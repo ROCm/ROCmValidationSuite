@@ -1,0 +1,10 @@
+/.settings/
+/CMakeFiles/
+/Debug/
+/build/
+/cmake_install.cmake
+/Makefile
+/.project
+/libgpup.so.1
+/libgpup.so.1.0.0
+
