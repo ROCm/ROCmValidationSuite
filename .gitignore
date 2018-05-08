@@ -10,3 +10,5 @@ documentation
 CMakeCache.txt
 Makefile
 cmake_install.cmake
+doc
+CMakeFiles

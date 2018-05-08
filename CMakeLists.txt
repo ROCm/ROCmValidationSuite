@@ -31,3 +31,8 @@ project ("rvs" )
 add_subdirectory(rvs)
 add_subdirectory(gpup.so)
 
+add_custom_target(doc ALL
+    COMMAND doxygen
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Generating RVS documentation"
+    VERBATIM)
