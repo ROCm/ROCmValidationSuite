@@ -12,7 +12,7 @@ Clone repository:
 
     cd /your/work/bench/folder
     export WB=$PWD
-    git clone https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.github
+    git clone https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.git
 
     
 Init environment variables:
