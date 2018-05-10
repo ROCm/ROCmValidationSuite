@@ -24,6 +24,8 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
+add_compile_options(-std=c++11)
+
 
 set ( RVS "rvs" )
 set ( RVS_PACKAGE "rvs-roct" )
@@ -55,16 +57,17 @@ endif ()
 set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
 
 ## additional libraries
-set ( PROJECT_LINK_LIBS libdl.so )
+set ( PROJECT_LINK_LIBS libdl.so "$ENV{RVS}/yaml-cpp/libyaml-cpp.a")
 
 ## define include directories
-include_directories(include)
+include_directories(include $ENV{RVS}/yaml-cpp/include )
 
 ## define source files
 set(SOURCES src/rvs.cpp src/rvsmodule.cpp src/rvsif0.cpp src/rvsif1.cpp)
 
 ## define target
 add_executable(${RVS_TARGET} ${SOURCES})
+
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
 

@@ -10,9 +10,13 @@
 #include <iostream>
 #include <dlfcn.h>
 
+#include <fstream>
+#include "yaml-cpp/yaml.h"
+
 #include "rvsif0.h"
 #include "rvsif1.h"
 #include "rvsmodule.h"
+
 
 
 using namespace std;
@@ -21,7 +25,18 @@ using namespace std;
 int main(int Argc, char**Argv) {
 	cout << "Hello from RVS..." << endl; 
 
+    YAML::Node config = YAML::LoadFile("./rvsmodules.config");
 
+//     std::cout << "config.Type(): " << config.Type() << "\n";
+//     std::cout << "config size: " << config.size() << "\n";
+//     std::cout << "config[0].Type(): " << config["version"].Type() << "\n";
+ 
+
+    for(YAML::const_iterator it=config.begin(); it!=config.end(); ++it) 
+    {
+        std::cout << "Key: " << it->first.as<std::string>() << "   Value: " << it->second.as<std::string>() << "\n";
+    }
+    
 
 	rvsmodule* module = rvsmodule::create("libgpup.so.1");
 	if(!module)
