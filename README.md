@@ -13,7 +13,8 @@ Clone repository:
     cd /your/work/bench/folder
     export WB=$PWD
     git clone https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.git
-
+    git submodule init
+    git submodule update
     
 Init environment variables:
 
