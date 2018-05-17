@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <dlfcn.h>
+#include <string.h>
 
 #include <fstream>
 #include "yaml-cpp/yaml.h"
@@ -21,39 +22,51 @@
 
 using namespace std;
 
-
-int main(int Argc, char**Argv) {
-	cout << "Hello from RVS..." << endl; 
-
+int listmodules(void)
+{
     YAML::Node config = YAML::LoadFile("./rvsmodules.config");
-
-//     std::cout << "config.Type(): " << config.Type() << "\n";
-//     std::cout << "config size: " << config.size() << "\n";
-//     std::cout << "config[0].Type(): " << config["version"].Type() << "\n";
- 
-
-    for(YAML::const_iterator it=config.begin(); it!=config.end(); ++it) 
+    
+    YAML::const_iterator it=config.begin();
+    std::string key=it->first.as<std::string>();
+    std::string value=it->second.as<std::string>();
+    if(value!="1")
     {
-        std::cout << "Key: " << it->first.as<std::string>() << "   Value: " << it->second.as<std::string>() << "\n";
+        printf("ERROR: version is not 1");
+        return -1;
     }
     
+    for(it++; it!=config.end(); ++it) 
+    {
+        std::string key=it->first.as<std::string>();
+        std::string value=it->second.as<std::string>();
+        std::cout << "Key: " << key <<"\n"; 
+        std::cout << "Value: " << value << "\n";
+        
+        rvsmodule* module = rvsmodule::create(value.c_str());
+        rvsif0* pif0 = (rvsif0*)module->get_interface(0);
 
-	rvsmodule* module = rvsmodule::create("libgpup.so.1");
-	if(!module)
-	{
-		fprintf(stdout, "Could not load module.\n");
-		return 1;
-	}
+        
+        fprintf(stdout, "Module: %s\n", pif0->get_name() );
 
-	rvsif0* pif0 = (rvsif0*)module->get_interface(0);
+        fprintf(stdout, "Description: %s\n", pif0->get_description() );
+        int Major,Minor,Patch;
+        pif0->get_version(&Major,&Minor,&Patch);
+        std::cout << "Version: " << Major << "." << Minor << "." << Patch << "\n";
+        rvsmodule::destroy(module);
+    }
+    return 0;
+}
 
-
-	fprintf(stdout, "Module: %s\n", pif0->get_name() );
-
-	fprintf(stdout, "Description: %s\n", pif0->get_description() );
-
-	rvsmodule::destroy(module);
-
+int main(int Argc, char**Argv)
+{
+    for (int i=1;i<Argc;i++)
+    {
+        if (!strcmp(Argv[i],"--modules"))
+        {
+        int status=listmodules();
+        }
+    }
+    
 	return 0;
 }
 
