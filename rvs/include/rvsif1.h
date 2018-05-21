@@ -1,38 +1,35 @@
-/*
- * rvsif1.h
- *
- *  Created on: May 6, 2018
- *      Author: ubuntu
- */
 
 #ifndef RVSIF1_H_
 #define RVSIF1_H_
 
-#include "rvsmodule_if.h"
+#include "rvsmodule_if1.h"
+#include "rvsif_base.h"
 
-class rvsif1
+namespace rvs 
+{
+	
+class if1 : public ifbase
 {
 public:
-	virtual int   init(void);
-	virtual int   run(int, char**);
-	virtual char* get_errstring(void);
-	virtual int   get_errint(void);
-	virtual int   terminate(void);
+	virtual ~if1();
+    virtual int   property_set(const char*, const char*);
+	virtual int   run(void);
+	virtual char* get_errstring(int);
 
-private:
-	rvsif1();
-	virtual ~rvsif1();
-	virtual int init_rvs_interface(void* psolib);
+protected:
+	if1();
+	if1(const if1&);
+	
+virtual if1& operator= (const if1& rhs);
+virtual ifbase* clone(void);
 
-private:
-	t_intvoid         rvs_module_init;
-	t_intintcharpp    rvs_module_run;
-	t_charpvoid       rvs_module_get_errstring;
-	t_intvoid         rvs_module_get_errint;
-	t_intvoid         rvs_module_terminate;
+protected:
+    t_rvs_module_action_property_set 	rvs_module_action_property_set;
+	t_rvs_module_action_run				rvs_module_action_run;
+	t_rvs_module_get_errstring			rvs_module_get_errstring;
 
-friend class rvsmodule;
+friend class module;
 };
 
-
+} // namespace rvs
 #endif /* RVSIF1_H_ */

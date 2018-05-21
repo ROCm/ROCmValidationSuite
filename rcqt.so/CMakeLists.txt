@@ -30,6 +30,7 @@ set ( RVS "rcqt" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
+set(CMAKE_BUILD_TYPE Debug)
 
 project ( ${RVS_TARGET} )
 
@@ -60,7 +61,7 @@ set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUIL
 ## set ( PROJECT_LINK_LIBS libdl.so )
 
 ## define include directories
-include_directories(include)
+include_directories(include ../include)
 
 ## define source files
 set(SOURCES src/rvs_module.cpp)

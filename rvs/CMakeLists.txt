@@ -31,6 +31,7 @@ set ( RVS "rvs" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
+set(CMAKE_BUILD_TYPE Debug)
 
 project ( ${RVS_TARGET} )
 
@@ -60,10 +61,10 @@ set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUIL
 set ( PROJECT_LINK_LIBS libdl.so "$ENV{RVS}/yaml-cpp/libyaml-cpp.a")
 
 ## define include directories
-include_directories(include $ENV{RVS}/yaml-cpp/include )
+include_directories(include ../include $ENV{RVS}/yaml-cpp/include )
 
 ## define source files
-set(SOURCES src/rvs.cpp src/rvsmodule.cpp src/rvsif0.cpp src/rvsif1.cpp)
+set(SOURCES src/rvs.cpp src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp )
 
 ## define target
 add_executable(${RVS_TARGET} ${SOURCES})

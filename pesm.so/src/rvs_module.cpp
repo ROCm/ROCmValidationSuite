@@ -1,6 +1,7 @@
 
 
 #include <stdio.h>
+#include <pci/pci.h>
 
 extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision)
 {
