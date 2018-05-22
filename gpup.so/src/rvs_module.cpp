@@ -1,6 +1,13 @@
 
-
+#include "rvs_module.h"
 #include "action.h"
+
+// callback for centralized loging functionality
+static t_rvs_module_log pflog;
+int log(const char* pMsg, const int level)
+{
+	return (*pflog)(pMsg, level);
+}
 
 extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision)
 {
@@ -31,8 +38,9 @@ extern "C" char* rvs_module_get_description(void)
    return (char*)"ROCm Validation Suite GPUP module";
 }
 
-extern "C" int   rvs_module_init(void)
+extern "C" int   rvs_module_init(void* pfLog)
 {
+	pflog = (t_rvs_module_log)pfLog;
 	return 0;
 }
 extern "C" int   rvs_module_terminate(void)
