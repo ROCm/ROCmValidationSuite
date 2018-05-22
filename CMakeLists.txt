@@ -28,22 +28,19 @@ cmake_minimum_required ( VERSION 3.5.0 )
 
 project ("rvs" )
 
+add_subdirectory(yaml-cpp)
+add_subdirectory(jsoncpp)
+
 add_subdirectory(rvs)
 add_subdirectory(gpup.so)
 add_subdirectory(pesm.so)
 add_subdirectory(rcqt.so)
 
-add_subdirectory(yaml-cpp)
-add_subdirectory(jsoncpp)
 
 add_dependencies(rvs yaml-cpp)
-add_dependencies(rvs jsoncpp)
 add_dependencies(gpup yaml-cpp)
-add_dependencies(gpup jsoncpp)
 add_dependencies(pesm yaml-cpp)
-add_dependencies(pesm jsoncpp)
 add_dependencies(rcqt yaml-cpp)
-add_dependencies(rcqt jsoncpp)
 
 add_custom_target(doc ALL
     COMMAND doxygen
