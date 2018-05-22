@@ -5,6 +5,7 @@
 #include <dlfcn.h>
 #include "yaml-cpp/yaml.h"
 
+#include "rvsliblogger.h"
 #include "rvsif0.h"
 #include "rvsif1.h"
 #include "rvsaction.h"
@@ -140,7 +141,7 @@ rvs::module* rvs::module::find_create_module(const char* name)
 
 int rvs::module::initialize()
 {
-	return (*rvs_module_init)();
+	return (*rvs_module_init)((void*)LoggerCallback);
 }
 
 

@@ -1,5 +1,5 @@
 
-#include <iostream>
+#include "rvs_module.h"
 
 #include "action.h"
 
@@ -21,7 +21,7 @@ int action::property_set(const char* Key, const char* Val)
 
 int action::run(void)
 {
-	cout << "Hello from GPUP action::run()\n";
+	log((char*)"Hello from GPUP action::run()");
 	
 	return 0;
 }

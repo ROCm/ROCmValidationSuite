@@ -18,6 +18,8 @@
 #include "rvsif1.h"
 #include "rvsaction.h"
 #include "rvsmodule.h"
+#include "rvscli.h"
+#include "rvsliblogger.h"
 
 
 
@@ -61,27 +63,29 @@ using namespace std;
 
 int main(int Argc, char**Argv)
 {
-    for (int i=1;i<Argc;i++)
-    {
-        if (!strcmp(Argv[i],"--modules"))
-        {
-        //int status=listmodules();
-        }
-    }
+	int sts;
+	rvs::cli cli;
+	
+// 	sts =  cli.parse(Argc, Argv);
+// 	if(sts)
+// 	{
+// 		cout<< "ERROR: error parsing command line:" << cli.get_error_string() << endl;
+// 		return -1;
+// 	}
     
     rvs::module::initialize("./rvsmodules.config");
 
 	rvs::action* pa = rvs::module::action_create("gpup");
 	if(!pa)
 	{
-		cout << "Could not create 'gpup' action." << endl;
+		rvs::lib::logger::log( "Could not create 'gpup' action.", rvs::logerror);
 		return -1;
 	}
 	
 	rvs::if0* pif0 = dynamic_cast<rvs::if0*>(pa->get_interface(0));
 	if(!pif0)
 	{
-		cout << "Could not get interface 'IF0'." << endl;
+		rvs::lib::logger::log("Could not get interface 'IF0'.", rvs::logerror);
 		return -1;
 	}
 	
@@ -91,11 +95,11 @@ int main(int Argc, char**Argv)
 	rvs::if1* pif1 = dynamic_cast<rvs::if1*>(pa->get_interface(1));
 	if(!pif0)
 	{
-		cout << "Could not get interface 'IF1'." << endl;
+		rvs::lib::logger::log("Could not get interface 'IF1'.", rvs::logerror);
 		return -1;
 	}
 	
-	int sts = pif1->run();
+	sts = pif1->run();
 	
 	rvs::module::action_destroy(pa);
 
