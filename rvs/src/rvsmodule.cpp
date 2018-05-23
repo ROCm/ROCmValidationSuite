@@ -36,7 +36,7 @@ int rvs::module::initialize(const char* pConfig)
     YAML::const_iterator it=config.begin();
 	if( it == config.end())
     {
-        cout << "ERROR: unsupported file format. Version string not found." << endl;
+        cerr << "ERROR: unsupported file format. Version string not found." << endl;
         return -1;
     }
 		
@@ -45,13 +45,13 @@ int rvs::module::initialize(const char* pConfig)
 	
 	if(key != "version")
 	{
-		cout << "ERROR: unsupported file format. Version string not found." << endl;
+		cerr << "ERROR: unsupported file format. Version string not found." << endl;
 		return -1;
 	}
 	
     if(value!="1")
     {
-        cout << "ERROR: version is not 1" << endl;
+        cerr << "ERROR: version is not 1" << endl;
         return -1;
     }
     
@@ -88,7 +88,7 @@ rvs::module* rvs::module::find_create_module(const char* name)
 		if( it == filemap.end())
 		{
 			// this should never happen if .config is OK
-			cout << "ERROR: module '" << name << "' not found in configuration." << endl;
+			cerr << "ERROR: module '" << name << "' not found in configuration." << endl;
 			return NULL;
 		}
 		
@@ -98,7 +98,7 @@ rvs::module* rvs::module::find_create_module(const char* name)
 		// error?
 		if( !psolib)
 		{
-			cout << "ERROR: could not load .so '" << it->second.c_str() << "' reason: " << dlerror() << endl;
+			cerr << "ERROR: could not load .so '" << it->second.c_str() << "' reason: " << dlerror() << endl;
 			return NULL;	// fail
 		}
 
@@ -113,7 +113,7 @@ rvs::module* rvs::module::find_create_module(const char* name)
 		// initialize API function pointers
 		if(m->init_interfaces())
 		{
-			cout << "ERROR: could not init interfaces for '" << it->second.c_str() << "'" << endl;
+			cerr << "ERROR: could not init interfaces for '" << it->second.c_str() << "'" << endl;
 			dlclose(psolib);
 			delete m;
 			return nullptr;
@@ -122,7 +122,7 @@ rvs::module* rvs::module::find_create_module(const char* name)
 		// initialize newly loaded module
 		if(m->initialize())
 		{
-			cout << "ERROR: could not initialize '" << it->second.c_str() << "'" << endl;
+			cerr << "ERROR: could not initialize '" << it->second.c_str() << "'" << endl;
 			dlclose(psolib);
 			delete m;
 			return nullptr;
@@ -151,7 +151,7 @@ rvs::action* rvs::module::action_create(const char* name)
 	rvs::module* m = module::find_create_module(name);
 	if( !m)
 	{
-		cout << "ERROR: module '" << name << "' not available." << endl;
+		cerr << "ERROR: module '" << name << "' not available." << endl;
 		return nullptr;
 	}
 	
@@ -159,7 +159,7 @@ rvs::action* rvs::module::action_create(const char* name)
 	void* plibaction = m->action_create();
 	if(!plibaction)
 	{
-		cout << "ERROR: module '" << name << "' could not create lib action." << endl;		
+		cerr << "ERROR: module '" << name << "' could not create lib action." << endl;		
 		return nullptr;
 	}
 	
@@ -167,7 +167,7 @@ rvs::action* rvs::module::action_create(const char* name)
 	rvs::action* pa = new rvs::action(name, plibaction);
 	if(!pa)
 	{
-		cout << "ERROR: module '" << name << "' could not create action proxy." << endl;	
+		cerr << "ERROR: module '" << name << "' could not create action proxy." << endl;	
 		return nullptr;
 	}
 	
@@ -257,13 +257,13 @@ int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName)
 {
 	if (!psolib)
 	{
-		cout << "ERROR: psolib is null. " << endl;
+		cerr << "ERROR: psolib is null. " << endl;
 		return -1;
 	}
 	void* pf = dlsym(psolib, pMethodName);
 	if (!pf)
 	{
-		cout << "ERROR: could not find .so method '" << pMethodName << "'" << endl;
+		cerr << "ERROR: could not find .so method '" << pMethodName << "'" << endl;
 	}
 	
 	*ppfunc = pf;

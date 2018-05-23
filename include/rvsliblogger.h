@@ -37,6 +37,7 @@ public:
 	static	int		log(const char* Message, const int level = 1);
 	static	int 	log(const string& Message, const int level = 1);
 
+	static	bool 	get_ticks(uint32_t& secs, uint32_t& usecs);
 protected:
 	static	int 	loglevel_m;
 	static	bool 	tojason_m;
