@@ -78,14 +78,14 @@ int main(int Argc, char**Argv)
 	rvs::action* pa = rvs::module::action_create("gpup");
 	if(!pa)
 	{
-		rvs::lib::logger::log( "Could not create 'gpup' action.", rvs::logerror);
+		cerr << "ERROR: could not create 'gpup' action." << endl;
 		return -1;
 	}
 	
 	rvs::if0* pif0 = dynamic_cast<rvs::if0*>(pa->get_interface(0));
 	if(!pif0)
 	{
-		rvs::lib::logger::log("Could not get interface 'IF0'.", rvs::logerror);
+		cerr << "ERROR: could not get interface 'IF0'." << endl;
 		return -1;
 	}
 	
@@ -95,10 +95,12 @@ int main(int Argc, char**Argv)
 	rvs::if1* pif1 = dynamic_cast<rvs::if1*>(pa->get_interface(1));
 	if(!pif0)
 	{
-		rvs::lib::logger::log("Could not get interface 'IF1'.", rvs::logerror);
+		cerr << "ERROR: could not get interface 'IF1'." << endl;
 		return -1;
 	}
 	
+	sts = pif1->property_set("properties", "gpu_id cpu_cores_count simd_count mem_banks_count caches_count io_links_count cpu_core_id_base simd_id_base max_waves_per_simd lds_size_in_kb gds_size_in_kb wave_front_size array_count simd_arrays_per_engine cu_per_simd_array simd_per_cu max_slots_scratch_cu vendor_id device_id location_id drm_render_minor max_engine_clk_fcompute local_mem_size fw_version capability max_engine_clk_ccompute");
+
 	sts = pif1->run();
 	
 	rvs::module::action_destroy(pa);
