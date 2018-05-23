@@ -99,7 +99,9 @@ int main(int Argc, char**Argv)
 		return -1;
 	}
 	
-	sts = pif1->property_set("properties", "gpu_id cpu_cores_count simd_count mem_banks_count caches_count io_links_count cpu_core_id_base simd_id_base max_waves_per_simd lds_size_in_kb gds_size_in_kb wave_front_size array_count simd_arrays_per_engine cu_per_simd_array simd_per_cu max_slots_scratch_cu vendor_id device_id location_id drm_render_minor max_engine_clk_fcompute local_mem_size fw_version capability max_engine_clk_ccompute");
+// 	sts = pif1->property_set("simd_count mem_banks_count caches_count io_links_count cpu_core_id_base simd_id_base max_waves_per_simd lds_size_in_kb gds_size_in_kb wave_front_size array_count simd_arrays_per_engine cu_per_simd_array simd_per_cu max_slots_scratch_cu vendor_id device_id location_id drm_render_minor max_engine_clk_fcompute local_mem_size fw_version capability max_engine_clk_ccompute");
+	pif1->property_set("simd_count", "");
+	pif1->property_set("cpu_cores_count", "" );
 
 	sts = pif1->run();
 	
