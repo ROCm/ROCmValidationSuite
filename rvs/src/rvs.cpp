@@ -107,6 +107,37 @@ int main(int Argc, char**Argv)
 	
 	rvs::module::action_destroy(pa);
 
+	//dummy peqt check
+	rvs::action* peqt_action = rvs::module::action_create("peqt");
+	if(!peqt_action)
+	{
+		cerr << "ERROR: could not create 'peqt' action." << endl;
+		return -1;
+	}
+	
+	rvs::if0* peqt_if0 = dynamic_cast<rvs::if0*>(peqt_action->get_interface(0));
+	if(!peqt_if0)
+	{
+		cerr << "ERROR: could not get interface 'IF0'." << endl;
+		return -1;
+	}
+	
+	std::cout << "Module: " << peqt_if0->get_name() << endl;
+	std::cout << "Description: " << peqt_if0->get_description() << endl;
+
+	rvs::if1* peqt_if1 = dynamic_cast<rvs::if1*>(peqt_action->get_interface(1));
+	if(!peqt_if1)
+	{
+		cerr << "ERROR: could not get interface 'IF1'." << endl;
+		return -1;
+	}
+	
+
+	sts = peqt_if1->run();
+	
+	rvs::module::action_destroy(peqt_action);
+
+
 	rvs::module::terminate();
     
 	return 0;
