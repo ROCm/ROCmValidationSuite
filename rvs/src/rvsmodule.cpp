@@ -291,6 +291,12 @@ int rvs::module::init_interface_0(void)
 	if( init_interface_method( (void**)(&(pif0->rvs_module_has_interface)), "rvs_module_has_interface"))
 		sts--;
 
+	if( init_interface_method( (void**)(&(pif0->rvs_module_get_config)), "rvs_module_get_config"))
+		sts--;
+
+	if( init_interface_method( (void**)(&(pif0->rvs_module_get_output)), "rvs_module_get_output"))
+		sts--;
+
 	if(sts)
 	{
 		delete pif0;

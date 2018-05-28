@@ -18,6 +18,8 @@ public:
 	virtual char*   get_name(void);
 	virtual char*   get_description(void);
 	virtual int     has_interface(int);
+	virtual char*	get_config(void);
+	virtual char*	get_output(void);
 
 protected:
 	if0();
@@ -31,6 +33,8 @@ protected:
 	t_rvs_module_get_name        	rvs_module_get_name;
 	t_rvs_module_get_description	rvs_module_get_description;
 	t_rvs_module_has_interface		rvs_module_has_interface;
+	t_rvs_module_get_config			rvs_module_get_config;
+	t_rvs_module_get_output			rvs_module_get_output;
 	
 friend class module;
 

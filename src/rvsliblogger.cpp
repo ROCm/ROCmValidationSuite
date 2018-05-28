@@ -22,6 +22,15 @@ rvs::lib::logger::~logger()
 {
 }
 
+void rvs::lib::logger::log_level(const int rLevel)
+{
+	loglevel_m = rLevel;
+}
+int rvs::lib::logger::log_level()
+{
+	return loglevel_m;
+}
+
 bool rvs::lib::logger::get_ticks(uint32_t& secs, uint32_t& usecs) 
 {
     struct timespec ts;
