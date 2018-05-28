@@ -27,8 +27,7 @@ int main(int Argc, char**Argv)
 	{
 		cerr << "ERROR: error executing configuration: " << sts << endl;
 	}
-	
-    
+	    
 	return sts;
 }
 
