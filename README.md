@@ -17,7 +17,7 @@ Clone repository:
 Init environment variables and submodule:
 
     export RVS=$WB/ROCmValidationSuite
-    export LD_LIBRARY_PATH=$RVS/gpup.so:$RVS/pesm.so:$RVS/rcqt.so
+    export LD_LIBRARY_PATH=$RVS/gpup.so:$RVS/pesm.so:$RVS/rcqt.so:$RVS/peqt.so
     cd $RVS
     git submodule init
     git submodule update
