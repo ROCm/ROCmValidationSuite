@@ -29,6 +29,8 @@ rvs::if0& rvs::if0::operator=(const rvs::if0& rhs) // copy assignment
 		rvs_module_get_name			= rhs.rvs_module_get_name;
 		rvs_module_get_description	= rhs.rvs_module_get_description;
 		rvs_module_has_interface	= rhs.rvs_module_has_interface;
+		rvs_module_get_config		= rhs.rvs_module_get_config;
+		rvs_module_get_output		= rhs.rvs_module_get_output;
     }
     
     return *this;
@@ -60,6 +62,14 @@ int rvs::if0::has_interface(int iid)
 	return (*rvs_module_has_interface)(iid);
 }
 
+char* rvs::if0::get_config()
+{
+	return (*rvs_module_get_config)();
+}
+char* rvs::if0::get_output()
+{
+	return (*rvs_module_get_output)();
+}
 
 
 

@@ -2,8 +2,12 @@
 #ifndef RVSIF1_H_
 #define RVSIF1_H_
 
+#include <string>
+
 #include "rvsmodule_if1.h"
 #include "rvsif_base.h"
+
+using namespace std;
 
 namespace rvs 
 {
@@ -13,6 +17,7 @@ class if1 : public ifbase
 public:
 	virtual ~if1();
     virtual int   property_set(const char*, const char*);
+    virtual int   property_set(const string&, const string&);
 	virtual int   run(void);
 	virtual char* get_errstring(int);
 
