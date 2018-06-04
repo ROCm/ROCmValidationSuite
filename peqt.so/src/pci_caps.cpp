@@ -19,33 +19,18 @@ extern "C"
  * gets the offset (within the PCI related regs) of a given PCI capability (e.g.: PCI_CAP_ID_EXP)
  * @param dev a pci_dev structure containing the PCI device information
  * @param cap a PCI capability (e.g.: PCI_CAP_ID_EXP) All the capabilities are detailed in <pci_regs.h>
+ * @param type capability type
  * @return capability offset
  */
-unsigned char pci_dev_find_cap_offset(struct pci_dev *dev, unsigned char cap)
+unsigned char pci_dev_find_cap_offset(struct pci_dev *dev, unsigned char cap, unsigned char type)
 {
-    int id;
-    int max_cap = 48;
-    int pos = PCI_CAPABILITY_LIST;
-    int status;
 
-    status = pci_read_byte(dev, PCI_STATUS);
-    if ( (status & PCI_STATUS_CAP_LIST) == 0 )
-        return 0;
-
-    while ( max_cap-- ){
-        pos = pci_read_byte(dev, pos);
-        if ( pos < 0x40 )
-            break;
-
-        pos &= ~3;
-        id = pci_read_byte(dev, pos + PCI_CAP_LIST_ID);
-
-        if ( id == 0xff )
-            break;
-        if ( id == cap )
-            return pos;
-
-        pos += PCI_CAP_LIST_NEXT;
+    struct pci_cap * pcap = dev->first_cap;
+    while(pcap != NULL)
+    {
+        if(pcap->id == cap && pcap->type == type)
+            return pcap->addr;
+        pcap = pcap->next;
     }
 
     return 0;
@@ -60,7 +45,7 @@ unsigned char pci_dev_find_cap_offset(struct pci_dev *dev, unsigned char cap)
 void get_link_cap_max_speed(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP);
+    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned int pci_dev_lnk_cap = pci_read_long(dev, cap_offset + PCI_EXP_LNKCAP);
@@ -97,7 +82,7 @@ void get_link_cap_max_speed(struct pci_dev *dev, char *buff)
 void get_link_cap_max_width(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP);
+    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned int pci_dev_lnk_cap = pci_read_long(dev, cap_offset + PCI_EXP_LNKCAP);
@@ -116,7 +101,7 @@ void get_link_cap_max_width(struct pci_dev *dev, char *buff)
 void get_link_stat_cur_speed(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP);
+    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned short int pci_dev_lnk_stat = pci_read_word(dev, cap_offset + PCI_EXP_LNKSTA); 
@@ -153,7 +138,7 @@ void get_link_stat_cur_speed(struct pci_dev *dev, char *buff)
 void get_link_stat_neg_width(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP);
+    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned short int pci_dev_lnk_stat = pci_read_word(dev, cap_offset + PCI_EXP_LNKSTA);
@@ -172,7 +157,7 @@ void get_link_stat_neg_width(struct pci_dev *dev, char *buff)
 void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP);
+    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
     float pwr;
 
     if(cap_offset != 0){
@@ -216,7 +201,7 @@ void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff)
 void get_slot_physical_num(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP);
+    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned int slot_cap = pci_read_long(dev, cap_offset + PCI_EXP_SLTCAP);
