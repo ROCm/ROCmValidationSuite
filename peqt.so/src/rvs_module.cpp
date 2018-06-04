@@ -38,6 +38,16 @@ extern "C" char* rvs_module_get_description(void)
    return (char*)"ROCm Validation Suite PEQT module";
 }
 
+extern "C" char* rvs_module_get_config(void)
+{
+	return (char*)"package (string), version (string), installed (bool), user (string), groups (collection of strings), file (string), owner (string), group (string), permission (int), type (int), exists (bool)";
+}
+
+extern "C" char* rvs_module_get_output(void)
+{
+	return (char*)"pass (bool)";
+}
+
 extern "C" int   rvs_module_init(void* pfLog)
 {
 	pflog = (t_rvs_module_log)pfLog;
@@ -75,4 +85,3 @@ extern "C" int rvs_module_action_run(void* pAction)
 {
 	return static_cast<rvs::lib::actionbase*>(pAction)->run();
 }
-

@@ -152,6 +152,13 @@ bool rvs::exec::is_yaml_properties_collection(const string& module_name, const s
 		if(property_name == "io_links-properties")
 			return true;
 	}
+	else
+		if( module_name == "peqt"){
+		if(property_name == "capability")
+			return true;
+	}
+
 	return false;
+	
 }
 

@@ -12,7 +12,7 @@ bool 	rvs::lib::logger::tojason_m;
 bool 	rvs::lib::logger::append_m;
 string 	rvs::lib::logger::logfile_m;
 
-const char*	rvs::lib::logger::loglevelname[] = {"[NONE  ]", "[RESULTS]", "[ERROR ]", "[DEBUG ]", "[INFO  ]", "[TRACE ]" };
+const char*	rvs::lib::logger::loglevelname[] = {"[NONE  ]", "[RESULTS]", "[ERROR ]", "[INFO  ]", "[DEBUG ]", "[TRACE ]" };
 
 rvs::lib::logger::logger()
 {
