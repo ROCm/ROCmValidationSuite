@@ -146,7 +146,7 @@ int action::run(void)
 
     //iterate over devices
     for (dev = pacc->devices; dev; dev = dev->next){
-        pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS); //fil in the info
+        pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT); //fil in the info
 
         //computes the actual dev's location_id (sysfs entry)
         unsigned short int dev_location_id = ((((unsigned short int)(dev->bus)) << 8) | (dev->func));
