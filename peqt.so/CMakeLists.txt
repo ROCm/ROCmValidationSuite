@@ -59,21 +59,21 @@ set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUIL
 
 ## additional libraries
 ## set ( PROJECT_LINK_LIBS libdl.so )
+set ( PROJECT_LINK_LIBS libpci.so libm.so)
 
 ## define include directories
 include_directories(include ../include)
 
 ## define source files
-set(SOURCES src/rvs_module.cpp src/action.cpp ../src/rvslib.cpp)
+set(SOURCES src/pci_caps.cpp src/rvs_module.cpp src/action.cpp ../src/rvslib.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}) 
-#target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD 
 COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/lib${RVS}.so.1
 COMMAND ln -s ${CMAKE_CURRENT_BINARY_DIR}/lib${RVS}.so.${LIB_VERSION_STRING} ${CMAKE_CURRENT_BINARY_DIR}/lib${RVS}.so.1)
-
 
 
