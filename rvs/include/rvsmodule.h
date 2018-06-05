@@ -22,7 +22,8 @@ public:
     static action*		action_create(const char* pModuleShortName);
 	static int       	action_destroy(action*);
     static int         	terminate();
-
+    static void         do_list_modules(void);
+    
 protected:
 	static 	module* 	find_create_module(const char* pShortName);
 	// YAML configuration
@@ -33,6 +34,8 @@ protected:
 	
 	// short name -> .so filename
     static std::map<std::string,std::string>	filemap;
+    
+
 
 protected:
 						module(const char* pModuleShortName, void* pSoLib);
@@ -62,6 +65,7 @@ protected:
 			t_rvs_module_terminate		rvs_module_terminate;
 			t_rvs_module_action_create	rvs_module_action_create;
 			t_rvs_module_action_destroy	rvs_module_action_destroy;
+            
 	
 	
 

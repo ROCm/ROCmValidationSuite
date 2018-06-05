@@ -337,6 +337,26 @@ int rvs::module::init_interface_1(void)
 	return 0;
 }
 
+void rvs::module::do_list_modules(void)
+{
+    for (auto it=filemap.begin();it!=filemap.end(); it++)
+    {
+//    rvs::module* rvs::module::find_create_module(it->first.c_str());       
+    rvs::action* pa = rvs::module::action_create(it->first.c_str());
+    rvs::if0* pif0 = dynamic_cast<rvs::if0*>(pa->get_interface(0));
+
+ 	std::cout << "Module: " << pif0->get_name() << endl;
+ 	std::cout << "Description: " << pif0->get_description() << endl;
+ 	std::cout << "  config: " << pif0->get_config() << endl;
+ 	std::cout << "  output: " << pif0->get_output() << endl; 
+    
+    cout<<endl;
+    cout<<endl;
+    
+ } 		
+}
+
+
 
 
 

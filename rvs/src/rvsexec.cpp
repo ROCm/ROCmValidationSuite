@@ -87,7 +87,9 @@ int rvs::exec::run()
 
 	if( has_option("-t", val))
 	{
-		do_list_modules();
+        cout<< "ROCm Validation Suite"<<endl;
+        cout<<"Modules available:"<<endl;
+		rvs::module::do_list_modules();
 		return 0;
 	}
 	
@@ -148,27 +150,9 @@ void rvs::exec::do_help()
 	cout << "No help available." << endl;
 }
 
-void rvs::exec::do_list_modules()
+/*void rvs::exec::do_list_modules()
 {
-// 	rvs::action* pa = rvs::module::action_create("gpup");
-// 	if(!pa)
-// 	{
-// 		cerr << "ERROR: could not create 'gpup' action." << endl;
-// 		return -1;
-// 	}
-// 	
-// 	rvs::if0* pif0 = dynamic_cast<rvs::if0*>(pa->get_interface(0));
-// 	if(!pif0)
-// 	{
-// 		cerr << "ERROR: could not get interface 'IF0'." << endl;
-// 		return -1;
-// 	}
-// 	
-// 	std::cout << "Module: " << pif0->get_name() << endl;
-// 	std::cout << "Description: " << pif0->get_description() << endl;
-// 	std::cout << "config: " << pif0->get_config() << endl;
-// 	std::cout << "output: " << pif0->get_output() << endl;
-
-	
-}
+    std::cout << "ROCm Validation Suite (version 1.0.0)" << endl;
+    std::cout << "Modules available:" << endl;
+}*/
 
