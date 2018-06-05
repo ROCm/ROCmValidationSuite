@@ -23,11 +23,11 @@ extern "C" {
 
 #define KFD_SYS_PATH_NODES              "/sys/class/kfd/kfd/topology/nodes"
 #define KFD_PATH_MAX_LENGTH             256
-#define PCI_DEV_NUM_CAPABILITIES        9
+#define PCI_DEV_NUM_CAPABILITIES        10
 
 using namespace std;
 
-const char* pcie_cap_names[] = {"link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed", "link_stat_neg_width", "slot_pwr_limit_value", "slot_physical_num", "device_id", "vendor_id", "kernel_driver"};
+const char* pcie_cap_names[] = {"link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed", "link_stat_neg_width", "slot_pwr_limit_value", "slot_physical_num", "device_id", "vendor_id", "kernel_driver", "dev_serial_num"};
 
 static int num_subdirs(char *dirpath, char *prefix);
 static void get_all_gpu_location_id(std::vector<unsigned short int> &gpus_location_id);
@@ -117,7 +117,7 @@ int action::run(void)
     string prop_name, msg, action_name = "[]";
     char buff[1024];
 
-    void (*arr_prop_pfunc_names[]) (struct pci_dev *dev, char *) = {get_link_cap_max_speed, get_link_cap_max_width, get_link_stat_cur_speed, get_link_stat_neg_width, get_slot_pwr_limit_value, get_slot_physical_num, get_device_id, get_vendor_id, get_kernel_driver};
+    void (*arr_prop_pfunc_names[]) (struct pci_dev *dev, char *) = {get_link_cap_max_speed, get_link_cap_max_width, get_link_stat_cur_speed, get_link_stat_neg_width, get_slot_pwr_limit_value, get_slot_physical_num, get_device_id, get_vendor_id, get_kernel_driver, get_dev_serial_num};
 
 	std::map<string,string>::iterator it;
  	std::vector<unsigned short int> gpus_location_id;

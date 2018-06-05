@@ -22,9 +22,8 @@ extern "C"
  * @param type capability type
  * @return capability offset
  */
-unsigned char pci_dev_find_cap_offset(struct pci_dev *dev, unsigned char cap, unsigned char type)
+unsigned int pci_dev_find_cap_offset(struct pci_dev *dev, unsigned char cap, unsigned char type)
 {
-
     struct pci_cap * pcap = dev->first_cap;
     while(pcap != NULL)
     {
@@ -45,7 +44,7 @@ unsigned char pci_dev_find_cap_offset(struct pci_dev *dev, unsigned char cap, un
 void get_link_cap_max_speed(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
+    unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned int pci_dev_lnk_cap = pci_read_long(dev, cap_offset + PCI_EXP_LNKCAP);
@@ -82,7 +81,7 @@ void get_link_cap_max_speed(struct pci_dev *dev, char *buff)
 void get_link_cap_max_width(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
+    unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned int pci_dev_lnk_cap = pci_read_long(dev, cap_offset + PCI_EXP_LNKCAP);
@@ -101,7 +100,7 @@ void get_link_cap_max_width(struct pci_dev *dev, char *buff)
 void get_link_stat_cur_speed(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
+    unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned short int pci_dev_lnk_stat = pci_read_word(dev, cap_offset + PCI_EXP_LNKSTA); 
@@ -138,7 +137,7 @@ void get_link_stat_cur_speed(struct pci_dev *dev, char *buff)
 void get_link_stat_neg_width(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
+    unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned short int pci_dev_lnk_stat = pci_read_word(dev, cap_offset + PCI_EXP_LNKSTA);
@@ -157,7 +156,7 @@ void get_link_stat_neg_width(struct pci_dev *dev, char *buff)
 void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
+    unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
     float pwr;
 
     if(cap_offset != 0){
@@ -201,7 +200,7 @@ void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff)
 void get_slot_physical_num(struct pci_dev *dev, char *buff)
 {
     //get pci dev capabilities offset
-    unsigned char cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
+    unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL);
 
     if(cap_offset != 0){
         unsigned int slot_cap = pci_read_long(dev, cap_offset + PCI_EXP_SLTCAP);
@@ -276,6 +275,25 @@ void get_kernel_driver(struct pci_dev *dev, char *buff)
 
     if (drv = strrchr(buff, '/'))
         strcpy(buff, drv + 1);
+}
+
+/**
+ * gets the device serial number
+ * @param dev a pci_dev structure containing the PCI device information
+ * @param buf pre-allocated char buffer
+ */
+void get_dev_serial_num(struct pci_dev *dev, char *buff)
+{
+	unsigned int cap_offset_dsn = pci_dev_find_cap_offset(dev, PCI_EXT_CAP_ID_DSN, PCI_CAP_EXTENDED);
+
+	if(cap_offset_dsn!=0){
+	  unsigned int t1, t2;
+	  t1 = pci_read_long(dev, cap_offset_dsn + 4);
+	  t2 = pci_read_long(dev, cap_offset_dsn + 8);
+	  sprintf(buff, "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x", t2 >> 24, (t2 >> 16) & 0xff, (t2 >> 8) & 0xff, t2 & 0xff, t1 >> 24, (t1 >> 16) & 0xff, (t1 >> 8) & 0xff, t1 & 0xff);
+	}
+	else
+		strcpy(buff, "");
 }
 
 }
