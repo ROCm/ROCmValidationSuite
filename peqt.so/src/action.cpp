@@ -23,11 +23,11 @@ extern "C" {
 
 #define KFD_SYS_PATH_NODES              "/sys/class/kfd/kfd/topology/nodes"
 #define KFD_PATH_MAX_LENGTH             256
-#define PCI_DEV_NUM_CAPABILITIES        10
+#define PCI_DEV_NUM_CAPABILITIES        13
 
 using namespace std;
 
-const char* pcie_cap_names[] = {"link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed", "link_stat_neg_width", "slot_pwr_limit_value", "slot_physical_num", "device_id", "vendor_id", "kernel_driver", "dev_serial_num"};
+const char* pcie_cap_names[] = {"link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed", "link_stat_neg_width", "slot_pwr_limit_value", "slot_physical_num", "device_id", "vendor_id", "kernel_driver", "dev_serial_num", "pwr_base_pwr", "pwr_rail_type", "atomic_op_completer"};
 
 static int num_subdirs(char *dirpath, char *prefix);
 static void get_all_gpu_location_id(std::vector<unsigned short int> &gpus_location_id);
@@ -54,7 +54,6 @@ static int num_subdirs(char *dirpath, char *prefix)
     }
     return count;
 }
-
 
 /**
  * gets all GPUS location_id
@@ -117,14 +116,13 @@ int action::run(void)
     string prop_name, msg, action_name = "[]";
     char buff[1024];
 
-    void (*arr_prop_pfunc_names[]) (struct pci_dev *dev, char *) = {get_link_cap_max_speed, get_link_cap_max_width, get_link_stat_cur_speed, get_link_stat_neg_width, get_slot_pwr_limit_value, get_slot_physical_num, get_device_id, get_vendor_id, get_kernel_driver, get_dev_serial_num};
+    void (*arr_prop_pfunc_names[]) (struct pci_dev *dev, char *) = {get_link_cap_max_speed, get_link_cap_max_width, get_link_stat_cur_speed, get_link_stat_neg_width, get_slot_pwr_limit_value, get_slot_physical_num, get_device_id, get_vendor_id, get_kernel_driver, get_dev_serial_num, get_pwr_base_pwr, get_pwr_rail_type, get_atomic_op_completer};
 
 	std::map<string,string>::iterator it;
  	std::vector<unsigned short int> gpus_location_id;
 
     struct pci_access *pacc;
     struct pci_dev *dev;
-
 
     //get the action name
     it=property.find("name");
@@ -156,9 +154,8 @@ int action::run(void)
 
         if(it_gpu != gpus_location_id.end()){
             //that should be an AMD GPU
-
             for (it=property.begin(); it!=property.end(); ++it){
-                string prop_name = it->first.substr(it->first.find_last_of(".") + 1); //skip the "capability."                
+                string prop_name = it->first.substr(it->first.find_last_of(".") + 1); //skip the "capability."
                 for(unsigned char i = 0; i < PCI_DEV_NUM_CAPABILITIES; i++)
                     if(prop_name == pcie_cap_names[i]){
                         (*arr_prop_pfunc_names[i])(dev, buff);

@@ -16,8 +16,10 @@ void get_device_id(struct pci_dev *dev, char *buff);
 void get_dev_serial_num(struct pci_dev *dev, char *buff);
 void get_vendor_id(struct pci_dev *dev, char *buff);
 void get_kernel_driver(struct pci_dev *dev, char *buff);
+void get_pwr_base_pwr(struct pci_dev *dev, char *buff);
+void get_pwr_rail_type(struct pci_dev *dev, char *buff);
+void get_atomic_op_completer(struct pci_dev *dev, char *buff);
 }
-
 
 class action : public rvs::lib::actionbase
 {
