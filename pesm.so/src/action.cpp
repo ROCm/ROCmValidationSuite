@@ -25,6 +25,11 @@ int action::run(void)
 {
 	log("[PESM] in run()", rvs::logdebug);
 	
+	// handle "wait" property
+	if (property["wait"] != "") {
+		sleep(atoi(property["wait"].c_str()));
+	}
+	
 	if(property["monitor"] == "true") {
 		log("property[\"monitor\"] == \"true\"", rvs::logdebug);
 		
@@ -41,7 +46,6 @@ int action::run(void)
 		log("[PESM] Monitoring started", rvs::logdebug);
 	}
 	else {
-		pworker->sleep(2000);
 		log("property[\"monitor\"] != \"true\"", rvs::logdebug);
 		if (pworker) {
 			pworker->stop();

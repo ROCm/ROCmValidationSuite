@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 
+
 namespace rvs
 {
 namespace lib
@@ -17,6 +18,7 @@ public:
 	
 protected:
 	actionbase();
+	void sleep(const unsigned int ms);
 	
 public:
     virtual int   	property_set(const char*, const char*);
