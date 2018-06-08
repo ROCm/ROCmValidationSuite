@@ -10,7 +10,7 @@
 #include "rvsliblogger.h"
 
 #include "rvsexec.h"
-
+#define VER "BUILD_VERSION_STRING"
 
 
 rvs::exec::exec(const rvs::exec::options_t& rOptions)
@@ -87,7 +87,7 @@ int rvs::exec::run()
 
 	if( has_option("-t", val))
 	{
-        cout<< "ROCm Validation Suite"<<endl;
+        cout<< endl << "ROCm Validation Suite (version " << LIB_VERSION_STRING << ")" << endl << endl;
         cout<<"Modules available:"<<endl;
 		rvs::module::do_list_modules();
 		return 0;
@@ -101,40 +101,6 @@ int rvs::exec::run()
 		cerr << "Error parsing configuration file: " << config_file << endl;
 	}
 
-// 	rvs::action* pa = rvs::module::action_create("gpup");
-// 	if(!pa)
-// 	{
-// 		cerr << "ERROR: could not create 'gpup' action." << endl;
-// 		return -1;
-// 	}
-// 	
-// 	rvs::if0* pif0 = dynamic_cast<rvs::if0*>(pa->get_interface(0));
-// 	if(!pif0)
-// 	{
-// 		cerr << "ERROR: could not get interface 'IF0'." << endl;
-// 		return -1;
-// 	}
-// 	
-// 	std::cout << "Module: " << pif0->get_name() << endl;
-// 	std::cout << "Description: " << pif0->get_description() << endl;
-// 	std::cout << "config: " << pif0->get_config() << endl;
-// 	std::cout << "output: " << pif0->get_output() << endl;
-// 
-// 	rvs::if1* pif1 = dynamic_cast<rvs::if1*>(pa->get_interface(1));
-// 	if(!pif0)
-// 	{
-// 		cerr << "ERROR: could not get interface 'IF1'." << endl;
-// 		return -1;
-// 	}
-// 	
-// // 	sts = pif1->property_set("simd_count mem_banks_count caches_count io_links_count cpu_core_id_base simd_id_base max_waves_per_simd lds_size_in_kb gds_size_in_kb wave_front_size array_count simd_arrays_per_engine cu_per_simd_array simd_per_cu max_slots_scratch_cu vendor_id device_id location_id drm_render_minor max_engine_clk_fcompute local_mem_size fw_version capability max_engine_clk_ccompute");
-// 	pif1->property_set("simd_count", "");
-// 	pif1->property_set("cpu_cores_count", "" );
-// 
-// 	sts = pif1->run();
-// 	
-// 	rvs::module::action_destroy(pa);
-
 	rvs::module::terminate();
 	
 	return sts;
@@ -142,17 +108,11 @@ int rvs::exec::run()
 
 void rvs::exec::do_version()
 {
-	cout << "1.0.0" << endl;
+	cout << LIB_VERSION_STRING << endl;
 }
 
 void rvs::exec::do_help()
 {
 	cout << "No help available." << endl;
 }
-
-/*void rvs::exec::do_list_modules()
-{
-    std::cout << "ROCm Validation Suite (version 1.0.0)" << endl;
-    std::cout << "Modules available:" << endl;
-}*/
 

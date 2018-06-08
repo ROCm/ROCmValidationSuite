@@ -40,7 +40,7 @@ extern "C" char* rvs_module_get_description(void)
 
 extern "C" char* rvs_module_get_config(void)
 {
-	return (char*)"package (string), version (string), installed (bool), user (string), groups (collection of strings), file (string), owner (string), group (string), permission (int), type (int), exists (bool)";
+	return (char*)"module (string), version (string), installed (bool), user (string), groups (collection of strings), file (string), owner (string), group (string), permission (int), type (int), exists (bool)";
 }
 
 extern "C" char* rvs_module_get_output(void)

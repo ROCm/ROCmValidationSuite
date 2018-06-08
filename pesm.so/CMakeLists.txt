@@ -25,6 +25,9 @@
 
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
+add_compile_options(-pthread)
+add_compile_options(-Wl,-no-as-needed)
+
 
 set ( RVS "pesm" )
 set ( RVS_PACKAGE "rvs-roct" )
@@ -43,7 +46,7 @@ endif ()
 include ( utils )
 
 ## Setup the package version.
-get_version ( "1.0.0" )
+get_version ( "0.0.0" )
 
 set ( BUILD_VERSION_MAJOR ${VERSION_MAJOR} )
 set ( BUILD_VERSION_MINOR ${VERSION_MINOR} )
@@ -56,15 +59,22 @@ if ( DEFINED VERSION_BUILD AND NOT ${VERSION_BUILD} STREQUAL "" )
 endif ()
 set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
 
+## make version numbers visible to C code
+add_compile_options(-DBUILD_VERSION_MAJOR=${VERSION_MAJOR})
+add_compile_options(-DBUILD_VERSION_MINOR=${VERSION_MINOR})
+add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
+add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
+add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
+
 
 ## additional libraries
-set ( PROJECT_LINK_LIBS libpci.so.3 )
+set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )
 
 ## define include directories
 include_directories(include pci ../include)
 
 ## define source files
-set(SOURCES src/rvs_module.cpp)
+set(SOURCES ../src/rvsthreadbase.cpp ../src/rvslib.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp src/rvs_module.cpp src/action.cpp src/worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
