@@ -43,7 +43,7 @@ endif ()
 include ( utils )
 
 ## Setup the package version.
-get_version ( "1.0.0" )
+get_version ( "0.0.0" )
 
 set ( BUILD_VERSION_MAJOR ${VERSION_MAJOR} )
 set ( BUILD_VERSION_MINOR ${VERSION_MINOR} )
@@ -72,8 +72,8 @@ set_target_properties(${RVS_TARGET} PROPERTIES SUFFIX .so.${LIB_VERSION_STRING})
 #target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD 
-COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/lib${RVS}.so.1
-COMMAND ln -s ${CMAKE_CURRENT_BINARY_DIR}/lib${RVS}.so.${LIB_VERSION_STRING} ${CMAKE_CURRENT_BINARY_DIR}/lib${RVS}.so.1)
+COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/../bin/lib${RVS}.so.${VERSION_MAJOR}
+COMMAND ln -s ${CMAKE_CURRENT_BINARY_DIR}/lib${RVS}.so.${LIB_VERSION_STRING} ${CMAKE_CURRENT_BINARY_DIR}/../bin/lib${RVS}.so.${VERSION_MAJOR})
 
 
 
