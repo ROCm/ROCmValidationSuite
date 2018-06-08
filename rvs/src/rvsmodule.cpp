@@ -339,21 +339,39 @@ int rvs::module::init_interface_1(void)
 
 void rvs::module::do_list_modules(void)
 {
+	// for all modules
     for (auto it=filemap.begin();it!=filemap.end(); it++)
     {
-//    rvs::module* rvs::module::find_create_module(it->first.c_str());       
-    rvs::action* pa = rvs::module::action_create(it->first.c_str());
-    rvs::if0* pif0 = dynamic_cast<rvs::if0*>(pa->get_interface(0));
+		// create action
+		rvs::action* pa = rvs::module::action_create(it->first.c_str());
+		if(!pa)
+		{
+			cerr << "ERROR: could not open module: " << it->first.c_str() << endl;
+			continue;
+		}
 
- 	std::cout << "Module: " << pif0->get_name() << endl;
- 	std::cout << "Description: " << pif0->get_description() << endl;
- 	std::cout << "  config: " << pif0->get_config() << endl;
- 	std::cout << "  output: " << pif0->get_output() << endl; 
-    
-    cout<<endl;
-    cout<<endl;
-    
- } 		
+		// output module name
+		cout << "\t" << it->first.c_str() << ":" << endl;
+
+		// obtain IF0
+		rvs::if0* pif0 = dynamic_cast<rvs::if0*>(pa->get_interface(0));
+		if(!pif0)
+		{
+			// action no longer needed so destroy it
+			rvs::module::action_destroy(pa);
+			
+			cerr << "ERROR: could not obtain data." << endl;
+			continue;
+		}
+		
+		// output info
+		std::cout << "\t\tDescription: " << pif0->get_description() << endl;
+		std::cout << "\t\tconfig: " << pif0->get_config() << endl;
+		std::cout << "\t\toutput: " << pif0->get_output() << endl; 
+   
+		// action no longer needed so destroy it
+		rvs::module::action_destroy(pa);
+	}
 }
 
 

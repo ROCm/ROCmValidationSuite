@@ -25,6 +25,7 @@
 
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
+add_compile_options(-pthread)
 
 
 set ( RVS "rvs" )
@@ -43,8 +44,8 @@ endif ()
 ## Include common cmake modules
 include ( utils )
 
-## Setup the package version.
-get_version ( "1.0.0" )
+## Setup the package version default (the actual one is taken from the latest Git tag).
+get_version ( "0.0.0" )
 
 set ( BUILD_VERSION_MAJOR ${VERSION_MAJOR} )
 set ( BUILD_VERSION_MINOR ${VERSION_MINOR} )
@@ -57,8 +58,16 @@ if ( DEFINED VERSION_BUILD AND NOT ${VERSION_BUILD} STREQUAL "" )
 endif ()
 set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
 
+## make version numbers visible to C code
+add_compile_options(-DBUILD_VERSION_MAJOR=${VERSION_MAJOR})
+add_compile_options(-DBUILD_VERSION_MINOR=${VERSION_MINOR})
+add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
+add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
+add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
+
 ## additional libraries
-set ( PROJECT_LINK_LIBS libdl.so "$ENV{RVS}/yaml-cpp/libyaml-cpp.a")
+set ( PROJECT_LINK_LIBS libdl.so "$ENV{RVS}/yaml-cpp/libyaml-cpp.a" libpthread.so)
+##set ( PROJECT_LINK_LIBS libdl.so "$ENV{RVS}/yaml-cpp/libyaml-cpp.a")
 
 ## define include directories
 include_directories(include ../include $ENV{RVS}/yaml-cpp/include )

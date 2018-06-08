@@ -31,4 +31,4 @@ Compile:
 Run:
 
     cd $RVS/rvs
-    ./rvs
+    sudo -HE  LD_LIBRARY_PATH=../gpup.so:../pesm.so:../rcqt.so:../peqt.so ./rvs -d 3 
