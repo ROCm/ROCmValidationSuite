@@ -1,37 +1,18 @@
-#ifndef ACTION_H_
-#define ACTION_H_
+// Copyright [year] <Copyright Owner> ... goes here
+#ifndef PEQT_SO_INCLUDE_ACTION_H_
+#define PEQT_SO_INCLUDE_ACTION_H_
 
 #include "rvslib.h"
 
-extern "C"
-{
-unsigned int pci_dev_find_cap_offset(struct pci_dev *dev, unsigned char cap);
-void get_link_cap_max_speed(struct pci_dev *dev, char *buf);
-void get_link_cap_max_width(struct pci_dev *dev, char *buff);
-void get_link_stat_cur_speed(struct pci_dev *dev, char *buff);
-void get_link_stat_neg_width(struct pci_dev *dev, char *buff);
-void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff);
-void get_slot_physical_num(struct pci_dev *dev, char *buff);
-void get_device_id(struct pci_dev *dev, char *buff);
-void get_dev_serial_num(struct pci_dev *dev, char *buff);
-void get_vendor_id(struct pci_dev *dev, char *buff);
-void get_kernel_driver(struct pci_dev *dev, char *buff);
-void get_pwr_base_pwr(struct pci_dev *dev, char *buff);
-void get_pwr_rail_type(struct pci_dev *dev, char *buff);
-void get_atomic_op_completer(struct pci_dev *dev, char *buff);
-}
+class action: public rvs::lib::actionbase {
+ public:
+    action();
+    virtual ~action();
 
-class action : public rvs::lib::actionbase
-{
-public:
-	action();
-	virtual ~action();
-	
-	virtual int property_set(const char*, const char*);
-	virtual int run(void);
-	
-protected:
-	
+    virtual int property_set(const char*, const char*);
+    virtual int run(void);
+
+ protected:
 };
 
-#endif /* ACTION_H_ */
+#endif  // PEQT_SO_INCLUDE_ACTION_H_
