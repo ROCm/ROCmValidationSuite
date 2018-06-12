@@ -28,6 +28,10 @@ extern "C" {
 #define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property!"
 #define YAML_DEVICE_PROP_DELIMITER      " "
 
+#define RVS_CONF_NAME_KEY               "name"
+#define RVS_CONF_DEVICE_KEY             "device"
+#define RVS_CONF_DEVICEID_KEY           "deviceid"
+
 const char* pcie_cap_names[] =
         { "link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed",
                 "link_stat_neg_width", "slot_pwr_limit_value",
@@ -53,6 +57,8 @@ int action::run(void) {
     bool amd_gpus_found = false;
     bool device_property_ok = true;
     bool device_all_selected = false;
+    bool device_id_filtering = false;
+    u16 config_deviceid;
 
     // array of pointer to function corresponding to each capability
     void (*arr_prop_pfunc_names[])(struct pci_dev *dev, char *) = {
@@ -74,14 +80,14 @@ int action::run(void) {
     struct pci_dev *dev;
 
     // get the action name
-    it = property.find("name");
+    it = property.find(RVS_CONF_NAME_KEY);
     if (it != property.end()) {
         action_name = it->second;
         property.erase(it);
     }
 
     // get gpus id
-    it = property.find("device");
+    it = property.find(RVS_CONF_DEVICE_KEY);
     if (it != property.end()) {
         if (it->second == "all") {
             device_all_selected = true;
@@ -96,6 +102,16 @@ int action::run(void) {
         msg = action_name + " peqt " + YAML_DEVICE_PROPERTY_ERROR;
         log(msg.c_str(), rvs::logerror);
         return 0;  // TODO(Tudor) check what to return 0 or -1?
+    }
+
+    // get the deviceid
+    it = property.find(RVS_CONF_DEVICEID_KEY);
+    if (it != property.end()) {
+        if(it->second != "") {
+            config_deviceid = std::stoi(it->second);
+            device_id_filtering = true;
+        }
+        property.erase(it);
     }
 
     // get all gpu id
@@ -135,50 +151,53 @@ int action::run(void) {
             // that should be an AMD GPU
             amd_gpus_found = true;
 
-            // check if the GPU is part of the PCIe check
-            // (either device: all or the gpu_id is the device: <gpu id> list
+            // check for deviceid filtering
+            if(!device_id_filtering || (device_id_filtering && dev->device_id == config_deviceid)) {
 
-            bool cur_gpu_selected = false;
+                // check if the GPU is part of the PCIe check
+                // (either device: all or the gpu_id is the device: <gpu id> list
 
-            if (device_all_selected) {
-                cur_gpu_selected = true;
-            } else {
-                // search for this gpu in the list provided under the
-                // <device> property get the actual position in
-                // the location_id list
-                u16 index_loc_id = std::distance(gpus_location_id.begin(),
-                        it_gpu);
-                // get the gpu_id for the same position
-                u16 gpu_id = gpus_gpu_id.at(index_loc_id);
-
-                // check if this gpu_id is in the list provided
-                // within the <device> property
-                std::vector<string>::iterator it_gpu_id = find(
-                        device_prop_gpu_id_list.begin(),
-                        device_prop_gpu_id_list.end(), std::to_string(gpu_id));
-
-                if (it_gpu_id != device_prop_gpu_id_list.end())
+                bool cur_gpu_selected = false;
+                if (device_all_selected) {
                     cur_gpu_selected = true;
-            }
+                } else {
+                    // search for this gpu in the list provided under the
+                    // <device> property get the actual position in
+                    // the location_id list
+                    u16 index_loc_id = std::distance(gpus_location_id.begin(),
+                            it_gpu);
+                    // get the gpu_id for the same position
+                    u16 gpu_id = gpus_gpu_id.at(index_loc_id);
 
-            if (cur_gpu_selected) {
-                for (it = property.begin(); it != property.end(); ++it) {
-                    // skip the "capability."
-                    string prop_name = it->first.substr(
-                            it->first.find_last_of(".") + 1);
-                    for (unsigned char i = 0; i < PCI_DEV_NUM_CAPABILITIES; i++)
-                        if (prop_name == pcie_cap_names[i]) {
-                            (*arr_prop_pfunc_names[i])(dev, buff);
-                            msg = action_name + " peqt " + pcie_cap_names[i]
-                                    + " " + buff;
-                            log(msg.c_str(), rvs::loginfo);
-                            if (it->second != "") {
-                                regex prop_regex(it->second);
-                                if (!regex_match(buff, prop_regex)) {
-                                    pci_infra_ok = false;
+                    // check if this gpu_id is in the list provided
+                    // within the <device> property
+                    std::vector<string>::iterator it_gpu_id = find(
+                            device_prop_gpu_id_list.begin(),
+                            device_prop_gpu_id_list.end(), std::to_string(gpu_id));
+
+                    if (it_gpu_id != device_prop_gpu_id_list.end())
+                        cur_gpu_selected = true;
+                }
+
+                if (cur_gpu_selected) {
+                    for (it = property.begin(); it != property.end(); ++it) {
+                        // skip the "capability."
+                        string prop_name = it->first.substr(
+                                it->first.find_last_of(".") + 1);
+                        for (unsigned char i = 0; i < PCI_DEV_NUM_CAPABILITIES; i++)
+                            if (prop_name == pcie_cap_names[i]) {
+                                (*arr_prop_pfunc_names[i])(dev, buff);
+                                msg = action_name + " peqt " + pcie_cap_names[i]
+                                        + " " + buff;
+                                log(msg.c_str(), rvs::loginfo);
+                                if (it->second != "") {
+                                    regex prop_regex(it->second);
+                                    if (!regex_match(buff, prop_regex)) {
+                                        pci_infra_ok = false;
+                                    }
                                 }
                             }
-                        }
+                    }
                 }
             }
         }
