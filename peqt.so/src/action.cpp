@@ -18,6 +18,7 @@ extern "C" {
 
 #include "pci_caps.h"
 #include "gpu_util.h"
+#include "rvs_util.h"
 #include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "action.h"
@@ -33,28 +34,6 @@ const char* pcie_cap_names[] =
                 "slot_physical_num", "device_id", "vendor_id", "kernel_driver",
                 "dev_serial_num", "pwr_base_pwr", "pwr_rail_type",
                 "atomic_op_completer" };
-
-/**
- * splits a string based on a given delimiter
- * @param str_val input string
- * @param delimiter tokens' delimiter
- * @return vector containing all tokens
- */
-static std::vector<string> split(const string& str_val,
-        const string& delimiter) {
-    std::vector<string> str_tokens;
-    u16 prev_pos = 0, cur_pos = 0;
-    do {
-        cur_pos = str_val.find(delimiter, prev_pos);
-        if (cur_pos == string::npos)
-            cur_pos = str_val.length();
-        string token = str_val.substr(prev_pos, cur_pos - prev_pos);
-        if (!token.empty())
-            str_tokens.push_back(token);
-        prev_pos = cur_pos + delimiter.length();
-    } while (cur_pos < str_val.length() && prev_pos < str_val.length());
-    return str_tokens;
-}
 
 action::action() {
 }
@@ -108,7 +87,7 @@ int action::run(void) {
             device_all_selected = true;
         } else {
             // split the list of gpu_id
-            device_prop_gpu_id_list = split(it->second,
+            device_prop_gpu_id_list = str_split(it->second,
             YAML_DEVICE_PROP_DELIMITER);
         }
         property.erase(it);
@@ -157,7 +136,7 @@ int action::run(void) {
             amd_gpus_found = true;
 
             // check if the GPU is part of the PCIe check
-            // (either device: all or the gpu id is the device: <gpu id> list
+            // (either device: all or the gpu_id is the device: <gpu id> list
 
             bool cur_gpu_selected = false;
 
