@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <fstream>
+#include <map>
 
 using namespace std;
 
@@ -71,3 +72,33 @@ void gpu_get_all_location_id( std::vector<unsigned short int>& gpus_location_id)
         f_prop.close();
      }
 }
+
+/**
+ * gets all GPUS gpu_id
+ * @param gpus_id the vector that will store all the GPU gpu_id
+ * @return
+ */
+void gpu_get_all_gpu_id(std::vector<unsigned short int>& gpus_id)
+{
+    ifstream f_id,f_prop;
+    char path[KFD_PATH_MAX_LENGTH];
+
+    int gpu_id;
+
+    //Discover the number of nodes: Inside nodes folder there are only folders that represent the node number
+    int num_nodes = gpu_num_subdirs((char*)KFD_SYS_PATH_NODES, (char*)"");
+
+    //get all GPUs device id
+    for(int node_id=0; node_id<num_nodes; node_id++){
+        snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES, node_id);
+        f_id.open(path);
+
+        f_id >> gpu_id;
+
+        if (gpu_id != 0)
+            gpus_id.push_back(gpu_id);
+
+        f_id.close();
+     }
+}
+
