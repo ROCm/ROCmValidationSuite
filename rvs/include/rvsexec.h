@@ -2,7 +2,6 @@
 #ifndef RVSEXEC_H_
 #define RVSEXEC_H_
 
-#include <map>
 #include <string>
 #include "yaml-cpp/node/node.h"
 
@@ -19,17 +18,13 @@ class exec
 {
 public:
 	
-	typedef map<string,string> options_t;
-	exec(const options_t& rOptions);
+	exec();
 	~exec();
 	
 	int run();
 	
 protected:	
-	
-	bool 	has_option(const char* pOption, string& val);
-	options_t	options;
-	
+
 	void 	do_help(void);
 	void 	do_version(void);
 

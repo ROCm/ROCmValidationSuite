@@ -3,16 +3,16 @@
 #include "rvs_module.h"
 
 #include <pci/pci.h>
-//#include <thread>
 #include <iostream>
 
+#include "rvsloglp.h"
 #include "action.h"
 
-// callback for centralized loging functionality
-static t_rvs_module_log pflog;
+
+
 int log(const char* pMsg, const int level)
 {
-	return (*pflog)(pMsg, level);
+	return rvs::lp::Log(pMsg, level);
 }
 
 
@@ -45,7 +45,6 @@ extern "C" char* rvs_module_get_description(void)
    return (char*)"ROCm Validation Suite PESM module";
 }
 
-
 extern "C" char* rvs_module_get_config(void)
 {
 	return (char*)"monitor (bool)";
@@ -56,18 +55,9 @@ extern "C" char* rvs_module_get_output(void)
 	return (char*)"state (string)";
 }
 
-// extern "C" void myfuncapi() {
-// 	std::cout << "In myfuncapi()" << std::endl;
-// }
-
-extern "C" int   rvs_module_init(void* pfLog)
+extern "C" int   rvs_module_init(void* pMi)
 {
-	pflog = (t_rvs_module_log)pfLog;
-	
-//	myfuncapi();
-// 	std::thread t(myfuncapi);
-// 	t.join();
-	
+  rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
 	return 0;
 }
 extern "C" int   rvs_module_terminate(void)

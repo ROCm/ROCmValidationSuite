@@ -1,9 +1,12 @@
 
+#include "rvscli.h"
+
 #include <stdio.h>
 #include <iostream>
 
 
-#include "rvscli.h"
+#include "rvsoptions.h"
+
 
 
 using namespace std;
@@ -48,11 +51,11 @@ void rvs::cli::init_grammar()
 	sp = make_shared<optbase>("--statspath", value);
 	grammar.insert(gpair("--statspath", sp));
 
-	sp = make_shared<optbase>("-a", value);
+	sp = make_shared<optbase>("-a", command);
 	grammar.insert(gpair("-a", sp));
 	grammar.insert(gpair("--appendLog", sp));
 
-	sp = make_shared<optbase>("-c", value);
+	sp = make_shared<optbase>("-c", command, value);
 	grammar.insert(gpair("-c", sp));
 	grammar.insert(gpair("--config", sp));
 
@@ -75,7 +78,7 @@ void rvs::cli::init_grammar()
 	grammar.insert(gpair("-j", sp));
 	grammar.insert(gpair("--json", sp));
 
-	sp = make_shared<optbase>("-l", value);
+	sp = make_shared<optbase>("-l", command, value);
 	grammar.insert(gpair("-l", sp));
 	grammar.insert(gpair("--debugLogFile", sp));
 
@@ -197,7 +200,7 @@ bool rvs::cli::emit_option()
 	// emit previous option and its value (if andy)
 	if( current_option != "")
 	{
-		options[current_option] = current_value;
+		options::opt[current_option] = current_value;
 	}
 	
 	// reset working buffer
@@ -245,7 +248,3 @@ bool rvs::cli::try_value(const string& token)
 	return true;
 }
 
-const  rvs::cli::t_options& rvs::cli::get_options(void)
-{
-	return options;
-}
