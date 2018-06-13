@@ -22,8 +22,8 @@ public:
 	static	void 	log_level(const int level);
 	static	int		log_level();
 
-	static	void 	to_jason(const bool flag);
-	static	bool	to_jason();
+	static	void 	to_json(const bool flag);
+	static	bool	to_json();
 
 	static	void 	append(const bool flag);
 	static	bool 	append();
@@ -31,15 +31,15 @@ public:
 	static	void 	logfile(const string& filename);
 	static	const 	string& logfile();
 		
-	static	int		log(const char* Message, const int level = 1);
-	static	int 	log(const string& Message, const int level = 1);
 
 	static	bool 	get_ticks(uint32_t& secs, uint32_t& usecs);
 	
 	static	int		initialize();
 	static  int		terminate();
 
+	static	int 	log(const string& Message, const int level = 1);
   static  int   Log(const char* Message, const int level);
+  static  int   LogExt(const char* Message, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
   static 	void* LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
   static 	int   LogRecordFlush( void* pLogRecord);
   static 	void* CreateNode(void* Parent, const char* Name);
@@ -52,7 +52,7 @@ public:
 
 protected:
 	static	int 	loglevel_m;
-	static	bool 	tojason_m;
+	static	bool 	tojson_m;
 	static	bool 	append_m;
 	static	bool 	isfirstrecord_m;
 	static	string 	logfile_m;

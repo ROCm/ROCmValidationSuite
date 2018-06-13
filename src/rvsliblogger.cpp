@@ -17,12 +17,12 @@
 
 
 int 	rvs::logger::loglevel_m(2);
-bool 	rvs::logger::tojason_m;
+bool 	rvs::logger::tojson_m;
 bool 	rvs::logger::append_m;
 bool	rvs::logger::isfirstrecord_m;
 string 	rvs::logger::logfile_m;
 
-const char*	rvs::logger::loglevelname[] = {"NONE  ", "RESULTS", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
+const char*	rvs::logger::loglevelname[] = {"NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
 
 rvs::logger::logger()
 {
@@ -53,6 +53,7 @@ void rvs::logger::log_level(const int rLevel)
 {
 	loglevel_m = rLevel;
 }
+
 int rvs::logger::log_level()
 {
 	return loglevel_m;
@@ -69,44 +70,77 @@ bool rvs::logger::get_ticks(uint32_t& secs, uint32_t& usecs)
     return true;
 }
 
-void rvs::logger::to_jason(const bool flag)
+void rvs::logger::to_json(const bool flag)
 {
-	tojason_m = flag;
-}
-bool rvs::logger::to_jason()
-{
-	return tojason_m;
+	tojson_m = flag;
 }
 
-
-int rvs::logger::log(const char* Message, const int level)
+bool rvs::logger::to_json()
 {
-	if( level < lognone || level > logtrace)
+	return tojson_m;
+}
+
+int rvs::logger::log(const string& Message, const int LogLevel) {
+	 return LogExt(Message.c_str(), LogLevel, 0, 0);
+}
+
+int rvs::logger::Log(const char* Message, const int LogLevel) {
+	return LogExt(Message, LogLevel, 0, 0);
+}
+
+int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
+	if( LogLevel < lognone || LogLevel > logtrace)
 	{
-		cerr << "ERROR: unknown logging level: " << level << endl;
+		cerr << "ERROR: unknown logging level: " << LogLevel << endl;
 		return -1;
 	}
 	
-	if( level > loglevel_m)
+	// log level too high?
+	if( LogLevel > loglevel_m)
 		return 0;
-	
+
 	uint32_t 	secs;
 	uint32_t 	usecs;
+
+  if( (Sec|uSec)) {
+		secs = Sec;
+		usecs = uSec;
+  } else {
+    get_ticks(secs, usecs);
+  }
+
 	char	buff[64];
-	get_ticks(secs, usecs);
 	sprintf(buff,"%6d.%6d", secs, usecs);
 	
 // 	std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
 // 	std::time_t now_c = std::chrono::system_clock::to_time_t(now);
 	
-	cout << "[" <<loglevelname[level] << "]" << " [" << buff << "] " << Message << endl;
-	
-	return 0;
-}
+  string row("[");
+  row += loglevelname[LogLevel];
+  row +="] [";
+  row += buff;
+  row +="] ";
+  row += Message;
 
-int rvs::logger::log(const string& Message, const int level)
-{
-	return log( Message.c_str(), level);
+  // if no quiet option given, output to cout
+  if (!rvs::options::has_option("-q")) {
+    cout << row << endl;
+  }
+
+  // this stream does not output JSON
+  if (to_json())
+    return 0;
+	
+  // send to file if requested
+  if (isfirstrecord_m) {
+    isfirstrecord_m = false;
+  }
+  else {
+    row = RVSENDL + row;
+  }
+  ToFile(row);
+
+	return 0;
 }
 
 void* rvs::logger::LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
@@ -134,7 +168,13 @@ int   rvs::logger::LogRecordFlush( void* pLogRecord) {
   string val;
 
   LogNodeRec* r = static_cast<LogNodeRec*>(pLogRecord);
+  // no JSON loggin requested
+  if (!to_json()) {
+    delete r;
+    return 0;
+  }
 
+  // assert log levl
   int level = r->LogLevel();
 	if( level < lognone || level > logtrace)
 	{
@@ -143,45 +183,32 @@ int   rvs::logger::LogRecordFlush( void* pLogRecord) {
 		return -1;
 	}
 
+	// if too high, ignore record
 	if( level > loglevel_m)
   {
     delete r;
 		return 0;
   }
 
+  // do not pre-pend "," separator for the first row
   string row;
-
-  if (tojason_m) {
-    if( isfirstrecord_m) {
-      isfirstrecord_m = false;
-    }
-    else {
-      row = ",";
-    }
-    row += r->ToJson("  ");
+  if( isfirstrecord_m) {
+    isfirstrecord_m = false;
   }
   else {
-    delete r;
-    return 0;
-TODO("fix this")
-//     if( isfirstrecord_m) {
-//       isfirstrecord_m = false;
-//     }
-//     row += r->ToJson("  ");
+    row = ",";
   }
 
+  // get JSON formatted log record
+  row += r->ToJson("  ");
 
-  // no --quiet option given?
-  if( !rvs::options::has_option("-q", val)) {
-    cout << row;
-  }
+  // send it to file
+  ToFile(row);
 
-  if( rvs::options::has_option("-l", val)) {
-    ToFile(row);
-  }
-
+  // dealloc memory
   delete r;
 
+  // return OK
 	return 0;
 }
 
@@ -235,41 +262,38 @@ void  rvs::logger::AddNode(void* Parent, void* Child) {
 }
 
 
-int rvs::logger::Log(const char* Message, const int level)
-{
-  if (tojason_m)
-    return 0;
-
-	return rvs::logger::log(Message, level);
-}
-
-
 int rvs::logger::initialize()
 {
   isfirstrecord_m = true;
 
   std::string row;
-  std::string val;
+  std::string logfile;
 
-  // logging but no appending - just truncate the file.
-  if (!append() && rvs::options::has_option("-l", val)) {
+  // if no logg to file requested, just return
+  if (!rvs::options::has_option("-l", logfile))
+    return 0;
+
+  if (append()) {
+
+    // appnd to file, replace the closing "]" with "," in order to
+    // have well formed JSON after appending
+    int patch_status = -1;
+
+    if( to_json()) {
+      patch_status = JsonPatchAppend();
+      if( (patch_status)) {
+        row += "[";
+      }
+    }
+  }  else {
+
+    // logging but not appending - just truncate the file.
     std::fstream fs;
-    fs.open (val, std::fstream::out);
+    fs.open (logfile, std::fstream::out);
     fs.close();
-  }
-
-  int patch_status = -1;
-  if( to_jason() && append() && rvs::options::has_option("-l", val)) {
-    patch_status = JsonPatchAppend();
-  }
-
-  if( (patch_status) && to_jason()) {
-    row += "[";
-  }
-
-  // if not "quiet" print to screen
-  if (!rvs::options::has_option("-q", val)) {
-    cout << row;
+    if (to_json()) {
+      row = "[";
+    }
   }
 
   // print to log file if requested
@@ -280,16 +304,14 @@ int rvs::logger::initialize()
 
 int rvs::logger::terminate()
 {
+  // if no logg to file requested, just return
+  if (!rvs::options::has_option("-l"))
+    return 0;
+
   std::string row(RVSENDL);
-  std::string val;
 
-  if( to_jason()) {
+  if( to_json()) {
     row += "]";
-  }
-
-  // if not "quiet" print to screen
-  if (!rvs::options::has_option("-q", val)) {
-    cout << row << endl;
   }
 
   // print to log file if requested

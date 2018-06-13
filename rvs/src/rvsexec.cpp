@@ -73,7 +73,7 @@ int rvs::exec::run()
 	// check -j options
 	if( rvs::options::has_option("-j", val))
 	{
-		logger::to_jason(true);
+		logger::to_json(true);
 	}
 	
 	
