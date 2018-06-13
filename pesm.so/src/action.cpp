@@ -37,6 +37,12 @@ int action::run(void)
 		log("creating Worker", rvs::logdebug);
 			pworker = new Worker();
 			pworker->set_name(property["name"]);
+			
+			// pas -j flag
+			if( property.find("cli.-j") != property.end())
+			{
+				pworker->json(true);
+			}
 		}
 		log("starting Worker", rvs::logdebug);
 		pworker->start();

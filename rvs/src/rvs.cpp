@@ -23,7 +23,7 @@ int main(int Argc, char**Argv)
 		return -1;
 	}
     
-    exec executor(cli.get_options());
+  exec executor;
 	sts = executor.run();
 	if(sts)
 	{

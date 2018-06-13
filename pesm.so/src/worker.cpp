@@ -20,6 +20,7 @@ extern "C" {
 #include "rvs_module.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
+#include "rvsloglp.h"
 
 
 Worker::Worker() {}
@@ -81,7 +82,12 @@ void Worker::run() {
 			
 			string msg("[" + action_name + "] " + "[PESM] " + std::to_string(dev_location_id) + " link speed change " + new_val);
 			log( msg.c_str(), rvs::loginfo);
-			
+
+      void* r = rvs::lp::LogRecordCreate("PESM", action_name);
+      rvs::lp::AddString(r, "msg", "link speed change");
+      rvs::lp::AddString(r, "val", new_val);
+      rvs::lp::LogRecordFlush(r);
+
 		}
 
 		pci_cleanup(pacc);

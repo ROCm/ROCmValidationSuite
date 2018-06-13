@@ -1,4 +1,6 @@
 
+#include "rvsexec.h"
+
 #include <iostream>
 #include <memory>
 #include "yaml-cpp/yaml.h"
@@ -8,29 +10,19 @@
 #include "rvsaction.h"
 #include "rvsmodule.h"
 #include "rvsliblogger.h"
+#include "rvsoptions.h"
 
-#include "rvsexec.h"
 #define VER "BUILD_VERSION_STRING"
 
 
-rvs::exec::exec(const rvs::exec::options_t& rOptions)
+rvs::exec::exec()
 {
-	options = rOptions;
 }
 
 rvs::exec::~exec()
 {
 }
 
-bool  rvs::exec::has_option(const char* pOptions, string& val)
-{
-	auto it = options.find(string(pOptions));
-	if( it == options.end())
-		return false;
-	
-	val = it->second;
-	return true;
-}
 
 int rvs::exec::run()
 {
@@ -38,21 +30,21 @@ int rvs::exec::run()
 	string 	val;
 	
 	// check -h options
-	if( has_option("-h", val))
+	if( rvs::options::has_option("-h", val))
 	{
 		do_help();
 		return 0;
 	}
 		
 	// check -v options
-	if( has_option("-v", val))
+	if( rvs::options::has_option("-v", val))
 	{
 		do_version();
 		return 0;
 	}
 		
 	// check -d options
-	if( has_option("-d", val))
+	if( rvs::options::has_option("-d", val))
 	{
 		int level;
 		try 
@@ -69,12 +61,29 @@ int rvs::exec::run()
 			cerr << "ERROR: syntax error: logging level not in range [0..5]: " << val <<endl;
 			return -1;
 		}
-//		rvs::lib::logger::log_level(level);
-		lib::logger::log_level(level);
+		logger::log_level(level);
 	}
 	
+	// check -a options
+	if( rvs::options::has_option("-a", val))
+	{
+		logger::append(true);
+	}
+	
+	// check -j options
+	if( rvs::options::has_option("-j", val))
+	{
+		logger::to_jason(true);
+	}
+	
+	
+	if( rvs::options::has_option("-l", val))
+	{
+		logger::logfile(val);
+	}
+
 	string config_file;
-	if( has_option("-c", val))
+	if( rvs::options::has_option("-c", val))
 	{
 		config_file = val;
 	}
@@ -83,9 +92,9 @@ int rvs::exec::run()
 		config_file = "conf/rvs.conf";
 	}
 		
-    rvs::module::initialize("./rvsmodules.config");
+  rvs::module::initialize("./rvsmodules.config");
 
-	if( has_option("-t", val))
+	if( rvs::options::has_option("-t", val))
 	{
         cout<< endl << "ROCm Validation Suite (version " << LIB_VERSION_STRING << ")" << endl << endl;
         cout<<"Modules available:"<<endl;
@@ -93,6 +102,8 @@ int rvs::exec::run()
 		return 0;
 	}
 	
+	logger::initialize();
+
 	try
 	{
 		sts = do_yaml(config_file);
@@ -101,6 +112,8 @@ int rvs::exec::run()
 		cerr << "Error parsing configuration file: " << config_file << endl;
 	}
 
+	logger::terminate();
+	
 	rvs::module::terminate();
 	
 	return sts;

@@ -8,6 +8,12 @@
 
 namespace rvs
 {
+
+struct init_stuct
+{
+	
+};
+
 namespace lib
 {
 

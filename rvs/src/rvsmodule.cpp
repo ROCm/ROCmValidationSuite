@@ -1,15 +1,16 @@
 
+#include "rvsmodule.h"
 
 #include <stdio.h>
 #include <iostream>
 #include <dlfcn.h>
-#include "yaml-cpp/yaml.h"
 
 #include "rvsliblogger.h"
 #include "rvsif0.h"
 #include "rvsif1.h"
 #include "rvsaction.h"
-#include "rvsmodule.h"
+#include "rvsliblog.h"
+
 
 std::map<std::string,rvs::module*>	rvs::module::modulemap;
 std::map<std::string,std::string>	rvs::module::filemap;
@@ -141,7 +142,17 @@ rvs::module* rvs::module::find_create_module(const char* name)
 
 int rvs::module::initialize()
 {
-	return (*rvs_module_init)((void*)LoggerCallback);
+	T_MODULE_INIT d;
+	
+	d.cbLog             = rvs::logger::Log;
+	d.cbLogRecordCreate = rvs::logger::LogRecordCreate;
+	d.cbLogRecordFlush 	= rvs::logger::LogRecordFlush;
+	d.cbCreateNode 		= rvs::logger::CreateNode;
+	d.cbAddString 		= rvs::logger::AddString;
+	d.cbAddInt			= rvs::logger::AddInt;
+	d.cbAddNode 		= rvs::logger::AddNode;
+	
+	return (*rvs_module_init)((void*)&d);
 }
 
 
