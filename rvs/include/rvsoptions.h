@@ -15,6 +15,7 @@ class options
 {
 public:
 
+  static bool has_option(const std::string& pOption);
   static bool has_option(const std::string& pOption, std::string& val);
   static const std::map<std::string,std::string>& get(void);
 

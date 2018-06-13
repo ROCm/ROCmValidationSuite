@@ -36,12 +36,18 @@ const int rvs::LogNodeRec::LogLevel()
 std::string rvs::LogNodeRec::ToJson(const std::string& Lead) {
 
 	string result(RVSENDL);
-	result += RVSENDL + Lead + "{";
+	result += Lead + "{";
 	
 	result += RVSENDL; 
 	result += Lead + RVSINDENT;
 	result +=  string("\"") + "loglevel" + "\"" + " : " + std::to_string(Level) + ",";
-	
+
+  char	buff[64];
+	sprintf(buff, "%6d.%6d", sec, usec);
+	result += RVSENDL;
+	result += Lead + RVSINDENT;
+	result +=  string("\"") + "time" + "\"" + " : " + string("\"") + buff + string("\"")  + ",";
+
 	int  size = Child.size();
 	for(int i = 0; i < size; i++) {
 //		result += RVSENDL;

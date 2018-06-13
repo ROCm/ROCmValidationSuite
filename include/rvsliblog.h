@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 typedef int   (*t_rvs_module_log)(const char*, const int);
+typedef int   (*t_cbLogExt)(const char*, const int, const unsigned int Sec, const unsigned int uSec);
 typedef void* (*t_cbLogRecordCreate)( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
 typedef int   (*t_cbLogRecordFlush)( void* pLogRecord);
 typedef void* (*t_cbCreateNode)(void* Parent, const char* Name);
@@ -17,13 +18,14 @@ typedef void  (*t_cbAddNode)(void* Parent, void* Child);
 
 typedef struct tag_module_init 
 {
-	t_rvs_module_log	cbLog;
-	t_cbLogRecordCreate	cbLogRecordCreate;
-	t_cbLogRecordFlush 	cbLogRecordFlush;
-	t_cbCreateNode 		cbCreateNode;
-	t_cbAddString 		cbAddString;
-	t_cbAddInt 			cbAddInt;
-	t_cbAddNode 		cbAddNode;
+	t_rvs_module_log     cbLog;
+  t_cbLogExt           cbLogExt;
+	t_cbLogRecordCreate  cbLogRecordCreate;
+	t_cbLogRecordFlush   cbLogRecordFlush;
+	t_cbCreateNode       cbCreateNode;
+	t_cbAddString        cbAddString;
+	t_cbAddInt           cbAddInt;
+	t_cbAddNode          cbAddNode;
 	
 } T_MODULE_INIT;
 

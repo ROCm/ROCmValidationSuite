@@ -142,17 +142,18 @@ rvs::module* rvs::module::find_create_module(const char* name)
 
 int rvs::module::initialize()
 {
-	T_MODULE_INIT d;
-	
-	d.cbLog             = rvs::logger::Log;
-	d.cbLogRecordCreate = rvs::logger::LogRecordCreate;
-	d.cbLogRecordFlush 	= rvs::logger::LogRecordFlush;
-	d.cbCreateNode 		= rvs::logger::CreateNode;
-	d.cbAddString 		= rvs::logger::AddString;
-	d.cbAddInt			= rvs::logger::AddInt;
-	d.cbAddNode 		= rvs::logger::AddNode;
-	
-	return (*rvs_module_init)((void*)&d);
+  T_MODULE_INIT d;
+
+  d.cbLog             = rvs::logger::Log;
+  d.cbLogExt          = rvs::logger::LogExt;
+  d.cbLogRecordCreate = rvs::logger::LogRecordCreate;
+  d.cbLogRecordFlush 	= rvs::logger::LogRecordFlush;
+  d.cbCreateNode      = rvs::logger::CreateNode;
+  d.cbAddString       = rvs::logger::AddString;
+  d.cbAddInt          = rvs::logger::AddInt;
+  d.cbAddNode         = rvs::logger::AddNode;
+
+  return (*rvs_module_init)((void*)&d);
 }
 
 
