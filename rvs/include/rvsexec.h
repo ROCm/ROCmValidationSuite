@@ -27,6 +27,7 @@ protected:
 
 	void 	do_help(void);
 	void 	do_version(void);
+  int   do_gpu_list(void);
 
 	int 	do_yaml(const string& config_file);
 	int 	do_yaml_properties(const YAML::Node& node, const string& module_name, if1* pif1);

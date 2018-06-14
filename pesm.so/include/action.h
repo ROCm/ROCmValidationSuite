@@ -14,7 +14,7 @@ public:
 	virtual int run(void);
 	
 protected:
-	
+	int do_gpu_list(void);
 };
 
 #endif /* ACTION_H_ */

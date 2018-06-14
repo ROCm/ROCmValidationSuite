@@ -27,8 +27,10 @@ protected:
 	void sleep(const unsigned int ms);
 	
 public:
-    virtual int   	property_set(const char*, const char*);
-	virtual int   	run(void) = 0;
+  virtual int   	property_set(const char*, const char*);
+  virtual int   	run(void) = 0;
+  bool has_property(const std::string& key, std::string& val);
+  bool has_property(const std::string& key);
 
 protected:
 	std::map<std::string, std::string>	property;
