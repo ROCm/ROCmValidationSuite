@@ -33,8 +33,10 @@ extern "C" {
 #define RVS_CONF_NAME_KEY               "name"
 #define RVS_CONF_DEVICE_KEY             "device"
 #define RVS_CONF_DEVICEID_KEY           "deviceid"
+#define RVS_LOG_GPU_ID_KEY              "gpu_id"
 
-#define JSON_CAPS_NODE_NAME             "PCIe capabilities"
+
+#define JSON_CAPS_NODE_NAME             "capabilities"
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 
 #define MODULE_NAME                     "peqt"
@@ -140,9 +142,10 @@ bool action::property_get_device(int *error) {
 /**
  * gets all PCIe capabilities for a given gpu
  * @param dev pointer to pci_dev corresponding to the current GPU
+ * @param gpu_id unique gpu id
  * @return false if regex check failed, true otherwise
  */
-bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev) {
+bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev, unsigned short int gpu_id) {
     char buff[CHAR_BUFF_MAX_SIZE];
     string prop_name, msg;
     bool pci_infra_qual_result = true;
@@ -158,6 +161,10 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev) {
                 log(msg.c_str(), rvs::logerror);
             }
         }
+    }
+
+    if (bjson && json_pcaps_node != NULL) { // json logging stuff
+        rvs::lp::AddString(json_pcaps_node, RVS_LOG_GPU_ID_KEY, std::to_string(gpu_id));
     }
 
     for (it = property.begin(); it != property.end(); ++it) {
@@ -195,10 +202,8 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev) {
             }
     }
 
-    if (bjson && json_root_node != NULL) {  // json logging stuff
-        if (json_pcaps_node != NULL)
+    if (bjson && json_pcaps_node != NULL)  // json logging stuff
             rvs::lp::AddNode(json_root_node, json_pcaps_node);
-    }
 
     return pci_infra_qual_result;
 }
@@ -261,6 +266,9 @@ int action::run(void) {
     struct pci_access *pacc;
     struct pci_dev *dev;
 
+    // get the action name
+    property_get_action_name();
+
     bjson = false;  // already initialized in the default constructor
 
     // check for -j flag (json logging)
@@ -268,10 +276,10 @@ int action::run(void) {
     {
         unsigned int sec;
         unsigned int usec;
+        rvs::lp::get_ticks(sec, usec);
 
         bjson = true;
 
-        rvs::lp::get_ticks(sec, usec);
         json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME, action_name.c_str(), rvs::loginfo, sec, usec);
         if (json_root_node == NULL) {
             // log the error
@@ -280,9 +288,6 @@ int action::run(void) {
         }
 
     }
-
-    // get the action name
-    property_get_action_name();
 
     // get <device> property value (a list of gpu id)
     device_all_selected = property_get_device(&error);
@@ -382,16 +387,15 @@ int action::run(void) {
 
                 bool cur_gpu_selected = false;
 
+                // get the actual position in the location_id list
+                unsigned short int index_loc_id = std::distance(gpus_location_id.begin(), it_gpu);
+                // get the gpu_id for the same position
+                unsigned short int gpu_id = gpus_id.at(index_loc_id);
+
                 if (device_all_selected) {
                     cur_gpu_selected = true;
                 } else {
                     // search for this gpu in the list provided under the <device> property
-
-                    // get the actual position in the location_id list
-                    unsigned short int index_loc_id = std::distance(gpus_location_id.begin(), it_gpu);
-                    // get the gpu_id for the same position
-                    unsigned short int gpu_id = gpus_id.at(index_loc_id);
-
                     // check if this gpu_id is in the list provided within the <device> property
                     vector<string>::iterator it_gpu_id = find(device_prop_gpu_id_list.begin(), device_prop_gpu_id_list.end(), std::to_string(gpu_id));
 
@@ -401,7 +405,7 @@ int action::run(void) {
 
                 if (cur_gpu_selected) {
                     amd_gpus_found = true;
-                    if(!get_gpu_all_pcie_capabilities(dev))
+                    if(!get_gpu_all_pcie_capabilities(dev, gpu_id))
                         pci_infra_qual_result = false;
                 }
             }
