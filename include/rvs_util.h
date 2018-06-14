@@ -1,12 +1,14 @@
-#ifndef _RVS_UTIL_H_
-#define _RVS_UTIL_H_
+// Copyright [year] <Copyright Owner> ... goes here
+#ifndef INCLUDE_RVS_UTIL_H_
+#define INCLUDE_RVS_UTIL_H_
 
 #include <vector>
 #include <string>
 
-using namespace std;
+using std::vector;
+using std::string;
 
-extern std::vector<string> str_split(const std::string& str_val,
-        const std::string& delimiter);
+extern vector<string> str_split(const string& str_val,
+        const string& delimiter);
 
-#endif  // _RVS_UTIL_H_
+#endif  // INCLUDE_RVS_UTIL_H_
