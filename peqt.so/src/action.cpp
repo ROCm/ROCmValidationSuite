@@ -17,6 +17,7 @@ extern "C" {
 #include "rvs_util.h"
 #include "rvsliblogger.h"
 #include "rvs_module.h"
+#include "rvsloglp.h"
 #include "action.h"
 
 #define CHAR_BUFF_MAX_SIZE              1024
@@ -32,6 +33,9 @@ extern "C" {
 #define RVS_CONF_NAME_KEY               "name"
 #define RVS_CONF_DEVICE_KEY             "device"
 #define RVS_CONF_DEVICEID_KEY           "deviceid"
+
+#define JSON_CAPS_NODE_NAME             "PCIe capabilities"
+#define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 
 #define MODULE_NAME                     "peqt"
 
@@ -57,10 +61,13 @@ using std::vector;
 using std::string;
 using std::map;
 
+
 /**
  * default class constructor
  */
 action::action() {
+    bjson = false;
+    json_root_node = NULL;
 }
 
 /**
@@ -140,6 +147,18 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev) {
     string prop_name, msg;
     bool pci_infra_qual_result = true;
     map<string, string>::iterator it;  // module's properties map iterator
+    void *json_pcaps_node = NULL;
+
+    if (bjson) {
+        if (json_root_node != NULL) {
+            json_pcaps_node = rvs::lp::CreateNode(json_root_node, JSON_CAPS_NODE_NAME);
+            if (json_pcaps_node == NULL) {
+                // log the error
+                msg = action_name + " " + MODULE_NAME + " " + JSON_CREATE_NODE_ERROR;
+                log(msg.c_str(), rvs::logerror);
+            }
+        }
+    }
 
     for (it = property.begin(); it != property.end(); ++it) {
         // skip the "capability."
@@ -152,6 +171,10 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev) {
                 // log the capability's value
                 msg = action_name + " " + MODULE_NAME + " " + pcie_cap_names[i] + " " + buff;
                 log(msg.c_str(), rvs::loginfo);
+
+                if (bjson && json_pcaps_node != NULL) { // json logging stuff
+                    rvs::lp::AddString(json_pcaps_node, pcie_cap_names[i], buff);
+                }
 
                 // check for regex match
                 if (it->second != "") {
@@ -170,6 +193,11 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev) {
                     }
                 }
             }
+    }
+
+    if (bjson && json_root_node != NULL) {  // json logging stuff
+        if (json_pcaps_node != NULL)
+            rvs::lp::AddNode(json_root_node, json_pcaps_node);
     }
 
     return pci_infra_qual_result;
@@ -232,6 +260,26 @@ int action::run(void) {
 
     struct pci_access *pacc;
     struct pci_dev *dev;
+
+    bjson = false;  // already initialized in the default constructor
+
+    // check for -j flag (json logging)
+    if( property.find("cli.-j") != property.end())
+    {
+        unsigned int sec;
+        unsigned int usec;
+
+        bjson = true;
+
+        rvs::lp::get_ticks(sec, usec);
+        json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME, action_name.c_str(), rvs::loginfo, sec, usec);
+        if (json_root_node == NULL) {
+            // log the error
+            msg = action_name + " " + MODULE_NAME + " " + JSON_CREATE_NODE_ERROR;
+            log(msg.c_str(), rvs::logerror);
+        }
+
+    }
 
     // get the action name
     property_get_action_name();
@@ -367,6 +415,11 @@ int action::run(void) {
 
     msg = action_name + " " + MODULE_NAME + " " + (pci_infra_qual_result ? "TRUE" : "FALSE");
     log(msg.c_str(), rvs::logresults);
+
+    if (bjson && json_root_node != NULL) {  // json logging stuff
+        rvs::lp::AddString(json_root_node, "RESULT", (pci_infra_qual_result ? "TRUE" : "FALSE"));  // find a way to overcome the "RESULT" hard-coded
+        rvs::lp::LogRecordFlush(json_root_node);
+    }
 
     return 0;
 }
