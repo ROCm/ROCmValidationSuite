@@ -32,3 +32,7 @@ Run:
 
     cd $RVS/rvs
     sudo -HE  LD_LIBRARY_PATH=../bin ./rvs -d 3 
+
+
+For CentOS specific instructions see this [link](./CentOS.md).
+
