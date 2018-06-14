@@ -66,9 +66,9 @@ void rvs::cli::init_grammar()
 	grammar.insert(gpair("-d", sp));
 	grammar.insert(gpair("--debugLevel", sp));
 
-// 	sp = make_shared<optbase>("-g", command);
-// 	grammar.insert(gpair("-g", sp));
-// 	grammar.insert(gpair("--listGpus", sp));
+  sp = make_shared<optbase>("-g", command);
+  grammar.insert(gpair("-g", sp));
+  grammar.insert(gpair("--listGpus", sp));
 
 // 	sp = make_shared<optbase>("-i", value);
 // 	grammar.insert(gpair("-i", sp));

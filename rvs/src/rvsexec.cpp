@@ -104,6 +104,12 @@ int rvs::exec::run()
 	
 	logger::initialize();
 
+	if( rvs::options::has_option("-g")) {
+    int sts = do_gpu_list();
+    logger::terminate();
+    return sts;
+  }
+
 	try
 	{
 		sts = do_yaml(config_file);
@@ -129,3 +135,41 @@ void rvs::exec::do_help()
 	cout << "No help available." << endl;
 }
 
+int rvs::exec::do_gpu_list() {
+
+  cout << "\nROCm Validation Suite (version " << LIB_VERSION_STRING << ")\n" << endl;
+  // create action excutor in .so
+  rvs::action* pa = module::action_create("pesm");
+  if(!pa)
+  {
+    cerr << "ERROR: could not list GPUs" << endl;
+    return 1;
+  }
+
+  // obtain interface to set parameters and execute action
+  if1* pif1 = (if1*)(pa->get_interface(1));
+  if(!pif1)
+  {
+    cerr << "ERROR: could not obtain interface IF1"<< endl;
+    module::action_destroy(pa);
+    return 1;
+  }
+
+  // specify "list GPUs" action
+  pif1->property_set("do_gpu_list", "");
+
+  // set command line options:
+  for (auto clit = rvs::options::get().begin(); clit != rvs::options::get().end(); ++clit) {
+    string p(clit->first);
+    p = "cli." + p;
+    pif1->property_set(p, clit->second);
+  }
+
+  // execute action
+  int sts = pif1->run();
+
+  // procssing finished, release action object
+  module::action_destroy(pa);
+
+  return sts;
+}
