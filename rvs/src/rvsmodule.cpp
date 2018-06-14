@@ -10,6 +10,7 @@
 #include "rvsif1.h"
 #include "rvsaction.h"
 #include "rvsliblog.h"
+#include "rvsoptions.h"
 
 
 std::map<std::string,rvs::module*>	rvs::module::modulemap;
@@ -94,12 +95,18 @@ rvs::module* rvs::module::find_create_module(const char* name)
 		}
 		
 		// open .so 
-		void* psolib = dlopen(it->second.c_str(), RTLD_LAZY);
+		string libpath;
+    if(rvs::options::has_option("-m",libpath)) {
+      libpath += "/";
+    }
+
+    string sofullname(libpath + it->second);
+		void* psolib = dlopen(sofullname.c_str(), RTLD_LAZY);
 		
 		// error?
 		if( !psolib)
 		{
-			cerr << "ERROR: could not load .so '" << it->second.c_str() << "' reason: " << dlerror() << endl;
+			cerr << "ERROR: could not load .so '" << sofullname << "' reason: " << dlerror() << endl;
 			return NULL;	// fail
 		}
 

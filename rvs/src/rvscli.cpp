@@ -85,9 +85,9 @@ void rvs::cli::init_grammar()
 	sp = make_shared<optbase>("-q", command);
 	grammar.insert(gpair("--quiet", sp));
 
-// 	sp = make_shared<optbase>("-m", value);
-// 	grammar.insert(gpair("-m", sp));
-// 	grammar.insert(gpair("--modulepath", sp));
+  sp = make_shared<optbase>("-m", command, value);
+  grammar.insert(gpair("-m", sp));
+  grammar.insert(gpair("--modulepath", sp));
 
 // 	sp = make_shared<optbase>("-s", command);
 // 	grammar.insert(gpair("-s", sp));
