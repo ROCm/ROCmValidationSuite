@@ -266,6 +266,9 @@ int action::run(void) {
     struct pci_access *pacc;
     struct pci_dev *dev;
 
+    // get the action name
+    property_get_action_name();
+
     bjson = false;  // already initialized in the default constructor
 
     // check for -j flag (json logging)
@@ -285,9 +288,6 @@ int action::run(void) {
         }
 
     }
-
-    // get the action name
-    property_get_action_name();
 
     // get <device> property value (a list of gpu id)
     device_all_selected = property_get_device(&error);
