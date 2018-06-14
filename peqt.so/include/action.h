@@ -31,6 +31,8 @@ class action: public rvs::lib::actionbase {
                                              // in the <device> property
 
     string action_name;
+    bool bjson;
+    void* json_root_node;
 
     // PCIe capabilities stuff
     bool get_gpu_all_pcie_capabilities(struct pci_dev *dev);
