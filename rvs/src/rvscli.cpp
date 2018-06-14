@@ -48,8 +48,8 @@ void rvs::cli::init_grammar()
 	shared_ptr<optbase> sp;
 	
 	grammar.clear();
-	sp = make_shared<optbase>("--statspath", value);
-	grammar.insert(gpair("--statspath", sp));
+// 	sp = make_shared<optbase>("--statspath", value);
+// 	grammar.insert(gpair("--statspath", sp));
 
 	sp = make_shared<optbase>("-a", command);
 	grammar.insert(gpair("-a", sp));
@@ -66,13 +66,13 @@ void rvs::cli::init_grammar()
 	grammar.insert(gpair("-d", sp));
 	grammar.insert(gpair("--debugLevel", sp));
 
-	sp = make_shared<optbase>("-g", command);
-	grammar.insert(gpair("-g", sp));
-	grammar.insert(gpair("--listGpus", sp));
+// 	sp = make_shared<optbase>("-g", command);
+// 	grammar.insert(gpair("-g", sp));
+// 	grammar.insert(gpair("--listGpus", sp));
 
-	sp = make_shared<optbase>("-i", value);
-	grammar.insert(gpair("-i", sp));
-	grammar.insert(gpair("--indexes", sp));
+// 	sp = make_shared<optbase>("-i", value);
+// 	grammar.insert(gpair("-i", sp));
+// 	grammar.insert(gpair("--indexes", sp));
 
 	sp = make_shared<optbase>("-j", command);
 	grammar.insert(gpair("-j", sp));
@@ -85,27 +85,27 @@ void rvs::cli::init_grammar()
 	sp = make_shared<optbase>("-q", command);
 	grammar.insert(gpair("--quiet", sp));
 
-	sp = make_shared<optbase>("-m", value);
-	grammar.insert(gpair("-m", sp));
-	grammar.insert(gpair("--modulepath", sp));
+// 	sp = make_shared<optbase>("-m", value);
+// 	grammar.insert(gpair("-m", sp));
+// 	grammar.insert(gpair("--modulepath", sp));
 
-	sp = make_shared<optbase>("-s", command);
-	grammar.insert(gpair("-s", sp));
-	grammar.insert(gpair("--scriptable", sp));
-
-	sp = make_shared<optbase>("-st", value);
-	grammar.insert(gpair("--specifiedtest", sp));
-
-	sp = make_shared<optbase>("-sf", command);
-	grammar.insert(gpair("--statsonfail", sp));
+// 	sp = make_shared<optbase>("-s", command);
+// 	grammar.insert(gpair("-s", sp));
+// 	grammar.insert(gpair("--scriptable", sp));
+//
+// 	sp = make_shared<optbase>("-st", value);
+// 	grammar.insert(gpair("--specifiedtest", sp));
+//
+// 	sp = make_shared<optbase>("-sf", command);
+// 	grammar.insert(gpair("--statsonfail", sp));
 
 	sp = make_shared<optbase>("-t", command);
 	grammar.insert(gpair("-t", sp));
 	grammar.insert(gpair("--listTests", sp));
 	
-	sp = make_shared<optbase>("-v", command);
-	grammar.insert(gpair("-v", sp));
-	grammar.insert(gpair("--verbose", sp));
+// 	sp = make_shared<optbase>("-v", command);
+// 	grammar.insert(gpair("-v", sp));
+// 	grammar.insert(gpair("--verbose", sp));
 	
 	sp = make_shared<optbase>("-ver", command);
 	grammar.insert(gpair("--version", sp));
@@ -221,7 +221,7 @@ bool rvs::cli::try_command(const string& token)
 	emit_option();
 
 	// token identified as command, so store it:
-	current_option = token;
+	current_option = it->second->name;
 	
 	// fill context  stack with new possible continuations:
 	it->second->adjust_context(context);

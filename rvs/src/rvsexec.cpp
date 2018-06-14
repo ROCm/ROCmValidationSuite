@@ -37,7 +37,7 @@ int rvs::exec::run()
 	}
 		
 	// check -v options
-	if( rvs::options::has_option("-v", val))
+	if( rvs::options::has_option("-ver", val))
 	{
 		do_version();
 		return 0;
