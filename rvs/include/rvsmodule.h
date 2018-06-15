@@ -3,6 +3,9 @@
 #ifndef RVSMODULE_H_
 #define RVSMODULE_H_
 
+#include <map>
+#include "yaml-cpp/yaml.h"
+
 #include "rvsmodule_if.h"
 	
 namespace rvs 

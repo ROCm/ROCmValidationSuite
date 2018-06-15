@@ -20,6 +20,7 @@ extern "C" {
 #include "rvs_module.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
+#include "rvsloglp.h"
 
 
 Worker::Worker() {}
@@ -67,7 +68,11 @@ void Worker::run() {
 
 			if (it_gpu == gpus_location_id.end())
 				continue;
-			
+
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(sec, usec);
+
 			// get current speed for the link
 			get_link_stat_cur_speed(dev, buff);
 			string new_val(buff);
@@ -80,8 +85,13 @@ void Worker::run() {
 			old_val[dev_location_id] = new_val;
 			
 			string msg("[" + action_name + "] " + "[PESM] " + std::to_string(dev_location_id) + " link speed change " + new_val);
-			log( msg.c_str(), rvs::loginfo);
-			
+			rvs::lp::Log( msg, rvs::loginfo, sec, usec);
+
+      void* r = rvs::lp::LogRecordCreate("PESM", action_name.c_str(), rvs::loginfo, sec, usec);
+      rvs::lp::AddString(r, "msg", "link speed change");
+      rvs::lp::AddString(r, "val", new_val);
+      rvs::lp::LogRecordFlush(r);
+
 		}
 
 		pci_cleanup(pacc);

@@ -15,14 +15,12 @@ class cli
 {
 
 public:
-	typedef map<string,string> t_options;
 	
 			cli();
 	virtual ~cli();
 
 	int 	parse(int Argc, char** Argv);
 	const 	char* 	get_error_string();
-	const 	t_options& get_options(void);
 
 protected:
 	typedef enum {eof, value, command} 			econtext;
@@ -62,7 +60,6 @@ protected:
 	string 					current_value;
 	stack<econtext> 					context;
 	map<string,shared_ptr<optbase>> 	grammar;
-	t_options 							options;
 	
 };
 

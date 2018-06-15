@@ -1,12 +1,11 @@
 
 #include "rvs_module.h"
 #include "action.h"
+#include "rvsloglp.h"
 
-// callback for centralized loging functionality
-static t_rvs_module_log pflog;
 int log(const char* pMsg, const int level)
 {
-	return (*pflog)(pMsg, level);
+	return rvs::lp::Log(pMsg, level);
 }
 
 extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision)
@@ -48,11 +47,12 @@ extern "C" char* rvs_module_get_output(void)
 	return (char*)"pass (bool)";
 }
 
-extern "C" int   rvs_module_init(void* pfLog)
+extern "C" int   rvs_module_init(void* pMi)
 {
-	pflog = (t_rvs_module_log)pfLog;
+  rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
 	return 0;
 }
+
 extern "C" int   rvs_module_terminate(void)
 {
 	return 0;

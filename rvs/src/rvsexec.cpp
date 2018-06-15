@@ -1,4 +1,6 @@
 
+#include "rvsexec.h"
+
 #include <iostream>
 #include <memory>
 #include "yaml-cpp/yaml.h"
@@ -8,29 +10,19 @@
 #include "rvsaction.h"
 #include "rvsmodule.h"
 #include "rvsliblogger.h"
+#include "rvsoptions.h"
 
-#include "rvsexec.h"
 #define VER "BUILD_VERSION_STRING"
 
 
-rvs::exec::exec(const rvs::exec::options_t& rOptions)
+rvs::exec::exec()
 {
-	options = rOptions;
 }
 
 rvs::exec::~exec()
 {
 }
 
-bool  rvs::exec::has_option(const char* pOptions, string& val)
-{
-	auto it = options.find(string(pOptions));
-	if( it == options.end())
-		return false;
-	
-	val = it->second;
-	return true;
-}
 
 int rvs::exec::run()
 {
@@ -38,21 +30,21 @@ int rvs::exec::run()
 	string 	val;
 	
 	// check -h options
-	if( has_option("-h", val))
+	if( rvs::options::has_option("-h", val))
 	{
 		do_help();
 		return 0;
 	}
 		
 	// check -v options
-	if( has_option("-v", val))
+	if( rvs::options::has_option("-ver", val))
 	{
 		do_version();
 		return 0;
 	}
 		
 	// check -d options
-	if( has_option("-d", val))
+	if( rvs::options::has_option("-d", val))
 	{
 		int level;
 		try 
@@ -69,12 +61,29 @@ int rvs::exec::run()
 			cerr << "ERROR: syntax error: logging level not in range [0..5]: " << val <<endl;
 			return -1;
 		}
-//		rvs::lib::logger::log_level(level);
-		lib::logger::log_level(level);
+		logger::log_level(level);
 	}
 	
+	// check -a options
+	if( rvs::options::has_option("-a", val))
+	{
+		logger::append(true);
+	}
+	
+	// check -j options
+	if( rvs::options::has_option("-j", val))
+	{
+		logger::to_json(true);
+	}
+	
+	
+	if( rvs::options::has_option("-l", val))
+	{
+		logger::logfile(val);
+	}
+
 	string config_file;
-	if( has_option("-c", val))
+	if( rvs::options::has_option("-c", val))
 	{
 		config_file = val;
 	}
@@ -83,9 +92,9 @@ int rvs::exec::run()
 		config_file = "conf/rvs.conf";
 	}
 		
-    rvs::module::initialize("./rvsmodules.config");
+  rvs::module::initialize("./rvsmodules.config");
 
-	if( has_option("-t", val))
+	if( rvs::options::has_option("-t", val))
 	{
         cout<< endl << "ROCm Validation Suite (version " << LIB_VERSION_STRING << ")" << endl << endl;
         cout<<"Modules available:"<<endl;
@@ -93,6 +102,14 @@ int rvs::exec::run()
 		return 0;
 	}
 	
+	logger::initialize();
+
+	if( rvs::options::has_option("-g")) {
+    int sts = do_gpu_list();
+    logger::terminate();
+    return sts;
+  }
+
 	try
 	{
 		sts = do_yaml(config_file);
@@ -101,6 +118,8 @@ int rvs::exec::run()
 		cerr << "Error parsing configuration file: " << config_file << endl;
 	}
 
+	logger::terminate();
+	
 	rvs::module::terminate();
 	
 	return sts;
@@ -116,3 +135,41 @@ void rvs::exec::do_help()
 	cout << "No help available." << endl;
 }
 
+int rvs::exec::do_gpu_list() {
+
+  cout << "\nROCm Validation Suite (version " << LIB_VERSION_STRING << ")\n" << endl;
+  // create action excutor in .so
+  rvs::action* pa = module::action_create("pesm");
+  if(!pa)
+  {
+    cerr << "ERROR: could not list GPUs" << endl;
+    return 1;
+  }
+
+  // obtain interface to set parameters and execute action
+  if1* pif1 = (if1*)(pa->get_interface(1));
+  if(!pif1)
+  {
+    cerr << "ERROR: could not obtain interface IF1"<< endl;
+    module::action_destroy(pa);
+    return 1;
+  }
+
+  // specify "list GPUs" action
+  pif1->property_set("do_gpu_list", "");
+
+  // set command line options:
+  for (auto clit = rvs::options::get().begin(); clit != rvs::options::get().end(); ++clit) {
+    string p(clit->first);
+    p = "cli." + p;
+    pif1->property_set(p, clit->second);
+  }
+
+  // execute action
+  int sts = pif1->run();
+
+  // procssing finished, release action object
+  module::action_destroy(pa);
+
+  return sts;
+}

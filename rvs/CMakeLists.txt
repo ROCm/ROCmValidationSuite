@@ -73,7 +73,11 @@ set ( PROJECT_LINK_LIBS libdl.so "$ENV{RVS}/yaml-cpp/libyaml-cpp.a" libpthread.s
 include_directories(include ../include $ENV{RVS}/yaml-cpp/include )
 
 ## define source files
-set(SOURCES src/rvs.cpp src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp src/rvscli.cpp src/rvsexec.cpp src/rvsexec_do_yaml.cpp ../src/rvsliblogger.cpp )
+set(SOURCES
+  src/rvs.cpp src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp src/rvscli.cpp src/rvsexec.cpp src/rvsexec_do_yaml.cpp 
+  src/rvsoptions.cpp
+  ../src/rvsliblogger.cpp ../src/rvslognodebase.cpp ../src/rvslognoderec.cpp ../src/rvslognode.cpp ../src/rvslognodestring.cpp ../src/rvslognodeint.cpp
+)
 
 ## define target
 add_executable(${RVS_TARGET} ${SOURCES})

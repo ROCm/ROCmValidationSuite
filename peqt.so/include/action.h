@@ -1,37 +1,49 @@
-#ifndef ACTION_H_
-#define ACTION_H_
+// Copyright [year] <Copyright Owner> ... goes here
+#ifndef PEQT_SO_INCLUDE_ACTION_H_
+#define PEQT_SO_INCLUDE_ACTION_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <pci/pci.h>
+#ifdef __cplusplus
+}
+#endif
+
+#include <vector>
+#include <string>
 
 #include "rvslib.h"
 
-extern "C"
-{
-unsigned int pci_dev_find_cap_offset(struct pci_dev *dev, unsigned char cap);
-void get_link_cap_max_speed(struct pci_dev *dev, char *buf);
-void get_link_cap_max_width(struct pci_dev *dev, char *buff);
-void get_link_stat_cur_speed(struct pci_dev *dev, char *buff);
-void get_link_stat_neg_width(struct pci_dev *dev, char *buff);
-void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff);
-void get_slot_physical_num(struct pci_dev *dev, char *buff);
-void get_device_id(struct pci_dev *dev, char *buff);
-void get_dev_serial_num(struct pci_dev *dev, char *buff);
-void get_vendor_id(struct pci_dev *dev, char *buff);
-void get_kernel_driver(struct pci_dev *dev, char *buff);
-void get_pwr_base_pwr(struct pci_dev *dev, char *buff);
-void get_pwr_rail_type(struct pci_dev *dev, char *buff);
-void get_atomic_op_completer(struct pci_dev *dev, char *buff);
-}
+using std::vector;
+using std::string;
 
-class action : public rvs::lib::actionbase
-{
-public:
-	action();
-	virtual ~action();
-	
-	virtual int property_set(const char*, const char*);
-	virtual int run(void);
-	
-protected:
-	
+class action: public rvs::lib::actionbase {
+ public:
+    action();
+    virtual ~action();
+
+    virtual int property_set(const char*, const char*);
+    virtual int run(void);
+
+ private:
+    vector<string> device_prop_gpu_id_list;  // the list of all gpu_id
+                                             // in the <device> property
+
+    string action_name;
+    bool bjson;
+    void* json_root_node;
+
+    // PCIe capabilities stuff
+    bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, unsigned short int gpu_id);
+
+    // configuration properties getters
+    bool property_get_device(int *error); // gets the device property value (list of gpu_id)
+    //from the module's properties collection
+    void property_get_action_name(void);  // gets the action name
+    int property_get_deviceid(int *error);  // gets the deviceid
+
+ protected:
 };
 
-#endif /* ACTION_H_ */
+#endif  // PEQT_SO_INCLUDE_ACTION_H_
