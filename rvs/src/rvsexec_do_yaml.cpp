@@ -1,3 +1,4 @@
+#include "rvsexec.h"
 
 #include <iostream>
 #include <memory>
@@ -8,8 +9,7 @@
 #include "rvsaction.h"
 #include "rvsmodule.h"
 #include "rvsliblogger.h"
-
-#include "rvsexec.h"
+#include "rvsoptions.h"
 
 /*** Example rvs.conf file structure
 
@@ -78,6 +78,13 @@ int rvs::exec::do_yaml(const string& config_file)
 		{
 			module::action_destroy(pa);
 			return sts;
+		}
+		
+		// set also command line options:
+		for (auto clit = rvs::options::get().begin(); clit != rvs::options::get().end(); ++clit) {
+			string p(clit->first);
+			p = "cli." + p;
+			pif1->property_set(p, clit->second);
 		}
 		
 		// execute action

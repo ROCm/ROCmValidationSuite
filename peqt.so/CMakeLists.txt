@@ -65,7 +65,7 @@ set ( PROJECT_LINK_LIBS libpci.so libm.so)
 include_directories(include ../include)
 
 ## define source files
-set(SOURCES ../src/pci_caps.cpp src/rvs_module.cpp src/action.cpp ../src/rvslib.cpp)
+set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp src/rvs_module.cpp src/action.cpp ../src/rvslib.cpp ../src/rvsloglp.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})

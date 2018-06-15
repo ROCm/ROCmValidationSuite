@@ -64,7 +64,7 @@ set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUIL
 include_directories(include ../include)
 
 ## define source files
-set(SOURCES src/rvs_module.cpp src/action.cpp ../src/rvslib.cpp)
+set(SOURCES ../src/rvsthreadbase.cpp ../src/rvslib.cpp ../src/rvsloglp.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp src/rvs_module.cpp src/action.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})

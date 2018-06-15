@@ -1,15 +1,17 @@
 
+#include "rvsmodule.h"
 
 #include <stdio.h>
 #include <iostream>
 #include <dlfcn.h>
-#include "yaml-cpp/yaml.h"
 
 #include "rvsliblogger.h"
 #include "rvsif0.h"
 #include "rvsif1.h"
 #include "rvsaction.h"
-#include "rvsmodule.h"
+#include "rvsliblog.h"
+#include "rvsoptions.h"
+
 
 std::map<std::string,rvs::module*>	rvs::module::modulemap;
 std::map<std::string,std::string>	rvs::module::filemap;
@@ -93,12 +95,18 @@ rvs::module* rvs::module::find_create_module(const char* name)
 		}
 		
 		// open .so 
-		void* psolib = dlopen(it->second.c_str(), RTLD_LAZY);
+		string libpath;
+    if(rvs::options::has_option("-m",libpath)) {
+      libpath += "/";
+    }
+
+    string sofullname(libpath + it->second);
+		void* psolib = dlopen(sofullname.c_str(), RTLD_LAZY);
 		
 		// error?
 		if( !psolib)
 		{
-			cerr << "ERROR: could not load .so '" << it->second.c_str() << "' reason: " << dlerror() << endl;
+			cerr << "ERROR: could not load .so '" << sofullname << "' reason: " << dlerror() << endl;
 			return NULL;	// fail
 		}
 
@@ -141,7 +149,18 @@ rvs::module* rvs::module::find_create_module(const char* name)
 
 int rvs::module::initialize()
 {
-	return (*rvs_module_init)((void*)LoggerCallback);
+  T_MODULE_INIT d;
+
+  d.cbLog             = rvs::logger::Log;
+  d.cbLogExt          = rvs::logger::LogExt;
+  d.cbLogRecordCreate = rvs::logger::LogRecordCreate;
+  d.cbLogRecordFlush 	= rvs::logger::LogRecordFlush;
+  d.cbCreateNode      = rvs::logger::CreateNode;
+  d.cbAddString       = rvs::logger::AddString;
+  d.cbAddInt          = rvs::logger::AddInt;
+  d.cbAddNode         = rvs::logger::AddNode;
+
+  return (*rvs_module_init)((void*)&d);
 }
 
 
