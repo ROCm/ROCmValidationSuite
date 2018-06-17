@@ -1,4 +1,27 @@
-
+/********************************************************************************
+ *
+ * Copyright (c) 2018 ROCm Developer Tools
+ *
+ * MIT LICENSE:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
 #include "rvsliblogger.h"
 
 #include <unistd.h>
@@ -16,105 +39,94 @@
 #include "rvsoptions.h"
 
 
-int 	rvs::logger::loglevel_m(2);
-bool 	rvs::logger::tojson_m;
-bool 	rvs::logger::append_m;
-bool	rvs::logger::isfirstrecord_m;
-string 	rvs::logger::logfile_m;
+int   rvs::logger::loglevel_m(2);
+bool  rvs::logger::tojson_m;
+bool  rvs::logger::append_m;
+bool  rvs::logger::isfirstrecord_m;
+string   rvs::logger::logfile_m;
 
-const char*	rvs::logger::loglevelname[] = {"NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
+const char*  rvs::logger::loglevelname[] = {"NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
 
-rvs::logger::logger()
-{
-	isfirstrecord_m = true;
+rvs::logger::logger() {
+  isfirstrecord_m = true;
 }
 
-rvs::logger::~logger()
-{
+rvs::logger::~logger() {
 }
 
 void rvs::logger::append(const bool flag) {
-	append_m = flag;
+  append_m = flag;
 }
 
 bool rvs::logger::append() {
-	return append_m;
+  return append_m;
 }
 
 void rvs::logger::logfile(const string& val) {
-	logfile_m = val;
+  logfile_m = val;
 }
 
 const string& rvs::logger::logfile() {
-	return logfile_m;
+  return logfile_m;
 }
 
-void rvs::logger::log_level(const int rLevel)
-{
-	loglevel_m = rLevel;
+void rvs::logger::log_level(const int rLevel) {
+  loglevel_m = rLevel;
 }
 
-int rvs::logger::log_level()
-{
-	return loglevel_m;
+int rvs::logger::log_level() {
+  return loglevel_m;
 }
 
-bool rvs::logger::get_ticks(uint32_t& secs, uint32_t& usecs) 
-{
-    struct timespec ts;
+bool rvs::logger::get_ticks(uint32_t& secs, uint32_t& usecs) {
+  struct timespec ts;
 
-	clock_gettime( CLOCK_MONOTONIC, &ts );
-    usecs  	= ts.tv_nsec / 1000;
-    secs	= ts.tv_sec;
-	
-    return true;
+  clock_gettime( CLOCK_MONOTONIC, &ts );
+  usecs    = ts.tv_nsec / 1000;
+  secs  = ts.tv_sec;
+
+  return true;
 }
 
-void rvs::logger::to_json(const bool flag)
-{
-	tojson_m = flag;
+void rvs::logger::to_json(const bool flag) {
+  tojson_m = flag;
 }
 
-bool rvs::logger::to_json()
-{
-	return tojson_m;
+bool rvs::logger::to_json() {
+  return tojson_m;
 }
 
 int rvs::logger::log(const string& Message, const int LogLevel) {
-	 return LogExt(Message.c_str(), LogLevel, 0, 0);
+   return LogExt(Message.c_str(), LogLevel, 0, 0);
 }
 
 int rvs::logger::Log(const char* Message, const int LogLevel) {
-	return LogExt(Message, LogLevel, 0, 0);
+  return LogExt(Message, LogLevel, 0, 0);
 }
 
 int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
-	if( LogLevel < lognone || LogLevel > logtrace)
-	{
-		cerr << "ERROR: unknown logging level: " << LogLevel << endl;
-		return -1;
-	}
-	
-	// log level too high?
-	if( LogLevel > loglevel_m)
-		return 0;
+  if( LogLevel < lognone || LogLevel > logtrace)   {
+    cerr << "ERROR: unknown logging level: " << LogLevel << endl;
+    return -1;
+  }
 
-	uint32_t 	secs;
-	uint32_t 	usecs;
+  // log level too high?
+  if( LogLevel > loglevel_m)
+    return 0;
+
+  uint32_t   secs;
+  uint32_t   usecs;
 
   if( (Sec|uSec)) {
-		secs = Sec;
-		usecs = uSec;
+    secs = Sec;
+    usecs = uSec;
   } else {
     get_ticks(secs, usecs);
   }
 
-	char	buff[64];
-	sprintf(buff,"%6d.%6d", secs, usecs);
-	
-// 	std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-// 	std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-	
+  char  buff[64];
+  sprintf(buff,"%6d.%6d", secs, usecs);
+
   string row("[");
   row += loglevelname[LogLevel];
   row +="] [";
@@ -130,7 +142,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned 
   // this stream does not output JSON
   if (to_json())
     return 0;
-	
+
   // send to file if requested
   if (isfirstrecord_m) {
     isfirstrecord_m = false;
@@ -140,28 +152,28 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned 
   }
   ToFile(row);
 
-	return 0;
+  return 0;
 }
 
 void* rvs::logger::LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
 
-	uint32_t 	sec;
-	uint32_t 	usec;
+  uint32_t   sec;
+  uint32_t   usec;
 
-	if ((Sec|uSec)) {
-		sec = Sec;
-		usec = uSec;
-	}
-	else  {
-		get_ticks(sec, usec);
-	}
+  if ((Sec|uSec)) {
+    sec = Sec;
+    usec = uSec;
+  }
+  else  {
+    get_ticks(sec, usec);
+  }
 
-	rvs::LogNodeRec* rec = new LogNodeRec(Action, LogLevel, sec, usec);
-	AddString(rec, "action", Action);
-	AddString(rec, "module", Module);
-	AddString(rec, "loglevelname", (LogLevel >= lognone && LogLevel < logtrace) ? loglevelname[LogLevel] : "UNKNOWN");
-	
-	return static_cast<void*>(rec);
+  rvs::LogNodeRec* rec = new LogNodeRec(Action, LogLevel, sec, usec);
+  AddString(rec, "action", Action);
+  AddString(rec, "module", Module);
+  AddString(rec, "loglevelname", (LogLevel >= lognone && LogLevel < logtrace) ? loglevelname[LogLevel] : "UNKNOWN");
+
+  return static_cast<void*>(rec);
 }
 
 int   rvs::logger::LogRecordFlush( void* pLogRecord) {
@@ -176,18 +188,16 @@ int   rvs::logger::LogRecordFlush( void* pLogRecord) {
 
   // assert log levl
   int level = r->LogLevel();
-	if( level < lognone || level > logtrace)
-	{
-		cerr << "ERROR: unknown logging level: " << level << endl;
+  if( level < lognone || level > logtrace) {
+    cerr << "ERROR: unknown logging level: " << level << endl;
     delete r;
-		return -1;
-	}
+    return -1;
+  }
 
-	// if too high, ignore record
-	if( level > loglevel_m)
-  {
+  // if too high, ignore record
+  if( level > loglevel_m) {
     delete r;
-		return 0;
+    return 0;
   }
 
   // do not pre-pend "," separator for the first row
@@ -209,7 +219,7 @@ int   rvs::logger::LogRecordFlush( void* pLogRecord) {
   delete r;
 
   // return OK
-	return 0;
+  return 0;
 }
 
 int rvs::logger::ToFile(const string& Row) {
@@ -242,28 +252,29 @@ int rvs::logger::JsonPatchAppend() {
 }
 
 void* rvs::logger::CreateNode(void* Parent, const char* Name) {
-	rvs::LogNode* p = new LogNode(Name, static_cast<rvs::LogNodeBase*>(Parent));
-	return p;
+  rvs::LogNode* p = new LogNode(Name, static_cast<rvs::LogNodeBase*>(Parent));
+  return p;
 }
+
 void  rvs::logger::AddString(void* Parent, const char* Key, const char* Val) {
-	rvs::LogNode* pp = static_cast<rvs::LogNode*>(Parent);
-	rvs::LogNodeString* p = new LogNodeString(Key, Val, pp);
-	pp->Add(p);
+  rvs::LogNode* pp = static_cast<rvs::LogNode*>(Parent);
+  rvs::LogNodeString* p = new LogNodeString(Key, Val, pp);
+  pp->Add(p);
 }
+
 void  rvs::logger::AddInt(void* Parent, const char* Key, const int Val) {
-	rvs::LogNode* pp = static_cast<rvs::LogNode*>(Parent);
-	rvs::LogNodeInt* p = new LogNodeInt(Key, Val, pp);
-	pp->Add(p);
+  rvs::LogNode* pp = static_cast<rvs::LogNode*>(Parent);
+  rvs::LogNodeInt* p = new LogNodeInt(Key, Val, pp);
+  pp->Add(p);
 }
 
 void  rvs::logger::AddNode(void* Parent, void* Child) {
-	rvs::LogNode* pp = static_cast<rvs::LogNode*>(Parent);
-	pp->Add(static_cast<rvs::LogNodeBase*>(Child));
+  rvs::LogNode* pp = static_cast<rvs::LogNode*>(Parent);
+  pp->Add(static_cast<rvs::LogNodeBase*>(Child));
 }
 
 
-int rvs::logger::initialize()
-{
+int rvs::logger::initialize() {
   isfirstrecord_m = true;
 
   std::string row;
@@ -302,8 +313,7 @@ int rvs::logger::initialize()
   return 0;
 }
 
-int rvs::logger::terminate()
-{
+int rvs::logger::terminate() {
   // if no logg to file requested, just return
   if (!rvs::options::has_option("-l"))
     return 0;
