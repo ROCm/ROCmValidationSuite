@@ -1,4 +1,27 @@
-
+/********************************************************************************
+ *
+ * Copyright (c) 2018 ROCm Developer Tools
+ *
+ * MIT LICENSE:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
 #include "action.h"
 
 #include "rvs_module.h"
@@ -24,63 +47,60 @@ extern const char* pcie_cap_names[];
 
 static Worker* pworker;
 
-action::action()
-{
+action::action() {
 }
 
-action::~action()
-{
-	property.clear();
+action::~action() {
+  property.clear();
 }
 
-int action::run(void)
-{
-	log("[PESM] in run()", rvs::logdebug);
-	
+int action::run(void) {
+  log("[PESM] in run()", rvs::logdebug);
+
   if (has_property("do_gpu_list")) {
     return do_gpu_list();
   }
 
-	// handle "wait" property
-	if (property["wait"] != "") {
-		sleep(atoi(property["wait"].c_str()));
-	}
-	
-	if(property["monitor"] == "true") {
-		log("property[\"monitor\"] == \"true\"", rvs::logdebug);
-		
-		if (!pworker) {
-		log("creating Worker", rvs::logdebug);
-			pworker = new Worker();
-			pworker->set_name(property["name"]);
-			
-			// pas -j flag
-			if( property.find("cli.-j") != property.end())
-			{
-				pworker->json(true);
-			}
-		}
-		log("starting Worker", rvs::logdebug);
-		pworker->start();
-// 		log("detaching Worker", rvs::logdebug);
-// 		pworker->detach();
-		
-		log("[PESM] Monitoring started", rvs::logdebug);
-	}
-	else {
-		log("property[\"monitor\"] != \"true\"", rvs::logdebug);
-		if (pworker) {
-			pworker->stop();
-			delete pworker;
-			pworker = nullptr;
-		}
-		log("[PESM] Monitoring stopped", rvs::logdebug);
-	}
-	return 0;
+  // handle "wait" property
+  if (property["wait"] != "") {
+    sleep(atoi(property["wait"].c_str()));
+  }
+
+  if(property["monitor"] == "true") {
+    log("property[\"monitor\"] == \"true\"", rvs::logdebug);
+
+    if (!pworker) {
+    log("creating Worker", rvs::logdebug);
+      pworker = new Worker();
+      pworker->set_name(property["name"]);
+
+      // pas -j flag
+      if( property.find("cli.-j") != property.end())
+      {
+        pworker->json(true);
+      }
+    }
+    log("starting Worker", rvs::logdebug);
+    pworker->start();
+//     log("detaching Worker", rvs::logdebug);
+//     pworker->detach();
+
+    log("[PESM] Monitoring started", rvs::logdebug);
+  }
+  else {
+    log("property[\"monitor\"] != \"true\"", rvs::logdebug);
+    if (pworker) {
+      pworker->stop();
+      delete pworker;
+      pworker = nullptr;
+    }
+    log("[PESM] Monitoring stopped", rvs::logdebug);
+  }
+  return 0;
 }
 
 int action::do_gpu_list() {
-	log("[PESM] in do_gpu_list()", rvs::logdebug);
+  log("[PESM] in do_gpu_list()", rvs::logdebug);
 
   std::map<string,string>::iterator it;
   std::vector<unsigned short int>   gpus_location_id;
@@ -88,6 +108,7 @@ int action::do_gpu_list() {
   struct pci_access* pacc;
   struct pci_dev*    dev;
   char buff[1024];
+  char devname[1024];
 
   //get all GPU location_id (Note: we're not using device_id as the unique identifier
   // because multiple GPUs can have the same ID. We use location_id which is unique and points to the sysfs
@@ -120,12 +141,10 @@ int action::do_gpu_list() {
       cout << "Supported GPUs available:" << endl;
     }
 
-    sprintf(buff, "%02X:%02X.%1X", dev->bus, dev->dev, dev->func);
+    sprintf(buff, "%02X:%02X.%d", dev->bus, dev->dev, dev->func);
 
-    string name("(unknown)");
-    if (dev->label) {
-      name = dev->label;
-    }
+    string name;
+    name = pci_lookup_name(pacc, devname, sizeof(devname), PCI_LOOKUP_DEVICE, dev->vendor_id, dev->device_id);
 
     cout << buff  << " - GPU[" << ix << "] " << name << hex << " (Device " << dev->device_id << ")"<< endl;
     ix++;
