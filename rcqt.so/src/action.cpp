@@ -36,7 +36,7 @@ int action::run()
 {
     bool version_exists = false;
     int fd[2];
-    //log( "INFO" , rvs::loginfo);
+
     map<string, string>::iterator iter;
     iter = property.find("package");
     if(iter == property.end())
@@ -45,17 +45,11 @@ int action::run()
     string version_name;
     iter = property.find("version");
     if(iter != property.end()){
-       //cout << "no version field in config file" << endl;
        version_name = iter->second;
-       //cout << version_name << "size " << version_name.length() <<endl;
        version_exists = true;
     }
     
-    //string msg = iter->second;
-    
-    //log( msg.c_str() , rvs::loginfo);
     pid_t pid;
-    
     pipe(fd);
 
     pid = fork();
@@ -68,66 +62,40 @@ int action::run()
         snprintf(buffer, 255, "dpkg-query -W -f='${Status} ${Version}\n' %s", package_name.c_str());
 
         system(buffer);
-        //execlp("dpkg" , "dpkg", "-s", arg.c_str(), nullptr);
-        //execl("/bin/ls" , "ls", nullptr);
         
     } else if (pid>0){
         // Parent
-        // citamo iz fd[0]
-        //cout << "testing" << endl;
-        //dup2(STDIN_FILENO, fd[0]);
+        
         char result[BUFFER_SIZE];
         int count;
         close(fd[1]);
            
         count=read(fd[0], result, BUFFER_SIZE);
         
-            result[count]=0;
-            string result1 = result;
-            //cout << result1 << endl;
-        
-            //cout << count << ":" << result1.substr(21, count - 21) << "end" << endl;
-            string version_value = result1.substr(21, count - 21);
-            int ending = version_value.find_first_of('\n');
-            if(ending > 0){
-                version_value = version_value.substr(0, ending);
-            }
-            string passed = "packagecheck " + package_name + " TRUE";
-            string failed = "packagecheck " + package_name + " FALSE";
-            //cout << version_value  << " " << version_value.length() << " count" << ending <<endl;
-            if(strstr(result, "dpkg-query:") == result)
-                log(failed.c_str(), rvs::logresults);
-            else if(version_exists == false){
-                log(passed.c_str(), rvs::logresults);
-            }else if(version_name.compare(version_value) == 0){
-                log(passed.c_str(), rvs::logresults);
-            }else{
-                log(failed.c_str(), rvs::logresults);
-            }
-            //write(STDOUT_FILENO, result, count);
-            //if(strstr(result, "[installed") != nullptr || strstr(result, "upgradable") != nullptr ){
-             //   log( "true", rvs::logresults);
-             //   break;
-           // }
-        
-            /*if(strstr(result, "[installed,automatic]\n") != nullptr || 
-               strstr(result, "[installed]\n") != nullptr){
-                  
-                  log("pass" , rvs::logresults);
-            }else{
-                  log("fail" , rvs::logerror);
-            }*/
+        result[count]=0;
+        string result1 = result;
             
-            /*write(STDOUT_FILENO, "LINE " , count);
-            if(strstr(result, "No packages") != nullptr){
-                log( "package not found", rvs::logresults);
-                cerr << "no packages found" << endl;
-                break;
-            }
-            */
+        string version_value = result1.substr(21, count - 21);
+        int ending = version_value.find_first_of('\n');
+        if(ending > 0){
+            version_value = version_value.substr(0, ending);
+        }
+        string passed = "packagecheck " + package_name + " TRUE";
+        string failed = "packagecheck " + package_name + " FALSE";
+            
+        if(strstr(result, "dpkg-query:") == result)
+            log(failed.c_str(), rvs::logresults);
+        else if(version_exists == false){
+            log(passed.c_str(), rvs::logresults);
+        }else if(version_name.compare(version_value) == 0){
+            log(passed.c_str(), rvs::logresults);
+        }else{
+            log(failed.c_str(), rvs::logresults);
+        }
         
     }else   {
-        cerr << "Internal Error" << endl;
+      // fork process error
+      cerr << "Internal Error" << endl;
         return -1;
     }
     
