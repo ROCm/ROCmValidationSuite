@@ -58,11 +58,12 @@ class action: public rvs::lib::actionbase {
     void* json_root_node;
 
     // PCIe capabilities stuff
-    bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, unsigned short int gpu_id);
+    bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, uint16_t gpu_id);
 
     // configuration properties getters
-    bool property_get_device(int *error); // gets the device property value (list of gpu_id)
-    //from the module's properties collection
+    // gets the device property value (list of gpu_id)
+    // from the module's properties collection
+    bool property_get_device(int *error);
     void property_get_action_name(void);  // gets the action name
     int property_get_deviceid(int *error);  // gets the deviceid
 
