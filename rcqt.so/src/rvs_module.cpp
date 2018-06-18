@@ -1,21 +1,20 @@
 
 #include "rvs_module.h"
 #include "action.h"
+#include "rvsloglp.h"
 
-// callback for centralized loging functionality
-static t_rvs_module_log pflog;
+
 int log(const char* pMsg, const int level)
 {
-	return (*pflog)(pMsg, level);
+	return rvs::lp::Log(pMsg, level);
 }
 
 
 extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision)
 {
-	puts("\nHello from shared library - rvs_module_get_version()\n");
-	*Major = 1;
-	*Minor = 0;
-	*Revision = 0;
+	*Major = BUILD_VERSION_MAJOR;
+	*Minor = BUILD_VERSION_MINOR;
+	*Revision = BUILD_VERSION_PATCH;
 }
 
 extern "C" int rvs_module_has_interface(int iid)
@@ -38,6 +37,7 @@ extern "C" char* rvs_module_get_description(void)
 {
    return (char*)"ROCm Configuration Qualification Tool module";
 }
+
 extern "C" char* rvs_module_get_config(void)
 {
 	return (char*)"package (string), version (string), installed (bool), user (string), groups (collection of strings), file (string), owner (string), group (string), permission (int), type (int), exists (bool)";
@@ -48,11 +48,12 @@ extern "C" char* rvs_module_get_output(void)
 	return (char*)"pass (bool)";
 }
 
-extern "C" int   rvs_module_init(void* pfLog)
+extern "C" int   rvs_module_init(void* pMi)
 {
-	pflog = (t_rvs_module_log)pfLog;
+  rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
 	return 0;
 }
+
 extern "C" int   rvs_module_terminate(void)
 {
 	return 0;
