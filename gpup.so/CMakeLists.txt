@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018 ROCm Developer Tools
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -56,6 +56,13 @@ if ( DEFINED VERSION_BUILD AND NOT ${VERSION_BUILD} STREQUAL "" )
 endif ()
 set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
 
+## make version numbers visible to C code
+add_compile_options(-DBUILD_VERSION_MAJOR=${VERSION_MAJOR})
+add_compile_options(-DBUILD_VERSION_MINOR=${VERSION_MINOR})
+add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
+add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
+add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
+
 
 ## additional libraries
 ## set ( PROJECT_LINK_LIBS libdl.so )
@@ -64,7 +71,9 @@ set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUIL
 include_directories(include ../include)
 
 ## define source files
-set(SOURCES ../src/rvsthreadbase.cpp ../src/rvslib.cpp ../src/rvsloglp.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp src/rvs_module.cpp src/action.cpp)
+set(SOURCES
+  ../src/rvsthreadbase.cpp ../src/rvslib.cpp ../src/rvsloglp.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp
+  src/rvs_module.cpp src/action.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
