@@ -1,29 +1,7 @@
-/********************************************************************************
- *
- * Copyright (c) 2018 ROCm Developer Tools
- *
- * MIT LICENSE:
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
- *******************************************************************************/
+
 #include "action.h"
 
+#include <stdlib.h>
 #include <stdio.h>      //log
 #include <math.h>       //log
 #include <iostream>
@@ -35,6 +13,7 @@
 #include <map>
 #include <string>
 #include <algorithm>
+#include <cmath>
 #ifdef __cplusplus
 extern "C" {
   #endif
@@ -53,9 +32,9 @@ extern "C" {
 using namespace std;
 
 //config
-int bar1_req_size, bar1_base_addr_min, bar1_base_addr_max, bar2_req_size, bar2_base_addr_min, bar2_base_addr_max, bar4_req_size, bar4_base_addr_min, bar4_base_addr_max, bar5_req_size;
+long bar1_req_size, bar1_base_addr_min, bar1_base_addr_max, bar2_req_size, bar2_base_addr_min, bar2_base_addr_max, bar4_req_size, bar4_base_addr_min, bar4_base_addr_max, bar5_req_size;
 //output
-int bar1_size, bar1_base_addr, bar2_size, bar2_base_addr, bar4_size, bar4_base_addr, bar5_size;
+unsigned long bar1_size, bar1_base_addr, bar2_size, bar2_base_addr, bar4_size, bar4_base_addr, bar5_size;
 bool pass;
 
 action::action()
@@ -130,7 +109,7 @@ int action::run(void)
     
     if (it_gpu == gpus_location_id.end())
       continue;
-    
+        
     //get actual values
     bar1_base_addr = dev->base_addr[0];
     bar1_size = dev->size[0];   
@@ -139,7 +118,8 @@ int action::run(void)
     bar4_base_addr = dev->base_addr[5];
     bar4_size = dev->size[5]; 
     bar5_size = dev->rom_size;
-    
+
+      
     //check if values are as expected  
     pass=true;
     
@@ -152,20 +132,51 @@ int action::run(void)
     
     if ((bar1_req_size>bar1_size)||(bar2_req_size<bar2_size)||(bar4_req_size<bar4_size)||(bar5_req_size<bar5_size))
       pass=false;
-    
-    
+
     //loginfo
     unsigned int sec;
     unsigned int usec;
     rvs::lp::get_ticks(sec, usec);
-    string msgs1,msgs2,msgs4,msgs5,msga1,msga2,msga4,pmsg;
-    msgs1 = "[" + action_name + "] " + " smqt bar1_size " + std::to_string(bar1_size);
-    msgs2 = "[" + action_name + "] " + " smqt bar2_size " + std::to_string(bar2_size);
-    msgs4 = "[" + action_name + "] " + " smqt bar4_size " + std::to_string(bar4_size);
-    msgs5 = "[" + action_name + "] " + " smqt bar5_size " + std::to_string(bar5_size);
-    msga1 = "[" + action_name + "] " + " smqt bar1_base_addr " + std::to_string(bar1_base_addr);
-    msga2 = "[" + action_name + "] " + " smqt bar2_base_addr " + std::to_string(bar2_base_addr);
-    msga4 = "[" + action_name + "] " + " smqt bar4_base_addr " + std::to_string(bar4_base_addr);
+    string msgs1,msgs2,msgs4,msgs5,msga1,msga2,msga4,pmsg,str;
+    char hex_value[30];
+    if (remainder(bar1_size,pow(2,30))==0)
+      str=std::to_string((int)round(bar1_size/pow(2,30)))+" GB";
+    else if (remainder(bar1_size,pow(2,20))==0)
+      str=std::to_string((int)round(bar1_size/pow(2,20)))+" MB";
+    else if (remainder(bar1_size,pow(2,10))==0)
+      str=std::to_string((int)round(bar1_size/pow(2,10)))+" KB";
+    msgs1 = "[" + action_name + "] " + " smqt bar1_size      " + std::to_string(bar1_size) + " (" + str+ ")";
+    
+    if (remainder(bar2_size,pow(2,30))==0)
+      str=std::to_string((int)round(bar2_size/pow(2,30)))+" GB";
+    else if (remainder(bar2_size,pow(2,20))==0)
+      str=std::to_string((int)round(bar2_size/pow(2,20)))+" MB";
+    else if (remainder(bar2_size,pow(2,10))==0)
+      str=std::to_string((int)round(bar2_size/pow(2,10)))+" KB";
+    msgs2 = "[" + action_name + "] " + " smqt bar2_size      " + std::to_string(bar2_size) + " (" + str+ ")"; 
+    
+    if (remainder(bar4_size,pow(2,30))==0)
+      str=std::to_string((int)round(bar4_size/pow(2,30)))+" GB";
+    else if (remainder(bar4_size,pow(2,20))==0)
+      str=std::to_string((int)round(bar4_size/pow(2,20)))+" MB";
+    else if (remainder(bar4_size,pow(2,10))==0)
+      str=std::to_string((int)round(bar4_size/pow(2,10)))+" KB";
+    
+    msgs4 = "[" + action_name + "] " + " smqt bar4_size      " + std::to_string(bar4_size) + " (" + str+ ")";  
+    
+    if (remainder(bar5_size,pow(2,30))==0)
+      str=std::to_string((int)round(bar5_size/pow(2,30)))+" GB";
+    else if (remainder(bar5_size,pow(2,20))==0)
+      str=std::to_string((int)round(bar5_size/pow(2,20)))+" MB";
+    else if (remainder(bar5_size,pow(2,10))==0)
+      str=std::to_string((int)round(bar5_size/pow(2,10)))+" KB";
+    msgs5 = "[" + action_name + "] " + " smqt bar5_size      " + std::to_string(bar5_size) + " (" + str+ ")";
+    sprintf(hex_value, "%lX", bar1_base_addr);  
+    msga1 = "[" + action_name + "] " + " smqt bar1_base_addr " + hex_value;
+    sprintf(hex_value, "%lX", bar2_base_addr);   
+    msga2 = "[" + action_name + "] " + " smqt bar2_base_addr " + hex_value;
+    sprintf(hex_value, "%lX", bar4_base_addr); 
+    msga4 = "[" + action_name + "] " + " smqt bar4_base_addr " + hex_value;
     pmsg = "[" + action_name + "] " + " smqt " + std::to_string(pass);
     void* r = rvs::lp::LogRecordCreate("SMQT", action_name.c_str(), rvs::loginfo, sec, usec);
     rvs::lp::Log( msgs1.c_str(), rvs::loginfo, sec, usec);
