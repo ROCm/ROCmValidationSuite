@@ -1,17 +1,17 @@
 #include <iostream>
 #include <stdlib.h>
-#include <string>
 #include <map>
 #include <sys/types.h>
 #include <unistd.h>
-#include <vector>
 #include <pwd.h>
 #include <grp.h>
+#include <string.h>
+#include <vector>
 
 #include "action.h"
 #include "rvs_module.h"
 #include "rvsliblogger.h"
-#include <string.h>
+
 
 #define BUFFER_SIZE 3000
 
@@ -32,28 +32,47 @@ int action::property_set(const char* Key, const char* Val)
 	return rvs::lib::actionbase::property_set(Key, Val);
 }
 
+void action::split_string(vector <string> &group_array,char delimiter, string string_of_groups)
+{
+  size_t found = string_of_groups.find_first_of(delimiter);
+  while( found != string::npos){
+    group_array.push_back(string_of_groups.substr(0, found - 1));
+    string_of_groups = string_of_groups.substr(found, string_of_groups.size());
+  }
+  group_array.push_back(string_of_groups);
+  
+  for(int i = 0 ; i < group_array.size(); i++)
+    cout << group_array[i] << endl;
+}
+
 int action::run()
 {
-    bool version_exists = false;
-    int fd[2];
-
+    string test = "jedan,dva,tri,cetiri";
+    vector<string>vector_test;
+    split_string(vector_test, ',', test);
+    
+    
+    
     map<string, string>::iterator iter;
     iter = property.find("package");
-    if(iter == property.end())
-        cerr << "no package field in config file" << endl;
-    string package_name = iter->second;
-    string version_name;
-    iter = property.find("version");
     if(iter != property.end()){
-       version_name = iter->second;
-       version_exists = true;
-    }
+      bool version_exists = false;
+      int fd[2];
+      string package_name;
+      
+      package_name = iter->second;
+      string version_name;
+      iter = property.find("version");
+      if(iter != property.end()){
+        version_name = iter->second;
+        version_exists = true;
+      }
     
-    pid_t pid;
-    pipe(fd);
+      pid_t pid;
+      pipe(fd);
 
-    pid = fork();
-    if(pid == 0){
+      pid = fork();
+      if(pid == 0){
         // Child process
         
         dup2(fd[1], STDOUT_FILENO);
@@ -63,7 +82,7 @@ int action::run()
 
         system(buffer);
         
-    } else if (pid>0){
+      } else if (pid>0){
         // Parent
         
         char result[BUFFER_SIZE];
@@ -93,49 +112,51 @@ int action::run()
             log(failed.c_str(), rvs::logresults);
         }
         
-    }else   {
-      // fork process error
-      cerr << "Internal Error" << endl;
-        return -1;
+      }else   {
+        // fork process error
+        cerr << "Internal Error" << endl;
+          return -1;
+      }
     }
     
-    /*bool group_exists = false;
+    
     iter = property.find("user");
-    if(iter == property.end())
-        cerr << "no user field in config file" << endl;
-    string user_name = iter->second;
-    string group_name;
-    iter = property.find("group");
-    if(iter != property.end()){
-       //cout << "no version field in config file" << endl;
-       group_name = iter->second;
-       //cout << version_name << "size " << version_name.length() <<endl;
-       group_exists= true;
-    }
-       
+    if(iter == property.end()){
+        
+      bool group_exists = false;
+      bool user_is_in_all_groups = true;
+      string user_name = iter->second;
+      string group_name;
+      iter = property.find("group");
+      if(iter != property.end()){
+        group_name = iter->second;
+        group_exists= true;
+      }
     
-    struct passwd *p;
-    struct group *g;
-    string user_exists = "[rcqt] usercheck " + user_name + " user exists";
-    string user_not_exists = "[rcqt] usercheck " + user_name + " user not exists";
-    if((p = getpwnam(user_name.c_str())) == nullptr){
+      struct passwd *p;
+      struct group *g;
+      string user_exists = "[rcqt] usercheck " + user_name + " user exists";
+      string user_not_exists = "[rcqt] usercheck " + user_name + " user not exists";
+      if((p = getpwnam(user_name.c_str())) == nullptr){
         log(user_not_exists.c_str(), rvs::logresults);
-        return -1;
-    }else{
+      }else{
         log( user_exists.c_str(), rvs::logresults);
-    }
-    if(group_exists == true){
+      }
+      vector<string> group_array;
+      
+      
+      if(group_exists == true){
         if((g = getgrnam(group_name.c_str())) == nullptr){
             cerr << "group doesn't exist" << endl;
-            return -1;
+            
         }
-    }   
+      }   
+      
+      //string user_is_in_group = "[rcqt] 
     
-    //string user_is_in_group = "[rcqt] 
-    
-    int i;
-    int j=0;
-    if(group_exists){
+      int i;
+      int j=0;
+      if(group_exists){
         for(i=0; g->gr_mem[i]!=NULL; i++){
             if(strcmp(g->gr_mem[i], group_name.c_str()) == 0){
                 //log("[rcqt] usercheck
@@ -144,10 +165,11 @@ int action::run()
                 break;
             }
         }
-    }
+      }
         
-    if(j==0) printf("user is not in the group\n");
-    */
+      if(j==0) printf("user is not in the group\n");
+    
+    }
     
     return 0;
 }
