@@ -36,13 +36,15 @@ add_subdirectory(gpup.so)
 add_subdirectory(pesm.so)
 add_subdirectory(rcqt.so)
 add_subdirectory(peqt.so)
-
+add_subdirectory(smqt.so)
 
 add_dependencies(rvs yaml-cpp)
 add_dependencies(gpup yaml-cpp)
 add_dependencies(pesm yaml-cpp)
 add_dependencies(rcqt yaml-cpp)
 add_dependencies(peqt yaml-cpp)
+add_dependencies(smqt yaml-cpp)
+
 
 add_custom_target(doc ALL
     COMMAND doxygen
