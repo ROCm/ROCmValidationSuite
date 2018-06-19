@@ -5,5 +5,5 @@
 /cmake_install.cmake
 /Makefile
 /.project
-/libpesm.so.*
+/lib*.so.*.*.*
 
