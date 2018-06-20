@@ -67,7 +67,7 @@ protected:
   void  store_command(const std::string& token);
   void  store_value(const std::string& token);
   void  init_grammar(void);
-  void  extract_path(const char* Argv0);
+  void  extract_path(void);
 
 protected:
   int    argc;
