@@ -47,8 +47,11 @@ rvs::exec::~exec() {
 
 
 int rvs::exec::run() {
-  int 	sts;
-  string 	val;
+  int     sts = 0;
+  string  val;
+  string  path;
+
+  options::has_option("pwd", path);
 
   // check -h options
   if( rvs::options::has_option("-h", val)) {
@@ -100,9 +103,12 @@ int rvs::exec::run() {
   }
   else {
     config_file = "conf/rvs.conf";
+    config_file = path + config_file;
   }
 
-  rvs::module::initialize("./rvsmodules.config");
+  // construct modules configuration file relative path
+  val = path + "rvsmodules.config";
+  rvs::module::initialize(val.c_str());
 
   if( rvs::options::has_option("-t", val)) {
         cout<< endl << "ROCm Validation Suite (version " << LIB_VERSION_STRING << ")" << endl << endl;
@@ -121,8 +127,10 @@ int rvs::exec::run() {
 
   try {
     sts = do_yaml(config_file);
-  } catch(...) {
-    cerr << "Error parsing configuration file: " << config_file << endl;
+  } catch(exception& e) {
+    sts = -999;
+    cerr << "Error processing configuration file " << config_file << endl;
+    cerr << "Exception: " << e.what() << endl;
   }
 
   logger::terminate();
@@ -133,11 +141,11 @@ int rvs::exec::run() {
 }
 
 void rvs::exec::do_version() {
-	cout << LIB_VERSION_STRING << endl;
+  cout << LIB_VERSION_STRING << endl;
 }
 
 void rvs::exec::do_help() {
-	cout << "No help available." << endl;
+  cout << "No help available." << endl;
 }
 
 int rvs::exec::do_gpu_list() {
