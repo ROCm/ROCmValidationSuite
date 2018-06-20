@@ -61,6 +61,21 @@ void Worker::run() {
   struct pci_access *pacc;
   struct pci_dev *dev;
 
+  unsigned int sec;
+  unsigned int usec;
+  void* r;
+
+  // get timestamp
+  rvs::lp::get_ticks(sec, usec);
+
+  // add string output
+  string msg("[" + action_name + "] [PESM] all started");
+  rvs::lp::Log(msg, rvs::logresults, sec, usec);
+
+  // add JSON output
+  r = rvs::lp::LogRecordCreate("PESM", action_name.c_str(), rvs::logresults, sec, usec);
+  rvs::lp::AddString(r, "msg", "started");
+  rvs::lp::LogRecordFlush(r);
 
   // worker thread has started
   while (brun) {
@@ -91,8 +106,6 @@ void Worker::run() {
       if (it_gpu == gpus_location_id.end())
         continue;
 
-      unsigned int sec;
-      unsigned int usec;
       rvs::lp::get_ticks(sec, usec);
 
       // get current speed for the link
@@ -109,7 +122,7 @@ void Worker::run() {
       string msg("[" + action_name + "] " + "[PESM] " + std::to_string(dev_location_id) + " link speed change " + new_val);
       rvs::lp::Log( msg, rvs::loginfo, sec, usec);
 
-      void* r = rvs::lp::LogRecordCreate("PESM", action_name.c_str(), rvs::loginfo, sec, usec);
+      r = rvs::lp::LogRecordCreate("PESM", action_name.c_str(), rvs::loginfo, sec, usec);
       rvs::lp::AddString(r, "msg", "link speed change");
       rvs::lp::AddString(r, "val", new_val);
       rvs::lp::LogRecordFlush(r);
@@ -121,6 +134,19 @@ void Worker::run() {
     sleep(1);
 
   }
+
+  // get timestamp
+  rvs::lp::get_ticks(sec, usec);
+
+  // add string output
+  msg = "[" + action_name + "] [PESM] all stopped";
+  rvs::lp::Log(msg, rvs::logresults, sec, usec);
+
+  // add JSON output
+  r = rvs::lp::LogRecordCreate("PESM", action_name.c_str(), rvs::logresults, sec, usec);
+  rvs::lp::AddString(r, "msg", "stopped");
+  rvs::lp::LogRecordFlush(r);
+
 
   log("[PESM] worker thread has finished", rvs::logdebug);
 
