@@ -5,9 +5,5 @@
 /cmake_install.cmake
 /Makefile
 /.project
-/libpeqt.so.1
-/libpeqt.so.1.0.0
+/lib*.so.*
 
-libpeqt.so.0.0.1
-libpeqt.so.1
-libpeqt.so.1.0.0

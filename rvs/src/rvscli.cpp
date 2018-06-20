@@ -27,7 +27,7 @@
 
 #include <stdio.h>
 #include <iostream>
-
+#include <cstddef>         // std::size_t
 
 #include "rvsoptions.h"
 
@@ -60,6 +60,14 @@ rvs::cli::cli() {
 }
 rvs::cli::~cli() {
 }
+
+void rvs::cli::extract_path(const char* Argv0) {
+  string argv0(Argv0);
+
+  size_t found = argv0.find_last_of("/\\");
+  options::opt["pwd"] = argv0.substr(0,found) + "/";
+}
+
 
 void rvs::cli::init_grammar()
 {
@@ -136,6 +144,9 @@ void rvs::cli::init_grammar()
 
 int rvs::cli::parse(int Argc, char** Argv) {
 	init_grammar();
+
+  cout << Argv[0] << endl;
+  extract_path(Argv[0]);
 
 	argc = Argc;
 	argv = Argv;

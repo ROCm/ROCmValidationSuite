@@ -27,7 +27,6 @@
 #include <stack>
 #include <string>
 
-using namespace std;
 
 namespace rvs
 {
@@ -50,34 +49,35 @@ protected:
   public:
     optbase(const char* ptruename, econtext s1, econtext s2 = eof, econtext s3 = eof);
     virtual ~optbase();
-    virtual bool adjust_context(stack<econtext>& old_context);
+    virtual bool adjust_context(std::stack<econtext>& old_context);
 
   public:
-    string name;
-    stack<econtext> new_context;
+    std::string name;
+    std::stack<econtext> new_context;
   };
 
-  typedef pair<string,shared_ptr<optbase>>   gpair;
+  typedef std::pair<std::string, std::shared_ptr<optbase>>   gpair;
 
 protected:
   const char*  get_token();
-  bool  is_command(const string& token);
-  bool  try_command(const string& token);
-  bool  try_value(const string& token);
+  bool  is_command(const std::string& token);
+  bool  try_command(const std::string& token);
+  bool  try_value(const std::string& token);
   bool  emit_option(void);
-  void  store_command(const string& token);
-  void  store_value(const string& token);
+  void  store_command(const std::string& token);
+  void  store_value(const std::string& token);
   void  init_grammar(void);
+  void  extract_path(const char* Argv0);
 
 protected:
   int    argc;
   char** argv;
   int    itoken;
-  string errstr;
-  string current_option;
-  string current_value;
-  stack<econtext>                 context;
-  map<string,shared_ptr<optbase>> grammar;
+  std::string errstr;
+  std::string current_option;
+  std::string current_value;
+  std::stack<econtext>  context;
+  std::map<std::string,std::shared_ptr<optbase>> grammar;
 
 };
 
