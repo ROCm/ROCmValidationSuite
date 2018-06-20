@@ -25,6 +25,12 @@
 
 #include "rvscli.h"
 
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <limits.h>
+#include <string.h>
+
 #include <stdio.h>
 #include <iostream>
 #include <cstddef>         // std::size_t
@@ -61,8 +67,20 @@ rvs::cli::cli() {
 rvs::cli::~cli() {
 }
 
-void rvs::cli::extract_path(const char* Argv0) {
-  string argv0(Argv0);
+void rvs::cli::extract_path() {
+
+  char path[PATH_MAX];
+  char dest[PATH_MAX];
+  memset(dest,0,sizeof(dest)); // readlink does not null terminate!
+  struct stat info;
+  pid_t pid = getpid();
+  sprintf(path, "/proc/%d/exe", pid);
+  if (readlink(path, dest, PATH_MAX) == -1) {
+    cerr << "ERROR: could not extract path to executable" << endl;
+    return;
+  }
+
+  string argv0(dest);
 
   size_t found = argv0.find_last_of("/\\");
   options::opt["pwd"] = argv0.substr(0,found) + "/";
