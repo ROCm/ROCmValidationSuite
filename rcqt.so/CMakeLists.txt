@@ -68,7 +68,7 @@ include_directories(include ../include)
 
 ## define source files
 set(SOURCES src/rvs_module.cpp src/action.cpp 
-        ../src/rvslib.cpp ../src/rvsloglp.cpp )
+        ../src/rvslib.cpp ../src/rvsloglp.cpp ../src/rvs_util.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})

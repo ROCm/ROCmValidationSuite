@@ -38,8 +38,7 @@ public:
 	
 	virtual int property_set(const char*, const char*);
 	virtual int run(void);
-  virtual void split_string(std::vector <std::string> &group_array, char delimiter, std::string string_of_groups);
-	
+  //virtual std::vector<std::string> str_split(const std::string& str_val, const std::string& delimiter);
 
 protected:
 

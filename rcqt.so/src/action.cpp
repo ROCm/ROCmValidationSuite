@@ -32,11 +32,11 @@
 #include <pwd.h>
 #include <grp.h>
 #include <string.h>
-
 #include <vector>
 
 #include "rvs_module.h"
 #include "rvsliblogger.h"
+#include "rvs_util.h"
 
 
 #define BUFFER_SIZE 3000
@@ -55,9 +55,24 @@ int action::property_set(const char* Key, const char* Val) {
   return rvs::lib::actionbase::property_set(Key, Val);
 }
 
-void action::split_string(vector <string> &group_array,char delimiter, string string_of_groups)
+/*vector<string> action::str_split(const string& str_val, const string& delimiter) {
+  vector<string> str_tokens;
+  unsigned int prev_pos = 0, cur_pos = 0;
+  do {
+    cur_pos = str_val.find(delimiter, prev_pos);
+    if (cur_pos == string::npos)
+      cur_pos = str_val.length();
+    string token = str_val.substr(prev_pos, cur_pos - prev_pos);
+    if (!token.empty())
+      str_tokens.push_back(token);
+    prev_pos = cur_pos + delimiter.length();
+  } while (cur_pos < str_val.length() && prev_pos < str_val.length());
+  return str_tokens;
+}*/
+
+/*void action::split_string(vector <string> &group_array,char delimiter, string string_of_groups)
 {
-  size_t found = string_of_groups.find_first_of(delimiter);
+  /*size_t found = string_of_groups.find_first_of(delimiter);
   while( found != string::npos){
     group_array.push_back(string_of_groups.substr(0, found - 1));
     string_of_groups = string_of_groups.substr(found, string_of_groups.size());
@@ -66,17 +81,18 @@ void action::split_string(vector <string> &group_array,char delimiter, string st
   
   for(int i = 0 ; i < group_array.size(); i++)
     cout << group_array[i] << endl;
-}
+  
+}*/
 
 int action::run()
 {
-    string test = "jedan,dva,tri,cetiri";
-    vector<string>vector_test;
-    split_string(vector_test, ',', test);
+    //string test = "jedan,dva,tri,cetiri";
+    //vector<string>vector_test;
+    //split_string(vector_test, ',', test);
     
     
     
-    /*map<string, string>::iterator iter;
+    map<string, string>::iterator iter;
     iter = property.find("package");
     if(iter != property.end()){
       bool version_exists = false;
@@ -144,15 +160,14 @@ int action::run()
     
     
     iter = property.find("user");
-    if(iter == property.end()){
-        
+    if(iter != property.end()){
       bool group_exists = false;
       bool user_is_in_all_groups = true;
       string user_name = iter->second;
-      string group_name;
+      string group_values_string;
       iter = property.find("group");
       if(iter != property.end()){
-        group_name = iter->second;
+        group_values_string = iter->second;
         group_exists= true;
       }
     
@@ -165,34 +180,42 @@ int action::run()
       }else{
         log( user_exists.c_str(), rvs::logresults);
       }
-      vector<string> group_array;
-      
-      
-      if(group_exists == true){
-        if((g = getgrnam(group_name.c_str())) == nullptr){
+      if(group_exists){
+        //rvs_util utility;
+        string delimiter = ",";
+        vector<string> group_vector ;
+        group_vector = str_split(group_values_string, delimiter);
+        string user_has_group = "[rcqt] usercheck " + user_name + " user exists";
+        string user_has_no_group = "[rcqt] usercheck " + user_name + " user exists";
+        
+        for(vector<string>::iterator vector_iter = group_vector.begin(); vector_iter != group_vector.end(); vector_iter++){
+          if((g = getgrnam(vector_iter->c_str())) == nullptr){
             cerr << "group doesn't exist" << endl;
             
-        }
-      }   
+          }else{
+            cout << "group exists " << *vector_iter << endl;
+          }
       
-      //string user_is_in_group = "[rcqt] 
-    
-      int i;
-      int j=0;
-      if(group_exists){
-        for(i=0; g->gr_mem[i]!=NULL; i++){
-            if(strcmp(g->gr_mem[i], group_name.c_str()) == 0){
+          //string user_is_in_group = "[rcqt] 
+
+          int i;
+          int j=0;
+          
+          if(group_exists){
+            for(i=0; g->gr_mem[i]!=NULL; i++){
+              if(strcmp(g->gr_mem[i], user_name.c_str()) == 0){
                 //log("[rcqt] usercheck
-                printf("user is in group\n");
+                //printf("user is in group\n");
                 j=1;
                 break;
+              }
             }
+          }
+          
+          if(j==0) printf("user is not in the group\n");
         }
       }
-        
-      if(j==0) printf("user is not in the group\n");
-    
-    }*/
+    }
     
     return 0;
 }
