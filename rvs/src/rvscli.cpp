@@ -163,8 +163,7 @@ void rvs::cli::init_grammar()
 int rvs::cli::parse(int Argc, char** Argv) {
 	init_grammar();
 
-  cout << Argv[0] << endl;
-  extract_path(Argv[0]);
+  extract_path();
 
 	argc = Argc;
 	argv = Argv;
