@@ -26,15 +26,19 @@
 #define ACTION_H_
 
 #include "rvslib.h"
+#include <string>
+#include <vector>
 
 class action : public rvs::lib::actionbase
 {
 public:
-  action();
-  virtual ~action();
 
-  virtual int property_set(const char*, const char*);
-  virtual int run(void);
+	action();
+	virtual ~action();
+	
+	virtual int property_set(const char*, const char*);
+	virtual int run(void);
+  //virtual std::vector<std::string> str_split(const std::string& str_val, const std::string& delimiter);
 
 protected:
 
