@@ -185,9 +185,9 @@ int action::run()
         string delimiter = ",";
         vector<string> group_vector ;
         group_vector = str_split(group_values_string, delimiter);
-        string user_group = "[rcqt] usercheck " + user_name ;
         
         for(vector<string>::iterator vector_iter = group_vector.begin(); vector_iter != group_vector.end(); vector_iter++){
+          string user_group = "[rcqt] usercheck " + user_name ;
           if((g = getgrnam(vector_iter->c_str())) == nullptr){
             cerr << "group doesn't exist" << endl;
             
@@ -198,23 +198,21 @@ int action::run()
           int i;
           int j=0;
           
-          if(group_exists){
-            for(i=0; g->gr_mem[i]!=NULL; i++){
-              if(strcmp(g->gr_mem[i], user_name.c_str()) == 0){
-                //log("[rcqt] usercheck
-                //printf("user is in group\n");
-                user_group += " " + *iter + " is member";
-                log(logresults, user_group.c_str());
-                j=1;
-                break;
-              }
+          for(i=0; g->gr_mem[i]!=NULL; i++){
+            if(strcmp(g->gr_mem[i], user_name.c_str()) == 0){
+              //log("[rcqt] usercheck
+              //printf("user is in group\n");
+              user_group = user_group + " " + vector_iter->c_str() + " is member";
+              log(user_group.c_str(), rvs::logresults);
+              j=1;
+              break;
             }
           }
           
           if(j==0){ 
-            printf("user is not in the group\n");
-            user_has_group += " " + *iter + " is not member";
-            log(logresults, usergroup.c_str());
+            //printf("user is not in the group\n");
+            user_group = user_group + " " + vector_iter->c_str() + " is not member";
+            log(user_group.c_str(), rvs::logresults);
           }
         }
       }
