@@ -48,10 +48,6 @@ int main(int Argc, char**Argv)
 
   exec executor;
   sts = executor.run();
-  if(sts)
-  {
-    cerr << "ERROR: error executing configuration: " << sts << endl;
-  }
 
   return sts;
 }
