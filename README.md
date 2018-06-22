@@ -25,13 +25,12 @@ Init environment variables and submodule:
 Compile: 
 
     cd $RVS
-    cmake .
+    cmake . -Bbuild
+    cd ../build
     make
 
 Run:
-
-    cd $RVS/rvs
-    sudo -HE  LD_LIBRARY_PATH=../bin ./rvs -d 3 
+    sudo bin /rvs -d 3
 
 
 For CentOS specific instructions see this [link](./CentOS.md).
