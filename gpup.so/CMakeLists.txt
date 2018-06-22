@@ -39,6 +39,13 @@ if ( NOT DEFINED CMAKE_MODULE_PATH )
     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
 endif ()
 
+## Support for in-source compilaton
+if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
+else()
+    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+endif ()
+
 ## Include common cmake modules
 include ( utils )
 
@@ -77,12 +84,10 @@ set(SOURCES
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
-set_target_properties(${RVS_TARGET} PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}) 
-#target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+set_target_properties(${RVS_TARGET} PROPERTIES
+        SUFFIX .so.${LIB_VERSION_STRING}
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD 
-COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/../bin/lib${RVS}.so.${VERSION_MAJOR}
-COMMAND ln -s ${CMAKE_CURRENT_BINARY_DIR}/lib${RVS}.so.${LIB_VERSION_STRING} ${CMAKE_CURRENT_BINARY_DIR}/../bin/lib${RVS}.so.${VERSION_MAJOR})
-
-
-
+add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
+COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}
+COMMAND ln -s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${LIB_VERSION_STRING} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR})

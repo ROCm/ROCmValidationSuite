@@ -27,6 +27,15 @@ cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 
+message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
+message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
+
+## Support for in-source compilaton
+if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
+else()
+    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+endif ()
 
 set ( RVS "rvs" )
 set ( RVS_PACKAGE "rvs-roct" )
@@ -66,11 +75,10 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 ## additional libraries
-set ( PROJECT_LINK_LIBS libdl.so "$ENV{RVS}/yaml-cpp/libyaml-cpp.a" libpthread.so)
-##set ( PROJECT_LINK_LIBS libdl.so "$ENV{RVS}/yaml-cpp/libyaml-cpp.a")
+set ( PROJECT_LINK_LIBS libdl.so "${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/libyaml-cpp.a" libpthread.so)
 
 ## define include directories
-include_directories(include ../include $ENV{RVS}/yaml-cpp/include )
+include_directories(include ../include ${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/include )
 
 ## define source files
 set(SOURCES
@@ -84,5 +92,9 @@ add_executable(${RVS_TARGET} ${SOURCES})
 
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
-
-
+add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
+COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
+COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/conf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
+)
