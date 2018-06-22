@@ -90,6 +90,7 @@ int action::run(void) {
   else {
     log("property[\"monitor\"] != \"true\"", rvs::logdebug);
     if (pworker) {
+      pworker->set_stop_name(property["name"]);
       pworker->stop();
       delete pworker;
       pworker = nullptr;

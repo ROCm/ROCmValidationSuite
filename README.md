@@ -5,7 +5,7 @@ The RVS is a collection of tests, benchmarks and qualification tools each target
 
 The function of each module see this [link](./FEATURES.md).
 
-# RVS "Hello World"
+# RVS
 This section explains how to get and compile current development stream of RVS.
 
 Clone repository:
@@ -25,13 +25,12 @@ Init environment variables and submodule:
 Compile: 
 
     cd $RVS
-    cmake .
+    cmake . -B../build
+    cd ../build
     make
 
 Run:
-
-    cd $RVS/rvs
-    sudo -HE  LD_LIBRARY_PATH=../bin ./rvs -d 3 
+    sudo bin/rvs -d 3
 
 
 For CentOS specific instructions see this [link](./CentOS.md).
