@@ -44,7 +44,7 @@ extern "C" {
 #include "action.h"
 
 #define CHAR_BUFF_MAX_SIZE              1024
-#define PCI_DEV_NUM_CAPABILITIES        13
+#define PCI_DEV_NUM_CAPABILITIES        16
 
 #define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
 #define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\
@@ -74,7 +74,10 @@ const char* pcie_cap_names[] =
                 "link_stat_neg_width", "slot_pwr_limit_value",
                 "slot_physical_num", "device_id", "vendor_id", "kernel_driver",
                 "dev_serial_num", "pwr_base_pwr", "pwr_rail_type",
-                "atomic_op_completer" };
+                "atomic_op_requester",  "atomic_32_bit_op_completer",
+		"atomic_64_bit_op_completer",
+		"atomic_128_bit_cas_op_completer"
+        };
 
 // array of pointer to function corresponding to each capability
 void (*arr_prop_pfunc_names[])(struct pci_dev *dev, char *) = {
@@ -83,7 +86,9 @@ void (*arr_prop_pfunc_names[])(struct pci_dev *dev, char *) = {
     get_slot_pwr_limit_value, get_slot_physical_num,
     get_device_id, get_vendor_id, get_kernel_driver,
     get_dev_serial_num, get_pwr_base_pwr,
-    get_pwr_rail_type, get_atomic_op_completer
+    get_pwr_rail_type, get_atomic_op_requester,
+	get_atomic_32_bit_op_completer, get_atomic_64_bit_op_completer,
+	get_atomic_128_bit_cas_op_completer
 };
 
 using std::vector;
@@ -438,7 +443,6 @@ int action::run(void) {
                         gpus_location_id.begin(), it_gpu);
                 // get the gpu_id for the same position
                 uint16_t gpu_id = gpus_id.at(index_loc_id);
-
                 if (device_all_selected) {
                     cur_gpu_selected = true;
                 } else {
