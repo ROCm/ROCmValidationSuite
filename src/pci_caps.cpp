@@ -481,7 +481,6 @@ void get_atomic_op_requester(struct pci_dev *dev, char *buff) {
  */
 long int get_atomic_op_register_value (struct pci_dev *dev) {
     unsigned char i, has_memory_bar = 0;
-    bool atomic_op_completer_supported_128_bit_CAS = false;
 
     // get pci dev capabilities offset
     unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
@@ -531,7 +530,8 @@ void get_atomic_32_bit_op_completer(struct pci_dev *dev, char *buff) {
 
 	if (atomic_op_completer_value != -1) {
         atomic_op_completer_supported_32_bit =
-                static_cast<bool>(static_cast<unsigned int>(atomic_op_completer_value) & 0x0080);
+        		static_cast<bool>(static_cast
+        				<unsigned int>(atomic_op_completer_value) & 0x0080);
 
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
                 atomic_op_completer_supported_32_bit ?
@@ -554,7 +554,8 @@ void get_atomic_64_bit_op_completer(struct pci_dev *dev, char *buff) {
 
 	if (atomic_op_completer_value != -1) {
         atomic_op_completer_supported_64_bit =
-                static_cast<bool>(static_cast<unsigned int>(atomic_op_completer_value) & 0x0100);
+                static_cast<bool>(static_cast
+                		<unsigned int>(atomic_op_completer_value) & 0x0100);
 
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
                 atomic_op_completer_supported_64_bit ?
@@ -577,7 +578,8 @@ void get_atomic_128_bit_cas_op_completer(struct pci_dev *dev, char *buff) {
 
 	if (atomic_op_completer_value != -1) {
 		atomic_op_completer_supported_128_bit_CAS =
-                static_cast<bool>(static_cast<unsigned int>(atomic_op_completer_value) & 0x0200);
+                static_cast<bool>(static_cast
+                		<unsigned int>(atomic_op_completer_value) & 0x0200);
 
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
         		atomic_op_completer_supported_128_bit_CAS ?
