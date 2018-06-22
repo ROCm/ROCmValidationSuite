@@ -107,7 +107,7 @@ int rvs::exec::run() {
   }
 
   // construct modules configuration file relative path
-  val = path + "rvsmodules.config";
+  val = path + ".rvsmodules.config";
   rvs::module::initialize(val.c_str());
 
   if( rvs::options::has_option("-t", val)) {
