@@ -111,7 +111,10 @@ rvs::module* rvs::module::find_create_module(const char* name)
     if(rvs::options::has_option("-m",libpath)) {
       libpath += "/";
     }
-
+    else {
+      rvs::options::has_option("pwd",libpath);
+      libpath += "/";
+    }
     string sofullname(libpath + it->second);
     void* psolib = dlopen(sofullname.c_str(), RTLD_LAZY);
 
