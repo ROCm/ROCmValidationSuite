@@ -25,7 +25,7 @@ Init environment variables and submodule:
 Compile: 
 
     cd $RVS
-    cmake . -Bbuild
+    cmake . -B../build
     cd ../build
     make
 
