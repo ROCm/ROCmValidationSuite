@@ -46,6 +46,7 @@ void get_atomic_op_requester(struct pci_dev *dev, char *buff);
 void get_atomic_32_bit_op_completer(struct pci_dev *dev, char *buff);
 void get_atomic_64_bit_op_completer(struct pci_dev *dev, char *buff);
 void get_atomic_128_bit_cas_op_completer(struct pci_dev *dev, char *buff);
+long int get_atomic_op_register_value (struct pci_dev *dev);
 
 #ifdef __cplusplus
 }

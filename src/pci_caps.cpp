@@ -476,117 +476,10 @@ void get_atomic_op_requester(struct pci_dev *dev, char *buff) {
 }
 
 /**
- * gets the device atomic 32-bit completer capabilities
+ * gets the device atomic capabilities register value
  * @param dev a pci_dev structure containing the PCI device information
- * @param buf pre-allocated char buffer
  */
-void get_atomic_32_bit_op_completer(struct pci_dev *dev, char *buff) {
-    unsigned char i, has_memory_bar = 0;
-    bool atomic_op_completer_supported_32_bit = false;
-
-    // get pci dev capabilities offset
-    unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
-    PCI_CAP_NORMAL);
-
-    if (cap_offset != 0) {
-        // get Capability version via
-        // PCI Express Capabilities Register (offset 02h)
-        u16 cap_flags = pci_read_word(dev, cap_offset + 2);
-
-        // check if it's capability version 2
-        if (!((cap_flags & PCI_EXP_FLAGS_VERS) < 2)) {
-            // check if the device has memory space BAR
-            // (basically it should have but let us be sure about it)
-            for (i = 0; i < MEM_BAR_MAX_INDEX + 1; i++)
-                if (dev->base_addr[i] && dev->size[i]) {
-                    if (!(dev->base_addr[i] & PCI_BASE_ADDRESS_SPACE_IO)) {
-                        has_memory_bar = 1;
-                        break;
-                    }
-                }
-
-            if (has_memory_bar) {
-                unsigned int dev_cap2_reg_val = pci_read_long(dev,
-                        cap_offset + PCI_EXP_DEVCAP2);
-
-                atomic_op_completer_supported_32_bit =
-                        static_cast<bool>(dev_cap2_reg_val & 0x0080);
-
-                snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-                        atomic_op_completer_supported_32_bit ?
-                        		"TRUE" : "FALSE");
-            } else {
-            	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-            			PCI_CAP_NOT_SUPPORTED);
-            }
-        } else {
-        	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-        			PCI_CAP_NOT_SUPPORTED);
-        }
-    } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-    }
-}
-
-/**
- * gets the device atomic 64-bit completer capabilities
- * @param dev a pci_dev structure containing the PCI device information
- * @param buf pre-allocated char buffer
- */
-void get_atomic_64_bit_op_completer(struct pci_dev *dev, char *buff) {
-    unsigned char i, has_memory_bar = 0;
-    bool atomic_op_completer_supported_64_bit = false;
-
-    // get pci dev capabilities offset
-    unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
-    PCI_CAP_NORMAL);
-
-    if (cap_offset != 0) {
-        // get Capability version via
-        // PCI Express Capabilities Register (offset 02h)
-        u16 cap_flags = pci_read_word(dev, cap_offset + 2);
-
-        // check if it's capability version 2
-        if (!((cap_flags & PCI_EXP_FLAGS_VERS) < 2)) {
-            // check if the device has memory space BAR
-            // (basically it should have but let us be sure about it)
-            for (i = 0; i < MEM_BAR_MAX_INDEX + 1; i++)
-                if (dev->base_addr[i] && dev->size[i]) {
-                    if (!(dev->base_addr[i] & PCI_BASE_ADDRESS_SPACE_IO)) {
-                        has_memory_bar = 1;
-                        break;
-                    }
-                }
-
-            if (has_memory_bar) {
-                unsigned int dev_cap2_reg_val = pci_read_long(dev,
-                        cap_offset + PCI_EXP_DEVCAP2);
-
-                atomic_op_completer_supported_64_bit =
-                		static_cast<bool>(dev_cap2_reg_val & 0x0100);
-
-                snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-                        atomic_op_completer_supported_64_bit ?
-                        		"TRUE" : "FALSE");
-            } else {
-            	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-            			PCI_CAP_NOT_SUPPORTED);
-            }
-        } else {
-        	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-        			PCI_CAP_NOT_SUPPORTED);
-        }
-    } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-    }
-}
-
-/**
- * gets the device atomic 128-bit CAS completer capabilities
- * @param dev a pci_dev structure containing the PCI device information
- * @param buf pre-allocated char buffer
- */
-void get_atomic_128_bit_cas_op_completer(struct pci_dev *dev, char *buff) {
+long int get_atomic_op_register_value (struct pci_dev *dev) {
     unsigned char i, has_memory_bar = 0;
     bool atomic_op_completer_supported_128_bit_CAS = false;
 
@@ -612,26 +505,86 @@ void get_atomic_128_bit_cas_op_completer(struct pci_dev *dev, char *buff) {
                 }
 
             if (has_memory_bar) {
-                unsigned int dev_cap2_reg_val = pci_read_long(dev,
-                        cap_offset + PCI_EXP_DEVCAP2);
+                return pci_read_long(dev, cap_offset + PCI_EXP_DEVCAP2);
 
-                atomic_op_completer_supported_128_bit_CAS =
-                		static_cast<bool>(dev_cap2_reg_val & 0x0200);
-
-                snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-                		atomic_op_completer_supported_128_bit_CAS ?
-                        		"TRUE" : "FALSE");
             } else {
-            	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-            			PCI_CAP_NOT_SUPPORTED);
+            	return -1;
             }
         } else {
-        	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-        			PCI_CAP_NOT_SUPPORTED);
+        	return -1;
         }
     } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+    	return -1;
     }
+}
+
+/**
+ * gets the device atomic 32-bit completer capabilities
+ * @param dev a pci_dev structure containing the PCI device information
+ * @param buf pre-allocated char buffer
+ */
+void get_atomic_32_bit_op_completer(struct pci_dev *dev, char *buff) {
+	long int atomic_op_completer_value;
+	bool atomic_op_completer_supported_32_bit = false;
+
+	atomic_op_completer_value = get_atomic_op_register_value(dev);
+
+	if (atomic_op_completer_value != -1) {
+        atomic_op_completer_supported_32_bit =
+                static_cast<bool>(static_cast<unsigned int>(atomic_op_completer_value) & 0x0080);
+
+        snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
+                atomic_op_completer_supported_32_bit ?
+                		"TRUE" : "FALSE");
+	} else {
+		snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+	}
+}
+
+/**
+ * gets the device atomic 64-bit completer capabilities
+ * @param dev a pci_dev structure containing the PCI device information
+ * @param buf pre-allocated char buffer
+ */
+void get_atomic_64_bit_op_completer(struct pci_dev *dev, char *buff) {
+	long int atomic_op_completer_value;
+	bool atomic_op_completer_supported_64_bit = false;
+
+	atomic_op_completer_value = get_atomic_op_register_value(dev);
+
+	if (atomic_op_completer_value != -1) {
+        atomic_op_completer_supported_64_bit =
+                static_cast<bool>(static_cast<unsigned int>(atomic_op_completer_value) & 0x0100);
+
+        snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
+                atomic_op_completer_supported_64_bit ?
+                		"TRUE" : "FALSE");
+	} else {
+		snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+	}
+}
+
+/**
+ * gets the device atomic 128-bit CAS completer capabilities
+ * @param dev a pci_dev structure containing the PCI device information
+ * @param buf pre-allocated char buffer
+ */
+void get_atomic_128_bit_cas_op_completer(struct pci_dev *dev, char *buff) {
+	long int atomic_op_completer_value;
+	bool atomic_op_completer_supported_128_bit_CAS = false;
+
+	atomic_op_completer_value = get_atomic_op_register_value(dev);
+
+	if (atomic_op_completer_value != -1) {
+		atomic_op_completer_supported_128_bit_CAS =
+                static_cast<bool>(static_cast<unsigned int>(atomic_op_completer_value) & 0x0200);
+
+        snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
+        		atomic_op_completer_supported_128_bit_CAS ?
+                		"TRUE" : "FALSE");
+	} else {
+		snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+	}
 }
 
 }
