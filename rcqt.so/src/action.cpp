@@ -25,6 +25,7 @@
 #include "action.h"
 
 #include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <map>
 #include <sys/types.h>
@@ -33,6 +34,7 @@
 #include <grp.h>
 #include <string.h>
 #include <vector>
+#include <sys/utsname.h>
 
 #include "rvs_module.h"
 #include "rvsliblogger.h"
@@ -208,6 +210,7 @@ int action::run()
               break;
             }
           }
+
           
           if(j==0){ 
             //printf("user is not in the group\n");
@@ -216,6 +219,35 @@ int action::run()
           }
         }
       }
+    }
+    iter = property.find("os_version");
+    if(iter != property.end()){
+      string os_version_values = iter->second;
+      iter = property.find("kernel_version");
+      if(iter == property.end()){
+        cerr << "kernel version field missing" << endl;
+        return -1;
+      }
+      string kernel_version_values = iter->second;
+      vector<string> os_vesrsion_vector = str_split(os_version_values, ",");
+      vector<string> kernel_version_vector = str_split(kernel_version_values, ",");
+      
+      ifstream os_version_read("/etc/os-release");
+      string os_file_line;
+      while(getline(os_version_read, os_file_line))
+        cout << os_file_line << " line " << endl;
+      
+      
+      
+      
+      struct utsname kernel_version_struct ;
+      if(uname(&kernel_version_struct) != 0)
+        cerr << "Unable to read kernel version" << endl;
+    
+      //cout << os_name_struct.version << endl ;
+      
+      
+      
     }
     
     return 0;
