@@ -14,6 +14,7 @@ public:
 	
 	void stop(void);
 	void set_name(const std::string& name) { action_name = name; }
+	void set_stop_name(const std::string& name) { stop_action_name = name; }
 	void json(const bool flag) { bjson = flag; }
 	const std::string& get_name(void) { return action_name; }
 	
@@ -24,6 +25,7 @@ protected:
 	bool		bjson;
 	bool 		brun;
 	std::string	action_name;
+	std::string	stop_action_name;
 };
 	
 

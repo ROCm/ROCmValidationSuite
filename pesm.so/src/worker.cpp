@@ -139,11 +139,11 @@ void Worker::run() {
   rvs::lp::get_ticks(sec, usec);
 
   // add string output
-  msg = "[" + action_name + "] [PESM] all stopped";
+  msg = "[" + stop_action_name + "] [PESM] all stopped";
   rvs::lp::Log(msg, rvs::logresults, sec, usec);
 
   // add JSON output
-  r = rvs::lp::LogRecordCreate("PESM", action_name.c_str(), rvs::logresults, sec, usec);
+  r = rvs::lp::LogRecordCreate("PESM", stop_action_name.c_str(), rvs::logresults, sec, usec);
   rvs::lp::AddString(r, "msg", "stopped");
   rvs::lp::LogRecordFlush(r);
 
