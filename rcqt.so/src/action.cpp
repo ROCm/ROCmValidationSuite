@@ -229,25 +229,50 @@ int action::run()
         return -1;
       }
       string kernel_version_values = iter->second;
-      vector<string> os_vesrsion_vector = str_split(os_version_values, ",");
+      vector<string> os_version_vector = str_split(os_version_values, ",");
       vector<string> kernel_version_vector = str_split(kernel_version_values, ",");
       
       ifstream os_version_read("/etc/os-release");
+      string os_actual = "";
       string os_file_line;
-      while(getline(os_version_read, os_file_line))
-        cout << os_file_line << " line " << endl;
-      
-      
-      
+      bool os_version_correct = false;
+      bool os_version_found_in_system = false;
+      while(getline(os_version_read, os_file_line)){
+        if(strcasestr(os_file_line.c_str(), "pretty_name") != nullptr){
+          os_version_found_in_system = true;
+          os_actual = os_file_line.substr(13, os_file_line.length() - 14);        
+          vector<string>::iterator os_iter;
+          for(os_iter = os_version_vector.begin(); os_iter != os_version_vector.end(); os_iter++){
+            if(strcmp(os_iter->c_str(), os_actual.c_str()) == 0){
+              os_version_correct = true;
+              break;
+            }
+          }
+          if(os_version_correct == true)
+            break;
+        }
+      }
+      if(os_version_found_in_system == false){
+        cerr << "Unable to locate actual OS installed" << endl;
+      }
       
       struct utsname kernel_version_struct ;
       if(uname(&kernel_version_struct) != 0)
         cerr << "Unable to read kernel version" << endl;
     
-      //cout << os_name_struct.version << endl ;
+      //cout << kernel_version_struct.release << endl ;
+      string kernel_actual = kernel_version_struct.release ;
+      bool kernel_version_correct = false;
       
-      
-      
+      vector<string>::iterator kernel_iter;
+      for(kernel_iter = kernel_version_vector.begin() ; kernel_iter != kernel_version_vector.end(); kernel_iter++)
+        if(kernel_actual.compare(*kernel_iter) == 0 ){
+          kernel_version_correct = true;
+          break;
+        }
+      //cout << kernel_actual << "**" << os_actual << endl;
+      string result = "[rcqt] kernelcheck " + os_actual + " " + kernel_actual + " " + (os_version_correct && kernel_version_correct ? "pass" : "fail");
+      log(result.c_str(), rvs::logresults) ;
     }
     
     return 0;
