@@ -270,7 +270,6 @@ int action::run()
           kernel_version_correct = true;
           break;
         }
-      //cout << kernel_actual << "**" << os_actual << endl;
       string result = "[rcqt] kernelcheck " + os_actual + " " + kernel_actual + " " + (os_version_correct && kernel_version_correct ? "pass" : "fail");
       log(result.c_str(), rvs::logresults) ;
     }
