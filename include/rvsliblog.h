@@ -56,7 +56,7 @@ typedef struct tag_module_init
 }
 #endif
 
-
+#ifdef __cplusplus
 namespace rvs
 {
 
@@ -69,9 +69,7 @@ const int logtrace    = 5;
 
 }  // namespace rvs
 
-
-
-
+#endif
 
 
 #endif // RVSLIBLOG_H_

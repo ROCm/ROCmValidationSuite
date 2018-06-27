@@ -22,6 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include "action.h"
+
 #include <string>
 #include <vector>
 #include <map>
@@ -31,7 +33,6 @@
 #include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
-#include "action.h"
 
 using std::vector;
 using std::string;
@@ -48,16 +49,6 @@ action::action() {
  */
 action::~action() {
     property.clear();
-}
-
-/**
- * adds a (key, value) pair to the module's properties collection
- * @param Key one of the keys specified in the RVS SRS
- * @param Val key's value
- * @return add result
- */
-int action::property_set(const char* Key, const char* Val) {
-    return rvs::lib::actionbase::property_set(Key, Val);
 }
 
 /**
