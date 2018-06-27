@@ -31,11 +31,23 @@
 namespace rvs
 {
 
+/**
+ *  \class cli
+ *
+ *  \brief Command line interpretter class.
+ *
+ * Parses command line options given when invoking rvs utility.
+ * Output si stored into rvs::options class.
+ *
+ */
+
 class cli {
 
 public:
 
+  //! A constructor
   cli();
+  //! A destructor
   virtual ~cli();
 
   int parse(int Argc, char** Argv);

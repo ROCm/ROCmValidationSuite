@@ -23,6 +23,16 @@
  *
  *******************************************************************************/
 
+/** \defgroup Launcher Launcher module
+ *
+ * \brief Launcher module implementation
+ *
+ * This is the starting point of rvs utility. Launcher will parse the command line
+ * as well as the input YAML configuration file and load appropriate test modules.
+ * Then, it will invoke tests specified in .conf file and provide logging functionality
+ * so that modules can print on screen of in the log file.
+ */
+
 #include <iostream>
 
 
@@ -33,7 +43,17 @@
 using namespace std;
 using namespace rvs;
 
-
+/**
+ * \ingroup Launcher
+ * \brief Main method
+ *
+ * standard C main() method.
+ *
+ * @param Argc standard C argc parameter to main()
+ * @param Argv standard C argv parameter to main()
+ * @return 0 - all OK, non-zero error
+ *
+ * */
 int main(int Argc, char**Argv)
 {
   int sts;

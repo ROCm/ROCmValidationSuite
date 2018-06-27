@@ -22,22 +22,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVSLIB_H_
-#define RVSLIB_H_
+#ifndef RVSACTIONBASE_H_
+#define RVSACTIONBASE_H_
 
 #include <map>
 #include <string>
 
 
 namespace rvs
-{
-
-struct init_stuct
-{
-
-};
-
-namespace lib
 {
 
 class actionbase
@@ -60,9 +52,7 @@ protected:
 };
 
 
-}  // namespace lib
-
 }  // namespace rvs
 
 
-#endif // RVSLIB_H_
+#endif // RVSACTIONBASE_H_

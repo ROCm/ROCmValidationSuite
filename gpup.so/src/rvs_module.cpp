@@ -81,16 +81,16 @@ extern "C" void* rvs_module_action_create(void) {
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {
-  delete static_cast<rvs::lib::actionbase*>(pAction);
+  delete static_cast<rvs::actionbase*>(pAction);
   return 0;
 }
 
 extern "C" int rvs_module_action_property_set(void* pAction, const char* Key, const char* Val) {
-  return static_cast<rvs::lib::actionbase*>(pAction)->property_set(Key, Val);
+  return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 
 extern "C" int rvs_module_action_run(void* pAction) {
-  return static_cast<rvs::lib::actionbase*>(pAction)->run();
+  return static_cast<rvs::actionbase*>(pAction)->run();
 }
 
 
