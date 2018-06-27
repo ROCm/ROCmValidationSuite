@@ -75,7 +75,7 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 ## additional libraries
-set ( PROJECT_LINK_LIBS libdl.so "${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/libyaml-cpp.a" libpthread.so)
+set ( PROJECT_LINK_LIBS libdl.so "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../yaml-cpp/libyaml-cpp.a" libpthread.so)
 
 ## define include directories
 include_directories(include ../include ${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/include )
