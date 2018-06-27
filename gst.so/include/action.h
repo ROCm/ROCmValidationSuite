@@ -36,17 +36,16 @@ extern "C" {
 #include <vector>
 #include <string>
 
-#include "rvslib.h"
+#include "rvsactionbase.h"
 
 using std::vector;
 using std::string;
 
-class action: public rvs::lib::actionbase {
+class action: public rvs::actionbase {
  public:
     action();
     virtual ~action();
 
-    virtual int property_set(const char*, const char*);
     virtual int run(void);
 
  private:
