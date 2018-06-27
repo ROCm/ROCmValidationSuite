@@ -47,11 +47,6 @@ action::~action()
 	property.clear();
 }
 
-int action::property_set(const char* Key, const char* Val)
-{
-	return rvs::lib::actionbase::property_set(Key, Val);
-}
-
 int action::run(void)
 { 
   std::string action_name;

@@ -22,6 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include "action.h"
+
 #include <string>
 #include <vector>
 #include <regex>
@@ -41,7 +43,6 @@ extern "C" {
 #include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
-#include "action.h"
 
 #define CHAR_BUFF_MAX_SIZE              1024
 #define PCI_DEV_NUM_CAPABILITIES        16
@@ -119,16 +120,6 @@ static bool is_positive_integer(const std::string& str_val) {
     return !str_val.empty()
             && std::find_if(str_val.begin(), str_val.end(),
                     [](char c) {return !std::isdigit(c);}) == str_val.end();
-}
-
-/**
- * adds a (key, value) pair to the module's properties collection
- * @param Key one of the keys specified in the RVS SRS
- * @param Val key's value
- * @return add result
- */
-int action::property_set(const char* Key, const char* Val) {
-    return rvs::lib::actionbase::property_set(Key, Val);
 }
 
 /**
