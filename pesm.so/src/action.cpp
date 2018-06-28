@@ -47,13 +47,27 @@ extern const char* pcie_cap_names[];
 
 static Worker* pworker;
 
+//! Default constructor
 action::action() {
 }
 
+//! Default destructor
 action::~action() {
   property.clear();
 }
 
+/**
+ * @brief Implements action functionality
+ *
+ * Functionality:
+ *
+ * - If "do_gpu_list" property is set, it lists all AMD GPUs present in the system and exits
+ * - If "monitor" property is set to "true", it creates Worker thread and initiates monitoring and exits
+ * - If "monitor" property is not set or is not set to "true", it stops the Worker thread and exits
+ *
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
 int action::run(void) {
   log("[PESM] in run()", rvs::logdebug);
 
@@ -100,6 +114,16 @@ int action::run(void) {
   return 0;
 }
 
+/**
+ * @brief Lists AMD GPUs
+ *
+ * Functionality:
+ *
+ * Lists all AMD GPUs present in the system.
+ *
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
 int action::do_gpu_list() {
   log("[PESM] in do_gpu_list()", rvs::logdebug);
 
