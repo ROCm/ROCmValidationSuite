@@ -51,6 +51,9 @@ class action: public rvs::actionbase {
     virtual int run(void);
 
  private:
+    bool bjson;
+    void* json_root_node;
+
     vector<string> device_prop_gpu_id_list;  // the list of all gpu_id
                                              // in the <device> property
     string action_name;
@@ -65,7 +68,6 @@ class action: public rvs::actionbase {
     float gst_target_stress;
     float gst_tolerance;
     
-
     // configuration properties getters
     // gets the device property value (list of gpu_id)
     // from the module's properties collection
@@ -85,6 +87,9 @@ class action: public rvs::actionbase {
     
     void log_module_error(const string &error);
     void do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
+    
+    // json stuff
+    void init_json_logging(void);
  protected:
 };
 

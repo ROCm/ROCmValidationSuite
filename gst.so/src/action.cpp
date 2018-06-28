@@ -34,6 +34,7 @@
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
 
+#include "gst_worker.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvsliblogger.h"
@@ -81,11 +82,14 @@ using std::map;
 
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 
+#define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 
 /**
  * default class constructor
  */
 action::action() {
+    bjson = false;
+    json_root_node = NULL;
 }
 
 /**
@@ -360,10 +364,56 @@ void action::log_module_error(const string &error) {
  * @param gst_gpus_device_index <gpu_index, gpu_id> map
  */
 void action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
-    map<int, uint16_t>::iterator it;
-    for (it = gst_gpus_device_index.begin(); it != gst_gpus_device_index.end(); ++it) {
-        printf("index_gpu=%d gpuid=%u\n", it->first, it->second);
+    unsigned int i = 0;
+    
+    if (gst_runs_parallel) {
+        GSTWorker worker[gst_gpus_device_index.size()];
+        map<int, uint16_t>::iterator it;
+        for (it = gst_gpus_device_index.begin(); it != gst_gpus_device_index.end(); ++it) {
+                // set worker thread stress test params
+                worker[i].set_name(action_name);
+                worker[i].set_gpu_id(it->second);
+                worker[i].set_gpu_device_index(it->first);
+                worker[i].set_run_wait_ms(gst_run_wait_ms);
+                worker[i].set_run_duration_ms(gst_run_duration_ms);
+                worker[i].set_ramp_interval(gst_ramp_interval);
+                worker[i].set_log_interval(gst_log_interval);
+                worker[i].set_max_violations(gst_max_violations);
+                worker[i].set_copy_matrix(gst_copy_matrix);
+                worker[i].set_target_stress(gst_target_stress);
+                worker[i].set_tolerance(gst_tolerance);                                
+                worker[i].start();
+                i++;
+        }
+    
+        // join threads
+        for(i = 0; i < gst_gpus_device_index.size(); i++) 
+            worker[i].join();
     }
+}
+
+/**
+ * checks if JSON logging is enabled (-j flag) and 
+ * initializes the root node
+ */
+void action::init_json_logging(void) {
+    bjson = false;  // already initialized in the default constructor
+
+    // check for -j flag (json logging)
+    if (property.find("cli.-j") != property.end()) {
+        unsigned int sec;
+        unsigned int usec;
+        rvs::lp::get_ticks(sec, usec);
+
+        bjson = true;
+
+        json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME, action_name.c_str(), rvs::loginfo, sec, usec);
+        if (json_root_node == NULL) {
+            // log the error
+            string msg = action_name + " " + MODULE_NAME + " " + JSON_CREATE_NODE_ERROR;
+            log(msg.c_str(), rvs::logerror);
+        }
+    }    
 }
 
 /**
@@ -383,6 +433,8 @@ int action::run(void) {
     map<int, uint16_t> gst_gpus_device_index;
 
     property_get_action_name();
+    
+    init_json_logging();
 
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU        
