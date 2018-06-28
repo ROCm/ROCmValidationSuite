@@ -116,7 +116,7 @@ rvs::module* rvs::module::find_create_module(const char* name)
       libpath += "/";
     }
     string sofullname(libpath + it->second);
-    void* psolib = dlopen(sofullname.c_str(), RTLD_LAZY);
+    void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
 
     // error?
     if( !psolib) {
