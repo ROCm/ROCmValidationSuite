@@ -30,6 +30,13 @@
 namespace rvs
 {
 
+/**
+ *  @class ThreadBase
+ *
+ *  @brief Base class for all module level threads
+ *
+ */
+
 class ThreadBase {
 protected:
   ThreadBase();
@@ -43,9 +50,13 @@ public:
 
 protected:
   void runinternal(void);
+
+  //! Virtual thread function. To be implemented in every derived class.
   virtual void run() = 0;
 
 protected:
+
+  //! Underlaying std::thread object.
   std::thread t;
 
 };
