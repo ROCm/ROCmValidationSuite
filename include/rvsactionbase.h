@@ -32,6 +32,13 @@
 namespace rvs
 {
 
+/**
+ *  @class actionbase
+ *
+ *  @brief Base class for all module level actions
+ *
+ */
+
 class actionbase
 {
 public:
@@ -43,11 +50,21 @@ protected:
 
 public:
   virtual int     property_set(const char*, const char*);
+
+  //! Virtual action function. To be implemented in every derived class.
   virtual int     run(void) = 0;
   bool has_property(const std::string& key, std::string& val);
   bool has_property(const std::string& key);
 
 protected:
+/**
+ *  @brief Collection of properties
+ *
+ * Properties represent:
+ *  - content of corresponding "action" tag in YAML .conf file
+ *  - command line arguments given when invoking rvs
+ *  - other parameters given for specific module actions (see module action for help)
+ */
   std::map<std::string, std::string>  property;
 };
 
