@@ -45,6 +45,7 @@ extern "C" {
 #include "gpu_util.h"
 #include "rvsloglp.h"
 
+using namespace std;
 
 Worker::Worker() {}
 Worker::~Worker() {}
