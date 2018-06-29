@@ -31,6 +31,13 @@ namespace rvs
 {
 
 
+/**
+ * @class LogNodeString
+ * @ingroup Launcher
+ *
+ * @brief Loger node holding string value
+ *
+ */
 class LogNodeString : public LogNodeBase
 {
 
@@ -45,6 +52,7 @@ public:
 
 protected:
 
+  //! Node value
   std::string Value;
 };
 

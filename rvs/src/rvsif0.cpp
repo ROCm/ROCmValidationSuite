@@ -24,6 +24,7 @@
  *******************************************************************************/
 #include "rvsif0.h"
 
+//! Default constructor
 rvs::if0::if0()
 :
 rvs_module_get_version(nullptr),
@@ -32,13 +33,27 @@ rvs_module_get_description(nullptr),
 rvs_module_has_interface(nullptr) {
 }
 
+//! Default destructor
 rvs::if0::~if0() {
 }
 
+/**
+ * @brief Copy constructor
+ *
+ * @param rhs reference to RHS instance
+ *
+ */
 rvs::if0::if0(const if0& rhs) {
   *this = rhs;
 }
 
+/**
+ * @brief Assignment operator
+ *
+ * @param rhs reference to RHS instance
+ * @return reference to LHS instance
+ *
+ */
 rvs::if0& rvs::if0::operator=(const rvs::if0& rhs) {
   // self-assignment check
   if (this != &rhs) {
@@ -54,30 +69,77 @@ rvs::if0& rvs::if0::operator=(const rvs::if0& rhs) {
   return *this;
 }
 
+/**
+ * @brief Clone instance
+ *
+ * @return pointer to newly created instance
+ *
+ */
 rvs::ifbase* rvs::if0::clone(void) {
   return new rvs::if0(*this);
 }
 
 
+/**
+ * @brief Fetch version number
+ *
+ * Fetch version number of the module where action has been instantiated.
+ *
+ * @param Major Major version number
+ * @param Minor Minor version number
+ * @param Patch Patch version number
+ *
+ */
 void  rvs::if0::get_version(int* Major, int* Minor, int* Patch) {
   (*rvs_module_get_version)(Major, Minor, Patch);
 }
 
+/**
+ * @brief Get module name
+ *
+ * @return pointer to C string holding module name
+ *
+ */
 char* rvs::if0::get_name(void) {
   return (*rvs_module_get_name)();
 }
 
+/**
+ * @brief Get module description
+ *
+ * @return pointer to C string holding module description
+ *
+ */
 char* rvs::if0::get_description(void) {
   return (*rvs_module_get_description)();
 }
 
+/**
+ * @brief Checks if action supports certain Inetrface ID
+ *
+ * @return 1 - IID is supporte, 0 - otherwise
+ *
+ */
 int rvs::if0::has_interface(int iid) {
   return (*rvs_module_has_interface)(iid);
 }
 
+/**
+ * @brief Returns short info on what configuaration properties (keys) are suppored
+ *
+ * @return pointer to C string holding configuration info
+ *
+ */
 char* rvs::if0::get_config() {
   return (*rvs_module_get_config)();
 }
+
+/**
+ * @brief Returns short info on what output properties (keys) are returned
+ *
+ * @return pointer to C string holding output info
+ *
+ */
 char* rvs::if0::get_output() {
   return (*rvs_module_get_output)();
 }
