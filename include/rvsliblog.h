@@ -39,6 +39,9 @@ typedef void  (*t_cbAddString)(void* Parent, const char* Key, const char* Val);
 typedef void  (*t_cbAddInt)(void* Parent, const char* Key, const int Val);
 typedef void  (*t_cbAddNode)(void* Parent, void* Child);
 
+/**
+ * @brief Module initialization structure
+ */
 typedef struct tag_module_init 
 {
   //! pointer to rvs::logger::Log() function

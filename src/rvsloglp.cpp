@@ -69,7 +69,7 @@ int rvs::lp::Log(const char* pMsg, const int level) {
  * @param Msg Message to log
  * @param LogLevel Logging level
  * @param Sec seconds from system start
- * @param uSec microseconds in current second
+ * @param uSec microseconds within current second
  * @return 0 - success, non-zero otherwise
  *
  */
@@ -86,7 +86,7 @@ int rvs::lp::Log(const std::string& Msg, const int LogLevel, const unsigned int 
  * @param Action Action from which record is originating
  * @param LogLevel Logging level
  * @param Sec seconds from system start
- * @param uSec microseconds in current second
+ * @param uSec microseconds within current second
  * @return 0 - success, non-zero otherwise
  *
  */
@@ -213,7 +213,7 @@ void  rvs::lp::AddNode(void* Parent, void* Child) {
  * @brief Fetches times since system start
  *
  * @param secs seconds since system start
- * @param usecs microseconds withing current second
+ * @param usecs microseconds within current second
  * @return 'true' - success, 'false' otherwise
  *
  */
