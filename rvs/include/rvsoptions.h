@@ -34,14 +34,25 @@
 namespace rvs
 {
 
+/**
+ * @class options
+ * @ingroup Launcher
+ *
+ * @brief Collection of options.
+ *
+ * Execute functionality based on command line and the contents of .conf file.
+ *
+ */
+
 class options {
 public:
 
-  static bool has_option(const std::string& pOption);
-  static bool has_option(const std::string& pOption, std::string& val);
+  static bool has_option(const std::string& Option);
+  static bool has_option(const std::string& Option, std::string& val);
   static const std::map<std::string,std::string>& get(void);
 
 protected:
+  //! Collection of options
   static      std::map<std::string,std::string>	opt;
 
 friend class cli;

@@ -31,6 +31,13 @@ namespace rvs
 {
 
 
+/**
+ * @class LogNodeInt
+ * @ingroup Launcher
+ *
+ * @brief Loger node holding integer value
+ *
+ */
 class LogNodeInt : public LogNodeBase
 {
 
@@ -45,6 +52,7 @@ public:
 
 protected:
 
+  //! Node value
   int Value;
 };
 

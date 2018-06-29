@@ -40,7 +40,6 @@ extern "C" {
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
-#include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
 
@@ -68,6 +67,8 @@ extern "C" {
 #define PEQT_RESULT_FAIL_MESSAGE        "FALSE"
 
 #define MODULE_NAME                     "peqt"
+
+using namespace std;
 
 // collection of allowed PCIe capabilities
 const char* pcie_cap_names[] =

@@ -45,10 +45,17 @@ extern "C" {
 #include "gpu_util.h"
 #include "rvsloglp.h"
 
+using namespace std;
 
 Worker::Worker() {}
 Worker::~Worker() {}
 
+/**
+ * @brief Thread function
+ *
+ * Loops while brun == TRUE and performs polled monitoring avery 1msec.
+ *
+ * */
 void Worker::run() {
 
   brun = true;
@@ -152,6 +159,13 @@ void Worker::run() {
 
 }
 
+/**
+ * @brief Stops monitoring
+ *
+ * Sets brun member to FALSE thus signaling end of monitoring.
+ * Then it waits for std::thread to exit before returning.
+ *
+ * */
 void Worker::stop() {
 
   log("[PESM] in Worker::stop()", rvs::logdebug);

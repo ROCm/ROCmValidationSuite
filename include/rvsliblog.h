@@ -39,15 +39,26 @@ typedef void  (*t_cbAddString)(void* Parent, const char* Key, const char* Val);
 typedef void  (*t_cbAddInt)(void* Parent, const char* Key, const int Val);
 typedef void  (*t_cbAddNode)(void* Parent, void* Child);
 
+/**
+ * @brief Module initialization structure
+ */
 typedef struct tag_module_init 
 {
+  //! pointer to rvs::logger::Log() function
   t_rvs_module_log     cbLog;
+  //! pointer to rvs::logger::LogExt() function
   t_cbLogExt           cbLogExt;
+  //! pointer to rvs::logger::LogRecordCreate() function
   t_cbLogRecordCreate  cbLogRecordCreate;
+  //! pointer to rvs::logger::LogRecordFlush() function
   t_cbLogRecordFlush   cbLogRecordFlush;
+  //! pointer to rvs::logger::CreateNode() function
   t_cbCreateNode       cbCreateNode;
+  //! pointer to rvs::logger::AddString() function
   t_cbAddString        cbAddString;
+  //! pointer to rvs::logger::AddInt() function
   t_cbAddInt           cbAddInt;
+  //! pointer to rvs::logger::AddNode() function
   t_cbAddNode          cbAddNode;
 
 } T_MODULE_INIT;
@@ -63,7 +74,7 @@ namespace rvs
 const int lognone     = 0;
 const int logresults  = 1;
 const int logerror    = 2;
-const int loginfo    = 3;
+const int loginfo     = 3;
 const int logdebug    = 4;
 const int logtrace    = 5;
 

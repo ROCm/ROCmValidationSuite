@@ -26,6 +26,16 @@
 #include "action.h"
 #include "rvsloglp.h"
 
+/**
+ * @defgroup GPUP GPUP Module
+ *
+ * @brief GPU Properties module
+ *
+ * The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will
+ * report various information at regular intervals. The module can be configured to halt another
+ * RVS modules execution if one of the quantities exceeds a specified boundary value.
+ */
+
 int log(const char* pMsg, const int level) {
   return rvs::lp::Log(pMsg, level);
 }
