@@ -36,7 +36,6 @@
 
 #include "gpu_util.h"
 #include "rvs_util.h"
-#include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
 

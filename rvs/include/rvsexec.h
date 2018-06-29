@@ -29,13 +29,20 @@
 #include "yaml-cpp/node/node.h"
 
 
-using namespace std;
-
-
 namespace rvs
 {
 
 class if1;
+
+/**
+ * @class exec
+ * @ingroup Launcher
+ *
+ * @brief Command executor class.
+ *
+ * Execute functionality based on command line and the contents of .conf file.
+ *
+ */
 
 class exec {
 
@@ -52,10 +59,10 @@ protected:
   void  do_version(void);
   int   do_gpu_list(void);
 
-  int   do_yaml(const string& config_file);
-  int   do_yaml_properties(const YAML::Node& node, const string& module_name, if1* pif1);
-  bool  is_yaml_properties_collection(const string& module_name, const string& proprty_name);
-  int   do_yaml_properties_collection(const YAML::Node& node, const string& parent_name, if1* pif1);
+  int   do_yaml(const std::string& config_file);
+  int   do_yaml_properties(const YAML::Node& node, const std::string& module_name, if1* pif1);
+  bool  is_yaml_properties_collection(const std::string& module_name, const std::string& proprty_name);
+  int   do_yaml_properties_collection(const YAML::Node& node, const std::string& parent_name, if1* pif1);
 
 };
 

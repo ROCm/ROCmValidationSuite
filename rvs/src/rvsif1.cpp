@@ -27,6 +27,7 @@
 
 using namespace std;
 
+//! Default constructor
 rvs::if1::if1()
 :
 rvs_module_action_property_set(nullptr),
@@ -34,13 +35,28 @@ rvs_module_action_run(nullptr),
 rvs_module_get_errstring(nullptr) {
 }
 
+//! Default descrutor
 rvs::if1::~if1() {
 }
 
+
+/**
+ * @brief Copy constructor
+ *
+ * @param rhs reference to RHS instance
+ *
+ */
 rvs::if1::if1(const if1& rhs) {
   *this = rhs;
 }
 
+/**
+ * @brief Assignment operator
+ *
+ * @param rhs reference to RHS instance
+ * @return reference to LHS instance
+ *
+ */
 rvs::if1& rvs::if1::operator=(const rvs::if1& rhs) {
   // self-assignment check
   if (this != &rhs) {
@@ -53,23 +69,58 @@ rvs::if1& rvs::if1::operator=(const rvs::if1& rhs) {
   return *this;
 }
 
+/**
+ * @brief Clone instance
+ *
+ * @return pointer to newly created instance
+ *
+ */
 rvs::ifbase* rvs::if1::clone(void) {
   return new rvs::if1(*this);
 }
 
+/**
+ * @brief Sets action property
+ *
+ * @param pKey Property key
+ * @param pVal Property value
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::if1::property_set(const char* pKey, const char* pVal ) {
   rvs::logger::log(string("poperty: [") + string(pKey) + string("]   val:[")+string(pVal)+string("]"), rvs::logtrace);
   return (*rvs_module_action_property_set)(plibaction, pKey, pVal);
 }
 
-int rvs::if1::property_set( const string& Key, const string& Val) {
+/**
+ * @brief Sets action property
+ *
+ * @param Key Property key
+ * @param Val Property value
+ * @return 0 - success. non-zero otherwise
+ *
+ */
+int rvs::if1::property_set( const std::string& Key, const std::string& Val) {
   return property_set( Key.c_str(), Val.c_str());
 }
 
+/**
+ * @brief Execute action
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::if1::run(void) {
   return (*rvs_module_action_run)(plibaction);
 }
 
+/**
+ * @brief Get error string
+ *
+ * @param iErrCode Error code returned by run()
+ * @return C string describing error code
+ *
+ */
 char* rvs::if1::get_errstring(int iErrCode) {
   return (*rvs_module_get_errstring)(iErrCode);
 }

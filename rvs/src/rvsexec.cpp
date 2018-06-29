@@ -38,14 +38,23 @@
 
 #define VER "BUILD_VERSION_STRING"
 
+using namespace std;
 
+//! Default constructor
 rvs::exec::exec() {
 }
 
+//! Default destructor
 rvs::exec::~exec() {
 }
 
 
+/**
+ * @brief Main executor method.
+ *
+ * @return 0 if successful, non-zero otherwise
+ *
+ */
 int rvs::exec::run() {
   int     sts = 0;
   string  val;
@@ -140,14 +149,17 @@ int rvs::exec::run() {
   return sts;
 }
 
+//! Reports version strin
 void rvs::exec::do_version() {
   cout << LIB_VERSION_STRING << endl;
 }
 
+//! Prints help
 void rvs::exec::do_help() {
   cout << "No help available." << endl;
 }
 
+//! Reports list of AMD GPUs presnt in the system
 int rvs::exec::do_gpu_list() {
 
   cout << "\nROCm Validation Suite (version " << LIB_VERSION_STRING << ")\n" << endl;

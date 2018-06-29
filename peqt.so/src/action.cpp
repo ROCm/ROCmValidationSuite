@@ -40,7 +40,6 @@ extern "C" {
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
-#include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
 
