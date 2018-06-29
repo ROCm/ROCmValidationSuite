@@ -68,6 +68,8 @@ extern "C" {
 
 #define MODULE_NAME                     "peqt"
 
+using namespace std;
+
 // collection of allowed PCIe capabilities
 const char* pcie_cap_names[] =
         { "link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed",

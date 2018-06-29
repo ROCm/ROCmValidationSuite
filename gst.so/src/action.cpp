@@ -39,9 +39,7 @@
 #include "rvs_module.h"
 #include "rvsloglp.h"
 
-using std::vector;
-using std::string;
-using std::map;
+using namespace std;
 
 #define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
 #define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\

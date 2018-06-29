@@ -29,28 +29,33 @@
 
 #include "rvsliblog.h"
 
-using namespace std;
 
 namespace rvs
 {
 
 
+/**
+ * @class lp
+ *
+ * @brief Logger Proxy class
+ *
+ * Used to access Logger functionality implemented in Launcher from RVS modules
+ *
+ */
 class lp
 {
 
 public:
-  lp();
-  ~lp();
 
   static int   Log(const char* pMsg, const int level);
-  static int   Log(const string& Msg, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
+  static int   Log(const std::string& Msg, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
   static int   Initialize(const T_MODULE_INIT* pMi);
   static void* LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
-  static void* LogRecordCreate( const string Module, const string Action, const int LogLevel = rvs::logresults);
-  static void* LogRecordCreate( const char* Module, const char* Action, const int LogLevel = rvs::logresults);
+  static void* LogRecordCreate( const std::string& Module, const std::string& Action, const int LogLevel = rvs::logerror);
+  static void* LogRecordCreate( const char* Module, const char* Action, const int LogLevel = rvs::logerror);
   static int   LogRecordFlush( void* pLogRecord);
   static void* CreateNode(void* Parent, const char* Name);
-  static void  AddString(void* Parent, const string& Key, const string& Val);
+  static void  AddString(void* Parent, const std::string& Key, const std::string& Val);
   static void  AddString(void* Parent, const char* Key, const char* Val);
   static void  AddInt(void* Parent, const char* Key, const int Val);
   static void  AddNode(void* Parent, void* Child);
@@ -58,6 +63,7 @@ public:
 
 
 protected:
+  //! Module init structure passed through Initialize() method
   static T_MODULE_INIT mi;
 
 };
