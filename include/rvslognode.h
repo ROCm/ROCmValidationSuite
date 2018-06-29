@@ -35,6 +35,7 @@ namespace rvs
 
 /**
  * @class LogNode
+ * @ingroup Launcher
  *
  * @brief Logger Node class
  *

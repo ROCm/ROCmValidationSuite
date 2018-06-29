@@ -76,7 +76,7 @@ void rvs::LogNode::Add(LogNodeBase* pChild) {
  * Also ensures proper indentation and line breaks for formatted output.
  *
  * @param Lead String of blanks " " representing current indentation
- * @return JSON node as string
+ * @return Node as JSON string
  *
  */
 std::string rvs::LogNode::ToJson(const std::string& Lead) {
