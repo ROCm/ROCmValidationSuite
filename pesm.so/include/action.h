@@ -5,6 +5,16 @@
 
 #include "rvsactionbase.h"
 
+/**
+ * @class action
+ * @ingroup PESM
+ *
+ * @brief PESM action implementation class
+ *
+ * Derives from rvs::actionbase and implements actual action functionality
+ * in its run() method.
+ *
+ */
 class action : public rvs::actionbase
 {
 public:

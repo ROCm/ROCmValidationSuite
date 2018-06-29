@@ -30,22 +30,55 @@
 
 using namespace std;
 
+/**
+ * @brief Default constructor.
+ *
+ * */
 rvs::actionbase::actionbase() {
 }
 
+/**
+ * @brief Default destructor.
+ *
+ * */
 rvs::actionbase::~actionbase() {
 }
 
+/**
+ * @brief Sets action property
+ *
+ * @param pKey Property key
+ * @param pVal Property value
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
 int rvs::actionbase::property_set(const char* pKey, const char* pVal) {
   property.insert( pair<string, string>(pKey, pVal));
   return 0;
 }
 
+/**
+ * @brief Pauses current thread for the given time period
+ *
+ * @param ms Sleep time in milliseconds.
+ * @return (void)
+ *
+ * */
 void rvs::actionbase::sleep(const unsigned int ms) {
   ::usleep(1000*ms);
 }
 
-bool rvs::actionbase::has_property(const string& key, string& val) {
+/**
+ * @brief Checks if property is set.
+ *
+ * Returns value if propety is set.
+ *
+ * @param key Property key
+ * @param val Property value. Not changed if propery is not set.
+ * @return TRUE - property set, FALSE - othewise
+ *
+ * */
+bool rvs::actionbase::has_property(const std::string& key, std::string& val) {
 
   auto it = property.find(key);
   if(it != property.end()) {
@@ -56,7 +89,14 @@ bool rvs::actionbase::has_property(const string& key, string& val) {
   return false;
 }
 
-bool rvs::actionbase::has_property(const string& key) {
+/**
+ * @brief Checks if property is set.
+ *
+ * @param key Property key
+ * @return TRUE - property set, FALSE - othewise
+ *
+ * */
+bool rvs::actionbase::has_property(const std::string& key) {
   string val;
   return has_property(key, val);
 }

@@ -33,6 +33,15 @@
 namespace rvs 
 {
 
+/**
+ * @class LogNode
+ * @ingroup Launcher
+ *
+ * @brief Logger Node class
+ *
+ * Used to construct structure log record for JSON output
+ *
+ */
 class LogNode : public LogNodeBase
 {
 
@@ -48,6 +57,7 @@ public:
   void Add(LogNodeBase* spChild);
 
 public:
+  //! list of child nodes
   std::vector<LogNodeBase*> Child;
 
 

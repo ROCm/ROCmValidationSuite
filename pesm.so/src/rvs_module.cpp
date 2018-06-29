@@ -30,6 +30,18 @@
 #include "rvsloglp.h"
 #include "action.h"
 
+/**
+ * @defgroup PESM PESM Module
+ *
+ * @brief PCIe State Monitoring module
+ *
+ * The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host
+ * platform and the GPU. The module will register a “listener” on a target GPU’s PCIe
+ * interconnect, and log a message whenever it detects a state change. The PESM will be able to
+ * detect the following state changes:
+ *   - 1.2.PCIe link speed changes
+ *   - GPU power state changes
+ */
 
 
 int log(const char* pMsg, const int level) {
