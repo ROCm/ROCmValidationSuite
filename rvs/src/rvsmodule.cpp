@@ -42,15 +42,33 @@ YAML::Node rvs::module::config;
 
 using namespace std;
 
-rvs::module::module(const char* pModuleShortName, void* pSoLib)
+/**
+ * @brief Constructor
+ *
+ * @param pModuleName Module name
+ * @param pSoLib .so library which implements module
+ *
+ */
+rvs::module::module(const char* pModuleName, void* pSoLib)
 :
 psolib(pSoLib),
-name(pModuleShortName) {
+name(pModuleName) {
 }
 
+//! Destructor
 rvs::module::~module() {
 }
 
+/**
+ * @brief Module manager initialization method
+ *
+ * Reads module name -> .so file mapping from configuration file name
+ * specified by pConfig
+ *
+ * @param pConfig Name of configuration file
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::initialize(const char* pConfig) {
   // load list of supported modules from config file
   YAML::Node config = YAML::LoadFile(pConfig);
@@ -85,6 +103,15 @@ int rvs::module::initialize(const char* pConfig) {
 	return 0;
 }
 
+/**
+ * @brief Given module name, return pointer to module instance
+ *
+ * This method will load and initialize module if needed.
+ *
+ * @param name Name of configuration file
+ * @return Pointer to module instance
+ *
+ */
 rvs::module* rvs::module::find_create_module(const char* name)
 {
   module* m = NULL;
@@ -157,6 +184,15 @@ rvs::module* rvs::module::find_create_module(const char* name)
   return m;
 }
 
+/**
+ * @brief Module instance initialization method
+ *
+ * Fills module initialization structure with pointers to
+ * Logger API and passes it to module Initialize() API.
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::initialize() {
   T_MODULE_INIT d;
 
@@ -173,6 +209,13 @@ int rvs::module::initialize() {
 }
 
 
+/**
+ * @brief Given module name, create module action
+ *
+ * @param name Module name
+ * @return Pointer to action instance created in module
+ *
+ */
 rvs::action* rvs::module::action_create(const char* name) {
   // find module
   rvs::module* m = module::find_create_module(name);
@@ -207,11 +250,28 @@ rvs::action* rvs::module::action_create(const char* name) {
   return pa;
 }
 
+/**
+ * @brief Create module action
+ *
+ * Note: internal, used by static action_create()
+ *
+ * @return Pointer to action instance created in module
+ *
+ */
 void* rvs::module::action_create() {
   return (*rvs_module_action_create)();
 }
 
 
+/**
+ * @brief Destroy module action
+ *
+ * Note: after this call, proxy action is also destroyed and its
+ * pointer can no
+ * @param paction Pointer to action proxy instance
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::action_destroy(rvs::action* paction) {
   // find module
   rvs::module* m = module::find_create_module(paction->name.c_str());
@@ -221,6 +281,15 @@ int rvs::module::action_destroy(rvs::action* paction) {
   return m->action_destroy_internal(paction);
 }
 
+/**
+ * @brief Destroy module action
+ *
+ * Note: internal, used by static action_destroy()
+ *
+ * @param paction Pointer to action proxy instance
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::action_destroy_internal(rvs::action* paction) {
   int sts = (*rvs_module_action_destroy)(paction->plibaction);
   delete paction;
@@ -228,9 +297,14 @@ int rvs::module::action_destroy_internal(rvs::action* paction) {
   return sts;
 }
 
+/**
+ * @brief Cleanup module manager
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::terminate() {
-  for(auto it = rvs::module::modulemap.begin(); it != rvs::module::modulemap.end(); it++)
-    {
+  for(auto it = rvs::module::modulemap.begin(); it != rvs::module::modulemap.end(); it++) {
     it->second->terminate_internal();
     dlclose(it->second->psolib);
     delete it->second;
@@ -241,11 +315,28 @@ int rvs::module::terminate() {
   return 0;
 }
 
+/**
+ * @brief Cleanup module instance
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::terminate_internal() {
   return (*rvs_module_terminate)();
 }
 
 
+/**
+ * @brief Init module interfaces
+ *
+ * Module interfaces are initialized upon loading of module.
+ * Pointer to starndard RVS API functions are obtained by calling ldsym() given API function names.
+ * Action proxy interfaces are also created at this point and later cloned into particular action
+ * proxy upon creation of action.
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::init_interfaces() {
   // init global helper methods for this library
   if( init_interface_method( (void**)(&rvs_module_init), "rvs_module_init"))
@@ -269,6 +360,17 @@ int rvs::module::init_interfaces() {
   return 0;
 }
 
+/**
+ * @brief Initialize function pointer
+ *
+ * Initialize function pointer by searching function by name in .so library
+ *
+ * @param ppfunc pointer to function pointer to be initialized
+ * @param pMethodName Method name
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName) {
   if (!psolib) {
     cerr << "ERROR: psolib is null. " << endl;
@@ -284,6 +386,12 @@ int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName) {
   return 0;
 }
 
+/**
+ * @brief Init RVS IF0 interfaces
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::init_interface_0(void) {
   rvs::if0* pif0 = new rvs::if0();
   if(!pif0)
@@ -320,6 +428,12 @@ int rvs::module::init_interface_0(void) {
   return 0;
 }
 
+/**
+ * @brief Init RVS IF1 interfaces
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::module::init_interface_1(void) {
   rvs::if1* pif1 = new rvs::if1();
   if(!pif1)
@@ -346,6 +460,10 @@ int rvs::module::init_interface_1(void) {
   return 0;
 }
 
+/**
+ * @brief Lists available modules
+ *
+ */
 void rvs::module::do_list_modules(void)
 {
   // for all modules
