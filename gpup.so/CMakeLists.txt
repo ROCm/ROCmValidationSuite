@@ -72,7 +72,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 
 ## additional libraries
-## set ( PROJECT_LINK_LIBS libdl.so )
+set (PROJECT_LINK_LIBS libpci.so libm.so)
 
 ## define include directories
 include_directories(include ../include)
@@ -87,6 +87,8 @@ add_library( ${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
