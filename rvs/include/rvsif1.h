@@ -30,17 +30,23 @@
 #include "rvsmodule_if1.h"
 #include "rvsif_base.h"
 
-using namespace std;
 
 namespace rvs 
 {
 
+/**
+ * @class if1
+ * @ingroup Launcher
+ *
+ * @brief RVS IF1 interface
+ *
+ */
 class if1 : public ifbase {
 
 public:
   virtual ~if1();
   virtual int   property_set(const char*, const char*);
-  virtual int   property_set(const string&, const string&);
+  virtual int   property_set(const std::string&, const std::string&);
   virtual int   run(void);
   virtual char* get_errstring(int);
 
@@ -52,8 +58,11 @@ virtual if1& operator= (const if1& rhs);
 virtual ifbase* clone(void);
 
 protected:
+  //! Pointer to module function doing property set
   t_rvs_module_action_property_set  rvs_module_action_property_set;
+  //! Pointer to module function implementing run() functionality
   t_rvs_module_action_run           rvs_module_action_run;
+  //! Pointer to module function returning error string
   t_rvs_module_get_errstring        rvs_module_get_errstring;
 
 friend class module;

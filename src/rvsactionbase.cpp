@@ -47,8 +47,6 @@ rvs::actionbase::~actionbase() {
 /**
  * @brief Sets action property
  *
- * Returns value if propety is set.
- *
  * @param pKey Property key
  * @param pVal Property value
  * @return 0 - success. non-zero otherwise

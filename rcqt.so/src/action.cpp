@@ -37,7 +37,6 @@
 #include <sys/utsname.h>
 
 #include "rvs_module.h"
-#include "rvsliblogger.h"
 #include "rvs_util.h"
 
 
