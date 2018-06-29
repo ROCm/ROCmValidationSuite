@@ -43,6 +43,7 @@ typedef enum eLN {
 
 /**
  * @class LogNodeBase
+ * @ingroup Launcher
  *
  * @brief Base class for all logger nodes
  *
@@ -60,7 +61,7 @@ public:
  * This method has to be implemented in every derived class.
  *
  * @param Lead String of blanks " " representing current indentation
- * @return JSON node as string
+ * @return Node as JSON string
  *
  */
   virtual std::string ToJson(const std::string& Lead = "") = 0;
