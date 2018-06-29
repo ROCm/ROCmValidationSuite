@@ -71,13 +71,17 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 ## additional libraries
-set ( PROJECT_LINK_LIBS libpci.so libm.so)
+set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so libhip_hcc.so librocblas.so)
 
 ## define include directories
-include_directories(include ../include)
+include_directories(include ../include /opt/rocm/include /opt/rocm/hip/include/hip /opt/rocm/rocblas/include)
+
+## define libraries directories
+link_directories(/opt/rocm/lib)
 
 ## define source files
-set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp src/rvs_module.cpp src/action.cpp ../src/rvslib.cpp ../src/rvsloglp.cpp)
+set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
+  src/rvs_module.cpp src/action.cpp src/gst_worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})

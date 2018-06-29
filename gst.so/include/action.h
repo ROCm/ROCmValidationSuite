@@ -35,22 +35,61 @@ extern "C" {
 
 #include <vector>
 #include <string>
+#include <map>
 
-#include "rvslib.h"
+#include "rvsactionbase.h"
 
 using std::vector;
 using std::string;
+using std::map;
 
-class action: public rvs::lib::actionbase {
+class action: public rvs::actionbase {
  public:
     action();
     virtual ~action();
 
-    virtual int property_set(const char*, const char*);
     virtual int run(void);
 
  private:
+    bool bjson;
+    void* json_root_node;
 
+    vector<string> device_prop_gpu_id_list;  // the list of all gpu_id
+                                             // in the <device> property
+    string action_name;
+    bool gst_runs_parallel;
+    unsigned int gst_run_count;
+    unsigned long gst_run_wait_ms;
+    unsigned long gst_run_duration_ms;
+    unsigned long gst_ramp_interval;
+    unsigned long gst_log_interval;
+    int gst_max_violations;
+    bool gst_copy_matrix;
+    float gst_target_stress;
+    float gst_tolerance;
+    
+    // configuration properties getters
+    // gets the device property value (list of gpu_id)
+    // from the module's properties collection
+    bool property_get_device(int *error);
+    void property_get_action_name(void);  
+    int property_get_deviceid(int *error); 
+    void property_get_run_parallel(void);
+    void property_get_run_count(void);
+    void property_get_run_wait(void);
+    void property_get_run_duration(void);
+    void property_get_gst_ramp_interval(void);
+    void property_get_gst_log_interval(void);
+    void property_get_gst_max_violations(void);
+    void property_get_gst_copy_matrix(void);
+    void property_get_gst_target_stress(int *error);
+    void property_get_gst_tolerance(void);
+    
+    void log_module_error(const string &error);
+    void do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
+    
+    // json stuff
+    void init_json_logging(void);
  protected:
 };
 

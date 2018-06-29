@@ -31,31 +31,69 @@
 namespace rvs
 {
 
+/**
+ * @class cli
+ * @ingroup Launcher
+ *
+ * @brief Command line interpretter class.
+ *
+ * Parses command line options given when invoking rvs utility.
+ * Output si stored into rvs::options class.
+ *
+ */
+
 class cli {
 
 public:
 
+  //! Default constructor
   cli();
+  //! Default destructor
   virtual ~cli();
 
   int parse(int Argc, char** Argv);
   const char* get_error_string();
 
 protected:
+/**
+ *
+ * @brief Possible continuation types
+ *
+ * Defines possible type for the next token:
+ * |value    |meaning
+ * |---------|-------------------------
+ * |eof      |end of input
+ * |value    |value expected (must be different then command strings defined throuth grammar)
+ * |command  |command string as defined in grammar
+ *
+ */
   typedef enum {eof, value, command} econtext;
+
+  /**
+ * @class optbase
+ *
+ * @brief Token continuation list
+ *
+ * Stores possible contions for a token defined in grammar
+ *
+ */
 
   class optbase {
 
   public:
     optbase(const char* ptruename, econtext s1, econtext s2 = eof, econtext s3 = eof);
+    //! Default destructor
     virtual ~optbase();
     virtual bool adjust_context(std::stack<econtext>& old_context);
 
   public:
+    //! Option name as known internally to RVS
     std::string name;
+    //! Continuation stack for this option
     std::stack<econtext> new_context;
   };
 
+  //! Token-continuation pair
   typedef std::pair<std::string, std::shared_ptr<optbase>>   gpair;
 
 protected:
@@ -64,19 +102,25 @@ protected:
   bool  try_command(const std::string& token);
   bool  try_value(const std::string& token);
   bool  emit_option(void);
-  void  store_command(const std::string& token);
-  void  store_value(const std::string& token);
   void  init_grammar(void);
   void  extract_path(void);
 
 protected:
+  //! Helper variable to store command line parameters count across function calls
   int    argc;
+  //! Helper variable to store command line parameters count across function calls
   char** argv;
+  //! Helper variable to store current command line parameter being processed
   int    itoken;
+  //! Helper variable to store error string
   std::string errstr;
+  //! Helper variable to store token identified as command line option
   std::string current_option;
+  //! Helper variable to store token identified as command line option value
   std::string current_value;
+  //! Helper variable to store current continuation stack
   std::stack<econtext>  context;
+  //! Helper variable to store grammar
   std::map<std::string,std::shared_ptr<optbase>> grammar;
 
 };

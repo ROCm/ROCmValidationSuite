@@ -37,7 +37,6 @@
 #include <sys/utsname.h>
 
 #include "rvs_module.h"
-#include "rvsliblogger.h"
 #include "rvs_util.h"
 
 
@@ -53,47 +52,8 @@ action::~action() {
   property.clear();
 }
 
-int action::property_set(const char* Key, const char* Val) {
-  return rvs::lib::actionbase::property_set(Key, Val);
-}
-
-/*vector<string> action::str_split(const string& str_val, const string& delimiter) {
-  vector<string> str_tokens;
-  unsigned int prev_pos = 0, cur_pos = 0;
-  do {
-    cur_pos = str_val.find(delimiter, prev_pos);
-    if (cur_pos == string::npos)
-      cur_pos = str_val.length();
-    string token = str_val.substr(prev_pos, cur_pos - prev_pos);
-    if (!token.empty())
-      str_tokens.push_back(token);
-    prev_pos = cur_pos + delimiter.length();
-  } while (cur_pos < str_val.length() && prev_pos < str_val.length());
-  return str_tokens;
-}*/
-
-/*void action::split_string(vector <string> &group_array,char delimiter, string string_of_groups)
-{
-  /*size_t found = string_of_groups.find_first_of(delimiter);
-  while( found != string::npos){
-    group_array.push_back(string_of_groups.substr(0, found - 1));
-    string_of_groups = string_of_groups.substr(found, string_of_groups.size());
-  }
-  group_array.push_back(string_of_groups);
-  
-  for(int i = 0 ; i < group_array.size(); i++)
-    cout << group_array[i] << endl;
-  
-}*/
-
 int action::run()
 {
-    //string test = "jedan,dva,tri,cetiri";
-    //vector<string>vector_test;
-    //split_string(vector_test, ',', test);
-    
-    
-    
     map<string, string>::iterator iter;
     iter = property.find("package");
     if(iter != property.end()){
