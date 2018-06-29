@@ -34,6 +34,8 @@
 #include "rvs_module.h"
 #include "rvsloglp.h"
 
+using namespace std;
+
 GSTWorker::GSTWorker() {}
 GSTWorker::~GSTWorker() {}
 
