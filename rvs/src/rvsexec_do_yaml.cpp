@@ -52,8 +52,15 @@ actions:
 ***/
 
 using namespace rvs;
+using namespace std;
 
-int rvs::exec::do_yaml(const string& config_file) {
+/**
+ * @brief Executes actions listed in .conf file.
+ *
+ * @return 0 if successful, non-zero otherwise
+ *
+ */
+int rvs::exec::do_yaml(const std::string& config_file) {
   int sts = 0;
 
   YAML::Node config = YAML::LoadFile(config_file);
@@ -121,7 +128,13 @@ int rvs::exec::do_yaml(const string& config_file) {
   return 0;
 }
 
-int rvs::exec::do_yaml_properties(const YAML::Node& node, const string& module_name, rvs::if1* pif1)
+/**
+ * @brief Loads action properties.
+ *
+ * @return 0 if successful, non-zero otherwise
+ *
+ */
+int rvs::exec::do_yaml_properties(const YAML::Node& node, const std::string& module_name, rvs::if1* pif1)
 {
   int sts = 0;
 
@@ -143,7 +156,13 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node, const string& module_n
   return sts;
 }
 
-int rvs::exec::do_yaml_properties_collection(const YAML::Node& node, const string& parent_name, if1* pif1) {
+/**
+ * @brief Loads property collection for collection type node in .conf file.
+ *
+ * @return 0 if successful, non-zero otherwise
+ *
+ */
+int rvs::exec::do_yaml_properties_collection(const YAML::Node& node, const std::string& parent_name, if1* pif1) {
   int sts = 0;
 
   // for all child nodes
@@ -157,10 +176,17 @@ int rvs::exec::do_yaml_properties_collection(const YAML::Node& node, const strin
 
 }
 
-// check if particular property for a module is collection property
-bool rvs::exec::is_yaml_properties_collection(const string& module_name, const string& property_name)
+/**
+ * @brief Checks if property is collection type property in .conf file.
+ *
+ * @param module_name module name
+ * @param property_name property name
+ * @return 'true' if property is collection, 'false' otherwise
+ *
+ */
+bool rvs::exec::is_yaml_properties_collection(const std::string& module_name, const std::string& property_name)
 {
-  if( module_name == "gpup")   {
+  if( module_name == "gpup") {
     if(property_name == "properties")
       return true;
 

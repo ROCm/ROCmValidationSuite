@@ -28,21 +28,33 @@
 namespace rvs 
 {
 
+/**
+ * @class ifbase
+ * @ingroup Launcher
+ *
+ * @brief Base class for RVS interfaces.
+ *
+ */
 class ifbase {
 
 public:
+  //! Dfault destructor
   virtual ~ifbase();
 
 protected:
+  //! Default constructor
   ifbase();
+  //! Copy constructor
   ifbase(const ifbase& rhs);
 
-virtual ifbase& operator=(const ifbase& rhs);
-virtual ifbase* clone(void);
+  virtual ifbase& operator=(const ifbase& rhs);
+  virtual ifbase* clone(void);
 
 protected:
+  //! Pointer to action instance in an RVS module
   void*  plibaction;
 
+//! Factory class
 friend class module;
 
 };

@@ -41,10 +41,29 @@ typedef enum eLN {
   Record  = 4
 } T_LNTYPE;
 
+/**
+ * @class LogNodeBase
+ * @ingroup Launcher
+ *
+ * @brief Base class for all logger nodes
+ *
+ */
 class LogNodeBase
 {
 public:
+
   virtual ~LogNodeBase();
+
+/**
+ * @brief Provides JSON representation of Node
+ *
+ * Converts node into proper string representation.
+ * This method has to be implemented in every derived class.
+ *
+ * @param Lead String of blanks " " representing current indentation
+ * @return Node as JSON string
+ *
+ */
   virtual std::string ToJson(const std::string& Lead = "") = 0;
 
 protected:
@@ -52,8 +71,11 @@ protected:
   LogNodeBase(const char* rName, const LogNodeBase* pParent = nullptr);
 
 protected:
+  //! Parent node
   const LogNodeBase*   Parent;
+  //! Node name
   std::string     Name;
+  //! Node type
   T_LNTYPE       Type;
 };
 

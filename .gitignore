@@ -13,3 +13,4 @@ cmake_install.cmake
 doc
 CMakeFiles
 yaml-cpp.pc
+/rocm_smi_lib

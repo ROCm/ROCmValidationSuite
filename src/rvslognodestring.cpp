@@ -27,7 +27,15 @@
 
 using namespace std;
 
-rvs::LogNodeString::LogNodeString( const string& Name, const string& Val, const LogNodeBase* Parent)
+/**
+ * @brief Constructor
+ *
+ * @param Name Node name
+ * @param Val Node value
+ * @param Parent Pointer to parent node
+ *
+ */
+rvs::LogNodeString::LogNodeString( const std::string& Name, const std::string& Val, const LogNodeBase* Parent)
 : 
 LogNodeBase(Name, Parent),
 Value(Val)
@@ -35,6 +43,14 @@ Value(Val)
   Type = eLN::String;
 }
 
+/**
+ * @brief Constructor
+ *
+ * @param Name Node name
+ * @param Val Node value
+ * @param Parent Pointer to parent node
+ *
+ */
 rvs::LogNodeString::LogNodeString( const char* Name, const char* Val, const LogNodeBase* Parent)
 :
 LogNodeBase(Name, Parent),
@@ -43,11 +59,22 @@ Value(Val)
   Type = eLN::String;
 }
 
+//! Destructor
 rvs::LogNodeString::~LogNodeString()
 {
 }
 
 
+/**
+ * @brief Provides JSON representation of Node
+ *
+ * Traverses list of child nodes and converts them into proper string representation.
+ * Also ensures proper indentation and line breaks for formatted output.
+ *
+ * @param Lead String of blanks " " representing current indentation
+ * @return Node as JSON string
+ *
+ */
 std::string rvs::LogNodeString::ToJson(const std::string& Lead) {
 
   string result(RVSENDL);

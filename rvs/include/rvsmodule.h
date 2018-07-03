@@ -37,8 +37,16 @@ class ifbase;
 class action;
 
 
+/**
+ * @class module
+ * @ingroup Launcher
+ *
+ * @brief RVS module manager class
+ *
+ */
 class module
 {
+//! module name - module instance pair
 typedef std::pair<std::string,module*> t_mmpair;
 
   // collection related members
@@ -52,42 +60,47 @@ public:
 protected:
   static module* find_create_module(const char* pShortName);
 
-  // YAML configuration
+  //! YAML configuration
   static YAML::Node  config;
 
-  // short name -> rvsmodule*
+  //! short name -> rvsmodule* mapping
   static std::map<std::string,module*> modulemap;
 
-  // short name -> .so filename
+  //! short name -> .so filename mapping
   static std::map<std::string,std::string> filemap;
     
 protected:
-  module(const char* pModuleShortName, void* pSoLib);
+  module(const char* pModuleName, void* pSoLib);
+  //! Destructor
   virtual ~module();
 
 protected:
-  void*       psolib;
-  std::string name;
-
   int     initialize();
   int     terminate_internal();
-protected:
+
   void*   action_create();
   int     action_destroy_internal(action*);
 
-protected:
   int     init_interfaces(void);
   int     init_interface_method(void** ppfunc, const char* pMethodName);
-  int     init_interfaces(action*);
   int     init_interface_0(void);
   int     init_interface_1(void);
 
 protected:
+  //! collection of interfaces supported by this module
   std::map<int,std::shared_ptr<ifbase>> ifmap;
+  //! Pointer to shared object library obtained through dlopnen() call
+  void*       psolib;
+  //! Module name
+  std::string name;
 
+  //! Pointer to module init function
   t_rvs_module_init           rvs_module_init;
+  //! Pointer to module terminate function
   t_rvs_module_terminate      rvs_module_terminate;
+  //! Pointer to module action create function
   t_rvs_module_action_create  rvs_module_action_create;
+  //! Pointer to module action destroy function
   t_rvs_module_action_destroy rvs_module_action_destroy;
 };
 

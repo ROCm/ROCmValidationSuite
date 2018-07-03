@@ -29,7 +29,15 @@ using namespace std;
 
 map<string,string>	rvs::options::opt;
 
-bool  rvs::options::has_option(const string& Option, string& val) {
+/**
+ * @brief Check and retrieve option.
+ *
+ * @param Option option to look for
+ * @param val option value. Unchanged if option does not exist.
+ * @return 'true' if Option exists, 'false' otherwise
+ *
+ */
+bool  rvs::options::has_option(const std::string& Option, std::string& val) {
   auto it = opt.find(string(Option));
   if( it == opt.end())
     return false;
@@ -38,7 +46,14 @@ bool  rvs::options::has_option(const string& Option, string& val) {
   return true;
 }
 
-bool  rvs::options::has_option(const string& Option) {
+/**
+ * @brief Check option.
+ *
+ * @param Option option to look for
+ * @return 'true' if Option exists, 'false' otherwise
+ *
+ */
+bool  rvs::options::has_option(const std::string& Option) {
   auto it = opt.find(string(Option));
   if( it == opt.end())
     return false;
@@ -46,6 +61,12 @@ bool  rvs::options::has_option(const string& Option) {
   return true;
 }
 
+/**
+ * @brief Get options.
+ *
+ * @return collection of options
+ *
+ */
 const std::map<std::string,std::string>& rvs::options::get(void) {
   return opt;
 }
