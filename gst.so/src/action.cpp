@@ -360,32 +360,45 @@ void action::log_module_error(const string &error) {
  * runs the test stress session
  * @param gst_gpus_device_index <gpu_index, gpu_id> map
  */
-void action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
-    unsigned int i = 0;
+void action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {    
     
-    if (gst_runs_parallel) {
+    for (int k = 0; k < gst_run_count; k++) {    
+        unsigned int i = 0;
+        if (gst_run_wait_ms != 0)  // delay gst execution
+            sleep(gst_run_wait_ms);
+                            
         GSTWorker worker[gst_gpus_device_index.size()];
         map<int, uint16_t>::iterator it;
+        
         for (it = gst_gpus_device_index.begin(); it != gst_gpus_device_index.end(); ++it) {
-                // set worker thread stress test params
-                worker[i].set_name(action_name);
-                worker[i].set_gpu_id(it->second);
-                worker[i].set_gpu_device_index(it->first);
-                worker[i].set_run_wait_ms(gst_run_wait_ms);
-                worker[i].set_run_duration_ms(gst_run_duration_ms);
-                worker[i].set_ramp_interval(gst_ramp_interval);
-                worker[i].set_log_interval(gst_log_interval);
-                worker[i].set_max_violations(gst_max_violations);
-                worker[i].set_copy_matrix(gst_copy_matrix);
-                worker[i].set_target_stress(gst_target_stress);
-                worker[i].set_tolerance(gst_tolerance);                                
-                worker[i].start();
-                i++;
+            // set worker thread stress test params
+            worker[i].set_name(action_name);
+            worker[i].set_gpu_id(it->second);
+            worker[i].set_gpu_device_index(it->first);
+            worker[i].set_run_wait_ms(gst_run_wait_ms);
+            worker[i].set_run_duration_ms(gst_run_duration_ms);
+            worker[i].set_ramp_interval(gst_ramp_interval);
+            worker[i].set_log_interval(gst_log_interval);
+            worker[i].set_max_violations(gst_max_violations);
+            worker[i].set_copy_matrix(gst_copy_matrix);
+            worker[i].set_target_stress(gst_target_stress);
+            worker[i].set_tolerance(gst_tolerance);                                            
+            i++;
         }
-    
-        // join threads
-        for(i = 0; i < gst_gpus_device_index.size(); i++) 
-            worker[i].join();
+        
+        if (gst_runs_parallel) {
+            for(i = 0; i < gst_gpus_device_index.size(); i++) 
+                worker[i].start();
+            
+            // join threads
+            for(i = 0; i < gst_gpus_device_index.size(); i++) 
+                worker[i].join();            
+        } else {
+            for(i = 0; i < gst_gpus_device_index.size(); i++) {
+                worker[i].start();
+                worker[i].join();
+            }                
+        }
     }
 }
 
@@ -542,6 +555,3 @@ int action::run(void) {
         
     return 0;
 }
-
-// todo list
-// TODO(Tudor) when duration and count are both compromised => set the run count to 1
