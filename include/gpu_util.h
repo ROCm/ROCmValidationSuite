@@ -33,5 +33,6 @@
 extern int  gpu_num_subdirs(char* dirpath, char* prefix);
 extern void gpu_get_all_location_id(std::vector<unsigned short int>& gpus_location_id);
 extern void gpu_get_all_gpu_id(std::vector<unsigned short int>& gpus_id);
+extern void gpu_get_all_device_id( std::vector<unsigned short int>& gpus_device_id);
 
 #endif	// _GPU_UTIL_H_

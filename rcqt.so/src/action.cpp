@@ -41,8 +41,8 @@
 #include <sys/utsname.h>
 
 #include "rvs_module.h"
-#include "rvsliblogger.h"
 #include "rvs_util.h"
+#include "rvsactionbase.h"
 
 
 #define BUFFER_SIZE 3000
@@ -57,8 +57,9 @@ action::~action() {
   property.clear();
 }
 
+
 int action::property_set(const char* Key, const char* Val) {
-  return rvs::lib::actionbase::property_set(Key, Val);
+  return rvs::actionbase::actionbase::property_set(Key, Val);
 }
 
 void action::check_property(string field_name, bool &return_bool){
@@ -67,8 +68,6 @@ void action::check_property(string field_name, bool &return_bool){
   if(iter == property.end())
     return_bool = false;
 }
-
-
 
 int action::run()
 {
@@ -82,8 +81,7 @@ int action::run()
     
     // check if package check action is going to trigger
     
-    check_property("package", pkgchk_bool);
-    
+    check_property("package", pkgchk_bool);    
     
     if(pkgchk_bool == true)
       return_value += pkgchk_run(property);

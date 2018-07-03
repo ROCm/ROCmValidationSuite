@@ -25,13 +25,12 @@
 #ifndef ACTION_H_
 #define ACTION_H_
 
-#include "rvslib.h"
-#include <string>
-#include <vector>
+#include "rvsactionbase.h"
 
-class action : public rvs::lib::actionbase
+class action : public rvs::actionbase
 {
 public:
+
 
 	action();
 	virtual ~action();
@@ -39,7 +38,7 @@ public:
 	virtual int property_set(const char*, const char*);
 	virtual int run(void);
   virtual void check_property(std::string field_name, bool &return_value);
-  //virtual std::vector<std::string> str_split(const std::string& str_val, const std::string& delimiter);
+
 
 protected:
 

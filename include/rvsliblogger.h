@@ -28,18 +28,21 @@
 #include <string>
 #include "rvsliblog.h"
 
-using namespace std;
-
 
 namespace rvs
 {
 
 
+/**
+ * @class logger
+ * @ingroup Launcher
+ *
+ * @brief Message logging class
+ *
+ */
 class logger
 {
 protected:
-  logger();
-  ~logger();
 
 public:
   static  void  log_level(const int level);
@@ -51,16 +54,15 @@ public:
   static  void  append(const bool flag);
   static  bool  append();
 
-  static  void   logfile(const string& filename);
-  static  const  string& logfile();
-
+  static  void   logfile(const std::string& filename);
+  static  const  std::string& logfile();
 
   static  bool   get_ticks(uint32_t& secs, uint32_t& usecs);
 
   static  int    initialize();
   static  int    terminate();
 
-  static  int    log(const string& Message, const int level = 1);
+  static  int    log(const std::string& Message, const int level = 1);
   static  int    Log(const char* Message, const int level);
   static  int    LogExt(const char* Message, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
   static  void*  LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
@@ -69,17 +71,21 @@ public:
   static  void   AddString(void* Parent, const char* Key, const char* Val);
   static  void   AddInt(void* Parent, const char* Key, const int Val);
   static  void   AddNode(void* Parent, void* Child);
-  static  int    LogToFile(const string& Val);
-  static  int    ToFile(const string& Row);
+  static  int    ToFile(const std::string& Row);
   static  int    JsonPatchAppend(void);
 
 protected:
+  //! Current logging level (0..5)
   static  int    loglevel_m;
+  //! 'true' if JSON output is requested
   static  bool   tojson_m;
+  //! 'true' if append to existing log file is requested
   static  bool   append_m;
+  //! 'true' if the incoming record is the first record in this rvs invocation
   static  bool   isfirstrecord_m;
-  static  string logfile_m;
-
+  //! Name of the log file
+  static  std::string logfile_m;
+  //! Array of C std::strings representing logging level names
   static  const char*   loglevelname[6];
 };
 

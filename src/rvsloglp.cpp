@@ -26,13 +26,18 @@
 
 #include <chrono>
 
-rvs::lp::lp() {}
-rvs::lp::~lp() {}
 
 using namespace std;
 
 T_MODULE_INIT rvs::lp::mi;
 
+/**
+ * @brief Initialize logger proxy class
+ *
+ * @param pMi Pointer to module initialization structure
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
   mi.cbLog             = pMi->cbLog;
   mi.cbLogExt          = pMi->cbLogExt;
@@ -46,50 +51,172 @@ int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
   return 0;
 }
 
+/**
+ * @brief Output log message
+ *
+ * @param pMsg Message to log
+ * @param level Logging level
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::lp::Log(const char* pMsg, const int level) {
   return (*mi.cbLog)(pMsg, level);
 }
 
-int rvs::lp::Log(const string& Msg, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
+/**
+ * @brief Output log message
+ *
+ * @param Msg Message to log
+ * @param LogLevel Logging level
+ * @param Sec seconds from system start
+ * @param uSec microseconds within current second
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+int rvs::lp::Log(const std::string& Msg, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
   return (*mi.cbLogExt)(Msg.c_str(), LogLevel, Sec, uSec);
 }
 
+/**
+ * @brief Create log record
+ *
+ * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
+ *
+ * @param Module Module from which record is originating
+ * @param Action Action from which record is originating
+ * @param LogLevel Logging level
+ * @param Sec seconds from system start
+ * @param uSec microseconds within current second
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 void* rvs::lp::LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
   return (*mi.cbLogRecordCreate)(Module,  Action,  LogLevel, Sec, uSec);
 }
 
+/**
+ * @brief Create log record
+ *
+ * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
+ *
+ * @param Module Module from which record is originating
+ * @param Action Action from which record is originating
+ * @param LogLevel Logging level
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 void* rvs::lp::LogRecordCreate( const char* Module, const char* Action, const int LogLevel) {
   return (*mi.cbLogRecordCreate)(Module,  Action,  LogLevel, 0, 0);
 }
 
-void* rvs::lp::LogRecordCreate( const string Module, const string Action, const int LogLevel) {
+/**
+ * @brief Create log record
+ *
+ * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
+ *
+ * @param Module Module from which record is originating
+ * @param Action Action from which record is originating
+ * @param LogLevel Logging level
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+void* rvs::lp::LogRecordCreate( const std::string& Module, const std::string& Action, const int LogLevel) {
   return (*mi.cbLogRecordCreate)(Module.c_str(),  Action.c_str(),  LogLevel, 0, 0);
 }
 
+/**
+ * @brief Output log record
+ *
+ * Sends out record previously created using LogRecordCreate()
+ *
+ * @param pLogRecord Pointer to previously created log record
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int   rvs::lp::LogRecordFlush( void* pLogRecord) {
   return (*mi.cbLogRecordFlush)(pLogRecord);
 }
 
+/**
+ * @brief Create loggin output node
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @param Parent Parent node
+ * @param Name Node name
+ * @return Pointer to newly created node
+ *
+ */
 void* rvs::lp::CreateNode(void* Parent, const char* Name) {
   return (*mi.cbCreateNode)(Parent, Name);
 }
 
-void  rvs::lp::AddString(void* Parent, const string& Key, const string& Val) {
+/**
+ * @brief Create and add child node of type string to the given parent node
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @param Parent Parent node
+ * @param Key Key (node name)
+ * @param Val Node value
+ *
+ */
+void  rvs::lp::AddString(void* Parent, const std::string& Key, const std::string& Val) {
   (*mi.cbAddString)(Parent, Key.c_str(), Val.c_str());
 }
 
+/**
+ * @brief Create and add child node of type int to the given parent node
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @param Parent Parent node
+ * @param Key Key (node name)
+ * @param Val Node value
+ *
+ */
 void  rvs::lp::AddString(void* Parent, const char* Key, const char* Val) {
   (*mi.cbAddString)(Parent, Key, Val);
 }
 
+/**
+ * @brief Create and add child node of type int to the given parent node
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @param Parent Parent node
+ * @param Key Key as C string
+ * @param Val Value as integer
+ *
+ */
 void  rvs::lp::AddInt(void* Parent, const char* Key, const int Val) {
   (*mi.cbAddInt)(Parent, Key, Val);
 }
 
+/**
+ * @brief Add child node to parent
+ *
+ * Takes node previously created using CreateNode() and
+ * adds it to the parent node.
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @param Parent Parent node
+ * @param Child Child node
+ *
+ */
 void  rvs::lp::AddNode(void* Parent, void* Child) {
   (*mi.cbAddNode)(Parent, Child);
 }
 
+/**
+ * @brief Fetches times since system start
+ *
+ * @param secs seconds since system start
+ * @param usecs microseconds within current second
+ * @return 'true' - success, 'false' otherwise
+ *
+ */
 bool rvs::lp::get_ticks(unsigned int& secs, unsigned int& usecs) {
   struct timespec ts;
 

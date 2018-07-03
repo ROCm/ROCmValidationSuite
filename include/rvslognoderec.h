@@ -33,6 +33,15 @@
 namespace rvs 
 {
 
+/**
+ * @class LogNodeRec
+ * @ingroup Launcher
+ *
+ * @brief Logger Node class
+ *
+ * Used to construct structure log record for JSON output
+ *
+ */
 class LogNodeRec : public LogNode
 {
 
@@ -48,8 +57,11 @@ public:
   const int LogLevel();
 
 protected:
+  //! Logging Level
   int Level;
+  //! Timestamp - seconds from system start
   const int sec;
+  //! Timestamp - microseconds in current second
   const int usec;
 };
 
