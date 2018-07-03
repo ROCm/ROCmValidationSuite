@@ -38,6 +38,7 @@
 #include "rvslognoderec.h"
 #include "rvsoptions.h"
 
+using namespace std;
 
 int   rvs::logger::loglevel_m(2);
 bool  rvs::logger::tojson_m;
@@ -47,37 +48,74 @@ string   rvs::logger::logfile_m;
 
 const char*  rvs::logger::loglevelname[] = {"NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
 
-rvs::logger::logger() {
-  isfirstrecord_m = true;
-}
-
-rvs::logger::~logger() {
-}
-
+/**
+ * @brief Set 'append' flag
+ *
+ * @param flag new value
+ *
+ */
 void rvs::logger::append(const bool flag) {
   append_m = flag;
 }
 
+/**
+ * @brief Get 'append' flag
+ *
+ * @return Current flag value
+ *
+ */
 bool rvs::logger::append() {
   return append_m;
 }
 
-void rvs::logger::logfile(const string& val) {
+/**
+ * @brief Set log file name
+ *
+ * @param val file name
+ *
+ */
+void rvs::logger::logfile(const std::string& val) {
   logfile_m = val;
 }
 
-const string& rvs::logger::logfile() {
+/**
+ * @brief Get log file name
+ *
+ * @return Current log file name
+ *
+ */
+const std::string& rvs::logger::logfile() {
   return logfile_m;
 }
 
+/**
+ * @brief Set logging level
+ *
+ * @param rLevel New logging level
+ *
+ */
 void rvs::logger::log_level(const int rLevel) {
   loglevel_m = rLevel;
 }
 
+/**
+ * @brief Get logging level
+ *
+ * @return Current logging level
+ *
+ */
 int rvs::logger::log_level() {
   return loglevel_m;
 }
 
+/**
+ * @brief Fetches times since system start
+ *
+ * @param secs seconds since system start
+ * @param usecs microseconds withing current second
+ * @return 'true' - success, 'false otherwise
+ *
+ */
 bool rvs::logger::get_ticks(uint32_t& secs, uint32_t& usecs) {
   struct timespec ts;
 
@@ -88,22 +126,60 @@ bool rvs::logger::get_ticks(uint32_t& secs, uint32_t& usecs) {
   return true;
 }
 
+/**
+ * @brief Set 'json' flag
+ *
+ * @param flag new value
+ *
+ */
 void rvs::logger::to_json(const bool flag) {
   tojson_m = flag;
 }
 
+/**
+ * @brief Get 'json' flag
+ *
+ * @return Current flag value
+ *
+ */
 bool rvs::logger::to_json() {
   return tojson_m;
 }
 
-int rvs::logger::log(const string& Message, const int LogLevel) {
+/**
+ * @brief Output log message
+ *
+ * @param Message Message to log
+ * @param LogLevel Logging level
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+int rvs::logger::log(const std::string& Message, const int LogLevel) {
    return LogExt(Message.c_str(), LogLevel, 0, 0);
 }
 
+/**
+ * @brief Output log message
+ *
+ * @param Message Message to log
+ * @param LogLevel Logging level
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::logger::Log(const char* Message, const int LogLevel) {
   return LogExt(Message, LogLevel, 0, 0);
 }
 
+/**
+ * @brief Output log message
+ *
+ * @param Message Message to log
+ * @param LogLevel Logging level
+ * @param Sec secconds from system start
+ * @param uSec microseconds in current second
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
   if( LogLevel < lognone || LogLevel > logtrace)   {
     cerr << "ERROR: unknown logging level: " << LogLevel << endl;
@@ -127,7 +203,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned 
   char  buff[64];
   sprintf(buff,"%6d.%6d", secs, usecs);
 
-  string row("[");
+  std::string row("[");
   row += loglevelname[LogLevel];
   row +="] [";
   row += buff;
@@ -155,6 +231,19 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned 
   return 0;
 }
 
+/**
+ * @brief Create log record
+ *
+ * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
+ *
+ * @param Module Module from which record is originating
+ * @param Action Action from which record is originating
+ * @param LogLevel Logging level
+ * @param Sec secconds from system start
+ * @param uSec microseconds in current second
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 void* rvs::logger::LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
 
   uint32_t   sec;
@@ -176,8 +265,17 @@ void* rvs::logger::LogRecordCreate( const char* Module, const char* Action, cons
   return static_cast<void*>(rec);
 }
 
+/**
+ * @brief Output log record
+ *
+ * Sends out record previously created using LogRecordCreate()
+ *
+ * @param pLogRecord Pointer to previously created log record
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int   rvs::logger::LogRecordFlush( void* pLogRecord) {
-  string val;
+  std::string val;
 
   LogNodeRec* r = static_cast<LogNodeRec*>(pLogRecord);
   // no JSON loggin requested
@@ -201,7 +299,7 @@ int   rvs::logger::LogRecordFlush( void* pLogRecord) {
   }
 
   // do not pre-pend "," separator for the first row
-  string row;
+  std::string row;
   if( isfirstrecord_m) {
     isfirstrecord_m = false;
   }
@@ -222,9 +320,18 @@ int   rvs::logger::LogRecordFlush( void* pLogRecord) {
   return 0;
 }
 
-int rvs::logger::ToFile(const string& Row) {
+/**
+ * @brief Output log record to file
+ *
+ * Sends out string representing record to a log file
+ *
+ * @param Row string representing log record
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+int rvs::logger::ToFile(const std::string& Row) {
 
-  string logfile;
+  std::string logfile;
   if( !rvs::options::has_option("-l", logfile))
     return -1;
 
@@ -237,9 +344,19 @@ int rvs::logger::ToFile(const string& Row) {
 
 }
 
+/**
+ * @brief Patch JSON log file
+ *
+ * In case when append "-a" option is given along with "-l --json",
+ * replaces "]" terminating character with "," in order to
+ * ensure well-formed JSON content.
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::logger::JsonPatchAppend() {
 
-  string logfile;
+  std::string logfile;
   if( !rvs::options::has_option("-l", logfile))
     return -1;
 
@@ -251,29 +368,77 @@ int rvs::logger::JsonPatchAppend() {
   return 0;
 }
 
+/**
+ * @brief Create loggin output node
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @param Parent Parent node
+ * @param Name Node name
+ * @return Pointer to newly created node
+ *
+ */
 void* rvs::logger::CreateNode(void* Parent, const char* Name) {
   rvs::LogNode* p = new LogNode(Name, static_cast<rvs::LogNodeBase*>(Parent));
   return p;
 }
 
+/**
+ * @brief Create and add child node of type string to the given parent node
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @param Parent Parent node
+ * @param Key Key as C string
+ * @param Val Value as C string
+ *
+ */
 void  rvs::logger::AddString(void* Parent, const char* Key, const char* Val) {
   rvs::LogNode* pp = static_cast<rvs::LogNode*>(Parent);
   rvs::LogNodeString* p = new LogNodeString(Key, Val, pp);
   pp->Add(p);
 }
 
+/**
+ * @brief Create and add child node of type int to the given parent node
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @param Parent Parent node
+ * @param Key Key as C string
+ * @param Val Value as integer
+ *
+ */
 void  rvs::logger::AddInt(void* Parent, const char* Key, const int Val) {
   rvs::LogNode* pp = static_cast<rvs::LogNode*>(Parent);
   rvs::LogNodeInt* p = new LogNodeInt(Key, Val, pp);
   pp->Add(p);
 }
 
+/**
+ * @brief Add child node to parent
+ *
+ * Takes node previously created using CreateNode() and
+ * adds it to the parent node.
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @param Parent Parent node
+ * @param Child Child node
+ *
+ */
 void  rvs::logger::AddNode(void* Parent, void* Child) {
   rvs::LogNode* pp = static_cast<rvs::LogNode*>(Parent);
   pp->Add(static_cast<rvs::LogNodeBase*>(Child));
 }
 
 
+/**
+ * @brief Initializes log file when "-l" command line option is given
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::logger::initialize() {
   isfirstrecord_m = true;
 
@@ -313,6 +478,12 @@ int rvs::logger::initialize() {
   return 0;
 }
 
+/**
+ * @brief Performs proper termination of log file contents
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 int rvs::logger::terminate() {
   // if no logg to file requested, just return
   if (!rvs::options::has_option("-l"))

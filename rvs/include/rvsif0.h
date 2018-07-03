@@ -32,6 +32,13 @@
 namespace rvs 
 {
 
+/**
+ * @class if0
+ * @ingroup Launcher
+ *
+ * @brief RVS IF0 interface
+ *
+ */
 class if0 : public ifbase {
 
 public:
@@ -51,11 +58,17 @@ virtual if0& operator= (const if0& rhs);
 virtual ifbase* clone(void);
 
 protected:
+  //! Ponter to module function returning version number
   t_rvs_module_get_version     rvs_module_get_version;
+  //! Pointer to module function returning module name
   t_rvs_module_get_name        rvs_module_get_name;
+  //! Pointer to module function returning module description
   t_rvs_module_get_description rvs_module_get_description;
+  //! Pointer to module function checking interface existance
   t_rvs_module_has_interface   rvs_module_has_interface;
+  //! Pointer to module function returning configuration info
   t_rvs_module_get_config      rvs_module_get_config;
+  //! Pointer to module function returning output info
   t_rvs_module_get_output      rvs_module_get_output;
 
 friend class module;

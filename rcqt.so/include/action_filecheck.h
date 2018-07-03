@@ -22,47 +22,25 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVSLIB_H_
-#define RVSLIB_H_
+#ifndef ACTION_FILECHECK_H_
+#define ACTION_FILECHECK_H_
 
-#include <map>
+#include "rvslib.h"
 #include <string>
+#include <vector>
 
-
-namespace rvs
+class action_filecheck : public rvs::lib::actionbase
 {
+public:
 
-struct init_stuct
-{
+	action_filecheck();
+	virtual ~action_filecheck();
+	
+	virtual int property_set(const char*, const char*);
+	virtual int run(void);
+
+protected:
 
 };
 
-namespace lib
-{
-
-class actionbase
-{
-public:
-  virtual ~actionbase();
-
-protected:
-  actionbase();
-  void sleep(const unsigned int ms);
-
-public:
-  virtual int     property_set(const char*, const char*);
-  virtual int     run(void) = 0;
-  bool has_property(const std::string& key, std::string& val);
-  bool has_property(const std::string& key);
-
-protected:
-  std::map<std::string, std::string>  property;
-};
-
-
-}  // namespace lib
-
-}  // namespace rvs
-
-
-#endif // RVSLIB_H_
+#endif /* ACTION_FILECHECK_H_ */

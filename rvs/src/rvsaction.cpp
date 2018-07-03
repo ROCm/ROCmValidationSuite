@@ -27,21 +27,39 @@
 
 using namespace std;
 
-
+/**
+ * @brief Constructor
+ *
+ * Returns value if propety is set.
+ *
+ * @param pName acion name as specified in .conf file
+ * @param pLibAction pointer to action instance in an RVS module
+ *
+ * */
 rvs::action::action(const char* pName, void* pLibAction)
 {
   name       = pName;
   plibaction = pLibAction;
 }
 
+//! Default destructor
 rvs::action::~action()
 {
   ifmap.clear();
 }
 
-rvs::ifbase* rvs::action::get_interface(int i)
+/**
+ * @brief Returns pointer to RVS interface
+ *
+ * Given RVS interface ID, returns interface pointer as pointer to common interface base class.
+ * If action does not support particular interface, NULL is returned.
+ *
+ * @param iID Interface ID
+ *
+ * */
+rvs::ifbase* rvs::action::get_interface(int iID)
 {
-  auto it = ifmap.find(i);
+  auto it = ifmap.find(iID);
   if( it != ifmap.end())
     return &(*(it->second));
 
