@@ -30,6 +30,18 @@
 #include "rvsloglp.h"
 #include "action.h"
 
+/**
+ * @defgroup PESM PESM Module
+ *
+ * @brief PCIe State Monitoring module
+ *
+ * The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host
+ * platform and the GPU. The module will register a “listener” on a target GPU’s PCIe
+ * interconnect, and log a message whenever it detects a state change. The PESM will be able to
+ * detect the following state changes:
+ *   - 1.2.PCIe link speed changes
+ *   - GPU power state changes
+ */
 
 
 int log(const char* pMsg, const int level) {
@@ -88,16 +100,16 @@ extern "C" void* rvs_module_action_create(void) {
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {
-  delete static_cast<rvs::lib::actionbase*>(pAction);
+  delete static_cast<rvs::actionbase*>(pAction);
   return 0;
 }
 
 extern "C" int rvs_module_action_property_set(void* pAction, const char* Key, const char* Val) {
-  return static_cast<rvs::lib::actionbase*>(pAction)->property_set(Key, Val);
+  return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 
 extern "C" int rvs_module_action_run(void* pAction) {
-  return static_cast<rvs::lib::actionbase*>(pAction)->run();
+  return static_cast<rvs::actionbase*>(pAction)->run();
 }
 
 

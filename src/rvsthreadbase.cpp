@@ -26,28 +26,57 @@
 
 #include <chrono>
 
+//! Default constructor.
 rvs::ThreadBase::ThreadBase() : t() {
 }
 
+//! Default destructor.
 rvs::ThreadBase::~ThreadBase() {
 }
 
+/**
+ *  \brief Internal thread function
+ *
+ * Used to construct std::thread object. Calls virtual run()
+ * to perform actual payload work.
+ *
+ */
 void rvs::ThreadBase::runinternal() {
   run();
 }
 
+/**
+ *  \brief Starts the thread.
+ *
+ * Creates std::thread object passing runinternal() as thread function.
+ *
+ */
 void rvs::ThreadBase::start() {
   t = std::thread(&rvs::ThreadBase::runinternal, this);
 }
 
+/**
+ *  \brief Performs detach() on the underlaying std::thread object.
+ *
+ */
 void rvs::ThreadBase::detach() {
   t.detach();
 }
 
+/**
+ *  \brief Performs join() on the underlaying std::thread object.
+ *
+ */
 void rvs::ThreadBase::join() {
   t.join();
 }
 
+/**
+ * @brief Pauses current thread for the given time period
+ *
+ * @param ms Sleep time in milliseconds.
+ *
+ * */
 void rvs::ThreadBase::sleep(const unsigned int ms) {
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }

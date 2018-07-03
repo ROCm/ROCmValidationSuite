@@ -26,6 +26,16 @@
 #include "action.h"
 #include "rvsloglp.h"
 
+/**
+ * @defgroup GPUP GPUP Module
+ *
+ * @brief GPU Properties module
+ *
+ * The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will
+ * report various information at regular intervals. The module can be configured to halt another
+ * RVS modules execution if one of the quantities exceeds a specified boundary value.
+ */
+
 int log(const char* pMsg, const int level) {
   return rvs::lp::Log(pMsg, level);
 }
@@ -81,16 +91,16 @@ extern "C" void* rvs_module_action_create(void) {
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {
-  delete static_cast<rvs::lib::actionbase*>(pAction);
+  delete static_cast<rvs::actionbase*>(pAction);
   return 0;
 }
 
 extern "C" int rvs_module_action_property_set(void* pAction, const char* Key, const char* Val) {
-  return static_cast<rvs::lib::actionbase*>(pAction)->property_set(Key, Val);
+  return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 
 extern "C" int rvs_module_action_run(void* pAction) {
-  return static_cast<rvs::lib::actionbase*>(pAction)->run();
+  return static_cast<rvs::actionbase*>(pAction)->run();
 }
 
 

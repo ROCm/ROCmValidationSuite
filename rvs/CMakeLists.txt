@@ -75,7 +75,7 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 ## additional libraries
-set ( PROJECT_LINK_LIBS libdl.so "${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/libyaml-cpp.a" libpthread.so)
+set ( PROJECT_LINK_LIBS libdl.so "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../yaml-cpp/libyaml-cpp.a" libpthread.so)
 
 ## define include directories
 include_directories(include ../include ${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/include )
@@ -97,4 +97,21 @@ COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
 COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
 COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
 COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/conf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
+)
+
+install(TARGETS ${RVS_TARGET}
+  RUNTIME
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
+  COMPONENT applications
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/conf
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
+  COMPONENT applications
+  FILES_MATCHING PATTERN "*.conf"
+)
+
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
+  COMPONENT applications
 )

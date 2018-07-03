@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvslib.h"
+#include "rvsactionbase.h"
 
 #include <chrono>
 #include <unistd.h>
@@ -30,34 +30,73 @@
 
 using namespace std;
 
-rvs::lib::actionbase::actionbase() {
+/**
+ * @brief Default constructor.
+ *
+ * */
+rvs::actionbase::actionbase() {
 }
 
-rvs::lib::actionbase::~actionbase() {
+/**
+ * @brief Default destructor.
+ *
+ * */
+rvs::actionbase::~actionbase() {
 }
 
-int rvs::lib::actionbase::property_set(const char* pKey, const char* pVal) {
+/**
+ * @brief Sets action property
+ *
+ * @param pKey Property key
+ * @param pVal Property value
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
+int rvs::actionbase::property_set(const char* pKey, const char* pVal) {
   property.insert( pair<string, string>(pKey, pVal));
   return 0;
 }
 
-void rvs::lib::actionbase::sleep(const unsigned int ms) {
+/**
+ * @brief Pauses current thread for the given time period
+ *
+ * @param ms Sleep time in milliseconds.
+ * @return (void)
+ *
+ * */
+void rvs::actionbase::sleep(const unsigned int ms) {
   ::usleep(1000*ms);
 }
 
-bool rvs::lib::actionbase::has_property(const std::string& key, std::string& val) {
+/**
+ * @brief Checks if property is set.
+ *
+ * Returns value if propety is set.
+ *
+ * @param key Property key
+ * @param val Property value. Not changed if propery is not set.
+ * @return TRUE - property set, FALSE - othewise
+ *
+ * */
+bool rvs::actionbase::has_property(const std::string& key, std::string& val) {
 
-  for (auto it = property.begin(); it != property.end(); ++it) {
-    if (it->first == key) {
-      val = it->second;
-      return true;
-    }
+  auto it = property.find(key);
+  if(it != property.end()) {
+    val = it->second;
+    return true;
   }
 
   return false;
 }
 
-bool rvs::lib::actionbase::has_property(const std::string& key) {
+/**
+ * @brief Checks if property is set.
+ *
+ * @param key Property key
+ * @return TRUE - property set, FALSE - othewise
+ *
+ * */
+bool rvs::actionbase::has_property(const std::string& key) {
   string val;
   return has_property(key, val);
 }

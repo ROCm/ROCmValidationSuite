@@ -25,11 +25,53 @@
 
 cmake_minimum_required ( VERSION 3.5.0 )
 
+project ("rocm-validation-suite" )
 
-project ("rvs" )
+message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
+message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_subdirectory(yaml-cpp)
-add_subdirectory(jsoncpp)
+## Support for in-source compilaton
+if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
+else()
+    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+endif ()
+
+## Set default module path if not already set
+if ( NOT DEFINED CMAKE_MODULE_PATH )
+    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/" )
+endif ()
+
+## Set default module path if not already set
+if ( NOT DEFINED CPACK_GENERATOR )
+    set ( CPACK_GENERATOR "DEB;RPM" )
+endif ()
+
+if ( NOT DEFINED CMAKE_PACKAGING_INSTALL_PREFIX )
+    set (CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
+endif ()
+
+## Include common cmake modules
+include ( utils )
+
+## Setup the package version default (the actual one is taken from the latest Git tag).
+get_version ( "0.0.0" )
+
+# Package Generator  #######################################################
+# set(CPACK_GENERATOR "DEB")
+# set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm")
+set(CPACK_PACKAGE_NAME "rocm-validation-suite")
+set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The ROCm Validation Suite – The ROCm Validation Suite is a system administrator and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPUs running in high performance computing environments, enabled using the ROCm software stack on a compatible platform.")
+set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
+set(CPACK_PACKAGE_VENDOR "AMD")
+set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
+set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
+set(CPACK_COMPONENTS_ALL applications rvsmodule)
+#add_subdirectory(yaml-cpp)
 
 add_subdirectory(rvs)
 add_subdirectory(gpup.so)
@@ -37,17 +79,15 @@ add_subdirectory(pesm.so)
 add_subdirectory(rcqt.so)
 add_subdirectory(peqt.so)
 add_subdirectory(smqt.so)
+add_subdirectory(gst.so)
 
-add_dependencies(rvs yaml-cpp)
-add_dependencies(gpup yaml-cpp)
-add_dependencies(pesm yaml-cpp)
-add_dependencies(rcqt yaml-cpp)
-add_dependencies(peqt yaml-cpp)
-add_dependencies(smqt yaml-cpp)
+#add_dependencies(rvs yaml-cpp)
 
 
 add_custom_target(doc ALL
-    COMMAND doxygen
+    COMMAND RVSVER=${VERSION_STRING}-${VERSION_BUILD} RVSBUILD=${CMAKE_BINARY_DIR} doxygen
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS documentation"
     VERBATIM)
+
+include (CPack)

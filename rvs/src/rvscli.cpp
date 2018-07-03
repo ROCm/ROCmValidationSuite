@@ -42,6 +42,15 @@
 using namespace std;
 using namespace rvs;
 
+/**
+ * @brief Constructor
+ *
+ * @param ptruename option name (some command line options may have multiple aliases)
+ * @param s1 possible continuation
+ * @param s2 possible continuation
+ * @param s3 possible continuation
+ *
+ */
 rvs::cli::optbase::optbase(const char* ptruename, econtext s1, econtext s2, econtext s3) {
   name = ptruename;
   new_context.push(eof);
@@ -50,9 +59,17 @@ rvs::cli::optbase::optbase(const char* ptruename, econtext s1, econtext s2, econ
   if( s3 != eof) new_context.push(s3);
 }
 
+//! Default destructor
 rvs::cli::optbase::~optbase() {
 }
 
+/**
+ * @brief Replaces current context with continuations allowed for this token
+ *
+ * @param old_context old stack context
+ * @return always returns TRUE
+ *
+ */
 bool rvs::cli::optbase::adjust_context(stack<econtext>& old_context) {
   while(!old_context.empty())
     old_context.pop();
@@ -61,12 +78,21 @@ bool rvs::cli::optbase::adjust_context(stack<econtext>& old_context) {
   return true;
 }
 
+//! Default constructor
 rvs::cli::cli() {
   itoken = 1;
 }
+
+//! Default destructor
 rvs::cli::~cli() {
 }
 
+/**
+ * @brief Extracts path from which rvs was invoked
+ *
+ * Extracts path from which rvs was invoked and puts it into command line option "pwd"
+ *
+ */
 void rvs::cli::extract_path() {
 
   char path[PATH_MAX];
@@ -87,6 +113,12 @@ void rvs::cli::extract_path() {
 }
 
 
+/**
+ * @brief Defines grammar
+ *
+ * Defines possible command line options for this application
+ *
+ */
 void rvs::cli::init_grammar()
 {
   shared_ptr<optbase> sp;
@@ -160,6 +192,16 @@ void rvs::cli::init_grammar()
 
 }
 
+/**
+ * @brief Parse command line
+ *
+ * Parses command line and stores command line options and their vaules into rvs::options
+ *
+ * @param Argc standard C argc parameter to main()
+ * @param Argv standard C argv parameter to main()
+ * @return 0 - OK, non-zero if error
+ *
+ */
 int rvs::cli::parse(int Argc, char** Argv) {
 	init_grammar();
 
@@ -218,10 +260,23 @@ int rvs::cli::parse(int Argc, char** Argv) {
 	return -1;
 }
 
+/**
+ * @brief Returns error string
+ *
+ * @return error string as const char*
+ *
+ */
 const char* rvs::cli::get_error_string() {
   return errstr.c_str();
 }
 
+
+/**
+ * @brief Returns next token from input stream
+ *
+ * @return token as const char*
+ *
+ */
 const char* rvs::cli::get_token() {
   if(itoken >= argc)
     return (const char*)"";
@@ -229,6 +284,13 @@ const char* rvs::cli::get_token() {
   return argv[itoken++];
 }
 
+/**
+ * @brief Checks if given token is in the list of command line options defined by grammar.
+ *
+ * @param token token being processed
+ * @return true if found, false otherwise
+ *
+ */
 bool rvs::cli::is_command(const string& token) {
   auto it = grammar.find(token);
   if( it == grammar.end())
@@ -237,6 +299,12 @@ bool rvs::cli::is_command(const string& token) {
   return true;
 }
 
+/**
+ * @brief Sends accepted command line option, with parameter if any, into rvs::options
+ *
+ * @return true
+ *
+ */
 bool rvs::cli::emit_option() {
   // emit previous option and its value (if andy)
   if( current_option != "") 	{
@@ -251,6 +319,16 @@ bool rvs::cli::emit_option() {
 }
 
 
+/**
+ * @brief Try interpreting given token as command line option.
+ *
+ * If successful, emmits previous option and stores current one in a buffer.
+ * This is needed in case optionhas parameter to it.
+ *
+ * @param token token being processed
+ * @return true if successful, false otherwise
+ *
+ */
 bool rvs::cli::try_command(const string& token) {
   auto it = grammar.find(token);
   if( it == grammar.end())
@@ -268,6 +346,16 @@ bool rvs::cli::try_command(const string& token) {
   return true;
 }
 
+
+/**
+ * @brief Try interpreting given token as a vaule following previous command line option.
+ *
+ * If successful, stores current token in a buffer as value
+ *
+ * @param token token being processed
+ * @return true if successful, false otherwise
+ *
+ */
 bool rvs::cli::try_value(const string& token) {
   if( token == "")
     return false;

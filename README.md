@@ -21,7 +21,21 @@ Init environment variables and submodule:
     git submodule init
     git submodule update
     
-Compile: 
+Compile yaml-cpp (this needs to be done only once after cloning):
+
+    cd $RVS
+    cmake ./yaml-cpp -B../build/yaml-cpp
+    cd ../build/yaml-cpp
+    make
+
+Compile rocm_smi_lib (this needs to be done only once after cloning):
+
+    cd $RVS
+    cmake ./rocm_smi_lib -B../build/rocm_smi_lib
+    cd ../build/rocm_smi_lib
+    make
+
+Compile RVS:
 
     cd $RVS
     cmake . -B../build
@@ -32,6 +46,12 @@ Run:
 
     sudo bin/rvs -d 3
 
+Build package:
+
+    cd $WB/build
+    make package
+
+_Note:_ based on your OS, only DEB or RPM package will be buile.
 
 For CentOS specific instructions see this [link](./CentOS.md).
 

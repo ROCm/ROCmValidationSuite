@@ -80,7 +80,7 @@ include_directories(include pci ../include)
 
 ## define source files
 set(SOURCES 
-    ../src/rvslib.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvsloglp.cpp
+    ../src/rvsactionbase.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvsloglp.cpp
     src/rvs_module.cpp src/action.cpp)
 
 ## define target
@@ -92,5 +92,9 @@ set_target_properties(${RVS_TARGET} PROPERTIES
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}
-COMMAND ln -s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${LIB_VERSION_STRING} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR})
+COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -s ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+)
+
+install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)

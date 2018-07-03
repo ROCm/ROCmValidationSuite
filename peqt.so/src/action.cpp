@@ -22,6 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include "action.h"
+
 #include <string>
 #include <vector>
 #include <regex>
@@ -38,10 +40,8 @@ extern "C" {
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
-#include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
-#include "action.h"
 
 #define CHAR_BUFF_MAX_SIZE              1024
 #define PCI_DEV_NUM_CAPABILITIES        16
@@ -67,6 +67,8 @@ extern "C" {
 #define PEQT_RESULT_FAIL_MESSAGE        "FALSE"
 
 #define MODULE_NAME                     "peqt"
+
+using namespace std;
 
 // collection of allowed PCIe capabilities
 const char* pcie_cap_names[] =
@@ -119,16 +121,6 @@ static bool is_positive_integer(const std::string& str_val) {
     return !str_val.empty()
             && std::find_if(str_val.begin(), str_val.end(),
                     [](char c) {return !std::isdigit(c);}) == str_val.end();
-}
-
-/**
- * adds a (key, value) pair to the module's properties collection
- * @param Key one of the keys specified in the RVS SRS
- * @param Val key's value
- * @return add result
- */
-int action::property_set(const char* Key, const char* Val) {
-    return rvs::lib::actionbase::property_set(Key, Val);
 }
 
 /**
