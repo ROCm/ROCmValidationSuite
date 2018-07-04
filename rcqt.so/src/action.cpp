@@ -58,54 +58,49 @@ action::~action() {
 }
 
 
-int action::property_set(const char* Key, const char* Val) {
-  return rvs::actionbase::actionbase::property_set(Key, Val);
-}
-
-void action::check_property(string field_name, bool &return_bool){
-  map<string, string>::iterator iter;
-  iter = property.find(field_name);
-  if(iter == property.end())
-    return_bool = false;
-}
 
 int action::run()
 {
     int return_value = 0;
     //map<string, string>::iterator iter;
     
-    bool pkgchk_bool = true;
-    bool usrchk_bool = true;
-    bool kernelchk_bool = true;
-    bool ldcfgchk_bool = true;
+    bool pkgchk_bool = false;
+    bool usrchk_bool = false;
+    bool kernelchk_os_bool = false;
+    bool kernelchk_kernel_bool = false;
+    bool ldcfgchk_so_bool = false;
+    bool ldcfgchk_arch_bool = false;
+    bool ldcfgchk_ldpath_bool = false;
+    
+    string dummy;
     
     // check if package check action is going to trigger
     
-    check_property("package", pkgchk_bool);    
+    pkgchk_bool =  rvs::actionbase::has_property("package", dummy);    
     
     if(pkgchk_bool == true)
-      return_value += pkgchk_run(property);
+      return pkgchk_run(property);
     
     // check if usrer check action is going to trigger
-    check_property("user", usrchk_bool);
+    usrchk_bool = rvs::actionbase::has_property("user", dummy);
     
     if(usrchk_bool == true)
-      return_value += usrchk_run(property);
+      return usrchk_run(property);
     
     // chck if kernel version action is going to trigger
-    check_property("os_version", kernelchk_bool);
-    check_property("kernel_version", kernelchk_bool);
+    kernelchk_os_bool = rvs::actionbase::has_property("os_version", dummy);
+    kernelchk_kernel_bool = rvs::actionbase::has_property("kernel_version", dummy);
     
-    if(kernelchk_bool == true)
-      return_value += kernelchk_run(property);
+    if(kernelchk_os_bool && kernelchk_kernel_bool)
+      return kernelchk_run(property);
     
     // check if ldcfg check action is going to trigger
-    check_property("soname", ldcfgchk_bool);
-    check_property("arch", ldcfgchk_bool);
-    check_property("ldpath", ldcfgchk_bool);
+    ldcfgchk_so_bool = rvs::actionbase::has_property("soname", dummy);
+    ldcfgchk_arch_bool = rvs::actionbase::has_property("arch", dummy);
+    ldcfgchk_ldpath_bool = rvs::actionbase::has_property("ldpath", dummy);
     
-    if(ldcfgchk_bool == true)
-      return_value += ldcfgchk_run(property);    
+    if(ldcfgchk_so_bool && ldcfgchk_arch_bool && ldcfgchk_ldpath_bool)
+      return ldcfgchk_run(property);    
         
-    return return_value < 0 ? -1 : 0;
+    return -1;
 }

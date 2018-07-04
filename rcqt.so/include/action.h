@@ -35,7 +35,6 @@ public:
 	action();
 	virtual ~action();
 	
-	virtual int property_set(const char*, const char*);
 	virtual int run(void);
   virtual void check_property(std::string field_name, bool &return_value);
 
