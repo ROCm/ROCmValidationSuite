@@ -49,8 +49,6 @@ class action: public rvs::actionbase {
     virtual int run(void);
 
  private:
-    vector<string> device_prop_gpu_id_list;  // the list of all gpu_id
-                                             // in the <device> property
 
     string action_name;
     bool bjson;
@@ -60,11 +58,7 @@ class action: public rvs::actionbase {
     bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, uint16_t gpu_id);
 
     // configuration properties getters
-    // gets the device property value (list of gpu_id)
-    // from the module's properties collection
-    bool property_get_device(int *error);
     void property_get_action_name(void);  // gets the action name
-    int property_get_deviceid(int *error);  // gets the deviceid
 
  protected:
 };
