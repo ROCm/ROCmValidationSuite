@@ -42,24 +42,7 @@
 
 using namespace std;
 
-#define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
-#define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\
-                                        "property"
-#define YAML_TARGET_STRESS_PROP_ERROR   "Error while parsing <target_stress> "\
-                                        "property"
 
-#define KFD_QUERYING_ERROR              "An error occurred while querying "\
-                                        "the GPU properties"
-
-#define YAML_DEVICE_PROP_DELIMITER      " "
-
-#define RVS_CONF_NAME_KEY               "name"
-#define RVS_CONF_DEVICE_KEY             "device"
-#define RVS_CONF_DEVICEID_KEY           "deviceid"
-#define RVS_CONF_PARALLEL_KEY           "parallel"
-#define RVS_CONF_COUNT_KEY              "count"
-#define RVS_CONF_WAIT_KEY               "wait"
-#define RVS_CONF_DURATION_KEY           "duration"
 #define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_interval"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
 #define RVS_CONF_MAX_VIOLATIONS_KEY     "max_violations"
@@ -96,57 +79,6 @@ action::~action() {
     property.clear();
 }
 
-/**
- * checks if input string is a positive integer number
- * @param str_val the input string
- * @return true if string is a positive integer number, false otherwise
- */
-static bool is_positive_integer(const std::string& str_val) {
-    return !str_val.empty()
-            && std::find_if(str_val.begin(), str_val.end(),
-                    [](char c) {return !std::isdigit(c);}) == str_val.end();
-}
-
-/**
- * gets the gpu_id list from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return true if "all" is selected, false otherwise
- */
-bool action::property_get_device(int *error) {
-    map<string, string>::iterator it;  // module's properties map iterator
-    *error = 0;  // init with 'no error'
-    it = property.find(RVS_CONF_DEVICE_KEY);
-    if (it != property.end()) {
-        if (it->second == "all") {
-            property.erase(it);
-            return true;
-        } else {
-            // split the list of gpu_id
-            device_prop_gpu_id_list = str_split(it->second,
-                    YAML_DEVICE_PROP_DELIMITER);
-            property.erase(it);
-
-            if (device_prop_gpu_id_list.empty()) {
-                *error = 1;  // list of gpu_id cannot be empty
-            } else {
-                for (vector<string>::iterator it_gpu_id =
-                        device_prop_gpu_id_list.begin();
-                        it_gpu_id != device_prop_gpu_id_list.end(); ++it_gpu_id)
-                    if (!is_positive_integer(*it_gpu_id)) {
-                        *error = 1;
-                        break;
-                    }
-            }
-            return false;
-        }
-
-    } else {
-        *error = 1;
-        // when error is set, it doesn't really matter whether the method
-        // returns true or false
-        return false;
-    }
-}
 
 /**
  * gets the action name from the module's properties collection
@@ -160,31 +92,6 @@ void action::property_get_action_name(void) {
     }
 }
 
-/**
- * gets the deviceid from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return deviceid value if valid, -1 otherwise
- */
-int action::property_get_deviceid(int *error) {
-    map<string, string>::iterator it = property.find(RVS_CONF_DEVICEID_KEY);
-    int deviceid = -1;
-    *error = 0;  // init with 'no error'
-
-    if (it != property.end()) {
-        if (it->second != "") {
-            if (is_positive_integer(it->second)) {
-                deviceid = std::stoi(it->second);
-            } else {
-                *error = 1;  // we have something but it's not a number
-            }
-        } else {
-            *error = 1;  // we have an empty string
-        }
-        property.erase(it);
-    }
-
-    return deviceid;
-}
 
 /**
  * reads the module's properties collection to see whether the GST should

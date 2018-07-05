@@ -27,7 +27,29 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
+#define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
+#define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\
+                                        "property"
+#define YAML_TARGET_STRESS_PROP_ERROR   "Error while parsing <target_stress> "\
+                                        "property"
+#define YAML_DEVICE_PROP_DELIMITER      " "
+#define YAML_REGULAR_EXPRESSION_ERROR   "Regular expression error"
+
+#define KFD_QUERYING_ERROR              "An error occurred while querying "\
+                                        "the GPU properties"
+
+#define YAML_DEVICE_PROP_DELIMITER      " "
+
+#define RVS_CONF_NAME_KEY               "name"
+#define RVS_CONF_DEVICE_KEY             "device"
+#define RVS_CONF_PARALLEL_KEY           "parallel"
+#define RVS_CONF_COUNT_KEY              "count"
+#define RVS_CONF_WAIT_KEY               "wait"
+#define RVS_CONF_DURATION_KEY           "duration"
+#define RVS_CONF_DEVICEID_KEY           "deviceid"
+#define RVS_JSON_LOG_GPU_ID_KEY         "gpu_id"
 
 namespace rvs
 {
@@ -55,6 +77,8 @@ public:
   virtual int     run(void) = 0;
   bool has_property(const std::string& key, std::string& val);
   bool has_property(const std::string& key);
+  int  property_get_deviceid(int *error);
+  bool property_get_device(int *error);
 
 protected:
 /**
@@ -66,6 +90,10 @@ protected:
  *  - other parameters given for specific module actions (see module action for help)
  */
   std::map<std::string, std::string>  property;
+
+  //! List of all gpu_id in the action's "device" property in .config file
+  std::vector<std::string> device_prop_gpu_id_list;
+
 };
 
 

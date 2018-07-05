@@ -26,6 +26,7 @@
 
 #include <vector>
 #include <string>
+#include <regex>
 
 using std::vector;
 using std::string;
@@ -49,4 +50,15 @@ vector<string> str_split(const string& str_val, const string& delimiter) {
         prev_pos = cur_pos + delimiter.length();
     } while (cur_pos < str_val.length() && prev_pos < str_val.length());
     return str_tokens;
+}
+
+/**
+ * checks if input string is a positive integer number
+ * @param str_val the input string
+ * @return true if string is a positive integer number, false otherwise
+ */
+bool is_positive_integer(const std::string& str_val) {
+    return !str_val.empty()
+            && std::find_if(str_val.begin(), str_val.end(),
+                    [](char c) {return !std::isdigit(c);}) == str_val.end();
 }
