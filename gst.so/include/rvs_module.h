@@ -22,43 +22,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _RVSOPTIONS_H_
-#define _RVSOPTIONS_H_
+#ifndef RVS_MODULE_H_
+#define RVS_MODULE_H_
 
-#define DO_PRAGMA(x) _Pragma (#x)
-#define TODO(x) DO_PRAGMA(message ("TODO - " #x))
+#include "rvsliblog.h"
 
-#include <string>
-#include <map>
+int log(const char* pMasg, const int level = 1);
 
-namespace rvs
-{
-
-/**
- * @class options
- * @ingroup Launcher
- *
- * @brief Collection of options.
- *
- * Execute functionality based on command line and the contents of .conf file.
- *
- */
-
-class options {
-public:
-
-  static bool has_option(const std::string& Option);
-  static bool has_option(const std::string& Option, std::string& val);
-  static const std::map<std::string,std::string>& get(void);
-
-protected:
-  //! Collection of options
-  static      std::map<std::string,std::string>	opt;
-
-friend class cli;
-};
-
-}
-
-
-#endif // _RVSOPTIONS_H_
+#endif	// RVS_MODULE_H_

@@ -36,6 +36,13 @@ rvs::ifbase::ifbase(const ifbase& rhs) {
   *this = rhs;
 }
 
+/**
+ * @brief Assignment operator
+ *
+ * @param rhs reference to RHS instance
+ * @return reference to LHS instance
+ *
+ */
 rvs::ifbase& rvs::ifbase::operator=(const rvs::ifbase& rhs) {
   // self-assignment check
   if (this != &rhs) {
@@ -44,6 +51,12 @@ rvs::ifbase& rvs::ifbase::operator=(const rvs::ifbase& rhs) {
   return *this;
 }
 
+/**
+ * @brief Clone instance
+ *
+ * @return pointer to newly created instance
+ *
+ */
 rvs::ifbase* rvs::ifbase::clone(void) {
   return new rvs::ifbase(*this);
 }

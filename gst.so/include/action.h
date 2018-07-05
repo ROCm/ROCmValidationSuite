@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PEQT_SO_INCLUDE_ACTION_H_
-#define PEQT_SO_INCLUDE_ACTION_H_
+#ifndef GST_SO_INCLUDE_ACTION_H_
+#define GST_SO_INCLUDE_ACTION_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,11 +35,13 @@ extern "C" {
 
 #include <vector>
 #include <string>
+#include <map>
 
 #include "rvsactionbase.h"
 
 using std::vector;
 using std::string;
+using std::map;
 
 class action: public rvs::actionbase {
  public:
@@ -49,24 +51,46 @@ class action: public rvs::actionbase {
     virtual int run(void);
 
  private:
-    vector<string> device_prop_gpu_id_list;  // the list of all gpu_id
-                                             // in the <device> property
-
-    string action_name;
     bool bjson;
     void* json_root_node;
 
-    // PCIe capabilities stuff
-    bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, uint16_t gpu_id);
-
+    vector<string> device_prop_gpu_id_list;  // the list of all gpu_id
+                                             // in the <device> property
+    string action_name;
+    bool gst_runs_parallel;
+    unsigned int gst_run_count;
+    unsigned long gst_run_wait_ms;
+    unsigned long gst_run_duration_ms;
+    unsigned long gst_ramp_interval;
+    unsigned long gst_log_interval;
+    int gst_max_violations;
+    bool gst_copy_matrix;
+    float gst_target_stress;
+    float gst_tolerance;
+    
     // configuration properties getters
     // gets the device property value (list of gpu_id)
     // from the module's properties collection
     bool property_get_device(int *error);
-    void property_get_action_name(void);  // gets the action name
-    int property_get_deviceid(int *error);  // gets the deviceid
-
+    void property_get_action_name(void);  
+    int property_get_deviceid(int *error); 
+    void property_get_run_parallel(void);
+    void property_get_run_count(void);
+    void property_get_run_wait(void);
+    void property_get_run_duration(void);
+    void property_get_gst_ramp_interval(void);
+    void property_get_gst_log_interval(void);
+    void property_get_gst_max_violations(void);
+    void property_get_gst_copy_matrix(void);
+    void property_get_gst_target_stress(int *error);
+    void property_get_gst_tolerance(void);
+    
+    void log_module_error(const string &error);
+    void do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
+    
+    // json stuff
+    void init_json_logging(void);
  protected:
 };
 
-#endif  // PEQT_SO_INCLUDE_ACTION_H_
+#endif  // GST_SO_INCLUDE_ACTION_H_

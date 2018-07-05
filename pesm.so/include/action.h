@@ -3,18 +3,28 @@
 #ifndef ACTION_H_
 #define ACTION_H_
 
-#include "rvslib.h"
+#include "rvsactionbase.h"
 
-class action : public rvs::lib::actionbase
+/**
+ * @class action
+ * @ingroup PESM
+ *
+ * @brief PESM action implementation class
+ *
+ * Derives from rvs::actionbase and implements actual action functionality
+ * in its run() method.
+ *
+ */
+class action : public rvs::actionbase
 {
 public:
-	action();
-	virtual ~action();
-	
-	virtual int run(void);
-	
+  action();
+  virtual ~action();
+
+  virtual int run(void);
+
 protected:
-	int do_gpu_list(void);
+  int do_gpu_list(void);
 };
 
 #endif /* ACTION_H_ */

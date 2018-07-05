@@ -126,3 +126,44 @@ void gpu_get_all_gpu_id(std::vector<unsigned short int>& gpus_id)
      }
 }
 
+/**
+ * gets all GPUS device_id
+ * @param gpus_device_id the vector that will store all the GPU location_id
+ * @return
+ */
+void gpu_get_all_device_id( std::vector<unsigned short int>& gpus_device_id)
+{
+	ifstream f_id,f_prop;
+	char path[KFD_PATH_MAX_LENGTH];
+
+    std::string prop_name;
+    int gpu_id;
+    unsigned short int prop_val;
+
+
+    //Discover the number of nodes: Inside nodes folder there are only folders that represent the node number
+    int num_nodes = gpu_num_subdirs((char*)KFD_SYS_PATH_NODES, (char*)"");
+
+    //get all GPUs device id
+    for(int node_id=0; node_id<num_nodes; node_id++){
+    	snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES, node_id);
+        f_id.open(path);
+        snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties", KFD_SYS_PATH_NODES, node_id);
+        f_prop.open(path);
+
+        f_id >> gpu_id;
+
+        if (gpu_id != 0){
+            while(f_prop >> prop_name){
+                if (prop_name == "device_id"){
+                f_prop >> prop_val;
+                gpus_device_id.push_back(prop_val);
+                break;
+                }
+            }
+        }
+
+        f_id.close();
+        f_prop.close();
+     }
+}

@@ -58,7 +58,6 @@ action::~action() {
   property.clear();
 }
 
-
 int action::property_set(const char* Key, const char* Val) {
   return rvs::actionbase::actionbase::property_set(Key, Val);
 }
@@ -81,8 +80,7 @@ int action::run()
     bool ldcfgchk_bool = true;
     bool filechk_bool = true;
     
-    // check if package check action is going to trigger
-    
+    // check if package check action is going to trigger   
     check_property("package", pkgchk_bool);    
     
     if(pkgchk_bool == true)

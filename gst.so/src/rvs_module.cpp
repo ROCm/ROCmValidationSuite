@@ -33,8 +33,8 @@ int log(const char* pMsg, const int level)
 
 extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision)
 {
-	*Major = BUILD_VERSION_MAJOR;
-	*Minor = BUILD_VERSION_MINOR;
+	*Major    = BUILD_VERSION_MAJOR;
+	*Minor    = BUILD_VERSION_MINOR;
 	*Revision = BUILD_VERSION_PATCH;
 }
 
@@ -43,7 +43,7 @@ extern "C" int rvs_module_has_interface(int iid)
 	switch(iid)
 	{
 	case 0:
-    case 1:
+	case 1:
 		return 1;
     }
 
@@ -52,25 +52,23 @@ extern "C" int rvs_module_has_interface(int iid)
 
 extern "C" char* rvs_module_get_name(void)
 {
-   return (char*)"smqt";
+   return (char*)"gst";
 }
 
 extern "C" char* rvs_module_get_description(void)
 {
-   return (char*)"SBIOS Mapping Qualification Tool";
+   return (char*)"ROCm Validation Suite GST module";
 }
 
 extern "C" char* rvs_module_get_config(void)
 {
-	return (char*)"bar1_req_size(integer), bar1_base_addr_min(integer), bar1_base_addr_max(integer), bar2_req_size(integer), bar2_base_addr_min(integer), bar2_base_addr_max(integer), bar4_req_size(integer), bar4_base_addr_min(integer), bar4_base_addr_max(integer), bar5_req_size(integer)";
+	return (char*)"package (string), version (string), installed (bool), user (string), groups (collection of strings), file (string), owner (string), group (string), permission (int), type (int), exists (bool)";
 }
 
 extern "C" char* rvs_module_get_output(void)
 {
-	return (char*)"bar1_size(integer), bar1_base_addr(integer), bar2_size(integer), bar2_base_addr(integer), bar4_size(integer), bar4_base_addr(integer), bar5_size(integer), pass(bool)";
+	return (char*)"pass (bool)";
 }
-
-
 
 extern "C" int   rvs_module_init(void* pMi)
 {
@@ -87,6 +85,8 @@ extern "C" char* rvs_module_get_errstring(int error)
 {
 	return  (char*)"General Error";
 }
+
+
 
 extern "C" void* rvs_module_action_create(void)
 {

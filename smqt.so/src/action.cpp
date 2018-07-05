@@ -23,7 +23,6 @@ extern "C" {
 }
 #endif
 
-#include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
@@ -45,11 +44,6 @@ action::action()
 action::~action()
 {
 	property.clear();
-}
-
-int action::property_set(const char* Key, const char* Val)
-{
-	return rvs::lib::actionbase::property_set(Key, Val);
 }
 
 int action::run(void)

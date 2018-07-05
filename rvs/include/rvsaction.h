@@ -35,6 +35,15 @@ namespace rvs
 class ifbase;
 class module;
 
+/**
+ * @class action
+ * @ingroup Launcher
+ *
+ * @brief Proxy class for RVS module actions
+ *
+ * Maintains RVS interaces to various action functionalities.
+ *
+ */
 class action {
 
 typedef std::pair< int, std::shared_ptr<ifbase> > t_impair;
@@ -47,10 +56,14 @@ protected:
   virtual ~action();
 
 protected:
+  //! action name as defined in YAML .conf file for this action
   std::string name;
+  //! pointer to actual action object created in and RVS module
   void*       plibaction;
+  //! list of RVS interfaces supported by this action
   std::map< int, std::shared_ptr<ifbase> > ifmap;
 
+  //! factory class
 friend class module;
 };
 

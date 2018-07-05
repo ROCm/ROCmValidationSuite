@@ -24,17 +24,32 @@
  *******************************************************************************/
 #include "rvslognodebase.h"
 
-rvs::LogNodeBase::LogNodeBase(const std::string& rName, const LogNodeBase* pParent) 
+/**
+ * @brief Constructor
+ *
+ * @param rName Node name
+ * @param pParent Pointer to parent node
+ *
+ */
+rvs::LogNodeBase::LogNodeBase(const std::string& rName, const LogNodeBase* pParent)
 : Name(rName),
 Parent(pParent),
 Type(eLN::Unknown) {
 }
 
-rvs::LogNodeBase::LogNodeBase(const char* rName, const LogNodeBase* pParent)
-: Name(rName),
+/**
+ * @brief Constructor
+ *
+ * @param pName Node name
+ * @param pParent Pointer to parent node
+ *
+ */
+rvs::LogNodeBase::LogNodeBase(const char* pName, const LogNodeBase* pParent)
+: Name(pName),
 Parent(pParent),
 Type(eLN::Unknown) {
 }
 
+//! Destructor
 rvs::LogNodeBase::~LogNodeBase() {
 }

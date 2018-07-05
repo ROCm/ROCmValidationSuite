@@ -28,7 +28,17 @@
 using namespace std;
 
 
-rvs::LogNodeRec::LogNodeRec( const string& Name, const int LoggingLevel, const unsigned int Sec, const unsigned int uSec, const LogNodeBase* Parent)
+/**
+ * @brief Constructor
+ *
+ * @param Name Node name
+ * @param LoggingLevel Logging level
+ * @param Sec secconds since system start
+ * @param uSec microseconds in current second
+ * @param Parent Pointer to parent node
+ *
+ */
+rvs::LogNodeRec::LogNodeRec( const std::string& Name, const int LoggingLevel, const unsigned int Sec, const unsigned int uSec, const LogNodeBase* Parent)
 :
 LogNode(Name, Parent),
 Level(LoggingLevel),
@@ -37,6 +47,16 @@ usec(uSec) {
   Type = eLN::Record;
 }
 
+/**
+ * @brief Constructor
+ *
+ * @param Name Node name
+ * @param LoggingLevel Logging level
+ * @param Sec secconds since system start
+ * @param uSec microseconds in current second
+ * @param Parent Pointer to parent node
+ *
+ */
 rvs::LogNodeRec::LogNodeRec( const char* Name, const int LoggingLevel, const unsigned int Sec, const unsigned int uSec, const LogNodeBase* Parent)
 :
 LogNode(Name, Parent),
@@ -46,13 +66,30 @@ usec(uSec) {
   Type = eLN::Record;
 }
 
+//! Destructor
 rvs::LogNodeRec::~LogNodeRec() {
 }
 
+/**
+ * @brief Get logging level
+ *
+ * @return Current logging level
+ *
+ */
 const int rvs::LogNodeRec::LogLevel() {
   return Level;
 }
 
+/**
+ * @brief Provides JSON representation of Node
+ *
+ * Traverses list of child nodes and converts them into proper string representation.
+ * Also ensures proper indentation and line breaks for formatted output.
+ *
+ * @param Lead String of blanks " " representing current indentation
+ * @return Node as JSON string
+ *
+ */
 std::string rvs::LogNodeRec::ToJson(const std::string& Lead) {
 
   string result(RVSENDL);
