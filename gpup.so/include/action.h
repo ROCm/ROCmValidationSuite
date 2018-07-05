@@ -60,11 +60,8 @@ private:
     bool bjson;
     void* json_root_node;
 
-    // configuration properties getters
-    bool property_get_device(int *error, int num_nodes); // gets the device property value (list of gpu_id)
     //from the module's properties collection
     void property_get_action_name(void);  // gets the action name
-    int property_get_deviceid(int *error);  // gets the deviceid
 	
 protected:
 	
