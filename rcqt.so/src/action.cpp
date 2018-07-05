@@ -23,8 +23,14 @@
  *
  *******************************************************************************/
 #include "action.h"
+#include "action_pkgchk.h"
+#include "action_usrchk.h"
+#include "action_kernelchk.h"
+#include "action_ldcfgchk.h"
+#include "action_filechk.h"
 
 #include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <map>
 #include <sys/types.h>
@@ -33,10 +39,11 @@
 #include <grp.h>
 #include <string.h>
 #include <vector>
+#include <sys/utsname.h>
 
 #include "rvs_module.h"
-#include "rvsliblogger.h"
 #include "rvs_util.h"
+#include "rvsactionbase.h"
 
 
 #define BUFFER_SIZE 3000
@@ -51,172 +58,63 @@ action::~action() {
   property.clear();
 }
 
+
 int action::property_set(const char* Key, const char* Val) {
-  return rvs::lib::actionbase::property_set(Key, Val);
+  return rvs::actionbase::actionbase::property_set(Key, Val);
 }
 
-/*vector<string> action::str_split(const string& str_val, const string& delimiter) {
-  vector<string> str_tokens;
-  unsigned int prev_pos = 0, cur_pos = 0;
-  do {
-    cur_pos = str_val.find(delimiter, prev_pos);
-    if (cur_pos == string::npos)
-      cur_pos = str_val.length();
-    string token = str_val.substr(prev_pos, cur_pos - prev_pos);
-    if (!token.empty())
-      str_tokens.push_back(token);
-    prev_pos = cur_pos + delimiter.length();
-  } while (cur_pos < str_val.length() && prev_pos < str_val.length());
-  return str_tokens;
-}*/
-
-/*void action::split_string(vector <string> &group_array,char delimiter, string string_of_groups)
-{
-  /*size_t found = string_of_groups.find_first_of(delimiter);
-  while( found != string::npos){
-    group_array.push_back(string_of_groups.substr(0, found - 1));
-    string_of_groups = string_of_groups.substr(found, string_of_groups.size());
-  }
-  group_array.push_back(string_of_groups);
-  
-  for(int i = 0 ; i < group_array.size(); i++)
-    cout << group_array[i] << endl;
-  
-}*/
+void action::check_property(string field_name, bool &return_bool){
+  map<string, string>::iterator iter;
+  iter = property.find(field_name);
+  if(iter == property.end())
+    return_bool = false;
+}
 
 int action::run()
 {
-    //string test = "jedan,dva,tri,cetiri";
-    //vector<string>vector_test;
-    //split_string(vector_test, ',', test);
+    int return_value = 0;
+    //map<string, string>::iterator iter;
     
+    bool pkgchk_bool = true;
+    bool usrchk_bool = true;
+    bool kernelchk_bool = true;
+    bool ldcfgchk_bool = true;
+    bool filechk_bool = true;
     
+    // check if package check action is going to trigger
     
-    map<string, string>::iterator iter;
-    iter = property.find("package");
-    if(iter != property.end()){
-      bool version_exists = false;
-      int fd[2];
-      string package_name;
-      
-      package_name = iter->second;
-      string version_name;
-      iter = property.find("version");
-      if(iter != property.end()){
-        version_name = iter->second;
-        version_exists = true;
-      }
+    check_property("package", pkgchk_bool);    
     
-      pid_t pid;
-      pipe(fd);
-
-      pid = fork();
-      if(pid == 0){
-        // Child process
+    if(pkgchk_bool == true)
+      return_value += pkgchk_run(property);
+    
+    // check if usrer check action is going to trigger
+    check_property("user", usrchk_bool);
+    
+    if(usrchk_bool == true)
+      return_value += usrchk_run(property);
+    
+    // chck if kernel version action is going to trigger
+    check_property("os_version", kernelchk_bool);
+    check_property("kernel_version", kernelchk_bool);
+    
+    if(kernelchk_bool == true)
+      return_value += kernelchk_run(property);
+    
+    // check if ldcfg check action is going to trigger
+    check_property("soname", ldcfgchk_bool);
+    check_property("arch", ldcfgchk_bool);
+    check_property("ldpath", ldcfgchk_bool);
+    
+    if(ldcfgchk_bool == true)
+      return_value += ldcfgchk_run(property);
+   
+    //check if file check action is going to trigger
+    check_property("file", filechk_bool);
+    
+    if(filechk_bool == true)
+      return_value += filechk_run(property);
+    
         
-        dup2(fd[1], STDOUT_FILENO);
-        dup2(fd[1], STDERR_FILENO);
-        char buffer[256];
-        snprintf(buffer, 255, "dpkg-query -W -f='${Status} ${Version}\n' %s", package_name.c_str());
-
-        system(buffer);
-        
-      } else if (pid>0){
-        // Parent
-        
-        char result[BUFFER_SIZE];
-        int count;
-        close(fd[1]);
-           
-        count=read(fd[0], result, BUFFER_SIZE);
-        
-        result[count]=0;
-        string result1 = result;
-            
-        string version_value = result1.substr(21, count - 21);
-        int ending = version_value.find_first_of('\n');
-        if(ending > 0){
-            version_value = version_value.substr(0, ending);
-        }
-        string passed = "packagecheck " + package_name + " TRUE";
-        string failed = "packagecheck " + package_name + " FALSE";
-            
-        if(strstr(result, "dpkg-query:") == result)
-            log(failed.c_str(), rvs::logresults);
-        else if(version_exists == false){
-            log(passed.c_str(), rvs::logresults);
-        }else if(version_name.compare(version_value) == 0){
-            log(passed.c_str(), rvs::logresults);
-        }else{
-            log(failed.c_str(), rvs::logresults);
-        }
-        
-      }else   {
-        // fork process error
-        cerr << "Internal Error" << endl;
-          return -1;
-      }
-    }
-    
-    
-    iter = property.find("user");
-    if(iter != property.end()){
-      bool group_exists = false;
-      bool user_is_in_all_groups = true;
-      string user_name = iter->second;
-      string group_values_string;
-      iter = property.find("group");
-      if(iter != property.end()){
-        group_values_string = iter->second;
-        group_exists= true;
-      }
-    
-      struct passwd *p;
-      struct group *g;
-      string user_exists = "[rcqt] usercheck " + user_name + " user exists";
-      string user_not_exists = "[rcqt] usercheck " + user_name + " user not exists";
-      if((p = getpwnam(user_name.c_str())) == nullptr){
-        log(user_not_exists.c_str(), rvs::logresults);
-      }else{
-        log( user_exists.c_str(), rvs::logresults);
-      }
-      if(group_exists){
-        //rvs_util utility;
-        string delimiter = ",";
-        vector<string> group_vector ;
-        group_vector = str_split(group_values_string, delimiter);
-        
-        for(vector<string>::iterator vector_iter = group_vector.begin(); vector_iter != group_vector.end(); vector_iter++){
-          string user_group = "[rcqt] usercheck " + user_name ;
-          if((g = getgrnam(vector_iter->c_str())) == nullptr){
-            cerr << "group doesn't exist" << endl;
-            
-          }
-      
-          //string user_is_in_group = "[rcqt] 
-
-          int i;
-          int j=0;
-          
-          for(i=0; g->gr_mem[i]!=NULL; i++){
-            if(strcmp(g->gr_mem[i], user_name.c_str()) == 0){
-              //log("[rcqt] usercheck
-              //printf("user is in group\n");
-              user_group = user_group + " " + vector_iter->c_str() + " is member";
-              log(user_group.c_str(), rvs::logresults);
-              j=1;
-              break;
-            }
-          }
-          
-          if(j==0){ 
-            //printf("user is not in the group\n");
-            user_group = user_group + " " + vector_iter->c_str() + " is not member";
-            log(user_group.c_str(), rvs::logresults);
-          }
-        }
-      }
-    }
-    
-    return 0;
+    return return_value < 0 ? -1 : 0;
 }
