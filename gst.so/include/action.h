@@ -56,18 +56,18 @@ class action: public rvs::actionbase {
 
     string action_name;
     bool gst_runs_parallel;
-    unsigned int gst_run_count;
-    unsigned long gst_run_wait_ms;
-    unsigned long gst_run_duration_ms;
-    unsigned long gst_ramp_interval;
-    unsigned long gst_log_interval;
+    uint64_t gst_run_count;
+    uint64_t gst_run_wait_ms;
+    uint64_t gst_run_duration_ms;
+    uint64_t gst_ramp_interval;
+    uint64_t gst_log_interval;
     int gst_max_violations;
     bool gst_copy_matrix;
     float gst_target_stress;
     float gst_tolerance;
-    
+
     // configuration properties getters
-    void property_get_action_name(void);  
+    void property_get_action_name(void);
     void property_get_run_parallel(void);
     void property_get_run_count(void);
     void property_get_run_wait(void);
@@ -78,13 +78,12 @@ class action: public rvs::actionbase {
     void property_get_gst_copy_matrix(void);
     void property_get_gst_target_stress(int *error);
     void property_get_gst_tolerance(void);
-    
+
     void log_module_error(const string &error);
     void do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
-    
+
     // json stuff
     void init_json_logging(void);
- protected:
 };
 
 #endif  // GST_SO_INCLUDE_ACTION_H_

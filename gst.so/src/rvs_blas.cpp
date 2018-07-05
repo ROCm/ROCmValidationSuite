@@ -25,14 +25,16 @@
 #include "rvs_blas.h"
 
 #include <stdlib.h>
-#include <limits>
 #include <time.h>
+#include <limits>
 #include <chrono>
+#include <random>
 
-#define RANDOM_CT               17
+#define RANDOM_CT               320000
 
-rocblas_operation transa = rocblas_operation_none, transb = rocblas_operation_transpose;
- 
+rocblas_operation transa = rocblas_operation_none;
+rocblas_operation transb = rocblas_operation_transpose;
+
 /**
  * class constructor
  * @param _gpu_device_index the gpu that will run the GEMM
@@ -40,23 +42,23 @@ rocblas_operation transa = rocblas_operation_none, transb = rocblas_operation_tr
  * @param n matrix size
  * @param k matrix size
  */
-rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k) : 
-                                    gpu_device_index (_gpu_device_index ), 
-                                    m (_m), 
-                                    n (_n),  
-                                    k (_k) {
+rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k) :
+                             gpu_device_index(_gpu_device_index),
+                             m(_m),
+                             n(_n),
+                             k(_k) {
     is_handle_init = false;
-    is_error = false;    
-        
+    is_error = false;
+
     da = db = dc = NULL;
     ha = hb = hc = NULL;
 
     size_a = k * m;
     size_b = k * n;
-    size_c = n * m;        
-    
+    size_c = n * m;
+
     if (alocate_host_matrix_mem()) {
-        if (!init_gpu_device()) 
+        if (!init_gpu_device())
             is_error = true;
     } else {
         is_error = true;
@@ -68,30 +70,31 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k) :
  */
 rvs_blas::~rvs_blas() {
     release_host_matrix_mem();
-    release_gpu_matrix_mem();    
+    release_gpu_matrix_mem();
 }
 
 /**
- * selects GPU device, allocates GPU memory, creates a rocBlas handle 
+ * selects GPU device, allocates GPU memory, creates a rocBlas handle
  * and get a reference to the rocBlas's stream
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::init_gpu_device(void) {
-    //select GPU device & allocate memory
+    // select GPU device & allocate memory
     if (hipSetDevice(gpu_device_index) != hipSuccess) {
         // cannot select the given GPU device
         return false;
     } else {
-        if (!allocate_gpu_matrix_mem()) 
+        if (!allocate_gpu_matrix_mem())
             return false;
         if (rocblas_create_handle(&blas_handle) == rocblas_status_success) {
             is_handle_init = true;
-            if (rocblas_get_stream(blas_handle, &hip_stream) != rocblas_status_success) 
-                    return false;
+            if (rocblas_get_stream(blas_handle, &hip_stream)
+                 != rocblas_status_success)
+                return false;
         } else {
-                return false;            
-        }        
-    }    
+            return false;
+        }
+    }
     return true;
 }
 
@@ -101,23 +104,30 @@ bool rvs_blas::init_gpu_device(void) {
  */
 bool rvs_blas::copy_data_to_gpu(void) {
     if (!is_error) {
-        if (da != NULL)
-            if(hipMemcpy(da, ha, sizeof(float) * size_a, hipMemcpyHostToDevice) != hipSuccess) {
-                is_error = true; 
-                return false;
-            }
-            
-        if (db != NULL)
-            if(hipMemcpy(db, hb, sizeof(float) * size_b, hipMemcpyHostToDevice) != hipSuccess) {
+        if (da != NULL) {
+            if (hipMemcpy(da, ha, sizeof(float) * size_a, hipMemcpyHostToDevice)
+                    != hipSuccess) {
                 is_error = true;
                 return false;
             }
+        }
 
-        if (dc != NULL)
-            if(hipMemcpy(dc, hc, sizeof(float) * size_c, hipMemcpyHostToDevice) != hipSuccess) {
+        if (db != NULL) {
+            if (hipMemcpy(db, hb, sizeof(float) * size_b, hipMemcpyHostToDevice)
+                     != hipSuccess) {
                 is_error = true;
                 return false;
             }
+        }
+
+        if (dc != NULL) {
+            if (hipMemcpy(dc, hc, sizeof(float) * size_c, hipMemcpyHostToDevice)
+                     != hipSuccess) {
+                is_error = true;
+                return false;
+            }
+        }
+
         return true;
     } else {
         return false;
@@ -129,18 +139,18 @@ bool rvs_blas::copy_data_to_gpu(void) {
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::allocate_gpu_matrix_mem(void) {
-    if (hipMalloc(&da, size_a * sizeof(float)) != hipSuccess) 
-        return false;    
+    if (hipMalloc(&da, size_a * sizeof(float)) != hipSuccess)
+        return false;
     if (hipMalloc(&db, size_b * sizeof(float)) != hipSuccess)
-        return false;        
-    if (hipMalloc(&dc, size_c * sizeof(float)) != hipSuccess) 
-            return false;                
+        return false;
+    if (hipMalloc(&dc, size_c * sizeof(float)) != hipSuccess)
+        return false;
 
     return true;
 }
- 
+
 /**
- * releases GPU mem & destroys the rocBlas handle 
+ * releases GPU mem & destroys the rocBlas handle
  */
 void rvs_blas::release_gpu_matrix_mem(void) {
     if (da)
@@ -149,7 +159,7 @@ void rvs_blas::release_gpu_matrix_mem(void) {
         hipFree(db);
     if (dc)
         hipFree(dc);
-    if(is_handle_init)
+    if (is_handle_init)
         rocblas_destroy_handle(blas_handle);
 }
 
@@ -159,31 +169,31 @@ void rvs_blas::release_gpu_matrix_mem(void) {
  */
 bool rvs_blas::alocate_host_matrix_mem(void) {
     ha = new float[size_a];
-    if (!ha) 
+    if (!ha)
         return false;
-    
+
     hb = new float[size_b];
-    if (!hb) 
-        return false;  
-    
+    if (!hb)
+        return false;
+
     hc = new float[size_c];
-    if (!hc) 
+    if (!hc)
         return false;
 
     return true;
 }
 
 /**
- * releases the host matrix memory 
+ * releases the host matrix memory
  */
 void rvs_blas::release_host_matrix_mem(void) {
     if (ha)
         delete []ha;
     if (hb)
-        delete []hb;    
+        delete []hb;
     if (hc)
-        delete []hc;    
-} 
+        delete []hc;
+}
 
 /**
  * checks whether the matrix multiplication completed
@@ -196,7 +206,7 @@ bool rvs_blas::is_gemm_op_complete(void) {
         return false;
     return true;
 }
- 
+
 /**
  * does the matrix multiplication
  * class is template, however, at the moment only SGEMM (float) is supported
@@ -205,10 +215,10 @@ bool rvs_blas::is_gemm_op_complete(void) {
 bool rvs_blas::run_blass_gemm(void) {
     if (!is_error) {
         float alpha = 1.1, beta = 0.9;
-        if (rocblas_sgemm(blas_handle, transa, transb, 
-                    rvs_blas::m, rvs_blas::n, rvs_blas::k, 
-                    &alpha, da, rvs_blas::m, 
-                    db, rvs_blas::n, &beta, 
+        if (rocblas_sgemm(blas_handle, transa, transb,
+                    rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                    &alpha, da, rvs_blas::m,
+                    db, rvs_blas::n, &beta,
                     dc, rvs_blas::m) != rocblas_status_success) {
             is_error = true;  // GPU cannot enqueue the gemm
             return false;
@@ -219,21 +229,33 @@ bool rvs_blas::run_blass_gemm(void) {
         return false;
     }
 }
- 
+
 /**
  * generate matrix random data
  * it should be called before rocBlas GEMM
  */
 void rvs_blas::generate_random_matrix_data(void) {
     int i;
-    if (!is_error) {    
-        srand(1);
-        
-        for(i = 0; i < size_a; ++i)
-            ha[i] = rand() % RANDOM_CT;
-        for(i = 0; i < size_b; ++i)
-            hb[i] = rand() % RANDOM_CT;
-        for(int i = 0; i < size_c; ++i)
-            hc[i] = rand() % RANDOM_CT;        
+    if (!is_error) {
+        int r1, r2;
+        unsigned int seed = time(NULL);
+
+        for (i = 0; i < size_a; ++i) {
+            r1 = rand_r(&seed) % RANDOM_CT;
+            r2 = rand_r(&seed) % (RANDOM_CT / 1000) + 1;
+            ha[i] = static_cast<float>(r1) / r2;
+        }
+
+        for (i = 0; i < size_b; ++i) {
+            r1 = rand_r(&seed) % RANDOM_CT;
+            r2 = rand_r(&seed) % (RANDOM_CT / 1000) + 1;
+            hb[i] = static_cast<float>(r1) / r2;
+        }
+
+        for (int i = 0; i < size_c; ++i) {
+            r1 = rand_r(&seed) % RANDOM_CT;
+            r2 = rand_r(&seed) % (RANDOM_CT / 1000) + 1;
+            hc[i] = static_cast<float>(r1) / r2;
+        }
     }
-} 
+}
