@@ -54,8 +54,6 @@ class action: public rvs::actionbase {
     bool bjson;
     void* json_root_node;
 
-    vector<string> device_prop_gpu_id_list;  // the list of all gpu_id
-                                             // in the <device> property
     string action_name;
     bool gst_runs_parallel;
     unsigned int gst_run_count;
@@ -69,11 +67,7 @@ class action: public rvs::actionbase {
     float gst_tolerance;
     
     // configuration properties getters
-    // gets the device property value (list of gpu_id)
-    // from the module's properties collection
-    bool property_get_device(int *error);
     void property_get_action_name(void);  
-    int property_get_deviceid(int *error); 
     void property_get_run_parallel(void);
     void property_get_run_count(void);
     void property_get_run_wait(void);
