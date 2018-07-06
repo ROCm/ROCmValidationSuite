@@ -22,11 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
-#include "action_pkgchk.h"
-#include "action_usrchk.h"
-#include "action_kernelchk.h"
-#include "action_ldcfgchk.h"
+#include "rcqt_subactions.h"
 
 #include <iostream>
 #include <fstream>
@@ -47,6 +43,7 @@
 
 #define BUFFER_SIZE 3000
 
+
 using namespace std;
 
 
@@ -57,12 +54,22 @@ action::~action() {
   property.clear();
 }
 
-
+/**
+ * @brief Implements action functionality
+ *
+ * Functionality:
+ *
+ * - If "do_gpu_list" property is set, it lists all AMD GPUs present in the system and exits
+ * - If "monitor" property is set to "true", it creates Worker thread and initiates monitoring and exits
+ * - If "monitor" property is not set or is not set to "true", it stops the Worker thread and exits
+ *
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
 
 int action::run()
 {
     int return_value = 0;
-    //map<string, string>::iterator iter;
     
     bool pkgchk_bool = false;
     bool usrchk_bool = false;
@@ -72,35 +79,34 @@ int action::run()
     bool ldcfgchk_arch_bool = false;
     bool ldcfgchk_ldpath_bool = false;
     
-    string dummy;
-    
     // check if package check action is going to trigger
     
-    pkgchk_bool =  rvs::actionbase::has_property("package", dummy);    
+    pkgchk_bool =  rvs::actionbase::has_property("package");    
     
     if(pkgchk_bool == true)
       return pkgchk_run(property);
     
     // check if usrer check action is going to trigger
-    usrchk_bool = rvs::actionbase::has_property("user", dummy);
+    usrchk_bool = rvs::actionbase::has_property("user");
     
     if(usrchk_bool == true)
       return usrchk_run(property);
     
     // chck if kernel version action is going to trigger
-    kernelchk_os_bool = rvs::actionbase::has_property("os_version", dummy);
-    kernelchk_kernel_bool = rvs::actionbase::has_property("kernel_version", dummy);
+    kernelchk_os_bool = rvs::actionbase::has_property("os_version");
+    kernelchk_kernel_bool = rvs::actionbase::has_property("kernel_version");
     
     if(kernelchk_os_bool && kernelchk_kernel_bool)
       return kernelchk_run(property);
     
     // check if ldcfg check action is going to trigger
-    ldcfgchk_so_bool = rvs::actionbase::has_property("soname", dummy);
-    ldcfgchk_arch_bool = rvs::actionbase::has_property("arch", dummy);
-    ldcfgchk_ldpath_bool = rvs::actionbase::has_property("ldpath", dummy);
+    ldcfgchk_so_bool = rvs::actionbase::has_property("soname");
+    ldcfgchk_arch_bool = rvs::actionbase::has_property("arch");
+    ldcfgchk_ldpath_bool = rvs::actionbase::has_property("ldpath");
     
     if(ldcfgchk_so_bool && ldcfgchk_arch_bool && ldcfgchk_ldpath_bool)
       return ldcfgchk_run(property);    
         
+    
     return -1;
 }

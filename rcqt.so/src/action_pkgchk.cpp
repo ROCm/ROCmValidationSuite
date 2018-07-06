@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action_pkgchk.h"
+#include "rcqt_subactions.h"
 
 #include <iostream>
 #include <fstream>
@@ -35,57 +35,70 @@
 #include <vector>
 #include <sys/utsname.h>
 
-#include "rvs_module.h"
-#include "rvsliblogger.h"
-#include "rvs_util.h"
 
-#define BUFFER_SIZE 3000
+
+#define BUFFER_SIZE 256
+#define PACKAGE "package"
+#define VERSION "version"
+#define INTERNAL_ERROR "Internal Error"
 
 using namespace std;
 
-int pkgchk_run(std::map<string,string> property){
-  map<string, string>::iterator iter;
+/**
+ * Check if the package is installed in the system (optional: check package version )
+ * @param property config file map fields
+ * @return 0 - success, non-zero otherwise
+ * */
+
+int pkgchk_run(map<string,string> property){
+  //static rvs::actionbase actionbase;
   
-  iter = property.find("package");
+  string package_name;
+  auto iter = property.find(PACKAGE);
   if(iter != property.end()){
     bool version_exists = false;
-    int fd[2];
-    string package_name;
-    
     package_name = iter->second;
     string version_name;
-    iter = property.find("version");
+    
+    iter = property.find(VERSION);
+    // Checking if version field exists
     if(iter != property.end()){
-      version_name = iter->second;
       version_exists = true;
+      version_name = iter->second;
     }
     
     pid_t pid;
+    int fd[2];
     pipe(fd);
     
     pid = fork();
     if(pid == 0){
       // Child process
       
+      // Pipe the standard output to the fd[1]
       dup2(fd[1], STDOUT_FILENO);
       dup2(fd[1], STDERR_FILENO);
-      char buffer[256];
-      snprintf(buffer, 255, "dpkg-query -W -f='${Status} ${Version}\n' %s", package_name.c_str());
+      char buffer[BUFFER_SIZE];
+      snprintf(buffer, BUFFER_SIZE, "dpkg-query -W -f='${Status} ${Version}\n' %s", package_name.c_str());
       
+      // We execute the dpkg-querry
       system(buffer);
       
     } else if (pid>0){
       // Parent
       
+      
       char result[BUFFER_SIZE];
       int count;
       close(fd[1]);
       
+      // We read the result from the dpk-querry from the fd[0]
       count=read(fd[0], result, BUFFER_SIZE);
       
       result[count]=0;
       string result1 = result;
       
+      // We parse the given result
       string version_value = result1.substr(21, count - 21);
       int ending = version_value.find_first_of('\n');
       if(ending > 0){
@@ -94,6 +107,11 @@ int pkgchk_run(std::map<string,string> property){
       string passed = "packagecheck " + package_name + " TRUE";
       string failed = "packagecheck " + package_name + " FALSE";
       
+      /* 
+       * If result start with dpkg-querry: then we haven't found the package
+       * If we get something different, then we confirme that the package is found
+       * if version is equal to the required then the test pass
+       */
       if(strstr(result, "dpkg-query:") == result)
         log(failed.c_str(), rvs::logresults);
       else if(version_exists == false){
@@ -106,11 +124,10 @@ int pkgchk_run(std::map<string,string> property){
       
     }else   {
       // fork process error
-      cerr << "Internal Error" << endl;
+      cerr << INTERNAL_ERROR << endl;
       return -1;
     }
+    return 0;
   }
-  
-  
-  
+  return -1;  
 }

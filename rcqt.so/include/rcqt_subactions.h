@@ -1,5 +1,5 @@
 /********************************************************************************
- *
+ * 
  * Copyright (c) 2018 ROCm Developer Tools
  *
  * MIT LICENSE:
@@ -22,34 +22,39 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ACTION_H_
-#define ACTION_H_
+#ifndef INCLUDE_SUBACTIONS_H_
+#define INCLUDE_SUBACTIONS_H_
 
+#include <map>
+#include <string>
+
+#include "action.h"
+#include "rvs_module.h"
+#include "rvsliblogger.h"
+#include "rvs_util.h"
 #include "rvsactionbase.h"
 
+/**
+ *  @brief Function used in rcqt action class to check for given user and group membership
+ */
+
+extern int usrchk_run(std::map<std::string,std::string> property);
 
 /**
- * @class action
- * @ingroup RCQT
- *
- * @brief RCQT action implementation class
- *
- * Derives from rvs::actionbase and implements actual action functionality
- * in its run() method.
- *
+ *  @brief Function used in rcqt action class to check for given package
  */
-class action : public rvs::actionbase
-{
-public:
 
-	action();
-	virtual ~action();
-	
-	virtual int run(void);
+extern int pkgchk_run(std::map<std::string,std::string> property);
 
+/**
+ *  @brief Function used in rcqt action class to check for os and kernel version
+ */
 
-protected:
+extern int kernelchk_run(std::map<std::string,std::string> property);
 
-};
+/**
+ *  @brief Function used in rcqt action class to check for o shared library existance and architecture
+ */
+extern int ldcfgchk_run(std::map<std::string,std::string> property);
 
-#endif /* ACTION_H_ */
+#endif  // INCLUDE_SUBACTIONS_H_
