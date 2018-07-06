@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action_ldcfgchk.h"
+#include "rcqt_subactions.h"
 
 #include <iostream>
 #include <stdlib.h>
@@ -36,18 +36,31 @@
 #include "rvs_module.h"
 #include "rvsliblogger.h"
 #include "rvs_util.h"
+#include "rvsactionbase.h"
+
+#define SONAME  "soname"
+#define LDPATH  "ldpath"
+#define ARCH    "arch"
 
 #define BUFFER_SIZE 3000
 
+
+
 using namespace std;
 
-int ldcfgchk_run(std::map<string,string> property){
-  map<string, string>::iterator iter;
+/**
+ * Check if the shared object is in the given location with the correct architecture
+ * @param property config file map fields
+ * @return 0 - success, non-zero otherwise
+ * */
+
+int ldcfgchk_run(std::map<string,string> property) {
   
-  iter = property.find("soname");
-  if(iter != property.end()){
-    string soname_requested = iter->second;
-    iter = property.find("arch");
+  string soname_requested;
+  auto iter = property.find(SONAME);
+  if(iter != property.end()) {
+    soname_requested = iter->second;
+    iter = property.find(ARCH);
     if(iter == property.end()){
       cerr << "acrhitecture field missing in conflig" << endl;
       return -1;
