@@ -50,19 +50,19 @@ using namespace std;
  * @return 0 - success, non-zero otherwise
  * */
 
-int pkgchk_run(map<string,string> property){
+int pkgchk_run(map<string,string> property) {
   //static rvs::actionbase actionbase;
   
   string package_name;
   auto iter = property.find(PACKAGE);
-  if(iter != property.end()){
+  if(iter != property.end()) {
     bool version_exists = false;
     package_name = iter->second;
     string version_name;
     
     iter = property.find(VERSION);
     // Checking if version field exists
-    if(iter != property.end()){
+    if(iter != property.end()) {
       version_exists = true;
       version_name = iter->second;
     }
@@ -72,7 +72,7 @@ int pkgchk_run(map<string,string> property){
     pipe(fd);
     
     pid = fork();
-    if(pid == 0){
+    if(pid == 0) {
       // Child process
       
       // Pipe the standard output to the fd[1]
@@ -84,9 +84,8 @@ int pkgchk_run(map<string,string> property){
       // We execute the dpkg-querry
       system(buffer);
       
-    } else if (pid>0){
+    } else if (pid>0) {
       // Parent
-      
       
       char result[BUFFER_SIZE];
       int count;
@@ -101,7 +100,7 @@ int pkgchk_run(map<string,string> property){
       // We parse the given result
       string version_value = result1.substr(21, count - 21);
       int ending = version_value.find_first_of('\n');
-      if(ending > 0){
+      if(ending > 0) {
         version_value = version_value.substr(0, ending);
       }
       string passed = "packagecheck " + package_name + " TRUE";
@@ -114,15 +113,15 @@ int pkgchk_run(map<string,string> property){
        */
       if(strstr(result, "dpkg-query:") == result)
         log(failed.c_str(), rvs::logresults);
-      else if(version_exists == false){
+      else if(version_exists == false) {
         log(passed.c_str(), rvs::logresults);
-      }else if(version_name.compare(version_value) == 0){
+      }else if(version_name.compare(version_value) == 0) {
         log(passed.c_str(), rvs::logresults);
-      }else{
+      }else {
         log(failed.c_str(), rvs::logresults);
       }
       
-    }else   {
+    }else {
       // fork process error
       cerr << INTERNAL_ERROR << endl;
       return -1;

@@ -91,7 +91,7 @@ int kernelchk_run(std::map<string,string> property) {
           break;
       }
     }
-    if(os_version_found_in_system == false){
+    if(os_version_found_in_system == false) {
       cerr << "Unable to locate actual OS installed" << endl;
     }
     
@@ -107,13 +107,13 @@ int kernelchk_run(std::map<string,string> property) {
     // Check if the given kernel version matches one from the list
     vector<string>::iterator kernel_iter;
     for(kernel_iter = kernel_version_vector.begin() ; kernel_iter != kernel_version_vector.end(); kernel_iter++)
-      if(kernel_actual.compare(*kernel_iter) == 0 ){
+      if(kernel_actual.compare(*kernel_iter) == 0 ) {
         kernel_version_correct = true;
         break;
       }
-      string result = "[rcqt] kernelcheck " + os_actual + " " + kernel_actual + " " + (os_version_correct && kernel_version_correct ? "pass" : "fail");
+    string result = "[rcqt] kernelcheck " + os_actual + " " + kernel_actual + " " + (os_version_correct && kernel_version_correct ? "pass" : "fail");
     log(result.c_str(), rvs::logresults) ;
-    return 1;
+    return 0;
   }
   
   return -1;
