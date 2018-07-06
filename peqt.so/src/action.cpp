@@ -45,20 +45,7 @@ extern "C" {
 
 #define CHAR_BUFF_MAX_SIZE              1024
 #define PCI_DEV_NUM_CAPABILITIES        16
-
-#define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
-#define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\
-                                        "property"
-#define YAML_REGULAR_EXPRESSION_ERROR   "Regular expression error"
-#define KFD_QUERYING_ERROR              "An error occurred while querying "\
-                                        "the GPU properties"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
-#define YAML_DEVICE_PROP_DELIMITER      " "
-
-#define RVS_CONF_NAME_KEY               "name"
-#define RVS_CONF_DEVICE_KEY             "device"
-#define RVS_CONF_DEVICEID_KEY           "deviceid"
-#define RVS_JSON_LOG_GPU_ID_KEY         "gpu_id"
 
 #define JSON_CAPS_NODE_NAME             "capabilities"
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
@@ -112,57 +99,6 @@ action::~action() {
     property.clear();
 }
 
-/**
- * checks if input string is a positive integer number
- * @param str_val the input string
- * @return true if string is a positive integer number, false otherwise
- */
-static bool is_positive_integer(const std::string& str_val) {
-    return !str_val.empty()
-            && std::find_if(str_val.begin(), str_val.end(),
-                    [](char c) {return !std::isdigit(c);}) == str_val.end();
-}
-
-/**
- * gets the gpu_id list from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return true if "all" is selected, false otherwise
- */
-bool action::property_get_device(int *error) {
-    map<string, string>::iterator it;  // module's properties map iterator
-    *error = 0;  // init with 'no error'
-    it = property.find(RVS_CONF_DEVICE_KEY);
-    if (it != property.end()) {
-        if (it->second == "all") {
-            property.erase(it);
-            return true;
-        } else {
-            // split the list of gpu_id
-            device_prop_gpu_id_list = str_split(it->second,
-                    YAML_DEVICE_PROP_DELIMITER);
-            property.erase(it);
-
-            if (device_prop_gpu_id_list.empty()) {
-                *error = 1;  // list of gpu_id cannot be empty
-            } else {
-                for (vector<string>::iterator it_gpu_id =
-                        device_prop_gpu_id_list.begin();
-                        it_gpu_id != device_prop_gpu_id_list.end(); ++it_gpu_id)
-                    if (!is_positive_integer(*it_gpu_id)) {
-                        *error = 1;
-                        break;
-                    }
-            }
-            return false;
-        }
-
-    } else {
-        *error = 1;
-        // when error is set, it doesn't really matter whether the method
-        // returns true or false
-        return false;
-    }
-}
 
 /**
  * gets all PCIe capabilities for a given AMD compatible GPU and
@@ -249,32 +185,6 @@ void action::property_get_action_name(void) {
         action_name = it->second;
         property.erase(it);
     }
-}
-
-/**
- * gets the deviceid from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return deviceid value if valid, -1 otherwise
- */
-int action::property_get_deviceid(int *error) {
-    map<string, string>::iterator it = property.find(RVS_CONF_DEVICEID_KEY);
-    int deviceid = -1;
-    *error = 0;  // init with 'no error'
-
-    if (it != property.end()) {
-        if (it->second != "") {
-            if (is_positive_integer(it->second)) {
-                deviceid = std::stoi(it->second);
-            } else {
-                *error = 1;  // we have something but it's not a number
-            }
-        } else {
-            *error = 1;  // we have an empty string
-        }
-        property.erase(it);
-    }
-
-    return deviceid;
 }
 
 /**
