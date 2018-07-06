@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _RVS_BLAS_H_
-#define _RVS_BLAS_H_
+#ifndef GST_SO_INCLUDE_RVS_BLAS_H_
+#define GST_SO_INCLUDE_RVS_BLAS_H_
 
 #define __HIP_PLATFORM_HCC__
 
@@ -32,43 +32,50 @@
 #include "hip_runtime_api.h"
 
 class rvs_blas {
-public:
+ public:
     rvs_blas(int , rocblas_int, rocblas_int, rocblas_int);
     ~rvs_blas();
-    
+
     // gpu_device_index, m, n and k getters
     int get_gpu_device_index(void) { return gpu_device_index; }
     rocblas_int get_m(void) { return m; }
     rocblas_int get_n(void) { return n; }
     rocblas_int get_k(void) { return k; }
-                
-    double gemm_gflop_count(void) { return (double)(2.0 * m * n * k) / 1e9; }  // computes the GFLOP for given m, n and k    
-    bool error(void) { return is_error; }    
-    void generate_random_matrix_data(void);  // generates random matrix data
-    bool copy_data_to_gpu(void);  // copy data from host to gpu
-    bool run_blass_gemm(void);  // does the matrix multiplication
-    bool is_gemm_op_complete(void);  // checks whether the matrix multiplication completed
-        
-private:
-    // data members    
+
+    double gemm_gflop_count(void) {
+        return static_cast<double>(2.0 * m * n * k) / 1e9;
+    }
+
+    bool error(void) { return is_error; }
+    void generate_random_matrix_data(void);
+    bool copy_data_to_gpu(void);
+    bool run_blass_gemm(void);
+    bool is_gemm_op_complete(void);
+
+ private:
+    // data members
     int gpu_device_index;  // the GPU device that will run the S/D GEMM
     rocblas_int m, n, k;   // data matrixes size
     rocblas_int size_a, size_b, size_c;   // data matrixes total mem size
     float *da, *db, *dc;  // pointers to device (GPU) memory
     float *ha, *hb, *hc;  // pointers to host memory
-        
-    hipStream_t hip_stream;  // HIP API stream (used to query for GEMM completion - rocBlass GEMM operates async)
-    rocblas_handle blas_handle; 
-    
+
+    // HIP API stream - used to query for GEMM completion
+    // needed because rocBlass GEMM operates async
+    hipStream_t hip_stream;
+    rocblas_handle blas_handle;
+
     bool is_handle_init;
-    bool is_error;  // rocBlas guard (prevents executing run_blass_gemm when there are memory related errors)
+
+    // rocBlas guard (prevents executing blass_gemm when there are mem errors)
+    bool is_error;
 
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);  // allocate memory on the GPU device
     void release_gpu_matrix_mem(void);  // release GPU mem
-    
-    bool alocate_host_matrix_mem(void);  // alocate host memory for the matrixes    
-    void release_host_matrix_mem(void);  // generates random matrix data    
+
+    bool alocate_host_matrix_mem(void);  // alocate host memory for matrixes
+    void release_host_matrix_mem(void);  // generates random matrix data
 };
 
-#endif // _RVS_BLAS_H
+#endif  // GST_SO_INCLUDE_RVS_BLAS_H_
