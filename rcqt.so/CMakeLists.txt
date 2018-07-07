@@ -75,7 +75,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 include_directories(include ../include)
 
 ## define source files
-set(SOURCES src/rvs_module.cpp src/action.cpp src/action_pkgchk.cpp src/action_usrchk.cpp src/action_kernelchk.cpp src/action_ldcfgchk.cpp
+set(SOURCES src/rvs_module.cpp src/action.cpp
         ../src/rvsactionbase.cpp ../src/rvsloglp.cpp ../src/rvs_util.cpp )
 
 ## define target

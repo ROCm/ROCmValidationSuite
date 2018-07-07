@@ -26,7 +26,9 @@
 #define ACTION_H_
 
 #include "rvsactionbase.h"
-
+#include "rvs_module.h"
+#include "rvsliblogger.h"
+#include "rvs_util.h"
 
 /**
  * @class action
@@ -50,6 +52,28 @@ public:
 
 protected:
 
+  /**
+   *  @brief Function used in rcqt action class to check for given package
+   */
+  
+  virtual int pkgchk_run();
+  
+  /**
+   *  @brief Function used in rcqt action class to check for given user and group membership
+   */
+  
+  virtual int usrchk_run();
+  
+  /**
+   *  @brief Function used in rcqt action class to check for os and kernel version
+   */
+  
+  virtual int kernelchk_run();
+  
+  /**
+   *  @brief Function used in rcqt action class to check for o shared library existance and architecture
+   */
+  virtual int ldcfgchk_run();
 };
 
 #endif /* ACTION_H_ */
