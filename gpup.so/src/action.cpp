@@ -40,11 +40,6 @@
 
 #define KFD_SYS_PATH_NODES "/sys/class/kfd/kfd/topology/nodes"
 
-#define RVS_CONF_NAME_KEY               "name"
-#define RVS_CONF_DEVICE_KEY             "device"
-#define RVS_CONF_DEVICEID_KEY           "deviceid"
-#define RVS_JSON_LOG_GPU_ID_KEY         "gpu_id"
-
 #define JSON_PROP_NODE_NAME             "properties"
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 
@@ -73,17 +68,6 @@ action::~action()
 }
 
 /**
- * checks if input string is a positive integer number
- * @param str_val the input string
- * @return true if string is a positive integer number, false otherwise
- */
-static bool is_positive_integer(const std::string& str_val) {
-    return !str_val.empty()
-            && std::find_if(str_val.begin(), str_val.end(),
-                    [](char c) {return !std::isdigit(c);}) == str_val.end();
-}
-
-/**
  * gets the action name from the module's properties collection
  */
 void action::property_get_action_name(void)
@@ -96,80 +80,6 @@ void action::property_get_action_name(void)
     }
 }
 
-/**
- * gets the gpu_id list from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return true if "all" is selected, false otherwise
- */
-bool action::property_get_device(int *error, int num_nodes) {
-    map<string, string>::iterator it;  // module's properties map iterator
-    ifstream f_id;
-    char path[256];
-    string gpu_id;
-    *error = 0;  // init with 'no error'
-    it = property.find(RVS_CONF_DEVICE_KEY);
-    if (it != property.end()) {
-        if (it->second == "all") {            
-          for(int node_id=0; node_id<num_nodes; node_id++){
-                snprintf(path, 256, "%s/%d/gpu_id", KFD_SYS_PATH_NODES, node_id);
-                f_id.open(path);                
-                f_id >> gpu_id;              
-                if (  gpu_id!="0" ){
-                    gpus_id.push_back(gpu_id);
-                }    
-                f_id.close();
-        }       
-            property.erase(it);
-            return true;
-        } else {
-            // split the list of gpu_id
-            gpus_id = str_split(it->second, YAML_DEVICE_PROP_DELIMITER);
-            property.erase(it);
-
-            if (gpus_id.empty()) {
-                *error = 1;  // list of gpu_id cannot be empty
-            } else {
-                for (vector<string>::iterator it_gpu_id =
-                        gpus_id.begin();
-                        it_gpu_id != gpus_id.end(); ++it_gpu_id){
-                    if (!is_positive_integer(*it_gpu_id)) {
-                        *error = 1;
-                        break;
-                    }}
-            }
-            return false;
-        }
-    } else {
-        *error = 1;
-        return false;
-    }
-}
-
-/**
- * gets the deviceid from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return deviceid value if valid, -1 otherwise
- */
-int action::property_get_deviceid(int *error) {
-    map<string, string>::iterator it = property.find(RVS_CONF_DEVICEID_KEY);
-    int deviceid = -1;
-    *error = 0;  // init with 'no error'
-
-    if (it != property.end()) {
-        if (it->second != "") {
-            if(is_positive_integer(it->second)) {
-                deviceid = std::stoi(it->second);
-            } else {
-                *error = 1;  // we have something but it's not a number
-            }
-        } else {
-            *error = 1;  // we have an empty string
-        }
-        property.erase(it);
-    }
-
-    return deviceid;
-}
 
 int action::run(void)
 {    
@@ -189,7 +99,7 @@ int action::run(void)
     property_get_action_name();
 
     // get <device> property value (a list of gpu id)
-    device_all_selected = property_get_device(&error, num_nodes);
+    device_all_selected = property_get_device(&error);
     
     // get the <deviceid> property value
     int dev_id = property_get_deviceid(&error);

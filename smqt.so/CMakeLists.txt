@@ -80,7 +80,7 @@ include_directories(include pci ../include)
 
 ## define source files
 set(SOURCES 
-    ../src/rvsactionbase.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvsloglp.cpp
+    ../src/rvsactionbase.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvsloglp.cpp ../src/rvs_util.cpp
     src/rvs_module.cpp src/action.cpp)
 
 ## define target
