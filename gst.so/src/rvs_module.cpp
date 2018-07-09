@@ -26,6 +26,20 @@
 #include "action.h"
 #include "rvsloglp.h"
 
+/**
+ * @defgroup GST GST Module
+ *
+ * @brief performs GPU Stress Test
+ *
+ * The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM
+ * (Single/Double-precision General Matrix Multiplication) workload
+ * on one, some or all GPUs. The GPUs can be of the same or different types.
+ * The duration of the benchmark should be configurable, both in terms of time
+ * (how long to run) and iterations (how many times to run).
+ * 
+ */
+
+
 int log(const char* pMsg, const int level) {
     return rvs::lp::Log(pMsg, level);
 }
