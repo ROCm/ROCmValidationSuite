@@ -27,6 +27,7 @@
 #include <chrono>
 #include <unistd.h>
 
+#include "rvs_util.h"
 
 using namespace std;
 
@@ -100,3 +101,73 @@ bool rvs::actionbase::has_property(const std::string& key) {
   string val;
   return has_property(key, val);
 }
+
+/**
+ * gets the deviceid from the module's properties collection
+ * @param error pointer to a memory location where the error code will be stored
+ * @return deviceid value if valid, -1 otherwise
+ */
+int rvs::actionbase::property_get_deviceid(int *error) {
+    map<string, string>::iterator it = property.find(RVS_CONF_DEVICEID_KEY);
+    int deviceid = -1;
+    *error = 0;  // init with 'no error'
+
+    if (it != property.end()) {
+        if (it->second != "") {
+            if (is_positive_integer(it->second)) {
+                deviceid = std::stoi(it->second);
+            } else {
+                *error = 1;  // we have something but it's not a number
+            }
+        } else {
+            *error = 1;  // we have an empty string
+        }
+        property.erase(it);
+    }
+
+    return deviceid;
+}
+
+/**
+ * gets the gpu_id list from the module's properties collection
+ * @param error pointer to a memory location where the error code will be stored
+ * @return true if "all" is selected, false otherwise
+ */
+bool rvs::actionbase::property_get_device(int *error) {
+    map<string, string>::iterator it;  // module's properties map iterator
+    *error = 0;  // init with 'no error'
+    it = property.find(RVS_CONF_DEVICE_KEY);
+    if (it != property.end()) {
+        if (it->second == "all") {
+            property.erase(it);
+            return true;
+        } else {
+            // split the list of gpu_id
+            device_prop_gpu_id_list = str_split(it->second,
+                    YAML_DEVICE_PROP_DELIMITER);
+            property.erase(it);
+
+            if (device_prop_gpu_id_list.empty()) {
+                *error = 1;  // list of gpu_id cannot be empty
+            } else {
+                for (vector<string>::iterator it_gpu_id =
+                        device_prop_gpu_id_list.begin();
+                        it_gpu_id != device_prop_gpu_id_list.end(); ++it_gpu_id)
+                    if (!is_positive_integer(*it_gpu_id)) {
+                        *error = 1;
+                        break;
+                    }
+            }
+            return false;
+        }
+
+    } else {
+        *error = 1;
+        // when error is set, it doesn't really matter whether the method
+        // returns true or false
+        return false;
+    }
+}
+
+
+
