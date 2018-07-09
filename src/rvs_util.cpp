@@ -26,6 +26,7 @@
 
 #include <vector>
 #include <string>
+#include <regex>
 
 using std::vector;
 using std::string;
@@ -49,4 +50,45 @@ vector<string> str_split(const string& str_val, const string& delimiter) {
         prev_pos = cur_pos + delimiter.length();
     } while (cur_pos < str_val.length() && prev_pos < str_val.length());
     return str_tokens;
+}
+
+
+/**
+ * Conert array of strings into array of integers
+ * @param sArr input string
+ * @param iArr tokens' delimiter
+ * @return -1 if error, 0 <= otherwise
+ */
+int rvs_util_strarr_to_intarr(const std::vector<string>& sArr,
+                              std::vector<int>* piArr) {
+  int ssize = sArr.size();
+
+  piArr->clear();
+
+  for (auto it = sArr.begin(); it != sArr.end(); ++it) {
+    try {
+      if (is_positive_integer(*it)) {
+        piArr->push_back(std::stoi(*it));
+      }
+    }
+    catch(...) {
+    }
+  }
+
+  if (sArr.size() != piArr->size())
+    return -1;
+
+  return piArr->size();
+}
+
+
+/**
+ * checks if input string is a positive integer number
+ * @param str_val the input string
+ * @return true if string is a positive integer number, false otherwise
+ */
+bool is_positive_integer(const std::string& str_val) {
+    return !str_val.empty()
+            && std::find_if(str_val.begin(), str_val.end(),
+                    [](char c) {return !std::isdigit(c);}) == str_val.end();
 }

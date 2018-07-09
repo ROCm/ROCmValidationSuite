@@ -22,11 +22,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVS_MODULE_H_
-#define RVS_MODULE_H_
+#ifndef GST_SO_INCLUDE_RVS_MODULE_H_
+#define GST_SO_INCLUDE_RVS_MODULE_H_
 
 #include "rvsliblog.h"
 
 int log(const char* pMasg, const int level = 1);
 
-#endif	// RVS_MODULE_H_
+#endif  // GST_SO_INCLUDE_RVS_MODULE_H_

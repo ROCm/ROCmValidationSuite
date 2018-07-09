@@ -43,6 +43,16 @@ using std::vector;
 using std::string;
 using std::map;
 
+/**
+ * @class action
+ * @ingroup GST
+ *
+ * @brief GST action implementation class
+ *
+ * Derives from rvs::actionbase and implements actual action functionality
+ * in its run() method.
+ *
+ */
 class action: public rvs::actionbase {
  public:
     action();
@@ -50,30 +60,38 @@ class action: public rvs::actionbase {
 
     virtual int run(void);
 
- private:
+ protected:
+    //! TRUE if JSON output is required
     bool bjson;
+    //! JSON root node
     void* json_root_node;
 
-    vector<string> device_prop_gpu_id_list;  // the list of all gpu_id
-                                             // in the <device> property
+    //! name of the action
     string action_name;
+    //! TRUE if the GST action will run on all selected devices in parallel
     bool gst_runs_parallel;
-    unsigned int gst_run_count;
-    unsigned long gst_run_wait_ms;
-    unsigned long gst_run_duration_ms;
-    unsigned long gst_ramp_interval;
-    unsigned long gst_log_interval;
+    //! number of GST stress test iterations to run
+    uint64_t gst_run_count;
+    //! stress test run delay
+    uint64_t gst_run_wait_ms;
+    //! stress test run duration
+    uint64_t gst_run_duration_ms;
+    //! stress test ramp duration
+    uint64_t gst_ramp_interval;
+    //! time interval at which the module reports the average GFlops
+    uint64_t gst_log_interval;
+    //! maximum allowed number of target_stress violations
     int gst_max_violations;
+    //! specifies whether to copy the matrix to the GPU for each SGEMM operation
     bool gst_copy_matrix;
+    //! target stress (in GFlops) that the GPU will try to achieve
     float gst_target_stress;
+    //! GFlops tolerance (how much the GFlops can fluctuare after
+    //! the ramp period for the test to succeed)
     float gst_tolerance;
-    
+
     // configuration properties getters
-    // gets the device property value (list of gpu_id)
-    // from the module's properties collection
-    bool property_get_device(int *error);
-    void property_get_action_name(void);  
-    int property_get_deviceid(int *error); 
+    void property_get_action_name(void);
     void property_get_run_parallel(void);
     void property_get_run_count(void);
     void property_get_run_wait(void);
@@ -84,13 +102,12 @@ class action: public rvs::actionbase {
     void property_get_gst_copy_matrix(void);
     void property_get_gst_target_stress(int *error);
     void property_get_gst_tolerance(void);
-    
+
     void log_module_error(const string &error);
     void do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
-    
+
     // json stuff
     void init_json_logging(void);
- protected:
 };
 
 #endif  // GST_SO_INCLUDE_ACTION_H_

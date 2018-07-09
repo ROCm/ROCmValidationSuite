@@ -26,22 +26,54 @@
 #define ACTION_H_
 
 #include "rvsactionbase.h"
+#include "rvs_module.h"
+#include "rvsliblogger.h"
+#include "rvs_util.h"
 
+/**
+ * @class action
+ * @ingroup RCQT
+ *
+ * @brief RCQT action implementation class
+ *
+ * Derives from rvs::actionbase and implements actual action functionality
+ * in its run() method.
+ *
+ */
 class action : public rvs::actionbase
 {
 public:
 
-
 	action();
 	virtual ~action();
 	
-	virtual int property_set(const char*, const char*);
 	virtual int run(void);
-  virtual void check_property(std::string field_name, bool &return_value);
 
 
 protected:
 
+  /**
+   *  @brief Function used in rcqt action class to check for given package
+   */
+  
+  virtual int pkgchk_run();
+  
+  /**
+   *  @brief Function used in rcqt action class to check for given user and group membership
+   */
+  
+  virtual int usrchk_run();
+  
+  /**
+   *  @brief Function used in rcqt action class to check for os and kernel version
+   */
+  
+  virtual int kernelchk_run();
+  
+  /**
+   *  @brief Function used in rcqt action class to check for o shared library existance and architecture
+   */
+  virtual int ldcfgchk_run();
 };
 
 #endif /* ACTION_H_ */

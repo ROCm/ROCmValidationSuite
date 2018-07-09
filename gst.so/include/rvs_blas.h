@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _RVS_BLAS_H_
-#define _RVS_BLAS_H_
+#ifndef GST_SO_INCLUDE_RVS_BLAS_H_
+#define GST_SO_INCLUDE_RVS_BLAS_H_
 
 #define __HIP_PLATFORM_HCC__
 
@@ -31,44 +31,81 @@
 #include "hip_runtime.h"
 #include "hip_runtime_api.h"
 
+/**
+ * @class rvs_blas
+ * @ingroup GST
+ *
+ * @brief implements the SGEMM logic
+ *
+ */
 class rvs_blas {
-public:
-    rvs_blas(int , rocblas_int, rocblas_int, rocblas_int);
+ public:
+    rvs_blas(int _gpu_device_index, int _m, int _n, int _k);
     ~rvs_blas();
-    
-    // gpu_device_index, m, n and k getters
+
+    //! returns the GPU index
     int get_gpu_device_index(void) { return gpu_device_index; }
+    //! returns m (matrix size)
     rocblas_int get_m(void) { return m; }
+    //! returns n (matrix size)
     rocblas_int get_n(void) { return n; }
+    //! returns k (matrix size)
     rocblas_int get_k(void) { return k; }
-                
-    double gemm_gflop_count(void) { return (double)(2.0 * m * n * k) / 1e9; }  // computes the GFLOP for given m, n and k    
-    bool error(void) { return is_error; }    
-    void generate_random_matrix_data(void);  // generates random matrix data
-    bool copy_data_to_gpu(void);  // copy data from host to gpu
-    bool run_blass_gemm(void);  // does the matrix multiplication
-    bool is_gemm_op_complete(void);  // checks whether the matrix multiplication completed
-        
-private:
-    // data members    
-    int gpu_device_index;  // the GPU device that will run the S/D GEMM
-    rocblas_int m, n, k;   // data matrixes size
-    rocblas_int size_a, size_b, size_c;   // data matrixes total mem size
-    float *da, *db, *dc;  // pointers to device (GPU) memory
-    float *ha, *hb, *hc;  // pointers to host memory
-        
-    hipStream_t hip_stream;  // HIP API stream (used to query for GEMM completion - rocBlass GEMM operates async)
-    rocblas_handle blas_handle; 
-    
+
+    //! computes the gflop for a SGEMM operation
+    double gemm_gflop_count(void) {
+        return static_cast<double>(2.0 * m * n * k) / 1e9;
+    }
+
+    //! returns TRUE if an error occured
+    bool error(void) { return is_error; }
+    void generate_random_matrix_data(void);
+    bool copy_data_to_gpu(void);
+    bool run_blass_gemm(void);
+    bool is_gemm_op_complete(void);
+
+ protected:
+    //! GPU device index
+    int gpu_device_index;
+    //! matrix size n
+    rocblas_int n;
+    //! matrix size m
+    rocblas_int m;
+    //! matrix size k
+    rocblas_int k;
+    //! amount of memory to allocate for the matrix
+    rocblas_int size_a;
+    //! amount of memory to allocate for the matrix
+    rocblas_int size_b;
+    //! amount of memory to allocate for the matrix
+    rocblas_int size_c;
+    //! pointer to device (GPU) memory
+    float *da;
+    //! pointer to device (GPU) memory
+    float *db;
+    //! pointer to device (GPU) memory
+    float *dc;
+    //! pointer to host memory
+    float *ha;
+    //! pointer to host memory
+    float *hb;
+    //! pointer to host memory
+    float *hc;
+    //! HIP API stream - used to query for GEMM completion
+    hipStream_t hip_stream;
+    //! rocBlas related handle
+    rocblas_handle blas_handle;
+    //! TRUE is rocBlas handle was successfully initialized
     bool is_handle_init;
-    bool is_error;  // rocBlas guard (prevents executing run_blass_gemm when there are memory related errors)
+    //! rocBlas guard (prevents executing blass_gemm when there are mem errors)
+    bool is_error;
 
     bool init_gpu_device(void);
-    bool allocate_gpu_matrix_mem(void);  // allocate memory on the GPU device
-    void release_gpu_matrix_mem(void);  // release GPU mem
-    
-    bool alocate_host_matrix_mem(void);  // alocate host memory for the matrixes    
-    void release_host_matrix_mem(void);  // generates random matrix data    
+    bool allocate_gpu_matrix_mem(void);
+    void release_gpu_matrix_mem(void);
+
+    bool alocate_host_matrix_mem(void);
+    void release_host_matrix_mem(void);
 };
 
-#endif // _RVS_BLAS_H
+#endif  // GST_SO_INCLUDE_RVS_BLAS_H_
