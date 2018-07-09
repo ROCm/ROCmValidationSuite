@@ -22,13 +22,39 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef INCLUDE_PKGCHK_H_
-#define INCLUDE_PKGCHK_H_
+#ifndef INCLUDE_SUBACTIONS_H_
+#define INCLUDE_SUBACTIONS_H_
 
 #include <map>
 #include <string>
 
+#include "action.h"
+#include "rvs_module.h"
+#include "rvsliblogger.h"
+#include "rvs_util.h"
+#include "rvsactionbase.h"
+
+/**
+ *  @brief Function used in rcqt action class to check for given user and group membership
+ */
+
+extern int usrchk_run(std::map<std::string,std::string> property);
+
+/**
+ *  @brief Function used in rcqt action class to check for given package
+ */
 
 extern int pkgchk_run(std::map<std::string,std::string> property);
 
-#endif  // INCLUDE_PKGCHK_H_
+/**
+ *  @brief Function used in rcqt action class to check for os and kernel version
+ */
+
+extern int kernelchk_run(std::map<std::string,std::string> property);
+
+/**
+ *  @brief Function used in rcqt action class to check for o shared library existance and architecture
+ */
+extern int ldcfgchk_run(std::map<std::string,std::string> property);
+
+#endif  // INCLUDE_SUBACTIONS_H_
