@@ -53,9 +53,6 @@ using std::regex;
 #define RVS_CONF_TARGET_STRESS_KEY      "target_stress"
 #define RVS_CONF_TOLERANCE_KEY          "tolerance"
 
-#define GST_RESULT_PASS_MESSAGE         "TRUE"
-#define GST_RESULT_FAIL_MESSAGE         "FALSE"
-
 #define MODULE_NAME                     "gst"
 
 #define GST_DEFAULT_RAMP_INTERVAL       5000
@@ -68,7 +65,7 @@ using std::regex;
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 
 /**
- * default class constructor
+ * @brief default class constructor
  */
 action::action() {
     bjson = false;
@@ -76,7 +73,7 @@ action::action() {
 }
 
 /**
- * class destructor
+ * @brief class destructor
  */
 action::~action() {
     property.clear();
@@ -84,7 +81,7 @@ action::~action() {
 
 
 /**
- * gets the action name from the module's properties collection
+ * @brief gets the action name from the module's properties collection
  */
 void action::property_get_action_name(void) {
     action_name = "[]";
@@ -97,7 +94,7 @@ void action::property_get_action_name(void) {
 
 
 /**
- * reads the module's properties collection to see whether the GST should
+ * @brief reads the module's properties collection to see whether the GST should
  * run the stress test in parallel
  */
 void action::property_get_run_parallel(void) {
@@ -111,7 +108,7 @@ void action::property_get_run_parallel(void) {
 }
 
 /**
- * reads the run count from the module's properties collection
+ * @brief reads the run count from the module's properties collection
  */
 void action::property_get_run_count(void) {
     gst_run_count = 1;
@@ -124,7 +121,7 @@ void action::property_get_run_count(void) {
 }
 
 /**
- * reads the module's properties collection to check how much to delay
+ * @brief reads the module's properties collection to check how much to delay
  * each stress test session
  */
 void action::property_get_run_wait(void) {
@@ -139,7 +136,7 @@ void action::property_get_run_wait(void) {
 }
 
 /**
- * reads the total run duration from the module's properties collection
+ * @brief reads the total run duration from the module's properties collection
  */
 void action::property_get_run_duration(void) {
     gst_run_duration_ms = 0;
@@ -154,7 +151,7 @@ void action::property_get_run_duration(void) {
 }
 
 /**
- * reads the stress test's ramp-up time from the module's properties collection
+ * @brief reads the stress test's ramp-up time from the module's properties collection
  */
 void action::property_get_gst_ramp_interval(void) {
     gst_ramp_interval = GST_DEFAULT_RAMP_INTERVAL;
@@ -168,7 +165,7 @@ void action::property_get_gst_ramp_interval(void) {
 }
 
 /**
- * reads the log interval from the module's properties collection
+ * @brief reads the log interval from the module's properties collection
  */
 void action::property_get_gst_log_interval(void) {
     gst_log_interval = GST_DEFAULT_LOG_INTERVAL;
@@ -182,7 +179,7 @@ void action::property_get_gst_log_interval(void) {
 }
 
 /**
- * reads the max_violations (maximum allowed number of GFLOPS violations)
+ * @brief reads the max_violations (maximum allowed number of GFLOPS violations)
  * from the module's properties collection
  */
 void action::property_get_gst_max_violations(void) {
@@ -197,7 +194,7 @@ void action::property_get_gst_max_violations(void) {
 }
 
 /**
- * reads the module's properties collection to see whether the GST should
+ * @brief reads the module's properties collection to see whether the GST should
  * copy the matrix to GPU for each SGEMM/DGEMM operation
  */
 void action::property_get_gst_copy_matrix(void) {
@@ -211,7 +208,7 @@ void action::property_get_gst_copy_matrix(void) {
 }
 
 /**
- * reads the maximum GFLOPS (that the GST will try to achieve) from
+ * @brief reads the maximum GFLOPS (that the GST will try to achieve) from
  * the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
@@ -237,7 +234,7 @@ void action::property_get_gst_target_stress(int *error) {
 }
 
 /**
- * reads the maximum GFLOPS tolerance from
+ * @brief reads the maximum GFLOPS tolerance from
  * the module's properties collection
  */
 void action::property_get_gst_tolerance(void) {
@@ -257,7 +254,7 @@ void action::property_get_gst_tolerance(void) {
 }
 
 /**
- * logs an error & the GST module's result as FALSE
+ * @brief logs an error & the GST module's result as FALSE
  * @param error the actual error message
  */
 void action::log_module_error(const string &error) {
@@ -270,7 +267,7 @@ void action::log_module_error(const string &error) {
 }
 
 /**
- * runs the test stress session
+ * @brief runs the test stress session
  * @param gst_gpus_device_index <gpu_index, gpu_id> map
  */
 void action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
@@ -321,7 +318,7 @@ void action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
 }
 
 /**
- * checks if JSON logging is enabled (-j flag) and 
+ * @brief checks if JSON logging is enabled (-j flag) and 
  * initializes the root node
  */
 void action::init_json_logging(void) {
@@ -347,7 +344,7 @@ void action::init_json_logging(void) {
 }
 
 /**
- * runs the whole GST logic
+ * @brief runs the whole GST logic
  * @return run result
  */
 int action::run(void) {
