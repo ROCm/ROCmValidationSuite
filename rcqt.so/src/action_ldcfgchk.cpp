@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action_ldcfgchk.h"
+#include "rcqt_subactions.h"
 
 #include <iostream>
 #include <stdlib.h>
@@ -33,40 +33,47 @@
 #include <vector>
 #include <sys/utsname.h>
 
-#include "rvs_module.h"
-#include "rvsliblogger.h"
-#include "rvs_util.h"
+
+#define SONAME  "soname"
+#define LDPATH  "ldpath"
+#define ARCH    "arch"
 
 #define BUFFER_SIZE 3000
 
 using namespace std;
 
-int ldcfgchk_run(std::map<string,string> property){
-  map<string, string>::iterator iter;
+/**
+ * Check if the shared object is in the given location with the correct architecture
+ * @param property config file map fields
+ * @return 0 - success, non-zero otherwise
+ * */
+
+int ldcfgchk_run(std::map<string,string> property) {
   
-  iter = property.find("soname");
-  if(iter != property.end()){
-    string soname_requested = iter->second;
-    iter = property.find("arch");
-    if(iter == property.end()){
+  string soname_requested;
+  auto iter = property.find(SONAME);
+  if(iter != property.end()) {
+    soname_requested = iter->second;
+    iter = property.find(ARCH);
+    if(iter == property.end()) {
       cerr << "acrhitecture field missing in conflig" << endl;
       return -1;
     }
     string arch_requested = iter->second;
     iter = property.find("ldpath");
-    if(iter == property.end()){
+    if(iter == property.end()) {
       cerr << "libraty path field missing in conflig" << endl;
       return -1;
     }
     string ldpath_requested = iter->second;
-    //cout << " name " << soname_requested << " arch " << arch_requested << " ldpath " << ldpath_requested << endl;
+    // Full path of shared object
     string full_ld_path = ldpath_requested + "/" + soname_requested;
     
     int fd[2];
     pid_t pid;
     pipe(fd);
     pid = fork();
-    if(pid == 0){
+    if(pid == 0) {
       // child process
       dup2(fd[1], STDOUT_FILENO);
       dup2(fd[1], STDERR_FILENO);
@@ -75,7 +82,8 @@ int ldcfgchk_run(std::map<string,string> property){
       
       system(buffer);
     }
-    else if(pid > 0){
+    else if(pid > 0) {
+      // Parent process
       char result[BUFFER_SIZE];
       int count;
       close(fd[1]);
@@ -84,35 +92,34 @@ int ldcfgchk_run(std::map<string,string> property){
       string ld_config_result = "[rcqt] ldconfigcheck ";
       
       string result_string = result;
-      //cout << result_string << endl;
-      if(strstr(result, "architecture:") != nullptr){
+      
+      if(strstr(result, "architecture:") != nullptr) {
         vector<string> objdump_lines = str_split(result_string, "\n");
         int begin_of_the_arch_string = 0;
         int end_of_the_arch_string = 0;
         for(int i = 0; i < objdump_lines.size(); i++){
           //cout << objdump_lines[i] << "*" << endl;
-          if( objdump_lines[i].find("architecture") != string::npos){
+          if( objdump_lines[i].find("architecture") != string::npos) {
             begin_of_the_arch_string = objdump_lines[i].find(":");
             end_of_the_arch_string = objdump_lines[i].find(",");
             string arch_found = objdump_lines[i].substr(begin_of_the_arch_string + 2, end_of_the_arch_string - begin_of_the_arch_string - 2);
-            //cout << arch_found << endl;
             if(arch_found.compare(arch_requested) == 0){
               string arch_pass = ld_config_result + soname_requested + " " + full_ld_path + " " + arch_found + " pass";
               log(arch_pass.c_str(), rvs::logresults);
-            }else{
+            }else {
               string arch_pass = ld_config_result + soname_requested + " " + full_ld_path + " " + arch_found + " fail";
               log(arch_pass.c_str(), rvs::logresults);
             }
           }
         }
-      }else{
+      }else {
         string lib_fail = ld_config_result + soname_requested + " not found " + "na " + "fail" ;
-        //cout << "The given file is not a lib or it doesn't exists" << endl;
         log(lib_fail.c_str(), rvs::logresults);
       }
       
     }else
       cerr << "Internal Error" << endl;
+    return 0;
   }
-  return 0;
+  return -1;
 }

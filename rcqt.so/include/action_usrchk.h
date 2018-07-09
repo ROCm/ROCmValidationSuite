@@ -28,6 +28,9 @@
 #include <map>
 #include <string>
 
+/**
+ *  @brief Function used in rcqt action class to check for given user and group membership
+ */
 
 extern int usrchk_run(std::map<std::string,std::string> property);
 
