@@ -43,6 +43,16 @@ using std::vector;
 using std::string;
 using std::map;
 
+/**
+ * @class action
+ * @ingroup GST
+ *
+ * @brief GST action implementation class
+ *
+ * Derives from rvs::actionbase and implements actual action functionality
+ * in its run() method.
+ *
+ */
 class action: public rvs::actionbase {
  public:
     action();
@@ -50,20 +60,34 @@ class action: public rvs::actionbase {
 
     virtual int run(void);
 
- private:
+ protected:
+    //! TRUE if JSON output is required
     bool bjson;
+    //! JSON root node
     void* json_root_node;
 
+    //! name of the action
     string action_name;
+    //! TRUE if the GST action will run on all selected devices in parallel
     bool gst_runs_parallel;
+    //! number of GST stress test iterations to run
     uint64_t gst_run_count;
+    //! stress test run delay
     uint64_t gst_run_wait_ms;
+    //! stress test run duration
     uint64_t gst_run_duration_ms;
+    //! stress test ramp duration
     uint64_t gst_ramp_interval;
+    //! time interval at which the module reports the average GFlops
     uint64_t gst_log_interval;
+    //! maximum allowed number of target_stress violations
     int gst_max_violations;
+    //! specifies whether to copy the matrix to the GPU for each SGEMM operation
     bool gst_copy_matrix;
+    //! target stress (in GFlops) that the GPU will try to achieve
     float gst_target_stress;
+    //! GFlops tolerance (how much the GFlops can fluctuare after
+    //! the ramp period for the test to succeed)
     float gst_tolerance;
 
     // configuration properties getters
