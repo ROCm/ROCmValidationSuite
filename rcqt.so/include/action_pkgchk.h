@@ -1,5 +1,5 @@
 /********************************************************************************
- *
+ * 
  * Copyright (c) 2018 ROCm Developer Tools
  *
  * MIT LICENSE:
@@ -22,26 +22,13 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ACTION_H_
-#define ACTION_H_
+#ifndef INCLUDE_PKGCHK_H_
+#define INCLUDE_PKGCHK_H_
 
-#include "rvsactionbase.h"
-
-class action : public rvs::actionbase
-{
-public:
+#include <map>
+#include <string>
 
 
-	action();
-	virtual ~action();
-	
-	virtual int property_set(const char*, const char*);
-	virtual int run(void);
-  virtual void check_property(std::string field_name, bool &return_value);
+extern int pkgchk_run(std::map<std::string,std::string> property);
 
-
-protected:
-
-};
-
-#endif /* ACTION_H_ */
+#endif  // INCLUDE_PKGCHK_H_
