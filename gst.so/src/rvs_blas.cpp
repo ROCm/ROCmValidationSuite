@@ -36,11 +36,11 @@ rocblas_operation transa = rocblas_operation_none;
 rocblas_operation transb = rocblas_operation_transpose;
 
 /**
- * class constructor
+ * @brief class constructor
  * @param _gpu_device_index the gpu that will run the GEMM
- * @param m matrix size
- * @param n matrix size
- * @param k matrix size
+ * @param _m matrix size
+ * @param _n matrix size
+ * @param _k matrix size
  */
 rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k) :
                              gpu_device_index(_gpu_device_index),
@@ -66,7 +66,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k) :
 }
 
 /**
- * class destructor
+ * @brief class destructor
  */
 rvs_blas::~rvs_blas() {
     release_host_matrix_mem();
@@ -74,8 +74,7 @@ rvs_blas::~rvs_blas() {
 }
 
 /**
- * selects GPU device, allocates GPU memory, creates a rocBlas handle
- * and get a reference to the rocBlas's stream
+ * @brief selects GPU device, allocates GPU memory, creates a rocBlas handle and get a reference to the rocBlas's stream
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::init_gpu_device(void) {
@@ -99,7 +98,7 @@ bool rvs_blas::init_gpu_device(void) {
 }
 
 /**
- * copy data matrix from host to gpu
+ * @brief copy data matrix from host to gpu
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::copy_data_to_gpu(void) {
@@ -135,7 +134,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
 }
 
 /**
- * allocates memory (for matrix multiplication) on the selected GPU
+ * @brief allocates memory (for matrix multiplication) on the selected GPU
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::allocate_gpu_matrix_mem(void) {
@@ -164,7 +163,7 @@ void rvs_blas::release_gpu_matrix_mem(void) {
 }
 
 /**
- * allocate host matrix memory
+ * @brief allocate host matrix memory
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::alocate_host_matrix_mem(void) {
@@ -184,7 +183,7 @@ bool rvs_blas::alocate_host_matrix_mem(void) {
 }
 
 /**
- * releases the host matrix memory
+ * @brief releases the host matrix memory
  */
 void rvs_blas::release_host_matrix_mem(void) {
     if (ha)
@@ -196,7 +195,7 @@ void rvs_blas::release_host_matrix_mem(void) {
 }
 
 /**
- * checks whether the matrix multiplication completed
+ * @brief checks whether the matrix multiplication completed
  * @return true if GPU finished with matrix multiplication, otherwise false
  */
 bool rvs_blas::is_gemm_op_complete(void) {
@@ -208,8 +207,7 @@ bool rvs_blas::is_gemm_op_complete(void) {
 }
 
 /**
- * does the matrix multiplication
- * class is template, however, at the moment only SGEMM (float) is supported
+ * @brief performs the SGEMM matrix multiplication
  * @return true if GPU was able to enqueue the GEMM operation, otherwise false
  */
 bool rvs_blas::run_blass_gemm(void) {
@@ -231,7 +229,7 @@ bool rvs_blas::run_blass_gemm(void) {
 }
 
 /**
- * generate matrix random data
+ * @brief generate matrix random data
  * it should be called before rocBlas GEMM
  */
 void rvs_blas::generate_random_matrix_data(void) {
