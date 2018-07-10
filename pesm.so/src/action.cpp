@@ -156,6 +156,8 @@ int action::run(void) {
   } else {
     log("[PESM] property[\"monitor\"] != \"true\"", rvs::logdebug);
     if (pworker) {
+      // (give thread chance to start)
+      sleep(2);
       pworker->set_stop_name(property["name"]);
       pworker->stop();
       delete pworker;
@@ -177,10 +179,10 @@ int action::run(void) {
  *
  * */
 int action::do_gpu_list() {
-  log("[PESM] in do_gpu_list()", rvs::logdebug);
+  log("pesm in do_gpu_list()", rvs::logtrace);
 
   std::map<string, string>::iterator it;
-  std::vector<unsigned short int> gpus_location_id;
+  std::vector<uint16_t> gpus_location_id;
 
   struct pci_access* pacc;
   struct pci_dev*    dev;
@@ -206,8 +208,8 @@ int action::do_gpu_list() {
     | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
 
     // computes the actual dev's location_id (sysfs entry)
-    unsigned short int dev_location_id =
-      ((((unsigned short int)(dev->bus)) << 8) | (dev->func));
+    uint16_t dev_location_id =
+      ((((uint16_t)(dev->bus)) << 8) | (dev->func));
 
     // check if this pci_dev corresponds to one of AMD GPUs
     auto it_gpu = find(gpus_location_id.begin(), gpus_location_id.end(),

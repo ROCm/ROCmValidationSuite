@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _PCI_CAP_H_
-#define _PCI_CAP_H_
+#ifndef INCLUDE_PCI_CAPS_H_
+#define INCLUDE_PCI_CAPS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,15 +42,16 @@ void get_vendor_id(struct pci_dev *dev, char *buff);
 void get_kernel_driver(struct pci_dev *dev, char *buff);
 void get_pwr_base_pwr(struct pci_dev *dev, char *buff);
 void get_pwr_rail_type(struct pci_dev *dev, char *buff);
+void get_pwr_curr_state(struct pci_dev *dev, char *buff);
 void get_atomic_op_requester(struct pci_dev *dev, char *buff);
 void get_atomic_32_bit_op_completer(struct pci_dev *dev, char *buff);
 void get_atomic_64_bit_op_completer(struct pci_dev *dev, char *buff);
 void get_atomic_128_bit_cas_op_completer(struct pci_dev *dev, char *buff);
-long int get_atomic_op_register_value (struct pci_dev *dev);
+long int get_atomic_op_register_value(struct pci_dev *dev);
 
 #ifdef __cplusplus
 }
 #endif
 
 
-#endif // _PCI_CAP_H_
+#endif  // INCLUDE_PCI_CAPS_H_

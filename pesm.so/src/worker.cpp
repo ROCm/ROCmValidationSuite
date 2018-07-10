@@ -75,8 +75,9 @@ void Worker::run() {
   char buff[1024];
 
   map<string, string>::iterator it;
-  vector<unsigned short int> gpus_location_id;
-  map<unsigned short int, string> old_val;
+  vector<uint16_t> gpus_location_id;
+  map<uint16_t, string> old_val;
+  map<uint16_t, string> old_pwr_val;
 
   struct pci_access *pacc;
   struct pci_dev *dev;
@@ -89,11 +90,11 @@ void Worker::run() {
   rvs::lp::get_ticks(sec, usec);
 
   // add string output
-  string msg("[" + action_name + "] [PESM] " + strgpuids + " started");
+  string msg("[" + action_name + "] pesm " + strgpuids + " started");
   rvs::lp::Log(msg, rvs::logresults, sec, usec);
 
   // add JSON output
-  r = rvs::lp::LogRecordCreate("PESM", action_name.c_str(), rvs::logresults,
+  r = rvs::lp::LogRecordCreate("pesm", action_name.c_str(), rvs::logresults,
                                sec, usec);
   rvs::lp::AddString(r, "msg", "started");
   rvs::lp::AddString(r, "device", strgpuids);
@@ -101,7 +102,7 @@ void Worker::run() {
 
   // worker thread has started
   while (brun) {
-    log("[PESM] worker thread is running...", rvs::logtrace);
+    log("pesm worker thread is running...", rvs::logtrace);
 
     // get all GPU location_id (Note: we're not using device_id as the unique
     // identifier of the GPU because multiple GPUs can have the same ID ...
@@ -124,8 +125,8 @@ void Worker::run() {
       | PCI_FILL_PHYS_SLOT);  // fil in the info
 
       // computes the actual dev's location_id (sysfs entry)
-      unsigned short int dev_location_id =
-      ((((unsigned short int)(dev->bus)) << 8) | (dev->func));
+      uint16_t dev_location_id =
+      ((((uint16_t)(dev->bus)) << 8) | (dev->func));
 
       // check if this pci_dev corresponds to one of AMD GPUs
       auto it_gpu = find(gpus_location_id.begin(), gpus_location_id.end(),
@@ -150,22 +151,42 @@ void Worker::run() {
       get_link_stat_cur_speed(dev, buff);
       string new_val(buff);
 
-      // same as the previously measured? do nothing just continue
-      if (old_val[dev_location_id] == new_val)
-        continue;
+      // get current power state for GPU
+      get_pwr_curr_state(dev, buff);
+      string new_pwr_val(buff);
 
-      // new value is different, so store it;
-      old_val[dev_location_id] = new_val;
+      // link speed changed?
+      if (old_val[dev_location_id] != new_val) {
+        // new value is different, so store it;
+        old_val[dev_location_id] = new_val;
 
-      string msg("[" + action_name + "] " + "[PESM] "
-        + std::to_string(dev_location_id) + " link speed change " + new_val);
-      rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+        string msg("[" + action_name + "] " + "pesm "
+          + std::to_string(dev_location_id) + " link speed change " + new_val);
+        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
 
-      r = rvs::lp::LogRecordCreate("PESM", action_name.c_str(), rvs::loginfo,
-                                   sec, usec);
-      rvs::lp::AddString(r, "msg", "link speed change");
-      rvs::lp::AddString(r, "val", new_val);
-      rvs::lp::LogRecordFlush(r);
+        r = rvs::lp::LogRecordCreate("pesm ", action_name.c_str(), rvs::loginfo,
+                                    sec, usec);
+        rvs::lp::AddString(r, "msg", "link speed change");
+        rvs::lp::AddString(r, "val", new_val);
+        rvs::lp::LogRecordFlush(r);
+      }
+
+      // power state changed
+      if (old_pwr_val[dev_location_id] != new_pwr_val) {
+        // new value is different, so store it;
+        old_pwr_val[dev_location_id] = new_pwr_val;
+
+        string msg("[" + action_name + "] " + "pesm "
+          + std::to_string(dev_location_id) +
+          " power state change " + new_pwr_val);
+        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+
+        r = rvs::lp::LogRecordCreate("pesm", action_name.c_str(), rvs::loginfo,
+                                    sec, usec);
+        rvs::lp::AddString(r, "msg", "power state change");
+        rvs::lp::AddString(r, "val", new_pwr_val);
+        rvs::lp::LogRecordFlush(r);
+      }
     }
 
     pci_cleanup(pacc);
@@ -177,7 +198,7 @@ void Worker::run() {
   rvs::lp::get_ticks(sec, usec);
 
   // add string output
-  msg = "[" + stop_action_name + "] [PESM] all stopped";
+  msg = "[" + stop_action_name + "] pesm all stopped";
   rvs::lp::Log(msg, rvs::logresults, sec, usec);
 
   // add JSON output
@@ -187,7 +208,7 @@ void Worker::run() {
   rvs::lp::AddString(r, "msg", "stopped");
   rvs::lp::LogRecordFlush(r);
 
-  log("[PESM] worker thread has finished", rvs::logdebug);
+  log("pesm worker thread has finished", rvs::logdebug);
 }
 
 /**
@@ -198,7 +219,7 @@ void Worker::run() {
  *
  * */
 void Worker::stop() {
-  log("[PESM] in Worker::stop()", rvs::logdebug);
+  log("pesm in Worker::stop()", rvs::logdebug);
   // reset "run" flag
   brun = false;
 
