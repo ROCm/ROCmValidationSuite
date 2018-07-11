@@ -79,6 +79,12 @@ public:
   bool has_property(const std::string& key);
   int  property_get_deviceid(int *error);
   bool property_get_device(int *error);
+  
+  void property_get_action_name(int *error);
+  void property_get_run_parallel(int *error);
+  void property_get_run_count(int *error);
+  void property_get_run_wait(int *error);
+  void property_get_run_duration(int *error);
 
 protected:
 /**

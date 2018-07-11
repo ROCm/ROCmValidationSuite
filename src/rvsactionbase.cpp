@@ -169,5 +169,81 @@ bool rvs::actionbase::property_get_device(int *error) {
     }
 }
 
+/**
+ * @brief gets the action name from the module's properties collection
+ */
+void rvs::actionbase::property_get_action_name(int *error) {
+  action_name = "[]";
+  map<string, string>::iterator it = property.find(RVS_CONF_NAME_KEY);
+  if (it != property.end()) {
+    action_name = it->second;
+    property.erase(it);
+  } else {
+      *error = 1;
+  }
+}
 
+/**
+ * @brief reads the module's properties collection to see whether the GST should
+ * run the stress test in parallel
+ */
+void rvs::actionbase::property_get_run_parallel(int *error) {
+  gst_runs_parallel = false;
+  map<string, string>::iterator it = property.find(RVS_CONF_PARALLEL_KEY);
+  if (it != property.end()) {
+    if (it->second == "true")
+      gst_runs_parallel = true;
+    property.erase(it);
+  } else {
+      *error = 1;
+  }
+}
 
+/**
+ * @brief reads the run count from the module's properties collection
+ */
+void rvs::actionbase::property_get_run_count(int *error) {
+  gst_run_count = 1;
+  map<string, string>::iterator it = property.find(RVS_CONF_COUNT_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second))
+      gst_run_count = std::stoi(it->second);
+    property.erase(it);
+  } else {
+      *error = 1;
+  }
+}
+
+/**
+ * @brief reads the module's properties collection to check how much to delay
+ * each stress test session
+ */
+void rvs::actionbase::property_get_run_wait(int *error) {
+  gst_run_wait_ms = 0;
+  map<string, string>::iterator it = property.find(RVS_CONF_WAIT_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      gst_run_wait_ms = std::stoul(it->second);
+    }
+    property.erase(it);
+  } else {
+      *error = 1;
+  }
+}
+
+/**
+ * @brief reads the total run duration from the module's properties collection
+ */
+void rvs::actionbase::property_get_run_duration(int *error) {
+  gst_run_duration_ms = 0;
+  map<string, string>::iterator it = property.find(RVS_CONF_DURATION_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      gst_run_duration_ms = std::stoul(it->second);
+      gst_run_count = 1;
+    }
+    property.erase(it);
+  } else {
+      *error = 1;
+  }
+}
