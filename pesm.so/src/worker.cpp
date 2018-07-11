@@ -105,13 +105,6 @@ void Worker::run() {
     rvs::lp::Log("[" + action_name + "] pesm worker thread is running...",
                  rvs::logtrace);
 
-    // get all GPU location_id (Note: we're not using device_id as the unique
-    // identifier of the GPU because multiple GPUs can have the same ID ...
-    // This is also true for the case of the machine where we're working)
-    // therefore, what we're using is the location_id which is unique
-    // and points to the sysfs
-    gpu_get_all_location_id(gpus_location_id);
-
     // get the pci_access structure
     pacc = pci_alloc();
     // initialize the PCI library
@@ -127,12 +120,11 @@ void Worker::run() {
 
       // computes the actual dev's location_id (sysfs entry)
       uint16_t dev_location_id =
-      ((((uint16_t)(dev->bus)) << 8) | (dev->func));
+        ((((uint16_t)(dev->bus)) << 8) | (dev->func));
+      int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
 
-      // check if this pci_dev corresponds to one of AMD GPUs
-      auto it_gpu = find(gpus_location_id.begin(), gpus_location_id.end(),
-                         dev_location_id);
-      if (it_gpu == gpus_location_id.end())
+      // if not and AMD GPU just continue
+      if (gpu_id < 0)
         continue;
 
       // device_id filtering
@@ -141,7 +133,7 @@ void Worker::run() {
 
       // gpu id filtering
       if (bfiltergpu) {
-        auto itgpuid = find(gpuids.begin(), gpuids.end(), dev_location_id);
+        auto itgpuid = find(gpuids.begin(), gpuids.end(), gpu_id);
         if (itgpuid == gpuids.end())
           continue;
       }
@@ -157,12 +149,12 @@ void Worker::run() {
       string new_pwr_val(buff);
 
       // link speed changed?
-      if (old_val[dev_location_id] != new_val) {
+      if (old_val[gpu_id] != new_val) {
         // new value is different, so store it;
-        old_val[dev_location_id] = new_val;
+        old_val[gpu_id] = new_val;
 
         string msg("[" + action_name + "] " + "pesm "
-          + std::to_string(dev_location_id) + " link speed change " + new_val);
+          + std::to_string(gpu_id) + " link speed change " + new_val);
         rvs::lp::Log(msg, rvs::loginfo, sec, usec);
 
         r = rvs::lp::LogRecordCreate("pesm ", action_name.c_str(), rvs::loginfo,
@@ -173,12 +165,12 @@ void Worker::run() {
       }
 
       // power state changed
-      if (old_pwr_val[dev_location_id] != new_pwr_val) {
+      if (old_pwr_val[gpu_id] != new_pwr_val) {
         // new value is different, so store it;
-        old_pwr_val[dev_location_id] = new_pwr_val;
+        old_pwr_val[gpu_id] = new_pwr_val;
 
         string msg("[" + action_name + "] " + "pesm "
-          + std::to_string(dev_location_id) +
+          + std::to_string(gpu_id) +
           " power state change " + new_pwr_val);
         rvs::lp::Log(msg, rvs::loginfo, sec, usec);
 

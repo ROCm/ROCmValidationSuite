@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <iostream>
 
+#include "gpu_util.h"
 #include "rvsloglp.h"
 #include "worker.h"
 #include "action.h"
@@ -59,7 +60,7 @@ extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision) {
 }
 
 extern "C" int rvs_module_has_interface(int iid) {
-  switch (iid)   {
+  switch (iid) {
   case 0:
   case 1:
     return 1;
@@ -87,6 +88,7 @@ extern "C" const char* rvs_module_get_output(void) {
 extern "C" int   rvs_module_init(void* pMi) {
 //  pworker = nullptr;
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+  rvs::gpulist::Initialize();
   return 0;
 }
 
