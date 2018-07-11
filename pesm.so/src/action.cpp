@@ -93,18 +93,25 @@ int action::run(void) {
 
   // start of monitoring?
   if (property["monitor"] == "true") {
-    rvs::lp::Log("[" + property["name"]+ "] pesm property[\"monitor\"] == \"true\"", rvs::logtrace);
+    if (pworker) {
+      rvs::lp::Log("[" + property["name"]+ "] pesm monitoring already started",
+                  rvs::logresults);
+      return 0;
+    }
+
+    rvs::lp::Log("[" + property["name"]+
+    "] pesm property[\"monitor\"] == \"true\"", rvs::logtrace);
 
     // create worker thread object
-    if (!pworker) {
-    rvs::lp::Log("[" + property["name"]+ "] pesm creating Worker", rvs::logtrace);
-      pworker = new Worker();
-      pworker->set_name(property["name"]);
+    rvs::lp::Log("[" + property["name"]+ "] pesm creating Worker",
+                 rvs::logtrace);
 
-      // check if  -j flag is passed
-      if (has_property("cli.-j")) {
-        pworker->json(true);
-      }
+    pworker = new Worker();
+    pworker->set_name(property["name"]);
+
+    // check if  -j flag is passed
+    if (has_property("cli.-j")) {
+      pworker->json(true);
     }
 
     // checki if deviceid filtering is required
@@ -148,13 +155,16 @@ int action::run(void) {
     }
 
     // start worker thread
-    rvs::lp::Log("[" + property["name"]+ "] pesm starting Worker", rvs::logtrace);
+    rvs::lp::Log("[" + property["name"]+ "] pesm starting Worker",
+                 rvs::logtrace);
     pworker->start();
     sleep(2);
 
-    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring started", rvs::logtrace);
+    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring started",
+                 rvs::logtrace);
   } else {
-    rvs::lp::Log("[" + property["name"]+ "] pesm property[\"monitor\"] != \"true\"", rvs::logtrace);
+    rvs::lp::Log("[" + property["name"]+
+    "] pesm property[\"monitor\"] != \"true\"", rvs::logtrace);
     if (pworker) {
       // (give thread chance to start)
       sleep(2);
@@ -163,7 +173,8 @@ int action::run(void) {
       delete pworker;
       pworker = nullptr;
     }
-    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring stopped", rvs::logtrace);
+    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring stopped",
+                 rvs::logtrace);
   }
   return 0;
 }
