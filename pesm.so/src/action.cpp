@@ -193,15 +193,11 @@ int action::do_gpu_list() {
   log("pesm in do_gpu_list()", rvs::logtrace);
 
   std::map<string, string>::iterator it;
-  std::vector<uint16_t> gpus_location_id;
 
   struct pci_access* pacc;
   struct pci_dev*    dev;
   char buff[1024];
   char devname[1024];
-
-  // get all GPU location_id
-  gpu_get_all_location_id(gpus_location_id);
 
   // get the pci_access structure
   pacc = pci_alloc();
@@ -222,11 +218,9 @@ int action::do_gpu_list() {
     uint16_t dev_location_id =
       ((((uint16_t)(dev->bus)) << 8) | (dev->func));
 
-    // check if this pci_dev corresponds to one of AMD GPUs
-    auto it_gpu = find(gpus_location_id.begin(), gpus_location_id.end(),
-                       dev_location_id);
-
-    if (it_gpu == gpus_location_id.end())
+    // if not and AMD GPU just continue
+    int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+    if (gpu_id < 0)
       continue;
 
     if (!bheader_printed) {
@@ -240,8 +234,8 @@ int action::do_gpu_list() {
     name = pci_lookup_name(pacc, devname, sizeof(devname), PCI_LOOKUP_DEVICE,
                            dev->vendor_id, dev->device_id);
 
-    cout << buff  << " - GPU[" << ix << "] " << name << hex <<
-    " (Device " << dev->device_id << ")"<< endl;
+    cout << buff  << " - GPU[" << gpu_id << "] " << name <<
+    " (Device " << dev->device_id << ")" << endl;
     ix++;
   }
 
