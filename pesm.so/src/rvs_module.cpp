@@ -26,8 +26,10 @@
 
 #include <pci/pci.h>
 #include <iostream>
+#include <unistd.h>
 
 #include "rvsloglp.h"
+#include "worker.h"
 #include "action.h"
 
 /**
@@ -43,6 +45,7 @@
  *   - GPU power state changes
  */
 
+Worker* pworker;
 
 int log(const char* pMsg, const int level) {
   return rvs::lp::Log(pMsg, level);
@@ -83,11 +86,21 @@ extern "C" char* rvs_module_get_output(void) {
 }
 
 extern "C" int   rvs_module_init(void* pMi) {
+//  pworker = nullptr;
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
   return 0;
 }
 
 extern "C" int   rvs_module_terminate(void) {
+  rvs::lp::Log("[module_terminate] pesm rvs_module_terminate() - entered", rvs::logtrace);
+  if (pworker) {
+    rvs::lp::Log("[module_terminate] pesm rvs_module_terminate() - pworker exists", rvs::logtrace);
+    pworker->set_stop_name("module_terminate");
+    pworker->stop();
+    delete pworker;
+    pworker = nullptr;
+    rvs::lp::Log("[module_terminate] pesm rvs_module_terminate() - monitoring stopped", rvs::logtrace);
+  }
   return 0;
 }
 
