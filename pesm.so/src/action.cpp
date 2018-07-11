@@ -49,9 +49,8 @@ using std::cerr;
 using std::endl;
 using std::hex;
 
-extern const char* pcie_cap_names[];
 
-static Worker* pworker;
+extern Worker* pworker;
 
 //! Default constructor
 action::action() {
@@ -78,7 +77,7 @@ action::~action() {
  *
  * */
 int action::run(void) {
-  log("[PESM] in run()", rvs::logdebug);
+  rvs::lp::Log("[" + property["name"]+ "] pesm in run()", rvs::logtrace);
 
   // debugging help
   string val;
@@ -94,11 +93,11 @@ int action::run(void) {
 
   // start of monitoring?
   if (property["monitor"] == "true") {
-    log("[PESM] property[\"monitor\"] == \"true\"", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+ "] pesm property[\"monitor\"] == \"true\"", rvs::logtrace);
 
     // create worker thread object
     if (!pworker) {
-    log("[PESM] creating Worker", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+ "] pesm creating Worker", rvs::logtrace);
       pworker = new Worker();
       pworker->set_name(property["name"]);
 
@@ -149,12 +148,13 @@ int action::run(void) {
     }
 
     // start worker thread
-    log("[PESM] starting Worker", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+ "] pesm starting Worker", rvs::logtrace);
     pworker->start();
+    sleep(2);
 
-    log("[PESM] Monitoring started", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring started", rvs::logtrace);
   } else {
-    log("[PESM] property[\"monitor\"] != \"true\"", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+ "] pesm property[\"monitor\"] != \"true\"", rvs::logtrace);
     if (pworker) {
       // (give thread chance to start)
       sleep(2);
@@ -163,7 +163,7 @@ int action::run(void) {
       delete pworker;
       pworker = nullptr;
     }
-    log("[PESM] Monitoring stopped", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring stopped", rvs::logtrace);
   }
   return 0;
 }

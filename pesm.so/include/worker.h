@@ -74,7 +74,7 @@ class Worker : public rvs::ThreadBase {
   bool     brun;
   //! device id to filter for. 0 if no filtering.
   int device_id;
-  // GPU id filtering flag
+  //! GPU id filtering flag
   bool bfiltergpu;
   //! list of GPU devices to monitor
   std::vector<int> gpuids;
