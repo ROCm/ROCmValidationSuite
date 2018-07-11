@@ -102,7 +102,8 @@ void Worker::run() {
 
   // worker thread has started
   while (brun) {
-    rvs::lp::Log("[" + action_name + "] pesm worker thread is running...", rvs::logtrace);
+    rvs::lp::Log("[" + action_name + "] pesm worker thread is running...",
+                 rvs::logtrace);
 
     // get all GPU location_id (Note: we're not using device_id as the unique
     // identifier of the GPU because multiple GPUs can have the same ID ...
@@ -208,7 +209,8 @@ void Worker::run() {
   rvs::lp::AddString(r, "msg", "stopped");
   rvs::lp::LogRecordFlush(r);
 
-  rvs::lp::Log("[" + stop_action_name + "] pesm worker thread has finished", rvs::logdebug);
+  rvs::lp::Log("[" + stop_action_name + "] pesm worker thread has finished",
+               rvs::logdebug);
 }
 
 /**
@@ -219,7 +221,8 @@ void Worker::run() {
  *
  * */
 void Worker::stop() {
-  rvs::lp::Log("[" + stop_action_name + "] pesm in Worker::stop()", rvs::logtrace);
+  rvs::lp::Log("[" + stop_action_name + "] pesm in Worker::stop()",
+               rvs::logtrace);
   // reset "run" flag
   brun = false;
   // (give thread chance to finish processing and exit)
