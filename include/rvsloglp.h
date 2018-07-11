@@ -48,6 +48,7 @@ class lp
 public:
 
   static int   Log(const char* pMsg, const int level);
+  static int   Log(const std::string& Msg, const int level);
   static int   Log(const std::string& Msg, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
   static int   Initialize(const T_MODULE_INIT* pMi);
   static void* LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec);

@@ -27,7 +27,7 @@
 #include <chrono>
 
 
-using namespace std;
+using std::string;
 
 T_MODULE_INIT rvs::lp::mi;
 
@@ -61,6 +61,18 @@ int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
  */
 int rvs::lp::Log(const char* pMsg, const int level) {
   return (*mi.cbLog)(pMsg, level);
+}
+
+/**
+ * @brief Output log message
+ *
+ * @param Msg Message to log
+ * @param level Logging level
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+int rvs::lp::Log(const std::string& Msg, const int level) {
+  return (*mi.cbLog)(Msg.c_str(), level);
 }
 
 /**
