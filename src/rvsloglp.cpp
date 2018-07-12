@@ -25,9 +25,10 @@
 #include "rvsloglp.h"
 
 #include <chrono>
+#include <string>
 
 
-using namespace std;
+using std::string;
 
 T_MODULE_INIT rvs::lp::mi;
 
@@ -67,20 +68,34 @@ int rvs::lp::Log(const char* pMsg, const int level) {
  * @brief Output log message
  *
  * @param Msg Message to log
+ * @param level Logging level
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+int rvs::lp::Log(const std::string& Msg, const int level) {
+  return (*mi.cbLog)(Msg.c_str(), level);
+}
+
+/**
+ * @brief Output log message
+ *
+ * @param Msg Message to log
  * @param LogLevel Logging level
  * @param Sec seconds from system start
  * @param uSec microseconds within current second
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::lp::Log(const std::string& Msg, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
+int rvs::lp::Log(const std::string& Msg, const int LogLevel,
+                 const unsigned int Sec, const unsigned int uSec) {
   return (*mi.cbLogExt)(Msg.c_str(), LogLevel, Sec, uSec);
 }
 
 /**
  * @brief Create log record
  *
- * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
+ * Note: this API is used to construct JSON output. Use LogExt() to perform
+ * unstructured output.
  *
  * @param Module Module from which record is originating
  * @param Action Action from which record is originating
@@ -90,14 +105,17 @@ int rvs::lp::Log(const std::string& Msg, const int LogLevel, const unsigned int 
  * @return 0 - success, non-zero otherwise
  *
  */
-void* rvs::lp::LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
+void* rvs::lp::LogRecordCreate(const char* Module, const char* Action,
+                               const int LogLevel, const unsigned int Sec,
+                               const unsigned int uSec) {
   return (*mi.cbLogRecordCreate)(Module,  Action,  LogLevel, Sec, uSec);
 }
 
 /**
  * @brief Create log record
  *
- * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
+ * Note: this API is used to construct JSON output. Use LogExt() to perform
+ * unstructured output.
  *
  * @param Module Module from which record is originating
  * @param Action Action from which record is originating
@@ -105,14 +123,16 @@ void* rvs::lp::LogRecordCreate( const char* Module, const char* Action, const in
  * @return 0 - success, non-zero otherwise
  *
  */
-void* rvs::lp::LogRecordCreate( const char* Module, const char* Action, const int LogLevel) {
+void* rvs::lp::LogRecordCreate(const char* Module, const char* Action,
+                               const int LogLevel) {
   return (*mi.cbLogRecordCreate)(Module,  Action,  LogLevel, 0, 0);
 }
 
 /**
  * @brief Create log record
  *
- * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
+ * Note: this API is used to construct JSON output. Use LogExt() to perform
+ * unstructured output.
  *
  * @param Module Module from which record is originating
  * @param Action Action from which record is originating
@@ -120,8 +140,10 @@ void* rvs::lp::LogRecordCreate( const char* Module, const char* Action, const in
  * @return 0 - success, non-zero otherwise
  *
  */
-void* rvs::lp::LogRecordCreate( const std::string& Module, const std::string& Action, const int LogLevel) {
-  return (*mi.cbLogRecordCreate)(Module.c_str(),  Action.c_str(),  LogLevel, 0, 0);
+void* rvs::lp::LogRecordCreate(const std::string& Module,
+                               const std::string& Action, const int LogLevel) {
+  return (*mi.cbLogRecordCreate)(Module.c_str(),  Action.c_str(),
+                                 LogLevel, 0, 0);
 }
 
 /**
@@ -133,7 +155,7 @@ void* rvs::lp::LogRecordCreate( const std::string& Module, const std::string& Ac
  * @return 0 - success, non-zero otherwise
  *
  */
-int   rvs::lp::LogRecordFlush( void* pLogRecord) {
+int   rvs::lp::LogRecordFlush(void* pLogRecord) {
   return (*mi.cbLogRecordFlush)(pLogRecord);
 }
 
@@ -161,7 +183,8 @@ void* rvs::lp::CreateNode(void* Parent, const char* Name) {
  * @param Val Node value
  *
  */
-void  rvs::lp::AddString(void* Parent, const std::string& Key, const std::string& Val) {
+void  rvs::lp::AddString(void* Parent, const std::string& Key,
+                         const std::string& Val) {
   (*mi.cbAddString)(Parent, Key.c_str(), Val.c_str());
 }
 
@@ -220,7 +243,7 @@ void  rvs::lp::AddNode(void* Parent, void* Child) {
 bool rvs::lp::get_ticks(unsigned int& secs, unsigned int& usecs) {
   struct timespec ts;
 
-  clock_gettime( CLOCK_MONOTONIC, &ts );
+  clock_gettime(CLOCK_MONOTONIC, &ts);
   usecs    = ts.tv_nsec / 1000;
   secs  = ts.tv_sec;
 
