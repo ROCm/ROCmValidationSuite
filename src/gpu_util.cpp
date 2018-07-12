@@ -29,30 +29,37 @@
 #include <string.h>
 #include <fstream>
 #include <map>
+#include <string>
+#include <vector>
 
-using namespace std;
+std::vector<uint16_t> rvs::gpulist::location_id;
+std::vector<uint16_t> rvs::gpulist::gpu_id;
+std::vector<uint16_t> rvs::gpulist::device_id;
 
-int gpu_num_subdirs(char* dirpath, char* prefix)
-{
-    int count = 0;
-    DIR *dirp;
-    struct dirent *dir;
-    int prefix_len = strlen(prefix);
+using std::vector;
+using std::string;
+using std::ifstream;
 
-    dirp = opendir(dirpath);
-    if (dirp){
-        while ((dir = readdir(dirp)) != 0){
-            if((strcmp(dir->d_name, ".") == 0) ||
-            (strcmp(dir->d_name, "..") == 0))
-            continue;
-            if(prefix_len &&
-            strncmp(dir->d_name, prefix, prefix_len))
-            continue;
-        count++;
-        }
-        closedir(dirp);
+int gpu_num_subdirs(const char* dirpath, const char* prefix) {
+  int count = 0;
+  DIR *dirp;
+  struct dirent *dir;
+  int prefix_len = strlen(prefix);
+
+  dirp = opendir(dirpath);
+  if (dirp) {
+    while ((dir = readdir(dirp)) != 0) {
+      if ((strcmp(dir->d_name, ".") == 0) ||
+        (strcmp(dir->d_name, "..") == 0))
+        continue;
+      if (prefix_len &&
+        strncmp(dir->d_name, prefix, prefix_len))
+        continue;
+      count++;
     }
-    return count;
+    closedir(dirp);
+  }
+  return count;
 }
 
 /**
@@ -60,41 +67,43 @@ int gpu_num_subdirs(char* dirpath, char* prefix)
  * @param gpus_location_id the vector that will store all the GPU location_id
  * @return
  */
-void gpu_get_all_location_id( std::vector<unsigned short int>& gpus_location_id)
-{
-	ifstream f_id,f_prop;
-	char path[KFD_PATH_MAX_LENGTH];
+void gpu_get_all_location_id(std::vector<uint16_t>& gpus_location_id) {
+  ifstream f_id, f_prop;
+  char path[KFD_PATH_MAX_LENGTH];
 
-    std::string prop_name;
-    int gpu_id;
-    unsigned short int prop_val;
+  std::string prop_name;
+  int gpu_id;
+  uint32_t prop_val;
 
 
-    //Discover the number of nodes: Inside nodes folder there are only folders that represent the node number
-    int num_nodes = gpu_num_subdirs((char*)KFD_SYS_PATH_NODES, (char*)"");
+  // Discover the number of nodes: Inside nodes folder there are only folders
+  // that represent the node number
+  int num_nodes = gpu_num_subdirs(KFD_SYS_PATH_NODES, "");
 
-    //get all GPUs device id
-    for(int node_id=0; node_id<num_nodes; node_id++){
-    	snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES, node_id);
-        f_id.open(path);
-        snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties", KFD_SYS_PATH_NODES, node_id);
-        f_prop.open(path);
+  // get all GPUs device id
+  for (int node_id = 0; node_id < num_nodes; node_id++) {
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES,
+           node_id);
+    f_id.open(path);
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties",
+             KFD_SYS_PATH_NODES, node_id);
+    f_prop.open(path);
 
-        f_id >> gpu_id;
+    f_id >> gpu_id;
 
-        if (gpu_id != 0){
-            while(f_prop >> prop_name){
-                if (prop_name == "location_id"){
-                f_prop >> prop_val;
-                gpus_location_id.push_back(prop_val);
-                break;
-                }
-            }
+    if (gpu_id != 0) {
+      while (f_prop >> prop_name) {
+        if (prop_name == "location_id") {
+          f_prop >> prop_val;
+          gpus_location_id.push_back(prop_val);
+          break;
         }
+      }
+    }
 
-        f_id.close();
-        f_prop.close();
-     }
+    f_id.close();
+    f_prop.close();
+  }
 }
 
 /**
@@ -102,28 +111,29 @@ void gpu_get_all_location_id( std::vector<unsigned short int>& gpus_location_id)
  * @param gpus_id the vector that will store all the GPU gpu_id
  * @return
  */
-void gpu_get_all_gpu_id(std::vector<unsigned short int>& gpus_id)
-{
-    ifstream f_id,f_prop;
-    char path[KFD_PATH_MAX_LENGTH];
+void gpu_get_all_gpu_id(std::vector<uint16_t>& gpus_id) {
+  ifstream f_id, f_prop;
+  char path[KFD_PATH_MAX_LENGTH];
 
-    int gpu_id;
+  int gpu_id;
 
-    //Discover the number of nodes: Inside nodes folder there are only folders that represent the node number
-    int num_nodes = gpu_num_subdirs((char*)KFD_SYS_PATH_NODES, (char*)"");
+  // Discover the number of nodes: Inside nodes folder there are only folders
+  // that represent the node number
+  int num_nodes = gpu_num_subdirs(KFD_SYS_PATH_NODES, "");
 
-    //get all GPUs device id
-    for(int node_id=0; node_id<num_nodes; node_id++){
-        snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES, node_id);
-        f_id.open(path);
+  // get all GPUs device id
+  for (int node_id = 0; node_id < num_nodes; node_id++) {
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES,
+             node_id);
+    f_id.open(path);
 
-        f_id >> gpu_id;
+    f_id >> gpu_id;
 
-        if (gpu_id != 0)
-            gpus_id.push_back(gpu_id);
+    if (gpu_id != 0)
+      gpus_id.push_back(gpu_id);
 
-        f_id.close();
-     }
+    f_id.close();
+  }
 }
 
 /**
@@ -131,39 +141,119 @@ void gpu_get_all_gpu_id(std::vector<unsigned short int>& gpus_id)
  * @param gpus_device_id the vector that will store all the GPU location_id
  * @return
  */
-void gpu_get_all_device_id( std::vector<unsigned short int>& gpus_device_id)
-{
-	ifstream f_id,f_prop;
-	char path[KFD_PATH_MAX_LENGTH];
+void gpu_get_all_device_id(std::vector<uint16_t>& gpus_device_id) {
+  ifstream f_id, f_prop;
+  char path[KFD_PATH_MAX_LENGTH];
 
-    std::string prop_name;
-    int gpu_id;
-    unsigned short int prop_val;
+  std::string prop_name;
+  int gpu_id;
+  uint32_t prop_val;
 
+  // Discover the number of nodes: Inside nodes folder there are only folders
+  // that represent the node number
+  int num_nodes = gpu_num_subdirs(KFD_SYS_PATH_NODES, "");
 
-    //Discover the number of nodes: Inside nodes folder there are only folders that represent the node number
-    int num_nodes = gpu_num_subdirs((char*)KFD_SYS_PATH_NODES, (char*)"");
+  // get all GPUs device id
+  for (int node_id = 0; node_id < num_nodes; node_id++) {
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES,
+             node_id);
+    f_id.open(path);
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties",
+             KFD_SYS_PATH_NODES, node_id);
+    f_prop.open(path);
 
-    //get all GPUs device id
-    for(int node_id=0; node_id<num_nodes; node_id++){
-    	snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES, node_id);
-        f_id.open(path);
-        snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties", KFD_SYS_PATH_NODES, node_id);
-        f_prop.open(path);
+    f_id >> gpu_id;
 
-        f_id >> gpu_id;
-
-        if (gpu_id != 0){
-            while(f_prop >> prop_name){
-                if (prop_name == "device_id"){
-                f_prop >> prop_val;
-                gpus_device_id.push_back(prop_val);
-                break;
-                }
-            }
+    if (gpu_id != 0) {
+      while (f_prop >> prop_name) {
+        if (prop_name == "device_id") {
+          f_prop >> prop_val;
+          gpus_device_id.push_back(prop_val);
+          break;
         }
+      }
+    }
 
-        f_id.close();
-        f_prop.close();
-     }
+    f_id.close();
+    f_prop.close();
+  }
+}
+
+/**
+ * @brief Initialize gpulist helper class
+ * @return 0 if successful, -1 otherwise
+ *}
+ * */
+int rvs::gpulist::Initialize() {
+  gpu_get_all_location_id(location_id);
+  gpu_get_all_gpu_id(gpu_id);
+  gpu_get_all_device_id(device_id);
+  return 0;
+}
+
+
+
+/**
+ * @brief Given Gpu ID return Location ID
+ * @param GpuID Gpu ID
+ * @return Location ID if found, -1 otherwise
+ *}
+ * */
+int32_t rvs::gpulist::GetLocation(const uint32_t GpuID) {
+  for (int i = 0; i < gpu_id.size(); i++) {
+    if (gpu_id[i] == GpuID) {
+      return location_id[i];
+    }
+  }
+
+  return -1;
+}
+
+
+/**
+ * @brief Given Location ID return GPU ID
+ * @param LocationID Location ID of a GPU
+ * @return Gpu ID if found, -1 otherwise
+ *}
+ * */
+int32_t rvs::gpulist::GetGpuId(const uint32_t LocationID) {
+  for (int i = 0; i < gpu_id.size(); i++) {
+    if (location_id[i] == LocationID) {
+      return gpu_id[i];
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * @brief Given Location ID return GPU device ID
+ * @param LocationID Location ID of a GPU
+ * @return Device ID if found, -1 otherwise
+ *}
+ * */
+int32_t rvs::gpulist::GetDeviceIdFromLocationId(const uint32_t LocationID) {
+  for (int i = 0; i < gpu_id.size(); i++) {
+    if (location_id[i] == LocationID) {
+      return device_id[i];
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * @brief Given Gpu ID return GPU device ID
+ * @param GpuID Gpu ID of a GPU
+ * @return Device ID if found, -1 otherwise
+ *}
+ * */
+int32_t rvs::gpulist::GetDeviceIdFromGpuId(const uint32_t GpuID) {
+  for (int i = 0; i < gpu_id.size(); i++) {
+    if (gpu_id[i] == GpuID) {
+      return device_id[i];
+    }
+  }
+
+  return -1;
 }
