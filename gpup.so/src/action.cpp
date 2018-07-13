@@ -93,7 +93,7 @@ int action::run(void)
     std::map<string,string>::iterator it;
         
     // discover the number of nodes: Inside nodes folder there are only folders that represent the node number
-    num_nodes = gpu_num_subdirs((char*)KFD_SYS_PATH_NODES, (char*)"");
+    num_nodes = gpu_num_subdirs(KFD_SYS_PATH_NODES, "");
         
     // get the action name
     property_get_action_name();
@@ -170,7 +170,7 @@ int action::run(void)
             }
                 for ( it=property.begin(); it!=property.end(); ++it ){
                     snprintf(path, 256, "%s/%d/io_links", KFD_SYS_PATH_NODES, node_id);
-                    num_links = gpu_num_subdirs((char*)path, (char*)"");
+                    num_links = gpu_num_subdirs(path, "");
                     
                     s = it->first;
 
