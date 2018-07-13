@@ -29,4 +29,4 @@
 
 int log(const char* pMasg, const int level = 1);
 
-#endif	// RVS_MODULE_H_
+#endif  /* RVS_MODULE_H_ */
