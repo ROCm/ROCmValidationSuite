@@ -1,20 +1,17 @@
 /*******************************************************************************
-*
+ *
  *
  * Copyright (c) 2018 ROCm Developer Tools
  *
  * MIT LICENSE:
- * Permission is hereby granted, free of charge, to any person obtaining a copy 
-of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to 
-do
+ * of the Software, and to permit persons to whom the Software is furnished to do
  * so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in 
-all
+ * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
@@ -24,10 +21,9 @@ all
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
- 
-*******************************************************************************/
-#include <iostream>
+ * 
+ *******************************************************************************/
+
 #include <string>
 #include <vector>
 #include <fstream>
@@ -55,7 +51,10 @@ all
 
 #define MODULE_NAME                     "gpup"
 
-using namespace std;
+using std::string;
+using std::regex;
+using std::vector;
+using std::map;
 // collection of allowed GPU properties
 const char* gpu_prop_names[] =
         { "cpu_cores_count", "simd_count", "mem_banks_count", "caches_count",
@@ -72,10 +71,6 @@ const char* gpu_io_link_prop_names[] =
 "node_to", "weight", "min_latency", "max_latency", "min_bandwidth",
 "max_bandwidth", "recommended_transfer_size", "flags"
         };
-
-using std::vector;
-using std::map;
-using std::string;
 
 /**
  * default class constructor
@@ -210,9 +205,9 @@ string action::property_get_gpuid(int node_id) {
 bool action::property_split(string props) {
     map<string, string>::iterator it;
     string s;
-    auto prop_length = end(gpu_prop_names) - begin(gpu_prop_names);
-    auto io_prop_length = end(gpu_io_link_prop_names) -
-    begin(gpu_io_link_prop_names);
+    auto prop_length = std::end(gpu_prop_names) - std::begin(gpu_prop_names);
+    auto io_prop_length = std::end(gpu_io_link_prop_names) -
+    std::begin(gpu_io_link_prop_names);
 
      for (it = property.begin(); it != property.end(); ++it) {
          s = it->first;
