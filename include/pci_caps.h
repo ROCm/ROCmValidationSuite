@@ -43,11 +43,11 @@ void get_kernel_driver(struct pci_dev *dev, char *buff);
 void get_pwr_base_pwr(struct pci_dev *dev, char *buff);
 void get_pwr_rail_type(struct pci_dev *dev, char *buff);
 void get_pwr_curr_state(struct pci_dev *dev, char *buff);
-void get_atomic_op_requester(struct pci_dev *dev, char *buff);
-void get_atomic_32_bit_op_completer(struct pci_dev *dev, char *buff);
-void get_atomic_64_bit_op_completer(struct pci_dev *dev, char *buff);
-void get_atomic_128_bit_cas_op_completer(struct pci_dev *dev, char *buff);
-long int get_atomic_op_register_value(struct pci_dev *dev);
+void get_atomic_op_routing(struct pci_dev *dev, char *buff);
+void get_atomic_op_32_completer(struct pci_dev *dev, char *buff);
+void get_atomic_op_64_completer(struct pci_dev *dev, char *buff);
+void get_atomic_op_128_CAS_completer(struct pci_dev *dev, char *buff);
+int64_t get_atomic_op_register_value(struct pci_dev *dev);
 
 #ifdef __cplusplus
 }
