@@ -518,7 +518,7 @@ void get_atomic_op_routing(struct pci_dev *dev, char *buff) {
  * gets the device atomic capabilities register value
  * @param dev a pci_dev structure containing the PCI device information
  */
-long int get_atomic_op_register_value(struct pci_dev *dev) {
+int64_t get_atomic_op_register_value(struct pci_dev *dev) {
     unsigned char i, has_memory_bar = 0;
 
     // get pci dev capabilities offset
@@ -562,7 +562,7 @@ long int get_atomic_op_register_value(struct pci_dev *dev) {
  * @param buf pre-allocated char buffer
  */
 void get_atomic_op_32_completer(struct pci_dev *dev, char *buff) {
-  long int atomic_op_completer_value;
+  int64_t atomic_op_completer_value;
   bool atomic_op_completer_supported_32_bit = false;
 
   atomic_op_completer_value = get_atomic_op_register_value(dev);
@@ -586,7 +586,7 @@ void get_atomic_op_32_completer(struct pci_dev *dev, char *buff) {
  * @param buf pre-allocated char buffer
  */
 void get_atomic_op_64_completer(struct pci_dev *dev, char *buff) {
-  long int atomic_op_completer_value;
+  int64_t atomic_op_completer_value;
   bool atomic_op_completer_supported_64_bit = false;
 
   atomic_op_completer_value = get_atomic_op_register_value(dev);
@@ -610,7 +610,7 @@ void get_atomic_op_64_completer(struct pci_dev *dev, char *buff) {
  * @param buf pre-allocated char buffer
  */
 void get_atomic_op_128_CAS_completer(struct pci_dev *dev, char *buff) {
-  long int atomic_op_completer_value;
+  int64_t atomic_op_completer_value;
   bool atomic_op_completer_supported_128_bit_CAS = false;
 
   atomic_op_completer_value = get_atomic_op_register_value(dev);
