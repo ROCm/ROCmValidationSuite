@@ -47,7 +47,7 @@ void get_atomic_op_routing(struct pci_dev *dev, char *buff);
 void get_atomic_op_32_completer(struct pci_dev *dev, char *buff);
 void get_atomic_op_64_completer(struct pci_dev *dev, char *buff);
 void get_atomic_op_128_CAS_completer(struct pci_dev *dev, char *buff);
-long int get_atomic_op_register_value(struct pci_dev *dev);
+int64_t get_atomic_op_register_value(struct pci_dev *dev);
 
 #ifdef __cplusplus
 }
