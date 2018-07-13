@@ -25,9 +25,12 @@
 #include "rvs_module.h"
 
 #include <pci/pci.h>
+#include <unistd.h>
 #include <iostream>
 
+#include "gpu_util.h"
 #include "rvsloglp.h"
+#include "worker.h"
 #include "action.h"
 
 /**
@@ -43,6 +46,7 @@
  *   - GPU power state changes
  */
 
+Worker* pworker;
 
 int log(const char* pMsg, const int level) {
   return rvs::lp::Log(pMsg, level);
@@ -56,8 +60,7 @@ extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision) {
 }
 
 extern "C" int rvs_module_has_interface(int iid) {
-  switch(iid)
-  {
+  switch (iid) {
   case 0:
   case 1:
     return 1;
@@ -66,33 +69,49 @@ extern "C" int rvs_module_has_interface(int iid) {
   return 0;
 }
 
-extern "C" char* rvs_module_get_name(void) {
-   return (char*)"pesm";
+extern "C" const char* rvs_module_get_name(void) {
+  return "pesm";
 }
 
-extern "C" char* rvs_module_get_description(void) {
-   return (char*)"ROCm Validation Suite PESM module";
+extern "C" const char* rvs_module_get_description(void) {
+  return "ROCm Validation Suite PESM module";
 }
 
-extern "C" char* rvs_module_get_config(void) {
-  return (char*)"monitor (bool)";
+extern "C" const char* rvs_module_get_config(void) {
+  return "monitor (bool)";
 }
 
-extern "C" char* rvs_module_get_output(void) {
-  return (char*)"state (string)";
+extern "C" const char* rvs_module_get_output(void) {
+  return "state (string)";
 }
 
 extern "C" int   rvs_module_init(void* pMi) {
+//  pworker = nullptr;
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+  rvs::gpulist::Initialize();
   return 0;
 }
 
 extern "C" int   rvs_module_terminate(void) {
+  rvs::lp::Log("[module_terminate] pesm rvs_module_terminate() - entered",
+               rvs::logtrace);
+  if (pworker) {
+    rvs::lp::Log(
+      "[module_terminate] pesm rvs_module_terminate() - pworker exists",
+                 rvs::logtrace);
+    pworker->set_stop_name("module_terminate");
+    pworker->stop();
+    delete pworker;
+    pworker = nullptr;
+    rvs::lp::Log(
+      "[module_terminate] pesm rvs_module_terminate() - monitoring stopped",
+                 rvs::logtrace);
+  }
   return 0;
 }
 
-extern "C" char* rvs_module_get_errstring(int error) {
-  return  (char*)"General Error";
+extern "C" const char* rvs_module_get_errstring(int error) {
+  return "General Error";
 }
 
 extern "C" void* rvs_module_action_create(void) {
@@ -104,7 +123,8 @@ extern "C" int   rvs_module_action_destroy(void* pAction) {
   return 0;
 }
 
-extern "C" int rvs_module_action_property_set(void* pAction, const char* Key, const char* Val) {
+extern "C" int rvs_module_action_property_set(
+  void* pAction, const char* Key, const char* Val) {
   return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 

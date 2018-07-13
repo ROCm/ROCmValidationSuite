@@ -36,9 +36,9 @@ extern "C" {
 }
 #endif
 
-#define PCI_CAP_DATA_MAX_BUF_SIZE	1024
-#define PCI_CAP_NOT_SUPPORTED		"NOT SUPPORTED"
-#define MEM_BAR_MAX_INDEX			5
+#define PCI_CAP_DATA_MAX_BUF_SIZE 1024
+#define PCI_CAP_NOT_SUPPORTED "NOT SUPPORTED"
+#define MEM_BAR_MAX_INDEX 5
 
 extern "C" {
 
@@ -101,7 +101,7 @@ void get_link_cap_max_speed(struct pci_dev *dev, char *buff) {
 
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", link_max_speed);
     } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+      snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
     }
 }
 
@@ -122,7 +122,7 @@ void get_link_cap_max_width(struct pci_dev *dev, char *buff) {
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "x%d",
                 ((pci_dev_lnk_cap & PCI_EXP_LNKCAP_MLW) >> 4));
     } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+      snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
     }
 }
 
@@ -163,7 +163,7 @@ void get_link_stat_cur_speed(struct pci_dev *dev, char *buff) {
 
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", link_cur_speed);
     } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+      snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
     }
 }
 
@@ -184,7 +184,7 @@ void get_link_stat_neg_width(struct pci_dev *dev, char *buff) {
                 ((pci_dev_lnk_stat & PCI_EXP_LNKSTA_NLW)
                         >> PCI_EXP_LNKSTA_NLW_SHIFT));
     } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+      snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
     }
 }
 
@@ -232,7 +232,7 @@ void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff) {
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%0.3fW", pwr);
 
     } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+      snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
     }
 }
 
@@ -336,7 +336,7 @@ void get_dev_serial_num(struct pci_dev *dev, char *buff) {
                 (t2 >> 16) & 0xff, (t2 >> 8) & 0xff, t2 & 0xff, t1 >> 24,
                 (t1 >> 16) & 0xff, (t1 >> 8) & 0xff, t1 & 0xff);
     } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+      snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
     }
 }
 
@@ -438,12 +438,51 @@ void get_pwr_rail_type(struct pci_dev *dev, char *buff) {
 }
 
 /**
+ * Get current power state
+ * @param dev a pci_dev structure containing the PCI device information
+ * @param buf pre-allocated char buffer
+ */
+void get_pwr_curr_state(struct pci_dev *dev, char *buff) {
+  u16 pmcsr;
+  const char *type_s;
+
+  // init output buffer with "not supported" message
+  snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+
+  // fetch capability offset
+  unsigned int cap_offset = pci_dev_find_cap_offset(dev,
+    PCI_CAP_ID_PM, PCI_CAP_NORMAL);
+
+  if (cap_offset == 0)
+    return;
+
+  pmcsr = pci_read_word(dev, cap_offset + PCI_PM_CTRL);
+
+  switch (pmcsr & PCI_PM_CTRL_STATE_MASK) {
+  case 0:
+      type_s = "D0";
+      break;
+  case 1:
+      type_s = "D1";
+      break;
+  case 2:
+      type_s = "D2";
+      break;
+  case 3:
+      type_s = "D3";
+      break;
+  }
+
+  snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", type_s);
+}
+
+/**
  * gets the device atomic requester capabilities
  * @param dev a pci_dev structure containing the PCI device information
  * @param buf pre-allocated char buffer
  */
-void get_atomic_op_requester(struct pci_dev *dev, char *buff) {
-    bool atomic_op_requester_enable = false;
+void get_atomic_op_routing(struct pci_dev *dev, char *buff) {
+    bool atomic_op_routing_enable = false;
 
     // get pci dev capabilities offset
     unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
@@ -461,17 +500,17 @@ void get_atomic_op_requester(struct pci_dev *dev, char *buff) {
 
             // hardcoded 0x0040 because PCI_EXP_DEVCTL2_ATOMIC_REQ
             // is not present on all versions of pci_regs.h
-            atomic_op_requester_enable = static_cast<bool>(dev_ctl2_reg_val
+            atomic_op_routing_enable = static_cast<bool>(dev_ctl2_reg_val
                     & 0x0040);
 
             snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-                    atomic_op_requester_enable ? "TRUE" : "FALSE");
+                    atomic_op_routing_enable ? "TRUE" : "FALSE");
         } else {
-        	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-        			PCI_CAP_NOT_SUPPORTED);
+          snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
+              PCI_CAP_NOT_SUPPORTED);
         }
     } else {
-    	snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+      snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
     }
 }
 
@@ -479,7 +518,7 @@ void get_atomic_op_requester(struct pci_dev *dev, char *buff) {
  * gets the device atomic capabilities register value
  * @param dev a pci_dev structure containing the PCI device information
  */
-long int get_atomic_op_register_value (struct pci_dev *dev) {
+int64_t get_atomic_op_register_value(struct pci_dev *dev) {
     unsigned char i, has_memory_bar = 0;
 
     // get pci dev capabilities offset
@@ -507,13 +546,13 @@ long int get_atomic_op_register_value (struct pci_dev *dev) {
                 return pci_read_long(dev, cap_offset + PCI_EXP_DEVCAP2);
 
             } else {
-            	return -1;
+              return -1;
             }
         } else {
-        	return -1;
+          return -1;
         }
     } else {
-    	return -1;
+      return -1;
     }
 }
 
@@ -522,23 +561,23 @@ long int get_atomic_op_register_value (struct pci_dev *dev) {
  * @param dev a pci_dev structure containing the PCI device information
  * @param buf pre-allocated char buffer
  */
-void get_atomic_32_bit_op_completer(struct pci_dev *dev, char *buff) {
-	long int atomic_op_completer_value;
-	bool atomic_op_completer_supported_32_bit = false;
+void get_atomic_op_32_completer(struct pci_dev *dev, char *buff) {
+  int64_t atomic_op_completer_value;
+  bool atomic_op_completer_supported_32_bit = false;
 
-	atomic_op_completer_value = get_atomic_op_register_value(dev);
+  atomic_op_completer_value = get_atomic_op_register_value(dev);
 
-	if (atomic_op_completer_value != -1) {
+  if (atomic_op_completer_value != -1) {
         atomic_op_completer_supported_32_bit =
-        		static_cast<bool>(static_cast
-        				<unsigned int>(atomic_op_completer_value) & 0x0080);
+            static_cast<bool>(static_cast
+                <unsigned int>(atomic_op_completer_value) & 0x0080);
 
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
                 atomic_op_completer_supported_32_bit ?
-                		"TRUE" : "FALSE");
-	} else {
-		snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-	}
+                    "TRUE" : "FALSE");
+  } else {
+    snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+  }
 }
 
 /**
@@ -546,23 +585,23 @@ void get_atomic_32_bit_op_completer(struct pci_dev *dev, char *buff) {
  * @param dev a pci_dev structure containing the PCI device information
  * @param buf pre-allocated char buffer
  */
-void get_atomic_64_bit_op_completer(struct pci_dev *dev, char *buff) {
-	long int atomic_op_completer_value;
-	bool atomic_op_completer_supported_64_bit = false;
+void get_atomic_op_64_completer(struct pci_dev *dev, char *buff) {
+  int64_t atomic_op_completer_value;
+  bool atomic_op_completer_supported_64_bit = false;
 
-	atomic_op_completer_value = get_atomic_op_register_value(dev);
+  atomic_op_completer_value = get_atomic_op_register_value(dev);
 
-	if (atomic_op_completer_value != -1) {
+  if (atomic_op_completer_value != -1) {
         atomic_op_completer_supported_64_bit =
                 static_cast<bool>(static_cast
-                		<unsigned int>(atomic_op_completer_value) & 0x0100);
+                    <unsigned int>(atomic_op_completer_value) & 0x0100);
 
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
                 atomic_op_completer_supported_64_bit ?
-                		"TRUE" : "FALSE");
-	} else {
-		snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-	}
+                    "TRUE" : "FALSE");
+  } else {
+    snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+  }
 }
 
 /**
@@ -570,23 +609,23 @@ void get_atomic_64_bit_op_completer(struct pci_dev *dev, char *buff) {
  * @param dev a pci_dev structure containing the PCI device information
  * @param buf pre-allocated char buffer
  */
-void get_atomic_128_bit_cas_op_completer(struct pci_dev *dev, char *buff) {
-	long int atomic_op_completer_value;
-	bool atomic_op_completer_supported_128_bit_CAS = false;
+void get_atomic_op_128_CAS_completer(struct pci_dev *dev, char *buff) {
+  int64_t atomic_op_completer_value;
+  bool atomic_op_completer_supported_128_bit_CAS = false;
 
-	atomic_op_completer_value = get_atomic_op_register_value(dev);
+  atomic_op_completer_value = get_atomic_op_register_value(dev);
 
-	if (atomic_op_completer_value != -1) {
-		atomic_op_completer_supported_128_bit_CAS =
+  if (atomic_op_completer_value != -1) {
+    atomic_op_completer_supported_128_bit_CAS =
                 static_cast<bool>(static_cast
-                		<unsigned int>(atomic_op_completer_value) & 0x0200);
+                    <unsigned int>(atomic_op_completer_value) & 0x0200);
 
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-        		atomic_op_completer_supported_128_bit_CAS ?
-                		"TRUE" : "FALSE");
-	} else {
-		snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-	}
+            atomic_op_completer_supported_128_bit_CAS ?
+                    "TRUE" : "FALSE");
+  } else {
+    snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
+  }
 }
 
 }
