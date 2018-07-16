@@ -22,15 +22,15 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVSACTION_H_
-#define RVSACTION_H_
+#ifndef RVS_INCLUDE_RVSACTION_H_
+#define RVS_INCLUDE_RVSACTION_H_
 
 #include <memory>
 #include <map>
 #include <string>
+#include <utility>
 
-namespace rvs 
-{
+namespace rvs {
 
 class ifbase;
 class module;
@@ -48,14 +48,14 @@ class action {
 
 typedef std::pair< int, std::shared_ptr<ifbase> > t_impair;
 
-public:
+ public:
   virtual rvs::ifbase*     get_interface(int);
 
-protected:
+ protected:
   action(const char* pName, void* pLibAction);
   virtual ~action();
 
-protected:
+ protected:
   //! action name as defined in YAML .conf file for this action
   std::string name;
   //! pointer to actual action object created in and RVS module
@@ -70,4 +70,4 @@ friend class module;
 }  // namespace rvs
 
 
-#endif /* RVSACTION_H_ */
+#endif  // RVS_INCLUDE_RVSACTION_H_

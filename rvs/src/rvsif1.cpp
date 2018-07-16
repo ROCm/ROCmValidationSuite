@@ -23,9 +23,11 @@
  *
  *******************************************************************************/
 #include "rvsif1.h"
+
+#include <string>
 #include "rvsliblogger.h"
 
-using namespace std;
+using std::string;
 
 //! Default constructor
 rvs::if1::if1()
@@ -61,9 +63,9 @@ rvs::if1& rvs::if1::operator=(const rvs::if1& rhs) {
   // self-assignment check
   if (this != &rhs) {
     ifbase::operator=(rhs);
-    rvs_module_action_property_set 	= rhs.rvs_module_action_property_set;
-    rvs_module_action_run			= rhs.rvs_module_action_run;
-    rvs_module_get_errstring		= rhs.rvs_module_get_errstring;
+    rvs_module_action_property_set = rhs.rvs_module_action_property_set;
+    rvs_module_action_run = rhs.rvs_module_action_run;
+    rvs_module_get_errstring = rhs.rvs_module_get_errstring;
   }
 
   return *this;
@@ -88,7 +90,8 @@ rvs::ifbase* rvs::if1::clone(void) {
  *
  */
 int rvs::if1::property_set(const char* pKey, const char* pVal ) {
-  rvs::logger::log(string("poperty: [") + string(pKey) + string("]   val:[")+string(pVal)+string("]"), rvs::logtrace);
+  rvs::logger::log(string("poperty: [") + string(pKey) + string("]   val:[") +
+                  string(pVal)+string("]"), rvs::logtrace);
   return (*rvs_module_action_property_set)(plibaction, pKey, pVal);
 }
 
@@ -100,7 +103,7 @@ int rvs::if1::property_set(const char* pKey, const char* pVal ) {
  * @return 0 - success. non-zero otherwise
  *
  */
-int rvs::if1::property_set( const std::string& Key, const std::string& Val) {
+int rvs::if1::property_set(const std::string& Key, const std::string& Val) {
   return property_set( Key.c_str(), Val.c_str());
 }
 
@@ -121,6 +124,6 @@ int rvs::if1::run(void) {
  * @return C string describing error code
  *
  */
-char* rvs::if1::get_errstring(int iErrCode) {
+const char* rvs::if1::get_errstring(int iErrCode) {
   return (*rvs_module_get_errstring)(iErrCode);
 }
