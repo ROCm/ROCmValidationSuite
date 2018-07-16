@@ -90,4 +90,10 @@ add_custom_target(doc ALL
     COMMENT "Generating RVS documentation"
     VERBATIM)
 
+add_custom_target(man1 ALL
+    COMMAND RVSVER=${VERSION_STRING}-${VERSION_BUILD} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyMan1
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Generating RVS man.1 files"
+    VERBATIM)
+
 include (CPack)
