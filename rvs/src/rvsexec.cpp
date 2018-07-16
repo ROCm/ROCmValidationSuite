@@ -123,11 +123,10 @@ int rvs::exec::run() {
   // Check if pConfig file exists
   std::ifstream file(config_file);
 
-  if (!file.good()) { 
+  if (!file.good()) {
     cerr << "ERROR: " << config_file << " file is missing.\n";
     return -1;
-  }
-  else {
+  } else {
     file.close();
   }
 

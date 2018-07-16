@@ -22,16 +22,19 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVSMODULE_H_
-#define RVSMODULE_H_
+#ifndef RVS_INCLUDE_RVSMODULE_H_
+#define RVS_INCLUDE_RVSMODULE_H_
 
 #include <map>
+#include <utility>
+#include <string>
+#include <memory>
+
 #include "yaml-cpp/yaml.h"
 
 #include "rvsmodule_if.h"
 
-namespace rvs 
-{
+namespace rvs {
 
 class ifbase;
 class action;
@@ -44,37 +47,36 @@ class action;
  * @brief RVS module manager class
  *
  */
-class module
-{
+class module {
 //! module name - module instance pair
-typedef std::pair<std::string,module*> t_mmpair;
+typedef std::pair<std::string, module*> t_mmpair;
 
   // collection related members
-public:
+ public:
   static int     initialize(const char* pConfigName);
   static action* action_create(const char* pModuleShortName);
   static int     action_destroy(action*);
   static int     terminate();
   static void    do_list_modules(void);
-    
-protected:
+
+ protected:
   static module* find_create_module(const char* pShortName);
 
   //! YAML configuration
   static YAML::Node  config;
 
   //! short name -> rvsmodule* mapping
-  static std::map<std::string,module*> modulemap;
+  static std::map<std::string, module*> modulemap;
 
   //! short name -> .so filename mapping
-  static std::map<std::string,std::string> filemap;
-    
-protected:
+  static std::map<std::string, std::string> filemap;
+
+ protected:
   module(const char* pModuleName, void* pSoLib);
   //! Destructor
   virtual ~module();
 
-protected:
+ protected:
   int     initialize();
   int     terminate_internal();
 
@@ -86,9 +88,9 @@ protected:
   int     init_interface_0(void);
   int     init_interface_1(void);
 
-protected:
+ protected:
   //! collection of interfaces supported by this module
-  std::map<int,std::shared_ptr<ifbase>> ifmap;
+  std::map<int, std::shared_ptr<ifbase>> ifmap;
   //! Pointer to shared object library obtained through dlopnen() call
   void*       psolib;
   //! Module name
@@ -104,8 +106,7 @@ protected:
   t_rvs_module_action_destroy rvs_module_action_destroy;
 };
 
+}  // namespace rvs
 
-} // namespace rvs
 
-
-#endif /* RVSMODULE_H_ */
+#endif  // RVS_INCLUDE_RVSMODULE_H_

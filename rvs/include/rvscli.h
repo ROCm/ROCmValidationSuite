@@ -22,14 +22,16 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#ifndef RVS_INCLUDE_RVSCLI_H_
+#define RVS_INCLUDE_RVSCLI_H_
+
 #include <memory>
 #include <map>
 #include <stack>
 #include <string>
+#include <utility>
 
-
-namespace rvs
-{
+namespace rvs {
 
 /**
  * @class cli
@@ -43,9 +45,7 @@ namespace rvs
  */
 
 class cli {
-
-public:
-
+ public:
   //! Default constructor
   cli();
   //! Default destructor
@@ -54,7 +54,7 @@ public:
   int parse(int Argc, char** Argv);
   const char* get_error_string();
 
-protected:
+ protected:
 /**
  *
  * @brief Possible continuation types
@@ -79,14 +79,14 @@ protected:
  */
 
   class optbase {
-
-  public:
-    optbase(const char* ptruename, econtext s1, econtext s2 = eof, econtext s3 = eof);
+   public:
+    optbase(const char* ptruename,
+            econtext s1, econtext s2 = eof, econtext s3 = eof);
     //! Default destructor
     virtual ~optbase();
     virtual bool adjust_context(std::stack<econtext>& old_context);
 
-  public:
+   public:
     //! Option name as known internally to RVS
     std::string name;
     //! Continuation stack for this option
@@ -96,7 +96,7 @@ protected:
   //! Token-continuation pair
   typedef std::pair<std::string, std::shared_ptr<optbase>>   gpair;
 
-protected:
+ protected:
   const char*  get_token();
   bool  is_command(const std::string& token);
   bool  try_command(const std::string& token);
@@ -105,10 +105,10 @@ protected:
   void  init_grammar(void);
   void  extract_path(void);
 
-protected:
-  //! Helper variable to store command line parameters count across function calls
+ protected:
+  //! Helper variable to store command line parameters across function calls
   int    argc;
-  //! Helper variable to store command line parameters count across function calls
+  //! Helper variable to store command line parameters across function calls
   char** argv;
   //! Helper variable to store current command line parameter being processed
   int    itoken;
@@ -121,8 +121,9 @@ protected:
   //! Helper variable to store current continuation stack
   std::stack<econtext>  context;
   //! Helper variable to store grammar
-  std::map<std::string,std::shared_ptr<optbase>> grammar;
-
+  std::map<std::string, std::shared_ptr<optbase>> grammar;
 };
 
 }  // namespace rvs
+
+#endif  // RVS_INCLUDE_RVSCLI_H_
