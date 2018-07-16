@@ -50,15 +50,12 @@ class action: public rvs::actionbase {
 
  private:
 
-    string action_name;
     bool bjson;
     void* json_root_node;
 
     // PCIe capabilities stuff
     bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, uint16_t gpu_id);
 
-    // configuration properties getters
-    void property_get_action_name(void);  // gets the action name
 
  protected:
 };
