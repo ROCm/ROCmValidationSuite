@@ -60,36 +60,35 @@ extern "C" int rvs_module_has_interface(int iid) {
     return 0;
 }
 
-extern "C" char* rvs_module_get_name(void) {
-    return (char*)"gst";
+extern "C" const char* rvs_module_get_name(void) {
+    return "gst";
 }
 
-extern "C" char* rvs_module_get_description(void) {
-    return (char*)"ROCm Validation Suite GST module";
+extern "C" const char* rvs_module_get_description(void) {
+    return "ROCm Validation Suite GST module";
 }
 
-extern "C" char* rvs_module_get_config(void) {
-    return (char*)"package (string), version (string), installed (bool), "\
-                    "user (string), groups (collection of strings), "\
-                    "file (string), owner (string), group (string), "\
-                    "permission (int), type (int), exists (bool)";
+extern "C" const char* rvs_module_get_config(void) {
+    return "target_stress (float), copy_matrix (bool), "\
+            "ramp_interval (int), tolerance (float), "\
+            "max_violations (int), log_interval (int)";
 }
 
-extern "C" char* rvs_module_get_output(void) {
-    return (char*)"pass (bool)";
+extern "C" const char* rvs_module_get_output(void) {
+    return "pass (bool)";
 }
 
-extern "C" int   rvs_module_init(void* pMi) {
+extern "C" int rvs_module_init(void* pMi) {
     rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
     return 0;
 }
 
-extern "C" int   rvs_module_terminate(void) {
+extern "C" int rvs_module_terminate(void) {
     return 0;
 }
 
-extern "C" char* rvs_module_get_errstring(int error) {
-    return  (char*)"General Error";
+extern "C" const char* rvs_module_get_errstring(int error) {
+    return "General Error";
 }
 
 extern "C" void* rvs_module_action_create(void) {
