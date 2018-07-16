@@ -77,45 +77,27 @@ action::~action() {
  *
  * */
 int action::run(void) {
-  int error = 0;
-  string msg;
-  
-  log("[PESM] in run()", rvs::logdebug);
-  
-  // get the action name
-  rvs::actionbase::property_get_action_name(&error);
-  if(error == 2) {
-    msg = "action field is missing in gst module";
-    log(msg.c_str(), rvs::logerror);
-    return -1;
-  }
-  rvs::lp::Log("[" + property["name"]+ "] pesm in run()", rvs::logtrace);
+  rvs::lp::Log("[" + property["name"]+ "] pebb in run()", rvs::logtrace);
 
   // debugging help
   string val;
   if (has_property("debugwait", val)) {
     sleep(std::stoi(val));
   }
-  // this module implements --listGpu command line option
-  // if this option is set, an internal input key 'do_gpu_list' is passed
-  // to this action
-  if (has_property("do_gpu_list")) {
-    return do_gpu_list();
-  }
 
   // start of monitoring?
   if (property["monitor"] == "true") {
     if (pworker) {
-      rvs::lp::Log("[" + property["name"]+ "] pesm monitoring already started",
+      rvs::lp::Log("[" + property["name"]+ "] pebb monitoring already started",
                   rvs::logresults);
       return 0;
     }
 
     rvs::lp::Log("[" + property["name"]+
-    "] pesm property[\"monitor\"] == \"true\"", rvs::logtrace);
+    "] pebb property[\"monitor\"] == \"true\"", rvs::logtrace);
 
     // create worker thread object
-    rvs::lp::Log("[" + property["name"]+ "] pesm creating Worker",
+    rvs::lp::Log("[" + property["name"]+ "] pebb creating Worker",
                  rvs::logtrace);
 
     pworker = new Worker();
@@ -134,12 +116,12 @@ int action::run(void) {
           pworker->set_deviceid(std::stoi(sdevid));
         }
         catch(...) {
-          cerr << "RVS-PESM: action: " << property["name"] <<
+          cerr << "RVS-PEBB: action: " << property["name"] <<
           "  invalide 'deviceid' key value: " << sdevid << std::endl;
           return -1;
         }
       } else {
-        cerr << "RVS-PESM: action: " << property["name"] <<
+        cerr << "RVS-PEBB: action: " << property["name"] <<
         "  invalide 'deviceid' key value: " << sdevid << std::endl;
         return -1;
       }
@@ -154,29 +136,29 @@ int action::run(void) {
         vector<int> iarr;
         int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
         if (sts < 0) {
-          cerr << "RVS-PESM: action: " << property["name"] <<
+          cerr << "RVS-PEBB: action: " << property["name"] <<
           "  invalide 'device' key value: " << sdev << std::endl;
           return -1;
         }
         pworker->set_gpuids(iarr);
       }
     } else {
-          cerr << "RVS-PESM: action: " << property["name"] <<
+          cerr << "RVS-PEBB: action: " << property["name"] <<
           "  key 'device' not found" << std::endl;
           return -1;
     }
 
     // start worker thread
-    rvs::lp::Log("[" + property["name"]+ "] pesm starting Worker",
+    rvs::lp::Log("[" + property["name"]+ "] pebb starting Worker",
                  rvs::logtrace);
     pworker->start();
     sleep(2);
 
-    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring started",
+    rvs::lp::Log("[" + property["name"]+ "] pebb Worker thread started",
                  rvs::logtrace);
   } else {
     rvs::lp::Log("[" + property["name"]+
-    "] pesm property[\"monitor\"] != \"true\"", rvs::logtrace);
+    "] pebb property[\"monitor\"] != \"true\"", rvs::logtrace);
     if (pworker) {
       // (give thread chance to start)
       sleep(2);
@@ -185,77 +167,8 @@ int action::run(void) {
       delete pworker;
       pworker = nullptr;
     }
-    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring stopped",
+    rvs::lp::Log("[" + property["name"]+ "] pebb Worker stopped",
                  rvs::logtrace);
   }
-  return 0;
-}
-
-/**
- * @brief Lists AMD GPUs
- *
- * Functionality:
- *
- * Lists all AMD GPUs present in the system.
- *
- * @return 0 - success. non-zero otherwise
- *
- * */
-int action::do_gpu_list() {
-  log("pesm in do_gpu_list()", rvs::logtrace);
-
-  std::map<string, string>::iterator it;
-
-  struct pci_access* pacc;
-  struct pci_dev*    dev;
-  char buff[1024];
-  char devname[1024];
-
-  // get the pci_access structure
-  pacc = pci_alloc();
-  // initialize the PCI library
-  pci_init(pacc);
-  // get the list of devices
-  pci_scan_bus(pacc);
-
-  bool bheader_printed = false;
-  int  ix = 0;
-  // iterate over devices
-  for (dev = pacc->devices; dev; dev = dev->next) {
-    // fil in the info
-    pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
-    | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
-
-    // computes the actual dev's location_id (sysfs entry)
-    uint16_t dev_location_id =
-      ((((uint16_t)(dev->bus)) << 8) | (dev->func));
-
-    // if not and AMD GPU just continue
-    int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-    if (gpu_id < 0)
-      continue;
-
-    if (!bheader_printed) {
-      bheader_printed = true;
-      cout << "Supported GPUs available:" << endl;
-    }
-
-    snprintf(buff, sizeof(buff), "%02X:%02X.%d", dev->bus, dev->dev, dev->func);
-
-    string name;
-    name = pci_lookup_name(pacc, devname, sizeof(devname), PCI_LOOKUP_DEVICE,
-                           dev->vendor_id, dev->device_id);
-
-    cout << buff  << " - GPU[" << gpu_id << "] " << name <<
-    " (Device " << dev->device_id << ")" << endl;
-    ix++;
-  }
-
-  pci_cleanup(pacc);
-
-  if (!bheader_printed) {
-    cout << endl << "No supported GPUs available." << endl;
-  }
-
   return 0;
 }

@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVSLIBLOG_H_
-#define RVSLIBLOG_H_
+#ifndef INCLUDE_RVSLIBLOG_H_
+#define INCLUDE_RVSLIBLOG_H_
 
 
 #ifdef __cplusplus
@@ -31,8 +31,12 @@ extern "C" {
 #endif
 
 typedef int   (*t_rvs_module_log)(const char*, const int);
-typedef int   (*t_cbLogExt)(const char*, const int, const unsigned int Sec, const unsigned int uSec);
-typedef void* (*t_cbLogRecordCreate)( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
+typedef int   (*t_cbLogExt)(const char*, const int, const unsigned int Sec,
+                            const unsigned int uSec);
+typedef void* (*t_cbLogRecordCreate)( const char* Module, const char* Action,
+                                      const int LogLevel,
+                                      const unsigned int Sec,
+                                      const unsigned int uSec);
 typedef int   (*t_cbLogRecordFlush)( void* pLogRecord);
 typedef void* (*t_cbCreateNode)(void* Parent, const char* Name);
 typedef void  (*t_cbAddString)(void* Parent, const char* Key, const char* Val);
@@ -42,8 +46,7 @@ typedef void  (*t_cbAddNode)(void* Parent, void* Child);
 /**
  * @brief Module initialization structure
  */
-typedef struct tag_module_init 
-{
+typedef struct tag_module_init {
   //! pointer to rvs::logger::Log() function
   t_rvs_module_log     cbLog;
   //! pointer to rvs::logger::LogExt() function
@@ -60,7 +63,6 @@ typedef struct tag_module_init
   t_cbAddInt           cbAddInt;
   //! pointer to rvs::logger::AddNode() function
   t_cbAddNode          cbAddNode;
-
 } T_MODULE_INIT;
 
 #ifdef __cplusplus
@@ -68,8 +70,7 @@ typedef struct tag_module_init
 #endif
 
 #ifdef __cplusplus
-namespace rvs
-{
+namespace rvs {
 
 const int lognone     = 0;
 const int logresults  = 1;
@@ -78,9 +79,9 @@ const int loginfo     = 3;
 const int logdebug    = 4;
 const int logtrace    = 5;
 
-}  // namespace rvs
+} // namespace rvs
 
 #endif
 
 
-#endif // RVSLIBLOG_H_
+#endif  // INCLUDE_RVSLIBLOG_H_

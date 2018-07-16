@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PESM_SO_INCLUDE_WORKER_H_
-#define PESM_SO_INCLUDE_WORKER_H_
+#ifndef PEBB_SO_INCLUDE_WORKER_H_
+#define PEBB_SO_INCLUDE_WORKER_H_
 
 #include <string>
 #include <vector>
@@ -33,11 +33,11 @@
 
 /**
  * @class Worker
- * @ingroup PESM
+ * @ingroup PEBB
  *
- * @brief Monitoring implementation class
+ * @brief PEBB worker thread implementation class
  *
- * Derives from rvs::ThreadBase and implements actual monitoring functionality
+ * Derives from rvs::ThreadBase and implements actual PEBB functionality
  * in its run() method.
  *
  */
@@ -88,4 +88,4 @@ class Worker : public rvs::ThreadBase {
 
 
 
-#endif  // PESM_SO_INCLUDE_WORKER_H_
+#endif  // PEBB_SO_INCLUDE_WORKER_H_

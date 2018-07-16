@@ -93,13 +93,14 @@ int action::run()
   bool ldcfgchk_so_bool = false;
   bool ldcfgchk_arch_bool = false;
   bool ldcfgchk_ldpath_bool = false;
+  // get the action name
   rvs::actionbase::property_get_action_name(&error);
   if(error == 2) {
-    msg = "action field is missing in rcqt module";
+    msg = "action field is missing in gst module";
     log(msg.c_str(), rvs::logerror);
     return -1;
   }
-    
+  
   // check if package check action is going to trigger
     
   pkgchk_bool =  rvs::actionbase::has_property(PACKAGE);    
@@ -226,14 +227,11 @@ int action::usrchk_run() {
     bool group_exists = false;
     bool user_is_in_all_groups = true;
     string group_values_string;
+    
+    
 
     // Check if gruop exists
     group_exists = has_property(GROUP, group_values_string);
-    /*
-    if(iter != property.end()) {
-      group_values_string = iter->second;
-      group_exists = true;
-    }*/
     
     // Structures for checking group and user
     struct passwd *p;
