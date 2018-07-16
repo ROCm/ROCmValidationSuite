@@ -34,16 +34,15 @@
 #include "action.h"
 
 /**
- * @defgroup PESM PESM Module
+ * @defgroup PEBB PEBB Module
  *
- * @brief PCIe State Monitoring module
+ * @brief PCIe Bandwidth Benchmark Module
  *
- * The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host
- * platform and the GPU. The module will register a “listener” on a target GPU’s PCIe
- * interconnect, and log a message whenever it detects a state change. The PESM will be able to
- * detect the following state changes:
- *   - 1.2.PCIe link speed changes
- *   - GPU power state changes
+ * The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
+ * transfers between  * system memory and a target GPU card’s memory. The
+ * maximum bandwidth obtained is reported  * to help debug low bandwidth issues.
+ * The benchmark should be capable of targeting one, some or all of the GPUs
+ * installed in a platform, reporting individual benchmark statistics for each.
  */
 
 Worker* pworker;
@@ -53,7 +52,8 @@ int log(const char* pMsg, const int level) {
 }
 
 
-extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision) {
+extern "C" void
+rvs_module_get_version(int* Major, int* Minor, int* Revision) {
   *Major = BUILD_VERSION_MAJOR;
   *Minor = BUILD_VERSION_MINOR;
   *Revision = BUILD_VERSION_PATCH;
@@ -70,19 +70,19 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_name(void) {
-  return "pesm";
+  return "pebb";
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return "ROCm Validation Suite PESM module";
+  return "ROCm Validation Suite PEBB module";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
-  return "monitor (bool)";
+  return "host_to_device (bool), device_to_host (bool), log_interval (integer)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {
-  return "state (string)";
+  return "interval_bandwidth (float array), bandwidth (float array)";
 }
 
 extern "C" int   rvs_module_init(void* pMi) {
@@ -93,18 +93,18 @@ extern "C" int   rvs_module_init(void* pMi) {
 }
 
 extern "C" int   rvs_module_terminate(void) {
-  rvs::lp::Log("[module_terminate] pesm rvs_module_terminate() - entered",
+  rvs::lp::Log("[module_terminate] pebb rvs_module_terminate() - entered",
                rvs::logtrace);
   if (pworker) {
     rvs::lp::Log(
-      "[module_terminate] pesm rvs_module_terminate() - pworker exists",
+      "[module_terminate] pebb rvs_module_terminate() - pworker exists",
                  rvs::logtrace);
     pworker->set_stop_name("module_terminate");
     pworker->stop();
     delete pworker;
     pworker = nullptr;
     rvs::lp::Log(
-      "[module_terminate] pesm rvs_module_terminate() - monitoring stopped",
+      "[module_terminate] pebb rvs_module_terminate() - monitoring stopped",
                  rvs::logtrace);
   }
   return 0;

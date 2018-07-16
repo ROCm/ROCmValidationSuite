@@ -72,15 +72,6 @@ void Worker::set_gpuids(const std::vector<int>& GpuIds) {
  * */
 void Worker::run() {
   brun = true;
-  char buff[1024];
-
-  map<string, string>::iterator it;
-  vector<uint16_t> gpus_location_id;
-  map<uint16_t, string> old_val;
-  map<uint16_t, string> old_pwr_val;
-
-  struct pci_access *pacc;
-  struct pci_dev *dev;
 
   unsigned int sec;
   unsigned int usec;
@@ -90,11 +81,13 @@ void Worker::run() {
   rvs::lp::get_ticks(sec, usec);
 
   // add string output
-  string msg("[" + action_name + "] pesm " + strgpuids + " started");
+  string msg("[" + action_name + "] pebb " + strgpuids + " started");
   rvs::lp::Log(msg, rvs::logresults, sec, usec);
+  // get timestamp
+  rvs::lp::get_ticks(sec, usec);
 
   // add JSON output
-  r = rvs::lp::LogRecordCreate("pesm", action_name.c_str(), rvs::logresults,
+  r = rvs::lp::LogRecordCreate("pebb", action_name.c_str(), rvs::logresults,
                                sec, usec);
   rvs::lp::AddString(r, "msg", "started");
   rvs::lp::AddString(r, "device", strgpuids);
@@ -102,96 +95,18 @@ void Worker::run() {
 
   // worker thread has started
   while (brun) {
-    rvs::lp::Log("[" + action_name + "] pesm worker thread is running...",
+    rvs::lp::Log("[" + action_name + "] pebb worker thread is running...",
                  rvs::logtrace);
 
-    // get the pci_access structure
-    pacc = pci_alloc();
-    // initialize the PCI library
-    pci_init(pacc);
-    // get the list of devices
-    pci_scan_bus(pacc);
-
-    // iterate over devices
-    for (dev = pacc->devices; dev; dev = dev->next) {
-      pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
-      | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS
-      | PCI_FILL_PHYS_SLOT);  // fil in the info
-
-      // computes the actual dev's location_id (sysfs entry)
-      uint16_t dev_location_id =
-        ((((uint16_t)(dev->bus)) << 8) | (dev->func));
-      int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-
-      // if not and AMD GPU just continue
-      if (gpu_id < 0)
-        continue;
-
-      // device_id filtering
-      if ( device_id != 0 && dev->device_id != device_id)
-        continue;
-
-      // gpu id filtering
-      if (bfiltergpu) {
-        auto itgpuid = find(gpuids.begin(), gpuids.end(), gpu_id);
-        if (itgpuid == gpuids.end())
-          continue;
-      }
-
-      rvs::lp::get_ticks(sec, usec);
-
-      // get current speed for the link
-      get_link_stat_cur_speed(dev, buff);
-      string new_val(buff);
-
-      // get current power state for GPU
-      get_pwr_curr_state(dev, buff);
-      string new_pwr_val(buff);
-
-      // link speed changed?
-      if (old_val[gpu_id] != new_val) {
-        // new value is different, so store it;
-        old_val[gpu_id] = new_val;
-
-        string msg("[" + action_name + "] " + "pesm "
-          + std::to_string(gpu_id) + " link speed change " + new_val);
-        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
-
-        r = rvs::lp::LogRecordCreate("pesm ", action_name.c_str(), rvs::loginfo,
-                                    sec, usec);
-        rvs::lp::AddString(r, "msg", "link speed change");
-        rvs::lp::AddString(r, "val", new_val);
-        rvs::lp::LogRecordFlush(r);
-      }
-
-      // power state changed
-      if (old_pwr_val[gpu_id] != new_pwr_val) {
-        // new value is different, so store it;
-        old_pwr_val[gpu_id] = new_pwr_val;
-
-        string msg("[" + action_name + "] " + "pesm "
-          + std::to_string(gpu_id) +
-          " power state change " + new_pwr_val);
-        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
-
-        r = rvs::lp::LogRecordCreate("pesm", action_name.c_str(), rvs::loginfo,
-                                    sec, usec);
-        rvs::lp::AddString(r, "msg", "power state change");
-        rvs::lp::AddString(r, "val", new_pwr_val);
-        rvs::lp::LogRecordFlush(r);
-      }
-    }
-
-    pci_cleanup(pacc);
-
-    sleep(1);
+    // add PEBB specific processing hereby
+    sleep(10);
   }
 
   // get timestamp
   rvs::lp::get_ticks(sec, usec);
 
   // add string output
-  msg = "[" + stop_action_name + "] pesm all stopped";
+  msg = "[" + stop_action_name + "] pebb all stopped";
   rvs::lp::Log(msg, rvs::logresults, sec, usec);
 
   // add JSON output
@@ -201,19 +116,19 @@ void Worker::run() {
   rvs::lp::AddString(r, "msg", "stopped");
   rvs::lp::LogRecordFlush(r);
 
-  rvs::lp::Log("[" + stop_action_name + "] pesm worker thread has finished",
+  rvs::lp::Log("[" + stop_action_name + "] pebb worker thread has finished",
                rvs::logdebug);
 }
 
 /**
- * @brief Stops monitoring
+ * @brief Stop worker thread
  *
  * Sets brun member to FALSE thus signaling end of monitoring.
  * Then it waits for std::thread to exit before returning.
  *
  * */
 void Worker::stop() {
-  rvs::lp::Log("[" + stop_action_name + "] pesm in Worker::stop()",
+  rvs::lp::Log("[" + stop_action_name + "] pebb in Worker::stop()",
                rvs::logtrace);
   // reset "run" flag
   brun = false;

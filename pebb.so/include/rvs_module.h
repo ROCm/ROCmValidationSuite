@@ -22,52 +22,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PEQT_SO_INCLUDE_ACTION_H_
-#define PEQT_SO_INCLUDE_ACTION_H_
+#ifndef PEBB_SO_INCLUDE_RVS_MODULE_H_
+#define PEBB_SO_INCLUDE_RVS_MODULE_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <pci/pci.h>
-#ifdef __cplusplus
-}
-#endif
+#include "rvsliblog.h"
 
-#include <vector>
-#include <string>
+int log(const char* pMasg, const int level = 1);
 
-#include "rvsactionbase.h"
-
-using std::vector;
-using std::string;
-
-/**
- * @class action
- * @ingroup PEQT
- *
- * @brief PEQT action implementation class
- *
- * Derives from rvs::actionbase and implements actual action functionality
- * in its run() method.
- *
- */
-class action: public rvs::actionbase {
- public:
-    action();
-    virtual ~action();
-
-    virtual int run(void);
-
- private:
-
-    bool bjson;
-    //! JSON root node
-    void* json_root_node;
-
-    bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, uint16_t gpu_id);
-
-
- protected:
-};
-
-#endif  // PEQT_SO_INCLUDE_ACTION_H_
+#endif  // PEBB_SO_INCLUDE_RVS_MODULE_H_
