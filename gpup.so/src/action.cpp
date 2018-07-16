@@ -67,28 +67,16 @@ action::~action()
 	property.clear();
 }
 
-/**
- * gets the action name from the module's properties collection
- */
-void action::property_get_action_name(void)
-{
-    action_name = "[]";
-    map<string, string>::iterator it = property.find(RVS_CONF_NAME_KEY);
-    if (it != property.end()) {
-        action_name = it->second;
-        property.erase(it);
-    }
-}
 
 
 int action::run(void)
 {    
+    int error = 0;
     ifstream f_id,f_prop,f_link_prop;
     char path[256];
     string prop_name, prop_val, gpu_id, devices, msg, s;
     int num_nodes, num_links;
     bool device_all_selected = false, dev_id_corr;
-    int error = 0;
     void *json_gpuprop_node = NULL;
     std::map<string,string>::iterator it;
         
@@ -96,8 +84,19 @@ int action::run(void)
     num_nodes = gpu_num_subdirs((char*)KFD_SYS_PATH_NODES, (char*)"");
         
     // get the action name
-    property_get_action_name();
+    rvs::actionbase::property_get_action_name(&error);
+    if(error == 2) {
+      msg = "action field is missing in gpup module";
+      log(msg.c_str(), rvs::logerror);
+      return -1;
+    }
 
+    rvs::actionbase::property_get_run_count(&error);
+    if (error == 1) {
+      msg = "count field is not in the correct format  in gpup module";
+      log(msg.c_str(), rvs::loginfo);
+    }
+  
     // get <device> property value (a list of gpu id)
     device_all_selected = property_get_device(&error);
     

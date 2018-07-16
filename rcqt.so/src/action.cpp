@@ -84,46 +84,51 @@ action::~action() {
 
 int action::run()
 {
-    int return_value = 0;
-    
-    bool pkgchk_bool = false;
-    bool usrchk_bool = false;
-    bool kernelchk_os_bool = false;
-    bool kernelchk_kernel_bool = false;
-    bool ldcfgchk_so_bool = false;
-    bool ldcfgchk_arch_bool = false;
-    bool ldcfgchk_ldpath_bool = false;
-    
-    // check if package check action is going to trigger
-    
-    pkgchk_bool =  rvs::actionbase::has_property(PACKAGE);    
-    
-    if(pkgchk_bool == true)
-      return pkgchk_run();
-    
-    // check if usrer check action is going to trigger
-    usrchk_bool = rvs::actionbase::has_property(USER);
-    
-    if(usrchk_bool == true)
-      return usrchk_run();
-    
-    // chck if kernel version action is going to trigger
-    kernelchk_os_bool = rvs::actionbase::has_property(OS_VERSION);
-    kernelchk_kernel_bool = rvs::actionbase::has_property(KERNEL_VERSION);
-    
-    if(kernelchk_os_bool && kernelchk_kernel_bool)
-      return kernelchk_run();
-    
-    // check if ldcfg check action is going to trigger
-    ldcfgchk_so_bool = rvs::actionbase::has_property(SONAME);
-    ldcfgchk_arch_bool = rvs::actionbase::has_property(ARCH);
-    ldcfgchk_ldpath_bool = rvs::actionbase::has_property(LDPATH);
-    
-    if(ldcfgchk_so_bool && ldcfgchk_arch_bool && ldcfgchk_ldpath_bool)
-      return ldcfgchk_run();    
-        
-    
+  int error = 0;
+  string msg;
+  bool pkgchk_bool = false;
+  bool usrchk_bool = false;
+  bool kernelchk_os_bool = false;
+  bool kernelchk_kernel_bool = false;
+  bool ldcfgchk_so_bool = false;
+  bool ldcfgchk_arch_bool = false;
+  bool ldcfgchk_ldpath_bool = false;
+  rvs::actionbase::property_get_action_name(&error);
+  if(error == 2) {
+    msg = "action field is missing in rcqt module";
+    log(msg.c_str(), rvs::logerror);
     return -1;
+  }
+    
+  // check if package check action is going to trigger
+    
+  pkgchk_bool =  rvs::actionbase::has_property(PACKAGE);    
+    
+  if (pkgchk_bool == true)
+    return pkgchk_run();
+    
+  // check if usrer check action is going to trigger
+  usrchk_bool = rvs::actionbase::has_property(USER);
+    
+  if (usrchk_bool == true)
+    return usrchk_run();
+    
+  // chck if kernel version action is going to trigger
+  kernelchk_os_bool = rvs::actionbase::has_property(OS_VERSION);
+  kernelchk_kernel_bool = rvs::actionbase::has_property(KERNEL_VERSION);
+    
+  if (kernelchk_os_bool && kernelchk_kernel_bool)
+    return kernelchk_run();
+    
+  // check if ldcfg check action is going to trigger
+  ldcfgchk_so_bool = rvs::actionbase::has_property(SONAME);
+  ldcfgchk_arch_bool = rvs::actionbase::has_property(ARCH);
+  ldcfgchk_ldpath_bool = rvs::actionbase::has_property(LDPATH);
+    
+  if (ldcfgchk_so_bool && ldcfgchk_arch_bool && ldcfgchk_ldpath_bool)
+    return ldcfgchk_run();    
+    
+  return -1;
 }
 
 /**
@@ -136,25 +141,19 @@ int action::pkgchk_run() {
   //static rvs::actionbase actionbase;
   
   string package_name;
-  if(has_property(PACKAGE, package_name)) {
+  if (has_property(PACKAGE, package_name)) {
     bool version_exists = false;
-
-    
 
     // Checking if version field exists
     string version_name;
     version_exists = has_property(VERSION, version_name);
-    /*if(iter != property.end()) {
-      version_exists = true;
-      version_name = iter->second;
-    }*/
     
     pid_t pid;
     int fd[2];
     pipe(fd);
     
     pid = fork();
-    if(pid == 0) {
+    if (pid == 0) {
       // Child process
       
       // Pipe the standard output to the fd[1]
@@ -166,7 +165,8 @@ int action::pkgchk_run() {
       // We execute the dpkg-querry
       system(buffer);
       
-    } else if (pid>0) {
+    } 
+    else if (pid>0) {
       // Parent
       
       char result[BUFFER_SIZE];

@@ -95,6 +95,18 @@ protected:
  *  - command line arguments given when invoking rvs
  *  - other parameters given for specific module actions (see module action for help)
  */
+
+  //! name of the action
+  std::string action_name;
+  //! TRUE if the GST action will run on all selected devices in parallel
+  bool gst_runs_parallel;
+  //! number of GST stress test iterations to run
+  uint64_t gst_run_count;
+  //! stress test run delay
+  uint64_t gst_run_wait_ms;
+  //! stress test run duration
+  uint64_t gst_run_duration_ms;
+  
   std::map<std::string, std::string>  property;
 
   //! List of all gpu_id in the action's "device" property in .config file

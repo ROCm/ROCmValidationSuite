@@ -178,8 +178,10 @@ void rvs::actionbase::property_get_action_name(int *error) {
   if (it != property.end()) {
     action_name = it->second;
     property.erase(it);
-  } else {
-      *error = 1;
+    *error = 0;
+  }
+  else {
+    *error = 2;
   }
 }
 
@@ -191,11 +193,20 @@ void rvs::actionbase::property_get_run_parallel(int *error) {
   gst_runs_parallel = false;
   map<string, string>::iterator it = property.find(RVS_CONF_PARALLEL_KEY);
   if (it != property.end()) {
-    if (it->second == "true")
+    if (it->second == "true") {
       gst_runs_parallel = true;
-    property.erase(it);
-  } else {
+      *error = 0;
+    }
+    else if(it->second == "false") {
+      property.erase(it);
+      *error = 0;
+    } 
+    else {
       *error = 1;
+    }
+  }
+  else {
+    *error = 2;
   }
 }
 
@@ -206,11 +217,18 @@ void rvs::actionbase::property_get_run_count(int *error) {
   gst_run_count = 1;
   map<string, string>::iterator it = property.find(RVS_CONF_COUNT_KEY);
   if (it != property.end()) {
-    if (is_positive_integer(it->second))
+    if (is_positive_integer(it->second)){
       gst_run_count = std::stoi(it->second);
-    property.erase(it);
-  } else {
+      property.erase(it);
+      *error = 0;
+    }
+    else {
       *error = 1;
+      property.erase(it);
+    }
+  } 
+  else {
+    *error = 2;
   }
 }
 
@@ -224,10 +242,15 @@ void rvs::actionbase::property_get_run_wait(int *error) {
   if (it != property.end()) {
     if (is_positive_integer(it->second)) {
       gst_run_wait_ms = std::stoul(it->second);
-    }
-    property.erase(it);
-  } else {
+      property.erase(it);
+      *error = 0;
+    } 
+    else {
       *error = 1;
+    }
+  } 
+  else {
+    *error = 2;
   }
 }
 
@@ -241,9 +264,14 @@ void rvs::actionbase::property_get_run_duration(int *error) {
     if (is_positive_integer(it->second)) {
       gst_run_duration_ms = std::stoul(it->second);
       gst_run_count = 1;
+      property.erase(it);
+      *error = 0;
     }
-    property.erase(it);
-  } else {
+    else {
       *error = 1;
+    }
+  }
+  else {
+    *error = 2;
   }
 }
