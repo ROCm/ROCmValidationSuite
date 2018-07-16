@@ -51,7 +51,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k) :
     is_error = false;
 
     da = db = dc = NULL;
-    ha = hb = hc = NULL;
+    ha = hb = hc = nullptr;
 
     size_a = k * m;
     size_b = k * n;
@@ -74,7 +74,8 @@ rvs_blas::~rvs_blas() {
 }
 
 /**
- * @brief selects GPU device, allocates GPU memory, creates a rocBlas handle and get a reference to the rocBlas's stream
+ * @brief selects GPU device, allocates GPU memory, creates a rocBlas
+ * handle and get a reference to the rocBlas's stream
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::init_gpu_device(void) {
@@ -103,7 +104,7 @@ bool rvs_blas::init_gpu_device(void) {
  */
 bool rvs_blas::copy_data_to_gpu(void) {
     if (!is_error) {
-        if (da != NULL) {
+        if (da) {
             if (hipMemcpy(da, ha, sizeof(float) * size_a, hipMemcpyHostToDevice)
                     != hipSuccess) {
                 is_error = true;
@@ -111,7 +112,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
             }
         }
 
-        if (db != NULL) {
+        if (db) {
             if (hipMemcpy(db, hb, sizeof(float) * size_b, hipMemcpyHostToDevice)
                      != hipSuccess) {
                 is_error = true;
@@ -119,7 +120,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
             }
         }
 
-        if (dc != NULL) {
+        if (dc) {
             if (hipMemcpy(dc, hc, sizeof(float) * size_c, hipMemcpyHostToDevice)
                      != hipSuccess) {
                 is_error = true;
@@ -149,7 +150,7 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
 }
 
 /**
- * releases GPU mem & destroys the rocBlas handle
+ * @brief releases GPU mem & destroys the rocBlas handle
  */
 void rvs_blas::release_gpu_matrix_mem(void) {
     if (da)
@@ -167,19 +168,14 @@ void rvs_blas::release_gpu_matrix_mem(void) {
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::alocate_host_matrix_mem(void) {
-    ha = new float[size_a];
-    if (!ha)
+    try {
+        ha = new float[size_a];
+        hb = new float[size_b];
+        hc = new float[size_c];
+        return true;
+    } catch (std::bad_alloc&) {
         return false;
-
-    hb = new float[size_b];
-    if (!hb)
-        return false;
-
-    hc = new float[size_c];
-    if (!hc)
-        return false;
-
-    return true;
+    }
 }
 
 /**
