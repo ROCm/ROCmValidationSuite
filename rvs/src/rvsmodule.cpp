@@ -76,7 +76,7 @@ int rvs::module::initialize(const char* pConfig) {
   std::ifstream file(pConfig);
 
   if (!file.good()) { 
-    cerr << "ERROR: " << pConfig << "does not exist.\n";
+    cerr << "ERROR: " << pConfig << "file does not exist.\n";
     return -1;
   }
   else {
