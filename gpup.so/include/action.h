@@ -1,4 +1,5 @@
-/********************************************************************************
+/*******************************************************************************
+ *
  *
  * Copyright (c) 2018 ROCm Developer Tools
  *
@@ -20,7 +21,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
+ * 
  *******************************************************************************/
 #ifndef GPUP_SO_INCLUDE_ACTION_H_
 #define GPUP_SO_INCLUDE_ACTION_H_
@@ -34,14 +35,13 @@ using std::vector;
 using std::string;
 
 class action : public rvs::actionbase {
-public:
-	action();
-	virtual ~action();
+ public:
+    action();
+    virtual ~action();
 
-	virtual int run(void);
-        
-private:
-    
+    virtual int run(void);
+
+ private:
     // the list of all gpu_id in the <device> property
     vector<string> gpus_id;
     // the list of properties that are in query
@@ -54,11 +54,12 @@ private:
     void* json_root_node;
 
 
-    // get the device property value (list of gpu_id) from the module's properties collection
+    // get the device property value (list of gpu_id) from the module's
+    // properties collection
     bool property_get_device(int *error, int num_nodes);
     // get the action name
     void property_get_action_name(void);
-    //get gpu id
+    // get gpu id
     string property_get_gpuid(int node_id);
     // check device id is correct
     bool device_id_correct(int node_id, int dev_id);
@@ -68,9 +69,8 @@ private:
     void property_get_value(string gpu_id, int node_id);
     // get io links properties values
     void property_io_links_get_value(string gpu_id, int node_id);
-	
-protected:
-	
+
+ protected:
 };
 
-#endif  // GPUP_SO_INCLUDE_ACTION_H_ 
+#endif  // GPUP_SO_INCLUDE_ACTION_H_
