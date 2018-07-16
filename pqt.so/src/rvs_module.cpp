@@ -66,20 +66,20 @@ extern "C" int rvs_module_has_interface(int iid) {
   return 0;
 }
 
-extern "C" char* rvs_module_get_name(void) {
-   return (char*)"pesm";
+extern "C" const char* rvs_module_get_name(void) {
+   return "pqt";
 }
 
-extern "C" char* rvs_module_get_description(void) {
-   return (char*)"ROCm Validation Suite PESM module";
+extern "C" const char* rvs_module_get_description(void) {
+   return "ROCm Validation Suite PQT module";
 }
 
-extern "C" char* rvs_module_get_config(void) {
-  return (char*)"monitor (bool)";
+extern "C" const char* rvs_module_get_config(void) {
+  return "peers (Collection of Strings), peer_deviceid (Integer), test_bandwidth (Bool), bidirectional(Bool), parallel (Bool), duration (Integer), log_interval (Integer)";
 }
 
-extern "C" char* rvs_module_get_output(void) {
-  return (char*)"state (string)";
+extern "C" const char* rvs_module_get_output(void) {
+  return "p2p_result (Collection of Bools), peers (Collection of Strings), peer_deviceid (Integer), test_bandwidth (Bool), interval_bandwidth (Collection of Floats), bandwidth (Collection of Floats)";
 }
 
 extern "C" int   rvs_module_init(void* pMi) {
@@ -91,8 +91,8 @@ extern "C" int   rvs_module_terminate(void) {
   return 0;
 }
 
-extern "C" char* rvs_module_get_errstring(int error) {
-  return  (char*)"General Error";
+extern "C" const char* rvs_module_get_errstring(int error) {
+  return "General Error";
 }
 
 extern "C" void* rvs_module_action_create(void) {
