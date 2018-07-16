@@ -23,6 +23,27 @@
  *
  *******************************************************************************/
 
+//! @~English
+//! @mainpage RVS
+//!
+//! @section name NAME
+//!
+//! (RVS description)
+//!
+//! @section synopsis SYNOPSIS
+//!
+//! @section description DESCRIPTION
+//!
+//! @section exitstatus EXIT STATUS
+//!
+//! @section history HISTORY
+//!
+//! @section author AUTHOR
+//!
+//! @version 1.1
+//! $Date: Sun Dec 25 07:02:41 2016 -0200 $
+
+
 /** \defgroup Launcher Launcher module
  *
  * \brief Launcher module implementation
@@ -44,9 +65,10 @@ using namespace std;
 using namespace rvs;
 
 /**
+ *
  * \ingroup Launcher
  * \brief Main method
- *
+ * @section 1 Test
  * standard C main() method.
  *
  * @param Argc standard C argc parameter to main()
