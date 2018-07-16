@@ -22,11 +22,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PESM_SO_INCLUDE_RVS_MODULE_H_
-#define PESM_SO_INCLUDE_RVS_MODULE_H_
+#ifndef PEBB_SO_INCLUDE_RVS_MODULE_H_
+#define PEBB_SO_INCLUDE_RVS_MODULE_H_
 
 #include "rvsliblog.h"
 
 int log(const char* pMasg, const int level = 1);
 
-#endif  // PESM_SO_INCLUDE_RVS_MODULE_H_
+#endif  // PEBB_SO_INCLUDE_RVS_MODULE_H_
