@@ -52,6 +52,11 @@ class rvs_blas {
     //! returns k (matrix size)
     rocblas_int get_k(void) { return k; }
 
+    //! computes the number of bytes which are copied to
+    //! the GPU for one SGEMM operation
+    uint64_t get_bytes_copied_per_op(void) {
+        return sizeof(float) * (size_a + size_b + size_c);
+    }
     //! computes the gflop for a SGEMM operation
     double gemm_gflop_count(void) {
         return static_cast<double>(2.0 * m * n * k) / 1e9;
