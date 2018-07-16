@@ -91,11 +91,6 @@ class action: public rvs::actionbase {
     float gst_tolerance;
 
     // configuration properties getters
-    void property_get_action_name(void);
-    void property_get_run_parallel(void);
-    void property_get_run_count(void);
-    void property_get_run_wait(void);
-    void property_get_run_duration(void);
     void property_get_gst_ramp_interval(void);
     void property_get_gst_log_interval(void);
     void property_get_gst_max_violations(void);

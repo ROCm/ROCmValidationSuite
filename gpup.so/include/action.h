@@ -59,9 +59,6 @@ private:
     string action_name;
     bool bjson;
     void* json_root_node;
-
-    //from the module's properties collection
-    void property_get_action_name(void);  // gets the action name
 	
 protected:
 	

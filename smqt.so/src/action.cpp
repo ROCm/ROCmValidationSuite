@@ -48,9 +48,19 @@ action::~action()
 
 int action::run(void)
 { 
+  int error = 0;
+  string msg;
   std::string action_name;
   std::vector<unsigned short int> gpus_location_id;
   struct pci_access *pacc;
+  
+  // get the action name
+  rvs::actionbase::property_get_action_name(&error);
+  if(error == 2) {
+    msg = "action field is missing in smqt module";
+    log(msg.c_str(), rvs::logerror);
+    return -1;
+  } 
  
   gpu_get_all_location_id(gpus_location_id);  
   //get the pci_access structure
