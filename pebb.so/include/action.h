@@ -22,11 +22,27 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PESM_SO_INCLUDE_RVS_MODULE_H_
-#define PESM_SO_INCLUDE_RVS_MODULE_H_
+#ifndef PEBB_SO_INCLUDE_ACTION_H_
+#define PEBB_SO_INCLUDE_ACTION_H_
 
-#include "rvsliblog.h"
+#include "rvsactionbase.h"
 
-int log(const char* pMasg, const int level = 1);
+/**
+ * @class action
+ * @ingroup PEBB
+ *
+ * @brief PEBB action implementation class
+ *
+ * Derives from rvs::actionbase and implements actual action functionality
+ * in its run() method.
+ *
+ */
+class action : public rvs::actionbase {
+ public:
+  action();
+  virtual ~action();
 
-#endif  // PESM_SO_INCLUDE_RVS_MODULE_H_
+  virtual int run(void);
+};
+
+#endif  // PEBB_SO_INCLUDE_ACTION_H_
