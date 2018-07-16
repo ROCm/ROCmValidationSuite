@@ -27,6 +27,7 @@
 
 #include <string>
 #include "rvsthreadbase.h"
+#include "rvs_blas.h"
 
 #define GST_RESULT_PASS_MESSAGE         "TRUE"
 #define GST_RESULT_FAIL_MESSAGE         "FALSE"
@@ -122,11 +123,14 @@ class GSTWorker : public rvs::ThreadBase {
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }
     //! returns the GFlops tolerance
     float get_tolerance(void) { return tolerance; }
+    //! returns the difference (in milliseconds) between 2 points in time
+    uint64_t time_diff(
+                std::chrono::time_point<std::chrono::system_clock> t_end,
+                    std::chrono::time_point<std::chrono::system_clock> t_start);
 
  protected:
-    void log_module_error(const std::string &error);
-    bool do_gst_ramp(int *error);
-    bool do_gst_stress_test(int *error);
+    bool do_gst_ramp(int *error, std::string *err_description);
+    bool do_gst_stress_test(int *error, std::string *err_description);
     virtual void run(void);
 
  protected:
@@ -153,6 +157,12 @@ class GSTWorker : public rvs::ThreadBase {
     //! GFlops tolerance (how much the GFlops can fluctuare after
     //! the ramp period for the test to succeed)
     float tolerance;
+    //! actual ramp time in case it succeeds
+    uint64_t ramp_actual_time;
+    //! rvs_blas pointer
+    rvs_blas *gpu_blas;
+    //! max gflops achieved during the stress test
+    double max_gflops;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_
