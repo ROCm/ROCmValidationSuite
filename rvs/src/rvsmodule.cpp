@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <dlfcn.h>
 
 #include "rvsliblogger.h"
@@ -70,6 +71,18 @@ rvs::module::~module() {
  *
  */
 int rvs::module::initialize(const char* pConfig) {
+
+  // Check if pConfig file exists
+  std::ifstream file(pConfig);
+
+  if (!file.good()) { 
+    cerr << "ERROR: " << pConfig << "does not exist.\n";
+    return -1;
+  }
+  else {
+    file.close();
+  }
+
   // load list of supported modules from config file
   YAML::Node config = YAML::LoadFile(pConfig);
 
