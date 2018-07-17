@@ -30,7 +30,6 @@
 #include <sys/stat.h>
 #include <limits.h>
 #include <string.h>
-
 #include <stdio.h>
 
 #include <iostream>
@@ -42,8 +41,6 @@
 #include "rvsoptions.h"
 
 
-//  using namespace rvs;
-
 /**
  * @brief Constructor
  *
@@ -53,7 +50,8 @@
  * @param s3 possible continuation
  *
  */
-rvs::cli::optbase::optbase(const char* ptruename, econtext s1, econtext s2, econtext s3) {
+rvs::cli::optbase::optbase(const char* ptruename, econtext s1, econtext s2,
+                           econtext s3) {
   name = ptruename;
   new_context.push(eof);
   new_context.push(s1);
@@ -68,7 +66,7 @@ rvs::cli::optbase::~optbase() {
 /**
  * @brief Replaces current context with continuations allowed for this token
  *
- * @param old_context old stack context
+ * @param old_context old std::stack context
  * @return always returns TRUE
  *
  */
@@ -92,15 +90,17 @@ rvs::cli::~cli() {
 /**
  * @brief Extracts path from which rvs was invoked
  *
- * Extracts path from which rvs was invoked and puts it into command line option "pwd"
+ * Extracts path from which rvs was invoked and puts it into
+ * command line option "pwd"
  *
  */
 void rvs::cli::extract_path() {
   char path[PATH_MAX];
   char dest[PATH_MAX];
   memset(dest, 0, sizeof(dest));  // readlink does not null terminate!
+
   pid_t pid = getpid();
-  sprintf(path, "/proc/%d/exe", pid);
+  snprintf(path, sizeof(path), "/proc/%d/exe", pid);
   if (readlink(path, dest, PATH_MAX) == -1) {
     std::cerr << "ERROR: could not extract path to executable\n";
     return;
@@ -123,8 +123,6 @@ void rvs::cli::init_grammar() {
   std::shared_ptr<optbase> sp;
 
   grammar.clear();
-  // sp = std::make_shared<optbase>("--statspath", value);
-  // grammar.insert(gpair("--statspath", sp));
 
   sp = std::make_shared<optbase>("-a", command);
   grammar.insert(gpair("-a", sp));
@@ -145,9 +143,9 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-g", sp));
   grammar.insert(gpair("--listGpus", sp));
 
-  // sp = std::make_shared<optbase>("-i", value);
-  // grammar.insert(gpair("-i", sp));
-  // grammar.insert(gpair("--indexes", sp));
+  //  sp = std::make_shared<optbase>("-i", value);
+  //  grammar.insert(gpair("-i", sp));
+  //  grammar.insert(gpair("--indexes", sp));
 
   sp = std::make_shared<optbase>("-j", command);
   grammar.insert(gpair("-j", sp));
@@ -164,23 +162,23 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-m", sp));
   grammar.insert(gpair("--modulepath", sp));
 
-  // sp = std::make_shared<optbase>("-s", command);
-  // grammar.insert(gpair("-s", sp));
-  // grammar.insert(gpair("--scriptable", sp));
+  //  sp = std::make_shared<optbase>("-s", command);
+  //  grammar.insert(gpair("-s", sp));
+  //  grammar.insert(gpair("--scriptable", sp));
   //
-  // sp = std::make_shared<optbase>("-st", value);
-  // grammar.insert(gpair("--specifiedtest", sp));
+  //  sp = std::make_shared<optbase>("-st", value);
+  //  grammar.insert(gpair("--specifiedtest", sp));
   //
-  // sp = std::make_shared<optbase>("-sf", command);
-  // grammar.insert(gpair("--statsonfail", sp));
+  //  sp = std::make_shared<optbase>("-sf", command);
+  //  grammar.insert(gpair("--statsonfail", sp));
 
   sp = std::make_shared<optbase>("-t", command);
   grammar.insert(gpair("-t", sp));
   grammar.insert(gpair("--listTests", sp));
 
-  // sp = std::make_shared<optbase>("-v", command);
-  // grammar.insert(gpair("-v", sp));
-  // grammar.insert(gpair("--verbose", sp));
+  //  sp = std::make_shared<optbase>("-v", command);
+  //  grammar.insert(gpair("-v", sp));
+  //  grammar.insert(gpair("--verbose", sp));
 
   sp = std::make_shared<optbase>("-ver", command);
   grammar.insert(gpair("--version", sp));
@@ -216,6 +214,7 @@ int rvs::cli::parse(int Argc, char** Argv) {
     while (!token_done) {
       econtext top = context.top();
       context.pop();
+
       switch (top) {
       case econtext::command:
         token_done = try_command(token);
@@ -224,7 +223,8 @@ int rvs::cli::parse(int Argc, char** Argv) {
       case econtext::value:
         token_done = try_value(token);
         if (!token_done) {
-          errstr = std::string("syntax error: value expected after ") +  current_option;
+          errstr = std::string("syntax error: value expected after ") +  
+                   current_option;
           return -1;
         }
         break;
@@ -234,12 +234,13 @@ int rvs::cli::parse(int Argc, char** Argv) {
           emit_option();
           return 0;
         } else {
-          errstr = "unexpected command line argument: " + token;  // + get_end_of_command();
+          errstr = "unexpected command line argument: " +
+                    token;
           return -1;
         }
 
       default:
-          errstr = "syntax error: " + token;  // + get_end_of_command();
+          errstr = "syntax error: " + token;
           return -1;
       }
     }
@@ -295,7 +296,7 @@ bool rvs::cli::is_command(const std::string& token) {
  */
 bool rvs::cli::emit_option() {
   // emit previous option and its value (if andy)
-  if (current_option != "")   {
+  if (current_option != "")  {
     options::opt[current_option] = current_value;
   }
 
@@ -328,7 +329,7 @@ bool rvs::cli::try_command(const std::string& token) {
   // token identified as command, so store it:
   current_option = it->second->name;
 
-  // fill context  stack with new possible continuations:
+  // fill context  std::stack with new possible continuations:
   it->second->adjust_context(context);
 
   return true;
