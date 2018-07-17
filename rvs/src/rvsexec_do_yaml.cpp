@@ -22,11 +22,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsexec.h"
-
 #include <iostream>
 #include <memory>
 #include <string>
+
+#include "rvsexec.h"
 #include "yaml-cpp/yaml.h"
 
 #include "rvsif0.h"
@@ -53,6 +53,8 @@ actions:
 ***/
 
 
+using std::string;
+
 /**
  * @brief Executes actions listed in .conf file.
  *
@@ -66,7 +68,6 @@ int rvs::exec::do_yaml(const std::string& config_file) {
 
   // find "actions" map
   const YAML::Node& actions = config["actions"];
-  if1* pif1 = nullptr;
 
   // for all actions...
   for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
@@ -79,7 +80,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     if (rvsmodule == "") {
       // report error and go to next action
       std::cerr << "ERROR: action '"<< action["name"].as<std::string>()
-           << "' does not specify module." << std::endl;
+           << "' does not specify module.\n";
       continue;
     }
 
@@ -88,15 +89,15 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     if (!pa) {
       std::cerr << "ERROR: action '"<< action["name"].as<std::string>()
           << "' could not crate action object in module '" << rvsmodule.c_str()
-          << "'"<< std::endl;
+          << "'\n";
       continue;
     }
 
-    // obtain interface to set parameters and execute action
-    if1* pif1 = reinterpret_cast<if1*>(pa->get_interface(1));
+    if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
     if (!pif1) {
       std::cerr << "ERROR: action '"<< action["name"].as<std::string>()
-           << "' could not obtain interface IF1"<< std::endl;
+           << "' could not obtain interface IF1\n";
+
       module::action_destroy(pa);
       continue;
     }
