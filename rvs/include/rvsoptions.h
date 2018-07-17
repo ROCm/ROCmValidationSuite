@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _RVSOPTIONS_H_
-#define _RVSOPTIONS_H_
+#ifndef RVS_INCLUDE_RVSOPTIONS_H_
+#define RVS_INCLUDE_RVSOPTIONS_H_
 
 #define DO_PRAGMA(x) _Pragma (#x)
 #define TODO(x) DO_PRAGMA(message ("TODO - " #x))
@@ -31,8 +31,7 @@
 #include <string>
 #include <map>
 
-namespace rvs
-{
+namespace rvs {
 
 /**
  * @class options
@@ -45,20 +44,19 @@ namespace rvs
  */
 
 class options {
-public:
-
+ public:
   static bool has_option(const std::string& Option);
   static bool has_option(const std::string& Option, std::string& val);
-  static const std::map<std::string,std::string>& get(void);
+  static const std::map<std::string, std::string>& get(void);
 
-protected:
+ protected:
   //! Collection of options
-  static      std::map<std::string,std::string>	opt;
+  static std::map<std::string, std::string> opt;
 
 friend class cli;
 };
 
-}
+}  // namespace rvs
 
 
-#endif // _RVSOPTIONS_H_
+#endif  // RVS_INCLUDE_RVSOPTIONS_H_
