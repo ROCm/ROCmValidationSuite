@@ -200,7 +200,7 @@ int rvs::gpulist::Initialize() {
  *}
  * */
 int32_t rvs::gpulist::GetLocation(const uint32_t GpuID) {
-  for (int i = 0; i < gpu_id.size(); i++) {
+  for (size_t i = 0; i < gpu_id.size(); i++) {
     if (gpu_id[i] == GpuID) {
       return location_id[i];
     }
@@ -217,7 +217,7 @@ int32_t rvs::gpulist::GetLocation(const uint32_t GpuID) {
  *}
  * */
 int32_t rvs::gpulist::GetGpuId(const uint32_t LocationID) {
-  for (int i = 0; i < gpu_id.size(); i++) {
+  for (size_t i = 0; i < gpu_id.size(); i++) {
     if (location_id[i] == LocationID) {
       return gpu_id[i];
     }
@@ -233,7 +233,7 @@ int32_t rvs::gpulist::GetGpuId(const uint32_t LocationID) {
  *}
  * */
 int32_t rvs::gpulist::GetDeviceIdFromLocationId(const uint32_t LocationID) {
-  for (int i = 0; i < gpu_id.size(); i++) {
+  for (size_t i = 0; i < gpu_id.size(); i++) {
     if (location_id[i] == LocationID) {
       return device_id[i];
     }
@@ -249,7 +249,7 @@ int32_t rvs::gpulist::GetDeviceIdFromLocationId(const uint32_t LocationID) {
  *}
  * */
 int32_t rvs::gpulist::GetDeviceIdFromGpuId(const uint32_t GpuID) {
-  for (int i = 0; i < gpu_id.size(); i++) {
+  for (size_t i = 0; i < gpu_id.size(); i++) {
     if (gpu_id[i] == GpuID) {
       return device_id[i];
     }

@@ -22,16 +22,15 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _RVSLOGNODEBASE_H_
-#define _RVSLOGNODEBASE_H_
+#ifndef INCLUDE_RVSLOGNODEBASE_H_
+#define INCLUDE_RVSLOGNODEBASE_H_
 
 #include <string>
 
 #define RVSENDL "\n"
 #define RVSINDENT "  "
 
-namespace rvs 
-{
+namespace rvs {
 
 typedef enum eLN {
   Unknown = 0,
@@ -48,10 +47,8 @@ typedef enum eLN {
  * @brief Base class for all logger nodes
  *
  */
-class LogNodeBase
-{
-public:
-
+class LogNodeBase {
+ public:
   virtual ~LogNodeBase();
 
 /**
@@ -66,15 +63,15 @@ public:
  */
   virtual std::string ToJson(const std::string& Lead = "") = 0;
 
-protected:
-  LogNodeBase(const std::string& rName, const LogNodeBase* pParent = nullptr);
-  LogNodeBase(const char* rName, const LogNodeBase* pParent = nullptr);
+ protected:
+  explicit LogNodeBase(const std::string& rName, const LogNodeBase* pParent = nullptr);
+  explicit LogNodeBase(const char* rName, const LogNodeBase* pParent = nullptr);
 
-protected:
-  //! Parent node
-  const LogNodeBase*   Parent;
+ protected:
   //! Node name
   std::string     Name;
+  //! Parent node
+  const LogNodeBase*   Parent;
   //! Node type
   T_LNTYPE       Type;
 };
@@ -84,4 +81,4 @@ protected:
 
 }  // namespace rvs
 
-#endif // _RVSLOGNODEBASE_H_
+#endif  // INCLUDE_RVSLOGNODEBASE_H_
