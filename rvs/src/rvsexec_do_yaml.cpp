@@ -52,6 +52,7 @@ actions:
 
 ***/
 
+
 using std::string;
 
 /**
@@ -73,26 +74,30 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     const YAML::Node& action = *it;
 
     // find module name
-    string rvsmodule = action["module"].as<std::string>();
+    std::string rvsmodule = action["module"].as<std::string>();
 
     // not found or empty
     if (rvsmodule == "") {
       // report error and go to next action
-      std::cerr << "ERROR: action '"<< action["name"].as<std::string>() << "' does not specify module.\n";
+      std::cerr << "ERROR: action '"<< action["name"].as<std::string>()
+           << "' does not specify module.\n";
       continue;
     }
 
     // create action excutor in .so
     rvs::action* pa = module::action_create(rvsmodule.c_str());
     if (!pa) {
-      std::cerr << "ERROR: action '"<< action["name"].as<std::string>() << "' could not crate action object in module '" << rvsmodule.c_str() << "'\n";
+      std::cerr << "ERROR: action '"<< action["name"].as<std::string>()
+          << "' could not crate action object in module '" << rvsmodule.c_str()
+          << "'\n";
       continue;
     }
 
-    // obtain interface to set parameters and execute action
     if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
     if (!pif1) {
-      std::cerr << "ERROR: action '"<< action["name"].as<std::string>() << "' could not obtain interface IF1\n";
+      std::cerr << "ERROR: action '"<< action["name"].as<std::string>()
+           << "' could not obtain interface IF1\n";
+
       module::action_destroy(pa);
       continue;
     }
@@ -105,8 +110,9 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     }
 
     // set also command line options:
-    for (auto clit = rvs::options::get().begin(); clit != rvs::options::get().end(); ++clit) {
-      string p(clit->first);
+    for (auto clit = rvs::options::get().begin();
+         clit != rvs::options::get().end(); ++clit) {
+      std::string p(clit->first);
       p = "cli." + p;
       pif1->property_set(p, clit->second);
     }
@@ -133,7 +139,9 @@ int rvs::exec::do_yaml(const std::string& config_file) {
  * @return 0 if successful, non-zero otherwise
  *
  */
-int rvs::exec::do_yaml_properties(const YAML::Node& node, const std::string& module_name, rvs::if1* pif1) {
+int rvs::exec::do_yaml_properties(const YAML::Node& node,
+                                  const std::string& module_name,
+                                  rvs::if1* pif1) {
   int sts = 0;
 
   // for all child nodes
@@ -141,12 +149,16 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node, const std::string& mod
     const YAML::Node& child = *it;
 
     // if property is collection of module specific properties,
-    if (is_yaml_properties_collection(module_name, it->first.as<string>())) {
+    if (is_yaml_properties_collection(module_name,
+        it->first.as<std::string>())) {
       // pass properties collection to .so action object
-      sts += do_yaml_properties_collection(it->second, it->first.as<string>(), pif1);
+      sts += do_yaml_properties_collection(it->second,
+                                           it->first.as<std::string>(),
+                                           pif1);
     } else {
       // just set this one propertiy
-      sts += pif1->property_set(it->first.as<string>(), it->second.as<string>());
+      sts += pif1->property_set(it->first.as<std::string>(),
+                                it->second.as<std::string>());
     }
   }
 
@@ -159,14 +171,16 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node, const std::string& mod
  * @return 0 if successful, non-zero otherwise
  *
  */
-int rvs::exec::do_yaml_properties_collection(const YAML::Node& node, const std::string& parent_name, if1* pif1) {
+int rvs::exec::do_yaml_properties_collection(const YAML::Node& node,
+                                             const std::string& parent_name,
+                                             if1* pif1) {
   int sts = 0;
 
   // for all child nodes
   for (YAML::const_iterator it = node.begin(); it != node.end(); it++) {
     // prepend dot separated parent name and pass property to module
-    sts += pif1->property_set(parent_name + "." + it->first.as<string>(),
-    it->second.IsNull() ? string("") : it->second.as<string>());
+    sts += pif1->property_set(parent_name + "." + it->first.as<std::string>(),
+    it->second.IsNull() ? std::string("") : it->second.as<std::string>());
   }
 
   return sts;
@@ -180,7 +194,9 @@ int rvs::exec::do_yaml_properties_collection(const YAML::Node& node, const std::
  * @return 'true' if property is collection, 'false' otherwise
  *
  */
-bool rvs::exec::is_yaml_properties_collection(const std::string& module_name, const std::string& property_name) {
+bool rvs::exec::is_yaml_properties_collection(
+  const std::string& module_name,
+  const std::string& property_name) {
   if (module_name == "gpup") {
     if (property_name == "properties")
       return true;
