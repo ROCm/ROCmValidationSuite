@@ -32,17 +32,14 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <string>
-#include <memory>
-#include <stack>
 #include <iostream>
 #include <cstddef>         // std::size_t
+#include <memory>
+#include <string>
+#include <stack>
 
 #include "rvsoptions.h"
 
-
-
-using std::string;
 
 /**
  * @brief Constructor
@@ -101,15 +98,15 @@ void rvs::cli::extract_path() {
   char path[PATH_MAX];
   char dest[PATH_MAX];
   memset(dest, 0, sizeof(dest));  // readlink does not null terminate!
-  struct stat info;
+
   pid_t pid = getpid();
   snprintf(path, sizeof(path), "/proc/%d/exe", pid);
   if (readlink(path, dest, PATH_MAX) == -1) {
-    std::cerr << "ERROR: could not extract path to executable" << std::endl;
+    std::cerr << "ERROR: could not extract path to executable\n";
     return;
   }
 
-  string argv0(dest);
+  std::string argv0(dest);
 
   size_t found = argv0.find_last_of("/\\");
   options::opt["pwd"] = argv0.substr(0, found) + "/";
@@ -212,9 +209,8 @@ int rvs::cli::parse(int Argc, char** Argv) {
   context.push(econtext::command);
 
   for (;;) {
-    string token = get_token();
+    std::string token = get_token();
     bool token_done = false;
-
     while (!token_done) {
       econtext top = context.top();
       context.pop();
@@ -227,7 +223,7 @@ int rvs::cli::parse(int Argc, char** Argv) {
       case econtext::value:
         token_done = try_value(token);
         if (!token_done) {
-          errstr = string("syntax error: value expected after ") +
+          errstr = std::string("syntax error: value expected after ") +  
                    current_option;
           return -1;
         }
@@ -284,7 +280,7 @@ const char* rvs::cli::get_token() {
  * @return true if found, false otherwise
  *
  */
-bool rvs::cli::is_command(const string& token) {
+bool rvs::cli::is_command(const std::string& token) {
   auto it = grammar.find(token);
   if (it == grammar.end())
     return false;
@@ -322,7 +318,7 @@ bool rvs::cli::emit_option() {
  * @return true if successful, false otherwise
  *
  */
-bool rvs::cli::try_command(const string& token) {
+bool rvs::cli::try_command(const std::string& token) {
   auto it = grammar.find(token);
   if (it == grammar.end())
     return false;
@@ -349,7 +345,7 @@ bool rvs::cli::try_command(const string& token) {
  * @return true if successful, false otherwise
  *
  */
-bool rvs::cli::try_value(const string& token) {
+bool rvs::cli::try_value(const std::string& token) {
   if (token == "")
     return false;
 
