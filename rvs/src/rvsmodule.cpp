@@ -267,8 +267,6 @@ rvs::action* rvs::module::action_create(const char* name) {
     sptrif->plibaction = plibaction;
     pa->ifmap.insert(rvs::action::t_impair(it->first, sptrif));
   }
-
-  //delete m;
   
   return pa;
 }
