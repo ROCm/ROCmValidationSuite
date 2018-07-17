@@ -22,41 +22,62 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVS_INCLUDE_RVSOPTIONS_H_
-#define RVS_INCLUDE_RVSOPTIONS_H_
+#include "worker.h"
 
-#define DO_PRAGMA(x) _Pragma (#x)
-#define TODO(x) DO_PRAGMA(message ("TODO - " #x))
-
-#include <string>
+#include <chrono>
 #include <map>
+#include <string>
+#include <algorithm>
+#include <iostream>
 
-namespace rvs {
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <pci/pci.h>
+#include <linux/pci.h>
+#ifdef __cplusplus
+}
+#endif
+
+#include "rvsliblogger.h"
+#include "rvs_module.h"
+#include "pci_caps.h"
+#include "gpu_util.h"
+#include "rvsloglp.h"
+
+using namespace std;
+
+Worker::Worker() {}
+Worker::~Worker() {}
 
 /**
- * @class options
- * @ingroup Launcher
+ * @brief Thread function
  *
- * @brief Collection of options.
+ * Loops while brun == TRUE and performs polled monitoring avery 1msec.
  *
- * Execute functionality based on command line and the contents of .conf file.
+ * */
+void Worker::run() {
+
+  log("[PQT] worker thread has finished", rvs::logdebug);
+
+}
+
+/**
+ * @brief Stops monitoring
  *
- */
+ * Sets brun member to FALSE thus signaling end of monitoring.
+ * Then it waits for std::thread to exit before returning.
+ *
+ * */
+void Worker::stop() {
 
-class options {
- public:
-  static bool has_option(const std::string& Option);
-  static bool has_option(const std::string& Option, std::string& val);
-  static const std::map<std::string, std::string>& get(void);
+  log("[PQT] in Worker::stop()", rvs::logdebug);
 
- protected:
-  //! Collection of options
-  static std::map<std::string, std::string> opt;
-
-friend class cli;
-};
-
-}  // namespace rvs
-
-
-#endif  // RVS_INCLUDE_RVSOPTIONS_H_
+  // wait a bit to make sure thread has exited
+  try {
+    if (t.joinable())
+      t.join();
+  }
+  catch(...) {
+  }
+}
