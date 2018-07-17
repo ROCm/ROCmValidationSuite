@@ -25,7 +25,7 @@
 
 #include "rvsaction.h"
 
-using namespace std;
+
 
 /**
  * @section Test
@@ -37,31 +37,29 @@ using namespace std;
  * @param pLibAction pointer to action instance in an RVS module
  *
  * */
-rvs::action::action(const char* pName, void* pLibAction)
-{
+rvs::action::action(const char* pName, void* pLibAction) {
   name       = pName;
   plibaction = pLibAction;
 }
 
 //! Default destructor
-rvs::action::~action()
-{
+rvs::action::~action() {
   ifmap.clear();
 }
 
 /**
  * @brief Returns pointer to RVS interface
  *
- * Given RVS interface ID, returns interface pointer as pointer to common interface base class.
- * If action does not support particular interface, NULL is returned.
+ * Given RVS interface ID, returns interface pointer as pointer to common
+ * interface base class. If action does not support particular interface,
+ * NULL is returned.
  *
  * @param iID Interface ID
  *
  * */
-rvs::ifbase* rvs::action::get_interface(int iID)
-{
+rvs::ifbase* rvs::action::get_interface(int iID) {
   auto it = ifmap.find(iID);
-  if( it != ifmap.end())
+  if (it != ifmap.end())
     return &(*(it->second));
 
   return nullptr;

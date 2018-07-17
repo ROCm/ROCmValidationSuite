@@ -1,0 +1,9 @@
+/.settings/
+/CMakeFiles/
+/Debug/
+/build/
+/cmake_install.cmake
+/Makefile
+/.project
+/lib*.so.*.*.*
+

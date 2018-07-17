@@ -22,11 +22,10 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVSIF_BASE_H_
-#define RVSIF_BASE_H_
+#ifndef RVS_INCLUDE_RVSIF_BASE_H_
+#define RVS_INCLUDE_RVSIF_BASE_H_
 
-namespace rvs 
-{
+namespace rvs {
 
 /**
  * @class ifbase
@@ -36,12 +35,11 @@ namespace rvs
  *
  */
 class ifbase {
-
-public:
+ public:
   //! Dfault destructor
   virtual ~ifbase();
 
-protected:
+ protected:
   //! Default constructor
   ifbase();
   //! Copy constructor
@@ -50,15 +48,14 @@ protected:
   virtual ifbase& operator=(const ifbase& rhs);
   virtual ifbase* clone(void);
 
-protected:
+ protected:
   //! Pointer to action instance in an RVS module
   void*  plibaction;
 
 //! Factory class
 friend class module;
-
 };
 
 }  // namespace rvs
 
-#endif /* RVSIF_BASE_H_ */
+#endif  // RVS_INCLUDE_RVSIF_BASE_H_

@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVSIF1_H_
-#define RVSIF1_H_
+#ifndef RVS_INCLUDE_RVSIF1_H_
+#define RVS_INCLUDE_RVSIF1_H_
 
 #include <string>
 
@@ -31,8 +31,7 @@
 #include "rvsif_base.h"
 
 
-namespace rvs 
-{
+namespace rvs {
 
 /**
  * @class if1
@@ -42,22 +41,21 @@ namespace rvs
  *
  */
 class if1 : public ifbase {
-
-public:
+ public:
   virtual ~if1();
   virtual int   property_set(const char*, const char*);
   virtual int   property_set(const std::string&, const std::string&);
   virtual int   run(void);
-  virtual char* get_errstring(int);
+  virtual const char* get_errstring(int);
 
-protected:
+ protected:
   if1();
   if1(const if1&);
 
-virtual if1& operator= (const if1& rhs);
-virtual ifbase* clone(void);
+  virtual if1& operator= (const if1& rhs);
+  virtual ifbase* clone(void);
 
-protected:
+ protected:
   //! Pointer to module function doing property set
   t_rvs_module_action_property_set  rvs_module_action_property_set;
   //! Pointer to module function implementing run() functionality
@@ -68,5 +66,6 @@ protected:
 friend class module;
 };
 
-} // namespace rvs
-#endif /* RVSIF1_H_ */
+}  // namespace rvs
+
+#endif  // RVS_INCLUDE_RVSIF1_H_

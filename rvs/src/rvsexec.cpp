@@ -28,6 +28,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <fstream>
 #include "yaml-cpp/yaml.h"
 
 #include "rvsif0.h"
@@ -117,6 +118,16 @@ int rvs::exec::run() {
   } else {
     config_file = "conf/rvs.conf";
     config_file = path + config_file;
+  }
+
+  // Check if pConfig file exists
+  std::ifstream file(config_file);
+
+  if (!file.good()) {
+    cerr << "ERROR: " << config_file << " file is missing.\n";
+    return -1;
+  } else {
+    file.close();
   }
 
   // construct modules configuration file relative path
