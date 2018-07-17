@@ -40,9 +40,6 @@
 #include "rvsexec.h"
 
 
-using namespace std;
-using namespace rvs;
-
 /**
  * \ingroup Launcher
  * \brief Main method
@@ -54,19 +51,18 @@ using namespace rvs;
  * @return 0 - all OK, non-zero error
  *
  * */
-int main(int Argc, char**Argv)
-{
+int main(int Argc, char**Argv) {
   int sts;
-  cli cli;
+  rvs::cli cli;
 
   sts =  cli.parse(Argc, Argv);
-  if(sts)
-  {
-    cerr << "ERROR: error parsing command line:" << cli.get_error_string() << endl;
+  if (sts) {
+    std::cerr << "ERROR: error parsing command line:"
+      << cli.get_error_string() << std::endl;
     return -1;
   }
 
-  exec executor;
+  rvs::exec executor;
   sts = executor.run();
 
   return sts;

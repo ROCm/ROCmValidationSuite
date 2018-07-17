@@ -22,41 +22,68 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVS_INCLUDE_RVSOPTIONS_H_
-#define RVS_INCLUDE_RVSOPTIONS_H_
+#include "action.h"
 
-#define DO_PRAGMA(x) _Pragma (#x)
-#define TODO(x) DO_PRAGMA(message ("TODO - " #x))
+#include "rvs_module.h"
+#include "worker.h"
 
-#include <string>
-#include <map>
+extern "C"
+{
+#include <pci/pci.h>
+#include <linux/pci.h>
+}
+#include <iostream>
+#include <algorithm>
 
-namespace rvs {
+#include "pci_caps.h"
+#include "gpu_util.h"
+#include "rvs_module.h"
+#include "rvsloglp.h"
+
+
+using namespace std;
+
+static Worker* pworker;
+
+//! Default constructor
+action::action() {
+}
+
+//! Default destructor
+action::~action() {
+  property.clear();
+}
 
 /**
- * @class options
- * @ingroup Launcher
+ * @brief Implements action functionality
  *
- * @brief Collection of options.
+ * Functionality:
  *
- * Execute functionality based on command line and the contents of .conf file.
+ * - If "do_gpu_list" property is set, it lists all AMD GPUs present in the system and exits
+ * - If "monitor" property is set to "true", it creates Worker thread and initiates monitoring and exits
+ * - If "monitor" property is not set or is not set to "true", it stops the Worker thread and exits
  *
- */
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
+int action::run(void) {
+  log("[PQT] in run()", rvs::logdebug);
 
-class options {
- public:
-  static bool has_option(const std::string& Option);
-  static bool has_option(const std::string& Option, std::string& val);
-  static const std::map<std::string, std::string>& get(void);
+  return 0;
+}
 
- protected:
-  //! Collection of options
-  static std::map<std::string, std::string> opt;
-
-friend class cli;
-};
-
-}  // namespace rvs
-
-
-#endif  // RVS_INCLUDE_RVSOPTIONS_H_
+/**
+ * @brief Lists AMD GPUs
+ *
+ * Functionality:
+ *
+ * Lists all AMD GPUs present in the system.
+ *
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
+int action::do_gpu_list() {
+  log("[PQT] in do_gpu_list()", rvs::logdebug);
+  
+  return 0;
+}
