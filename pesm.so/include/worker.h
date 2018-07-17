@@ -45,7 +45,7 @@
 class Worker : public rvs::ThreadBase {
  public:
   Worker();
-  ~Worker();
+  virtual ~Worker();
 
   void stop(void);
   //! Sets initiating action name
