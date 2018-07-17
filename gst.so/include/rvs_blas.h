@@ -72,10 +72,10 @@ class rvs_blas {
  protected:
     //! GPU device index
     int gpu_device_index;
-    //! matrix size n
-    rocblas_int n;
     //! matrix size m
     rocblas_int m;
+    //! matrix size n
+    rocblas_int n;
     //! matrix size k
     rocblas_int k;
     //! amount of memory to allocate for the matrix

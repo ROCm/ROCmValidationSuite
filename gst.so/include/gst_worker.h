@@ -45,7 +45,7 @@
 class GSTWorker : public rvs::ThreadBase {
  public:
     GSTWorker();
-    ~GSTWorker();
+    virtual ~GSTWorker();
 
     //! sets action name
     void set_name(const std::string& name) { action_name = name; }
@@ -98,12 +98,12 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t get_log_interval(void) { return log_interval; }
 
     //! sets the maximum allowed number of target_stress violations
-    void set_max_violations(int _max_violations) {
+    void set_max_violations(uint64_t _max_violations) {
         max_violations = _max_violations;
     }
 
     //! returns the maximum allowed number of target_stress violations
-    int get_max_violations(void) { return max_violations; }
+    uint64_t get_max_violations(void) { return max_violations; }
 
     //! sets the copy_matrix (true = the matrix will be copied to GPU each
     //! time a new SGEMM will run, false = the matrix will be copied only once)
@@ -149,7 +149,7 @@ class GSTWorker : public rvs::ThreadBase {
     //! time interval at which the module reports the average GFlops
     uint64_t log_interval;
     //! maximum allowed number of target_stress violations
-    int max_violations;
+    uint64_t max_violations;
     //! specifies whether to copy the matrix to the GPU for each SGEMM operation
     bool copy_matrix;
     //! target stress (in GFlops) that the GPU will try to achieve

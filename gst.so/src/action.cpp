@@ -314,7 +314,7 @@ void action::property_get_gst_tolerance(int *error) {
  * @return true if no error occured, false otherwise
  */
 bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
-    int k = 0;
+    size_t k = 0;
     while (1) {
         unsigned int i = 0;
         if (gst_run_wait_ms != 0)  // delay gst execution
