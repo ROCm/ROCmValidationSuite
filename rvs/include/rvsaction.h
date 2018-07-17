@@ -45,7 +45,6 @@ class module;
  *
  */
 class action {
-
 typedef std::pair< int, std::shared_ptr<ifbase> > t_impair;
 
  public:
