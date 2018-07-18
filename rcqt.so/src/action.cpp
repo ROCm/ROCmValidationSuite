@@ -139,7 +139,6 @@ int action::run() {
 
 /**
  * Check if the package is installed in the system (optional: check package version )
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */
 
@@ -224,7 +223,6 @@ int action::pkgchk_run() {
 
 /**
  * Check if the user exists in the system (optional: check for the group membership )
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */
 
@@ -243,17 +241,18 @@ int action::usrchk_run() {
       group_exists = true;
     }*/
     // Structures for checking group and user
-    struct passwd *p;
+    struct passwd p, *result;
+    char pwdbuffer[256];
+    int pwdbufflen = 200;
+    uid_t uid = 0;
     struct group *g;
     string user_exists = "[rcqt] usercheck " + user_name + " user exists";
     string user_not_exists = "[rcqt] usercheck " + user_name\
     + " user not exists";
 
     // Check for given user
-    if ((p = getpwnam(user_name.c_str())) == nullptr) {
-      log(user_not_exists.c_str(), rvs::logresults);
-    } else {
-      log(user_exists.c_str(), rvs::logresults);
+    if ((getpwnam_r(user_name.c_str(), &p, pwdbuffer, pwdbufflen, &result)) == 0) {
+      cerr << "Error with getpwnam_r for user " << user_name.c_str() << endl;
     }
     if (group_exists) {
       // Put the group list into vector
@@ -300,7 +299,6 @@ int action::usrchk_run() {
 
 /**
  * Check if the os and kernel version in the system match the givem os and kernel version
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */
 
@@ -382,7 +380,6 @@ int action::kernelchk_run() {
 
 /**
  * Check if the shared object is in the given location with the correct architecture
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */
 
@@ -478,7 +475,6 @@ int action::dectooct(int decnum) {
 }
 /**
  * Check if the parametrs of the file match the given ones
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */ 
 
@@ -528,13 +524,16 @@ int action::filechk_run() {
       } else {
         // check if value from property is equal to real one
         owner = iter->second;
-        struct passwd *pws;
-        pws = getpwuid(info.st_uid);
-        if (pws->pw_name == owner)
+        struct passwd p, *result;
+        char pbuff[256];
+        if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0))
+          cout << "Error with getpwuid_r" << endl;
+        if (p.pw_name == owner)
           check = "true";
         else
           check = "false";
-        msg = "[" + action_name + "] " + " filecheck " + owner +" owner:"+check;
+        msg = "[" + action_name + "] " + " filecheck " \
+        + owner +" owner:" + check;
         log(msg.c_str(), rvs::logresults);
       }
       // check if group is tested
@@ -544,9 +543,11 @@ int action::filechk_run() {
       } else {
         // check if value from property is equal to real one
         group = iter->second;
-        struct group *g;
-        g = getgrgid(info.st_gid);
-        if (g->gr_name == group)
+        struct group g, *result;
+        char pbuff[256];
+        if ((getgrgid_r(info.st_gid, &g, pbuff, sizeof(pbuff), &result) != 0))
+          cout << "Error with getgrgid_r" << endl;
+        if (g.gr_name == group)
           check = "true";
         else
           check = "false";
