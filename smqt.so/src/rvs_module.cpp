@@ -84,7 +84,8 @@ extern "C" int   rvs_module_action_destroy(void* pAction) {
   return 0;
 }
 
-extern "C" int rvs_module_action_property_set(void* pAction, const char* Key, const char* Val) {
+extern "C" int rvs_module_action_property_set\
+(void* pAction, const char* Key, const char* Val) {
   return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 

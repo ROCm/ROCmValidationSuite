@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ACTION_H_
-#define ACTION_H_
+#ifndef RCQT_SO_INCLUDE_ACTION_H_
+#define RCQT_SO_INCLUDE_ACTION_H_
 
 #include "rvsactionbase.h"
 #include "rvs_module.h"
@@ -41,12 +41,12 @@
  *
  */
 class action : public rvs::actionbase {
-  public:
-    action();
-    virtual ~action();
-    virtual int run(void);
+ public:
+      action();
+      virtual ~action();
+      virtual int run(void);
 
-  protected:
+ protected:
     /**
     *  @brief Function used in rcqt action class to check for given package
     */
@@ -81,4 +81,4 @@ class action : public rvs::actionbase {
     virtual int dectooct(int decnum);
 };
 
-#endif /* ACTION_H_ */
+#endif /* RCQT_SO_INCLUDE_ACTION_H_ */

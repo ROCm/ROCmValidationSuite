@@ -49,19 +49,19 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_name(void) {
-  return (const char*)"rcqt";
+  return "rcqt";
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return (const char*)"ROCm Configuration Qualification Tool module";
+  return "ROCm Configuration Qualification Tool module";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
-  return (const char*)"package (string), version (string), installed (bool), user (string), groups (collection of strings), file (string) , owner (string), group (string), permission (int), type (int), exists (bool)";
+  return "package (string), version (string), installed (bool), user (string), groups (collection of strings), file (string) , owner (string), group (string), permission (int), type (int), exists (bool)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {
-  return (const char*)"pass (bool)";
+  return "pass (bool)";
 }
 
 extern "C" int   rvs_module_init(void* pMi) {
@@ -74,7 +74,7 @@ extern "C" int   rvs_module_terminate(void) {
 }
 
 extern "C" const char* rvs_module_get_errstring(int error) {
-  return  (const char*)"General Error";
+  return "General Error";
 }
 
 extern "C" void* rvs_module_action_create(void) {

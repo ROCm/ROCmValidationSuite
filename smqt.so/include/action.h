@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ACTION_H_
-#define ACTION_H_
+#ifndef SMQT_SO_INCLUDE_ACTION_H_
+#define SMQT_SO_INCLUDE_ACTION_H_
 
 #include "rvsactionbase.h"
 /**
@@ -45,4 +45,4 @@ class action : public rvs::actionbase {
   protected:
 };
 
-#endif /* ACTION_H_ */
+#endif /* SMQT_SO_INCLUDE_ACTION_H_ */
