@@ -41,10 +41,11 @@
 
 
 /**
+ *
  * \ingroup Launcher
  * \brief Main method
  *
- * standard C main() method.
+ * Standard C main() method.
  *
  * @param Argc standard C argc parameter to main()
  * @param Argv standard C argv parameter to main()

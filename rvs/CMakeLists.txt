@@ -116,3 +116,14 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
   DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
   COMPONENT applications
 )
+
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/man/man1/rvs.1"
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/man
+  COMPONENT applications
+)
+
+install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/userguide/html
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/userguide
+  COMPONENT applications
+)
+
