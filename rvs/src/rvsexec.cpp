@@ -147,6 +147,7 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-g")) {
     int sts = do_gpu_list();
     logger::terminate();
+    rvs::module::terminate();
     return sts;
   }
 
