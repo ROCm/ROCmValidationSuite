@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ACTION_H_
-#define ACTION_H_
+#ifndef RCQT_SO_INCLUDE_ACTION_H_
+#define RCQT_SO_INCLUDE_ACTION_H_
 
 #include "rvsactionbase.h"
 #include "rvs_module.h"
@@ -40,40 +40,36 @@
  * in its run() method.
  *
  */
-class action : public rvs::actionbase
-{
-public:
+class action : public rvs::actionbase {
+ public:
+  action();
+  virtual ~action();
 
-	action();
-	virtual ~action();
-	
-	virtual int run(void);
+  virtual int run(void);
 
-
-protected:
-
+ protected:
   /**
    *  @brief Function used in rcqt action class to check for given package
    */
-  
+
   virtual int pkgchk_run();
-  
+
   /**
    *  @brief Function used in rcqt action class to check for given user and group membership
    */
-  
+
   virtual int usrchk_run();
-  
+
   /**
    *  @brief Function used in rcqt action class to check for os and kernel version
    */
-  
+
   virtual int kernelchk_run();
-  
+
   /**
    *  @brief Function used in rcqt action class to check for o shared library existance and architecture
    */
   virtual int ldcfgchk_run();
 };
 
-#endif /* ACTION_H_ */
+#endif /* RCQT_SO_INCLUDE_ACTION_H_ */

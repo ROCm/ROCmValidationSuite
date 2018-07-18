@@ -23,11 +23,10 @@
  *
  *******************************************************************************/
 #include "rvsactionbase.h"
-
-#include <chrono>
-#include <unistd.h>
-
 #include "rvs_util.h"
+
+#include <unistd.h>
+#include <chrono>
 
 using namespace std;
 
@@ -80,13 +79,11 @@ void rvs::actionbase::sleep(const unsigned int ms) {
  *
  * */
 bool rvs::actionbase::has_property(const std::string& key, std::string& val) {
-
   auto it = property.find(key);
-  if(it != property.end()) {
+  if (it != property.end()) {
     val = it->second;
     return true;
   }
-
   return false;
 }
 
@@ -124,7 +121,6 @@ int rvs::actionbase::property_get_deviceid(int *error) {
         }
         property.erase(it);
     }
-
     return deviceid;
 }
 
@@ -179,8 +175,7 @@ void rvs::actionbase::property_get_action_name(int *error) {
     action_name = it->second;
     property.erase(it);
     *error = 0;
-  }
-  else {
+  } else {
     *error = 2;
   }
 }
@@ -196,16 +191,13 @@ void rvs::actionbase::property_get_run_parallel(int *error) {
     if (it->second == "true") {
       gst_runs_parallel = true;
       *error = 0;
-    }
-    else if(it->second == "false") {
+    } else if (it->second == "false") {
       property.erase(it);
       *error = 0;
-    } 
-    else {
+    } else {
       *error = 1;
     }
-  }
-  else {
+  } else {
     *error = 2;
   }
 }
@@ -244,12 +236,10 @@ void rvs::actionbase::property_get_run_wait(int *error) {
       gst_run_wait_ms = std::stoul(it->second);
       property.erase(it);
       *error = 0;
-    } 
-    else {
+    } else {
       *error = 1;
     }
-  } 
-  else {
+  } else {
     *error = 2;
   }
 }
