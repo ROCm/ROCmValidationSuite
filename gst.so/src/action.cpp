@@ -53,6 +53,7 @@ using std::cerr;
 #define RVS_CONF_COPY_MATRIX_KEY        "copy_matrix"
 #define RVS_CONF_TARGET_STRESS_KEY      "target_stress"
 #define RVS_CONF_TOLERANCE_KEY          "tolerance"
+#define RVS_CONF_GREEDY_GFLOPS_KEY      "greedy_gflops"
 
 #define MODULE_NAME                     "gst"
 
@@ -61,6 +62,7 @@ using std::cerr;
 #define GST_DEFAULT_MAX_VIOLATIONS      0
 #define GST_DEFAULT_TOLERANCE           0.1
 #define GST_DEFAULT_COPY_MATRIX         true
+#define GST_DEFAULT_GREEDY_GFLOPS       false
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_COUNT               1
@@ -78,7 +80,6 @@ using std::cerr;
  */
 action::action() {
     bjson = false;
-    json_root_node = nullptr;
 }
 
 /**
@@ -260,6 +261,28 @@ void action::property_get_gst_copy_matrix(int *error) {
 }
 
 /**
+ * @brief reads the module's properties collection to see whether the GST should
+ * copy the matrix to GPU for each SGEMM/DGEMM operation
+ * @param error pointer to a memory location where the error code will be stored
+ */
+void action::property_get_gst_gflops_greedy_strategy(int *error) {
+    *error = 0;
+    gst_gflops_greedy_strategy = GST_DEFAULT_GREEDY_GFLOPS;
+    map<string, string>::iterator it =
+                    property.find(RVS_CONF_GREEDY_GFLOPS_KEY);
+    if (it != property.end()) {
+        if (it->second == "true")
+            gst_gflops_greedy_strategy = true;
+        else
+        if (it->second == "false")
+            gst_gflops_greedy_strategy = false;
+        else
+            *error = 1;
+        property.erase(it);
+    }
+}
+
+/**
  * @brief reads the maximum GFLOPS (that the GST will try to achieve) from
  * the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
@@ -320,49 +343,44 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
         if (gst_run_wait_ms != 0)  // delay gst execution
             sleep(gst_run_wait_ms);
 
-        GSTWorker *worker = nullptr;
-        try {
-            worker = new GSTWorker[gst_gpus_device_index.size()];
-        } catch (std::bad_alloc&) {
-            cerr << "RVS-GST: action: " << action_name <<
-                "  memory allocation error!" << std::endl;
-            return false;
-        }
+        vector<GSTWorker> workers(gst_gpus_device_index.size());
 
         map<int, uint16_t>::iterator it;
+
+        // all worker instances have the same json settings
+        GSTWorker::set_use_json(bjson);
 
         for (it = gst_gpus_device_index.begin();
                 it != gst_gpus_device_index.end(); ++it) {
             // set worker thread stress test params
-            worker[i].set_name(action_name);
-            worker[i].set_gpu_id(it->second);
-            worker[i].set_gpu_device_index(it->first);
-            worker[i].set_run_wait_ms(gst_run_wait_ms);
-            worker[i].set_run_duration_ms(gst_run_duration_ms);
-            worker[i].set_ramp_interval(gst_ramp_interval);
-            worker[i].set_log_interval(gst_log_interval);
-            worker[i].set_max_violations(gst_max_violations);
-            worker[i].set_copy_matrix(gst_copy_matrix);
-            worker[i].set_target_stress(gst_target_stress);
-            worker[i].set_tolerance(gst_tolerance);
+            workers[i].set_name(action_name);
+            workers[i].set_gpu_id(it->second);
+            workers[i].set_gpu_device_index(it->first);
+            workers[i].set_run_wait_ms(gst_run_wait_ms);
+            workers[i].set_run_duration_ms(gst_run_duration_ms);
+            workers[i].set_ramp_interval(gst_ramp_interval);
+            workers[i].set_log_interval(gst_log_interval);
+            workers[i].set_max_violations(gst_max_violations);
+            workers[i].set_copy_matrix(gst_copy_matrix);
+            workers[i].set_target_stress(gst_target_stress);
+            workers[i].set_tolerance(gst_tolerance);
+            workers[i].set_gflops_greedy_strategy(gst_gflops_greedy_strategy);
             i++;
         }
 
         if (gst_runs_parallel) {
             for (i = 0; i < gst_gpus_device_index.size(); i++)
-                worker[i].start();
+                workers[i].start();
 
             // join threads
             for (i = 0; i < gst_gpus_device_index.size(); i++)
-                worker[i].join();
+                workers[i].join();
         } else {
             for (i = 0; i < gst_gpus_device_index.size(); i++) {
-                worker[i].start();
-                worker[i].join();
+                workers[i].start();
+                workers[i].join();
             }
         }
-
-        delete []worker;
 
         if (gst_run_count != 0) {
             k++;
@@ -371,32 +389,6 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
         }
     }
     return true;
-}
-
-/**
- * @brief checks if JSON logging is enabled (-j flag) and 
- * initializes the root node
- */
-void action::init_json_logging(void) {
-    bjson = false;  // already initialized in the default constructor
-
-    // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end()) {
-        unsigned int sec;
-        unsigned int usec;
-        rvs::lp::get_ticks(sec, usec);
-
-        bjson = true;
-
-        json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::loginfo, sec, usec);
-        if (json_root_node == nullptr) {
-            // log the error
-            string msg = action_name + " " + MODULE_NAME + " "
-                                        + JSON_CREATE_NODE_ERROR;
-            log(msg.c_str(), rvs::logerror);
-        }
-    }
 }
 
 /**
@@ -458,6 +450,7 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
+    property_get_gst_gflops_greedy_strategy(&error);
     return true;
 }
 
@@ -550,12 +543,33 @@ int action::run(void) {
         return -1;
     }
 
-    init_json_logging();
+    // check for -j flag (json logging)
+    if (property.find("cli.-j") != property.end())
+        bjson = true;
 
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
         msg = action_name + " " + MODULE_NAME + " " + GST_NO_COMPATIBLE_GPUS;
         log(msg.c_str(), rvs::logerror);
+
+        if (bjson) {
+            unsigned int sec;
+            unsigned int usec;
+            rvs::lp::get_ticks(sec, usec);
+            void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::loginfo, sec, usec);
+            if (!json_root_node) {
+                // log the error
+                string msg = action_name + " " + MODULE_NAME + " "
+                                            + JSON_CREATE_NODE_ERROR;
+                log(msg.c_str(), rvs::logerror);
+                return 0;
+            }
+
+            rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
+            rvs::lp::LogRecordFlush(json_root_node);
+        }
+
         return 0;
     }
 

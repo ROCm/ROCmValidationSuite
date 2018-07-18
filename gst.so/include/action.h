@@ -63,8 +63,6 @@ class action: public rvs::actionbase {
  protected:
     //! TRUE if JSON output is required
     bool bjson;
-    //! JSON root node
-    void* json_root_node;
 
     //! name of the action
     string action_name;
@@ -89,6 +87,8 @@ class action: public rvs::actionbase {
     //! GFlops tolerance (how much the GFlops can fluctuare after
     //! the ramp period for the test to succeed)
     float gst_tolerance;
+    //! target_stress strategy (lazy vs. greedy)
+    bool gst_gflops_greedy_strategy;
 
     //! TRUE if device config key is "all
     bool device_all_selected;
@@ -112,14 +112,12 @@ class action: public rvs::actionbase {
     void property_get_gst_copy_matrix(int *error);
     void property_get_gst_target_stress(int *error);
     void property_get_gst_tolerance(int *error);
+    void property_get_gst_gflops_greedy_strategy(int *error);
 
     bool get_all_gst_config_keys(void);
     bool get_all_common_config_keys(void);
 
     bool do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
-
-    // json stuff
-    void init_json_logging(void);
 };
 
 #endif  // GST_SO_INCLUDE_ACTION_H_
