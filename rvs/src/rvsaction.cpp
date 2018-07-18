@@ -28,6 +28,7 @@
 
 
 /**
+ * @section Test
  * @brief Constructor
  *
  * Returns value if propety is set.
