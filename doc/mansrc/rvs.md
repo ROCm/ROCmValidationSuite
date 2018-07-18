@@ -45,7 +45,7 @@ The RVS is a collection of tests, benchmarks and qualification tools each target
                    of a current log. Used in conjuction with the -d and -l options
 -c --config        Specify the configuration file to be used.
                    The default is <install base>/conf/RVS.conf
-   --configless    Run RVS in a configless mode. Executes a \"long\" test on all
+   --configless    Run RVS in a configless mode. Executes a "long" test on all
                    supported GPUs.
 -d --debugLevel    Specify the debug level for the output log. The range is
                    0 to 5 with 5 being the most verbose.
