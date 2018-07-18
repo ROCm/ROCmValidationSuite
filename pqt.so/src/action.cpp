@@ -68,7 +68,10 @@ action::~action() {
  * */
 int action::run(void) {
   log("[PQT] in run()", rvs::logdebug);
-
+  
+  // get all the agents
+  GetAgents();
+  
   return 0;
 }
 
@@ -86,4 +89,193 @@ int action::do_gpu_list() {
   log("[PQT] in do_gpu_list()", rvs::logdebug);
   
   return 0;
+}
+
+// TODO add info
+void action::print_hsa_status(string message, hsa_status_t st) {
+  string log_msg = message;
+  switch (st) {
+    case HSA_STATUS_SUCCESS : {
+      log_msg = message + "[PQT] HSA_STATUS: The function has been executed successfully.";
+      break;
+    };
+    case HSA_STATUS_INFO_BREAK : {
+      log_msg = message + "[PQT] HSA_STATUS: A traversal over a list of elements has been interrupted by the application before completing.";
+      break;
+    };
+    case HSA_STATUS_ERROR : {
+      log_msg = message + "[PQT] HSA_STATUS: A generic error has occurred.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_ARGUMENT : {
+      log_msg = message + "[PQT] HSA_STATUS: One of the actual arguments does not meet a precondition stated in the documentation of the corresponding formal argument.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_QUEUE_CREATION : {
+      log_msg = message + "[PQT] HSA_STATUS: The requested queue creation is not valid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_ALLOCATION : {
+      log_msg = message + "[PQT] HSA_STATUS: The requested allocation is not valid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_AGENT : {
+      log_msg = message + "[PQT] HSA_STATUS: The agent is invalid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_REGION : {
+      log_msg = message + "[PQT] HSA_STATUS: The memory region is invalid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_SIGNAL : {
+      log_msg = message + "[PQT] HSA_STATUS: The signal is invalid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_QUEUE : {
+      log_msg = message + "[PQT] HSA_STATUS: The queue is invalid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_OUT_OF_RESOURCES : {
+      log_msg = message + "[PQT] HSA_STATUS: The HSA runtime failed to allocate the necessary resources. This error may also occur when the HSA runtime needs to spawn threads or create internal OS-specific events.";
+      break;
+    };    
+    case HSA_STATUS_ERROR_INVALID_PACKET_FORMAT : {
+      log_msg = message + "[PQT] HSA_STATUS: The AQL packet is malformed.";
+      break;
+    };
+    case HSA_STATUS_ERROR_RESOURCE_FREE : {
+      log_msg = message + "[PQT] HSA_STATUS: An error has been detected while releasing a resource.";
+      break;
+    };
+    case HSA_STATUS_ERROR_NOT_INITIALIZED : {
+      log_msg = message + "[PQT] HSA_STATUS: An API other than ::hsa_init has been invoked while the reference count of the HSA runtime is 0.";
+      break;
+    };
+    case HSA_STATUS_ERROR_REFCOUNT_OVERFLOW : {
+      log_msg = message + "[PQT] HSA_STATUS: The maximum reference count for the object has been reached.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS : {
+      log_msg = message + "[PQT] HSA_STATUS: The arguments passed to a functions are not compatible.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_INDEX : {
+      log_msg = message + "[PQT] HSA_STATUS: The index is invalid.";
+      break;
+    };    
+    case HSA_STATUS_ERROR_INVALID_ISA : {
+      log_msg = message + "[PQT] HSA_STATUS: The instruction set architecture is invalid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_ISA_NAME : {
+      log_msg = message + "[PQT] HSA_STATUS: The instruction set architecture name is invalid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_CODE_OBJECT : {
+      log_msg = message + "[PQT] HSA_STATUS: The code object is invalid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_EXECUTABLE : {
+      log_msg = message + "[PQT] HSA_STATUS: The executable is invalid.";
+      break;
+    };
+    case HSA_STATUS_ERROR_FROZEN_EXECUTABLE : {
+      log_msg = message + "[PQT] HSA_STATUS: The executable is frozen.";
+      break;
+    };
+    case HSA_STATUS_ERROR_INVALID_SYMBOL_NAME : {
+      log_msg = message + "[PQT] HSA_STATUS: There is no symbol with the given name.";
+      break;
+    };    
+    case HSA_STATUS_ERROR_VARIABLE_ALREADY_DEFINED : {
+      log_msg = message + "[PQT] HSA_STATUS: The variable is already defined.";
+      break;
+    };
+    case HSA_STATUS_ERROR_VARIABLE_UNDEFINED : {
+      log_msg = message + "[PQT] HSA_STATUS: The variable is undefined.";
+      break;
+    };
+    case HSA_STATUS_ERROR_EXCEPTION : {
+      log_msg = message + "[PQT] HSA_STATUS: An HSAIL operation resulted on a hardware exception.";
+      break;
+    };
+  };
+  log(log_msg.c_str(), rvs::logdebug);
+}
+
+
+/**
+ * @brief Fetch all hsa_agents
+ *
+ * Functionality:
+ *
+ * Fetch all CPUs and GPUs present in the system.
+ *
+ * @return void
+ *
+ * */
+void action::GetAgents() {
+  hsa_status_t status;
+  string log_msg;
+  
+  // Initialize Roc Runtime
+  log("[PQT] Before hsa_init ...", rvs::logdebug);
+  status = hsa_init();
+  log("[PQT] After hsa_init ...", rvs::logdebug);
+  print_hsa_status("[PQT] ProcessAgent - hsa_init()\n", status);
+  
+  // Populate the lists of agents and pools
+  log("[PQT] Before hsa_iterate_agents ...", rvs::logdebug);
+  status = hsa_iterate_agents(ProcessAgent, this);
+  log("[PQT] After hsa_iterate_agents ...", rvs::logdebug);
+  print_hsa_status("[PQT] GetAgents - hsa_iterate_agents()\n", status);
+    
+//   log_msg = "[PQT] After hsa_iterate_agents with status "  + status;
+//   log_msg = "BLA";
+//   log(log_msg.c_str(), rvs::logdebug);  
+}
+
+/**
+ * @brief Process individual hsa_agent
+ *
+ * Functionality:
+ *
+ * Process a single CPUs or GPUs hsa_agent_t
+ *
+ * @return hsa_status_t
+ *
+ * */
+hsa_status_t action::ProcessAgent(hsa_agent_t agent, void* data) {
+  hsa_status_t status;
+  char agent_name[64];
+  hsa_device_type_t device_type;
+  string log_msg, log_agent_name, log_device_type;
+
+  log("[PQT] Called ProcessAgent() ...", rvs::logdebug);
+  
+  // Get the name of the agent
+  status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, agent_name);
+  print_hsa_status("[PQT] ProcessAgent - hsa_agent_get_info()\n", status);
+
+  // Get device type
+  status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
+  print_hsa_status("[PQT] ProcessAgent - hsa_agent_get_info()\n", status);
+
+  log_agent_name = agent_name;
+  log_device_type = device_type;
+  log_msg = "[PQT] Found agent with name = "  + log_agent_name + " and device_type = " + log_device_type;
+  log(log_msg.c_str(), rvs::logdebug);  
+  
+//   // Capture the handle of Cpu agent
+//   if (device_type == HSA_DEVICE_TYPE_CPU) {
+//     cpu_list.push_back(agent);
+//   } else {
+//     gpu_list.push_back(agent);
+//   }
+//   agent_list.push_back(agent);
+
+  // TODO fetch memory pools
+//   status = hsa_amd_agent_iterate_memory_pools(agent, MemPoolInfo, asyncDrvr);
+
+  return HSA_STATUS_SUCCESS;
 }
