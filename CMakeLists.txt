@@ -89,13 +89,19 @@ add_subdirectory(pqt.so)
 add_custom_target(doc ALL
     COMMAND RVSVER=${VERSION_STRING}-${VERSION_BUILD} RVSBUILD=${CMAKE_BINARY_DIR} doxygen
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Generating RVS documentation"
+    COMMENT "Generating RVS Programmer's Reference Guide"
     VERBATIM)
 
 add_custom_target(man1 ALL
     COMMAND RVSVER=${VERSION_STRING}-${VERSION_BUILD} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyMan1
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS man.1 files"
+    VERBATIM)
+
+add_custom_target(userguide ALL
+    COMMAND RVSVER=${VERSION_STRING}-${VERSION_BUILD} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyGuide
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Generating RVS User Guide"
     VERBATIM)
 
 include (CPack)

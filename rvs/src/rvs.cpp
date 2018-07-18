@@ -23,10 +23,6 @@
  *
  *******************************************************************************/
 
-//! @~English
-//! @mainpage RVS
-
-
 /** \defgroup Launcher Launcher module
  *
  * \brief Launcher module implementation
@@ -48,8 +44,8 @@
  *
  * \ingroup Launcher
  * \brief Main method
- * @section 1 Test
- * standard C main() method.
+ *
+ * Standard C main() method.
  *
  * @param Argc standard C argc parameter to main()
  * @param Argv standard C argv parameter to main()

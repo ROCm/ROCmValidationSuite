@@ -23,22 +23,24 @@
  *
  *******************************************************************************/
 
-//! @file
-//! @~English
-//! @page RVS
-//!
-//! @section name NAME
-//!         rvs - ROCm Validation Suite
-//!
-//! @section synopsis SYNOPSIS
-//!
-//! @section description DESCRIPTION
-//!The ROCm Validation Suite (RVS) is a system administrator’s and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPU(s) running in a high-performance computing environment, enabled using the ROCm software stack on a compatible platform.
-//!
-//!The RVS is a collection of tests, benchmarks and qualification tools each targeting a specific sub-system of the ROCm platform. All of the tools are implemented in software and share a common command line interface. Each set of tests are implemented in a “module” which is a library encapsulating the functionality specific to the tool. The CLI can specify the directory containing modules to use when searching for libraries to load. Each module may have a set of options that it defines and a configuration file that supports its execution. aaa
-//!
-//! @section options OPTIONS
-//! \verbatim
+@file
+
+@page rvs
+ROCm Validation Suite
+
+@section synopsis SYNOPSIS
+<b>rvs</b>  [<b>-h</b>|<b>-g</b>|<b>-t</b>|<b>--version</b>|<b>--help</b>|<b>--listTests</b>|<b>--listGpus</b>]\n
+<b>rvs</b> [[[<b>-d</b>|<b>--debugLevel</b>] 0|<b>--quiet</b>] | [[<b>-d</b>|<b>--debugLevel</b>] 1|2|3|4] |\n [[<b>-d</b>|<b>--debugLevel</b>] 5|<b>--verbose</b>|<b>-v</b>]]\n
+[<b>-c</b> <i>path/config_file</i>]\n
+[<b>-l</b> <i>path/log_file</i> [<b>-a</b>] [<b>-j</b>]] \n
+[<b>-m</b> <i>module_path</i>]
+@section description DESCRIPTION
+The ROCm Validation Suite (RVS) is a system administrator’s and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPU(s) running in a high-performance computing environment, enabled using the ROCm software stack on a compatible platform.
+
+The RVS is a collection of tests, benchmarks and qualification tools each targeting a specific sub-system of the ROCm platform. All of the tools are implemented in software and share a common command line interface. Each set of tests are implemented in a “module” which is a library encapsulating the functionality specific to the tool. The CLI can specify the directory containing modules to use when searching for libraries to load. Each module may have a set of options that it defines and a configuration file that supports its execution.
+
+@section options OPTIONS
+@verbatim
 -a --appendLog     When generating a debug logfile, do not overwrite the contents
                    of a current log. Used in conjuction with the -d and -l options
 -c --config        Specify the configuration file to be used.
@@ -68,10 +70,21 @@
                    specifying the -d 5 option.
    --version       Displays the version information and exits.
 -h --help          Display usage information and exit.
-//! \endverbatim
-//! @section exitstatus EXIT STATUS
-//!
-//! @section history HISTORY
-//!
-//! @section author AUTHOR
-//!
+
+@endverbatim
+
+@section exitstatus EXIT STATUS
+
+@verbatim
+0        - if OK
+non-zero - otherwise
+
+@endverbatim
+
+@section examples EXAMPLES
+<b>rvs</b> \n
+Runs rvs with the default test configuration file <i>[install_base]/conf/rvs.conf</i>
+
+<b>rvs -c conf/gpup1.conf -d 3 -j -l mylog.txt</b> \n
+Runs rvs with configuration file <i>conf/gpup1.conf</i> and writes output \n
+into log file <i>mylog.txt</i> using logging level 3 (INFO) in JSON format
