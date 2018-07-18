@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 #include "action.h"
+
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
@@ -36,6 +37,7 @@
 #include <map>
 #include <iostream>
 #include <fstream>
+
 #include "rvs_module.h"
 #include "rvs_util.h"
 #include "rvsactionbase.h"
@@ -59,7 +61,7 @@
 
 #define BUFFER_SIZE 3000
 
-
+using std::cerr;
 using std::string;
 using std::cin;
 using std::cout;
@@ -90,7 +92,7 @@ action::~action() {
  * */
 
 int action::run() {
-    int return_value = 0;
+    string msg;
     bool pkgchk_bool = false;
     bool usrchk_bool = false;
     bool kernelchk_os_bool = false;
@@ -101,13 +103,12 @@ int action::run() {
     bool filechk_bool = false;
 
     // check if package check action is going to trigger
-
-    pkgchk_bool =  rvs::actionbase::has_property(PACKAGE);
+    pkgchk_bool = rvs::actionbase::has_property(PACKAGE);
 
     if (pkgchk_bool == true)
       return pkgchk_run();
 
-    // check if user check action is going to trigger
+    // check if usrer check action is going to trigger
     usrchk_bool = rvs::actionbase::has_property(USER);
 
     if (usrchk_bool == true)
@@ -143,7 +144,7 @@ int action::run() {
  * */
 
 int action::pkgchk_run() {
-  // static rvs::actionbase actionbase;
+  //  static rvs::actionbase actionbase;
 
   string package_name;
   if (has_property(PACKAGE, package_name)) {
@@ -169,6 +170,7 @@ int action::pkgchk_run() {
       dup2(fd[1], STDOUT_FILENO);
       dup2(fd[1], STDERR_FILENO);
       char buffer[BUFFER_SIZE];
+
       snprintf(buffer, BUFFER_SIZE, \
       "dpkg-query -W -f='${Status} ${Version}\n' %s", package_name.c_str());
 
@@ -213,7 +215,7 @@ int action::pkgchk_run() {
       }
     } else {
       // fork process error
-      cerr << INTERNAL_ERROR << endl;
+      cerr << INTERNAL_ERROR << '\n';
       return -1;
     }
     return 0;
@@ -230,7 +232,6 @@ int action::usrchk_run() {
   string user_name;
   if (has_property(USER, user_name)) {
     bool group_exists = false;
-    bool user_is_in_all_groups = true;
     string group_values_string;
 
     // Check if gruop exists
@@ -240,41 +241,71 @@ int action::usrchk_run() {
       group_values_string = iter->second;
       group_exists = true;
     }*/
+
     // Structures for checking group and user
-    struct passwd p, *result;
+    struct passwd pwd, *result;
     char pwdbuffer[256];
-    int pwdbufflen = 200;
-    uid_t uid = 0;
-    struct group *g;
-    string user_exists = "[rcqt] usercheck " + user_name + " user exists";
+    int pwdbufflenght = 200;
+    struct group grp, *grprst;
+    string user_exists = "[rcqt] usercheck "
+    + user_name + " user exists";
     string user_not_exists = "[rcqt] usercheck " + user_name\
     + " user not exists";
 
     // Check for given user
-    if ((getpwnam_r(user_name.c_str(), &p, pwdbuffer, pwdbufflen, &result)) == 0) {
-      cerr << "Error with getpwnam_r for user " << user_name.c_str() << endl;
-    }
-    if (group_exists) {
-      // Put the group list into vector
-      string delimiter = ",";
-      vector<string> group_vector;
-      group_vector = str_split(group_values_string, delimiter);
-
-      // Check if the group exists
-      for (vector<string>::iterator vector_iter = group_vector.begin(); \
-        vector_iter != group_vector.end(); vector_iter++) {
-        string user_group = "[rcqt] usercheck " + user_name;
-        if ((g = getgrnam(vector_iter->c_str())) == nullptr) {
-          cerr << "group doesn't exist" << endl;
-          return -1;
-        }
+    if (getpwnam_r(user_name.c_str()
+      , &pwd, pwdbuffer, pwdbufflenght, &result) != 0) {
+      cerr << "Error with getpwnam_r" << endl;
+    return -1;
+      }
+      if (result == nullptr) {
+        log(user_not_exists.c_str(), rvs::logresults);
+      } else {
+        log(user_exists.c_str(), rvs::logresults);
+      }
+      if (group_exists) {
+        // Put the group list into vector
+        string delimiter = ",";
+        vector<string> group_vector;
+        group_vector = str_split(group_values_string, delimiter);
+        // Check if the group exists
+        for (vector<string>::iterator vector_iter = group_vector.begin()
+          ; vector_iter != group_vector.end(); vector_iter++) {
+          string user_group = "[rcqt] usercheck " + user_name;
+        int error_group;
+        if ((error_group =  getgrnam_r(vector_iter->c_str()
+          , &grp, pwdbuffer, pwdbufflenght, &grprst)) != 0) {
+          cerr << "Error with getgrnam_r" << endl;
+        //  return -1;
+          }
+          if (error_group == EIO) {
+            cerr << "IO error" << endl;
+            return -1;
+          } else if (error_group == EINTR) {
+            cerr << "Error sginal was caught during getgrnam_r" << endl;
+            return -1;
+          } else if (error_group == EMFILE) {
+            cerr << "Error file descriptors are currently open" << endl;
+            return -1;
+          } else if (error_group == ERANGE) {
+            cerr << "Error insufficient buffer in getgrnam_r" << endl;
+            return -1;
+          }
+          string err_msg;
+          if (grprst == nullptr) {
+            err_msg = "group ";
+            err_msg += vector_iter->c_str();
+            err_msg += " doesn't exist";
+            log(err_msg.c_str(), rvs::logerror);
+            continue;
+          }
 
         int i;
         int j = 0;
 
         // Compare if the user group id is equal to the group id
-        for (i=0; g->gr_mem[i] != NULL; i++) {
-          if (strcmp(g->gr_mem[i], user_name.c_str()) == 0) {
+        for (i = 0; grp.gr_mem[i] != NULL; i++) {
+          if (strcmp(grp.gr_mem[i], user_name.c_str()) == 0) {
             user_group = user_group + " " + vector_iter->c_str() + " is member";
             log(user_group.c_str(), rvs::logresults);
             j = 1;
@@ -323,7 +354,7 @@ int action::kernelchk_run() {
     /*
      * Parsing /etc/os-release file for pretty name to extract 
      */
-    ifstream os_version_read("/etc/os-release");
+    std::ifstream os_version_read("/etc/os-release");
     string os_actual = "";
     string os_file_line;
     bool os_version_correct = false;
@@ -333,14 +364,13 @@ int action::kernelchk_run() {
         os_version_found_in_system = true;
         os_actual = os_file_line.substr(13, os_file_line.length() - 14);
         vector<string>::iterator os_iter;
-        for (os_iter = os_version_vector.begin(); \
-          os_iter != os_version_vector.end(); os_iter++) {
+        for (os_iter = os_version_vector.begin();
+        os_iter != os_version_vector.end(); os_iter++) {
           if (strcmp(os_iter->c_str(), os_actual.c_str()) == 0) {
             os_version_correct = true;
             break;
           }
         }
-
         if (os_version_correct == true)
           break;
       }
@@ -389,12 +419,12 @@ int action::ldcfgchk_run() {
   string ldpath_requested;
   if (has_property(SONAME, soname_requested)) {
     if (has_property(ARCH, arch_requested) == false) {
-      cerr << "acrhitecture field missing in conflig" << endl;
+      cerr << "acrhitecture field missing in config" << endl;
       return -1;
     }
 
     if (has_property(LDPATH, ldpath_requested) == false) {
-      cerr << "libraty path field missing in conflig" << endl;
+      cerr << "libraty path field missing in config" << endl;
       return -1;
     }
 
@@ -410,16 +440,13 @@ int action::ldcfgchk_run() {
       dup2(fd[1], STDOUT_FILENO);
       dup2(fd[1], STDERR_FILENO);
       char buffer[256];
-      snprintf(buffer, sizeof(256), "objdump -f %s", full_ld_path.c_str());
+      snprintf(buffer, sizeof(buffer), "objdump -f %s", full_ld_path.c_str());
 
       system(buffer);
     } else if (pid > 0) {
       // Parent process
       char result[BUFFER_SIZE];
-      int count;
       close(fd[1]);
-
-      count = read(fd[0], result, BUFFER_SIZE);
       string ld_config_result = "[rcqt] ldconfigcheck ";
 
       string result_string = result;
@@ -428,31 +455,30 @@ int action::ldcfgchk_run() {
         vector<string> objdump_lines = str_split(result_string, "\n");
         int begin_of_the_arch_string = 0;
         int end_of_the_arch_string = 0;
-        for (int i = 0; i < objdump_lines.size(); i++) {
+        for (uint i = 0; i < objdump_lines.size(); i++) {
           // cout << objdump_lines[i] << "*" << endl;
           if (objdump_lines[i].find("architecture") != string::npos) {
             begin_of_the_arch_string = objdump_lines[i].find(":");
             end_of_the_arch_string = objdump_lines[i].find(",");
-            string arch_found = objdump_lines[i].substr(\
-            begin_of_the_arch_string + 2, \
-            end_of_the_arch_string - begin_of_the_arch_string - 2);
+            string arch_found = objdump_lines[i]
+            .substr(begin_of_the_arch_string + 2
+            , end_of_the_arch_string - begin_of_the_arch_string - 2);
             if (arch_found.compare(arch_requested) == 0) {
-              string arch_pass = ld_config_result + soname_requested + " " + \
-              full_ld_path + " " + arch_found + " pass";
+              string arch_pass = ld_config_result + soname_requested
+              + " " + full_ld_path + " " + arch_found + " pass";
               log(arch_pass.c_str(), rvs::logresults);
             } else {
-              string arch_pass = ld_config_result + soname_requested + " " + \
-              full_ld_path + " " + arch_found + " fail";
+              string arch_pass = ld_config_result + soname_requested + " "
+              + full_ld_path + " " + arch_found + " fail";
               log(arch_pass.c_str(), rvs::logresults);
             }
           }
         }
       } else {
-        string lib_fail = ld_config_result + soname_requested +\
-        " not found " + "na " + "fail";
+        string lib_fail = ld_config_result + soname_requested
+        + " not found " + "na " + "fail";
         log(lib_fail.c_str(), rvs::logresults);
       }
-
     } else {
       cerr << "Internal Error" << endl;
       return -1;
@@ -481,7 +507,7 @@ int action::dectooct(int decnum) {
 int action::filechk_run() {
   string exists_string, file, owner, group, msg, check;
   int permission, type;
-  bool exists, pass;
+  bool exists;
   struct stat info;
 
   map<string, string>::iterator iter;

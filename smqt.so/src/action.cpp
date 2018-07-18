@@ -156,7 +156,7 @@ int action::run(void) {
       pass = false;
     if (bar1_base_addr > bar1_base_addr_max)
     pass = false;
-    if (bar2_base_addr < bar1_base_addr_min)
+    if (bar2_base_addr < bar2_base_addr_min)
       pass = false;
     if (bar2_base_addr > bar2_base_addr_max)
       pass = false;
