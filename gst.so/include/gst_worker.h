@@ -26,6 +26,7 @@
 #define GST_SO_INCLUDE_GST_WORKER_H_
 
 #include <string>
+#include <memory>
 #include "rvsthreadbase.h"
 #include "rvs_blas.h"
 
@@ -45,7 +46,7 @@
 class GSTWorker : public rvs::ThreadBase {
  public:
     GSTWorker();
-    ~GSTWorker();
+    virtual ~GSTWorker();
 
     //! sets action name
     void set_name(const std::string& name) { action_name = name; }
@@ -98,18 +99,24 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t get_log_interval(void) { return log_interval; }
 
     //! sets the maximum allowed number of target_stress violations
-    void set_max_violations(int _max_violations) {
+    void set_max_violations(uint64_t _max_violations) {
         max_violations = _max_violations;
     }
 
     //! returns the maximum allowed number of target_stress violations
-    int get_max_violations(void) { return max_violations; }
+    uint64_t get_max_violations(void) { return max_violations; }
 
     //! sets the copy_matrix (true = the matrix will be copied to GPU each
     //! time a new SGEMM will run, false = the matrix will be copied only once)
     void set_copy_matrix(bool _copy_matrix) { copy_matrix = _copy_matrix; }
     //! returns the copy_matrix value
     bool get_copy_matrix(void) { return copy_matrix; }
+
+    //! sets the gflops strategy (lazy vs. greedy)
+    void set_gflops_greedy_strategy(bool _gflops_greedy_strategy)
+                    { gflops_greedy_strategy = _gflops_greedy_strategy; }
+    //! returns the gflops strategy
+    bool get_gflops_greedy_strategy(void) { return gflops_greedy_strategy; }
 
     //! sets the target stress (in GFlops) that the GPU will try to achieve
     void set_target_stress(float _target_stress) {
@@ -127,11 +134,18 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
                     std::chrono::time_point<std::chrono::system_clock> t_start);
+    //! sets the JSON flag
+    static void set_use_json(bool _bjson) { bjson = _bjson; }
+    //! returns the JSON flag
+    static bool get_use_json(void) { return bjson; }
 
  protected:
     bool do_gst_ramp(int *error, std::string *err_description);
+    bool do_gst_ramp_greedy(int *error, std::string *err_description);
     bool do_gst_stress_test(int *error, std::string *err_description);
     virtual void run(void);
+    void log_to_json(const std::string &key, const std::string &value,
+                     int log_level);
 
  protected:
     //! name of the action
@@ -149,7 +163,7 @@ class GSTWorker : public rvs::ThreadBase {
     //! time interval at which the module reports the average GFlops
     uint64_t log_interval;
     //! maximum allowed number of target_stress violations
-    int max_violations;
+    uint64_t max_violations;
     //! specifies whether to copy the matrix to the GPU for each SGEMM operation
     bool copy_matrix;
     //! target stress (in GFlops) that the GPU will try to achieve
@@ -160,9 +174,13 @@ class GSTWorker : public rvs::ThreadBase {
     //! actual ramp time in case it succeeds
     uint64_t ramp_actual_time;
     //! rvs_blas pointer
-    rvs_blas *gpu_blas;
+    std::unique_ptr<rvs_blas> gpu_blas;
     //! max gflops achieved during the stress test
     double max_gflops;
+    //! TRUE if JSON output is required
+    static bool bjson;
+    //! target_stress strategy (lazy vs. greedy)
+    bool gflops_greedy_strategy;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

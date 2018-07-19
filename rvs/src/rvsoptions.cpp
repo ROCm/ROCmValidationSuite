@@ -25,9 +25,10 @@
 
 #include "rvsoptions.h"
 
-using namespace std;
+#include <map>
+#include <string>
 
-map<string,string>	rvs::options::opt;
+std::map<std::string, std::string> rvs::options::opt;
 
 /**
  * @brief Check and retrieve option.
@@ -38,8 +39,8 @@ map<string,string>	rvs::options::opt;
  *
  */
 bool  rvs::options::has_option(const std::string& Option, std::string& val) {
-  auto it = opt.find(string(Option));
-  if( it == opt.end())
+  auto it = opt.find(std::string(Option));
+  if (it == opt.end())
     return false;
 
   val = it->second;
@@ -54,8 +55,8 @@ bool  rvs::options::has_option(const std::string& Option, std::string& val) {
  *
  */
 bool  rvs::options::has_option(const std::string& Option) {
-  auto it = opt.find(string(Option));
-  if( it == opt.end())
+  auto it = opt.find(std::string(Option));
+  if (it == opt.end())
     return false;
 
   return true;
@@ -67,7 +68,7 @@ bool  rvs::options::has_option(const std::string& Option) {
  * @return collection of options
  *
  */
-const std::map<std::string,std::string>& rvs::options::get(void) {
+const std::map<std::string, std::string>& rvs::options::get(void) {
   return opt;
 }
 
