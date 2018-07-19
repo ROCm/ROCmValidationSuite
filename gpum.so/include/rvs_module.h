@@ -1,4 +1,4 @@
-/********************************************************************************
+/******************************************************************************* *
  *
  * Copyright (c) 2018 ROCm Developer Tools
  *
@@ -20,27 +20,13 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
+ * 
  *******************************************************************************/
-#ifndef ACTION_FILECHECK_H_
-#define ACTION_FILECHECK_H_
+#ifndef GPUM_SO_INCLUDE_RVS_MODULE_H_
+#define GPUM_SO_INCLUDE_RVS_MODULE_H_
 
-#include "rvslib.h"
-#include <string>
-#include <vector>
+#include "rvsliblog.h"
 
-class action_filecheck : public rvs::lib::actionbase
-{
-public:
+int log(const char* pMasg, const int level = 1);
 
-	action_filecheck();
-	virtual ~action_filecheck();
-	
-	virtual int property_set(const char*, const char*);
-	virtual int run(void);
-
-protected:
-
-};
-
-#endif /* ACTION_FILECHECK_H_ */
+#endif  // GPUM_SO_INCLUDE_RVS_MODULE_H_
