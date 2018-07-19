@@ -102,5 +102,3 @@ extern "C" int rvs_module_action_property_set(void* pAction, const char* Key, co
 extern "C" int rvs_module_action_run(void* pAction) {
   return static_cast<rvs::actionbase*>(pAction)->run();
 }
-
-

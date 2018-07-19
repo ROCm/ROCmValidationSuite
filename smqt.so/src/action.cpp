@@ -82,9 +82,19 @@ int action::run(void) {
   ulong bar1_size, bar1_base_addr, bar2_size, bar2_base_addr;
   ulong bar4_size, bar4_base_addr, bar5_size;
   bool pass;
+  int error = 0;
+  string msg;
   string action_name;
   vector<uint16_t> gpus_location_id;
   struct pci_access *pacc;
+
+  // get the action name
+  rvs::actionbase::property_get_action_name(&error);
+  if (error == 2) {
+    msg = "action field is missing in smqt module";
+    log(msg.c_str(), rvs::logerror);
+    return -1;
+  }
 
   gpu_get_all_location_id(gpus_location_id);
   // get the pci_access structure
@@ -128,7 +138,8 @@ int action::run(void) {
   // iterate over devices
   for (dev = pacc->devices; dev; dev = dev->next) {
     // fil in the info
-    pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
+    pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES \
+    | PCI_FILL_CLASS | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
 
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id = ((((uint16_t)(dev->bus)) << 8) | (dev->func));
