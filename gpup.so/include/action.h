@@ -1,4 +1,5 @@
-/********************************************************************************
+/*******************************************************************************
+ *
  *
  * Copyright (c) 2018 ROCm Developer Tools
  *
@@ -20,10 +21,10 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
+ * 
  *******************************************************************************/
-#ifndef ACTION_H_
-#define ACTION_H_
+#ifndef GPUP_SO_INCLUDE_ACTION_H_
+#define GPUP_SO_INCLUDE_ACTION_H_
 
 #include <vector>
 #include <string>
@@ -33,38 +34,40 @@
 using std::vector;
 using std::string;
 
-/**
- * @class action
- * @ingroup GPUP
- *
- * @brief GPUP action implementation class
- *
- * Derives from rvs::actionbase and implements actual action functionality
- * in its run() method.
- *
- */
-class action : public rvs::actionbase
-{
-public:
-	action();
-	virtual ~action();
-	
-	virtual int run(void);
-        
-private:
-    
-    vector<string> gpus_id;                  // the list of all gpu_id
-                                             // in the <device> property
+class action : public rvs::actionbase {
+ public:
+    action();
+    virtual ~action();
+
+    virtual int run(void);
+
+ private:
+    // the list of all gpu_id in the <device> property
+    vector<string> gpus_id;
+    // the list of properties that are in query
+    vector<string> property_name;
+    // the list of io_links properties that are in query
+    vector<string> io_link_property_name;
 
     string action_name;
     bool bjson;
     void* json_root_node;
 
-    //from the module's properties collection
-    void property_get_action_name(void);  // gets the action name
-	
-protected:
-	
+    // get the device property value (list of gpu_id) from the module's
+    // properties collection
+    bool property_get_device(int *error, int num_nodes);
+    // get the action name
+    void property_get_action_name(void);
+    // get gpu id
+    string property_get_gpuid(int node_id);
+    // check device id is correct
+    bool device_id_correct(int node_id, int dev_id);
+    // split properties and io_links properties
+    bool property_split(string prop);
+    // get properties values
+    void property_get_value(string gpu_id, int node_id);
+    // get io links properties values
+    void property_io_links_get_value(string gpu_id, int node_id);
 };
 
-#endif /* ACTION_H_ */
+#endif  // GPUP_SO_INCLUDE_ACTION_H_

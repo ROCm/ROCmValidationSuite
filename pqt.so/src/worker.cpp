@@ -1,5 +1,5 @@
 /********************************************************************************
- * 
+ *
  * Copyright (c) 2018 ROCm Developer Tools
  *
  * MIT LICENSE:
@@ -22,13 +22,62 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef INCLUDE_LDCFGCHK_H_
-#define INCLUDE_LDCFGCHK_H_
+#include "worker.h"
 
+#include <chrono>
 #include <map>
 #include <string>
+#include <algorithm>
+#include <iostream>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <pci/pci.h>
+#include <linux/pci.h>
+#ifdef __cplusplus
+}
+#endif
 
-extern int ldcfgchk_run(std::map<std::string,std::string> property);
+#include "rvsliblogger.h"
+#include "rvs_module.h"
+#include "pci_caps.h"
+#include "gpu_util.h"
+#include "rvsloglp.h"
 
-#endif  // INCLUDE_LDCFGCHK_H_
+using namespace std;
+
+Worker::Worker() {}
+Worker::~Worker() {}
+
+/**
+ * @brief Thread function
+ *
+ * Loops while brun == TRUE and performs polled monitoring avery 1msec.
+ *
+ * */
+void Worker::run() {
+
+  log("[PQT] worker thread has finished", rvs::logdebug);
+
+}
+
+/**
+ * @brief Stops monitoring
+ *
+ * Sets brun member to FALSE thus signaling end of monitoring.
+ * Then it waits for std::thread to exit before returning.
+ *
+ * */
+void Worker::stop() {
+
+  log("[PQT] in Worker::stop()", rvs::logdebug);
+
+  // wait a bit to make sure thread has exited
+  try {
+    if (t.joinable())
+      t.join();
+  }
+  catch(...) {
+  }
+}

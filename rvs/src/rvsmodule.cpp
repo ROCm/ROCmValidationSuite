@@ -24,9 +24,15 @@
  *******************************************************************************/
 #include "rvsmodule.h"
 
-#include <stdio.h>
-#include <iostream>
 #include <dlfcn.h>
+#include <stdio.h>
+
+#include <utility>
+#include <string>
+#include <map>
+#include <memory>
+#include <iostream>
+#include <fstream>
 
 #include "rvsliblogger.h"
 #include "rvsif0.h"
@@ -36,11 +42,11 @@
 #include "rvsoptions.h"
 
 
-std::map<std::string,rvs::module*>	rvs::module::modulemap;
-std::map<std::string,std::string>	rvs::module::filemap;
+std::map<std::string, rvs::module*> rvs::module::modulemap;
+std::map<std::string, std::string>  rvs::module::filemap;
 YAML::Node rvs::module::config;
 
-using namespace std;
+using std::string;
 
 /**
  * @brief Constructor
@@ -70,37 +76,49 @@ rvs::module::~module() {
  *
  */
 int rvs::module::initialize(const char* pConfig) {
+  // Check if pConfig file exists
+  std::ifstream file(pConfig);
+
+  if (!file.good()) {
+    std::cerr << "ERROR: " << pConfig << " file does not exist.\n";
+    return -1;
+  } else {
+    file.close();
+  }
+
   // load list of supported modules from config file
   YAML::Node config = YAML::LoadFile(pConfig);
 
   // verify that that the file format is supported
-    YAML::const_iterator it=config.begin();
-  if( it == config.end()) {
-    cerr << "ERROR: unsupported file format. Version string not found." << endl;
+  YAML::const_iterator it = config.begin();
+  if (it == config.end()) {
+    std::cerr << "ERROR: unsupported file format. Version string not found."
+              << std::endl;
     return -1;
   }
 
-    std::string key=it->first.as<std::string>();
-    std::string value=it->second.as<std::string>();
+    std::string key = it->first.as<std::string>();
+    std::string value = it->second.as<std::string>();
 
-  if(key != "version") {
-    cerr << "ERROR: unsupported file format. Version string not found." << endl;
+  if (key != "version") {
+    std::cerr << "ERROR: unsupported file format. Version string not found."
+              << std::endl;
     return -1;
   }
 
-  if(value!="1") {
-    cerr << "ERROR: version is not 1" << endl;
+  if (value != "1") {
+    std::cerr << "ERROR: version is not 1" << std::endl;
     return -1;
   }
 
   // load nam-file pairs:
-  for(it++; it!=config.end(); ++it) {
-    key=it->first.as<std::string>();
-    value=it->second.as<std::string>();
-    filemap.insert( pair<string,string>(key, value));
+  for (it++; it != config.end(); ++it) {
+    key = it->first.as<std::string>();
+    value = it->second.as<std::string>();
+    filemap.insert(std::pair<string, string>(key, value));
   }
 
-	return 0;
+  return 0;
 }
 
 /**
@@ -112,9 +130,8 @@ int rvs::module::initialize(const char* pConfig) {
  * @return Pointer to module instance
  *
  */
-rvs::module* rvs::module::find_create_module(const char* name)
-{
-  module* m = NULL;
+rvs::module* rvs::module::find_create_module(const char* name) {
+  module* m = nullptr;
 
   // find module based on short name
   auto it = modulemap.find(std::string(name));
@@ -127,48 +144,51 @@ rvs::module* rvs::module::find_create_module(const char* name)
     auto it = filemap.find(std::string(name));
 
     // not found...
-    if( it == filemap.end()) {
+    if (it == filemap.end()) {
       // this should never happen if .config is OK
-      cerr << "ERROR: module '" << name << "' not found in configuration." << endl;
+      std::cerr << "ERROR: module '" << name << "' not found in configuration."
+                << std::endl;
       return NULL;
     }
 
     // open .so
     string libpath;
-    if(rvs::options::has_option("-m",libpath)) {
+    if (rvs::options::has_option("-m", libpath)) {
       libpath += "/";
-    }
-    else {
-      rvs::options::has_option("pwd",libpath);
+    } else {
+      rvs::options::has_option("pwd", libpath);
       libpath += "/";
     }
     string sofullname(libpath + it->second);
     void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
 
     // error?
-    if( !psolib) {
-      cerr << "ERROR: could not load .so '" << sofullname << "' reason: " << dlerror() << endl;
-      return NULL;	// fail
+    if (!psolib) {
+      std::cerr << "ERROR: could not load .so '" << sofullname << "' reason: "
+                << dlerror() << std::endl;
+      return NULL;  // fail
     }
 
     // create module object
     m = new rvs::module(name, psolib);
-    if(!m) {
+    if (!m) {
       dlclose(psolib);
       return NULL;
     }
 
     // initialize API function pointers
-    if(m->init_interfaces()) {
-      cerr << "ERROR: could not init interfaces for '" << it->second.c_str() << "'" << endl;
+    if (m->init_interfaces()) {
+      std::cerr << "ERROR: could not init interfaces for '"
+                << it->second.c_str() << "'" << std::endl;
       dlclose(psolib);
       delete m;
       return nullptr;
     }
 
     // initialize newly loaded module
-    if(m->initialize()) {
-      cerr << "ERROR: could not initialize '" << it->second.c_str() << "'" << endl;
+    if (m->initialize()) {
+      std::cerr << "ERROR: could not initialize '" << it->second.c_str() << "'"
+                << std::endl;
       dlclose(psolib);
       delete m;
       return nullptr;
@@ -176,8 +196,7 @@ rvs::module* rvs::module::find_create_module(const char* name)
 
     // add to map
     modulemap.insert(t_mmpair(name, m));
-  }
-  else {
+  } else {
     m = it->second;
   }
 
@@ -199,13 +218,13 @@ int rvs::module::initialize() {
   d.cbLog             = rvs::logger::Log;
   d.cbLogExt          = rvs::logger::LogExt;
   d.cbLogRecordCreate = rvs::logger::LogRecordCreate;
-  d.cbLogRecordFlush 	= rvs::logger::LogRecordFlush;
+  d.cbLogRecordFlush   = rvs::logger::LogRecordFlush;
   d.cbCreateNode      = rvs::logger::CreateNode;
   d.cbAddString       = rvs::logger::AddString;
   d.cbAddInt          = rvs::logger::AddInt;
   d.cbAddNode         = rvs::logger::AddNode;
 
-  return (*rvs_module_init)((void*)&d);
+  return (*rvs_module_init)(reinterpret_cast<void*>(&d));
 }
 
 
@@ -219,29 +238,31 @@ int rvs::module::initialize() {
 rvs::action* rvs::module::action_create(const char* name) {
   // find module
   rvs::module* m = module::find_create_module(name);
-  if( !m) {
-    cerr << "ERROR: module '" << name << "' not available." << endl;
+  if (!m) {
+    std::cerr << "ERROR: module '" << name << "' not available." << std::endl;
     return nullptr;
   }
 
   // create lib action objct
   void* plibaction = m->action_create();
-  if(!plibaction)  {
-    cerr << "ERROR: module '" << name << "' could not create lib action." << endl;
+  if (!plibaction)  {
+    std::cerr << "ERROR: module '" << name << "' could not create lib action."
+         << std::endl;
     return nullptr;
   }
 
   // create action proxy object
   rvs::action* pa = new rvs::action(name, plibaction);
-  if(!pa) {
-    cerr << "ERROR: module '" << name << "' could not create action proxy." << endl;
+  if (!pa) {
+    std::cerr << "ERROR: module '" << name << "' could not create action proxy."
+              << std::endl;
     return nullptr;
   }
 
   // create interfaces for the proxy
   // clone from module and assign libaction ptr
 
-  for(auto it = m->ifmap.begin(); it != m->ifmap.end(); it++) {
+  for (auto it = m->ifmap.begin(); it != m->ifmap.end(); it++) {
     std::shared_ptr<rvs::ifbase> sptrif(it->second->clone());
     sptrif->plibaction = plibaction;
     pa->ifmap.insert(rvs::action::t_impair(it->first, sptrif));
@@ -275,7 +296,7 @@ void* rvs::module::action_create() {
 int rvs::module::action_destroy(rvs::action* paction) {
   // find module
   rvs::module* m = module::find_create_module(paction->name.c_str());
-  if( !m)
+  if (!m)
     return -1;
 
   return m->action_destroy_internal(paction);
@@ -304,7 +325,8 @@ int rvs::module::action_destroy_internal(rvs::action* paction) {
  *
  */
 int rvs::module::terminate() {
-  for(auto it = rvs::module::modulemap.begin(); it != rvs::module::modulemap.end(); it++) {
+  for (auto it = rvs::module::modulemap.begin();
+       it != rvs::module::modulemap.end(); it++) {
     it->second->terminate_internal();
     dlclose(it->second->psolib);
     delete it->second;
@@ -330,31 +352,37 @@ int rvs::module::terminate_internal() {
  * @brief Init module interfaces
  *
  * Module interfaces are initialized upon loading of module.
- * Pointer to starndard RVS API functions are obtained by calling ldsym() given API function names.
- * Action proxy interfaces are also created at this point and later cloned into particular action
- * proxy upon creation of action.
+ * Pointer to starndard RVS API functions are obtained by calling ldsym()
+ * given API function names. Action proxy interfaces are also created at this
+ * point and later cloned into particular action proxy upon creation of action.
  *
  * @return 0 - success, non-zero otherwise
  *
  */
 int rvs::module::init_interfaces() {
   // init global helper methods for this library
-  if( init_interface_method( (void**)(&rvs_module_init), "rvs_module_init"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&rvs_module_init), "rvs_module_init"))
     return -1;
 
-  if( init_interface_method( (void**)(&rvs_module_terminate), "rvs_module_terminate"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&rvs_module_terminate), "rvs_module_terminate"))
     return -1;
 
-  if( init_interface_method( (void**)(&rvs_module_action_create), "rvs_module_action_create"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&rvs_module_action_create),
+                            "rvs_module_action_create"))
     return -1;
 
-  if( init_interface_method( (void**)(&rvs_module_action_destroy), "rvs_module_action_destroy"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&rvs_module_action_destroy),
+                            "rvs_module_action_destroy"))
     return -1;
 
-  if( init_interface_0())
+  if (init_interface_0())
     return -1;
 
-  if( init_interface_1())
+  if (init_interface_1())
     return -1;
 
   return 0;
@@ -373,12 +401,13 @@ int rvs::module::init_interfaces() {
  */
 int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName) {
   if (!psolib) {
-    cerr << "ERROR: psolib is null. " << endl;
+    std::cerr << "ERROR: psolib is null. " << std::endl;
     return -1;
   }
   void* pf = dlsym(psolib, pMethodName);
   if (!pf) {
-    cerr << "ERROR: could not find .so method '" << pMethodName << "'" << endl;
+    std::cerr << "ERROR: could not find .so method '" << pMethodName << "'"
+              << std::endl;
   }
 
   *ppfunc = pf;
@@ -394,35 +423,47 @@ int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName) {
  */
 int rvs::module::init_interface_0(void) {
   rvs::if0* pif0 = new rvs::if0();
-  if(!pif0)
+  if (!pif0)
     return -1;
 
   int sts = 0;
 
-  if( init_interface_method( (void**)(&(pif0->rvs_module_get_version)), "rvs_module_get_version"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif0->rvs_module_get_version)),
+                            "rvs_module_get_version"))
     sts--;
 
-  if( init_interface_method( (void**)(&(pif0->rvs_module_get_name)), "rvs_module_get_name"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif0->rvs_module_get_name)),
+                            "rvs_module_get_name"))
     sts--;
 
-  if( init_interface_method( (void**)(&(pif0->rvs_module_get_description)), "rvs_module_get_description"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif0->rvs_module_get_description)),
+                            "rvs_module_get_description"))
     sts--;
 
-  if( init_interface_method( (void**)(&(pif0->rvs_module_has_interface)), "rvs_module_has_interface"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif0->rvs_module_has_interface)),
+                            "rvs_module_has_interface"))
     sts--;
 
-  if( init_interface_method( (void**)(&(pif0->rvs_module_get_config)), "rvs_module_get_config"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif0->rvs_module_get_config)),
+                            "rvs_module_get_config"))
     sts--;
 
-  if( init_interface_method( (void**)(&(pif0->rvs_module_get_output)), "rvs_module_get_output"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif0->rvs_module_get_output)),
+                            "rvs_module_get_output"))
     sts--;
 
-  if(sts) {
+  if (sts) {
     delete pif0;
     return sts;
   }
 
-  std::shared_ptr<rvs::ifbase> sptr( (rvs::ifbase*)pif0);
+  std::shared_ptr<rvs::ifbase> sptr((rvs::ifbase*)pif0);
   ifmap.insert(rvs::action::t_impair(0, sptr));
 
   return 0;
@@ -436,25 +477,31 @@ int rvs::module::init_interface_0(void) {
  */
 int rvs::module::init_interface_1(void) {
   rvs::if1* pif1 = new rvs::if1();
-  if(!pif1)
+  if (!pif1)
     return -1;
 
   int sts = 0;
-  if( init_interface_method( (void**)(&(pif1->rvs_module_action_property_set)), "rvs_module_action_property_set"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif1->rvs_module_action_property_set)),
+                            "rvs_module_action_property_set"))
     sts--;
 
-  if( init_interface_method( (void**)(&(pif1->rvs_module_action_run)), "rvs_module_action_run"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif1->rvs_module_action_run)),
+                            "rvs_module_action_run"))
     sts--;
 
-  if( init_interface_method( (void**)(&(pif1->rvs_module_get_errstring)), "rvs_module_get_errstring"))
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif1->rvs_module_get_errstring)),
+                            "rvs_module_get_errstring"))
     sts--;
 
-  if(sts) {
+  if (sts) {
     delete pif1;
     return sts;
   }
 
-  std::shared_ptr<rvs::ifbase> sptr( (rvs::ifbase*)pif1);
+  std::shared_ptr<rvs::ifbase> sptr((rvs::ifbase*)pif1);
   ifmap.insert(rvs::action::t_impair(1, sptr));
 
   return 0;
@@ -464,34 +511,34 @@ int rvs::module::init_interface_1(void) {
  * @brief Lists available modules
  *
  */
-void rvs::module::do_list_modules(void)
-{
+void rvs::module::do_list_modules(void) {
   // for all modules
-  for (auto it=filemap.begin();it!=filemap.end(); it++) {
+  for (auto it = filemap.begin(); it != filemap.end(); it++) {
     // create action
     rvs::action* pa = rvs::module::action_create(it->first.c_str());
-    if(!pa) {
-      cerr << "ERROR: could not open module: " << it->first.c_str() << endl;
+    if (!pa) {
+      std::cerr << "ERROR: could not open module: " << it->first.c_str()
+                << std::endl;
       continue;
     }
 
     // output module name
-    cout << "\t" << it->first.c_str() << ":" << endl;
+    std::cout << "\t" << it->first.c_str() << ":" << std::endl;
 
     // obtain IF0
     rvs::if0* pif0 = dynamic_cast<rvs::if0*>(pa->get_interface(0));
-    if(!pif0) {
+    if (!pif0) {
       // action no longer needed so destroy it
       rvs::module::action_destroy(pa);
 
-      cerr << "ERROR: could not obtain data." << endl;
+      std::cerr << "ERROR: could not obtain data." << std::endl;
       continue;
     }
 
     // output info
-    std::cout << "\t\tDescription: " << pif0->get_description() << endl;
-    std::cout << "\t\tconfig: " << pif0->get_config() << endl;
-    std::cout << "\t\toutput: " << pif0->get_output() << endl;
+    std::cout << "\t\tDescription: " << pif0->get_description() << std::endl;
+    std::cout << "\t\tconfig: " << pif0->get_config() << std::endl;
+    std::cout << "\t\toutput: " << pif0->get_output() << std::endl;
 
     // action no longer needed so destroy it
     rvs::module::action_destroy(pa);

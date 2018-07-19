@@ -1,5 +1,5 @@
 /********************************************************************************
- * 
+ *
  * Copyright (c) 2018 ROCm Developer Tools
  *
  * MIT LICENSE:
@@ -22,16 +22,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef INCLUDE_USRCHK_H_
-#define INCLUDE_USRCHK_H_
+#ifndef PEBB_SO_INCLUDE_RVS_MODULE_H_
+#define PEBB_SO_INCLUDE_RVS_MODULE_H_
 
-#include <map>
-#include <string>
+#include "rvsliblog.h"
 
-/**
- *  @brief Function used in rcqt action class to check for given user and group membership
- */
+int log(const char* pMasg, const int level = 1);
 
-extern int usrchk_run(std::map<std::string,std::string> property);
-
-#endif  // INCLUDE_USRCHK_H_
+#endif  // PEBB_SO_INCLUDE_RVS_MODULE_H_

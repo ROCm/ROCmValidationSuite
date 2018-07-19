@@ -22,17 +22,47 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _GPU_UTIL_H_
-#define _GPU_UTIL_H_
+#ifndef INCLUDE_GPU_UTIL_H_
+#define INCLUDE_GPU_UTIL_H_
 
+#include <stdint.h>
 #include <vector>
 
 #define KFD_SYS_PATH_NODES              "/sys/class/kfd/kfd/topology/nodes"
 #define KFD_PATH_MAX_LENGTH             256
 
-extern int  gpu_num_subdirs(char* dirpath, char* prefix);
-extern void gpu_get_all_location_id(std::vector<unsigned short int>& gpus_location_id);
-extern void gpu_get_all_gpu_id(std::vector<unsigned short int>& gpus_id);
-extern void gpu_get_all_device_id( std::vector<unsigned short int>& gpus_device_id);
+extern int  gpu_num_subdirs(const char* dirpath, const char* prefix);
+extern void gpu_get_all_location_id(std::vector<uint16_t>& gpus_location_id);
+extern void gpu_get_all_gpu_id(std::vector<uint16_t>& gpus_id);
+extern void gpu_get_all_device_id(std::vector<uint16_t>& gpus_device_id);
 
-#endif	// _GPU_UTIL_H_
+namespace rvs {
+
+/**
+ * @class gpulist
+ *
+ * @brief GPU cross-indexing utility class
+ *
+ * Used to quickly get GPU ID from location ID and vs. versa
+ *
+ */
+class gpulist {
+ public:
+  static int Initialize();
+  static int32_t GetLocation(const uint32_t GpuID);
+  static int32_t GetGpuId(const uint32_t LocationID);
+  static int32_t GetDeviceIdFromLocationId(const uint32_t LocationID);
+  static int32_t GetDeviceIdFromGpuId(const uint32_t GpuID);
+
+ protected:
+  //! Array of GPU location IDs
+  static std::vector<uint16_t> location_id;
+  //! Array of GPU IDs
+  static std::vector<uint16_t> gpu_id;
+  //! Array of device IDs
+  static std::vector<uint16_t> device_id;
+};
+
+}  // namespace rvs
+
+#endif  // INCLUDE_GPU_UTIL_H_

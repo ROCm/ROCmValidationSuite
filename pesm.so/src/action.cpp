@@ -49,9 +49,8 @@ using std::cerr;
 using std::endl;
 using std::hex;
 
-extern const char* pcie_cap_names[];
 
-static Worker* pworker;
+extern Worker* pworker;
 
 //! Default constructor
 action::action() {
@@ -78,7 +77,19 @@ action::~action() {
  *
  * */
 int action::run(void) {
+  int error = 0;
+  string msg;
+  
   log("[PESM] in run()", rvs::logdebug);
+  
+  // get the action name
+  rvs::actionbase::property_get_action_name(&error);
+  if (error == 2) {
+    msg = "action field is missing in gst module";
+    log(msg.c_str(), rvs::logerror);
+    return -1;
+  }
+  rvs::lp::Log("[" + property["name"]+ "] pesm in run()", rvs::logtrace);
 
   // debugging help
   string val;
@@ -94,18 +105,25 @@ int action::run(void) {
 
   // start of monitoring?
   if (property["monitor"] == "true") {
-    log("[PESM] property[\"monitor\"] == \"true\"", rvs::logdebug);
+    if (pworker) {
+      rvs::lp::Log("[" + property["name"]+ "] pesm monitoring already started",
+                  rvs::logresults);
+      return 0;
+    }
+
+    rvs::lp::Log("[" + property["name"]+
+    "] pesm property[\"monitor\"] == \"true\"", rvs::logtrace);
 
     // create worker thread object
-    if (!pworker) {
-    log("[PESM] creating Worker", rvs::logdebug);
-      pworker = new Worker();
-      pworker->set_name(property["name"]);
+    rvs::lp::Log("[" + property["name"]+ "] pesm creating Worker",
+                 rvs::logtrace);
 
-      // check if  -j flag is passed
-      if (has_property("cli.-j")) {
-        pworker->json(true);
-      }
+    pworker = new Worker();
+    pworker->set_name(property["name"]);
+
+    // check if  -j flag is passed
+    if (has_property("cli.-j")) {
+      pworker->json(true);
     }
 
     // checki if deviceid filtering is required
@@ -149,19 +167,26 @@ int action::run(void) {
     }
 
     // start worker thread
-    log("[PESM] starting Worker", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+ "] pesm starting Worker",
+                 rvs::logtrace);
     pworker->start();
+    sleep(2);
 
-    log("[PESM] Monitoring started", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring started",
+                 rvs::logtrace);
   } else {
-    log("[PESM] property[\"monitor\"] != \"true\"", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+
+    "] pesm property[\"monitor\"] != \"true\"", rvs::logtrace);
     if (pworker) {
+      // (give thread chance to start)
+      sleep(2);
       pworker->set_stop_name(property["name"]);
       pworker->stop();
       delete pworker;
       pworker = nullptr;
     }
-    log("[PESM] Monitoring stopped", rvs::logdebug);
+    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring stopped",
+                 rvs::logtrace);
   }
   return 0;
 }
@@ -177,18 +202,14 @@ int action::run(void) {
  *
  * */
 int action::do_gpu_list() {
-  log("[PESM] in do_gpu_list()", rvs::logdebug);
+  log("pesm in do_gpu_list()", rvs::logtrace);
 
   std::map<string, string>::iterator it;
-  std::vector<unsigned short int> gpus_location_id;
 
   struct pci_access* pacc;
   struct pci_dev*    dev;
   char buff[1024];
   char devname[1024];
-
-  // get all GPU location_id
-  gpu_get_all_location_id(gpus_location_id);
 
   // get the pci_access structure
   pacc = pci_alloc();
@@ -206,14 +227,12 @@ int action::do_gpu_list() {
     | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
 
     // computes the actual dev's location_id (sysfs entry)
-    unsigned short int dev_location_id =
-      ((((unsigned short int)(dev->bus)) << 8) | (dev->func));
+    uint16_t dev_location_id =
+      ((((uint16_t)(dev->bus)) << 8) | (dev->func));
 
-    // check if this pci_dev corresponds to one of AMD GPUs
-    auto it_gpu = find(gpus_location_id.begin(), gpus_location_id.end(),
-                       dev_location_id);
-
-    if (it_gpu == gpus_location_id.end())
+    // if not and AMD GPU just continue
+    int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+    if (gpu_id < 0)
       continue;
 
     if (!bheader_printed) {
@@ -227,8 +246,8 @@ int action::do_gpu_list() {
     name = pci_lookup_name(pacc, devname, sizeof(devname), PCI_LOOKUP_DEVICE,
                            dev->vendor_id, dev->device_id);
 
-    cout << buff  << " - GPU[" << ix << "] " << name << hex <<
-    " (Device " << dev->device_id << ")"<< endl;
+    cout << buff  << " - GPU[" << gpu_id << "] " << name <<
+    " (Device " << dev->device_id << ")" << endl;
     ix++;
   }
 

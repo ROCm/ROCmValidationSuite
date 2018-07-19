@@ -22,25 +22,63 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ACTION_FILECHECK_H_
-#define ACTION_FILECHECK_H_
+extern "C" {
+#include <pci/pci.h>
+#include <linux/pci.h>
+}
 
-#include "rvslib.h"
-#include <string>
-#include <vector>
+#include <iostream>
+#include <algorithm>
+#include "action.h"
 
-class action_filecheck : public rvs::lib::actionbase
-{
-public:
+#include "rvs_module.h"
+#include "worker.h"
 
-	action_filecheck();
-	virtual ~action_filecheck();
-	
-	virtual int property_set(const char*, const char*);
-	virtual int run(void);
+#include "pci_caps.h"
+#include "gpu_util.h"
+#include "rvsloglp.h"
 
-protected:
+//  static Worker* pworker;  //FIXME
 
-};
+//! Default constructor
+action::action() {
+}
 
-#endif /* ACTION_FILECHECK_H_ */
+//! Default destructor
+action::~action() {
+  property.clear();
+}
+
+/**
+ * @brief Implements action functionality
+ *
+ * Functionality:
+ *
+ * - If "do_gpu_list" property is set, it lists all AMD GPUs present in the system and exits
+ * - If "monitor" property is set to "true", it creates Worker thread and initiates monitoring and exits
+ * - If "monitor" property is not set or is not set to "true", it stops the Worker thread and exits
+ *
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
+int action::run(void) {
+  log("[PQT] in run()", rvs::logdebug);
+
+  return 0;
+}
+
+/**
+ * @brief Lists AMD GPUs
+ *
+ * Functionality:
+ *
+ * Lists all AMD GPUs present in the system.
+ *
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
+int action::do_gpu_list() {
+  log("[PQT] in do_gpu_list()", rvs::logdebug);
+
+  return 0;
+}
