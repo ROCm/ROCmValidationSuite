@@ -61,8 +61,6 @@ vector<string> str_split(const string& str_val, const string& delimiter) {
  */
 int rvs_util_strarr_to_intarr(const std::vector<string>& sArr,
                               std::vector<int>* piArr) {
-  int ssize = sArr.size();
-
   piArr->clear();
 
   for (auto it = sArr.begin(); it != sArr.end(); ++it) {

@@ -100,7 +100,7 @@ void  rvs::if0::get_version(int* Major, int* Minor, int* Patch) {
  * @return pointer to C string holding module name
  *
  */
-char* rvs::if0::get_name(void) {
+const char* rvs::if0::get_name(void) {
   return (*rvs_module_get_name)();
 }
 
@@ -110,7 +110,7 @@ char* rvs::if0::get_name(void) {
  * @return pointer to C string holding module description
  *
  */
-char* rvs::if0::get_description(void) {
+const char* rvs::if0::get_description(void) {
   return (*rvs_module_get_description)();
 }
 
@@ -130,7 +130,7 @@ int rvs::if0::has_interface(int iid) {
  * @return pointer to C string holding configuration info
  *
  */
-char* rvs::if0::get_config() {
+const char* rvs::if0::get_config() {
   return (*rvs_module_get_config)();
 }
 
@@ -140,7 +140,7 @@ char* rvs::if0::get_config() {
  * @return pointer to C string holding output info
  *
  */
-char* rvs::if0::get_output() {
+const char* rvs::if0::get_output() {
   return (*rvs_module_get_output)();
 }
 

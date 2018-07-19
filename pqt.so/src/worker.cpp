@@ -1,5 +1,4 @@
-/*******************************************************************************
- *
+/********************************************************************************
  *
  * Copyright (c) 2018 ROCm Developer Tools
  *
@@ -21,13 +20,64 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- * 
+ *
  *******************************************************************************/
-#ifndef GPUP_SO_INCLUDE_RVS_MODULE_H_
-#define GPUP_SO_INCLUDE_RVS_MODULE_H_
+#include "worker.h"
 
-#include "rvsliblog.h"
+#include <chrono>
+#include <map>
+#include <string>
+#include <algorithm>
+#include <iostream>
 
-int log(const char* pMasg, const int level = 1);
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <pci/pci.h>
+#include <linux/pci.h>
+#ifdef __cplusplus
+}
+#endif
 
-#endif  // GPUP_SO_INCLUDE_RVS_MODULE_H_
+#include "rvsliblogger.h"
+#include "rvs_module.h"
+#include "pci_caps.h"
+#include "gpu_util.h"
+#include "rvsloglp.h"
+
+using namespace std;
+
+Worker::Worker() {}
+Worker::~Worker() {}
+
+/**
+ * @brief Thread function
+ *
+ * Loops while brun == TRUE and performs polled monitoring avery 1msec.
+ *
+ * */
+void Worker::run() {
+
+  log("[PQT] worker thread has finished", rvs::logdebug);
+
+}
+
+/**
+ * @brief Stops monitoring
+ *
+ * Sets brun member to FALSE thus signaling end of monitoring.
+ * Then it waits for std::thread to exit before returning.
+ *
+ * */
+void Worker::stop() {
+
+  log("[PQT] in Worker::stop()", rvs::logdebug);
+
+  // wait a bit to make sure thread has exited
+  try {
+    if (t.joinable())
+      t.join();
+  }
+  catch(...) {
+  }
+}
