@@ -71,7 +71,6 @@ class lp {
   static T_MODULE_INIT mi;
 };
 
-
 }  // namespace rvs
 
 #endif  // INCLUDE_RVSLOGLP_H_
