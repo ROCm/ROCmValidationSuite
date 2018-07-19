@@ -41,6 +41,16 @@ extern "C" {
 using std::vector;
 using std::string;
 
+/**
+ * @class action
+ * @ingroup PEQT
+ *
+ * @brief PEQT action implementation class
+ *
+ * Derives from rvs::actionbase and implements actual action functionality
+ * in its run() method.
+ *
+ */
 class action: public rvs::actionbase {
  public:
     action();
@@ -50,15 +60,12 @@ class action: public rvs::actionbase {
 
  private:
 
-    string action_name;
     bool bjson;
+    //! JSON root node
     void* json_root_node;
 
-    // PCIe capabilities stuff
     bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, uint16_t gpu_id);
 
-    // configuration properties getters
-    void property_get_action_name(void);  // gets the action name
 
  protected:
 };

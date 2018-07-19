@@ -22,15 +22,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVSIF0_H_
-#define RVSIF0_H_
+#ifndef RVS_INCLUDE_RVSIF0_H_
+#define RVS_INCLUDE_RVSIF0_H_
 
 
 #include "rvsmodule_if0.h"
 #include "rvsif_base.h"
 
-namespace rvs 
-{
+namespace rvs {
 
 /**
  * @class if0
@@ -40,24 +39,23 @@ namespace rvs
  *
  */
 class if0 : public ifbase {
-
-public:
+ public:
   virtual ~if0();
   virtual void   get_version(int*, int*, int*);
-  virtual char*  get_name(void);
-  virtual char*  get_description(void);
+  virtual const char*  get_name(void);
+  virtual const char*  get_description(void);
   virtual int    has_interface(int);
-  virtual char*  get_config(void);
-  virtual char*  get_output(void);
+  virtual const char*  get_config(void);
+  virtual const char*  get_output(void);
 
-protected:
+ protected:
   if0();
   if0(const if0&);
 
-virtual if0& operator= (const if0& rhs);
-virtual ifbase* clone(void);
+  virtual if0& operator= (const if0& rhs);
+  virtual ifbase* clone(void);
 
-protected:
+ protected:
   //! Ponter to module function returning version number
   t_rvs_module_get_version     rvs_module_get_version;
   //! Pointer to module function returning module name
@@ -72,9 +70,8 @@ protected:
   t_rvs_module_get_output      rvs_module_get_output;
 
 friend class module;
-
 };
 
 }  // namespace rvs
 
-#endif /* RVSIF0_H_ */
+#endif  // RVS_INCLUDE_RVSIF0_H_

@@ -55,17 +55,20 @@ extern "C" {
 
 #define MODULE_NAME                     "peqt"
 
-using namespace std;
+using std::string;
+using std::regex;
+using std::vector;
+using std::map;
 
 // collection of allowed PCIe capabilities
 const char* pcie_cap_names[] =
-        { "link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed",
-                "link_stat_neg_width", "slot_pwr_limit_value",
-                "slot_physical_num", "device_id", "vendor_id", "kernel_driver",
-                "dev_serial_num", "pwr_base_pwr", "pwr_rail_type",
-                "atomic_op_requester",  "atomic_32_bit_op_completer",
-		"atomic_64_bit_op_completer",
-		"atomic_128_bit_cas_op_completer"
+        {   "link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed",
+            "link_stat_neg_width", "slot_pwr_limit_value",
+            "slot_physical_num", "device_id", "vendor_id", "kernel_driver",
+            "dev_serial_num", "pwr_base_pwr", "pwr_rail_type",
+            "atomic_op_routing",  "atomic_op_32_completer",
+            "atomic_op_64_completer",
+            "atomic_op_128_CAS_completer"
         };
 
 // array of pointer to function corresponding to each capability
@@ -75,9 +78,9 @@ void (*arr_prop_pfunc_names[])(struct pci_dev *dev, char *) = {
     get_slot_pwr_limit_value, get_slot_physical_num,
     get_device_id, get_vendor_id, get_kernel_driver,
     get_dev_serial_num, get_pwr_base_pwr,
-    get_pwr_rail_type, get_atomic_op_requester,
-	get_atomic_32_bit_op_completer, get_atomic_64_bit_op_completer,
-	get_atomic_128_bit_cas_op_completer
+    get_pwr_rail_type, get_atomic_op_routing,
+    get_atomic_op_32_completer, get_atomic_op_64_completer,
+    get_atomic_op_128_CAS_completer
 };
 
 using std::vector;
@@ -85,7 +88,7 @@ using std::string;
 using std::map;
 
 /**
- * default class constructor
+ * @brief default class constructor
  */
 action::action() {
     bjson = false;
@@ -101,7 +104,7 @@ action::~action() {
 
 
 /**
- * gets all PCIe capabilities for a given AMD compatible GPU and
+ * @brief gets all PCIe capabilities for a given AMD compatible GPU and
  * checks the values against the given set of regular expressions
  * @param dev pointer to pci_dev corresponding to the current GPU
  * @param gpu_id unique gpu id
@@ -175,20 +178,9 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
     return pci_infra_qual_result;
 }
 
-/**
- * gets the action name from the module's properties collection
- */
-void action::property_get_action_name(void) {
-    action_name = "[]";
-    map<string, string>::iterator it = property.find(RVS_CONF_NAME_KEY);
-    if (it != property.end()) {
-        action_name = it->second;
-        property.erase(it);
-    }
-}
 
 /**
- * runs the whole PEQT logic
+ * @brief runs the whole PEQT logic
  * @return run result
  */
 int action::run(void) {
@@ -207,7 +199,12 @@ int action::run(void) {
     struct pci_dev *dev;
 
     // get the action name
-    property_get_action_name();
+    rvs::actionbase::property_get_action_name(&error);
+    if (error == 2) {
+      msg = "action field is missing in gst module";
+      log(msg.c_str(), rvs::logerror);
+      return -1;
+    }
 
     bjson = false;  // already initialized in the default constructor
 
@@ -244,7 +241,7 @@ int action::run(void) {
         msg = action_name + " " + MODULE_NAME + " " + PEQT_RESULT_FAIL_MESSAGE;
         log(msg.c_str(), rvs::logresults);
 
-        return 1;  // PCIe qualification check cannot continue
+        return -1;  // PCIe qualification check cannot continue
     }
 
     // get the <deviceid> property value
@@ -260,7 +257,12 @@ int action::run(void) {
                 + YAML_DEVICEID_PROPERTY_ERROR;
         log(msg.c_str(), rvs::logerror);
 
-        // continue with PCIe qualification check (this parameter is optional)
+        // log the module's result (FALSE) and abort PCIe qualification check
+        // (<device> parameter is mandatory)
+        msg = action_name + " " + MODULE_NAME + " " + PEQT_RESULT_FAIL_MESSAGE;
+        log(msg.c_str(), rvs::logresults);
+
+        return -1;  // PCIe qualification check cannot continue
     }
 
     // get all gpu_id for all AMD compatible GPUs that are registered

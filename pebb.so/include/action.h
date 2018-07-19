@@ -1,5 +1,5 @@
 /********************************************************************************
- * 
+ *
  * Copyright (c) 2018 ROCm Developer Tools
  *
  * MIT LICENSE:
@@ -22,13 +22,27 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef INCLUDE_KERNELCHK_H_
-#define INCLUDE_KERNELCHK_H_
+#ifndef PEBB_SO_INCLUDE_ACTION_H_
+#define PEBB_SO_INCLUDE_ACTION_H_
 
-#include <map>
-#include <string>
+#include "rvsactionbase.h"
 
+/**
+ * @class action
+ * @ingroup PEBB
+ *
+ * @brief PEBB action implementation class
+ *
+ * Derives from rvs::actionbase and implements actual action functionality
+ * in its run() method.
+ *
+ */
+class action : public rvs::actionbase {
+ public:
+  action();
+  virtual ~action();
 
-extern int kernelchk_run(std::map<std::string,std::string> property);
+  virtual int run(void);
+};
 
-#endif  // INCLUDE_KERNELCHK_H_
+#endif  // PEBB_SO_INCLUDE_ACTION_H_
