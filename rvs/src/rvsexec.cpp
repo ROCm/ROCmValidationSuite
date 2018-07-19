@@ -28,6 +28,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <fstream>
 #include "yaml-cpp/yaml.h"
 
 #include "rvsif0.h"
@@ -119,6 +120,16 @@ int rvs::exec::run() {
     config_file = path + config_file;
   }
 
+  // Check if pConfig file exists
+  std::ifstream file(config_file);
+
+  if (!file.good()) {
+    cerr << "ERROR: " << config_file << " file is missing.\n";
+    return -1;
+  } else {
+    file.close();
+  }
+
   // construct modules configuration file relative path
   val = path + ".rvsmodules.config";
   rvs::module::initialize(val.c_str());
@@ -136,6 +147,7 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-g")) {
     int sts = do_gpu_list();
     logger::terminate();
+    rvs::module::terminate();
     return sts;
   }
 
