@@ -53,7 +53,7 @@ rvs::actionbase::~actionbase() {
  *
  * */
 int rvs::actionbase::property_set(const char* pKey, const char* pVal) {
-  property.insert( pair<string, string>(pKey, pVal));
+  property.insert(pair<string, string>(pKey, pVal));
   return 0;
 }
 
@@ -209,17 +209,15 @@ void rvs::actionbase::property_get_run_count(int *error) {
   gst_run_count = 1;
   map<string, string>::iterator it = property.find(RVS_CONF_COUNT_KEY);
   if (it != property.end()) {
-    if (is_positive_integer(it->second)){
+    if (is_positive_integer(it->second)) {
       gst_run_count = std::stoi(it->second);
       property.erase(it);
       *error = 0;
-    }
-    else {
+    } else {
       *error = 1;
       property.erase(it);
     }
-  } 
-  else {
+  } else {
     *error = 2;
   }
 }
@@ -256,12 +254,10 @@ void rvs::actionbase::property_get_run_duration(int *error) {
       gst_run_count = 1;
       property.erase(it);
       *error = 0;
-    }
-    else {
+    } else {
       *error = 1;
     }
-  }
-  else {
+  } else {
     *error = 2;
   }
 }

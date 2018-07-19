@@ -22,28 +22,23 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+extern "C" {
+#include <pci/pci.h>
+#include <linux/pci.h>
+}
+
+#include <iostream>
+#include <algorithm>
 #include "action.h"
 
 #include "rvs_module.h"
 #include "worker.h"
 
-extern "C"
-{
-#include <pci/pci.h>
-#include <linux/pci.h>
-}
-#include <iostream>
-#include <algorithm>
-
 #include "pci_caps.h"
 #include "gpu_util.h"
-#include "rvs_module.h"
 #include "rvsloglp.h"
 
-
-using namespace std;
-
-static Worker* pworker;
+//  static Worker* pworker;  //FIXME
 
 //! Default constructor
 action::action() {
@@ -84,6 +79,6 @@ int action::run(void) {
  * */
 int action::do_gpu_list() {
   log("[PQT] in do_gpu_list()", rvs::logdebug);
-  
+
   return 0;
 }

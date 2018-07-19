@@ -110,5 +110,4 @@ class actionbase {
   std::vector<std::string> device_prop_gpu_id_list;
 };
 }  // namespace rvs
-
-#endif // INCLUDE_RVSACTIONBASE_H_
+#endif  // INCLUDE_RVSACTIONBASE_H_
