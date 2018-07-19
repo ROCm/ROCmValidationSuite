@@ -178,17 +178,6 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
     return pci_infra_qual_result;
 }
 
-/**
- * @brief gets the action name from the module's properties collection
- */
-void action::property_get_action_name(void) {
-    action_name = "[]";
-    map<string, string>::iterator it = property.find(RVS_CONF_NAME_KEY);
-    if (it != property.end()) {
-        action_name = it->second;
-        property.erase(it);
-    }
-}
 
 /**
  * @brief runs the whole PEQT logic
@@ -210,7 +199,12 @@ int action::run(void) {
     struct pci_dev *dev;
 
     // get the action name
-    property_get_action_name();
+    rvs::actionbase::property_get_action_name(&error);
+    if (error == 2) {
+      msg = "action field is missing in gst module";
+      log(msg.c_str(), rvs::logerror);
+      return -1;
+    }
 
     bjson = false;  // already initialized in the default constructor
 
