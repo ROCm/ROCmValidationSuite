@@ -24,6 +24,7 @@
  *******************************************************************************/
 #include "action.h"
 
+
 #include <stdlib.h>
 #include <sys/utsname.h>
 #include <sys/types.h>
@@ -31,14 +32,12 @@
 #include <pwd.h>
 #include <grp.h>
 #include <string.h>
+
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <map>
 #include <vector>
-
-
-
 
 #define PACKAGE "package"
 #define VERSION "version"
@@ -57,6 +56,7 @@
 #define BUFFER_SIZE 3000
 
 
+using std::cerr;
 using namespace std;
 
 
@@ -96,6 +96,7 @@ int action::run() {
   if (error == 2) {
     msg = "action field is missing in gst module";
     log(msg.c_str(), rvs::logerror);
+
     return -1;
   }
 
@@ -134,8 +135,6 @@ int action::run() {
  * */
 
 int action::pkgchk_run() {
-  // static rvs::actionbase actionbase;
-
   string package_name;
   if (has_property(PACKAGE, package_name)) {
     bool version_exists = false;
@@ -143,7 +142,6 @@ int action::pkgchk_run() {
     // Checking if version field exists
     string version_name;
     version_exists = has_property(VERSION, version_name);
-
     pid_t pid;
     int fd[2];
     pipe(fd);
@@ -161,6 +159,7 @@ int action::pkgchk_run() {
           , package_name.c_str());
       // We execute the dpkg-querry
       system(buffer);
+
     } else if (pid > 0) {
       // Parent
 
@@ -172,6 +171,7 @@ int action::pkgchk_run() {
       count = read(fd[0], result, BUFFER_SIZE);
 
       result[count] = 0;
+
       string result1 = result;
 
       // We parse the given result
@@ -199,7 +199,7 @@ int action::pkgchk_run() {
       }
     } else {
       // fork process error
-      cerr << INTERNAL_ERROR << endl;
+      cerr << INTERNAL_ERROR << '\n';
       return -1;
     }
     return 0;
@@ -218,11 +218,11 @@ int action::usrchk_run() {
   string user_name;
   if (has_property(USER, user_name)) {
     bool group_exists = false;
-    bool user_is_in_all_groups = true;
     string group_values_string;
 
     // Check if gruop exists
     group_exists = has_property(GROUP, group_values_string);
+
 
     // Structures for checking group and user
     struct passwd pwd, *result;
@@ -245,7 +245,6 @@ int action::usrchk_run() {
     } else {
       log(user_exists.c_str(), rvs::logresults);
     }
-
     if (group_exists) {
       // Put the group list into vector
       string delimiter = ",";
@@ -283,7 +282,6 @@ int action::usrchk_run() {
           log(err_msg.c_str(), rvs::logerror);
           continue;
         }
-
         int i;
         int j = 0;
 
@@ -292,6 +290,7 @@ int action::usrchk_run() {
           if (strcmp(grp.gr_mem[i], user_name.c_str()) == 0) {
             user_group = user_group + " "
               + vector_iter->c_str() + " is member";
+
             log(user_group.c_str(), rvs::logresults);
             j = 1;
             break;
@@ -340,7 +339,7 @@ int action::kernelchk_run() {
     /*
      * Parsing /etc/os-release file for pretty name to extract 
      */
-    ifstream os_version_read("/etc/os-release");
+    std::ifstream os_version_read("/etc/os-release");
     string os_actual = "";
     string os_file_line;
     bool os_version_correct = false;
@@ -372,6 +371,7 @@ int action::kernelchk_run() {
       cerr << "Unable to read kernel version" << endl;
       return -1;
     }
+
     string kernel_actual = kernel_version_struct.release;
     bool kernel_version_correct = false;
 
@@ -389,6 +389,7 @@ int action::kernelchk_run() {
     log(result.c_str(), rvs::logresults);
     return 0;
   }
+
   return -1;
 }
 
@@ -431,10 +432,9 @@ int action::ldcfgchk_run() {
     } else if (pid > 0) {
       // Parent process
       char result[BUFFER_SIZE];
-      int count;
       close(fd[1]);
 
-      count = read(fd[0], result, BUFFER_SIZE);
+      read(fd[0], result, BUFFER_SIZE);
       string ld_config_result = "[rcqt] ldconfigcheck ";
 
       string result_string = result;
@@ -443,7 +443,7 @@ int action::ldcfgchk_run() {
         vector<string> objdump_lines = str_split(result_string, "\n");
         int begin_of_the_arch_string = 0;
         int end_of_the_arch_string = 0;
-        for (int i = 0; i < objdump_lines.size(); i++) {
+        for (uint i = 0; i < objdump_lines.size(); i++) {
           // cout << objdump_lines[i] << "*" << endl;
           if (objdump_lines[i].find("architecture") != string::npos) {
             begin_of_the_arch_string = objdump_lines[i].find(":");

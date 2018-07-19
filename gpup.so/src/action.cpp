@@ -365,8 +365,8 @@ void action::property_io_links_get_value(string gpu_id, int node_id) {
  */
 int action::run(void) {
     string gpu_id, msg;
-    int num_nodes, num_links;
-    bool device_all_selected = false, dev_id_corr;
+    int num_nodes;
+    bool dev_id_corr;
     int error = 0;
 
     // discover the number of nodes: Inside nodes folder there are only folders
@@ -376,21 +376,21 @@ int action::run(void) {
     
     // get the action name
     rvs::actionbase::property_get_action_name(&error);
-    if(error == 2) {
+    if (error == 2) {
       msg = "action field is missing in gst module";
       log(msg.c_str(), rvs::logerror);
       return -1;
     }
 
     // get <device> property value (a list of gpu id)
-    device_all_selected = property_get_device(&error, num_nodes);
+    property_get_device(&error, num_nodes);
 
     // get the <deviceid> property value if provided
     int dev_id = property_get_deviceid(&error);
 
     // extract properties and io_links properties names
-    int prop_all = property_split(JSON_PROP_NODE_NAME);
-    int prop_io_link_all = property_split(JSON_IO_LINK_PROP_NODE_NAME);
+    property_split(JSON_PROP_NODE_NAME);
+    property_split(JSON_IO_LINK_PROP_NODE_NAME);
 
     bjson = false;  // already initialized in the default constructor
 
