@@ -91,97 +91,6 @@ action::~action() {
 
 
 /**
- * @brief gets the action name from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_action_name(int *error) {
-    *error = 0;
-    map<string, string>::iterator it = property.find(RVS_CONF_NAME_KEY);
-    if (it != property.end()) {
-        action_name = it->second;
-        property.erase(it);
-    } else {
-        *error = 1;
-    }
-}
-
-
-/**
- * @brief reads the module's properties collection to see whether the GST should
- * run the stress test in parallel
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_run_parallel(int *error) {
-    *error = 0;
-    gst_runs_parallel = false;
-    map<string, string>::iterator it = property.find(RVS_CONF_PARALLEL_KEY);
-    if (it != property.end()) {
-        if (it->second == "true")
-            gst_runs_parallel = true;
-        else
-        if (it->second == "false")
-            gst_runs_parallel = false;
-        else
-            *error = 1;
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads the run count from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_run_count(int *error) {
-    *error = 0;
-    gst_run_count = 1;
-    map<string, string>::iterator it = property.find(RVS_CONF_COUNT_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second))
-            gst_run_count = std::stoi(it->second);
-        else
-            *error = 1;
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads the module's properties collection to check how much to delay
- * each stress test session
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_run_wait(int *error) {
-    *error = 0;
-    gst_run_wait_ms = 0;
-    map<string, string>::iterator it = property.find(RVS_CONF_WAIT_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second))
-            gst_run_wait_ms = std::stoul(it->second);
-        else
-            *error = 1;
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads the total run duration from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_run_duration(int *error) {
-    *error = 0;
-    gst_run_duration_ms = 0;
-    map<string, string>::iterator it = property.find(RVS_CONF_DURATION_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second)) {
-            gst_run_duration_ms = std::stoul(it->second);
-            gst_run_count = 1;
-        } else {
-            *error = 1;
-        }
-        property.erase(it);
-    }
-}
-
-/**
  * @brief reads the stress test's ramp-up time from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
@@ -534,18 +443,19 @@ int action::run(void) {
     vector<uint16_t> gpus_location_id, gpus_device_id, gpus_id;
     map<int, uint16_t> gst_gpus_device_index;
 
+    // get the action name
+    rvs::actionbase::property_get_action_name(&error);
+    if (error == 2) {
+      msg = "action field is missing in gst module";
+      log(msg.c_str(), rvs::logerror);
+      return -1;
+    }
+
     device_all_selected = false;
     device_id_filtering = false;
 
-    property_get_action_name(&error);
-    if (error) {
-        cerr << "RVS-GST: action name cannot be empty";
-        return -1;
-    }
-
-    // check for -j flag (json logging)
     if (property.find("cli.-j") != property.end())
-        bjson = true;
+      bjson = true;
 
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
@@ -569,7 +479,6 @@ int action::run(void) {
             rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
             rvs::lp::LogRecordFlush(json_root_node);
         }
-
         return 0;
     }
 
@@ -601,6 +510,61 @@ int action::run(void) {
         cerr << "RVS-GST: action: " << action_name << " " <<
                 KFD_QUERYING_ERROR << std::endl;
         return -1;
+    }
+
+    // get the other action/GST related properties
+    rvs::actionbase::property_get_run_parallel(&error);
+    if (error == 1) {
+      msg = "run parallel field is not in the correct format in gst module";
+      log(msg.c_str(), rvs::loginfo);
+    }
+    rvs::actionbase::property_get_run_count(&error);
+    if (error == 1) {
+      msg = "count field is not in the correct format  in gst module";
+      log(msg.c_str(), rvs::loginfo);
+    }
+    rvs::actionbase::property_get_run_wait(&error);
+    if (error == 1) {
+      msg = "wait field is not in the correct format in gst module";
+      log(msg.c_str(), rvs::loginfo);
+    }
+    rvs::actionbase::property_get_run_duration(&error);
+    if (error == 1) {
+      msg = "wait field is not in the correct format in gst module";
+      log(msg.c_str(), rvs::loginfo);
+    } else if (error == 2) {
+      msg = "wait field is missing in gst module";
+      log(msg.c_str(), rvs::loginfo);
+    }
+    property_get_gst_ramp_interval(&error);
+    if (error) {
+      cerr << "RVS-GST: action: " << action_name <<
+      "  invalid '" << RVS_CONF_RAMP_INTERVAL_KEY;
+      return false;
+    }
+    property_get_gst_log_interval(&error);
+    if (error) {
+      cerr << "RVS-GST: action: " << action_name <<
+      "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY;
+      return false;
+    }
+    property_get_gst_max_violations(&error);
+    if (error) {
+      cerr << "RVS-GST: action: " << action_name <<
+      "  invalid '" << RVS_CONF_MAX_VIOLATIONS_KEY;
+      return false;
+    }
+    property_get_gst_copy_matrix(&error);
+    if (error) {
+      cerr << "RVS-GST: action: " << action_name <<
+      "  invalid '" << RVS_CONF_COPY_MATRIX_KEY;
+      return false;
+    }
+    property_get_gst_tolerance(&error);
+    if (error) {
+      cerr << "RVS-GST: action: " << action_name <<
+      "  invalid '" << RVS_CONF_TOLERANCE_KEY;
+      return false;
     }
 
     // iterate over available & compatible AMD GPUs

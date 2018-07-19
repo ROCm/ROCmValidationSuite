@@ -31,7 +31,6 @@ int log(const char* pMsg, const int level) {
   return rvs::lp::Log(pMsg, level);
 }
 
-
 extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision) {
   *Major = BUILD_VERSION_MAJOR;
   *Minor = BUILD_VERSION_MINOR;
@@ -43,25 +42,28 @@ extern "C" int rvs_module_has_interface(int iid) {
   case 0:
   case 1:
     return 1;
-    }
-
+  }
   return 0;
 }
 
-extern "C" const char* rvs_module_get_name(void) {
-  return "rcqt";
+extern "C" char* rvs_module_get_name(void) {
+  return const_cast<char*>("rcqt");
 }
 
-extern "C" const char* rvs_module_get_description(void) {
-  return "ROCm Configuration Qualification Tool module";
+extern "C" char* rvs_module_get_description(void) {
+  return const_cast<char*>("ROCm Configuration Qualification Tool module");
 }
 
-extern "C" const char* rvs_module_get_config(void) {
-  return "package (string), version (string), installed (bool), user (string), groups (collection of strings), file (string) , owner (string), group (string), permission (int), type (int), exists (bool)";
+extern "C" char* rvs_module_get_config(void) {
+  return const_cast<char*>("package (string)\
+    , version (string), installed (bool)\
+    , user (string), groups (collection of strings), file (string)\
+    , owner (string), group (string), permission (int)\
+    , type (int), exists (bool)");
 }
 
-extern "C" const char* rvs_module_get_output(void) {
-  return "pass (bool)";
+extern "C" char* rvs_module_get_output(void) {
+  return const_cast<char*>("pass (bool)");
 }
 
 extern "C" int   rvs_module_init(void* pMi) {
@@ -73,8 +75,8 @@ extern "C" int   rvs_module_terminate(void) {
   return 0;
 }
 
-extern "C" const char* rvs_module_get_errstring(int error) {
-  return "General Error";
+extern "C" char* rvs_module_get_errstring(int error) {
+  return const_cast<char*>("General Error");
 }
 
 extern "C" void* rvs_module_action_create(void) {
@@ -85,6 +87,7 @@ extern "C" int   rvs_module_action_destroy(void* pAction) {
   delete static_cast<rvs::actionbase*>(pAction);
   return 0;
 }
+
 
 extern "C" int rvs_module_action_property_set\
 (void* pAction, const char* Key, const char* Val) {
