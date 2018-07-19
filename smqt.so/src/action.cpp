@@ -31,7 +31,7 @@ extern "C" {
 using namespace std;
 
 //config
-long bar1_req_size, bar1_base_addr_min, bar1_base_addr_max, bar2_req_size, bar2_base_addr_min, bar2_base_addr_max, bar4_req_size, bar4_base_addr_min, bar4_base_addr_max, bar5_req_size;
+unsigned long bar1_req_size, bar1_base_addr_min, bar1_base_addr_max, bar2_req_size, bar2_base_addr_min, bar2_base_addr_max, bar4_req_size, bar4_base_addr_min, bar4_base_addr_max, bar5_req_size;
 //output
 unsigned long bar1_size, bar1_base_addr, bar2_size, bar2_base_addr, bar4_size, bar4_base_addr, bar5_size;
 bool pass;

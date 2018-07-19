@@ -1,5 +1,4 @@
-/*******************************************************************************
- *
+/********************************************************************************
  *
  * Copyright (c) 2018 ROCm Developer Tools
  *
@@ -21,13 +20,65 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- * 
+ *
  *******************************************************************************/
-#ifndef GPUP_SO_INCLUDE_RVS_MODULE_H_
-#define GPUP_SO_INCLUDE_RVS_MODULE_H_
+extern "C" {
+#include <pci/pci.h>
+#include <linux/pci.h>
+}
 
-#include "rvsliblog.h"
+#include <iostream>
+#include <algorithm>
+#include "action.h"
 
-int log(const char* pMasg, const int level = 1);
+#include "rvs_module.h"
+#include "worker.h"
 
-#endif  // GPUP_SO_INCLUDE_RVS_MODULE_H_
+#include "pci_caps.h"
+#include "gpu_util.h"
+#include "rvsloglp.h"
+
+//  static Worker* pworker;  //FIXME
+
+//! Default constructor
+action::action() {
+}
+
+//! Default destructor
+action::~action() {
+  property.clear();
+}
+
+/**
+ * @brief Implements action functionality
+ *
+ * Functionality:
+ *
+ * - If "do_gpu_list" property is set, it lists all AMD GPUs present in the system and exits
+ * - If "monitor" property is set to "true", it creates Worker thread and initiates monitoring and exits
+ * - If "monitor" property is not set or is not set to "true", it stops the Worker thread and exits
+ *
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
+int action::run(void) {
+  log("[PQT] in run()", rvs::logdebug);
+
+  return 0;
+}
+
+/**
+ * @brief Lists AMD GPUs
+ *
+ * Functionality:
+ *
+ * Lists all AMD GPUs present in the system.
+ *
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
+int action::do_gpu_list() {
+  log("[PQT] in do_gpu_list()", rvs::logdebug);
+
+  return 0;
+}

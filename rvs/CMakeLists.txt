@@ -26,6 +26,7 @@
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
+add_compile_options(-Wall -Werror)
 
 message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
@@ -115,3 +116,14 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
   DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
   COMPONENT applications
 )
+
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/man/man1/rvs.1"
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/man
+  COMPONENT applications
+)
+
+install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/userguide/html
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/userguide
+  COMPONENT applications
+)
+
