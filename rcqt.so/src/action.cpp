@@ -24,20 +24,20 @@
  *******************************************************************************/
 #include "action.h"
 
-
 #include <stdlib.h>
 #include <sys/utsname.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
+#include <sys/stat.h>
 #include <string.h>
-
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <map>
 #include <vector>
+
 
 #define PACKAGE "package"
 #define VERSION "version"
@@ -53,12 +53,19 @@
 #define LDPATH  "ldpath"
 #define ARCH    "arch"
 
+#define FILE "file"
+
 #define BUFFER_SIZE 3000
 
-
 using std::cerr;
-using namespace std;
-
+using std::string;
+using std::cin;
+using std::cout;
+using std::cerr;
+using std::iterator;
+using std::endl;
+using std::ifstream;
+using std::map;
 
 action::action() {
 }
@@ -90,13 +97,12 @@ int action::run() {
   bool ldcfgchk_so_bool = false;
   bool ldcfgchk_arch_bool = false;
   bool ldcfgchk_ldpath_bool = false;
-
+  bool filechk_bool = false;
   // get the action name
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing in gst module";
     log(msg.c_str(), rvs::logerror);
-
     return -1;
   }
 
@@ -125,12 +131,17 @@ int action::run() {
   if (ldcfgchk_so_bool && ldcfgchk_arch_bool && ldcfgchk_ldpath_bool)
     return ldcfgchk_run();
 
+  // check if file check action is going to trigger
+  filechk_bool = rvs::actionbase::has_property(FILE);
+
+  if (filechk_bool == true)
+    return filechk_run();
+
   return -1;
 }
 
 /**
  * Check if the package is installed in the system (optional: check package version )
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */
 
@@ -154,15 +165,14 @@ int action::pkgchk_run() {
       dup2(fd[1], STDOUT_FILENO);
       dup2(fd[1], STDERR_FILENO);
       char buffer[BUFFER_SIZE];
-      snprintf(buffer, BUFFER_SIZE
-          , "dpkg-query -W -f='${Status} ${Version}\n' %s"
-          , package_name.c_str());
+
+      snprintf(buffer, BUFFER_SIZE, \
+      "dpkg-query -W -f='${Status} ${Version}\n' %s", package_name.c_str());
+
       // We execute the dpkg-querry
       system(buffer);
-
     } else if (pid > 0) {
       // Parent
-
       char result[BUFFER_SIZE];
       int count;
       close(fd[1]);
@@ -171,7 +181,6 @@ int action::pkgchk_run() {
       count = read(fd[0], result, BUFFER_SIZE);
 
       result[count] = 0;
-
       string result1 = result;
 
       // We parse the given result
@@ -209,7 +218,6 @@ int action::pkgchk_run() {
 
 /**
  * Check if the user exists in the system (optional: check for the group membership )
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */
 
@@ -223,9 +231,9 @@ int action::usrchk_run() {
     // Check if gruop exists
     group_exists = has_property(GROUP, group_values_string);
 
-
     // Structures for checking group and user
     struct passwd pwd, *result;
+
     char pwdbuffer[2000];
     int pwdbufflenght = 2000;
     struct group grp, *grprst;
@@ -256,10 +264,11 @@ int action::usrchk_run() {
           ; vector_iter != group_vector.end(); vector_iter++) {
         string user_group = "[rcqt] usercheck " + user_name;
       int error_group;
+
         if ((error_group =  getgrnam_r(vector_iter->c_str()
           , &grp, pwdbuffer, pwdbufflenght, &grprst)) != 0) {
           cerr << "Error with getgrnam_r" << endl;
-        //  return -1;
+          return -1;
         }
         if (error_group == EIO) {
           cerr << "IO error" << endl;
@@ -273,6 +282,14 @@ int action::usrchk_run() {
         } else if (error_group == ERANGE) {
           cerr << "Error insufficient buffer in getgrnam_r" << endl;
           return -1;
+        }
+        string err_msg;
+        if (grprst == nullptr) {
+          err_msg = "group ";
+          err_msg += vector_iter->c_str();
+          err_msg += " doesn't exist";
+          log(err_msg.c_str(), rvs::logerror);
+          continue;
         }
 
         if (grprst == nullptr) {
@@ -288,9 +305,7 @@ int action::usrchk_run() {
         // Compare if the user group id is equal to the group id
         for (i = 0; grp.gr_mem[i] != NULL; i++) {
           if (strcmp(grp.gr_mem[i], user_name.c_str()) == 0) {
-            user_group = user_group + " "
-              + vector_iter->c_str() + " is member";
-
+            user_group = user_group + " " + vector_iter->c_str() + " is member";
             log(user_group.c_str(), rvs::logresults);
             j = 1;
             break;
@@ -300,8 +315,9 @@ int action::usrchk_run() {
         // If the index is 0 then we user id doesn't match the group id
         if (j == 0) {
           // printf("user is not in the group\n");
-          user_group = user_group + " "
-            + vector_iter->c_str() + " is not member";
+
+          user_group = user_group + " " + vector_iter->c_str() \
+          + " is not member";
           log(user_group.c_str(), rvs::logresults);
         }
       }
@@ -313,7 +329,6 @@ int action::usrchk_run() {
 
 /**
  * Check if the os and kernel version in the system match the givem os and kernel version
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */
 
@@ -333,6 +348,7 @@ int action::kernelchk_run() {
      * Fill the os version vector and kernel version vector with
      */
     vector<string> os_version_vector = str_split(os_version_values, ",");
+
     vector<string> kernel_version_vector =
       str_split(kernel_version_values, ",");
 
@@ -377,25 +393,23 @@ int action::kernelchk_run() {
 
     // Check if the given kernel version matches one from the list
     vector<string>::iterator kernel_iter;
-    for (kernel_iter = kernel_version_vector.begin()
-        ; kernel_iter != kernel_version_vector.end(); kernel_iter++)
+    for (kernel_iter = kernel_version_vector.begin() ; \
+      kernel_iter != kernel_version_vector.end(); kernel_iter++)
       if (kernel_actual.compare(*kernel_iter) == 0) {
         kernel_version_correct = true;
         break;
       }
-      string result = "[rcqt] kernelcheck " + os_actual + " "
-        + kernel_actual + " "
-        + (os_version_correct && kernel_version_correct ? "pass" : "fail");
+    string result = "[rcqt] kernelcheck " + os_actual + \
+    " " + kernel_actual + " " + \
+    (os_version_correct && kernel_version_correct ? "pass" : "fail");
     log(result.c_str(), rvs::logresults);
     return 0;
   }
-
   return -1;
 }
 
 /**
  * Check if the shared object is in the given location with the correct architecture
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */
 
@@ -405,15 +419,13 @@ int action::ldcfgchk_run() {
   string ldpath_requested;
   if (has_property(SONAME, soname_requested)) {
     if (has_property(ARCH, arch_requested) == false) {
-      cerr << "acrhitecture field missing in conflig" << endl;
+      cerr << "acrhitecture field missing in config" << endl;
       return -1;
     }
-
     if (has_property(LDPATH, ldpath_requested) == false) {
-      cerr << "libraty path field missing in conflig" << endl;
+      cerr << "library path field missing in config" << endl;
       return -1;
     }
-
     // Full path of shared object
     string full_ld_path = ldpath_requested + "/" + soname_requested;
 
@@ -433,8 +445,6 @@ int action::ldcfgchk_run() {
       // Parent process
       char result[BUFFER_SIZE];
       close(fd[1]);
-
-      read(fd[0], result, BUFFER_SIZE);
       string ld_config_result = "[rcqt] ldconfigcheck ";
 
       string result_string = result;
@@ -458,6 +468,7 @@ int action::ldcfgchk_run() {
             } else {
               string arch_pass = ld_config_result + soname_requested + " "
                 + full_ld_path + " " + arch_found + " fail";
+
               log(arch_pass.c_str(), rvs::logresults);
             }
           }
@@ -474,4 +485,134 @@ int action::ldcfgchk_run() {
     return 0;
   }
   return -1;
+}
+
+// Converts decimal into octal
+int action::dectooct(int decnum) {
+  int rem, i = 1, octnum = 0;
+  while (decnum !=0) {
+    rem = decnum%8;
+    decnum/=8;
+    octnum +=rem*i;
+    i *=10;
+  }
+  return octnum;
+}
+/**
+ * Check if the parametrs of the file match the given ones
+ * @return 0 - success, non-zero otherwise
+ * */ 
+
+int action::filechk_run() {
+  string exists_string, file, owner, group, msg, check;
+  int permission, type;
+  bool exists;
+  struct stat info;
+
+  map<string, string>::iterator iter;
+  iter = property.find("name");
+  std::string action_name = iter->second;
+
+  // get from property which file we are checking
+  iter = property.find("file");
+  file = iter->second;
+
+  // get bool value of property exists
+  iter = property.find("exists");
+  if (iter == property.end())
+    exists = true;
+  else
+    exists_string = iter->second;
+  if (exists_string == "false")
+    exists = false;
+  else if (exists_string == "true")
+    exists = true;
+
+  // check if exists property corresponds to real existence of the file
+  if (exists == false) {
+    if (stat(file.c_str(), &info) < 0)
+      check = "true";
+    else
+      check = "false";
+    msg = "[" + action_name + "] " + " filecheck "+ file +" DNE " + check;
+    log(msg.c_str(), rvs::logresults);
+    } else {
+    // when exists propetry is true,but file cannot be found
+    if (stat(file.c_str(), &info) < 0) {
+      cerr << "File is not found" << endl;
+    // if exists property is set to true and file is found,check each parametar
+    } else {
+      // check if owner is tested
+      iter = property.find("owner");
+      if (iter == property.end()) {
+        cerr << "Ownership is not tested." << endl;
+      } else {
+        // check if value from property is equal to real one
+        owner = iter->second;
+        struct passwd p, *result;
+        char pbuff[256];
+        if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0))
+          cout << "Error with getpwuid_r" << endl;
+        if (p.pw_name == owner)
+          check = "true";
+        else
+          check = "false";
+        msg = "[" + action_name + "] " + " filecheck " \
+        + owner +" owner:" + check;
+        log(msg.c_str(), rvs::logresults);
+      }
+      // check if group is tested
+      iter = property.find("group");
+      if (iter == property.end()) {
+        cerr << "Group ownership is not tested." << endl;
+      } else {
+        // check if value from property is equal to real one
+        group = iter->second;
+        struct group g, *result;
+        char pbuff[256];
+        if ((getgrgid_r(info.st_gid, &g, pbuff, sizeof(pbuff), &result) != 0))
+          cout << "Error with getgrgid_r" << endl;
+        if (g.gr_name == group)
+          check = "true";
+        else
+          check = "false";
+        msg = "[" + action_name + "] " + " filecheck " + group+ " group:"+check;
+        log(msg.c_str(), rvs::logresults);
+      }
+      // check if permissions are tested
+      iter = property.find("permission");
+      if (iter == property.end()) {
+        cerr << "Permissions are not tested." << endl;
+    } else {
+        // check if value from property is equal to real one
+        permission = std::atoi(iter->second.c_str());
+        if (dectooct(info.st_mode)%1000 == permission)
+          check = "true";
+        else
+          check = "false";
+        msg = "[" + action_name + "] " + " filecheck " + \
+        std::to_string(permission)+" permission:"+check;
+        log(msg.c_str(), rvs::logresults);
+      }
+      // check if type is tested
+      iter = property.find("type");
+      if (iter == property.end()) {
+        cerr << "File type is not tested." << endl;
+      } else {
+        // check if value from property is equal to real one
+        type = std::atoi(iter->second.c_str());
+        struct stat buf;
+        if (lstat(file.c_str(), &buf) >= 0) {
+          if (dectooct(buf.st_mode)/1000 == type)
+            check = "true";
+          else
+            check = "false";
+          msg = "[" + action_name + "] " + " filecheck " + \
+          std::to_string(type)+" type:"+check;
+          log(msg.c_str(), rvs::logresults);
+        }
+      }
+    }
+  }
+  return 0;
 }
