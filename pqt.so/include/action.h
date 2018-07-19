@@ -36,10 +36,21 @@ public:
 
   virtual int run(void);
   
+  // agent structure
+  struct AgentInformation {
+    // global agent information
+    hsa_agent_t agent;
+    string      agent_name;
+    string      agent_device_type;
+    // memory pool
+    
+  };
+  
+  
   // TODO add info
-  vector<hsa_agent_t> agent_list;
-  vector<hsa_agent_t> gpu_list;
-  vector<hsa_agent_t> cpu_list;
+  vector<AgentInformation> agent_list;
+  vector<AgentInformation> gpu_list;
+  vector<AgentInformation> cpu_list;
 
   // TODO add info
 //   hsa_status_t status;
@@ -52,8 +63,12 @@ public:
   void GetAgents();
   
   // TODO add info
-  // Process one agent and put it in CPU or GPU list
+  // Process one agent and put it in the list
   static hsa_status_t ProcessAgent(hsa_agent_t agent, void* data);
+  
+  // TODO add info
+  // Process one agent and put it in the list
+  static hsa_status_t ProcessMemPool(hsa_agent_t agent, void* data);  
 
   // TODO add info
   static void print_hsa_status(string message, hsa_status_t st);

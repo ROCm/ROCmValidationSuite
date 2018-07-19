@@ -222,17 +222,33 @@ void action::GetAgents() {
   log("[PQT] Before hsa_init ...", rvs::logdebug);
   status = hsa_init();
   log("[PQT] After hsa_init ...", rvs::logdebug);
-  print_hsa_status("[PQT] ProcessAgent - hsa_init()\n", status);
+  print_hsa_status("[PQT] GetAgents - hsa_init()\n", status);
   
-  // Populate the lists of agents and pools
+  // Populate the lists of agents
   log("[PQT] Before hsa_iterate_agents ...", rvs::logdebug);
-  status = hsa_iterate_agents(ProcessAgent, this);
+  status = hsa_iterate_agents(ProcessAgent, &agent_list);
   log("[PQT] After hsa_iterate_agents ...", rvs::logdebug);
   print_hsa_status("[PQT] GetAgents - hsa_iterate_agents()\n", status);
     
-//   log_msg = "[PQT] After hsa_iterate_agents with status "  + status;
-//   log_msg = "BLA";
-//   log(log_msg.c_str(), rvs::logdebug);  
+  for (int i = 0; i < agent_list.size(); i++) {
+    log_msg = "[PQT] GetAgents - agent with name = "  + agent_list[i].agent_name + " and device_type = " + agent_list[i].agent_device_type;
+    log(log_msg.c_str(), rvs::logdebug);
+    
+//     // Populate the list of memory pools
+//     log("[PQT] Before hsa_amd_agent_iterate_memory_pools ...", rvs::logdebug);
+//     status = hsa_amd_agent_iterate_memory_pools(agent_list[i].agent, ProcessMemPool, &agent_list);
+//     log("[PQT] After hsa_amd_agent_iterate_memory_pools ...", rvs::logdebug);
+//     print_hsa_status("[PQT] GetAgents - hsa_amd_agent_iterate_memory_pools()\n", status);
+    
+    
+    // separate the lists
+    if (agent_list[i].agent_device_type == "CPU") {
+      cpu_list.push_back(agent_list[i]);
+    } else if (agent_list[i].agent_device_type == "GPU") {
+      gpu_list.push_back(agent_list[i]);
+    }
+  }
+ 
 }
 
 /**
@@ -249,8 +265,12 @@ hsa_status_t action::ProcessAgent(hsa_agent_t agent, void* data) {
   hsa_status_t status;
   char agent_name[64];
   hsa_device_type_t device_type;
-  string log_msg, log_agent_name, log_device_type;
-
+  string log_msg, log_agent_name;
+  AgentInformation agent_info;
+  
+  // get agent list
+  vector<AgentInformation>* agent_l = reinterpret_cast<vector<AgentInformation>*>(data);
+  
   log("[PQT] Called ProcessAgent() ...", rvs::logdebug);
   
   // Get the name of the agent
@@ -260,22 +280,32 @@ hsa_status_t action::ProcessAgent(hsa_agent_t agent, void* data) {
   // Get device type
   status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
   print_hsa_status("[PQT] ProcessAgent - hsa_agent_get_info()\n", status);
-
-  log_agent_name = agent_name;
-  log_device_type = device_type;
-  log_msg = "[PQT] Found agent with name = "  + log_agent_name + " and device_type = " + log_device_type;
-  log(log_msg.c_str(), rvs::logdebug);  
   
-//   // Capture the handle of Cpu agent
-//   if (device_type == HSA_DEVICE_TYPE_CPU) {
-//     cpu_list.push_back(agent);
-//   } else {
-//     gpu_list.push_back(agent);
-//   }
-//   agent_list.push_back(agent);
-
-  // TODO fetch memory pools
-//   status = hsa_amd_agent_iterate_memory_pools(agent, MemPoolInfo, asyncDrvr);
+  log_agent_name = agent_name;
+  log_msg = "[PQT] Found agent with name = "  + log_agent_name + " and device_type = ";
+  switch (device_type) {
+    case HSA_DEVICE_TYPE_CPU : {
+      agent_info.agent_device_type = "CPU";
+      log_msg = log_msg + "CPU.";
+      break;
+    };
+    case HSA_DEVICE_TYPE_GPU : {
+      agent_info.agent_device_type = "GPU";
+      log_msg = log_msg + "GPU.";
+      break;
+    };
+    case HSA_DEVICE_TYPE_DSP : {
+      agent_info.agent_device_type = "DSP";
+      log_msg = log_msg + "DSP.";
+      break;
+    };
+  };
+  log(log_msg.c_str(), rvs::logdebug);
+  // add agent to list
+  agent_info.agent = agent;
+  agent_info.agent_name = log_agent_name;
+  agent_l->push_back(agent_info);
+  
 
   return HSA_STATUS_SUCCESS;
 }
