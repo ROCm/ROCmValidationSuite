@@ -42,9 +42,9 @@
  */
 class action : public rvs::actionbase {
  public:
-      action();
-      virtual ~action();
-      virtual int run(void);
+    action();
+    virtual ~action();
+    virtual int run(void);
 
  protected:
     /**
@@ -62,7 +62,6 @@ class action : public rvs::actionbase {
     /**
     *  @brief Function used in rcqt action class to check for os and kernel version
     */
-
     virtual int kernelchk_run();
 
     /**

@@ -64,8 +64,7 @@ class action: public rvs::actionbase {
     //! TRUE if JSON output is required
     bool bjson;
 
-    //! name of the action
-    string action_name;
+    
     //! TRUE if the GST action will run on all selected devices in parallel
     bool gst_runs_parallel;
     //! number of GST stress test iterations to run
@@ -98,18 +97,14 @@ class action: public rvs::actionbase {
     uint16_t deviceid;
 
     // configuration properties getters
-    // general config keys
-    void property_get_action_name(int *error);
-    void property_get_run_parallel(int *error);
-    void property_get_run_count(int *error);
-    void property_get_run_wait(int *error);
-    void property_get_run_duration(int *error);
+
 
     // GST specific config keys
     void property_get_gst_ramp_interval(int *error);
     void property_get_gst_log_interval(int *error);
     void property_get_gst_max_violations(int *error);
     void property_get_gst_copy_matrix(int *error);
+
     void property_get_gst_target_stress(int *error);
     void property_get_gst_tolerance(int *error);
     void property_get_gst_gflops_greedy_strategy(int *error);
