@@ -225,6 +225,8 @@ int rvs::exec::do_gpu_list() {
     return 1;
   }
 
+  pif1->property_set("name", "(launcher)");
+
   // specify "list GPUs" action
   pif1->property_set("do_gpu_list", "");
 
