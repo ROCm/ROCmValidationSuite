@@ -88,18 +88,6 @@ action::~action() {
 }
 
 /**
- * gets the action name from the module's properties collection
- */
-void action::property_get_action_name(void) {
-    action_name = "[]";
-    map<string, string>::iterator it = property.find(RVS_CONF_NAME_KEY);
-    if (it != property.end()) {
-        action_name = it->second;
-        property.erase(it);
-    }
-}
-
-/**
  * gets the gpu_id list from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  * @return true if "all" is selected, false otherwise
@@ -129,7 +117,6 @@ bool action::property_get_device(int *error, int num_nodes) {
             // split the list of gpu_id
             gpus_id = str_split(it->second, YAML_DEVICE_PROP_DELIMITER);
             property.erase(it);
-
             if (gpus_id.empty()) {
                 *error = 1;  // list of gpu_id cannot be empty
             } else {
@@ -386,9 +373,14 @@ int action::run(void) {
     // that represent the node number
     num_nodes = gpu_num_subdirs(const_cast<char*>(KFD_SYS_PATH_NODES),
     const_cast<char*>(""));
-
+    
     // get the action name
-    property_get_action_name();
+    rvs::actionbase::property_get_action_name(&error);
+    if (error == 2) {
+      msg = "action field is missing in gst module";
+      log(msg.c_str(), rvs::logerror);
+      return -1;
+    }
 
     // get <device> property value (a list of gpu id)
     property_get_device(&error, num_nodes);
