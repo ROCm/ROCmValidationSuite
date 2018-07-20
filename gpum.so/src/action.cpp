@@ -81,18 +81,6 @@ action::~action() {
 }
 
 /**
- * gets the action name from the module's properties collection
- */
-void action::property_get_action_name(void) {
-    action_name = "[]";
-    map<string, string>::iterator it = property.find(RVS_CONF_NAME_KEY);
-    if (it != property.end()) {
-        action_name = it->second;
-        property.erase(it);
-    }
-}
-
-/**
  * @brief Implements action functionality
  *
  * Functionality:

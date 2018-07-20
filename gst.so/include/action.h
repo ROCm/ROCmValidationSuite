@@ -63,16 +63,7 @@ class action: public rvs::actionbase {
  protected:
     //! TRUE if JSON output is required
     bool bjson;
-
     
-    //! TRUE if the GST action will run on all selected devices in parallel
-    bool gst_runs_parallel;
-    //! number of GST stress test iterations to run
-    uint64_t gst_run_count;
-    //! stress test run delay
-    uint64_t gst_run_wait_ms;
-    //! stress test run duration
-    uint64_t gst_run_duration_ms;
     //! stress test ramp duration
     uint64_t gst_ramp_interval;
     //! time interval at which the module reports the average GFlops
