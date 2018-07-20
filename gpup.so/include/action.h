@@ -49,16 +49,12 @@ class action : public rvs::actionbase {
     // the list of io_links properties that are in query
     vector<string> io_link_property_name;
 
-    string action_name;
     bool bjson;
     void* json_root_node;
-
 
     // get the device property value (list of gpu_id) from the module's
     // properties collection
     bool property_get_device(int *error, int num_nodes);
-    // get the action name
-    void property_get_action_name(void);
     // get gpu id
     string property_get_gpuid(int node_id);
     // check device id is correct
@@ -69,8 +65,6 @@ class action : public rvs::actionbase {
     void property_get_value(string gpu_id, int node_id);
     // get io links properties values
     void property_io_links_get_value(string gpu_id, int node_id);
-
- protected:
 };
 
 #endif  // GPUP_SO_INCLUDE_ACTION_H_
