@@ -67,10 +67,30 @@ action::~action() {
  *
  * */
 int action::run(void) {
+  hsa_agent_t src_agent, dst_agent;
+  hsa_amd_memory_pool_t src_buff, dst_buff;
+  bool bidirectional;
+  
   log("[PQT] in run()", rvs::logdebug);
   
   // get all the agents
   GetAgents();
+  
+  for (int i = 0; i < gpu_list.size(); i++) {
+    for (int j = 0; j < gpu_list.size(); j++) {
+      if (i == j) { continue; };
+      for (int n = 0; n < gpu_list[i].mem_pool_list.size(); n++) {      
+        for (int m = 0; m < gpu_list[j].mem_pool_list.size(); m++) {
+          src_agent = gpu_list[i].agent;
+          dst_agent = gpu_list[j].agent;
+          src_buff  = gpu_list[i].mem_pool_list[n];
+          dst_buff  = gpu_list[j].mem_pool_list[m];
+          // send p2p traffic
+          send_p2p_traffic(src_agent, dst_agent, src_buff, dst_buff, true);
+        }
+      }
+    }
+  } 
   
   return 0;
 }
@@ -347,6 +367,7 @@ hsa_status_t action::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
   size_t max_size = 0;
   status = hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_SIZE, &max_size);
   print_hsa_status("[PQT] ProcessMemPool - hsa_amd_memory_pool_get_info(HSA_AMD_MEMORY_POOL_INFO_SIZE)", status);
+  agent_info->max_size_list.push_back(max_size);
 
   // Determine if the pools is accessible to all agents
   bool access_to_all = false;
@@ -379,3 +400,21 @@ hsa_status_t action::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
 
   return HSA_STATUS_SUCCESS;
 }
+
+// TODO info
+/**
+ * @brief Process hsa_agent memory pool
+ *
+ * Functionality:
+ *
+ * Process agents memory pools
+ *
+ * @return hsa_status_t
+ *
+ * */
+void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_amd_memory_pool_t src_buff, hsa_amd_memory_pool_t dst_buff, bool bidirectional) {
+  log("[PQT] send_p2p_traffic called ... ", rvs::logdebug);
+}
+
+
+

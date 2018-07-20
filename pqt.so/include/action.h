@@ -46,6 +46,7 @@ public:
     hsa_amd_memory_pool_t         sys_pool;
     // Memory region
     vector<hsa_amd_memory_pool_t> mem_pool_list;
+    vector<size_t>                max_size_list;
   };
   
   
@@ -68,6 +69,9 @@ public:
   
   // TODO add info
   static void print_hsa_status(string message, hsa_status_t st);
+
+  // TODO add info
+  static void send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_amd_memory_pool_t src_buff, hsa_amd_memory_pool_t dst_buff, bool bidirectional);
   
 protected:
   int do_gpu_list(void);
