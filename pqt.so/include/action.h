@@ -71,7 +71,7 @@ public:
   static void print_hsa_status(string message, hsa_status_t st);
 
   // TODO add info
-  static void send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_amd_memory_pool_t src_buff, hsa_amd_memory_pool_t dst_buff, bool bidirectional);
+  static void send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_amd_memory_pool_t src_buff, hsa_amd_memory_pool_t dst_buff, bool bidirectional, size_t src_max_size, size_t dst_max_size);
   
 protected:
   int do_gpu_list(void);

@@ -69,6 +69,7 @@ action::~action() {
 int action::run(void) {
   hsa_agent_t src_agent, dst_agent;
   hsa_amd_memory_pool_t src_buff, dst_buff;
+  size_t src_max_size, dst_max_size;
   bool bidirectional;
   
   log("[PQT] in run()", rvs::logdebug);
@@ -81,12 +82,14 @@ int action::run(void) {
       if (i == j) { continue; };
       for (int n = 0; n < gpu_list[i].mem_pool_list.size(); n++) {      
         for (int m = 0; m < gpu_list[j].mem_pool_list.size(); m++) {
-          src_agent = gpu_list[i].agent;
-          dst_agent = gpu_list[j].agent;
-          src_buff  = gpu_list[i].mem_pool_list[n];
-          dst_buff  = gpu_list[j].mem_pool_list[m];
+          src_agent    = gpu_list[i].agent;
+          dst_agent    = gpu_list[j].agent;
+          src_buff     = gpu_list[i].mem_pool_list[n];
+          dst_buff     = gpu_list[j].mem_pool_list[m];
+          src_max_size = gpu_list[i].max_size_list[n];
+          dst_max_size = gpu_list[j].max_size_list[m];
           // send p2p traffic
-          send_p2p_traffic(src_agent, dst_agent, src_buff, dst_buff, true);
+          send_p2p_traffic(src_agent, dst_agent, src_buff, dst_buff, true, src_max_size, dst_max_size);
         }
       }
     }
@@ -412,8 +415,23 @@ hsa_status_t action::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
  * @return hsa_status_t
  *
  * */
-void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_amd_memory_pool_t src_buff, hsa_amd_memory_pool_t dst_buff, bool bidirectional) {
+void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_amd_memory_pool_t src_buff, hsa_amd_memory_pool_t dst_buff, bool bidirectional, size_t src_max_size, size_t dst_max_size) {
+  hsa_status_t status;
+  void* src_pool_pointer;
+  void* dst_pool_pointer;
   log("[PQT] send_p2p_traffic called ... ", rvs::logdebug);
+  
+  // Allocate buffers in src and dst pools
+  status = hsa_amd_memory_pool_allocate(src_buff, src_max_size, 0, &src_pool_pointer);
+  print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(SRC)", status);
+
+  status = hsa_amd_memory_pool_allocate(dst_buff, dst_max_size, 0, &dst_pool_pointer);
+  print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(DST)", status);
+
+  // Create a signal to wait on copy operation
+//   status = hsa_signal_create(1, 0, NULL, &signal);
+//   print_hsa_status("[PQT] ProcessMemPool - hsa_amd_memory_pool_get_info(HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS)", status);
+  
 }
 
 
