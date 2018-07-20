@@ -39,11 +39,13 @@ public:
   // agent structure
   struct AgentInformation {
     // global agent information
-    hsa_agent_t agent;
-    string      agent_name;
-    string      agent_device_type;
-    // memory pool
-    
+    hsa_agent_t                   agent;
+    string                        agent_name;
+    string                        agent_device_type;
+    // System region
+    hsa_amd_memory_pool_t         sys_pool;
+    // Memory region
+    vector<hsa_amd_memory_pool_t> mem_pool_list;
   };
   
   
@@ -52,12 +54,6 @@ public:
   vector<AgentInformation> gpu_list;
   vector<AgentInformation> cpu_list;
 
-  // TODO add info
-//   hsa_status_t status;
-
-  // TODO add info
-//   string log_msg;
-  
   // TODO add info
   // Get all agents
   void GetAgents();
@@ -68,8 +64,8 @@ public:
   
   // TODO add info
   // Process one agent and put it in the list
-  static hsa_status_t ProcessMemPool(hsa_agent_t agent, void* data);  
-
+  static hsa_status_t ProcessMemPool(hsa_amd_memory_pool_t pool, void* data);
+  
   // TODO add info
   static void print_hsa_status(string message, hsa_status_t st);
   
