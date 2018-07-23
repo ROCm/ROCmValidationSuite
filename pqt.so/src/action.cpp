@@ -117,6 +117,10 @@ int action::do_gpu_list() {
 // TODO add info
 void action::print_hsa_status(string message, hsa_status_t st) {
   string log_msg = message;
+//   // skip successfull messages
+//   if (st == HSA_STATUS_SUCCESS) {
+//     return;
+//   }
   switch (st) {
     case HSA_STATUS_SUCCESS : {
       log_msg = message + " The function has been executed successfully.";
@@ -434,6 +438,8 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
   void* src_pool_pointer;
   void* dst_pool_pointer;
   string log_msg;
+  hsa_signal_t signal;
+
   log("[PQT] +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
   log("[PQT] send_p2p_traffic called ... ", rvs::logdebug);
   log("[PQT] +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
@@ -453,8 +459,10 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     }  
 
     // print current size
+    log("[PQT] -----------------------------------------------------------------------------------", rvs::logdebug);
     log_msg = "[PQT] send_p2p_traffic - curr_size = " + std::to_string(curr_size) + " Bytes";
     log(log_msg.c_str(), rvs::logdebug);
+    log("[PQT] -----------------------------------------------------------------------------------", rvs::logdebug);  
     
     // Allocate buffers in src and dst pools
     status = hsa_amd_memory_pool_allocate(src_buff, curr_size, 0, &src_pool_pointer);
@@ -464,8 +472,26 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(DST)", status);
 
     // Create a signal to wait on copy operation
-//     status = hsa_signal_create(1, 0, NULL, &signal);
-//     print_hsa_status("[PQT] ProcessMemPool - hsa_amd_memory_pool_get_info(HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS)", status);
+    status = hsa_signal_create(1, 0, NULL, &signal);
+    print_hsa_status("[PQT] send_p2p_traffic - hsa_signal_create()", status);
+    
+    // get agent access 
+    status = hsa_amd_agents_allow_access(1, &src_agent, NULL, src_pool_pointer);
+    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(SRC)", status);
+
+    status = hsa_amd_agents_allow_access(1, &dst_agent, NULL, dst_pool_pointer);
+    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(SRC)", status);
+    
+    // Copy from src into dst buffer (hsa_amd_memory_async_copy(dst, dst_agent, src, src_agent, size, 0, NULL, signal))
+    status = hsa_amd_memory_async_copy(dst_pool_pointer, dst_agent, src_pool_pointer, src_agent, curr_size, 0, NULL, signal);
+    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(SRC)", status);
+
+    // Wait for the forward copy operation to complete
+    log_msg = "[PQT] send_p2p_traffic - hsa_signal_wait_acquire(SRC -> DST) before ...";
+    log(log_msg.c_str(), rvs::logdebug);
+    while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE));    
+    log_msg = "[PQT] send_p2p_traffic - hsa_signal_wait_acquire(SRC -> DST) after ...";
+    log(log_msg.c_str(), rvs::logdebug);
     
   }
   
