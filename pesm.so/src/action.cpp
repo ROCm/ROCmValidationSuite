@@ -33,7 +33,6 @@ extern "C" {
 #include <vector>
 #include <map>
 #include <iostream>
-#include <iomanip>
 #include <algorithm>
 
 #include "rvs_module.h"
