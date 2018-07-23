@@ -433,6 +433,7 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
   hsa_status_t status;
   void* src_pool_pointer;
   void* dst_pool_pointer;
+  string log_msg;
   log("[PQT] +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
   log("[PQT] send_p2p_traffic called ... ", rvs::logdebug);
   log("[PQT] +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
@@ -451,6 +452,10 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
       break;
     }  
 
+    // print current size
+    log_msg = "[PQT] send_p2p_traffic - curr_size = " + std::to_string(curr_size) + " Bytes";
+    log(log_msg.c_str(), rvs::logdebug);
+    
     // Allocate buffers in src and dst pools
     status = hsa_amd_memory_pool_allocate(src_buff, curr_size, 0, &src_pool_pointer);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(SRC)", status);
