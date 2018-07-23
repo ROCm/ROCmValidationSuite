@@ -480,11 +480,11 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(SRC)", status);
 
     status = hsa_amd_agents_allow_access(1, &dst_agent, NULL, dst_pool_pointer);
-    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(SRC)", status);
+    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(DST)", status);
     
     // Copy from src into dst buffer (hsa_amd_memory_async_copy(dst, dst_agent, src, src_agent, size, 0, NULL, signal))
     status = hsa_amd_memory_async_copy(dst_pool_pointer, dst_agent, src_pool_pointer, src_agent, curr_size, 0, NULL, signal);
-    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(SRC)", status);
+    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_async_copy(SRC -> DST)", status);
 
     // Wait for the forward copy operation to complete
     log_msg = "[PQT] send_p2p_traffic - hsa_signal_wait_acquire(SRC -> DST) before ...";
