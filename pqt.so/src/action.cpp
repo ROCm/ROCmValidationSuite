@@ -272,7 +272,21 @@ void action::GetAgents() {
       gpu_list.push_back(agent_list[i]);
     }
   }
- 
+
+  // Initialize the list of buffer sizes to use in copy/read/write operations
+  // For All Copy operations use only one buffer size
+  if (size_list.size() == 0) {
+    uint32_t size_len = sizeof(DEFAULT_SIZE_LIST)/sizeof(uint32_t);
+    for (uint32_t idx = 0; idx < size_len; idx++) {
+      size_list.push_back(DEFAULT_SIZE_LIST[idx]);
+    }
+  } else {
+    uint32_t size_len = size_list.size();
+    for (uint32_t idx = 0; idx < size_len; idx++) {
+      size_list[idx] = size_list[idx] * 1024 * 1024;
+    }
+  }
+  std::sort(size_list.begin(), size_list.end());
 }
 
 /**
@@ -419,18 +433,36 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
   hsa_status_t status;
   void* src_pool_pointer;
   void* dst_pool_pointer;
+  log("[PQT] +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
   log("[PQT] send_p2p_traffic called ... ", rvs::logdebug);
-  
-  // Allocate buffers in src and dst pools
-  status = hsa_amd_memory_pool_allocate(src_buff, src_max_size, 0, &src_pool_pointer);
-  print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(SRC)", status);
+  log("[PQT] +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
 
-  status = hsa_amd_memory_pool_allocate(dst_buff, dst_max_size, 0, &dst_pool_pointer);
-  print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(DST)", status);
+  // Initialize size of buffer to equal the largest element of allocation
+  uint32_t size_len = size_list.size();
+  uint32_t max_size = size_list.back();
 
-  // Create a signal to wait on copy operation
-//   status = hsa_signal_create(1, 0, NULL, &signal);
-//   print_hsa_status("[PQT] ProcessMemPool - hsa_amd_memory_pool_get_info(HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS)", status);
+  // Iterate through the differnt buffer sizes to
+  // compute the bandwidth as determined by copy
+  for (uint32_t idx = 0; idx < size_len; idx++) {
+    
+    // This should not be happening
+    uint32_t curr_size = size_list[idx];
+    if (curr_size > src_max_size || curr_size > dst_max_size) {
+      break;
+    }  
+
+    // Allocate buffers in src and dst pools
+    status = hsa_amd_memory_pool_allocate(src_buff, curr_size, 0, &src_pool_pointer);
+    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(SRC)", status);
+
+    status = hsa_amd_memory_pool_allocate(dst_buff, curr_size, 0, &dst_pool_pointer);
+    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(DST)", status);
+
+    // Create a signal to wait on copy operation
+//     status = hsa_signal_create(1, 0, NULL, &signal);
+//     print_hsa_status("[PQT] ProcessMemPool - hsa_amd_memory_pool_get_info(HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS)", status);
+    
+  }
   
 }
 
