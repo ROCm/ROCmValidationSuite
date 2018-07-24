@@ -34,7 +34,7 @@ extern "C"
 }
 #include <iostream>
 #include <algorithm>
-
+#include <stdio.h>
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_module.h"
@@ -71,6 +71,7 @@ int action::run(void) {
   hsa_amd_memory_pool_t src_buff, dst_buff;
   size_t src_max_size, dst_max_size;
   bool bidirectional;
+  string log_msg;
   
   log("[PQT] in run()", rvs::logdebug);
   
@@ -88,6 +89,9 @@ int action::run(void) {
           dst_buff     = gpu_list[j].mem_pool_list[m];
           src_max_size = gpu_list[i].max_size_list[n];
           dst_max_size = gpu_list[j].max_size_list[m];
+          // print
+          log_msg = "[PQT] src = " + gpu_list[i].agent_name + " / " + gpu_list[i].agent_device_type + " and dst = " + gpu_list[j].agent_name + " / " + gpu_list[j].agent_device_type;
+          log(log_msg.c_str(), rvs::logdebug);
           // send p2p traffic
           send_p2p_traffic(src_agent, dst_agent, src_buff, dst_buff, true, src_max_size, dst_max_size);
         }
@@ -463,6 +467,10 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     log_msg = "[PQT] send_p2p_traffic - curr_size = " + std::to_string(curr_size) + " Bytes";
     log(log_msg.c_str(), rvs::logdebug);
     log("[PQT] -----------------------------------------------------------------------------------", rvs::logdebug);  
+
+    // Initialize buffers
+//     std::memset(src_pool_pointer, 0xA5, curr_size);
+//     std::memset(dst_pool_pointer, 0x5A, curr_size);
     
     // Allocate buffers in src and dst pools
     status = hsa_amd_memory_pool_allocate(src_buff, curr_size, 0, &src_pool_pointer);
@@ -472,6 +480,7 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(DST)", status);
 
     // Create a signal to wait on copy operation
+    // hsa_signal_create(hsa_signal_value_t initial_value, uint32_t num_consumers, const hsa_agent_t *consumers, hsa_signal_t *signal)
     status = hsa_signal_create(1, 0, NULL, &signal);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_signal_create()", status);
     
@@ -482,7 +491,11 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     status = hsa_amd_agents_allow_access(1, &dst_agent, NULL, dst_pool_pointer);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(DST)", status);
     
-    // Copy from src into dst buffer (hsa_amd_memory_async_copy(dst, dst_agent, src, src_agent, size, 0, NULL, signal))
+//     // store signal
+//     hsa_signal_store_relaxed(signal, 1);
+
+    // Copy from src into dst buffer
+    // hsa_amd_memory_async_copy(void* dst, hsa_agent_t dst_agent, const void* src, hsa_agent_t src_agent, size_t size, uint32_t num_dep_signals, const hsa_signal_t* dep_signals, hsa_signal_t completion_signal)
     status = hsa_amd_memory_async_copy(dst_pool_pointer, dst_agent, src_pool_pointer, src_agent, curr_size, 0, NULL, signal);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_async_copy(SRC -> DST)", status);
 
