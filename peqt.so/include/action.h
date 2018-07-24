@@ -59,15 +59,13 @@ class action: public rvs::actionbase {
     virtual int run(void);
 
  private:
-    //! name of the action
-    string action_name;
-    //! TRUE if JSON output is required
+
     bool bjson;
     //! JSON root node
     void* json_root_node;
 
     bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, uint16_t gpu_id);
-    void property_get_action_name(void);
+
 
  protected:
 };

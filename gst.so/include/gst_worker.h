@@ -26,6 +26,7 @@
 #define GST_SO_INCLUDE_GST_WORKER_H_
 
 #include <string>
+#include <memory>
 #include "rvsthreadbase.h"
 #include "rvs_blas.h"
 
@@ -45,7 +46,7 @@
 class GSTWorker : public rvs::ThreadBase {
  public:
     GSTWorker();
-    ~GSTWorker();
+    virtual ~GSTWorker();
 
     //! sets action name
     void set_name(const std::string& name) { action_name = name; }
@@ -98,12 +99,12 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t get_log_interval(void) { return log_interval; }
 
     //! sets the maximum allowed number of target_stress violations
-    void set_max_violations(int _max_violations) {
+    void set_max_violations(uint64_t _max_violations) {
         max_violations = _max_violations;
     }
 
     //! returns the maximum allowed number of target_stress violations
-    int get_max_violations(void) { return max_violations; }
+    uint64_t get_max_violations(void) { return max_violations; }
 
     //! sets the copy_matrix (true = the matrix will be copied to GPU each
     //! time a new SGEMM will run, false = the matrix will be copied only once)
@@ -116,6 +117,14 @@ class GSTWorker : public rvs::ThreadBase {
         target_stress = _target_stress;
     }
 
+    //! sets the SGEMM matrix size
+    void set_matrix_size(uint64_t _matrix_size) {
+        matrix_size = _matrix_size;
+    }
+
+    //! returns the SGEMM matrix size
+    uint64_t get_matrix_size(void) { return matrix_size; }
+
     //! returns the target stress (in GFlops) that the GPU will try to achieve
     float get_target_stress(void) { return target_stress; }
 
@@ -127,11 +136,19 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
                     std::chrono::time_point<std::chrono::system_clock> t_start);
+    //! sets the JSON flag
+    static void set_use_json(bool _bjson) { bjson = _bjson; }
+    //! returns the JSON flag
+    static bool get_use_json(void) { return bjson; }
 
  protected:
+    void setup_blas(int *error, std::string *err_description);
+    void hit_max_gflops(int *error, std::string *err_description);
     bool do_gst_ramp(int *error, std::string *err_description);
     bool do_gst_stress_test(int *error, std::string *err_description);
     virtual void run(void);
+    void log_to_json(const std::string &key, const std::string &value,
+                     int log_level);
 
  protected:
     //! name of the action
@@ -149,7 +166,7 @@ class GSTWorker : public rvs::ThreadBase {
     //! time interval at which the module reports the average GFlops
     uint64_t log_interval;
     //! maximum allowed number of target_stress violations
-    int max_violations;
+    uint64_t max_violations;
     //! specifies whether to copy the matrix to the GPU for each SGEMM operation
     bool copy_matrix;
     //! target stress (in GFlops) that the GPU will try to achieve
@@ -157,12 +174,18 @@ class GSTWorker : public rvs::ThreadBase {
     //! GFlops tolerance (how much the GFlops can fluctuare after
     //! the ramp period for the test to succeed)
     float tolerance;
+    //! SGEMM matrix size
+    uint64_t matrix_size;
     //! actual ramp time in case it succeeds
     uint64_t ramp_actual_time;
     //! rvs_blas pointer
-    rvs_blas *gpu_blas;
+    std::unique_ptr<rvs_blas> gpu_blas;
     //! max gflops achieved during the stress test
     double max_gflops;
+    //! delay used to reduce SGEMM frequency
+    double delay_target_stress;
+    //! TRUE if JSON output is required
+    static bool bjson;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

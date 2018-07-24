@@ -131,7 +131,7 @@ int rvs::module::initialize(const char* pConfig) {
  *
  */
 rvs::module* rvs::module::find_create_module(const char* name) {
-  module* m = NULL;
+  module* m = nullptr;
 
   // find module based on short name
   auto it = modulemap.find(std::string(name));

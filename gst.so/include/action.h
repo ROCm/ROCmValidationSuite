@@ -63,19 +63,7 @@ class action: public rvs::actionbase {
  protected:
     //! TRUE if JSON output is required
     bool bjson;
-    //! JSON root node
-    void* json_root_node;
 
-    //! name of the action
-    string action_name;
-    //! TRUE if the GST action will run on all selected devices in parallel
-    bool gst_runs_parallel;
-    //! number of GST stress test iterations to run
-    uint64_t gst_run_count;
-    //! stress test run delay
-    uint64_t gst_run_wait_ms;
-    //! stress test run duration
-    uint64_t gst_run_duration_ms;
     //! stress test ramp duration
     uint64_t gst_ramp_interval;
     //! time interval at which the module reports the average GFlops
@@ -89,6 +77,8 @@ class action: public rvs::actionbase {
     //! GFlops tolerance (how much the GFlops can fluctuare after
     //! the ramp period for the test to succeed)
     float gst_tolerance;
+    //! matrix size for SGEMM
+    uint64_t gst_matrix_size;
 
     //! TRUE if device config key is "all
     bool device_all_selected;
@@ -98,28 +88,22 @@ class action: public rvs::actionbase {
     uint16_t deviceid;
 
     // configuration properties getters
-    // general config keys
-    void property_get_action_name(int *error);
-    void property_get_run_parallel(int *error);
-    void property_get_run_count(int *error);
-    void property_get_run_wait(int *error);
-    void property_get_run_duration(int *error);
+
 
     // GST specific config keys
     void property_get_gst_ramp_interval(int *error);
     void property_get_gst_log_interval(int *error);
     void property_get_gst_max_violations(int *error);
     void property_get_gst_copy_matrix(int *error);
+
     void property_get_gst_target_stress(int *error);
     void property_get_gst_tolerance(int *error);
+    void property_get_gst_matrix_size(int *error);
 
     bool get_all_gst_config_keys(void);
     bool get_all_common_config_keys(void);
 
     bool do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
-
-    // json stuff
-    void init_json_logging(void);
 };
 
 #endif  // GST_SO_INCLUDE_ACTION_H_

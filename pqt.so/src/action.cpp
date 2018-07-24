@@ -24,26 +24,22 @@
  *******************************************************************************/
 #include "action.h"
 
-#include "rvs_module.h"
-#include "worker.h"
-
-extern "C"
-{
+extern "C" {
 #include <pci/pci.h>
 #include <linux/pci.h>
 }
+
 #include <iostream>
 #include <algorithm>
 #include <stdio.h>
+
+#include "rvs_module.h"
+#include "worker.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
-#include "rvs_module.h"
 #include "rvsloglp.h"
 
-
-using namespace std;
-
-static Worker* pworker;
+//  static Worker* pworker;  //FIXME
 
 //! Default constructor
 action::action() {
@@ -70,7 +66,7 @@ int action::run(void) {
   hsa_agent_t src_agent, dst_agent;
   hsa_amd_memory_pool_t src_buff, dst_buff;
   size_t src_max_size, dst_max_size;
-  bool bidirectional;
+//   bool bidirectional;
   string log_msg;
   
   log("[PQT] in run()", rvs::logdebug);
@@ -78,11 +74,11 @@ int action::run(void) {
   // get all the agents
   GetAgents();
   
-  for (int i = 0; i < gpu_list.size(); i++) {
-    for (int j = 0; j < gpu_list.size(); j++) {
+  for (uint32_t i = 0; i < gpu_list.size(); i++) {
+    for (uint32_t j = 0; j < gpu_list.size(); j++) {
       if (i == j) { continue; };
-      for (int n = 0; n < gpu_list[i].mem_pool_list.size(); n++) {      
-        for (int m = 0; m < gpu_list[j].mem_pool_list.size(); m++) {
+      for (uint32_t n = 0; n < gpu_list[i].mem_pool_list.size(); n++) {      
+        for (uint32_t m = 0; m < gpu_list[j].mem_pool_list.size(); m++) {
           src_agent    = gpu_list[i].agent;
           dst_agent    = gpu_list[j].agent;
           src_buff     = gpu_list[i].mem_pool_list[n];
@@ -114,7 +110,7 @@ int action::run(void) {
  * */
 int action::do_gpu_list() {
   log("[PQT] in do_gpu_list()", rvs::logdebug);
-  
+
   return 0;
 }
 
@@ -230,6 +226,10 @@ void action::print_hsa_status(string message, hsa_status_t st) {
       log_msg = message + " An HSAIL operation resulted on a hardware exception.";
       break;
     };
+    default : {
+      log_msg = message + " Unknown error.";
+      break;      
+    }
   };
   log(log_msg.c_str(), rvs::logdebug);
 }
@@ -261,7 +261,7 @@ void action::GetAgents() {
   log("[PQT] After hsa_iterate_agents ...", rvs::logdebug);
   print_hsa_status("[PQT] GetAgents - hsa_iterate_agents()", status);
     
-  for (int i = 0; i < agent_list.size(); i++) {
+  for (uint32_t i = 0; i < agent_list.size(); i++) {
     log("[PQT] ===================================================================================================================", rvs::logdebug);
     log_msg = "[PQT] GetAgents - agent with name = "  + agent_list[i].agent_name + " and device_type = " + agent_list[i].agent_device_type;
     log(log_msg.c_str(), rvs::logdebug);
@@ -410,14 +410,14 @@ hsa_status_t action::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
   status = hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flag);
   print_hsa_status("[PQT] ProcessMemPool - hsa_amd_memory_pool_get_info(HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS)", status);
   bool is_kernarg = (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT & flag);
-  bool is_fine_grained = (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED & flag);
+//   bool is_fine_grained = (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED & flag);
 
   // Update the pool handle for system memory if kernarg is true
   log("[PQT] *******************************************************************************************************************", rvs::logdebug);  
   if (is_kernarg) {
     agent_info->sys_pool = pool;
     log("[PQT] Found system memory region", rvs::logdebug);
-  } else {
+  } else if (owner_access != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
     agent_info->mem_pool_list.push_back(pool);
     log("[PQT] Found regular memory region", rvs::logdebug);
   }
@@ -450,7 +450,7 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
 
   // Initialize size of buffer to equal the largest element of allocation
   uint32_t size_len = size_list.size();
-  uint32_t max_size = size_list.back();
+//   uint32_t max_size = size_list.back();
 
   // Iterate through the differnt buffer sizes to
   // compute the bandwidth as determined by copy
