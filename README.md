@@ -51,7 +51,7 @@ Compile RVS:
     export ROCT_LIB_DIR=/opt/rocm/lib/
 
 
-    cmake -DROCR_INC_DIR=$ROCR_INC_DIR -DROCR_LIB_DIR=$ROCR_LIB_DIR . ../build
+    cmake -DROCR_INC_DIR=$ROCR_INC_DIR -DROCR_LIB_DIR=$ROCR_LIB_DIR ./ -B../build
     cd ../build
     make
 
