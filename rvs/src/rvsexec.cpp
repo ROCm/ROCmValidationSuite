@@ -147,6 +147,7 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-g")) {
     int sts = do_gpu_list();
     logger::terminate();
+    rvs::module::terminate();
     return sts;
   }
 
@@ -223,6 +224,8 @@ int rvs::exec::do_gpu_list() {
     module::action_destroy(pa);
     return 1;
   }
+
+  pif1->property_set("name", "(launcher)");
 
   // specify "list GPUs" action
   pif1->property_set("do_gpu_list", "");
