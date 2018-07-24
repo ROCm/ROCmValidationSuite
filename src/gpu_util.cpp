@@ -309,9 +309,9 @@ int32_t rvs::gpulist::GetNodeIdFromGpuId(const uint32_t GpuID) {
 }
 
 /**
- * @brief Given Location ID return GPU device ID
+ * @brief Given Location ID return GPU node ID
  * @param LocationID Location ID of a GPU
- * @return Device ID if found, -1 otherwise
+ * @return Node ID if found, -1 otherwise
  *}
  * */
 int32_t rvs::gpulist::GetNodeIdFromLocationId(const uint32_t LocationID) {
