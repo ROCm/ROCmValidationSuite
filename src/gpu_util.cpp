@@ -232,7 +232,8 @@ int rvs::gpulist::Initialize() {
  *}
  * */
 int32_t rvs::gpulist::GetLocation(const uint32_t GpuID) {
-  const auto it = std::find(gpu_id.cbegin(), gpu_id.cend(), GpuID);
+  const auto it = std::find(gpu_id.cbegin(),
+                            gpu_id.cend(), GpuID);
   if (it != gpu_id.cend()) {
     size_t pos = std::distance(gpu_id.cbegin(), it);
     return location_id[pos];
@@ -248,7 +249,8 @@ int32_t rvs::gpulist::GetLocation(const uint32_t GpuID) {
  *}
  * */
 int32_t rvs::gpulist::GetGpuId(const uint32_t LocationID) {
-  const auto it = std::find(location_id.cbegin(), location_id.cend(), LocationID);
+  const auto it = std::find(location_id.cbegin(),
+                            location_id.cend(), LocationID);
   if (it != location_id.cend()) {
     size_t pos = std::distance(location_id.cbegin(), it);
     return gpu_id[pos];
@@ -263,7 +265,8 @@ int32_t rvs::gpulist::GetGpuId(const uint32_t LocationID) {
  *}
  * */
 int32_t rvs::gpulist::GetDeviceIdFromLocationId(const uint32_t LocationID) {
-  const auto it = std::find(location_id.cbegin(), location_id.cend(), LocationID);
+  const auto it = std::find(location_id.cbegin(),
+                            location_id.cend(), LocationID);
   if (it != location_id.cend()) {
     size_t pos = std::distance(location_id.cbegin(), it);
     return device_id[pos];
@@ -278,7 +281,8 @@ int32_t rvs::gpulist::GetDeviceIdFromLocationId(const uint32_t LocationID) {
  *}
  * */
 int32_t rvs::gpulist::GetDeviceIdFromGpuId(const uint32_t GpuID) {
-  const auto it = std::find(gpu_id.cbegin(), gpu_id.cend(), GpuID);
+  const auto it = std::find(gpu_id.cbegin(),
+                            gpu_id.cend(), GpuID);
   if (it != gpu_id.cend()) {
     size_t pos = std::distance(gpu_id.cbegin(), it);
     return device_id[pos];
@@ -294,7 +298,8 @@ int32_t rvs::gpulist::GetDeviceIdFromGpuId(const uint32_t GpuID) {
  *}
  * */
 int32_t rvs::gpulist::GetNodeIdFromGpuId(const uint32_t GpuID) {
-  const auto it = std::find(gpu_id.cbegin(), gpu_id.cend(), GpuID);
+  const auto it = std::find(gpu_id.cbegin(),
+                            gpu_id.cend(), GpuID);
   if (it != gpu_id.cend()) {
     size_t pos = std::distance(gpu_id.cbegin(), it);
     return node_id[pos];
@@ -310,7 +315,8 @@ int32_t rvs::gpulist::GetNodeIdFromGpuId(const uint32_t GpuID) {
  *}
  * */
 int32_t rvs::gpulist::GetNodeIdFromLocationId(const uint32_t LocationID) {
-  const auto it = std::find(location_id.cbegin(), location_id.cend(), LocationID);
+  const auto it = std::find(location_id.cbegin(),
+                            location_id.cend(), LocationID);
   if (it != location_id.cend()) {
     size_t pos = std::distance(location_id.cbegin(), it);
     return node_id[pos];
