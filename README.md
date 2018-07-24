@@ -5,7 +5,7 @@ The RVS is a collection of tests, benchmarks and qualification tools each target
 
 The function of each module see this [link](./FEATURES.md).
 
-# RVS
+## Building from Source
 This section explains how to get and compile current development stream of RVS.
 
 Clone repository:
@@ -38,7 +38,20 @@ Compile rocm_smi_lib (this needs to be done only once after cloning):
 Compile RVS:
 
     cd $RVS
-    cmake . -B../build
+    # Contains header files exported by ROC Runtime
+    export ROCR_INC_DIR=/opt/rocm/include/
+
+    # Contains library files exported by ROC Runtime
+    export ROCR_LIB_DIR=/opt/rocm/lib/
+
+    # Contains header files exported by ROC Thunk
+    export ROCT_INC_DIR=/opt/rocm/include/libhsakmt/
+
+    # Contains library files exported by ROC Thunk
+    export ROCT_LIB_DIR=/opt/rocm/lib/
+
+
+    cmake -DROCR_INC_DIR=$ROCR_INC_DIR -DROCR_LIB_DIR=$ROCR_LIB_DIR . ../build
     cd ../build
     make
 
