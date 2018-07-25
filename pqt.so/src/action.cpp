@@ -473,10 +473,10 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
 //     std::memset(dst_pool_pointer, 0x5A, curr_size);
     
     // Allocate buffers in src and dst pools
-    status = hsa_amd_memory_pool_allocate(src_buff, curr_size, 0, &src_pool_pointer);
+    status = hsa_amd_memory_pool_allocate(src_buff, curr_size, 0, (void**)&src_pool_pointer);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(SRC)", status);
 
-    status = hsa_amd_memory_pool_allocate(dst_buff, curr_size, 0, &dst_pool_pointer);
+    status = hsa_amd_memory_pool_allocate(dst_buff, curr_size, 0, (void**)&dst_pool_pointer);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(DST)", status);
 
     // Create a signal to wait on copy operation
@@ -491,9 +491,22 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     status = hsa_amd_agents_allow_access(1, &dst_agent, NULL, dst_pool_pointer);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(DST)", status);
     
-//     // store signal
-//     hsa_signal_store_relaxed(signal, 1);
+    // store signal
+    hsa_signal_store_relaxed(signal, 1);
 
+    // TODO need to check if the combination is unidirectonial or bidirectional
+    
+    // Determine if accessibility to dst pool for src agent is not denied
+    hsa_amd_memory_pool_access_t access;
+    status = hsa_amd_agent_memory_pool_get_info(src_agent, dst_buff, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+    print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agent_memory_pool_get_info(SRC->DST)", status);
+
+    if (access == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
+      log_msg = "[PQT] send_p2p_traffic - HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED for SRC -> DST), so skip it ...";
+      log(log_msg.c_str(), rvs::logdebug);
+      return;
+    }
+    
     // Copy from src into dst buffer
     // hsa_amd_memory_async_copy(void* dst, hsa_agent_t dst_agent, const void* src, hsa_agent_t src_agent, size_t size, uint32_t num_dep_signals, const hsa_signal_t* dep_signals, hsa_signal_t completion_signal)
     status = hsa_amd_memory_async_copy(dst_pool_pointer, dst_agent, src_pool_pointer, src_agent, curr_size, 0, NULL, signal);
