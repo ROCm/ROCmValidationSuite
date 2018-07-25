@@ -24,6 +24,17 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
+# Compiler Preprocessor definitions.
+add_definitions(-D__linux__)
+add_definitions(-DUNIX_OS)
+add_definitions(-DLINUX)
+add_definitions(-D__AMD64__)
+add_definitions(-D__x86_64__)
+add_definitions(-DAMD_INTERNAL_BUILD)
+add_definitions(-DLITTLEENDIAN_CPU=1)
+add_definitions(-DHSA_LARGE_MODEL=)
+add_definitions(-DHSA_DEPRECATED=)
+
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wl,-no-as-needed)
