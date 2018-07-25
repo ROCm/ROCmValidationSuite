@@ -90,7 +90,7 @@ rvs::ifbase* rvs::if1::clone(void) {
  *
  */
 int rvs::if1::property_set(const char* pKey, const char* pVal ) {
-  rvs::logger::log(string("poperty: [") + string(pKey) + string("]   val:[") +
+  rvs::logger::log(string("property: [") + string(pKey) + string("]   val:[") +
                   string(pVal)+string("]"), rvs::logtrace);
   return (*rvs_module_action_property_set)(plibaction, pKey, pVal);
 }
