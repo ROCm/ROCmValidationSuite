@@ -47,6 +47,8 @@ class action : public rvs::actionbase {
     virtual int run(void);
 
  protected:
+  bool bjson;
+  void *json_rcqt_node;
     /**
     *  @brief Function used in rcqt action class to check for given package
     */
