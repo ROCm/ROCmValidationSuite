@@ -25,7 +25,9 @@
 #ifndef SMQT_SO_INCLUDE_ACTION_H_
 #define SMQT_SO_INCLUDE_ACTION_H_
 
+#include <string>
 #include "rvsactionbase.h"
+
 /**
  * @class action
  * @ingroup SMQT
@@ -37,12 +39,12 @@
  *
  */
 class action : public rvs::actionbase {
-  public:
+ public:
     action();
     virtual ~action();
     virtual int run(void);
-
-  protected:
+ protected:
+    ulong get_property(std::string);
 };
 
 #endif /* SMQT_SO_INCLUDE_ACTION_H_ */
