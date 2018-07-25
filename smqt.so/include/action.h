@@ -43,8 +43,9 @@ class action : public rvs::actionbase {
     action();
     virtual ~action();
     virtual int run(void);
- protected:
-    ulong get_property(std::string);
+ private:
+    ulong  get_property(std::string);
+    std::string pretty_print(ulong, std::string, std::string);
 };
 
 #endif /* SMQT_SO_INCLUDE_ACTION_H_ */
