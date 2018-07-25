@@ -50,7 +50,7 @@ using std::vector;
 using std::cerr;
 
 // Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
-string pretty_print(ulong bytes, string action_name, string bar_name) {
+string action::pretty_print(ulong bytes, string action_name, string bar_name) {
   std::string suffix[5] = { " B", " KB", " MB", " GB", " TB"};
   std::stringstream ss;
 
