@@ -80,6 +80,7 @@ add_subdirectory(rcqt.so)
 add_subdirectory(peqt.so)
 add_subdirectory(smqt.so)
 add_subdirectory(pebb.so)
+add_subdirectory(gpum.so)
 add_subdirectory(gst.so)
 add_subdirectory(pqt.so)
 
