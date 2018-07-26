@@ -115,7 +115,7 @@ set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )
 include_directories(include pci ../include)
 
 ## define source files
-set(SOURCES ../src/rvsthreadbase.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp src/rvs_module.cpp src/action.cpp src/worker.cpp)
+set(SOURCES ../src/rvsthreadbase.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp ../src/rvsactionbase.cpp ../src/rvstimer.cpp ../src/rvsloglp.cpp src/rvs_module.cpp src/action.cpp src/worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
