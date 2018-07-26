@@ -47,8 +47,11 @@ class action : public rvs::actionbase {
     virtual int run(void);
 
  protected:
+    //! bjson field indicates if the json flag is set
   bool bjson;
+    //! json_rcqt_node is json node shared through submodules
   void *json_rcqt_node;
+
     /**
     *  @brief Function used in rcqt action class to check for given package
     */
@@ -82,4 +85,4 @@ class action : public rvs::actionbase {
     virtual int dectooct(int decnum);
 };
 
-#endif /* RCQT_SO_INCLUDE_ACTION_H_ */
+#endif  // RCQT_SO_INCLUDE_ACTION_H_

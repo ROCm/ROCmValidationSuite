@@ -23,7 +23,6 @@
  *
  *******************************************************************************/
 #include "action.h"
-#include "rvsloglp.h"
 
 #include <stdlib.h>
 #include <sys/utsname.h>
@@ -38,6 +37,8 @@
 #include <string>
 #include <map>
 #include <vector>
+
+#include "rvsloglp.h"
 
 #define MODULE_NAME "rcqt"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
