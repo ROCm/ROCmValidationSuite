@@ -39,6 +39,7 @@ extern "C" {
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvsloglp.h"
+#include "rvstimer.h"
 
 //  static Worker* pworker;  //FIXME
 
@@ -90,12 +91,16 @@ int action::run(void) {
           // print
           log_msg = "[PQT] src = " + gpu_list[i].agent_name + " / " + gpu_list[i].agent_device_type + " and dst = " + gpu_list[j].agent_name + " / " + gpu_list[j].agent_device_type;
           log(log_msg.c_str(), rvs::logdebug);
-          // send p2p traffic
-          send_p2p_traffic(src_agent, dst_agent, src_buff, dst_buff, true, src_max_size, dst_max_size);
+          // send p2p traffic (unidirectional)
+          send_p2p_traffic(src_agent, dst_agent, src_buff, dst_buff, false, src_max_size, dst_max_size, false);
+          // send p2p traffic (bidirectional)
+//           send_p2p_traffic(src_agent, dst_agent, src_buff, dst_buff, true, src_max_size, dst_max_size, false);          
         }
       }
     }
   } 
+  
+  rvs::lp::Log("[PQT] Test DONE", rvs::logdebug);
   
   return 0;
 }
@@ -256,6 +261,12 @@ void action::GetAgents() {
   status = hsa_init();
   log("[PQT] After hsa_init ...", rvs::logdebug);
   print_hsa_status("[PQT] GetAgents - hsa_init()", status);
+  
+  // Initialize profiling
+  log("[PQT] Before hsa_amd_profiling_async_copy_enable ...", rvs::logdebug);
+  status = hsa_amd_profiling_async_copy_enable(true);
+  log("[PQT] Before hsa_amd_profiling_async_copy_enable ...", rvs::logdebug);    
+  print_hsa_status("[PQT] GetAgents - hsa_amd_profiling_async_copy_enable()", status);  
   
   // Populate the lists of agents
   log("[PQT] Before hsa_iterate_agents ...", rvs::logdebug);
@@ -428,6 +439,27 @@ hsa_status_t action::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
   return HSA_STATUS_SUCCESS;
 }
 
+
+// TODO info
+double action::GetCopyTime(bool bidirectional, hsa_signal_t signal_fwd, hsa_signal_t signal_rev) {
+  hsa_status_t status;
+  // Obtain time taken for forward copy
+  hsa_amd_profiling_async_copy_time_t async_time_fwd = {0};
+  status = hsa_amd_profiling_get_async_copy_time(signal_fwd, &async_time_fwd);
+  print_hsa_status("[PQT] GetCopyTime - hsa_amd_profiling_get_async_copy_time(forward)", status);
+  if (bidirectional == false) {
+    return(async_time_fwd.end - async_time_fwd.start);
+  }
+
+  hsa_amd_profiling_async_copy_time_t async_time_rev = {0};
+  status = hsa_amd_profiling_get_async_copy_time(signal_rev, &async_time_rev);
+  print_hsa_status("[PQT] GetCopyTime - hsa_amd_profiling_get_async_copy_time(backward)", status);
+  double start = min(async_time_fwd.start, async_time_rev.start);
+  double end = max(async_time_fwd.end, async_time_rev.end);
+  return(end - start);
+}
+
+
 // TODO info
 /**
  * @brief Process hsa_agent memory pool
@@ -439,14 +471,21 @@ hsa_status_t action::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
  * @return hsa_status_t
  *
  * */
-void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_amd_memory_pool_t src_buff, hsa_amd_memory_pool_t dst_buff, bool bidirectional, size_t src_max_size, size_t dst_max_size) {
+void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_amd_memory_pool_t src_buff, hsa_amd_memory_pool_t dst_buff, bool bidirectional, size_t src_max_size, size_t dst_max_size, bool validate) {
   hsa_status_t status;
   void* src_pool_pointer;
   void* dst_pool_pointer;
   string log_msg;
-  hsa_signal_t signal;
+  hsa_signal_t signal_fwd, signal_rev;;
   char s_buff[256];
-
+  uint64_t total_size = 0;
+  double total_time = 0;  
+  double curr_time;
+  double bandwidth;
+  
+  // Create a timer object and reset signals
+  PerfTimer timer;
+  uint32_t index = timer.CreateTimer();
 
   log("[PQT] +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
   log("[PQT] send_p2p_traffic called ... ", rvs::logdebug);
@@ -478,10 +517,6 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     log(log_msg.c_str(), rvs::logdebug);
     log("[PQT] -----------------------------------------------------------------------------------", rvs::logdebug);  
 
-    // Initialize buffers
-//     std::memset(src_pool_pointer, 0xA5, curr_size);
-//     std::memset(dst_pool_pointer, 0x5A, curr_size);
-    
     // Allocate buffers in src and dst pools
     status = hsa_amd_memory_pool_allocate(src_buff, curr_size, 0, (void**)&src_pool_pointer);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_pool_allocate(SRC)", status);
@@ -493,13 +528,15 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     snprintf(s_buff, sizeof(s_buff), "%p", dst_pool_pointer);
     rvs::lp::Log(std::string("dst_pool_pointer = ") + s_buff, rvs::logdebug);
 
-    // Initialize buffers
-    std::memset(src_pool_pointer, 0xA5, curr_size);
-    std::memset(dst_pool_pointer, 0x5A, curr_size);
+    // Initialize buffers if validate is used
+    if (validate == true) {
+      std::memset(src_pool_pointer, 0xA5, curr_size);
+      std::memset(dst_pool_pointer, 0x5A, curr_size);
+    }
 
     // Create a signal to wait on copy operation
     // hsa_signal_create(hsa_signal_value_t initial_value, uint32_t num_consumers, const hsa_agent_t *consumers, hsa_signal_t *signal)
-    status = hsa_signal_create(1, 0, NULL, &signal);
+    status = hsa_signal_create(1, 0, NULL, &signal_fwd);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_signal_create()", status);
     
     // get agent access
@@ -509,7 +546,7 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
     status = hsa_amd_agents_allow_access(1, &dst_agent, NULL, src_pool_pointer);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_agents_allow_access(DST)", status);
     // store signal
-    hsa_signal_store_relaxed(signal, 1);
+    hsa_signal_store_relaxed(signal_fwd, 1);
 
     // TODO need to check if the combination is unidirectonial or bidirectional
     
@@ -524,19 +561,53 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
       return;
     }
     
+    // Start the timer and launch forward copy operation
+    total_size += curr_size;
+    timer.StartTimer(index); 
+    
     // Copy from src into dst buffer
     // hsa_amd_memory_async_copy(void* dst, hsa_agent_t dst_agent, const void* src, hsa_agent_t src_agent, size_t size, uint32_t num_dep_signals, const hsa_signal_t* dep_signals, hsa_signal_t completion_signal)
-    status = hsa_amd_memory_async_copy(dst_pool_pointer, dst_agent, src_pool_pointer, src_agent, curr_size, 0, NULL, signal);
+    status = hsa_amd_memory_async_copy(dst_pool_pointer, dst_agent, src_pool_pointer, src_agent, curr_size, 0, NULL, signal_fwd);
     print_hsa_status("[PQT] send_p2p_traffic - hsa_amd_memory_async_copy(SRC -> DST)", status);
 
     // Wait for the forward copy operation to complete
     log_msg = "[PQT] send_p2p_traffic - hsa_signal_wait_acquire(SRC -> DST) before ...";
     log(log_msg.c_str(), rvs::logdebug);
-    while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE));    
+    while (hsa_signal_wait_acquire(signal_fwd, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE));
     log_msg = "[PQT] send_p2p_traffic - hsa_signal_wait_acquire(SRC -> DST) after ...";
     log(log_msg.c_str(), rvs::logdebug);
     
+    // Stop the timer object
+    timer.StopTimer(index);
+
+    // Push the time taken for copy into a vector of copy times
+//     curr_time = timer.ReadTimer(index);
+    log_msg = "[PQT] send_p2p_traffic - timer = " + std::to_string(timer.ReadTimer(index));
+    log(log_msg.c_str(), rvs::logdebug);    
+    
+    curr_time = GetCopyTime(bidirectional, signal_fwd, signal_rev)/1000000000;
+    total_time += curr_time;
+    log_msg = "[PQT] send_p2p_traffic - total_time = " + std::to_string(total_time);
+    log(log_msg.c_str(), rvs::logdebug);
+    
+    // convert to GB/s
+    bandwidth = (curr_size / curr_time);
+    bandwidth /= (1024*1024*1024);
+    log_msg = "[PQT] send_p2p_traffic - PARTIAL curr_size = " + std::to_string(curr_size) + " Bytes and curr_time = " + std::to_string(curr_time) + " bandwidth = " + std::to_string(bandwidth) + " GBytes/s";
+    log(log_msg.c_str(), rvs::logdebug);    
+    
+    // Compare output equals input
+    if (validate == true && memcmp(src_pool_pointer, dst_pool_pointer, curr_size) != 0) {
+      log("After copy is finished memory content is not the same", rvs::logerror);
+    }
+    
   }
+  
+  // convert to GB/s
+  bandwidth = (total_size / total_time);
+  bandwidth /= (1024*1024*1024);
+  log_msg = "[PQT] send_p2p_traffic - END total_size = " + std::to_string(total_size) + " Bytes and total_time = " + std::to_string(total_time) + " bandwidth = " + std::to_string(bandwidth) + " GBytes/s";
+  log(log_msg.c_str(), rvs::logdebug);
   
 }
 
