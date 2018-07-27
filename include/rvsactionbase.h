@@ -107,7 +107,7 @@ class actionbase {
   //! data from config file
   std::map<std::string, std::string>  property;
 
-  // ! List of all gpu_id in the action's "device" property in .config file
+  //! List of all gpu_id in the action's "device" property in .config file
   std::vector<std::string> device_prop_gpu_id_list;
 };
 }  // namespace rvs

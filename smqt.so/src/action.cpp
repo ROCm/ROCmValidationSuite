@@ -89,8 +89,8 @@ action::~action() {
 }
 
 /**
+ * @brief Implements action functionality
  * Check if the sizes and addresses of BARs match the given ones
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */ 
 
