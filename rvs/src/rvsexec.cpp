@@ -112,11 +112,6 @@ int rvs::exec::run() {
     logger::to_json(true);
   }
 
-
-  if (rvs::options::has_option("-l", val)) {
-    logger::logfile(val);
-  }
-
   string config_file;
   if (rvs::options::has_option("-c", val)) {
     config_file = val;
