@@ -17,14 +17,12 @@
  */
 class action : public rvs::actionbase
 {
-public:
+ public:
   action();
   virtual ~action();
 
   virtual int run(void);
 
-protected:
-  int do_gpu_list(void);
 };
 
 #endif /* ACTION_H_ */
