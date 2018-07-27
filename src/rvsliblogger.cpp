@@ -49,7 +49,8 @@ bool  rvs::logger::append_m;
 bool  rvs::logger::isfirstrecord_m;
 std::string rvs::logger::logfile_m;
 
-const char*  rvs::logger::loglevelname[] = {"NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
+const char*  rvs::logger::loglevelname[] =
+             {"NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
 
 /**
  * @brief Set 'append' flag
@@ -183,7 +184,8 @@ int rvs::logger::Log(const char* Message, const int LogLevel) {
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
+int rvs::logger::LogExt(const char* Message, const int LogLevel,
+                        const unsigned int Sec, const unsigned int uSec) {
   if (LogLevel < lognone || LogLevel > logtrace) {
     cerr << "ERROR: unknown logging level: " << LogLevel << '\n';
     return -1;
@@ -204,7 +206,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned 
   }
 
   char  buff[64];
-  sprintf(buff, "%6d.%6d", secs, usecs);
+  snprintf(buff, sizeof(buff), "%6d.%6d", secs, usecs);
 
   std::string row("[");
   row += loglevelname[LogLevel];
@@ -246,7 +248,8 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned 
  * @return 0 - success, non-zero otherwise
  *
  */
-void* rvs::logger::LogRecordCreate(const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
+void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
+      const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
   uint32_t   sec;
   uint32_t   usec;
 
@@ -260,7 +263,8 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action, const
   rvs::LogNodeRec* rec = new LogNodeRec(Action, LogLevel, sec, usec);
   AddString(rec, "action", Action);
   AddString(rec, "module", Module);
-  AddString(rec, "loglevelname", (LogLevel >= lognone && LogLevel < logtrace) ? loglevelname[LogLevel] : "UNKNOWN");
+  AddString(rec, "loglevelname", (LogLevel >= lognone && LogLevel < logtrace)
+            ? loglevelname[LogLevel] : "UNKNOWN");
 
   return static_cast<void*>(rec);
 }
