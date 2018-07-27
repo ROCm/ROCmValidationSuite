@@ -33,7 +33,6 @@
 #include <memory>
 
 #include "rvs_blas.h"
-#include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
 
