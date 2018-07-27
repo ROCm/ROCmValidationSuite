@@ -24,18 +24,13 @@
  *******************************************************************************/
 #include "action.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <dirent.h>
-#include <string.h>
-#include <math.h>
+#include <cstdlib>
 #include <iostream>
-#include <fstream>
-#include <map>
-#include <string>
+#include <sstream>
+#include <iomanip>
 #include <algorithm>
-#include <cmath>
 #include <vector>
+#include <string>
 #ifdef __cplusplus
 extern "C" {
   #endif
@@ -51,14 +46,40 @@ extern "C" {
 #include "rvsloglp.h"
 
 using std::string;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::iterator;
-using std::endl;
-using std::ifstream;
-using std::map;
 using std::vector;
+using std::cerr;
+
+// Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
+string action::pretty_print(ulong bytes, string action_name, string bar_name) {
+  std::string suffix[5] = { " B", " KB", " MB", " GB", " TB"};
+  std::stringstream ss;
+
+  uint s = 0;  // which suffix to use
+  double count = bytes;
+  while (count >= 1024 && s < 5) {
+    s++;
+    count /= 1024;
+  }
+  ss << "[" << action_name << "]  smqt " << bar_name << "      "\
+  << bytes << " (" << std::fixed << std::setprecision(2) <<
+  count << suffix[s] << ")";
+
+  return ss.str();
+}
+
+ulong action::get_property(string property) {
+  string value;
+  ulong result;
+
+  if (has_property(property, value)) {
+    result = std::stoul(value);
+  } else {
+    std::cerr << "Error fetching " << property
+              << ". Cannot continue without it. Exiting!\n";
+    exit(EXIT_FAILURE);
+  }
+  return result;
+}
 
 action::action() {
 }
@@ -68,8 +89,8 @@ action::~action() {
 }
 
 /**
+ * @brief Implements action functionality
  * Check if the sizes and addresses of BARs match the given ones
- * @param property config file map fields
  * @return 0 - success, non-zero otherwise
  * */ 
 
@@ -107,33 +128,21 @@ int action::run(void) {
   struct pci_dev *dev;
   dev = pacc->devices;
 
-  // get requested values
-  for (auto it=property.begin(); it != property.end(); ++it) {
-    if (it->first == "name")
-      action_name = it->second;
-    if (it->first == "bar1_req_size")
-      bar1_req_size = std::atoi(it->second.c_str());
-    if (it->first == "bar2_req_size")
-      bar2_req_size = std::atoi(it->second.c_str());
-    if (it->first == "bar4_req_size")
-      bar4_req_size = std::atoi(it->second.c_str());
-    if (it->first == "bar5_req_size")
-      bar5_req_size = std::atoi(it->second.c_str());
-
-    if (it->first == "bar1_base_addr_min")
-      bar1_base_addr_min = std::atoi(it->second.c_str());
-    if (it->first == "bar2_base_addr_min")
-      bar2_base_addr_min = std::atoi(it->second.c_str());
-    if (it->first == "bar4_base_addr_min")
-      bar4_base_addr_min = std::atoi(it->second.c_str());
-
-    if (it->first == "bar1_base_addr_max")
-      bar1_base_addr_max = std::atoi(it->second.c_str());
-    if (it->first == "bar2_base_addr_max")
-      bar2_base_addr_max = std::atoi(it->second.c_str());
-    if (it->first == "bar4_base_addr_max")
-      bar4_base_addr_max = std::atoi(it->second.c_str());
+  if (!has_property("name", action_name)) {
+    std::cerr << "Error fetching action_name\n";
+    return false;
   }
+
+  bar1_req_size      = get_property("bar1_req_size");
+  bar2_req_size      = get_property("bar2_req_size");
+  bar4_req_size      = get_property("bar4_req_size");
+  bar5_req_size      = get_property("bar5_req_size");
+  bar1_base_addr_min = get_property("bar1_base_addr_min");
+  bar2_base_addr_min = get_property("bar2_base_addr_min");
+  bar4_base_addr_min = get_property("bar4_base_addr_min");
+  bar1_base_addr_max = get_property("bar1_base_addr_max");
+  bar2_base_addr_max = get_property("bar2_base_addr_max");
+  bar4_base_addr_max = get_property("bar4_base_addr_max");
 
   // iterate over devices
   for (dev = pacc->devices; dev; dev = dev->next) {
@@ -145,8 +154,8 @@ int action::run(void) {
     uint16_t dev_location_id = ((((uint16_t)(dev->bus)) << 8) | (dev->func));
 
     // check if this pci_dev corresponds to one of AMD GPUs
-    auto it_gpu = find(gpus_location_id.begin(), \
-    gpus_location_id.end(), dev_location_id);
+    auto it_gpu = std::find(gpus_location_id.begin(),
+                  gpus_location_id.end(), dev_location_id);
 
     if (it_gpu == gpus_location_id.end())
       continue;
@@ -163,26 +172,20 @@ int action::run(void) {
     // check if values are as expected
     pass = true;
 
-    if (bar1_base_addr < bar1_base_addr_min)
+    if (bar1_base_addr < bar1_base_addr_min ||
+        bar1_base_addr > bar1_base_addr_max)
       pass = false;
-    if (bar1_base_addr > bar1_base_addr_max)
-    pass = false;
-    if (bar2_base_addr < bar2_base_addr_min)
+    if (bar2_base_addr < bar2_base_addr_min ||
+        bar2_base_addr > bar2_base_addr_max)
       pass = false;
-    if (bar2_base_addr > bar2_base_addr_max)
+    if (bar4_base_addr < bar4_base_addr_min ||
+        bar4_base_addr > bar4_base_addr_max)
       pass = false;
-    if (bar4_base_addr < bar4_base_addr_min)
-      pass = false;
-    if (bar4_base_addr > bar4_base_addr_max)
-    pass = false;
 
-    if (bar1_req_size > bar1_size)
-      pass = false;
-    if (bar2_req_size < bar2_size)
-      pass = false;
-    if (bar4_req_size < bar4_size)
-      pass = false;
-    if (bar5_req_size < bar5_size)
+    if (bar1_req_size > bar1_size ||
+        bar2_req_size < bar2_size ||
+        bar4_req_size < bar4_size ||
+        bar5_req_size < bar5_size)
       pass = false;
 
     // loginfo
@@ -193,44 +196,16 @@ int action::run(void) {
     char hex_value[30];
 
     // formating bar1 size for print
-    if (remainder(bar1_size, pow(2, 30)) == 0)
-      str = std::to_string(static_cast<int>(round(bar1_size/pow(2, 30))))+" GB";
-    else if (remainder(bar1_size, pow(2, 20)) == 0)
-      str = std::to_string(static_cast<int>(round(bar1_size/pow(2, 20))))+" MB";
-    else if (remainder(bar1_size, pow(2, 10)) == 0)
-      str = std::to_string(static_cast<int>(round(bar1_size/pow(2, 10))))+" KB";
-    msgs1 = "[" + action_name + "] " + " smqt bar1_size      "\
-    + std::to_string(bar1_size) + " (" + str+ ")";
+    msgs1 = pretty_print(bar1_size, action_name, "bar1_size");
 
     // formating bar2 size for print
-    if (remainder(bar2_size, pow(2, 30)) == 0)
-      str = std::to_string(static_cast<int>(round(bar2_size/pow(2, 30))))+" GB";
-    else if (remainder(bar2_size, pow(2, 20)) == 0)
-      str = std::to_string(static_cast<int>(round(bar2_size/pow(2, 20))))+" MB";
-    else if (remainder(bar2_size, pow(2, 10)) == 0)
-      str = std::to_string(static_cast<int>(round(bar2_size/pow(2, 10))))+" KB";
-    msgs2 = "[" + action_name + "] " + " smqt bar2_size      "\
-    + std::to_string(bar2_size) + " (" + str+ ")";
+    msgs2 = pretty_print(bar2_size, action_name, "bar2_size");
 
     // formating bar4 size for print
-    if (remainder(bar4_size, pow(2, 30)) == 0)
-      str = std::to_string(static_cast<int>(round(bar4_size/pow(2, 30))))+" GB";
-    else if (remainder(bar4_size, pow(2, 20)) == 0)
-      str = std::to_string(static_cast<int>(round(bar4_size/pow(2, 20))))+" MB";
-    else if (remainder(bar4_size, pow(2, 10)) == 0)
-      str = std::to_string(static_cast<int>(round(bar4_size/pow(2, 10))))+" KB";
-    msgs4 = "[" + action_name + "] " + " smqt bar4_size      "\
-    + std::to_string(bar4_size) + " (" + str+ ")";
+    msgs4 = pretty_print(bar4_size, action_name, "bar4_size");
 
     // formating bar5 size for print
-    if (remainder(bar5_size, pow(2, 30)) == 0)
-      str = std::to_string(static_cast<int>(round(bar5_size/pow(2, 30))))+" GB";
-    else if (remainder(bar5_size, pow(2, 20)) == 0)
-      str = std::to_string(static_cast<int>(round(bar5_size/pow(2, 20))))+" MB";
-    else if (remainder(bar5_size, pow(2, 10)) == 0)
-      str = std::to_string(static_cast<int>(round(bar5_size/pow(2, 10))))+" KB";
-    msgs5 = "[" + action_name + "] " + " smqt bar5_size      "\
-    + std::to_string(bar5_size) + " (" + str+ ")";
+    msgs5 = pretty_print(bar5_size, action_name, "bar5_size");
 
     snprintf(hex_value, 0xFF, "%lX", bar1_base_addr);
     msga1 = "[" + action_name + "] " + " smqt bar1_base_addr " + hex_value;
@@ -239,16 +214,16 @@ int action::run(void) {
     snprintf(hex_value, 0xFF, "%lX", bar4_base_addr);
     msga4 = "[" + action_name + "] " + " smqt bar4_base_addr " + hex_value;
     pmsg = "[" + action_name + "] " + " smqt " + std::to_string(pass);
-    void* r = rvs::lp::LogRecordCreate("SMQT", action_name.c_str(), \
-    rvs::loginfo, sec, usec);
-    rvs::lp::Log(msgs1.c_str(), rvs::loginfo, sec, usec);
-    rvs::lp::Log(msga1.c_str(), rvs::loginfo, sec, usec);
-    rvs::lp::Log(msgs2.c_str(), rvs::loginfo, sec, usec);
-    rvs::lp::Log(msga2.c_str(), rvs::loginfo, sec, usec);
-    rvs::lp::Log(msgs4.c_str(), rvs::loginfo, sec, usec);
-    rvs::lp::Log(msga4.c_str(), rvs::loginfo, sec, usec);
-    rvs::lp::Log(msgs5.c_str(), rvs::loginfo, sec, usec);
-    rvs::lp::Log(pmsg.c_str(), rvs::logresults);
+    void* r = rvs::lp::LogRecordCreate("SMQT", action_name.c_str(),
+                                       rvs::loginfo, sec, usec);
+    rvs::lp::Log(msgs1, rvs::loginfo, sec, usec);
+    rvs::lp::Log(msga1, rvs::loginfo, sec, usec);
+    rvs::lp::Log(msgs2, rvs::loginfo, sec, usec);
+    rvs::lp::Log(msga2, rvs::loginfo, sec, usec);
+    rvs::lp::Log(msgs4, rvs::loginfo, sec, usec);
+    rvs::lp::Log(msga4, rvs::loginfo, sec, usec);
+    rvs::lp::Log(msgs5, rvs::loginfo, sec, usec);
+    rvs::lp::Log(pmsg, rvs::logresults);
     rvs::lp::AddString(r, "bar1_size", std::to_string(bar1_size));
     rvs::lp::AddString(r, "bar1_base_addr", std::to_string(bar1_base_addr));
     rvs::lp::AddString(r, "bar2_size", std::to_string(bar2_size));
