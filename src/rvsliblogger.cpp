@@ -170,7 +170,6 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec) {
   // lock cout_mutex for the duration of this block
   std::lock_guard<std::mutex> lk(cout_mutex);
-
   if (LogLevel < lognone || LogLevel > logtrace) {
     cerr << "ERROR: unknown logging level: " << LogLevel << '\n';
     return -1;
