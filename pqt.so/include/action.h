@@ -30,7 +30,7 @@ using std::vector;
  */
 class action : public rvs::actionbase
 {
-public:
+ public:
   action();
   virtual ~action();
 
@@ -104,6 +104,7 @@ public:
   
 protected:
   int do_gpu_list(void);
+
 };
 
 #endif /* ACTION_H_ */

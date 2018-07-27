@@ -55,12 +55,6 @@ action::~action() {
 /**
  * @brief Implements action functionality
  *
- * Functionality:
- *
- * - If "do_gpu_list" property is set, it lists all AMD GPUs present in the system and exits
- * - If "monitor" property is set to "true", it creates Worker thread and initiates monitoring and exits
- * - If "monitor" property is not set or is not set to "true", it stops the Worker thread and exits
- *
  * @return 0 - success. non-zero otherwise
  *
  * */
@@ -104,6 +98,7 @@ int action::run(void) {
   
   return 0;
 }
+
 
 /**
  * @brief Lists AMD GPUs
@@ -664,6 +659,4 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
   log(log_msg.c_str(), rvs::logdebug);
   
 }
-
-
 
