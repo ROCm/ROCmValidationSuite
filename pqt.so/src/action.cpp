@@ -79,7 +79,7 @@ int action::run(void) {
   rvs::lp::Log("[PQT] gpu_list.size() = " + std::to_string(gpu_list.size()), rvs::logdebug);
   for (uint32_t i = 0; i < gpu_list.size(); i++) {
     for (uint32_t j = 0; j < gpu_list.size(); j++) {
-//       if (i == j) { continue; };
+      if (i == j) { continue; };
       for (uint32_t n = 0; n < gpu_list[i].mem_pool_list.size(); n++) {      
         for (uint32_t m = 0; m < gpu_list[j].mem_pool_list.size(); m++) {
           src_agent    = gpu_list[i].agent;
