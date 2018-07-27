@@ -32,6 +32,7 @@ extern "C" {
 #include <iostream>
 #include <algorithm>
 #include <stdio.h>
+#include <stdlib.h>
 #include <cstring>
 
 #include "rvs_module.h"
@@ -39,7 +40,6 @@ extern "C" {
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvsloglp.h"
-#include "rvstimer.h"
 
 //  static Worker* pworker;  //FIXME
 
@@ -79,7 +79,7 @@ int action::run(void) {
   rvs::lp::Log("[PQT] gpu_list.size() = " + std::to_string(gpu_list.size()), rvs::logdebug);
   for (uint32_t i = 0; i < gpu_list.size(); i++) {
     for (uint32_t j = 0; j < gpu_list.size(); j++) {
-      if (i == j) { continue; };
+//       if (i == j) { continue; };
       for (uint32_t n = 0; n < gpu_list[i].mem_pool_list.size(); n++) {      
         for (uint32_t m = 0; m < gpu_list[j].mem_pool_list.size(); m++) {
           src_agent    = gpu_list[i].agent;
@@ -124,10 +124,10 @@ int action::do_gpu_list() {
 // TODO add info
 void action::print_hsa_status(string message, hsa_status_t st) {
   string log_msg = message;
-//   // skip successfull messages
-//   if (st == HSA_STATUS_SUCCESS) {
-//     return;
-//   }
+  // skip successfull messages
+  if (st == HSA_STATUS_SUCCESS) {
+    return;
+  }
   switch (st) {
     case HSA_STATUS_SUCCESS : {
       log_msg = message + " The function has been executed successfully.";
@@ -454,8 +454,8 @@ double action::GetCopyTime(bool bidirectional, hsa_signal_t signal_fwd, hsa_sign
   hsa_amd_profiling_async_copy_time_t async_time_rev = {0};
   status = hsa_amd_profiling_get_async_copy_time(signal_rev, &async_time_rev);
   print_hsa_status("[PQT] GetCopyTime - hsa_amd_profiling_get_async_copy_time(backward)", status);
-  double start = min(async_time_fwd.start, async_time_rev.start);
-  double end = max(async_time_fwd.end, async_time_rev.end);
+  double start = std::min(async_time_fwd.start, async_time_rev.start);
+  double end = std::max(async_time_fwd.end, async_time_rev.end);
   return(end - start);
 }
 
@@ -485,10 +485,6 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
   double curr_time;
   double bandwidth;
   
-  // Create a timer object and reset signals
-  PerfTimer timer;
-  uint32_t index = timer.CreateTimer();
-
   log("[PQT] +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
   log("[PQT] send_p2p_traffic called ... ", rvs::logdebug);
   log("[PQT] +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
@@ -605,9 +601,8 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
       }
     }
     
-    // Start the timer and launch forward copy operation
+    // Add current transfer size
     total_size += curr_size;
-    timer.StartTimer(index); 
     
     // Copy from src into dst buffer
     // hsa_amd_memory_async_copy(void* dst, hsa_agent_t dst_agent, const void* src, hsa_agent_t src_agent, size_t size, uint32_t num_dep_signals, const hsa_signal_t* dep_signals, hsa_signal_t completion_signal)
@@ -634,20 +629,15 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
       log(log_msg.c_str(), rvs::logdebug);
     }    
     
-    // Stop the timer object
-    timer.StopTimer(index);
-
-    // Push the time taken for copy into a vector of copy times
-//     curr_time = timer.ReadTimer(index);
-    log_msg = "[PQT] send_p2p_traffic - timer = " + std::to_string(timer.ReadTimer(index));
-    log(log_msg.c_str(), rvs::logdebug);    
-    
     curr_time = GetCopyTime(bidirectional, signal_fwd, signal_rev)/1000000000;
     total_time += curr_time;
     log_msg = "[PQT] send_p2p_traffic - total_time = " + std::to_string(total_time);
     log(log_msg.c_str(), rvs::logdebug);
     
     // convert to GB/s
+    if (bidirectional == true) {
+      curr_size *= 2;
+    }
     bandwidth = (curr_size / curr_time);
     bandwidth /= (1024*1024*1024);
     log_msg = "[PQT] send_p2p_traffic - PARTIAL curr_size = " + std::to_string(curr_size) + " Bytes and curr_time = " + std::to_string(curr_time) + " bandwidth = " + std::to_string(bandwidth) + " GBytes/s";
@@ -665,6 +655,9 @@ void action::send_p2p_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_
   }
   
   // convert to GB/s
+  if (bidirectional == true) {
+    total_size *= 2;
+  }
   bandwidth = (total_size / total_time);
   bandwidth /= (1024*1024*1024);
   log_msg = "[PQT] send_p2p_traffic - END total_size = " + std::to_string(total_size) + " Bytes and total_time = " + std::to_string(total_time) + " bandwidth = " + std::to_string(bandwidth) + " GBytes/s";
