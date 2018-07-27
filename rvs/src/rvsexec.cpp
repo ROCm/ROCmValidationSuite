@@ -107,11 +107,6 @@ int rvs::exec::run() {
     logger::to_json(true);
   }
 
-
-  if (rvs::options::has_option("-l", val)) {
-    logger::logfile(val);
-  }
-
   string config_file;
   if (rvs::options::has_option("-c", val)) {
     config_file = val;
@@ -208,7 +203,8 @@ void rvs::exec::do_help() {
 
 //! Reports list of AMD GPUs presnt in the system
 int rvs::exec::do_gpu_list() {
-  cout << "\nROCm Validation Suite (version " << LIB_VERSION_STRING << ")\n" << endl;
+  cout << "\nROCm Validation Suite (version " << LIB_VERSION_STRING << ")\n"
+       << endl;
 
   // create action excutor in .so
   rvs::action* pa = module::action_create("pesm");

@@ -35,6 +35,7 @@ extern int  gpu_num_subdirs(const char* dirpath, const char* prefix);
 extern void gpu_get_all_location_id(std::vector<uint16_t>& gpus_location_id);
 extern void gpu_get_all_gpu_id(std::vector<uint16_t>& gpus_id);
 extern void gpu_get_all_device_id(std::vector<uint16_t>& gpus_device_id);
+extern void gpu_get_all_node_id(std::vector<uint16_t>& gpus_node_id);
 
 namespace rvs {
 
@@ -53,6 +54,8 @@ class gpulist {
   static int32_t GetGpuId(const uint32_t LocationID);
   static int32_t GetDeviceIdFromLocationId(const uint32_t LocationID);
   static int32_t GetDeviceIdFromGpuId(const uint32_t GpuID);
+  static int32_t GetNodeIdFromGpuId(const uint32_t GpuID);
+  static int32_t GetNodeIdFromLocationId(const uint32_t LocationID);
 
  protected:
   //! Array of GPU location IDs
@@ -61,6 +64,8 @@ class gpulist {
   static std::vector<uint16_t> gpu_id;
   //! Array of device IDs
   static std::vector<uint16_t> device_id;
+  //! Array of node IDs
+  static std::vector<uint16_t> node_id;
 };
 
 }  // namespace rvs
