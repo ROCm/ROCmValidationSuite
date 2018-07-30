@@ -35,6 +35,7 @@
 #include "rvsmodule.h"
 #include "rvsliblogger.h"
 #include "rvsoptions.h"
+#include "rvs_util.h"
 
 /*** Example rvs.conf file structure
 
@@ -143,6 +144,12 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
                                   const std::string& module_name,
                                   rvs::if1* pif1) {
   int sts = 0;
+  
+  string indexes;
+  bool indexes_provided = false;
+  if (rvs::options::has_option("-i", indexes) && (!indexes.empty()))
+    indexes_provided = true;
+
 
   // for all child nodes
   for (YAML::const_iterator it = node.begin(); it != node.end(); it++) {
@@ -157,8 +164,12 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
                                            pif1);
     } else {
       // just set this one propertiy
-      sts += pif1->property_set(it->first.as<std::string>(),
+      if (indexes_provided && it->first.as<std::string>() == "device") {
+        sts += pif1->property_set("device", indexes);
+      } else {
+        sts += pif1->property_set(it->first.as<std::string>(),
                                 it->second.as<std::string>());
+      }
     }
   }
 

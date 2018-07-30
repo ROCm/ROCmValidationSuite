@@ -143,9 +143,9 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-g", sp));
   grammar.insert(gpair("--listGpus", sp));
 
-  //  sp = std::make_shared<optbase>("-i", value);
-  //  grammar.insert(gpair("-i", sp));
-  //  grammar.insert(gpair("--indexes", sp));
+  sp = std::make_shared<optbase>("-i", command, value);
+  grammar.insert(gpair("-i", sp));
+  grammar.insert(gpair("--indexes", sp));
 
   sp = std::make_shared<optbase>("-j", command);
   grammar.insert(gpair("-j", sp));
