@@ -265,36 +265,6 @@ int action::run(void) {
         return -1;  // PCIe qualification check cannot continue
     }
 
-    // get all gpu_id for all AMD compatible GPUs that are registered
-    // into the system, via kfd querying
-    gpu_get_all_gpu_id(gpus_id);
-
-    if (gpus_id.empty()) {
-        // no need to query the PCI bus as there is no AMD compatible GPU
-        msg = action_name + " " + MODULE_NAME + " " + PEQT_RESULT_FAIL_MESSAGE;
-        log(msg.c_str(), rvs::logresults);
-        return 0;
-    }
-
-    // get all GPU location_id (all values are unique and point to the sysfs)
-    // this list is "synced" (in regards to the elements position) with gpus_id
-    gpu_get_all_location_id(gpus_location_id);
-
-    if (gpus_location_id.empty()) {
-        // basically, if we got to this point then the gpus_location_id
-        // list cannot be empty unless there was some kind of an error
-        // while querying the kfd
-
-        // log the error
-        msg = action_name + " " + MODULE_NAME + " " + KFD_QUERYING_ERROR;
-        log(msg.c_str(), rvs::logerror);
-
-        // log the module's result (FALSE)
-        msg = action_name + " " + MODULE_NAME + " " + PEQT_RESULT_FAIL_MESSAGE;
-        log(msg.c_str(), rvs::logresults);
-        return 1;  // PCIe qualification check cannot continue
-    }
-
     // get the pci_access structure
     pacc = pci_alloc();
 
@@ -326,11 +296,9 @@ int action::run(void) {
                 | (dev->func));
 
         // check if this pci_dev corresponds to one of the AMD GPUs
-        vector<uint16_t>::iterator it_gpu = find(
-                gpus_location_id.begin(), gpus_location_id.end(),
-                dev_location_id);
+        int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
 
-        if (it_gpu != gpus_location_id.end()) {
+        if (-1 != gpu_id) {
             // that should be an AMD GPU
 
             // check for deviceid filtering
@@ -342,11 +310,6 @@ int action::run(void) {
 
                 bool cur_gpu_selected = false;
 
-                // get the actual position in the location_id list
-                uint16_t index_loc_id = std::distance(
-                        gpus_location_id.begin(), it_gpu);
-                // get the gpu_id for the same position
-                uint16_t gpu_id = gpus_id.at(index_loc_id);
                 if (device_all_selected) {
                     cur_gpu_selected = true;
                 } else {
@@ -363,7 +326,8 @@ int action::run(void) {
 
                 if (cur_gpu_selected) {
                     amd_gpus_found = true;
-                    if (!get_gpu_all_pcie_capabilities(dev, gpu_id))
+                    if (!get_gpu_all_pcie_capabilities(dev,
+                        static_cast<uint16_t>(gpu_id)))
                         pci_infra_qual_result = false;
                 }
             }

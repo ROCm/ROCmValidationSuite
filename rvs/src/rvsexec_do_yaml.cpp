@@ -25,6 +25,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <algorithm>
 
 #include "rvsexec.h"
 #include "yaml-cpp/yaml.h"
@@ -144,7 +145,7 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
                                   const std::string& module_name,
                                   rvs::if1* pif1) {
   int sts = 0;
-  
+
   string indexes;
   bool indexes_provided = false;
   if (rvs::options::has_option("-i", indexes) && (!indexes.empty()))
@@ -165,6 +166,7 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
     } else {
       // just set this one propertiy
       if (indexes_provided && it->first.as<std::string>() == "device") {
+        std::replace(indexes.begin(), indexes.end(), ',', ' ');
         sts += pif1->property_set("device", indexes);
       } else {
         sts += pif1->property_set(it->first.as<std::string>(),
