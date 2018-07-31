@@ -628,6 +628,10 @@ int action::filechk_run() {
       check = "false";
     msg = "[" + action_name + "] " + " filecheck "+ file +" DNE " + check;
     log(msg.c_str(), rvs::logresults);
+    if (bjson && json_rcqt_node != nullptr) {
+      rvs::lp::AddString(json_rcqt_node
+      , "exists", file);
+    }
     } else {
     // when exists propetry is true,but file cannot be found
     if (stat(file.c_str(), &info) < 0) {
@@ -652,6 +656,10 @@ int action::filechk_run() {
         msg = "[" + action_name + "] " + " filecheck " \
         + owner +" owner:" + check;
         log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , "owner", owner);
+        }
       }
       // check if group is tested
       iter = property.find("group");
@@ -670,6 +678,10 @@ int action::filechk_run() {
           check = "false";
         msg = "[" + action_name + "] " + " filecheck " + group+ " group:"+check;
         log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , "group", group);
+        }
       }
       // check if permissions are tested
       iter = property.find("permission");
@@ -685,6 +697,10 @@ int action::filechk_run() {
         msg = "[" + action_name + "] " + " filecheck " + \
         std::to_string(permission)+" permission:"+check;
         log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , "permissions", std::to_string(permission));
+        }
       }
       // check if type is tested
       iter = property.find("type");
@@ -702,9 +718,16 @@ int action::filechk_run() {
           msg = "[" + action_name + "] " + " filecheck " + \
           std::to_string(type)+" type:"+check;
           log(msg.c_str(), rvs::logresults);
+          if (bjson && json_rcqt_node != nullptr) {
+            rvs::lp::AddString(json_rcqt_node
+            , "type", std::to_string(type));
+          }
         }
       }
     }
   }
+      if (bjson && json_rcqt_node != nullptr) {
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }
   return 0;
 }

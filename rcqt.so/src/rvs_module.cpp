@@ -55,7 +55,7 @@ extern "C" char* rvs_module_get_description(void) {
 }
 
 extern "C" char* rvs_module_get_config(void) {
-  return const_cast<char*>("package (string)\
+  return const_cast<char*>(R"("package (string)\
     , version (string), installed (bool)\
     , user (string), groups (collection of strings), file (string)\
     , owner (string), group (string), permission (int)\
