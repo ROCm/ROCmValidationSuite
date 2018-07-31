@@ -171,8 +171,10 @@ bool rvs::actionbase::property_get_device(int *error) {
  * @brief gets the action name from the module's properties collection
  */
 void rvs::actionbase::property_get_action_name(int *error) {
+  action_name = "[]";
   auto it = property.find(RVS_CONF_NAME_KEY);
   if (it != property.end()) {
+    action_name = it->second;
     *error = 0;
   } else {
     *error = 2;
