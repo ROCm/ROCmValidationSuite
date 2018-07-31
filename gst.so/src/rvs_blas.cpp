@@ -24,13 +24,10 @@
  *******************************************************************************/
 #include "rvs_blas.h"
 
-#include <stdlib.h>
 #include <time.h>
-#include <limits>
-#include <chrono>
-#include <random>
 
 #define RANDOM_CT               320000
+#define RANDOM_DIV_CT           0.1234
 
 rocblas_operation transa = rocblas_operation_none;
 rocblas_operation transb = rocblas_operation_transpose;
@@ -231,25 +228,26 @@ bool rvs_blas::run_blass_gemm(void) {
 void rvs_blas::generate_random_matrix_data(void) {
     int i;
     if (!is_error) {
-        int r1, r2;
-        unsigned int seed = time(NULL);
+        uint64_t nextr = time(NULL);
 
-        for (i = 0; i < size_a; ++i) {
-            r1 = rand_r(&seed) % RANDOM_CT;
-            r2 = rand_r(&seed) % (RANDOM_CT / 1000) + 1;
-            ha[i] = static_cast<float>(r1) / r2;
-        }
+        for (i = 0; i < size_a; ++i)
+            ha[i] = fast_pseudo_rand(&nextr);
 
-        for (i = 0; i < size_b; ++i) {
-            r1 = rand_r(&seed) % RANDOM_CT;
-            r2 = rand_r(&seed) % (RANDOM_CT / 1000) + 1;
-            hb[i] = static_cast<float>(r1) / r2;
-        }
+        for (i = 0; i < size_b; ++i)
+            hb[i] = fast_pseudo_rand(&nextr);
 
-        for (int i = 0; i < size_c; ++i) {
-            r1 = rand_r(&seed) % RANDOM_CT;
-            r2 = rand_r(&seed) % (RANDOM_CT / 1000) + 1;
-            hc[i] = static_cast<float>(r1) / r2;
-        }
+        for (int i = 0; i < size_c; ++i)
+            hc[i] = fast_pseudo_rand(&nextr);
     }
 }
+
+/**
+ * @brief fast pseudo random generator 
+ * @return floating point random number
+ */
+float rvs_blas::fast_pseudo_rand(u_long *nextr) {
+    *nextr = *nextr * 1103515245 + 12345;
+    return static_cast<float>(static_cast<uint32_t>
+                    ((*nextr / 65536) % RANDOM_CT)) / RANDOM_DIV_CT;
+}
+
