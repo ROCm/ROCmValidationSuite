@@ -26,12 +26,15 @@
 #define INCLUDE_RVSHSA_H_
 
 #include <stdlib.h>
-#include <assert.h>
-#include <algorithm>
 #include <unistd.h>
+#include <assert.h>
+
+#include <algorithm>
 #include <cctype>
 #include <sstream>
 #include <limits>
+#include <string>
+#include <vector>
 
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
@@ -39,12 +42,13 @@
 using std::string;
 using std::vector;
 
+namespace rvs {
 
-// TODO add info
-class rvshsa {
+// TODO(dmatichdl) add info
+class hsa {
  public:
-  rvshsa();
-  virtual ~rvshsa();
+  hsa();
+  virtual ~hsa();
 
   // agent structure
   struct AgentInformation {
@@ -52,6 +56,7 @@ class rvshsa {
     hsa_agent_t                   agent;
     string                        agent_name;
     string                        agent_device_type;
+    uint32_t                      node;
     // System region
     hsa_amd_memory_pool_t         sys_pool;
     // Memory region
@@ -80,38 +85,65 @@ class rvshsa {
                                             64 * 1024 * 1024,
                                             128 * 1024 * 1024,
                                             256 * 1024 * 1024,
-                                            512 * 1024 * 1024 };  
-  
+                                            512 * 1024 * 1024 };
+
   // List of sizes to use in copy and read/write transactions
   // Size is specified in terms of Megabytes
   vector<uint32_t> size_list;
-                                   
-  // TODO add info
+
+  // TODO(dmatichdl) add info
   vector<AgentInformation> agent_list;
   vector<AgentInformation> gpu_list;
   vector<AgentInformation> cpu_list;
 
-  // TODO add info
+ public:
+  static void Init();
+  static void Terminate();
+  static rvs::hsa* Get();
+
+  const int FindAgent(uint32_t Node);
+
+  // TODO(mlucinhdl) add info
+  int SendTraffic(uint32_t SrcNode, uint32_t DstNode,
+                  size_t   Size,    bool     bidirectional,
+                  double*  Duration
+                 );
+
+  // TODO(dmatichdl) add info
+  double send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
+                      hsa_amd_memory_pool_t src_buff,
+                      hsa_amd_memory_pool_t dst_buff,
+                      bool bidirectional, size_t curr_size);
+
+
+ protected:
+  // TODO(dmatichdl) add info
   // Get all agents
   void InitAgents();
-  
-  // TODO add info
+
+  int Allocate(int SrcAgent, int DstAgent, size_t Size,
+                     hsa_amd_memory_pool_t* pSrcPool, void** SrcBuff,
+                     hsa_amd_memory_pool_t* pDstPool, void** DstBuff);
+
+  // TODO(dmatichdl) add info
   // Process one agent and put it in the list
   static hsa_status_t ProcessAgent(hsa_agent_t agent, void* data);
-  
-  // TODO add info
+
+  // TODO(dmatichdl) add info
   // Process one agent and put it in the list
   static hsa_status_t ProcessMemPool(hsa_amd_memory_pool_t pool, void* data);
-  
-  // TODO add info
+
+  // TODO(dmatichdl) add info
   static void print_hsa_status(string message, hsa_status_t st);
+  // TODO(dmatichdl) add info
+  static void print_hsa_status(const std::string& file, int line, const std::string& function, hsa_status_t st);
 
-  // TODO add info
-  double send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent, hsa_amd_memory_pool_t src_buff, hsa_amd_memory_pool_t dst_buff, bool bidirectional, size_t curr_size);
-  
-  // TODO add info
-  double GetCopyTime(bool bidirectional, hsa_signal_t signal_fwd, hsa_signal_t signal_rev);
-
+  // TODO(dmatichdl) add info
+  double GetCopyTime(bool bidirectional,
+                     hsa_signal_t signal_fwd, hsa_signal_t signal_rev);
+ protected:
+   static rvs::hsa* pDsc;
 };
 
+}  // namespace rvs
 #endif  // INCLUDE_RVSHSA_H_

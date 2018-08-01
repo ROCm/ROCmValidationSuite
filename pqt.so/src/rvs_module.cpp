@@ -28,19 +28,14 @@
 #include <iostream>
 
 #include "rvsloglp.h"
+#include "rvshsa.h"
 #include "action.h"
 
 /**
- * @defgroup PESM PESM Module
+ * @defgroup PQT PQT Module
  *
- * @brief PCIe State Monitoring module
+ * @brief P2P Qualification Test Module
  *
- * The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host
- * platform and the GPU. The module will register a “listener” on a target GPU’s PCIe
- * interconnect, and log a message whenever it detects a state change. The PESM will be able to
- * detect the following state changes:
- *   - 1.2.PCIe link speed changes
- *   - GPU power state changes
  */
 
 
@@ -84,10 +79,15 @@ extern "C" const char* rvs_module_get_output(void) {
 
 extern "C" int   rvs_module_init(void* pMi) {
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+
+  rvs::hsa::Init();
+
   return 0;
 }
 
 extern "C" int   rvs_module_terminate(void) {
+
+  rvs::hsa::Terminate();
   return 0;
 }
 

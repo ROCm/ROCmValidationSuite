@@ -75,30 +75,6 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
-# Set project requirements
-set(ROC_THUNK_NAME "hsakmt")
-set(CORE_RUNTIME_NAME "hsa-runtime")
-set(ROC_THUNK_LIBRARY "lib${ROC_THUNK_NAME}")
-set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
-set(CORE_RUNTIME_LIBRARY "lib${CORE_RUNTIME_TARGET}")
-
-# Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${ROCR_INC_DIR}/hsa/hsa.h)
-  message("ERROR: ROC Runtime headers can't be found under specified path. Please set ROCR_INC_DIR path. Current value is : " ${ROCR_INC_DIR})
-  RETURN()
-endif()
-
-if(NOT EXISTS ${ROCR_LIB_DIR}/${CORE_RUNTIME_LIBRARY}.so)
-  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set ROCR_LIB_DIR path. Current value is : " ${ROCR_LIB_DIR})
-  RETURN()
-endif()
-
-# Add directories to look for header files to compile
-INCLUDE_DIRECTORIES(${ROCR_INC_DIR})
-
-# Add directories to look for library files to link 
-LINK_DIRECTORIES(${ROCR_LIB_DIR})
-
 ## additional libraries
 set ( PROJECT_LINK_LIBS libdl.so "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../yaml-cpp/libyaml-cpp.a" libpthread.so)
 
@@ -109,13 +85,13 @@ include_directories(include ../include ${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/i
 set(SOURCES
   src/rvs.cpp src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp src/rvscli.cpp src/rvsexec.cpp src/rvsexec_do_yaml.cpp 
   src/rvsoptions.cpp
-  ../src/rvsliblogger.cpp ../src/rvslognodebase.cpp ../src/rvslognoderec.cpp ../src/rvslognode.cpp ../src/rvslognodestring.cpp ../src/rvslognodeint.cpp ../src/rvsloglp.cpp ../src/rvshsa.cpp
+  ../src/rvsliblogger.cpp ../src/rvslognodebase.cpp ../src/rvslognoderec.cpp ../src/rvslognode.cpp ../src/rvslognodestring.cpp ../src/rvslognodeint.cpp
 )
 
 ## define target
 add_executable(${RVS_TARGET} ${SOURCES})
 
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${CORE_RUNTIME_TARGET} ${ROC_THUNK_NAME})
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
