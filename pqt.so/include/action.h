@@ -1,22 +1,45 @@
+/********************************************************************************
+ *
+ * Copyright (c) 2018 ROCm Developer Tools
+ *
+ * MIT LICENSE:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+#ifndef PQT_SO_INCLUDE_ACTION_H_
+#define PQT_SO_INCLUDE_ACTION_H_
 
-
-#ifndef ACTION_H_
-#define ACTION_H_
-
+#include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>
+
 #include <algorithm>
-#include <unistd.h>
 #include <cctype>
 #include <sstream>
 #include <limits>
+#include <string>
+#include <vector>
 
 #include "rvsactionbase.h"
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
 
-using std::string;
-using std::vector;
 
 /**
  * @class action
@@ -28,8 +51,7 @@ using std::vector;
  * in its run() method.
  *
  */
-class action : public rvs::actionbase
-{
+class action : public rvs::actionbase {
  public:
   action();
   virtual ~action();
@@ -37,22 +59,34 @@ class action : public rvs::actionbase
   virtual int run(void);
 
  protected:
+  bool get_all_pqt_config_keys(void);
+  bool get_all_common_config_keys(void);
+
+  // helpers for common keys
+  bool      prop_device_all_selected;
+  uint16_t  prop_deviceid;
+  bool      prop_device_id_filtering;
+
   // PQT specific config keys
-  void property_get_peers(int *error);
-  void property_get_peer_deviceid(int *error);
-  void property_get_tet_bandwidth(int *error);
+  bool property_get_peers(int *error);
+  int  property_get_peer_deviceid(int *error);
+  void property_get_test_bandwidth(int *error);
   void property_get_log_interval(int *error);
   void property_get_bidirectional(int *error);
+
+  std::vector<std::string> prop_peers;
+  int  prop_peer_deviceid;
+  bool prop_test_bandwidth;
+  int  prop_log_interval;
+  bool prop_bidirectional;
 
  protected:
   int create_threads();
   int run_single();
   int run_parallel();
 
+ private:
   void ontimer();
-
-private:
-
 };
 
-#endif /* ACTION_H_ */
+#endif  // PQT_SO_INCLUDE_ACTION_H_

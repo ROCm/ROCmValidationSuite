@@ -106,15 +106,13 @@ class hsa {
   // TODO(mlucinhdl) add info
   int SendTraffic(uint32_t SrcNode, uint32_t DstNode,
                   size_t   Size,    bool     bidirectional,
-                  double*  Duration
-                 );
+                  double*  Duration);
 
-  // TODO(dmatichdl) add info
-  double send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
-                      hsa_amd_memory_pool_t src_buff,
-                      hsa_amd_memory_pool_t dst_buff,
-                      bool bidirectional, size_t curr_size);
-
+//   // TODO(dmatichdl) add info
+//   double send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
+//                       hsa_amd_memory_pool_t src_buff,
+//                       hsa_amd_memory_pool_t dst_buff,
+//                       bool bidirectional, size_t curr_size);
 
  protected:
   // TODO(dmatichdl) add info
@@ -136,13 +134,15 @@ class hsa {
   // TODO(dmatichdl) add info
   static void print_hsa_status(string message, hsa_status_t st);
   // TODO(dmatichdl) add info
-  static void print_hsa_status(const std::string& file, int line, const std::string& function, hsa_status_t st);
+  static void print_hsa_status(const std::string& file, int line,
+                               const std::string& function, hsa_status_t st);
 
   // TODO(dmatichdl) add info
   double GetCopyTime(bool bidirectional,
                      hsa_signal_t signal_fwd, hsa_signal_t signal_rev);
+
  protected:
-   static rvs::hsa* pDsc;
+  static rvs::hsa* pDsc;
 };
 
 }  // namespace rvs
