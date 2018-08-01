@@ -680,6 +680,7 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
  * @return hsa_status_t
  *
  * */
+/*
 double rvs::hsa::send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
                               hsa_amd_memory_pool_t src_buff,
                               hsa_amd_memory_pool_t dst_buff,
@@ -873,4 +874,4 @@ double rvs::hsa::send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
 
   return bandwidth;
 }
-
+*/

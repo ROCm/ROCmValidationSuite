@@ -51,30 +51,33 @@ extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision) {
 }
 
 extern "C" int rvs_module_has_interface(int iid) {
-  switch(iid)
-  {
+  switch (iid) {
   case 0:
   case 1:
     return 1;
-    }
+  }
 
   return 0;
 }
 
 extern "C" const char* rvs_module_get_name(void) {
-   return "pqt";
+  return "pqt";
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-   return "ROCm Validation Suite PQT module";
+  return "ROCm Validation Suite PQT module";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
-  return "peers (Collection of Strings), peer_deviceid (Integer), test_bandwidth (Bool), bidirectional(Bool), parallel (Bool), duration (Integer), log_interval (Integer)";
+  return "peers (Collection of Strings), peer_deviceid (Integer), "
+"test_bandwidth (Bool), bidirectional(Bool), parallel (Bool), duration "
+"(Integer), log_interval (Integer)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {
-  return "p2p_result (Collection of Bools), peers (Collection of Strings), peer_deviceid (Integer), test_bandwidth (Bool), interval_bandwidth (Collection of Floats), bandwidth (Collection of Floats)";
+  return "p2p_result (Collection of Bools), peers (Collection of Strings), "
+  "peer_deviceid (Integer), test_bandwidth (Bool), interval_bandwidth "
+  "(Collection of Floats), bandwidth (Collection of Floats)";
 }
 
 extern "C" int   rvs_module_init(void* pMi) {
@@ -86,7 +89,6 @@ extern "C" int   rvs_module_init(void* pMi) {
 }
 
 extern "C" int   rvs_module_terminate(void) {
-
   rvs::hsa::Terminate();
   return 0;
 }
@@ -104,7 +106,9 @@ extern "C" int   rvs_module_action_destroy(void* pAction) {
   return 0;
 }
 
-extern "C" int rvs_module_action_property_set(void* pAction, const char* Key, const char* Val) {
+extern "C" int rvs_module_action_property_set(void* pAction,
+                                              const char* Key,
+                                              const char* Val) {
   return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 
