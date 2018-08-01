@@ -38,8 +38,13 @@ class action : public rvs::actionbase
 
  protected:
   // PQT specific config keys
-  void property_get_ramp_interval(int *error);
+  void property_get_peers(int *error);
+  void property_get_peer_deviceid(int *error);
+  void property_get_tet_bandwidth(int *error);
   void property_get_log_interval(int *error);
+  void property_get_bidirectional(int *error);
+
+ protected:
   int create_threads();
   int run_single();
   int run_parallel();
