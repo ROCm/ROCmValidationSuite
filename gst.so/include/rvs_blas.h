@@ -111,6 +111,7 @@ class rvs_blas {
 
     bool alocate_host_matrix_mem(void);
     void release_host_matrix_mem(void);
+    float fast_pseudo_rand(u_long *nextr);
 };
 
 #endif  // GST_SO_INCLUDE_RVS_BLAS_H_

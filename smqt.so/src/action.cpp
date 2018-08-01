@@ -89,6 +89,32 @@ action::~action() {
 }
 
 /**
+ * @brief reads all common configuration keys from
+ * the module's properties collection
+ * @return true if no fatal error occured, false otherwise
+ */
+bool action::get_all_common_config_keys() {
+  string msg, sdevid, sdev;
+  int error;
+
+  // get <device> property value (a list of gpu id)
+  if (has_property("device", sdev)) {
+    property_get_device(&error);
+    if (error) {  // log the error & abort GST
+      cerr << "RVS-SMQT: action: " << action_name <<
+            "  invalid 'device' key value " << sdev << '\n';
+      return false;
+    }
+  } else {
+    cerr << "RVS-SMQT: action: " << action_name <<
+        "  key 'device' was not found" << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * @brief Implements action functionality
  * Check if the sizes and addresses of BARs match the given ones
  * @return 0 - success, non-zero otherwise
@@ -105,8 +131,6 @@ int action::run(void) {
   bool pass;
   int error = 0;
   string msg;
-  string action_name;
-  vector<uint16_t> gpus_location_id;
   struct pci_access *pacc;
 
   // get the action name
@@ -117,7 +141,12 @@ int action::run(void) {
     return -1;
   }
 
-  gpu_get_all_location_id(gpus_location_id);
+  if (!get_all_common_config_keys()) {
+    std::cerr << "Couldn't fetch common config keys "
+              << "from the configuration file!\n";
+    return -1;
+  }
+
   // get the pci_access structure
   pacc = pci_alloc();
   // initialize the PCI library
@@ -153,11 +182,17 @@ int action::run(void) {
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id = ((((uint16_t)(dev->bus)) << 8) | (dev->func));
 
-    // check if this pci_dev corresponds to one of AMD GPUs
-    auto it_gpu = std::find(gpus_location_id.begin(),
-                  gpus_location_id.end(), dev_location_id);
+    int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
 
-    if (it_gpu == gpus_location_id.end())
+    // if the device is not in the list, move on
+    if (-1 == gpu_id)
+      continue;
+
+    auto it_gpu_id = find(device_prop_gpu_id_list.begin(),
+                          device_prop_gpu_id_list.end(),
+                          std::to_string(gpu_id));
+
+    if (it_gpu_id == device_prop_gpu_id_list.end())
       continue;
 
     // get actual values
