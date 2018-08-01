@@ -41,6 +41,8 @@
 #include "hsa/hsa_ext_amd.h"
 
 
+class Worker;
+
 /**
  * @class action
  * @ingroup PQT
@@ -82,11 +84,14 @@ class action : public rvs::actionbase {
 
  protected:
   int create_threads();
+  int destroy_threads();
   int run_single();
   int run_parallel();
 
  private:
   void ontimer();
+
+  std::vector<Worker*> test_array;
 };
 
 #endif  // PQT_SO_INCLUDE_ACTION_H_
