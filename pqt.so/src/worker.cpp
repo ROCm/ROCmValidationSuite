@@ -24,12 +24,6 @@
  *******************************************************************************/
 #include "worker.h"
 
-#include <chrono>
-#include <map>
-#include <string>
-#include <algorithm>
-#include <iostream>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,12 +33,18 @@ extern "C" {
 }
 #endif
 
+#include <chrono>
+#include <map>
+#include <string>
+#include <algorithm>
+#include <iostream>
+
 #include "rvs_module.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvsloglp.h"
+#include "rvshsa.h"
 
-using namespace std;
 
 Worker::Worker() {}
 Worker::~Worker() {}
@@ -57,7 +57,7 @@ Worker::~Worker() {}
  * */
 void Worker::run() {
 
-  log("[PQT] worker thread has finished", rvs::logdebug);
+  log("pqt worker thread has finished", rvs::logdebug);
 
 }
 
@@ -70,7 +70,9 @@ void Worker::run() {
  * */
 void Worker::stop() {
 
-  log("[PQT] in Worker::stop()", rvs::logdebug);
+  log("pqt in Worker::stop()", rvs::logdebug);
+
+  brun = false;
 
   // wait a bit to make sure thread has exited
   try {
@@ -79,4 +81,47 @@ void Worker::stop() {
   }
   catch(...) {
   }
+}
+
+int Worker::initialize(int Src, int Dst, bool Bidirect) {
+  src_node = Src;
+  dst_node = Dst;
+  bidirect = Bidirect;
+  pHsa = rvs::hsa::Get();
+
+  running_size = 0;
+  running_duration = 0;
+
+  total_size = 0;
+  total_duration = 0;
+
+  return 0;
+}
+
+int Worker::do_transfer() {
+  double duration;
+  int sts;
+
+  for (size_t i = 0; i < pHsa->size_list.size(); i++) {
+    current_size = pHsa->size_list[i];
+    sts = pHsa->SendTraffic(src_node, dst_node, current_size, bidirect, &duration);
+
+    if (sts) {
+      std::cerr << "RVS-PQT: internal error, src: " << src_node <<
+                   "   dst: " << dst_node << std::endl;
+      return sts;
+    }
+
+    running_size += current_size;
+    running_duration += duration;
+
+    /*
+    std::string msg = "pqt packet size: " + std::to_string(phsa->size_list[i])
+      + "   throughput: "
+      + std::to_string(phsa->size_list[i]/duration/(1024*1024*1024)*2);
+    rvs::lp::Log(msg, rvs::logresults);
+    */
+  }
+
+  return 0;
 }

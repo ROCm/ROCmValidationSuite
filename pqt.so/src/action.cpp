@@ -191,18 +191,45 @@ void action::property_get_log_interval(int *error) {
  * @return true if no fatal error occured, false otherwise
  */
 bool action::get_all_pqt_config_keys(void) {
-    int error;
-    string msg, ststress;
+  int    error;
+  string msg;
 
+  property_get_peers(&error);
+  if (error) {
+    cerr << "RVS-PQT: action: " << action_name <<
+        "  invalid '" << "peers" << "'" << std::endl;
+    return false;
+  }
 
-    property_get_log_interval(&error);
-    if (error) {
-        cerr << "RVS-PQT: action: " << action_name <<
-            "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "'" << std::endl;
-        return false;
-    }
+  prop_peer_deviceid = property_get_peer_deviceid(&error);
+  if (error) {
+    cerr << "RVS-PQT: action: " << action_name <<
+        "  invalid 'peer_deviceid '" << std::endl;
+    return false;
+  }
 
-    return true;
+  property_get_test_bandwidth(&error);
+  if (error) {
+    cerr << "RVS-PQT: action: " << action_name <<
+        "  invalid 'test_bandwidth'" << std::endl;
+    return false;
+  }
+
+  property_get_log_interval(&error);
+  if (error) {
+    cerr << "RVS-PQT: action: " << action_name <<
+        "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "'" << std::endl;
+    return false;
+  }
+
+  property_get_bidirectional(&error);
+  if (error) {
+    cerr << "RVS-PQT: action: " << action_name <<
+        "  invalid 'bidirectional'" << std::endl;
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -213,6 +240,14 @@ bool action::get_all_pqt_config_keys(void) {
 bool action::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
+
+    // get the action name
+    property_get_action_name(&error);
+    if (error) {
+      msg = "pqt [] action field is missing";
+      log(msg.c_str(), rvs::logerror);
+      return false;
+    }
 
     // get <device> property value (a list of gpu id)
     if (has_property("device", sdev)) {
@@ -277,26 +312,40 @@ bool action::get_all_common_config_keys(void) {
     return true;
 }
 
+int action::create_threads() {
+
+  Worker* p = new Worker;
+  p->initialize(4, 5, false);
+
+  test_array.push_back(p);
+
+  return 0;
+}
+
+int action::destroy_threads() {
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    delete *it;
+  }
+
+  return 0;
+}
 
 int action ::run() {
-  rvs::hsa* phsa = rvs::hsa::Get();
 
-  double duration;
-//  size_t size = 1024*1024;
-  int sts;
+  if (!get_all_common_config_keys())
+    return -1;
+  if (!get_all_pqt_config_keys())
+    return -1;
 
-  for (size_t i = 0; i < phsa->size_list.size(); i++) {
-    sts = phsa->SendTraffic(4, 5, phsa->size_list[i], true, &duration);
+  create_threads();
 
-    if (sts) {
-      std::cerr << "RVS-PQT: internal error" << std::endl;
-    }
-
-    std::string msg = "pqt packet size: " + std::to_string(phsa->size_list[i])
-      + "   throughput: "
-      + std::to_string(phsa->size_list[i]/duration/(1024*1024*1024)*2);
-    rvs::lp::Log(msg, rvs::logresults);
+  if (gst_runs_parallel) {
+    run_parallel();
+  } else {
+    run_single();
   }
+
+  destroy_threads();
 
   return 0;
 }
