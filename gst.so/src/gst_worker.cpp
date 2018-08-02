@@ -46,6 +46,8 @@
 #define GST_LOG_GFLOPS_INTERVAL_KEY             "Gflops"
 #define GST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 
+#define PROC_DEC_INC_SGEMM_FREQ_DELAY           10
+
 #define NMAX_MS_GPU_RUN_PEAK_PERFORMANCE        1000
 #define NMAX_MS_SGEMM_OPS_RAMP_SUB_INTERVAL     1000
 #define USLEEP_MAX_VAL                          (1000000 - 1)
@@ -200,6 +202,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     double seconds_elapsed, curr_gflops, dyn_delay_target_stress;
     uint16_t num_sgemm_ops = 0, num_sgemm_ops_log_interval = 0;
     uint64_t millis_sgemm_ops, millis_last_sgemm;
+    uint16_t proc_delay = 0;
     string msg;
 
     // make sure that the ramp_interval & duration are not less than
@@ -269,8 +272,10 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
             dyn_delay_target_stress =
                     static_cast<uint64_t>((
                         1000 * gpu_blas->gemm_gflop_count()) /
-                            (target_stress + target_stress * tolerance / 2)) -
+                        (target_stress + target_stress * tolerance / 2)) -
                                 millis_last_sgemm;
+            if (dyn_delay_target_stress > proc_delay + 1)
+                dyn_delay_target_stress -= proc_delay;
         }
 
         if (dyn_delay_target_stress != 1) {
@@ -304,6 +309,8 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
                     return true;
                 }
             }
+            proc_delay +=
+                (delay_target_stress * PROC_DEC_INC_SGEMM_FREQ_DELAY) / 100;
             num_sgemm_ops = 0;
             delay_target_stress = 0;
             gst_start_gflops_time = std::chrono::system_clock::now();
