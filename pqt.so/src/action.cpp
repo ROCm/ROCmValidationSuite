@@ -55,11 +55,11 @@ using std::string;
 using std::vector;
 
 //! Default constructor
-action::action() {
+pqtaction::pqtaction() {
 }
 
 //! Default destructor
-action::~action() {
+pqtaction::~pqtaction() {
   property.clear();
 }
 
@@ -68,7 +68,7 @@ action::~action() {
  * @param error pointer to a memory location where the error code will be stored
  * @return true if "all" is selected, false otherwise
  */
-bool action::property_get_peers(int *error) {
+bool pqtaction::property_get_peers(int *error) {
     *error = 0;  // init with 'no error'
     auto it = property.find("peers");
     if (it != property.end()) {
@@ -105,7 +105,7 @@ bool action::property_get_peers(int *error) {
  * @param error pointer to a memory location where the error code will be stored
  * @return deviceid value if valid, -1 otherwise
  */
-int action::property_get_peer_deviceid(int *error) {
+int pqtaction::property_get_peer_deviceid(int *error) {
     auto it = property.find("peer_deviceid");
     int deviceid = -1;
     *error = 0;  // init with 'no error'
@@ -128,7 +128,7 @@ int action::property_get_peer_deviceid(int *error) {
  * @brief reads the module's properties collection to see whether bandiwdth
  * tests should be run after peer check
  */
-void action::property_get_test_bandwidth(int *error) {
+void pqtaction::property_get_test_bandwidth(int *error) {
   prop_test_bandwidth = false;
   auto it = property.find("test_bandwidth");
   if (it != property.end()) {
@@ -149,7 +149,7 @@ void action::property_get_test_bandwidth(int *error) {
  * @brief reads the module's properties collection to see whether bandiwdth
  * tests should be run in both directions
  */
-void action::property_get_bidirectional(int *error) {
+void pqtaction::property_get_bidirectional(int *error) {
   prop_bidirectional = false;
   auto it = property.find("bidirectional");
   if (it != property.end()) {
@@ -170,7 +170,7 @@ void action::property_get_bidirectional(int *error) {
  * @brief reads the log interval from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_log_interval(int *error) {
+void pqtaction::property_get_log_interval(int *error) {
     *error = 0;
     prop_log_interval = DEFAULT_LOG_INTERVAL;
     auto it = property.find(RVS_CONF_LOG_INTERVAL_KEY);
@@ -191,7 +191,7 @@ void action::property_get_log_interval(int *error) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_pqt_config_keys(void) {
+bool pqtaction::get_all_pqt_config_keys(void) {
   int    error;
   string msg;
 
@@ -238,7 +238,7 @@ bool action::get_all_pqt_config_keys(void) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_common_config_keys(void) {
+bool pqtaction::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
 
@@ -313,7 +313,18 @@ bool action::get_all_common_config_keys(void) {
     return true;
 }
 
-int action::create_threads() {
+/**
+ * @brief Create thread objects based on action description in configuation
+ * file.
+ *
+ * Threads are created but are not started. Execution, one by one of parallel,
+ * depends on "parallel" key in configuration file. Pointers to created objects
+ * are stored in "test_array" member
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pqtaction::create_threads() {
   Worker* p = new Worker;
   p->initialize(4, 5, false);
 
@@ -322,7 +333,13 @@ int action::create_threads() {
   return 0;
 }
 
-int action::destroy_threads() {
+/**
+ * @brief Delete test thread objects at the end of action execution
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pqtaction::destroy_threads() {
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     delete *it;
   }
@@ -330,7 +347,13 @@ int action::destroy_threads() {
   return 0;
 }
 
-int action ::run() {
+/**
+ * @brief Main action execution entry point. Implements test logic.
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pqtaction::run() {
   if (!get_all_common_config_keys())
     return -1;
   if (!get_all_pqt_config_keys())
@@ -349,10 +372,17 @@ int action ::run() {
   return 0;
 }
 
-int action::run_single() {
+/**
+ * @brief Execute test transfers one by one, in round robin fashion, for the
+ * duration of the action.
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pqtaction::run_single() {
   // define timers
-  rvs::timer<action> timer_running(&action::do_running_average, this);
-  rvs::timer<action> timer_final(&action::do_final_average, this);
+  rvs::timer<pqtaction> timer_running(&pqtaction::do_running_average, this);
+  rvs::timer<pqtaction> timer_final(&pqtaction::do_final_average, this);
 
   // let the test run
   brun = true;
@@ -377,11 +407,25 @@ int action::run_single() {
   return 0;
 }
 
-int action::run_parallel() {
+/**
+ * @brief Execute test transfers all at once, for the
+ * duration of the action.
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pqtaction::run_parallel() {
   return 0;
 }
 
-int action::print_running_average() {
+/**
+ * @brief Collect running average bandwidth data for all the tests and prints
+ * them on cout every log_interval msec.
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pqtaction::print_running_average() {
   int src_node, dst_node;
   int src_id, dst_id;
   bool bidir;
@@ -414,7 +458,14 @@ int action::print_running_average() {
   return 0;
 }
 
-int action::print_final_average() {
+/**
+ * @brief Collect bandwidth totals for all the tests and prints
+ * them on cout at the end of action execution
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pqtaction::print_final_average() {
   int src_node, dst_node;
   int src_id, dst_id;
   bool bidir;
@@ -449,12 +500,12 @@ int action::print_final_average() {
   return 0;
 }
 
-void action::do_final_average() {
+void pqtaction::do_final_average() {
   rvs::lp::Log("pqt in do_final_average", rvs::logdebug);
   brun = false;
 }
 
-void action::do_running_average() {
+void pqtaction::do_running_average() {
   rvs::lp::Log("in do_running_average", rvs::logdebug);
 
   print_running_average();

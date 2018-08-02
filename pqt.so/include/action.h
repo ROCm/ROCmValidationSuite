@@ -44,7 +44,7 @@
 class Worker;
 
 /**
- * @class action
+ * @class pqtaction
  * @ingroup PQT
  *
  * @brief PQT action implementation class
@@ -53,10 +53,10 @@ class Worker;
  * in its run() method.
  *
  */
-class action : public rvs::actionbase {
+class pqtaction : public rvs::actionbase {
  public:
-  action();
-  virtual ~action();
+  pqtaction();
+  virtual ~pqtaction();
 
   virtual int run(void);
 
@@ -64,9 +64,11 @@ class action : public rvs::actionbase {
   bool get_all_pqt_config_keys(void);
   bool get_all_common_config_keys(void);
 
-  // helpers for common keys
+  //! 'true' if "all" is found under "device" key for this action
   bool      prop_device_all_selected;
+  //! deviceid key from config file
   uint16_t  prop_deviceid;
+  //! 'true' if prop_device_id is valid number
   bool      prop_device_id_filtering;
 
   // PQT specific config keys
@@ -76,10 +78,15 @@ class action : public rvs::actionbase {
   void property_get_log_interval(int *error);
   void property_get_bidirectional(int *error);
 
+  //! array of peer GPU IDs to be used in data trasfers
   std::vector<std::string> prop_peers;
+  //! deviceid of peer GPUs
   int  prop_peer_deviceid;
+  //! 'true' if bandwidth test is to be executed for verified peers
   bool prop_test_bandwidth;
+  //! log interval for running totals (in msec)
   int  prop_log_interval;
+  //! 'true' if bidirectional data transfer is required
   bool prop_bidirectional;
 
  protected:
@@ -92,6 +99,7 @@ class action : public rvs::actionbase {
   int print_running_average();
   int print_final_average();
 
+  //! 'true' for the duration of test
   bool brun;
 
  private:
