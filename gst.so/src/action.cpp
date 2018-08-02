@@ -26,10 +26,11 @@
 
 #include <string>
 #include <vector>
-#include <algorithm>
+#include <iostream>
 #include <regex>
-#include <map>
 #include <utility>
+#include <algorithm>
+#include <map>
 
 #define __HIP_PLATFORM_HCC__
 #include "hip/hip_runtime.h"
@@ -447,7 +448,7 @@ int action::run(void) {
     // get the action name
     rvs::actionbase::property_get_action_name(&error);
     if (error == 2) {
-      msg = "action field is missing in gst module";
+      msg = "action name field is missing in gst module";
       log(msg.c_str(), rvs::logerror);
       return -1;
     }
