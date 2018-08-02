@@ -85,11 +85,18 @@ class action : public rvs::actionbase {
  protected:
   int create_threads();
   int destroy_threads();
+
   int run_single();
   int run_parallel();
 
+  int print_running_average();
+  int print_final_average();
+
+  bool brun;
+
  private:
-  void ontimer();
+  void do_running_average(void);
+  void do_final_average(void);
 
   std::vector<Worker*> test_array;
 };

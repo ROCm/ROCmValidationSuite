@@ -42,12 +42,13 @@ extern "C" {
 #include "rvs_util.h"
 #include "rvsloglp.h"
 #include "rvshsa.h"
+#include "rvstimer.h"
 
 #include "rvs_module.h"
 #include "worker.h"
 
 #define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
-#define DEFAULT_LOG_INTERVAL 10
+#define DEFAULT_LOG_INTERVAL 500
 
 using std::cerr;
 using std::string;
@@ -349,3 +350,47 @@ int action ::run() {
 
   return 0;
 }
+
+int action::run_single() {
+
+  // define timers
+  rvs::timer<action> timer_running(&action::do_running_average, this);
+  rvs::timer<action> timer_final(&action::do_final_average, this);
+
+  // let the test run
+  brun = true;
+
+  // start timers
+  timer_final.start(10000, true);  // ticks only once
+  timer_running.start(500);        // ticks continuously
+
+  // iterate through test array and invoke tests one by one
+  do {
+    for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
+      (*it)->do_transfer();
+     sleep(1);
+   }
+  } while(brun);
+
+  timer_running.stop();
+  timer_final.stop();
+
+//  print_final_average();
+
+  return 0;
+}
+
+int action::run_parallel() {
+  return 0;
+}
+
+void action::do_final_average() {
+  rvs::lp::Log("pqt in do_final_average", rvs::logdebug);
+  brun = false;
+}
+
+void action::do_running_average() {
+  rvs::lp::Log("in do_running_average", rvs::logdebug);
+}
+
+
