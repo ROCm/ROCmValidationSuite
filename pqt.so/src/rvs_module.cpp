@@ -28,6 +28,7 @@
 #include <iostream>
 
 #include "rvsloglp.h"
+#include "gpu_util.h"
 #include "rvshsa.h"
 #include "action.h"
 
@@ -82,6 +83,7 @@ extern "C" const char* rvs_module_get_output(void) {
 
 extern "C" int   rvs_module_init(void* pMi) {
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+  rvs::gpulist::Initialize();
 
   rvs::hsa::Init();
 

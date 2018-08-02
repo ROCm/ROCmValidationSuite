@@ -3,6 +3,8 @@
 #define _WORKER_H_
 
 #include <string>
+#include <mutex>
+
 #include "rvsthreadbase.h"
 
 
@@ -40,10 +42,10 @@ public:
 
   int initialize(int iSrc, int iDst, bool Bidirect);
   int do_transfer();
-  void get_running_avg(int* Src, int* Dst, bool* Bidirect,
-                       size_t* Size, double* Duration);
-  void get_final_avg(int* Src, int* Dst, bool* Bidirect,
-                       size_t* Size, double* Duration);
+  void get_running_data(int* Src, int* Dst, bool* Bidirect,
+                        size_t* Size, double* Duration);
+  void get_final_data(int* Src, int* Dst, bool* Bidirect,
+                      size_t* Size, double* Duration);
 
 protected:
   virtual void run(void);
@@ -61,7 +63,7 @@ protected:
   rvs::hsa* pHsa;
   int src_node;
   int dst_node;
-  int bidirect;
+  bool bidirect;
 
   //! Current size of transfer data
   size_t current_size;
@@ -73,6 +75,8 @@ protected:
   // final totals
   size_t total_size;
   double total_duration;
+
+  std::mutex cntmutex;
 };
 
 
