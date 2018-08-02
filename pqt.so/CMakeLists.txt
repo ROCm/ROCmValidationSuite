@@ -117,7 +117,7 @@ include_directories(include pci ../include)
 ## define source files
 set(SOURCES ../src/rvsthreadbase.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp
             ../src/pci_caps.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
-            ../src/rvshsa.cpp ../src/rvstimer.cpp
+            ../src/rvshsa.cpp
             src/rvs_module.cpp src/action.cpp src/worker.cpp)
 
 ## define target

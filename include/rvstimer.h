@@ -23,28 +23,86 @@
  *
  *******************************************************************************/
 
+#include <chrono>
 
 #include "rvsthreadbase.h"
 
 namespace rvs {
 
-typedef void (*timerfunc_t)(void*);
-
+template<class T>
 class timer : public ThreadBase {
  public:
-  timer(const timerfunc_t cbFunc, const void* cbArg);
-  virtual ~timer();
+  typedef void (T::*timerfunc_t)();
 
-  void start(int Interval);
-  void stop();
+  timer(timerfunc_t cbFunc, T* cbArg) {
+    cbfunc = cbFunc;
+    cbarg = cbArg;
+  }
+
+  ~timer() {
+  }
+
+  void start(int Interval, bool RunOnce = false) {
+    brunonce = RunOnce;
+    timeset = Interval;
+    timeleft = timeset;
+
+    brun = true;
+    rvs::ThreadBase::start();
+  }
+
+
+
+/**
+ * @brief Stop timer
+ *
+ * Sets brun member to FALSE thus signaling end of processing.
+ * Then it waits for std::thread to exit before returning.
+ *
+ * */
+  void stop() {
+    // signal thread to exit
+    brun = false;
+
+    // wait a bit to make sure thread has exited
+    std::this_thread::yield();
+
+    try {
+      if (t.joinable())
+        t.join();
+    } catch(...) {
+    }
+  }
+
+ virtual void run() {
+
+  do {
+    // wait for time to ellsapse (or for timer to be stopped)
+    while (brun && timeleft-- > 0) {
+      sleep(1);
+    }
+
+    // if timer is not stopped, call the callback function
+    if (brun) {
+      (cbarg->*cbfunc)();
+    }
+
+    if (brunonce) {
+      brun = false;
+    } else {
+      timeleft = timeset;
+    }
+  } while (brun);
+}
 
 protected:
-  virtual void run();
 
   bool        brun;
+  bool        brunonce;
   int         timeleft;
+  int         timeset;
   timerfunc_t cbfunc;
-  void*       cbarg;
+  T*          cbarg;
 
 };
 

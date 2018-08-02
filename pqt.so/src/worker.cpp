@@ -107,8 +107,9 @@ int Worker::do_transfer() {
     sts = pHsa->SendTraffic(src_node, dst_node, current_size, bidirect, &duration);
 
     if (sts) {
-      std::cerr << "RVS-PQT: internal error, src: " << src_node <<
-                   "   dst: " << dst_node << std::endl;
+      std::cerr << "RVS-PQT: internal error, src: " << src_node
+                << "   dst: " << dst_node
+                << "   current size: " << current_size << std::endl;
       return sts;
     }
 
