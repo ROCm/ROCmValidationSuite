@@ -48,7 +48,9 @@ class hsa;
 
 class Worker : public rvs::ThreadBase {
  public:
+  //! default constructor
   Worker();
+  //! default destructor
   virtual ~Worker();
 
   //! stop thread loop and exit thread
@@ -82,22 +84,29 @@ class Worker : public rvs::ThreadBase {
   //! Name of the action which stops thread
   std::string  stop_action_name;
 
+  //! ptr to RVS HSA singleton wrapper
   rvs::hsa* pHsa;
+  //! source NUMA node
   int src_node;
+  //! destination NUMA node
   int dst_node;
+  //! 'true' for bidirectional transfer
   bool bidirect;
 
   //! Current size of transfer data
   size_t current_size;
 
-  // running totals
+  //! running total for size (bytes)
   size_t running_size;
+  //! running total for duration (sec)
   double running_duration;
 
-  // final totals
+  //! final total size (bytes)
   size_t total_size;
+  //! final total duration (sec)
   double total_duration;
 
+  //! synchronization mutex
   std::mutex cntmutex;
 };
 

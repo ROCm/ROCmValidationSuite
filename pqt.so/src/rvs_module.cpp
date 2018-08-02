@@ -100,7 +100,7 @@ extern "C" const char* rvs_module_get_errstring(int error) {
 }
 
 extern "C" void* rvs_module_action_create(void) {
-  return static_cast<void*>(new action);
+  return static_cast<void*>(new pqtaction);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {

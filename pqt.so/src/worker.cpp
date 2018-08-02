@@ -61,9 +61,9 @@ void Worker::run() {
 }
 
 /**
- * @brief Stops monitoring
+ * @brief Stop processing
  *
- * Sets brun member to FALSE thus signaling end of monitoring.
+ * Sets brun member to FALSE thus signaling end of processing.
  * Then it waits for std::thread to exit before returning.
  *
  * */
@@ -81,6 +81,15 @@ void Worker::stop() {
   }
 }
 
+/**
+ * @brief Init worker object and set transfer parameters
+ *
+ * @param Src source NUMA node
+ * @param Dst destination NUMA node
+ * @param Bidirect 'true' for bidirectional transfer
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
 int Worker::initialize(int Src, int Dst, bool Bidirect) {
   src_node = Src;
   dst_node = Dst;
@@ -96,6 +105,15 @@ int Worker::initialize(int Src, int Dst, bool Bidirect) {
   return 0;
 }
 
+/**
+ * @brief Executes data transfer
+ *
+ * Based on transfer parameters, initiates and performs one way or
+ * bidirectional data transfer. Resulting measurements are compounded in running
+ * totals for periodical printout during the test.
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
 int Worker::do_transfer() {
   double duration;
   int sts;
@@ -129,6 +147,18 @@ int Worker::do_transfer() {
   return 0;
 }
 
+/**
+ * @brief Get running cumulatives for data trnasferred and time ellapsed
+ *
+ * @param Src [out] source NUMA node
+ * @param Dst [out] destination NUMA node
+ * @param Bidirect [out] 'true' for bidirectional transfer
+ * @param Size [out] cumulative size of transferred data in this sampling
+ * interval (in bytes)
+ * @param Duration [out] cumulative duration of transfers in this sampling
+ * interval (in seconds)
+ *
+ * */
 void Worker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
                              size_t* Size, double* Duration) {
   // lock data until totalling has finished
@@ -149,6 +179,18 @@ void Worker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
   running_duration = 0;
 }
 
+/**
+ * @brief Get final cumulatives for data trnasferred and time ellapsed
+ *
+ * @param Src [out] source NUMA node
+ * @param Dst [out] destination NUMA node
+ * @param Bidirect [out] 'true' for bidirectional transfer
+ * @param Size [out] cumulative size of transferred data in
+ * this test (in bytes)
+ * @param Duration [out] cumulative duration of transfers in
+ * this test (in seconds)
+ *
+ * */
 void Worker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
                            size_t* Size, double* Duration) {
   // lock data until totalling has finished
