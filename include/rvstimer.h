@@ -22,6 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#ifndef INCLUDE_RVSTIMER_H_
+#define INCLUDE_RVSTIMER_H_
 
 #include <chrono>
 
@@ -29,19 +31,50 @@
 
 namespace rvs {
 
+/**
+ * @class timer
+ * @ingroup RVS
+ *
+ * @brief Timer utility template class
+ *
+ * Provides for easy implementation of timer based scenarios.
+ * It accepts parameter T which is a class which member function will
+ * be called upon expiration of timer interval.
+ *
+ * Timer resolution is 1ms
+ *
+ */
+
 template<class T>
 class timer : public ThreadBase {
  public:
+  //! helper typedef to simplify member declaration of callback function
   typedef void (T::*timerfunc_t)();
 
+/**
+ * @brief Constructor
+ * @param cbFunc Member function in calss T. it has to be of type "void f()"";
+ * @param cbArg pointer to instance of class T method of which will be called
+ * back
+ *
+ */
   timer(timerfunc_t cbFunc, T* cbArg) {
     cbfunc = cbFunc;
     cbarg = cbArg;
   }
 
-  ~timer() {
+  //! Default destructor
+  virtual ~timer() {
+    stop();
   }
 
+  /**
+  * @brief Start timer
+  *
+  * @param Interval Timer interval in ms
+  * @param RunOnce 'true' if timer is to fire only once
+  *
+  * */
   void start(int Interval, bool RunOnce = false) {
     brunonce = RunOnce;
     timeset = Interval;
@@ -50,7 +83,6 @@ class timer : public ThreadBase {
     brun = true;
     rvs::ThreadBase::start();
   }
-
 
 
 /**
@@ -74,36 +106,46 @@ class timer : public ThreadBase {
     }
   }
 
- virtual void run() {
 
-  do {
-    // wait for time to ellsapse (or for timer to be stopped)
-    while (brun && timeleft-- > 0) {
-      sleep(1);
-    }
+/**
+ * @brief Timer internal thread function (called from ThreadBase)
+ *
+ * */
+  virtual void run() {
+    do {
+      // wait for time to ellsapse (or for timer to be stopped)
+      while (brun && timeleft-- > 0) {
+        sleep(1);
+      }
 
-    // if timer is not stopped, call the callback function
-    if (brun) {
-      (cbarg->*cbfunc)();
-    }
+      // if timer is not stopped, call the callback function
+      if (brun) {
+        (cbarg->*cbfunc)();
+      }
 
-    if (brunonce) {
-      brun = false;
-    } else {
-      timeleft = timeset;
-    }
-  } while (brun);
-}
+      if (brunonce) {
+        brun = false;
+      } else {
+        timeleft = timeset;
+      }
+    } while (brun);
+  }
 
-protected:
-
+ protected:
+  //! true for the duration of timer activity
   bool        brun;
+  //! true if timer is to fire only once
   bool        brunonce;
+  //! time left to next fire (ms)
   int         timeleft;
+  //! timer interval (ms)
   int         timeset;
+  //! call back function
   timerfunc_t cbfunc;
+  //! ptr to instance of a class to be called-back through cbfunc.
   T*          cbarg;
-
 };
 
-}
+}  // namespace rvs
+
+#endif  // INCLUDE_RVSTIMER_H_

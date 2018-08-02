@@ -41,6 +41,10 @@
 // ptr to singletone instance
 rvs::hsa* rvs::hsa::pDsc;
 
+/**
+ * @brief Initialize RVS HSA wrapper
+ *
+ * */
 void rvs::hsa::Init() {
   if (pDsc == nullptr) {
     pDsc = new rvs::hsa();
@@ -48,6 +52,10 @@ void rvs::hsa::Init() {
   }
 }
 
+/**
+ * @brief Terminate RVS HSA wrapper
+ *
+ * */
 void rvs::hsa::Terminate() {
   if (pDsc != nullptr) {
     delete pDsc;
@@ -55,6 +63,11 @@ void rvs::hsa::Terminate() {
   }
 }
 
+/**
+ * @brief Fetch RVS HSA wrapper
+ * @return pointer to RVS HSA singleton
+ *
+ * */
 rvs::hsa* rvs::hsa::Get() {
   return pDsc;
 }
@@ -67,6 +80,11 @@ rvs::hsa::hsa() {
 rvs::hsa::~hsa() {
 }
 
+
+/**
+ * @brief helper method used in debbuging
+ *
+ */
 void rvs::hsa::print_hsa_status(const std::string& file,
                                 int line,
                                 const std::string& function,
@@ -77,7 +95,10 @@ void rvs::hsa::print_hsa_status(const std::string& file,
   print_hsa_status(log_msg, st);
 }
 
-// TODO(dmatichdl) add info
+/**
+ * @brief helper method used in debbuging
+ *
+ */
 void rvs::hsa::print_hsa_status(string message, hsa_status_t st) {
   string log_msg = message;
   // skip successfull messages
@@ -210,7 +231,7 @@ void rvs::hsa::print_hsa_status(string message, hsa_status_t st) {
 
 
 /**
- * @brief Fetch all hsa_agents
+ * @brief Fetch all HSA agents
  *
  * Functionality:
  *
@@ -436,6 +457,13 @@ hsa_status_t rvs::hsa::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
   return HSA_STATUS_SUCCESS;
 }
 
+
+/**
+ * @brief Find HSA agent index in RVS HSA wrapper
+ * @param Node NUMA node
+ * @return index in agent_list vector
+ *
+ * */
 const int rvs::hsa::FindAgent(const uint32_t Node) {
   for (size_t i = 0; i < agent_list.size(); i++) {
     if (agent_list[i].node == Node)
@@ -444,7 +472,17 @@ const int rvs::hsa::FindAgent(const uint32_t Node) {
   return -1;
 }
 
-// TODO(dmatichdl) info
+/**
+ * @brief Fetch time needed to copy data between two memory pools
+ *
+ * Uses time obtained from corresponding hsa_signal objects
+ *
+ * @param bidirectional 'true' for bidirectional transfer
+ * @param signal_fwd signal used for direct transfer
+ * @param signal_rev signal used for reverse transfer
+ * @return time in seconds
+ *
+ * */
 double rvs::hsa::GetCopyTime(bool bidirectional,
                              hsa_signal_t signal_fwd, hsa_signal_t signal_rev) {
   hsa_status_t status;
@@ -470,6 +508,19 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
   return(end - start);
 }
 
+/**
+ * @brief Allocate buffers in source and destination memory pools
+ *
+ * @param SrcAgent source agent index in agent_list vector
+ * @param DstAgent destination agent index in agent_list vector
+ * @param Size size of data to transfer
+ * @param pSrcPool [out] ptr to source memory pool
+ * @param SrcBuff  [out] ptr to source buffer
+ * @param pDstPool [out] ptr to destination memory pool
+ * @param DstBuff  [out] ptr to destination buffer
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
 int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
                      hsa_amd_memory_pool_t* pSrcPool, void** SrcBuff,
                      hsa_amd_memory_pool_t* pDstPool, void** DstBuff) {
@@ -546,7 +597,17 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
   return -1;
 }
 
-  // TODO(mlucinhdl) add info
+/**
+ * @brief Allocate buffers in source and destination memory pools
+ *
+ * @param SrcNode source NUMA node
+ * @param DstNode destination NUMA node
+ * @param Size size of data to transfer
+ * @param bidirectional 'true' for bidirectional transfer
+ * @param Duration [out] duration of transfer in seconds
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
 int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
                               size_t Size, bool bidirectional,
                               double* Duration) {
@@ -669,17 +730,7 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
   return 0;
 }
 
-// TODO(dmatichdl) info
-/**
- * @brief Process hsa_agent memory pool
- *
- * Functionality:
- *
- * Process agents memory pools
- *
- * @return hsa_status_t
- *
- * */
+
 /*
 double rvs::hsa::send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
                               hsa_amd_memory_pool_t src_buff,

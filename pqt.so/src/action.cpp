@@ -314,7 +314,6 @@ bool action::get_all_common_config_keys(void) {
 }
 
 int action::create_threads() {
-
   Worker* p = new Worker;
   p->initialize(4, 5, false);
 
@@ -332,7 +331,6 @@ int action::destroy_threads() {
 }
 
 int action ::run() {
-
   if (!get_all_common_config_keys())
     return -1;
   if (!get_all_pqt_config_keys())
@@ -352,7 +350,6 @@ int action ::run() {
 }
 
 int action::run_single() {
-
   // define timers
   rvs::timer<action> timer_running(&action::do_running_average, this);
   rvs::timer<action> timer_final(&action::do_final_average, this);
@@ -369,13 +366,13 @@ int action::run_single() {
     for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
       (*it)->do_transfer();
      sleep(1);
-   }
-  } while(brun);
+    }
+  } while (brun);
 
   timer_running.stop();
   timer_final.stop();
 
-//  print_final_average();
+  print_final_average();
 
   return 0;
 }
@@ -401,8 +398,7 @@ int action::print_running_average() {
       bandiwdth *=2;
     }
     char buff[64];
-    snprintf( buff, sizeof(buff), "%.2f GBps", bandiwdth)
-    ;
+    snprintf( buff, sizeof(buff), "%.2f GBps", bandiwdth);
     src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
     dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
 
@@ -418,6 +414,40 @@ int action::print_running_average() {
   return 0;
 }
 
+int action::print_final_average() {
+  int src_node, dst_node;
+  int src_id, dst_id;
+  bool bidir;
+  size_t current_size;
+  double duration;
+  std::string msg;
+
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->get_final_data(&src_node, &dst_node, &bidir,
+                            &current_size, &duration);
+
+    double bandiwdth = current_size/duration/(1024*1024*1024);
+    if (bidir) {
+      bandiwdth *=2;
+    }
+    char buff[64];
+    snprintf( buff, sizeof(buff), "%.2f GBps", bandiwdth);
+    src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
+    dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+    msg = "[" + action_name + "] p2p-bandwidth  " +
+           std::to_string(src_id) + " " + std::to_string(dst_id) +
+           "  bidirectional: " +
+           std::string(bidir ? "true" : "false") +
+           "  " + buff +
+           "  duration: " + std::to_string(duration) + " ms";
+
+    rvs::lp::Log(msg, rvs::logresults);
+    sleep(1);
+  }
+
+  return 0;
+}
 
 void action::do_final_average() {
   rvs::lp::Log("pqt in do_final_average", rvs::logdebug);
