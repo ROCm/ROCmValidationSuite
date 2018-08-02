@@ -38,6 +38,7 @@ extern "C" {
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include <mutex>
 
 #include "rvs_module.h"
 #include "pci_caps.h"
@@ -113,8 +114,11 @@ int Worker::do_transfer() {
       return sts;
     }
 
-    running_size += current_size;
-    running_duration += duration;
+    {
+      std::lock_guard<std::mutex> lk(cntmutex);
+      running_size += current_size;
+      running_duration += duration;
+    }
 
     /*
     std::string msg = "pqt packet size: " + std::to_string(phsa->size_list[i])
@@ -125,4 +129,50 @@ int Worker::do_transfer() {
   }
 
   return 0;
+}
+
+void Worker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
+                             size_t* Size, double* Duration) {
+
+  // lock data until totalling has finished
+  std::lock_guard<std::mutex> lk(cntmutex);
+
+  // update total
+  total_size += running_size;
+  total_duration += running_duration;
+
+  *Src = src_node;
+  *Dst = dst_node;
+  *Bidirect = bidirect;
+  *Size = running_size;
+  *Duration = running_duration;
+
+  // reset running totas
+  running_size = 0;
+  running_duration = 0;
+}
+
+void Worker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
+                           size_t* Size, double* Duration) {
+
+  // lock data until totalling has finished
+  std::lock_guard<std::mutex> lk(cntmutex);
+
+  // update total
+  total_size += running_size;
+  total_duration += running_duration;
+
+  *Src = src_node;
+  *Dst = dst_node;
+  *Bidirect = bidirect;
+  *Size = total_size;
+  *Duration = total_duration;
+
+  // reset running totas
+  running_size = 0;
+  running_duration = 0;
+
+  // reset final toral
+  total_size = 0;
+  total_duration = 0;
 }

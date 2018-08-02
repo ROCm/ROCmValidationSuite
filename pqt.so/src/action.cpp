@@ -384,6 +384,41 @@ int action::run_parallel() {
   return 0;
 }
 
+int action::print_running_average() {
+  int src_node, dst_node;
+  int src_id, dst_id;
+  bool bidir;
+  size_t current_size;
+  double duration;
+  std::string msg;
+
+  for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
+    (*it)->get_running_data(&src_node, &dst_node, &bidir,
+                            &current_size, &duration);
+
+    double bandiwdth = current_size/duration/(1024*1024*1024);
+    if (bidir) {
+      bandiwdth *=2;
+    }
+    char buff[64];
+    snprintf( buff, sizeof(buff), "%.2f GBps", bandiwdth)
+    ;
+    src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
+    dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+    msg = "[" + action_name + "] p2p-bandwidth  " +
+           std::to_string(src_id) + " " + std::to_string(dst_id) +
+           "  bidirectional: " +
+           std::string(bidir ? "true" : "false") +
+           "  " + buff;
+    rvs::lp::Log(msg, rvs::loginfo);
+    sleep(1);
+  }
+
+  return 0;
+}
+
+
 void action::do_final_average() {
   rvs::lp::Log("pqt in do_final_average", rvs::logdebug);
   brun = false;
@@ -391,6 +426,8 @@ void action::do_final_average() {
 
 void action::do_running_average() {
   rvs::lp::Log("in do_running_average", rvs::logdebug);
+
+  print_running_average();
 }
 
 
