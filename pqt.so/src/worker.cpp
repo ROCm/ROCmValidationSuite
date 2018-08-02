@@ -57,9 +57,7 @@ Worker::~Worker() {}
  *
  * */
 void Worker::run() {
-
   log("pqt worker thread has finished", rvs::logdebug);
-
 }
 
 /**
@@ -70,7 +68,6 @@ void Worker::run() {
  *
  * */
 void Worker::stop() {
-
   log("pqt in Worker::stop()", rvs::logdebug);
 
   brun = false;
@@ -105,7 +102,8 @@ int Worker::do_transfer() {
 
   for (size_t i = 0; i < pHsa->size_list.size(); i++) {
     current_size = pHsa->size_list[i];
-    sts = pHsa->SendTraffic(src_node, dst_node, current_size, bidirect, &duration);
+    sts = pHsa->SendTraffic(src_node, dst_node, current_size,
+                            bidirect, &duration);
 
     if (sts) {
       std::cerr << "RVS-PQT: internal error, src: " << src_node
@@ -133,7 +131,6 @@ int Worker::do_transfer() {
 
 void Worker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
                              size_t* Size, double* Duration) {
-
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
 
@@ -154,7 +151,6 @@ void Worker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
 
 void Worker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
                            size_t* Size, double* Duration) {
-
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
 

@@ -44,28 +44,46 @@ using std::vector;
 
 namespace rvs {
 
-// TODO(dmatichdl) add info
+/**
+ * @class hsa
+ * @ingroup RVS
+ *
+ * @brief Wrapper class for HSA functionality needed for rvs tests
+ *
+ */
 class hsa {
  public:
+  //! Default constructor
   hsa();
+  //! Default destructor
   virtual ~hsa();
 
-  // agent structure
+/**
+ * @class AgentInformation
+ * @ingroup RVS
+ *
+ * @brief Utility class used to store HSA agent information
+ *
+ */
   struct AgentInformation {
-    // global agent information
+    //! HSA agent handle
     hsa_agent_t                   agent;
+    //! agent name
     string                        agent_name;
+    //! device type, can be "GPU" or "CPU"
     string                        agent_device_type;
+    //! NUMA node this agent belongs to
     uint32_t                      node;
-    // System region
+    //! system memory pool
     hsa_amd_memory_pool_t         sys_pool;
-    // Memory region
+    //! vector of memory pool HSA handles as reported during mem pool enumeration
     vector<hsa_amd_memory_pool_t> mem_pool_list;
+    //! vecor of mem pools max sizes (index alligned with mem_pool_list)
     vector<size_t>                max_size_list;
   };
 
 
-  // The values are in megabytes at allocation time
+  //! list of test transfer sizes
   const uint32_t DEFAULT_SIZE_LIST[20] = {  1 * 1024,
                                             2 * 1024,
                                             4 * 1024,
@@ -87,13 +105,14 @@ class hsa {
                                             256 * 1024 * 1024,
                                             512 * 1024 * 1024 };
 
-  // List of sizes to use in copy and read/write transactions
-  // Size is specified in terms of Megabytes
+  //! same as DEFAULT_SIZE_LIST but as std::vector
   vector<uint32_t> size_list;
 
-  // TODO(dmatichdl) add info
+  //! array of all found HSA agents
   vector<AgentInformation> agent_list;
+  //! array of HSA GPU agents
   vector<AgentInformation> gpu_list;
+  //! array of HSA CPU agents
   vector<AgentInformation> cpu_list;
 
  public:
@@ -103,45 +122,32 @@ class hsa {
 
   const int FindAgent(uint32_t Node);
 
-  // TODO(mlucinhdl) add info
   int SendTraffic(uint32_t SrcNode, uint32_t DstNode,
                   size_t   Size,    bool     bidirectional,
                   double*  Duration);
 
-//   // TODO(dmatichdl) add info
 //   double send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
 //                       hsa_amd_memory_pool_t src_buff,
 //                       hsa_amd_memory_pool_t dst_buff,
 //                       bool bidirectional, size_t curr_size);
 
  protected:
-  // TODO(dmatichdl) add info
-  // Get all agents
   void InitAgents();
 
   int Allocate(int SrcAgent, int DstAgent, size_t Size,
                      hsa_amd_memory_pool_t* pSrcPool, void** SrcBuff,
                      hsa_amd_memory_pool_t* pDstPool, void** DstBuff);
 
-  // TODO(dmatichdl) add info
-  // Process one agent and put it in the list
   static hsa_status_t ProcessAgent(hsa_agent_t agent, void* data);
-
-  // TODO(dmatichdl) add info
-  // Process one agent and put it in the list
   static hsa_status_t ProcessMemPool(hsa_amd_memory_pool_t pool, void* data);
-
-  // TODO(dmatichdl) add info
   static void print_hsa_status(string message, hsa_status_t st);
-  // TODO(dmatichdl) add info
   static void print_hsa_status(const std::string& file, int line,
                                const std::string& function, hsa_status_t st);
-
-  // TODO(dmatichdl) add info
   double GetCopyTime(bool bidirectional,
                      hsa_signal_t signal_fwd, hsa_signal_t signal_rev);
 
  protected:
+  //! pointer to RVS HSA singleton
   static rvs::hsa* pDsc;
 };
 
