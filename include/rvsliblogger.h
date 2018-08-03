@@ -22,15 +22,15 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVSLIBLOGGER_H_
-#define RVSLIBLOGGER_H_
+#ifndef INCLUDE_RVSLIBLOGGER_H_
+#define INCLUDE_RVSLIBLOGGER_H_
 
 #include <string>
+#include <mutex>
 #include "rvsliblog.h"
 
 
-namespace rvs
-{
+namespace rvs {
 
 
 /**
@@ -40,11 +40,8 @@ namespace rvs
  * @brief Message logging class
  *
  */
-class logger
-{
-protected:
-
-public:
+class logger {
+ public:
   static  void  log_level(const int level);
   static  int   log_level();
 
@@ -54,9 +51,6 @@ public:
   static  void  append(const bool flag);
   static  bool  append();
 
-  static  void   logfile(const std::string& filename);
-  static  const  std::string& logfile();
-
   static  bool   get_ticks(uint32_t& secs, uint32_t& usecs);
 
   static  int    initialize();
@@ -64,9 +58,12 @@ public:
 
   static  int    log(const std::string& Message, const int level = 1);
   static  int    Log(const char* Message, const int level);
-  static  int    LogExt(const char* Message, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
-  static  void*  LogRecordCreate( const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec);
-  static  int    LogRecordFlush( void* pLogRecord);
+  static  int    LogExt(const char* Message, const int LogLevel,
+                        const unsigned int Sec, const unsigned int uSec);
+  static  void*  LogRecordCreate(const char* Module, const char* Action,
+                                  const int LogLevel, const unsigned int Sec,
+                                  const unsigned int uSec);
+  static  int    LogRecordFlush(void* pLogRecord);
   static  void*  CreateNode(void* Parent, const char* Name);
   static  void   AddString(void* Parent, const char* Key, const char* Val);
   static  void   AddInt(void* Parent, const char* Key, const int Val);
@@ -74,7 +71,7 @@ public:
   static  int    ToFile(const std::string& Row);
   static  int    JsonPatchAppend(void);
 
-protected:
+ protected:
   //! Current logging level (0..5)
   static  int    loglevel_m;
   //! 'true' if JSON output is requested
@@ -83,17 +80,14 @@ protected:
   static  bool   append_m;
   //! 'true' if the incoming record is the first record in this rvs invocation
   static  bool   isfirstrecord_m;
-  //! Name of the log file
-  static  std::string logfile_m;
   //! Array of C std::strings representing logging level names
   static  const char*   loglevelname[6];
+  //! Mutex to synchronize cout output
+  static std::mutex cout_mutex;
+  //! Mutex to synchronize log file output
+  static std::mutex log_mutex;
 };
 
 }  // namespace rvs
 
-
-
-
-
-
-#endif // RVSLIBLOGGER_H_
+#endif  // INCLUDE_RVSLIBLOGGER_H_

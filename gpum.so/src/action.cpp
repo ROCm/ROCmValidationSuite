@@ -89,6 +89,8 @@ action::~action() {
  *
  * */
 int action::run(void) {
+    int error = 0;
+    string err_msg;
     amd::smi::RocmSMI hw;
     std::vector<std::shared_ptr<amd::smi::Device>> monitor_devices;
 
@@ -107,7 +109,13 @@ int action::run(void) {
     uint32_t value2;
     int ret;
 
-    property_get_action_name();
+    // get the action name
+    rvs::actionbase::property_get_action_name(&error);
+    if (error == 2) {
+      err_msg = "action field is missing in gpum module";
+      log(err_msg.c_str(), rvs::logerror);
+      return -1;
+    }
 
     bjson = false;  // already initialized in the default constructor
 
