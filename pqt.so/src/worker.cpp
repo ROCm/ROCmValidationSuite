@@ -57,7 +57,7 @@ pqtworker::~pqtworker() {}
  *
  * */
 void pqtworker::run() {
-  while(brun) {
+  while (brun) {
     do_transfer();
     std::this_thread::yield();
   }
