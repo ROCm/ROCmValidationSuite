@@ -79,9 +79,8 @@ action::~action() {
 int action::run(void) {
   int error = 0;
   string msg;
-  
   log("[PESM] in run()", rvs::logdebug);
-  
+
   // get the action name
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
@@ -206,6 +205,15 @@ int action::do_gpu_list() {
 
   std::map<string, string>::iterator it;
 
+  struct device_info {
+    std::string bus;
+    std::string name;
+    int32_t node_id;
+    int32_t device_id;
+  };
+
+  std::vector<struct device_info> gpu_info_list;
+
   struct pci_access* pacc;
   struct pci_dev*    dev;
   char buff[1024];
@@ -218,7 +226,6 @@ int action::do_gpu_list() {
   // get the list of devices
   pci_scan_bus(pacc);
 
-  bool bheader_printed = false;
   int  ix = 0;
   // iterate over devices
   for (dev = pacc->devices; dev; dev = dev->next) {
@@ -231,14 +238,9 @@ int action::do_gpu_list() {
       ((((uint16_t)(dev->bus)) << 8) | (dev->func));
 
     // if not and AMD GPU just continue
-    int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-    if (gpu_id < 0)
+    int32_t node_id = rvs::gpulist::GetNodeIdFromLocationId(dev_location_id);
+    if (node_id < 0)
       continue;
-
-    if (!bheader_printed) {
-      bheader_printed = true;
-      cout << "Supported GPUs available:" << endl;
-    }
 
     snprintf(buff, sizeof(buff), "%02X:%02X.%d", dev->bus, dev->dev, dev->func);
 
@@ -246,16 +248,31 @@ int action::do_gpu_list() {
     name = pci_lookup_name(pacc, devname, sizeof(devname), PCI_LOOKUP_DEVICE,
                            dev->vendor_id, dev->device_id);
 
-    cout << buff  << " - GPU[" << gpu_id << "] " << name <<
-    " (Device " << dev->device_id << ")" << endl;
-    ix++;
+    struct device_info info;
+    info.bus       = buff;
+    info.name      = name;
+    info.node_id   = node_id;
+    info.device_id = dev->device_id;
+    gpu_info_list.push_back(info);
+
+    ++ix;
+  }
+
+  std::sort(gpu_info_list.begin(), gpu_info_list.end(),
+           [](const struct device_info& a, const struct device_info& b) {
+             return a.node_id < b.node_id; });
+
+  if (!gpu_info_list.empty()) {
+    cout << "Supported GPUs available:\n";
+    for (const auto& info : gpu_info_list) {
+      cout << info.bus  << " - GPU[" << info.node_id << "] " << info.name <<
+      " (Device " << info.device_id << ")\n";
+    }
+  } else {
+    cout << endl << "No supported GPUs available.\n";
   }
 
   pci_cleanup(pacc);
-
-  if (!bheader_printed) {
-    cout << endl << "No supported GPUs available." << endl;
-  }
 
   return 0;
 }
