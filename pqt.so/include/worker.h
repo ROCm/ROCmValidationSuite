@@ -32,7 +32,7 @@
 
 
 /**
- * @class Worker
+ * @class pqtworker
  * @ingroup PQT
  *
  * @brief Bandwidth test implementation class
@@ -46,12 +46,12 @@ namespace rvs {
 class hsa;
 }
 
-class Worker : public rvs::ThreadBase {
+class pqtworker : public rvs::ThreadBase {
  public:
   //! default constructor
-  Worker();
+  pqtworker();
   //! default destructor
-  virtual ~Worker();
+  virtual ~pqtworker();
 
   //! stop thread loop and exit thread
   void stop();

@@ -41,7 +41,7 @@
 #include "hsa/hsa_ext_amd.h"
 
 
-class Worker;
+class pqtworker;
 
 /**
  * @class pqtaction
@@ -106,7 +106,7 @@ class pqtaction : public rvs::actionbase {
   void do_running_average(void);
   void do_final_average(void);
 
-  std::vector<Worker*> test_array;
+  std::vector<pqtworker*> test_array;
 };
 
 #endif  // PQT_SO_INCLUDE_ACTION_H_

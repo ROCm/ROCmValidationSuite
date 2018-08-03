@@ -325,7 +325,7 @@ bool pqtaction::get_all_common_config_keys(void) {
  *
  * */
 int pqtaction::create_threads() {
-  Worker* p = new Worker;
+  pqtworker* p = new pqtworker;
   p->initialize(4, 5, false);
 
   test_array.push_back(p);
@@ -415,6 +415,32 @@ int pqtaction::run_single() {
  *
  * */
 int pqtaction::run_parallel() {
+  // define timers
+  rvs::timer<pqtaction> timer_running(&pqtaction::do_running_average, this);
+  rvs::timer<pqtaction> timer_final(&pqtaction::do_final_average, this);
+
+  // let the test run
+  brun = true;
+
+  // start all worker threads
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->start();
+  }
+
+  // start timers
+  timer_final.start(10000, true);  // ticks only once
+  timer_running.start(500);        // ticks continuously
+
+  // wait for test to complete
+  while(brun) {
+    sleep(1);
+  }
+
+  timer_running.stop();
+  timer_final.stop();
+
+  print_final_average();
+
   return 0;
 }
 
