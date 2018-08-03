@@ -40,8 +40,8 @@ void get_device_id(struct pci_dev *dev, char *buff);
 void get_dev_serial_num(struct pci_dev *dev, char *buff);
 void get_vendor_id(struct pci_dev *dev, char *buff);
 void get_kernel_driver(struct pci_dev *dev, char *buff);
-void get_pwr_base_pwr(struct pci_dev *dev, char *buff);
-void get_pwr_rail_type(struct pci_dev *dev, char *buff);
+void get_pwr_budgeting(struct pci_dev *dev, uint8_t pb_pm_state,
+                       uint8_t pb_type, uint8_t pb_power_rail, char *buff);
 void get_pwr_curr_state(struct pci_dev *dev, char *buff);
 void get_atomic_op_routing(struct pci_dev *dev, char *buff);
 void get_atomic_op_32_completer(struct pci_dev *dev, char *buff);
