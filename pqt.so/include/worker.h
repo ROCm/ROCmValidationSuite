@@ -1,53 +1,113 @@
-
-#ifndef _WORKER_H_
-#define _WORKER_H_
+/********************************************************************************
+ *
+ * Copyright (c) 2018 ROCm Developer Tools
+ *
+ * MIT LICENSE:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+#ifndef PQT_SO_INCLUDE_WORKER_H_
+#define PQT_SO_INCLUDE_WORKER_H_
 
 #include <string>
+#include <mutex>
+
 #include "rvsthreadbase.h"
 
-	
+
 /**
- * @class Worker
+ * @class pqtworker
  * @ingroup PQT
  *
- * @brief Monitoring implementation class
+ * @brief Bandwidth test implementation class
  *
- * Derives from rvs::ThreadBase and implements actual monitoring functionality
+ * Derives from rvs::ThreadBase and implements actual test functionality
  * in its run() method.
  *
  */
 
-class Worker : public rvs::ThreadBase {
+namespace rvs {
+class hsa;
+}
 
-public:
-	Worker();
-	~Worker();
+class pqtworker : public rvs::ThreadBase {
+ public:
+  //! default constructor
+  pqtworker();
+  //! default destructor
+  virtual ~pqtworker();
 
-	//! stop thread loope and exit thread
-	void stop();
+  //! stop thread loop and exit thread
+  void stop();
   //! Sets initiating action name
-	void set_name(const std::string& name) { action_name = name; }
-	//! sets stopping action name
-	void set_stop_name(const std::string& name) { stop_action_name = name; }
-	//! Sets JSON flag
-	void json(const bool flag) { bjson = flag; }
-	//! Returns initiating action name
-	const std::string& get_name(void) { return action_name; }
-	
-protected:
-	virtual void run(void);
-	
-protected:
+  void set_name(const std::string& name) { action_name = name; }
+  //! sets stopping action name
+  void set_stop_name(const std::string& name) { stop_action_name = name; }
+  //! Sets JSON flag
+  void json(const bool flag) { bjson = flag; }
+  //! Returns initiating action name
+  const std::string& get_name(void) { return action_name; }
+
+  int initialize(int iSrc, int iDst, bool Bidirect);
+  int do_transfer();
+  void get_running_data(int* Src, int* Dst, bool* Bidirect,
+                        size_t* Size, double* Duration);
+  void get_final_data(int* Src, int* Dst, bool* Bidirect,
+                      size_t* Size, double* Duration);
+
+ protected:
+  virtual void run(void);
+
+ protected:
   //! TRUE if JSON output is required
-	bool		bjson;
+  bool    bjson;
   //! Loops while TRUE
-	bool 		brun;
-  //! Name of the action which initiated monitoring
-	std::string	action_name;
-  //! Name of the action which stops monitoring
-	std::string	stop_action_name;
+  bool    brun;
+  //! Name of the action which initiated thread
+  std::string  action_name;
+  //! Name of the action which stops thread
+  std::string  stop_action_name;
+
+  //! ptr to RVS HSA singleton wrapper
+  rvs::hsa* pHsa;
+  //! source NUMA node
+  int src_node;
+  //! destination NUMA node
+  int dst_node;
+  //! 'true' for bidirectional transfer
+  bool bidirect;
+
+  //! Current size of transfer data
+  size_t current_size;
+
+  //! running total for size (bytes)
+  size_t running_size;
+  //! running total for duration (sec)
+  double running_duration;
+
+  //! final total size (bytes)
+  size_t total_size;
+  //! final total duration (sec)
+  double total_duration;
+
+  //! synchronization mutex
+  std::mutex cntmutex;
 };
-	
 
-
-#endif // _WORKER_H_
+#endif  // PQT_SO_INCLUDE_WORKER_H_

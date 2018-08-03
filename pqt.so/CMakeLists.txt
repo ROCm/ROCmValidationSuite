@@ -24,6 +24,17 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
+# Compiler Preprocessor definitions.
+add_definitions(-D__linux__)
+add_definitions(-DUNIX_OS)
+add_definitions(-DLINUX)
+add_definitions(-D__AMD64__)
+add_definitions(-D__x86_64__)
+add_definitions(-DAMD_INTERNAL_BUILD)
+add_definitions(-DLITTLEENDIAN_CPU=1)
+add_definitions(-DHSA_LARGE_MODEL=)
+add_definitions(-DHSA_DEPRECATED=)
+
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wl,-no-as-needed)
@@ -73,6 +84,29 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
+# Set project requirements
+set(ROC_THUNK_NAME "hsakmt")
+set(CORE_RUNTIME_NAME "hsa-runtime")
+set(ROC_THUNK_LIBRARY "lib${ROC_THUNK_NAME}")
+set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
+set(CORE_RUNTIME_LIBRARY "lib${CORE_RUNTIME_TARGET}")
+
+# Determine Roc Runtime header files are accessible
+if(NOT EXISTS ${ROCR_INC_DIR}/hsa/hsa.h)
+  message("ERROR: ROC Runtime headers can't be found under specified path. Please set ROCR_INC_DIR path. Current value is : " ${ROCR_INC_DIR})
+  RETURN()
+endif()
+
+if(NOT EXISTS ${ROCR_LIB_DIR}/${CORE_RUNTIME_LIBRARY}.so)
+  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set ROCR_LIB_DIR path. Current value is : " ${ROCR_LIB_DIR})
+  RETURN()
+endif()
+
+# Add directories to look for header files to compile
+INCLUDE_DIRECTORIES(${ROCR_INC_DIR})
+
+# Add directories to look for library files to link 
+LINK_DIRECTORIES(${ROCR_LIB_DIR})
 
 ## additional libraries
 set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )
@@ -81,7 +115,10 @@ set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )
 include_directories(include pci ../include)
 
 ## define source files
-set(SOURCES ../src/rvsthreadbase.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp src/rvs_module.cpp src/action.cpp src/worker.cpp)
+set(SOURCES ../src/rvsthreadbase.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp
+            ../src/pci_caps.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
+            ../src/rvshsa.cpp
+            src/rvs_module.cpp src/action.cpp src/worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
@@ -89,7 +126,7 @@ set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${CORE_RUNTIME_TARGET} ${ROC_THUNK_NAME})
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD 
 COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
