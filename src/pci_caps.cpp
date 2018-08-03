@@ -32,6 +32,7 @@ extern "C" {
 #include <pci/pci.h>
 #include <linux/pci.h>
 #include <math.h>
+#include <stdint.h>
 #ifdef __cplusplus
 }
 #endif
@@ -343,11 +344,16 @@ void get_dev_serial_num(struct pci_dev *dev, char *buff) {
 /**
  * gets the device power budgeting capabilities
  * @param dev a pci_dev structure containing the PCI device information
+ * @param pb_pm_state the PM State for the given operating condition
+ * @param pb_type the type of the given operating condition
+ * @param pb_power_rail thermal load or power rail for the given operating condition
  * @param buf pre-allocated char buffer
  */
-void get_pwr_base_pwr(struct pci_dev *dev, char *buff) {
+void get_pwr_budgeting(struct pci_dev *dev, uint8_t pb_pm_state,
+                       uint8_t pb_type, uint8_t pb_power_rail, char *buff) {
     u16 i, w = 0;
     u16 base, scale;
+    uint8_t pb_act_pm_state, pb_act_type, pb_act_power_rail;
 
     unsigned int cap_offset_pwbgd = pci_dev_find_cap_offset(dev,
     PCI_EXT_CAP_ID_PWR, PCI_CAP_EXTENDED);
@@ -364,74 +370,19 @@ void get_pwr_base_pwr(struct pci_dev *dev, char *buff) {
             if (!w)
                 return;
 
-            base = PCI_PWR_DATA_BASE(w);
-            scale = PCI_PWR_DATA_SCALE(w);
+            pb_act_pm_state = PCI_PWR_DATA_PM_STATE(w);
+            pb_act_type = PCI_PWR_DATA_TYPE(w);
+            pb_act_power_rail = PCI_PWR_DATA_RAIL(w);
 
-            // TODO(Tudor): 2. which value to return when there are
-            // many power budgeting capability values?
-            snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%.3fW",
-                    base * pow(10, -scale));
-
-            return;
-            i++;
-        } while (1);
-    }
-}
-
-/**
- * gets the device power railt type (power budget)
- * @param dev a pci_dev structure containing the PCI device information
- * @param buf pre-allocated char buffer
- */
-void get_pwr_rail_type(struct pci_dev *dev, char *buff) {
-    u16 i, w = 0;
-    u16 type;
-    const char *type_s;
-
-    unsigned int cap_offset_pwbgd = pci_dev_find_cap_offset(dev,
-    PCI_EXT_CAP_ID_PWR, PCI_CAP_EXTENDED);
-
-    snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-
-    if (cap_offset_pwbgd != 0) {
-        i = 0;
-
-        do {
-            pci_write_byte(dev, cap_offset_pwbgd + PCI_PWR_DSR, i);
-            w = pci_read_word(dev, cap_offset_pwbgd + PCI_PWR_DATA);
-
-            if (!w)
+            if (pb_act_pm_state == pb_pm_state && pb_act_type == pb_type &&
+                                        pb_act_power_rail == pb_power_rail) {
+                base = PCI_PWR_DATA_BASE(w);
+                scale = PCI_PWR_DATA_SCALE(w);
+                snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%.3fW",
+                        base * pow(10, -scale));
                 return;
-
-            type = PCI_PWR_DATA_TYPE(w);
-
-            // TODO(Tudor): 1. which value to return when there are
-            // many power budgeting capability values?
-
-            switch (type) {
-            case 0:
-                type_s = "PME_Aux";
-                break;
-            case 1:
-                type_s = "Auxiliary";
-                break;
-            case 2:
-                type_s = "Idle";
-                break;
-            case 3:
-                type_s = "Sustained";
-                break;
-            case 7:
-                type_s = "Maximum";
-                break;
-            default:
-                type_s = "Reserved";
-                break;
             }
 
-            snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", type_s);
-
-            return;
             i++;
         } while (1);
     }

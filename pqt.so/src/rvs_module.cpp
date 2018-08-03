@@ -28,19 +28,15 @@
 #include <iostream>
 
 #include "rvsloglp.h"
+#include "gpu_util.h"
+#include "rvshsa.h"
 #include "action.h"
 
 /**
- * @defgroup PESM PESM Module
+ * @defgroup PQT PQT Module
  *
- * @brief PCIe State Monitoring module
+ * @brief P2P Qualification Test Module
  *
- * The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host
- * platform and the GPU. The module will register a “listener” on a target GPU’s PCIe
- * interconnect, and log a message whenever it detects a state change. The PESM will be able to
- * detect the following state changes:
- *   - 1.2.PCIe link speed changes
- *   - GPU power state changes
  */
 
 
@@ -56,38 +52,44 @@ extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision) {
 }
 
 extern "C" int rvs_module_has_interface(int iid) {
-  switch(iid)
-  {
+  switch (iid) {
   case 0:
   case 1:
     return 1;
-    }
+  }
 
   return 0;
 }
 
 extern "C" const char* rvs_module_get_name(void) {
-   return "pqt";
+  return "pqt";
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-   return "ROCm Validation Suite PQT module";
+  return "ROCm Validation Suite PQT module";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
-  return "peers (Collection of Strings), peer_deviceid (Integer), test_bandwidth (Bool), bidirectional(Bool), parallel (Bool), duration (Integer), log_interval (Integer)";
+  return "peers (Collection of Strings), peer_deviceid (Integer), "
+"test_bandwidth (Bool), bidirectional(Bool), parallel (Bool), duration "
+"(Integer), log_interval (Integer)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {
-  return "p2p_result (Collection of Bools), peers (Collection of Strings), peer_deviceid (Integer), test_bandwidth (Bool), interval_bandwidth (Collection of Floats), bandwidth (Collection of Floats)";
+  return "p2p_result (Collection of Bools), peers (Collection of Strings), "
+  "peer_deviceid (Integer), test_bandwidth (Bool), interval_bandwidth "
+  "(Collection of Floats), bandwidth (Collection of Floats)";
 }
 
 extern "C" int   rvs_module_init(void* pMi) {
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+  rvs::gpulist::Initialize();
+  rvs::hsa::Init();
   return 0;
 }
 
 extern "C" int   rvs_module_terminate(void) {
+  rvs::hsa::Terminate();
   return 0;
 }
 
@@ -96,7 +98,7 @@ extern "C" const char* rvs_module_get_errstring(int error) {
 }
 
 extern "C" void* rvs_module_action_create(void) {
-  return static_cast<void*>(new action);
+  return static_cast<void*>(new pqtaction);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {
@@ -104,7 +106,9 @@ extern "C" int   rvs_module_action_destroy(void* pAction) {
   return 0;
 }
 
-extern "C" int rvs_module_action_property_set(void* pAction, const char* Key, const char* Val) {
+extern "C" int rvs_module_action_property_set(void* pAction,
+                                              const char* Key,
+                                              const char* Val) {
   return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 

@@ -26,10 +26,11 @@
 
 #include <string>
 #include <vector>
-#include <algorithm>
+#include <iostream>
 #include <regex>
-#include <map>
 #include <utility>
+#include <algorithm>
+#include <map>
 
 #define __HIP_PLATFORM_HCC__
 #include "hip/hip_runtime.h"
@@ -442,13 +443,12 @@ int action::run(void) {
     string msg;
     bool amd_gpus_found = false;
     int hip_num_gpu_devices, error;
-    vector<uint16_t> gpus_location_id, gpus_device_id, gpus_id;
     map<int, uint16_t> gst_gpus_device_index;
 
     // get the action name
     rvs::actionbase::property_get_action_name(&error);
     if (error == 2) {
-      msg = "action field is missing in gst module";
+      msg = "action name field is missing in gst module";
       log(msg.c_str(), rvs::logerror);
       return -1;
     }
@@ -496,25 +496,6 @@ int action::run(void) {
         return -1;
     }
 
-    // get all gpu_id for all AMD compatible GPUs that are registered
-    // into the system, via kfd querying
-    gpu_get_all_gpu_id(gpus_id);
-    // get all GPU location_id (all values are unique and point to the sysfs)
-    // this list is "synced" (in regards to the elements position) with gpus_id
-    gpu_get_all_location_id(gpus_location_id);
-    // get all GPU device_id
-    // this list is "synced" (in regards to the elements position) with gpus_id
-    gpu_get_all_device_id(gpus_device_id);
-
-    if (gpus_id.empty() || gpus_location_id.empty() || gpus_device_id.empty()) {
-        // basically, if we got to this point then gpus_id, gpus_location_id
-        // and gpus_device_id lists cannot be empty unless an error occurred
-        // while querying the kfd
-        cerr << "RVS-GST: action: " << action_name << " " <<
-                KFD_QUERYING_ERROR << std::endl;
-        return -1;
-    }
-
     // iterate over available & compatible AMD GPUs
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
@@ -526,22 +507,21 @@ int action::run(void) {
         unsigned int dev_location_id =
             ((((unsigned int) (props.pciBusID)) << 8) | (props.pciDeviceID));
 
-        vector<uint16_t>::iterator it_location_id = find(
-                    gpus_location_id.begin(), gpus_location_id.end(),
-                        dev_location_id);
-
-        uint16_t index_loc_id = std::distance(gpus_location_id.begin(),
-                                              it_location_id);
+        int32_t devId =
+            rvs::gpulist::GetDeviceIdFromLocationId(dev_location_id);
+        if (-1 == devId) {
+            continue;
+        }
 
         // check for deviceid filtering
         if (!device_id_filtering ||
-            (device_id_filtering && gpus_device_id.at(index_loc_id)
+            (device_id_filtering && static_cast<uint16_t>(devId)
                                                         == deviceid)) {
             // check if this GPU is part of the GPU stress test
             // (either device: all or the gpu_id is in
             // the device: <gpu id> list
             bool cur_gpu_selected = false;
-            uint16_t gpu_id = gpus_id.at(index_loc_id);
+            uint16_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
             if (device_all_selected) {
                 cur_gpu_selected = true;
             } else {
@@ -558,7 +538,7 @@ int action::run(void) {
 
             if (cur_gpu_selected) {
                 gst_gpus_device_index.insert
-                    (std::pair<int, uint16_t>(i, gpus_id.at(index_loc_id)));
+                    (std::pair<int, uint16_t>(i, gpu_id));
                 amd_gpus_found = true;
             }
         }
