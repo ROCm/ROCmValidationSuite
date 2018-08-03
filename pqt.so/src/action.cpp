@@ -195,7 +195,7 @@ bool pqtaction::get_all_pqt_config_keys(void) {
   int    error;
   string msg;
 
-  property_get_peers(&error);
+  prop_peer_device_all_selected = property_get_peers(&error);
   if (error) {
     cerr << "RVS-PQT: action: " << action_name <<
         "  invalid '" << "peers" << "'" << std::endl;
@@ -325,10 +325,93 @@ bool pqtaction::get_all_common_config_keys(void) {
  *
  * */
 int pqtaction::create_threads() {
-  pqtworker* p = new pqtworker;
-  p->initialize(4, 5, false);
+  std::string msg;
 
-  test_array.push_back(p);
+  std::vector<uint16_t> gpu_id;
+  std::vector<uint16_t> gpu_device_id;
+
+  gpu_get_all_gpu_id(gpu_id);
+  gpu_get_all_device_id(gpu_device_id);
+
+  for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
+    // filter out by source device id
+    if (prop_device_id_filtering) {
+      if (prop_deviceid != gpu_device_id[i]) {
+        continue;
+      }
+    }
+
+    // filter out by listed sources
+    if (!prop_device_all_selected) {
+      const auto it = std::find(device_prop_gpu_id_list.cbegin(),
+                                device_prop_gpu_id_list.cend(),
+                                std::to_string(gpu_id[i]));
+      if (it == device_prop_gpu_id_list.cend()) {
+            continue;
+      }
+    }
+
+    for (size_t j = 0; j < gpu_id.size(); j++) {  // all possible peers
+      // filter out by peer id
+      if (prop_peer_deviceid > 0) {
+        if (prop_peer_deviceid != gpu_device_id[j]) {
+          continue;
+        }
+      }
+
+      // filter out by listed peers
+      if (!prop_peer_device_all_selected) {
+        const auto it = std::find(prop_peers.cbegin(),
+                                  prop_peers.cend(),
+                                  std::to_string(gpu_id[j]));
+        if (it == prop_peers.cend()) {
+          continue;
+        }
+      }
+
+      // perform peer check
+      if (is_peer(gpu_id[i], gpu_id[j])) {
+        msg = "[" + action_name + "] p2p "
+            + std::to_string(gpu_id[i]) + " "
+            + std::to_string(gpu_id[j]) + " true";
+        rvs::lp::Log(msg, rvs::logresults);
+
+        // GPUs are peers, create transaction for them
+        int srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
+        if (srcnode < 0) {
+          std::cerr << "RVS-PQT: no node found for GPU ID "
+          << std::to_string(gpu_id[i]);
+          return -1;
+        }
+
+        int dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[j]);
+        if (srcnode < 0) {
+          std::cerr << "RVS-PQT: no node found for GPU ID "
+          << std::to_string(gpu_id[j]);
+          return -1;
+        }
+
+        if (prop_test_bandwidth) {
+          pqtworker* p = new pqtworker;
+          p->initialize(srcnode, dstnode, prop_bidirectional);
+          test_array.push_back(p);
+        }
+
+      } else {
+        msg = "[" + action_name + "] p2p "
+            + std::to_string(gpu_id[i]) + " "
+            + std::to_string(gpu_id[j]) + " false";
+        rvs::lp::Log(msg, rvs::logerror);
+      }
+    }
+  }
+
+  if (prop_test_bandwidth && test_array.size() < 1) {
+    msg = "[" + action_name + "]" +
+          "No GPU/peer combination matches criteria from test configuation";
+    rvs::lp::Log(msg, rvs::logerror);
+    return -1;
+  }
 
   return 0;
 }
@@ -354,22 +437,41 @@ int pqtaction::destroy_threads() {
  *
  * */
 int pqtaction::run() {
+  int sts;
+
   if (!get_all_common_config_keys())
     return -1;
   if (!get_all_pqt_config_keys())
     return -1;
 
-  create_threads();
+  sts = create_threads();
+  return sts;
+
+  if (sts)
+    return sts;
 
   if (gst_runs_parallel) {
-    run_parallel();
+    sts = run_parallel();
   } else {
-    run_single();
+    sts = run_single();
   }
 
   destroy_threads();
 
-  return 0;
+  return sts;
+}
+
+/**
+ * @brief Check if two GPU can access each other memory
+ *
+ * @param Src GPU ID of the source GPU
+ * @param Dst GPU ID of the destination GPU
+ *
+ * @return 0 - no access, 1 - Src can acces Dst, 2 - both have access
+ *
+ * */
+int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
+  return 2;
 }
 
 /**
@@ -388,8 +490,8 @@ int pqtaction::run_single() {
   brun = true;
 
   // start timers
-  timer_final.start(10000, true);  // ticks only once
-  timer_running.start(500);        // ticks continuously
+  timer_final.start(gst_run_duration_ms, true);  // ticks only once
+  timer_running.start(prop_log_interval);        // ticks continuously
 
   // iterate through test array and invoke tests one by one
   do {
@@ -428,11 +530,11 @@ int pqtaction::run_parallel() {
   }
 
   // start timers
-  timer_final.start(10000, true);  // ticks only once
-  timer_running.start(500);        // ticks continuously
+  timer_final.start(gst_run_duration_ms, true);  // ticks only once
+  timer_running.start(prop_log_interval);        // ticks continuously
 
   // wait for test to complete
-  while(brun) {
+  while (brun) {
     sleep(1);
   }
 

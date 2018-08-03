@@ -66,6 +66,8 @@ class pqtaction : public rvs::actionbase {
 
   //! 'true' if "all" is found under "device" key for this action
   bool      prop_device_all_selected;
+  //! 'true' if "all" is found under "peer" key for this action
+  bool      prop_peer_device_all_selected;
   //! deviceid key from config file
   uint16_t  prop_deviceid;
   //! 'true' if prop_device_id is valid number
@@ -90,6 +92,7 @@ class pqtaction : public rvs::actionbase {
   bool prop_bidirectional;
 
  protected:
+  int is_peer(uint16_t Src, uint16_t Dst);
   int create_threads();
   int destroy_threads();
 
