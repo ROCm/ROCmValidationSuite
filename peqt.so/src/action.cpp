@@ -28,6 +28,7 @@
 #include <vector>
 #include <regex>
 #include <map>
+#include <utility>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +45,7 @@ extern "C" {
 #include "rvsloglp.h"
 
 #define CHAR_BUFF_MAX_SIZE              1024
-#define PCI_DEV_NUM_CAPABILITIES        16
+#define PCI_DEV_NUM_CAPABILITIES        14
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
 
 #define JSON_CAPS_NODE_NAME             "capabilities"
@@ -54,6 +55,13 @@ extern "C" {
 #define PEQT_RESULT_FAIL_MESSAGE        "FALSE"
 
 #define MODULE_NAME                     "peqt"
+
+#define YAML_CAPABILITY_TAG             "capability"
+#define PB_OP_COND_DYN_DELIMITER        "_"
+
+#define PB_NUM_OP_STATES                4
+#define PB_NUM_OP_TYPES                 5
+#define PN_NUM_OP_POWER_RAILS           4
 
 using std::string;
 using std::regex;
@@ -65,10 +73,8 @@ const char* pcie_cap_names[] =
         {   "link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed",
             "link_stat_neg_width", "slot_pwr_limit_value",
             "slot_physical_num", "device_id", "vendor_id", "kernel_driver",
-            "dev_serial_num", "pwr_base_pwr", "pwr_rail_type",
-            "atomic_op_routing",  "atomic_op_32_completer",
-            "atomic_op_64_completer",
-            "atomic_op_128_CAS_completer"
+            "dev_serial_num", "atomic_op_routing",  "atomic_op_32_completer",
+            "atomic_op_64_completer", "atomic_op_128_CAS_completer"
         };
 
 // array of pointer to function corresponding to each capability
@@ -77,15 +83,21 @@ void (*arr_prop_pfunc_names[])(struct pci_dev *dev, char *) = {
     get_link_stat_cur_speed, get_link_stat_neg_width,
     get_slot_pwr_limit_value, get_slot_physical_num,
     get_device_id, get_vendor_id, get_kernel_driver,
-    get_dev_serial_num, get_pwr_base_pwr,
-    get_pwr_rail_type, get_atomic_op_routing,
+    get_dev_serial_num, get_atomic_op_routing,
     get_atomic_op_32_completer, get_atomic_op_64_completer,
     get_atomic_op_128_CAS_completer
 };
 
-using std::vector;
-using std::string;
-using std::map;
+const char * pb_op_pm_states_list[] = {"D0", "D1", "D2", "D3"};
+const char * pb_op_types_list[] = {"PMEAux", "Auxiliary", "Idle",
+                                    "Sustained", "Maximum"};
+const char * pb_op_power_rails_list[] = {"Power_12V", "Power_3_3V",
+                                        "Power_1_5V_1_8V", "Thermal"};
+
+
+const uint8_t pb_op_pm_states_encoding[] = {0, 1, 2, 3};
+const uint8_t pb_op_types_encoding[] = {0, 1, 2, 3, 7};
+const uint8_t pb_op_power_rails_encoding[] = {0, 1, 2, 7};
 
 /**
  * @brief default class constructor
@@ -117,6 +129,7 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
     bool pci_infra_qual_result = true;
     map<string, string>::iterator it;  // module's properties map iterator
     void *json_pcaps_node = NULL;
+    uint8_t i;
 
     if (bjson) {
         if (json_root_node != NULL) {
@@ -139,8 +152,10 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
     for (it = property.begin(); it != property.end(); ++it) {
         // skip the "capability."
         string prop_name = it->first.substr(it->first.find_last_of(".") + 1);
-        for (unsigned char i = 0; i < PCI_DEV_NUM_CAPABILITIES; i++)
+        bool prop_found = false;
+        for (i = 0; i < PCI_DEV_NUM_CAPABILITIES; i++) {
             if (prop_name == pcie_cap_names[i]) {
+                prop_found = true;
                 // call the capability's corresponding function
                 (*arr_prop_pfunc_names[i])(dev, buff);
 
@@ -169,7 +184,70 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                         log(msg.c_str(), rvs::logerror);
                     }
                 }
+                break;
             }
+        }
+
+        if (!prop_found &&
+                it->first.find(YAML_CAPABILITY_TAG) != string::npos) {
+            // the property was not found among those that
+            // have fixed/constant name => check whether it's
+            // a dynamic Power Budgeting capability
+            if (regex_match(prop_name, pb_dynamic_regex)) {
+                // no additional checks are needed (itetator != .end() && npos)
+                // because the prop_name already matched the regular expression
+
+                std::size_t pos_pb_pm_state =
+                            prop_name.find_first_of(PB_OP_COND_DYN_DELIMITER);
+                map<string, uint8_t>::iterator it_pb_pm_state =
+                                pb_op_pm_states_encodings_map.find
+                                    (prop_name.substr(0, pos_pb_pm_state));
+                uint8_t pb_op_pm_state = it_pb_pm_state->second;
+
+                std::size_t pos_pb_type =
+                            prop_name.find(PB_OP_COND_DYN_DELIMITER,
+                                                    pos_pb_pm_state + 1);
+                map<string, uint8_t>::iterator it_pb_type =
+                                pb_op_pm_types_encodings_map.find
+                                    (prop_name.substr(pos_pb_pm_state + 1,
+                                        pos_pb_type - pos_pb_pm_state - 1));
+                uint8_t pb_op_pm_type = it_pb_type->second;
+
+                map<string, uint8_t>::iterator it_pb_power_rail =
+                                pb_op_pm_power_rails_encodings_map.find
+                                        (prop_name.substr(pos_pb_type + 1));
+                uint8_t pb_op_power_rail = it_pb_power_rail->second;
+                // query for power budgeting capabilities
+                get_pwr_budgeting(dev, pb_op_pm_state, pb_op_pm_type,
+                                                    pb_op_power_rail, buff);
+
+                // log the capability's value
+                msg = action_name + " " + MODULE_NAME + " " + prop_name
+                        + " " + buff;
+                log(msg.c_str(), rvs::loginfo);
+
+                if (bjson && json_pcaps_node != NULL) {
+                    rvs::lp::AddString(json_pcaps_node, prop_name,
+                            buff);
+                }
+
+                // check for regex match
+                if (it->second != "") {
+                    try {
+                        regex prop_regex(it->second);
+                        if (!regex_match(buff, prop_regex)) {
+                            pci_infra_qual_result = false;
+                        }
+                    } catch (const std::regex_error& e) {
+                        // log the regex error
+                        msg = action_name + " " + MODULE_NAME + " "
+                                + YAML_REGULAR_EXPRESSION_ERROR + " at '"
+                                + it->second + "'";
+                        log(msg.c_str(), rvs::logerror);
+                    }
+                }
+            }
+        }
     }
 
     if (bjson && json_pcaps_node != NULL)
@@ -194,6 +272,7 @@ int action::run(void) {
     uint16_t deviceid;
     vector<uint16_t> gpus_location_id;
     vector<uint16_t> gpus_id;
+    uint8_t i;
 
     struct pci_access *pacc;
     struct pci_dev *dev;
@@ -278,6 +357,35 @@ int action::run(void) {
         log(msg.c_str(), rvs::logresults);
         return 1;  // PCIe qualification check cannot continue
     }
+
+    // compose Power Budgeting dynamic regex
+    string dyn_pb_regex_str = "^(";
+    for (i = 0; i < PB_NUM_OP_STATES; i++) {
+        dyn_pb_regex_str += pb_op_pm_states_list[i];
+        pb_op_pm_states_encodings_map.insert(std::pair<string, uint8_t>
+                    (pb_op_pm_states_list[i], pb_op_pm_states_encoding[i]));
+        if (i < PB_NUM_OP_STATES - 1)
+            dyn_pb_regex_str += "|";
+    }
+    dyn_pb_regex_str += ")_(";
+    for (i = 0; i < PB_NUM_OP_TYPES; i++) {
+        dyn_pb_regex_str += pb_op_types_list[i];
+        pb_op_pm_types_encodings_map.insert(std::pair<string, uint8_t>
+                    (pb_op_types_list[i], pb_op_types_encoding[i]));
+        if (i < PB_NUM_OP_TYPES - 1)
+            dyn_pb_regex_str += "|";
+    }
+    dyn_pb_regex_str += ")_(";
+    for (i = 0; i < PN_NUM_OP_POWER_RAILS; i++) {
+        dyn_pb_regex_str += pb_op_power_rails_list[i];
+        pb_op_pm_power_rails_encodings_map.insert(std::pair<string, uint8_t>
+                    (pb_op_power_rails_list[i], pb_op_power_rails_encoding[i]));
+        if (i < PN_NUM_OP_POWER_RAILS - 1)
+            dyn_pb_regex_str += "|";
+    }
+
+    dyn_pb_regex_str += ")$";
+    pb_dynamic_regex.assign(dyn_pb_regex_str);
 
     // initialize the PCI library
     pci_init(pacc);
