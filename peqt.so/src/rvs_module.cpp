@@ -25,6 +25,7 @@
 #include "rvs_module.h"
 #include "action.h"
 #include "rvsloglp.h"
+#include "gpu_util.h"
 
 /**
  * @defgroup PEQT PEQT Module
@@ -75,7 +76,8 @@ extern "C" const char* rvs_module_get_output(void) {
 
 extern "C" int rvs_module_init(void* pMi) {
     rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
-        return 0;
+    rvs::gpulist::Initialize();
+    return 0;
 }
 
 extern "C" int rvs_module_terminate(void) {
