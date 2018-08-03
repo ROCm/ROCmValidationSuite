@@ -47,8 +47,8 @@ extern "C" {
 #include "rvshsa.h"
 
 
-Worker::Worker() {}
-Worker::~Worker() {}
+pqtworker::pqtworker() {}
+pqtworker::~pqtworker() {}
 
 /**
  * @brief Thread function
@@ -56,7 +56,11 @@ Worker::~Worker() {}
  * Loops while brun == TRUE and performs polled monitoring avery 1msec.
  *
  * */
-void Worker::run() {
+void pqtworker::run() {
+  while(brun) {
+    do_transfer();
+    std::this_thread::yield();
+  }
   log("pqt worker thread has finished", rvs::logdebug);
 }
 
@@ -67,8 +71,8 @@ void Worker::run() {
  * Then it waits for std::thread to exit before returning.
  *
  * */
-void Worker::stop() {
-  log("pqt in Worker::stop()", rvs::logdebug);
+void pqtworker::stop() {
+  log("pqt in pqtworker::stop()", rvs::logdebug);
 
   brun = false;
 
@@ -90,7 +94,7 @@ void Worker::stop() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int Worker::initialize(int Src, int Dst, bool Bidirect) {
+int pqtworker::initialize(int Src, int Dst, bool Bidirect) {
   src_node = Src;
   dst_node = Dst;
   bidirect = Bidirect;
@@ -114,7 +118,7 @@ int Worker::initialize(int Src, int Dst, bool Bidirect) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int Worker::do_transfer() {
+int pqtworker::do_transfer() {
   double duration;
   int sts;
 
@@ -159,7 +163,7 @@ int Worker::do_transfer() {
  * interval (in seconds)
  *
  * */
-void Worker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
+void pqtworker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
                              size_t* Size, double* Duration) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
@@ -191,7 +195,7 @@ void Worker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
  * this test (in seconds)
  *
  * */
-void Worker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
+void pqtworker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
                            size_t* Size, double* Duration) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
