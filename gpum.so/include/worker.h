@@ -77,6 +77,7 @@ class Worker : public rvs::ThreadBase {
   //! sets bound values for metric
   void set_bound(std::string metr_name, bool met_bound, int metr_max,
                  int metr_min);
+  const std::string get_irq(const std::string path);
 
  protected:
   virtual void run(void);
