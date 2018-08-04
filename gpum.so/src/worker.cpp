@@ -37,6 +37,7 @@ all
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <fstream>
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,9 +59,11 @@ extern "C" {
 using std::string;
 using std::vector;
 using std::map;
+using std::fstream;
 
 #define PCI_ALLOC_ERROR               "pci_alloc() error"
 #define GM_RESULT_FAIL_MESSAGE        "FALSE"
+#define IRQ_PATH_MAX_LENGTH           256
 #define MODULE_NAME                   "gm"
 
 // collection of allowed metrics
@@ -68,7 +71,12 @@ const char* metric_names[] =
         { "temp", "clock", "mem_clock", "fan", "power"
         };
 
-// Call-back function to append to a vector of Devices
+/**
+ * @brief call-back function to append to a vector of Devices
+ * @param d represent device
+ * @param p pointer
+ * @return true if dev connected to monitor, false otherwise
+ */ 
 static bool GetMonitorDevices(const std::shared_ptr<amd::smi::Device> &d,
             void *p) {
   std::string val_str;
@@ -102,14 +110,40 @@ void Worker::set_gpuids(const std::vector<int>& GpuIds) {
   bfiltergpu = true;
 }
 
+/**
+ * @brief sets values used to check if metrics is monitored
+ * @param metr_name represent metric
+ * @param metr_true if metric is going to be monitored
+ */ 
 void Worker::set_metr_mon(string metr_name, bool metr_true) {
   bounds[metr_name].mon_metric = metr_true;
 }
+/**
+ * @brief sets bounding box values for metric
+ * @param metr_name represent metric
+ * @param met_bound if bound provided
+ * @param metr_max max metric value allowed
+ * @param metr_min min metric value allowed
+ */ 
 void Worker::set_bound(std::string metr_name, bool met_bound, int metr_max,
                        int metr_min) {
   bounds[metr_name].check_bounds = met_bound;
   bounds[metr_name].max_val = metr_max;
   bounds[metr_name].min_val = metr_min;
+}
+/**
+ * @brief gets irq value for device
+ * @param path represents path of device
+ * @return irq value
+ */
+const std::string Worker::get_irq(const std::string path) {
+    std::ifstream f_id;
+    string irq;
+    f_id.open(path);
+
+    f_id >> irq;
+    f_id.close();
+    return irq;
 }
 
 /**
@@ -123,6 +157,8 @@ void Worker::run() {
   vector<uint16_t> gpus_location_id;
   std::string val_str;
   std::vector<std::string> val_vec;
+
+  char path[IRQ_PATH_MAX_LENGTH];
   uint32_t value;
   uint32_t value2;
 
@@ -170,7 +206,9 @@ void Worker::run() {
   pci_scan_bus(pacc);
 
   for (auto dev : monitor_devices) {
-    dev->readDevInfo(amd::smi::kDevGPUMIrq, &val_str);
+    // get irq of device
+    snprintf(path, IRQ_PATH_MAX_LENGTH, "%s/device/irq", (dev->path()).c_str());
+    val_str = get_irq(path);
 
     // iterate over devices
     for (dev_pci = pacc->devices; dev_pci; dev_pci = dev_pci->next) {
@@ -226,7 +264,10 @@ void Worker::run() {
 
     for (auto dev : monitor_devices) {
       // if irq is not in map skip monitoring this device
-      dev->readDevInfo(amd::smi::kDevGPUMIrq, &val_str);
+      snprintf(path, IRQ_PATH_MAX_LENGTH, "%s/device/irq",
+               (dev->path()).c_str());
+      val_str = get_irq(path);
+
       auto it = irq_gpu_ids.find(val_str);
       if (it == irq_gpu_ids.end()) {
         break;
