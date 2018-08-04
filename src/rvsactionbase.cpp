@@ -254,3 +254,65 @@ void rvs::actionbase::property_get_run_duration(int *error) {
     *error = 2;
   }
 }
+
+/**
+ * @brief reads the sample interval from the module's properties collection
+ */
+int rvs::actionbase::property_get_sample_interval(int *error) {
+  int sample_int = -1;
+  auto it = property.find(RVS_CONF_SAMPLE_INTERVAL_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      sample_int = std::stoi(it->second);
+      property.erase(it);
+      *error = 0;
+    } else {
+      *error = 1;
+    }
+  } else {
+    *error = 2;
+  }
+  return sample_int;
+}
+
+/**
+ * @brief reads the log interval from the module's properties collection
+ */
+int rvs::actionbase::property_get_log_interval(int *error) {
+  int log_int = -1;
+  auto it = property.find(RVS_CONF_LOG_INTERVAL_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      log_int = std::stoul(it->second);
+      property.erase(it);
+      *error = 0;
+    } else {
+      *error = 1;
+    }
+  } else {
+    *error = 2;
+  }
+  return log_int;
+}
+
+/**
+ * @brief reads terminate from the module's properties collection
+ */
+bool rvs::actionbase::property_get_terminate(int *error) {
+  bool term = -1;
+  auto it = property.find(RVS_CONF_TERMINATE_KEY);
+  if (it != property.end()) {
+    if (it->second == "true") {
+      term = true;
+      property.erase(it);
+    } else if (it->second == "false") {
+      term = false;
+      property.erase(it);
+    } else {
+      *error = 0;
+    }
+  }
+
+  return term;
+}
+

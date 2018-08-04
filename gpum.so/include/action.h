@@ -53,8 +53,7 @@ class action : public rvs::actionbase {
  private:
     bool bjson;
     void* json_root_node;
-
-
+    
  protected:
 };
 
