@@ -23,12 +23,15 @@
  *
  *******************************************************************************/
 #include "rvsactionbase.h"
-#include "rvs_util.h"
 
 #include <unistd.h>
 #include <chrono>
+#include <utility>
+#include <map>
+#include <string>
+#include <vector>
 
-using namespace std;
+#include "rvs_util.h"
 
 /**
  * @brief Default constructor.
@@ -53,7 +56,7 @@ rvs::actionbase::~actionbase() {
  *
  * */
 int rvs::actionbase::property_set(const char* pKey, const char* pVal) {
-  property.insert(pair<string, string>(pKey, pVal));
+  property.insert(std::pair<string, string>(pKey, pVal));
   return 0;
 }
 
@@ -105,7 +108,7 @@ bool rvs::actionbase::has_property(const std::string& key) {
  * @return deviceid value if valid, -1 otherwise
  */
 int rvs::actionbase::property_get_deviceid(int *error) {
-    map<string, string>::iterator it = property.find(RVS_CONF_DEVICEID_KEY);
+    auto it = property.find(RVS_CONF_DEVICEID_KEY);
     int deviceid = -1;
     *error = 0;  // init with 'no error'
 
@@ -130,9 +133,8 @@ int rvs::actionbase::property_get_deviceid(int *error) {
  * @return true if "all" is selected, false otherwise
  */
 bool rvs::actionbase::property_get_device(int *error) {
-    map<string, string>::iterator it;  // module's properties map iterator
     *error = 0;  // init with 'no error'
-    it = property.find(RVS_CONF_DEVICE_KEY);
+    auto it = property.find(RVS_CONF_DEVICE_KEY);
     if (it != property.end()) {
         if (it->second == "all") {
             property.erase(it);
@@ -170,10 +172,9 @@ bool rvs::actionbase::property_get_device(int *error) {
  */
 void rvs::actionbase::property_get_action_name(int *error) {
   action_name = "[]";
-  map<string, string>::iterator it = property.find(RVS_CONF_NAME_KEY);
+  auto it = property.find(RVS_CONF_NAME_KEY);
   if (it != property.end()) {
     action_name = it->second;
-    property.erase(it);
     *error = 0;
   } else {
     *error = 2;
@@ -186,7 +187,7 @@ void rvs::actionbase::property_get_action_name(int *error) {
  */
 void rvs::actionbase::property_get_run_parallel(int *error) {
   gst_runs_parallel = false;
-  map<string, string>::iterator it = property.find(RVS_CONF_PARALLEL_KEY);
+  auto it = property.find(RVS_CONF_PARALLEL_KEY);
   if (it != property.end()) {
     if (it->second == "true") {
       gst_runs_parallel = true;
@@ -207,7 +208,7 @@ void rvs::actionbase::property_get_run_parallel(int *error) {
  */
 void rvs::actionbase::property_get_run_count(int *error) {
   gst_run_count = 1;
-  map<string, string>::iterator it = property.find(RVS_CONF_COUNT_KEY);
+  auto it = property.find(RVS_CONF_COUNT_KEY);
   if (it != property.end()) {
     if (is_positive_integer(it->second)) {
       gst_run_count = std::stoi(it->second);
@@ -228,7 +229,7 @@ void rvs::actionbase::property_get_run_count(int *error) {
  */
 void rvs::actionbase::property_get_run_wait(int *error) {
   gst_run_wait_ms = 0;
-  map<string, string>::iterator it = property.find(RVS_CONF_WAIT_KEY);
+  auto it = property.find(RVS_CONF_WAIT_KEY);
   if (it != property.end()) {
     if (is_positive_integer(it->second)) {
       gst_run_wait_ms = std::stoul(it->second);
@@ -247,7 +248,7 @@ void rvs::actionbase::property_get_run_wait(int *error) {
  */
 void rvs::actionbase::property_get_run_duration(int *error) {
   gst_run_duration_ms = 0;
-  map<string, string>::iterator it = property.find(RVS_CONF_DURATION_KEY);
+  auto it = property.find(RVS_CONF_DURATION_KEY);
   if (it != property.end()) {
     if (is_positive_integer(it->second)) {
       gst_run_duration_ms = std::stoul(it->second);
@@ -261,3 +262,65 @@ void rvs::actionbase::property_get_run_duration(int *error) {
     *error = 2;
   }
 }
+
+/**
+ * @brief reads the sample interval from the module's properties collection
+ */
+int rvs::actionbase::property_get_sample_interval(int *error) {
+  int sample_int = -1;
+  auto it = property.find(RVS_CONF_SAMPLE_INTERVAL_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      sample_int = std::stoi(it->second);
+      property.erase(it);
+      *error = 0;
+    } else {
+      *error = 1;
+    }
+  } else {
+    *error = 2;
+  }
+  return sample_int;
+}
+
+/**
+ * @brief reads the log interval from the module's properties collection
+ */
+int rvs::actionbase::property_get_log_interval(int *error) {
+  int log_int = -1;
+  auto it = property.find(RVS_CONF_LOG_INTERVAL_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      log_int = std::stoul(it->second);
+      property.erase(it);
+      *error = 0;
+    } else {
+      *error = 1;
+    }
+  } else {
+    *error = 2;
+  }
+  return log_int;
+}
+
+/**
+ * @brief reads terminate from the module's properties collection
+ */
+bool rvs::actionbase::property_get_terminate(int *error) {
+  bool term = -1;
+  auto it = property.find(RVS_CONF_TERMINATE_KEY);
+  if (it != property.end()) {
+    if (it->second == "true") {
+      term = true;
+      property.erase(it);
+    } else if (it->second == "false") {
+      term = false;
+      property.erase(it);
+    } else {
+      *error = 0;
+    }
+  }
+
+  return term;
+}
+

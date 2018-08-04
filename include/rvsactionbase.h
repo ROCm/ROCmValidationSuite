@@ -50,6 +50,9 @@
 #define RVS_CONF_DURATION_KEY           "duration"
 #define RVS_CONF_DEVICEID_KEY           "deviceid"
 #define RVS_JSON_LOG_GPU_ID_KEY         "gpu_id"
+#define RVS_CONF_SAMPLE_INTERVAL_KEY    "sample_interval"
+#define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
+#define RVS_CONF_TERMINATE_KEY          "terminate"
 
 namespace rvs {
 /**
@@ -82,6 +85,10 @@ class actionbase {
   void property_get_run_count(int *error);
   void property_get_run_wait(int *error);
   void property_get_run_duration(int *error);
+  int  property_get_sample_interval(int *error);
+  int  property_get_log_interval(int *error);
+  bool property_get_terminate(int* error);
+
 
  protected:
 /**
@@ -104,9 +111,10 @@ class actionbase {
   //! stress test run duration
   uint64_t gst_run_duration_ms;
 
+  //! data from config file
   std::map<std::string, std::string>  property;
 
-  // ! List of all gpu_id in the action's "device" property in .config file
+  //! List of all gpu_id in the action's "device" property in .config file
   std::vector<std::string> device_prop_gpu_id_list;
 };
 }  // namespace rvs

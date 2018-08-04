@@ -66,7 +66,7 @@ class Worker : public rvs::ThreadBase {
   void json(const bool flag) { bjson = flag; }
   //! Returns initiating action name
   const std::string& get_name(void) { return action_name; }
-  //! sets sample interval  
+  //! sets sample interval
   void set_sample_int(int interval) { sample_interval = interval; }
   //! sets log interval
   void set_log_int(int interval) { log_interval = interval; }
@@ -75,7 +75,8 @@ class Worker : public rvs::ThreadBase {
   //! sets true/false for metric
   void set_metr_mon(std::string metr_name, bool metr_true);
   //! sets bound values for metric
-  void set_bound(std::string metr_name,bool met_bound, int metr_max, int metr_min); 
+  void set_bound(std::string metr_name, bool met_bound, int metr_max,
+                 int metr_min);
 
  protected:
   virtual void run(void);
@@ -104,9 +105,9 @@ class Worker : public rvs::ThreadBase {
   int log_interval;
   //! terminate key
   bool term;
-  
+  //! number of times of get metric
   int count;
-  
+
 struct Dev_metrics {
     uint32_t gpu_id;
     uint32_t av_temp;
@@ -134,9 +135,6 @@ struct Metric_violation {
   std::map<std::string, Dev_metrics> irq_gpu_ids;
   std::map<std::string, Metric_bound> bounds;
   std::map<std::string, Metric_violation> met_violation;
-   
 };
 
-
-
-#endif  // PESM_SO_INCLUDE_WORKER_H_
+#endif  // GPUM_SO_INCLUDE_WORKER_H_
