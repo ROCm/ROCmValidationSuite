@@ -25,6 +25,10 @@
 
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
+add_compile_options(-pthread)
+add_compile_options(-Wl,-no-as-needed)
+add_compile_options(-Wall -Werror)
+
 
 set ( RVS "gpum" )
 set ( RVS_PACKAGE "rvs-roct" )
@@ -73,7 +77,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 
 ## additional libraries
-set (PROJECT_LINK_LIBS libpci.so libm.so)
+set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 
 
 ## define include directories
@@ -82,7 +86,7 @@ include_directories(include ../include ../rocm_smi_lib/include)
 ## define source files
 set(SOURCES
   ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp
-  src/rvs_module.cpp src/action.cpp ../rocm_smi_lib/src/rocm_smi_main.cc ../rocm_smi_lib/src/rocm_smi_monitor.cc  ../rocm_smi_lib/src/rocm_smi_device.cc)
+  src/rvs_module.cpp src/action.cpp ../rocm_smi_lib/src/rocm_smi_main.cc ../rocm_smi_lib/src/rocm_smi_monitor.cc  ../rocm_smi_lib/src/rocm_smi_device.cc src/worker.cpp)
 
 
 ## define target
