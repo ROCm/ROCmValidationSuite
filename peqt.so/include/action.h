@@ -35,11 +35,15 @@ extern "C" {
 
 #include <vector>
 #include <string>
+#include <regex>
+#include <map>
 
 #include "rvsactionbase.h"
 
 using std::vector;
 using std::string;
+using std::regex;
+using std::map;
 
 /**
  * @class action
@@ -59,10 +63,20 @@ class action: public rvs::actionbase {
     virtual int run(void);
 
  private:
-
+    //! TRUE if JSON output is required
     bool bjson;
     //! JSON root node
     void* json_root_node;
+
+    //! PCI PB (Power Budgeting) <<PM State, encoding>> pairs (according to
+    //! PCI_Express_Base_Specification_Revision_3.0)
+    map <string, uint8_t> pb_op_pm_states_encodings_map;
+    //! PCI PB (Power Budgeting) <<Type, encoding>> pairs
+    map <string, uint8_t> pb_op_pm_types_encodings_map;
+    //! PCI PB (Power Budgeting) <<Power Rail, encoding>> pairs
+    map <string, uint8_t> pb_op_pm_power_rails_encodings_map;
+    //! regex for dynamic PB capabilities
+    regex pb_dynamic_regex;
 
     bool get_gpu_all_pcie_capabilities(struct pci_dev *dev, uint16_t gpu_id);
 

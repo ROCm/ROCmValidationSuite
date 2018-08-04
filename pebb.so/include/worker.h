@@ -47,6 +47,7 @@ class Worker : public rvs::ThreadBase {
   Worker();
   virtual ~Worker();
 
+  //! stop thread loope and exit thread
   void stop(void);
   //! Sets initiating action name
   void set_name(const std::string& name) { action_name = name; }

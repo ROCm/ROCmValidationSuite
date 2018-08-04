@@ -25,6 +25,9 @@
 #ifndef PESM_SO_INCLUDE_ACTION_H_
 #define PESM_SO_INCLUDE_ACTION_H_
 
+#include <string>
+#include <vector>
+
 #include "rvsactionbase.h"
 
 /**

@@ -56,9 +56,9 @@
 
 namespace rvs {
 /**
- *  @class actionbase
- *
- *  @brief Base class for all module level actions
+ * @class actionbase
+ * @ingroup RVS
+ * @brief Base class for all module level actions
  *
  */
 
