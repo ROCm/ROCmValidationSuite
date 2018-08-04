@@ -218,8 +218,14 @@ bool rvs::exec::is_yaml_properties_collection(
       return true;
   } else {
     if (module_name == "peqt") {
-      if (property_name == "capability")
+      if (property_name == "capability") {
         return true;
+      }
+    } else {
+        if (module_name == "gpum") {
+            if (property_name == "metrics")
+            return true;
+    }
     }
   }
 

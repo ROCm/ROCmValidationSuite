@@ -25,6 +25,8 @@
 #include "rvs_module.h"
 #include "action.h"
 #include "rvsloglp.h"
+#include "worker.h"
+#include "gpu_util.h"
 
 /**
  * @defgroup GPUP GPUP Module
@@ -38,6 +40,8 @@ to halt another
  * RVS modules execution if one of the quantities exceeds a specified boundary 
 value.
  */
+
+Worker* pworker;
 
 int log(const char* pMsg, const int level) {
   return rvs::lp::Log(pMsg, level);
@@ -72,15 +76,30 @@ extern "C" const char* rvs_module_get_config(void) {
 }
 
 extern "C" const char* rvs_module_get_output(void) {
-  return "pass (bool)";
+  return "state (string)";
 }
 
 extern "C" int   rvs_module_init(void* pMi) {
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+  rvs::gpulist::Initialize();
   return 0;
 }
 
 extern "C" int   rvs_module_terminate(void) {
+  rvs::lp::Log("[module_terminate] gm rvs_module_terminate() - entered",
+               rvs::logtrace);
+  if (pworker) {
+    rvs::lp::Log(
+      "[module_terminate] gm rvs_module_terminate() - pworker exists",
+                 rvs::logtrace);
+    pworker->set_stop_name("module_terminate");
+    pworker->stop();
+    delete pworker;
+    pworker = nullptr;
+    rvs::lp::Log(
+      "[module_terminate] gm rvs_module_terminate() - monitoring stopped",
+                 rvs::logtrace);
+  }
   return 0;
 }
 
