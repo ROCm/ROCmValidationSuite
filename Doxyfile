@@ -782,7 +782,7 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = rvs src include gpup.so peqt.so rcqt.so pesm.so smqt.so \
-                         gst.so pqt.so pebb.so
+                         gst.so pqt.so pebb.so iet.so
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
