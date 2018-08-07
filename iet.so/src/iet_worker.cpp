@@ -31,6 +31,8 @@
 
 using std::string;
 
+bool IETWorker::bjson = false;
+
 IETWorker::IETWorker() {}
 IETWorker::~IETWorker() {}
 
