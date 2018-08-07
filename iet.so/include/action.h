@@ -33,7 +33,15 @@ extern "C" {
 }
 #endif
 
+#include <vector>
+#include <string>
+#include <map>
+
 #include "rvsactionbase.h"
+
+using std::vector;
+using std::string;
+using std::map;
 
 /**
  * @class action
@@ -51,6 +59,49 @@ class action: public rvs::actionbase {
     virtual ~action();
 
     virtual int run(void);
+
+ protected:
+    //! TRUE if JSON output is required
+    bool bjson;
+
+    //! target power level for the test
+    float iet_target_power;
+    //! IET test ramp duration
+    uint64_t iet_ramp_interval;
+    //! power tolerance (how much the target_power can fluctuare after
+    //! the ramp period for the test to succeed)
+    float iet_tolerance;
+    //! maximum allowed number of target_power violations
+    int iet_max_violations;
+    //! sampling rate for the target_power
+    uint64_t iet_sample_interval;
+    //! time interval at which the module reports the GPU's power
+    uint64_t iet_log_interval;
+    //! matrix size for SGEMM
+    uint64_t iet_matrix_size;
+
+    //! TRUE if device config key is "all
+    bool device_all_selected;
+    //! TRUE if deviceid filtering was enabled
+    bool device_id_filtering;
+    //! GPU device type config key value
+    uint16_t deviceid;
+
+    // configuration properties getters
+
+    // IET specific config keys
+    void property_get_iet_target_power(int *error);
+    void property_get_iet_ramp_interval(int *error);
+    void property_get_iet_tolerance(int *error);
+    void property_get_iet_max_violations(int *error);
+    void property_get_iet_sample_interval(int *error);
+    void property_get_iet_log_interval(int *error);
+    void property_get_iet_matrix_size(int *error);
+
+    bool get_all_iet_config_keys(void);
+    bool get_all_common_config_keys(void);
+
+    bool do_edp_test(map<int, uint16_t> iet_gpus_device_index);
 };
 
 #endif  // IET_SO_INCLUDE_ACTION_H_
