@@ -64,6 +64,9 @@ Compile RVS:
     # Contains library files exported by ROC Thunk
     export ROCT_LIB_DIR=/opt/rocm/lib/
     
+    # Contains header files exported by ROC Runtime
+    export HIP_INC_DIR=/opt/rocm/hip/include/hip/
+    
     # Contains header files exported by rocBLAS
     export ROCBLAS_INC_DIR=$RVS/../build/rocBLAS/build/release/rocblas-install/include/
     
