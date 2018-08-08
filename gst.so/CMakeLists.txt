@@ -71,14 +71,48 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
+set(ROCBLAS_LIB "rocblas")
+set(HIP_HCC_LIB "hip_hcc")
+
+# Determine Roc Runtime header files are accessible
+if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime.h)
+  message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
+  RETURN()
+endif()
+
+if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime_api.h)
+  message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
+  RETURN()
+endif()
+
+# Determine Roc Runtime header files are accessible
+if(NOT EXISTS ${ROCBLAS_INC_DIR}/rocblas.h)
+  message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
+  RETURN()
+endif()
+
+if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
+  message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
+  RETURN()
+endif()
+
+if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
+  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set ROCR_LIB_DIR path. Current value is : " ${ROCR_LIB_DIR})
+  RETURN()
+endif()
+
+# Add directories to look for header files to compile
+INCLUDE_DIRECTORIES(${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
+
+# Add directories to look for library files to link 
+LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR})
+
+
 ## additional libraries
-set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so libhip_hcc.so librocblas.so)
+set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 
 ## define include directories
-include_directories(include ../include /opt/rocm/include /opt/rocm/hip/include/hip /opt/rocm/rocblas/include)
-
-## define libraries directories
-link_directories(/opt/rocm/lib)
+include_directories(include ../include)
 
 ## define source files
 set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
@@ -90,7 +124,7 @@ set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB})
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
@@ -99,3 +133,4 @@ COMMAND ln -s ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR}
 
 install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
+
