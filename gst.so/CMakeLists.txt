@@ -116,7 +116,7 @@ include_directories(include ../include)
 
 ## define source files
 set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
-  src/rvs_module.cpp src/action.cpp src/gst_worker.cpp src/rvs_blas.cpp)
+  src/rvs_module.cpp src/action.cpp src/gst_worker.cpp ../src/rvs_blas.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})

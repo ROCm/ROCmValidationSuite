@@ -36,6 +36,7 @@ extern "C" {
 #include <vector>
 #include <string>
 #include <map>
+#include <utility>
 
 #include "rvsactionbase.h"
 
@@ -100,8 +101,10 @@ class action: public rvs::actionbase {
 
     bool get_all_iet_config_keys(void);
     bool get_all_common_config_keys(void);
+    int get_all_selected_gpus(void);
 
-    bool do_edp_test(map<int, uint16_t> iet_gpus_device_index);
+    bool do_edp_test(std::map<int,
+                     std::pair<uint16_t, string>> iet_gpus_device_index);
 };
 
 #endif  // IET_SO_INCLUDE_ACTION_H_

@@ -44,6 +44,6 @@ void IETWorker::run() {
     string msg;
 
     // log GST stress test - start
-    msg = " IETWorker is running ... ";
+    msg = " IETWorker [" + std::to_string(gpu_id) + "] is running ... ";
     log(msg.c_str(), rvs::loginfo);
 }
