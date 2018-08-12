@@ -149,6 +149,7 @@ class GSTWorker : public rvs::ThreadBase {
     virtual void run(void);
     void log_to_json(const std::string &key, const std::string &value,
                      int log_level);
+    void usleep_ex(uint64_t microseconds);
 
  protected:
     //! name of the action
