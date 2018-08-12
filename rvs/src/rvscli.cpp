@@ -143,9 +143,9 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-g", sp));
   grammar.insert(gpair("--listGpus", sp));
 
-  //  sp = std::make_shared<optbase>("-i", value);
-  //  grammar.insert(gpair("-i", sp));
-  //  grammar.insert(gpair("--indexes", sp));
+  sp = std::make_shared<optbase>("-i", command, value);
+  grammar.insert(gpair("-i", sp));
+  grammar.insert(gpair("--indexes", sp));
 
   sp = std::make_shared<optbase>("-j", command);
   grammar.insert(gpair("-j", sp));
@@ -156,6 +156,7 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("--debugLogFile", sp));
 
   sp = std::make_shared<optbase>("-q", command);
+  grammar.insert(gpair("-q", sp));
   grammar.insert(gpair("--quiet", sp));
 
   sp = std::make_shared<optbase>("-m", command, value);
@@ -176,9 +177,9 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-t", sp));
   grammar.insert(gpair("--listTests", sp));
 
-  //  sp = std::make_shared<optbase>("-v", command);
-  //  grammar.insert(gpair("-v", sp));
-  //  grammar.insert(gpair("--verbose", sp));
+  sp = std::make_shared<optbase>("-v", command);
+  grammar.insert(gpair("-v", sp));
+  grammar.insert(gpair("--verbose", sp));
 
   sp = std::make_shared<optbase>("-ver", command);
   grammar.insert(gpair("--version", sp));
@@ -223,7 +224,7 @@ int rvs::cli::parse(int Argc, char** Argv) {
       case econtext::value:
         token_done = try_value(token);
         if (!token_done) {
-          errstr = std::string("syntax error: value expected after ") +  
+          errstr = std::string("syntax error: value expected after ") +
                    current_option;
           return -1;
         }

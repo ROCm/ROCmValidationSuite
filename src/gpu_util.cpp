@@ -259,6 +259,23 @@ int32_t rvs::gpulist::GetGpuId(const uint32_t LocationID) {
 }
 
 /**
+ * @brief Given Node ID return GPU ID
+ * @param NodeID Location ID of a GPU
+ * @return Gpu ID if found, -1 otherwise
+ *}
+ * */
+int32_t rvs::gpulist::GetGpuIdFromNodeId(const uint32_t NodeID) {
+  const auto it = std::find(node_id.cbegin(),
+                            node_id.cend(), NodeID);
+  if (it != location_id.cend()) {
+    size_t pos = std::distance(node_id.cbegin(), it);
+    return gpu_id[pos];
+  }
+  return -1;
+}
+
+
+/**
  * @brief Given Location ID return GPU device ID
  * @param LocationID Location ID of a GPU
  * @return Device ID if found, -1 otherwise

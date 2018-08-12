@@ -33,6 +33,7 @@
 #include <iomanip>
 #include <fstream>
 #include <string>
+#include <mutex>
 
 #include "rvslognode.h"
 #include "rvslognodestring.h"
@@ -47,9 +48,11 @@ int   rvs::logger::loglevel_m(2);
 bool  rvs::logger::tojson_m;
 bool  rvs::logger::append_m;
 bool  rvs::logger::isfirstrecord_m;
-std::string rvs::logger::logfile_m;
+std::mutex  rvs::logger::cout_mutex;
+std::mutex  rvs::logger::log_mutex;
 
-const char*  rvs::logger::loglevelname[] = {"NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
+const char*  rvs::logger::loglevelname[] = {
+  "NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
 
 /**
  * @brief Set 'append' flag
@@ -69,26 +72,6 @@ void rvs::logger::append(const bool flag) {
  */
 bool rvs::logger::append() {
   return append_m;
-}
-
-/**
- * @brief Set log file name
- *
- * @param val file name
- *
- */
-void rvs::logger::logfile(const std::string& val) {
-  logfile_m = val;
-}
-
-/**
- * @brief Get log file name
- *
- * @return Current log file name
- *
- */
-const std::string& rvs::logger::logfile() {
-  return logfile_m;
 }
 
 /**
@@ -183,7 +166,10 @@ int rvs::logger::Log(const char* Message, const int LogLevel) {
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
+int rvs::logger::LogExt(const char* Message, const int LogLevel,
+                        const unsigned int Sec, const unsigned int uSec) {
+  // lock cout_mutex for the duration of this block
+  std::lock_guard<std::mutex> lk(cout_mutex);
   if (LogLevel < lognone || LogLevel > logtrace) {
     cerr << "ERROR: unknown logging level: " << LogLevel << '\n';
     return -1;
@@ -204,7 +190,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned 
   }
 
   char  buff[64];
-  sprintf(buff, "%6d.%6d", secs, usecs);
+  snprintf(buff, sizeof(buff), "%6d.%6d", secs, usecs);
 
   std::string row("[");
   row += loglevelname[LogLevel];
@@ -246,7 +232,9 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel, const unsigned 
  * @return 0 - success, non-zero otherwise
  *
  */
-void* rvs::logger::LogRecordCreate(const char* Module, const char* Action, const int LogLevel, const unsigned int Sec, const unsigned int uSec) {
+void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
+                                   const int LogLevel, const unsigned int Sec,
+                                   const unsigned int uSec) {
   uint32_t   sec;
   uint32_t   usec;
 
@@ -260,7 +248,8 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action, const
   rvs::LogNodeRec* rec = new LogNodeRec(Action, LogLevel, sec, usec);
   AddString(rec, "action", Action);
   AddString(rec, "module", Module);
-  AddString(rec, "loglevelname", (LogLevel >= lognone && LogLevel < logtrace) ? loglevelname[LogLevel] : "UNKNOWN");
+  AddString(rec, "loglevelname", (LogLevel >= lognone && LogLevel < logtrace) ?
+    loglevelname[LogLevel] : "UNKNOWN");
 
   return static_cast<void*>(rec);
 }
@@ -329,6 +318,9 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
  *
  */
 int rvs::logger::ToFile(const std::string& Row) {
+  // lock log_mutex for the duration of this block
+  std::lock_guard<std::mutex> lk(log_mutex);
+
   std::string logfile;
   if (!rvs::options::has_option("-l", logfile))
     return -1;
