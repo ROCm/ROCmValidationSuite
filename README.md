@@ -35,6 +35,20 @@ Compile rocm_smi_lib (this needs to be done only once after cloning):
     cd ../build/rocm_smi_lib
     make
 
+Compile rocBLAS (this needs to be done only once after cloning):
+
+    cd $RVS
+    cd ../build
+    git clone https://github.com/ROCmSoftwarePlatform/rocBLAS.git
+    cd rocBLAS
+    ./install.sh -d
+
+Note:
+- in case you want to install rocBLAS after compiling then you can use the _-i_ option (e.g.: _./install.sh -i_). In this case, _ROCBLAS_INC_DIR_ and _ROCBLAS_LIB_DIR_ have to be updated based on your rocBLAS installation location (e.g.: _/opt/rocm/rocblas/.._)
+- if the latest version of rocBLAS is already installed on your system you may skip this step but you need to update the _ROCBLAS_INC_DIR_ and _ROCBLAS_LIB_DIR_ based on your rocBLAS installation location
+- if rocBLAS dependencies are already satisfied then you can skip the _-d_ option
+- in case _./install.sh -d_ fails please try without _-d_
+
 Compile RVS:
 
     cd $RVS
@@ -49,9 +63,17 @@ Compile RVS:
 
     # Contains library files exported by ROC Thunk
     export ROCT_LIB_DIR=/opt/rocm/lib/
+    
+    # Contains header files exported by ROC Runtime
+    export HIP_INC_DIR=/opt/rocm/hip/include/hip/
+    
+    # Contains header files exported by rocBLAS
+    export ROCBLAS_INC_DIR=$RVS/../build/rocBLAS/build/release/rocblas-install/include/
+    
+    # Contains library files exported by rocBLAS
+    export ROCBLAS_LIB_DIR=$RVS/../build/rocBLAS/build/release/rocblas-install/lib/
 
-
-    cmake -DROCR_INC_DIR=$ROCR_INC_DIR -DROCR_LIB_DIR=$ROCR_LIB_DIR ./ -B../build
+    cmake -DROCR_INC_DIR=$ROCR_INC_DIR -DROCR_LIB_DIR=$ROCR_LIB_DIR  -DROCBLAS_INC_DIR=$ROCBLAS_INC_DIR -DROCBLAS_LIB_DIR=$ROCBLAS_LIB_DIR -DHIP_INC_DIR=$HIP_INC_DIR ./ -B../build
     cd ../build
     make
 
