@@ -245,7 +245,6 @@ void rvs::actionbase::property_get_run_duration(int *error) {
   if (it != property.end()) {
     if (is_positive_integer(it->second)) {
       gst_run_duration_ms = std::stoul(it->second);
-      gst_run_count = 1;
       *error = 0;
     } else {
       *error = 1;
