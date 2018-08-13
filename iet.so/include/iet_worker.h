@@ -49,6 +49,13 @@ class IETWorker : public rvs::ThreadBase {
     //! returns action name
     const std::string& get_name(void) { return action_name; }
 
+    //! sets GPU's hwmon entry
+    void set_gpu_hwmon_entry(const std::string& _gpu_hwmon_entry) {
+        gpu_hwmon_entry = _gpu_hwmon_entry;
+    }
+    //! returns the GPU's hwmon entry
+    const std::string& get_gpu_hwmon_entry(void) { return gpu_hwmon_entry; }
+
     //! sets GPU ID
     void set_gpu_id(uint16_t _gpu_id) { gpu_id = _gpu_id; }
     //! returns GPU ID
@@ -134,6 +141,8 @@ class IETWorker : public rvs::ThreadBase {
  protected:
     //! name of the action
     std::string action_name;
+    //! GPU's hwmon entry
+    std::string gpu_hwmon_entry;
     //! index of the GPU that will run the EDPp test
     int gpu_device_index;
     //! ID of the GPU that will run the EDPp test
