@@ -62,12 +62,13 @@ performance and firmware problems.
 @subsubsection usg31a02 3.2.2 GPU Monitor – GM module
 The GPU monitor tool is capable of running on one, some or all of the GPU(s)
 installed and will report various information at regular intervals. The module
-can be configured to halt another RVS modules execution if one of the quantities exceeds a specified boundary value.
-
+can be configured to halt another RVS modules execution if one of the quantities
+exceeds a specified boundary value.
 @subsubsection usg31a03 3.2.3 PCI Express State Monitor  – PESM module
 The PCIe State Monitor tool is used to actively monitor the PCIe interconnect
 between the host platform and the GPU. The module will register a “listener” on
-a target GPU’s PCIe interconnect, and log a message whenever it detects a state change. The PESM will be able to detect the following state changes:
+a target GPU’s PCIe interconnect, and log a message whenever it detects a state
+change. The PESM will be able to detect the following state changes:
 
 1.	PCIe link speed changes
 2.	GPU power state changes
@@ -193,15 +194,13 @@ table below:\n
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>name</td><td>String</td><td>The name of the defined action.</td></tr>
-<tr><td>device</td><td>Collection of String</td><td>This is a list of device indexes
-(gpu ids), or the
-keyword “all”. The defined actions will be
-executed on the specified device, as long as
-the action targets a device specifically (some
-are platform actions). If an invalid device id
-value or no value is specified the tool will report that the device was not
-found and terminate execution, returning an
-error regarding the configuration file.</td></tr>
+<tr><td>device</td><td>Collection of String</td>
+<td>This is a list of device indexes (gpu ids), or the keyword “all”. The
+defined actions will be executed on the specified device, as long as the action
+targets a device specifically (some are platform actions). If an invalid device
+id value or no value is specified the tool will report that the device was not
+found and terminate execution, returning an error regarding the configuration
+file.</td></tr>
 
 <tr><td>deviceid</td><td>Integer</td><td>This is an optional parameter, but if
 specified it restricts the action to a specific device type
@@ -292,6 +291,216 @@ equivalent to specifying the -d 5 option.</td></tr>
 
 </table>
 
-@section usg4 4 RCQT Module
+@section usg4 4 GPUP Module
+The GPU properties module provides an interface to easily dump the static
+characteristics of a GPU. This information is stored in the sysfs file system
+for the kfd, with the following path:
+
+    /sys/class/kfd/kfd/topology/nodes/<node id>
+
+Each of the GPU nodes in the directory is identified with a number,
+indicating the device index of the GPU. This module will ignore count, duration
+or wait key values.
+
+@subsection usg41 4.1 Module Specific Keys
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>properties</td><td>Collection of Strings</td>
+<td>The properties key specifies what configuration property or properties the
+query is interested in. Possible values are:\n
+all - collect all settings\n
+gpu_id\n
+cpu_cores_count\n
+simd_count\n
+mem_banks_count\n
+caches_count\n
+io_links_count\n
+cpu_core_id_base\n
+simd_id_base\n
+max_waves_per_simd\n
+lds_size_in_kb\n
+gds_size_in_kb\n
+wave_front_size\n
+array_count\n
+simd_arrays_per_engine\n
+cu_per_simd_array\n
+simd_per_cu\n
+max_slots_scratch_cu\n
+vendor_id\n
+device_id\n
+location_id\n
+drm_render_minor\n
+max_engine_clk_fcompute\n
+local_mem_size\n
+fw_version\n
+capability\n
+max_engine_clk_ccompute\n
+</td></tr>
+<tr><td>io_links-properties</td><td>Collection of Strings</td>
+<td>The properties key specifies what configuration
+property or properties the query is interested in.
+Possible values are:\n
+all - collect all settings\n
+count - the number of io_links\n
+type\n
+version_major\n
+version_minor\n
+node_from\n
+node_to\n
+weight\n
+min_latency\n
+max_latency\n
+min_bandwidth\n
+max_bandwidth\n
+recommended_transfer_size\n
+flags\n
+</td></tr>
+</table>
+@subsection usg42 4.2 Output
+
+Module specific output keys are described in the table below:
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>properties-values</td><td>Collection of Integers</td>
+<td>The collection will contain a positive integer value for each of the valid
+properties specified in the properties config key.</td></tr>
+<tr><td>io_links-propertiesvalues</td><td>Collection of Integers</td>
+<td>The collection will contain a positive integer value for each of the valid
+properties specified in the io_links-properties config key.</td></tr>
+</table>
+Each of the settings specified has a positive integer value. For each
+setting requested in the properties key a message with the following format will
+be returned:
+
+    [RESULT][<timestamp>][<action name>] gpup <gpu id> <property> <property value>
+
+For each setting in the io_links-properties key a message with the following
+format will be returned:
+
+    [RESULT][<timestamp>][<action name>] gpup <gpu id> <io_link id> <property> <property value>
+
+@subsection usg43 4.3 Examples
+
+@section usg5 5 GM Module
+The GPU monitor module can be used monitor and characterize the response of a
+GPU to different levels of use. This module is intended to run concurrently with
+other actions, and provides a ‘start’ and ‘stop’ configuration key to start the
+monitoring and then stop it after testing has completed. The module can also be
+configured with bounding box values for interested GPU parameters. If any of the
+GPU’s parameters exceed the bounding values on a specific GPU an INFO warning
+message will be printed to stdout while the bounding value is still exceeded.
+
+@subsection usg51 5.1 Module Specific Keys
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>monitor</td><td>Bool</td>
+<td>If this this key is set to true, the GM module will start monitoring on
+specified devices. If this key is set to false, all other keys are ignored and
+monitoring of the specified device will be stopped.</td></tr>
+<tr><td>metrics</td>
+<td>Collection of Structures, specifying the metric, if there are bounds and the
+bound values. The structures have the following format:\n{String, Bool, Integer,
+Integer}</td>
+<td>The set of metrics to monitor during the monitoring period. Example values
+are:\n{‘temp’, ‘true’, max_temp, min_temp}\n {‘clock’, ‘false’, max_clock,
+min_clock}\n {‘mem_clock’, ‘true’, max_mem_clock, min_mem_clock}\n {‘fan’,
+‘true’, max_fan, min_fan}\n {‘power’, ‘true’, max_power, min_power}\n The set of
+upper bounds for each metric are specified as an integer. The units and values
+for each metric are:\n temp - degrees Celsius\n clock - MHz \n mem_clock - MHz
+\n fan - Integer between 0 and 255 \n power - Power in Watts</td></tr>
+<tr><td>sample_interval</td><td>Integer</td>
+<td>If this key is specified metrics will be sampled at the given rate. The
+units for the sample_interval are milliseconds. The default value is 1000.
+</td></tr>
+<tr><td>log_interval</td><td>Integer</td>
+<td>If this key is specified informational messages will be emitted at the given
+interval, providing the current values of all parameters specified. This
+parameter must be equal to or greater than the sample rate. If this value is not
+specified, no logging will occur.</td></tr>
+<tr><td>terminate</td><td>Bool</td> <td>If the terminate key is true the GM
+monitor will terminate the RVS process when a bounds violation is encountered on
+any of the metrics specified.</td></tr>
+</table>
+
+@subsection usg52 5.2 Output
+
+Module specific output keys are described in the table below:
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>metric_values</td><td>Time Series Collection of Result
+Integers</td><td>A collection of integers containing the result values for each
+of the metrics being monitored. </td></tr>
+<tr><td>metric_violations</td><td>Collection of Result Integers </td><td>A
+collection of integers containing the violation count for each of the metrics
+being monitored. </td></tr>
+<tr><td>metric_average</td><td>Collection of Result Integers </td><td></td></tr>
+</table>
+
+@subsection usg53 5.3 Examples
+
+@section usg6 6 PESM Module
+The PCIe State Monitor (PESM) tool is used to actively monitor the PCIe
+interconnect between the host platform and the GPU. The module registers
+“listener” on a target GPUs PCIe interconnect, and log a message whenever it
+detects a state change. The PESM is able to detect the following state changes:
+
+1. PCIe link speed changes
+2. GPU device power state changes
+
+This module is intended to run concurrently with other actions, and provides a
+‘start’ and ‘stop’ configuration key to start the monitoring and then stop it
+after testing has completed. For information on GPU power state monitoring
+please consult the 7.6. PCI Power Management Capability Structure, Gen 3 spec,
+page 601, device states D0-D3. For information on link status changes please
+consult the 7.8.8. Link Status Register (Offset 12h), Gen 3 spec, page 635.
+
+Monitoring is performed by polling respective PCIe registers roughly every 1ms
+(one millisecond).
+
+@subsection usg61 6.1 Module Specific Keys
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>monitor</td><td>Bool</td><td>This this key is set to true, the PESM
+module will start monitoring on specified devices. If this key is set to false,
+all other keys are ignored and monitoring will be stopped for all devices.</td>
+</tr> </table>
+
+@subsection usg62 6.2 Output
+
+Module specific output keys are described in the table below:
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>state</td><td>String</td><td>A string detailing the current power state
+of the GPU or the speed of the PCIe link.</td></tr>
+</table>
+
+When monitoring is started for a target GPU, a result message will be logged
+with the following format:
+
+    [RESULT][<timestamp>][<action name>] pesm <gpu id> started
+
+When monitoring is stopped for a target GPU, a result message will be logged
+with the following format:
+
+    [RESULT][<timestamp>][<action name>] pesm all stopped
+
+When monitoring is enabled, any detected state changes in link speed or GPU
+power state will generate the following informational messages:
+
+    [INFO ][<timestamp>][<action name>] pesm <gpu id> power state change <state>
+    [INFO ][<timestamp>][<action name>] pesm <gpu id> link speed change <state>
+
+@subsection usg63 6.3 Examples
+
+@section usg7 7 RCQT Module
+@section usg8 8 PEQT Module
+@section usg9 9 SMQT Module
+@section usg10 10 PQT Module
+@section usg11 11 PEBB Module
+@section usg12 12 GST Module
+@section usg13 13 IET Module
+
+
 
 
