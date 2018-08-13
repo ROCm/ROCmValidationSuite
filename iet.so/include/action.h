@@ -37,12 +37,23 @@ extern "C" {
 #include <string>
 #include <map>
 #include <utility>
+#include <memory>
 
 #include "rvsactionbase.h"
+#include "rocm_smi/rocm_smi.h"
 
 using std::vector;
 using std::string;
-using std::map;
+
+//! structure containing hwmon related info
+struct gpu_hwmon_info {
+    //! GPU device index (0.n)
+    int hip_gpu_deviceid;
+    //! real GPU ID (e.g.: 53645) as exported by kfd
+    uint16_t gpu_id;
+    //! gpu_hwmon_power_entry
+    std::string gpu_hwmon_power_entry;
+};
 
 /**
  * @class action
@@ -88,6 +99,10 @@ class action: public rvs::actionbase {
     //! GPU device type config key value
     uint16_t deviceid;
 
+    //! list of GPUs (along with some hwmon data) selected for EDPp test
+    std::vector<gpu_hwmon_info> edpp_gpus;
+    //! list of SMI monitor devices
+    std::vector<std::shared_ptr<amd::smi::Device>> monitor_devices;
     // configuration properties getters
 
     // IET specific config keys
@@ -102,11 +117,12 @@ class action: public rvs::actionbase {
     bool get_all_iet_config_keys(void);
     bool get_all_common_config_keys(void);
     const std::string get_irq(const std::string dev_path);
+    bool add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
+                              int32_t gpu_id, int hip_num_gpu_devices);
     int get_num_amd_gpu_devices(void);
     int get_all_selected_gpus(void);
 
-    bool do_edp_test(std::map<int,
-                     std::pair<uint16_t, string>> iet_gpus_device_index);
+    bool do_edp_test(void);
 };
 
 #endif  // IET_SO_INCLUDE_ACTION_H_

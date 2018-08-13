@@ -442,30 +442,28 @@ bool action::get_all_common_config_keys(void) {
 
 /**
  * @brief runs the edp test
- * @param iet_gpus_device_index <gpu_index, <gpu_id, hwmonpath>> map
  * @return true if no error occured, false otherwise
  */
-bool action::do_edp_test(
-            map<int, std::pair<uint16_t, string>> iet_gpus_device_index) {
+bool action::do_edp_test(void) {
     size_t k = 0;
     while (1) {
         unsigned int i = 0;
         if (gst_run_wait_ms != 0)  // delay iet execution
             sleep(gst_run_wait_ms);
 
-        vector<IETWorker> workers(iet_gpus_device_index.size());
+        vector<IETWorker> workers(edpp_gpus.size());
 
-        map<int, std::pair<uint16_t, string>>::iterator it;
+        vector<gpu_hwmon_info>::iterator it;
 
         // all worker instances have the same json settings
         IETWorker::set_use_json(bjson);
 
-        for (it = iet_gpus_device_index.begin();
-                it != iet_gpus_device_index.end(); ++it) {
+        for (it = edpp_gpus.begin(); it != edpp_gpus.end(); ++it) {
             // set worker thread params
             workers[i].set_name(action_name);
-            workers[i].set_gpu_id((it->second).first);
-            workers[i].set_gpu_device_index(it->first);
+            workers[i].set_gpu_id((*it).gpu_id);
+            workers[i].set_gpu_device_index((*it).hip_gpu_deviceid);
+            workers[i].set_gpu_hwmon_entry((*it).gpu_hwmon_power_entry);
             workers[i].set_run_wait_ms(gst_run_wait_ms);
             workers[i].set_run_duration_ms(gst_run_duration_ms);
             workers[i].set_ramp_interval(iet_ramp_interval);
@@ -479,14 +477,14 @@ bool action::do_edp_test(
         }
 
         if (gst_runs_parallel) {
-            for (i = 0; i < iet_gpus_device_index.size(); i++)
+            for (i = 0; i < edpp_gpus.size(); i++)
                 workers[i].start();
 
             // join threads
-            for (i = 0; i < iet_gpus_device_index.size(); i++)
+            for (i = 0; i < edpp_gpus.size(); i++)
                 workers[i].join();
         } else {
-            for (i = 0; i < iet_gpus_device_index.size(); i++) {
+            for (i = 0; i < edpp_gpus.size(); i++) {
                 workers[i].start();
                 workers[i].join();
             }
@@ -556,6 +554,65 @@ int action::get_num_amd_gpu_devices(void) {
 }
 
 /**
+ * @brief retrieves the hwmon path (and some other info) for the given GPU
+ * and adds it to the list of those that will run the EDPp test
+ * @param dev_location_id GPU device location ID
+ * @param gpu_irq GPU's IRQ
+ * @param gpu_id GPU's ID as exported by KFD
+ * @param hip_num_gpu_devices number of GPU devices (as reported by HIP API)
+ * @return true if all info could be retrieved and the gpu was successfully to
+ * the EDPp test list, false otherwise
+ */
+bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
+                                  int32_t gpu_id, int hip_num_gpu_devices) {
+    bool dev_index_found = false;
+
+    for (int i = 0; i < hip_num_gpu_devices; i++) {
+        // get GPU device properties
+        hipDeviceProp_t props;
+        hipGetDeviceProperties(&props, i);
+
+        // compute device location_id (needed to match this device
+        // with one of those found while querying the pci bus
+        uint16_t hip_dev_location_id =
+                ((((uint16_t) (props.pciBusID)) << 8) | (props.pciDeviceID));
+
+        if (hip_dev_location_id == dev_location_id) {
+            // now try finding the hwmon entry which is
+            // needed for the power related data
+            for (auto cgpu_dev : monitor_devices) {
+                // get irq of device
+                string irq = get_irq(cgpu_dev ->path());
+                if (irq != "" && gpu_irq == std::stoi(irq)) {
+                    // found the device
+                    string base_folder_hwmon = cgpu_dev->path() +
+                            "/" + SMI_DEVICE_FOLDER_BASE_NAME +
+                            "/" + HWMON_FOLDER_BASE_NAME;
+                    string cgpu_hwmon_power_entry =
+                        get_hwmon_entry(base_folder_hwmon);
+                    if (cgpu_hwmon_power_entry != "") {
+                        gpu_hwmon_info cgpu_info;
+                        cgpu_info.hip_gpu_deviceid = i;
+                        cgpu_info.gpu_id = gpu_id;
+                        cgpu_info.gpu_hwmon_power_entry =
+                            cgpu_hwmon_power_entry;
+                        edpp_gpus.push_back(cgpu_info);
+
+                        return true;
+                    }
+                    break;
+                }
+            }
+            if (dev_index_found)
+                break;
+        }
+    }
+
+    return false;
+}
+
+
+/**
  * @brief gets all selected GPUs and starts the worker threads
  * @return run result
  */
@@ -563,11 +620,9 @@ int action::get_all_selected_gpus(void) {
     string msg;
     bool amd_gpus_found = false;
     int hip_num_gpu_devices;
-    map<int, std::pair<uint16_t, string>> iet_gpus_device_index;
     struct pci_access *pacc;
     struct pci_dev *pci_cdev;
     amd::smi::RocmSMI hw;
-    std::vector<std::shared_ptr<amd::smi::Device>> monitor_devices;
 
     hip_num_gpu_devices = get_num_amd_gpu_devices();
     if (hip_num_gpu_devices == 0)
@@ -633,56 +688,17 @@ int action::get_all_selected_gpus(void) {
                     cur_gpu_selected = true;
             }
 
-            if (cur_gpu_selected) {
-                bool dev_index_found = false;
-                for (int i = 0; i < hip_num_gpu_devices; i++) {
-                    // get GPU device properties
-                    hipDeviceProp_t props;
-                    hipGetDeviceProperties(&props, i);
-
-                    // compute device location_id (needed to match this device
-                    // with one of those found while querying the pci bus
-                    uint16_t hip_dev_location_id =
-                        ((((uint16_t) (props.pciBusID)) << 8) |
-                                (props.pciDeviceID));
-
-                    if (hip_dev_location_id == dev_location_id) {
-                        // now try finding the hwmon entry which is
-                        // needed for the power related data
-                        for (auto cgpu_dev : monitor_devices) {
-                            // get irq of device
-                            string irq = get_irq(cgpu_dev ->path());
-                            if (irq != "" && pci_cdev->irq == std::stoi(irq)) {
-                                // found the device
-                                string base_folder_hwmon = cgpu_dev->path() +
-                                        "/" + SMI_DEVICE_FOLDER_BASE_NAME +
-                                        "/" + HWMON_FOLDER_BASE_NAME;
-                                string cgpu_hwmon_power_entry =
-                                    get_hwmon_entry(base_folder_hwmon);
-                                if (cgpu_hwmon_power_entry != "") {
-                                    std::pair<uint16_t, string> gpu_data =
-                                        std::make_pair(gpu_id,
-                                            cgpu_hwmon_power_entry);
-                                    iet_gpus_device_index.insert(
-                                        std::make_pair(i, gpu_data));
-                                    amd_gpus_found = true;
-                                    dev_index_found = true;
-                                }
-                                break;
-                            }
-                        }
-                        if (dev_index_found)
-                            break;
-                    }
-                }
-            }
+            if (cur_gpu_selected)
+                if (add_gpu_to_edpp_list(dev_location_id, pci_cdev->irq,
+                    gpu_id, hip_num_gpu_devices))
+                    amd_gpus_found = true;
         }
     }
 
     pci_cleanup(pacc);
 
     if (amd_gpus_found) {
-        if (do_edp_test(iet_gpus_device_index))
+        if (do_edp_test())
             return 0;
         return -1;
     }
