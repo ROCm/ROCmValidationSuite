@@ -101,6 +101,8 @@ class action: public rvs::actionbase {
 
     bool get_all_iet_config_keys(void);
     bool get_all_common_config_keys(void);
+    const std::string get_irq(const std::string dev_path);
+    int get_num_amd_gpu_devices(void);
     int get_all_selected_gpus(void);
 
     bool do_edp_test(std::map<int,
