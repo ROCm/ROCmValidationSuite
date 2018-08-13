@@ -100,7 +100,7 @@ using std::fstream;
  * @param d represent device
  * @param p pointer
  * @return true if dev connected to monitor, false otherwise
- */ 
+ */
 static bool smi_get_gpu_devices_list(
                 const std::shared_ptr<amd::smi::Device> &d, void *p) {
   std::string val_str;
@@ -120,7 +120,7 @@ static bool smi_get_gpu_devices_list(
  * @param d represent device
  * @param p pointer
  * @return true if dev connected to monitor, false otherwise
- */ 
+ */
 static string get_hwmon_entry(const std::string &path) {
     DIR *dirp;
     struct dirent *dir;
@@ -502,19 +502,32 @@ bool action::do_edp_test(
 }
 
 /**
- * @brief gets all selected GPUs and starts the worker threads
- * @return run result
+ * @brief gets irq value for device
+ * @param dev_path represents path of device
+ * @return irq value
  */
-int action::get_all_selected_gpus(void) {
-    string msg;
-    bool amd_gpus_found = false;
-    int hip_num_gpu_devices;
-    map<int, std::pair<uint16_t, string>> iet_gpus_device_index;
-    struct pci_access *pacc;
-    struct pci_dev *pci_cdev;
-    amd::smi::RocmSMI hw;
-    std::vector<std::shared_ptr<amd::smi::Device>> monitor_devices;
+const std::string action::get_irq(const std::string dev_path) {
+    std::ifstream f_id;
+    char path[IRQ_PATH_MAX_LENGTH];
+    string irq = "";
 
+    snprintf(path, IRQ_PATH_MAX_LENGTH, "%s/device/irq", dev_path.c_str());
+    f_id.open(path);
+
+    if (f_id.is_open()) {
+        f_id >> irq;
+        f_id.close();
+    }
+    return irq;
+}
+
+/**
+ * @brief gets the number of ROCm compatible AMD GPUs
+ * @return run number of GPUs
+ */
+int action::get_num_amd_gpu_devices(void) {
+    int hip_num_gpu_devices;
+    string msg;
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
         msg = action_name + " " + MODULE_NAME + " " + IET_NO_COMPATIBLE_GPUS;
@@ -539,6 +552,26 @@ int action::get_all_selected_gpus(void) {
         }
         return 0;
     }
+    return hip_num_gpu_devices;
+}
+
+/**
+ * @brief gets all selected GPUs and starts the worker threads
+ * @return run result
+ */
+int action::get_all_selected_gpus(void) {
+    string msg;
+    bool amd_gpus_found = false;
+    int hip_num_gpu_devices;
+    map<int, std::pair<uint16_t, string>> iet_gpus_device_index;
+    struct pci_access *pacc;
+    struct pci_dev *pci_cdev;
+    amd::smi::RocmSMI hw;
+    std::vector<std::shared_ptr<amd::smi::Device>> monitor_devices;
+
+    hip_num_gpu_devices = get_num_amd_gpu_devices();
+    if (hip_num_gpu_devices == 0)
+        return 0;  // no AMD compatible GPU found!
 
     // get GPU devices via smi lib
     hw.DiscoverDevices();
@@ -553,7 +586,7 @@ int action::get_all_selected_gpus(void) {
         msg = action_name + " " + MODULE_NAME + " " + PCI_ALLOC_ERROR;
         log(msg.c_str(), rvs::logerror);
 
-        return -1;  // PCIe qualification check cannot continue
+        return -1;  // EDPp test cannot continue
     }
 
     // initialize the PCI library
@@ -574,87 +607,72 @@ int action::get_all_selected_gpus(void) {
 
         // check if this pci_dev corresponds to one of the AMD GPUs
         int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+        if (gpu_id == -1)
+            continue;
 
-        if (-1 != gpu_id) {
-            // that should be an AMD GPU
-
-            // check for deviceid filtering
-            if (!device_id_filtering
-                    || (device_id_filtering &&
+        // that should be an AMD GPU
+        // check for deviceid filtering
+        if (!device_id_filtering || (device_id_filtering &&
                         pci_cdev->device_id == deviceid)) {
-                // check if the GPU is part of the PCIe check
-                // (either device: all or the gpu_id is in
-                // the device: <gpu id> list
+            // check if the GPU is part of the EDPp test  (either <device>: all
+            // or the gpu_id is in the device: <gpu id> list)
 
-                bool cur_gpu_selected = false;
+            bool cur_gpu_selected = false;
 
-                if (device_all_selected) {
+            if (device_all_selected) {
+                cur_gpu_selected = true;
+            } else {
+                // search for this gpu in the list
+                // provided under the <device> property
+                vector<string>::iterator it_gpu_id = find(
+                    device_prop_gpu_id_list.begin(),
+                    device_prop_gpu_id_list.end(),
+                    std::to_string(gpu_id));
+
+                if (it_gpu_id != device_prop_gpu_id_list.end())
                     cur_gpu_selected = true;
-                } else {
-                    // search for this gpu in the list
-                    // provided under the <device> property
-                    vector<string>::iterator it_gpu_id = find(
-                            device_prop_gpu_id_list.begin(),
-                            device_prop_gpu_id_list.end(),
-                            std::to_string(gpu_id));
+            }
 
-                    if (it_gpu_id != device_prop_gpu_id_list.end())
-                        cur_gpu_selected = true;
-                }
+            if (cur_gpu_selected) {
+                bool dev_index_found = false;
+                for (int i = 0; i < hip_num_gpu_devices; i++) {
+                    // get GPU device properties
+                    hipDeviceProp_t props;
+                    hipGetDeviceProperties(&props, i);
 
-                if (cur_gpu_selected) {
-                    bool dev_index_found = false;
-                    for (int i = 0; i < hip_num_gpu_devices; i++) {
-                        // get GPU device properties
-                        hipDeviceProp_t props;
-                        hipGetDeviceProperties(&props, i);
-
-                        // compute device location_id (needed to match this
-                        // device with one of those found while querying
-                        // the pci bus
-                        unsigned int hip_dev_location_id =
-                            ((((unsigned int) (props.pciBusID)) << 8) |
+                    // compute device location_id (needed to match this device
+                    // with one of those found while querying the pci bus
+                    uint16_t hip_dev_location_id =
+                        ((((uint16_t) (props.pciBusID)) << 8) |
                                 (props.pciDeviceID));
-                        if (hip_dev_location_id == dev_location_id) {
-                            // now try finding the hwmon entry which is
-                            // needed for the power related data
-                            for (auto cgpu_dev : monitor_devices) {
-                                // get irq of device
-                                char path[IRQ_PATH_MAX_LENGTH];
-                                string irq;
-                                snprintf(path, IRQ_PATH_MAX_LENGTH,
-                                         "%s/device/irq",
-                                            (cgpu_dev ->path()).c_str());
-                                std::ifstream f_id;
-                                f_id.open(path);
-                                if (f_id.is_open()) {
-                                    f_id >> irq;
-                                    f_id.close();
-                                    if (pci_cdev->irq == std::stoi(irq)) {
-                                        // found the device
-                                        string base_folder_hwmon =
-                                                cgpu_dev->path() + "/" +
-                                                SMI_DEVICE_FOLDER_BASE_NAME +
-                                                "/" + HWMON_FOLDER_BASE_NAME;
-                                        string cgpu_hwmon_power_entry =
-                                            get_hwmon_entry(base_folder_hwmon);
-                                        if (cgpu_hwmon_power_entry != "") {
-                                            std::pair<uint16_t, string>
-                                                gpu_data_id =
-                                                    std::make_pair(gpu_id,
-                                                        cgpu_hwmon_power_entry);
-                                            iet_gpus_device_index.insert(
-                                                std::make_pair(i, gpu_data_id));
-                                            amd_gpus_found = true;
-                                            dev_index_found = true;
-                                        }
-                                        break;
-                                    }
+
+                    if (hip_dev_location_id == dev_location_id) {
+                        // now try finding the hwmon entry which is
+                        // needed for the power related data
+                        for (auto cgpu_dev : monitor_devices) {
+                            // get irq of device
+                            string irq = get_irq(cgpu_dev ->path());
+                            if (irq != "" && pci_cdev->irq == std::stoi(irq)) {
+                                // found the device
+                                string base_folder_hwmon = cgpu_dev->path() +
+                                        "/" + SMI_DEVICE_FOLDER_BASE_NAME +
+                                        "/" + HWMON_FOLDER_BASE_NAME;
+                                string cgpu_hwmon_power_entry =
+                                    get_hwmon_entry(base_folder_hwmon);
+                                if (cgpu_hwmon_power_entry != "") {
+                                    std::pair<uint16_t, string> gpu_data =
+                                        std::make_pair(gpu_id,
+                                            cgpu_hwmon_power_entry);
+                                    iet_gpus_device_index.insert(
+                                        std::make_pair(i, gpu_data));
+                                    amd_gpus_found = true;
+                                    dev_index_found = true;
                                 }
-                            }
-                            if (dev_index_found)
                                 break;
+                            }
                         }
+                        if (dev_index_found)
+                            break;
                     }
                 }
             }
@@ -671,7 +689,6 @@ int action::get_all_selected_gpus(void) {
 
     return 0;
 }
-
 
 /**
  * @brief runs the whole IET logic
