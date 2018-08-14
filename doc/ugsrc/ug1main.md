@@ -30,7 +30,7 @@ and follow instructions in README file.
 Please download `rocm-validation-suite-$(RVSVER).deb` or `.rpt` file from AMD
 site. Install package using your favorite package manager.
 
-RVS components will be installed in `/opt/rocm/rvs`. Package contains:
+RVS components is installed in `/opt/rocm/rvs`. Package contains:
 - executable modules
 - user guide (located in in _install-base_/userguide/html)
 - man page (located in _install-base_/man)
@@ -68,7 +68,7 @@ exceeds a specified boundary value.
 The PCIe State Monitor tool is used to actively monitor the PCIe interconnect
 between the host platform and the GPU. The module will register a “listener” on
 a target GPU’s PCIe interconnect, and log a message whenever it detects a state
-change. The PESM will be able to detect the following state changes:
+change. The PESM is able to detect the following state changes:
 
 1.	PCIe link speed changes
 2.	GPU power state changes
@@ -89,7 +89,7 @@ qualification steps include checking:
 
 @subsubsection usg31a05 3.2.5 PCI Express Qualification Tool – PEQT module
 The PCIe Qualification Tool consists is used to qualify the PCIe bus on which
-the GPU is connected. The qualification test will be capable of determining the
+the GPU is connected. The qualification test is capable of determining the
 following characteristics of the PCIe bus interconnect to a GPU:
 
 1.	Support for Gen 3 atomic completers
@@ -152,7 +152,7 @@ expected results of a test, benchmark or configuration check.
 
 The configuration
 file used for an execution is specified using the `--config` option. The default
-configuration file used for a run will be `rvs.conf`, which will include default
+configuration file used for a run is `rvs.conf`, which will include default
 values for all defined tests, benchmarks and configurations checks, as well as
 device specific configuration values. The format of the configuration files
 determines the order in which actions are executed, and can provide the number
@@ -213,7 +213,7 @@ specified the default value is false.</td></tr>
 
 <tr><td>count</td><td>Integer</td><td>This specifies number of times to execute
 the action. If the value is 0, execution will continue indefinitely. If a value
-isn’t specified the default will be 1. Some modules will ignore this
+isn’t specified the default is 1. Some modules will ignore this
 parameter.</td></tr>
 
 <tr><td>wait</td><td>Integer</td><td>This indicates how long the test should wait
@@ -437,6 +437,40 @@ being monitored. </td></tr>
 <tr><td>metric_average</td><td>Collection of Result Integers </td><td></td></tr>
 </table>
 
+When monitoring is started for a target GPU, a result message is logged
+with the following format:
+
+    [RESULT][<timestamp>][<action name>] gm <gpu id> started
+
+In addition, an informational message is provided for each for each metric
+being monitored:
+
+    [INFO ][<timestamp>][<action name>] gm <gpu id> monitoring < metric> bounds min:<min_metric> max: <max_metric>
+
+During the monitoring informational output regarding the metrics of the GPU will
+be sampled at every interval specified by the sample_rate key. If a bounding box
+violation is discovered during a sampling interval, a warning message is
+logged with the following format:
+
+    [INFO ][<timestamp>][<action name>] gm <gpu id> < metric> bounds violation <metric value>
+
+If the log_interval value is set an information message for each metric is
+logged at every interval using the following format:
+
+    [INFO ][<timestamp>][<action name>] gm <gpu id> < metric> <metric_value>
+
+When monitoring is stopped for a target GPU, a result message is logged
+with the following format:
+
+    [RESULT][<timestamp>][<action name>] gm <gpu id> gm stopped
+
+The following messages, reporting the number of metric violations that were
+sampled over the duration of the monitoring and the average metric value is
+reported:
+
+    [RESULT][<timestamp>][<action name>] gm <gpu id> <metric> violations <metric_violations>
+    [RESULT][<timestamp>][<action name>] gm <gpu id> <metric> average <metric_average>
+
 @subsection usg53 5.3 Examples
 
 @section usg6 6 PESM Module
@@ -475,12 +509,12 @@ Module specific output keys are described in the table below:
 of the GPU or the speed of the PCIe link.</td></tr>
 </table>
 
-When monitoring is started for a target GPU, a result message will be logged
+When monitoring is started for a target GPU, a result message is logged
 with the following format:
 
     [RESULT][<timestamp>][<action name>] pesm <gpu id> started
 
-When monitoring is stopped for a target GPU, a result message will be logged
+When monitoring is stopped for a target GPU, a result message is logged
 with the following format:
 
     [RESULT][<timestamp>][<action name>] pesm all stopped
@@ -494,12 +528,197 @@ power state will generate the following informational messages:
 @subsection usg63 6.3 Examples
 
 @section usg7 7 RCQT Module
+
 @section usg8 8 PEQT Module
+PCI Express Qualification Tool module targets and qualifies the configuration of
+the platforms PCIe connections to the GPUs. The purpose of the PEQT module is to
+provide an extensible, OS independent and scriptable interface capable of
+performing the PCIe interconnect configuration checks required for ROCm support
+of GPUs. This information can be obtained through the sysfs PCIe interface or by
+using the PCIe development libraries to extract values from various PCIe
+control, status and capabilities registers. These registers are specified in the
+PCI Express Base Specification, Revision 3. Iteration keys, i.e. count, wait and
+duration will be ignored for actions using the PEQT module.
+
+@subsection usg81 8.1 Module Specific Keys
+Module specific output keys are described in the table below:
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>capability</td><td>Collection of Structures with the
+following format:\n{String,String}</td>
+<td>The PCIe capability key contains a collection of structures that specify
+which PCIe capability to check and the expected value of the capability. A check
+structure must contain the PCIe capability value, but an expected value may be
+omitted. The value of all valid capabilities that are a part of this collection
+will be entered into the capability_value field. Possible capabilities, and
+their value types are:\n\n
+link_cap_max_speed\n
+link_cap_max_width\n
+link_stat_cur_speed\n
+link_stat_neg_width\n
+slot_pwr_limit_value\n
+slot_physical_num\n
+atomic_op_32_completer\n
+atomic_op_64_completer\n
+atomic_op_128_CAS_completer\n
+atomic_op_routing\n
+dev_serial_num\n
+kernel_driver\n
+pwr_base_pwr\n
+pwr_rail_type\n
+device_id\n
+vendor_id\n\n
+
+The expected value String is a regular expression that is used to check the
+actual value of the capability.
+
+</td></tr>
+</table>
+
+@subsection usg82 8.2 Output
+Module specific output keys are described in the table below:
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>capability_value</td><td>Collection of Strings</td>
+<td>For each of the capabilities specified in the capability key, the actual
+value of the capability will be returned, represented as a String.</td></tr>
+<tr><td>pass</td><td>String</td> <td>'true' if all of the properties match the
+values given, 'false' otherwise.</td></tr>
+</table>
+
+The qualification check queries the specified PCIe capabilities and
+properties and checks that their actual values satisfy the regular expression
+provided in the ‘expected value’ field for that capability. The pass output key
+will be true and the test will pass if all of the properties match the values
+given. After the check is finished, the following informational messages will be
+generated:
+
+    [INFO  ][<timestamp>][<action name>] peqt <capability> <capability_value>
+    [RESULT][<timestamp>][<action name>] peqt <pass>
+
+For details regarding each of the capabilities and current values consult the
+chapters in the PCI Express Base Specification, Revision 3.
+
+@subsection usg83 8.3 Examples
+
 @section usg9 9 SMQT Module
+The GPU SBIOS mapping qualification tool is designed to verify that a platform’s
+SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct
+products for ROCm support. These are the current BAR requirements:\n\n
+
+BAR 1: GPU Frame Buffer BAR – In this example it happens to be 256M, but
+typically this will be size of the GPU memory (typically 4GB+). This BAR has to
+be placed < 2^40 to allow peer- to-peer access from other GFX8 AMD GPUs. For
+GFX9 (Vega GPU) the BAR has to be placed < 2^44 to allow peer-to-peer access
+from other GFX9 AMD GPUs.\n\n
+
+BAR 2: Doorbell BAR – The size of the BAR is typically will be < 10MB (currently
+fixed at 2MB) for this generation GPUs. This BAR has to be placed < 2^40 to
+allow peer-to-peer access from other current generation AMD GPUs.\n\n
+BAR 3: IO BAR - This is for legacy VGA and boot device support, but since this
+the GPUs in this project are not VGA devices (headless), this is not a concern
+even if the SBIOS does not setup.\n\n
+
+BAR 4: MMIO BAR – This is required for the AMD Driver SW to access the
+configuration registers. Since the reminder of the BAR available is only 1 DWORD
+(32bit), this is placed < 4GB. This is fixed at 256KB.\n\n
+
+BAR 5: Expansion ROM – This is required for the AMD Driver SW to access the
+GPU’s video-BIOS. This is currently fixed at 128KB.\n\n
+
+Refer to the ROCm Use of Advanced PCIe Features and Overview of How BAR Memory
+is Used In ROCm Enabled System web page for more information about how BAR
+memory is initialized by VDI and Radeon products. Iteration keys, i.e. count,
+wait and duration will be ignored.
+
+@subsection usg91 9.1 Module Specific Keys
+
+Module specific output keys are described in the table below:
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>bar1_req_size</td><td>Integer</td>
+<td>This is an integer specifying the required size of the BAR1 frame buffer
+region.</td></tr>
+<tr><td>bar1_base_addr_min</td><td>Integer</td>
+<td>This is an integer specifying the minimum value the BAR1 base address can
+be.</td></tr>
+<tr><td>bar1_base_addr_max</td><td>Integer</td>
+<td>This is an integer specifying the maximum value the BAR1 base address can
+be.</td></tr>
+<tr><td>bar2_req_size</td><td>Integer</td>
+<td>This is an integer specifying the required size of the BAR2 frame buffer
+region.</td></tr>
+<tr><td>bar2_base_addr_min</td><td>Integer</td>
+<td>This is an integer specifying the minimum value the BAR2 base address can
+be.</td></tr>
+<tr><td>bar2_base_addr_max</td><td>Integer</td>
+<td>This is an integer specifying the maximum value the BAR2 base address can
+be.</td></tr>
+<tr><td>bar4_req_size</td><td>Integer</td>
+<td>This is an integer specifying the required size of the BAR4 frame buffer
+region.</td></tr>
+<tr><td>bar4_base_addr_min</td><td>Integer</td>
+<td>This is an integer specifying the minimum value the BAR4 base address can
+be.</td></tr>
+<tr><td>bar4_base_addr_max</td><td>Integer</td>
+<td>This is an integer specifying the maximum value the BAR4 base address can
+be.</td></tr>
+<tr><td>bar5_req_size</td><td>Integer</td>
+<td>This is an integer specifying the required size of the BAR5 frame buffer
+region.</td></tr>
+</table>
+
+@subsection usg92 9.2 Output
+Module specific output keys are described in the table below:
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>bar1_size</td><td>Integer</td><td>The actual size of BAR1.</td></tr>
+<tr><td>bar1_base_addr</td><td>Integer</td><td>The actual base address of BAR1 memory.</td></tr>
+<tr><td>bar2_size</td><td>Integer</td><td>The actual size of BAR2.</td></tr>
+<tr><td>bar2_base_addr</td><td>Integer</td><td>The actual base address of BAR2 memory.</td></tr>
+<tr><td>bar4_size</td><td>Integer</td><td>The actual size of BAR4.</td></tr>
+<tr><td>bar4_base_addr</td><td>Integer</td><td>The actual base address of BAR4 memory.</td></tr>
+<tr><td>bar5_size</td><td>Integer</td><td>The actual size of BAR5.</td></tr>
+<tr><td>pass</td><td>String</td> <td>'true' if all of the properties match the
+values given, 'false' otherwise.</td></tr>
+</table>
+
+The qualification check will query the specified bar properties and check that
+they satisfy the give parameters. The pass output key will be true and the test
+will pass if all of the BAR properties satisfy the constraints. After the check
+is finished, the following informational messages will be generated:
+
+    [INFO  ][<timestamp>][<action name>] smqt bar1_size <bar1_size>
+    [INFO  ][<timestamp>][<action name>] smqt bar1_base_addr <bar1_base_addr>
+    [INFO  ][<timestamp>][<action name>] smqt bar2_size <bar2_size>
+    [INFO  ][<timestamp>][<action name>] smqt bar2_base_addr <bar2_base_addr>
+    [INFO  ][<timestamp>][<action name>] smqt bar4_size <bar4_size>
+    [INFO  ][<timestamp>][<action name>] smqt bar4_base_addr <bar4_base_addr>
+    [INFO  ][<timestamp>][<action name>] smqt bar5_size <bar5_size>
+    [RESULT][<timestamp>][<action name>] smqt <pass>
+
+
+@subsection usg93 9.3 Examples
+
 @section usg10 10 PQT Module
+@subsection usg101 10.1 Module Specific Keys
+@subsection usg102 10.2 Output
+@subsection usg103 10.3 Examples
+
 @section usg11 11 PEBB Module
+@subsection usg111 11.1 Module Specific Keys
+@subsection usg112 11.2 Output
+@subsection usg113 11.3 Examples
+
 @section usg12 12 GST Module
+@subsection usg121 12.1 Module Specific Keys
+@subsection usg122 12.2 Output
+@subsection usg123 12.3 Examples
+
 @section usg13 13 IET Module
+@subsection usg131 13.1 Module Specific Keys
+@subsection usg132 13.2 Output
+@subsection usg133 13.3 Examples
 
 
 
