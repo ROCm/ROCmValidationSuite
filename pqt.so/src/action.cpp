@@ -471,6 +471,9 @@ int pqtaction::run() {
  *
  * */
 int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
+  if (Src == Dst) {
+    return 0;
+  }
   return 2;
 }
 
