@@ -701,13 +701,145 @@ is finished, the following informational messages will be generated:
 @subsection usg93 9.3 Examples
 
 @section usg10 10 PQT Module
+The P2P Qualification Tool is designed to provide the list of all GPUs that
+support P2P and characterize the P2P links between peers. In addition to testing
+for P2P compatibility, this test will perform a peer-to-peer throughput test
+between all unique P2P pairs for performance evaluation. These are known as
+device-to-device transfers, and can be either uni-directional or bi-directional.
+The average bandwidth obtained is reported to help debug low bandwidth issues.
+
 @subsection usg101 10.1 Module Specific Keys
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>peers</td><td>Collection of Strings</td>
+<td>This is a required key, and specifies the set of GPU(s) considered being
+peers of the GPU specified in the action. If ‘all’ is specified, all other
+GPU(s) on the system will be considered peers. Otherwise only the GPU ids
+specified in the list will be considered.</td></tr>
+<tr><td>peer_deviceid</td><td>Integer</td>
+<td>This is an optional parameter, but if specified it restricts the peers list
+to a specific device type corresponding to the deviceid.</td></tr>
+<tr><td>test_bandwidth</td><td>Bool</td>
+<td>If this key is set to true the P2P bandwidth benchmark will run if a pair of
+devices pass the P2P check.</td></tr>
+<tr><td>bidirectional</td><td>Bool</td>
+<td>This option is only used if test_bandwidth key is true. This specifies the
+type of transfer to run:\n
+true – Do a bidirectional transfer test\n
+false – Do a unidirectional transfer test
+from the agent to its peers.
+</td></tr>
+<tr><td>parallel</td><td>Bool</td>
+<td>This option is only used if the test_bandwith
+key is true.\n
+true – Run transfer testing to all peers
+in parallel.\n
+false – Run transfer testing to a single
+peer at a time.
+</td></tr>
+<tr><td>duration</td><td>Integer</td>
+<td>This option is only used if test_bandwidth is true. This key specifies the
+duration a transfer test should run, given in milliseconds. If this key is not
+specified, the default value is 10000 (10 seconds).
+</td></tr>
+<tr><td>log_interval</td><td>Integer</td>
+<td>This option is only used if test_bandwidth is true. This is a positive
+integer, given in milliseconds, that specifies an interval over which the moving
+average of the bandwidth will be calculated and logged. The default value is
+1000 (1 second). It must be smaller than the duration key.</td></tr>
+</table>
+
 @subsection usg102 10.2 Output
+
+Module specific output keys are described in the table below:
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>p2p_result</td><td>Collection of Result Bools</td>
+<td>Indicates if the gpu and the specified peer have P2P capabilities. If this
+quantity is true, the GPU pair tested has p2p capabilities. If false, they are
+not peers.</td></tr>
+<tr><td>interval_bandwidth</td><td>Collection of Time Series Floats</td>
+<td>The average bandwidth of a p2p transfer, during the log_interval time
+period. </td></tr>
+<tr><td>bandwidth</td><td>Collection of Floats</td>
+<td>The average bandwidth of a p2p transfer, averaged over the entire test
+duration of the interval.</td></tr>
+</table>
+
+If the value of test_bandwidth key is false, the tool will only try to determine
+if the GPU(s) in the peers key are P2P to the action’s GPU. In this case the
+bidirectional and log_interval values will be ignored, if they are specified. If
+a gpu is a P2P peer to the device the test will pass, otherwise it will fail. A
+message indicating the result will be provided for each GPUs specified. It will
+have the following format:
+
+    [RESULT][<timestamp>][<action name>] p2p <gpu id> <peer gpu id> <p2p_result>
+
+If the value of test_bandwidth is true bandwidth testing between the device and
+each of its peers will take place in parallel or in sequence, depending on the
+value of the parallel flag. During the duration of bandwidth benchmarking,
+informational output providing the moving average of the transfer’s bandwidth
+will be calculated and logged at every time increment specified by the
+log_interval parameter. The messages will have the following output:
+
+    [INFO  ][<timestamp>][<action name>] p2p-bandwidth <gpu id> <peer gpu id> bidirectional: <bidirectional> <interval_bandwidth >
+
+At the end of the test the average bytes/second will be calculated over the
+entire test duration, and will be logged as a result:
+
+    [RESULT][<timestamp>][<action name>] p2p-bandwidth <gpu id> <peer gpu id> bidirectional: <bidirectional> <bandwidth > <duration>
+
 @subsection usg103 10.3 Examples
 
 @section usg11 11 PEBB Module
+The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
+transfers between system memory and a target GPU card’s memory. These are known
+as host-to-device or device- to-host transfers, and can be either unidirectional
+or bidirectional transfers. The maximum bandwidth obtained is reported.
+
 @subsection usg111 11.1 Module Specific Keys
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>host_to_device</td><td>Bool</td>
+<td>This key indicates if host to device transfers
+will be considered. The default value is true.</td></tr>
+<tr><td>device_to_host</td><td>Bool</td>
+<td>This key indicates if device to host transfers
+will be considered. The default value is true.
+</td></tr>
+<tr><td>log_interval</td><td>Integer</td>
+<td>This is a positive integer, given in milliseconds, that specifies an
+interval over which the moving average of the bandwidth will be calculated and
+logged.</td></tr>
+</table>
+
 @subsection usg112 11.2 Output
+
+Module specific output keys are described in the table below:
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>interval_bandwidth</td><td>Collection of Time Series Floats</td>
+<td>The average bandwidth of a transfer, during the log_interval time
+period. </td></tr>
+<tr><td>bandwidth</td><td>Collection of Floats</td>
+<td>The average bandwidth of a transfer, averaged over the entire test
+duration of the interval.</td></tr>
+</table>
+
+During the execution of the benchmark, informational output providing the moving
+average of the bandwidth of the transfer will be calculated and logged. This
+interval is provided by the log_interval parameter and will have the following
+output format:
+
+    [INFO ][<timestamp>][<action name>] pcie-bandwidth <gpu id> h2d: <host_to_device> d2h: <device_to_host> <interval_bandwidth >
+
+At the end of the test the average bytes/second will be calculated over the
+entire test duration, and will be logged as a result:
+
+    [RESULT][<timestamp>][<action name>] pcie-bandwidth <gpu id> h2d: <host_to_device> d2h: <device_to_host> < bandwidth > <duration>
+
+
 @subsection usg113 11.3 Examples
 
 @section usg12 12 GST Module
