@@ -50,6 +50,9 @@ extern "C" {
 #define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
 #define DEFAULT_LOG_INTERVAL 500
 
+#define MODULE_NAME "rcqt"
+#define JSON_CREATE_NODE_ERROR "JSON cannot create node"
+
 using std::cerr;
 using std::string;
 using std::vector;
@@ -375,7 +378,11 @@ int pqtaction::create_threads() {
             + std::to_string(gpu_id[i]) + " "
             + std::to_string(gpu_id[j]) + " true";
         rvs::lp::Log(msg, rvs::logresults);
-
+        if (bjson) {
+          rvs::lp::AddString(json_rcqt_node, "p2p", msg);
+          rvs::lp::LogRecordFlush(json_rcqt_node);
+        }
+        
         // GPUs are peers, create transaction for them
         int srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
         if (srcnode < 0) {
@@ -438,14 +445,32 @@ int pqtaction::destroy_threads() {
  * */
 int pqtaction::run() {
   int sts;
+  string msg;
 
   if (!get_all_common_config_keys())
     return -1;
   if (!get_all_pqt_config_keys())
     return -1;
 
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end()) {
+    unsigned int sec;
+    unsigned int usec;
+    rvs::lp::get_ticks(sec, usec);
+    bjson = true;
+    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::loginfo, sec, usec);
+    if (json_rcqt_node == NULL) {
+      // log the error
+      msg =
+      action_name + " " + MODULE_NAME + " "
+      + JSON_CREATE_NODE_ERROR;
+      log(msg.c_str(), rvs::logerror);
+    }
+  }
+  
   sts = create_threads();
-  return sts;
+//   return sts;
 
   if (sts)
     return sts;
@@ -629,6 +654,10 @@ int pqtaction::print_final_average() {
            "  duration: " + std::to_string(duration) + " ms";
 
     rvs::lp::Log(msg, rvs::logresults);
+    if (bjson) {
+      rvs::lp::AddString(json_rcqt_node, "p2p bandiwdth", msg);
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }    
     sleep(1);
   }
 
