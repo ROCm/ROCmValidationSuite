@@ -471,10 +471,14 @@ int pqtaction::run() {
  *
  * */
 int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
+  //! ptr to RVS HSA singleton wrapper
+  rvs::hsa* pHsa;
+  
   if (Src == Dst) {
     return 0;
   }
-  return 2;
+  pHsa = rvs::hsa::Get();
+  return pHsa->rvs::hsa::GetPeerStatus(Src, Dst);
 }
 
 /**
