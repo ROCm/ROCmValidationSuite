@@ -87,7 +87,6 @@ add_subdirectory(iet.so)
 
 #add_dependencies(rvs yaml-cpp)
 
-
 add_custom_target(doc ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

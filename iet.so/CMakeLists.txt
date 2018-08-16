@@ -75,8 +75,6 @@ set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "hip_hcc")
 set(ROCM_SMI_LIB "rocm_smi64")
 
-set(ROCM_SMI_INC_DIR "../rocm_smi_lib/include")
-set(ROCM_SMI_LIB_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../rocm_smi_lib")
 
 # Determine Roc Runtime header files are accessible
 if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime.h)
@@ -111,7 +109,7 @@ if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
 endif()
 
 # Add directories to look for header files to compile
-INCLUDE_DIRECTORIES(${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${ROCM_SMI_INC_DIR})
+INCLUDE_DIRECTORIES(${ROCM_SMI_INC_DIR} ${ROCBLAS_INC_DIR} ${ROCR_INC_DIR} ${HIP_INC_DIR})
 
 # Add directories to look for library files to link 
 LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
@@ -122,9 +120,8 @@ set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 ## define include directories
 include_directories(include ../include)
 
-
 set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
-  src/rvs_module.cpp src/action.cpp src/iet_worker.cpp)
+  src/rvs_module.cpp src/action.cpp src/iet_worker.cpp src/hwmon_util.cpp ../src/rvs_blas.cpp src/blas_worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
