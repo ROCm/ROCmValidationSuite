@@ -137,6 +137,8 @@ class IETWorker : public rvs::ThreadBase {
 
  protected:
     virtual void run(void);
+    bool do_gpu_init_training(int *error, std::string *err_description);
+    bool do_iet_ramp(int *error, std::string *err_description);
 
  protected:
     //! name of the action

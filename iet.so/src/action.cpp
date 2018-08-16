@@ -48,6 +48,7 @@ extern "C" {
 #include "hip/hip_runtime_api.h"
 
 #include "iet_worker.h"
+#include "blas_worker.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvs_module.h"
@@ -116,10 +117,9 @@ static bool smi_get_gpu_devices_list(
 }
 
 /**
- * @brief call-back function to append to a vector of Devices
- * @param d represent device
- * @param p pointer
- * @return true if dev connected to monitor, false otherwise
+ * @brief obtains the full path for the file containing GPU power related data
+ * @param path base path
+ * @return power data file full path
  */
 static string get_hwmon_entry(const std::string &path) {
     DIR *dirp;
@@ -731,6 +731,7 @@ int action::run(void) {
 
     if (!get_all_common_config_keys())
         return -1;
+
     if (!get_all_iet_config_keys())
         return -1;
 
