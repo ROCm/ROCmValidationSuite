@@ -122,7 +122,6 @@ int rvs::actionbase::property_get_deviceid(int *error) {
         } else {
             *error = 1;  // we have an empty string
         }
-        property.erase(it);
     }
     return deviceid;
 }
@@ -137,13 +136,11 @@ bool rvs::actionbase::property_get_device(int *error) {
     auto it = property.find(RVS_CONF_DEVICE_KEY);
     if (it != property.end()) {
         if (it->second == "all") {
-            property.erase(it);
             return true;
         } else {
             // split the list of gpu_id
             device_prop_gpu_id_list = str_split(it->second,
                     YAML_DEVICE_PROP_DELIMITER);
-            property.erase(it);
 
             if (device_prop_gpu_id_list.empty()) {
                 *error = 1;  // list of gpu_id cannot be empty
@@ -193,7 +190,6 @@ void rvs::actionbase::property_get_run_parallel(int *error) {
       gst_runs_parallel = true;
       *error = 0;
     } else if (it->second == "false") {
-      property.erase(it);
       *error = 0;
     } else {
       *error = 1;
@@ -212,11 +208,9 @@ void rvs::actionbase::property_get_run_count(int *error) {
   if (it != property.end()) {
     if (is_positive_integer(it->second)) {
       gst_run_count = std::stoi(it->second);
-      property.erase(it);
       *error = 0;
     } else {
       *error = 1;
-      property.erase(it);
     }
   } else {
     *error = 2;
@@ -233,7 +227,6 @@ void rvs::actionbase::property_get_run_wait(int *error) {
   if (it != property.end()) {
     if (is_positive_integer(it->second)) {
       gst_run_wait_ms = std::stoul(it->second);
-      property.erase(it);
       *error = 0;
     } else {
       *error = 1;
@@ -252,8 +245,6 @@ void rvs::actionbase::property_get_run_duration(int *error) {
   if (it != property.end()) {
     if (is_positive_integer(it->second)) {
       gst_run_duration_ms = std::stoul(it->second);
-      gst_run_count = 1;
-      property.erase(it);
       *error = 0;
     } else {
       *error = 1;
@@ -262,3 +253,65 @@ void rvs::actionbase::property_get_run_duration(int *error) {
     *error = 2;
   }
 }
+
+/**
+ * @brief reads the sample interval from the module's properties collection
+ */
+int rvs::actionbase::property_get_sample_interval(int *error) {
+  int sample_int = -1;
+  auto it = property.find(RVS_CONF_SAMPLE_INTERVAL_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      sample_int = std::stoi(it->second);
+      property.erase(it);
+      *error = 0;
+    } else {
+      *error = 1;
+    }
+  } else {
+    *error = 2;
+  }
+  return sample_int;
+}
+
+/**
+ * @brief reads the log interval from the module's properties collection
+ */
+int rvs::actionbase::property_get_log_interval(int *error) {
+  int log_int = -1;
+  auto it = property.find(RVS_CONF_LOG_INTERVAL_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      log_int = std::stoul(it->second);
+      property.erase(it);
+      *error = 0;
+    } else {
+      *error = 1;
+    }
+  } else {
+    *error = 2;
+  }
+  return log_int;
+}
+
+/**
+ * @brief reads terminate from the module's properties collection
+ */
+bool rvs::actionbase::property_get_terminate(int *error) {
+  bool term = -1;
+  auto it = property.find(RVS_CONF_TERMINATE_KEY);
+  if (it != property.end()) {
+    if (it->second == "true") {
+      term = true;
+      property.erase(it);
+    } else if (it->second == "false") {
+      term = false;
+      property.erase(it);
+    } else {
+      *error = 0;
+    }
+  }
+
+  return term;
+}
+

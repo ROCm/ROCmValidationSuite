@@ -52,6 +52,7 @@ class gpulist {
   static int Initialize();
   static int32_t GetLocation(const uint32_t GpuID);
   static int32_t GetGpuId(const uint32_t LocationID);
+  static int32_t GetGpuIdFromNodeId(const uint32_t NodeID);
   static int32_t GetDeviceIdFromLocationId(const uint32_t LocationID);
   static int32_t GetDeviceIdFromGpuId(const uint32_t GpuID);
   static int32_t GetNodeIdFromGpuId(const uint32_t GpuID);
