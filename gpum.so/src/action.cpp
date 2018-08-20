@@ -24,16 +24,28 @@
  * 
  *******************************************************************************/
 
-#include <assert.h>
-
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <map>
 #include <vector>
 #include <memory>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <pci/pci.h>
+#ifdef __cplusplus
+}
+#endif
+
 #include "rvsloglp.h"
 #include "rvs_module.h"
 #include "rvs_util.h"
 #include "action.h"
+#include "worker.h"
+#include "pci_caps.h"
+#include "gpu_util.h"
 #include "rocm_smi/rocm_smi.h"
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
@@ -42,28 +54,10 @@
 using std::map;
 using std::string;
 using std::vector;
-/*using namespace amd::smi;*/
+using std::thread;
+using std::cerr;
 
-// collection of allowed io links properties
-const char* metric_names[] =
-        { "temp", "clock", "mem_clock", "fan", "power"
-        };
-
-// Call-back function to append to a vector of Devices
-static bool GetMonitorDevices(const std::shared_ptr<amd::smi::Device> &d,
-            void *p) {
-  std::string val_str;
-
-  assert(p != nullptr);
-
-  std::vector<std::shared_ptr<amd::smi::Device>> *device_list =
-    reinterpret_cast<std::vector<std::shared_ptr<amd::smi::Device>> *>(p);
-
-  if (d->monitor() != nullptr) {
-    device_list->push_back(d);
-  }
-  return false;
-}
+extern Worker* pworker;
 
 /**
  * default class constructor
@@ -89,73 +83,143 @@ action::~action() {
  *
  * */
 int action::run(void) {
+    map<string, string>::iterator it;  // module's properties map iterator
+
+    string msg;
+    int sample_interval = 1, log_interval = 0;
     int error = 0;
-    string err_msg;
-    amd::smi::RocmSMI hw;
-    std::vector<std::shared_ptr<amd::smi::Device>> monitor_devices;
+    bool metric_true, metric_bound;
+    int metric_min, metric_max;
+    bool terminate = false;
 
-    // DiscoverDevices() will seach for devices and monitors and update internal
-    // data structures.
-    hw.DiscoverDevices();
-
-    // IterateSMIDevices will iterate through all the known devices and apply
-    // the provided call-back to each device found.
-    hw.IterateSMIDevices(GetMonitorDevices,
-        reinterpret_cast<void *>(&monitor_devices));
-
-    std::string val_str;
-    std::vector<std::string> val_vec;
-    uint32_t value;
-    uint32_t value2;
-    int ret;
-
-    // get the action name
-    rvs::actionbase::property_get_action_name(&error);
-    if (error == 2) {
-      err_msg = "action field is missing in gpum module";
-      log(err_msg.c_str(), rvs::logerror);
-      return -1;
+    if (rvs::actionbase::has_property("sample_interval")) {
+        sample_interval =
+        rvs::actionbase::property_get_sample_interval(&error)/1000;
     }
 
-    bjson = false;  // already initialized in the default constructor
-
-    // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end()) {
-        unsigned int sec;
-        unsigned int usec;
-        rvs::lp::get_ticks(sec, usec);
-
-        bjson = true;
-
-        json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-        action_name.c_str(), rvs::loginfo, sec, usec);
-        if (json_root_node == NULL) {
-            // log the error
-            string msg = action_name + " " + MODULE_NAME + " " +
-            JSON_CREATE_NODE_ERROR;
+    if (rvs::actionbase::has_property("log_interval")) {
+        log_interval = rvs::actionbase::property_get_log_interval(&error)/1000;
+        if ( log_interval < sample_interval ) {
+            msg = "Log interval is lower than the sample interval ";
             log(msg.c_str(), rvs::logerror);
+            return -1;
         }
     }
 
-    string msg = action_name + " " + MODULE_NAME + " " +
-                            "gpu_id" + " " + " started";
-    log(msg.c_str(), rvs::logresults);
-
-    auto metric_length = std::end(metric_names) - std::begin(metric_names);
-    for (int i = 0; i < metric_length; i++) {
-        msg = action_name + " " + MODULE_NAME + " " +
-            "gpu_id" + " " + " monitoring " + metric_names[i] +
-            " bounds min:" + "min_metric" +
-            " max:" + "max_metric";
-        log(msg.c_str(), rvs::loginfo);
+    if (rvs::actionbase::has_property("terminate")) {
+        terminate = rvs::actionbase::property_get_terminate(&error);
     }
 
-    msg = action_name + " " + MODULE_NAME + " " +
-                            "gpu_id" + " " + " stopped";
-    log(msg.c_str(), rvs::logresults);
+  // start of monitoring?
+  if (property["monitor"] == "true") {
+    if (pworker) {
+      rvs::lp::Log("[" + property["name"]+ "] gm monitoring already started",
+                  rvs::logresults);
+      return 0;
+    }
 
-    // TODO(bsimeunovic) Iterate through the list of devices and print out
-    // information related to that device.
+    pworker = new Worker();
+    pworker->set_name(property["name"]);
+    pworker->set_sample_int(sample_interval);
+    pworker->set_log_int(log_interval);
+    pworker->set_terminate(terminate);
+
+    for (it = property.begin(); it != property.end(); ++it) {
+      metric_bound = false;
+      string word;
+      string s = it->first;
+      if (s.find(".") != std::string::npos && s.substr(0, s.find(".")) ==
+          "metrics") {
+        string metric = s.substr(s.find(".")+1);
+        s = it->second;
+        vector<string> values = str_split(s, YAML_DEVICE_PROP_DELIMITER);
+
+        if (values.size() == 3) {
+            metric_true = (values[0] == "true") ? true : false;
+            metric_max = std::stoi(values[1]);
+            metric_min = std::stoi(values[2]);
+            metric_bound = true;
+        } else {
+          msg = " Wrong number of metric parameters ";
+          log(msg.c_str(), rvs::logerror);
+          return -1;
+        }
+
+        pworker->set_metr_mon(metric, metric_true);
+        pworker->set_bound(metric, metric_bound, metric_max, metric_min);
+        values.clear();
+      }
+    }
+
+    // check if  -j flag is passed
+    if (has_property("cli.-j")) {
+      pworker->json(true);
+    }
+
+    // checki if deviceid filtering is required
+    string sdevid;
+    if (has_property("deviceid", sdevid)) {
+      if (::is_positive_integer(sdevid)) {
+        try {
+          pworker->set_deviceid(std::stoi(sdevid));
+        }
+        catch(...) {
+          cerr << "RVS-GM: action: " << property["name"] <<
+          "  invalide 'deviceid' key value: " << sdevid << std::endl;
+          return -1;
+        }
+      } else {
+        cerr << "RVS-GM: action: " << property["name"] <<
+        "  invalide 'deviceid' key value: " << sdevid << std::endl;
+        return -1;
+      }
+    }
+
+    // check if GPU id filtering is requied
+    string sdev;
+    if (has_property("device", sdev)) {
+      pworker->set_strgpuids(sdev);
+      if (sdev != "all") {
+        vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
+        vector<int> iarr;
+        int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
+        if (sts < 0) {
+          cerr << "RVS-GM: action: " << property["name"] <<
+          "  invalide 'device' key value: " << sdev << std::endl;
+          return -1;
+        }
+        pworker->set_gpuids(iarr);
+      }
+    } else {
+          cerr << "RVS-GM: action: " << property["name"] <<
+          "  key 'device' not found" << std::endl;
+          return -1;
+    }
+
+    // start worker thread
+    rvs::lp::Log("[" + property["name"]+ "] gm starting Worker",
+                 rvs::logtrace);
+    pworker->start();
+    sleep(50);
+
+    rvs::lp::Log("[" + property["name"]+ "] gm Monitoring started",
+                 rvs::logtrace);
+  } else {
+    rvs::lp::Log("[" + property["name"]+
+    "] gm property[\"monitor\"] != \"true\"", rvs::logtrace);
+    if (pworker) {
+      // (give thread chance to start)
+      sleep(10);
+      pworker->set_stop_name(property["name"]);
+      pworker->stop();
+      delete pworker;
+      pworker = nullptr;
+    }
+
+       msg = action_name + " " + MODULE_NAME + " " +
+                            "gpu_id" + " " + " stopped";
+        log(msg.c_str(), rvs::logresults);
+  }
 
     if (bjson && json_root_node != NULL) {  // json logging stuff
         rvs::lp::LogRecordFlush(json_root_node);
