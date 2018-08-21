@@ -28,6 +28,7 @@
 #include <string>
 #include <memory>
 #include "rvsthreadbase.h"
+#include "blas_worker.h"
 
 /**
  * @class IETWorker
@@ -137,7 +138,9 @@ class IETWorker : public rvs::ThreadBase {
 
  protected:
     virtual void run(void);
-    bool do_gpu_init_training(int *error, std::string *err_description);
+    bool do_gpu_init_training(std::string *err_description);
+    void compute_gpu_stats(void);
+    void compute_new_sgemm_freq(float avg_power);
     bool do_iet_ramp(int *error, std::string *err_description);
 
  protected:
@@ -170,5 +173,16 @@ class IETWorker : public rvs::ThreadBase {
     uint64_t matrix_size;
     //! TRUE if JSON output is required
     static bool bjson;
+    //! blas_worker pointer
+    std::unique_ptr<blas_worker> gpu_worker;
+
+    //! actual training time
+    uint64_t training_time_ms;
+    //! number of SGEMMs that the GPU achieved during the training
+    uint64_t num_sgemms_training;
+    //! average GPU power during training
+    float avg_power_training;
+    //! the SGEMM delay which gives the actual GPU SGEMM frequency
+    float sgemm_si_delay;
 };
 #endif  // IET_SO_INCLUDE_IET_WORKER_H_

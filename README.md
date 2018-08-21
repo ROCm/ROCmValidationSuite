@@ -31,7 +31,7 @@ Compile yaml-cpp (this needs to be done only once after cloning):
 Compile rocm_smi_lib (this needs to be done only once after cloning):
 
     cd $RVS
-    cmake ./rocm_smi_lib -B../build/rocm_smi_lib
+    cmake ./rocm_smi_lib -DROCM_SMI_BUILD_TYPE=64 -B../build/rocm_smi_lib
     cd ../build/rocm_smi_lib
     make
 
