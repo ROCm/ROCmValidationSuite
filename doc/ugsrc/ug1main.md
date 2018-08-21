@@ -843,6 +843,24 @@ entire test duration, and will be logged as a result:
 @subsection usg113 11.3 Examples
 
 @section usg12 12 GST Module
+The GPU Stress Test modules purpose is to bring the CUs of the specified GPU(s)
+to a target performance level in gigaflops by doing large matrix multiplications
+using SGEMM/DGEMM (Single/Double-precision General Matrix Multiplication)
+available in a library like rocBlas. The GPU stress module may be configured so
+it does not copy the source arrays to the GPU before every matrix
+multiplication. This allows the GPU performance to not be capped by device to
+host bandwidth transfers. The module calculates how many matrix operations per
+second are necessary to achieve the configured performance target and fails if
+it cannot achieve that target. \n\n
+
+This module should be used in conjunction with the GPU Monitor, to watch for
+thermal, power and related anomalies while the target GPU(s) are under realistic
+load conditions. By setting the appropriate parameters a user can ensure that
+all GPUs in a node or cluster reach desired performance levels. Further analysis
+of the generated stats can also show variations in the required power, clocks or
+temperatures to reach these targets, and thus highlight GPUs or nodes that are
+operating less efficiently.
+
 @subsection usg121 12.1 Module Specific Keys
 @subsection usg122 12.2 Output
 @subsection usg123 12.3 Examples
