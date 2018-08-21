@@ -503,7 +503,23 @@ int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
     return 0;
   }
   pHsa = rvs::hsa::Get();
-  return pHsa->rvs::hsa::GetPeerStatus(Src, Dst);
+  
+  // GPUs are peers, create transaction for them
+  int srcnode = rvs::gpulist::GetNodeIdFromGpuId(Src);
+  if (srcnode < 0) {
+    std::cerr << "RVS-PQT: no node found for GPU ID "
+    << std::to_string(Src);
+    return 0;
+  }
+
+  int dstnode = rvs::gpulist::GetNodeIdFromGpuId(Dst);
+  if (srcnode < 0) {
+    std::cerr << "RVS-PQT: no node found for GPU ID "
+    << std::to_string(Dst);
+    return 0;
+  }
+        
+  return pHsa->rvs::hsa::GetPeerStatus(srcnode, dstnode);
 }
 
 /**
