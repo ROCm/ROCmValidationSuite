@@ -31,7 +31,7 @@ Compile yaml-cpp (this needs to be done only once after cloning):
 Compile rocm_smi_lib (this needs to be done only once after cloning):
 
     cd $RVS
-    cmake ./rocm_smi_lib -DROCM_SMI_BUILD_TYPE=64 -B../build/rocm_smi_lib
+    cmake ./rocm_smi_lib -DROCM_SMI_BLD_BITS=64 -B../build/rocm_smi_lib
     cd ../build/rocm_smi_lib
     make
 
@@ -78,9 +78,6 @@ Compile RVS:
 
     # Contains library files exported by rocm_smi
     export ROCM_SMI_LIB_DIR=$RVS/../build/rocm_smi_lib    
-
-    # Contains header files exported by rocm_smi
-    export ROCM_SMI_INC_DIR=$RVS/rocm_smi_lib/include
 
     # Contains library files exported by rocm_smi
     export ROCM_SMI_LIB_DIR=$RVS/../build/rocm_smi_lib
