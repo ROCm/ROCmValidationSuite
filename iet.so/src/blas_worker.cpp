@@ -52,6 +52,7 @@ blas_worker::blas_worker(int _gpu_device_index, uint64_t _matrix_size) :
     sgemm_delay = 0;
     blas_error = 0;
     setup_finished = false;
+    bpaused = false;
 }
 
 blas_worker::~blas_worker() {}
@@ -106,6 +107,15 @@ bool blas_worker::is_setup_complete(void) {
 }
 
 /**
+ * @brief checks for SGEMM completeness
+ * @return true if last SGEMM finished, false otherwise
+ */
+bool blas_worker::is_sgemm_complete(void) {
+    std::lock_guard<std::mutex> lck(mtx_bsgemm_done);
+    return sgemm_done;
+}
+
+/**
  * @brief sets the brun flag to false (signal the thread to stop)
  */
 void blas_worker::stop(void) {
@@ -150,6 +160,22 @@ void blas_worker::set_sgemm_delay(uint64_t _sgemm_delay) {
 }
 
 /**
+ * @brief pauses the BLAS worker
+ */
+void blas_worker::pause(void) {
+    std::lock_guard<std::mutex> lck(mtx_bpaused);
+    bpaused = true;
+}
+
+/**
+ * @brief reseumes the BLAS worker
+ */
+void blas_worker::resume(void) {
+    std::lock_guard<std::mutex> lck(mtx_bpaused);
+    bpaused = false;
+}
+
+/**
  * @brief returns the current SGEMM delay
  * @return SGEMM delay
  */
@@ -183,6 +209,17 @@ void blas_worker::run() {
                 break;
         }
 
+        {
+            std::lock_guard<std::mutex> lck(mtx_bpaused);
+            if (bpaused)
+                continue;
+        }
+
+        {
+            std::lock_guard<std::mutex> lck(mtx_bsgemm_done);
+            sgemm_done = false;
+        }
+
         bool sgemm_success = true;
         // run SGEMM & wait for completion
         if (gpu_blas->run_blass_gemm()) {
@@ -191,11 +228,15 @@ void blas_worker::run() {
             sgemm_success = false;
         }
 
+        {
+            std::lock_guard<std::mutex> lck(mtx_bsgemm_done);
+            sgemm_done = true;
+        }
+
         // increase number of SGEMM ops
         if (sgemm_success) {
             {
                 std::lock_guard<std::mutex> lck(mtx_bcount_sgemm);
-
                 if (bcount_sgemm) {
                     // lock_guard [num_sgemm_ops]
                     std::lock_guard<std::mutex> lck(mtx_num_sgemm);
@@ -206,7 +247,7 @@ void blas_worker::run() {
             // lock_guard [sgemm_delay]
             {
                 std::lock_guard<std::mutex> lck(mtx_sgemm_delay);
-                usleep_ex(1000*sgemm_delay);
+                usleep_ex(sgemm_delay);
             }
         }
     }

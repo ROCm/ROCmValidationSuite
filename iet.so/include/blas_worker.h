@@ -53,7 +53,10 @@ class blas_worker : public rvs::ThreadBase {
     bool get_bcount_sgemm(void);
 
     bool is_setup_complete(void);
+    bool is_sgemm_complete(void);
     uint64_t get_num_sgemm_ops(void);
+    void pause(void);
+    void resume(void);
 
     void stop(void);
 
@@ -83,10 +86,16 @@ class blas_worker : public rvs::ThreadBase {
     bool bcount_sgemm;
     //! Loops while TRUE
     bool brun;
+    //! TRUE is BLAS worker is paused
+    bool bpaused;
     //! TRUE when BLAS setup finished
     bool setup_finished;
+    //! TRUE if last SGEMM finished
+    bool sgemm_done;
     //! brun synchronization mutex
     std::mutex mtx_brun;
+    //! bpaused synchronization mutex
+    std::mutex mtx_bpaused;
     //! SGEMM counter synchronization mutex
     std::mutex mtx_num_sgemm;
     //! BLAS setup synchronization mutex
@@ -95,6 +104,8 @@ class blas_worker : public rvs::ThreadBase {
     std::mutex mtx_sgemm_delay;
     //! SGEMM counter flag synchronization mutex
     std::mutex mtx_bcount_sgemm;
+    //! SGEMM done synchronization mutex
+    std::mutex mtx_bsgemm_done;
     //! rvs_blas pointer
     std::unique_ptr<rvs_blas> gpu_blas;
     //! BLAS related error code
