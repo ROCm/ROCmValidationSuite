@@ -761,10 +761,12 @@ int rvs::hsa::GetPeerStatus(uint32_t SrcNode, uint32_t DstNode) {
       
       // check if Src can access Dst
       status = hsa_amd_agent_memory_pool_get_info(agent_list[SrcAgent].agent, agent_list[DstAgent].mem_pool_list[j], HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_fwd);
+      print_hsa_status("GetPeerStatus(SRC->DST)", status);
       if (status != HSA_STATUS_SUCCESS) return 0;
      
       // also check if Dst can access Src
       status = hsa_amd_agent_memory_pool_get_info(agent_list[DstAgent].agent, agent_list[SrcAgent].mem_pool_list[i], HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_bck);
+      print_hsa_status("GetPeerStatus(DST->SRC)", status);
       if (status != HSA_STATUS_SUCCESS) return 0;
       
       if (access_fwd != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED && access_bck != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
