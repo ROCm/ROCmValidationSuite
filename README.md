@@ -79,9 +79,6 @@ Compile RVS:
     # Contains library files exported by rocm_smi
     export ROCM_SMI_LIB_DIR=$RVS/../build/rocm_smi_lib    
 
-    # Contains library files exported by rocm_smi
-    export ROCM_SMI_LIB_DIR=$RVS/../build/rocm_smi_lib
-
     cmake -DROCR_INC_DIR=$ROCR_INC_DIR -DROCR_LIB_DIR=$ROCR_LIB_DIR  -DROCBLAS_INC_DIR=$ROCBLAS_INC_DIR -DROCBLAS_LIB_DIR=$ROCBLAS_LIB_DIR -DHIP_INC_DIR=$HIP_INC_DIR  -DROCM_SMI_INC_DIR=$ROCM_SMI_INC_DIR -DROCM_SMI_LIB_DIR=$ROCM_SMI_LIB_DIR  ./ -B../build    
     cd ../build
     make
