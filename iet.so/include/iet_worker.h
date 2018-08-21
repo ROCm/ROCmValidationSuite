@@ -142,6 +142,7 @@ class IETWorker : public rvs::ThreadBase {
     void compute_gpu_stats(void);
     void compute_new_sgemm_freq(float avg_power);
     bool do_iet_ramp(int *error, std::string *err_description);
+    bool do_iet_power_stress(void);
 
  protected:
     //! name of the action
@@ -178,6 +179,8 @@ class IETWorker : public rvs::ThreadBase {
 
     //! actual training time
     uint64_t training_time_ms;
+    //! actual ramp time
+    uint64_t ramp_actual_time;
     //! number of SGEMMs that the GPU achieved during the training
     uint64_t num_sgemms_training;
     //! average GPU power during training
