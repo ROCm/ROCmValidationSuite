@@ -23,7 +23,8 @@ pre-built package.
 RVS has been developed as open source solution. Its source code and belonging
 documentation can be found at AMD's GitHub page.\n
 In order to build RVS from source code please visit
-[ROCm Validation Suite GitHub site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite)
+[ROCm Validation Suite GitHub
+site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite)
 and follow instructions in README file.
 
 @subsection usg22 2.2 Installing from Package
@@ -73,7 +74,8 @@ change. The PESM is able to detect the following state changes:
 1.  PCIe link speed changes
 2.  GPU power state changes
 
-@subsubsection usg31a04 3.2.4 ROCm Configuration Qualification Tool - RCQT module
+@subsubsection usg31a04 3.2.4 ROCm Configuration Qualification Tool - RCQT
+module
 The ROCm Configuration Qualification Tool ensures the platform is capable of
 running ROCm applications and is configured correctly. It checks the installed
 versions of the ROCm components and the platform configuration of the system.
@@ -84,8 +86,10 @@ qualification steps include checking:
 1.  The existence of the /dev/kfd device
 2.  The /dev/kfd device’s permissions
 3.  The existence of all required users and groups that support ROCm
-4.  That the user mode components are compatible with the drivers, both the KFD and the amdgpu driver.
-5.  The configuration of the runtime linker/loader qualifying that all ROCm libraries are in the correct search path.
+4.  That the user mode components are compatible with the drivers, both the KFD
+and the amdgpu driver.
+5.  The configuration of the runtime linker/loader qualifying that all ROCm
+libraries are in the correct search path.
 
 @subsubsection usg31a05 3.2.5 PCI Express Qualification Tool – PEQT module
 The PCIe Qualification Tool consists is used to qualify the PCIe bus on which
@@ -216,7 +220,8 @@ the action. If the value is 0, execution will continue indefinitely. If a value
 isn’t specified the default is 1. Some modules will ignore this
 parameter.</td></tr>
 
-<tr><td>wait</td><td>Integer</td><td>This indicates how long the test should wait
+<tr><td>wait</td><td>Integer</td><td>This indicates how long the test should
+wait
 between executions, in milliseconds. Some
 modules will ignore this parameter. If the
 count key is not specified, this key is ignored.
@@ -228,7 +233,8 @@ modules will ignore this parameter.</td></tr>
 
 <tr><td>module</td><td>String</td><td>This parameter specifies the module that
 will be used in the execution of the action. Each module has a set of sub-tests
-or sub-actions that can be configured based on its specific parameters.</td></tr>
+or sub-actions that can be configured based on its specific
+parameters.</td></tr>
 </table>
 
 @subsection usg34 3.4 Command Line Options
@@ -473,6 +479,7 @@ reported:
 
 @subsection usg53 5.3 Examples
 
+
 @section usg6 6 PESM Module
 The PCIe State Monitor (PESM) tool is used to actively monitor the PCIe
 interconnect between the host platform and the GPU. The module registers
@@ -673,11 +680,14 @@ Module specific output keys are described in the table below:
 <table>
 <tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>bar1_size</td><td>Integer</td><td>The actual size of BAR1.</td></tr>
-<tr><td>bar1_base_addr</td><td>Integer</td><td>The actual base address of BAR1 memory.</td></tr>
+<tr><td>bar1_base_addr</td><td>Integer</td><td>The actual base address of BAR1
+memory.</td></tr>
 <tr><td>bar2_size</td><td>Integer</td><td>The actual size of BAR2.</td></tr>
-<tr><td>bar2_base_addr</td><td>Integer</td><td>The actual base address of BAR2 memory.</td></tr>
+<tr><td>bar2_base_addr</td><td>Integer</td><td>The actual base address of BAR2
+memory.</td></tr>
 <tr><td>bar4_size</td><td>Integer</td><td>The actual size of BAR4.</td></tr>
-<tr><td>bar4_base_addr</td><td>Integer</td><td>The actual base address of BAR4 memory.</td></tr>
+<tr><td>bar4_base_addr</td><td>Integer</td><td>The actual base address of BAR4
+memory.</td></tr>
 <tr><td>bar5_size</td><td>Integer</td><td>The actual size of BAR5.</td></tr>
 <tr><td>pass</td><td>String</td> <td>'true' if all of the properties match the
 values given, 'false' otherwise.</td></tr>
@@ -862,78 +872,110 @@ temperatures to reach these targets, and thus highlight GPUs or nodes that are
 operating less efficiently.
 
 @subsection usg121 12.1 Module Specific Keys
+
+Module specific keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>target_stress</td><td>Float</td>
+<td>The maximum relative performance the GPU will attempt to achieve in
+gigaflops. This parameter is required.</td></tr>
+<tr><td>copy_matrix</td><td>Bool</td>
+<td>This parameter indicates if each operation should copy the matrix data to
+the GPU before executing. The default value is true.</td></tr>
+<tr><td>ramp_interval</td><td>Integer</td>
+<td>This is an time interval, specified in milliseconds, given to the test to
+reach the given target_stress gigaflops. The default value is 5000 (5 seconds).
+This time is counted against the duration of the test. If the target gflops, or
+stress, is not achieved in this time frame, the test will fail. If the target
+stress (gflops) is achieved the test will attempt to run for the rest of the
+duration specified by the action, sustaining the stress load during that
+time.</td></tr>
+<tr><td>tolerance</td><td>Float</td>
+<td>A value indicating how much the target_stress can fluctuate after the ramp
+period for the test to succeed. The default value is 0.1 or 10%.</td></tr>
+<tr><td>max_violations</td><td>Integer</td>
+<td>The number of tolerance violations that can occur after the ramp_interval
+for the test to still pass. The default value is 0.</td></tr>
+<tr><td>log_interval</td><td>Integer</td>
+<td>This is a positive integer, given in milliseconds, that specifies an
+interval over which the moving average of the bandwidth will be calculated and
+logged.</td></tr>
+<tr><td>matrix_size</td><td>Integer</td>
+<td>Size of the matrices of the SGEMM operations. The default value is
+5760.</td></tr>
+</table>
+
 @subsection usg122 12.2 Output
+
+Module specific output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>target_stress</td><td>Time Series Floats</td>
+<td>The average gflops over the last log interval.</td></tr>
+<tr><td>max_gflops</td><td>Float</td>
+<td>The maximum sustained performance obtained by the GPU during the
+test.</td></tr>
+<tr><td>stress_violations</td><td>Integer</td>
+<td>The number of gflops readings that violated the tolerance of the test after
+the ramp interval.</td></tr>
+<tr><td>flops_per_op</td><td>Integer</td>
+<td>Flops (floating point operations) per operation queued to the GPU queue.
+One operation is one call to SGEMM/DGEMM.</td></tr>
+<tr><td>bytes_copied_per_op</td><td>Integer</td>
+<td>Calculated number of ops/second necessary to achieve target
+gigaflops.</td></tr>
+<tr><td>try_ops_per_sec</td><td>Float</td>
+<td>Calculated number of ops/second necessary to achieve target
+gigaflops.</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>'true' if the GPU achieves its desired sustained performance
+level.</td></tr>
+</table>
+
+An informational message indicating will be emitted when the test starts
+execution:
+
+    [INFO ][<timestamp>][<action name>] gst <gpu id> start <target_stress> copy matrix: <copy_matrix>
+
+
+During the execution of the test, informational output providing the moving
+average the GPU(s) gflops will be logged at each log_interval:
+
+    [INFO ][<timestamp>][<action name>] gst Gflops: <interval_gflops>
+
+When the target gflops is achieved, the following message will be logged:
+
+    [INFO ][<timestamp>][<action name>] gst <gpu id> target achieved <target_stress>
+
+If the target gflops, or stress, is not achieved in the “ramp_interval”
+provided, the test will terminate and the following message will be logged:
+
+    [INFO ][<timestamp>][<action name>] gst <gpu id> ramp time exceeded <ramp_time>
+
+In this case the test will fail.\n
+
+If the target stress (gflops) is achieved the test will attempt to run for the
+rest of the duration specified by the action, sustaining the stress load during
+that time. If the stress level violates the bounds set by the tolerance level
+during that time a violation message will be logged:
+
+    [INFO ][<timestamp>][<action name>] gst <gpu id> stress violation <interval_gflops>
+
+When the test completes, the following result message will be printed:
+
+    [RESULT][<timestamp>][<action name>] gst <gpu id> Gflop: < max_gflops> flops_per_op:<flops_per_op> bytes_copied_per_op: <bytes_copied_per_op> try_ops_per_sec: <try_ops_per_sec> pass: <pass>
+
+The test will pass if the target_stress is reached before the end of the
+ramp_interval and the stress_violations value is less than the given
+max_violations value. Otherwise, the test will fail.
+
 @subsection usg123 12.3 Examples
 
-@section usg13 13 IET Module
-@subsection usg131 13.1 Module Specific Keys
-@subsection usg132 13.2 Output
-@subsection usg133 13.3 Examples
-
-
-
-@section usg5 5 GST Module
-@subsection usg51 5.1 Configuration keys
-@verbatim
------------------------------------------------------------------------------------------------------------------
-Config key         Type         Description
------------------------------------------------------------------------------------------------------------------
-target_stress      Float        The maximum relative performance the GPU will attempt to achieve in gigaflops.
-                                This parameter is required.
-
-copy_matrix        Bool         This parameter indicates if each operation should copy the matrix data to the GPU
-                                before executing. The default value is true.
-
-ramp_interval      Integer      This is an time interval, specified in milliseconds, given to the test to reach the 
-                                given target_stress gigaflops. The default value is 5000 (5 seconds). This time
-                                is counted against the duration of the test. If the target gflops, or stress, is not 
-                                achieved in this time frame, the test will fail. If the target stress (gflops) 
-                                is achieved the test will attempt to run for the rest of the duration specified 
-                                by the action, sustaining the stress load during that time.
-
-tolerance          Float        A value indicating how much the target_stress can fluctuate after the ramp period 
-                                for the test to succeed. The default value is 0.1 or 10%.
-
-max_violations     Integer      The number of tolerance violations that can occur after the ramp_interval for 
-                                the test to still pass. The default value is 0.
-
-log_interval       Integer      If this key is specified informational messages will be emitted at the given
-                                interval providing the current values of all parameters that have a bound set.
-                                The units for the log_interval are milliseconds. The default value is 1000 (1 second).
-
-matrix_size        Integer      Size of the matrices of the SGEMM operations. The default value is 5760.
-@endverbatim
-
-@subsection usg52 5.2 Output keys
-@verbatim
------------------------------------------------------------------------------------------------------------------
-Output key         Type         Description
------------------------------------------------------------------------------------------------------------------
-target_stress      Time Series  The average gflops over the last log interval.
-                   Float        
-
-max_gflops         Float        The maximum sustained performance obtained by the GPU during the test.
-
-stress_violations  Integer      The number of gflops readings that violated the tolerance of the test after 
-                                the ramp interval.
-
-flops_per_op       Integer      Flops (floating point operations) per operation queued to the GPU queue.
-                                One operation is one call to SGEMM/DGEMM.
-
-bytes_copied_      Integer      Calculated number of ops/second necessary to achieve target gigaflops.
-per_op
- 
-try_ops_per_sec    Float        Calculated number of ops/second necessary to achieve target gigaflops.
-
-pass               Bool         If the GPU achieves its desired sustained performance level                         
-@endverbatim
-
-
-
-@subsection usg53 5.3 Configuration files examples
-
-When running the __GST__ module, users should provide at least an action name, the module name (gst), a list of GPU IDs, the test duration and a target stress value (gigaflops). Thus, the most basic configuration file looks like this: 
-
+When running the __GST__ module, users should provide at least an action name,
+the module name (gst), a list of GPU IDs, the test duration and a target stress
+value (gigaflops). Thus, the most basic configuration file looks like this:
 
     actions:
     - name: action_gst_1
@@ -942,33 +984,55 @@ When running the __GST__ module, users should provide at least an action name, t
       target_stress: 3500
       duration: 8000
 
-For the above configuration file, all the missing configuration keys will have their default
-values (e.g.: __copy_matrix=true__, __matrix_size=5760__ etc.). For more information about the default 
-values please consult the dedicated sections (__3.3 Common Configuration Keys__ and __5.1 Configuration keys__). 
-    
-When the __RVS__ tool runs against such a configuration file, it will do the following:
-  - run the stress test on all available (and compatible) AMD GPUs, one after the other
-  - log a start message containing the GPU ID, the __target_stress__ and the value of the __copy_matrix__<br />
-e.g.: __[INFO  ] [164337.932824] action_gst_1 gst 50599 start 3500.000000 copy matrix:true__
-  - emit, each __log_interval__ (e.g.: 1000ms), a message containing the gigaflops value that the current GPU achieved<br />
+For the above configuration file, all the missing configuration keys will have
+their default
+values (e.g.: __copy_matrix=true__, __matrix_size=5760__ etc.). For more
+information about the default
+values please consult the dedicated sections (__3.3 Common Configuration Keys__
+and __5.1 Configuration keys__).
+
+When the __RVS__ tool runs against such a configuration file, it will do the
+following:
+  - run the stress test on all available (and compatible) AMD GPUs, one after
+the other
+  - log a start message containing the GPU ID, the __target_stress__ and the
+value of the __copy_matrix__<br />
+e.g.: __[INFO  ] [164337.932824] action_gst_1 gst 50599 start 3500.000000 copy
+matrix:true__
+  - emit, each __log_interval__ (e.g.: 1000ms), a message containing the
+gigaflops value that the current GPU achieved<br />
 e.g.: __[INFO  ] [164355.111207] action_gst_1 gst 33367 Gflops 3535.670231__
-  - log a message as soon as the current GPU reaches the given __target_stress__<br />
-e.g.: __[INFO  ] [164350.804843] action_gst_1 gst 33367 target achieved 3500.000000__
-  - log a __ramp time exceeded__ message if the GPU was not able to reach the __target_stress__ in the __ramp_interval__ time frame (e.g.: 5000). In such a case, the test will also terminate<br />
+  - log a message as soon as the current GPU reaches the given
+__target_stress__<br />
+e.g.: __[INFO  ] [164350.804843] action_gst_1 gst 33367 target achieved
+3500.000000__
+  - log a __ramp time exceeded__ message if the GPU was not able to reach the
+__target_stress__ in the __ramp_interval__ time frame (e.g.: 5000). In such a
+case, the test will also terminate<br />
 e.g.: __[INFO  ] [164013.788870] action_gst_1 gst 3254 ramp time exceeded 5000__
-  - log the test result, when the stress test completes. The message contains the test's overall result and some other statistics according to __5.2 Output keys__<br />
-e.g.: __[RESULT] [164355.647523] action_gst_1 gst 33367 Gflop: 4066.020766 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 9.157367 pass: TRUE__ 
-  - log a __stress violation__ message when the current gigaflops (for the last __log_interval__, e.g.; 1000ms) violates the bounds set by the __tolerance__ configuration key (e.g.: 0.1). Please note that this message is not logged during the __ramp_interval__ time frame<br />
+  - log the test result, when the stress test completes. The message contains
+the test's overall result and some other statistics according to __5.2 Output
+keys__<br />
+e.g.: __[RESULT] [164355.647523] action_gst_1 gst 33367 Gflop: 4066.020766
+flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec:
+9.157367 pass: TRUE__
+  - log a __stress violation__ message when the current gigaflops (for the last
+__log_interval__, e.g.; 1000ms) violates the bounds set by the __tolerance__
+configuration key (e.g.: 0.1). Please note that this message is not logged
+during the __ramp_interval__ time frame<br />
 e.g.: __[INFO  ] [164013.788870] action_gst_1 gst 3254 stress violation 2500__
 
 
-If a mandatory configuration key is missing, the __RVS__ tool will log an error message and terminate the executation of the current module. For example, the following configuration file will cause the __RVS__ to terminate with the following error message:<br /> 
-__RVS-GST: action: action_gst_1  key 'target_stress' was not found__
+If a mandatory configuration key is missing, the __RVS__ tool will log an error
+message and terminate the executation of the current module. For example, the
+following configuration file will cause the __RVS__ to terminate with the
+following error message:<br /> __RVS-GST: action: action_gst_1  key
+'target_stress' was not found__
 
     actions:
     - name: action_gst_1
       module: gst
-      device: all      
+      device: all
       duration: 8000
 
 A more complex configuration file looks like this:
@@ -987,46 +1051,66 @@ A more complex configuration file looks like this:
       copy_matrix: false
       target_stress: 5000
       tolerance: 0.07
-      matrix_size: 5760    
+      matrix_size: 5760
 
 For this configuration file, the RVS tool:
-  - will run the stress test only for the GPUs having the ID 50599 or 33367. To get all the available GPU IDs, run __RVS__ tool with __-g__ option
+  - will run the stress test only for the GPUs having the ID 50599 or 33367. To
+get all the available GPU IDs, run __RVS__ tool with __-g__ option
   - will run the test on the selected GPUs, one after the other
   - will run each test, 12 times
   - will only copy the matrices to the GPUs at the beginning of the test
   - will wait 100ms before each test execution
   - will try to reach 5000 gflops in maximum 3000ms
-  - if __target_stress__ (5000) is achieved in the __ramp_interval__ (3000 ms) it will attempt to run the test for the rest of the duration, sustaining the stress load during that time     
-  - will allow a 7% __target_stress__ __tolerance__ (each __target_stress__ violation will generate a __stress violation__ message as shown in the first example)
-  - will allow only 2 __target_stress__ violations. Exceeding the __max_violations__ will not terminate the test, but the __RVS__ will mark the test result as "fail". 
+  - if __target_stress__ (5000) is achieved in the __ramp_interval__ (3000 ms)
+it will attempt to run the test for the rest of the duration, sustaining the
+stress load during that time
+  - will allow a 7% __target_stress__ __tolerance__ (each __target_stress__
+violation will generate a __stress violation__ message as shown in the first
+example)
+  - will allow only 2 __target_stress__ violations. Exceeding the
+__max_violations__ will not terminate the test, but the __RVS__ will mark the
+test result as "fail".
 
 The output for such a configuration key may look like this:
 
-__[INFO  ] [172061.758830] action_1 gst 50599 start 5000.000000 copy matrix:false__<br />
+__[INFO  ] [172061.758830] action_1 gst 50599 start 5000.000000 copy
+matrix:false__<br />
 __[INFO  ] [172063.547668] action_1 gst 50599 Gflops 6471.614725__<br />
-__[INFO  ] [172064.577715] action_1 gst 50599 target achieved 5000.000000__<br />
+__[INFO  ] [172064.577715] action_1 gst 50599 target achieved 5000.000000__<br
+/>
 __[INFO  ] [172065.609224] action_1 gst 50599 Gflops 5189.993529__<br />
 __[INFO  ] [172066.634360] action_1 gst 50599 Gflops 5220.373979__<br />
 __[INFO  ] [172067.659262] action_1 gst 50599 Gflops 5225.472000__<br />
 __[INFO  ] [172068.694305] action_1 gst 50599 Gflops 5169.935583__<br />
-__[RESULT] [172069.573967] action_1 gst 50599 Gflop: 6471.614725 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE__<br />
-__[INFO  ] [172069.574369] action_1 gst 33367 start 5000.000000 copy matrix:false__<br />
+__[RESULT] [172069.573967] action_1 gst 50599 Gflop: 6471.614725 flops_per_op:
+382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
+TRUE__<br />
+__[INFO  ] [172069.574369] action_1 gst 33367 start 5000.000000 copy
+matrix:false__<br />
 __[INFO  ] [172071.409483] action_1 gst 33367 Gflops 6558.348080__<br />
-__[INFO  ] [172072.438104] action_1 gst 33367 target achieved 5000.000000__<br />
+__[INFO  ] [172072.438104] action_1 gst 33367 target achieved 5000.000000__<br
+/>
 __[INFO  ] [172073.465033] action_1 gst 33367 Gflops 5215.285895__<br />
 __[INFO  ] [172074.501571] action_1 gst 33367 Gflops 5164.945297__<br />
 __[INFO  ] [172075.529468] action_1 gst 33367 Gflops 5210.207720__<br />
 __[INFO  ] [172076.558102] action_1 gst 33367 Gflops 5205.139424__<br />
-__[RESULT] [172077.448182] action_1 gst 33367 Gflop: 6558.348080 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE__<br />
+__[RESULT] [172077.448182] action_1 gst 33367 Gflop: 6558.348080 flops_per_op:
+382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
+TRUE__<br />
 
-When setting the __parallel__ to false, the __RVS__ will run the stress tests on all selected GPUs in parallel and the output may look like this:
+When setting the __parallel__ to false, the __RVS__ will run the stress tests on
+all selected GPUs in parallel and the output may look like this:
 
-__[INFO  ] [173381.407428] action_1 gst 50599 start 5000.000000 copy matrix:false__<br />
-__[INFO  ] [173381.407744] action_1 gst 33367 start 5000.000000 copy matrix:false__<br />
+__[INFO  ] [173381.407428] action_1 gst 50599 start 5000.000000 copy
+matrix:false__<br />
+__[INFO  ] [173381.407744] action_1 gst 33367 start 5000.000000 copy
+matrix:false__<br />
 __[INFO  ] [173383.245771] action_1 gst 33367 Gflops 6558.348080__<br />
 __[INFO  ] [173383.256935] action_1 gst 50599 Gflops 6484.532120__<br />
-__[INFO  ] [173384.274202] action_1 gst 33367 target achieved 5000.000000__<br />
-__[INFO  ] [173384.286014] action_1 gst 50599 target achieved 5000.000000__<br />
+__[INFO  ] [173384.274202] action_1 gst 33367 target achieved 5000.000000__<br
+/>
+__[INFO  ] [173384.286014] action_1 gst 50599 target achieved 5000.000000__<br
+/>
 __[INFO  ] [173385.301038] action_1 gst 33367 Gflops 5215.285895__<br />
 __[INFO  ] [173385.315794] action_1 gst 50599 Gflops 5200.080980__<br />
 __[INFO  ] [173386.337638] action_1 gst 33367 Gflops 5164.945297__<br />
@@ -1035,22 +1119,103 @@ __[INFO  ] [173387.365494] action_1 gst 33367 Gflops 5210.207720__<br />
 __[INFO  ] [173387.383437] action_1 gst 50599 Gflops 5195.032357__<br />
 __[INFO  ] [173388.401250] action_1 gst 33367 Gflops 5169.935583__<br />
 __[INFO  ] [173388.421599] action_1 gst 50599 Gflops 5154.993572__<br />
-__[RESULT] [173389.282710] action_1 gst 33367 Gflop: 6558.348080 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE__<br />
-__[RESULT] [173389.305479] action_1 gst 50599 Gflop: 6484.532120 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE__<br />
+__[RESULT] [173389.282710] action_1 gst 33367 Gflop: 6558.348080 flops_per_op:
+382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
+TRUE__<br />
+__[RESULT] [173389.305479] action_1 gst 50599 Gflop: 6484.532120 flops_per_op:
+382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
+TRUE__<br />
 
-It is important that all the configuration keys will be adjusted/fine-tuned according to the actual GPUs and HW platform capabilities. For example, a matrix size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20 GPUs.
+It is important that all the configuration keys will be adjusted/fine-tuned
+according to the actual GPUs and HW platform capabilities. For example, a matrix
+size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20
+GPUs.
+
+@section usg13 13 IET Module
+@subsection usg131 13.1 Module Specific Keys
+@subsection usg132 13.2 Output
+@subsection usg133 13.3 Examples
 
 
 
+@subsection usg511 5.1 Configuration keys
+@verbatim
+--------------------------------------------------------------------------------
+---------------------------------
+Config key         Type         Description
+--------------------------------------------------------------------------------
+---------------------------------
+target_stress      Float        The maximum relative performance the GPU will
+attempt to achieve in gigaflops.
+                                This parameter is required.
 
+copy_matrix        Bool         This parameter indicates if each operation
+should copy the matrix data to the GPU
+                                before executing. The default value is true.
 
+ramp_interval      Integer      This is an time interval, specified in
+milliseconds, given to the test to reach the
+                                given target_stress gigaflops. The default value
+is 5000 (5 seconds). This time
+                                is counted against the duration of the test. If
+the target gflops, or stress, is not
+                                achieved in this time frame, the test will fail.
+If the target stress (gflops)
+                                is achieved the test will attempt to run for the
+rest of the duration specified
+                                by the action, sustaining the stress load during
+that time.
 
+tolerance          Float        A value indicating how much the target_stress
+can fluctuate after the ramp period
+                                for the test to succeed. The default value is
+0.1 or 10%.
 
+max_violations     Integer      The number of tolerance violations that can
+occur after the ramp_interval for
+                                the test to still pass. The default value is 0.
 
+log_interval       Integer      If this key is specified informational messages
+will be emitted at the given
+                                interval providing the current values of all
+parameters that have a bound set.
+                                The units for the log_interval are milliseconds.
+The default value is 1000 (1 second).
 
+matrix_size        Integer      Size of the matrices of the SGEMM operations.
+The default value is 5760.
+@endverbatim
+
+@subsection usg521 5.2 Output keys
+@verbatim
+--------------------------------------------------------------------------------
+---------------------------------
+Output key         Type         Description
+--------------------------------------------------------------------------------
+---------------------------------
+target_stress      Time Series  The average gflops over the last log interval.
+                   Float        
+
+max_gflops         Float        The maximum sustained performance obtained by
+the GPU during the test.
+
+stress_violations  Integer      The number of gflops readings that violated the
+tolerance of the test after
+                                the ramp interval.
+
+flops_per_op       Integer      Flops (floating point operations) per operation
+queued to the GPU queue.
+                                One operation is one call to SGEMM/DGEMM.
+
+bytes_copied_      Integer      Calculated number of ops/second necessary to
+achieve target gigaflops.
+per_op
  
- 
+try_ops_per_sec    Float        Calculated number of ops/second necessary to
+achieve target gigaflops.
+
+pass               Bool         If the GPU achieves its desired sustained
+performance level
+@endverbatim
 
 
-
-  
