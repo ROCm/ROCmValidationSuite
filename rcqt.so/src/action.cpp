@@ -640,9 +640,7 @@ int action::filechk_run() {
     } else {
       // check if owner is tested
       iter = property.find("owner");
-      if (iter == property.end()) {
-        cerr << "Ownership is not tested." << endl;
-      } else {
+      if (iter != property.end()) {
         // check if value from property is equal to real one
         owner = iter->second;
         struct passwd p, *result;
@@ -663,9 +661,7 @@ int action::filechk_run() {
       }
       // check if group is tested
       iter = property.find("group");
-      if (iter == property.end()) {
-        cerr << "Group ownership is not tested." << endl;
-      } else {
+      if (iter != property.end()) {
         // check if value from property is equal to real one
         group = iter->second;
         struct group g, *result;
@@ -685,9 +681,7 @@ int action::filechk_run() {
       }
       // check if permissions are tested
       iter = property.find("permission");
-      if (iter == property.end()) {
-        cerr << "Permissions are not tested." << endl;
-    } else {
+      if (iter != property.end()) {
         // check if value from property is equal to real one
         permission = std::atoi(iter->second.c_str());
         if (dectooct(info.st_mode)%1000 == permission)
@@ -704,9 +698,7 @@ int action::filechk_run() {
       }
       // check if type is tested
       iter = property.find("type");
-      if (iter == property.end()) {
-        cerr << "File type is not tested." << endl;
-      } else {
+      if (iter != property.end()) {
         // check if value from property is equal to real one
         type = std::atoi(iter->second.c_str());
         struct stat buf;
