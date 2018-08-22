@@ -32,6 +32,7 @@
 
 #include "hwmon_util.h"
 #include "blas_worker.h"
+#include "log_worker.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
 
@@ -49,6 +50,13 @@
 #define IET_POWER_PROC_ERROR                    "could not get/process the GPU"\
                                                 " power!"
 #define IET_SGEMM_FAILURE                       "GPU failed to run the SGEMMs!"
+
+#define IET_PWR_VIOLATION_MSG                   "power violation"
+#define IET_PWR_TARGET_ACHIEVED_MSG             "target achieved"
+#define IET_PWR_RAMP_EXCEEDED_MSG               "ramp time exceeded"
+#define IET_PASS_KEY                            "pass"
+
+#define IET_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 
 using std::string;
 
@@ -68,8 +76,39 @@ static uint64_t time_diff(
     return milliseconds.count();
 }
 
-IETWorker::IETWorker() {}
+/**
+ * @brief class default constructor
+ */
+IETWorker::IETWorker() {
+    gpu_worker = nullptr;
+    pwr_log_worker = nullptr;
+}
+
 IETWorker::~IETWorker() {}
+
+/**
+ * @brief logs a message to JSON
+ * @param key info type
+ * @param value message to log
+ * @param log_level the level of log (e.g.: info, results, error)
+ */
+void IETWorker::log_to_json(const std::string &key, const std::string &value,
+                     int log_level) {
+    if (IETWorker::bjson) {
+        unsigned int sec;
+        unsigned int usec;
+
+        rvs::lp::get_ticks(sec, usec);
+        void *json_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), log_level, sec, usec);
+        if (json_node) {
+            rvs::lp::AddString(json_node, IET_JSON_LOG_GPU_ID_KEY,
+                            std::to_string(gpu_id));
+            rvs::lp::AddString(json_node, key, value);
+            rvs::lp::LogRecordFlush(json_node);
+        }
+    }
+}
 
 /**
  * @brief performs the EDPp rampup on the given GPU (attempts to reach the given
@@ -92,7 +131,7 @@ bool IETWorker::do_gpu_init_training(string *err_description) {
     num_sgemms_training = 0;
     avg_power_training = 0;
 
-     gpu_worker = std::unique_ptr<blas_worker>(
+    gpu_worker = std::unique_ptr<blas_worker>(
         new blas_worker(gpu_device_index, matrix_size));
     if (gpu_worker == nullptr) {
         *err_description = IET_MEM_ALLOC_ERROR;
@@ -110,6 +149,10 @@ bool IETWorker::do_gpu_init_training(string *err_description) {
 
     // wait for the BLAS setup to complete
     while (!gpu_worker->is_setup_complete()) {}
+    if (gpu_worker->get_blas_error()) {
+        *err_description = IET_BLAS_FAILURE;
+        return false;
+    }
 
     // record inital time
     start_time = std::chrono::system_clock::now();
@@ -127,13 +170,18 @@ bool IETWorker::do_gpu_init_training(string *err_description) {
         uint64_t diff_ms = time_diff(end_time, start_time);
         if (diff_ms >= MAX_MS_TRAIN_GPU) {
             // wait for the last sgemm to finish
-            while (!gpu_worker->is_sgemm_complete()) {}
-            // record the actual training time
-            end_time = std::chrono::system_clock::now();
-            diff_ms = time_diff(end_time, start_time);
-            training_time_ms = diff_ms;
-            // stop the training
-            break;
+            bool bend_training = false;
+            while (!gpu_worker->is_sgemm_complete()) {
+                // record the actual training time
+                end_time = std::chrono::system_clock::now();
+                diff_ms = time_diff(end_time, start_time);
+                training_time_ms = diff_ms;
+                bend_training = true;
+                // stop the training
+                break;
+            }
+            if (bend_training)
+                break;
         }
     }
 
@@ -229,6 +277,18 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
         return false;
     }
 
+    pwr_log_worker = std::unique_ptr<log_worker>(
+                        new log_worker(IETWorker::bjson));
+    if (pwr_log_worker == nullptr) {
+        *error = 1;
+        *err_description = IET_MEM_ALLOC_ERROR;
+        return false;
+    }
+    pwr_log_worker->set_name(action_name);
+    pwr_log_worker->set_gpu_hwmon_entry(gpu_hwmon_entry);
+    pwr_log_worker->set_gpu_id(gpu_id);
+    pwr_log_worker->set_log_interval(log_interval);
+
     compute_gpu_stats();
 
     gpu_worker->pause();
@@ -242,6 +302,7 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
 
     // restart the worker
     gpu_worker->resume();
+    pwr_log_worker->start();
 
     for (;;) {
         // get GPU's current average power
@@ -329,9 +390,11 @@ bool IETWorker::do_iet_power_stress(void) {
                     // detected a target_power violation
                     num_power_violations++;
                     msg = action_name + " " + MODULE_NAME + " " +
-                            std::to_string(gpu_id) + " power violation " +
-                            std::to_string(avg_power);
+                        std::to_string(gpu_id) + " " + IET_PWR_VIOLATION_MSG +
+                        " " + std::to_string(avg_power);
                     log(msg.c_str(), rvs::loginfo);
+                    log_to_json(IET_PWR_VIOLATION_MSG,
+                                std::to_string(avg_power), rvs::loginfo);
                 }
             }
 
@@ -348,9 +411,10 @@ bool IETWorker::do_iet_power_stress(void) {
         usleep(POWER_PROCESS_DELAY);
     }
 
+    pwr_log_worker->stop();
+
     gpu_worker->stop();
     usleep(MAX_MS_WAIT_BLAS_THREAD);
-    // terminate the blas worker thread
     gpu_worker->join();
 
     if (num_power_violations > max_violations)
@@ -369,6 +433,7 @@ void IETWorker::run() {
     msg = action_name + " " + MODULE_NAME + " " + std::to_string(gpu_id) +
             " start " + std::to_string(target_power);
     log(msg.c_str(), rvs::loginfo);
+    log_to_json("start", std::to_string(target_power), rvs::loginfo);
 
     if (ramp_interval < MAX_MS_TRAIN_GPU)
         ramp_interval += MAX_MS_TRAIN_GPU;
@@ -376,36 +441,55 @@ void IETWorker::run() {
         run_duration_ms += MAX_MS_TRAIN_GPU;
 
     if (!do_iet_ramp(&error, &err_description)) {
-        // terminate the blas worker thread
-        gpu_worker->stop();
-        usleep(MAX_MS_WAIT_BLAS_THREAD);
-        gpu_worker->join();
+        if (gpu_worker != nullptr) {
+            // terminate the blas worker thread
+            gpu_worker->stop();
+            usleep(MAX_MS_WAIT_BLAS_THREAD);
+            gpu_worker->join();
+        }
+
+        if (pwr_log_worker != nullptr)
+            pwr_log_worker->stop();
 
         if (error) {
             msg = action_name + " " + MODULE_NAME + " "
                     + std::to_string(gpu_id) + " " + err_description;
+            log_to_json("err", err_description, rvs::logerror);
         } else  {
+            log_to_json(IET_PWR_RAMP_EXCEEDED_MSG,
+                std::to_string(ramp_interval), rvs::loginfo);
+
             msg = action_name + " " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " ramp time exceeded " +
-            std::to_string(ramp_interval);
+                std::to_string(gpu_id) + " " + IET_PWR_RAMP_EXCEEDED_MSG + " " +
+                    std::to_string(ramp_interval);
         }
 
         log(msg.c_str(), rvs::logerror);
 
         msg = action_name + " " + MODULE_NAME + " " + std::to_string(gpu_id) +
-                " pass: " + IET_RESULT_PASS_MESSAGE;
+                " " + IET_PASS_KEY + ": " + IET_RESULT_FAIL_MESSAGE;
         log(msg.c_str(), rvs::logresults);
+
+        log_to_json(IET_PASS_KEY, IET_RESULT_FAIL_MESSAGE, rvs::logresults);
 
     } else {
         // the GPU succeeded in achieving the given target_power
         // => log a message and start the sustained stress test
         msg = action_name + " " + MODULE_NAME + " " + std::to_string(gpu_id) +
-                " target achieved " + std::to_string(target_power);
+                " " + IET_PWR_TARGET_ACHIEVED_MSG + " " +
+                    std::to_string(target_power);
         log(msg.c_str(), rvs::loginfo);
+        log_to_json(IET_PWR_TARGET_ACHIEVED_MSG,
+                    std::to_string(target_power), rvs::loginfo);
+
 
         bool pass = do_iet_power_stress();
         msg = action_name + " " + MODULE_NAME + " " + std::to_string(gpu_id) +
-        " pass: " + (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
+                " " + IET_PASS_KEY + ": " +
+                    (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
         log(msg.c_str(), rvs::logresults);
+        log_to_json(IET_PASS_KEY,
+                    (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE),
+                        rvs::logresults);
     }
 }
