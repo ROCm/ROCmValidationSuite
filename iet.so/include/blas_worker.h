@@ -57,7 +57,6 @@ class blas_worker : public rvs::ThreadBase {
     uint64_t get_num_sgemm_ops(void);
     void pause(void);
     void resume(void);
-
     void stop(void);
 
     //! returns the GPU index
