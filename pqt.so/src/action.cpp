@@ -379,8 +379,15 @@ int pqtaction::create_threads() {
             + std::to_string(gpu_id[j]) + " true";
         rvs::lp::Log(msg, rvs::logresults);
         if (bjson) {
-          rvs::lp::AddString(json_rcqt_node, "p2p", msg);
-          rvs::lp::LogRecordFlush(json_rcqt_node);
+          unsigned int sec;
+          unsigned int usec;
+          rvs::lp::get_ticks(sec, usec);
+          json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                                  action_name.c_str(), rvs::loginfo, sec, usec);
+          if (json_rcqt_node != NULL) {
+            rvs::lp::AddString(json_rcqt_node, "p2p", msg);
+            rvs::lp::LogRecordFlush(json_rcqt_node);
+          }
         }
         
         // GPUs are peers, create transaction for them
@@ -456,6 +463,8 @@ int pqtaction::run() {
   if (property.find("cli.-j") != property.end()) {
     unsigned int sec;
     unsigned int usec;
+    log("[PQT] uses json", rvs::logdebug);
+
     rvs::lp::get_ticks(sec, usec);
     bjson = true;
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
@@ -671,8 +680,15 @@ int pqtaction::print_final_average() {
 
     rvs::lp::Log(msg, rvs::logresults);
     if (bjson) {
-      rvs::lp::AddString(json_rcqt_node, "p2p bandiwdth", msg);
-      rvs::lp::LogRecordFlush(json_rcqt_node);
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(sec, usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                              action_name.c_str(), rvs::loginfo, sec, usec);
+      if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node, "p2p bandiwdth", msg);
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
     }    
     sleep(1);
   }
