@@ -272,7 +272,7 @@ int action::do_gpu_list() {
   if (!gpu_info_list.empty()) {
     cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {
-      cout << info.bus  << " - GPU[" << std::setw(2) << info.node_id 
+      cout << info.bus  << " - GPU[" << std::setw(2) << info.node_id
       << " - " << std::setw(5) << info.gpu_id << "] " << info.name
       << " (Device " << info.device_id << ")\n";
     }
