@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GPUM_SO_INCLUDE_WORKER_H_
-#define GPUM_SO_INCLUDE_WORKER_H_
+#ifndef GM_SO_INCLUDE_WORKER_H_
+#define GM_SO_INCLUDE_WORKER_H_
 
 #include <string>
 #include <vector>
@@ -138,4 +138,4 @@ struct Metric_violation {
   std::map<std::string, Metric_violation> met_violation;
 };
 
-#endif  // GPUM_SO_INCLUDE_WORKER_H_
+#endif  // GM_SO_INCLUDE_WORKER_H_
