@@ -29,16 +29,16 @@
 #include "gpu_util.h"
 
 /**
- * @defgroup GPUP GPUP Module
+ * @defgroup GM GM Module
  *
- * @brief GPU Properties module
+ * @brief GPU Monitor module
  *
  * The GPU monitor tool is capable of running on one, some or all of the GPU(s) 
-installed and will
+ *installed and will
  * report various information at regular intervals. The module can be configured 
-to halt another
+ * to halt another
  * RVS modules execution if one of the quantities exceeds a specified boundary 
-value.
+ * value.
  */
 
 Worker* pworker;
@@ -64,11 +64,11 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_name(void) {
-    return "gpum";
+    return "gm";
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-    return "ROCm Validation Suite GPUP module";
+    return "ROCm Validation Suite GM module";
 }
 
 extern "C" const char* rvs_module_get_config(void) {

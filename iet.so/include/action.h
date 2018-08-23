@@ -35,7 +35,6 @@ extern "C" {
 
 #include <vector>
 #include <string>
-#include <map>
 #include <utility>
 #include <memory>
 
@@ -93,7 +92,7 @@ class action: public rvs::actionbase {
     //! matrix size for SGEMM
     uint64_t iet_matrix_size;
 
-    //! TRUE if device config key is "all
+    //! TRUE if device config key is "all"
     bool device_all_selected;
     //! TRUE if deviceid filtering was enabled
     bool device_id_filtering;

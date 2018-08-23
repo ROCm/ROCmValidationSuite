@@ -50,6 +50,9 @@ extern "C" {
 #define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
 #define DEFAULT_LOG_INTERVAL 500
 
+#define MODULE_NAME "pqt"
+#define JSON_CREATE_NODE_ERROR "JSON cannot create node"
+
 using std::cerr;
 using std::string;
 using std::vector;
@@ -375,6 +378,21 @@ int pqtaction::create_threads() {
             + std::to_string(gpu_id[i]) + " "
             + std::to_string(gpu_id[j]) + " true";
         rvs::lp::Log(msg, rvs::logresults);
+        if (bjson) {
+          unsigned int sec;
+          unsigned int usec;
+          rvs::lp::get_ticks(sec, usec);
+          json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                                  action_name.c_str(), rvs::loginfo, sec, usec);
+          if (json_rcqt_node != NULL) {
+            rvs::lp::AddString(json_rcqt_node, "src",
+                               std::to_string(gpu_id[i]));
+            rvs::lp::AddString(json_rcqt_node, "dst",
+                               std::to_string(gpu_id[j]));
+            rvs::lp::AddString(json_rcqt_node, "p2p", "true");
+            rvs::lp::LogRecordFlush(json_rcqt_node);
+          }
+        }
 
         // GPUs are peers, create transaction for them
         int srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
@@ -438,15 +456,33 @@ int pqtaction::destroy_threads() {
  * */
 int pqtaction::run() {
   int sts;
+  string msg;
 
   if (!get_all_common_config_keys())
     return -1;
   if (!get_all_pqt_config_keys())
     return -1;
 
-  sts = create_threads();
-  return sts;
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end()) {
+    unsigned int sec;
+    unsigned int usec;
+    log("[PQT] uses json", rvs::logdebug);
 
+    rvs::lp::get_ticks(sec, usec);
+    bjson = true;
+    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::loginfo, sec, usec);
+    if (json_rcqt_node == NULL) {
+      // log the error
+      msg =
+      action_name + " " + MODULE_NAME + " "
+      + JSON_CREATE_NODE_ERROR;
+      log(msg.c_str(), rvs::logerror);
+    }
+  }
+
+  sts = create_threads();
   if (sts)
     return sts;
 
@@ -471,7 +507,30 @@ int pqtaction::run() {
  *
  * */
 int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
-  return 2;
+  //! ptr to RVS HSA singleton wrapper
+  rvs::hsa* pHsa;
+
+  if (Src == Dst) {
+    return 0;
+  }
+  pHsa = rvs::hsa::Get();
+
+  // GPUs are peers, create transaction for them
+  int srcnode = rvs::gpulist::GetNodeIdFromGpuId(Src);
+  if (srcnode < 0) {
+    std::cerr << "RVS-PQT: no node found for GPU ID "
+    << std::to_string(Src);
+    return 0;
+  }
+
+  int dstnode = rvs::gpulist::GetNodeIdFromGpuId(Dst);
+  if (srcnode < 0) {
+    std::cerr << "RVS-PQT: no node found for GPU ID "
+    << std::to_string(Dst);
+    return 0;
+  }
+
+  return pHsa->rvs::hsa::GetPeerStatus(srcnode, dstnode);
 }
 
 /**
@@ -622,6 +681,24 @@ int pqtaction::print_final_average() {
            "  duration: " + std::to_string(duration) + " ms";
 
     rvs::lp::Log(msg, rvs::logresults);
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(sec, usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                              action_name.c_str(), rvs::loginfo, sec, usec);
+      if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
+        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
+        rvs::lp::AddString(json_rcqt_node, "p2p", "true");
+        rvs::lp::AddString(json_rcqt_node, "bidirectional",
+                           std::string(bidir ? "true" : "false"));
+        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
+        rvs::lp::AddString(json_rcqt_node, "duration (ms)",
+                           std::to_string(duration));
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+    }
     sleep(1);
   }
 

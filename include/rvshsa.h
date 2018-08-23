@@ -76,7 +76,9 @@ class hsa {
     uint32_t                      node;
     //! system memory pool
     hsa_amd_memory_pool_t         sys_pool;
-    //! vector of memory pool HSA handles as reported during mem pool enumeration
+    /** vector of memory pool HSA handles as reported during mem pool
+    * enumeration
+    **/
     vector<hsa_amd_memory_pool_t> mem_pool_list;
     //! vecor of mem pools max sizes (index alligned with mem_pool_list)
     vector<size_t>                max_size_list;
@@ -125,6 +127,8 @@ class hsa {
   int SendTraffic(uint32_t SrcNode, uint32_t DstNode,
                   size_t   Size,    bool     bidirectional,
                   double*  Duration);
+
+  int GetPeerStatus(uint32_t SrcNode, uint32_t DstNode);
 
 //   double send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
 //                       hsa_amd_memory_pool_t src_buff,

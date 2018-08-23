@@ -29,6 +29,7 @@
 #include <memory>
 #include "rvsthreadbase.h"
 #include "blas_worker.h"
+#include "log_worker.h"
 
 /**
  * @class IETWorker
@@ -104,7 +105,6 @@ class IETWorker : public rvs::ThreadBase {
     //! returns the sampling rate for the target_power
     uint64_t get_sample_interval(void) { return sample_interval; }
 
-
     //! sets the maximum allowed number of target_power violations
     void set_max_violations(uint64_t _max_violations) {
         max_violations = _max_violations;
@@ -112,7 +112,7 @@ class IETWorker : public rvs::ThreadBase {
     //! returns the maximum allowed number of target_power violations
     uint64_t get_max_violations(void) { return max_violations; }
 
-    //! sets the target power level for the test
+    //! sets the target power level for the EDPp test
     void set_target_power(float _target_power) {
         target_power = _target_power;
     }
@@ -142,6 +142,10 @@ class IETWorker : public rvs::ThreadBase {
     void compute_gpu_stats(void);
     void compute_new_sgemm_freq(float avg_power);
     bool do_iet_ramp(int *error, std::string *err_description);
+    bool do_iet_power_stress(void);
+    void log_to_json(const std::string &key, const std::string &value,
+                        int log_level);
+
 
  protected:
     //! name of the action
@@ -158,7 +162,7 @@ class IETWorker : public rvs::ThreadBase {
     uint64_t run_duration_ms;
     //! stress test ramp duration
     uint64_t ramp_interval;
-    //! time interval at which the GPU's power
+    //! time interval at which the GPU's power is logged out
     uint64_t log_interval;
     //! sampling rate for the target_power
     uint64_t sample_interval;
@@ -175,9 +179,13 @@ class IETWorker : public rvs::ThreadBase {
     static bool bjson;
     //! blas_worker pointer
     std::unique_ptr<blas_worker> gpu_worker;
+    //! log_worker pointer
+    std::unique_ptr<log_worker> pwr_log_worker;
 
     //! actual training time
     uint64_t training_time_ms;
+    //! actual ramp time
+    uint64_t ramp_actual_time;
     //! number of SGEMMs that the GPU achieved during the training
     uint64_t num_sgemms_training;
     //! average GPU power during training
