@@ -105,6 +105,11 @@ class pqtaction : public rvs::actionbase {
   //! 'true' for the duration of test
   bool brun;
 
+  //! bjson field indicates if the json flag is set
+  bool bjson;
+  //! json_rcqt_node is json node shared through submodules
+  void *json_rcqt_node;
+
  private:
   void do_running_average(void);
   void do_final_average(void);
