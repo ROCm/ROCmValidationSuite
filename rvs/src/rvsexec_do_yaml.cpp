@@ -222,7 +222,7 @@ bool rvs::exec::is_yaml_properties_collection(
         return true;
       }
     } else {
-        if (module_name == "gpum") {
+        if (module_name == "gm") {
             if (property_name == "metrics")
             return true;
     }

@@ -22,16 +22,16 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GPUM_SO_INCLUDE_WORKER_H_
-#define GPUM_SO_INCLUDE_WORKER_H_
+#ifndef GM_SO_INCLUDE_WORKER_H_
+#define GM_SO_INCLUDE_WORKER_H_
 
 #include <string>
 #include <vector>
 #include <memory>
 #include <map>
-#include "rocm_smi/rocm_smi.h"
 
 #include "rvsthreadbase.h"
+#include "rocm_smi/rocm_smi.h"
 
 
 /**
@@ -138,4 +138,4 @@ struct Metric_violation {
   std::map<std::string, Metric_violation> met_violation;
 };
 
-#endif  // GPUM_SO_INCLUDE_WORKER_H_
+#endif  // GM_SO_INCLUDE_WORKER_H_
