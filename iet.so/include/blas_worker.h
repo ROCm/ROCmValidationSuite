@@ -51,13 +51,13 @@ class blas_worker : public rvs::ThreadBase {
 
     void set_bcount_sgemm(bool _bcount_sgemm);
     bool get_bcount_sgemm(void);
+    uint64_t get_num_sgemm_ops(void);
 
     bool is_setup_complete(void);
     bool is_sgemm_complete(void);
-    uint64_t get_num_sgemm_ops(void);
+
     void pause(void);
     void resume(void);
-
     void stop(void);
 
     //! returns the GPU index

@@ -34,6 +34,7 @@ extern "C" {
 #include <map>
 #include <iostream>
 #include <algorithm>
+#include <iomanip>
 
 #include "rvs_module.h"
 #include "worker.h"
@@ -209,6 +210,7 @@ int action::do_gpu_list() {
     std::string bus;
     std::string name;
     int32_t node_id;
+    int32_t gpu_id;
     int32_t device_id;
   };
 
@@ -242,6 +244,10 @@ int action::do_gpu_list() {
     if (node_id < 0)
       continue;
 
+    int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+    if (gpu_id < 0)
+      continue;
+
     snprintf(buff, sizeof(buff), "%02X:%02X.%d", dev->bus, dev->dev, dev->func);
 
     string name;
@@ -252,6 +258,7 @@ int action::do_gpu_list() {
     info.bus       = buff;
     info.name      = name;
     info.node_id   = node_id;
+    info.gpu_id    = gpu_id;
     info.device_id = dev->device_id;
     gpu_info_list.push_back(info);
 
@@ -265,8 +272,9 @@ int action::do_gpu_list() {
   if (!gpu_info_list.empty()) {
     cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {
-      cout << info.bus  << " - GPU[" << info.node_id << "] " << info.name <<
-      " (Device " << info.device_id << ")\n";
+      cout << info.bus  << " - GPU[" << std::setw(2) << info.node_id
+      << " - " << std::setw(5) << info.gpu_id << "] " << info.name
+      << " (Device " << info.device_id << ")\n";
     }
   } else {
     cout << endl << "No supported GPUs available.\n";

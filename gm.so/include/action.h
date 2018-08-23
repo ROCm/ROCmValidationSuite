@@ -24,8 +24,8 @@
  * 
  *******************************************************************************/
 
-#ifndef GPUM_SO_INCLUDE_ACTION_H_
-#define GPUM_SO_INCLUDE_ACTION_H_
+#ifndef GM_SO_INCLUDE_ACTION_H_
+#define GM_SO_INCLUDE_ACTION_H_
 
 #include <string>
 
@@ -53,8 +53,8 @@ class action : public rvs::actionbase {
  private:
     bool bjson;
     void* json_root_node;
-    
+
  protected:
 };
 
-#endif  // GPUM_SO_INCLUDE_ACTION_H_
+#endif  // GM_SO_INCLUDE_ACTION_H_

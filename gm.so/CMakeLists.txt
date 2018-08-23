@@ -30,7 +30,7 @@ add_compile_options(-Wl,-no-as-needed)
 add_compile_options(-Wall -Werror)
 
 
-set ( RVS "gpum" )
+set ( RVS "gm" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
@@ -74,19 +74,30 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
+set(ROCM_SMI_LIB "rocm_smi64")
 
+# Determine Roc Runtime header files are accessible
+if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
+  message("ERROR: rocm_smi library can't be found!")
+  RETURN()
+endif()
+
+# Add directories to look for header files to compile
+INCLUDE_DIRECTORIES(${ROCM_SMI_INC_DIR})
+
+# Add directories to look for library files to link 
+LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
 
 ## additional libraries
 set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 
-
 ## define include directories
-include_directories(include ../include ../rocm_smi_lib/include)
+include_directories(include ../include)
 
 ## define source files
 set(SOURCES
   ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp
-  src/rvs_module.cpp src/action.cpp ../rocm_smi_lib/src/rocm_smi_main.cc ../rocm_smi_lib/src/rocm_smi_monitor.cc  ../rocm_smi_lib/src/rocm_smi_device.cc src/worker.cpp)
+  src/rvs_module.cpp src/action.cpp src/worker.cpp)
 
 
 ## define target
@@ -95,7 +106,7 @@ set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${ROCM_SMI_LIB})
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
