@@ -61,10 +61,10 @@ for test_bandwidth_f in test_bandwidth:
 
                             # device id is optional parameter
                             if device_id_f > -1:
-                                f.write("  peer_device_id: " + str(device_id_f) + "\n")
+                                f.write("  peer_deviceid: " + str(device_id_f) + "\n")
                             f.write("  test_bandwidth: " + str(test_bandwidth_f) + "\n")
                             f.write("  bidirectional: " + str(bidirectional_f) + "\n")
-                            f.write("  parralel: " + str(parralel_f) + "\n")
+                            f.write("  parallel: " + str(parralel_f) + "\n")
                             f.close()
 
                             sample_size += 1
