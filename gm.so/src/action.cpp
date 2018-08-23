@@ -46,7 +46,6 @@ extern "C" {
 #include "worker.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
-#include "rocm_smi/rocm_smi.h"
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 #define MODULE_NAME                     "gm"

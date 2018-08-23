@@ -29,7 +29,6 @@
 #include <vector>
 #include <memory>
 #include <map>
-#include "rocm_smi/rocm_smi.h"
 
 #include "rvsthreadbase.h"
 
