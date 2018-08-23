@@ -536,6 +536,43 @@ power state will generate the following informational messages:
 
 @section usg7 7 RCQT Module
 
+This ‘module’ is actually a set of modules that target and qualify the
+configuration of the platform. Many of the checks can be done manually using the
+operating systems command line tools and general knowledge about ROCm’s
+requirements. The purpose of the RCQT modules is to provide an extensible, OS
+independent and scriptable interface capable for performing the configuration
+checks required for ROCm support. The checks in this module do not target a
+specific device (instead the underlying platform is targeted), and any device or
+device id keys specified will be ignored. Iteration keys, i.e. count, wait and
+duration, are also ignored.
+
+@subsection usg71 7.1 Packaging Check
+@subsubsection usg711 7.1.1 Packaging Check Specific Keys
+
+Input keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>package</td><td>String</td>
+<td>Specifies the package to check. This key is required.</td></tr>
+<tr><td>version</td><td>String</td>
+<td>This is an optional key specifying a package version. If it is provided, the
+tool will check if the version is installed, failing otherwise. If it is not
+provided any version matching the package name will result in success.
+</td></tr>
+</table>
+
+@subsubsection usg712 7.1.2 Packaging Check Output Keys
+
+Output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>installed</td><td>Bool</td>
+<td>If the test has passed, the output will be true. Otherwise it will be false.
+</td></tr>
+</table>
+
 @section usg8 8 PEQT Module
 PCI Express Qualification Tool module targets and qualifies the configuration of
 the platforms PCIe connections to the GPUs. The purpose of the PEQT module is to
@@ -1132,90 +1169,74 @@ size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20
 GPUs.
 
 @section usg13 13 IET Module
+
+The Input EDPp Test can be used to characterize the peak power capabilities of a
+GPU to different levels of use. This tool can leverage the functionality of the
+GST to drive the compute load on the GPU, but the test will use different
+configuration and output keys and should focus on driving power usage rather
+than calculating compute load. The purpose of the IET module is to bring the
+GPU(s) to a preconfigured power level in watts by gradually increasing the
+compute load on the GPUs until the desired power level is achieved. This
+verifies that the GPUs can sustain a power level for a reasonable amount of time
+without problems like thermal violations arising.\n
+
+This module should be used in conjunction with the GPU Monitor, to watch for
+thermal, power and related anomalies while the target GPU(s) are under realistic
+load conditions. By setting the appropriate parameters a user can ensure that
+all GPUs in a node or cluster reach desired performance levels. Further analysis
+of the generated stats can also show variations in the required power, clocks or
+temperatures to reach these targets, and thus highlight GPUs or nodes that are
+operating less efficiently.
+
 @subsection usg131 13.1 Module Specific Keys
+
+Module specific keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>target_power</td><td>Float</td>
+<td>This is a floating point value specifying the target sustained power level
+for the test.</td></tr>
+<tr><td>ramp_interval</td><td>Integer</td>
+<td>This is an time interval, specified in milliseconds, given to the test to
+determine the compute load that will sustain the target power. The default value
+is 5000 (5 seconds). This time is counted against the duration of the test.
+</td></tr>
+<tr><td>tolerance</td><td>Float</td>
+<td>A value indicating how much the target_power can fluctuate after the ramp
+period for the test to succeed. The default value is 0.1 or 10%.
+</td></tr>
+<tr><td>max_violations</td><td>Integer</td>
+<td>The number of tolerance violations that can occur after the ramp_interval
+for the test to still pass. The default value is 0.</td></tr>
+<tr><td>sample_interval</td><td>Integer</td>
+<td>The sampling rate for target_power values given in milliseconds. The default
+value is 100 (.1 seconds).
+</td></tr>
+<tr><td>log_interval</td><td>Integer</td>
+<td>This is a positive integer, given in milliseconds, that specifies an
+interval over which the moving average of the bandwidth will be calculated and
+logged.</td></tr>
+</table>
+
+
 @subsection usg132 13.2 Output
+
+Module specific output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>current_power</td><td>Time Series Floats</td>
+<td>The current measured power of the GPU.</td></tr>
+<tr><td>power_violations</td><td>Integer</td>
+<td>The number of power reading that violated the tolerance of the test after
+the ramp interval.
+</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>'true' if the GPU achieves its desired sustained power level in the ramp
+interval.</td></tr>
+</table>
+
 @subsection usg133 13.3 Examples
-
-
-
-@subsection usg511 5.1 Configuration keys
-@verbatim
---------------------------------------------------------------------------------
----------------------------------
-Config key         Type         Description
---------------------------------------------------------------------------------
----------------------------------
-target_stress      Float        The maximum relative performance the GPU will
-attempt to achieve in gigaflops.
-                                This parameter is required.
-
-copy_matrix        Bool         This parameter indicates if each operation
-should copy the matrix data to the GPU
-                                before executing. The default value is true.
-
-ramp_interval      Integer      This is an time interval, specified in
-milliseconds, given to the test to reach the
-                                given target_stress gigaflops. The default value
-is 5000 (5 seconds). This time
-                                is counted against the duration of the test. If
-the target gflops, or stress, is not
-                                achieved in this time frame, the test will fail.
-If the target stress (gflops)
-                                is achieved the test will attempt to run for the
-rest of the duration specified
-                                by the action, sustaining the stress load during
-that time.
-
-tolerance          Float        A value indicating how much the target_stress
-can fluctuate after the ramp period
-                                for the test to succeed. The default value is
-0.1 or 10%.
-
-max_violations     Integer      The number of tolerance violations that can
-occur after the ramp_interval for
-                                the test to still pass. The default value is 0.
-
-log_interval       Integer      If this key is specified informational messages
-will be emitted at the given
-                                interval providing the current values of all
-parameters that have a bound set.
-                                The units for the log_interval are milliseconds.
-The default value is 1000 (1 second).
-
-matrix_size        Integer      Size of the matrices of the SGEMM operations.
-The default value is 5760.
-@endverbatim
-
-@subsection usg521 5.2 Output keys
-@verbatim
---------------------------------------------------------------------------------
----------------------------------
-Output key         Type         Description
---------------------------------------------------------------------------------
----------------------------------
-target_stress      Time Series  The average gflops over the last log interval.
-                   Float        
-
-max_gflops         Float        The maximum sustained performance obtained by
-the GPU during the test.
-
-stress_violations  Integer      The number of gflops readings that violated the
-tolerance of the test after
-                                the ramp interval.
-
-flops_per_op       Integer      Flops (floating point operations) per operation
-queued to the GPU queue.
-                                One operation is one call to SGEMM/DGEMM.
-
-bytes_copied_      Integer      Calculated number of ops/second necessary to
-achieve target gigaflops.
-per_op
- 
-try_ops_per_sec    Float        Calculated number of ops/second necessary to
-achieve target gigaflops.
-
-pass               Bool         If the GPU achieves its desired sustained
-performance level
-@endverbatim
 
 
