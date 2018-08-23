@@ -30,7 +30,7 @@ add_compile_options(-Wl,-no-as-needed)
 add_compile_options(-Wall -Werror)
 
 
-set ( RVS "gpum" )
+set ( RVS "gm" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
