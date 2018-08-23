@@ -690,7 +690,7 @@ int pqtaction::print_final_average() {
         rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
         rvs::lp::AddString(json_rcqt_node, "p2p", "true");
         rvs::lp::AddString(json_rcqt_node, "bidirectional", std::string(bidir ? "true" : "false"));
-        rvs::lp::AddString(json_rcqt_node, "p2p bandwidth (GBs)", buff);
+        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
         rvs::lp::AddString(json_rcqt_node, "duration (ms)", std::to_string(duration));        
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
