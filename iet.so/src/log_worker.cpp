@@ -95,7 +95,7 @@ void log_worker::pause(void) {
 }
 
 /**
- * @brief reseumes the worker
+ * @brief resumes the worker
  */
 void log_worker::resume(void) {
     std::lock_guard<std::mutex> lck(mtx_bpaused);
@@ -167,7 +167,8 @@ void log_worker::run() {
             if (power_sampling_iters != 0) {
                 avg_power /= power_sampling_iters;
                 msg = action_name + " " + MODULE_NAME + " " +
-                        std::to_string(gpu_id) + " current power " +
+                        std::to_string(gpu_id) + " " +
+                        IET_LOGGER_CURRENT_POWER_MSG + " " +
                         std::to_string(avg_power);
                 log(msg.c_str(), rvs::loginfo);
                 log_to_json(IET_LOGGER_CURRENT_POWER_MSG,

@@ -170,18 +170,12 @@ bool IETWorker::do_gpu_init_training(string *err_description) {
         uint64_t diff_ms = time_diff(end_time, start_time);
         if (diff_ms >= MAX_MS_TRAIN_GPU) {
             // wait for the last sgemm to finish
-            bool bend_training = false;
-            while (!gpu_worker->is_sgemm_complete()) {
-                // record the actual training time
-                end_time = std::chrono::system_clock::now();
-                diff_ms = time_diff(end_time, start_time);
-                training_time_ms = diff_ms;
-                bend_training = true;
-                // stop the training
-                break;
-            }
-            if (bend_training)
-                break;
+            while (!gpu_worker->is_sgemm_complete()) { }
+            // record the actual training time
+            end_time = std::chrono::system_clock::now();
+            training_time_ms = time_diff(end_time, start_time);
+            // stop the training
+            break;
         }
     }
 
@@ -255,7 +249,7 @@ void IETWorker::compute_new_sgemm_freq(float avg_power) {
 }
 
 /**
- * @brief performs the EDPp rampup on the given GPU (attempts to reach the given
+ * @brief performs the EDPp ramp on the given GPU (attempts to reach the given
  * target power)
  * @param error pointer to a memory location where the error code will be stored
  * @param err_description stores the error description if any
@@ -284,6 +278,7 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
         *err_description = IET_MEM_ALLOC_ERROR;
         return false;
     }
+
     pwr_log_worker->set_name(action_name);
     pwr_log_worker->set_gpu_hwmon_entry(gpu_hwmon_entry);
     pwr_log_worker->set_gpu_id(gpu_id);
@@ -452,9 +447,9 @@ void IETWorker::run() {
             pwr_log_worker->stop();
 
         if (error) {
+            log_to_json("ERROR", err_description, rvs::logerror);
             msg = action_name + " " + MODULE_NAME + " "
                     + std::to_string(gpu_id) + " " + err_description;
-            log_to_json("err", err_description, rvs::logerror);
         } else  {
             log_to_json(IET_PWR_RAMP_EXCEEDED_MSG,
                 std::to_string(ramp_interval), rvs::loginfo);

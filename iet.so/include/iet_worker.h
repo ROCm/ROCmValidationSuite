@@ -112,7 +112,7 @@ class IETWorker : public rvs::ThreadBase {
     //! returns the maximum allowed number of target_power violations
     uint64_t get_max_violations(void) { return max_violations; }
 
-    //! sets the target power level for the test
+    //! sets the target power level for the EDPp test
     void set_target_power(float _target_power) {
         target_power = _target_power;
     }
@@ -162,7 +162,7 @@ class IETWorker : public rvs::ThreadBase {
     uint64_t run_duration_ms;
     //! stress test ramp duration
     uint64_t ramp_interval;
-    //! time interval at which the GPU's power
+    //! time interval at which the GPU's power is logged out
     uint64_t log_interval;
     //! sampling rate for the target_power
     uint64_t sample_interval;

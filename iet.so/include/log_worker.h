@@ -33,7 +33,7 @@
  * @class log_worker
  * @ingroup IET
  *
- * @brief logworker action implementation class
+ * @brief log_worker action implementation class
  *
  * Derives from rvs::ThreadBase and implements actual action functionality
  * in its run() method.
@@ -61,11 +61,11 @@ class log_worker : public rvs::ThreadBase {
     //! returns GPU ID
     uint16_t get_gpu_id(void) { return gpu_id; }
 
-    //! sets the time interval at which the module reports the GPU's power
+    //! sets the time interval at which the module reports the GPU power
     void set_log_interval(uint64_t _log_interval) {
         log_interval = _log_interval;
     }
-    //! returns the time interval at which the module reports the GPU's power
+    //! returns the time interval at which the module reports the GPU power
     uint64_t get_log_interval(void) { return log_interval; }
 
     void pause(void);
@@ -77,7 +77,6 @@ class log_worker : public rvs::ThreadBase {
     void log_to_json(const std::string &key, const std::string &value,
                      int log_level);
 
-
  protected:
     //! name of the action
     std::string action_name;
@@ -85,7 +84,7 @@ class log_worker : public rvs::ThreadBase {
     std::string gpu_hwmon_entry;
     //! ID of the GPU that will run the EDPp test
     uint16_t gpu_id;
-    //! time interval at which the GPU's power is computed and logged out
+    //! time interval at which the GPU power is computed and logged out
     uint64_t log_interval;
     //! TRUE if JSON output is required
     bool bjson;
@@ -93,7 +92,6 @@ class log_worker : public rvs::ThreadBase {
     bool brun;
     //! TRUE is the worker is paused
     bool bpaused;
-    //! TRUE when BLAS setup finished
 
     //! brun synchronization mutex
     std::mutex mtx_brun;
