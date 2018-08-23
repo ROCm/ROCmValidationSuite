@@ -228,9 +228,11 @@ bool pqtaction::get_all_pqt_config_keys(void) {
 
   property_get_bidirectional(&error);
   if (error) {
-    cerr << "RVS-PQT: action: " << action_name <<
-        "  invalid 'bidirectional'" << std::endl;
-    return false;
+    if (prop_test_bandwidth == true) {
+      cerr << "RVS-PQT: action: " << action_name <<
+          "  invalid 'bidirectional'" << std::endl;
+      return false;
+    }
   }
 
   return true;
@@ -311,6 +313,9 @@ bool pqtaction::get_all_common_config_keys(void) {
             "  invalid '" << RVS_CONF_DURATION_KEY <<
             "' key value" << std::endl;
         return false;
+    }
+    if (gst_run_duration_ms == 0) {
+      gst_run_duration_ms = 1000;
     }
 
     return true;
@@ -417,7 +422,7 @@ int pqtaction::create_threads() {
         msg = "[" + action_name + "] p2p "
             + std::to_string(gpu_id[i]) + " "
             + std::to_string(gpu_id[j]) + " false";
-        rvs::lp::Log(msg, rvs::logerror);
+        rvs::lp::Log(msg, rvs::logresults);
       }
     }
   }
@@ -440,6 +445,7 @@ int pqtaction::create_threads() {
  * */
 int pqtaction::destroy_threads() {
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
     delete *it;
   }
 
