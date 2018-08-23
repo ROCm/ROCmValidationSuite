@@ -635,8 +635,8 @@ int action::filechk_run() {
     } else {
     // when exists propetry is true,but file cannot be found
     if (stat(file.c_str(), &info) < 0) {
-      cerr << "File is not found" << endl;
-    // if exists property is set to true and file is found,check each parametar
+      log("File is not found", rvs::logerror);
+    // if exists property is set to true and file is found,check each parameter
     } else {
       // check if owner is tested
       iter = property.find("owner");

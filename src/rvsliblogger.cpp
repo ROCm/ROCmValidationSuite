@@ -190,7 +190,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   }
 
   char  buff[64];
-  snprintf(buff, sizeof(buff), "%6d.%6d", secs, usecs);
+  snprintf(buff, sizeof(buff), "%6d.%-6d", secs, usecs);
 
   std::string row("[");
   row += loglevelname[LogLevel];
