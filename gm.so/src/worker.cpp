@@ -48,6 +48,7 @@ extern "C" {
 }
 #endif
 
+#include "rocm_smi/rocm_smi.h"
 #include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "pci_caps.h"
