@@ -58,7 +58,7 @@ class Worker : public rvs::ThreadBase {
   //! Sets device id for filtering
   void set_deviceid(const int id) { device_id = id; }
   //! Sets GPU IDs for filtering
-  void set_gpuids(const std::vector<int>& GpuIds);
+  void set_gpuids(const std::vector<uint16_t>& GpuIds);
   //! Sets GPU IDs for filtering (string used in messages)
   //! @param Devices List of devices to monitor
   void set_strgpuids(const std::string& Devices) { strgpuids = Devices; }
@@ -93,7 +93,7 @@ class Worker : public rvs::ThreadBase {
   //! GPU id filtering flag
   bool bfiltergpu;
   //! list of GPU devices to monitor
-  std::vector<int> gpuids;
+  std::vector<uint16_t> gpuids;
   //! list of GPU devices to monitor (string used in messages)
   std::string strgpuids;
   //! Name of the action which initiated monitoring
