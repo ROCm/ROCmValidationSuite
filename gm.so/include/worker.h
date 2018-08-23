@@ -31,6 +31,7 @@
 #include <map>
 
 #include "rvsthreadbase.h"
+#include "rocm_smi/rocm_smi.h"
 
 
 /**
