@@ -743,10 +743,10 @@ int rvs::hsa::GetPeerStatus(uint32_t SrcNode, uint32_t DstNode) {
   int32_t SrcAgent;
   int32_t DstAgent;
   hsa_amd_memory_pool_access_t access_fwd;
-  hsa_amd_memory_pool_access_t access_bck;  
+  hsa_amd_memory_pool_access_t access_bck;
   hsa_status_t status;
   int cur_access_rights;
-  int res_access_rights;  
+  int res_access_rights;
 
   // given NUMA nodes, find agent indexes
   SrcAgent = FindAgent(SrcNode);
@@ -758,18 +758,23 @@ int rvs::hsa::GetPeerStatus(uint32_t SrcNode, uint32_t DstNode) {
   res_access_rights = 0;
   for (size_t i = 0; i < agent_list[SrcAgent].mem_pool_list.size(); i++) {
     for (size_t j = 0; j < agent_list[DstAgent].mem_pool_list.size(); j++) {
-      
       // check if Src can access Dst
-      status = hsa_amd_agent_memory_pool_get_info(agent_list[SrcAgent].agent, agent_list[DstAgent].mem_pool_list[j], HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_fwd);
+      status = hsa_amd_agent_memory_pool_get_info(
+        agent_list[SrcAgent].agent,
+        agent_list[DstAgent].mem_pool_list[j],
+        HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_fwd);
       print_hsa_status("GetPeerStatus(SRC->DST)", status);
       if (status != HSA_STATUS_SUCCESS) return 0;
-     
+
       // also check if Dst can access Src
-      status = hsa_amd_agent_memory_pool_get_info(agent_list[DstAgent].agent, agent_list[SrcAgent].mem_pool_list[i], HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_bck);
+      status = hsa_amd_agent_memory_pool_get_info(
+        agent_list[DstAgent].agent, agent_list[SrcAgent].mem_pool_list[i],
+        HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_bck);
       print_hsa_status("GetPeerStatus(DST->SRC)", status);
       if (status != HSA_STATUS_SUCCESS) return 0;
-      
-      if (access_fwd != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED && access_bck != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
+
+      if (access_fwd != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED &&
+          access_bck != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
         cur_access_rights = 2;
       } else if (access_fwd != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
         cur_access_rights = 1;
@@ -778,7 +783,8 @@ int rvs::hsa::GetPeerStatus(uint32_t SrcNode, uint32_t DstNode) {
       }
 
       // in case of multiple memory pools return the best access rights
-      if (cur_access_rights > res_access_rights) res_access_rights = cur_access_rights;
+      if (cur_access_rights > res_access_rights)
+        res_access_rights = cur_access_rights;
     }
   }
   return res_access_rights;
