@@ -46,7 +46,6 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k) :
                              k(_k) {
     is_handle_init = false;
     is_error = false;
-
     da = db = dc = NULL;
     ha = hb = hc = nullptr;
 
