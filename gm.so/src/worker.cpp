@@ -105,7 +105,7 @@ Worker::~Worker() {}
  * @brief Sets GPU IDs for filtering
  * @arg GpuIds Array of GPU GpuIds
  */
-void Worker::set_gpuids(const std::vector<int>& GpuIds) {
+void Worker::set_gpuids(const std::vector<uint16_t>& GpuIds) {
   gpuids = GpuIds;
   bfiltergpu = true;
 }
