@@ -37,6 +37,7 @@ all
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <utility>
 #include <fstream>
 
 #ifdef __cplusplus
@@ -54,7 +55,6 @@ extern "C" {
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvsloglp.h"
-#include "rocm_smi/rocm_smi.h"
 
 using std::string;
 using std::vector;
