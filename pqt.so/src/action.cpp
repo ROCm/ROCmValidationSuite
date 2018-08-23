@@ -50,7 +50,7 @@ extern "C" {
 #define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
 #define DEFAULT_LOG_INTERVAL 500
 
-#define MODULE_NAME "rcqt"
+#define MODULE_NAME "pqt"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 
 using std::cerr;
@@ -385,7 +385,9 @@ int pqtaction::create_threads() {
           json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                                   action_name.c_str(), rvs::loginfo, sec, usec);
           if (json_rcqt_node != NULL) {
-            rvs::lp::AddString(json_rcqt_node, "p2p", msg);
+            rvs::lp::AddString(json_rcqt_node, "src", std::to_string(gpu_id[i]));
+            rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(gpu_id[j]));
+            rvs::lp::AddString(json_rcqt_node, "p2p", "true");
             rvs::lp::LogRecordFlush(json_rcqt_node);
           }
         }
@@ -479,8 +481,6 @@ int pqtaction::run() {
   }
   
   sts = create_threads();
-//   return sts;
-
   if (sts)
     return sts;
 
@@ -686,7 +686,12 @@ int pqtaction::print_final_average() {
       json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::loginfo, sec, usec);
       if (json_rcqt_node != NULL) {
-        rvs::lp::AddString(json_rcqt_node, "p2p bandiwdth", msg);
+        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
+        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
+        rvs::lp::AddString(json_rcqt_node, "p2p", "true");
+        rvs::lp::AddString(json_rcqt_node, "bidirectional", std::string(bidir ? "true" : "false"));
+        rvs::lp::AddString(json_rcqt_node, "p2p bandwidth (GBs)", buff);
+        rvs::lp::AddString(json_rcqt_node, "duration (ms)", std::to_string(duration));        
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
     }    
