@@ -428,7 +428,7 @@ int pqtaction::create_threads() {
         if (bjson) {
           unsigned int sec;
           unsigned int usec;
-          rvs::lp::get_ticks(sec, usec);
+          rvs::lp::get_ticks(&sec, &usec);
           json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                                   action_name.c_str(), rvs::logresults, sec, usec);
           if (json_rcqt_node != NULL) {
@@ -449,7 +449,7 @@ int pqtaction::create_threads() {
     if (bjson) {
       unsigned int sec;
       unsigned int usec;
-      rvs::lp::get_ticks(sec, usec);
+      rvs::lp::get_ticks(&sec, &usec);
       json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::loginfo, sec, usec);
       if (json_rcqt_node != NULL) {
@@ -497,7 +497,6 @@ int pqtaction::run() {
   if (property.find("cli.-j") != property.end()) {
     unsigned int sec;
     unsigned int usec;
-    log("[PQT] uses json", rvs::logdebug);
 
     rvs::lp::get_ticks(&sec, &usec);
     bjson = true;
@@ -672,20 +671,19 @@ int pqtaction::print_running_average() {
     if (bjson) {
       unsigned int sec;
       unsigned int usec;
-      string json_msg;
-      json_msg = p2p-bandwidth  " +
-           std::to_string(src_id) + " " + std::to_string(dst_id) +
-           "  bidirectional: " +
-           std::string(bidir ? "true" : "false") +
-           "  " + buff;
-      rvs::lp::get_ticks(sec, usec);
+      rvs::lp::get_ticks(&sec, &usec);
       json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::loginfo, sec, usec);
       if (json_rcqt_node != NULL) {
-        rvs::lp::AddString(json_rcqt_node, "message", json_msg);
+        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
+        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
+        rvs::lp::AddString(json_rcqt_node, "p2p", "true");
+        rvs::lp::AddString(json_rcqt_node, "bidirectional",
+                           std::string(bidir ? "true" : "false"));
+        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
-    }    
+    }
     sleep(1);
   }
 
@@ -757,7 +755,7 @@ void pqtaction::do_final_average() {
   if (bjson) {
     unsigned int sec;
     unsigned int usec;
-    rvs::lp::get_ticks(sec, usec);
+    rvs::lp::get_ticks(&sec, &usec);
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::logdebug, sec, usec);
     if (json_rcqt_node != NULL) {
@@ -773,7 +771,7 @@ void pqtaction::do_running_average() {
   if (bjson) {
     unsigned int sec;
     unsigned int usec;
-    rvs::lp::get_ticks(sec, usec);
+    rvs::lp::get_ticks(&sec, &usec);
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::logdebug, sec, usec);
     if (json_rcqt_node != NULL) {
