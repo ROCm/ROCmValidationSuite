@@ -39,7 +39,7 @@ using std::string;
  */
 vector<string> str_split(const string& str_val, const string& delimiter) {
     vector<string> str_tokens;
-    unsigned int prev_pos = 0, cur_pos = 0;
+    size_t prev_pos = 0, cur_pos = 0;
     do {
         cur_pos = str_val.find(delimiter, prev_pos);
         if (cur_pos == string::npos)
@@ -61,6 +61,31 @@ vector<string> str_split(const string& str_val, const string& delimiter) {
  */
 int rvs_util_strarr_to_intarr(const std::vector<string>& sArr,
                               std::vector<int>* piArr) {
+  piArr->clear();
+
+  for (auto it = sArr.begin(); it != sArr.end(); ++it) {
+    try {
+      if (is_positive_integer(*it)) {
+        piArr->push_back(std::stoi(*it));
+      }
+    }
+    catch(...) {
+    }
+  }
+
+  if (sArr.size() != piArr->size())
+    return -1;
+
+  return piArr->size();
+}
+/**
+ * Convert array of strings into array of unsigned integers
+ * @param sArr input string
+ * @param iArr tokens' delimiter
+ * @return -1 if error, 0 <= otherwise
+ */
+int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
+                              std::vector<uint16_t>* piArr) {
   piArr->clear();
 
   for (auto it = sArr.begin(); it != sArr.end(); ++it) {

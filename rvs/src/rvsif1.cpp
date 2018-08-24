@@ -48,7 +48,7 @@ rvs::if1::~if1() {
  * @param rhs reference to RHS instance
  *
  */
-rvs::if1::if1(const if1& rhs) {
+rvs::if1::if1(const if1& rhs) : ifbase(rhs) {
   *this = rhs;
 }
 
