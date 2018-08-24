@@ -34,7 +34,7 @@ std::map<std::string, std::string> rvs::options::opt;
  * @brief Check and retrieve option.
  *
  * @param Option option to look for
- * @param val option value. Unchanged if option does not exist.
+ * @param pval option value. Unchanged if option does not exist.
  * @return 'true' if Option exists, 'false' otherwise
  *
  */
