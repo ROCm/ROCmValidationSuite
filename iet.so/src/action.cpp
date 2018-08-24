@@ -52,6 +52,7 @@ extern "C" {
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvs_module.h"
+#include "rvsactionbase.h"
 #include "rvsloglp.h"
 #include "rocm_smi/rocm_smi.h"
 
@@ -117,7 +118,7 @@ static bool smi_get_gpu_devices_list(
 }
 
 /**
- * @brief obtains the full path for the file containing GPU power related data
+ * @brief obtains the full path of the file containing GPU power related data
  * @param path base path
  * @return power data file full path
  */
@@ -156,7 +157,7 @@ action::~action() {
 }
 
 /**
- * @brief reads the EDPp test's ramp-up time from the module's properties collection
+ * @brief reads the EDPp test ramp time from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
 void action::property_get_iet_ramp_interval(int *error) {
@@ -216,8 +217,8 @@ void action::property_get_iet_sample_interval(int *error) {
 }
 
 /**
- * @brief reads the max_violations (maximum allowed number of target_power violations)
- * from the module's properties collection
+ * @brief reads the max_violations (maximum allowed number of target_power 
+ * violations) from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
 void action::property_get_iet_max_violations(int *error) {
@@ -275,7 +276,7 @@ void action::property_get_iet_tolerance(int *error) {
                 *error = 1;  // not a floating point number
             }
         } catch (const std::regex_error& e) {
-            *error = 1;
+            *error = 1;  // something went wrong with the regex
         }
         property.erase(it);
     }
@@ -300,7 +301,7 @@ void action::property_get_iet_matrix_size(int *error) {
 }
 
 /**
- * @brief reads all IET related configuration keys from
+ * @brief reads all IET's related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
@@ -317,6 +318,7 @@ bool action::get_all_iet_config_keys(void) {
             return false;
         }
     } else {
+        // <target_power> is mandatory => IET cannot continue
         cerr << "RVS-IET: action: " << action_name <<
             "  key '" << RVS_CONF_TARGET_POWER_KEY <<
             "' was not found" << std::endl;
@@ -325,44 +327,44 @@ bool action::get_all_iet_config_keys(void) {
 
     property_get_iet_ramp_interval(&error);
     if (error) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_RAMP_INTERVAL_KEY << "'" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_RAMP_INTERVAL_KEY << "' key value" << std::endl;
         return false;
     }
 
     property_get_iet_log_interval(&error);
     if (error) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "'" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_LOG_INTERVAL_KEY << "' key value" << std::endl;
         return false;
     }
 
     property_get_iet_sample_interval(&error);
     if (error) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_SAMPLE_INTERVAL_KEY << "'" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_SAMPLE_INTERVAL_KEY << "' key value" << std::endl;
         return false;
     }
 
 
     property_get_iet_max_violations(&error);
     if (error) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_MAX_VIOLATIONS_KEY << "'" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_MAX_VIOLATIONS_KEY << "' key value" << std::endl;
         return false;
     }
 
     property_get_iet_tolerance(&error);
     if (error) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_TOLERANCE_KEY << "'" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_TOLERANCE_KEY << "' key value" << std::endl;
         return false;
     }
 
     property_get_iet_matrix_size(&error);
     if (error) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_MATRIX_SIZE_KEY << "'" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_MATRIX_SIZE_KEY << "' key value" << std::endl;
         return false;
     }
     return true;
@@ -377,17 +379,18 @@ bool action::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
 
-    // get <device> property value (a list of gpu id)
+    // get <device> property value ("all" or a list of gpu id)
     if (has_property("device", sdev)) {
         device_all_selected = property_get_device(&error);
         if (error) {  // log the error & abort IET
-            cerr << "RVS-IET: action: " << action_name <<
-                "  invalid 'device' key value " << sdev << std::endl;
+            cerr << "RVS-IET: action: " << action_name << " invalid '" <<
+                    RVS_CONF_DEVICE_KEY << "' key value " << sdev << std::endl;
             return false;
         }
     } else {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  key 'device' was not found" << std::endl;
+        // log the error & abort IET
+        cerr << "RVS-IET: action: " << action_name << " key '" <<
+                RVS_CONF_DEVICE_KEY << "' was not found" << std::endl;
         return false;
     }
 
@@ -400,8 +403,8 @@ bool action::get_all_common_config_keys(void) {
                 device_id_filtering = true;
             }
         } else {
-            cerr << "RVS-IET: action: " << action_name <<
-                "  invalid 'deviceid' key value " << sdevid << std::endl;
+            cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_DEVICEID_KEY << "' key value " << sdevid << std::endl;
             return false;
         }
     }
@@ -409,31 +412,29 @@ bool action::get_all_common_config_keys(void) {
     // get the other action/IET related properties
     rvs::actionbase::property_get_run_parallel(&error);
     if (error == 1) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_PARALLEL_KEY <<
-            "' key value" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_PARALLEL_KEY << "' key value" << std::endl;
         return false;
     }
 
     rvs::actionbase::property_get_run_count(&error);
     if (error == 1) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_COUNT_KEY << "' key value" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_COUNT_KEY << "' key value" << std::endl;
         return false;
     }
 
     rvs::actionbase::property_get_run_wait(&error);
     if (error == 1) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_WAIT_KEY << "' key value" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_WAIT_KEY << "' key value" << std::endl;
         return false;
     }
 
     rvs::actionbase::property_get_run_duration(&error);
     if (error == 1) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  invalid '" << RVS_CONF_DURATION_KEY <<
-            "' key value" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  invalid '" <<
+                RVS_CONF_DURATION_KEY << "' key value" << std::endl;
         return false;
     }
 
@@ -446,13 +447,12 @@ bool action::get_all_common_config_keys(void) {
  */
 bool action::do_edp_test(void) {
     size_t k = 0;
-    while (1) {
+    for (;;) {
         unsigned int i = 0;
         if (gst_run_wait_ms != 0)  // delay iet execution
             sleep(gst_run_wait_ms);
 
         vector<IETWorker> workers(edpp_gpus.size());
-
         vector<gpu_hwmon_info>::iterator it;
 
         // all worker instances have the same json settings
@@ -501,7 +501,7 @@ bool action::do_edp_test(void) {
 
 /**
  * @brief gets irq value for device
- * @param dev_path represents path of device
+ * @param dev_path device's path (within the sysfs)
  * @return irq value
  */
 const std::string action::get_irq(const std::string dev_path) {
@@ -526,6 +526,7 @@ const std::string action::get_irq(const std::string dev_path) {
 int action::get_num_amd_gpu_devices(void) {
     int hip_num_gpu_devices;
     string msg;
+
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
         msg = action_name + " " + MODULE_NAME + " " + IET_NO_COMPATIBLE_GPUS;
@@ -565,8 +566,6 @@ int action::get_num_amd_gpu_devices(void) {
  */
 bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
                                   int32_t gpu_id, int hip_num_gpu_devices) {
-    bool dev_index_found = false;
-
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
         hipDeviceProp_t props;
@@ -603,8 +602,6 @@ bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
                     break;
                 }
             }
-            if (dev_index_found)
-                break;
         }
     }
 
@@ -653,8 +650,7 @@ int action::get_all_selected_gpus(void) {
     for (pci_cdev = pacc->devices; pci_cdev; pci_cdev = pci_cdev->next) {
         // fill in the info
         pci_fill_info(pci_cdev,
-                PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
-                | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
+                PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS);
 
         // computes the actual dev's location_id (sysfs entry)
         uint16_t dev_location_id = ((((uint16_t) (pci_cdev->bus)) << 8)
@@ -671,7 +667,6 @@ int action::get_all_selected_gpus(void) {
                         pci_cdev->device_id == deviceid)) {
             // check if the GPU is part of the EDPp test  (either <device>: all
             // or the gpu_id is in the device: <gpu id> list)
-
             bool cur_gpu_selected = false;
 
             if (device_all_selected) {
@@ -736,8 +731,9 @@ int action::run(void) {
         return -1;
 
     if (gst_run_duration_ms > 0 && (gst_run_duration_ms < iet_ramp_interval)) {
-        cerr << "RVS-IET: action: " << action_name <<
-            "  'duration' cannot be less than 'ramp_interval'" << std::endl;
+        cerr << "RVS-IET: action: " << action_name << "  '" <<
+        RVS_CONF_DURATION_KEY << "' cannot be less than '" <<
+        RVS_CONF_RAMP_INTERVAL_KEY << "'" << std::endl;
         return -1;
     }
 

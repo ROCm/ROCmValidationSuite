@@ -390,13 +390,15 @@ int pqtaction::create_threads() {
           json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                                   action_name.c_str(), rvs::logresults, sec, usec);
           if (json_rcqt_node != NULL) {
-            rvs::lp::AddString(json_rcqt_node, "src", std::to_string(gpu_id[i]));
-            rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(gpu_id[j]));
+            rvs::lp::AddString(json_rcqt_node, "src",
+                               std::to_string(gpu_id[i]));
+            rvs::lp::AddString(json_rcqt_node, "dst",
+                               std::to_string(gpu_id[j]));
             rvs::lp::AddString(json_rcqt_node, "p2p", "true");
             rvs::lp::LogRecordFlush(json_rcqt_node);
           }
         }
-        
+
         // GPUs are peers, create transaction for them
         int srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
         if (srcnode < 0) {
@@ -498,7 +500,7 @@ int pqtaction::run() {
       log(msg.c_str(), rvs::logerror);
     }
   }
-  
+
   sts = create_threads();
   if (sts)
     return sts;
@@ -526,12 +528,12 @@ int pqtaction::run() {
 int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
   //! ptr to RVS HSA singleton wrapper
   rvs::hsa* pHsa;
-  
+
   if (Src == Dst) {
     return 0;
   }
   pHsa = rvs::hsa::Get();
-  
+
   // GPUs are peers, create transaction for them
   int srcnode = rvs::gpulist::GetNodeIdFromGpuId(Src);
   if (srcnode < 0) {
@@ -546,7 +548,7 @@ int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
     << std::to_string(Dst);
     return 0;
   }
-        
+
   return pHsa->rvs::hsa::GetPeerStatus(srcnode, dstnode);
 }
 
@@ -708,12 +710,14 @@ int pqtaction::print_final_average() {
         rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
         rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
         rvs::lp::AddString(json_rcqt_node, "p2p", "true");
-        rvs::lp::AddString(json_rcqt_node, "bidirectional", std::string(bidir ? "true" : "false"));
+        rvs::lp::AddString(json_rcqt_node, "bidirectional",
+                           std::string(bidir ? "true" : "false"));
         rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
-        rvs::lp::AddString(json_rcqt_node, "duration (ms)", std::to_string(duration));        
+        rvs::lp::AddString(json_rcqt_node, "duration (ms)",
+                           std::to_string(duration));
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
-    }    
+    }
     sleep(1);
   }
 

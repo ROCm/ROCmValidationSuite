@@ -132,7 +132,6 @@ int action::run(void) {
   int error = 0;
   string msg;
   struct pci_access *pacc;
-
   // get the action name
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
@@ -161,7 +160,6 @@ int action::run(void) {
     std::cerr << "Error fetching action_name\n";
     return false;
   }
-
   bar1_req_size      = get_property("bar1_req_size");
   bar2_req_size      = get_property("bar2_req_size");
   bar4_req_size      = get_property("bar4_req_size");
@@ -186,13 +184,6 @@ int action::run(void) {
 
     // if the device is not in the list, move on
     if (-1 == gpu_id)
-      continue;
-
-    auto it_gpu_id = find(device_prop_gpu_id_list.begin(),
-                          device_prop_gpu_id_list.end(),
-                          std::to_string(gpu_id));
-
-    if (it_gpu_id == device_prop_gpu_id_list.end())
       continue;
 
     // get actual values
@@ -227,8 +218,13 @@ int action::run(void) {
     unsigned int sec;
     unsigned int usec;
     rvs::lp::get_ticks(sec, usec);
-    string msgs1, msgs2, msgs4, msgs5, msga1, msga2, msga4, pmsg, str;
+    string msgs1, msgs2, msgs4, msgs5, msga1, msga2, msga4, pmsg, str, pass_str;
     char hex_value[30];
+
+    if (pass)
+      pass_str = "pass";
+    else
+      pass_str = "fail";
 
     // formating bar1 size for print
     msgs1 = pretty_print(bar1_size, action_name, "bar1_size");
@@ -248,9 +244,11 @@ int action::run(void) {
     msga2 = "[" + action_name + "] " + " smqt bar2_base_addr " + hex_value;
     snprintf(hex_value, 0xFF, "%lX", bar4_base_addr);
     msga4 = "[" + action_name + "] " + " smqt bar4_base_addr " + hex_value;
-    pmsg = "[" + action_name + "] " + " smqt " + std::to_string(pass);
+    pmsg = "[" + action_name + "] " + " smqt " + pass_str;
+
     void* r = rvs::lp::LogRecordCreate("SMQT", action_name.c_str(),
                                        rvs::loginfo, sec, usec);
+
     rvs::lp::Log(msgs1, rvs::loginfo, sec, usec);
     rvs::lp::Log(msga1, rvs::loginfo, sec, usec);
     rvs::lp::Log(msgs2, rvs::loginfo, sec, usec);
