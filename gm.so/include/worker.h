@@ -78,6 +78,7 @@ class Worker : public rvs::ThreadBase {
   void set_bound(std::string metr_name, bool met_bound, int metr_max,
                  int metr_min);
   const std::string get_irq(const std::string path);
+  void do_metric_values(void);
 
  protected:
   virtual void run(void);
@@ -133,9 +134,19 @@ struct Metric_violation {
     int power_violation;
 };
 
+struct Metric_value {
+    int temp;
+    int clock;
+    int mem_clock;
+    int fan;
+    int power;
+};
+
+
   std::map<std::string, Dev_metrics> irq_gpu_ids;
   std::map<std::string, Metric_bound> bounds;
   std::map<std::string, Metric_violation> met_violation;
+  std::map<std::string, Metric_value> met_value;
 };
 
 #endif  // GM_SO_INCLUDE_WORKER_H_
