@@ -71,7 +71,7 @@ ulong action::get_property(string property) {
   string value;
   ulong result;
 
-  if (has_property(property, value)) {
+  if (has_property(property, &value)) {
     result = std::stoul(value);
   } else {
     std::cerr << "Error fetching " << property
@@ -98,7 +98,7 @@ bool action::get_all_common_config_keys() {
   int error;
 
   // get <device> property value (a list of gpu id)
-  if (has_property("device", sdev)) {
+  if (has_property("device", &sdev)) {
     property_get_device(&error);
     if (error) {  // log the error & abort GST
       cerr << "RVS-SMQT: action: " << action_name <<
@@ -156,7 +156,7 @@ int action::run(void) {
   struct pci_dev *dev;
   dev = pacc->devices;
 
-  if (!has_property("name", action_name)) {
+  if (!has_property("name", &action_name)) {
     std::cerr << "Error fetching action_name\n";
     return false;
   }
@@ -217,7 +217,7 @@ int action::run(void) {
     // loginfo
     unsigned int sec;
     unsigned int usec;
-    rvs::lp::get_ticks(sec, usec);
+    rvs::lp::get_ticks(&sec, &usec);
     string msgs1, msgs2, msgs4, msgs5, msga1, msga2, msga4, pmsg, str, pass_str;
     char hex_value[30];
 

@@ -86,7 +86,7 @@ void Worker::run() {
   void* r;
 
   // get timestamp
-  rvs::lp::get_ticks(sec, usec);
+  rvs::lp::get_ticks(&sec, &usec);
 
   // add string output
   string msg("[" + action_name + "] pesm " + strgpuids + " started");
@@ -137,7 +137,7 @@ void Worker::run() {
           continue;
       }
 
-      rvs::lp::get_ticks(sec, usec);
+      rvs::lp::get_ticks(&sec, &usec);
 
       // get current speed for the link
       get_link_stat_cur_speed(dev, buff);
@@ -187,7 +187,7 @@ void Worker::run() {
   }
 
   // get timestamp
-  rvs::lp::get_ticks(sec, usec);
+  rvs::lp::get_ticks(&sec, &usec);
 
   // add string output
   msg = "[" + stop_action_name + "] pesm all stopped";
