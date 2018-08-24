@@ -22,16 +22,16 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GPUM_SO_INCLUDE_WORKER_H_
-#define GPUM_SO_INCLUDE_WORKER_H_
+#ifndef GM_SO_INCLUDE_WORKER_H_
+#define GM_SO_INCLUDE_WORKER_H_
 
 #include <string>
 #include <vector>
 #include <memory>
 #include <map>
-#include "rocm_smi/rocm_smi.h"
 
 #include "rvsthreadbase.h"
+#include "rocm_smi/rocm_smi.h"
 
 
 /**
@@ -58,7 +58,7 @@ class Worker : public rvs::ThreadBase {
   //! Sets device id for filtering
   void set_deviceid(const int id) { device_id = id; }
   //! Sets GPU IDs for filtering
-  void set_gpuids(const std::vector<int>& GpuIds);
+  void set_gpuids(const std::vector<uint16_t>& GpuIds);
   //! Sets GPU IDs for filtering (string used in messages)
   //! @param Devices List of devices to monitor
   void set_strgpuids(const std::string& Devices) { strgpuids = Devices; }
@@ -78,6 +78,7 @@ class Worker : public rvs::ThreadBase {
   void set_bound(std::string metr_name, bool met_bound, int metr_max,
                  int metr_min);
   const std::string get_irq(const std::string path);
+  void do_metric_values(void);
 
  protected:
   virtual void run(void);
@@ -93,7 +94,7 @@ class Worker : public rvs::ThreadBase {
   //! GPU id filtering flag
   bool bfiltergpu;
   //! list of GPU devices to monitor
-  std::vector<int> gpuids;
+  std::vector<uint16_t> gpuids;
   //! list of GPU devices to monitor (string used in messages)
   std::string strgpuids;
   //! Name of the action which initiated monitoring
@@ -133,9 +134,19 @@ struct Metric_violation {
     int power_violation;
 };
 
+struct Metric_value {
+    int temp;
+    int clock;
+    int mem_clock;
+    int fan;
+    int power;
+};
+
+
   std::map<std::string, Dev_metrics> irq_gpu_ids;
   std::map<std::string, Metric_bound> bounds;
   std::map<std::string, Metric_violation> met_violation;
+  std::map<std::string, Metric_value> met_value;
 };
 
-#endif  // GPUM_SO_INCLUDE_WORKER_H_
+#endif  // GM_SO_INCLUDE_WORKER_H_
