@@ -388,7 +388,7 @@ int pqtaction::create_threads() {
           unsigned int usec;
           rvs::lp::get_ticks(sec, usec);
           json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                                  action_name.c_str(), rvs::loginfo, sec, usec);
+                                  action_name.c_str(), rvs::logresults, sec, usec);
           if (json_rcqt_node != NULL) {
             rvs::lp::AddString(json_rcqt_node, "src", std::to_string(gpu_id[i]));
             rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(gpu_id[j]));
@@ -423,13 +423,26 @@ int pqtaction::create_threads() {
             + std::to_string(gpu_id[i]) + " "
             + std::to_string(gpu_id[j]) + " false";
         rvs::lp::Log(msg, rvs::logresults);
+        if (bjson) {
+          unsigned int sec;
+          unsigned int usec;
+          rvs::lp::get_ticks(sec, usec);
+          json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                                  action_name.c_str(), rvs::logresults, sec, usec);
+          if (json_rcqt_node != NULL) {
+            rvs::lp::AddString(json_rcqt_node, "src", std::to_string(gpu_id[i]));
+            rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(gpu_id[j]));
+            rvs::lp::AddString(json_rcqt_node, "p2p", "false");
+            rvs::lp::LogRecordFlush(json_rcqt_node);
+          }
+        }
       }
     }
   }
 
   if (prop_test_bandwidth && test_array.size() < 1) {
     msg = "[" + action_name + "]" +
-          "No GPU/peer combination matches criteria from test configuation";
+          " No GPU/peer combination matches criteria from test configuation";
     rvs::lp::Log(msg, rvs::logerror);
     return -1;
   }
@@ -690,7 +703,7 @@ int pqtaction::print_final_average() {
       unsigned int usec;
       rvs::lp::get_ticks(sec, usec);
       json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::loginfo, sec, usec);
+                              action_name.c_str(), rvs::logresults, sec, usec);
       if (json_rcqt_node != NULL) {
         rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
         rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
