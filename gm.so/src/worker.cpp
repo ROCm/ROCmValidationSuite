@@ -155,7 +155,7 @@ void Worker::do_metric_values() {
   unsigned int usec;
 
   // get timestamp
-  rvs::lp::get_ticks(sec, usec);
+  rvs::lp::get_ticks(&sec, &usec);
 
   for (map<string, Dev_metrics>::iterator it = irq_gpu_ids.begin(); it !=
             irq_gpu_ids.end(); it++) {
