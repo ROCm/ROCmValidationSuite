@@ -176,7 +176,7 @@ void Worker::run() {
   void* r;
 
   // get timestamp
-  rvs::lp::get_ticks(sec, usec);
+  rvs::lp::get_ticks(&sec, &usec);
 
   // DiscoverDevices() will seach for devices and monitors and update internal
   // data structures.
@@ -403,7 +403,7 @@ void Worker::run() {
 
   pci_cleanup(pacc);
   // get timestamp
-  rvs::lp::get_ticks(sec, usec);
+  rvs::lp::get_ticks(&sec, &usec);
 
   for (map<string, Dev_metrics>::iterator it = irq_gpu_ids.begin();
         it != irq_gpu_ids.end(); it++) {
@@ -438,7 +438,7 @@ void Worker::stop() {
   unsigned int sec;
   unsigned int usec;
   // get timestamp
-  rvs::lp::get_ticks(sec, usec);
+  rvs::lp::get_ticks(&sec, &usec);
   // reset "run" flag
   brun = false;
   // (give thread chance to finish processing and exit)

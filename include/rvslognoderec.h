@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <string>
+
 #include "rvslognode.h"
 
 namespace rvs {
