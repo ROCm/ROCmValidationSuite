@@ -24,9 +24,7 @@
  *******************************************************************************/
 
 #include "rvslognoderec.h"
-
-using namespace std;
-
+#include <string>
 
 /**
  * @brief Constructor
@@ -38,7 +36,8 @@ using namespace std;
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNodeRec::LogNodeRec( const std::string& Name, const int LoggingLevel, const unsigned int Sec, const unsigned int uSec, const LogNodeBase* Parent)
+rvs::LogNodeRec::LogNodeRec(const std::string& Name, int LoggingLevel,
+  unsigned Sec, unsigned uSec, const LogNodeBase* Parent)
 :
 LogNode(Name, Parent),
 Level(LoggingLevel),
@@ -57,7 +56,8 @@ usec(uSec) {
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNodeRec::LogNodeRec( const char* Name, const int LoggingLevel, const unsigned int Sec, const unsigned int uSec, const LogNodeBase* Parent)
+rvs::LogNodeRec::LogNodeRec(const char* Name, int LoggingLevel,
+  const unsigned Sec, const unsigned uSec, const LogNodeBase* Parent)
 :
 LogNode(Name, Parent),
 Level(LoggingLevel),
@@ -76,7 +76,7 @@ rvs::LogNodeRec::~LogNodeRec() {
  * @return Current logging level
  *
  */
-const int rvs::LogNodeRec::LogLevel() {
+int rvs::LogNodeRec::LogLevel() {
   return Level;
 }
 
@@ -91,24 +91,25 @@ const int rvs::LogNodeRec::LogLevel() {
  *
  */
 std::string rvs::LogNodeRec::ToJson(const std::string& Lead) {
-
-  string result(RVSENDL);
+  std::string result(RVSENDL);
   result += Lead + "{";
 
   result += RVSENDL;
   result += Lead + RVSINDENT;
-  result +=  string("\"") + "loglevel" + "\"" + " : " + std::to_string(Level) + ",";
+  result += std::string("\"") + "loglevel" + "\"" + " : " +
+            std::to_string(Level) + ",";
 
   char  buff[64];
-  sprintf(buff, "%6d.%6d", sec, usec);
+  snprintf(buff, sizeof(buff), "%6d.%-6d", secs, usecs);
   result += RVSENDL;
   result += Lead + RVSINDENT;
-  result +=  string("\"") + "time" + "\"" + " : " + string("\"") + buff + string("\"")  + ",";
+  result += std::string("\"") + "time" + "\"" + " : " +
+            std::string("\"") + buff + std::string("\"")  + ",";
 
   int  size = Child.size();
-  for(int i = 0; i < size; i++) {
+  for (int i = 0; i < size; i++) {
     result += Child[i]->ToJson(Lead + RVSINDENT);
-    if( i+ 1 < size) {
+    if (i+ 1 < size) {
       result += ",";
     }
   }
