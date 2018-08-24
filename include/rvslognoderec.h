@@ -22,17 +22,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _LOGNODEREC_H
-#define _LOGNODEREC_H
-
-#include "rvslognode.h"
+#ifndef INCLUDE_RVSLOGNODEREC_H_
+#define INCLUDE_RVSLOGNODEREC_H_
 
 #include <vector>
+#include <string>
+#include "rvslognode.h"
 
-
-namespace rvs 
-{
-
+namespace rvs {
 /**
  * @class LogNodeRec
  * @ingroup Launcher
@@ -42,21 +39,20 @@ namespace rvs
  * Used to construct structure log record for JSON output
  *
  */
-class LogNodeRec : public LogNode
-{
-
-public:
-
-  LogNodeRec( const std::string& Name, const int LogLevel, const unsigned int Sec, const unsigned int uSec, const LogNodeBase* Parent = nullptr);
-  LogNodeRec( const char* Name, const int LogLevel, const unsigned int Sec, const unsigned int uSec, const LogNodeBase* Parent = nullptr);
+class LogNodeRec : public LogNode {
+ public:
+  LogNodeRec(const std::string& Name, int LogLevel, unsigned Sec,
+             unsigned uSec, const LogNodeBase* Parent = nullptr);
+  LogNodeRec(const char* Name, int LogLevel, unsigned Sec,
+             unsigned uSec, const LogNodeBase* Parent = nullptr);
   virtual ~LogNodeRec();
 
   virtual std::string ToJson(const std::string& Lead = "");
 
-public:
-  const int LogLevel();
+ public:
+  int LogLevel();
 
-protected:
+ protected:
   //! Logging Level
   int Level;
   //! Timestamp - seconds from system start
@@ -67,4 +63,4 @@ protected:
 
 }  // namespace rvs
 
-#endif // _LOGNODEREC_H
+#endif  // INCLUDE_RVSLOGNODEREC_H_
