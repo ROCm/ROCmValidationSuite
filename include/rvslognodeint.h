@@ -22,13 +22,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _LOGNODEINT_H
-#define _LOGNODEINT_H
+#ifndef INCLUDE_RVSLOGNODEINT_H_
+#define INCLUDE_RVSLOGNODEINT_H_
+
+#include <string>
 
 #include "rvslognodebase.h"
 
-namespace rvs 
-{
+namespace rvs {
 
 
 /**
@@ -38,24 +39,22 @@ namespace rvs
  * @brief Loger node holding integer value
  *
  */
-class LogNodeInt : public LogNodeBase
-{
-
-public:
-
-  LogNodeInt( const std::string& Name, const int Val, const LogNodeBase* pParent = nullptr);
-  LogNodeInt( const char* Name, const int Val, const LogNodeBase* pParent = nullptr);
+class LogNodeInt : public LogNodeBase {
+ public:
+  explicit LogNodeInt(const std::string& Name, const int Val,
+                      const LogNodeBase* pParent = nullptr);
+  explicit LogNodeInt(const char* Name, const int Val,
+                      const LogNodeBase* pParent = nullptr);
 
   virtual ~LogNodeInt();
 
   virtual std::string ToJson(const std::string& Lead = "");
 
-protected:
-
+ protected:
   //! Node value
   int Value;
 };
 
 }  // namespace rvs
 
-#endif // _LOGNODEINT_H
+#endif  // INCLUDE_RVSLOGNODEINT_H_

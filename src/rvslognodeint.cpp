@@ -22,9 +22,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include <string>
+
 #include "rvslognodeint.h"
 
-using namespace std;
+using std::string;
 
 /**
  * @brief Constructor
@@ -34,8 +36,9 @@ using namespace std;
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNodeInt::LogNodeInt( const std::string& Name, const int Val, const LogNodeBase* Parent)
-: 
+rvs::LogNodeInt::LogNodeInt(const std::string& Name, const int Val,
+                            const LogNodeBase* Parent)
+:
 LogNodeBase(Name, Parent),
 Value(Val) {
   Type = eLN::Integer;
@@ -49,7 +52,8 @@ Value(Val) {
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNodeInt::LogNodeInt( const char* Name, const int Val, const LogNodeBase* Parent)
+rvs::LogNodeInt::LogNodeInt(const char* Name, const int Val,
+                            const LogNodeBase* Parent)
 :
 LogNodeBase(Name, Parent),
 Value(Val) {
@@ -71,7 +75,6 @@ rvs::LogNodeInt::~LogNodeInt() {
  *
  */
 std::string rvs::LogNodeInt::ToJson(const std::string& Lead) {
-
   string result(RVSENDL);
   result += Lead + "\"" + Name + "\"" + " : " + std::to_string(Value);
 

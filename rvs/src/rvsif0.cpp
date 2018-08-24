@@ -43,7 +43,7 @@ rvs::if0::~if0() {
  * @param rhs reference to RHS instance
  *
  */
-rvs::if0::if0(const if0& rhs) {
+rvs::if0::if0(const if0& rhs) : ifbase(rhs) {
   *this = rhs;
 }
 
