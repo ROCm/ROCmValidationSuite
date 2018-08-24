@@ -97,17 +97,17 @@ int rvs::logger::log_level() {
 /**
  * @brief Fetches times since system start
  *
- * @param secs seconds since system start
- * @param usecs microseconds withing current second
+ * @param psecs seconds since system start
+ * @param pusecs microseconds withing current second
  * @return 'true' - success, 'false otherwise
  *
  */
-bool rvs::logger::get_ticks(uint32_t& secs, uint32_t& usecs) {
+bool rvs::logger::get_ticks(uint32_t* psecs, uint32_t* pusecs) {
   struct timespec ts;
 
   clock_gettime(CLOCK_MONOTONIC, &ts);
-  usecs    = ts.tv_nsec / 1000;
-  secs  = ts.tv_sec;
+  *pusecs    = ts.tv_nsec / 1000;
+  *psecs  = ts.tv_sec;
 
   return true;
 }
@@ -186,7 +186,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
     secs = Sec;
     usecs = uSec;
   } else {
-    get_ticks(secs, usecs);
+    get_ticks(&secs, &usecs);
   }
 
   char  buff[64];
@@ -242,7 +242,7 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
     sec = Sec;
     usec = uSec;
   } else  {
-    get_ticks(sec, usec);
+    get_ticks(&sec, &usec);
   }
 
   rvs::LogNodeRec* rec = new LogNodeRec(Action, LogLevel, sec, usec);
@@ -322,7 +322,7 @@ int rvs::logger::ToFile(const std::string& Row) {
   std::lock_guard<std::mutex> lk(log_mutex);
 
   std::string logfile;
-  if (!rvs::options::has_option("-l", logfile))
+  if (!rvs::options::has_option("-l", &logfile))
     return -1;
 
   std::fstream fs;
@@ -347,7 +347,7 @@ int rvs::logger::ToFile(const std::string& Row) {
  */
 int rvs::logger::JsonPatchAppend() {
   std::string logfile;
-  if (!rvs::options::has_option("-l", logfile))
+  if (!rvs::options::has_option("-l", &logfile))
     return -1;
 
   FILE * pFile;
@@ -436,7 +436,7 @@ int rvs::logger::initialize() {
   std::string logfile;
 
   // if no logg to file requested, just return
-  if (!rvs::options::has_option("-l", logfile))
+  if (!rvs::options::has_option("-l", &logfile))
     return 0;
 
   if (append()) {
