@@ -22,6 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include <string>
+
 #include "rvslognodebase.h"
 
 /**
@@ -31,7 +33,8 @@
  * @param pParent Pointer to parent node
  *
  */
-rvs::LogNodeBase::LogNodeBase(const std::string& rName, const LogNodeBase* pParent)
+rvs::LogNodeBase::LogNodeBase(const std::string& rName,
+                              const LogNodeBase* pParent)
 : Name(rName),
 Parent(pParent),
 Type(eLN::Unknown) {

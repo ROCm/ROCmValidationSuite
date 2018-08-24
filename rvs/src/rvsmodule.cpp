@@ -153,10 +153,10 @@ rvs::module* rvs::module::find_create_module(const char* name) {
 
     // open .so
     string libpath;
-    if (rvs::options::has_option("-m", libpath)) {
+    if (rvs::options::has_option("-m", &libpath)) {
       libpath += "/";
     } else {
-      rvs::options::has_option("pwd", libpath);
+      rvs::options::has_option("pwd", &libpath);
       libpath += "/";
     }
     string sofullname(libpath + it->second);
