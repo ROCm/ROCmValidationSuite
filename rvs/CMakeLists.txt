@@ -26,7 +26,7 @@
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
-add_compile_options(-Wall -Werror)
+add_compile_options(-Wall -Wextra)
 
 message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
