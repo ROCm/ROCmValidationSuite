@@ -55,6 +55,7 @@ extern "C" {
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvsloglp.h"
+#include "rvstimer.h"
 
 using std::string;
 using std::vector;
@@ -145,6 +146,46 @@ const std::string Worker::get_irq(const std::string path) {
     f_id.close();
     return irq;
 }
+/**
+ * @brief Prints current metric values at every log_interval msec.
+ * */
+void Worker::do_metric_values() {
+  string msg;  
+  unsigned int sec;
+  unsigned int usec;
+
+  // get timestamp
+  rvs::lp::get_ticks(sec, usec);
+  
+    for (map<string, Dev_metrics>::iterator it = irq_gpu_ids.begin(); it !=
+            irq_gpu_ids.end(); it++) {
+      if (bounds["temp"].mon_metric) {
+        msg = "[" + action_name + "] gm " +
+            std::to_string((it->second).gpu_id) + " temp " +
+            std::to_string(met_value[it->first].temp);
+        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+      }
+      if (bounds["clock"].mon_metric) {
+        msg = "[" + action_name + "] gm " +
+            std::to_string((it->second).gpu_id) + " clock " +
+            std::to_string(met_value[it->first].clock);
+        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+      }
+      if (bounds["mem_clock"].mon_metric) {
+        msg = "[" + action_name + "] gm " +
+            std::to_string((it->second).gpu_id) +
+            " mem_clock " +
+            std::to_string(met_value[it->first].mem_clock);
+        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+      }
+      if (bounds["fan"].mon_metric) {
+        msg = "[" + action_name + "] gm " +
+            std::to_string((it->second).gpu_id) + " fan "+
+            std::to_string(met_value[it->first].fan) + "%";
+        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+      }
+    }
+}
 
 /**
  * @brief Thread function
@@ -174,6 +215,8 @@ void Worker::run() {
   unsigned int sec;
   unsigned int usec;
   void* r;
+
+  rvs::timer<Worker> timer_running(&Worker::do_metric_values, this);
 
   // get timestamp
   rvs::lp::get_ticks(sec, usec);
@@ -250,13 +293,15 @@ void Worker::run() {
                 (val_str, {gpu_id, 0, 0, 0, 0, 0}));
           met_violation.insert(std::pair<string, Metric_violation>
                 (val_str, {0, 0, 0, 0, 0}));
-
+          met_value.insert(std::pair<string, Metric_value>
+                (val_str, {0, 0, 0, 0, 0}));
           count = 0;
           break;
         }
       }
     }
   }
+  timer_running.start(log_interval);
   // worker thread has started
   while (brun) {
     rvs::lp::Log("[" + action_name + "] gm worker thread is running...",
@@ -282,6 +327,7 @@ void Worker::run() {
             size_t cur_pos = vs.find("Mhz");
             string token = vs.substr(2, cur_pos-2);
             int mhz = stoi(token);
+            met_value[val_str].mem_clock = mhz;
             if (!(mhz >= bounds["mem_clock"].min_val && mhz <=
                             bounds["mem_clock"].max_val) &&
                             bounds["mem_clock"].check_bounds) {
@@ -315,6 +361,7 @@ void Worker::run() {
             size_t cur_pos = vs.find("Mhz");
             string token = vs.substr(2, cur_pos-2);
             int mhz = stoi(token);
+            met_value[val_str].clock = mhz;
             if (!(mhz >= bounds["clock"].min_val && mhz <=
                         bounds["clock"].max_val) &&
                         bounds["clock"].check_bounds) {
@@ -344,6 +391,7 @@ void Worker::run() {
         ret = dev->monitor()->readMonitor(amd::smi::kMonTemp, &value);
         if (ret != -1) {
           int temper = (static_cast<float>(value)/1000.0);
+          met_value[val_str].temp = temper;
           irq_gpu_ids[val_str].av_temp += temper;
           if (!(temper >= bounds["temp"].min_val && temper <=
                         bounds["temp"].max_val) &&
@@ -374,6 +422,7 @@ void Worker::run() {
                         &value2);
           if (ret != -1) {
             int fan = value2/static_cast<float>(value) * 100;
+            met_value[val_str].fan = fan;
             irq_gpu_ids[val_str].av_fan += fan;
             if (!(fan >= bounds["fan"].min_val && fan <=
                         bounds["fan"].max_val) &&
@@ -402,6 +451,8 @@ void Worker::run() {
   }
 
   pci_cleanup(pacc);
+
+  timer_running.stop();
   // get timestamp
   rvs::lp::get_ticks(sec, usec);
 
