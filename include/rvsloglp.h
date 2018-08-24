@@ -29,7 +29,8 @@
 
 #include "rvsliblog.h"
 
-#define RVSDEBUG_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"+std::to_string(__LINE__), rvs::logtrace);
+#define RVSDEBUG_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
++std::to_string(__LINE__), rvs::logtrace);
 
 namespace rvs {
 
@@ -64,7 +65,7 @@ class lp {
   static void  AddString(void* Parent, const char* Key, const char* Val);
   static void  AddInt(void* Parent, const char* Key, const int Val);
   static void  AddNode(void* Parent, void* Child);
-  static bool  get_ticks(unsigned int& sec, unsigned int& usec);
+  static bool  get_ticks(unsigned int* psec, unsigned int* pusec);
 
 
  protected:

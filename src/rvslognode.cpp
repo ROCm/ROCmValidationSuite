@@ -22,9 +22,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include <string>
+
 #include "rvslognode.h"
 
-using namespace std;
+using std::string;
 
 /**
  * @brief Constructor
@@ -33,7 +35,7 @@ using namespace std;
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNode::LogNode( const std::string& Name, const LogNodeBase* Parent)
+rvs::LogNode::LogNode(const std::string& Name, const LogNodeBase* Parent)
 :
 LogNodeBase(Name, Parent) {
   Type = eLN::List;
@@ -46,7 +48,7 @@ LogNodeBase(Name, Parent) {
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNode::LogNode( const char* Name, const LogNodeBase* Parent)
+rvs::LogNode::LogNode(const char* Name, const LogNodeBase* Parent)
 :
 LogNodeBase(Name, Parent) {
   Type = eLN::List;
@@ -54,7 +56,7 @@ LogNodeBase(Name, Parent) {
 
 //! Destructor
 rvs::LogNode::~LogNode() {
-  for(auto it = Child.begin(); it != Child.end(); ++it) {
+  for (auto it = Child.begin(); it != Child.end(); ++it) {
     delete (*it);
   }
 }
@@ -80,14 +82,13 @@ void rvs::LogNode::Add(LogNodeBase* pChild) {
  *
  */
 std::string rvs::LogNode::ToJson(const std::string& Lead) {
-
   string result(RVSENDL);
   result += Lead + "\"" + Name + "\"" + " : {";
 
   int  size = Child.size();
-  for(int i = 0; i < size; i++) {
+  for (int i = 0; i < size; i++) {
     result += Child[i]->ToJson(Lead + RVSINDENT);
-    if( i+ 1 < size) {
+    if (i+ 1 < size) {
       result += ",";
     }
   }
