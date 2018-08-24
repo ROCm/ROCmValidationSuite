@@ -100,7 +100,7 @@ std::string rvs::LogNodeRec::ToJson(const std::string& Lead) {
             std::to_string(Level) + ",";
 
   char  buff[64];
-  snprintf(buff, sizeof(buff), "%6d.%-6d", secs, usecs);
+  snprintf(buff, sizeof(buff), "%6d.%-6d", sec, usec);
   result += RVSENDL;
   result += Lead + RVSINDENT;
   result += std::string("\"") + "time" + "\"" + " : " +
