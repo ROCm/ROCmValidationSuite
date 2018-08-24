@@ -22,10 +22,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include <string>
 
 #include "rvslognodestring.h"
 
-using namespace std;
+using std::string;
 
 /**
  * @brief Constructor
@@ -35,11 +36,12 @@ using namespace std;
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNodeString::LogNodeString( const std::string& Name, const std::string& Val, const LogNodeBase* Parent)
-: 
+rvs::LogNodeString::LogNodeString(const std::string& Name,
+                                  const std::string& Val,
+                                  const LogNodeBase* Parent)
+:
 LogNodeBase(Name, Parent),
-Value(Val)
-{
+Value(Val) {
   Type = eLN::String;
 }
 
@@ -51,19 +53,17 @@ Value(Val)
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNodeString::LogNodeString( const char* Name, const char* Val, const LogNodeBase* Parent)
+rvs::LogNodeString::LogNodeString(const char* Name, const char* Val,
+                                  const LogNodeBase* Parent)
 :
 LogNodeBase(Name, Parent),
-Value(Val)
-{
+Value(Val) {
   Type = eLN::String;
 }
 
 //! Destructor
-rvs::LogNodeString::~LogNodeString()
-{
+rvs::LogNodeString::~LogNodeString() {
 }
-
 
 /**
  * @brief Provides JSON representation of Node
@@ -76,7 +76,6 @@ rvs::LogNodeString::~LogNodeString()
  *
  */
 std::string rvs::LogNodeString::ToJson(const std::string& Lead) {
-
   string result(RVSENDL);
   result += Lead + "\"" + Name + "\"" + " : " + "\"" + Value + "\"";
 

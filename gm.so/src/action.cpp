@@ -90,6 +90,9 @@ int action::run(void) {
     bool metric_true, metric_bound;
     int metric_min, metric_max;
     bool terminate = false;
+    std::vector<uint16_t> gpu_id;
+
+    gpu_get_all_gpu_id(&gpu_id);
 
     if (rvs::actionbase::has_property("sample_interval")) {
         sample_interval =
@@ -157,7 +160,7 @@ int action::run(void) {
 
     // checki if deviceid filtering is required
     string sdevid;
-    if (has_property("deviceid", sdevid)) {
+    if (has_property("deviceid", &sdevid)) {
       if (::is_positive_integer(sdevid)) {
         try {
           pworker->set_deviceid(std::stoi(sdevid));
@@ -176,18 +179,19 @@ int action::run(void) {
 
     // check if GPU id filtering is requied
     string sdev;
-    if (has_property("device", sdev)) {
-      pworker->set_strgpuids(sdev);
+    if (has_property("device", &sdev)) {
+      vector<uint16_t> iarr;
       if (sdev != "all") {
         vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
-        vector<int> iarr;
-        int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
+        uint16_t sts = rvs_util_strarr_to_uintarr(sarr, &iarr);
         if (sts < 0) {
           cerr << "RVS-GM: action: " << property["name"] <<
           "  invalide 'device' key value: " << sdev << std::endl;
           return -1;
         }
         pworker->set_gpuids(iarr);
+      } else {
+         pworker->set_gpuids(gpu_id);
       }
     } else {
           cerr << "RVS-GM: action: " << property["name"] <<

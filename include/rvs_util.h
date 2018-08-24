@@ -37,6 +37,9 @@ extern vector<string> str_split(const string& str_val,
 extern int rvs_util_strarr_to_intarr(const std::vector<string>& sArr,
                                      std::vector<int>* piArr);
 
+extern int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
+                                     std::vector<uint16_t>* piArr);
+
 bool is_positive_integer(const std::string& str_val);
 
 #endif  // INCLUDE_RVS_UTIL_H_

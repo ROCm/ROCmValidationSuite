@@ -32,10 +32,10 @@
 #define KFD_PATH_MAX_LENGTH             256
 
 extern int  gpu_num_subdirs(const char* dirpath, const char* prefix);
-extern void gpu_get_all_location_id(std::vector<uint16_t>& gpus_location_id);
-extern void gpu_get_all_gpu_id(std::vector<uint16_t>& gpus_id);
-extern void gpu_get_all_device_id(std::vector<uint16_t>& gpus_device_id);
-extern void gpu_get_all_node_id(std::vector<uint16_t>& gpus_node_id);
+extern void gpu_get_all_location_id(std::vector<uint16_t>* pgpus_location_id);
+extern void gpu_get_all_gpu_id(std::vector<uint16_t>* pgpus_id);
+extern void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id);
+extern void gpu_get_all_node_id(std::vector<uint16_t>* pgpus_node_id);
 
 namespace rvs {
 

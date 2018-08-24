@@ -38,7 +38,7 @@ add_definitions(-DHSA_DEPRECATED=)
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wl,-no-as-needed)
-add_compile_options(-Wall -Werror)
+add_compile_options(-Wall -Wextra)
 
 set ( RVS "pqt" )
 set ( RVS_PACKAGE "rvs-roct" )

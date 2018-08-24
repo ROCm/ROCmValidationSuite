@@ -55,7 +55,9 @@ extern "C" const char* rvs_module_get_description(void) {
 }
 
 extern "C" const char* rvs_module_get_config(void) {
-  return "package (string), version (string), installed (bool), user (string), groups (collection of strings), file (string), owner (string), group (string), permission (int), type (int), exists (bool)";
+  return "package (string), version (string), installed (bool), user (string), "
+  "groups (collection of strings), file (string), owner (string), "
+  "group (string), permission (int), type (int), exists (bool)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {
@@ -72,7 +74,10 @@ extern "C" int   rvs_module_terminate(void) {
 }
 
 extern "C" const char* rvs_module_get_errstring(int error) {
-  return "General Error";
+  switch (error) {
+    default:
+      return "General Error";
+  }
 }
 
 extern "C" void* rvs_module_action_create(void) {
