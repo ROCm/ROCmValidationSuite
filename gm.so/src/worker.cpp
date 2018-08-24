@@ -150,41 +150,40 @@ const std::string Worker::get_irq(const std::string path) {
  * @brief Prints current metric values at every log_interval msec.
  * */
 void Worker::do_metric_values() {
-  string msg;  
+  string msg;
   unsigned int sec;
   unsigned int usec;
 
   // get timestamp
   rvs::lp::get_ticks(sec, usec);
-  
-    for (map<string, Dev_metrics>::iterator it = irq_gpu_ids.begin(); it !=
+
+  for (map<string, Dev_metrics>::iterator it = irq_gpu_ids.begin(); it !=
             irq_gpu_ids.end(); it++) {
-      if (bounds["temp"].mon_metric) {
-        msg = "[" + action_name + "] gm " +
-            std::to_string((it->second).gpu_id) + " temp " +
-            std::to_string(met_value[it->first].temp);
-        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
-      }
-      if (bounds["clock"].mon_metric) {
-        msg = "[" + action_name + "] gm " +
-            std::to_string((it->second).gpu_id) + " clock " +
-            std::to_string(met_value[it->first].clock);
-        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
-      }
-      if (bounds["mem_clock"].mon_metric) {
-        msg = "[" + action_name + "] gm " +
-            std::to_string((it->second).gpu_id) +
-            " mem_clock " +
-            std::to_string(met_value[it->first].mem_clock);
-        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
-      }
-      if (bounds["fan"].mon_metric) {
-        msg = "[" + action_name + "] gm " +
-            std::to_string((it->second).gpu_id) + " fan "+
-            std::to_string(met_value[it->first].fan) + "%";
-        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
-      }
+    if (bounds["temp"].mon_metric) {
+      msg = "[" + action_name + "] gm " +
+          std::to_string((it->second).gpu_id) + " temp " +
+          std::to_string(met_value[it->first].temp) + "C";
+      rvs::lp::Log(msg, rvs::loginfo, sec, usec);
     }
+    if (bounds["clock"].mon_metric) {
+      msg = "[" + action_name + "] gm " +
+          std::to_string((it->second).gpu_id) + " clock " +
+          std::to_string(met_value[it->first].clock) + "Mhz";
+      rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+    }
+    if (bounds["mem_clock"].mon_metric) {
+      msg = "[" + action_name + "] gm " +
+          std::to_string((it->second).gpu_id) + " mem_clock " +
+          std::to_string(met_value[it->first].mem_clock) + "Mhz";
+      rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+    }
+    if (bounds["fan"].mon_metric) {
+      msg = "[" + action_name + "] gm " +
+        std::to_string((it->second).gpu_id) + " fan "+
+        std::to_string(met_value[it->first].fan) + "%";
+      rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+    }
+  }
 }
 
 /**
