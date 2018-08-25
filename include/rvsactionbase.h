@@ -75,7 +75,7 @@ class actionbase {
 
   //! Virtual action function. To be implemented in every derived class.
   virtual int     run(void) = 0;
-  bool has_property(const std::string& key, std::string& val);
+  bool has_property(const std::string& key, std::string* pval);
   bool has_property(const std::string& key);
   int  property_get_deviceid(int *error);
   bool property_get_device(int *error);

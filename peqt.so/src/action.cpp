@@ -291,7 +291,7 @@ int action::run(void) {
     if (property.find("cli.-j") != property.end()) {
         unsigned int sec;
         unsigned int usec;
-        rvs::lp::get_ticks(sec, usec);
+        rvs::lp::get_ticks(&sec, &usec);
 
         bjson = true;
 

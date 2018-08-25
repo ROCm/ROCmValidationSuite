@@ -575,7 +575,7 @@ void GSTWorker::log_to_json(const std::string &key, const std::string &value,
         unsigned int sec;
         unsigned int usec;
 
-        rvs::lp::get_ticks(sec, usec);
+        rvs::lp::get_ticks(&sec, &usec);
         void *json_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), log_level,
                             sec, usec);

@@ -65,22 +65,22 @@ int rvs::exec::run() {
   string  val;
   string  path;
 
-  options::has_option("pwd", path);
+  options::has_option("pwd", &path);
 
   // check -h options
-  if (rvs::options::has_option("-h", val)) {
+  if (rvs::options::has_option("-h", &val)) {
     do_help();
     return 0;
   }
 
   // check -v options
-  if (rvs::options::has_option("-ver", val)) {
+  if (rvs::options::has_option("-ver", &val)) {
     do_version();
     return 0;
   }
 
   // check -d options
-  if (rvs::options::has_option("-d", val)) {
+  if (rvs::options::has_option("-d", &val)) {
     int level;
     try {
       level = std::stoi(val);
@@ -103,17 +103,17 @@ int rvs::exec::run() {
   }
 
   // check -a options
-  if (rvs::options::has_option("-a", val)) {
+  if (rvs::options::has_option("-a", &val)) {
     logger::append(true);
   }
 
   // check -j options
-  if (rvs::options::has_option("-j", val)) {
+  if (rvs::options::has_option("-j", &val)) {
     logger::to_json(true);
   }
 
   string config_file;
-  if (rvs::options::has_option("-c", val)) {
+  if (rvs::options::has_option("-c", &val)) {
     config_file = val;
   } else {
     config_file = "conf/rvs.conf";
@@ -134,7 +134,7 @@ int rvs::exec::run() {
   val = path + ".rvsmodules.config";
   rvs::module::initialize(val.c_str());
 
-  if (rvs::options::has_option("-t", val)) {
+  if (rvs::options::has_option("-t", &val)) {
         cout << endl << "ROCm Validation Suite (version " <<
         LIB_VERSION_STRING << ")" << endl << endl;
         cout << "Modules available:" << endl;

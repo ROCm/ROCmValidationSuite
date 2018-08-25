@@ -1,4 +1,4 @@
-/********************************************************************************
+/******************************************************************************* *
  *
  * Copyright (c) 2018 ROCm Developer Tools
  *
@@ -20,13 +20,13 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
+ * 
  *******************************************************************************/
-#ifndef RVSVERSION_H_
-#define RVSVERSION_H_
+#ifndef GM_SO_INCLUDE_RVS_MODULE_H_
+#define GM_SO_INCLUDE_RVS_MODULE_H_
 
-#ifndef RVS_BUILD_VERSION_STRING
-#define 	RVS_BUILD_VERSION_STRING "1.0.0"
-#endif
+#include "rvsliblog.h"
 
-#endif // RVSVERSION_H_
+int log(const char* pMasg, const int level = 1);
+
+#endif  // GM_SO_INCLUDE_RVS_MODULE_H_

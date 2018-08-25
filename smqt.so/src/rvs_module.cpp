@@ -80,7 +80,10 @@ extern "C" int   rvs_module_terminate(void) {
 }
 
 extern "C" const char* rvs_module_get_errstring(int error) {
-  return  (const char*)"General Error";
+  switch (error) {
+    default:
+      return  (const char*)"General Error";
+  }
 }
 
 extern "C" void* rvs_module_action_create(void) {
