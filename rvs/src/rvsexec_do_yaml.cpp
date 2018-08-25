@@ -148,7 +148,7 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
 
   string indexes;
   bool indexes_provided = false;
-  if (rvs::options::has_option("-i", indexes) && (!indexes.empty()))
+  if (rvs::options::has_option("-i", &indexes) && (!indexes.empty()))
     indexes_provided = true;
 
 
@@ -222,7 +222,7 @@ bool rvs::exec::is_yaml_properties_collection(
         return true;
       }
     } else {
-        if (module_name == "gpum") {
+        if (module_name == "gm") {
             if (property_name == "metrics")
             return true;
     }

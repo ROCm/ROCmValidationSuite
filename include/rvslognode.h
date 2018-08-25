@@ -22,16 +22,16 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _LOGNODE_H
-#define _LOGNODE_H
-
-#include "rvslognodebase.h"
+#ifndef INCLUDE_RVSLOGNODE_H_
+#define INCLUDE_RVSLOGNODE_H_
 
 #include <vector>
 #include <memory>
+#include <string>
 
-namespace rvs 
-{
+#include "rvslognodebase.h"
+
+namespace rvs {
 
 /**
  * @class LogNode
@@ -42,27 +42,23 @@ namespace rvs
  * Used to construct structure log record for JSON output
  *
  */
-class LogNode : public LogNodeBase
-{
-
-public:
-
-  LogNode( const std::string& Name, const LogNodeBase* Parent = nullptr);
-  LogNode( const char* Name, const LogNodeBase* Parent = nullptr);
+class LogNode : public LogNodeBase {
+ public:
+  explicit LogNode(const std::string& Name,
+                   const LogNodeBase* Parent = nullptr);
+  explicit LogNode(const char* Name, const LogNodeBase* Parent = nullptr);
   virtual ~LogNode();
 
   virtual std::string ToJson(const std::string& Lead = "");
 
-public:
+ public:
   void Add(LogNodeBase* spChild);
 
-public:
+ public:
   //! list of child nodes
   std::vector<LogNodeBase*> Child;
-
-
 };
 
 }  // namespace rvs
 
-#endif // _LOGNODE_H
+#endif  // INCLUDE_RVSLOGNODE_H_

@@ -235,17 +235,17 @@ void  rvs::lp::AddNode(void* Parent, void* Child) {
 /**
  * @brief Fetches times since system start
  *
- * @param secs seconds since system start
- * @param usecs microseconds within current second
+ * @param psecs seconds since system start
+ * @param pusecs microseconds within current second
  * @return 'true' - success, 'false' otherwise
  *
  */
-bool rvs::lp::get_ticks(unsigned int& secs, unsigned int& usecs) {
+bool rvs::lp::get_ticks(unsigned int* psecs, unsigned int* pusecs) {
   struct timespec ts;
 
   clock_gettime(CLOCK_MONOTONIC, &ts);
-  usecs    = ts.tv_nsec / 1000;
-  secs  = ts.tv_sec;
+  *pusecs    = ts.tv_nsec / 1000;
+  *psecs  = ts.tv_sec;
 
   return true;
 }

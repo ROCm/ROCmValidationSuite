@@ -22,13 +22,12 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _RVSTHREAD_BASE_H_
-#define _RVSTHREAD_BASE_H_
+#ifndef INCLUDE_RVSTHREADBASE_H_
+#define INCLUDE_RVSTHREADBASE_H_
 
 #include <thread>
 
-namespace rvs
-{
+namespace rvs {
 
 /**
  *  @class ThreadBase
@@ -38,30 +37,28 @@ namespace rvs
  */
 
 class ThreadBase {
-protected:
+ protected:
   ThreadBase();
   ~ThreadBase();
 
-public:
+ public:
   void start();
   void detach();
   void join();
   void sleep(const unsigned int ms);
 
-protected:
+ protected:
   void runinternal(void);
 
   //! Virtual thread function. To be implemented in every derived class.
   virtual void run() = 0;
 
-protected:
-
+ protected:
   //! Underlaying std::thread object.
   std::thread t;
-
 };
 
-}
+}  // namespace rvs
 
 
-#endif // _RVSTHREAD_BASE_H_
+#endif  // INCLUDE_RVSTHREADBASE_H_

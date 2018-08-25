@@ -41,10 +41,9 @@ using std::string;
 
 /**
  * @brief default class constructor
- * @param _gpu_device_index the gpu that will run the GEMM
+ * @param _gpu_device_index index of the gpu that will run the GEMM
  * @param _matrix_size size of SGEMM m atrices
  */
-
 blas_worker::blas_worker(int _gpu_device_index, uint64_t _matrix_size) :
                             gpu_device_index(_gpu_device_index),
                             matrix_size(_matrix_size) {
@@ -70,6 +69,7 @@ void blas_worker::setup_blas(void) {
     if (gpu_blas == nullptr) {
         blas_error = IET_MEM_ALLOC_ERROR;
         set_setup_complete();
+        return;
     }
 
     if (gpu_blas->error()) {
@@ -134,7 +134,7 @@ uint64_t blas_worker::get_num_sgemm_ops(void) {
 
 /**
  * @brief sets whether SGEMM counting is needed or not
- * @param _bcount_sgemm true when SGEMM ops counting is needed, false otherwise
+ * @param _bcount_sgemm true if SGEMM ops counting is needed, false otherwise
  */
 void blas_worker::set_bcount_sgemm(bool _bcount_sgemm) {
     std::lock_guard<std::mutex> lck(mtx_bcount_sgemm);
@@ -168,7 +168,7 @@ void blas_worker::pause(void) {
 }
 
 /**
- * @brief reseumes the BLAS worker
+ * @brief resumes the BLAS worker
  */
 void blas_worker::resume(void) {
     std::lock_guard<std::mutex> lck(mtx_bpaused);

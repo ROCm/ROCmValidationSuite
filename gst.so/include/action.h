@@ -101,6 +101,11 @@ class action: public rvs::actionbase {
     void property_get_gst_matrix_size(int *error);
 
     bool get_all_gst_config_keys(void);
+/**
+ * @brief reads all common configuration keys from
+ * the module's properties collection
+ * @return true if no fatal error occured, false otherwise
+ */
     bool get_all_common_config_keys(void);
 
     bool do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
