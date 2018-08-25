@@ -1157,6 +1157,136 @@ entire test duration, and will be logged as a result:
 
 @subsection usg103 10.3 Examples
 
+
+**Example 1:**
+
+Here all source GPUs (device: all) with all destination GPUs (peers: all) are
+tested for p2p capability with no bandwidth testing (test_bandwidth: false).
+
+    actions:
+    - name: action_1
+      device: all
+      module: pqt
+      peers: all
+      test_bandwidth: false
+
+
+Possible result is:
+
+    [RESULT] [167896.97743 ] [action_1] p2p 3254 3254 false
+    [RESULT] [167896.97764 ] [action_1] p2p 3254 50599 true
+    [RESULT] [167896.97818 ] [action_1] p2p 3254 33367 true
+    [RESULT] [167896.97848 ] [action_1] p2p 50599 3254 true
+    [RESULT] [167896.97873 ] [action_1] p2p 50599 50599 false
+    [RESULT] [167896.97881 ] [action_1] p2p 50599 33367 true
+    [RESULT] [167896.97907 ] [action_1] p2p 33367 3254 true
+    [RESULT] [167896.97935 ] [action_1] p2p 33367 50599 true
+    [RESULT] [167896.97960 ] [action_1] p2p 33367 33367 false
+
+From the first line of result, we can see that GPU (ID 3254) can't access itself.
+From the second line of result, we can see that source GPU (ID 3254) can access destination GPU (ID 50599).
+
+**Example 2:**
+
+Here all source GPUs (device: all) with all destination GPUs (peers: all) are tested for p2p capability including bandwidth testing (test_bandwidth: true) with
+bidirectional transfers (bidirectional: true) and running in paralell (parallel : true) - default values are used for duration and log_interval.
+
+    actions:
+    - name: action_1
+      device: all
+      module: pqt
+      peers: all
+      test_bandwidth: true
+      bidirectional: true
+      parallel : true
+
+Possible result is:
+
+    [RESULT] [170487.818898] [action_1] p2p 3254 3254 false
+    [RESULT] [170487.818918] [action_1] p2p 3254 50599 true
+    [RESULT] [170487.818969] [action_1] p2p 3254 33367 true
+    [RESULT] [170487.818997] [action_1] p2p 50599 3254 true
+    [RESULT] [170487.819022] [action_1] p2p 50599 50599 false
+    [RESULT] [170487.819029] [action_1] p2p 50599 33367 true
+    [RESULT] [170487.819054] [action_1] p2p 33367 3254 true
+    [RESULT] [170487.819080] [action_1] p2p 33367 50599 true
+    [RESULT] [170487.819105] [action_1] p2p 33367 33367 false
+    [INFO  ] [170488.351341] [action_1] p2p-bandwidth  3254 50599  bidirectional: true  7.46 GBps
+    [INFO  ] [170488.352438] [action_1] p2p-bandwidth  3254 33367  bidirectional: true  7.91 GBps
+    [INFO  ] [170488.353512] [action_1] p2p-bandwidth  50599 3254  bidirectional: true  7.58 GBps
+    [INFO  ] [170488.354581] [action_1] p2p-bandwidth  50599 33367  bidirectional: true  6.93 GBps
+    [INFO  ] [170488.355652] [action_1] p2p-bandwidth  33367 3254  bidirectional: true  5.69 GBps
+    [INFO  ] [170488.356725] [action_1] p2p-bandwidth  33367 50599  bidirectional: true  5.67 GBps
+    [RESULT] [170488.880108] [action_1] p2p-bandwidth  3254 50599  bidirectional: true  7.95 GBps  duration: 0.031455 ms
+    [RESULT] [170488.881314] [action_1] p2p-bandwidth  3254 33367  bidirectional: true  7.50 GBps  duration: 0.133382 ms
+    [RESULT] [170488.882453] [action_1] p2p-bandwidth  50599 3254  bidirectional: true  7.58 GBps  duration: 0.016483 ms
+    [RESULT] [170488.883580] [action_1] p2p-bandwidth  50599 33367  bidirectional: true  8.31 GBps  duration: 0.060156 ms
+    [RESULT] [170488.884702] [action_1] p2p-bandwidth  33367 3254  bidirectional: true  6.90 GBps  duration: 0.036216 ms
+    [RESULT] [170488.885863] [action_1] p2p-bandwidth  33367 50599  bidirectional: true  2.58 GBps  duration: 0.096949 ms
+
+From the last line of result, we can see that source GPU (ID 33367) can access
+destination GPU (ID 50599) and that bidirectional bandwidth is 2.58 GBps.
+
+**Example 3:**
+
+Here some source GPUs (device: 50599) are targeting some destination GPUs
+(peers: 33367 3254) with specified log interval (log_interval: 500) and duration
+(duration: 1000). Bandwidth is tested (test_bandwidth: true) but only
+unidirectional (bidirectional: false) without parralel execution (parralel:
+false).
+
+    actions:
+    - name: action_1
+      device: 50599
+      module: pqt
+      log_interval: 500
+      duration: 1000
+      peers: 33367 3254
+      test_bandwidth: true
+      bidirectional: false
+      parralel: false
+
+Possible output is:
+
+    [RESULT] [175852.862778] [action_1] p2p 50599 3254 true
+    [RESULT] [175852.862837] [action_1] p2p 50599 33367 true
+    [INFO  ] [175853.393991] [action_1] p2p-bandwidth  50599 3254  bidirectional: false  4.56 GBps
+    [INFO  ] [175853.395080] [action_1] p2p-bandwidth  50599 33367  bidirectional: false  4.60 GBps
+    [INFO  ] [175853.928202] [action_1] p2p-bandwidth  50599 3254  bidirectional: false  4.40 GBps
+    [RESULT] [175854.235624] [action_1] p2p-bandwidth  50599 3254  bidirectional: false  4.50 GBps  duration: 0.444359 ms
+    [RESULT] [175854.236772] [action_1] p2p-bandwidth  50599 33367  bidirectional: false  4.57 GBps  duration: 0.218679 ms
+
+From the last line of result, we can see that source GPU (ID 50599) can access
+destination GPU (ID 33367) and that bidirectional bandwidth is 4.57 GBps.
+
+**Example 4:**
+
+Here some source GPUs (device: 3254) are targeting some destination GPUs (peers:
+33367) with specified log interval (log_interval: 500) and duration (duration:
+1000). Bandwidth is tested (test_bandwidth: true) but only unidirectional
+(bidirectional: false) without parralel execution (parralel: false). Also, only
+GPUs with specified device id are considered (peer_deviceid: 26720).
+
+    actions:
+    - name: action_1
+      device: 3254
+      module: pqt
+      log_interval: 500
+      duration: 1000
+      peers: 33367
+      peer_deviceid: 26720
+      test_bandwidth: true
+      bidirectional: false
+      parralel: false
+
+Possible output is:
+
+    [RESULT] [176419.658547] [action_1] p2p 3254 33367 true
+    [INFO  ] [176420.192962] [action_1] p2p-bandwidth  3254 33367  bidirectional: false  4.61 GBps
+    [INFO  ] [176420.726227] [action_1] p2p-bandwidth  3254 33367  bidirectional: false  4.67 GBps
+    [RESULT] [176421.1565  ] [action_1] p2p-bandwidth  3254 33367  bidirectional: false  4.65 GBps  duration: 0.645375 ms
+
+
 @section usg11 11 PEBB Module
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
 transfers between system memory and a target GPU card’s memory. These are known
