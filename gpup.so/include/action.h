@@ -33,6 +33,16 @@
 
 using std::vector;
 using std::string;
+/**
+ * @class action
+ * @ingroup GPUP
+ *
+ * @brief GPUP action implementation class
+ *
+ * Derives from rvs::actionbase and implements actual action functionality
+ * in its run() method.
+ *
+ */
 
 class action : public rvs::actionbase {
  public:
