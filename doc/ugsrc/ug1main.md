@@ -547,6 +547,11 @@ device id keys specified will be ignored. Iteration keys, i.e. count, wait and
 duration, are also ignored.
 
 @subsection usg71 7.1 Packaging Check
+
+This feature is used to check installed packages on the system. It provides
+checks for installed packages and the currently available package versions, if
+applicable.
+
 @subsubsection usg711 7.1.1 Packaging Check Specific Keys
 
 Input keys are described in the table below:
@@ -562,7 +567,7 @@ provided any version matching the package name will result in success.
 </td></tr>
 </table>
 
-@subsubsection usg712 7.1.2 Packaging Check Output Keys
+@subsubsection usg712 7.1.2 Output
 
 Output keys are described in the table below:
 
@@ -573,7 +578,230 @@ Output keys are described in the table below:
 </td></tr>
 </table>
 
+The check will emit a result message with the following format:
+
+    [RESULT][<timestamp>][<action name>] packagecheck <package> <installed>
+
+The package name will include the version of the package if the version key is
+specified. The installed output value will either be true or false depending on
+if the package is installed or not.
+
+@subsection usg72 7.2 User Check
+
+This feature checks for the existence of a user and the user’s group membership.
+
+@subsubsection usg721 7.2.1 User Check Specific Keys
+
+Input keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>user</td><td>String</td>
+<td>Specifies the user name to check. This key is required.</td></tr>
+<tr><td>groups</td><td>Collection of Strings</td>
+<td>This is an optional key specifying a collection of groups the user should
+belong to. The user’s membership in each group will be checked.
+</td></tr>
+</table>
+
+@subsubsection usg722 7.2.2 Output
+
+Output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>exists</td><td>Bool</td>
+<td>This value is true if the user exists.
+</td></tr>
+<tr><td>members</td><td>Collection of Bools</td>
+<td>This value is true if the user is a member of the specified group.
+</td></tr>
+</table>
+
+The status of the user’s existence is provided in a message with the following
+format:
+
+    [RESULT][<timestamp>][<action name>] usercheck <user> <exists>
+
+For each group in the list, a result message with the following format will be
+generated:
+
+    [RESULT][<timestamp>][<action name>] usercheck <user> <group> <member>
+
+If the user doesn’t exist no group checks will take place.
+
+@subsection usg73 7.3 File/device Check
+
+This feature checks for the existence of a file, its owner, group, permissions
+and type. The primary purpose of this module is to check that the device
+interfaces for the driver and the kfd are available, but it can also be used to
+check for the existence of important configuration files, libraries and
+executables.
+
+@subsubsection usg731 7.3.1 File/device Check Specific Keys
+
+Input keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>file</td><td>String</td>
+<td>The value of this key should satisfy the filename limitations of the target
+OS and specifies the file to check. This key is required.
+</td></tr>
+<tr><td>owner</td><td>String</td>
+<td>The expected owner of the file. If this key is specified ownership is
+tested.
+</td></tr>
+<tr><td>group</td><td>String</td>
+<td>If this key is specified, group ownership is tested.
+</td></tr>
+<tr><td>permission</td><td>Integer</td>
+<td>If this key is specified, the permissions on the file are tested. The
+permissions are expected to match the permission value given.
+</td></tr>
+<tr><td>type</td><td>Integer</td>
+<td>If this key is specified the file type is checked.
+</td></tr>
+<tr><td>exists</td><td>Bool</td>
+<td>If this key is specified and set to false all optional parameters will be
+ignored and a check will be made to make sure the file does not exist. The
+default value for this key is true.
+</td></tr>
+</table>
+
+@subsubsection usg732 7.3.2 Output
+
+Output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>owner</td><td>Bool</td>
+<td>True if the correct user owns the file.
+</td></tr>
+<tr><td>group</td><td>Bool</td>
+<td>True if the correct group owns the file.
+</td></tr>
+<tr><td>permission</td><td>Bool</td>
+<td>True if the file has the correct permissions.
+</td></tr>
+<tr><td>type</td><td>Bool</td>
+<td>True if the file is of the right type.
+</td></tr>
+<tr><td>exists</td><td>Bool</td>
+<td>True if the file exists and the ‘exists’ config key is true. True if the
+file does not exist and the ‘exists’ key if false.
+</td></tr>
+</table>
+
+If the ‘exists’ key is true a set of messages, one for each stat check, will be
+generated with the following format:
+
+    [RESULT][<timestamp>][<action name>] filecheck <config key> <matching output key>
+
+If the ‘exists’ key is false the format of the message will be:
+
+    [RESULT][<timestamp>][<action name>] filecheck <file> DNE <exists>
+
+@subsection usg74 7.4 Kernel compatibility Check
+
+The rcqt-kernelcheck module determines the version of the operating system and
+the kernel installed on the platform and compares the values against the list of
+supported values.
+
+@subsubsection usg741 7.4.1 Kernel compatibility Check Specific Keys
+
+Input keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>os_versions</td><td>Collection of Strings</td>
+<td>A collection of strings corresponding to operating systems names, i.e.
+{“Ubuntu 16.04.3 LTS”, “Centos 7.4”, etc.}
+</td></tr>
+<tr><td>kernel_versions</td><td>Collection of Strings</td>
+<td>A collection of strings corresponding to kernel version names, i.e.
+{“4.4.0-116-generic”, “4.13.0-36-generic”, etc.}
+</td></tr>
+</table>
+
+@subsubsection usg742 7.4.2 Output
+
+Output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>os</td><td>String</td>
+<td>The actual OS installed on the system.
+</td></tr>
+<tr><td>kernel</td><td>String</td>
+<td>The actual kernel version installed on the system.
+</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>True if the actual os version and kernel version match any value provided in
+the collection.
+</td></tr>
+</table>
+
+If the detected versions of the operating system and the kernel version match
+any of the supported values the pass output key will be true. Otherwise it will
+be false. The result message will contain the actual os version and the kernel
+version regardless of where the check passed or failed.
+
+    [RESULT][<timestamp>][<action name>] kernelcheck <os version> <kernel version> <pass>
+
+@subsection usg75 7.5 Linker/Loader Check
+
+This feature checks that a search by the linker/loader for a library finds the
+correct version in the correct location. The check should include a SONAME
+version of the library, the expected location and the architecture of the
+library.
+
+@subsubsection usg751 7.5.1 Linker/Loader Check Specific Keys
+
+Input keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>soname</td><td>String</td>
+<td>This is the SONAME of the library for the check. An SONAME library contains
+the major version of the library in question.
+</td></tr>
+<tr><td>arch</td><td>String</td>
+<td>This value qualifies the architecture expected for the library.
+</td></tr>
+<tr><td>ldpath</td><td>String</td>
+<td>This is the fully qualified path where the library is expected to be
+located.
+</td></tr>
+</table>
+
+@subsubsection usg752 7.5.2 Output
+
+Output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>arch</td><td>String</td>
+<td>The actual architecture found for the file, or NA if it wasn’t found.
+</td></tr>
+<tr><td>path</td><td>String</td>
+<td>The actual path the linker is looking for the file at, or “not found” if the
+file isn’t found.
+</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>True if the linker/loader is looking for the file in the correct place with
+the correctly specified architecture.
+</td></tr>
+</table>
+
+If the linker/loader search path looks for the soname version of the library,
+qualified by arch, at the directory specified the test will pass. Otherwise it
+will fail. The output message has the following format:
+
+    [RESULT][<timestamp>][<action name>] ldconfigcheck <soname> <arch> <path> <pass>
+
 @section usg8 8 PEQT Module
+
 PCI Express Qualification Tool module targets and qualifies the configuration of
 the platforms PCIe connections to the GPUs. The purpose of the PEQT module is to
 provide an extensible, OS independent and scriptable interface capable of
