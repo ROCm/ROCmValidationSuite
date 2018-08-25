@@ -702,6 +702,97 @@ If the ‘exists’ key is false the format of the message will be:
 
     [RESULT][<timestamp>][<action name>] filecheck <file> DNE <exists>
 
+@subsubsection usg733 7.3.3 Examples
+
+**Example 1:**
+
+In this example, config key exists is set to **true** by default and file really
+exists so parameters are tested. Permission number 644 equals to rw-r--r-- and
+type number 40 indicates that it is a folder.
+
+rcqt_fc4.conf :
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      file: /work/mvisekrunahdl/ROCmValidationSuite/rcqt.so/src
+      owner: mvisekrunahdl
+      group: mvisekrunahdl
+      permission: 664
+      type: 40
+
+Output from running this action:
+
+    [RESULT] [240384.678074] [action_1]  filecheck mvisekrunahdl owner:true
+    [RESULT] [240384.678214] [action_1]  filecheck mvisekrunahdl group:true
+    [RESULT] [240384.678250] [action_1]  filecheck 664 permission:true
+    [RESULT] [240384.678275] [action_1]  filecheck 100 type:true
+
+
+**Example 2:**
+
+In this example, config key exists is set to false, but file actually exists so
+parameters are not tested.
+
+rcqt_fc1.conf:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      file: /work/mvisekrunahdl/ROCmValidationSuite/src
+      owner: root
+      permission: 644
+      type: 40
+      exists: false
+
+The output for such configuration is:
+
+    [RESULT] [240188.150386] [action_1]  filecheck /work/mvisekrunahdl/ROCmValidationSuite/src DNE false
+
+**Example 3:**
+
+In this example, config key **exists** is true by default and file really
+exists. Config key **group, permission** and **type** are not specified so only
+ownership is tested.
+
+rcqt_fc2.conf:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      file: /work/mvisekrunahdl/build/test.txt
+      owner: root
+
+The output for such configuration is:
+
+    [RESULT] [240253.957738] [action_1]  filecheck root owner:true
+
+
+**Example 4:**
+
+In this example, config key **exists** is true by default, but given file does
+not exist.
+
+rcqt_fc3.conf:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      file: /work/mvisekrunahdl/ROCmValidationSuite/rcqt.so/src/tst
+      owner: mvisekrunahdl
+      group: mvisekrunahdl
+      permission: 664
+      type: 100
+
+The output for such configuration is:
+
+    [ERROR ] [240277.355553] File is not found
+
+
 @subsection usg74 7.4 Kernel compatibility Check
 
 The rcqt-kernelcheck module determines the version of the operating system and
