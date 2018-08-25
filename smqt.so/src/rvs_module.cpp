@@ -27,6 +27,16 @@
 #include "rvsloglp.h"
 #include "gpu_util.h"
 
+/**
+ * @defgroup SMQT SMQT Module
+ *
+ * @brief SBIOS Mapping Qualification Tool
+ *
+ * The GPU SBIOS mapping qualification tool is designed to verify that a
+ * platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon
+ * Instinct products for ROCm support.
+ */
+
 int log(const char* pMsg, const int level) {
   return rvs::lp::Log(pMsg, level);
 }

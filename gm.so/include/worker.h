@@ -36,7 +36,7 @@
 
 /**
  * @class Worker
- * @ingroup GPUM
+ * @ingroup GM
  *
  * @brief Monitoring implementation class
  *

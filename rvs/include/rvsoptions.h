@@ -39,8 +39,6 @@ namespace rvs {
  *
  * @brief Collection of options.
  *
- * Execute functionality based on command line and the contents of .conf file.
- *
  */
 
 class options {
