@@ -388,7 +388,7 @@ int pqtaction::create_threads() {
           unsigned int usec;
           rvs::lp::get_ticks(&sec, &usec);
           json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                                  action_name.c_str(), rvs::logresults, sec, usec);
+                              action_name.c_str(), rvs::logresults, sec, usec);
           if (json_rcqt_node != NULL) {
             rvs::lp::AddString(json_rcqt_node, "src",
                                std::to_string(gpu_id[i]));
@@ -430,11 +430,14 @@ int pqtaction::create_threads() {
           unsigned int usec;
           rvs::lp::get_ticks(&sec, &usec);
           json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                                  action_name.c_str(), rvs::logresults, sec, usec);
+                              action_name.c_str(), rvs::logresults, sec, usec);
           if (json_rcqt_node != NULL) {
-            rvs::lp::AddString(json_rcqt_node, "src", std::to_string(gpu_id[i]));
-            rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(gpu_id[j]));
-            rvs::lp::AddString(json_rcqt_node, "p2p", "false");
+            rvs::lp::AddString(json_rcqt_node,
+                               "src", std::to_string(gpu_id[i]));
+            rvs::lp::AddString(json_rcqt_node,
+                               "dst", std::to_string(gpu_id[j]));
+            rvs::lp::AddString(json_rcqt_node,
+                               "p2p", "false");
             rvs::lp::LogRecordFlush(json_rcqt_node);
           }
         }
@@ -453,7 +456,9 @@ int pqtaction::create_threads() {
       json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::loginfo, sec, usec);
       if (json_rcqt_node != NULL) {
-        rvs::lp::AddString(json_rcqt_node, "message", "No GPU/peer combination matches criteria from test configuation");
+        rvs::lp::AddString(json_rcqt_node,
+          "message",
+          "No GPU/peer combination matches criteria from test configuation");
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
     }
@@ -762,7 +767,7 @@ void pqtaction::do_final_average() {
       rvs::lp::AddString(json_rcqt_node, "message", "pqt in do_final_average");
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
-  }  
+  }
   brun = false;
 }
 
@@ -775,7 +780,9 @@ void pqtaction::do_running_average() {
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::logdebug, sec, usec);
     if (json_rcqt_node != NULL) {
-      rvs::lp::AddString(json_rcqt_node, "message", "pqt in do_running_average");
+      rvs::lp::AddString(json_rcqt_node,
+                         "message",
+                         "pqt in do_running_average");
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
   }
