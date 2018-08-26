@@ -536,7 +536,7 @@ power state will generate the following informational messages:
 
 @section usg7 7 RCQT Module
 
-This ‘module’ is actually a set of modules that target and qualify the
+This ‘module’ is actually a set of feature checks that target and qualify the
 configuration of the platform. Many of the checks can be done manually using the
 operating systems command line tools and general knowledge about ROCm’s
 requirements. The purpose of the RCQT modules is to provide an extensible, OS
@@ -545,6 +545,18 @@ checks required for ROCm support. The checks in this module do not target a
 specific device (instead the underlying platform is targeted), and any device or
 device id keys specified will be ignored. Iteration keys, i.e. count, wait and
 duration, are also ignored.
+\n\n
+One RCQT action can perform only one check at the time. Checks are decoded in
+this order:\n
+
+- If 'package' key is detected, packaging check will be performed
+- If 'user' key is detected, user check will be performed
+- If 'os_versions' and 'kernel_versions' keys are detected, OS check will be performed
+- If 'soname', 'arch' and 'ldpath' keys are detected, linker/loader check will be
+performed
+- If 'file' key is detected, file check will be performed
+
+All other keys not pertinent to the detected action are ignored.
 
 @subsection usg71 7.1 Packaging Check
 
@@ -963,6 +975,139 @@ For details regarding each of the capabilities and current values consult the
 chapters in the PCI Express Base Specification, Revision 3.
 
 @subsection usg83 8.3 Examples
+
+**Example 1:**
+
+A regular PEQT configuration file looks like this:
+
+    actions:
+    - name: pcie_act_1
+      module: peqt
+      capability:
+        link_cap_max_speed:
+        link_cap_max_width:
+        link_stat_cur_speed:
+        link_stat_neg_width:
+        slot_pwr_limit_value:
+        slot_physical_num:
+        device_id:
+        vendor_id:
+        kernel_driver:
+        dev_serial_num:
+        D0_Maximum_Power_12V:
+        D0_Maximum_Power_3_3V:
+        D0_Sustained_Power_12V:
+        D0_Sustained_Power_3_3V:
+        atomic_op_routing:
+        atomic_op_32_completer:
+        atomic_op_64_completer:
+        atomic_op_128_CAS_completer:
+      device: all
+
+Please note:
+- when setting the 'device' configuration key to 'all', the RVS will detect all the AMD compatible GPUs and run the test on all of them
+
+- there are no regular expression for this .conf file, therefore RVS will report TRUE if at least one AMD compatible GPU is registered within the system. Otherwise it will report FALSE.
+
+Please note that the Power Budgeting capability is a dynamic one, having the following form:
+
+    <PM_State>_<Type>_<Power rail>
+
+where:
+
+    PM_State = D0/D1/D2/D3
+    Type=PMEAux/Auxiliary/Idle/Sustained/Maximum
+    PowerRail = Power_12V/Power_3_3V/Power_1_5V_1_8V/Thermal
+
+When the RVS tool runs against such a configuration file, it will query for the all the PCIe capabilities specified under the capability list (and log the corresponding values) for all the AMD compatible GPUs. For those PCIe capabilities that are not supported by the HW platform were the RVS is running, a "NOT SUPPORTED" message will be logged.
+
+The output for such a configuration file may look like this:
+
+
+    [INFO ] [177628.401176] pcie_act_1 peqt D0_Maximum_Power_12V NOT SUPPORTED
+    [INFO ] [177628.401229] pcie_act_1 peqt D0_Maximum_Power_3_3V NOT SUPPORTED
+    [INFO ] [177628.401248] pcie_act_1 peqt D0_Sustained_Power_12V NOT SUPPORTED
+    [INFO ] [177628.401269] pcie_act_1 peqt D0_Sustained_Power_3_3V NOT SUPPORTED
+    [INFO ] [177628.401282] pcie_act_1 peqt atomic_op_128_CAS_completer FALSE
+    [INFO ] [177628.401291] pcie_act_1 peqt atomic_op_32_completer FALSE
+    [INFO ] [177628.401303] pcie_act_1 peqt atomic_op_64_completer FALSE
+    [INFO ] [177628.401311] pcie_act_1 peqt atomic_op_routing TRUE
+    [INFO ] [177628.401317] pcie_act_1 peqt dev_serial_num NOT SUPPORTED
+    [INFO ] [177628.401323] pcie_act_1 peqt device_id 26720
+    [INFO ] [177628.401334] pcie_act_1 peqt kernel_driver amdgpu
+    [INFO ] [177628.401342] pcie_act_1 peqt link_cap_max_speed 8 GT/s
+    [INFO ] [177628.401352] pcie_act_1 peqt link_cap_max_width x16
+    [INFO ] [177628.401359] pcie_act_1 peqt link_stat_cur_speed 8 GT/s
+    [INFO ] [177628.401367] pcie_act_1 peqt link_stat_neg_width x16
+    [INFO ] [177628.401375] pcie_act_1 peqt slot_physical_num #0
+    [INFO ] [177628.401396] pcie_act_1 peqt slot_pwr_limit_value 0.000W
+    [INFO ] [177628.401402] pcie_act_1 peqt vendor_id 4098
+    [INFO ] [177628.401656] pcie_act_1 peqt D0_Maximum_Power_12V NOT SUPPORTED
+    [INFO ] [177628.401675] pcie_act_1 peqt D0_Maximum_Power_3_3V NOT SUPPORTED
+    [INFO ] [177628.401692] pcie_act_1 peqt D0_Sustained_Power_12V NOT SUPPORTED
+    [INFO ] [177628.401709] pcie_act_1 peqt D0_Sustained_Power_3_3V NOT SUPPORTED
+    [INFO ] [177628.401719] pcie_act_1 peqt atomic_op_128_CAS_completer FALSE
+    [INFO ] [177628.401728] pcie_act_1 peqt atomic_op_32_completer FALSE
+    [INFO ] [177628.401736] pcie_act_1 peqt atomic_op_64_completer FALSE
+    [INFO ] [177628.401745] pcie_act_1 peqt atomic_op_routing TRUE
+    [INFO ] [177628.401750] pcie_act_1 peqt dev_serial_num NOT SUPPORTED
+    [INFO ] [177628.401757] pcie_act_1 peqt device_id 26720
+    [INFO ] [177628.401771] pcie_act_1 peqt kernel_driver amdgpu
+    [INFO ] [177628.401781] pcie_act_1 peqt link_cap_max_speed 8 GT/s
+    [INFO ] [177628.401788] pcie_act_1 peqt link_cap_max_width x16
+    [INFO ] [177628.401794] pcie_act_1 peqt link_stat_cur_speed 8 GT/s
+    [INFO ] [177628.401800] pcie_act_1 peqt link_stat_neg_width x16
+    [INFO ] [177628.401806] pcie_act_1 peqt slot_physical_num #0
+    [INFO ] [177628.401814] pcie_act_1 peqt slot_pwr_limit_value 0.000W
+    [INFO ] [177628.401819] pcie_act_1 peqt vendor_id 4098
+    [RESULT] [177628.403781] pcie_act_1 peqt TRUE
+
+**Example 2:**
+
+Another example of a configuration file, which queries for a smaller subset of PCIe capabilities but adds regular expressions check, is given below
+
+    actions:
+    - name: pcie_act_1
+      module: peqt
+      capability:
+        link_cap_max_speed: '^(2\.5 GT\/s|5 GT\/s|8 GT\/s)$'
+        link_cap_max_width:
+        link_stat_cur_speed: '^(2\.5 GT\/s|5 GT\/s|8 GT\/s)$'
+        link_stat_neg_width:
+        slot_pwr_limit_value: '[a-b][d-'
+        slot_physical_num:
+        device_id:
+        vendor_id:
+        kernel_driver:
+      device: all
+
+For this example, the expected PEQT check result is TRUE if:
+
+- at least one AMD compatible GPU is registered within the system and:
+- all \<link_cap_max_speed> values for all AMD compatible GPUs match the given regular expression and
+- all \<link_stat_cur_speed> values for all AMD compatible GPUs match the given regular expression
+
+Please note that the \<slot_pwr_limit_value> regular expression is not valid and will be skipped without affecting the PEQT module's check RESULT (however, an error will be logged out)
+
+**Example 3:**
+
+Another example with even more regular expressions is given below. The expected PEQT check result is TRUE if at least one AMD compatible GPU having the ID 3254 or 33367 is registered within the system and all the PCIe capabilities values match their corresponding regular expressions.
+
+    actions:
+    - name: pcie_act_1
+      module: peqt
+      deviceid: 26720
+      capability:
+        link_cap_max_speed: '^(2\.5 GT\/s|5 GT\/s|8 GT\/s)$'
+        link_cap_max_width: ^(x8|x16)$
+        link_stat_cur_speed: '^(8 GT\/s)$'
+        link_stat_neg_width: ^(x8|x16)$
+        kernel_driver: ^amdgpu$
+        atomic_op_routing: ^((TRUE|FALSE){1})$
+        atomic_op_32_completer: ^((TRUE|FALSE){1})$
+        atomic_op_64_completer: ^((TRUE|FALSE){1})$
+        atomic_op_128_CAS_completer: ^((TRUE|FALSE){1})$
+      device: 3254 33367
 
 @section usg9 9 SMQT Module
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s
@@ -1482,35 +1627,40 @@ following:
   - run the stress test on all available (and compatible) AMD GPUs, one after
 the other
   - log a start message containing the GPU ID, the __target_stress__ and the
-value of the __copy_matrix__<br />
-e.g.: __[INFO  ] [164337.932824] action_gst_1 gst 50599 start 3500.000000 copy
-matrix:true__
+value of the __copy_matrix__:<br />
+
+    [INFO  ] [164337.932824] action_gst_1 gst 50599 start 3500.000000 copy matrix:true
+
   - emit, each __log_interval__ (e.g.: 1000ms), a message containing the
-gigaflops value that the current GPU achieved<br />
-e.g.: __[INFO  ] [164355.111207] action_gst_1 gst 33367 Gflops 3535.670231__
-  - log a message as soon as the current GPU reaches the given
-__target_stress__<br />
-e.g.: __[INFO  ] [164350.804843] action_gst_1 gst 33367 target achieved
-3500.000000__
+gigaflops value that the current GPU achieved:<br />
+
+    [INFO  ] [164355.111207] action_gst_1 gst 33367 Gflops 3535.670231
+
+  - log a message as soon as the current GPU reaches the given __target_stress__:
+
+    [INFO  ] [164350.804843] action_gst_1 gst 33367 target achieved 500.000000
+
   - log a __ramp time exceeded__ message if the GPU was not able to reach the
 __target_stress__ in the __ramp_interval__ time frame (e.g.: 5000). In such a
-case, the test will also terminate<br />
-e.g.: __[INFO  ] [164013.788870] action_gst_1 gst 3254 ramp time exceeded 5000__
+case, the test will also terminate:<br/>
+
+    [INFO  ] [164013.788870] action_gst_1 gst 3254 ramp time exceeded 5000
+
   - log the test result, when the stress test completes. The message contains
 the test's overall result and some other statistics according to __5.2 Output
-keys__<br />
-e.g.: __[RESULT] [164355.647523] action_gst_1 gst 33367 Gflop: 4066.020766
-flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec:
-9.157367 pass: TRUE__
+keys__:<br />
+
+    [RESULT] [164355.647523] action_gst_1 gst 33367 Gflop: 4066.020766 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 9.157367 pass: TRUE
+
   - log a __stress violation__ message when the current gigaflops (for the last
 __log_interval__, e.g.; 1000ms) violates the bounds set by the __tolerance__
 configuration key (e.g.: 0.1). Please note that this message is not logged
-during the __ramp_interval__ time frame<br />
-e.g.: __[INFO  ] [164013.788870] action_gst_1 gst 3254 stress violation 2500__
+during the __ramp_interval__ time frame:<br />
 
+    [INFO  ] [164013.788870] action_gst_1 gst 3254 stress violation 2500
 
 If a mandatory configuration key is missing, the __RVS__ tool will log an error
-message and terminate the executation of the current module. For example, the
+message and terminate the execution of the current module. For example, the
 following configuration file will cause the __RVS__ to terminate with the
 following error message:<br /> __RVS-GST: action: action_gst_1  key
 'target_stress' was not found__
@@ -1687,5 +1837,158 @@ interval.</td></tr>
 </table>
 
 @subsection usg133 13.3 Examples
+
+**Example 1:**
+
+A regular IET configuration file looks like this:
+
+    actions:
+    - name: action_1
+      device: all
+      module: iet
+      parallel: false
+      count: 2
+      wait: 100
+      duration: 10000
+      ramp_interval: 5000
+      sample_interval: 500
+      log_interval: 500
+      max_violations: 1
+      target_power: 135
+      tolerance: 0.1
+      matrix_size: 5760
+
+*Please note:*
+- when setting the 'device' configuration key to 'all', the RVS will detect all the AMD compatible GPUs and run the test on all of them
+- the test will run 2 times on each GPU (count = 2)
+- only one power violation is allowed. If the total number of violations is bigger than 1 the IET test result will be marked as 'failed'
+
+When the RVS tool runs against such a configuration file, it will do the following:
+- run the test on all AMD compatible GPUs
+
+- log a start message containing the GPU ID and the target_power, e.g.:
+
+    [INFO ] [167316.308057] action_1 iet 50599 start 135.000000
+
+- emit, each log_interval (e.g.: 500ms), a message containing the power for the current GPU
+
+    [INFO ] [167319.266707] action_1 iet 50599 current power 136.878342
+
+- log a message as soon as the current GPU reaches the given target_power
+
+    [INFO ] [167318.793062] action_1 iet 50599 target achieved 135.000000
+
+- log a 'ramp time exceeded' message if the GPU was not able to reach the target_power in the ramp_interval time frame (e.g.: 5000ms). In such a case, the test will also terminate
+
+    [INFO ] [167648.832413] action_1 iet 50599 ramp time exceeded 5000
+
+- log a 'power violation message' when the current power (for the last sample_interval, e.g.; 500ms) violates the bounds set by the tolerance configuration key (e.g.: 0.1). Please note that this message is never logged during the ramp_interval time frame
+
+    [INFO ] [161251.971277] action_1 iet 3254 power violation 73.783211
+
+- log the test result, when the stress test completes.
+
+    [RESULT] [167305.260051] action_1 iet 33367 pass: TRUE
+
+The output for such a configuration file may look like this:
+
+    [INFO ] [167261.27161 ] action_1 iet 33367 start 135.000000
+    [INFO ] [167263.516803] action_1 iet 33367 current power 136.934479
+    [INFO ] [167263.521355] action_1 iet 33367 target achieved 135.000000
+    [INFO ] [167264.16925 ] action_1 iet 33367 current power 138.421844
+    [INFO ] [167264.517018] action_1 iet 33367 current power 138.394608
+    ...
+    [INFO ] [167271.518402] action_1 iet 33367 current power 139.231918
+    [RESULT] [167272.67686 ] action_1 iet 33367 pass: TRUE
+    [INFO ] [167272.68029 ] action_1 iet 3254 start 135.000000
+    [INFO ] [167274.552026] action_1 iet 3254 current power 139.363525
+    [INFO ] [167274.552059] action_1 iet 3254 target achieved 135.000000
+    [INFO ] [167275.52168 ] action_1 iet 3254 current power 138.661453
+    [INFO ] [167275.552241] action_1 iet 3254 current power 138.857635
+    ...
+    [INFO ] [167282.553983] action_1 iet 3254 current power 140.069687
+    [RESULT] [167283.95763 ] action_1 iet 3254 pass: TRUE
+    [INFO ] [167283.96158 ] action_1 iet 50599 start 135.000000
+    [INFO ] [167285.532999] action_1 iet 50599 current power 137.205032
+    [INFO ] [167285.543084] action_1 iet 50599 target achieved 135.000000
+    [INFO ] [167286.33050 ] action_1 iet 50599 current power 136.137115
+    ...
+    [INFO ] [167293.534672] action_1 iet 50599 current power 139.753464
+    [RESULT] [167294.131420] action_1 iet 50599 pass: TRUE
+
+
+**Example 2:**
+
+Another configuration file, which may raise some 'power violation' messages (due to the small tolerance value) looks like this
+
+    - name: action_1
+      device: all
+      module: iet
+      parallel: false
+      count: 1
+      wait: 100
+      duration: 8000
+      ramp_interval: 5000
+      sample_interval: 700
+      log_interval: 700
+      max_violations: 1
+      target_power: 80
+      tolerance: 0.06
+      matrix_size: 5760
+
+The output for such a configuration file may look like this:
+
+    [INFO ] [161236.677785] action_1 iet 33367 start 80.000000
+    [INFO ] [161239.350055] action_1 iet 33367 current power 84.186142
+    [INFO ] [161239.354542] action_1 iet 33367 target achieved 80.000000
+    ...
+    [INFO ] [161241.450517] action_1 iet 33367 current power 77.001945
+    [INFO ] [161241.459600] action_1 iet 33367 power violation 75.163689
+    [INFO ] [161242.150642] action_1 iet 33367 current power 82.063576
+    [RESULT] [161245.698113] action_1 iet 33367 pass: TRUE
+    [INFO ] [161245.698525] action_1 iet 3254 start 80.000000
+    [INFO ] [161248.394003] action_1 iet 3254 current power 78.842796
+    [INFO ] [161248.418631] action_1 iet 3254 target achieved 80.000000
+    [INFO ] [161249.94149 ] action_1 iet 3254 current power 79.938454
+    ...
+    [INFO ] [161249.794201] action_1 iet 3254 current power 76.511711
+    [INFO ] [161249.818803] action_1 iet 3254 power violation 74.279594
+    [INFO ] [161250.494263] action_1 iet 3254 current power 74.615120
+    ...
+    [INFO ] [161254.117386] action_1 iet 3254 power violation 73.682312
+    [RESULT] [161254.738939] action_1 iet 3254 pass: FALSE
+    [INFO ] [161254.739387] action_1 iet 50599 start 80.000000
+    [INFO ] [161257.374079] action_1 iet 50599 current power 81.560165
+    [INFO ] [161257.392085] action_1 iet 50599 target achieved 80.000000
+    [INFO ] [161258.774304] action_1 iet 50599 current power 75.057304
+    ...
+    [INFO ] [161262.974833] action_1 iet 50599 current power 80.200668
+    [RESULT] [161263.771631] action_1 iet 50599 pass: TRUE
+
+
+*Important notes:*
+
+
+- all the missing configuration keys (if any) will have their default values. For more information about the default values please consult the dedicated sections (3.3 Common Configuration Keys and 13.1 Module specific keys).
+
+
+- if a mandatory configuration key is missing, the RVS tool will log an error message and terminate the execution of the current module. For example, if the target_power is missing, the RVS to terminate with the following error message: "RVS-IET: action: action_1 key 'target_power' was not found"
+
+
+- it is important that all the configuration keys will be adjusted/fine-tuned according to the actual GPUs and HW platform capabilities.
+
+
+*) for example, a matrix size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20 GPUs
+
+
+*) for small target_power values (e.g.: 30-40W), the sample_interval should be increased, otherwise the IET may fail either to achieve the given target_power or to sustain it (e.g.: ramp_interval = 1500 for target_power = 40)
+
+
+*) in case there are problems reaching/sustaining the given target_power
+
+**) please increase the ramp_interval and/or the tolerance value(s) and try again (in case of a 'ramp time exceeded' message)
+
+**) please increase the tolerance value (in case too many 'power violation message' are logged out)
+
 
 
