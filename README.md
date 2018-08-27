@@ -25,15 +25,13 @@ Compile yaml-cpp (this needs to be done only once after cloning):
 
     cd $RVS
     cmake ./yaml-cpp -B../build/yaml-cpp
-    cd ../build/yaml-cpp
-    make
+    make -C ../build/yaml-cpp
 
 Compile rocm_smi_lib (this needs to be done only once after cloning):
 
     cd $RVS
     cmake ./rocm_smi_lib -DROCM_SMI_BLD_BITS=64 -B../build/rocm_smi_lib
-    cd ../build/rocm_smi_lib
-    make
+    make -C ../build/rocm_smi_lib
 
 Compile rocBLAS (this needs to be done only once after cloning):
 
@@ -54,8 +52,7 @@ Compile RVS:
     cd $RVS
 
     cmake ./ -B../build    
-    cd ../build
-    make
+    make -C ../build
 
 Run:
 
