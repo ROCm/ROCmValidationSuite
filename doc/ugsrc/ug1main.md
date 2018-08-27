@@ -1291,6 +1291,54 @@ is finished, the following informational messages will be generated:
 
 @subsection usg93 9.3 Examples
 
+**Example 1:**
+
+Consider this file (sizes are in bytes):
+
+    actions:
+    - name: action_1
+      device: all
+      module: smqt
+      bar1_req_size: 17179869184
+      bar1_base_addr_min: 0
+      bar1_base_addr_max: 17592168044416
+      bar2_req_size: 2097152
+      bar2_base_addr_min: 0
+      bar2_base_addr_max: 1099511627776
+      bar4_req_size: 262144
+      bar4_base_addr_min: 0
+      bar4_base_addr_max: 17592168044416
+      bar5_req_size: 131072
+
+Results for three GPUs are:
+
+    [INFO  ] [257936.568768] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.568768] [action_1]  smqt bar1_base_addr 13C0000000C
+    [INFO  ] [257936.568768] [action_1]  smqt bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.568768] [action_1]  smqt bar2_base_addr 13B0000000C
+    [INFO  ] [257936.568768] [action_1]  smqt bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.568768] [action_1]  smqt bar4_base_addr E4B00000
+    [INFO  ] [257936.568768] [action_1]  smqt bar5_size      0 (0.00 B)
+    [RESULT] [257936.568920] [action_1]  smqt fail
+    [INFO  ] [257936.569234] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.569234] [action_1]  smqt bar1_base_addr 1A00000000C
+    [INFO  ] [257936.569234] [action_1]  smqt bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.569234] [action_1]  smqt bar2_base_addr 19F0000000C
+    [INFO  ] [257936.569234] [action_1]  smqt bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.569234] [action_1]  smqt bar4_base_addr E9900000
+    [INFO  ] [257936.569234] [action_1]  smqt bar5_size      0 (0.00 B)
+    [RESULT] [257936.569281] [action_1]  smqt fail
+    [INFO  ] [257936.570798] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.570798] [action_1]  smqt bar1_base_addr 16C0000000C
+    [INFO  ] [257936.570798] [action_1]  smqt bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.570798] [action_1]  smqt bar2_base_addr 1710000000C
+    [INFO  ] [257936.570798] [action_1]  smqt bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.570798] [action_1]  smqt bar4_base_addr E7300000
+    [INFO  ] [257936.570798] [action_1]  smqt bar5_size      0 (0.00 B)
+    [RESULT] [257936.570837] [action_1]  smqt fail
+
+In this example, BAR sizes reported by GPUs match those listed in configuration key except for the BAR5, hence the test fails.
+
 @section usg10 10 PQT Module
 The P2P Qualification Tool is designed to provide the list of all GPUs that
 support P2P and characterize the P2P links between peers. In addition to testing
