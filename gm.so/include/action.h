@@ -35,9 +35,9 @@ using std::string;
 
 /**
  * @class action
- * @ingroup GPUM
+ * @ingroup GM
  *
- * @brief GPUM action implementation class
+ * @brief GM action implementation class
  *
  * Derives from rvs::actionbase and implements actual action functionality
  * in its run() method.
