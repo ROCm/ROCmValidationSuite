@@ -534,6 +534,86 @@ power state will generate the following informational messages:
 
 @subsection usg63 6.3 Examples
 
+**Example 1**
+
+Here is a typical check utilizing PESM functionlit:
+
+    actions:
+    - name: action_1
+      device: all
+      module: pesm
+      monitor: true
+    - name: action_2
+      device: 33367
+      module: gst
+      parallel: false
+      count: 2
+      wait: 100
+      duration: 18000
+      ramp_interval: 7000
+      log_interval: 1000
+      max_violations: 1
+      copy_matrix: false
+      target_stress: 5000
+      tolerance: 0.07
+      matrix_size: 5760
+    - name: action_3
+      device: all
+      module: pesm
+      monitor: false
+
+-  **action_1** will initiate monitoring on all devices by setting key **monitor** to **true**\n
+-  **action_2** will start GPU stgress test
+-  **action_3** will stop monitoring
+
+If executed like this:
+
+    sudo rvs -c conf/pesm8.conf -d 3
+
+output similar to this one can be produced:
+
+    [RESULT] [497544.637462] [action_1] pesm all started
+    [INFO  ] [497544.648299] [action_1] pesm 33367 link speed change 8 GT/s
+    [INFO  ] [497544.648299] [action_1] pesm 33367 power state change D0
+    [INFO  ] [497544.648733] [action_1] pesm 3254 link speed change 8 GT/s
+    [INFO  ] [497544.648733] [action_1] pesm 3254 power state change D0
+    [INFO  ] [497544.650413] [action_1] pesm 50599 link speed change 8 GT/s
+    [INFO  ] [497544.650413] [action_1] pesm 50599 power state change D0
+    [INFO  ] [497545.170392] [action_2] gst 33367 start 5000.000000 copy matrix:false
+    [INFO  ] [497547.36602 ] [action_2] gst 33367 Gflops 6478.066983
+    [INFO  ] [497548.69221 ] [action_2] gst 33367 target achieved 5000.000000
+    [INFO  ] [497549.101219] [action_2] gst 33367 Gflops 5189.993529
+    [INFO  ] [497550.132376] [action_2] gst 33367 Gflops 5189.993529
+    ...
+    [INFO  ] [497563.569370] [action_2] gst 33367 Gflops 5174.935520
+    [RESULT] [497564.86904 ] [action_2] gst 33367 Gflop: 6478.066983 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE
+    [INFO  ] [497564.220311] [action_2] gst 33367 start 5000.000000 copy matrix:false
+    [INFO  ] [497566.70585 ] [action_2] gst 33367 Gflops 6521.049418
+    [INFO  ] [497567.99929 ] [action_2] gst 33367 target achieved 5000.000000
+    [INFO  ] [497568.143096] [action_2] gst 33367 Gflops 5130.281235
+    ...
+    [INFO  ] [497582.683893] [action_2] gst 33367 Gflops 5135.204729
+    [RESULT] [497583.130945] [action_2] gst 33367 Gflop: 6521.049418 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE
+    [RESULT] [497583.155470] [action_3] pesm all stopped
+
+**Example 2:**
+
+Consider this file:
+
+    actions:
+    - name: act1
+      device: all
+      deviceid: xxx
+      module: pesm
+      monitor: true
+
+
+This file has and ivalid entry in **deviceid** key.
+If execute, an error will be reported:
+
+    RVS-PESM: action: act1  invalide 'deviceid' key value: xxx
+
+
 @section usg7 7 RCQT Module
 
 This ‘module’ is actually a set of feature checks that target and qualify the
@@ -1210,6 +1290,54 @@ is finished, the following informational messages will be generated:
 
 
 @subsection usg93 9.3 Examples
+
+**Example 1:**
+
+Consider this file (sizes are in bytes):
+
+    actions:
+    - name: action_1
+      device: all
+      module: smqt
+      bar1_req_size: 17179869184
+      bar1_base_addr_min: 0
+      bar1_base_addr_max: 17592168044416
+      bar2_req_size: 2097152
+      bar2_base_addr_min: 0
+      bar2_base_addr_max: 1099511627776
+      bar4_req_size: 262144
+      bar4_base_addr_min: 0
+      bar4_base_addr_max: 17592168044416
+      bar5_req_size: 131072
+
+Results for three GPUs are:
+
+    [INFO  ] [257936.568768] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.568768] [action_1]  smqt bar1_base_addr 13C0000000C
+    [INFO  ] [257936.568768] [action_1]  smqt bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.568768] [action_1]  smqt bar2_base_addr 13B0000000C
+    [INFO  ] [257936.568768] [action_1]  smqt bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.568768] [action_1]  smqt bar4_base_addr E4B00000
+    [INFO  ] [257936.568768] [action_1]  smqt bar5_size      0 (0.00 B)
+    [RESULT] [257936.568920] [action_1]  smqt fail
+    [INFO  ] [257936.569234] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.569234] [action_1]  smqt bar1_base_addr 1A00000000C
+    [INFO  ] [257936.569234] [action_1]  smqt bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.569234] [action_1]  smqt bar2_base_addr 19F0000000C
+    [INFO  ] [257936.569234] [action_1]  smqt bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.569234] [action_1]  smqt bar4_base_addr E9900000
+    [INFO  ] [257936.569234] [action_1]  smqt bar5_size      0 (0.00 B)
+    [RESULT] [257936.569281] [action_1]  smqt fail
+    [INFO  ] [257936.570798] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.570798] [action_1]  smqt bar1_base_addr 16C0000000C
+    [INFO  ] [257936.570798] [action_1]  smqt bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.570798] [action_1]  smqt bar2_base_addr 1710000000C
+    [INFO  ] [257936.570798] [action_1]  smqt bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.570798] [action_1]  smqt bar4_base_addr E7300000
+    [INFO  ] [257936.570798] [action_1]  smqt bar5_size      0 (0.00 B)
+    [RESULT] [257936.570837] [action_1]  smqt fail
+
+In this example, BAR sizes reported by GPUs match those listed in configuration key except for the BAR5, hence the test fails.
 
 @section usg10 10 PQT Module
 The P2P Qualification Tool is designed to provide the list of all GPUs that
