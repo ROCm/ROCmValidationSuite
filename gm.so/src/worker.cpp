@@ -152,7 +152,7 @@ const std::string Worker::get_irq(const std::string path) {
  * @param path represents path of device
  * @return power value
  */
-const int Worker::get_power(const std::string path) {
+int Worker::get_power(const std::string path) {
   string retStr;
   auto tempPath = path;
 
