@@ -71,6 +71,17 @@ set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
+
+# Set PATH variables
+set(ROCR_INC_DIR "/opt/rocm/include/" CACHE PATH "Contains header files exported by ROC Runtime")
+set(ROCR_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by ROC Runtime")
+set(ROCT_INC_DIR "/opt/rocm/include/libhsakmt" CACHE PATH "Contains header files exported by ROC Trunk")
+set(ROCT_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by ROC Trunk")
+set(HIP_INC_DIR "/opt/rocm/hip/include/hip/" CACHE PATH "Contains header files exported by ROC Runtime")
+set(ROCBLAS_INC_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/include/" CACHE PATH "Contains header files exported by rocBLAS")
+set(ROCBLAS_LIB_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/lib/" CACHE PATH "Contains library files exported by rocBLAS")
+set(ROCM_SMI_INC_DIR "$ENV{RVS}/rocm_smi_lib/include" CACHE PATH "Contains header files exported by rocm_smi")
+set(ROCM_SMI_LIB_DIR "$ENV{RVS}/../build/rocm_smi_lib" CACHE PATH "Contains library files exported by rocm_smi")
 #add_subdirectory(yaml-cpp)
 
 add_subdirectory(rvs)
