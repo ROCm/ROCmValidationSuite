@@ -500,7 +500,7 @@ int pqtaction::run() {
     return -1;
 
   // log_interval must be less than duration
-  if ((int)prop_log_interval > (int)gst_run_duration_ms) {
+  if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
     cerr << "RVS-PQT: action: " << action_name <<
         "  log_interval must be less than duration" << std::endl;
     return -1;
@@ -511,7 +511,7 @@ int pqtaction::run() {
     prop_log_interval = 0;
     gst_run_duration_ms = 0;
   }
-  
+
   // check for -j flag (json logging)
   if (property.find("cli.-j") != property.end()) {
     unsigned int sec;
