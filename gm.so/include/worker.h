@@ -93,7 +93,6 @@ class Worker : public rvs::ThreadBase {
  protected:
   //! TRUE if JSON output is required
   bool bjson;
-  std::shared_ptr<amd::smi::Device> dev;
   //! Loops while TRUE
   bool brun;
   //! device id to filter for. 0 if no filtering.
@@ -118,43 +117,66 @@ class Worker : public rvs::ThreadBase {
   bool term;
   //! number of times of get metric
   int count;
-
+//! gpu_id and average metrics values
 struct Dev_metrics {
+    //! gpu_id
     uint32_t gpu_id;
+    //! average temperature
     uint32_t av_temp;
+    //! average clock
     uint32_t av_clock;
+    //! average mem_clock
     uint32_t av_mem_clock;
+    //! average fan
     uint32_t av_fan;
+    //! average power
     uint32_t av_power;
 };
-
+//! monitored metric and its bound values
 struct Metric_bound {
+    //! true if metric observed
     bool mon_metric;
+    //! true if bounds checked
     bool check_bounds;
+    //! bound max_val
     int max_val;
+    //! bound min_val
     int min_val;
 };
-
+//! number of violations for metrics
 struct Metric_violation {
+    //! number of temperature violation
     int temp_violation;
+    //! number of clock violation
     int clock_violation;
+    //! number of mem_clock violation
     int mem_clock_violation;
+    //! number of fan violation
     int fan_violation;
+    //! number of power violation
     int power_violation;
 };
-
+//! current metric values
 struct Metric_value {
+    //! current temperature value
     int temp;
+    //! current clock value
     int clock;
+    //! current mem_clock value
     int mem_clock;
+    //! current fan value
     int fan;
+    //! current power value
     int power;
 };
 
-
+  //! device irq, gpu_id and average metric
   std::map<std::string, Dev_metrics> irq_gpu_ids;
+  //! device_irq and metric bounds
   std::map<std::string, Metric_bound> bounds;
+  //! device_irq and metrics violation
   std::map<std::string, Metric_violation> met_violation;
+  //! device_irq and current metric values
   std::map<std::string, Metric_value> met_value;
 };
 
