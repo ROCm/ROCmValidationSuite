@@ -115,6 +115,11 @@ class action: public rvs::actionbase {
     void property_get_iet_matrix_size(int *error);
 
     bool get_all_iet_config_keys(void);
+    /**
+    * @brief reads all common configuration keys from
+    * the module's properties collection
+    * @return true if no fatal error occured, false otherwise
+    */
     bool get_all_common_config_keys(void);
     const std::string get_irq(const std::string dev_path);
     bool add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
