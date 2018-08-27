@@ -1505,7 +1505,7 @@ destination GPU (ID 50599) and that bidirectional bandwidth is 2.58 GBps.
 Here some source GPUs (device: 50599) are targeting some destination GPUs
 (peers: 33367 3254) with specified log interval (log_interval: 500) and duration
 (duration: 1000). Bandwidth is tested (test_bandwidth: true) but only
-unidirectional (bidirectional: false) without parralel execution (parralel:
+unidirectional (bidirectional: false) without parallel execution (parallel:
 false).
 
     actions:
@@ -1517,7 +1517,7 @@ false).
       peers: 33367 3254
       test_bandwidth: true
       bidirectional: false
-      parralel: false
+      parallel: false
 
 Possible output is:
 
@@ -1537,7 +1537,7 @@ destination GPU (ID 33367) and that bidirectional bandwidth is 4.57 GBps.
 Here some source GPUs (device: 3254) are targeting some destination GPUs (peers:
 33367) with specified log interval (log_interval: 500) and duration (duration:
 1000). Bandwidth is tested (test_bandwidth: true) but only unidirectional
-(bidirectional: false) without parralel execution (parralel: false). Also, only
+(bidirectional: false) without parallel execution (parallel: false). Also, only
 GPUs with specified device id are considered (peer_deviceid: 26720).
 
     actions:
@@ -1550,7 +1550,7 @@ GPUs with specified device id are considered (peer_deviceid: 26720).
       peer_deviceid: 26720
       test_bandwidth: true
       bidirectional: false
-      parralel: false
+      parallel: false
 
 Possible output is:
 

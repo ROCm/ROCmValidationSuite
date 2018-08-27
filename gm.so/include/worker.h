@@ -83,7 +83,7 @@ class Worker : public rvs::ThreadBase {
   //! gets irq of device
   const std::string get_irq(const std::string path);
   //! gets power of device
-  const int get_power(const std::string path);
+  int get_power(const std::string path);
   //! prints captured metric values
   void do_metric_values(void);
 

@@ -25,7 +25,7 @@
 
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
-add_compile_options(-Wall -Werror)
+add_compile_options(-Wall -Wextra)
 
 set ( RVS "iet" )
 set ( RVS_PACKAGE "rvs-roct" )
