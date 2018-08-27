@@ -373,7 +373,7 @@ int action::run(void) {
     // that represent the node number
     num_nodes = gpu_num_subdirs(const_cast<char*>(KFD_SYS_PATH_NODES),
     const_cast<char*>(""));
-    
+
     // get the action name
     rvs::actionbase::property_get_action_name(&error);
     if (error == 2) {
@@ -398,7 +398,7 @@ int action::run(void) {
     if (property.find("cli.-j") != property.end()) {
         unsigned int sec;
         unsigned int usec;
-        rvs::lp::get_ticks(sec, usec);
+        rvs::lp::get_ticks(&sec, &usec);
 
         bjson = true;
 

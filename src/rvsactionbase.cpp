@@ -77,14 +77,14 @@ void rvs::actionbase::sleep(const unsigned int ms) {
  * Returns value if propety is set.
  *
  * @param key Property key
- * @param val Property value. Not changed if propery is not set.
+ * @param pval Property value. Not changed if propery is not set.
  * @return TRUE - property set, FALSE - othewise
  *
  * */
-bool rvs::actionbase::has_property(const std::string& key, std::string& val) {
+bool rvs::actionbase::has_property(const std::string& key, std::string* pval) {
   auto it = property.find(key);
   if (it != property.end()) {
-    val = it->second;
+    *pval = it->second;
     return true;
   }
   return false;
@@ -99,7 +99,7 @@ bool rvs::actionbase::has_property(const std::string& key, std::string& val) {
  * */
 bool rvs::actionbase::has_property(const std::string& key) {
   string val;
-  return has_property(key, val);
+  return has_property(key, &val);
 }
 
 /**
