@@ -78,8 +78,9 @@ int rvs_util_strarr_to_intarr(const std::vector<string>& sArr,
 
   return piArr->size();
 }
+
 /**
- * Convert array of strings into array of unsigned integers
+ * Conert array of strings into array of integers
  * @param sArr input string
  * @param iArr tokens' delimiter
  * @return -1 if error, 0 <= otherwise
@@ -103,7 +104,6 @@ int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
 
   return piArr->size();
 }
-
 
 /**
  * checks if input string is a positive integer number
