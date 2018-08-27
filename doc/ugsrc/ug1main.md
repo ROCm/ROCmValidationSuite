@@ -722,6 +722,61 @@ generated:
 
 If the user doesn’t exist no group checks will take place.
 
+@subsubsection usg723 7.2.3 Examples
+
+**Example 1:**
+
+In this example, given user does not exist.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      user: jdoe
+      group: sudo,video
+
+The output for such configuration is:
+
+    [RESULT] [496559.219160] [action_1] usercheck jdoe false
+
+Group check is not performed.
+
+**Example 2:**
+
+In this example, group **rvs** does not exist.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      user: jovanbhdl
+      group: rvs,video
+
+The output for such configuration is:
+
+    [RESULT] [496984.993394] [action_1] usercheck jovanbhdl true
+    [ERROR ] [496984.993535] [action_1] usercheck group rvs doesn't exist
+    [RESULT] [496984.993578] [action_1] usercheck jovanbhdl video true
+
+
+**Example 3:**
+
+In this example, given user exists and belongs to given groups.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      user: jovanbhdl
+      group: sudo,video
+
+The output for such configuration is:
+
+    [RESULT] [497361.361045] [action_1] usercheck jovanbhdl true
+    [RESULT] [497361.361168] [action_1] usercheck jovanbhdl sudo true
+    [RESULT] [497361.361209] [action_1] usercheck jovanbhdl video true
+
+
 @subsection usg73 7.3 File/device Check
 
 This feature checks for the existence of a file, its owner, group, permissions
