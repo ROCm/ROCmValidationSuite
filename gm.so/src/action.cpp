@@ -188,7 +188,7 @@ int action::run(void) {
       vector<uint16_t> iarr;
       if (sdev != "all") {
         vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
-        uint16_t sts = rvs_util_strarr_to_uintarr(sarr, &iarr);
+        int sts = rvs_util_strarr_to_uintarr(sarr, &iarr);
         if (sts < 0) {
           cerr << "RVS-GM: action: " << property["name"] <<
           "  invalide 'device' key value: " << sdev << std::endl;
