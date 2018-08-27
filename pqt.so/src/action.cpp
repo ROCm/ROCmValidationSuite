@@ -506,6 +506,12 @@ int pqtaction::run() {
     return -1;
   }
 
+  // no bandwidth test is performed
+  if (prop_test_bandwidth == false) {
+    prop_log_interval = 0;
+    gst_run_duration_ms = 0;
+  }
+  
   // check for -j flag (json logging)
   if (property.find("cli.-j") != property.end()) {
     unsigned int sec;
