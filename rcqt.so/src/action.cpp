@@ -111,7 +111,7 @@ int action::run() {
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing in gst module";
-    log(msg.c_str(), rvs::logerror);
+    cerr << "RVS-RCQT: " << msg;
     return -1;
   }
 
@@ -128,7 +128,7 @@ int action::run() {
       msg =
       action_name + " " + MODULE_NAME + " "
       + JSON_CREATE_NODE_ERROR;
-      log(msg.c_str(), rvs::logerror);
+      cerr << "RVS-RCQT: " << msg;
     }
   }
 
