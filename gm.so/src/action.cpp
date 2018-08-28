@@ -90,6 +90,7 @@ int action::run(void) {
     bool metric_true, metric_bound;
     int metric_min, metric_max;
     bool terminate = false;
+    uint64_t duration = 1;
     std::vector<uint16_t> gpu_id;
 
     gpu_get_all_gpu_id(&gpu_id);
@@ -129,6 +130,7 @@ int action::run(void) {
       if (rvs::actionbase::has_property("duration")) {
         rvs::actionbase::property_get_run_duration(&error);
         pworker->set_duration(rvs::actionbase::gst_run_duration_ms);
+        duration = rvs::actionbase::gst_run_duration_ms;
       }
 
       for (it = property.begin(); it != property.end(); ++it) {
@@ -208,7 +210,7 @@ int action::run(void) {
     rvs::lp::Log("[" + property["name"]+ "] gm starting Worker",
                  rvs::logtrace);
     pworker->start();
-    sleep(500);
+    sleep(duration);
 
     rvs::lp::Log("[" + property["name"]+ "] gm Monitoring started",
                  rvs::logtrace);
@@ -224,8 +226,7 @@ int action::run(void) {
       pworker = nullptr;
     }
 
-       msg = action_name + " " + MODULE_NAME + " " +
-                            "gpu_id" + " " + " stopped";
+       msg = action_name + " " + MODULE_NAME + " stopped";
         log(msg.c_str(), rvs::logresults);
   }
 
