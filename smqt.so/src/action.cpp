@@ -136,7 +136,7 @@ int action::run(void) {
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing in smqt module";
-    log(msg.c_str(), rvs::logerror);
+    cerr << "RVS-SMQT: " << msg;
     return -1;
   }
 
@@ -157,7 +157,7 @@ int action::run(void) {
   dev = pacc->devices;
 
   if (!has_property("name", &action_name)) {
-    std::cerr << "Error fetching action_name\n";
+    std::cerr << "RVS-SMQT: Error fetching action_name\n";
     return false;
   }
   bar1_req_size      = get_property("bar1_req_size");
