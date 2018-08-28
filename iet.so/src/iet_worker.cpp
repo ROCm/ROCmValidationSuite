@@ -98,7 +98,7 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
         unsigned int sec;
         unsigned int usec;
 
-        rvs::lp::get_ticks(sec, usec);
+        rvs::lp::get_ticks(&sec, &usec);
         void *json_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), log_level, sec, usec);
         if (json_node) {
@@ -450,6 +450,7 @@ void IETWorker::run() {
             log_to_json("ERROR", err_description, rvs::logerror);
             msg = action_name + " " + MODULE_NAME + " "
                     + std::to_string(gpu_id) + " " + err_description;
+            log(msg.c_str(), rvs::logerror);
         } else  {
             log_to_json(IET_PWR_RAMP_EXCEEDED_MSG,
                 std::to_string(ramp_interval), rvs::loginfo);
@@ -457,9 +458,8 @@ void IETWorker::run() {
             msg = action_name + " " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + IET_PWR_RAMP_EXCEEDED_MSG + " " +
                     std::to_string(ramp_interval);
+            log(msg.c_str(), rvs::loginfo);
         }
-
-        log(msg.c_str(), rvs::logerror);
 
         msg = action_name + " " + MODULE_NAME + " " + std::to_string(gpu_id) +
                 " " + IET_PASS_KEY + ": " + IET_RESULT_FAIL_MESSAGE;

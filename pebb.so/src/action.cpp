@@ -81,7 +81,7 @@ int action::run(void) {
 
   // debugging help
   string val;
-  if (has_property("debugwait", val)) {
+  if (has_property("debugwait", &val)) {
     sleep(std::stoi(val));
   }
 
@@ -110,7 +110,7 @@ int action::run(void) {
 
     // checki if deviceid filtering is required
     string sdevid;
-    if (has_property("deviceid", sdevid)) {
+    if (has_property("deviceid", &sdevid)) {
       if (::is_positive_integer(sdevid)) {
         try {
           pworker->set_deviceid(std::stoi(sdevid));
@@ -129,7 +129,7 @@ int action::run(void) {
 
     // check if GPU id filtering is requied
     string sdev;
-    if (has_property("device", sdev)) {
+    if (has_property("device", &sdev)) {
       pworker->set_strgpuids(sdev);
       if (sdev != "all") {
         vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);

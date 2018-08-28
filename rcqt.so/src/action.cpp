@@ -101,10 +101,7 @@ int action::run() {
   bool pkgchk_bool = false;
   bool usrchk_bool = false;
   bool kernelchk_os_bool = false;
-  bool kernelchk_kernel_bool = false;
   bool ldcfgchk_so_bool = false;
-  bool ldcfgchk_arch_bool = false;
-  bool ldcfgchk_ldpath_bool = false;
   bool filechk_bool = false;
 
   // get the action name
@@ -119,7 +116,7 @@ int action::run() {
   if (property.find("cli.-j") != property.end()) {
     unsigned int sec;
     unsigned int usec;
-    rvs::lp::get_ticks(sec, usec);
+    rvs::lp::get_ticks(&sec, &usec);
     bjson = true;
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::loginfo, sec, usec);
@@ -142,19 +139,17 @@ int action::run() {
 
   if (usrchk_bool == true)
     return usrchk_run();
+
   // chck if kernel version action is going to trigger
   kernelchk_os_bool = rvs::actionbase::has_property(OS_VERSION);
-  kernelchk_kernel_bool = rvs::actionbase::has_property(KERNEL_VERSION);
 
-  if (kernelchk_os_bool && kernelchk_kernel_bool)
+  if (kernelchk_os_bool)
     return kernelchk_run();
 
   // check if ldcfg check action is going to trigger
   ldcfgchk_so_bool = rvs::actionbase::has_property(SONAME);
-  ldcfgchk_arch_bool = rvs::actionbase::has_property(ARCH);
-  ldcfgchk_ldpath_bool = rvs::actionbase::has_property(LDPATH);
 
-  if (ldcfgchk_so_bool && ldcfgchk_arch_bool && ldcfgchk_ldpath_bool)
+  if (ldcfgchk_so_bool)
     return ldcfgchk_run();
 
   // check if file check action is going to trigger
@@ -174,12 +169,12 @@ int action::run() {
 int action::pkgchk_run() {
   string package_name;
   string msg;
-  if (has_property(PACKAGE, package_name)) {
+  if (has_property(PACKAGE, &package_name)) {
     bool version_exists = false;
 
     // Checking if version field exists
     string version_name;
-    version_exists = has_property(VERSION, version_name);
+    version_exists = has_property(VERSION, &version_name);
     pid_t pid;
     int fd[2];
     pipe(fd);
@@ -277,12 +272,12 @@ int action::pkgchk_run() {
 int action::usrchk_run() {
   string err_msg, msg;
   string user_name;
-  if (has_property(USER, user_name)) {
+  if (has_property(USER, &user_name)) {
     bool group_exists = false;
     string group_values_string;
 
     // Check if gruop exists
-    group_exists = has_property(GROUP, group_values_string);
+    group_exists = has_property(GROUP, &group_values_string);
 
     // Structures for checking group and user
     struct passwd pwd, *result;
@@ -402,11 +397,11 @@ int action::kernelchk_run() {
   string os_version_values;
   string kernel_version_values;
 
-  if (has_property(OS_VERSION, os_version_values)) {
+  if (has_property(OS_VERSION, &os_version_values)) {
     // Check kernel version
     if (has_property(KERNEL_VERSION,
-      kernel_version_values) == false) {
-      cerr << "Kernel version missing in config" << endl;
+      &kernel_version_values) == false) {
+      cerr << "Kernel version is missing in config." << endl;
       return -1;
     }
 
@@ -495,13 +490,13 @@ int action::ldcfgchk_run() {
   string soname_requested;
   string arch_requested;
   string ldpath_requested;
-  if (has_property(SONAME, soname_requested)) {
-    if (has_property(ARCH, arch_requested) == false) {
-      cerr << "acrhitecture field missing in config" << endl;
+  if (has_property(SONAME, &soname_requested)) {
+    if (has_property(ARCH, &arch_requested) == false) {
+      cerr << "Architecture field is missing in config." << endl;
       return -1;
     }
-    if (has_property(LDPATH, ldpath_requested) == false) {
-      cerr << "library path field missing in config" << endl;
+    if (has_property(LDPATH, &ldpath_requested) == false) {
+      cerr << "Library path field is missing in config." << endl;
       return -1;
     }
     // Full path of shared object
@@ -526,7 +521,7 @@ int action::ldcfgchk_run() {
       close(fd[1]);
       string ld_config_result = "[" + action_name + "] " +
       "rcqt ldconfigcheck ";
-
+      read(fd[0], result, BUFFER_SIZE);
       string result_string = result;
 
       if (strstr(result, "architecture:") != nullptr) {
@@ -534,7 +529,6 @@ int action::ldcfgchk_run() {
         int begin_of_the_arch_string = 0;
         int end_of_the_arch_string = 0;
         for (uint i = 0; i < objdump_lines.size(); i++) {
-          // cout << objdump_lines[i] << "*" << endl;
           if (objdump_lines[i].find("architecture") != string::npos) {
             begin_of_the_arch_string = objdump_lines[i].find(":");
             end_of_the_arch_string = objdump_lines[i].find(",");
@@ -578,6 +572,7 @@ int action::ldcfgchk_run() {
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
+
     return 0;
   }
   return -1;
@@ -676,7 +671,7 @@ int action::filechk_run() {
           check = "true";
         else
           check = "false";
-        msg = "[" + action_name + "] " + "rcqt filecheck " + group+ " "+check;
+        msg = "[" + action_name + "] " + "rcqt filecheck " + group+ " " + check;
         log(msg.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node

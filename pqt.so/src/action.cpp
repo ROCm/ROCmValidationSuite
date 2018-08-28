@@ -48,7 +48,8 @@ extern "C" {
 #include "worker.h"
 
 #define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
-#define DEFAULT_LOG_INTERVAL 500
+#define DEFAULT_LOG_INTERVAL 1000
+#define DEFAULT_DURATION 10000
 
 #define MODULE_NAME "pqt"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
@@ -228,9 +229,11 @@ bool pqtaction::get_all_pqt_config_keys(void) {
 
   property_get_bidirectional(&error);
   if (error) {
-    cerr << "RVS-PQT: action: " << action_name <<
-        "  invalid 'bidirectional'" << std::endl;
-    return false;
+    if (prop_test_bandwidth == true) {
+      cerr << "RVS-PQT: action: " << action_name <<
+          "  invalid 'bidirectional'" << std::endl;
+      return false;
+    }
   }
 
   return true;
@@ -254,7 +257,7 @@ bool pqtaction::get_all_common_config_keys(void) {
     }
 
     // get <device> property value (a list of gpu id)
-    if (has_property("device", sdev)) {
+    if (has_property("device", &sdev)) {
         prop_device_all_selected = property_get_device(&error);
         if (error) {  // log the error & abort GST
             cerr << "RVS-PQT: action: " << action_name <<
@@ -268,7 +271,7 @@ bool pqtaction::get_all_common_config_keys(void) {
     }
 
     // get the <deviceid> property value
-    if (has_property("deviceid", sdevid)) {
+    if (has_property("deviceid", &sdevid)) {
         int devid = property_get_deviceid(&error);
         if (!error) {
             if (devid != -1) {
@@ -312,6 +315,9 @@ bool pqtaction::get_all_common_config_keys(void) {
             "' key value" << std::endl;
         return false;
     }
+    if (gst_run_duration_ms == 0) {
+      gst_run_duration_ms = DEFAULT_DURATION;
+    }
 
     return true;
 }
@@ -333,8 +339,8 @@ int pqtaction::create_threads() {
   std::vector<uint16_t> gpu_id;
   std::vector<uint16_t> gpu_device_id;
 
-  gpu_get_all_gpu_id(gpu_id);
-  gpu_get_all_device_id(gpu_device_id);
+  gpu_get_all_gpu_id(&gpu_id);
+  gpu_get_all_device_id(&gpu_device_id);
 
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
     // filter out by source device id
@@ -381,9 +387,9 @@ int pqtaction::create_threads() {
         if (bjson) {
           unsigned int sec;
           unsigned int usec;
-          rvs::lp::get_ticks(sec, usec);
+          rvs::lp::get_ticks(&sec, &usec);
           json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                                  action_name.c_str(), rvs::loginfo, sec, usec);
+                              action_name.c_str(), rvs::logresults, sec, usec);
           if (json_rcqt_node != NULL) {
             rvs::lp::AddString(json_rcqt_node, "src",
                                std::to_string(gpu_id[i]));
@@ -419,15 +425,44 @@ int pqtaction::create_threads() {
         msg = "[" + action_name + "] p2p "
             + std::to_string(gpu_id[i]) + " "
             + std::to_string(gpu_id[j]) + " false";
-        rvs::lp::Log(msg, rvs::logerror);
+        rvs::lp::Log(msg, rvs::logresults);
+        if (bjson) {
+          unsigned int sec;
+          unsigned int usec;
+          rvs::lp::get_ticks(&sec, &usec);
+          json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                              action_name.c_str(), rvs::logresults, sec, usec);
+          if (json_rcqt_node != NULL) {
+            rvs::lp::AddString(json_rcqt_node,
+                               "src", std::to_string(gpu_id[i]));
+            rvs::lp::AddString(json_rcqt_node,
+                               "dst", std::to_string(gpu_id[j]));
+            rvs::lp::AddString(json_rcqt_node,
+                               "p2p", "false");
+            rvs::lp::LogRecordFlush(json_rcqt_node);
+          }
+        }
       }
     }
   }
 
   if (prop_test_bandwidth && test_array.size() < 1) {
     msg = "[" + action_name + "]" +
-          "No GPU/peer combination matches criteria from test configuation";
-    rvs::lp::Log(msg, rvs::logerror);
+          " No GPU/peer combination matches criteria from test configuation";
+    rvs::lp::Log(msg, rvs::loginfo);
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                              action_name.c_str(), rvs::loginfo, sec, usec);
+      if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node,
+          "message",
+          "No GPU/peer combination matches criteria from test configuation");
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+    }
     return -1;
   }
 
@@ -442,6 +477,7 @@ int pqtaction::create_threads() {
  * */
 int pqtaction::destroy_threads() {
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
     delete *it;
   }
 
@@ -463,13 +499,25 @@ int pqtaction::run() {
   if (!get_all_pqt_config_keys())
     return -1;
 
+  // log_interval must be less than duration
+  if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
+    cerr << "RVS-PQT: action: " << action_name <<
+        "  log_interval must be less than duration" << std::endl;
+    return -1;
+  }
+
+  // no bandwidth test is performed
+  if (prop_test_bandwidth == false) {
+    prop_log_interval = 0;
+    gst_run_duration_ms = 0;
+  }
+
   // check for -j flag (json logging)
   if (property.find("cli.-j") != property.end()) {
     unsigned int sec;
     unsigned int usec;
-    log("[PQT] uses json", rvs::logdebug);
 
-    rvs::lp::get_ticks(sec, usec);
+    rvs::lp::get_ticks(&sec, &usec);
     bjson = true;
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::loginfo, sec, usec);
@@ -639,6 +687,22 @@ int pqtaction::print_running_average() {
            std::string(bidir ? "true" : "false") +
            "  " + buff;
     rvs::lp::Log(msg, rvs::loginfo);
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                              action_name.c_str(), rvs::loginfo, sec, usec);
+      if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
+        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
+        rvs::lp::AddString(json_rcqt_node, "p2p", "true");
+        rvs::lp::AddString(json_rcqt_node, "bidirectional",
+                           std::string(bidir ? "true" : "false"));
+        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+    }
     sleep(1);
   }
 
@@ -684,9 +748,9 @@ int pqtaction::print_final_average() {
     if (bjson) {
       unsigned int sec;
       unsigned int usec;
-      rvs::lp::get_ticks(sec, usec);
+      rvs::lp::get_ticks(&sec, &usec);
       json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::loginfo, sec, usec);
+                              action_name.c_str(), rvs::logresults, sec, usec);
       if (json_rcqt_node != NULL) {
         rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
         rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
@@ -707,12 +771,35 @@ int pqtaction::print_final_average() {
 
 void pqtaction::do_final_average() {
   rvs::lp::Log("pqt in do_final_average", rvs::logdebug);
+  if (bjson) {
+    unsigned int sec;
+    unsigned int usec;
+    rvs::lp::get_ticks(&sec, &usec);
+    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::logdebug, sec, usec);
+    if (json_rcqt_node != NULL) {
+      rvs::lp::AddString(json_rcqt_node, "message", "pqt in do_final_average");
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }
+  }
   brun = false;
 }
 
 void pqtaction::do_running_average() {
-  rvs::lp::Log("in do_running_average", rvs::logdebug);
-
+  rvs::lp::Log("pqt in do_running_average", rvs::logdebug);
+  if (bjson) {
+    unsigned int sec;
+    unsigned int usec;
+    rvs::lp::get_ticks(&sec, &usec);
+    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::logdebug, sec, usec);
+    if (json_rcqt_node != NULL) {
+      rvs::lp::AddString(json_rcqt_node,
+                         "message",
+                         "pqt in do_running_average");
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }
+  }
   print_running_average();
 }
 

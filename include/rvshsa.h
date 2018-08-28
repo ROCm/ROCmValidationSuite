@@ -122,7 +122,7 @@ class hsa {
   static void Terminate();
   static rvs::hsa* Get();
 
-  const int FindAgent(uint32_t Node);
+  int FindAgent(uint32_t Node);
 
   int SendTraffic(uint32_t SrcNode, uint32_t DstNode,
                   size_t   Size,    bool     bidirectional,
