@@ -251,8 +251,8 @@ bool pqtaction::get_all_common_config_keys(void) {
     // get the action name
     property_get_action_name(&error);
     if (error) {
-      msg = "pqt [] action field is missing";
-      log(msg.c_str(), rvs::logerror);
+      msg = "action field is missing";
+      cerr << "RVS-PQT: " << msg;
       return false;
     }
 
@@ -526,7 +526,7 @@ int pqtaction::run() {
       msg =
       action_name + " " + MODULE_NAME + " "
       + JSON_CREATE_NODE_ERROR;
-      log(msg.c_str(), rvs::logerror);
+      cerr << "RVS-PQT: " << msg;
     }
   }
 
