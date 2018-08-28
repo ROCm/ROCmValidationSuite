@@ -74,7 +74,7 @@ ulong action::get_property(string property) {
   if (has_property(property, &value)) {
     result = std::stoul(value);
   } else {
-    std::cerr << "Error fetching " << property
+    std::cerr << "RVS-SMQT: Error fetching " << property
               << ". Cannot continue without it. Exiting!\n";
     exit(EXIT_FAILURE);
   }
@@ -141,7 +141,7 @@ int action::run(void) {
   }
 
   if (!get_all_common_config_keys()) {
-    std::cerr << "Couldn't fetch common config keys "
+    std::cerr << "RVS-SMQT: Couldn't fetch common config keys "
               << "from the configuration file!\n";
     return -1;
   }

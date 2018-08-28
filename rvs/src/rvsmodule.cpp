@@ -80,7 +80,7 @@ int rvs::module::initialize(const char* pConfig) {
   std::ifstream file(pConfig);
 
   if (!file.good()) {
-    std::cerr << "ERROR: " << pConfig << " file does not exist.\n";
+    std::cerr << "RVS-CLI: " << pConfig << " file does not exist.\n";
     return -1;
   } else {
     file.close();
@@ -92,7 +92,7 @@ int rvs::module::initialize(const char* pConfig) {
   // verify that that the file format is supported
   YAML::const_iterator it = config.begin();
   if (it == config.end()) {
-    std::cerr << "ERROR: unsupported file format. Version string not found."
+    std::cerr << "RVS-CLI: unsupported file format. Version string not found."
               << std::endl;
     return -1;
   }
@@ -101,13 +101,13 @@ int rvs::module::initialize(const char* pConfig) {
     std::string value = it->second.as<std::string>();
 
   if (key != "version") {
-    std::cerr << "ERROR: unsupported file format. Version string not found."
+    std::cerr << "RVS-CLI: unsupported file format. Version string not found."
               << std::endl;
     return -1;
   }
 
   if (value != "1") {
-    std::cerr << "ERROR: version is not 1" << std::endl;
+    std::cerr << "RVS-CLI: version is not 1" << std::endl;
     return -1;
   }
 
@@ -146,7 +146,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
     // not found...
     if (it == filemap.end()) {
       // this should never happen if .config is OK
-      std::cerr << "ERROR: module '" << name << "' not found in configuration."
+      std::cerr << "RVS-CLI: module '" << name << "' not found in configuration."
                 << std::endl;
       return NULL;
     }
@@ -164,7 +164,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
 
     // error?
     if (!psolib) {
-      std::cerr << "ERROR: could not load .so '" << sofullname << "' reason: "
+      std::cerr << "RVS-CLI: could not load .so '" << sofullname << "' reason: "
                 << dlerror() << std::endl;
       return NULL;  // fail
     }
@@ -178,7 +178,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
 
     // initialize API function pointers
     if (m->init_interfaces()) {
-      std::cerr << "ERROR: could not init interfaces for '"
+      std::cerr << "RVS-CLI: could not init interfaces for '"
                 << it->second.c_str() << "'" << std::endl;
       dlclose(psolib);
       delete m;
@@ -187,7 +187,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
 
     // initialize newly loaded module
     if (m->initialize()) {
-      std::cerr << "ERROR: could not initialize '" << it->second.c_str() << "'"
+      std::cerr << "RVS-CLI: could not initialize '" << it->second.c_str() << "'"
                 << std::endl;
       dlclose(psolib);
       delete m;
@@ -239,14 +239,14 @@ rvs::action* rvs::module::action_create(const char* name) {
   // find module
   rvs::module* m = module::find_create_module(name);
   if (!m) {
-    std::cerr << "ERROR: module '" << name << "' not available." << std::endl;
+    std::cerr << "RVS-CLI: module '" << name << "' not available." << std::endl;
     return nullptr;
   }
 
   // create lib action objct
   void* plibaction = m->action_create();
   if (!plibaction)  {
-    std::cerr << "ERROR: module '" << name << "' could not create lib action."
+    std::cerr << "RVS-CLI: module '" << name << "' could not create lib action."
          << std::endl;
     return nullptr;
   }
@@ -254,7 +254,7 @@ rvs::action* rvs::module::action_create(const char* name) {
   // create action proxy object
   rvs::action* pa = new rvs::action(name, plibaction);
   if (!pa) {
-    std::cerr << "ERROR: module '" << name << "' could not create action proxy."
+    std::cerr << "RVS-CLI: module '" << name << "' could not create action proxy."
               << std::endl;
     return nullptr;
   }
@@ -401,12 +401,12 @@ int rvs::module::init_interfaces() {
  */
 int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName) {
   if (!psolib) {
-    std::cerr << "ERROR: psolib is null. " << std::endl;
+    std::cerr << "RVS-CLI: psolib is null. " << std::endl;
     return -1;
   }
   void* pf = dlsym(psolib, pMethodName);
   if (!pf) {
-    std::cerr << "ERROR: could not find .so method '" << pMethodName << "'"
+    std::cerr << "RVS-CLI: could not find .so method '" << pMethodName << "'"
               << std::endl;
   }
 
@@ -517,7 +517,7 @@ void rvs::module::do_list_modules(void) {
     // create action
     rvs::action* pa = rvs::module::action_create(it->first.c_str());
     if (!pa) {
-      std::cerr << "ERROR: could not open module: " << it->first.c_str()
+      std::cerr << "RVS-CLI: could not open module: " << it->first.c_str()
                 << std::endl;
       continue;
     }
@@ -531,7 +531,7 @@ void rvs::module::do_list_modules(void) {
       // action no longer needed so destroy it
       rvs::module::action_destroy(pa);
 
-      std::cerr << "ERROR: could not obtain data." << std::endl;
+      std::cerr << "RVS-CLI: could not obtain data." << std::endl;
       continue;
     }
 
