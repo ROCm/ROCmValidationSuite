@@ -148,7 +148,7 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
 
   string indexes;
   bool indexes_provided = false;
-  if (rvs::options::has_option("-i", indexes) && (!indexes.empty()))
+  if (rvs::options::has_option("-i", &indexes) && (!indexes.empty()))
     indexes_provided = true;
 
 

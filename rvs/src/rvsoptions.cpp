@@ -34,16 +34,16 @@ std::map<std::string, std::string> rvs::options::opt;
  * @brief Check and retrieve option.
  *
  * @param Option option to look for
- * @param val option value. Unchanged if option does not exist.
+ * @param pval option value. Unchanged if option does not exist.
  * @return 'true' if Option exists, 'false' otherwise
  *
  */
-bool  rvs::options::has_option(const std::string& Option, std::string& val) {
+bool  rvs::options::has_option(const std::string& Option, std::string* pval) {
   auto it = opt.find(std::string(Option));
   if (it == opt.end())
     return false;
 
-  val = it->second;
+  *pval = it->second;
   return true;
 }
 

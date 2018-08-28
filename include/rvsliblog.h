@@ -79,7 +79,7 @@ const int loginfo     = 3;
 const int logdebug    = 4;
 const int logtrace    = 5;
 
-} // namespace rvs
+}  // namespace rvs
 
 #endif
 

@@ -90,6 +90,9 @@ int action::run(void) {
     bool metric_true, metric_bound;
     int metric_min, metric_max;
     bool terminate = false;
+    std::vector<uint16_t> gpu_id;
+
+    gpu_get_all_gpu_id(&gpu_id);
 
     if (rvs::actionbase::has_property("sample_interval")) {
         sample_interval =
@@ -109,39 +112,44 @@ int action::run(void) {
         terminate = rvs::actionbase::property_get_terminate(&error);
     }
 
-  // start of monitoring?
-  if (property["monitor"] == "true") {
-    if (pworker) {
-      rvs::lp::Log("[" + property["name"]+ "] gm monitoring already started",
+    // start of monitoring?
+    if (property["monitor"] == "true") {
+      if (pworker) {
+        rvs::lp::Log("[" + property["name"]+ "] gm monitoring already started",
                   rvs::logresults);
       return 0;
-    }
+      }
 
-    pworker = new Worker();
-    pworker->set_name(property["name"]);
-    pworker->set_sample_int(sample_interval);
-    pworker->set_log_int(log_interval);
-    pworker->set_terminate(terminate);
+      pworker = new Worker();
+      pworker->set_name(property["name"]);
+      pworker->set_sample_int(sample_interval);
+      pworker->set_log_int(log_interval);
+      pworker->set_terminate(terminate);
 
-    for (it = property.begin(); it != property.end(); ++it) {
-      metric_bound = false;
-      string word;
-      string s = it->first;
-      if (s.find(".") != std::string::npos && s.substr(0, s.find(".")) ==
+      if (rvs::actionbase::has_property("duration")) {
+        rvs::actionbase::property_get_run_duration(&error);
+        pworker->set_duration(rvs::actionbase::gst_run_duration_ms);
+      }
+
+      for (it = property.begin(); it != property.end(); ++it) {
+        metric_bound = false;
+        string word;
+        string s = it->first;
+        if (s.find(".") != std::string::npos && s.substr(0, s.find(".")) ==
           "metrics") {
-        string metric = s.substr(s.find(".")+1);
-        s = it->second;
-        vector<string> values = str_split(s, YAML_DEVICE_PROP_DELIMITER);
+          string metric = s.substr(s.find(".")+1);
+          s = it->second;
+          vector<string> values = str_split(s, YAML_DEVICE_PROP_DELIMITER);
 
-        if (values.size() == 3) {
+          if (values.size() == 3) {
             metric_true = (values[0] == "true") ? true : false;
             metric_max = std::stoi(values[1]);
             metric_min = std::stoi(values[2]);
             metric_bound = true;
-        } else {
-          msg = " Wrong number of metric parameters ";
-          log(msg.c_str(), rvs::logerror);
-          return -1;
+          } else {
+            msg = " Wrong number of metric parameters ";
+            log(msg.c_str(), rvs::logerror);
+            return -1;
         }
 
         pworker->set_metr_mon(metric, metric_true);
@@ -157,7 +165,7 @@ int action::run(void) {
 
     // checki if deviceid filtering is required
     string sdevid;
-    if (has_property("deviceid", sdevid)) {
+    if (has_property("deviceid", &sdevid)) {
       if (::is_positive_integer(sdevid)) {
         try {
           pworker->set_deviceid(std::stoi(sdevid));
@@ -176,18 +184,19 @@ int action::run(void) {
 
     // check if GPU id filtering is requied
     string sdev;
-    if (has_property("device", sdev)) {
-      pworker->set_strgpuids(sdev);
+    if (has_property("device", &sdev)) {
+      vector<uint16_t> iarr;
       if (sdev != "all") {
         vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
-        vector<int> iarr;
-        int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
+        int sts = rvs_util_strarr_to_uintarr(sarr, &iarr);
         if (sts < 0) {
           cerr << "RVS-GM: action: " << property["name"] <<
           "  invalide 'device' key value: " << sdev << std::endl;
           return -1;
         }
         pworker->set_gpuids(iarr);
+      } else {
+         pworker->set_gpuids(gpu_id);
       }
     } else {
           cerr << "RVS-GM: action: " << property["name"] <<
@@ -199,7 +208,7 @@ int action::run(void) {
     rvs::lp::Log("[" + property["name"]+ "] gm starting Worker",
                  rvs::logtrace);
     pworker->start();
-    sleep(50);
+    sleep(500);
 
     rvs::lp::Log("[" + property["name"]+ "] gm Monitoring started",
                  rvs::logtrace);
@@ -208,7 +217,7 @@ int action::run(void) {
     "] gm property[\"monitor\"] != \"true\"", rvs::logtrace);
     if (pworker) {
       // (give thread chance to start)
-      sleep(10);
+      sleep(2);
       pworker->set_stop_name(property["name"]);
       pworker->stop();
       delete pworker;
@@ -220,9 +229,9 @@ int action::run(void) {
         log(msg.c_str(), rvs::logresults);
   }
 
-    if (bjson && json_root_node != NULL) {  // json logging stuff
-        rvs::lp::LogRecordFlush(json_root_node);
-    }
+     if (bjson && json_root_node != NULL) {  // json logging stuff
+         rvs::lp::LogRecordFlush(json_root_node);
+     }
 
   return 0;
 }

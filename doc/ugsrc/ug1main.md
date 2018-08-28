@@ -534,9 +534,89 @@ power state will generate the following informational messages:
 
 @subsection usg63 6.3 Examples
 
+**Example 1**
+
+Here is a typical check utilizing PESM functionlit:
+
+    actions:
+    - name: action_1
+      device: all
+      module: pesm
+      monitor: true
+    - name: action_2
+      device: 33367
+      module: gst
+      parallel: false
+      count: 2
+      wait: 100
+      duration: 18000
+      ramp_interval: 7000
+      log_interval: 1000
+      max_violations: 1
+      copy_matrix: false
+      target_stress: 5000
+      tolerance: 0.07
+      matrix_size: 5760
+    - name: action_3
+      device: all
+      module: pesm
+      monitor: false
+
+-  **action_1** will initiate monitoring on all devices by setting key **monitor** to **true**\n
+-  **action_2** will start GPU stgress test
+-  **action_3** will stop monitoring
+
+If executed like this:
+
+    sudo rvs -c conf/pesm8.conf -d 3
+
+output similar to this one can be produced:
+
+    [RESULT] [497544.637462] [action_1] pesm all started
+    [INFO  ] [497544.648299] [action_1] pesm 33367 link speed change 8 GT/s
+    [INFO  ] [497544.648299] [action_1] pesm 33367 power state change D0
+    [INFO  ] [497544.648733] [action_1] pesm 3254 link speed change 8 GT/s
+    [INFO  ] [497544.648733] [action_1] pesm 3254 power state change D0
+    [INFO  ] [497544.650413] [action_1] pesm 50599 link speed change 8 GT/s
+    [INFO  ] [497544.650413] [action_1] pesm 50599 power state change D0
+    [INFO  ] [497545.170392] [action_2] gst 33367 start 5000.000000 copy matrix:false
+    [INFO  ] [497547.36602 ] [action_2] gst 33367 Gflops 6478.066983
+    [INFO  ] [497548.69221 ] [action_2] gst 33367 target achieved 5000.000000
+    [INFO  ] [497549.101219] [action_2] gst 33367 Gflops 5189.993529
+    [INFO  ] [497550.132376] [action_2] gst 33367 Gflops 5189.993529
+    ...
+    [INFO  ] [497563.569370] [action_2] gst 33367 Gflops 5174.935520
+    [RESULT] [497564.86904 ] [action_2] gst 33367 Gflop: 6478.066983 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE
+    [INFO  ] [497564.220311] [action_2] gst 33367 start 5000.000000 copy matrix:false
+    [INFO  ] [497566.70585 ] [action_2] gst 33367 Gflops 6521.049418
+    [INFO  ] [497567.99929 ] [action_2] gst 33367 target achieved 5000.000000
+    [INFO  ] [497568.143096] [action_2] gst 33367 Gflops 5130.281235
+    ...
+    [INFO  ] [497582.683893] [action_2] gst 33367 Gflops 5135.204729
+    [RESULT] [497583.130945] [action_2] gst 33367 Gflop: 6521.049418 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE
+    [RESULT] [497583.155470] [action_3] pesm all stopped
+
+**Example 2:**
+
+Consider this file:
+
+    actions:
+    - name: act1
+      device: all
+      deviceid: xxx
+      module: pesm
+      monitor: true
+
+
+This file has and ivalid entry in **deviceid** key.
+If execute, an error will be reported:
+
+    RVS-PESM: action: act1  invalide 'deviceid' key value: xxx
+
+
 @section usg7 7 RCQT Module
 
-This ‘module’ is actually a set of modules that target and qualify the
+This ‘module’ is actually a set of feature checks that target and qualify the
 configuration of the platform. Many of the checks can be done manually using the
 operating systems command line tools and general knowledge about ROCm’s
 requirements. The purpose of the RCQT modules is to provide an extensible, OS
@@ -545,8 +625,25 @@ checks required for ROCm support. The checks in this module do not target a
 specific device (instead the underlying platform is targeted), and any device or
 device id keys specified will be ignored. Iteration keys, i.e. count, wait and
 duration, are also ignored.
+\n\n
+One RCQT action can perform only one check at the time. Checks are decoded in
+this order:\n
+
+- If 'package' key is detected, packaging check will be performed
+- If 'user' key is detected, user check will be performed
+- If 'os_versions' and 'kernel_versions' keys are detected, OS check will be performed
+- If 'soname', 'arch' and 'ldpath' keys are detected, linker/loader check will be
+performed
+- If 'file' key is detected, file check will be performed
+
+All other keys not pertinent to the detected action are ignored.
 
 @subsection usg71 7.1 Packaging Check
+
+This feature is used to check installed packages on the system. It provides
+checks for installed packages and the currently available package versions, if
+applicable.
+
 @subsubsection usg711 7.1.1 Packaging Check Specific Keys
 
 Input keys are described in the table below:
@@ -562,7 +659,7 @@ provided any version matching the package name will result in success.
 </td></tr>
 </table>
 
-@subsubsection usg712 7.1.2 Packaging Check Output Keys
+@subsubsection usg712 7.1.2 Output
 
 Output keys are described in the table below:
 
@@ -573,7 +670,468 @@ Output keys are described in the table below:
 </td></tr>
 </table>
 
+The check will emit a result message with the following format:
+
+    [RESULT][<timestamp>][<action name>] packagecheck <package> <installed>
+
+The package name will include the version of the package if the version key is
+specified. The installed output value will either be true or false depending on
+if the package is installed or not.
+
+@subsubsection usg713 7.1.3 Examples
+
+**Example 1:**
+
+In this example, given package does not exist.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip12345
+
+The output for such configuration is:
+
+    [RESULT] [500022.877512] [action_1] packagecheck zip12345 FALSE
+
+**Example 2:**
+
+In this example, version of the given package is incorrect.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip
+      version: 3.0-11****
+
+The output for such configuration is:
+
+    [RESULT] [500123.480561] [action_1] packagecheck zip FALSE
+
+**Example 3:**
+
+In this example, given package exists.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip
+
+The output for such configuration is:
+
+    [RESULT] [500329.824495] [action_1] packagecheck zip TRUE
+
+**Example 4:**
+
+In this example, given package exists and its version is correct.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip
+      version: 3.0-11
+
+The output for such configuration is:
+
+    [RESULT] [500595.859025] [action_1] packagecheck zip TRUE
+
+
+@subsection usg72 7.2 User Check
+
+This feature checks for the existence of a user and the user’s group membership.
+
+@subsubsection usg721 7.2.1 User Check Specific Keys
+
+Input keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>user</td><td>String</td>
+<td>Specifies the user name to check. This key is required.</td></tr>
+<tr><td>groups</td><td>Collection of Strings</td>
+<td>This is an optional key specifying a collection of groups the user should
+belong to. The user’s membership in each group will be checked.
+</td></tr>
+</table>
+
+@subsubsection usg722 7.2.2 Output
+
+Output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>exists</td><td>Bool</td>
+<td>This value is true if the user exists.
+</td></tr>
+<tr><td>members</td><td>Collection of Bools</td>
+<td>This value is true if the user is a member of the specified group.
+</td></tr>
+</table>
+
+The status of the user’s existence is provided in a message with the following
+format:
+
+    [RESULT][<timestamp>][<action name>] usercheck <user> <exists>
+
+For each group in the list, a result message with the following format will be
+generated:
+
+    [RESULT][<timestamp>][<action name>] usercheck <user> <group> <member>
+
+If the user doesn’t exist no group checks will take place.
+
+@subsubsection usg723 7.2.3 Examples
+
+**Example 1:**
+
+In this example, given user does not exist.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      user: jdoe
+      group: sudo,video
+
+The output for such configuration is:
+
+    [RESULT] [496559.219160] [action_1] usercheck jdoe false
+
+Group check is not performed.
+
+**Example 2:**
+
+In this example, group **rvs** does not exist.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      user: jovanbhdl
+      group: rvs,video
+
+The output for such configuration is:
+
+    [RESULT] [496984.993394] [action_1] usercheck jovanbhdl true
+    [ERROR ] [496984.993535] [action_1] usercheck group rvs doesn't exist
+    [RESULT] [496984.993578] [action_1] usercheck jovanbhdl video true
+
+
+**Example 3:**
+
+In this example, given user exists and belongs to given groups.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      user: jovanbhdl
+      group: sudo,video
+
+The output for such configuration is:
+
+    [RESULT] [497361.361045] [action_1] usercheck jovanbhdl true
+    [RESULT] [497361.361168] [action_1] usercheck jovanbhdl sudo true
+    [RESULT] [497361.361209] [action_1] usercheck jovanbhdl video true
+
+
+@subsection usg73 7.3 File/device Check
+
+This feature checks for the existence of a file, its owner, group, permissions
+and type. The primary purpose of this module is to check that the device
+interfaces for the driver and the kfd are available, but it can also be used to
+check for the existence of important configuration files, libraries and
+executables.
+
+@subsubsection usg731 7.3.1 File/device Check Specific Keys
+
+Input keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>file</td><td>String</td>
+<td>The value of this key should satisfy the filename limitations of the target
+OS and specifies the file to check. This key is required.
+</td></tr>
+<tr><td>owner</td><td>String</td>
+<td>The expected owner of the file. If this key is specified ownership is
+tested.
+</td></tr>
+<tr><td>group</td><td>String</td>
+<td>If this key is specified, group ownership is tested.
+</td></tr>
+<tr><td>permission</td><td>Integer</td>
+<td>If this key is specified, the permissions on the file are tested. The
+permissions are expected to match the permission value given.
+</td></tr>
+<tr><td>type</td><td>Integer</td>
+<td>If this key is specified the file type is checked.
+</td></tr>
+<tr><td>exists</td><td>Bool</td>
+<td>If this key is specified and set to false all optional parameters will be
+ignored and a check will be made to make sure the file does not exist. The
+default value for this key is true.
+</td></tr>
+</table>
+
+@subsubsection usg732 7.3.2 Output
+
+Output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>owner</td><td>Bool</td>
+<td>True if the correct user owns the file.
+</td></tr>
+<tr><td>group</td><td>Bool</td>
+<td>True if the correct group owns the file.
+</td></tr>
+<tr><td>permission</td><td>Bool</td>
+<td>True if the file has the correct permissions.
+</td></tr>
+<tr><td>type</td><td>Bool</td>
+<td>True if the file is of the right type.
+</td></tr>
+<tr><td>exists</td><td>Bool</td>
+<td>True if the file exists and the ‘exists’ config key is true. True if the
+file does not exist and the ‘exists’ key if false.
+</td></tr>
+</table>
+
+If the ‘exists’ key is true a set of messages, one for each stat check, will be
+generated with the following format:
+
+    [RESULT][<timestamp>][<action name>] filecheck <config key> <matching output key>
+
+If the ‘exists’ key is false the format of the message will be:
+
+    [RESULT][<timestamp>][<action name>] filecheck <file> DNE <exists>
+
+@subsubsection usg733 7.3.3 Examples
+
+**Example 1:**
+
+In this example, config key exists is set to **true** by default and file really
+exists so parameters are tested. Permission number 644 equals to rw-r--r-- and
+type number 40 indicates that it is a folder.
+
+rcqt_fc4.conf :
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      file: /work/mvisekrunahdl/ROCmValidationSuite/rcqt.so/src
+      owner: mvisekrunahdl
+      group: mvisekrunahdl
+      permission: 664
+      type: 40
+
+Output from running this action:
+
+    [RESULT] [240384.678074] [action_1]  filecheck mvisekrunahdl owner:true
+    [RESULT] [240384.678214] [action_1]  filecheck mvisekrunahdl group:true
+    [RESULT] [240384.678250] [action_1]  filecheck 664 permission:true
+    [RESULT] [240384.678275] [action_1]  filecheck 100 type:true
+
+
+**Example 2:**
+
+In this example, config key exists is set to false, but file actually exists so
+parameters are not tested.
+
+rcqt_fc1.conf:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      file: /work/mvisekrunahdl/ROCmValidationSuite/src
+      owner: root
+      permission: 644
+      type: 40
+      exists: false
+
+The output for such configuration is:
+
+    [RESULT] [240188.150386] [action_1]  filecheck /work/mvisekrunahdl/ROCmValidationSuite/src DNE false
+
+**Example 3:**
+
+In this example, config key **exists** is true by default and file really
+exists. Config key **group, permission** and **type** are not specified so only
+ownership is tested.
+
+rcqt_fc2.conf:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      file: /work/mvisekrunahdl/build/test.txt
+      owner: root
+
+The output for such configuration is:
+
+    [RESULT] [240253.957738] [action_1]  filecheck root owner:true
+
+
+**Example 4:**
+
+In this example, config key **exists** is true by default, but given file does
+not exist.
+
+rcqt_fc3.conf:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      file: /work/mvisekrunahdl/ROCmValidationSuite/rcqt.so/src/tst
+      owner: mvisekrunahdl
+      group: mvisekrunahdl
+      permission: 664
+      type: 100
+
+The output for such configuration is:
+
+    [ERROR ] [240277.355553] File is not found
+
+
+@subsection usg74 7.4 Kernel compatibility Check
+
+The rcqt-kernelcheck module determines the version of the operating system and
+the kernel installed on the platform and compares the values against the list of
+supported values.
+
+@subsubsection usg741 7.4.1 Kernel compatibility Check Specific Keys
+
+Input keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>os_versions</td><td>Collection of Strings</td>
+<td>A collection of strings corresponding to operating systems names, i.e.
+{“Ubuntu 16.04.3 LTS”, “Centos 7.4”, etc.}
+</td></tr>
+<tr><td>kernel_versions</td><td>Collection of Strings</td>
+<td>A collection of strings corresponding to kernel version names, i.e.
+{“4.4.0-116-generic”, “4.13.0-36-generic”, etc.}
+</td></tr>
+</table>
+
+@subsubsection usg742 7.4.2 Output
+
+Output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>os</td><td>String</td>
+<td>The actual OS installed on the system.
+</td></tr>
+<tr><td>kernel</td><td>String</td>
+<td>The actual kernel version installed on the system.
+</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>True if the actual os version and kernel version match any value provided in
+the collection.
+</td></tr>
+</table>
+
+If the detected versions of the operating system and the kernel version match
+any of the supported values the pass output key will be true. Otherwise it will
+be false. The result message will contain the actual os version and the kernel
+version regardless of where the check passed or failed.
+
+    [RESULT][<timestamp>][<action name>] kernelcheck <os version> <kernel version> <pass>
+
+
+@subsubsection usg743 7.4.3 Examples
+
+**Example 1:**
+
+In this example, given kernel version is incorrect.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      os_version: Ubuntu 16.04.5 LTS
+      kernel_version: 4.4.0-116-generic-wrong
+
+The output for such configuration is:
+
+    [RESULT] [498398.774182] [action_1] kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 fail
+
+**Example 2**
+
+In this example, given os version and kernel verison are the correct ones.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      os_version: Ubuntu 16.04.5 LTS
+      kernel_version: 4.18.0-rc1-kfd-compute-roc-master-8874
+
+The output for such configuration is:
+
+    [RESULT] [515924.695932] [action_1] kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 pass
+
+
+@subsection usg75 7.5 Linker/Loader Check
+
+This feature checks that a search by the linker/loader for a library finds the
+correct version in the correct location. The check should include a SONAME
+version of the library, the expected location and the architecture of the
+library.
+
+
+@subsubsection usg751 7.5.1 Linker/Loader Check Specific Keys
+
+Input keys are described in the table below:
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>soname</td><td>String</td>
+<td>This is the SONAME of the library for the check. An SONAME library contains
+the major version of the library in question.
+</td></tr>
+<tr><td>arch</td><td>String</td>
+<td>This value qualifies the architecture expected for the library.
+</td></tr>
+<tr><td>ldpath</td><td>String</td>
+<td>This is the fully qualified path where the library is expected to be
+located.
+</td></tr>
+</table>
+
+@subsubsection usg752 7.5.2 Output
+
+Output keys are described in the table below:
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>arch</td><td>String</td>
+<td>The actual architecture found for the file, or NA if it wasn’t found.
+</td></tr>
+<tr><td>path</td><td>String</td>
+<td>The actual path the linker is looking for the file at, or “not found” if the
+file isn’t found.
+</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>True if the linker/loader is looking for the file in the correct place with
+the correctly specified architecture.
+</td></tr>
+</table>
+
+If the linker/loader search path looks for the soname version of the library,
+qualified by arch, at the directory specified the test will pass. Otherwise it
+will fail. The output message has the following format:
+
+    [RESULT][<timestamp>][<action name>] ldconfigcheck <soname> <arch> <path> <pass>
+
 @section usg8 8 PEQT Module
+
 PCI Express Qualification Tool module targets and qualifies the configuration of
 the platforms PCIe connections to the GPUs. The purpose of the PEQT module is to
 provide an extensible, OS independent and scriptable interface capable of
@@ -644,6 +1202,139 @@ For details regarding each of the capabilities and current values consult the
 chapters in the PCI Express Base Specification, Revision 3.
 
 @subsection usg83 8.3 Examples
+
+**Example 1:**
+
+A regular PEQT configuration file looks like this:
+
+    actions:
+    - name: pcie_act_1
+      module: peqt
+      capability:
+        link_cap_max_speed:
+        link_cap_max_width:
+        link_stat_cur_speed:
+        link_stat_neg_width:
+        slot_pwr_limit_value:
+        slot_physical_num:
+        device_id:
+        vendor_id:
+        kernel_driver:
+        dev_serial_num:
+        D0_Maximum_Power_12V:
+        D0_Maximum_Power_3_3V:
+        D0_Sustained_Power_12V:
+        D0_Sustained_Power_3_3V:
+        atomic_op_routing:
+        atomic_op_32_completer:
+        atomic_op_64_completer:
+        atomic_op_128_CAS_completer:
+      device: all
+
+Please note:
+- when setting the 'device' configuration key to 'all', the RVS will detect all the AMD compatible GPUs and run the test on all of them
+
+- there are no regular expression for this .conf file, therefore RVS will report TRUE if at least one AMD compatible GPU is registered within the system. Otherwise it will report FALSE.
+
+Please note that the Power Budgeting capability is a dynamic one, having the following form:
+
+    <PM_State>_<Type>_<Power rail>
+
+where:
+
+    PM_State = D0/D1/D2/D3
+    Type=PMEAux/Auxiliary/Idle/Sustained/Maximum
+    PowerRail = Power_12V/Power_3_3V/Power_1_5V_1_8V/Thermal
+
+When the RVS tool runs against such a configuration file, it will query for the all the PCIe capabilities specified under the capability list (and log the corresponding values) for all the AMD compatible GPUs. For those PCIe capabilities that are not supported by the HW platform were the RVS is running, a "NOT SUPPORTED" message will be logged.
+
+The output for such a configuration file may look like this:
+
+
+    [INFO ] [177628.401176] pcie_act_1 peqt D0_Maximum_Power_12V NOT SUPPORTED
+    [INFO ] [177628.401229] pcie_act_1 peqt D0_Maximum_Power_3_3V NOT SUPPORTED
+    [INFO ] [177628.401248] pcie_act_1 peqt D0_Sustained_Power_12V NOT SUPPORTED
+    [INFO ] [177628.401269] pcie_act_1 peqt D0_Sustained_Power_3_3V NOT SUPPORTED
+    [INFO ] [177628.401282] pcie_act_1 peqt atomic_op_128_CAS_completer FALSE
+    [INFO ] [177628.401291] pcie_act_1 peqt atomic_op_32_completer FALSE
+    [INFO ] [177628.401303] pcie_act_1 peqt atomic_op_64_completer FALSE
+    [INFO ] [177628.401311] pcie_act_1 peqt atomic_op_routing TRUE
+    [INFO ] [177628.401317] pcie_act_1 peqt dev_serial_num NOT SUPPORTED
+    [INFO ] [177628.401323] pcie_act_1 peqt device_id 26720
+    [INFO ] [177628.401334] pcie_act_1 peqt kernel_driver amdgpu
+    [INFO ] [177628.401342] pcie_act_1 peqt link_cap_max_speed 8 GT/s
+    [INFO ] [177628.401352] pcie_act_1 peqt link_cap_max_width x16
+    [INFO ] [177628.401359] pcie_act_1 peqt link_stat_cur_speed 8 GT/s
+    [INFO ] [177628.401367] pcie_act_1 peqt link_stat_neg_width x16
+    [INFO ] [177628.401375] pcie_act_1 peqt slot_physical_num #0
+    [INFO ] [177628.401396] pcie_act_1 peqt slot_pwr_limit_value 0.000W
+    [INFO ] [177628.401402] pcie_act_1 peqt vendor_id 4098
+    [INFO ] [177628.401656] pcie_act_1 peqt D0_Maximum_Power_12V NOT SUPPORTED
+    [INFO ] [177628.401675] pcie_act_1 peqt D0_Maximum_Power_3_3V NOT SUPPORTED
+    [INFO ] [177628.401692] pcie_act_1 peqt D0_Sustained_Power_12V NOT SUPPORTED
+    [INFO ] [177628.401709] pcie_act_1 peqt D0_Sustained_Power_3_3V NOT SUPPORTED
+    [INFO ] [177628.401719] pcie_act_1 peqt atomic_op_128_CAS_completer FALSE
+    [INFO ] [177628.401728] pcie_act_1 peqt atomic_op_32_completer FALSE
+    [INFO ] [177628.401736] pcie_act_1 peqt atomic_op_64_completer FALSE
+    [INFO ] [177628.401745] pcie_act_1 peqt atomic_op_routing TRUE
+    [INFO ] [177628.401750] pcie_act_1 peqt dev_serial_num NOT SUPPORTED
+    [INFO ] [177628.401757] pcie_act_1 peqt device_id 26720
+    [INFO ] [177628.401771] pcie_act_1 peqt kernel_driver amdgpu
+    [INFO ] [177628.401781] pcie_act_1 peqt link_cap_max_speed 8 GT/s
+    [INFO ] [177628.401788] pcie_act_1 peqt link_cap_max_width x16
+    [INFO ] [177628.401794] pcie_act_1 peqt link_stat_cur_speed 8 GT/s
+    [INFO ] [177628.401800] pcie_act_1 peqt link_stat_neg_width x16
+    [INFO ] [177628.401806] pcie_act_1 peqt slot_physical_num #0
+    [INFO ] [177628.401814] pcie_act_1 peqt slot_pwr_limit_value 0.000W
+    [INFO ] [177628.401819] pcie_act_1 peqt vendor_id 4098
+    [RESULT] [177628.403781] pcie_act_1 peqt TRUE
+
+**Example 2:**
+
+Another example of a configuration file, which queries for a smaller subset of PCIe capabilities but adds regular expressions check, is given below
+
+    actions:
+    - name: pcie_act_1
+      module: peqt
+      capability:
+        link_cap_max_speed: '^(2\.5 GT\/s|5 GT\/s|8 GT\/s)$'
+        link_cap_max_width:
+        link_stat_cur_speed: '^(2\.5 GT\/s|5 GT\/s|8 GT\/s)$'
+        link_stat_neg_width:
+        slot_pwr_limit_value: '[a-b][d-'
+        slot_physical_num:
+        device_id:
+        vendor_id:
+        kernel_driver:
+      device: all
+
+For this example, the expected PEQT check result is TRUE if:
+
+- at least one AMD compatible GPU is registered within the system and:
+- all \<link_cap_max_speed> values for all AMD compatible GPUs match the given regular expression and
+- all \<link_stat_cur_speed> values for all AMD compatible GPUs match the given regular expression
+
+Please note that the \<slot_pwr_limit_value> regular expression is not valid and will be skipped without affecting the PEQT module's check RESULT (however, an error will be logged out)
+
+**Example 3:**
+
+Another example with even more regular expressions is given below. The expected PEQT check result is TRUE if at least one AMD compatible GPU having the ID 3254 or 33367 is registered within the system and all the PCIe capabilities values match their corresponding regular expressions.
+
+    actions:
+    - name: pcie_act_1
+      module: peqt
+      deviceid: 26720
+      capability:
+        link_cap_max_speed: '^(2\.5 GT\/s|5 GT\/s|8 GT\/s)$'
+        link_cap_max_width: ^(x8|x16)$
+        link_stat_cur_speed: '^(8 GT\/s)$'
+        link_stat_neg_width: ^(x8|x16)$
+        kernel_driver: ^amdgpu$
+        atomic_op_routing: ^((TRUE|FALSE){1})$
+        atomic_op_32_completer: ^((TRUE|FALSE){1})$
+        atomic_op_64_completer: ^((TRUE|FALSE){1})$
+        atomic_op_128_CAS_completer: ^((TRUE|FALSE){1})$
+      device: 3254 33367
 
 @section usg9 9 SMQT Module
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s
@@ -747,6 +1438,54 @@ is finished, the following informational messages will be generated:
 
 @subsection usg93 9.3 Examples
 
+**Example 1:**
+
+Consider this file (sizes are in bytes):
+
+    actions:
+    - name: action_1
+      device: all
+      module: smqt
+      bar1_req_size: 17179869184
+      bar1_base_addr_min: 0
+      bar1_base_addr_max: 17592168044416
+      bar2_req_size: 2097152
+      bar2_base_addr_min: 0
+      bar2_base_addr_max: 1099511627776
+      bar4_req_size: 262144
+      bar4_base_addr_min: 0
+      bar4_base_addr_max: 17592168044416
+      bar5_req_size: 131072
+
+Results for three GPUs are:
+
+    [INFO  ] [257936.568768] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.568768] [action_1]  smqt bar1_base_addr 13C0000000C
+    [INFO  ] [257936.568768] [action_1]  smqt bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.568768] [action_1]  smqt bar2_base_addr 13B0000000C
+    [INFO  ] [257936.568768] [action_1]  smqt bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.568768] [action_1]  smqt bar4_base_addr E4B00000
+    [INFO  ] [257936.568768] [action_1]  smqt bar5_size      0 (0.00 B)
+    [RESULT] [257936.568920] [action_1]  smqt fail
+    [INFO  ] [257936.569234] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.569234] [action_1]  smqt bar1_base_addr 1A00000000C
+    [INFO  ] [257936.569234] [action_1]  smqt bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.569234] [action_1]  smqt bar2_base_addr 19F0000000C
+    [INFO  ] [257936.569234] [action_1]  smqt bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.569234] [action_1]  smqt bar4_base_addr E9900000
+    [INFO  ] [257936.569234] [action_1]  smqt bar5_size      0 (0.00 B)
+    [RESULT] [257936.569281] [action_1]  smqt fail
+    [INFO  ] [257936.570798] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.570798] [action_1]  smqt bar1_base_addr 16C0000000C
+    [INFO  ] [257936.570798] [action_1]  smqt bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.570798] [action_1]  smqt bar2_base_addr 1710000000C
+    [INFO  ] [257936.570798] [action_1]  smqt bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.570798] [action_1]  smqt bar4_base_addr E7300000
+    [INFO  ] [257936.570798] [action_1]  smqt bar5_size      0 (0.00 B)
+    [RESULT] [257936.570837] [action_1]  smqt fail
+
+In this example, BAR sizes reported by GPUs match those listed in configuration key except for the BAR5, hence the test fails.
+
 @section usg10 10 PQT Module
 The P2P Qualification Tool is designed to provide the list of all GPUs that
 support P2P and characterize the P2P links between peers. In addition to testing
@@ -837,6 +1576,136 @@ entire test duration, and will be logged as a result:
     [RESULT][<timestamp>][<action name>] p2p-bandwidth <gpu id> <peer gpu id> bidirectional: <bidirectional> <bandwidth > <duration>
 
 @subsection usg103 10.3 Examples
+
+
+**Example 1:**
+
+Here all source GPUs (device: all) with all destination GPUs (peers: all) are
+tested for p2p capability with no bandwidth testing (test_bandwidth: false).
+
+    actions:
+    - name: action_1
+      device: all
+      module: pqt
+      peers: all
+      test_bandwidth: false
+
+
+Possible result is:
+
+    [RESULT] [167896.97743 ] [action_1] p2p 3254 3254 false
+    [RESULT] [167896.97764 ] [action_1] p2p 3254 50599 true
+    [RESULT] [167896.97818 ] [action_1] p2p 3254 33367 true
+    [RESULT] [167896.97848 ] [action_1] p2p 50599 3254 true
+    [RESULT] [167896.97873 ] [action_1] p2p 50599 50599 false
+    [RESULT] [167896.97881 ] [action_1] p2p 50599 33367 true
+    [RESULT] [167896.97907 ] [action_1] p2p 33367 3254 true
+    [RESULT] [167896.97935 ] [action_1] p2p 33367 50599 true
+    [RESULT] [167896.97960 ] [action_1] p2p 33367 33367 false
+
+From the first line of result, we can see that GPU (ID 3254) can't access itself.
+From the second line of result, we can see that source GPU (ID 3254) can access destination GPU (ID 50599).
+
+**Example 2:**
+
+Here all source GPUs (device: all) with all destination GPUs (peers: all) are tested for p2p capability including bandwidth testing (test_bandwidth: true) with
+bidirectional transfers (bidirectional: true) and running in paralell (parallel : true) - default values are used for duration and log_interval.
+
+    actions:
+    - name: action_1
+      device: all
+      module: pqt
+      peers: all
+      test_bandwidth: true
+      bidirectional: true
+      parallel : true
+
+Possible result is:
+
+    [RESULT] [170487.818898] [action_1] p2p 3254 3254 false
+    [RESULT] [170487.818918] [action_1] p2p 3254 50599 true
+    [RESULT] [170487.818969] [action_1] p2p 3254 33367 true
+    [RESULT] [170487.818997] [action_1] p2p 50599 3254 true
+    [RESULT] [170487.819022] [action_1] p2p 50599 50599 false
+    [RESULT] [170487.819029] [action_1] p2p 50599 33367 true
+    [RESULT] [170487.819054] [action_1] p2p 33367 3254 true
+    [RESULT] [170487.819080] [action_1] p2p 33367 50599 true
+    [RESULT] [170487.819105] [action_1] p2p 33367 33367 false
+    [INFO  ] [170488.351341] [action_1] p2p-bandwidth  3254 50599  bidirectional: true  7.46 GBps
+    [INFO  ] [170488.352438] [action_1] p2p-bandwidth  3254 33367  bidirectional: true  7.91 GBps
+    [INFO  ] [170488.353512] [action_1] p2p-bandwidth  50599 3254  bidirectional: true  7.58 GBps
+    [INFO  ] [170488.354581] [action_1] p2p-bandwidth  50599 33367  bidirectional: true  6.93 GBps
+    [INFO  ] [170488.355652] [action_1] p2p-bandwidth  33367 3254  bidirectional: true  5.69 GBps
+    [INFO  ] [170488.356725] [action_1] p2p-bandwidth  33367 50599  bidirectional: true  5.67 GBps
+    [RESULT] [170488.880108] [action_1] p2p-bandwidth  3254 50599  bidirectional: true  7.95 GBps  duration: 0.031455 ms
+    [RESULT] [170488.881314] [action_1] p2p-bandwidth  3254 33367  bidirectional: true  7.50 GBps  duration: 0.133382 ms
+    [RESULT] [170488.882453] [action_1] p2p-bandwidth  50599 3254  bidirectional: true  7.58 GBps  duration: 0.016483 ms
+    [RESULT] [170488.883580] [action_1] p2p-bandwidth  50599 33367  bidirectional: true  8.31 GBps  duration: 0.060156 ms
+    [RESULT] [170488.884702] [action_1] p2p-bandwidth  33367 3254  bidirectional: true  6.90 GBps  duration: 0.036216 ms
+    [RESULT] [170488.885863] [action_1] p2p-bandwidth  33367 50599  bidirectional: true  2.58 GBps  duration: 0.096949 ms
+
+From the last line of result, we can see that source GPU (ID 33367) can access
+destination GPU (ID 50599) and that bidirectional bandwidth is 2.58 GBps.
+
+**Example 3:**
+
+Here some source GPUs (device: 50599) are targeting some destination GPUs
+(peers: 33367 3254) with specified log interval (log_interval: 500) and duration
+(duration: 1000). Bandwidth is tested (test_bandwidth: true) but only
+unidirectional (bidirectional: false) without parallel execution (parallel:
+false).
+
+    actions:
+    - name: action_1
+      device: 50599
+      module: pqt
+      log_interval: 500
+      duration: 1000
+      peers: 33367 3254
+      test_bandwidth: true
+      bidirectional: false
+      parallel: false
+
+Possible output is:
+
+    [RESULT] [175852.862778] [action_1] p2p 50599 3254 true
+    [RESULT] [175852.862837] [action_1] p2p 50599 33367 true
+    [INFO  ] [175853.393991] [action_1] p2p-bandwidth  50599 3254  bidirectional: false  4.56 GBps
+    [INFO  ] [175853.395080] [action_1] p2p-bandwidth  50599 33367  bidirectional: false  4.60 GBps
+    [INFO  ] [175853.928202] [action_1] p2p-bandwidth  50599 3254  bidirectional: false  4.40 GBps
+    [RESULT] [175854.235624] [action_1] p2p-bandwidth  50599 3254  bidirectional: false  4.50 GBps  duration: 0.444359 ms
+    [RESULT] [175854.236772] [action_1] p2p-bandwidth  50599 33367  bidirectional: false  4.57 GBps  duration: 0.218679 ms
+
+From the last line of result, we can see that source GPU (ID 50599) can access
+destination GPU (ID 33367) and that bidirectional bandwidth is 4.57 GBps.
+
+**Example 4:**
+
+Here some source GPUs (device: 3254) are targeting some destination GPUs (peers:
+33367) with specified log interval (log_interval: 500) and duration (duration:
+1000). Bandwidth is tested (test_bandwidth: true) but only unidirectional
+(bidirectional: false) without parallel execution (parallel: false). Also, only
+GPUs with specified device id are considered (peer_deviceid: 26720).
+
+    actions:
+    - name: action_1
+      device: 3254
+      module: pqt
+      log_interval: 500
+      duration: 1000
+      peers: 33367
+      peer_deviceid: 26720
+      test_bandwidth: true
+      bidirectional: false
+      parallel: false
+
+Possible output is:
+
+    [RESULT] [176419.658547] [action_1] p2p 3254 33367 true
+    [INFO  ] [176420.192962] [action_1] p2p-bandwidth  3254 33367  bidirectional: false  4.61 GBps
+    [INFO  ] [176420.726227] [action_1] p2p-bandwidth  3254 33367  bidirectional: false  4.67 GBps
+    [RESULT] [176421.1565  ] [action_1] p2p-bandwidth  3254 33367  bidirectional: false  4.65 GBps  duration: 0.645375 ms
+
 
 @section usg11 11 PEBB Module
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
@@ -1033,35 +1902,40 @@ following:
   - run the stress test on all available (and compatible) AMD GPUs, one after
 the other
   - log a start message containing the GPU ID, the __target_stress__ and the
-value of the __copy_matrix__<br />
-e.g.: __[INFO  ] [164337.932824] action_gst_1 gst 50599 start 3500.000000 copy
-matrix:true__
+value of the __copy_matrix__:<br />
+
+    [INFO  ] [164337.932824] action_gst_1 gst 50599 start 3500.000000 copy matrix:true
+
   - emit, each __log_interval__ (e.g.: 1000ms), a message containing the
-gigaflops value that the current GPU achieved<br />
-e.g.: __[INFO  ] [164355.111207] action_gst_1 gst 33367 Gflops 3535.670231__
-  - log a message as soon as the current GPU reaches the given
-__target_stress__<br />
-e.g.: __[INFO  ] [164350.804843] action_gst_1 gst 33367 target achieved
-3500.000000__
+gigaflops value that the current GPU achieved:<br />
+
+    [INFO  ] [164355.111207] action_gst_1 gst 33367 Gflops 3535.670231
+
+  - log a message as soon as the current GPU reaches the given __target_stress__:
+
+    [INFO  ] [164350.804843] action_gst_1 gst 33367 target achieved 500.000000
+
   - log a __ramp time exceeded__ message if the GPU was not able to reach the
 __target_stress__ in the __ramp_interval__ time frame (e.g.: 5000). In such a
-case, the test will also terminate<br />
-e.g.: __[INFO  ] [164013.788870] action_gst_1 gst 3254 ramp time exceeded 5000__
+case, the test will also terminate:<br/>
+
+    [INFO  ] [164013.788870] action_gst_1 gst 3254 ramp time exceeded 5000
+
   - log the test result, when the stress test completes. The message contains
 the test's overall result and some other statistics according to __5.2 Output
-keys__<br />
-e.g.: __[RESULT] [164355.647523] action_gst_1 gst 33367 Gflop: 4066.020766
-flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec:
-9.157367 pass: TRUE__
+keys__:<br />
+
+    [RESULT] [164355.647523] action_gst_1 gst 33367 Gflop: 4066.020766 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 9.157367 pass: TRUE
+
   - log a __stress violation__ message when the current gigaflops (for the last
 __log_interval__, e.g.; 1000ms) violates the bounds set by the __tolerance__
 configuration key (e.g.: 0.1). Please note that this message is not logged
-during the __ramp_interval__ time frame<br />
-e.g.: __[INFO  ] [164013.788870] action_gst_1 gst 3254 stress violation 2500__
+during the __ramp_interval__ time frame:<br />
 
+    [INFO  ] [164013.788870] action_gst_1 gst 3254 stress violation 2500
 
 If a mandatory configuration key is missing, the __RVS__ tool will log an error
-message and terminate the executation of the current module. For example, the
+message and terminate the execution of the current module. For example, the
 following configuration file will cause the __RVS__ to terminate with the
 following error message:<br /> __RVS-GST: action: action_gst_1  key
 'target_stress' was not found__
@@ -1238,5 +2112,158 @@ interval.</td></tr>
 </table>
 
 @subsection usg133 13.3 Examples
+
+**Example 1:**
+
+A regular IET configuration file looks like this:
+
+    actions:
+    - name: action_1
+      device: all
+      module: iet
+      parallel: false
+      count: 2
+      wait: 100
+      duration: 10000
+      ramp_interval: 5000
+      sample_interval: 500
+      log_interval: 500
+      max_violations: 1
+      target_power: 135
+      tolerance: 0.1
+      matrix_size: 5760
+
+*Please note:*
+- when setting the 'device' configuration key to 'all', the RVS will detect all the AMD compatible GPUs and run the test on all of them
+- the test will run 2 times on each GPU (count = 2)
+- only one power violation is allowed. If the total number of violations is bigger than 1 the IET test result will be marked as 'failed'
+
+When the RVS tool runs against such a configuration file, it will do the following:
+- run the test on all AMD compatible GPUs
+
+- log a start message containing the GPU ID and the target_power, e.g.:
+
+    [INFO ] [167316.308057] action_1 iet 50599 start 135.000000
+
+- emit, each log_interval (e.g.: 500ms), a message containing the power for the current GPU
+
+    [INFO ] [167319.266707] action_1 iet 50599 current power 136.878342
+
+- log a message as soon as the current GPU reaches the given target_power
+
+    [INFO ] [167318.793062] action_1 iet 50599 target achieved 135.000000
+
+- log a 'ramp time exceeded' message if the GPU was not able to reach the target_power in the ramp_interval time frame (e.g.: 5000ms). In such a case, the test will also terminate
+
+    [INFO ] [167648.832413] action_1 iet 50599 ramp time exceeded 5000
+
+- log a 'power violation message' when the current power (for the last sample_interval, e.g.; 500ms) violates the bounds set by the tolerance configuration key (e.g.: 0.1). Please note that this message is never logged during the ramp_interval time frame
+
+    [INFO ] [161251.971277] action_1 iet 3254 power violation 73.783211
+
+- log the test result, when the stress test completes.
+
+    [RESULT] [167305.260051] action_1 iet 33367 pass: TRUE
+
+The output for such a configuration file may look like this:
+
+    [INFO ] [167261.27161 ] action_1 iet 33367 start 135.000000
+    [INFO ] [167263.516803] action_1 iet 33367 current power 136.934479
+    [INFO ] [167263.521355] action_1 iet 33367 target achieved 135.000000
+    [INFO ] [167264.16925 ] action_1 iet 33367 current power 138.421844
+    [INFO ] [167264.517018] action_1 iet 33367 current power 138.394608
+    ...
+    [INFO ] [167271.518402] action_1 iet 33367 current power 139.231918
+    [RESULT] [167272.67686 ] action_1 iet 33367 pass: TRUE
+    [INFO ] [167272.68029 ] action_1 iet 3254 start 135.000000
+    [INFO ] [167274.552026] action_1 iet 3254 current power 139.363525
+    [INFO ] [167274.552059] action_1 iet 3254 target achieved 135.000000
+    [INFO ] [167275.52168 ] action_1 iet 3254 current power 138.661453
+    [INFO ] [167275.552241] action_1 iet 3254 current power 138.857635
+    ...
+    [INFO ] [167282.553983] action_1 iet 3254 current power 140.069687
+    [RESULT] [167283.95763 ] action_1 iet 3254 pass: TRUE
+    [INFO ] [167283.96158 ] action_1 iet 50599 start 135.000000
+    [INFO ] [167285.532999] action_1 iet 50599 current power 137.205032
+    [INFO ] [167285.543084] action_1 iet 50599 target achieved 135.000000
+    [INFO ] [167286.33050 ] action_1 iet 50599 current power 136.137115
+    ...
+    [INFO ] [167293.534672] action_1 iet 50599 current power 139.753464
+    [RESULT] [167294.131420] action_1 iet 50599 pass: TRUE
+
+
+**Example 2:**
+
+Another configuration file, which may raise some 'power violation' messages (due to the small tolerance value) looks like this
+
+    - name: action_1
+      device: all
+      module: iet
+      parallel: false
+      count: 1
+      wait: 100
+      duration: 8000
+      ramp_interval: 5000
+      sample_interval: 700
+      log_interval: 700
+      max_violations: 1
+      target_power: 80
+      tolerance: 0.06
+      matrix_size: 5760
+
+The output for such a configuration file may look like this:
+
+    [INFO ] [161236.677785] action_1 iet 33367 start 80.000000
+    [INFO ] [161239.350055] action_1 iet 33367 current power 84.186142
+    [INFO ] [161239.354542] action_1 iet 33367 target achieved 80.000000
+    ...
+    [INFO ] [161241.450517] action_1 iet 33367 current power 77.001945
+    [INFO ] [161241.459600] action_1 iet 33367 power violation 75.163689
+    [INFO ] [161242.150642] action_1 iet 33367 current power 82.063576
+    [RESULT] [161245.698113] action_1 iet 33367 pass: TRUE
+    [INFO ] [161245.698525] action_1 iet 3254 start 80.000000
+    [INFO ] [161248.394003] action_1 iet 3254 current power 78.842796
+    [INFO ] [161248.418631] action_1 iet 3254 target achieved 80.000000
+    [INFO ] [161249.94149 ] action_1 iet 3254 current power 79.938454
+    ...
+    [INFO ] [161249.794201] action_1 iet 3254 current power 76.511711
+    [INFO ] [161249.818803] action_1 iet 3254 power violation 74.279594
+    [INFO ] [161250.494263] action_1 iet 3254 current power 74.615120
+    ...
+    [INFO ] [161254.117386] action_1 iet 3254 power violation 73.682312
+    [RESULT] [161254.738939] action_1 iet 3254 pass: FALSE
+    [INFO ] [161254.739387] action_1 iet 50599 start 80.000000
+    [INFO ] [161257.374079] action_1 iet 50599 current power 81.560165
+    [INFO ] [161257.392085] action_1 iet 50599 target achieved 80.000000
+    [INFO ] [161258.774304] action_1 iet 50599 current power 75.057304
+    ...
+    [INFO ] [161262.974833] action_1 iet 50599 current power 80.200668
+    [RESULT] [161263.771631] action_1 iet 50599 pass: TRUE
+
+
+*Important notes:*
+
+
+- all the missing configuration keys (if any) will have their default values. For more information about the default values please consult the dedicated sections (3.3 Common Configuration Keys and 13.1 Module specific keys).
+
+
+- if a mandatory configuration key is missing, the RVS tool will log an error message and terminate the execution of the current module. For example, if the target_power is missing, the RVS to terminate with the following error message: "RVS-IET: action: action_1 key 'target_power' was not found"
+
+
+- it is important that all the configuration keys will be adjusted/fine-tuned according to the actual GPUs and HW platform capabilities.
+
+
+*) for example, a matrix size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20 GPUs
+
+
+*) for small target_power values (e.g.: 30-40W), the sample_interval should be increased, otherwise the IET may fail either to achieve the given target_power or to sustain it (e.g.: ramp_interval = 1500 for target_power = 40)
+
+
+*) in case there are problems reaching/sustaining the given target_power
+
+**) please increase the ramp_interval and/or the tolerance value(s) and try again (in case of a 'ramp time exceeded' message)
+
+**) please increase the tolerance value (in case too many 'power violation message' are logged out)
+
 
 

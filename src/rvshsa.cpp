@@ -464,7 +464,7 @@ hsa_status_t rvs::hsa::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
  * @return index in agent_list vector
  *
  * */
-const int rvs::hsa::FindAgent(const uint32_t Node) {
+int rvs::hsa::FindAgent(const uint32_t Node) {
   for (size_t i = 0; i < agent_list.size(); i++) {
     if (agent_list[i].node == Node)
       return i;
@@ -487,7 +487,7 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
                              hsa_signal_t signal_fwd, hsa_signal_t signal_rev) {
   hsa_status_t status;
   // Obtain time taken for forward copy
-  hsa_amd_profiling_async_copy_time_t async_time_fwd = {0};
+  hsa_amd_profiling_async_copy_time_t async_time_fwd {0, 0};
   status = hsa_amd_profiling_get_async_copy_time(signal_fwd, &async_time_fwd);
   print_hsa_status(
     "[PQT] GetCopyTime - hsa_amd_profiling_get_async_copy_time(forward)",
@@ -497,7 +497,7 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
     return(async_time_fwd.end - async_time_fwd.start);
   }
 
-  hsa_amd_profiling_async_copy_time_t async_time_rev = {0};
+  hsa_amd_profiling_async_copy_time_t async_time_rev {0, 0};
   status = hsa_amd_profiling_get_async_copy_time(signal_rev, &async_time_rev);
   print_hsa_status(
     "[PQT] GetCopyTime - hsa_amd_profiling_get_async_copy_time(backward)",
