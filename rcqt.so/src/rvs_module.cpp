@@ -26,6 +26,18 @@
 #include "action.h"
 #include "rvsloglp.h"
 
+/**
+ * @defgroup RCQT RCQT Module
+ *
+ * @brief ROCm Configuration Qualification Tools
+ *
+ * This module implements set of features that target and qualify the
+ * configuration of the platform. Many of the checks can be done manually using
+ * the operating systems command line tools and general knowledge about ROCm’s
+ * requirements. The purpose of the RCQT modules is to provide an extensible, OS
+ * independent and scriptable interface capable for performing the configuration
+ * checks required for ROCm support.
+ */
 
 int log(const char* pMsg, const int level) {
   return rvs::lp::Log(pMsg, level);
@@ -55,7 +67,9 @@ extern "C" const char* rvs_module_get_description(void) {
 }
 
 extern "C" const char* rvs_module_get_config(void) {
-  return "package (string), version (string), installed (bool), user (string), groups (collection of strings), file (string), owner (string), group (string), permission (int), type (int), exists (bool)";
+  return "package (string), version (string), installed (bool), user (string), "
+  "groups (collection of strings), file (string), owner (string), "
+  "group (string), permission (int), type (int), exists (bool)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {
@@ -72,7 +86,10 @@ extern "C" int   rvs_module_terminate(void) {
 }
 
 extern "C" const char* rvs_module_get_errstring(int error) {
-  return "General Error";
+  switch (error) {
+    default:
+      return "General Error";
+  }
 }
 
 extern "C" void* rvs_module_action_create(void) {

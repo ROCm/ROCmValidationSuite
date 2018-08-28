@@ -39,14 +39,12 @@ namespace rvs {
  *
  * @brief Collection of options.
  *
- * Execute functionality based on command line and the contents of .conf file.
- *
  */
 
 class options {
  public:
   static bool has_option(const std::string& Option);
-  static bool has_option(const std::string& Option, std::string& val);
+  static bool has_option(const std::string& Option, std::string* pval);
   static const std::map<std::string, std::string>& get(void);
 
  protected:

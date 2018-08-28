@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GST_SO_INCLUDE_RVS_BLAS_H_
-#define GST_SO_INCLUDE_RVS_BLAS_H_
+#ifndef INCLUDE_RVS_BLAS_H_
+#define INCLUDE_RVS_BLAS_H_
 
 #define __HIP_PLATFORM_HCC__
 
@@ -114,4 +114,4 @@ class rvs_blas {
     float fast_pseudo_rand(u_long *nextr);
 };
 
-#endif  // GST_SO_INCLUDE_RVS_BLAS_H_
+#endif  // INCLUDE_RVS_BLAS_H_

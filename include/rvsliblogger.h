@@ -51,7 +51,7 @@ class logger {
   static  void  append(const bool flag);
   static  bool  append();
 
-  static  bool   get_ticks(uint32_t& secs, uint32_t& usecs);
+  static  bool   get_ticks(uint32_t* psecs, uint32_t* pusecs);
 
   static  int    initialize();
   static  int    terminate();
