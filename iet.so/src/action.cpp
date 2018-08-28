@@ -542,8 +542,8 @@ int action::get_num_amd_gpu_devices(void) {
                 // log the error
                 string msg = action_name + " " + MODULE_NAME + " "
                                             + JSON_CREATE_NODE_ERROR;
-                log(msg.c_str(), rvs::logerror);
-                return 0;
+                cerr << "RVS-IET: " << msg;
+                return -1;
             }
 
             rvs::lp::AddString(json_root_node, "ERROR", IET_NO_COMPATIBLE_GPUS);
@@ -636,7 +636,7 @@ int action::get_all_selected_gpus(void) {
     if (pacc == NULL) {
         // log the error
         msg = action_name + " " + MODULE_NAME + " " + PCI_ALLOC_ERROR;
-        log(msg.c_str(), rvs::logerror);
+        cerr << "RVS-IET: " << msg;
 
         return -1;  // EDPp test cannot continue
     }
@@ -713,7 +713,7 @@ int action::run(void) {
     rvs::actionbase::property_get_action_name(&error);
     if (error == 2) {
       msg = "action name field is missing in iet module";
-      log(msg.c_str(), rvs::logerror);
+      cerr << "RVS-IET: " << msg;
       return -1;
     }
 
