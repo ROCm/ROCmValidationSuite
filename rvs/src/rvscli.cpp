@@ -102,7 +102,7 @@ void rvs::cli::extract_path() {
   pid_t pid = getpid();
   snprintf(path, sizeof(path), "/proc/%d/exe", pid);
   if (readlink(path, dest, PATH_MAX) == -1) {
-    std::cerr << "ERROR: could not extract path to executable\n";
+    std::cerr << "RVS-CLI: could not extract path to executable\n";
     return;
   }
 

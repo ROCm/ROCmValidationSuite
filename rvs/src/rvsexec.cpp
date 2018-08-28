@@ -86,11 +86,11 @@ int rvs::exec::run() {
       level = std::stoi(val);
     }
     catch(...) {
-      cerr << "ERROR: syntax error: logging level not integer: " << val <<endl;
+      cerr << "RVS-CLI: syntax error: logging level not integer: " << val <<endl;
       return -1;
     }
     if (level < 0 || level > 5) {
-      cerr << "ERROR: syntax error: logging level not in range [0..5]: "
+      cerr << "RVS-CLI: syntax error: logging level not in range [0..5]: "
       << val <<endl;
       return -1;
     }
@@ -124,7 +124,7 @@ int rvs::exec::run() {
   std::ifstream file(config_file);
 
   if (!file.good()) {
-    cerr << "ERROR: " << config_file << " file is missing.\n";
+    cerr << "RVS-CLI: " << config_file << " file is missing.\n";
     return -1;
   } else {
     file.close();
@@ -155,8 +155,8 @@ int rvs::exec::run() {
     sts = do_yaml(config_file);
   } catch(std::exception& e) {
     sts = -999;
-    cerr << "Error processing configuration file " << config_file << endl;
-    cerr << "Exception: " << e.what() << endl;
+    cerr << "RVS-CLI: error processing configuration file " << config_file << endl;
+    cerr << "RVS-CLI: exception: " << e.what() << endl;
   }
 
   logger::terminate();
@@ -213,14 +213,14 @@ int rvs::exec::do_gpu_list() {
   // create action excutor in .so
   rvs::action* pa = module::action_create("pesm");
   if (!pa) {
-    cerr << "ERROR: could not list GPUs\n";
+    cerr << "RVS-CLI: could not list GPUs\n";
     return 1;
   }
 
   // obtain interface to set parameters and execute action
   if1* pif1 = static_cast<if1*>(pa->get_interface(1));
   if (!pif1) {
-    cerr << "ERROR: could not obtain interface IF1\n";
+    cerr << "RVS-CLI: could not obtain interface IF1\n";
     module::action_destroy(pa);
     return 1;
   }
