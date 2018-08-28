@@ -672,7 +672,7 @@ Output keys are described in the table below:
 
 The check will emit a result message with the following format:
 
-    [RESULT][<timestamp>][<action name>] packagecheck <package> <installed>
+    [RESULT][<timestamp>][<action name>] rcqt packagecheck <package> <installed>
 
 The package name will include the version of the package if the version key is
 specified. The installed output value will either be true or false depending on
@@ -691,7 +691,7 @@ In this example, given package does not exist.
 
 The output for such configuration is:
 
-    [RESULT] [500022.877512] [action_1] packagecheck zip12345 FALSE
+    [RESULT] [500022.877512] [action_1] rcqt packagecheck zip12345 FALSE
 
 **Example 2:**
 
@@ -705,7 +705,7 @@ In this example, version of the given package is incorrect.
 
 The output for such configuration is:
 
-    [RESULT] [500123.480561] [action_1] packagecheck zip FALSE
+    [RESULT] [500123.480561] [action_1] rcqt packagecheck zip FALSE
 
 **Example 3:**
 
@@ -718,7 +718,7 @@ In this example, given package exists.
 
 The output for such configuration is:
 
-    [RESULT] [500329.824495] [action_1] packagecheck zip TRUE
+    [RESULT] [500329.824495] [action_1] rcqt packagecheck zip TRUE
 
 **Example 4:**
 
@@ -732,7 +732,7 @@ In this example, given package exists and its version is correct.
 
 The output for such configuration is:
 
-    [RESULT] [500595.859025] [action_1] packagecheck zip TRUE
+    [RESULT] [500595.859025] [action_1] rcqt packagecheck zip TRUE
 
 
 @subsection usg72 7.2 User Check
@@ -770,12 +770,12 @@ Output keys are described in the table below:
 The status of the user’s existence is provided in a message with the following
 format:
 
-    [RESULT][<timestamp>][<action name>] usercheck <user> <exists>
+    [RESULT][<timestamp>][<action name>] rcqt usercheck <user> <exists>
 
 For each group in the list, a result message with the following format will be
 generated:
 
-    [RESULT][<timestamp>][<action name>] usercheck <user> <group> <member>
+    [RESULT][<timestamp>][<action name>] rcqt usercheck <user> <group> <member>
 
 If the user doesn’t exist no group checks will take place.
 
@@ -794,7 +794,7 @@ In this example, given user does not exist.
 
 The output for such configuration is:
 
-    [RESULT] [496559.219160] [action_1] usercheck jdoe false
+    [RESULT] [496559.219160] [action_1] rcqt usercheck jdoe false
 
 Group check is not performed.
 
@@ -811,9 +811,9 @@ In this example, group **rvs** does not exist.
 
 The output for such configuration is:
 
-    [RESULT] [496984.993394] [action_1] usercheck jovanbhdl true
-    [ERROR ] [496984.993535] [action_1] usercheck group rvs doesn't exist
-    [RESULT] [496984.993578] [action_1] usercheck jovanbhdl video true
+    [RESULT] [496984.993394] [action_1] rcqt usercheck jovanbhdl true
+    [ERROR ] [496984.993535] [action_1] rcqt usercheck group rvs doesn't exist
+    [RESULT] [496984.993578] [action_1] rcqt usercheck jovanbhdl video true
 
 
 **Example 3:**
@@ -829,9 +829,9 @@ In this example, given user exists and belongs to given groups.
 
 The output for such configuration is:
 
-    [RESULT] [497361.361045] [action_1] usercheck jovanbhdl true
-    [RESULT] [497361.361168] [action_1] usercheck jovanbhdl sudo true
-    [RESULT] [497361.361209] [action_1] usercheck jovanbhdl video true
+    [RESULT] [497361.361045] [action_1] rcqt usercheck jovanbhdl true
+    [RESULT] [497361.361168] [action_1] rcqt usercheck jovanbhdl sudo true
+    [RESULT] [497361.361209] [action_1] rcqt usercheck jovanbhdl video true
 
 
 @subsection usg73 7.3 File/device Check
@@ -900,11 +900,11 @@ file does not exist and the ‘exists’ key if false.
 If the ‘exists’ key is true a set of messages, one for each stat check, will be
 generated with the following format:
 
-    [RESULT][<timestamp>][<action name>] filecheck <config key> <matching output key>
+    [RESULT][<timestamp>][<action name>] rcqt filecheck <config key> <matching output key>
 
 If the ‘exists’ key is false the format of the message will be:
 
-    [RESULT][<timestamp>][<action name>] filecheck <file> DNE <exists>
+    [RESULT][<timestamp>][<action name>] rcqt filecheck <file> DNE <exists>
 
 @subsubsection usg733 7.3.3 Examples
 
@@ -928,10 +928,10 @@ rcqt_fc4.conf :
 
 Output from running this action:
 
-    [RESULT] [240384.678074] [action_1]  filecheck mvisekrunahdl owner:true
-    [RESULT] [240384.678214] [action_1]  filecheck mvisekrunahdl group:true
-    [RESULT] [240384.678250] [action_1]  filecheck 664 permission:true
-    [RESULT] [240384.678275] [action_1]  filecheck 100 type:true
+    [RESULT] [240384.678074] [action_1] rcqt filecheck mvisekrunahdl owner:true
+    [RESULT] [240384.678214] [action_1] rcqt filecheck mvisekrunahdl group:true
+    [RESULT] [240384.678250] [action_1] rcqt filecheck 664 permission:true
+    [RESULT] [240384.678275] [action_1] rcqt filecheck 100 type:true
 
 
 **Example 2:**
@@ -953,7 +953,7 @@ rcqt_fc1.conf:
 
 The output for such configuration is:
 
-    [RESULT] [240188.150386] [action_1]  filecheck /work/mvisekrunahdl/ROCmValidationSuite/src DNE false
+    [RESULT] [240188.150386] [action_1] rcqt filecheck /work/mvisekrunahdl/ROCmValidationSuite/src DNE false
 
 **Example 3:**
 
@@ -972,7 +972,7 @@ rcqt_fc2.conf:
 
 The output for such configuration is:
 
-    [RESULT] [240253.957738] [action_1]  filecheck root owner:true
+    [RESULT] [240253.957738] [action_1] rcqt filecheck root owner:true
 
 
 **Example 4:**
@@ -994,7 +994,7 @@ rcqt_fc3.conf:
 
 The output for such configuration is:
 
-    [ERROR ] [240277.355553] File is not found
+    [ERROR ] [240277.355553] [action_1] rcqt File is not found
 
 
 @subsection usg74 7.4 Kernel compatibility Check
@@ -1042,7 +1042,7 @@ any of the supported values the pass output key will be true. Otherwise it will
 be false. The result message will contain the actual os version and the kernel
 version regardless of where the check passed or failed.
 
-    [RESULT][<timestamp>][<action name>] kernelcheck <os version> <kernel version> <pass>
+    [RESULT][<timestamp>][<action name>] rcqt kernelcheck <os version> <kernel version> <pass>
 
 
 @subsubsection usg743 7.4.3 Examples
@@ -1060,7 +1060,7 @@ In this example, given kernel version is incorrect.
 
 The output for such configuration is:
 
-    [RESULT] [498398.774182] [action_1] kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 fail
+    [RESULT] [498398.774182] [action_1] rcqt kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 fail
 
 **Example 2**
 
@@ -1075,7 +1075,7 @@ In this example, given os version and kernel verison are the correct ones.
 
 The output for such configuration is:
 
-    [RESULT] [515924.695932] [action_1] kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 pass
+    [RESULT] [515924.695932] [action_1] rcqt kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 pass
 
 
 @subsection usg75 7.5 Linker/Loader Check
@@ -1128,7 +1128,42 @@ If the linker/loader search path looks for the soname version of the library,
 qualified by arch, at the directory specified the test will pass. Otherwise it
 will fail. The output message has the following format:
 
-    [RESULT][<timestamp>][<action name>] ldconfigcheck <soname> <arch> <path> <pass>
+    [RESULT][<timestamp>][<action name>] rcqt ldconfigcheck <soname> <arch> <path> <pass>
+
+@subsubsection usg753 7.5.3 Examples
+
+**Example 1:**
+
+Consider this action:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      soname: librcqt.so.0.0.3fail
+      arch: i386:x86-64
+      ldpath: /work/jovanbhdl/build/bin
+
+The test will fail because the file given is not found on the specified path:
+
+    [RESULT] [587042.789384] [action_1] rcqt ldconfigcheck librcqt.so.0.0.3fail i386:x86-64 /work/jovanbhdl/build/bin false
+
+**Example 2:**
+
+Consider this action:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      soname: librcqt.so.0.0.16
+      arch: i386:x86-64
+      ldpath: /work/jovanbhdl/build/bin
+
+The test will pass and will output the message:
+
+    [RESULT] [587047.395787] [action_1] rcqt ldconfigcheck librcqt.so.0.0.16 i386:x86-64 /work/jovanbhdl/build/bin true
+
 
 @section usg8 8 PEQT Module
 
