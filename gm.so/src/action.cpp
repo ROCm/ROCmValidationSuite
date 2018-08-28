@@ -55,6 +55,7 @@ using std::string;
 using std::vector;
 using std::thread;
 using std::cerr;
+using std::endl;
 
 extern Worker* pworker;
 
@@ -104,7 +105,7 @@ int action::run(void) {
         log_interval = rvs::actionbase::property_get_log_interval(&error)/1000;
         if ( log_interval < sample_interval ) {
             msg = "Log interval is lower than the sample interval ";
-            log(msg.c_str(), rvs::logerror);
+            cerr << "RVS-GM: action: " << property["name"] << msg << endl;
             return -1;
         }
     }
@@ -150,7 +151,7 @@ int action::run(void) {
             metric_bound = true;
           } else {
             msg = " Wrong number of metric parameters ";
-            log(msg.c_str(), rvs::logerror);
+            cerr << "RVS-GM: action: " << property["name"] << msg << endl;
             return -1;
         }
 
