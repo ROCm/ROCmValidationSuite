@@ -77,13 +77,13 @@ void Worker::run() {
   void* r;
 
   // get timestamp
-  rvs::lp::get_ticks(sec, usec);
+  rvs::lp::get_ticks(&sec, &usec);
 
   // add string output
   string msg("[" + action_name + "] pebb " + strgpuids + " started");
   rvs::lp::Log(msg, rvs::logresults, sec, usec);
   // get timestamp
-  rvs::lp::get_ticks(sec, usec);
+  rvs::lp::get_ticks(&sec, &usec);
 
   // add JSON output
   r = rvs::lp::LogRecordCreate("pebb", action_name.c_str(), rvs::logresults,
@@ -102,7 +102,7 @@ void Worker::run() {
   }
 
   // get timestamp
-  rvs::lp::get_ticks(sec, usec);
+  rvs::lp::get_ticks(&sec, &usec);
 
   // add string output
   msg = "[" + stop_action_name + "] pebb all stopped";

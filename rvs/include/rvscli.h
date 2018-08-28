@@ -84,7 +84,7 @@ class cli {
             econtext s1, econtext s2 = eof, econtext s3 = eof);
     //! Default destructor
     virtual ~optbase();
-    virtual bool adjust_context(std::stack<econtext>& old_context);
+    virtual bool adjust_context(std::stack<econtext>* old_context);
 
    public:
     //! Option name as known internally to RVS

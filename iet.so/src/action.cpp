@@ -309,7 +309,7 @@ bool action::get_all_iet_config_keys(void) {
     int error;
     string msg, ststress;
 
-    if (has_property(RVS_CONF_TARGET_POWER_KEY, ststress)) {
+    if (has_property(RVS_CONF_TARGET_POWER_KEY, &ststress)) {
         property_get_iet_target_power(&error);
         if (error) {  // <target_power> is mandatory => IET cannot continue
             cerr << "RVS-IET: action: " << action_name <<
@@ -380,7 +380,7 @@ bool action::get_all_common_config_keys(void) {
     int error;
 
     // get <device> property value ("all" or a list of gpu id)
-    if (has_property("device", sdev)) {
+    if (has_property("device", &sdev)) {
         device_all_selected = property_get_device(&error);
         if (error) {  // log the error & abort IET
             cerr << "RVS-IET: action: " << action_name << " invalid '" <<
@@ -395,7 +395,7 @@ bool action::get_all_common_config_keys(void) {
     }
 
     // get the <deviceid> property value
-    if (has_property("deviceid", sdevid)) {
+    if (has_property("deviceid", &sdevid)) {
         int devid = property_get_deviceid(&error);
         if (!error) {
             if (devid != -1) {
@@ -535,7 +535,7 @@ int action::get_num_amd_gpu_devices(void) {
         if (bjson) {
             unsigned int sec;
             unsigned int usec;
-            rvs::lp::get_ticks(sec, usec);
+            rvs::lp::get_ticks(&sec, &usec);
             void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::loginfo, sec, usec);
             if (!json_root_node) {

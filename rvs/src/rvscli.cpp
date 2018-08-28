@@ -66,14 +66,14 @@ rvs::cli::optbase::~optbase() {
 /**
  * @brief Replaces current context with continuations allowed for this token
  *
- * @param old_context old std::stack context
+ * @param pold_context ptr to old std::stack context
  * @return always returns TRUE
  *
  */
-bool rvs::cli::optbase::adjust_context(std::stack<econtext>& old_context) {
-  while (!old_context.empty())
-    old_context.pop();
-  old_context = new_context;
+bool rvs::cli::optbase::adjust_context(std::stack<econtext>* pold_context) {
+  while (!(*pold_context).empty())
+    (*pold_context).pop();
+  (*pold_context) = new_context;
 
   return true;
 }
@@ -331,7 +331,7 @@ bool rvs::cli::try_command(const std::string& token) {
   current_option = it->second->name;
 
   // fill context  std::stack with new possible continuations:
-  it->second->adjust_context(context);
+  it->second->adjust_context(&context);
 
   return true;
 }

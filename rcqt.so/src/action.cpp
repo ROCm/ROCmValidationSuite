@@ -119,7 +119,7 @@ int action::run() {
   if (property.find("cli.-j") != property.end()) {
     unsigned int sec;
     unsigned int usec;
-    rvs::lp::get_ticks(sec, usec);
+    rvs::lp::get_ticks(&sec, &usec);
     bjson = true;
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::loginfo, sec, usec);
@@ -174,12 +174,12 @@ int action::run() {
 int action::pkgchk_run() {
   string package_name;
   string msg;
-  if (has_property(PACKAGE, package_name)) {
+  if (has_property(PACKAGE, &package_name)) {
     bool version_exists = false;
 
     // Checking if version field exists
     string version_name;
-    version_exists = has_property(VERSION, version_name);
+    version_exists = has_property(VERSION, &version_name);
     pid_t pid;
     int fd[2];
     pipe(fd);
@@ -275,12 +275,12 @@ int action::pkgchk_run() {
 int action::usrchk_run() {
   string err_msg, msg;
   string user_name;
-  if (has_property(USER, user_name)) {
+  if (has_property(USER, &user_name)) {
     bool group_exists = false;
     string group_values_string;
 
     // Check if gruop exists
-    group_exists = has_property(GROUP, group_values_string);
+    group_exists = has_property(GROUP, &group_values_string);
 
     // Structures for checking group and user
     struct passwd pwd, *result;
@@ -400,10 +400,10 @@ int action::kernelchk_run() {
   string os_version_values;
   string kernel_version_values;
 
-  if (has_property(OS_VERSION, os_version_values)) {
+  if (has_property(OS_VERSION, &os_version_values)) {
     // Check kernel version
     if (has_property(KERNEL_VERSION,
-      kernel_version_values) == false) {
+      &kernel_version_values) == false) {
       cerr << "Kernel version missing in config" << endl;
       return -1;
     }
@@ -493,12 +493,12 @@ int action::ldcfgchk_run() {
   string soname_requested;
   string arch_requested;
   string ldpath_requested;
-  if (has_property(SONAME, soname_requested)) {
-    if (has_property(ARCH, arch_requested) == false) {
+  if (has_property(SONAME, &soname_requested)) {
+    if (has_property(ARCH, &arch_requested) == false) {
       cerr << "acrhitecture field missing in config" << endl;
       return -1;
     }
-    if (has_property(LDPATH, ldpath_requested) == false) {
+    if (has_property(LDPATH, &ldpath_requested) == false) {
       cerr << "library path field missing in config" << endl;
       return -1;
     }
