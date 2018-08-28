@@ -678,6 +678,63 @@ The package name will include the version of the package if the version key is
 specified. The installed output value will either be true or false depending on
 if the package is installed or not.
 
+@subsubsection usg713 7.1.3 Examples
+
+**Example 1:**
+
+In this example, given package does not exist.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip12345
+
+The output for such configuration is:
+
+    [RESULT] [500022.877512] [action_1] packagecheck zip12345 FALSE
+
+**Example 2:**
+
+In this example, version of the given package is incorrect.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip
+      version: 3.0-11****
+
+The output for such configuration is:
+
+    [RESULT] [500123.480561] [action_1] packagecheck zip FALSE
+
+**Example 3:**
+
+In this example, given package exists.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip
+
+The output for such configuration is:
+
+    [RESULT] [500329.824495] [action_1] packagecheck zip TRUE
+
+**Example 4:**
+
+In this example, given package exists and its version is correct.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip
+      version: 3.0-11
+
+The output for such configuration is:
+
+    [RESULT] [500595.859025] [action_1] packagecheck zip TRUE
+
+
 @subsection usg72 7.2 User Check
 
 This feature checks for the existence of a user and the user’s group membership.
@@ -987,12 +1044,47 @@ version regardless of where the check passed or failed.
 
     [RESULT][<timestamp>][<action name>] kernelcheck <os version> <kernel version> <pass>
 
+
+@subsubsection usg743 7.4.3 Examples
+
+**Example 1:**
+
+In this example, given kernel version is incorrect.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      os_version: Ubuntu 16.04.5 LTS
+      kernel_version: 4.4.0-116-generic-wrong
+
+The output for such configuration is:
+
+    [RESULT] [498398.774182] [action_1] kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 fail
+
+**Example 2**
+
+In this example, given os version and kernel verison are the correct ones.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      os_version: Ubuntu 16.04.5 LTS
+      kernel_version: 4.18.0-rc1-kfd-compute-roc-master-8874
+
+The output for such configuration is:
+
+    [RESULT] [515924.695932] [action_1] kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 pass
+
+
 @subsection usg75 7.5 Linker/Loader Check
 
 This feature checks that a search by the linker/loader for a library finds the
 correct version in the correct location. The check should include a SONAME
 version of the library, the expected location and the architecture of the
 library.
+
 
 @subsubsection usg751 7.5.1 Linker/Loader Check Specific Keys
 
