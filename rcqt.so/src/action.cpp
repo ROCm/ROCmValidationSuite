@@ -288,10 +288,10 @@ int action::usrchk_run() {
     char pwdbuffer[2000];
     int pwdbufflenght = 2000;
     struct group grp, *grprst;
-    string user_exists = "[rcqt] usercheck "
-        + user_name + " user exists";
-    string user_not_exists = "[rcqt] usercheck "
-        + user_name + " user not exists";
+    string user_exists = "[" + action_name + "] " + "[rcqt] usercheck "
+        + user_name + " true";
+        string user_not_exists = "[" + action_name + "] " + "[rcqt] usercheck "
+        + user_name + " false";
 
     // Check for given user
     if (getpwnam_r(user_name.c_str()
@@ -302,15 +302,15 @@ int action::usrchk_run() {
     if (result == nullptr) {
       log(user_not_exists.c_str(), rvs::logresults);
       if (bjson && json_rcqt_node != nullptr) {
-        rvs::lp::AddString(json_rcqt_node, user_name, "not exists");
+        rvs::lp::AddString(json_rcqt_node, user_name, " false");
       }
     } else {
       log(user_exists.c_str(), rvs::logresults);
       if (bjson && json_rcqt_node != nullptr) {
-        rvs::lp::AddString(json_rcqt_node, user_name, "exists");
+        rvs::lp::AddString(json_rcqt_node, user_name, " true");
       }
     }
-    if (group_exists) {
+    if (group_exists && result != nullptr) {
       // Put the group list into vector
       string delimiter = ",";
       vector<string> group_vector;
@@ -331,7 +331,7 @@ int action::usrchk_run() {
           cerr << "IO error" << endl;
           return -1;
         } else if (error_group == EINTR) {
-          cerr << "Error sginal was caught during getgrnam_r" << endl;
+          cerr << "Error signal was caught during getgrnam_r" << endl;
           return -1;
         } else if (error_group == EMFILE) {
           cerr << "Error file descriptors are currently open" << endl;
@@ -355,11 +355,12 @@ int action::usrchk_run() {
         // Compare if the user group id is equal to the group id
         for (i = 0; grp.gr_mem[i] != NULL; i++) {
           if (strcmp(grp.gr_mem[i], user_name.c_str()) == 0) {
-            user_group = user_group + " " + vector_iter->c_str() + " is member";
+            user_group = "[" + action_name + "] " + user_group + \
+            " " + vector_iter->c_str() + " false";
             log(user_group.c_str(), rvs::logresults);
             if (bjson && json_rcqt_node != nullptr) {
               rvs::lp::AddString(json_rcqt_node
-              , user_group + " " + vector_iter->c_str(), "is member");
+              , user_group + " " + vector_iter->c_str(), " true");
             }
             j = 1;
             break;
@@ -370,12 +371,12 @@ int action::usrchk_run() {
         if (j == 0) {
           // printf("user is not in the group\n");
 
-          user_group = user_group + " " + vector_iter->c_str() \
-          + " is not member";
+          user_group = "[" + action_name + "] " + user_group + " " \
+          + vector_iter->c_str() + " false";
           log(user_group.c_str(), rvs::logresults);
           if (bjson && json_rcqt_node != nullptr) {
             rvs::lp::AddString(json_rcqt_node
-            , user_group + " " + vector_iter->c_str(), "is not member");
+            , user_group + " " + vector_iter->c_str(), "false");
           }
           j = 1;
         }
