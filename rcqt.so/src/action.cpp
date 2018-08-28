@@ -356,7 +356,7 @@ int action::usrchk_run() {
         for (i = 0; grp.gr_mem[i] != NULL; i++) {
           if (strcmp(grp.gr_mem[i], user_name.c_str()) == 0) {
             user_group = "[" + action_name + "] " + user_group + \
-            " " + vector_iter->c_str() + " false";
+            " " + vector_iter->c_str() + " true";
             log(user_group.c_str(), rvs::logresults);
             if (bjson && json_rcqt_node != nullptr) {
               rvs::lp::AddString(json_rcqt_node
