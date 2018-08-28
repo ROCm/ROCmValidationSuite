@@ -55,6 +55,7 @@ using std::string;
 using std::vector;
 using std::thread;
 using std::cerr;
+using std::endl;
 
 extern Worker* pworker;
 
@@ -90,6 +91,7 @@ int action::run(void) {
     bool metric_true, metric_bound;
     int metric_min, metric_max;
     bool terminate = false;
+    uint64_t duration = 1;
     std::vector<uint16_t> gpu_id;
 
     gpu_get_all_gpu_id(&gpu_id);
@@ -103,7 +105,7 @@ int action::run(void) {
         log_interval = rvs::actionbase::property_get_log_interval(&error)/1000;
         if ( log_interval < sample_interval ) {
             msg = "Log interval is lower than the sample interval ";
-            log(msg.c_str(), rvs::logerror);
+            cerr << "RVS-GM: action: " << property["name"] << msg << endl;
             return -1;
         }
     }
@@ -129,6 +131,7 @@ int action::run(void) {
       if (rvs::actionbase::has_property("duration")) {
         rvs::actionbase::property_get_run_duration(&error);
         pworker->set_duration(rvs::actionbase::gst_run_duration_ms);
+        duration = rvs::actionbase::gst_run_duration_ms;
       }
 
       for (it = property.begin(); it != property.end(); ++it) {
@@ -148,7 +151,7 @@ int action::run(void) {
             metric_bound = true;
           } else {
             msg = " Wrong number of metric parameters ";
-            log(msg.c_str(), rvs::logerror);
+            cerr << "RVS-GM: action: " << property["name"] << msg << endl;
             return -1;
         }
 
@@ -208,7 +211,7 @@ int action::run(void) {
     rvs::lp::Log("[" + property["name"]+ "] gm starting Worker",
                  rvs::logtrace);
     pworker->start();
-    sleep(500);
+    sleep(duration);
 
     rvs::lp::Log("[" + property["name"]+ "] gm Monitoring started",
                  rvs::logtrace);
@@ -224,8 +227,7 @@ int action::run(void) {
       pworker = nullptr;
     }
 
-       msg = action_name + " " + MODULE_NAME + " " +
-                            "gpu_id" + " " + " stopped";
+       msg = action_name + " " + MODULE_NAME + " stopped";
         log(msg.c_str(), rvs::logresults);
   }
 
