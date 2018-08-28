@@ -449,7 +449,7 @@ int action::run(void) {
     rvs::actionbase::property_get_action_name(&error);
     if (error == 2) {
       msg = "action name field is missing in gst module";
-      log(msg.c_str(), rvs::logerror);
+      cerr << "RVS-GST: " << msg;
       return -1;
     }
 
@@ -475,8 +475,8 @@ int action::run(void) {
                 // log the error
                 string msg = action_name + " " + MODULE_NAME + " "
                                             + JSON_CREATE_NODE_ERROR;
-                log(msg.c_str(), rvs::logerror);
-                return 0;
+                cerr << "RVS-GST: " << msg;
+                return -1;
             }
 
             rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
