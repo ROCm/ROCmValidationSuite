@@ -48,7 +48,8 @@ extern "C" {
 #include "worker.h"
 
 #define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
-#define DEFAULT_LOG_INTERVAL 500
+#define DEFAULT_LOG_INTERVAL 1000
+#define DEFAULT_DURATION 10000
 
 #define MODULE_NAME "pqt"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
@@ -315,7 +316,7 @@ bool pqtaction::get_all_common_config_keys(void) {
         return false;
     }
     if (gst_run_duration_ms == 0) {
-      gst_run_duration_ms = 1000;
+      gst_run_duration_ms = DEFAULT_DURATION;
     }
 
     return true;
@@ -497,6 +498,19 @@ int pqtaction::run() {
     return -1;
   if (!get_all_pqt_config_keys())
     return -1;
+
+  // log_interval must be less than duration
+  if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
+    cerr << "RVS-PQT: action: " << action_name <<
+        "  log_interval must be less than duration" << std::endl;
+    return -1;
+  }
+
+  // no bandwidth test is performed
+  if (prop_test_bandwidth == false) {
+    prop_log_interval = 0;
+    gst_run_duration_ms = 0;
+  }
 
   // check for -j flag (json logging)
   if (property.find("cli.-j") != property.end()) {
