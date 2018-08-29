@@ -100,7 +100,6 @@ static bool GetMonitorDevices(const std::shared_ptr<amd::smi::Device> &d,
 
 Worker::Worker() {
   bfiltergpu = false;
-  duration = 0;
   auto metric_length = std::end(metric_names) - std::begin(metric_names);
     for (int i = 0; i < metric_length; i++) {
         bounds.insert(std::pair<string, Metric_bound>(metric_names[i],
@@ -271,14 +270,9 @@ void Worker::run() {
   hw.IterateSMIDevices(GetMonitorDevices,
       reinterpret_cast<void *>(&monitor_devices));
 
-  // add string output
-  msg = "[" + action_name + "] gm " + strgpuids + " started";
-  rvs::lp::Log(msg, rvs::logresults, sec, usec);
-
   // add JSON output
   r = rvs::lp::LogRecordCreate("gm", action_name.c_str(), rvs::loginfo,
                                sec, usec);
-  rvs::lp::AddString(r, "msg", "started");
 
   // get the pci_access structure
   pacc = pci_alloc();
@@ -342,8 +336,11 @@ void Worker::run() {
       }
     }
   }
-    rvs::lp::LogRecordFlush(r);
-  timer_running.start(log_interval);
+  rvs::lp::LogRecordFlush(r);
+  // if log_interval timer starts
+  if (log_interval) {
+    timer_running.start(log_interval);
+  }
   // worker thread has started
   while (brun) {
     rvs::lp::Log("[" + action_name + "] gm worker thread is running...",
@@ -451,7 +448,10 @@ void Worker::run() {
             }
           }
         } else {
-            std::cout << "Not available" << std::endl;
+            msg = action_name + " " + MODULE_NAME + " " +
+            std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
+            GM_TEMP + " Not available";
+            log(msg.c_str(), rvs::loginfo);
           }
       }
 
@@ -482,7 +482,10 @@ void Worker::run() {
               }
             }
           } else {
-              std::cout << "Not available" << std::endl;
+              msg = action_name + " " + MODULE_NAME + " " +
+              std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
+              GM_FAN + " Not available";
+              log(msg.c_str(), rvs::loginfo);
             }
         }
       }
@@ -523,7 +526,7 @@ void Worker::run() {
   for (map<string, Dev_metrics>::iterator it = irq_gpu_ids.begin();
         it != irq_gpu_ids.end(); it++) {
     // add string output
-    msg = "[" + stop_action_name + "] gm " +
+    msg = "[" + action_name + "] gm " +
         std::to_string((it->second).gpu_id) + " stopped";
     rvs::lp::Log(msg, rvs::logresults, sec, usec);
   }
@@ -561,39 +564,39 @@ void Worker::stop() {
     for (map<string, Dev_metrics>::iterator it = irq_gpu_ids.begin(); it !=
             irq_gpu_ids.end(); it++) {
       if (bounds[GM_TEMP].mon_metric) {
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " +
             GM_TEMP + " violations " +
             std::to_string(met_violation[it->first].temp_violation);
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " "+ GM_TEMP + " average " +
             std::to_string((it->second).av_temp/count) + "C";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
       }
       if (bounds[GM_CLOCK].mon_metric) {
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " +
             GM_CLOCK + " violations " +
             std::to_string(met_violation[it->first].clock_violation);
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " + GM_CLOCK + " average " +
             std::to_string((it->second).av_clock/count) + "Mhz";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
       }
       if (bounds[GM_MEM_CLOCK].mon_metric) {
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) +
             " " + GM_MEM_CLOCK + " violations " +
             std::to_string(met_violation[it->first].mem_clock_violation);
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " +
             GM_MEM_CLOCK + " average " +
             std::to_string((it->second).av_mem_clock/count) + "Mhz";
@@ -601,23 +604,23 @@ void Worker::stop() {
         rvs::lp::AddString(r, "result", msg);
       }
       if (bounds[GM_FAN].mon_metric) {
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " + GM_FAN +" violations " +
             std::to_string(met_violation[it->first].fan_violation);
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " + GM_FAN + " average " +
             std::to_string((it->second).av_fan/count) + "%";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
       }
       if (bounds[GM_POWER].mon_metric) {
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " +
             GM_POWER + " violations " +
             std::to_string(met_violation[it->first].power_violation);
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
-        msg = "[" + stop_action_name + "] gm " +
+        msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " + GM_POWER + " average " +
             std::to_string((it->second).av_power/count) + "Watts";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
