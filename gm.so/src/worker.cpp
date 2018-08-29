@@ -100,7 +100,6 @@ static bool GetMonitorDevices(const std::shared_ptr<amd::smi::Device> &d,
 
 Worker::Worker() {
   bfiltergpu = false;
-  duration = 0;
   auto metric_length = std::end(metric_names) - std::begin(metric_names);
     for (int i = 0; i < metric_length; i++) {
         bounds.insert(std::pair<string, Metric_bound>(metric_names[i],
@@ -342,8 +341,11 @@ void Worker::run() {
       }
     }
   }
-    rvs::lp::LogRecordFlush(r);
-  timer_running.start(log_interval);
+  rvs::lp::LogRecordFlush(r);
+  // if log_interval timer starts
+  if (log_interval) {
+    timer_running.start(log_interval);
+  }
   // worker thread has started
   while (brun) {
     rvs::lp::Log("[" + action_name + "] gm worker thread is running...",
@@ -451,7 +453,10 @@ void Worker::run() {
             }
           }
         } else {
-            std::cout << "Not available" << std::endl;
+            msg = action_name + " " + MODULE_NAME + " " +
+            std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
+            GM_TEMP + " Not available";
+            log(msg.c_str(), rvs::loginfo);
           }
       }
 
@@ -482,7 +487,10 @@ void Worker::run() {
               }
             }
           } else {
-              std::cout << "Not available" << std::endl;
+              msg = action_name + " " + MODULE_NAME + " " +
+              std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
+              GM_FAN + " Not available";
+              log(msg.c_str(), rvs::loginfo);
             }
         }
       }
