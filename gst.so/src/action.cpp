@@ -40,6 +40,7 @@
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvs_module.h"
+#include "rvsactionbase.h"
 #include "rvsloglp.h"
 
 using std::string;
@@ -92,7 +93,7 @@ action::~action() {
 
 
 /**
- * @brief reads the stress test's ramp-up time from the module's properties collection
+ * @brief reads the stress test ramp time from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
 void action::property_get_gst_ramp_interval(int *error) {
@@ -151,7 +152,7 @@ void action::property_get_gst_max_violations(int *error) {
 
 /**
  * @brief reads the module's properties collection to see whether the GST should
- * copy the matrix to GPU for each SGEMM/DGEMM operation
+ * copy the matrices to GPU before each SGEMM/DGEMM operation
  * @param error pointer to a memory location where the error code will be stored
  */
 void action::property_get_gst_copy_matrix(int *error) {
@@ -171,7 +172,7 @@ void action::property_get_gst_copy_matrix(int *error) {
 }
 
 /**
- * @brief reads the maximum GFLOPS (that the GST will try to achieve) from
+ * @brief reads the GFLOPS value (that the GST will try to achieve) from
  * the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
@@ -237,15 +238,14 @@ void action::property_get_gst_matrix_size(int *error) {
     }
 }
 
-
 /**
- * @brief runs the test stress session
+ * @brief runs the GST test stress session
  * @param gst_gpus_device_index <gpu_index, gpu_id> map
  * @return true if no error occured, false otherwise
  */
 bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     size_t k = 0;
-    while (1) {
+    for (;;) {
         unsigned int i = 0;
         if (gst_run_wait_ms != 0)  // delay gst execution
             sleep(gst_run_wait_ms);
@@ -299,7 +299,7 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
 }
 
 /**
- * @brief reads all GST related configuration keys from
+ * @brief reads all GST-related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
@@ -324,43 +324,43 @@ bool action::get_all_gst_config_keys(void) {
 
     property_get_gst_ramp_interval(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_RAMP_INTERVAL_KEY << "'" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+        RVS_CONF_RAMP_INTERVAL_KEY << "' key value" << std::endl;
         return false;
     }
 
     property_get_gst_log_interval(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "'" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+        RVS_CONF_LOG_INTERVAL_KEY << "' key value" << std::endl;
         return false;
     }
 
     property_get_gst_max_violations(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_MAX_VIOLATIONS_KEY << "'" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+        RVS_CONF_MAX_VIOLATIONS_KEY << "' key value" << std::endl;
         return false;
     }
 
     property_get_gst_copy_matrix(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_COPY_MATRIX_KEY << "'" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+        RVS_CONF_COPY_MATRIX_KEY << "' key value" << std::endl;
         return false;
     }
 
     property_get_gst_tolerance(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_TOLERANCE_KEY << "'" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+        RVS_CONF_TOLERANCE_KEY << "' key value" << std::endl;
         return false;
     }
 
     property_get_gst_matrix_size(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_MATRIX_SIZE_KEY << "'" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+        RVS_CONF_MATRIX_SIZE_KEY << "' key value" << std::endl;
         return false;
     }
     return true;
@@ -379,13 +379,13 @@ bool action::get_all_common_config_keys(void) {
     if (has_property("device", &sdev)) {
         device_all_selected = property_get_device(&error);
         if (error) {  // log the error & abort GST
-            cerr << "RVS-GST: action: " << action_name <<
-                "  invalid 'device' key value " << sdev << std::endl;
+            cerr << "RVS-GST: action: " << action_name << "  invalid '"
+                    RVS_CONF_DEVICE_KEY << "' key value " << sdev << std::endl;
             return false;
         }
     } else {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  key 'device' was not found" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  key '"
+                RVS_CONF_DEVICE_KEY << "' was not found" << std::endl;
         return false;
     }
 
@@ -398,8 +398,8 @@ bool action::get_all_common_config_keys(void) {
                 device_id_filtering = true;
             }
         } else {
-            cerr << "RVS-GST: action: " << action_name <<
-                "  invalid 'deviceid' key value " << sdevid << std::endl;
+            cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+                RVS_CONF_DEVICEID_KEY << "' key value " << sdevid << std::endl;
             return false;
         }
     }
@@ -407,58 +407,42 @@ bool action::get_all_common_config_keys(void) {
     // get the other action/GST related properties
     rvs::actionbase::property_get_run_parallel(&error);
     if (error == 1) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_PARALLEL_KEY <<
-            "' key value" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+                RVS_CONF_PARALLEL_KEY << "' key value" << std::endl;
         return false;
     }
 
     rvs::actionbase::property_get_run_count(&error);
     if (error == 1) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_COUNT_KEY << "' key value" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+                RVS_CONF_COUNT_KEY << "' key value" << std::endl;
         return false;
     }
 
     rvs::actionbase::property_get_run_wait(&error);
     if (error == 1) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_WAIT_KEY << "' key value" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+                RVS_CONF_WAIT_KEY << "' key value" << std::endl;
         return false;
     }
 
     rvs::actionbase::property_get_run_duration(&error);
     if (error == 1) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  invalid '" << RVS_CONF_DURATION_KEY <<
-            "' key value" << std::endl;
+        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
+                RVS_CONF_DURATION_KEY << "' key value" << std::endl;
         return false;
     }
 
     return true;
 }
 
-
-int action::run(void) {
+/**
+ * @brief gets the number of ROCm compatible AMD GPUs
+ * @return run number of GPUs
+ */
+int action::get_num_amd_gpu_devices(void) {
+    int hip_num_gpu_devices;
     string msg;
-    bool amd_gpus_found = false;
-    int hip_num_gpu_devices, error;
-    map<int, uint16_t> gst_gpus_device_index;
-
-    // get the action name
-    rvs::actionbase::property_get_action_name(&error);
-    if (error == 2) {
-      msg = "action name field is missing in gst module";
-      cerr << "RVS-GST: " << msg;
-      return -1;
-    }
-
-    device_all_selected = false;
-    device_id_filtering = false;
-
-    // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end())
-        bjson = true;
 
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
@@ -484,19 +468,23 @@ int action::run(void) {
         }
         return 0;
     }
+    return hip_num_gpu_devices;
+}
 
-    if (!get_all_common_config_keys())
-        return -1;
-    if (!get_all_gst_config_keys())
-        return -1;
+/**
+ * @brief gets all selected GPUs and starts the worker threads
+ * @return run result
+ */
+int action::get_all_selected_gpus(void) {
+    int hip_num_gpu_devices;
+    bool amd_gpus_found = false;
+    map<int, uint16_t> gst_gpus_device_index;
 
-    if (gst_run_duration_ms > 0 && (gst_run_duration_ms < gst_ramp_interval)) {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  'duration' cannot be less than 'ramp_interval'" << std::endl;
-        return -1;
-    }
+    hip_num_gpu_devices = get_num_amd_gpu_devices();
+    if (hip_num_gpu_devices < 1)
+        return hip_num_gpu_devices;
 
-    // iterate over available & compatible AMD GPUs
+    // iterate over all available & compatible AMD GPUs
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
         hipDeviceProp_t props;
@@ -518,8 +506,7 @@ int action::run(void) {
             (device_id_filtering && static_cast<uint16_t>(devId)
                                                         == deviceid)) {
             // check if this GPU is part of the GPU stress test
-            // (either device: all or the gpu_id is in
-            // the device: <gpu id> list
+            // (device = "all" or the gpu_id is in the device: <gpu id> list)
             bool cur_gpu_selected = false;
             uint16_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
             if (device_all_selected) {
@@ -547,8 +534,47 @@ int action::run(void) {
     if (amd_gpus_found) {
         if (do_gpu_stress_test(gst_gpus_device_index))
             return 0;
+
         return -1;
     }
 
     return 0;
+}
+
+/**
+ * @brief runs the whole GST logic
+ * @return run result
+ */
+int action::run(void) {
+    string msg;
+    int error;
+
+    // get the action name
+    rvs::actionbase::property_get_action_name(&error);
+    if (error == 2) {
+      msg = "action name field is missing in gst module";
+      cerr << "RVS-GST: " << msg;
+      return -1;
+    }
+
+    device_all_selected = false;
+    device_id_filtering = false;
+
+    // check for -j flag (json logging)
+    if (property.find("cli.-j") != property.end())
+        bjson = true;
+
+    if (!get_all_common_config_keys())
+        return -1;
+    if (!get_all_gst_config_keys())
+        return -1;
+
+    if (gst_run_duration_ms > 0 && (gst_run_duration_ms < gst_ramp_interval)) {
+        cerr << "RVS-GST: action: " << action_name << "  '" <<
+                RVS_CONF_DURATION_KEY << "' cannot be less than '" <<
+                RVS_CONF_RAMP_INTERVAL_KEY << "'" << std::endl;
+        return -1;
+    }
+
+    return get_all_selected_gpus();
 }
