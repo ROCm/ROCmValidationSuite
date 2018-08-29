@@ -86,7 +86,7 @@ int action::run(void) {
     map<string, string>::iterator it;  // module's properties map iterator
 
     string msg;
-    int sample_interval = 1, log_interval = 0;
+    int sample_interval = 1000, log_interval = 0;
     int error = 0;
     bool metric_true, metric_bound;
     int metric_min, metric_max;
@@ -225,9 +225,6 @@ int action::run(void) {
       delete pworker;
       pworker = nullptr;
     }
-
-       msg = action_name + " " + MODULE_NAME + " stopped";
-        log(msg.c_str(), rvs::logresults);
   }
 
      if (bjson && json_root_node != NULL) {  // json logging stuff
