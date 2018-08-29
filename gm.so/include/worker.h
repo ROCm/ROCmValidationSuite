@@ -72,9 +72,6 @@ class Worker : public rvs::ThreadBase {
   void set_log_int(int interval) { log_interval = interval; }
   //! sets terminate key
   void set_terminate(bool term_true) { term = term_true; }
-  //! sets duration key
-  void set_duration(uint64_t gst_run_duration_ms)
-    { duration = gst_run_duration_ms; }
   //! sets true/false for metric
   void set_metr_mon(std::string metr_name, bool metr_true);
   //! sets bound values for metric
@@ -111,8 +108,6 @@ class Worker : public rvs::ThreadBase {
   int sample_interval;
   //! log interval;
   int log_interval;
-  //! duration
-  uint64_t duration;
   //! terminate key
   bool term;
   //! number of times of get metric
