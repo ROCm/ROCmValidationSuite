@@ -10,8 +10,8 @@ from random import sample
 module_name = "demofile"
 
 gpu_ids        = [3254, 33367, 50599]
-log_interval   = [100]
-duration       = [1000]
+log_interval   = [1000]
+duration       = [10000]
 device_id      = [-1, 26720]
 test_bandwidth = ['true', 'false']
 bidirectional  = ['true', 'false']
