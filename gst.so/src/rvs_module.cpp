@@ -72,7 +72,8 @@ extern "C" const char* rvs_module_get_description(void) {
 extern "C" const char* rvs_module_get_config(void) {
     return "target_stress (float), copy_matrix (bool), "\
             "ramp_interval (int), tolerance (float), "\
-            "max_violations (int), log_interval (int)";
+            "max_violations (int), log_interval (int), "\
+            "matrix_size (int)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {

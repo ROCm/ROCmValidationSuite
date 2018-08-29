@@ -124,7 +124,16 @@ class action: public rvs::actionbase {
     const std::string get_irq(const std::string dev_path);
     bool add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
                               int32_t gpu_id, int hip_num_gpu_devices);
+
+/**
+ * @brief gets the number of ROCm compatible AMD GPUs
+ * @return run number of GPUs
+ */
     int get_num_amd_gpu_devices(void);
+/**
+ * @brief gets all selected GPUs and starts the worker threads
+ * @return run result
+ */    
     int get_all_selected_gpus(void);
 
     bool do_edp_test(void);

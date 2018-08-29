@@ -62,15 +62,11 @@ class GSTWorker : public rvs::ThreadBase {
     void set_gpu_device_index(int _gpu_device_index) {
         gpu_device_index = _gpu_device_index;
     }
-
     //! returns the GPU index
     int get_gpu_device_index(void) { return gpu_device_index; }
 
     //! sets the run delay
-    void set_run_wait_ms(uint64_t _run_wait_ms) {
-        run_wait_ms = _run_wait_ms;
-    }
-
+    void set_run_wait_ms(uint64_t _run_wait_ms) { run_wait_ms = _run_wait_ms; }
     //! returns the run delay
     uint64_t get_run_wait_ms(void) { return run_wait_ms; }
 
@@ -78,7 +74,6 @@ class GSTWorker : public rvs::ThreadBase {
     void set_run_duration_ms(uint64_t _run_duration_ms) {
         run_duration_ms = _run_duration_ms;
     }
-
     //! returns the total stress test run duration
     uint64_t get_run_duration_ms(void) { return run_duration_ms; }
 
@@ -86,7 +81,6 @@ class GSTWorker : public rvs::ThreadBase {
     void set_ramp_interval(uint64_t _ramp_interval) {
         ramp_interval = _ramp_interval;
     }
-
     //! returns the stress test ramp duration
     uint64_t get_ramp_interval(void) { return ramp_interval; }
 
@@ -94,7 +88,6 @@ class GSTWorker : public rvs::ThreadBase {
     void set_log_interval(uint64_t _log_interval) {
         log_interval = _log_interval;
     }
-
     //! returns the time interval at which the module reports the average GFlops
     uint64_t get_log_interval(void) { return log_interval; }
 
@@ -102,7 +95,6 @@ class GSTWorker : public rvs::ThreadBase {
     void set_max_violations(uint64_t _max_violations) {
         max_violations = _max_violations;
     }
-
     //! returns the maximum allowed number of target_stress violations
     uint64_t get_max_violations(void) { return max_violations; }
 
@@ -116,26 +108,26 @@ class GSTWorker : public rvs::ThreadBase {
     void set_target_stress(float _target_stress) {
         target_stress = _target_stress;
     }
+    //! returns the target stress (in GFlops) that the GPU will try to achieve
+    float get_target_stress(void) { return target_stress; }
 
     //! sets the SGEMM matrix size
     void set_matrix_size(uint64_t _matrix_size) {
         matrix_size = _matrix_size;
     }
-
     //! returns the SGEMM matrix size
     uint64_t get_matrix_size(void) { return matrix_size; }
-
-    //! returns the target stress (in GFlops) that the GPU will try to achieve
-    float get_target_stress(void) { return target_stress; }
 
     //! sets the GFlops tolerance
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }
     //! returns the GFlops tolerance
     float get_tolerance(void) { return tolerance; }
+
     //! returns the difference (in milliseconds) between 2 points in time
     uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
                     std::chrono::time_point<std::chrono::system_clock> t_start);
+
     //! sets the JSON flag
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
@@ -146,9 +138,12 @@ class GSTWorker : public rvs::ThreadBase {
     void hit_max_gflops(int *error, std::string *err_description);
     bool do_gst_ramp(int *error, std::string *err_description);
     bool do_gst_stress_test(int *error, std::string *err_description);
+    void log_gst_test_result(bool gst_test_passed);
     virtual void run(void);
     void log_to_json(const std::string &key, const std::string &value,
                      int log_level);
+    void log_interval_gflops(double gflops_interval);
+    bool check_gflops_violation(double gflops_interval);
     void usleep_ex(uint64_t microseconds);
 
  protected:
@@ -177,7 +172,7 @@ class GSTWorker : public rvs::ThreadBase {
     float tolerance;
     //! SGEMM matrix size
     uint64_t matrix_size;
-    //! actual ramp time in case it succeeds
+    //! actual ramp time in case the GPU achieves the given target_stress Gflops
     uint64_t ramp_actual_time;
     //! rvs_blas pointer
     std::unique_ptr<rvs_blas> gpu_blas;
