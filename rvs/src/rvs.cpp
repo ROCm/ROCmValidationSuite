@@ -58,7 +58,7 @@ int main(int Argc, char**Argv) {
 
   sts =  cli.parse(Argc, Argv);
   if (sts) {
-    std::cerr << "ERROR: error parsing command line:"
+    std::cerr << "RVS-CLI: error parsing command line:"
       << cli.get_error_string() << std::endl;
     return -1;
   }

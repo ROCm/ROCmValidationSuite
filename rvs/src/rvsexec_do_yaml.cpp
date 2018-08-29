@@ -81,7 +81,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     // not found or empty
     if (rvsmodule == "") {
       // report error and go to next action
-      std::cerr << "ERROR: action '"<< action["name"].as<std::string>()
+      std::cerr << "RVS-CLI: action '"<< action["name"].as<std::string>()
            << "' does not specify module.\n";
       continue;
     }
@@ -89,7 +89,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     // create action excutor in .so
     rvs::action* pa = module::action_create(rvsmodule.c_str());
     if (!pa) {
-      std::cerr << "ERROR: action '"<< action["name"].as<std::string>()
+      std::cerr << "RVS-CLI: action '"<< action["name"].as<std::string>()
           << "' could not crate action object in module '" << rvsmodule.c_str()
           << "'\n";
       continue;
@@ -97,7 +97,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
 
     if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
     if (!pif1) {
-      std::cerr << "ERROR: action '"<< action["name"].as<std::string>()
+      std::cerr << "RVS-CLI: action '"<< action["name"].as<std::string>()
            << "' could not obtain interface IF1\n";
 
       module::action_destroy(pa);
