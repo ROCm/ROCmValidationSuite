@@ -644,7 +644,8 @@ int action::filechk_run() {
         struct passwd p, *result;
         char pbuff[256];
         if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0)) {
-          cerr << "RVS-RCQT: ["<< action_name << "] Error with getpwuid_r" << endl;
+          cerr << "RVS-RCQT: ["<< action_name << "] Error with getpwuid_r"
+          << endl;
           return -1;
         }
         if (p.pw_name == owner)
