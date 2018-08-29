@@ -246,6 +246,7 @@ void action::property_get_value(string gpu_id, int node_id) {
                         // log the error
                         msg = action_name + " " + MODULE_NAME + " " +
                         JSON_CREATE_NODE_ERROR;
+                        cerr << "RVS-GPUP: " << msg;
                     }
                 }
             }
@@ -300,6 +301,7 @@ void action::property_io_links_get_value(string gpu_id, int node_id) {
                         // log the error
                         msg = action_name + " " + MODULE_NAME + " " +
                         JSON_CREATE_NODE_ERROR;
+                        cerr << "RVS-GPUP: " << msg;
                     }
                 }
             }
