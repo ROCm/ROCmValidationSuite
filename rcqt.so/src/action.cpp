@@ -66,9 +66,6 @@
 
 using std::cerr;
 using std::string;
-using std::cin;
-using std::cout;
-using std::cerr;
 using std::iterator;
 using std::endl;
 using std::ifstream;
@@ -341,9 +338,9 @@ int action::usrchk_run() {
         if (grprst == nullptr) {
           err_msg = "group ";
           err_msg += vector_iter->c_str();
-          err_msg += " doesn't exist";
-          cerr << "RVS-RCQT: " << msg;
-          continue;
+          err_msg += " does not exist";
+          cerr << "RVS-RCQT: " << err_msg << endl;
+          return -1;
         }
 
         int i;
@@ -372,8 +369,8 @@ int action::usrchk_run() {
           + vector_iter->c_str() + " false";
           log(user_group.c_str(), rvs::logresults);
           if (bjson && json_rcqt_node != nullptr) {
-            rvs::lp::AddString(json_rcqt_node
-            , user_group + " " + vector_iter->c_str(), "false");
+            rvs::lp::AddString(json_rcqt_node,
+              user_group + " " + vector_iter->c_str(), "false");
           }
           j = 1;
         }
@@ -634,7 +631,9 @@ int action::filechk_run() {
     } else {
     // when exists propetry is true,but file cannot be found
     if (stat(file.c_str(), &info) < 0) {
-      log("File is not found", rvs::logerror);
+      msg = "[" + action_name + "] " + "rcqt filecheck "+ file +
+        " file is not found";
+      rvs::lp::Log(msg, rvs::logerror);
     // if exists property is set to true and file is found,check each parameter
     } else {
       // check if owner is tested
@@ -644,8 +643,10 @@ int action::filechk_run() {
         owner = iter->second;
         struct passwd p, *result;
         char pbuff[256];
-        if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0))
-          cout << "Error with getpwuid_r" << endl;
+        if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0)) {
+          cerr << "RVS-RCQT: ["<< action_name << "] Error with getpwuid_r" << endl;
+          return -1;
+        }
         if (p.pw_name == owner)
           check = "true";
         else
@@ -665,8 +666,11 @@ int action::filechk_run() {
         group = iter->second;
         struct group g, *result;
         char pbuff[256];
-        if ((getgrgid_r(info.st_gid, &g, pbuff, sizeof(pbuff), &result) != 0))
-          cout << "Error with getgrgid_r" << endl;
+        if ((getgrgid_r(info.st_gid, &g, pbuff, sizeof(pbuff), &result) != 0)) {
+          cerr << "RVS-RCQT: [" << action_name <<
+            "] Error with getgrgid_r" << endl;
+          return -1;
+        }
         if (g.gr_name == group)
           check = "true";
         else
