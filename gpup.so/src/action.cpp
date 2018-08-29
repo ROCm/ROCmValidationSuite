@@ -30,7 +30,7 @@
 #include <regex>
 #include <map>
 #include <iostream>
-
+#include <sstream>
 #include "action.h"
 #include "rvs_module.h"
 #include "gpu_util.h"
@@ -58,7 +58,6 @@ using std::regex;
 using std::vector;
 using std::map;
 using std::cerr;
-
 // collection of allowed GPU properties
 const char* gpu_prop_names[] =
         { "cpu_cores_count", "simd_count", "mem_banks_count", "caches_count",
@@ -412,7 +411,6 @@ int action::run(void) {
             // log the error
             msg = action_name + " " + MODULE_NAME + " " +
             JSON_CREATE_NODE_ERROR;
-            cerr << "RVS-GPUP: " << msg;
         }
     }
 
@@ -423,14 +421,21 @@ int action::run(void) {
 
             gpu_id = property_get_gpuid(node_id);
 
-            if (gpu_id == *it_gpu_id  && dev_id_corr) {
+            if (gpu_id == *it_gpu_id) {
+              if (dev_id_corr) {
                 // properties values
                 property_get_value(gpu_id, node_id);
                 // io_links properties
                 property_io_links_get_value(gpu_id, node_id);
+              } else {
+                  cerr << "RVS-GPUP: action: " << property["name"] <<
+                  "  invalid 'deviceid' key value: " <<
+                  dev_id << std::endl;
+                  return -1;
              }
-         }
-    }
+            }
+          }
+      }
 
     if (bjson && json_root_node != NULL) {  // json logging stuff
         rvs::lp::LogRecordFlush(json_root_node);
