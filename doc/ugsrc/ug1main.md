@@ -387,6 +387,147 @@ format will be returned:
 
 @subsection usg43 4.3 Examples
 
+**Example 1:**
+
+Consider action>
+
+    actions:
+    - name: action_1
+      device: all
+      module: gpup
+      properties:
+        all:
+      io_links-properties:
+        all:
+
+Action will display all properties for all compatible GPUs present in the
+system. Output for such configuration may be like this:
+
+    [RESULT] [597737.498442] action_1 gpup 3254 cpu_cores_count 0
+    [RESULT] [597737.498517] action_1 gpup 3254 simd_count 256
+    [RESULT] [597737.498558] action_1 gpup 3254 mem_banks_count 1
+    [RESULT] [597737.498598] action_1 gpup 3254 caches_count 96
+    [RESULT] [597737.498637] action_1 gpup 3254 io_links_count 1
+    [RESULT] [597737.498680] action_1 gpup 3254 cpu_core_id_base 0
+    [RESULT] [597737.498725] action_1 gpup 3254 simd_id_base 2147487744
+    [RESULT] [597737.498768] action_1 gpup 3254 max_waves_per_simd 10
+    [RESULT] [597737.498812] action_1 gpup 3254 lds_size_in_kb 64
+    [RESULT] [597737.498856] action_1 gpup 3254 gds_size_in_kb 0
+    [RESULT] [597737.498901] action_1 gpup 3254 wave_front_size 64
+    [RESULT] [597737.498945] action_1 gpup 3254 array_count 4
+    [RESULT] [597737.498990] action_1 gpup 3254 simd_arrays_per_engine 1
+    [RESULT] [597737.499035] action_1 gpup 3254 cu_per_simd_array 16
+    [RESULT] [597737.499081] action_1 gpup 3254 simd_per_cu 4
+    [RESULT] [597737.499128] action_1 gpup 3254 max_slots_scratch_cu 32
+    [RESULT] [597737.499175] action_1 gpup 3254 vendor_id 4098
+    [RESULT] [597737.499222] action_1 gpup 3254 device_id 26720
+    [RESULT] [597737.499270] action_1 gpup 3254 location_id 8960
+    [RESULT] [597737.499318] action_1 gpup 3254 drm_render_minor 128
+    [RESULT] [597737.499369] action_1 gpup 3254 max_engine_clk_ccompute 2200
+    [RESULT] [597737.499419] action_1 gpup 3254 local_mem_size 17163091968
+    [RESULT] [597737.499468] action_1 gpup 3254 fw_version 405
+    [RESULT] [597737.499518] action_1 gpup 3254 capability 8832
+    [RESULT] [597737.499569] action_1 gpup 3254 max_engine_clk_ccompute 2200
+    [RESULT] [597737.499633] action_1 gpup 3254 0 count 1
+    [RESULT] [597737.499675] action_1 gpup 3254 0 type 2
+    [RESULT] [597737.499695] action_1 gpup 3254 0 version_major 0
+    [RESULT] [597737.499716] action_1 gpup 3254 0 version_minor 0
+    [RESULT] [597737.499736] action_1 gpup 3254 0 node_from 4
+    [RESULT] [597737.499763] action_1 gpup 3254 0 node_to 1
+    [RESULT] [597737.499783] action_1 gpup 3254 0 weight 20
+    [RESULT] [597737.499808] action_1 gpup 3254 0 min_latency 0
+    [RESULT] [597737.499830] action_1 gpup 3254 0 max_latency 0
+    [RESULT] [597737.499853] action_1 gpup 3254 0 min_bandwidth 0
+    [RESULT] [597737.499878] action_1 gpup 3254 0 max_bandwidth 0
+    [RESULT] [597737.499902] action_1 gpup 3254 0 recommended_transfer_size 0
+    [RESULT] [597737.499927] action_1 gpup 3254 0 flags 1
+    [RESULT] [597737.500208] action_1 gpup 50599 cpu_cores_count 0
+    [RESULT] [597737.500254] action_1 gpup 50599 simd_count 256
+    ...
+    [RESULT] [597737.501603] action_1 gpup 50599 0 recommended_transfer_size 0
+    [RESULT] [597737.501626] action_1 gpup 50599 0 flags 1
+    [RESULT] [597737.501877] action_1 gpup 33367 cpu_cores_count 0
+    [RESULT] [597737.501921] action_1 gpup 33367 simd_count 256
+    ...
+    [RESULT] [597737.503258] action_1 gpup 33367 0 recommended_transfer_size 0
+    [RESULT] [597737.503282] action_1 gpup 33367 0 flags 1
+    ...
+
+**Example 2:**
+
+Consider action:
+
+    actions:
+    - name: action_1
+      device: all
+      module: gpup
+      properties:
+        simd_count:
+        mem_banks_count:
+        io_links_count:
+        vendor_id:
+        device_id:
+        location_id:
+        max_engine_clk_ccompute:
+      io_links-properties:
+        version_major:
+        type:
+        version_major:
+        version_minor:
+        node_from:
+        node_to:
+        recommended_transfer_size:
+        flags:
+
+This action explicitely lists some of the properties.
+Output for such configuration may be:
+
+    [RESULT] [597868.690637] action_1 gpup 3254 device_id 26720
+    [RESULT] [597868.690713] action_1 gpup 3254 io_links_count 1
+    [RESULT] [597868.690766] action_1 gpup 3254 location_id 8960
+    [RESULT] [597868.690819] action_1 gpup 3254 max_engine_clk_ccompute 2200
+    [RESULT] [597868.690862] action_1 gpup 3254 mem_banks_count 1
+    [RESULT] [597868.690903] action_1 gpup 3254 simd_count 256
+    [RESULT] [597868.690950] action_1 gpup 3254 vendor_id 4098
+    [RESULT] [597868.691029] action_1 gpup 3254 0 flags 1
+    [RESULT] [597868.691053] action_1 gpup 3254 0 node_from 4
+    [RESULT] [597868.691075] action_1 gpup 3254 0 node_to 1
+    [RESULT] [597868.691099] action_1 gpup 3254 0 recommended_transfer_size 0
+    [RESULT] [597868.691119] action_1 gpup 3254 0 type 2
+    [RESULT] [597868.691138] action_1 gpup 3254 0 version_major 0
+    [RESULT] [597868.691158] action_1 gpup 3254 0 version_minor 0
+    [RESULT] [597868.691425] action_1 gpup 50599 device_id 26720
+    [RESULT] [597868.691469] action_1 gpup 50599 io_links_count 1
+    [RESULT] [597868.691517] action_1 gpup 50599 location_id 17152
+    ...
+    [RESULT] [597868.692159] action_1 gpup 33367 device_id 26720
+    [RESULT] [597868.692204] action_1 gpup 33367 io_links_count 1
+    [RESULT] [597868.692252] action_1 gpup 33367 location_id 25344
+    ...
+    [RESULT] [597868.692619] action_1 gpup 33367 0 version_minor 0
+
+**Example 3:**
+
+Consider this action:
+
+    actions:
+    - name: action_1
+      device: all
+      module: gpup
+      deviceid: 267
+      properties:
+        all:
+      io_links-properties:
+        all:
+
+Action lists deviceid 267 which is not present in the system.
+Output for such configuration is:
+
+    RVS-GPUP: action: action_1  invalid 'deviceid' key value
+
+
+
+
 @section usg5 5 GM Module
 The GPU monitor module can be used monitor and characterize the response of a
 GPU to different levels of use. This module is intended to run concurrently with
@@ -478,6 +619,123 @@ reported:
     [RESULT][<timestamp>][<action name>] gm <gpu id> <metric> average <metric_average>
 
 @subsection usg53 5.3 Examples
+
+**Example 1:**
+
+Consider action:
+
+    actions:
+    - name: action_1
+      module: gm
+      device: all
+      monitor: true
+      metrics:
+        temp: true 20 0
+        fan: true 10 0
+      duration: 5000
+    - name: another_action
+    ...
+
+This action will monitor temperature and fan speed for 5 seconds and then continue
+with the next action. Output for such configuration may be:
+
+    [RESULT] [694381.521373] [action_1] gm 33367 started
+    [INFO  ] [694381.531803] action_1 gm 33367  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.531817] action_1 gm 33367  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.531828] action_1 gm 33367  monitoring fan bounds min:0 max:10
+    [RESULT] [694381.521373] [action_1] gm 3254 started
+    [INFO  ] [694381.532257] action_1 gm 3254  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.532276] action_1 gm 3254  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.532293] action_1 gm 3254  monitoring fan bounds min:0 max:10
+    [RESULT] [694381.521373] [action_1] gm 50599 started
+    [INFO  ] [694381.534471] action_1 gm 50599  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.534487] action_1 gm 50599  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.534502] action_1 gm 50599  monitoring fan bounds min:0 max:10
+    [INFO  ] [694381.534623] action_1 gm 33367 temp  bounds violation 22C
+    [INFO  ] [694381.534822] action_1 gm 3254 temp  bounds violation 22C
+    [INFO  ] [694381.534946] action_1 gm 50599 temp  bounds violation 22C
+    [INFO  ] [694382.535329] action_1 gm 33367 temp  bounds violation 22C
+    ...
+    [INFO  ] [694385.537777] action_1 gm 50599 temp  bounds violation 21C
+    [RESULT] [694386.538037] [action_1] gm 3254 stopped
+    [RESULT] [694386.538037] [action_1] gm 50599 stopped
+    [RESULT] [694386.538037] [action_1] gm 33367 stopped
+    [RESULT] [694386.521449] [action_1] gm 3254 temp violations 1
+    [RESULT] [694386.521449] [action_1] gm 3254 temp average 19C
+    [RESULT] [694386.521449] [action_1] gm 3254 fan violations 0
+    [RESULT] [694386.521449] [action_1] gm 3254 fan average 0%
+    [RESULT] [694386.521449] [action_1] gm 50599 temp violations 5
+    [RESULT] [694386.521449] [action_1] gm 50599 temp average 21C
+    [RESULT] [694386.521449] [action_1] gm 50599 fan violations 0
+    [RESULT] [694386.521449] [action_1] gm 50599 fan average 0%
+    [RESULT] [694386.521449] [action_1] gm 33367 temp violations 5
+    [RESULT] [694386.521449] [action_1] gm 33367 temp average 22C
+    [RESULT] [694386.521449] [action_1] gm 33367 fan violations 0
+    [RESULT] [694386.521449] [action_1] gm 33367 fan average 0%
+
+**Example 2:**
+
+Consider action:
+
+    actions:
+    - name: action_1
+      module: gm
+      device: all
+      monitor: true
+      metrics:
+        temp: true 20 0
+        fan: true 10 0
+        power: true 100 0
+      sample_interval: 1000
+      log_interval: 1200
+      terminate: false
+      duration: 5000
+
+This configuration is similar to that in *Example 1* but has explicitely
+given values for *sample_interval* and *log_interval*. Output is similar to
+the previous one but averaging and the printout are performe at a different
+rate.
+
+**Example 3:**
+
+Conside action with syntax error ('temp' key is missing lower value):
+
+    actions:
+    - name: action_1
+      module: gm
+      device: 33367 50599
+      monitor: true
+      metrics:
+        temp: true 20
+        fan: true 10 0
+        power: true 100 0
+      sample_interval: 1000
+      log_interval: 1200
+
+Output for such configuration is:
+
+    RVS-GM: action: action_1 Wrong number of metric parameters
+
+**Example 4:**
+
+Consider action with logical error:
+
+    actions:
+    - name: action_1
+      module: gm
+      device: all
+      monitor: true
+      metrics:
+        temp: false 20 0
+        clock: true 1500 852
+        power: true 100 0
+      sample_interval: 5000
+      log_interval: 4000
+      duration: 8000
+
+Output for such configuration is:
+
+    RVS-GM: action: action_1 Log interval has the lower value than the sample interval
 
 
 @section usg6 6 PESM Module
@@ -672,11 +930,68 @@ Output keys are described in the table below:
 
 The check will emit a result message with the following format:
 
-    [RESULT][<timestamp>][<action name>] packagecheck <package> <installed>
+    [RESULT][<timestamp>][<action name>] rcqt packagecheck <package> <installed>
 
 The package name will include the version of the package if the version key is
 specified. The installed output value will either be true or false depending on
 if the package is installed or not.
+
+@subsubsection usg713 7.1.3 Examples
+
+**Example 1:**
+
+In this example, given package does not exist.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip12345
+
+The output for such configuration is:
+
+    [RESULT] [500022.877512] [action_1] rcqt packagecheck zip12345 FALSE
+
+**Example 2:**
+
+In this example, version of the given package is incorrect.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip
+      version: 3.0-11****
+
+The output for such configuration is:
+
+    [RESULT] [500123.480561] [action_1] rcqt packagecheck zip FALSE
+
+**Example 3:**
+
+In this example, given package exists.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip
+
+The output for such configuration is:
+
+    [RESULT] [500329.824495] [action_1] rcqt packagecheck zip TRUE
+
+**Example 4:**
+
+In this example, given package exists and its version is correct.
+
+    actions:
+    - name: action_1
+      module: rcqt
+      package: zip
+      version: 3.0-11
+
+The output for such configuration is:
+
+    [RESULT] [500595.859025] [action_1] rcqt packagecheck zip TRUE
+
 
 @subsection usg72 7.2 User Check
 
@@ -713,14 +1028,69 @@ Output keys are described in the table below:
 The status of the user’s existence is provided in a message with the following
 format:
 
-    [RESULT][<timestamp>][<action name>] usercheck <user> <exists>
+    [RESULT][<timestamp>][<action name>] rcqt usercheck <user> <exists>
 
 For each group in the list, a result message with the following format will be
 generated:
 
-    [RESULT][<timestamp>][<action name>] usercheck <user> <group> <member>
+    [RESULT][<timestamp>][<action name>] rcqt usercheck <user> <group> <member>
 
 If the user doesn’t exist no group checks will take place.
+
+@subsubsection usg723 7.2.3 Examples
+
+**Example 1:**
+
+In this example, given user does not exist.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      user: jdoe
+      group: sudo,video
+
+The output for such configuration is:
+
+    [RESULT] [496559.219160] [action_1] rcqt usercheck jdoe false
+
+Group check is not performed.
+
+**Example 2:**
+
+In this example, group **rvs** does not exist.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      user: jovanbhdl
+      group: rvs,video
+
+The output for such configuration is:
+
+    [RESULT] [496984.993394] [action_1] rcqt usercheck jovanbhdl true
+    [ERROR ] [496984.993535] [action_1] rcqt usercheck group rvs doesn't exist
+    [RESULT] [496984.993578] [action_1] rcqt usercheck jovanbhdl video true
+
+
+**Example 3:**
+
+In this example, given user exists and belongs to given groups.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      user: jovanbhdl
+      group: sudo,video
+
+The output for such configuration is:
+
+    [RESULT] [497361.361045] [action_1] rcqt usercheck jovanbhdl true
+    [RESULT] [497361.361168] [action_1] rcqt usercheck jovanbhdl sudo true
+    [RESULT] [497361.361209] [action_1] rcqt usercheck jovanbhdl video true
+
 
 @subsection usg73 7.3 File/device Check
 
@@ -788,11 +1158,11 @@ file does not exist and the ‘exists’ key if false.
 If the ‘exists’ key is true a set of messages, one for each stat check, will be
 generated with the following format:
 
-    [RESULT][<timestamp>][<action name>] filecheck <config key> <matching output key>
+    [RESULT][<timestamp>][<action name>] rcqt filecheck <config key> <matching output key>
 
 If the ‘exists’ key is false the format of the message will be:
 
-    [RESULT][<timestamp>][<action name>] filecheck <file> DNE <exists>
+    [RESULT][<timestamp>][<action name>] rcqt filecheck <file> DNE <exists>
 
 @subsubsection usg733 7.3.3 Examples
 
@@ -816,10 +1186,10 @@ rcqt_fc4.conf :
 
 Output from running this action:
 
-    [RESULT] [240384.678074] [action_1]  filecheck mvisekrunahdl owner:true
-    [RESULT] [240384.678214] [action_1]  filecheck mvisekrunahdl group:true
-    [RESULT] [240384.678250] [action_1]  filecheck 664 permission:true
-    [RESULT] [240384.678275] [action_1]  filecheck 100 type:true
+    [RESULT] [240384.678074] [action_1] rcqt filecheck mvisekrunahdl owner:true
+    [RESULT] [240384.678214] [action_1] rcqt filecheck mvisekrunahdl group:true
+    [RESULT] [240384.678250] [action_1] rcqt filecheck 664 permission:true
+    [RESULT] [240384.678275] [action_1] rcqt filecheck 100 type:true
 
 
 **Example 2:**
@@ -841,7 +1211,7 @@ rcqt_fc1.conf:
 
 The output for such configuration is:
 
-    [RESULT] [240188.150386] [action_1]  filecheck /work/mvisekrunahdl/ROCmValidationSuite/src DNE false
+    [RESULT] [240188.150386] [action_1] rcqt filecheck /work/mvisekrunahdl/ROCmValidationSuite/src DNE false
 
 **Example 3:**
 
@@ -860,7 +1230,7 @@ rcqt_fc2.conf:
 
 The output for such configuration is:
 
-    [RESULT] [240253.957738] [action_1]  filecheck root owner:true
+    [RESULT] [240253.957738] [action_1] rcqt filecheck root owner:true
 
 
 **Example 4:**
@@ -882,7 +1252,7 @@ rcqt_fc3.conf:
 
 The output for such configuration is:
 
-    [ERROR ] [240277.355553] File is not found
+    [ERROR ] [240277.355553] [action_1] rcqt File is not found
 
 
 @subsection usg74 7.4 Kernel compatibility Check
@@ -930,7 +1300,41 @@ any of the supported values the pass output key will be true. Otherwise it will
 be false. The result message will contain the actual os version and the kernel
 version regardless of where the check passed or failed.
 
-    [RESULT][<timestamp>][<action name>] kernelcheck <os version> <kernel version> <pass>
+    [RESULT][<timestamp>][<action name>] rcqt kernelcheck <os version> <kernel version> <pass>
+
+
+@subsubsection usg743 7.4.3 Examples
+
+**Example 1:**
+
+In this example, given kernel version is incorrect.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      os_version: Ubuntu 16.04.5 LTS
+      kernel_version: 4.4.0-116-generic-wrong
+
+The output for such configuration is:
+
+    [RESULT] [498398.774182] [action_1] rcqt kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 fail
+
+**Example 2**
+
+In this example, given os version and kernel verison are the correct ones.
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      os_version: Ubuntu 16.04.5 LTS
+      kernel_version: 4.18.0-rc1-kfd-compute-roc-master-8874
+
+The output for such configuration is:
+
+    [RESULT] [515924.695932] [action_1] rcqt kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 pass
+
 
 @subsection usg75 7.5 Linker/Loader Check
 
@@ -938,6 +1342,7 @@ This feature checks that a search by the linker/loader for a library finds the
 correct version in the correct location. The check should include a SONAME
 version of the library, the expected location and the architecture of the
 library.
+
 
 @subsubsection usg751 7.5.1 Linker/Loader Check Specific Keys
 
@@ -981,7 +1386,42 @@ If the linker/loader search path looks for the soname version of the library,
 qualified by arch, at the directory specified the test will pass. Otherwise it
 will fail. The output message has the following format:
 
-    [RESULT][<timestamp>][<action name>] ldconfigcheck <soname> <arch> <path> <pass>
+    [RESULT][<timestamp>][<action name>] rcqt ldconfigcheck <soname> <arch> <path> <pass>
+
+@subsubsection usg753 7.5.3 Examples
+
+**Example 1:**
+
+Consider this action:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      soname: librcqt.so.0.0.3fail
+      arch: i386:x86-64
+      ldpath: /work/jovanbhdl/build/bin
+
+The test will fail because the file given is not found on the specified path:
+
+    [RESULT] [587042.789384] [action_1] rcqt ldconfigcheck librcqt.so.0.0.3fail i386:x86-64 /work/jovanbhdl/build/bin false
+
+**Example 2:**
+
+Consider this action:
+
+    actions:
+    - name: action_1
+      device: all
+      module: rcqt
+      soname: librcqt.so.0.0.16
+      arch: i386:x86-64
+      ldpath: /work/jovanbhdl/build/bin
+
+The test will pass and will output the message:
+
+    [RESULT] [587047.395787] [action_1] rcqt ldconfigcheck librcqt.so.0.0.16 i386:x86-64 /work/jovanbhdl/build/bin true
+
 
 @section usg8 8 PEQT Module
 

@@ -86,7 +86,7 @@ int action::run(void) {
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing in gst module";
-    log(msg.c_str(), rvs::logerror);
+    cerr << "RVS-PESM: " << msg;
     return -1;
   }
   rvs::lp::Log("[" + property["name"]+ "] pesm in run()", rvs::logtrace);

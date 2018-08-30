@@ -74,7 +74,7 @@ ulong action::get_property(string property) {
   if (has_property(property, &value)) {
     result = std::stoul(value);
   } else {
-    std::cerr << "Error fetching " << property
+    std::cerr << "RVS-SMQT: Error fetching " << property
               << ". Cannot continue without it. Exiting!\n";
     exit(EXIT_FAILURE);
   }
@@ -136,12 +136,12 @@ int action::run(void) {
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing in smqt module";
-    log(msg.c_str(), rvs::logerror);
+    cerr << "RVS-SMQT: " << msg;
     return -1;
   }
 
   if (!get_all_common_config_keys()) {
-    std::cerr << "Couldn't fetch common config keys "
+    std::cerr << "RVS-SMQT: Couldn't fetch common config keys "
               << "from the configuration file!\n";
     return -1;
   }
@@ -157,7 +157,7 @@ int action::run(void) {
   dev = pacc->devices;
 
   if (!has_property("name", &action_name)) {
-    std::cerr << "Error fetching action_name\n";
+    std::cerr << "RVS-SMQT: Error fetching action_name\n";
     return false;
   }
   bar1_req_size      = get_property("bar1_req_size");
