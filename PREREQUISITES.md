@@ -32,18 +32,18 @@ If CMake is not installed on your system you may install it like this:
 First install `libpci3.s0`:
 
     sudo apt-get update
-    sudo apt-install libpci3
+    sudo apt-get install libpci3
 
 Then install header files:
 
-    sudo apt-install libpci-dev
+    sudo apt-get install libpci-dev
 
 ## Doxygen
 
 For Ubuntu:
 
     sudo apt-get update
-    sudo apt-install doxygen
+    sudo apt-get install doxygen
 
 
 
