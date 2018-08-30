@@ -213,6 +213,8 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
                             ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
             return false;
 
+        gst_last_sgemm_start_time = std::chrono::system_clock::now();
+
         if (copy_matrix) {
             // copy matrix before each GEMM
             if (!gpu_blas->copy_data_to_gpu()) {
@@ -223,7 +225,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
         }
 
         // run GEMM & wait for completion
-        gst_last_sgemm_start_time = std::chrono::system_clock::now();
         if (!gpu_blas->run_blass_gemm())
             continue;  // failed to run the current SGEMM
         while (!gpu_blas->is_gemm_op_complete()) {}
