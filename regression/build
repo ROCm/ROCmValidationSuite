@@ -1,16 +1,3 @@
-export WB=/work/dmatichdl/ROCmValidationSuite
-export RVS=$WB/ROCmValidationSuite
-export ROCR_INC_DIR=/opt/rocm/include/
-export ROCR_LIB_DIR=/opt/rocm/lib/
-export ROCT_INC_DIR=/opt/rocm/include/libhsakmt/
-export ROCT_LIB_DIR=/opt/rocm/lib/
-export HIP_INC_DIR=/opt/rocm/hip/include/hip/
-export ROCBLAS_INC_DIR=$RVS/../build/rocBLAS/build/release/rocblas-install/include/
-export ROCBLAS_LIB_DIR=$RVS/../build/rocBLAS/build/release/rocblas-install/lib/
-export ROCM_SMI_INC_DIR=$RVS/rocm_smi_lib/include
-export ROCM_SMI_LIB_DIR=$RVS/../build/rocm_smi_lib
-
-cmake -DROCR_INC_DIR=$ROCR_INC_DIR -DROCR_LIB_DIR=$ROCR_LIB_DIR  -DROCBLAS_INC_DIR=$ROCBLAS_INC_DIR -DROCBLAS_LIB_DIR=$ROCBLAS_LIB_DIR -DHIP_INC_DIR=$HIP_INC_DIR  -DROCM_SMI_INC_DIR=$ROCM_SMI_INC_DIR -DROCM_SMI_LIB_DIR=$ROCM_SMI_LIB_DIR  ./ -B../build    
-
+cmake ./ -B../build    
 cd ../build
 make
