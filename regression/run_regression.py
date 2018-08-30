@@ -9,10 +9,16 @@ curr_location_size = len(curr_location)
 curr_location = curr_location[0:curr_location_size-1]
 print curr_location
 
-# configuration
-conf_location = "/work/dmatichdl/ROCmValidationSuite/rvs/conf"
+# set paths to build and ROCmValidationSuite folders
+build_location = "/work/dmatichdl/build"
+rocm_location = "/work/dmatichdl/ROCmValidationSuite"
+# set output folder and configuration file format
 conf_files = "demofile"
 regression_directory = "regression_dir"
+
+# location of configuration files
+conf_location = rocm_location + "/rvs/conf"
+print conf_location
 
 print "Create configuration files ..."
 
@@ -43,7 +49,7 @@ while True:
     else:
         number_of_tests = number_of_tests - 1
         break
-    os.chdir(curr_location)
+    os.chdir(build_location)
     
     # run test
     os.system("./run %s %s" % ("conf/" + confname + ".conf", "json_" + confname + ".txt"))
@@ -79,7 +85,7 @@ while True:
     if (restart == 0):
         number_of_tests = number_of_tests + 1
         print number_of_tests
-    
+
 # finish output
 res.write("\n")
 res.write("REGRESSION_RESULTS: passing " + str(number_of_tests - count_fail) + " / " + str(number_of_tests) + "\n")
