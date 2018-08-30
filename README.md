@@ -61,7 +61,8 @@ Compile RVS:
 
 Run:
 
-    sudo bin/rvs -d 3
+    cd ../build/bin
+    sudo ./rvs -d 3
 
 Build package:
 
