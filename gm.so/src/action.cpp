@@ -104,14 +104,14 @@ int action::run(void) {
     if (rvs::actionbase::has_property("log_interval")) {
         log_interval = rvs::actionbase::property_get_log_interval(&error);
         if ( log_interval < sample_interval ) {
-            msg = "Log interval is lower than the sample interval ";
-            cerr << "RVS-GM: action: " << property["name"] << msg << endl;
-            return -1;
+          msg = " Log interval has the lower value than the sample interval ";
+          cerr << "RVS-GM: action: " << property["name"] << msg << endl;
+          return -1;
         }
     }
 
     if (rvs::actionbase::has_property("terminate")) {
-        terminate = rvs::actionbase::property_get_terminate(&error);
+      terminate = rvs::actionbase::property_get_terminate(&error);
     }
 
     // start of monitoring?
@@ -205,7 +205,7 @@ int action::run(void) {
           "  key 'device' not found" << std::endl;
           return -1;
     }
-
+    pworker->set_stop_name(property["name"]);
     // start worker thread
     rvs::lp::Log("[" + property["name"]+ "] gm starting Worker",
                  rvs::logtrace);
