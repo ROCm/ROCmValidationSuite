@@ -5,6 +5,11 @@ The RVS is a collection of tests, benchmarks and qualification tools each target
 
 The function of each module see this [link](./FEATURES.md).
 
+## Prerequisites
+
+In order to build RVS from source please install prerequisites by following
+this [link](./PREREQUISITES.md).
+
 ## Building from Source
 This section explains how to get and compile current development stream of RVS.
 
