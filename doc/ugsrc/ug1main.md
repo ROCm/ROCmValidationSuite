@@ -620,6 +620,123 @@ reported:
 
 @subsection usg53 5.3 Examples
 
+**Example 1:**
+
+Consider action:
+
+    actions:
+    - name: action_1
+      module: gm
+      device: all
+      monitor: true
+      metrics:
+        temp: true 20 0
+        fan: true 10 0
+      duration: 5000
+    - name: another_action
+    ...
+
+This action will monitor temperature and fan speed for 5 seconds and then continue
+with the next action. Output for such configuration may be:
+
+    [RESULT] [694381.521373] [action_1] gm 33367 started
+    [INFO  ] [694381.531803] action_1 gm 33367  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.531817] action_1 gm 33367  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.531828] action_1 gm 33367  monitoring fan bounds min:0 max:10
+    [RESULT] [694381.521373] [action_1] gm 3254 started
+    [INFO  ] [694381.532257] action_1 gm 3254  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.532276] action_1 gm 3254  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.532293] action_1 gm 3254  monitoring fan bounds min:0 max:10
+    [RESULT] [694381.521373] [action_1] gm 50599 started
+    [INFO  ] [694381.534471] action_1 gm 50599  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.534487] action_1 gm 50599  monitoring temp bounds min:0 max:20
+    [INFO  ] [694381.534502] action_1 gm 50599  monitoring fan bounds min:0 max:10
+    [INFO  ] [694381.534623] action_1 gm 33367 temp  bounds violation 22C
+    [INFO  ] [694381.534822] action_1 gm 3254 temp  bounds violation 22C
+    [INFO  ] [694381.534946] action_1 gm 50599 temp  bounds violation 22C
+    [INFO  ] [694382.535329] action_1 gm 33367 temp  bounds violation 22C
+    ...
+    [INFO  ] [694385.537777] action_1 gm 50599 temp  bounds violation 21C
+    [RESULT] [694386.538037] [action_1] gm 3254 stopped
+    [RESULT] [694386.538037] [action_1] gm 50599 stopped
+    [RESULT] [694386.538037] [action_1] gm 33367 stopped
+    [RESULT] [694386.521449] [action_1] gm 3254 temp violations 1
+    [RESULT] [694386.521449] [action_1] gm 3254 temp average 19C
+    [RESULT] [694386.521449] [action_1] gm 3254 fan violations 0
+    [RESULT] [694386.521449] [action_1] gm 3254 fan average 0%
+    [RESULT] [694386.521449] [action_1] gm 50599 temp violations 5
+    [RESULT] [694386.521449] [action_1] gm 50599 temp average 21C
+    [RESULT] [694386.521449] [action_1] gm 50599 fan violations 0
+    [RESULT] [694386.521449] [action_1] gm 50599 fan average 0%
+    [RESULT] [694386.521449] [action_1] gm 33367 temp violations 5
+    [RESULT] [694386.521449] [action_1] gm 33367 temp average 22C
+    [RESULT] [694386.521449] [action_1] gm 33367 fan violations 0
+    [RESULT] [694386.521449] [action_1] gm 33367 fan average 0%
+
+**Example 2:**
+
+Consider action:
+
+    actions:
+    - name: action_1
+      module: gm
+      device: all
+      monitor: true
+      metrics:
+        temp: true 20 0
+        fan: true 10 0
+        power: true 100 0
+      sample_interval: 1000
+      log_interval: 1200
+      terminate: false
+      duration: 5000
+
+This configuration is similar to that in *Example 1* but has explicitely
+given values for *sample_interval* and *log_interval*. Output is similar to
+the previous one but averaging and the printout are performe at a different
+rate.
+
+**Example 3:**
+
+Conside action with syntax error ('temp' key is missing lower value):
+
+    actions:
+    - name: action_1
+      module: gm
+      device: 33367 50599
+      monitor: true
+      metrics:
+        temp: true 20
+        fan: true 10 0
+        power: true 100 0
+      sample_interval: 1000
+      log_interval: 1200
+
+Output for such configuration is:
+
+    RVS-GM: action: action_1 Wrong number of metric parameters
+
+**Example 4:**
+
+Consider action with logical error:
+
+    actions:
+    - name: action_1
+      module: gm
+      device: all
+      monitor: true
+      metrics:
+        temp: false 20 0
+        clock: true 1500 852
+        power: true 100 0
+      sample_interval: 5000
+      log_interval: 4000
+      duration: 8000
+
+Output for such configuration is:
+
+    RVS-GM: action: action_1 Log interval has the lower value than the sample interval
+
 
 @section usg6 6 PESM Module
 The PCIe State Monitor (PESM) tool is used to actively monitor the PCIe

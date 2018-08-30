@@ -166,7 +166,7 @@ void log_worker::run() {
         if (cur_milis >= log_interval) {
             if (power_sampling_iters != 0) {
                 avg_power /= power_sampling_iters;
-                msg = action_name + " " + MODULE_NAME + " " +
+                msg = "[" + action_name + "] " + MODULE_NAME + " " +
                         std::to_string(gpu_id) + " " +
                         IET_LOGGER_CURRENT_POWER_MSG + " " +
                         std::to_string(avg_power);
