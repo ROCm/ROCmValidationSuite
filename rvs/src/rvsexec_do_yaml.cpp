@@ -75,6 +75,11 @@ int rvs::exec::do_yaml(const std::string& config_file) {
   for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
     const YAML::Node& action = *it;
 
+    // if stop was requested
+    if (rvs::logger::Stopping()) {
+      return -1;
+    }
+
     // find module name
     std::string rvsmodule = action["module"].as<std::string>();
 

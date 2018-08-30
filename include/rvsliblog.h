@@ -25,6 +25,7 @@
 #ifndef INCLUDE_RVSLIBLOG_H_
 #define INCLUDE_RVSLIBLOG_H_
 
+#include "stdint.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +43,8 @@ typedef void* (*t_cbCreateNode)(void* Parent, const char* Name);
 typedef void  (*t_cbAddString)(void* Parent, const char* Key, const char* Val);
 typedef void  (*t_cbAddInt)(void* Parent, const char* Key, const int Val);
 typedef void  (*t_cbAddNode)(void* Parent, void* Child);
+typedef void  (*t_cbStop)(uint16_t flags);
+typedef bool  (*t_cbStopping)(void);
 
 /**
  * @brief Module initialization structure
@@ -63,6 +66,10 @@ typedef struct tag_module_init {
   t_cbAddInt           cbAddInt;
   //! pointer to rvs::logger::AddNode() function
   t_cbAddNode          cbAddNode;
+  //! pointer to rvs::logger::Stop() function
+  t_cbStop             cbStop;
+  //! pointer to rvs::logger::Stopping() function
+  t_cbStopping         cbStopping;
 } T_MODULE_INIT;
 
 #ifdef __cplusplus
