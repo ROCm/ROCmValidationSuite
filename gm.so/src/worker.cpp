@@ -162,7 +162,7 @@ int Worker::get_power(const std::string path) {
   auto tempPath = path;
 
   tempPath += "/";
-  tempPath += "power1_cap";
+  tempPath += "power1_average";
 
   std::ifstream fs;
   fs.open(tempPath);
