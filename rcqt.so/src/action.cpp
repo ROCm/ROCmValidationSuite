@@ -66,9 +66,6 @@
 
 using std::cerr;
 using std::string;
-using std::cin;
-using std::cout;
-using std::cerr;
 using std::iterator;
 using std::endl;
 using std::ifstream;
@@ -101,17 +98,14 @@ int action::run() {
   bool pkgchk_bool = false;
   bool usrchk_bool = false;
   bool kernelchk_os_bool = false;
-  bool kernelchk_kernel_bool = false;
   bool ldcfgchk_so_bool = false;
-  bool ldcfgchk_arch_bool = false;
-  bool ldcfgchk_ldpath_bool = false;
   bool filechk_bool = false;
 
   // get the action name
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing in gst module";
-    log(msg.c_str(), rvs::logerror);
+    cerr << "RVS-RCQT: " << msg;
     return -1;
   }
 
@@ -128,7 +122,7 @@ int action::run() {
       msg =
       action_name + " " + MODULE_NAME + " "
       + JSON_CREATE_NODE_ERROR;
-      log(msg.c_str(), rvs::logerror);
+      cerr << "RVS-RCQT: " << msg;
     }
   }
 
@@ -142,19 +136,17 @@ int action::run() {
 
   if (usrchk_bool == true)
     return usrchk_run();
+
   // chck if kernel version action is going to trigger
   kernelchk_os_bool = rvs::actionbase::has_property(OS_VERSION);
-  kernelchk_kernel_bool = rvs::actionbase::has_property(KERNEL_VERSION);
 
-  if (kernelchk_os_bool && kernelchk_kernel_bool)
+  if (kernelchk_os_bool)
     return kernelchk_run();
 
   // check if ldcfg check action is going to trigger
   ldcfgchk_so_bool = rvs::actionbase::has_property(SONAME);
-  ldcfgchk_arch_bool = rvs::actionbase::has_property(ARCH);
-  ldcfgchk_ldpath_bool = rvs::actionbase::has_property(LDPATH);
 
-  if (ldcfgchk_so_bool && ldcfgchk_arch_bool && ldcfgchk_ldpath_bool)
+  if (ldcfgchk_so_bool)
     return ldcfgchk_run();
 
   // check if file check action is going to trigger
@@ -217,8 +209,10 @@ int action::pkgchk_run() {
       if (ending > 0) {
         version_value = version_value.substr(0, ending);
       }
-      string passed = "packagecheck " + package_name + " TRUE";
-      string failed = "packagecheck " + package_name + " FALSE";
+      string passed =  "[" + action_name + "] " + "rcqt packagecheck "
+      + package_name + " true";
+      string failed =  "[" + action_name + "] " + "rcqt packagecheck "
+      + package_name + " false";
 
       /* 
        * If result start with dpkg-querry: then we haven't found the package
@@ -230,14 +224,14 @@ int action::pkgchk_run() {
         log(failed.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node, package_name, "not exists");
-          rvs::lp::AddString(json_rcqt_node, "pkgchk", "fail");
+          rvs::lp::AddString(json_rcqt_node, "pkgchk", "false");
           rvs::lp::LogRecordFlush(json_rcqt_node);
         }
       } else if (version_exists == false) {
         log(passed.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node, package_name, "exists");
-          rvs::lp::AddString(json_rcqt_node, "pkgchk", "pass");
+          rvs::lp::AddString(json_rcqt_node, "pkgchk", "true");
           rvs::lp::LogRecordFlush(json_rcqt_node);
         }
       } else if (version_name.compare(version_value) == 0) {
@@ -245,7 +239,7 @@ int action::pkgchk_run() {
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node, package_name, "exists");
           rvs::lp::AddString(json_rcqt_node, version_name, "exists");
-          rvs::lp::AddString(json_rcqt_node, "pkgchk", "pass");
+          rvs::lp::AddString(json_rcqt_node, "pkgchk", "true");
           rvs::lp::LogRecordFlush(json_rcqt_node);
         }
       } else {
@@ -253,13 +247,13 @@ int action::pkgchk_run() {
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node, package_name, "exists");
           rvs::lp::AddString(json_rcqt_node, version_name, "not exists");
-          rvs::lp::AddString(json_rcqt_node, "pkgchk", "fail");
+          rvs::lp::AddString(json_rcqt_node, "pkgchk", "false");
           rvs::lp::LogRecordFlush(json_rcqt_node);
         }
       }
     } else {
       // fork process error
-      cerr << INTERNAL_ERROR << '\n';
+      cerr << "RVS-RCQT: INTERNAL_ERROR" << '\n';
       return -1;
     }
     return 0;
@@ -288,29 +282,29 @@ int action::usrchk_run() {
     char pwdbuffer[2000];
     int pwdbufflenght = 2000;
     struct group grp, *grprst;
-    string user_exists = "[rcqt] usercheck "
-        + user_name + " user exists";
-    string user_not_exists = "[rcqt] usercheck "
-        + user_name + " user not exists";
+    string user_exists = "[" + action_name + "] " + "rcqt usercheck "
+        + user_name + " true";
+        string user_not_exists = "[" + action_name + "] " + "rcqt usercheck "
+        + user_name + " false";
 
     // Check for given user
     if (getpwnam_r(user_name.c_str()
       , &pwd, pwdbuffer, pwdbufflenght, &result) != 0) {
-      cerr << "Error with getpwnam_r" << endl;
+      cerr << "RVS-RCQT: Error with getpwnam_r" << endl;
       return -1;
     }
     if (result == nullptr) {
       log(user_not_exists.c_str(), rvs::logresults);
       if (bjson && json_rcqt_node != nullptr) {
-        rvs::lp::AddString(json_rcqt_node, user_name, "not exists");
+        rvs::lp::AddString(json_rcqt_node, user_name, " false");
       }
     } else {
       log(user_exists.c_str(), rvs::logresults);
       if (bjson && json_rcqt_node != nullptr) {
-        rvs::lp::AddString(json_rcqt_node, user_name, "exists");
+        rvs::lp::AddString(json_rcqt_node, user_name, " true");
       }
     }
-    if (group_exists) {
+    if (group_exists && result != nullptr) {
       // Put the group list into vector
       string delimiter = ",";
       vector<string> group_vector;
@@ -319,34 +313,34 @@ int action::usrchk_run() {
       // Check if the group exists
       for (vector<string>::iterator vector_iter = group_vector.begin()
           ; vector_iter != group_vector.end(); vector_iter++) {
-        string user_group = "[rcqt] usercheck " + user_name;
+        string user_group = "rcqt usercheck " + user_name;
         int error_group;
 
         if ((error_group =  getgrnam_r(vector_iter->c_str()
           , &grp, pwdbuffer, pwdbufflenght, &grprst)) != 0) {
-          cerr << "Error with getgrnam_r" << endl;
+          cerr << "RVS-RCQT: Error with getgrnam_r" << endl;
           return -1;
         }
         if (error_group == EIO) {
-          cerr << "IO error" << endl;
+          cerr << "RVS-RCQT: IO error" << endl;
           return -1;
         } else if (error_group == EINTR) {
-          cerr << "Error sginal was caught during getgrnam_r" << endl;
+          cerr << "RVS-RCQT: Error sginal was caught during getgrnam_r" << endl;
           return -1;
         } else if (error_group == EMFILE) {
-          cerr << "Error file descriptors are currently open" << endl;
+          cerr << "RVS-RCQT: Error file descriptors are currently open" << endl;
           return -1;
         } else if (error_group == ERANGE) {
-          cerr << "Error insufficient buffer in getgrnam_r" << endl;
+          cerr << "RVS-RCQT: Error insufficient buffer in getgrnam_r" << endl;
           return -1;
         }
         string err_msg;
         if (grprst == nullptr) {
           err_msg = "group ";
           err_msg += vector_iter->c_str();
-          err_msg += " doesn't exist";
-          log(err_msg.c_str(), rvs::logerror);
-          continue;
+          err_msg += " does not exist";
+          cerr << "RVS-RCQT: " << err_msg << endl;
+          return -1;
         }
 
         int i;
@@ -355,11 +349,12 @@ int action::usrchk_run() {
         // Compare if the user group id is equal to the group id
         for (i = 0; grp.gr_mem[i] != NULL; i++) {
           if (strcmp(grp.gr_mem[i], user_name.c_str()) == 0) {
-            user_group = user_group + " " + vector_iter->c_str() + " is member";
+            user_group = "[" + action_name + "] " + user_group + \
+            " " + vector_iter->c_str() + " true";
             log(user_group.c_str(), rvs::logresults);
             if (bjson && json_rcqt_node != nullptr) {
               rvs::lp::AddString(json_rcqt_node
-              , user_group + " " + vector_iter->c_str(), "is member");
+              , user_group + " " + vector_iter->c_str(), " true");
             }
             j = 1;
             break;
@@ -370,12 +365,12 @@ int action::usrchk_run() {
         if (j == 0) {
           // printf("user is not in the group\n");
 
-          user_group = user_group + " " + vector_iter->c_str() \
-          + " is not member";
+          user_group = "[" + action_name + "] " + user_group + " " \
+          + vector_iter->c_str() + " false";
           log(user_group.c_str(), rvs::logresults);
           if (bjson && json_rcqt_node != nullptr) {
-            rvs::lp::AddString(json_rcqt_node
-            , user_group + " " + vector_iter->c_str(), "is not member");
+            rvs::lp::AddString(json_rcqt_node,
+              user_group + " " + vector_iter->c_str(), "false");
           }
           j = 1;
         }
@@ -403,7 +398,7 @@ int action::kernelchk_run() {
     // Check kernel version
     if (has_property(KERNEL_VERSION,
       &kernel_version_values) == false) {
-      cerr << "Kernel version missing in config" << endl;
+      cerr << "RVS-RCQT: Kernel version missing in config" << endl;
       return -1;
     }
 
@@ -443,14 +438,14 @@ int action::kernelchk_run() {
       }
     }
     if (os_version_found_in_system == false) {
-      cerr << "Unable to locate actual OS installed" << endl;
+      cerr << "RVS-RCQT: Unable to locate actual OS installed" << endl;
       return -1;
     }
 
     // Get data about the kernel version
     struct utsname kernel_version_struct;
     if (uname(&kernel_version_struct) != 0) {
-      cerr << "Unable to read kernel version" << endl;
+      cerr << "RVS-RCQT: Unable to read kernel version" << endl;
       return -1;
     }
 
@@ -468,13 +463,13 @@ int action::kernelchk_run() {
         kernel_version_correct = true;
         break;
       }
-    string result = "[rcqt] kernelcheck " + os_actual + \
-    " " + kernel_actual + " " + \
-    (os_version_correct && kernel_version_correct ? "pass" : "fail");
+      string result = "[" + action_name + "] " + "rcqt kernelcheck " + \
+      os_actual + " " + kernel_actual + " " + \
+    (os_version_correct && kernel_version_correct ? "true" : "false");
     log(result.c_str(), rvs::logresults);
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::AddString(json_rcqt_node, "kerelchk"
-      , os_version_correct && kernel_version_correct ? "pass" : "fail");
+      , os_version_correct && kernel_version_correct ? "true" : "false");
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
     return 0;
@@ -494,11 +489,11 @@ int action::ldcfgchk_run() {
   string ldpath_requested;
   if (has_property(SONAME, &soname_requested)) {
     if (has_property(ARCH, &arch_requested) == false) {
-      cerr << "acrhitecture field missing in config" << endl;
+      cerr << "RVS-RCQT: acrhitecture field missing in config" << endl;
       return -1;
     }
     if (has_property(LDPATH, &ldpath_requested) == false) {
-      cerr << "library path field missing in config" << endl;
+      cerr << "RVS-RCQT: library path field missing in config" << endl;
       return -1;
     }
     // Full path of shared object
@@ -521,8 +516,9 @@ int action::ldcfgchk_run() {
       // Parent process
       char result[BUFFER_SIZE];
       close(fd[1]);
-      string ld_config_result = "[rcqt] ldconfigcheck ";
-
+      string ld_config_result = "[" + action_name + "] " +
+      "rcqt ldconfigcheck ";
+      read(fd[0], result, BUFFER_SIZE);
       string result_string = result;
 
       if (strstr(result, "architecture:") != nullptr) {
@@ -530,7 +526,6 @@ int action::ldcfgchk_run() {
         int begin_of_the_arch_string = 0;
         int end_of_the_arch_string = 0;
         for (uint i = 0; i < objdump_lines.size(); i++) {
-          // cout << objdump_lines[i] << "*" << endl;
           if (objdump_lines[i].find("architecture") != string::npos) {
             begin_of_the_arch_string = objdump_lines[i].find(":");
             end_of_the_arch_string = objdump_lines[i].find(",");
@@ -543,37 +538,38 @@ int action::ldcfgchk_run() {
             }
             if (arch_found.compare(arch_requested) == 0) {
               string arch_pass = ld_config_result + soname_requested
-                + " " + full_ld_path + " " + arch_found + " pass";
+                + " " + full_ld_path + " " + arch_found + " true";
               log(arch_pass.c_str(), rvs::logresults);
               if (bjson && json_rcqt_node != nullptr) {
-                rvs::lp::AddString(json_rcqt_node, "ldchk", "pass");
+                rvs::lp::AddString(json_rcqt_node, "ldchk", "true");
               }
             } else {
               string arch_pass = ld_config_result + soname_requested + " "
-                + full_ld_path + " " + arch_found + " fail";
+                + full_ld_path + " " + arch_found + " false";
               log(arch_pass.c_str(), rvs::logresults);
               if (bjson && json_rcqt_node != nullptr) {
-                rvs::lp::AddString(json_rcqt_node, "ldchk", "fail");
+                rvs::lp::AddString(json_rcqt_node, "ldchk", "false");
               }
             }
           }
         }
       } else {
         string lib_fail = ld_config_result + soname_requested
-          + " not found " + "na " + "fail";
+        + " " + full_ld_path + " " + arch_requested + " false";
         log(lib_fail.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node, "soname", soname_requested);
-          rvs::lp::AddString(json_rcqt_node, "ldchk", "fail");
+          rvs::lp::AddString(json_rcqt_node, "ldchk", "false");
         }
       }
     } else {
-      cerr << "Internal Error" << endl;
+      cerr << "RVS-RCQT: Internal Error" << endl;
       return -1;
     }
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
+
     return 0;
   }
   return -1;
@@ -626,7 +622,7 @@ int action::filechk_run() {
       check = "true";
     else
       check = "false";
-    msg = "[" + action_name + "] " + " filecheck "+ file +" DNE " + check;
+    msg = "[" + action_name + "] " + "rcqt filecheck "+ file +" DNE " + check;
     log(msg.c_str(), rvs::logresults);
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::AddString(json_rcqt_node
@@ -635,7 +631,9 @@ int action::filechk_run() {
     } else {
     // when exists propetry is true,but file cannot be found
     if (stat(file.c_str(), &info) < 0) {
-      log("File is not found", rvs::logerror);
+      msg = "[" + action_name + "] " + "rcqt filecheck "+ file +
+        " file is not found";
+      rvs::lp::Log(msg, rvs::logerror);
     // if exists property is set to true and file is found,check each parameter
     } else {
       // check if owner is tested
@@ -645,14 +643,17 @@ int action::filechk_run() {
         owner = iter->second;
         struct passwd p, *result;
         char pbuff[256];
-        if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0))
-          cout << "Error with getpwuid_r" << endl;
+        if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0)) {
+          cerr << "RVS-RCQT: ["<< action_name << "] Error with getpwuid_r"
+          << endl;
+          return -1;
+        }
         if (p.pw_name == owner)
           check = "true";
         else
           check = "false";
-        msg = "[" + action_name + "] " + " filecheck " \
-        + owner +" owner:" + check;
+        msg = "[" + action_name + "] " + "rcqt filecheck " \
+        + owner +" " + check;
         log(msg.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node
@@ -666,13 +667,16 @@ int action::filechk_run() {
         group = iter->second;
         struct group g, *result;
         char pbuff[256];
-        if ((getgrgid_r(info.st_gid, &g, pbuff, sizeof(pbuff), &result) != 0))
-          cout << "Error with getgrgid_r" << endl;
+        if ((getgrgid_r(info.st_gid, &g, pbuff, sizeof(pbuff), &result) != 0)) {
+          cerr << "RVS-RCQT: [" << action_name <<
+            "] Error with getgrgid_r" << endl;
+          return -1;
+        }
         if (g.gr_name == group)
           check = "true";
         else
           check = "false";
-        msg = "[" + action_name + "] " + " filecheck " + group+ " group:"+check;
+        msg = "[" + action_name + "] " + "rcqt filecheck " + group+ " " + check;
         log(msg.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node
@@ -688,8 +692,8 @@ int action::filechk_run() {
           check = "true";
         else
           check = "false";
-        msg = "[" + action_name + "] " + " filecheck " + \
-        std::to_string(permission)+" permission:"+check;
+        msg = "[" + action_name + "] " + "rcqt filecheck " + \
+        std::to_string(permission)+" "+check;
         log(msg.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node
@@ -707,8 +711,8 @@ int action::filechk_run() {
             check = "true";
           else
             check = "false";
-          msg = "[" + action_name + "] " + " filecheck " + \
-          std::to_string(type)+" type:"+check;
+          msg = "[" + action_name + "] " + "rcqt filecheck " + \
+          std::to_string(type)+" "+check;
           log(msg.c_str(), rvs::logresults);
           if (bjson && json_rcqt_node != nullptr) {
             rvs::lp::AddString(json_rcqt_node

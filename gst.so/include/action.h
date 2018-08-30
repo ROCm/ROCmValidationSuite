@@ -70,7 +70,8 @@ class action: public rvs::actionbase {
     uint64_t gst_log_interval;
     //! maximum allowed number of target_stress violations
     int gst_max_violations;
-    //! specifies whether to copy the matrix to the GPU for each SGEMM operation
+    //! specifies whether to copy the matrices to the GPU before each
+    //! SGEMM operation
     bool gst_copy_matrix;
     //! target stress (in GFlops) that the GPU will try to achieve
     float gst_target_stress;
@@ -80,7 +81,7 @@ class action: public rvs::actionbase {
     //! matrix size for SGEMM
     uint64_t gst_matrix_size;
 
-    //! TRUE if device config key is "all
+    //! TRUE if device config key is "all"
     bool device_all_selected;
     //! TRUE if deviceid filtering was enabled
     bool device_id_filtering;
@@ -105,9 +106,11 @@ class action: public rvs::actionbase {
  * @brief reads all common configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
- */
+ */    
     bool get_all_common_config_keys(void);
 
+    int get_num_amd_gpu_devices(void);
+    int get_all_selected_gpus(void);
     bool do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
 };
 
