@@ -310,7 +310,7 @@ void Worker::run() {
                           std::begin(metric_names);
           for (int i = 0; i < metric_length; i++) {
             if (bounds[metric_names[i]].mon_metric) {
-              msg = action_name + " " + MODULE_NAME + " " +
+              msg = "[" + action_name + "] " + MODULE_NAME + " " +
                   std::to_string(gpu_id) + " " + " monitoring " +
                   metric_names[i];
               if (bounds[metric_names[i]].check_bounds) {
@@ -370,7 +370,7 @@ void Worker::run() {
                             bounds[GM_MEM_CLOCK].max_val) &&
                             bounds[GM_MEM_CLOCK].check_bounds) {
               // write info and increase number of violations
-              msg = action_name + " " + MODULE_NAME + " " +
+              msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                     std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
                     GM_MEM_CLOCK  + " " + " bounds violation " +
                     std::to_string(mhz) + "Mhz";
@@ -404,7 +404,7 @@ void Worker::run() {
                         bounds[GM_CLOCK].max_val) &&
                         bounds[GM_CLOCK].check_bounds) {
               // write info
-              msg = action_name + " " + MODULE_NAME + " " +
+              msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                   std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
                   GM_CLOCK + " " + " bounds violation " +
                   std::to_string(mhz) + "Mhz";
@@ -435,7 +435,7 @@ void Worker::run() {
                         bounds[GM_TEMP].max_val) &&
                         bounds[GM_TEMP].check_bounds) {
             // write info
-            msg = action_name + " " + MODULE_NAME + " " +
+            msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                 std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
                 + GM_TEMP + " " + " bounds violation " +
                 std::to_string(temper) + "C";
@@ -448,7 +448,7 @@ void Worker::run() {
             }
           }
         } else {
-            msg = action_name + " " + MODULE_NAME + " " +
+            msg = "[" + action_name  + "] " + MODULE_NAME + " " +
             std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
             GM_TEMP + " Not available";
             log(msg.c_str(), rvs::loginfo);
@@ -469,7 +469,7 @@ void Worker::run() {
                         bounds[GM_FAN].max_val) &&
                         bounds[GM_FAN].check_bounds) {
               // write info
-              msg = action_name + " " + MODULE_NAME + " " +
+              msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                     std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
                     + GM_FAN + " " + " bounds violation " +
                     std::to_string(fan) + "%";
@@ -482,7 +482,7 @@ void Worker::run() {
               }
             }
           } else {
-              msg = action_name + " " + MODULE_NAME + " " +
+              msg = "[" + action_name  + "] " + MODULE_NAME + " " +
               std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
               GM_FAN + " Not available";
               log(msg.c_str(), rvs::loginfo);
@@ -499,7 +499,7 @@ void Worker::run() {
                         bounds[GM_POWER].max_val) &&
                         bounds[GM_POWER].check_bounds) {
               // write info
-              msg = action_name + " " + MODULE_NAME + " " +
+              msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                     std::to_string(irq_gpu_ids[val_str].gpu_id) + " " +
                     GM_POWER + " " + " bounds violation " +
                     std::to_string(power) + "Watts";
