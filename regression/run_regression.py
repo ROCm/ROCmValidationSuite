@@ -3,6 +3,7 @@
 import subprocess
 import os
 import mmap
+from shutil import copyfile
 
 curr_location = subprocess.check_output(["pwd", ""])
 curr_location_size = len(curr_location)
@@ -18,9 +19,14 @@ regression_directory = "regression_dir"
 
 # location of configuration files
 conf_location = rocm_location + "/rvs/conf"
-print conf_location
 
-print "Create configuration files ..."
+# copy run and build files to build_location
+copyfile("build", build_location + "/build")
+copyfile("run", build_location + "/run")
+# make them executable
+os.chdir(build_location)
+subprocess.call(["chmod", "+x", "build"])
+subprocess.call(["chmod", "+x", "run"])
 
 # create tests
 os.chdir(conf_location)
@@ -32,6 +38,10 @@ if not os.path.exists(regression_directory):
 
 # open file for regression result
 res = open(regression_directory + "/regression_res", "w")
+
+# build
+os.chdir(build_location)
+os.system("./build")
 
 # count tests and run them
 number_of_tests = 0
