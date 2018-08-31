@@ -1,5 +1,5 @@
 /********************************************************************************
- *
+ * 
  * Copyright (c) 2018 ROCm Developer Tools
  *
  * MIT LICENSE:
@@ -25,10 +25,25 @@
 #ifndef PEBB_SO_INCLUDE_ACTION_H_
 #define PEBB_SO_INCLUDE_ACTION_H_
 
+#include <unistd.h>
+#include <stdlib.h>
+#include <assert.h>
+
+#include <algorithm>
+#include <cctype>
+#include <sstream>
+#include <limits>
+#include <string>
+#include <vector>
+
 #include "rvsactionbase.h"
+#include "worker.h"
+#include "hsa/hsa.h"
+#include "hsa/hsa_ext_amd.h"
+
 
 /**
- * @class action
+ * @class pqtaction
  * @ingroup PEBB
  *
  * @brief PEBB action implementation class
@@ -37,12 +52,68 @@
  * in its run() method.
  *
  */
-class action : public rvs::actionbase {
- public:
-  action();
-  virtual ~action();
-
+class pebbaction : public rvs::actionbase {
+public:
+  pebbaction();
+  virtual ~pebbaction();
+  
   virtual int run(void);
+
+protected:
+  bool get_all_pebb_config_keys(void);
+  bool get_all_common_config_keys(void);
+  //! 'true' if "all" is found under "device" key for this action
+  bool      prop_device_all_selected;
+  //! 'true' if "all" is found under "peer" key for this action
+  bool      prop_peer_device_all_selected;
+  //! deviceid key from config file
+  uint16_t  prop_deviceid;
+  //! 'true' if prop_device_id is valid number
+  bool      prop_device_id_filtering;
+  
+  // PQT specific config keys
+  void property_get_log_interval(int *error);
+  void property_get_h2d();
+  void property_get_d2h();
+
+  //! array of peer GPU IDs to be used in data trasfers
+  std::vector<std::string> prop_peers;
+  //! deviceid of peer GPUs
+  int  prop_peer_deviceid;
+  //! 'true' if bandwidth test is to be executed for verified peers
+  bool prop_test_bandwidth;
+  //! log interval for running totals (in msec)
+  int  prop_log_interval;
+  //! 'true' if bidirectional data transfer is required
+  bool prop_bidirectional;
+  
+  bool prop_h2d;
+  
+  bool prop_d2h;
+  
+protected:
+  //int is_peer(uint16_t Src, uint16_t Dst);
+  int create_threads();
+  int destroy_threads();
+  
+  int run_single();
+  int run_parallel();
+  
+  int print_running_average();
+  int print_final_average();
+  
+  //! 'true' for the duration of test
+  bool brun;
+  //! bjson field indicates if the json flag is set
+  bool bjson;
+  //! json_rcqt_node is json node shared through submodules
+  void *json_rcqt_node;
+private:
+  void do_running_average(void);
+  void do_final_average(void);
+  
+  std::vector<pebbworker*> test_array;
+
 };
 
 #endif  // PEBB_SO_INCLUDE_ACTION_H_
