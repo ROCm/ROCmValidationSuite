@@ -605,6 +605,10 @@ int pqtaction::run_single() {
     for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
       (*it)->do_transfer();
      sleep(1);
+     if (rvs::lp::Stopping()) {
+       brun = false;
+       break;
+      }
     }
   } while (brun);
 
@@ -613,7 +617,7 @@ int pqtaction::run_single() {
 
   print_final_average();
 
-  return 0;
+  return rvs::lp::Stopping() ? -1 : 0;
 }
 
 /**
@@ -643,6 +647,9 @@ int pqtaction::run_parallel() {
   // wait for test to complete
   while (brun) {
     sleep(1);
+    if (rvs::lp::Stopping()) {
+      brun = false;
+    }
   }
 
   timer_running.stop();
@@ -650,7 +657,7 @@ int pqtaction::run_parallel() {
 
   print_final_average();
 
-  return 0;
+  return rvs::lp::Stopping() ? -1 : 0;
 }
 
 /**
