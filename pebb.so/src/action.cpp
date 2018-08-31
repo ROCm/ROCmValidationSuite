@@ -241,24 +241,38 @@ int pebbaction::create_threads() {
       }
     }
 
+
     int dstnode;
     int srcnode;
 
     for (uint cpu_index = 0;
          cpu_index < rvs::hsa::Get()->cpu_list.size(); cpu_index++) {
         // GPUs are peers, create transaction for them
-        if (prop_h2d) {
-          dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
-          if (dstnode < 0) {
-            std::cerr << "RVS-PEBB: no node found for destination GPU ID "
-            //<< std::to_string(gpu_id[i]);
-            << std::to_string(i);
-            return -1;
+      if (prop_h2d) {
+        dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
+        if (dstnode < 0) {
+          std::cerr << "RVS-PEBB: no node found for destination GPU ID "
+            << std::to_string(gpu_id[i]);
+          return -1;
+        }
+        srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
+        pebbworker* p = new pebbworker;
+        p->initialize(srcnode, dstnode, false);
+        test_array.push_back(p);
+         if (bjson) {
+          unsigned int sec;
+          unsigned int usec;
+          rvs::lp::get_ticks(&sec, &usec);
+          json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                action_name.c_str(), rvs::logresults, sec, usec);
+            if (json_rcqt_node != NULL) {
+              rvs::lp::AddString(json_rcqt_node, "src",
+                               std::to_string(srcnode));
+              rvs::lp::AddString(json_rcqt_node, "dst",
+                               std::to_string(gpu_id[i]));
+              rvs::lp::LogRecordFlush(json_rcqt_node);
+            }
           }
-          srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
-          pebbworker* p = new pebbworker;
-          p->initialize(srcnode, dstnode, false);
-          test_array.push_back(p);
         }
         if (prop_d2h) {
           srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
@@ -271,6 +285,20 @@ int pebbaction::create_threads() {
           pebbworker* p = new pebbworker;
           p->initialize(srcnode, dstnode, false);
           test_array.push_back(p);
+          if (bjson) {
+            unsigned int sec;
+            unsigned int usec;
+            rvs::lp::get_ticks(&sec, &usec);
+            json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                  action_name.c_str(), rvs::logresults, sec, usec);
+            if (json_rcqt_node != NULL) {
+              rvs::lp::AddString(json_rcqt_node, "src",
+                                 std::to_string(gpu_id[i]));
+              rvs::lp::AddString(json_rcqt_node, "dst",
+                                std::to_string(dstnode));
+              rvs::lp::LogRecordFlush(json_rcqt_node);
+            }
+          }
         }
     }
   }
@@ -300,23 +328,6 @@ int pebbaction::destroy_threads() {
 int pebbaction::run() {
   int sts;
   string msg;
-  // check for -j flag (json logging)
-  if (property.find("cli.-j") != property.end()) {
-    unsigned int sec;
-    unsigned int usec;
-
-    rvs::lp::get_ticks(&sec, &usec);
-    bjson = true;
-    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::loginfo, sec, usec);
-    if (json_rcqt_node == NULL) {
-      // log the error
-      msg =
-      action_name + " " + MODULE_NAME + " "
-      + JSON_CREATE_NODE_ERROR;
-      log(msg.c_str(), rvs::logerror);
-    }
-  }
 
   if (!get_all_common_config_keys())
     return -1;
@@ -326,6 +337,24 @@ int pebbaction::run() {
 
   if (sts != 0) {
     return sts;
+  }
+
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end()) {
+    unsigned int sec;
+    unsigned int usec;
+
+    rvs::lp::get_ticks(&sec, &usec);
+    bjson = true;
+    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                        action_name.c_str(), rvs::loginfo, sec, usec);
+    if (json_rcqt_node == NULL) {
+      // log the error
+      msg =
+      action_name + " " + MODULE_NAME + " "
+      + JSON_CREATE_NODE_ERROR;
+      log(msg.c_str(), rvs::logerror);
+    }
   }
 
   if (gst_runs_parallel) {
@@ -358,12 +387,10 @@ int pebbaction::run_single() {
   timer_final.start(gst_run_duration_ms, true);  // ticks only once
   timer_running.start(prop_log_interval);        // ticks continuously
 
-  int i = 0;
   // iterate through test array and invoke tests one by one
   do {
     for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
       (*it)->do_transfer();
-      cout << "do transfer " << i++ << endl;
       sleep(1);
     }
   } while (brun);
@@ -391,11 +418,9 @@ int pebbaction::run_parallel() {
   // let the test run
   brun = true;
 
-  int i = 0;
   // start all worker threads
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->start();
-    cout << "do transfer " << i++ << endl;
   }
 
   // start timers
@@ -434,13 +459,15 @@ int pebbaction::print_running_average() {
                             &current_size, &duration);
 
     double bandiwdth = current_size/duration/(1024*1024*1024);
-    if (bidir) {
-      bandiwdth *=2;
-    }
+
     char buff[64];
     snprintf( buff, sizeof(buff), "%.2f GBps", bandiwdth);
     src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
     dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+    if (src_id == 0)
+      src_id = src_node;
+    if (dst_id == 0)
+      dst_id = dst_node;
 
     msg = "[" + action_name + "] bandwidth  " +
     std::to_string(src_id) + " " + std::to_string(dst_id) + " :" +buff;
@@ -485,6 +512,21 @@ int pebbaction::print_final_average() {
     "  duration: " + std::to_string(duration) + " ms";
 
     rvs::lp::Log(msg, rvs::logresults);
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                          action_name.c_str(), rvs::logresults, sec, usec);
+      if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
+        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
+        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
+        rvs::lp::AddString(json_rcqt_node, "duration (ms)",
+                           std::to_string(duration));
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+    }
   }
   return 0;
 }
