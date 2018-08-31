@@ -3,6 +3,8 @@
 import subprocess
 import os
 import mmap
+import sys
+
 from shutil import copyfile
 
 curr_location = subprocess.check_output(["pwd", ""])
@@ -15,10 +17,12 @@ build_location = os.environ['RVS_BUILD']
 rocm_location = os.environ['RVS']
 # set output folder and configuration file format
 conf_files = "demofile"
-regression_directory = "regression_dir"
+regression_directory = build_location + "/regression"
 
 # location of configuration files
-conf_location = rocm_location + "/rvs/conf"
+conf_location = build_location + "/regression/conf/"
+if not os.path.exists(conf_location):
+    os.makedirs(conf_location)
 
 # copy run and build files to build_location
 copyfile("build", build_location + "/build")
@@ -29,19 +33,20 @@ subprocess.call(["chmod", "+x", "build"])
 subprocess.call(["chmod", "+x", "run"])
 
 # create tests
-os.chdir(conf_location)
-subprocess.call([conf_location + "/pqt_create_conf.py", ""])
-os.chdir(curr_location)
+subprocess.call([rocm_location + "/regression/pqt_create_conf.py", ""])
 
 if not os.path.exists(regression_directory):
     os.makedirs(regression_directory)
 
+#sys.exit()
+
 # open file for regression result
 res = open(regression_directory + "/regression_res", "w")
 
-# build
-os.chdir(build_location)
-os.system("./build")
+#**** build
+#os.chdir(build_location)
+#os.system("./build")
+
 
 # count tests and run them
 number_of_tests = 0
@@ -59,13 +64,13 @@ while True:
     else:
         number_of_tests = number_of_tests - 1
         break
-    os.chdir(build_location)
     
     # run test
-    os.system("./run %s %s" % ("conf/" + confname + ".conf", "json_" + confname + ".txt"))
+    os.chdir(build_location)
+    os.system("./run %s %s" % (conf_location + confname + ".conf", regression_directory + "/json_" + confname + ".txt"))
     
     # check json output
-    result_json = "bin/json_" + confname + ".txt"
+    result_json = regression_directory + "/json_" + confname + ".txt"
     if os.path.isfile(result_json):
         print "Found json file " + conf_files + "\n"
         f = open(result_json)
