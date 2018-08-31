@@ -38,15 +38,8 @@ subprocess.call([rocm_location + "/regression/pqt_create_conf.py", ""])
 if not os.path.exists(regression_directory):
     os.makedirs(regression_directory)
 
-#sys.exit()
-
 # open file for regression result
 res = open(regression_directory + "/regression_res", "w")
-
-#**** build
-#os.chdir(build_location)
-#os.system("./build")
-
 
 # count tests and run them
 number_of_tests = 0
