@@ -69,7 +69,12 @@ Build package:
     cd $WB/build
     make package
 
-_Note:_ based on your OS, only DEB or RPM package will be buile.
+_Note:_ based on your OS, only DEB or RPM package will be built.
 
 For CentOS specific instructions see this [link](./CentOS.md).
 
+
+## Regression
+
+Simple regression has been implemented. You may find more about it
+on this [link](./REGRESSION.md).
