@@ -43,7 +43,7 @@
 
 
 /**
- * @class pqtaction
+ * @class pebbaction
  * @ingroup PEBB
  *
  * @brief PEBB action implementation class
@@ -53,13 +53,13 @@
  *
  */
 class pebbaction : public rvs::actionbase {
-public:
+ public:
   pebbaction();
   virtual ~pebbaction();
-  
+
   virtual int run(void);
 
-protected:
+ protected:
   bool get_all_pebb_config_keys(void);
   bool get_all_common_config_keys(void);
   //! 'true' if "all" is found under "device" key for this action
@@ -70,7 +70,7 @@ protected:
   uint16_t  prop_deviceid;
   //! 'true' if prop_device_id is valid number
   bool      prop_device_id_filtering;
-  
+
   // PQT specific config keys
   void property_get_log_interval(int *error);
   void property_get_h2d();
@@ -86,34 +86,34 @@ protected:
   int  prop_log_interval;
   //! 'true' if bidirectional data transfer is required
   bool prop_bidirectional;
-  
+
+  //! 'true' if host to device transfer is required
   bool prop_h2d;
-  
+  //! 'true' if device to host transfer is required
   bool prop_d2h;
-  
-protected:
-  //int is_peer(uint16_t Src, uint16_t Dst);
+
+ protected:
   int create_threads();
   int destroy_threads();
-  
+
   int run_single();
   int run_parallel();
-  
+
   int print_running_average();
   int print_final_average();
-  
+
   //! 'true' for the duration of test
   bool brun;
   //! bjson field indicates if the json flag is set
   bool bjson;
   //! json_rcqt_node is json node shared through submodules
   void *json_rcqt_node;
-private:
+
+ private:
   void do_running_average(void);
   void do_final_average(void);
-  
-  std::vector<pebbworker*> test_array;
 
+  std::vector<pebbworker*> test_array;
 };
 
 #endif  // PEBB_SO_INCLUDE_ACTION_H_
