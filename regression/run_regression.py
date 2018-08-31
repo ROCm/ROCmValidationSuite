@@ -11,8 +11,8 @@ curr_location = curr_location[0:curr_location_size-1]
 print curr_location
 
 # set paths to build and ROCmValidationSuite folders
-build_location = "/work/dmatichdl/build"
-rocm_location = "/work/dmatichdl/ROCmValidationSuite"
+build_location = os.environ['RVS_BUILD']
+rocm_location = os.environ['RVS']
 # set output folder and configuration file format
 conf_files = "demofile"
 regression_directory = "regression_dir"
