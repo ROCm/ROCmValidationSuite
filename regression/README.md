@@ -11,4 +11,4 @@ Before running the run_regression.py you first need to set the following environ
 
     export WB=/work/yourworkfolder
     export RVS=$WB/ROCmValidationSuite
-    export RVS_BUILD=$WB/build
+    export RVS_BUILD=$RVS/../build
