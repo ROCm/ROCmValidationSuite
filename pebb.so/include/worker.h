@@ -43,16 +43,16 @@
  */
 
 namespace rvs {
-  class hsa;
+class hsa;
 }
 
 class pebbworker : public rvs::ThreadBase {
-public:
+ public:
   //! default constructor
   pebbworker();
   //! default destructor
   virtual ~pebbworker();
-  
+
   //! stop thread loop and exit thread
   void stop();
   //! Sets initiating action name
@@ -63,18 +63,18 @@ public:
   void json(const bool flag) { bjson = flag; }
   //! Returns initiating action name
   const std::string& get_name(void) { return action_name; }
-  
+
   int initialize(int iSrc, int iDst, bool Bidirect);
   int do_transfer();
   void get_running_data(int* Src, int* Dst, bool* Bidirect,
                         size_t* Size, double* Duration);
   void get_final_data(int* Src, int* Dst, bool* Bidirect,
                       size_t* Size, double* Duration);
-  
-protected:
+
+ protected:
   virtual void run(void);
-  
-protected:
+
+ protected:
   //! TRUE if JSON output is required
   bool    bjson;
   //! Loops while TRUE
@@ -83,7 +83,7 @@ protected:
   std::string  action_name;
   //! Name of the action which stops thread
   std::string  stop_action_name;
-  
+
   //! ptr to RVS HSA singleton wrapper
   rvs::hsa* pHsa;
   //! source NUMA node
@@ -92,20 +92,20 @@ protected:
   int dst_node;
   //! 'true' for bidirectional transfer
   bool bidirect;
-  
+
   //! Current size of transfer data
   size_t current_size;
-  
+
   //! running total for size (bytes)
   size_t running_size;
   //! running total for duration (sec)
   double running_duration;
-  
+
   //! final total size (bytes)
   size_t total_size;
   //! final total duration (sec)
   double total_duration;
-  
+
   //! synchronization mutex
   std::mutex cntmutex;
 };

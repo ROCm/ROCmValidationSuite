@@ -566,10 +566,26 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
         continue;
 
       // grant src agen access to destination buffer
-      status = hsa_amd_agents_allow_access(1,
-                                           &agent_list[SrcAgent].agent,
-                                           NULL,
-                                           dstbuff);
+      if (agent_list[SrcAgent].agent_device_type == "CPU" ||
+        agent_list[DstAgent].agent_device_type == "GPU") {
+        status = hsa_amd_agents_allow_access(1,
+                                            &agent_list[DstAgent].agent,
+                                            NULL,
+                                            srcbuff);
+        if (status != HSA_STATUS_SUCCESS)
+          continue;
+        status = hsa_amd_agents_allow_access(1,
+                                             &agent_list[SrcAgent].agent,
+                                             NULL,
+                                             dstbuff);
+        if (status != HSA_STATUS_SUCCESS)
+          continue;
+      } else {
+        status = hsa_amd_agents_allow_access(1,
+                                            &agent_list[SrcAgent].agent,
+                                            NULL,
+                                            dstbuff);
+      }
       if (status != HSA_STATUS_SUCCESS) {
         // cannot grant access, release buffer and skip to the next pool
         hsa_amd_memory_pool_free(dstbuff);
