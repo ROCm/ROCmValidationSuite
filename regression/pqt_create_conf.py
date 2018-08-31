@@ -2,6 +2,8 @@
 
 # This script only creates valid combinations, invalid ones will be created as special cases
 
+import os
+
 from random import seed
 from random import random
 from random import sample
@@ -9,13 +11,21 @@ from random import sample
 # global variables
 module_name = "demofile"
 
-gpu_ids        = [3254, 33367, 50599]
+#gpu_ids        = [3254, 33367, 50599]
+gpu_ids        = [3254]
 log_interval   = [1000]
 duration       = [10000]
 device_id      = [-1, 26720]
 test_bandwidth = ['true', 'false']
 bidirectional  = ['true', 'false']
 parralel       = ['true', 'false']
+
+# RVS build folder
+build_location = os.environ['RVS_BUILD']
+# location of configuration files
+conf_location = build_location + "/regression/conf/"
+if not os.path.exists(conf_location):
+    os.makedirs(conf_location)
 
 counter = 0
 total_iterations = (len(gpu_ids) + 1) * len(log_interval) * len(duration) * len(test_bandwidth) * len(bidirectional) * len(parralel) * len(device_id)
@@ -38,7 +48,7 @@ for test_bandwidth_f in test_bandwidth:
                                 break
                             
                             # for each combination create the conf file
-                            filename = module_name + str(counter) + ".conf"
+                            filename = conf_location + module_name + str(counter) + ".conf"
                             print 'Iteration is %d' % (counter) + ", working on conf file " + filename
                             f = open(filename, "w")
                             counter = counter + 1
