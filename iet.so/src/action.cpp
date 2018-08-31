@@ -92,56 +92,6 @@ using std::fstream;
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
-#define IRQ_PATH_MAX_LENGTH             256
-#define SMI_DEVICE_FOLDER_BASE_NAME     "device"
-#define HWMON_FOLDER_BASE_NAME          "hwmon"
-#define GPU_POWER_DATA_FILE             "power1_average"
-
-/**
- * @brief call-back function to append to a vector of Devices
- * @param d represent device
- * @param p pointer
- * @return true if dev connected to monitor, false otherwise
- */
-static bool smi_get_gpu_devices_list(
-                const std::shared_ptr<amd::smi::Device> &d, void *p) {
-  std::string val_str;
-  assert(p != nullptr);
-
-  std::vector<std::shared_ptr<amd::smi::Device>> *device_list =
-    reinterpret_cast<std::vector<std::shared_ptr<amd::smi::Device>> *>(p);
-
-  if (d->monitor() != nullptr) {
-    device_list->push_back(d);
-  }
-  return false;
-}
-
-/**
- * @brief obtains the full path of the file containing GPU power related data
- * @param path base path
- * @return power data file full path
- */
-static string get_hwmon_entry(const std::string &path) {
-    DIR *dirp;
-    struct dirent *dir;
-    dirp = opendir(path.c_str());
-    if (dirp) {
-        while ((dir = readdir(dirp)) != 0) {
-            if ((strcmp(dir->d_name, ".") == 0) ||
-            (strcmp(dir->d_name, "..") == 0))
-                continue;
-            if (strstr(dir->d_name, HWMON_FOLDER_BASE_NAME) != NULL) {
-                closedir(dirp);
-                return path + "/" + dir->d_name + "/" + GPU_POWER_DATA_FILE;
-            }
-        }
-        closedir(dirp);
-        return "";
-    } else {
-        return "";
-    }
-}
 
 /**
  * @brief default class constructor
@@ -463,7 +413,7 @@ bool action::do_edp_test(void) {
             workers[i].set_name(action_name);
             workers[i].set_gpu_id((*it).gpu_id);
             workers[i].set_gpu_device_index((*it).hip_gpu_deviceid);
-            workers[i].set_gpu_hwmon_entry((*it).gpu_hwmon_power_entry);
+            workers[i].set_pwr_device_id((*it).pwr_device_id);
             workers[i].set_run_wait_ms(gst_run_wait_ms);
             workers[i].set_run_duration_ms(gst_run_duration_ms);
             workers[i].set_ramp_interval(iet_ramp_interval);
@@ -497,26 +447,6 @@ bool action::do_edp_test(void) {
         }
     }
     return true;
-}
-
-/**
- * @brief gets irq value for device
- * @param dev_path device's path (within the sysfs)
- * @return irq value
- */
-const std::string action::get_irq(const std::string dev_path) {
-    std::ifstream f_id;
-    char path[IRQ_PATH_MAX_LENGTH];
-    string irq = "";
-
-    snprintf(path, IRQ_PATH_MAX_LENGTH, "%s/device/irq", dev_path.c_str());
-    f_id.open(path);
-
-    if (f_id.is_open()) {
-        f_id >> irq;
-        f_id.close();
-    }
-    return irq;
 }
 
 /**
@@ -555,16 +485,16 @@ int action::get_num_amd_gpu_devices(void) {
 }
 
 /**
- * @brief retrieves the hwmon path (and some other info) for the given GPU
- * and adds it to the list of those that will run the EDPp test
+ * @brief retrieves the GPU identification data  and adds it to the list of 
+ * those that will run the EDPp test
  * @param dev_location_id GPU device location ID
- * @param gpu_irq GPU's IRQ
+ * @param dev_idx index of the GPU device as required by the rocm_smi lib
  * @param gpu_id GPU's ID as exported by KFD
  * @param hip_num_gpu_devices number of GPU devices (as reported by HIP API)
  * @return true if all info could be retrieved and the gpu was successfully to
  * the EDPp test list, false otherwise
  */
-bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
+bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, uint32_t dev_idx,
                                   int32_t gpu_id, int hip_num_gpu_devices) {
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
@@ -575,33 +505,14 @@ bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
         // with one of those found while querying the pci bus
         uint16_t hip_dev_location_id =
                 ((((uint16_t) (props.pciBusID)) << 8) | (props.pciDeviceID));
-
         if (hip_dev_location_id == dev_location_id) {
-            // now try finding the hwmon entry which is
-            // needed for the power related data
-            for (auto cgpu_dev : monitor_devices) {
-                // get irq of device
-                string irq = get_irq(cgpu_dev ->path());
-                if (irq != "" && gpu_irq == std::stoi(irq)) {
-                    // found the device
-                    string base_folder_hwmon = cgpu_dev->path() +
-                            "/" + SMI_DEVICE_FOLDER_BASE_NAME +
-                            "/" + HWMON_FOLDER_BASE_NAME;
-                    string cgpu_hwmon_power_entry =
-                        get_hwmon_entry(base_folder_hwmon);
-                    if (cgpu_hwmon_power_entry != "") {
-                        gpu_hwmon_info cgpu_info;
-                        cgpu_info.hip_gpu_deviceid = i;
-                        cgpu_info.gpu_id = gpu_id;
-                        cgpu_info.gpu_hwmon_power_entry =
-                            cgpu_hwmon_power_entry;
-                        edpp_gpus.push_back(cgpu_info);
+            gpu_hwmon_info cgpu_info;
+            cgpu_info.hip_gpu_deviceid = i;
+            cgpu_info.gpu_id = gpu_id;
+            cgpu_info.pwr_device_id = dev_idx;
+            edpp_gpus.push_back(cgpu_info);
 
-                        return true;
-                    }
-                    break;
-                }
-            }
+            return true;
         }
     }
 
@@ -619,16 +530,11 @@ int action::get_all_selected_gpus(void) {
     int hip_num_gpu_devices;
     struct pci_access *pacc;
     struct pci_dev *pci_cdev;
-    amd::smi::RocmSMI hw;
+    uint16_t dev_idx = 0;
 
     hip_num_gpu_devices = get_num_amd_gpu_devices();
     if (hip_num_gpu_devices == 0)
         return 0;  // no AMD compatible GPU found!
-
-    // get GPU devices via smi lib
-    hw.DiscoverDevices();
-    hw.IterateSMIDevices(smi_get_gpu_devices_list,
-      reinterpret_cast<void *>(&monitor_devices));
 
     // get the pci_access structure
     pacc = pci_alloc();
@@ -683,10 +589,13 @@ int action::get_all_selected_gpus(void) {
                     cur_gpu_selected = true;
             }
 
-            if (cur_gpu_selected)
-                if (add_gpu_to_edpp_list(dev_location_id, pci_cdev->irq,
+            if (cur_gpu_selected) {
+                if (add_gpu_to_edpp_list(dev_location_id, dev_idx,
                     gpu_id, hip_num_gpu_devices))
                     amd_gpus_found = true;
+            }
+
+            dev_idx++;
         }
     }
 

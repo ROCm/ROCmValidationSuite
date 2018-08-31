@@ -30,9 +30,9 @@
 #include <mutex>
 #include <chrono>
 
-#include "hwmon_util.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
+#include "rocm_smi/rocm_smi.h"
 
 #define MODULE_NAME                             "iet"
 #define POWER_PROCESS_DELAY                     5
@@ -132,7 +132,7 @@ void log_worker::log_to_json(const std::string &key, const std::string &value,
 void log_worker::run() {
     std::chrono::time_point<std::chrono::system_clock> start_time, end_time;
     float cur_power_value, avg_power = 0;
-    uint64_t power_sampling_iters = 0, cur_milis;
+    uint64_t power_sampling_iters = 0, cur_milis, last_avg_power;
     string msg;
 
     {
@@ -155,8 +155,10 @@ void log_worker::run() {
         }
 
         // get GPU's current average power
-        cur_power_value = get_power_data(gpu_hwmon_entry);
-        if (cur_power_value != 0) {
+        rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
+                                    &last_avg_power);
+        if (rmsi_stat == RSMI_STATUS_SUCCESS) {
+            cur_power_value = static_cast<float>(last_avg_power)/1e3;
             avg_power += cur_power_value;
             power_sampling_iters++;
         }
