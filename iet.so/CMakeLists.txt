@@ -73,7 +73,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "hip_hcc")
-set(ROCM_SMI_LIB "rocm_smi64")
+set(ROCM_SMI_LIB "rocm_smi")
 
 
 # Determine Roc Runtime header files are accessible
@@ -121,7 +121,7 @@ set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 include_directories(include ../include)
 
 set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
-  src/rvs_module.cpp src/action.cpp src/iet_worker.cpp src/hwmon_util.cpp ../src/rvs_blas.cpp src/blas_worker.cpp src/log_worker.cpp)
+  src/rvs_module.cpp src/action.cpp src/iet_worker.cpp ../src/rvs_blas.cpp src/blas_worker.cpp src/log_worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})

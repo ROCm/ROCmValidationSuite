@@ -45,14 +45,15 @@ extern "C" {
 using std::vector;
 using std::string;
 
-//! structure containing hwmon related info
+//! structure containing GPU identification related data
 struct gpu_hwmon_info {
-    //! GPU device index (0.n)
+    //! GPU device index (0.n) as reported by HIP API
     int hip_gpu_deviceid;
     //! real GPU ID (e.g.: 53645) as exported by kfd
     uint16_t gpu_id;
-    //! gpu_hwmon_power_entry
-    std::string gpu_hwmon_power_entry;
+    //! device index as required by the rocm_smi lib (can)
+    //! be different from that of hip_gpu_deviceid
+    uint32_t pwr_device_id;
 };
 
 /**
@@ -99,10 +100,10 @@ class action: public rvs::actionbase {
     //! GPU device type config key value
     uint16_t deviceid;
 
-    //! list of GPUs (along with some hwmon data) selected for EDPp test
+    //! list of GPUs (along with some identification data) which are
+    //! selected for EDPp test
     std::vector<gpu_hwmon_info> edpp_gpus;
-    //! list of SMI monitor devices
-    std::vector<std::shared_ptr<amd::smi::Device>> monitor_devices;
+
     // configuration properties getters
 
     // IET specific config keys
@@ -121,8 +122,7 @@ class action: public rvs::actionbase {
     * @return true if no fatal error occured, false otherwise
     */
     bool get_all_common_config_keys(void);
-    const std::string get_irq(const std::string dev_path);
-    bool add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
+    bool add_gpu_to_edpp_list(uint16_t dev_location_id, uint32_t dev_idx,
                               int32_t gpu_id, int hip_num_gpu_devices);
 
 /**
