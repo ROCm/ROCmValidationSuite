@@ -441,8 +441,6 @@ void IETWorker::run() {
     if (run_duration_ms < MAX_MS_TRAIN_GPU)
         run_duration_ms += MAX_MS_TRAIN_GPU;
 
-    rsmi_init(0);
-
     if (!do_iet_ramp(&error, &err_description)) {
         if (gpu_worker != nullptr) {
             // terminate the blas worker thread
@@ -496,6 +494,4 @@ void IETWorker::run() {
                     (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE),
                         rvs::logresults);
     }
-
-    rsmi_shut_down();
 }

@@ -426,6 +426,8 @@ bool action::do_edp_test(void) {
             i++;
         }
 
+        rsmi_init(0);
+
         if (gst_runs_parallel) {
             for (i = 0; i < edpp_gpus.size(); i++)
                 workers[i].start();
@@ -439,6 +441,8 @@ bool action::do_edp_test(void) {
                 workers[i].join();
             }
         }
+
+        rsmi_shut_down();
 
         if (gst_run_count != 0) {
             k++;
