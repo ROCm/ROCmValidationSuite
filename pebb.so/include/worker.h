@@ -64,7 +64,7 @@ class pebbworker : public rvs::ThreadBase {
   //! Returns initiating action name
   const std::string& get_name(void) { return action_name; }
 
-  int initialize(int iSrc, int iDst, bool Bidirect);
+  int initialize(int iSrc, int iDst, bool h2d, bool d2h);
   int do_transfer();
   void get_running_data(int* Src, int* Dst, bool* Bidirect,
                         size_t* Size, double* Duration);
@@ -92,6 +92,10 @@ class pebbworker : public rvs::ThreadBase {
   int dst_node;
   //! 'true' for bidirectional transfer
   bool bidirect;
+  //! 'true' if host to device transfer is required
+  bool prop_h2d;
+  //! 'true' if device to host transfer is required
+  bool prop_d2h;
 
   //! Current size of transfer data
   size_t current_size;

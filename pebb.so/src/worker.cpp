@@ -93,14 +93,19 @@ void pebbworker::stop() {
  *
  * @param Src source NUMA node
  * @param Dst destination NUMA node
- * @param Bidirect 'true' for bidirectional transfer
+ * @param h2d 'true' for host to device transfer
+ * @param d2h 'true' for device to host transfer
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbworker::initialize(int Src, int Dst, bool Bidirect) {
+int pebbworker::initialize(int Src, int Dst, bool h2d, bool d2h) {
   src_node = Src;
   dst_node = Dst;
-  bidirect = Bidirect;
+  bidirect = d2h && h2d;
+
+  prop_d2h = d2h;
+  prop_h2d = h2d;
+
   pHsa = rvs::hsa::Get();
 
   running_size = 0;
@@ -127,8 +132,15 @@ int pebbworker::do_transfer() {
 
   for (size_t i = 0; i < pHsa->size_list.size(); i++) {
     current_size = pHsa->size_list[i];
-    sts = pHsa->SendTraffic(src_node, dst_node, current_size,
-                            bidirect, &duration);
+
+    // if needed, swap source and destination
+    if (!prop_h2d && prop_d2h) {
+      sts = pHsa->SendTraffic(dst_node, src_node, current_size,
+                              bidirect, &duration);
+    } else {
+      sts = pHsa->SendTraffic(src_node, dst_node, current_size,
+                              bidirect, &duration);
+    }
     if (sts) {
       std::cerr << "RVS-PEBB: internal error, src: " << src_node
       << "   dst: " << dst_node
