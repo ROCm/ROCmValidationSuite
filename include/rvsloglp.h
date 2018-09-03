@@ -66,7 +66,8 @@ class lp {
   static void  AddInt(void* Parent, const char* Key, const int Val);
   static void  AddNode(void* Parent, void* Child);
   static bool  get_ticks(unsigned int* psec, unsigned int* pusec);
-
+  static void  Stop(uint16_t flags);
+  static bool  Stopping();
 
  protected:
   //! Module init structure passed through Initialize() method
