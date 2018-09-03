@@ -24,44 +24,34 @@
  *******************************************************************************/
 #include "worker.h"
 
+#ifdef __cplusplus
+extern "C" {
+  #endif
+  #include <pci/pci.h>
+  #include <linux/pci.h>
+  #ifdef __cplusplus
+}
+#endif
+
 #include <chrono>
 #include <map>
 #include <string>
-#include <vector>
 #include <algorithm>
 #include <iostream>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <pci/pci.h>
-#include <linux/pci.h>
-#ifdef __cplusplus
-}
-#endif
+#include <mutex>
 
 #include "rvs_module.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvsloglp.h"
+#include "rvshsa.h"
 
 using std::string;
 using std::vector;
 using std::map;
 
-Worker::Worker() {
-  bfiltergpu = false;
-}
-Worker::~Worker() {}
-
-/**
- * @brief Sets GPU IDs for filtering
- * @arg GpuIds Array of GPU GpuIds
- */
-void Worker::set_gpuids(const std::vector<int>& GpuIds) {
-  gpuids = GpuIds;
-  bfiltergpu = true;
-}
+pebbworker::pebbworker() {}
+pebbworker::~pebbworker() {}
 
 /**
  * @brief Thread function
@@ -69,70 +59,25 @@ void Worker::set_gpuids(const std::vector<int>& GpuIds) {
  * Loops while brun == TRUE and performs polled monitoring avery 1msec.
  *
  * */
-void Worker::run() {
-  brun = true;
-
-  unsigned int sec;
-  unsigned int usec;
-  void* r;
-
-  // get timestamp
-  rvs::lp::get_ticks(&sec, &usec);
-
-  // add string output
-  string msg("[" + action_name + "] pebb " + strgpuids + " started");
-  rvs::lp::Log(msg, rvs::logresults, sec, usec);
-  // get timestamp
-  rvs::lp::get_ticks(&sec, &usec);
-
-  // add JSON output
-  r = rvs::lp::LogRecordCreate("pebb", action_name.c_str(), rvs::logresults,
-                               sec, usec);
-  rvs::lp::AddString(r, "msg", "started");
-  rvs::lp::AddString(r, "device", strgpuids);
-  rvs::lp::LogRecordFlush(r);
-
-  // worker thread has started
+void pebbworker::run() {
   while (brun) {
-    rvs::lp::Log("[" + action_name + "] pebb worker thread is running...",
-                 rvs::logtrace);
-
-    // add PEBB specific processing hereby
-    sleep(10);
+    do_transfer();
+    std::this_thread::yield();
   }
-
-  // get timestamp
-  rvs::lp::get_ticks(&sec, &usec);
-
-  // add string output
-  msg = "[" + stop_action_name + "] pebb all stopped";
-  rvs::lp::Log(msg, rvs::logresults, sec, usec);
-
-  // add JSON output
-  r = rvs::lp::LogRecordCreate("PESM",
-                               stop_action_name.c_str(), rvs::logresults,
-                               sec, usec);
-  rvs::lp::AddString(r, "msg", "stopped");
-  rvs::lp::LogRecordFlush(r);
-
-  rvs::lp::Log("[" + stop_action_name + "] pebb worker thread has finished",
-               rvs::logdebug);
+  log("pebb worker thread has finished", rvs::logdebug);
 }
 
 /**
- * @brief Stop worker thread
+ * @brief Stop processing
  *
- * Sets brun member to FALSE thus signaling end of monitoring.
+ * Sets brun member to FALSE thus signaling end of processing.
  * Then it waits for std::thread to exit before returning.
  *
  * */
-void Worker::stop() {
-  rvs::lp::Log("[" + stop_action_name + "] pebb in Worker::stop()",
-               rvs::logtrace);
-  // reset "run" flag
+void pebbworker::stop() {
+  log("pebb in pebbworker::stop()", rvs::logdebug);
+
   brun = false;
-  // (give thread chance to finish processing and exit)
-  sleep(200);
 
   // wait a bit to make sure thread has exited
   try {
@@ -141,4 +86,141 @@ void Worker::stop() {
   }
   catch(...) {
   }
+}
+
+/**
+ * @brief Init worker object and set transfer parameters
+ *
+ * @param Src source NUMA node
+ * @param Dst destination NUMA node
+ * @param h2d 'true' for host to device transfer
+ * @param d2h 'true' for device to host transfer
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pebbworker::initialize(int Src, int Dst, bool h2d, bool d2h) {
+  src_node = Src;
+  dst_node = Dst;
+  bidirect = d2h && h2d;
+
+  prop_d2h = d2h;
+  prop_h2d = h2d;
+
+  pHsa = rvs::hsa::Get();
+
+  running_size = 0;
+  running_duration = 0;
+
+  total_size = 0;
+  total_duration = 0;
+
+  return 0;
+}
+
+/**
+ * @brief Executes data transfer
+ *
+ * Based on transfer parameters, initiates and performs one way or
+ * bidirectional data transfer. Resulting measurements are compounded in running
+ * totals for periodical printout during the test.
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pebbworker::do_transfer() {
+  double duration;
+  int sts;
+
+  for (size_t i = 0; i < pHsa->size_list.size(); i++) {
+    current_size = pHsa->size_list[i];
+
+    // if needed, swap source and destination
+    if (!prop_h2d && prop_d2h) {
+      sts = pHsa->SendTraffic(dst_node, src_node, current_size,
+                              bidirect, &duration);
+    } else {
+      sts = pHsa->SendTraffic(src_node, dst_node, current_size,
+                              bidirect, &duration);
+    }
+    if (sts) {
+      std::cerr << "RVS-PEBB: internal error, src: " << src_node
+      << "   dst: " << dst_node
+      << "   current size: " << current_size << " status "<< sts <<std::endl;
+      return sts;
+    }
+
+    {
+      std::lock_guard<std::mutex> lk(cntmutex);
+      running_size += current_size;
+      running_duration += duration;
+    }
+  }
+  return 0;
+}
+
+/**
+ * @brief Get running cumulatives for data trnasferred and time ellapsed
+ *
+ * @param Src [out] source NUMA node
+ * @param Dst [out] destination NUMA node
+ * @param Bidirect [out] 'true' for bidirectional transfer
+ * @param Size [out] cumulative size of transferred data in this sampling
+ * interval (in bytes)
+ * @param Duration [out] cumulative duration of transfers in this sampling
+ * interval (in seconds)
+ *
+ * */
+void pebbworker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
+                                 size_t* Size, double* Duration) {
+  // lock data until totalling has finished
+  std::lock_guard<std::mutex> lk(cntmutex);
+
+  // update total
+  total_size += running_size;
+  total_duration += running_duration;
+
+  *Src = src_node;
+  *Dst = dst_node;
+  *Bidirect = bidirect;
+  *Size = running_size;
+  *Duration = running_duration;
+
+  // reset running totas
+  running_size = 0;
+  running_duration = 0;
+}
+
+/**
+ * @brief Get final cumulatives for data trnasferred and time ellapsed
+ *
+ * @param Src [out] source NUMA node
+ * @param Dst [out] destination NUMA node
+ * @param Bidirect [out] 'true' for bidirectional transfer
+ * @param Size [out] cumulative size of transferred data in
+ * this test (in bytes)
+ * @param Duration [out] cumulative duration of transfers in
+ * this test (in seconds)
+ *
+ * */
+void pebbworker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
+                               size_t* Size, double* Duration) {
+  // lock data until totalling has finished
+  std::lock_guard<std::mutex> lk(cntmutex);
+
+  // update total
+  total_size += running_size;
+  total_duration += running_duration;
+
+  *Src = src_node;
+  *Dst = dst_node;
+  *Bidirect = bidirect;
+  *Size = total_size;
+  *Duration = total_duration;
+
+  // reset running totas
+  running_size = 0;
+  running_duration = 0;
+
+  // reset final toral
+  total_size = 0;
+  total_duration = 0;
 }

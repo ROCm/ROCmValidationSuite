@@ -1,5 +1,5 @@
 /********************************************************************************
- *
+ * 
  * Copyright (c) 2018 ROCm Developer Tools
  *
  * MIT LICENSE:
@@ -26,44 +26,50 @@
 #define PEBB_SO_INCLUDE_WORKER_H_
 
 #include <string>
-#include <vector>
+#include <mutex>
 
 #include "rvsthreadbase.h"
 
 
 /**
- * @class Worker
+ * @class pebbworker
  * @ingroup PEBB
  *
- * @brief PEBB worker thread implementation class
+ * @brief Bandwidth test implementation class
  *
- * Derives from rvs::ThreadBase and implements actual PEBB functionality
+ * Derives from rvs::ThreadBase and implements actual test functionality
  * in its run() method.
  *
  */
 
-class Worker : public rvs::ThreadBase {
- public:
-  Worker();
-  virtual ~Worker();
+namespace rvs {
+class hsa;
+}
 
-  //! stop thread loope and exit thread
-  void stop(void);
+class pebbworker : public rvs::ThreadBase {
+ public:
+  //! default constructor
+  pebbworker();
+  //! default destructor
+  virtual ~pebbworker();
+
+  //! stop thread loop and exit thread
+  void stop();
   //! Sets initiating action name
   void set_name(const std::string& name) { action_name = name; }
   //! sets stopping action name
   void set_stop_name(const std::string& name) { stop_action_name = name; }
-  //! Sets device id for filtering
-  void set_deviceid(const int id) { device_id = id; }
-  //! Sets GPU IDs for filtering
-  void set_gpuids(const std::vector<int>& GpuIds);
-  //! Sets GPU IDs for filtering (string used in messages)
-  //! @param Devices List of devices to monitor
-  void set_strgpuids(const std::string& Devices) { strgpuids = Devices; }
   //! Sets JSON flag
   void json(const bool flag) { bjson = flag; }
   //! Returns initiating action name
   const std::string& get_name(void) { return action_name; }
+
+  int initialize(int iSrc, int iDst, bool h2d, bool d2h);
+  int do_transfer();
+  void get_running_data(int* Src, int* Dst, bool* Bidirect,
+                        size_t* Size, double* Duration);
+  void get_final_data(int* Src, int* Dst, bool* Bidirect,
+                      size_t* Size, double* Duration);
 
  protected:
   virtual void run(void);
@@ -72,21 +78,40 @@ class Worker : public rvs::ThreadBase {
   //! TRUE if JSON output is required
   bool    bjson;
   //! Loops while TRUE
-  bool     brun;
-  //! device id to filter for. 0 if no filtering.
-  int device_id;
-  //! GPU id filtering flag
-  bool bfiltergpu;
-  //! list of GPU devices to monitor
-  std::vector<int> gpuids;
-  //! list of GPU devices to monitor (string used in messages)
-  std::string strgpuids;
-  //! Name of the action which initiated monitoring
+  bool    brun;
+  //! Name of the action which initiated thread
   std::string  action_name;
-  //! Name of the action which stops monitoring
+  //! Name of the action which stops thread
   std::string  stop_action_name;
+
+  //! ptr to RVS HSA singleton wrapper
+  rvs::hsa* pHsa;
+  //! source NUMA node
+  int src_node;
+  //! destination NUMA node
+  int dst_node;
+  //! 'true' for bidirectional transfer
+  bool bidirect;
+  //! 'true' if host to device transfer is required
+  bool prop_h2d;
+  //! 'true' if device to host transfer is required
+  bool prop_d2h;
+
+  //! Current size of transfer data
+  size_t current_size;
+
+  //! running total for size (bytes)
+  size_t running_size;
+  //! running total for duration (sec)
+  double running_duration;
+
+  //! final total size (bytes)
+  size_t total_size;
+  //! final total duration (sec)
+  double total_duration;
+
+  //! synchronization mutex
+  std::mutex cntmutex;
 };
-
-
 
 #endif  // PEBB_SO_INCLUDE_WORKER_H_

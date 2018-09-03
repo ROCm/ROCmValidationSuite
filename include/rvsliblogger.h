@@ -70,6 +70,8 @@ class logger {
   static  void   AddNode(void* Parent, void* Child);
   static  int    ToFile(const std::string& Row);
   static  int    JsonPatchAppend(void);
+  static  void   Stop(uint16_t flags);
+  static  bool   Stopping(void);
 
  protected:
   //! Current logging level (0..5)
@@ -86,6 +88,10 @@ class logger {
   static std::mutex cout_mutex;
   //! Mutex to synchronize log file output
   static std::mutex log_mutex;
+  //! flag indicating stop loging was requested
+  static bool bStop;
+  //! stop flags
+  static uint16_t stop_flags;
 };
 
 }  // namespace rvs

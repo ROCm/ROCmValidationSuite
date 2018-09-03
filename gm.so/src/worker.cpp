@@ -30,6 +30,7 @@ all
 #include "worker.h"
 
 #include <assert.h>
+#include <stdlib.h>
 
 #include <map>
 #include <string>
@@ -100,6 +101,7 @@ static bool GetMonitorDevices(const std::shared_ptr<amd::smi::Device> &d,
 
 Worker::Worker() {
   bfiltergpu = false;
+  force = false;
   auto metric_length = std::end(metric_names) - std::begin(metric_names);
     for (int i = 0; i < metric_length; i++) {
         bounds.insert(std::pair<string, Metric_bound>(metric_names[i],
@@ -377,7 +379,15 @@ void Worker::run() {
               log(msg.c_str(), rvs::loginfo);
               met_violation[val_str].mem_clock_violation++;
               if (term) {
-                // exit
+                if (force) {
+                  // stop logging
+                  rvs::lp::Stop(1);
+                  // force exit
+                  exit(EXIT_FAILURE);
+                } else {
+                  // just signal stop processing
+                  rvs::lp::Stop(0);
+                }
                 brun = false;
                 break;
               }
@@ -411,7 +421,15 @@ void Worker::run() {
               log(msg.c_str(), rvs::loginfo);
               met_violation[val_str].clock_violation++;
               if (term) {
-                // exit
+                if (force) {
+                  // stop logging
+                  rvs::lp::Stop(1);
+                  // force exit
+                  exit(EXIT_FAILURE);
+                } else {
+                  // just signal stop processing
+                  rvs::lp::Stop(0);
+                }
                 brun = false;
                 break;
               }
@@ -442,7 +460,15 @@ void Worker::run() {
             log(msg.c_str(), rvs::loginfo);
             met_violation[val_str].temp_violation++;
             if (term) {
-              // exit
+              if (force) {
+                // stop logging
+                rvs::lp::Stop(1);
+                // force exit
+                exit(EXIT_FAILURE);
+              } else {
+                // just signal stop processing
+                rvs::lp::Stop(0);
+              }
               brun = false;
               break;
             }
@@ -476,7 +502,15 @@ void Worker::run() {
               log(msg.c_str(), rvs::loginfo);
               met_violation[val_str].fan_violation++;
               if (term) {
-                // exit
+                if (force) {
+                  // stop logging
+                  rvs::lp::Stop(1);
+                  // force exit
+                  exit(EXIT_FAILURE);
+                } else {
+                  // just signal stop processing
+                  rvs::lp::Stop(0);
+                }
                 brun = false;
                 break;
               }
@@ -506,7 +540,15 @@ void Worker::run() {
               log(msg.c_str(), rvs::loginfo);
               met_violation[val_str].power_violation++;
               if (term) {
-                // exit
+                if (force) {
+                  // stop logging
+                  rvs::lp::Stop(1);
+                  // force exit
+                  exit(EXIT_FAILURE);
+                } else {
+                  // just signal stop processing
+                  rvs::lp::Stop(0);
+                }
                 brun = false;
                 break;
               }
