@@ -472,6 +472,19 @@ int pebbaction::print_running_average() {
     msg = "[" + action_name + "] bandwidth  " +
     std::to_string(src_id) + " " + std::to_string(dst_id) + " :" +buff;
     rvs::lp::Log(msg, rvs::loginfo);
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                          action_name.c_str(), rvs::loginfo, sec, usec);
+      if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
+        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
+        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+    }
   }
 
   return 0;
