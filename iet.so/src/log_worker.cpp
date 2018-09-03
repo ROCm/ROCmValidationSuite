@@ -155,6 +155,7 @@ void log_worker::run() {
         }
 
         // get GPU's current average power
+
         rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
                                     &last_avg_power);
         if (rmsi_stat == RSMI_STATUS_SUCCESS) {

@@ -51,8 +51,8 @@ struct gpu_hwmon_info {
     int hip_gpu_deviceid;
     //! real GPU ID (e.g.: 53645) as exported by kfd
     uint16_t gpu_id;
-    //! device index as required by the rocm_smi lib (can)
-    //! be different from that of hip_gpu_deviceid
+    //! device index as required by the rocm_smi lib
+    //! can be different from hip_gpu_deviceid
     uint32_t pwr_device_id;
 };
 
