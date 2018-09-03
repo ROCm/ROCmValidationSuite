@@ -48,6 +48,8 @@ int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
   mi.cbAddString       = pMi->cbAddString;
   mi.cbAddInt          = pMi->cbAddInt;
   mi.cbAddNode         = pMi->cbAddNode;
+  mi.cbStop            = pMi->cbStop;
+  mi.cbStopping        = pMi->cbStopping;
 
   return 0;
 }
@@ -248,4 +250,26 @@ bool rvs::lp::get_ticks(unsigned int* psecs, unsigned int* pusecs) {
   *psecs  = ts.tv_sec;
 
   return true;
+}
+
+/**
+ * @brief Signals that RVS is about to terminate.
+ *
+ * This method will prevent all further
+ * printout to cout and to log file if any. Log file will be closed and properly
+ * terminated before returning from this function.
+ *
+ */
+void  rvs::lp::Stop(uint16_t flags) {
+  (*mi.cbStop)(flags);
+}
+
+/**
+ * @brief Returns stop flag
+ *
+ * Checks if a module requested RVS processing to stop
+ *
+ */
+bool  rvs::lp::Stopping() {
+  return (*mi.cbStopping)();
 }

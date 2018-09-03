@@ -72,6 +72,8 @@ class Worker : public rvs::ThreadBase {
   void set_log_int(int interval) { log_interval = interval; }
   //! sets terminate key
   void set_terminate(bool term_true) { term = term_true; }
+  //! sets force key
+  void set_force(bool flag) { force = flag; }
   //! sets true/false for metric
   void set_metr_mon(std::string metr_name, bool metr_true);
   //! sets bound values for metric
@@ -110,6 +112,8 @@ class Worker : public rvs::ThreadBase {
   int log_interval;
   //! terminate key
   bool term;
+  //! force key
+  bool force;
   //! number of times of get metric
   int count;
 //! gpu_id and average metrics values
