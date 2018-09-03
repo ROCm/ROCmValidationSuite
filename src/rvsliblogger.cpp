@@ -352,6 +352,9 @@ int rvs::logger::JsonPatchAppend() {
 
   FILE * pFile;
   pFile = fopen(logfile.c_str() , "r+");
+  if (pFile == nullptr) {
+    return -1;
+  }
   fseek(pFile , -1 , SEEK_END);
   fputs("," , pFile);
   fclose(pFile);
