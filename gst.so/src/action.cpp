@@ -293,6 +293,10 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             }
         }
 
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return false;
+
         if (gst_run_count != 0) {
             k++;
             if (k == gst_run_count)
