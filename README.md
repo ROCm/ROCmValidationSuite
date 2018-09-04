@@ -69,7 +69,7 @@ Build package:
     make package
 
 _**Note:**_ based on your OS, only DEB or RPM package will be built. You may
-ignore an error for the unrelated configuraion
+ignore an error for the unrelated configuration
 
 
 ## Running RVS
@@ -79,11 +79,17 @@ ignore an error for the unrelated configuraion
     cd ../build/bin
     sudo ./rvs -d 3
 
-### Running without install (just copying files)
+### Running without install
 
-sudo LD_LIBRARY_PATH=<_rocm_smi_lib_path> ./rvs ...
+In general, it is possible to run RVS by simply coping all relevant files
+onto another location (e.g., Docker image). Please note that in addition to
+files in `bin/` folder you will also need to copy `rocm_smi_lib64.so`
 
-_**Note:**_ it is important to specify path to rocm_smi_lib64.so until this
+In that case, you may run RVS using this command:
+
+    sudo LD_LIBRARY_PATH=<_rocm_smi_lib_path> ./rvs ...
+
+_**Note:**_ it is important to specify path to `rocm_smi_lib64.so` until this
 library is fully included into ROCm distribution.
 
 ### Install package:
