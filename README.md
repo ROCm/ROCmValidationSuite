@@ -32,11 +32,20 @@ Compile yaml-cpp (this needs to be done only once after cloning):
     cmake ./yaml-cpp -B../build/yaml-cpp
     make -C ../build/yaml-cpp
 
+
 Compile rocm_smi_lib (this needs to be done only once after cloning):
 
     cd $RVS
     cmake ./rocm_smi_lib -DROCM_SMI_BLD_BITS=64 -B../build/rocm_smi_lib
     make -C ../build/rocm_smi_lib
+
+Copy librocm_smi64.so build/bin folder:
+
+    mkdir -p ../build/bin
+    cp ../build/rocm_smi_lib/librocm_smi64.so ../build/bin/librocm_smi64.so
+
+_**Note:**_ `rocm_smi_lib` handling will need to be changed once `rocm_smi_lib` is
+included into ROCm package
 
 Compile rocBLAS (this needs to be done only once after cloning):
 
@@ -56,7 +65,7 @@ Compile RVS:
 
     cd $RVS
 
-    cmake ./ -B../build    
+    cmake ./ -B../build
     make -C ../build
 
 Run:

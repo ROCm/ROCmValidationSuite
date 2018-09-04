@@ -82,6 +82,7 @@ set(ROCBLAS_INC_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/in
 set(ROCBLAS_LIB_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/lib/" CACHE PATH "Contains library files exported by rocBLAS")
 set(ROCM_SMI_INC_DIR "$ENV{RVS}/rocm_smi_lib/include" CACHE PATH "Contains header files exported by rocm_smi")
 set(ROCM_SMI_LIB_DIR "$ENV{RVS}/../build/rocm_smi_lib" CACHE PATH "Contains library files exported by rocm_smi")
+set(ROCM_SMI_LIB "rocm_smi64" CACHE PATH "rocm_smi library name")
 #add_subdirectory(yaml-cpp)
 
 add_subdirectory(rvs)
@@ -115,5 +116,7 @@ add_custom_target(userguide ALL
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS User Guide"
     VERBATIM)
+
+install(FILES "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 
 include (CPack)
