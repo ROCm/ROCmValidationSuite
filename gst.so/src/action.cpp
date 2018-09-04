@@ -286,6 +286,10 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             for (i = 0; i < gst_gpus_device_index.size(); i++) {
                 workers[i].start();
                 workers[i].join();
+
+                // check if stop signal was received
+                if (rvs::lp::Stopping())
+                    return false;
             }
         }
 
@@ -295,7 +299,8 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
                 break;
         }
     }
-    return true;
+
+    return rvs::lp::Stopping() ? false : true;
 }
 
 /**
