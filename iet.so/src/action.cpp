@@ -490,7 +490,7 @@ bool action::do_edp_test(void) {
 
                 // check if stop signal was received
                 if (rvs::lp::Stopping())
-                    break;
+                    return false;
             }
         }
 
