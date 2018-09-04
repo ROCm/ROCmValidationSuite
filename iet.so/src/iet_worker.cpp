@@ -158,6 +158,10 @@ bool IETWorker::do_gpu_init_training(string *err_description) {
     start_time = std::chrono::system_clock::now();
 
     for (;;) {
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return false;
+
         // get power data
         cur_power_value = get_power_data(gpu_hwmon_entry);
         if (cur_power_value != 0) {
@@ -300,6 +304,10 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
     pwr_log_worker->start();
 
     for (;;) {
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return false;
+
         // get GPU's current average power
         cur_power_value = get_power_data(gpu_hwmon_entry);
         if (cur_power_value != 0) {
@@ -365,6 +373,10 @@ bool IETWorker::do_iet_power_stress(void) {
     gpu_worker->resume();
 
     for (;;) {
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            break;
+
         // get GPU's current average power
         cur_power_value = get_power_data(gpu_hwmon_entry);
         if (cur_power_value != 0) {
@@ -412,6 +424,10 @@ bool IETWorker::do_iet_power_stress(void) {
     usleep(MAX_MS_WAIT_BLAS_THREAD);
     gpu_worker->join();
 
+    // check if stop signal was received
+    if (rvs::lp::Stopping())
+        return false;
+
     if (num_power_violations > max_violations)
         return false;
 
@@ -445,6 +461,10 @@ void IETWorker::run() {
 
         if (pwr_log_worker != nullptr)
             pwr_log_worker->stop();
+
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return;
 
         if (error) {
             log_to_json("ERROR", err_description, rvs::logerror);
@@ -480,6 +500,11 @@ void IETWorker::run() {
 
 
         bool pass = do_iet_power_stress();
+
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return;
+
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + IET_PASS_KEY + ": " +
                     (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
