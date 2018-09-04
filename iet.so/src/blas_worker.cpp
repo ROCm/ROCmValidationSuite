@@ -30,6 +30,7 @@
 #include <mutex>
 
 #include "rvs_blas.h"
+#include "rvsloglp.h"
 
 #define IET_MEM_ALLOC_ERROR                     1
 #define IET_BLAS_ERROR                          2
@@ -250,6 +251,10 @@ void blas_worker::run() {
                 usleep_ex(sgemm_delay);
             }
         }
+
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            break;
     }
 }
 
