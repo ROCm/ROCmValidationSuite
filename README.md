@@ -32,11 +32,15 @@ Compile yaml-cpp (this needs to be done only once after cloning):
     cmake ./yaml-cpp -B../build/yaml-cpp
     make -C ../build/yaml-cpp
 
+
 Compile rocm_smi_lib (this needs to be done only once after cloning):
 
     cd $RVS
     cmake ./rocm_smi_lib -DROCM_SMI_BLD_BITS=64 -B../build/rocm_smi_lib
     make -C ../build/rocm_smi_lib
+
+_**Note:**_ `rocm_smi_lib` handling will need to be changed once `rocm_smi_lib`
+is included into ROCm package
 
 Compile rocBLAS (this needs to be done only once after cloning):
 
@@ -56,20 +60,46 @@ Compile RVS:
 
     cd $RVS
 
-    cmake ./ -B../build    
+    cmake ./ -B../build
     make -C ../build
-
-Run:
-
-    cd ../build/bin
-    sudo ./rvs -d 3
 
 Build package:
 
     cd $WB/build
     make package
 
-_Note:_ based on your OS, only DEB or RPM package will be built.
+_**Note:**_ based on your OS, only DEB or RPM package will be built. You may
+ignore an error for the unrelated configuration
+
+
+## Running RVS
+
+### Running version built from source code:
+
+    cd ../build/bin
+    sudo ./rvs -d 3
+
+### Running without install
+
+In general, it is possible to run RVS by simply coping all relevant files
+onto another location (e.g., Docker image). Please note that in addition to
+files in `bin/` folder you will also need to copy `rocm_smi_lib64.so`
+
+In that case, you may run RVS using this command:
+
+    sudo LD_LIBRARY_PATH=<_rocm_smi_lib_path> ./rvs ...
+
+_**Note:**_ it is important to specify path to `rocm_smi_lib64.so` until this
+library is fully included into ROCm distribution.
+
+### Install package:
+
+    sudo dpkg -i rocm-validation-suite.0.0.17
+    sudo ldconfig
+
+_**Note:**_ it is important to run `ldconfig` after install in order to refresh
+dynamic linker cache.
+
 
 For CentOS specific instructions see this [link](./CentOS.md).
 
