@@ -493,6 +493,10 @@ void GSTWorker::run() {
                     rvs::loginfo);
         if (run_duration_ms > 0) {
             gst_test_passed = do_gst_stress_test(&error, &err_description);
+            // check if stop signal was received
+            if (rvs::lp::Stopping())
+                return;
+
             if (error) {
                 // GPU didn't complete the test (HIP/rocBlas error(s) occurred)
                 string msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -501,10 +505,6 @@ void GSTWorker::run() {
                 log_to_json("err", err_description, rvs::logerror);
                 return;
             }
-
-            // check if stop signal was received
-            if (rvs::lp::Stopping())
-                return;
         }
     }
 
