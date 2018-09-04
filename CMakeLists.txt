@@ -81,7 +81,7 @@ set(HIP_INC_DIR "/opt/rocm/hip/include/hip/" CACHE PATH "Contains header files e
 set(ROCBLAS_INC_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/include/" CACHE PATH "Contains header files exported by rocBLAS")
 set(ROCBLAS_LIB_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/lib/" CACHE PATH "Contains library files exported by rocBLAS")
 set(ROCM_SMI_INC_DIR "$ENV{RVS}/rocm_smi_lib/include" CACHE PATH "Contains header files exported by rocm_smi")
-set(ROCM_SMI_LIB_DIR "$ENV{RVS}/../build/rocm_smi_lib" CACHE PATH "Contains library files exported by rocm_smi")
+set(ROCM_SMI_LIB_DIR "$ENV{RVS}/../build/bin" CACHE PATH "Contains library files exported by rocm_smi")
 set(ROCM_SMI_LIB "rocm_smi64" CACHE PATH "rocm_smi library name")
 #add_subdirectory(yaml-cpp)
 
