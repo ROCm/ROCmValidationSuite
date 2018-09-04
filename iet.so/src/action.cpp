@@ -494,6 +494,10 @@ bool action::do_edp_test(void) {
             }
         }
 
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return false;
+
         if (gst_run_count != 0) {
             k++;
             if (k == gst_run_count)
