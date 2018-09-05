@@ -439,10 +439,20 @@ bool action::do_edp_test(void) {
             for (i = 0; i < edpp_gpus.size(); i++) {
                 workers[i].start();
                 workers[i].join();
+
+                // check if stop signal was received
+                if (rvs::lp::Stopping()) {
+                    rsmi_shut_down();
+                    return false;
+                }
             }
         }
 
         rsmi_shut_down();
+
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return false;
 
         if (gst_run_count != 0) {
             k++;
@@ -450,7 +460,7 @@ bool action::do_edp_test(void) {
                 break;
         }
     }
-    return true;
+    return rvs::lp::Stopping() ? false : true;
 }
 
 /**

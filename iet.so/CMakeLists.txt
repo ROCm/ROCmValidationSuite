@@ -73,8 +73,6 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "hip_hcc")
-set(ROCM_SMI_LIB "rocm_smi")
-
 
 # Determine Roc Runtime header files are accessible
 if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime.h)
@@ -103,16 +101,16 @@ if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
   RETURN()
 endif()
 
-if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
+if(NOT EXISTS "${NEWROCM_SMI_LIB_DIR}/lib${NEWROCM_SMI_LIB}.so")
   message("ERROR: rocm_smi library can't be found!")
   RETURN()
 endif()
 
 # Add directories to look for header files to compile
-INCLUDE_DIRECTORIES(${ROCM_SMI_INC_DIR} ${ROCBLAS_INC_DIR} ${ROCR_INC_DIR} ${HIP_INC_DIR})
+INCLUDE_DIRECTORIES(${NEWROCM_SMI_INC_DIR} ${ROCBLAS_INC_DIR} ${ROCR_INC_DIR} ${HIP_INC_DIR})
 
 # Add directories to look for library files to link 
-LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
+LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${NEWROCM_SMI_LIB_DIR})
 
 ## additional libraries
 set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
@@ -129,7 +127,7 @@ set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB} ${ROCM_SMI_LIB})
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB} ${NEWROCM_SMI_LIB})
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

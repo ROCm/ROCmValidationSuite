@@ -31,6 +31,7 @@
 #include "gpu_util.h"
 #include "rvsloglp.h"
 #include "worker.h"
+#include "rvshsa.h"
 #include "action.h"
 
 /**
@@ -45,7 +46,7 @@
  * installed in a platform, reporting individual benchmark statistics for each.
  */
 
-Worker* pworker;
+pebbworker* pworker;
 
 int log(const char* pMsg, const int level) {
   return rvs::lp::Log(pMsg, level);
@@ -89,6 +90,7 @@ extern "C" int   rvs_module_init(void* pMi) {
 //  pworker = nullptr;
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
   rvs::gpulist::Initialize();
+  rvs::hsa::Init();
   return 0;
 }
 
@@ -118,7 +120,7 @@ extern "C" const char* rvs_module_get_errstring(int error) {
 }
 
 extern "C" void* rvs_module_action_create(void) {
-  return static_cast<void*>(new action);
+  return static_cast<void*>(new pebbaction);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {

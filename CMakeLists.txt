@@ -80,8 +80,13 @@ set(ROCT_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by
 set(HIP_INC_DIR "/opt/rocm/hip/include/hip/" CACHE PATH "Contains header files exported by ROC Runtime")
 set(ROCBLAS_INC_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/include/" CACHE PATH "Contains header files exported by rocBLAS")
 set(ROCBLAS_LIB_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/lib/" CACHE PATH "Contains library files exported by rocBLAS")
-set(ROCM_SMI_INC_DIR "/opt/rocm/rocm_smi/include/" CACHE PATH "Contains header files exported by rocm_smi")
-set(ROCM_SMI_LIB_DIR "/opt/rocm/rocm_smi/lib/" CACHE PATH "Contains library files exported by rocm_smi")
+set(ROCM_SMI_INC_DIR "$ENV{RVS}/rocm_smi_lib/include" CACHE PATH "Contains header files exported by rocm_smi")
+set(ROCM_SMI_LIB_DIR "$ENV{RVS}/../build/rocm_smi_lib" CACHE PATH "Contains library files exported by rocm_smi")
+set(ROCM_SMI_LIB "rocm_smi64" CACHE PATH "rocm_smi library name")
+set(NEWROCM_SMI_INC_DIR "/opt/rocm/rocm_smi/include/" CACHE PATH "Contains header files exported by rocm_smi")
+set(NEWROCM_SMI_LIB_DIR "/opt/rocm/rocm_smi/lib/" CACHE PATH "Contains library files exported by rocm_smi")
+set(NEWROCM_SMI_LIB "rocm_smi" CACHE PATH "rocm_smi library name")
+
 #add_subdirectory(yaml-cpp)
 
 add_subdirectory(rvs)
@@ -91,7 +96,7 @@ add_subdirectory(rcqt.so)
 add_subdirectory(peqt.so)
 add_subdirectory(smqt.so)
 add_subdirectory(pebb.so)
-#add_subdirectory(gm.so)
+add_subdirectory(gm.so)
 add_subdirectory(gst.so)
 add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
@@ -115,5 +120,8 @@ add_custom_target(userguide ALL
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS User Guide"
     VERBATIM)
+
+install(FILES "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib COMPONENT rvsmodule)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf" DESTINATION /etc/ld.so.conf.d COMPONENT rvsmodule)
 
 include (CPack)
