@@ -350,6 +350,10 @@ int pebbaction::run_single() {
   do {
     for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
       (*it)->do_transfer();
+      if (rvs::lp::Stopping()) {
+        brun = false;
+        break;
+      }
       sleep(1);
     }
   } while (brun);
@@ -388,7 +392,15 @@ int pebbaction::run_parallel() {
 
   // wait for test to complete
   while (brun) {
+    if (rvs::lp::Stopping()) {
+      brun = false;
+    }
     sleep(1);
+  }
+
+  // stop all worker threads
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
   }
 
   timer_running.stop();
