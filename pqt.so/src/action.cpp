@@ -652,6 +652,11 @@ int pqtaction::run_parallel() {
     }
   }
 
+  // stop all worker threads
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
+  }
+
   timer_running.stop();
   timer_final.stop();
 
