@@ -119,6 +119,10 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
     gst_log_interval_time = std::chrono::system_clock::now();
 
     for (;;) {
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            break;
+
         gst_end_time = std::chrono::system_clock::now();
         if (time_diff(gst_end_time, gst_start_time) >=
                             NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
@@ -199,6 +203,10 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     if (*error)
         return false;
 
+    // check if stop signal was received
+    if (rvs::lp::Stopping())
+        return false;
+
     // stage 3. reduce the SGEMM frequency and try to achieve the desired Gflops
     // the delay which gives the SGEMM frequency will be dynamically computed
     delay_target_stress = 0;
@@ -208,6 +216,10 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     gst_start_gflops_time = std::chrono::system_clock::now();
 
     for (;;) {
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return false;
+
         gst_end_time = std::chrono::system_clock::now();
         if (time_diff(gst_end_time,  gst_start_time) >
                             ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
@@ -363,6 +375,10 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     gst_log_interval_time = std::chrono::system_clock::now();
 
     for (;;) {
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return false;
+
         if (copy_matrix) {
             // copy matrix before each GEMM
             if (!gpu_blas->copy_data_to_gpu()) {
@@ -454,6 +470,10 @@ void GSTWorker::run() {
     }
 
     if (!ramp_up_success) {
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return;
+
         // the selected GPU was not able to achieve the target_stress GFLOPS
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + GST_RAMP_EXCEEDED_MSG + " " +
@@ -473,6 +493,10 @@ void GSTWorker::run() {
                     rvs::loginfo);
         if (run_duration_ms > 0) {
             gst_test_passed = do_gst_stress_test(&error, &err_description);
+            // check if stop signal was received
+            if (rvs::lp::Stopping())
+                return;
+
             if (error) {
                 // GPU didn't complete the test (HIP/rocBlas error(s) occurred)
                 string msg = "[" + action_name + "] " + MODULE_NAME + " " +

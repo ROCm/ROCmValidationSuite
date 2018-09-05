@@ -62,6 +62,9 @@ pebbworker::~pebbworker() {}
 void pebbworker::run() {
   while (brun) {
     do_transfer();
+    if (rvs::lp::Stopping()) {
+      break;
+    }
     std::this_thread::yield();
   }
   log("pebb worker thread has finished", rvs::logdebug);
@@ -133,6 +136,9 @@ int pebbworker::do_transfer() {
   for (size_t i = 0; i < pHsa->size_list.size(); i++) {
     current_size = pHsa->size_list[i];
 
+    if (rvs::lp::Stopping()) {
+      return -1;
+    }
     // if needed, swap source and destination
     if (!prop_h2d && prop_d2h) {
       sts = pHsa->SendTraffic(dst_node, src_node, current_size,
