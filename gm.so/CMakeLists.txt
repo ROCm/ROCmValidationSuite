@@ -74,8 +74,6 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
-set(ROCM_SMI_LIB "rocm_smi64")
-
 # Determine Roc Runtime header files are accessible
 if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
   message("ERROR: rocm_smi library can't be found!")

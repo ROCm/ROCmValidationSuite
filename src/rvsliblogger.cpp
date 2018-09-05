@@ -50,6 +50,8 @@ bool  rvs::logger::append_m;
 bool  rvs::logger::isfirstrecord_m;
 std::mutex  rvs::logger::cout_mutex;
 std::mutex  rvs::logger::log_mutex;
+bool  rvs::logger::bStop;
+uint16_t rvs::logger::stop_flags;
 
 const char*  rvs::logger::loglevelname[] = {
   "NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
@@ -170,6 +172,14 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec) {
   // lock cout_mutex for the duration of this block
   std::lock_guard<std::mutex> lk(cout_mutex);
+
+  // stop logging requested?
+  if (bStop) {
+    if (stop_flags)
+      // just return
+      return 0;
+  }
+
   if (LogLevel < lognone || LogLevel > logtrace) {
     cerr << "ERROR: unknown logging level: " << LogLevel << '\n';
     return -1;
@@ -321,6 +331,11 @@ int rvs::logger::ToFile(const std::string& Row) {
   // lock log_mutex for the duration of this block
   std::lock_guard<std::mutex> lk(log_mutex);
 
+  if (bStop) {
+    if (stop_flags)
+      return 0;
+  }
+
   std::string logfile;
   if (!rvs::options::has_option("-l", &logfile))
     return -1;
@@ -352,6 +367,9 @@ int rvs::logger::JsonPatchAppend() {
 
   FILE * pFile;
   pFile = fopen(logfile.c_str() , "r+");
+  if (pFile == nullptr) {
+    return -1;
+  }
   fseek(pFile , -1 , SEEK_END);
   fputs("," , pFile);
   fclose(pFile);
@@ -431,6 +449,8 @@ void  rvs::logger::AddNode(void* Parent, void* Child) {
  */
 int rvs::logger::initialize() {
   isfirstrecord_m = true;
+  bStop = false;
+  stop_flags = 0;
 
   std::string row;
   std::string logfile;
@@ -487,4 +507,38 @@ int rvs::logger::terminate() {
   ToFile(row);
 
   return 0;
+}
+
+/**
+ * @brief Signals that RVS is about to terminate.
+ *
+ * This method will prevent all further
+ * printout to cout and to log file if any. Log file will be closed and properly
+ * terminated before returning from this function.
+ *
+ */
+void rvs::logger::Stop(uint16_t flags) {
+  // lock cout_mutex for the duration of this block
+  std::lock_guard<std::mutex> lk(cout_mutex);
+
+  // signal no further logging to either screen or file
+  bStop = true;
+  stop_flags = flags;
+
+  // properly terminate log file if needed
+  terminate();
+}
+
+/**
+ * @brief Returns stop flag
+ *
+ * Checks if a module requested RVS processing to stop
+ *
+ */
+bool rvs::logger::Stopping(void) {
+  // lock cout_mutex for the duration of this block
+  std::lock_guard<std::mutex> lk(cout_mutex);
+
+  // return stop flag
+  return bStop;
 }

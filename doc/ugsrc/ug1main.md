@@ -1,5 +1,5 @@
 
-@section ugs1 1 Introduciton
+@section ugs1 1 Introduction
 The ROCm Validation Suite (RVS) is a system administrator’s and cluster
 manager's tool for detecting and troubleshooting common problems affecting AMD
 GPU(s) running in a high-performance computing environment, enabled using the
@@ -8,8 +8,8 @@ ROCm software stack on a compatible platform.
 The RVS is a collection of tests, benchmarks and qualification tools each
 targeting a specific sub-system of the ROCm platform. All of the tools are
 implemented in software and share a common command line interface. Each set of
-tests are implemented in a “module” which is a library encapsulating the f
-unctionality specific to the tool. The CLI can specify the directory containing
+tests are implemented in a “module” which is a library encapsulating the
+functionality specific to the tool. The CLI can specify the directory containing
 modules to use when searching for libraries to load. Each module may have a set
 of options that it defines and a configuration file that supports its execution.
 
@@ -80,7 +80,7 @@ The ROCm Configuration Qualification Tool ensures the platform is capable of
 running ROCm applications and is configured correctly. It checks the installed
 versions of the ROCm components and the platform configuration of the system.
 This includes checking that dependencies, corresponding to the associated
-operating system and runtime environment, are installed correctly. Other
+operating system and run time environment, are installed correctly. Other
 qualification steps include checking:
 
 1.  The existence of the /dev/kfd device
@@ -88,7 +88,7 @@ qualification steps include checking:
 3.  The existence of all required users and groups that support ROCm
 4.  That the user mode components are compatible with the drivers, both the KFD
 and the amdgpu driver.
-5.  The configuration of the runtime linker/loader qualifying that all ROCm
+5.  The configuration of the run time linker/loader qualifying that all ROCm
 libraries are in the correct search path.
 
 @subsubsection usg31a05 3.2.5 PCI Express Qualification Tool – PEQT module
@@ -245,7 +245,7 @@ Command line options are summarized in the table below:
 <tr><th>Short option</th><th>Long option</th><th> Description</th></tr>
 <tr><td>-a</td><td>\-\-appendLog</td><td>When generating a debug logfile,
 do not overwrite the contents
-of a current log. Used in conjuction with the -d and -l options.
+of a current log. Used in conjunction with the -d and -l options.
 </td></tr>
 
 <tr><td>-c</td><td>\-\-config</td><td>Specify the configuration file to be used.
@@ -479,7 +479,7 @@ Consider action:
         recommended_transfer_size:
         flags:
 
-This action explicitely lists some of the properties.
+This action explicitly lists some of the properties.
 Output for such configuration may be:
 
     [RESULT] [597868.690637] action_1 gpup 3254 device_id 26720
@@ -568,6 +568,9 @@ specified, no logging will occur.</td></tr>
 <tr><td>terminate</td><td>Bool</td> <td>If the terminate key is true the GM
 monitor will terminate the RVS process when a bounds violation is encountered on
 any of the metrics specified.</td></tr>
+<tr><td>force</td><td>Bool</td> <td>If 'true'  and terminate key is also 'true'
+the RVS process will terminate immediately. **Note:** this may cose resource leaks
+within GPUs.</td></tr>
 </table>
 
 @subsection usg52 5.2 Output
@@ -691,14 +694,14 @@ Consider action:
       terminate: false
       duration: 5000
 
-This configuration is similar to that in *Example 1* but has explicitely
+This configuration is similar to that in *Example 1* but has explicitly
 given values for *sample_interval* and *log_interval*. Output is similar to
-the previous one but averaging and the printout are performe at a different
+the previous one but averaging and the printout are performed at a different
 rate.
 
 **Example 3:**
 
-Conside action with syntax error ('temp' key is missing lower value):
+Consider action with syntax error ('temp' key is missing lower value):
 
     actions:
     - name: action_1
@@ -794,7 +797,7 @@ power state will generate the following informational messages:
 
 **Example 1**
 
-Here is a typical check utilizing PESM functionlit:
+Here is a typical check utilizing PESM functionality:
 
     actions:
     - name: action_1
@@ -821,7 +824,7 @@ Here is a typical check utilizing PESM functionlit:
       monitor: false
 
 -  **action_1** will initiate monitoring on all devices by setting key **monitor** to **true**\n
--  **action_2** will start GPU stgress test
+-  **action_2** will start GPU stress test
 -  **action_3** will stop monitoring
 
 If executed like this:
@@ -866,7 +869,7 @@ Consider this file:
       monitor: true
 
 
-This file has and ivalid entry in **deviceid** key.
+This file has and invalid entry in **deviceid** key.
 If execute, an error will be reported:
 
     RVS-PESM: action: act1  invalide 'deviceid' key value: xxx
@@ -1107,7 +1110,7 @@ Input keys are described in the table below:
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>file</td><td>String</td>
-<td>The value of this key should satisfy the filename limitations of the target
+<td>The value of this key should satisfy the file name limitations of the target
 OS and specifies the file to check. This key is required.
 </td></tr>
 <tr><td>owner</td><td>String</td>
@@ -1539,7 +1542,11 @@ where:
     Type=PMEAux/Auxiliary/Idle/Sustained/Maximum
     PowerRail = Power_12V/Power_3_3V/Power_1_5V_1_8V/Thermal
 
-When the RVS tool runs against such a configuration file, it will query for the all the PCIe capabilities specified under the capability list (and log the corresponding values) for all the AMD compatible GPUs. For those PCIe capabilities that are not supported by the HW platform were the RVS is running, a "NOT SUPPORTED" message will be logged.
+When the RVS tool runs against such a configuration file, it will query for the
+all the PCIe capabilities specified under the capability list (and log the
+corresponding values) for all the AMD compatible GPUs. For those PCIe
+capabilities that are not supported by the HW platform were the RVS is running,
+a "NOT SUPPORTED" message will be logged.
 
 The output for such a configuration file may look like this:
 
@@ -1607,11 +1614,16 @@ For this example, the expected PEQT check result is TRUE if:
 - all \<link_cap_max_speed> values for all AMD compatible GPUs match the given regular expression and
 - all \<link_stat_cur_speed> values for all AMD compatible GPUs match the given regular expression
 
-Please note that the \<slot_pwr_limit_value> regular expression is not valid and will be skipped without affecting the PEQT module's check RESULT (however, an error will be logged out)
+Please note that the \<slot_pwr_limit_value> regular expression is not valid and
+will be skipped without affecting the PEQT module's check RESULT (however, an
+error will be logged out)
 
 **Example 3:**
 
-Another example with even more regular expressions is given below. The expected PEQT check result is TRUE if at least one AMD compatible GPU having the ID 3254 or 33367 is registered within the system and all the PCIe capabilities values match their corresponding regular expressions.
+Another example with even more regular expressions is given below. The expected
+PEQT check result is TRUE if at least one AMD compatible GPU having the ID 3254
+or 33367 is registered within the system and all the PCIe capabilities values
+match their corresponding regular expressions.
 
     actions:
     - name: pcie_act_1
@@ -1777,7 +1789,8 @@ Results for three GPUs are:
     [INFO  ] [257936.570798] [action_1]  smqt bar5_size      0 (0.00 B)
     [RESULT] [257936.570837] [action_1]  smqt fail
 
-In this example, BAR sizes reported by GPUs match those listed in configuration key except for the BAR5, hence the test fails.
+In this example, BAR sizes reported by GPUs match those listed in configuration
+key except for the BAR5, hence the test fails.
 
 @section usg10 10 PQT Module
 The P2P Qualification Tool is designed to provide the list of all GPUs that
@@ -1809,7 +1822,7 @@ false – Do a unidirectional transfer test
 from the agent to its peers.
 </td></tr>
 <tr><td>parallel</td><td>Bool</td>
-<td>This option is only used if the test_bandwith
+<td>This option is only used if the test_bandwidth
 key is true.\n
 true – Run transfer testing to all peers
 in parallel.\n
@@ -1901,8 +1914,10 @@ From the second line of result, we can see that source GPU (ID 3254) can access 
 
 **Example 2:**
 
-Here all source GPUs (device: all) with all destination GPUs (peers: all) are tested for p2p capability including bandwidth testing (test_bandwidth: true) with
-bidirectional transfers (bidirectional: true) and running in paralell (parallel : true) - default values are used for duration and log_interval.
+Here all source GPUs (device: all) with all destination GPUs (peers: all) are
+tested for p2p capability including bandwidth testing (test_bandwidth: true)
+with bidirectional transfers (bidirectional: true) and running in parallel
+(parallel : true) - default values are used for duration and log_interval.
 
     actions:
     - name: action_1
@@ -2028,12 +2043,16 @@ logged.</td></tr>
 Module specific output keys are described in the table below:
 <table>
 <tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>CPU node</td><td>Integer</td>
+<td>Particular CPU node involved in transfer</td></tr>
 <tr><td>interval_bandwidth</td><td>Collection of Time Series Floats</td>
 <td>The average bandwidth of a transfer, during the log_interval time
 period. </td></tr>
 <tr><td>bandwidth</td><td>Collection of Floats</td>
 <td>The average bandwidth of a transfer, averaged over the entire test
 duration of the interval.</td></tr>
+<tr><td>duration</td><td>Collection of Floats</td>
+<td>Cumulative duration of transfers between particular CPU node and particular GPU</td></tr>
 </table>
 
 During the execution of the benchmark, informational output providing the moving
@@ -2046,10 +2065,46 @@ output format:
 At the end of the test the average bytes/second will be calculated over the
 entire test duration, and will be logged as a result:
 
-    [RESULT][<timestamp>][<action name>] pcie-bandwidth <gpu id> h2d: <host_to_device> d2h: <device_to_host> < bandwidth > <duration>
+    [RESULT][<timestamp>][<action name>] pcie-bandwidth <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> < bandwidth > <duration>
 
 
 @subsection usg113 11.3 Examples
+**Example 1:**
+
+Consider action:
+
+    actions:
+    - name: action_1
+      device: 50599 3254
+      module: pebb
+      log_interval: 1000
+      duration: 10000
+      device_to_host: false
+      host_to_device: true
+      parallel: false
+
+This will initiate host to device transfer test for two GPUs.\n
+Output from this action might look like:
+
+    [INFO  ] [  3766.789326] [action_1] pcie-bandwidth  0 3254  h2d: true  d2h: false  10.24GBps
+    [INFO  ] [  3766.789382] [action_1] pcie-bandwidth  1 3254  h2d: true  d2h: false  11.03GBps
+    [INFO  ] [  3766.789403] [action_1] pcie-bandwidth  2 3254  h2d: true  d2h: false  10.01GBps
+    [INFO  ] [  3766.789443] [action_1] pcie-bandwidth  3 3254  h2d: true  d2h: false  10.25GBps
+    ...
+    [INFO  ] [  3767.856848] [action_1] pcie-bandwidth  0 50599  h2d: true  d2h: false  11.09GBps
+    [INFO  ] [  3767.856862] [action_1] pcie-bandwidth  1 50599  h2d: true  d2h: false  10.60GBps
+    [INFO  ] [  3767.856877] [action_1] pcie-bandwidth  2 50599  h2d: true  d2h: false  11.32GBps
+    [INFO  ] [  3767.856889] [action_1] pcie-bandwidth  3 50599  h2d: true  d2h: false  11.22GBps
+    ...
+    [RESULT] [  3776.617594] [action_1] pcie-bandwidth  0 3254  h2d: true  d2h: false  11.61GBps  duration: 0.430710 ms
+    [RESULT] [  3776.617620] [action_1] pcie-bandwidth  1 3254  h2d: true  d2h: false  11.82GBps  duration: 0.423176 ms
+    [RESULT] [  3776.617625] [action_1] pcie-bandwidth  2 3254  h2d: true  d2h: false  11.05GBps  duration: 0.452555 ms
+    [RESULT] [  3776.617630] [action_1] pcie-bandwidth  3 3254  h2d: true  d2h: false  11.29GBps  duration: 0.354260 ms
+    [RESULT] [  3776.617636] [action_1] pcie-bandwidth  0 50599  h2d: true  d2h: false  10.93GBps  duration: 0.365892 ms
+    [RESULT] [  3776.617642] [action_1] pcie-bandwidth  1 50599  h2d: true  d2h: false  10.68GBps  duration: 0.374698 ms
+    [RESULT] [  3776.617647] [action_1] pcie-bandwidth  2 50599  h2d: true  d2h: false  11.04GBps  duration: 0.362272 ms
+    [RESULT] [  3776.617653] [action_1] pcie-bandwidth  3 50599  h2d: true  d2h: false  11.36GBps  duration: 0.352116 ms
+
 
 @section usg12 12 GST Module
 The GPU Stress Test modules purpose is to bring the CUs of the specified GPU(s)
@@ -2342,7 +2397,7 @@ GPU to different levels of use. This tool can leverage the functionality of the
 GST to drive the compute load on the GPU, but the test will use different
 configuration and output keys and should focus on driving power usage rather
 than calculating compute load. The purpose of the IET module is to bring the
-GPU(s) to a preconfigured power level in watts by gradually increasing the
+GPU(s) to a pre-configured power level in watts by gradually increasing the
 compute load on the GPUs until the desired power level is achieved. This
 verifies that the GPUs can sustain a power level for a reasonable amount of time
 without problems like thermal violations arising.\n

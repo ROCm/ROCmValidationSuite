@@ -127,6 +127,8 @@ int action::run(void) {
       pworker->set_sample_int(sample_interval);
       pworker->set_log_int(log_interval);
       pworker->set_terminate(terminate);
+      if (property["force"] == "true")
+        pworker->set_force(true);
 
       if (rvs::actionbase::has_property("duration")) {
         rvs::actionbase::property_get_run_duration(&error);

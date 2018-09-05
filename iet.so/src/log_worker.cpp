@@ -142,6 +142,10 @@ void log_worker::run() {
 
     start_time = std::chrono::system_clock::now();
     for (;;) {
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            break;
+
         {
             std::lock_guard<std::mutex> lck(mtx_brun);
             if (!brun)

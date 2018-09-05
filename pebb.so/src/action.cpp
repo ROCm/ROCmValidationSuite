@@ -1,5 +1,5 @@
 /********************************************************************************
- *
+ * 
  * Copyright (c) 2018 ROCm Developer Tools
  *
  * MIT LICENSE:
@@ -25,150 +25,505 @@
 #include "action.h"
 
 extern "C" {
-#include <pci/pci.h>
-#include <linux/pci.h>
+  #include <pci/pci.h>
+  #include <linux/pci.h>
 }
+#include <stdio.h>
+#include <stdlib.h>
 
-#include <string>
-#include <vector>
-#include <map>
 #include <iostream>
 #include <algorithm>
+#include <cstring>
+#include <string>
+#include <vector>
 
-#include "rvs_module.h"
-#include "worker.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvsloglp.h"
+#include "rvshsa.h"
+#include "rvstimer.h"
+#include "hsa/hsa.h"
 
 
-using std::string;
+#include "rvs_module.h"
+#include "worker.h"
+
+#define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
+#define DEFAULT_LOG_INTERVAL 10
+#define DEFAULT_DURATION 10000
+
+#define MODULE_NAME "pebb"
+#define JSON_CREATE_NODE_ERROR "JSON cannot create node"
+
 using std::cout;
-using std::cerr;
 using std::endl;
-using std::hex;
-
-
-extern Worker* pworker;
+using std::cerr;
+using std::string;
+using std::vector;
 
 //! Default constructor
-action::action() {
+pebbaction::pebbaction() {
+  prop_deviceid = -1;
+  prop_device_id_filtering = false;
 }
 
 //! Default destructor
-action::~action() {
+pebbaction::~pebbaction() {
   property.clear();
 }
 
 /**
- * @brief Implements action functionality
- *
- * Functionality:
- *
- * - If "do_gpu_list" property is set,
- *   it lists all AMD GPUs present in the system and exits
- * - If "monitor" property is set to "true",
- *   it creates Worker thread and initiates monitoring and exits
- * - If "monitor" property is not set or is not set to "true",
- *   it stops the Worker thread and exits
- *
- * @return 0 - success. non-zero otherwise
- *
- * */
-int action::run(void) {
-  rvs::lp::Log("[" + property["name"]+ "] pebb in run()", rvs::logtrace);
+ *  * @brief reads the module's properties collection to see if
+ * device to host transfers will be considered
+ */
+void pebbaction::property_get_h2d() {
+  prop_h2d = true;
+  auto it = property.find("host_to_device");
+  if (it != property.end()) {
+    if (it->second == "false")
+      prop_h2d = false;
+  }
+}
 
-  // debugging help
-  string val;
-  if (has_property("debugwait", &val)) {
-    sleep(std::stoi(val));
+/**
+ *  * @brief reads the module's properties collection to see if
+ * device to host transfers will be considered
+ */
+void pebbaction::property_get_d2h() {
+  prop_d2h = true;
+  auto it = property.find("device_to_host");
+  if (it != property.end()) {
+    if (it->second == "false")
+      prop_d2h = false;
+  }
+}
+
+/**
+ * @brief reads the log interval from the module's properties collection
+ * @param error pointer to a memory location where the error code will be stored
+ */
+void pebbaction::property_get_log_interval(int *error) {
+  *error = 0;
+  prop_log_interval = DEFAULT_LOG_INTERVAL;
+  auto it = property.find(RVS_CONF_LOG_INTERVAL_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      prop_log_interval = std::stoul(it->second);
+      if (prop_log_interval == 0)
+        prop_log_interval = DEFAULT_LOG_INTERVAL;
+    } else {
+      *error = 1;
+    }
+  }
+}
+
+/**
+ * @brief reads all PQT related configuration keys from
+ * the module's properties collection
+ * @return true if no fatal error occured, false otherwise
+ */
+bool pebbaction::get_all_pebb_config_keys(void) {;
+  string msg;
+  int error;
+
+  property_get_log_interval(&error);
+  if (error) {
+    cerr << "RVS-PEBB: action: " << action_name <<
+    "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "'" << std::endl;
+    return false;
   }
 
-  // start of monitoring?
-  if (property["monitor"] == "true") {
-    if (pworker) {
-      rvs::lp::Log("[" + property["name"]+ "] pebb monitoring already started",
-                  rvs::logresults);
-      return 0;
+  property_get_h2d();
+  property_get_d2h();
+
+  return true;
+}
+
+/**
+ * @brief reads all common configuration keys from
+ * the module's properties collection
+ * @return true if no fatal error occured, false otherwise
+ */
+bool pebbaction::get_all_common_config_keys(void) {
+  string msg, sdevid, sdev;
+  int error;
+  // get the action name
+  property_get_action_name(&error);
+  if (error) {
+    msg = "pqt [] action field is missing";
+    log(msg.c_str(), rvs::logerror);
+    return false;
+  }
+
+  // get <device> property value (a list of gpu id)
+  if (has_property("device", &sdev)) {
+    prop_device_all_selected = property_get_device(&error);
+    if (error) {  // log the error & abort GST
+      cerr << "RVS-PQT: action: " << action_name <<
+      "  invalid 'device' key value " << sdev << std::endl;
+      return false;
     }
+  } else {
+    cerr << "RVS-PQT: action: " << action_name <<
+    "  key 'device' was not found" << std::endl;
+    return false;
+  }
 
-    rvs::lp::Log("[" + property["name"]+
-    "] pebb property[\"monitor\"] == \"true\"", rvs::logtrace);
-
-    // create worker thread object
-    rvs::lp::Log("[" + property["name"]+ "] pebb creating Worker",
-                 rvs::logtrace);
-
-    pworker = new Worker();
-    pworker->set_name(property["name"]);
-
-    // check if  -j flag is passed
-    if (has_property("cli.-j")) {
-      pworker->json(true);
-    }
-
-    // checki if deviceid filtering is required
-    string sdevid;
-    if (has_property("deviceid", &sdevid)) {
-      if (::is_positive_integer(sdevid)) {
-        try {
-          pworker->set_deviceid(std::stoi(sdevid));
-        }
-        catch(...) {
-          cerr << "RVS-PEBB: action: " << property["name"] <<
-          "  invalide 'deviceid' key value: " << sdevid << std::endl;
-          return -1;
-        }
-      } else {
-        cerr << "RVS-PEBB: action: " << property["name"] <<
-        "  invalide 'deviceid' key value: " << sdevid << std::endl;
-        return -1;
-      }
-    }
-
-    // check if GPU id filtering is requied
-    string sdev;
-    if (has_property("device", &sdev)) {
-      pworker->set_strgpuids(sdev);
-      if (sdev != "all") {
-        vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
-        vector<int> iarr;
-        int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
-        if (sts < 0) {
-          cerr << "RVS-PEBB: action: " << property["name"] <<
-          "  invalide 'device' key value: " << sdev << std::endl;
-          return -1;
-        }
-        pworker->set_gpuids(iarr);
+  // get the <deviceid> property value
+  if (has_property("deviceid", &sdevid)) {
+    int devid = property_get_deviceid(&error);
+    if (!error) {
+      if (devid != -1) {
+        prop_deviceid = static_cast<uint16_t>(devid);
+        prop_device_id_filtering = true;
       }
     } else {
-          cerr << "RVS-PEBB: action: " << property["name"] <<
-          "  key 'device' not found" << std::endl;
-          return -1;
+      cerr << "RVS-PQT: action: " << action_name <<
+      "  invalid 'deviceid' key value " << sdevid << std::endl;
+      return false;
     }
-
-    // start worker thread
-    rvs::lp::Log("[" + property["name"]+ "] pebb starting Worker",
-                 rvs::logtrace);
-    pworker->start();
-    sleep(2);
-
-    rvs::lp::Log("[" + property["name"]+ "] pebb Worker thread started",
-                 rvs::logtrace);
   } else {
-    rvs::lp::Log("[" + property["name"]+
-    "] pebb property[\"monitor\"] != \"true\"", rvs::logtrace);
-    if (pworker) {
-      // (give thread chance to start)
-      sleep(2);
-      pworker->set_stop_name(property["name"]);
-      pworker->stop();
-      delete pworker;
-      pworker = nullptr;
+    prop_device_id_filtering = false;
+  }
+
+  // get the other action/GST related properties
+  rvs::actionbase::property_get_run_parallel(&error);
+  if (error == 1) {
+    cerr << "RVS-PQT: action: " << action_name <<
+    "  invalid '" << RVS_CONF_PARALLEL_KEY <<
+    "' key value" << std::endl;
+    return false;
+  }
+  rvs::actionbase::property_get_run_duration(&error);
+  if (error == 1) {
+    cerr << "RVS-PQT: action: " << action_name <<
+    "  invalid '" << RVS_CONF_DURATION_KEY <<
+    "' key value" << std::endl;
+    return false;
+  }
+  if (gst_run_duration_ms == 0) {
+    gst_run_duration_ms = DEFAULT_DURATION;
+  }
+  return true;
+}
+
+/**
+ * @brief Create thread objects based on action description in configuation
+ * file.
+ *
+ * Threads are created but are not started. Execution, one by one of parallel,
+ * depends on "parallel" key in configuration file. Pointers to created objects
+ * are stored in "test_array" member
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pebbaction::create_threads() {
+  std::string msg;
+  std::vector<uint16_t> gpu_id;
+  std::vector<uint16_t> gpu_device_id;
+
+  gpu_get_all_gpu_id(&gpu_id);
+  gpu_get_all_device_id(&gpu_device_id);
+
+  for (size_t i = 0; i < gpu_id.size(); i++) {
+    if (prop_device_id_filtering) {
+      if (prop_deviceid != gpu_device_id[i]) {
+        continue;
+      }
     }
-    rvs::lp::Log("[" + property["name"]+ "] pebb Worker stopped",
-                 rvs::logtrace);
+    // filter out by listed sources
+    if (!prop_device_all_selected) {
+      const auto it = std::find(device_prop_gpu_id_list.cbegin(),
+                                device_prop_gpu_id_list.cend(),
+                                std::to_string(gpu_id[i]));
+      if (it == device_prop_gpu_id_list.cend()) {
+        continue;
+      }
+    }
+
+
+    int dstnode;
+    int srcnode;
+
+    for (uint cpu_index = 0;
+         cpu_index < rvs::hsa::Get()->cpu_list.size();
+         cpu_index++) {
+      // GPUs are peers, create transaction for them
+      dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
+      if (dstnode < 0) {
+        std::cerr << "RVS-PEBB: no node found for destination GPU ID "
+          << std::to_string(gpu_id[i]);
+        return -1;
+      }
+      srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
+      pebbworker* p = new pebbworker;
+      p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
+      test_array.push_back(p);
+    }
   }
   return 0;
+}
+
+/**
+ * @brief Delete test thread objects at the end of action execution
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pebbaction::destroy_threads() {
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
+    delete *it;
+  }
+  return 0;
+}
+
+/**
+ * @brief Main action execution entry point. Implements test logic.
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pebbaction::run() {
+  int sts;
+  string msg;
+
+  if (!get_all_common_config_keys())
+    return -1;
+  if (!get_all_pebb_config_keys())
+    return -1;
+  sts = create_threads();
+
+  if (sts != 0) {
+    return sts;
+  }
+
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end()) {
+    unsigned int sec;
+    unsigned int usec;
+
+    rvs::lp::get_ticks(&sec, &usec);
+    bjson = true;
+    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                        action_name.c_str(), rvs::loginfo, sec, usec);
+    if (json_rcqt_node == NULL) {
+      // log the error
+      msg =
+      action_name + " " + MODULE_NAME + " "
+      + JSON_CREATE_NODE_ERROR;
+      log(msg.c_str(), rvs::logerror);
+    }
+  }
+
+  if (gst_runs_parallel) {
+    sts = run_parallel();
+  } else {
+    sts = run_single();
+  }
+
+  destroy_threads();
+
+  return sts;
+}
+
+/**
+ * @brief Execute test transfers one by one, in round robin fashion, for the
+ * duration of the action.
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pebbaction::run_single() {
+  // define timers
+  rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
+  rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
+
+  // let the test run
+  brun = true;
+
+  // start timers
+  timer_final.start(gst_run_duration_ms, true);  // ticks only once
+  timer_running.start(prop_log_interval);        // ticks continuously
+
+  // iterate through test array and invoke tests one by one
+  do {
+    for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
+      (*it)->do_transfer();
+      if (rvs::lp::Stopping()) {
+        brun = false;
+        break;
+      }
+      sleep(1);
+    }
+  } while (brun);
+
+  timer_running.stop();
+  timer_final.stop();
+
+  print_final_average();
+
+  return 0;
+}
+
+/**
+ * @brief Execute test transfers all at once, for the
+ * duration of the action.
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pebbaction::run_parallel() {
+  // define timers
+  rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
+  rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
+
+  // let the test run
+  brun = true;
+
+  // start all worker threads
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->start();
+  }
+
+  // start timers
+  timer_final.start(gst_run_duration_ms, true);  // ticks only once
+  timer_running.start(prop_log_interval);        // ticks continuously
+
+  // wait for test to complete
+  while (brun) {
+    if (rvs::lp::Stopping()) {
+      brun = false;
+    }
+    sleep(1);
+  }
+
+  // stop all worker threads
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
+  }
+
+  timer_running.stop();
+  timer_final.stop();
+
+  print_final_average();
+
+  return 0;
+}
+
+/**
+ * @brief Collect running average bandwidth data for all the tests and prints
+ * them on cout every log_interval msec.
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pebbaction::print_running_average() {
+  int src_node, dst_node;
+  int dst_id;
+  bool bidir;
+  size_t current_size;
+  double duration;
+  std::string msg;
+  for (auto it = test_array.begin(); it != test_array.end() ; ++it) {
+    (*it)->get_running_data(&src_node, &dst_node, &bidir,
+                            &current_size, &duration);
+
+    double bandiwdth = current_size/duration/(1024*1024*1024);
+    if (bidir) {
+      bandiwdth *=2;
+    }
+
+    char buff[64];
+    snprintf( buff, sizeof(buff), "%.2fGBps", bandiwdth);
+    dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+    msg = "[" + action_name + "] pcie-bandwidth  " +
+    std::to_string(src_node) + " " + std::to_string(dst_id) +
+    "  h2d: " + (prop_h2d ? "true" : "false") +
+    "  d2h: " + (prop_d2h ? "true" : "false") + "  " +
+    buff;
+    rvs::lp::Log(msg, rvs::loginfo);
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                          action_name.c_str(), rvs::loginfo, sec, usec);
+      if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_node));
+        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
+        rvs::lp::AddString(json_rcqt_node, "pcie-bandwidth (GBs)", buff);
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * @brief Collect bandwidth totals for all the tests and prints
+ * them on cout at the end of action execution
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pebbaction::print_final_average() {
+  int src_node, dst_node;
+  int dst_id;
+  bool bidir = false;
+  size_t current_size;
+  double duration;
+  std::string msg;
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->get_final_data(&src_node, &dst_node, &bidir,
+                          &current_size, &duration);
+
+    double bandiwdth = current_size/duration/(1024*1024*1024);
+    if (bidir) {
+      bandiwdth *=2;
+    }
+
+    char buff[64];
+    snprintf( buff, sizeof(buff), "%.2fGBps", bandiwdth);
+    dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+    msg = "[" + action_name + "] pcie-bandwidth  " +
+    std::to_string(src_node) + " " + std::to_string(dst_id) +
+    "  h2d: " + (prop_h2d ? "true" : "false") +
+    "  d2h: " + (prop_d2h ? "true" : "false") + "  " +
+    buff +
+    "  duration: " + std::to_string(duration) + " ms";
+
+    rvs::lp::Log(msg, rvs::logresults);
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                          action_name.c_str(), rvs::logresults, sec, usec);
+      if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_node));
+        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
+        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
+        rvs::lp::AddString(json_rcqt_node, "duration (ms)",
+                           std::to_string(duration));
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+    }
+  }
+  return 0;
+}
+
+void pebbaction::do_final_average() {
+  rvs::lp::Log("pqt in do_final_average", rvs::logdebug);
+  brun = false;
+}
+
+void pebbaction::do_running_average() {
+  rvs::lp::Log("in do_running_average", rvs::logdebug);
+  print_running_average();
 }
