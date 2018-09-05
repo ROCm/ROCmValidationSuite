@@ -60,6 +60,9 @@ using std::vector;
 
 //! Default constructor
 pqtaction::pqtaction() {
+  prop_deviceid = -1;
+  prop_device_id_filtering = false;
+  prop_peer_deviceid = -1;
 }
 
 //! Default destructor
@@ -494,10 +497,16 @@ int pqtaction::run() {
   int sts;
   string msg;
 
-  if (!get_all_common_config_keys())
+  rvs::lp::Log("int pqtaction::run()", rvs::logtrace);
+
+  if (!get_all_common_config_keys()) {
+    cerr << "RVS-PQT: " << "Error in get_all_common_config_keys()"<< std::endl;
     return -1;
-  if (!get_all_pqt_config_keys())
+  }
+  if (!get_all_pqt_config_keys()) {
+    cerr << "RVS-PQT: " << "Error in get_all_pqt_config_keys()"<< std::endl;
     return -1;
+  }
 
   // log_interval must be less than duration
   if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
@@ -506,40 +515,19 @@ int pqtaction::run() {
     return -1;
   }
 
-  // no bandwidth test is performed
-  if (prop_test_bandwidth == false) {
-    prop_log_interval = 0;
-    gst_run_duration_ms = 0;
-  }
-
-  // check for -j flag (json logging)
-  if (property.find("cli.-j") != property.end()) {
-    unsigned int sec;
-    unsigned int usec;
-
-    rvs::lp::get_ticks(&sec, &usec);
-    bjson = true;
-    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::loginfo, sec, usec);
-    if (json_rcqt_node == NULL) {
-      // log the error
-      msg =
-      action_name + " " + MODULE_NAME + " "
-      + JSON_CREATE_NODE_ERROR;
-      cerr << "RVS-PQT: " << msg;
-    }
-  }
-
   sts = create_threads();
   if (sts)
     return sts;
 
-  if (gst_runs_parallel) {
-    sts = run_parallel();
-  } else {
-    sts = run_single();
+  if (prop_test_bandwidth) {
+    if (gst_runs_parallel) {
+      sts = run_parallel();
+    } else {
+      sts = run_single();
+    }
   }
 
+  // do cleanup
   destroy_threads();
 
   return sts;

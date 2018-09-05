@@ -64,6 +64,8 @@ using std::vector;
 
 //! Default constructor
 pebbaction::pebbaction() {
+  prop_deviceid = -1;
+  prop_device_id_filtering = false;
 }
 
 //! Default destructor
