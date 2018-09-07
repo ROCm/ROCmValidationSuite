@@ -88,3 +88,6 @@ Runs rvs with the default test configuration file <i>[install_base]/conf/rvs.con
 <b>rvs -c conf/gpup1.conf -d 3 -j -l mylog.txt</b> \n
 Runs rvs with configuration file <i>conf/gpup1.conf</i> and writes output \n
 into log file <i>mylog.txt</i> using logging level 3 (INFO) in JSON format
+
+For more details consult the User Guide located in:
+<i>[install_base]/userguide/html/index.html</i>

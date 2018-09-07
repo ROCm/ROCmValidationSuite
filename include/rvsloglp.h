@@ -30,6 +30,9 @@
 #include "rvsliblog.h"
 
 #define RVSDEBUG_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
++std::to_string(__LINE__), rvs::logdebug);
+
+#define RVSTRACE_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
 +std::to_string(__LINE__), rvs::logtrace);
 
 namespace rvs {

@@ -1841,6 +1841,36 @@ average of the bandwidth will be calculated and logged. The default value is
 1000 (1 second). It must be smaller than the duration key.</td></tr>
 </table>
 
+Please note that suitable values for **log\_interval** and **duration** depend
+on your system.
+
+- **log_interval**, in sequential mode, should be long enough to allow all
+transfer tests to finish at lest once. Number of transfers depends on number of
+peer NUMA nodes in your system. In parallel mode, it should be roughly 1.5 times
+the duration of single longest individual test.
+
+- **duration**, regardless of mode should be at least, 4 * log_interval.
+
+You may obtain indication of how long single transfer between two NUMA nodes
+take by running test with "-d 4" switch and observing DEBUG messages for
+transfer start/finish. An output may look like this:
+
+    [DEBUG ] [183940.634118] [action_1] pqt transfer 6 5 start
+    [DEBUG ] [183941.311671] [action_1] pqt transfer 6 5 finish
+    [DEBUG ] [183941.312746] [action_1] pqt transfer 4 5 start
+    [DEBUG ] [183941.990174] [action_1] pqt transfer 4 5 finish
+    [DEBUG ] [183941.991244] [action_1] pqt transfer 4 6 start
+    [DEBUG ] [183942.668687] [action_1] pqt transfer 4 6 finish
+    [DEBUG ] [183942.669756] [action_1] pqt transfer 5 4 start
+    [DEBUG ] [183943.340957] [action_1] pqt transfer 5 4 finish
+    [DEBUG ] [183943.342037] [action_1] pqt transfer 5 6 start
+    [DEBUG ] [183944.17957 ] [action_1] pqt transfer 5 6 finish
+    [DEBUG ] [183944.19032 ] [action_1] pqt transfer 6 4 start
+    [DEBUG ] [183944.700868] [action_1] pqt transfer 6 4 finish
+
+From this printout, it can be concluded that single transfer takes on average
+800ms. Values for **log\_interval** and **duration** should be set accordingly.
+
 @subsection usg102 10.2 Output
 
 Module specific output keys are described in the table below:
@@ -1880,6 +1910,15 @@ At the end of the test the average bytes/second will be calculated over the
 entire test duration, and will be logged as a result:
 
     [RESULT][<timestamp>][<action name>] p2p-bandwidth <gpu id> <peer gpu id> bidirectional: <bidirectional> <bandwidth > <duration>
+
+In some cases, based on particular value of **log\_interval** settings, you
+might get an output containing **nan GBps**:
+
+    [INFO  ] [186147.611737] [action_1] p2p-bandwidth  3254 50599  bidirectional: true  -nan GBps
+
+This means that the moving average calculation kicked in before at least one
+test transfer happened for those particular nodes in this moving average cycle.
+You should probably increase value of **log\_interval** in that case.
 
 @subsection usg103 10.3 Examples
 
@@ -2038,6 +2077,39 @@ interval over which the moving average of the bandwidth will be calculated and
 logged.</td></tr>
 </table>
 
+Please note that suitable values for **log\_interval** and **duration** depend
+on your system.
+
+- **log_interval**, in sequential mode, should be long enough to allow all
+transfer tests to finish at lest once. Number of transfers depends on number of
+peer NUMA nodes in your system. In parallel mode, it should be roughly 1.5 times
+the duration of single longest individual test.
+
+- **duration**, regardless of mode should be at least, 4 * log_interval.
+
+You may obtain indication of how long single transfer between two NUMA nodes
+take by running test with "-d 4" switch and observing DEBUG messages for
+transfer start/finish. An output may look like this:
+
+    [DEBUG ] [187024.729433] [action_1] pebb transfer 0 6 start
+    [DEBUG ] [187029.327818] [action_1] pebb transfer 0 6 finish
+    [DEBUG ] [187024.299150] [action_1] pebb transfer 1 6 start
+    [DEBUG ] [187029.473378] [action_1] pebb transfer 1 6 finish
+    [DEBUG ] [187023.227009] [action_1] pebb transfer 1 5 start
+    [DEBUG ] [187029.530203] [action_1] pebb transfer 1 5 finish
+    [DEBUG ] [187025.737675] [action_1] pebb transfer 3 5 start
+    [DEBUG ] [187030.134100] [action_1] pebb transfer 3 5 finish
+    [DEBUG ] [187027.19961 ] [action_1] pebb transfer 2 6 start
+    [DEBUG ] [187030.421181] [action_1] pebb transfer 2 6 finish
+    [DEBUG ] [187027.41475 ] [action_1] pebb transfer 2 5 start
+    [DEBUG ] [187031.293998] [action_1] pebb transfer 2 5 finish
+    [DEBUG ] [187027.71717 ] [action_1] pebb transfer 0 5 start
+    [DEBUG ] [187031.605326] [action_1] pebb transfer 0 5 finish
+
+From this printout, it can be concluded that single transfer takes on average
+5500ms. Values for **log\_interval** and **duration** should be set accordingly.
+
+
 @subsection usg112 11.2 Output
 
 Module specific output keys are described in the table below:
@@ -2060,12 +2132,22 @@ average of the bandwidth of the transfer will be calculated and logged. This
 interval is provided by the log_interval parameter and will have the following
 output format:
 
-    [INFO ][<timestamp>][<action name>] pcie-bandwidth <gpu id> h2d: <host_to_device> d2h: <device_to_host> <interval_bandwidth >
+    [INFO ][<timestamp>][<action name>] pcie-bandwidth <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> <interval_bandwidth >
 
 At the end of the test the average bytes/second will be calculated over the
 entire test duration, and will be logged as a result:
 
     [RESULT][<timestamp>][<action name>] pcie-bandwidth <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> < bandwidth > <duration>
+
+In some cases, based on particular value of **log\_interval** settings, you
+might get an output containing **nan GBps**:
+
+    [INFO  ] [187036.322945] [action_1] pcie-bandwidth  0 3254  h2d: true  d2h: true  -nanGBps
+
+This means that the moving average calculation kicked in before at least one
+test transfer happened for those particular nodes in this moving average cycle.
+You should probably increase value of **log\_interval** in that case.
+
 
 
 @subsection usg113 11.3 Examples
