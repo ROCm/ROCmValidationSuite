@@ -421,6 +421,8 @@ int pqtaction::create_threads() {
         if (prop_test_bandwidth) {
           pqtworker* p = new pqtworker;
           p->initialize(srcnode, dstnode, prop_bidirectional);
+          p->set_name(action_name);
+          p->set_stop_name(action_name);
           test_array.push_back(p);
         }
 
@@ -480,6 +482,7 @@ int pqtaction::create_threads() {
  * */
 int pqtaction::destroy_threads() {
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->set_stop_name(action_name);
     (*it)->stop();
     delete *it;
   }
@@ -634,8 +637,9 @@ int pqtaction::run_parallel() {
 
   // wait for test to complete
   while (brun) {
-    sleep(1);
+    sleep(10);
     if (rvs::lp::Stopping()) {
+      RVSTRACE_
       brun = false;
     }
   }
@@ -742,7 +746,7 @@ int pqtaction::print_final_average() {
            "  bidirectional: " +
            std::string(bidir ? "true" : "false") +
            "  " + buff +
-           "  duration: " + std::to_string(duration) + " ms";
+           "  duration: " + std::to_string(duration) + " sec";
 
     rvs::lp::Log(msg, rvs::logresults);
     if (bjson) {
@@ -757,8 +761,8 @@ int pqtaction::print_final_average() {
         rvs::lp::AddString(json_rcqt_node, "p2p", "true");
         rvs::lp::AddString(json_rcqt_node, "bidirectional",
                            std::string(bidir ? "true" : "false"));
-        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
-        rvs::lp::AddString(json_rcqt_node, "duration (ms)",
+        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBps)", buff);
+        rvs::lp::AddString(json_rcqt_node, "duration (sec)",
                            std::to_string(duration));
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
@@ -769,34 +773,56 @@ int pqtaction::print_final_average() {
   return 0;
 }
 
+/**
+ * @brief timer callback used to signal end of test
+ *
+ * timer callback used to signal end of test and to initiate
+ * calculation of final average
+ *
+ * */
 void pqtaction::do_final_average() {
-  rvs::lp::Log("pqt in do_final_average", rvs::logdebug);
+  std::string msg;
+  unsigned int sec;
+  unsigned int usec;
+  rvs::lp::get_ticks(&sec, &usec);
+
+  msg = "[" + action_name + "] pqt in do_final_average";
+  rvs::lp::Log(msg, rvs::logtrace, sec, usec);
+
   if (bjson) {
-    unsigned int sec;
-    unsigned int usec;
-    rvs::lp::get_ticks(&sec, &usec);
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::logdebug, sec, usec);
+                            action_name.c_str(), rvs::logtrace, sec, usec);
     if (json_rcqt_node != NULL) {
       rvs::lp::AddString(json_rcqt_node, "message", "pqt in do_final_average");
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
   }
+
   brun = false;
 }
 
+/**
+ * @brief timer callback used to signal end of log interval
+ *
+ * timer callback used to signal end of log interval and to initiate
+ * calculation of moving average
+ *
+ * */
 void pqtaction::do_running_average() {
-  rvs::lp::Log("pqt in do_running_average", rvs::logdebug);
+  unsigned int sec;
+  unsigned int usec;
+  std::string msg;
+
+  rvs::lp::get_ticks(&sec, &usec);
+  msg = "[" + action_name + "] pqt in do_running_average";
+  rvs::lp::Log(msg, rvs::logtrace, sec, usec);
   if (bjson) {
-    unsigned int sec;
-    unsigned int usec;
-    rvs::lp::get_ticks(&sec, &usec);
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::logdebug, sec, usec);
+                            action_name.c_str(), rvs::logtrace, sec, usec);
     if (json_rcqt_node != NULL) {
       rvs::lp::AddString(json_rcqt_node,
                          "message",
-                         "pqt in do_running_average");
+                         "in do_running_average");
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
   }

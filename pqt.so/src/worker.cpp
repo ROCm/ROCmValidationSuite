@@ -57,11 +57,27 @@ pqtworker::~pqtworker() {}
  *
  * */
 void pqtworker::run() {
+  std::string msg;
+
+  msg = "[" + action_name + "] pqt thread " + std::to_string(src_node) + " "
+  + std::to_string(dst_node) + " has started";
+  rvs::lp::Log(msg, rvs::logdebug);
+
+  brun = true;
+
   while (brun) {
     do_transfer();
     std::this_thread::yield();
+
+    if (rvs::lp::Stopping()) {
+      brun = false;
+      RVSTRACE_
+    }
   }
-  log("pqt worker thread has finished", rvs::logdebug);
+
+  msg = "[" + action_name + "] pqt thread " + std::to_string(src_node) + " "
+  + std::to_string(dst_node) + " has finished";
+  rvs::lp::Log(msg, rvs::logdebug);
 }
 
 /**
@@ -72,7 +88,11 @@ void pqtworker::run() {
  *
  * */
 void pqtworker::stop() {
-  log("pqt in pqtworker::stop()", rvs::logdebug);
+  std::string msg;
+
+  msg = "[" + stop_action_name + "] pqt transfer " + std::to_string(src_node)
+      + " " + std::to_string(dst_node) + " in pqtworker::stop()";
+  rvs::lp::Log(msg, rvs::logtrace);
 
   brun = false;
 
@@ -121,6 +141,16 @@ int pqtworker::initialize(int Src, int Dst, bool Bidirect) {
 int pqtworker::do_transfer() {
   double duration;
   int sts;
+  unsigned int startsec;
+  unsigned int startusec;
+  unsigned int endsec;
+  unsigned int endusec;
+  std::string msg;
+
+  msg = "[" + action_name + "] pqt transfer " + std::to_string(src_node) + " "
+      + std::to_string(dst_node) + " ";
+
+  rvs::lp::get_ticks(&startsec, &startusec);
 
   for (size_t i = 0; i < pHsa->size_list.size(); i++) {
     current_size = pHsa->size_list[i];
@@ -139,14 +169,11 @@ int pqtworker::do_transfer() {
       running_size += current_size;
       running_duration += duration;
     }
-
-    /*
-    std::string msg = "pqt packet size: " + std::to_string(phsa->size_list[i])
-      + "   throughput: "
-      + std::to_string(phsa->size_list[i]/duration/(1024*1024*1024)*2);
-    rvs::lp::Log(msg, rvs::logresults);
-    */
   }
+
+  rvs::lp::get_ticks(&endsec, &endusec);
+  rvs::lp::Log(msg + "start", rvs::logdebug, startsec, startusec);
+  rvs::lp::Log(msg + "finish", rvs::logdebug, endsec, endusec);
 
   return 0;
 }
