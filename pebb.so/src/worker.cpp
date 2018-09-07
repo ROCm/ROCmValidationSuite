@@ -60,14 +60,27 @@ pebbworker::~pebbworker() {}
  *
  * */
 void pebbworker::run() {
+  std::string msg;
+
+  msg = "[" + action_name + "] pebb thread " + std::to_string(src_node) + " "
+  + std::to_string(dst_node) + " has started";
+  rvs::lp::Log(msg, rvs::logdebug);
+
+  brun = true;
+
   while (brun) {
     do_transfer();
-    if (rvs::lp::Stopping()) {
-      break;
-    }
     std::this_thread::yield();
+
+    if (rvs::lp::Stopping()) {
+      brun = false;
+      RVSTRACE_
+    }
   }
-  log("pebb worker thread has finished", rvs::logdebug);
+
+  msg = "[" + action_name + "] pebb thread " + std::to_string(src_node) + " "
+  + std::to_string(dst_node) + " has finished";
+  rvs::lp::Log(msg, rvs::logdebug);
 }
 
 /**
@@ -78,7 +91,11 @@ void pebbworker::run() {
  *
  * */
 void pebbworker::stop() {
-  log("pebb in pebbworker::stop()", rvs::logdebug);
+  std::string msg;
+
+  msg = "[" + stop_action_name + "] pebb transfer " + std::to_string(src_node)
+      + " "       + std::to_string(dst_node) + " in pebbworker::stop()";
+  rvs::lp::Log(msg, rvs::logtrace);
 
   brun = false;
 
@@ -132,6 +149,16 @@ int pebbworker::initialize(int Src, int Dst, bool h2d, bool d2h) {
 int pebbworker::do_transfer() {
   double duration;
   int sts;
+  unsigned int startsec;
+  unsigned int startusec;
+  unsigned int endsec;
+  unsigned int endusec;
+  std::string msg;
+
+  msg = "[" + action_name + "] pebb transfer " + std::to_string(src_node) + " "
+      + std::to_string(dst_node) + " ";
+
+  rvs::lp::get_ticks(&startsec, &startusec);
 
   for (size_t i = 0; i < pHsa->size_list.size(); i++) {
     current_size = pHsa->size_list[i];
@@ -160,6 +187,11 @@ int pebbworker::do_transfer() {
       running_duration += duration;
     }
   }
+
+  rvs::lp::get_ticks(&endsec, &endusec);
+  rvs::lp::Log(msg + "start", rvs::logdebug, startsec, startusec);
+  rvs::lp::Log(msg + "finish", rvs::logdebug, endsec, endusec);
+
   return 0;
 }
 
