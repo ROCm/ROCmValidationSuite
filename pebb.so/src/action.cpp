@@ -260,6 +260,8 @@ int pebbaction::create_threads() {
       srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
       pebbworker* p = new pebbworker;
       p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
+      p->set_name(action_name);
+      p->set_stop_name(action_name);
       test_array.push_back(p);
     }
   }
@@ -274,6 +276,7 @@ int pebbaction::create_threads() {
  * */
 int pebbaction::destroy_threads() {
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->set_stop_name(action_name);
     (*it)->stop();
     delete *it;
   }
@@ -496,7 +499,7 @@ int pebbaction::print_final_average() {
     "  h2d: " + (prop_h2d ? "true" : "false") +
     "  d2h: " + (prop_d2h ? "true" : "false") + "  " +
     buff +
-    "  duration: " + std::to_string(duration) + " ms";
+    "  duration: " + std::to_string(duration) + " sec";
 
     rvs::lp::Log(msg, rvs::logresults);
     if (bjson) {
@@ -508,8 +511,8 @@ int pebbaction::print_final_average() {
       if (json_rcqt_node != NULL) {
         rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_node));
         rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
-        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
-        rvs::lp::AddString(json_rcqt_node, "duration (ms)",
+        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBps)", buff);
+        rvs::lp::AddString(json_rcqt_node, "duration (sec)",
                            std::to_string(duration));
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
@@ -518,12 +521,58 @@ int pebbaction::print_final_average() {
   return 0;
 }
 
+/**
+ * @brief timer callback used to signal end of test
+ *
+ * timer callback used to signal end of test and to initiate
+ * calculation of final average
+ *
+ * */
 void pebbaction::do_final_average() {
-  rvs::lp::Log("pqt in do_final_average", rvs::logdebug);
+  std::string msg;
+  unsigned int sec;
+  unsigned int usec;
+  rvs::lp::get_ticks(&sec, &usec);
+
+  msg = "[" + action_name + "] pebb in do_final_average";
+  rvs::lp::Log(msg, rvs::logtrace, sec, usec);
+
+  if (bjson) {
+    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::logtrace, sec, usec);
+    if (json_rcqt_node != NULL) {
+      rvs::lp::AddString(json_rcqt_node, "message", "pebb in do_final_average");
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }
+  }
+
   brun = false;
 }
 
+/**
+ * @brief timer callback used to signal end of log interval
+ *
+ * timer callback used to signal end of log interval and to initiate
+ * calculation of moving average
+ *
+ * */
 void pebbaction::do_running_average() {
-  rvs::lp::Log("in do_running_average", rvs::logdebug);
+  unsigned int sec;
+  unsigned int usec;
+  std::string msg;
+
+  rvs::lp::get_ticks(&sec, &usec);
+  msg = "[" + action_name + "] pebb in do_running_average";
+  rvs::lp::Log(msg, rvs::logtrace, sec, usec);
+  if (bjson) {
+    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::logtrace, sec, usec);
+    if (json_rcqt_node != NULL) {
+      rvs::lp::AddString(json_rcqt_node,
+                         "message",
+                         "in do_running_average");
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }
+  }
   print_running_average();
 }
