@@ -50,8 +50,35 @@ using std::string;
 using std::vector;
 using std::map;
 
-pebbworker::pebbworker() {}
+pebbworker::pebbworker() {
+  current_size_ix = 0;
+  transfer_fisnished = false;
+}
 pebbworker::~pebbworker() {}
+
+/**
+ * @brief Passes wave context data to a test thread
+ *
+ * Pases number of tests in a weave along with synchronization mutex
+ *
+ * @param pWaveMutex ptr to synchraonization mutex for wave context
+ * @param pWaveCount ptr to number of remaining threads in wave
+ *
+ * */
+void pebbworker::set_wave(std::mutex* pWaveMutex, size_t* pWaveCount) {
+  pwave_mutex = pWaveMutex;
+  pwave_count = pWaveCount;
+}
+
+/**
+ * @brief Re-enables transfer for the next wave
+ *
+ *
+ * */
+void pebbworker::restart_transfer() {
+      std::lock_guard<std::mutex> lk(cntmutex);
+      transfer_fisnished = false;
+}
 
 /**
  * @brief Thread function
@@ -67,14 +94,33 @@ void pebbworker::run() {
   rvs::lp::Log(msg, rvs::logdebug);
 
   brun = true;
+  current_size_ix = 0;
 
   while (brun) {
-    do_transfer();
-    std::this_thread::yield();
-
+    // checki if Stopping condition is set
     if (rvs::lp::Stopping()) {
       brun = false;
       RVSTRACE_
+      break;
+    }
+
+    // wait for wave to start
+    if (transfer_fisnished) {
+      sleep(1);
+      continue;
+    }
+
+    do_transfer();
+
+    {
+      std::lock_guard<std::mutex> lk(cntmutex);
+      transfer_fisnished = true;
+    }
+
+    // decrease wave count
+    {
+      std::lock_guard<std::mutex> lk(*pwave_mutex);
+      (*pwave_count)--;
     }
   }
 
@@ -160,8 +206,8 @@ int pebbworker::do_transfer() {
 
   rvs::lp::get_ticks(&startsec, &startusec);
 
-  for (size_t i = 0; i < pHsa->size_list.size(); i++) {
-    current_size = pHsa->size_list[i];
+
+    current_size = pHsa->size_list[current_size_ix];
 
     if (rvs::lp::Stopping()) {
       return -1;
@@ -186,6 +232,11 @@ int pebbworker::do_transfer() {
       running_size += current_size;
       running_duration += duration;
     }
+
+
+  current_size_ix += 1;
+  if (current_size_ix >= pHsa->size_list.size()) {
+    current_size_ix = 0;
   }
 
   rvs::lp::get_ticks(&endsec, &endusec);
@@ -209,6 +260,11 @@ int pebbworker::do_transfer() {
  * */
 void pebbworker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
                                  size_t* Size, double* Duration) {
+//  int icount = 0;
+//   while (running_size == 0 && icount < 100) {
+//     sleep(5);
+//     icount++;
+//   }
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
 

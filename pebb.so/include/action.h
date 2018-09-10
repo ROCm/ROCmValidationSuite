@@ -109,9 +109,16 @@ class pebbaction : public rvs::actionbase {
   //! json_rcqt_node is json node shared through submodules
   void *json_rcqt_node;
 
+  //! wave synchronization mutex
+  std::mutex wave_mutex;
+  //! global wave counter
+  size_t wave_count;
+
+
  private:
   void do_running_average(void);
   void do_final_average(void);
+  void do_wave(void);
 
   std::vector<pebbworker*> test_array;
 };
