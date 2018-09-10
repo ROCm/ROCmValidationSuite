@@ -71,6 +71,10 @@ class pebbworker : public rvs::ThreadBase {
   void get_final_data(int* Src, int* Dst, bool* Bidirect,
                       size_t* Size, double* Duration);
 
+  void set_wave(std::mutex* pWaveMutex, size_t* pWaveCount);
+
+  void restart_transfer();
+
  protected:
   virtual void run(void);
 
@@ -97,11 +101,23 @@ class pebbworker : public rvs::ThreadBase {
   //! 'true' if device to host transfer is required
   bool prop_d2h;
 
+  //! current size index;
+  size_t current_size_ix;
+
+  //! global wave counter
+  size_t* pwave_count;
+
+  //! synchronization mutex
+  std::mutex* pwave_mutex;
+
+  //! 'true' if current wave transfer has finished
+  volatile bool transfer_fisnished;
+
   //! Current size of transfer data
   size_t current_size;
 
   //! running total for size (bytes)
-  size_t running_size;
+  volatile size_t running_size;
   //! running total for duration (sec)
   double running_duration;
 
