@@ -258,7 +258,7 @@ int pebbaction::create_threads() {
         return -1;
       }
       srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
-      pebbworker* p = new pebbworker;
+      pebbworker* p = new pebbworker();
       p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
       p->set_name(action_name);
       p->set_stop_name(action_name);
@@ -382,9 +382,16 @@ int pebbaction::run_parallel() {
   // define timers
   rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
   rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
+  rvs::timer<pebbaction> timer_wave(&pebbaction::do_wave, this);
 
   // let the test run
   brun = true;
+
+  // set wave size
+  wave_count = test_array.size();
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->set_wave(&wave_mutex, &wave_count);
+  }
 
   // start all worker threads
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
@@ -394,6 +401,7 @@ int pebbaction::run_parallel() {
   // start timers
   timer_final.start(gst_run_duration_ms, true);  // ticks only once
   timer_running.start(prop_log_interval);        // ticks continuously
+  timer_wave.start(1);        // ticks continuously every 1ms
 
   // wait for test to complete
   while (brun) {
@@ -408,6 +416,7 @@ int pebbaction::run_parallel() {
     (*it)->stop();
   }
 
+  timer_wave.stop();
   timer_running.stop();
   timer_final.stop();
 
@@ -575,4 +584,33 @@ void pebbaction::do_running_average() {
     }
   }
   print_running_average();
+}
+
+/**
+ * @brief timer callback used to triger new wave of transfers
+ *
+ * restart wave of transfers
+ *
+ * */
+void pebbaction::do_wave() {
+  std::string msg;
+  bool restart_wave = false;
+
+  // reset wave count if needed
+  {
+    std::lock_guard<std::mutex> lk(wave_mutex);
+    if (wave_count == 0) {
+      wave_count = test_array.size();
+      restart_wave = true;
+      msg = "[" + action_name + "] pebb wave started";
+      rvs::lp::Log(msg, rvs::logdebug);
+    }
+  }
+
+  if (restart_wave) {
+    // signal threads to re-start transfers
+    for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+      (*it)->restart_transfer();
+    }
+  }
 }
