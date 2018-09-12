@@ -76,7 +76,7 @@ using std::fstream;
 
 // collection of allowed metrics
 const char* metric_names[] =
-        { GM_TEMP, GM_TEMP, GM_MEM_CLOCK, GM_FAN, GM_POWER
+        { GM_TEMP, GM_CLOCK, GM_MEM_CLOCK, GM_FAN, GM_POWER
         };
 
 /**

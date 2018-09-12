@@ -42,10 +42,10 @@ class ThreadBase {
   ~ThreadBase();
 
  public:
-  void start();
-  void detach();
-  void join();
-  void sleep(const unsigned int ms);
+  virtual void start();
+  virtual void detach();
+  virtual void join();
+  virtual void sleep(const unsigned int ms);
 
  protected:
   void runinternal(void);
