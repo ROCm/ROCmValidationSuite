@@ -132,7 +132,7 @@ int pqtaction::property_get_peer_deviceid(int *error) {
 }
 
 /**
- * @brief reads the module's properties collection to see whether bandiwdth
+ * @brief reads the module's properties collection to see whether bandwidth
  * tests should be run after peer check
  */
 void pqtaction::property_get_test_bandwidth(int *error) {
@@ -153,7 +153,7 @@ void pqtaction::property_get_test_bandwidth(int *error) {
 }
 
 /**
- * @brief reads the module's properties collection to see whether bandiwdth
+ * @brief reads the module's properties collection to see whether bandwidth
  * tests should be run in both directions
  */
 void pqtaction::property_get_bidirectional(int *error) {
@@ -172,26 +172,6 @@ void pqtaction::property_get_bidirectional(int *error) {
     *error = 2;
   }
 }
-
-/**
- * @brief reads the log interval from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void pqtaction::property_get_log_interval(int *error) {
-    *error = 0;
-    prop_log_interval = DEFAULT_LOG_INTERVAL;
-    auto it = property.find(RVS_CONF_LOG_INTERVAL_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second)) {
-            prop_log_interval = std::stoul(it->second);
-            if (prop_log_interval == 0)
-                prop_log_interval = DEFAULT_LOG_INTERVAL;
-        } else {
-            *error = 1;
-        }
-    }
-}
-
 
 /**
  * @brief reads all PQT related configuration keys from
@@ -223,11 +203,13 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  property_get_log_interval(&error);
-  if (error) {
+  prop_log_interval = property_get_log_interval(&error);
+  if (error == 1) {
     cerr << "RVS-PQT: action: " << action_name <<
         "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "'" << std::endl;
     return false;
+  } else if (error == 2) {
+    prop_log_interval = DEFAULT_LOG_INTERVAL;
   }
 
   property_get_bidirectional(&error);
@@ -248,81 +230,78 @@ bool pqtaction::get_all_pqt_config_keys(void) {
  * @return true if no fatal error occured, false otherwise
  */
 bool pqtaction::get_all_common_config_keys(void) {
-    string msg, sdevid, sdev;
-    int error;
+  string msg, sdevid, sdev;
+  int error;
 
-    // get the action name
-    property_get_action_name(&error);
-    if (error) {
-      msg = "action field is missing";
-      cerr << "RVS-PQT: " << msg;
+  // get the action name
+  property_get_action_name(&error);
+  if (error) {
+    msg = "action field is missing";
+    cerr << "RVS-PQT: " << msg;
+    return false;
+  }
+
+  // get <device> property value (a list of gpu id)
+  if (has_property("device", &sdev)) {
+      prop_device_all_selected = property_get_device(&error);
+      if (error) {  // log the error & abort GST
+          cerr << "RVS-PQT: action: " << action_name <<
+              "  invalid 'device' key value " << sdev << std::endl;
+          return false;
+      }
+  } else {
+      cerr << "RVS-PQT: action: " << action_name <<
+          "  key 'device' was not found" << std::endl;
       return false;
-    }
+  }
 
-    // get <device> property value (a list of gpu id)
-    if (has_property("device", &sdev)) {
-        prop_device_all_selected = property_get_device(&error);
-        if (error) {  // log the error & abort GST
-            cerr << "RVS-PQT: action: " << action_name <<
-                "  invalid 'device' key value " << sdev << std::endl;
-            return false;
-        }
-    } else {
-        cerr << "RVS-PQT: action: " << action_name <<
-            "  key 'device' was not found" << std::endl;
-        return false;
-    }
+  // get the <deviceid> property value
+  if (has_property("deviceid", &sdevid)) {
+      int devid = property_get_deviceid(&error);
+      if (!error) {
+          if (devid != -1) {
+              prop_deviceid = static_cast<uint16_t>(devid);
+              prop_device_id_filtering = true;
+          }
+      } else {
+          cerr << "RVS-PQT: action: " << action_name <<
+              "  invalid 'deviceid' key value " << sdevid << std::endl;
+          return false;
+      }
+  }
 
-    // get the <deviceid> property value
-    if (has_property("deviceid", &sdevid)) {
-        int devid = property_get_deviceid(&error);
-        if (!error) {
-            if (devid != -1) {
-                prop_deviceid = static_cast<uint16_t>(devid);
-                prop_device_id_filtering = true;
-            }
-        } else {
-            cerr << "RVS-PQT: action: " << action_name <<
-                "  invalid 'deviceid' key value " << sdevid << std::endl;
-            return false;
-        }
-    }
+  // get the other action/GST related properties
+  rvs::actionbase::property_get_run_parallel(&error);
+  if (error == 1) {
+      cerr << "RVS-PQT: action: " << action_name <<
+          "  invalid '" << RVS_CONF_PARALLEL_KEY <<
+          "' key value" << std::endl;
+      return false;
+  }
 
-    // get the other action/GST related properties
-    rvs::actionbase::property_get_run_parallel(&error);
-    if (error == 1) {
-        cerr << "RVS-PQT: action: " << action_name <<
-            "  invalid '" << RVS_CONF_PARALLEL_KEY <<
-            "' key value" << std::endl;
-        return false;
-    }
+  rvs::actionbase::property_get_run_count(&error);
+  if (error == 1) {
+      cerr << "RVS-PQT: action: " << action_name <<
+          "  invalid '" << RVS_CONF_COUNT_KEY << "' key value" << std::endl;
+      return false;
+  }
 
-    rvs::actionbase::property_get_run_count(&error);
-    if (error == 1) {
-        cerr << "RVS-PQT: action: " << action_name <<
-            "  invalid '" << RVS_CONF_COUNT_KEY << "' key value" << std::endl;
-        return false;
-    }
+  rvs::actionbase::property_get_run_wait(&error);
+  if (error == 1) {
+      cerr << "RVS-PQT: action: " << action_name <<
+          "  invalid '" << RVS_CONF_WAIT_KEY << "' key value" << std::endl;
+      return false;
+  }
 
-    rvs::actionbase::property_get_run_wait(&error);
-    if (error == 1) {
-        cerr << "RVS-PQT: action: " << action_name <<
-            "  invalid '" << RVS_CONF_WAIT_KEY << "' key value" << std::endl;
-        return false;
-    }
+  rvs::actionbase::property_get_run_duration(&error);
+  if (error == 1) {
+      cerr << "RVS-PQT: action: " << action_name <<
+          "  invalid '" << RVS_CONF_DURATION_KEY <<
+          "' key value" << std::endl;
+      return false;
+  }
 
-    rvs::actionbase::property_get_run_duration(&error);
-    if (error == 1) {
-        cerr << "RVS-PQT: action: " << action_name <<
-            "  invalid '" << RVS_CONF_DURATION_KEY <<
-            "' key value" << std::endl;
-        return false;
-    }
-    if (gst_run_duration_ms == 0) {
-      gst_run_duration_ms = DEFAULT_DURATION;
-    }
-
-    return true;
+  return true;
 }
 
 /**
@@ -341,6 +320,7 @@ int pqtaction::create_threads() {
 
   std::vector<uint16_t> gpu_id;
   std::vector<uint16_t> gpu_device_id;
+  uint16_t transfer_ix = 0;
 
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&gpu_device_id);
@@ -419,10 +399,12 @@ int pqtaction::create_threads() {
         }
 
         if (prop_test_bandwidth) {
+          transfer_ix += 1;
           pqtworker* p = new pqtworker;
           p->initialize(srcnode, dstnode, prop_bidirectional);
           p->set_name(action_name);
           p->set_stop_name(action_name);
+          p->set_transfer_ix(transfer_ix);
           test_array.push_back(p);
         }
 
@@ -471,6 +453,10 @@ int pqtaction::create_threads() {
     return -1;
   }
 
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->set_transfer_num(test_array.size());
+  }
+
   return 0;
 }
 
@@ -512,10 +498,12 @@ int pqtaction::run() {
   }
 
   // log_interval must be less than duration
-  if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
-    cerr << "RVS-PQT: action: " << action_name <<
-        "  log_interval must be less than duration" << std::endl;
-    return -1;
+  if (prop_log_interval > 0 && gst_run_duration_ms > 0) {
+    if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
+      cerr << "RVS-PQT: action: " << action_name <<
+          "  log_interval must be less than duration" << std::endl;
+      return -1;
+    }
   }
 
   sts = create_threads();
@@ -586,22 +574,42 @@ int pqtaction::run_single() {
 
   // let the test run
   brun = true;
+  unsigned int iter = gst_run_count > 0 ? gst_run_count : 1;
+  unsigned int step = gst_run_count == 0 ? 0 : 1;
 
   // start timers
-  timer_final.start(gst_run_duration_ms, true);  // ticks only once
-  timer_running.start(prop_log_interval);        // ticks continuously
+  if (gst_run_duration_ms) {
+    timer_final.start(gst_run_duration_ms, true);  // ticks only once
+  }
+
+  if (prop_log_interval) {
+    timer_running.start(prop_log_interval);        // ticks continuously
+  }
 
   // iterate through test array and invoke tests one by one
   do {
     for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
       (*it)->do_transfer();
-     sleep(1);
-     if (rvs::lp::Stopping()) {
-       brun = false;
-       break;
+
+      // if log interval is zero, print current results immediately
+      if (prop_log_interval == 0) {
+        print_running_average(*it);
+      }
+      sleep(1);
+
+      if (rvs::lp::Stopping()) {
+        brun = false;
+        break;
       }
     }
-  } while (brun);
+
+    iter -= step;
+
+    // insert wait between runs if needed
+    if (iter > 0 && gst_run_wait_ms > 0) {
+      sleep(gst_run_wait_ms);
+    }
+  } while (brun && iter);
 
   timer_running.stop();
   timer_final.stop();
@@ -637,20 +645,26 @@ int pqtaction::run_parallel() {
 
   // wait for test to complete
   while (brun) {
-    sleep(10);
+    sleep(1);
     if (rvs::lp::Stopping()) {
       RVSTRACE_
       brun = false;
     }
   }
 
-  // stop all worker threads
+  timer_running.stop();
+  timer_final.stop();
+
+  // signal all worker threads to stop
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->stop();
   }
+  sleep(10);
 
-  timer_running.stop();
-  timer_final.stop();
+  // join all worker threads
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->join();
+  }
 
   print_final_average();
 
@@ -659,55 +673,96 @@ int pqtaction::run_parallel() {
 
 /**
  * @brief Collect running average bandwidth data for all the tests and prints
- * them on cout every log_interval msec.
+ * them out every log_interval msecs.
  *
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
 int pqtaction::print_running_average() {
-  int src_node, dst_node;
-  int src_id, dst_id;
-  bool bidir;
-  size_t current_size;
-  double duration;
-  std::string msg;
-
   for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
-    (*it)->get_running_data(&src_node, &dst_node, &bidir,
+    print_running_average(*it);
+  }
+
+  return 0;
+}
+
+/**
+ * @brief Collect running average for this particular transfer.
+ *
+ * @param pWorker ptr to a pqtworker class
+ *
+ * @return 0 - if successfull, non-zero otherwise
+ *
+ * */
+int pqtaction::print_running_average(pqtworker* pWorker) {
+  int         src_node, dst_node;
+  int         src_id, dst_id;
+  bool        bidir;
+  size_t      current_size;
+  double      duration;
+  std::string msg;
+  char        buff[64];
+  double      bandwidth;
+  uint16_t    transfer_ix;
+  uint16_t    transfer_num;
+
+  // get running average
+  pWorker->get_running_data(&src_node, &dst_node, &bidir,
                             &current_size, &duration);
 
-    double bandiwdth = current_size/duration/(1024*1024*1024);
+  if (duration > 0) {
+    bandwidth = current_size/duration/(1024*1024*1024);
     if (bidir) {
-      bandiwdth *=2;
+      bandwidth *=2;
     }
-    char buff[64];
-    snprintf( buff, sizeof(buff), "%.2f GBps", bandiwdth);
-    src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
-    dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
-
-    msg = "[" + action_name + "] p2p-bandwidth  " +
-           std::to_string(src_id) + " " + std::to_string(dst_id) +
-           "  bidirectional: " +
-           std::string(bidir ? "true" : "false") +
-           "  " + buff;
-    rvs::lp::Log(msg, rvs::loginfo);
-    if (bjson) {
-      unsigned int sec;
-      unsigned int usec;
-      rvs::lp::get_ticks(&sec, &usec);
-      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::loginfo, sec, usec);
-      if (json_rcqt_node != NULL) {
-        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
-        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
-        rvs::lp::AddString(json_rcqt_node, "p2p", "true");
-        rvs::lp::AddString(json_rcqt_node, "bidirectional",
-                           std::string(bidir ? "true" : "false"));
-        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
-        rvs::lp::LogRecordFlush(json_rcqt_node);
+    snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
+  } else {
+    // no running average in this iteration, try getting total so far
+    // (do not reset final totals as this is just intermediate query)
+    pWorker->get_final_data(&src_node, &dst_node, &bidir,
+                            &current_size, &duration, false);
+    if (duration > 0) {
+      bandwidth = current_size/duration/(1024*1024*1024);
+      if (bidir) {
+        bandwidth *=2;
       }
+      snprintf( buff, sizeof(buff), "%.3f GBps (*)", bandwidth);
+    } else {
+      // not transfers at all - print "pending"
+      snprintf( buff, sizeof(buff), "(pending)");
     }
-    sleep(1);
+  }
+
+  src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
+  dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+  transfer_ix = pWorker->get_transfer_ix();
+  transfer_num = pWorker->get_transfer_num();
+
+  msg = "[" + action_name + "] p2p-bandwidth  ["
+      + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
+      + "] " + std::to_string(src_id) + " " + std::to_string(dst_id)
+      + "  bidirectional: " + std::string(bidir ? "true" : "false")
+      + "  " + buff;
+  rvs::lp::Log(msg, rvs::loginfo);
+  if (bjson) {
+    unsigned int sec;
+    unsigned int usec;
+    rvs::lp::get_ticks(&sec, &usec);
+    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::loginfo, sec, usec);
+    if (json_rcqt_node != NULL) {
+      rvs::lp::AddString(json_rcqt_node,
+                          "transfer_ix", std::to_string(transfer_ix));
+      rvs::lp::AddString(json_rcqt_node,
+                          "transfer_num", std::to_string(transfer_num));
+      rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
+      rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
+      rvs::lp::AddString(json_rcqt_node, "p2p", "true");
+      rvs::lp::AddString(json_rcqt_node, "bidirectional",
+                          std::string(bidir ? "true" : "false"));
+      rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }
   }
 
   return 0;
@@ -721,32 +776,40 @@ int pqtaction::print_running_average() {
  *
  * */
 int pqtaction::print_final_average() {
-  int src_node, dst_node;
-  int src_id, dst_id;
-  bool bidir;
-  size_t current_size;
-  double duration;
+  int         src_node, dst_node;
+  int         src_id, dst_id;
+  bool        bidir;
+  size_t      current_size;
+  double      duration;
   std::string msg;
+  double      bandwidth;
+  char        buff[128];
+  uint16_t    transfer_ix;
+  uint16_t    transfer_num;
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->get_final_data(&src_node, &dst_node, &bidir,
                             &current_size, &duration);
 
-    double bandiwdth = current_size/duration/(1024*1024*1024);
-    if (bidir) {
-      bandiwdth *=2;
+    if (duration) {
+      bandwidth = current_size/duration/(1024*1024*1024);
+      if (bidir) {
+        bandwidth *=2;
+      }
+      snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
+    } else {
+      snprintf( buff, sizeof(buff), "(not measured)");
     }
-    char buff[64];
-    snprintf( buff, sizeof(buff), "%.2f GBps", bandiwdth);
     src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
     dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+    transfer_ix = (*it)->get_transfer_ix();
+    transfer_num = (*it)->get_transfer_num();
 
-    msg = "[" + action_name + "] p2p-bandwidth  " +
-           std::to_string(src_id) + " " + std::to_string(dst_id) +
-           "  bidirectional: " +
-           std::string(bidir ? "true" : "false") +
-           "  " + buff +
-           "  duration: " + std::to_string(duration) + " sec";
+    msg = "[" + action_name + "] p2p-bandwidth  ["
+        + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
+        + "] " + std::to_string(src_id) + " " + std::to_string(dst_id)
+        + "  bidirectional: " + std::string(bidir ? "true" : "false")
+        + "  " + buff + "  duration: " + std::to_string(duration) + " sec";
 
     rvs::lp::Log(msg, rvs::logresults);
     if (bjson) {
@@ -756,6 +819,10 @@ int pqtaction::print_final_average() {
       json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::logresults, sec, usec);
       if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node,
+                            "transfer_ix", std::to_string(transfer_ix));
+        rvs::lp::AddString(json_rcqt_node,
+                            "transfer_num", std::to_string(transfer_num));
         rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
         rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
         rvs::lp::AddString(json_rcqt_node, "p2p", "true");
