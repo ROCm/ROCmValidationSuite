@@ -69,11 +69,16 @@ class pebbworker : public rvs::ThreadBase {
   void get_running_data(int* Src, int* Dst, bool* Bidirect,
                         size_t* Size, double* Duration);
   void get_final_data(int* Src, int* Dst, bool* Bidirect,
-                      size_t* Size, double* Duration);
+                      size_t* Size, double* Duration, bool bReset = true);
 
-  void set_wave(std::mutex* pWaveMutex, size_t* pWaveCount);
-
-  void restart_transfer();
+  //! Set transfer index
+  void set_transfer_ix(uint16_t val) { transfer_ix = val; }
+  //! Get transfer index
+  uint16_t get_transfer_ix() { return transfer_ix; }
+  //! Set total number of transfers
+  void set_transfer_num(uint16_t val) { transfer_num = val; }
+  //! Get total number of transfers
+  uint16_t get_transfer_num() { return transfer_num; }
 
  protected:
   virtual void run(void);
@@ -101,23 +106,11 @@ class pebbworker : public rvs::ThreadBase {
   //! 'true' if device to host transfer is required
   bool prop_d2h;
 
-  //! current size index;
-  size_t current_size_ix;
-
-  //! global wave counter
-  size_t* pwave_count;
-
-  //! synchronization mutex
-  std::mutex* pwave_mutex;
-
-  //! 'true' if current wave transfer has finished
-  volatile bool transfer_fisnished;
-
   //! Current size of transfer data
   size_t current_size;
 
   //! running total for size (bytes)
-  volatile size_t running_size;
+  size_t running_size;
   //! running total for duration (sec)
   double running_duration;
 
@@ -125,6 +118,11 @@ class pebbworker : public rvs::ThreadBase {
   size_t total_size;
   //! final total duration (sec)
   double total_duration;
+
+  //! transfer index
+  uint16_t transfer_ix;
+  //! total number of transfers
+  uint16_t transfer_num;
 
   //! synchronization mutex
   std::mutex cntmutex;

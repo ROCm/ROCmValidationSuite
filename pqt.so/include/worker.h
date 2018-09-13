@@ -113,11 +113,11 @@ class pqtworker : public rvs::ThreadBase {
   size_t total_size;
   //! final total duration (sec)
   double total_duration;
+
   //! transfer index
   uint16_t transfer_ix;
   //! total number of transfers
   uint16_t transfer_num;
-
 
   //! synchronization mutex
   std::mutex cntmutex;
