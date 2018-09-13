@@ -90,6 +90,10 @@ class pebbaction : public rvs::actionbase {
   bool prop_h2d;
   //! 'true' if device to host transfer is required
   bool prop_d2h;
+  //! list of test block sizes
+  std::vector<uint32_t> block_size;
+  //! set to 'true' if the default block sizes are to be used
+  bool b_block_size_all;
 
  protected:
   int create_threads();

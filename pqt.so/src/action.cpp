@@ -228,6 +228,9 @@ bool pqtaction::get_all_pqt_config_keys(void) {
       cerr << "RVS-PQT: action: " << action_name << "  invalid '"
            << RVS_CONF_BLOCK_SIZE_KEY << "' key" << std::endl;
       return false;
+  } else if (error == 2) {
+    b_block_size_all = true;
+    block_size.clear();
   }
 
   return true;
