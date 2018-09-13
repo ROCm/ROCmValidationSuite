@@ -2164,6 +2164,30 @@ average of the bandwidth will be calculated and logged. The default value is
 1000 (1 second). It must be smaller than the duration key.\n
 if this key is 0 (zero), results are displayed as soon as the test transfer
 is completed.</td></tr>
+<tr><td>block_size</td><td>Collection of Integers</td>
+<td>Optional. Defines list of block sizes to be used in transfer tests.\n
+If "all" or missing list of block sizes used in rocm_bandwidth_test is used:
+- 1 * 1024
+- 2 * 1024
+- 4 * 1024
+- 8 * 1024
+- 16 * 1024
+- 32 * 1024
+- 64 * 1024
+- 128 * 1024
+- 256 * 1024
+- 512 * 1024
+- 1 * 1024 * 1024
+- 2 * 1024 * 1024
+- 4 * 1024 * 1024
+- 8 * 1024 * 1024
+- 16 * 1024 * 1024
+- 32 * 1024 * 1024
+- 64 * 1024 * 1024
+- 128 * 1024 * 1024
+- 256 * 1024 * 1024
+- 512 * 1024 * 1024
+</td></tr>
 </table>
 
 Please note that suitable values for **log\_interval** and **duration** depend
