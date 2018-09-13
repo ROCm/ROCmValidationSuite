@@ -72,7 +72,6 @@ class pebbaction : public rvs::actionbase {
   bool      prop_device_id_filtering;
 
   // PQT specific config keys
-  void property_get_log_interval(int *error);
   void property_get_h2d();
   void property_get_d2h();
 
@@ -100,6 +99,7 @@ class pebbaction : public rvs::actionbase {
   int run_parallel();
 
   int print_running_average();
+  int print_running_average(pebbworker* pWorker);
   int print_final_average();
 
   //! 'true' for the duration of test
@@ -109,16 +109,9 @@ class pebbaction : public rvs::actionbase {
   //! json_rcqt_node is json node shared through submodules
   void *json_rcqt_node;
 
-  //! wave synchronization mutex
-  std::mutex wave_mutex;
-  //! global wave counter
-  size_t wave_count;
-
-
  private:
   void do_running_average(void);
   void do_final_average(void);
-  void do_wave(void);
 
   std::vector<pebbworker*> test_array;
 };

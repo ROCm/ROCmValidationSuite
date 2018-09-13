@@ -68,7 +68,13 @@ void rvs::ThreadBase::detach() {
  *
  */
 void rvs::ThreadBase::join() {
-  t.join();
+  // wait a bit to make sure thread has exited
+  try {
+    if (t.joinable())
+      t.join();
+  }
+  catch(...) {
+  }
 }
 
 /**
