@@ -595,19 +595,19 @@ with the following format:
 In addition, an informational message is provided for each for each metric
 being monitored:
 
-    [INFO ][<timestamp>][<action name>] gm <gpu id> monitoring < metric> bounds min:<min_metric> max: <max_metric>
+    [INFO ][<timestamp>][<action name>] gm <gpu id> monitoring <metric> bounds min:<min_metric> max: <max_metric>
 
 During the monitoring informational output regarding the metrics of the GPU will
 be sampled at every interval specified by the sample_rate key. If a bounding box
 violation is discovered during a sampling interval, a warning message is
 logged with the following format:
 
-    [INFO ][<timestamp>][<action name>] gm <gpu id> < metric> bounds violation <metric value>
+    [INFO ][<timestamp>][<action name>] gm <gpu id> <metric> bounds violation <metric value>
 
 If the log_interval value is set an information message for each metric is
 logged at every interval using the following format:
 
-    [INFO ][<timestamp>][<action name>] gm <gpu id> < metric> <metric_value>
+    [INFO ][<timestamp>][<action name>] gm <gpu id> <metric> <metric_value>
 
 When monitoring is stopped for a target GPU, a result message is logged
 with the following format:
@@ -1842,6 +1842,30 @@ average of the bandwidth will be calculated and logged. The default value is
 1000 (1 second). It must be smaller than the duration key.\n
 if this key is 0 (zero), results are displayed as soon as the test transfer
 is completed.</td></tr>
+<tr><td>block_size</td><td>Collection of Integers</td>
+<td>Optional. Defines list of block sizes to be used in transfer tests.\n
+If "all" or missing list of block sizes used in rocm_bandwidth_test is used:
+- 1 * 1024
+- 2 * 1024
+- 4 * 1024
+- 8 * 1024
+- 16 * 1024
+- 32 * 1024
+- 64 * 1024
+- 128 * 1024
+- 256 * 1024
+- 512 * 1024
+- 1 * 1024 * 1024
+- 2 * 1024 * 1024
+- 4 * 1024 * 1024
+- 8 * 1024 * 1024
+- 16 * 1024 * 1024
+- 32 * 1024 * 1024
+- 64 * 1024 * 1024
+- 128 * 1024 * 1024
+- 256 * 1024 * 1024
+- 512 * 1024 * 1024
+</td></tr>
 </table>
 
 Please note that suitable values for **log\_interval** and **duration** depend
@@ -1926,12 +1950,12 @@ informational output providing the moving average of the transfer’s bandwidth
 will be calculated and logged at every time increment specified by the
 log_interval parameter. The messages will have the following output:
 
-    [INFO  ][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <interval_bandwidth >
+    [INFO  ][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <interval_bandwidth>
 
 At the end of the test the average bytes/second will be calculated over the
 entire test duration, and will be logged as a result:
 
-    [RESULT][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <bandwidth > <duration>
+    [RESULT][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <bandwidth> <duration>
 
 
 @subsection usg103 10.3 Examples
@@ -2214,7 +2238,7 @@ average of the bandwidth of the transfer will be calculated and logged. This
 interval is provided by the log_interval parameter and will have the following
 output format:
 
-    [INFO ][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> <interval_bandwidth >
+    [INFO ][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> <interval_bandwidth>
 
 At the end of test, the average bytes/second will be calculated over the
 entire test duration, and will be logged as a result:
@@ -2438,7 +2462,7 @@ during that time a violation message will be logged:
 
 When the test completes, the following result message will be printed:
 
-    [RESULT][<timestamp>][<action name>] gst <gpu id> Gflop: < max_gflops> flops_per_op:<flops_per_op> bytes_copied_per_op: <bytes_copied_per_op> try_ops_per_sec: <try_ops_per_sec> pass: <pass>
+    [RESULT][<timestamp>][<action name>] gst <gpu id> Gflop: <max_gflops> flops_per_op:<flops_per_op> bytes_copied_per_op: <bytes_copied_per_op> try_ops_per_sec: <try_ops_per_sec> pass: <pass>
 
 The test will pass if the target_stress is reached before the end of the
 ramp_interval and the stress_violations value is less than the given
