@@ -47,7 +47,11 @@ extern "C" {
 #include "rvshsa.h"
 
 
-pqtworker::pqtworker() {}
+pqtworker::pqtworker() {
+  // set to 'true' so that do_transfer() will also work
+  // when parallel: false
+  brun = true;
+}
 pqtworker::~pqtworker() {}
 
 /**
@@ -95,14 +99,6 @@ void pqtworker::stop() {
   rvs::lp::Log(msg, rvs::logtrace);
 
   brun = false;
-
-  // wait a bit to make sure thread has exited
-  try {
-    if (t.joinable())
-      t.join();
-  }
-  catch(...) {
-  }
 }
 
 /**
@@ -152,7 +148,7 @@ int pqtworker::do_transfer() {
 
   rvs::lp::get_ticks(&startsec, &startusec);
 
-  for (size_t i = 0; i < pHsa->size_list.size(); i++) {
+  for (size_t i = 0; brun && i < pHsa->size_list.size(); i++) {
     current_size = pHsa->size_list[i];
     sts = pHsa->SendTraffic(src_node, dst_node, current_size,
                             bidirect, &duration);
@@ -220,10 +216,11 @@ void pqtworker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
  * this test (in bytes)
  * @param Duration [out] cumulative duration of transfers in
  * this test (in seconds)
+ * @param bReset [in] if 'true' set final totals to zero
  *
  * */
 void pqtworker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
-                           size_t* Size, double* Duration) {
+                           size_t* Size, double* Duration, bool bReset) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
 
@@ -241,7 +238,9 @@ void pqtworker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
   running_size = 0;
   running_duration = 0;
 
-  // reset final toral
-  total_size = 0;
-  total_duration = 0;
+  // reset final totals
+  if (bReset) {
+    total_size = 0;
+    total_duration = 0;
+  }
 }

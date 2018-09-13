@@ -77,7 +77,7 @@ class pqtaction : public rvs::actionbase {
   bool property_get_peers(int *error);
   int  property_get_peer_deviceid(int *error);
   void property_get_test_bandwidth(int *error);
-  void property_get_log_interval(int *error);
+//  void property_get_log_interval(int *error);
   void property_get_bidirectional(int *error);
 
   //! array of peer GPU IDs to be used in data trasfers
@@ -100,6 +100,8 @@ class pqtaction : public rvs::actionbase {
   int run_parallel();
 
   int print_running_average();
+  int print_running_average(pqtworker* pWorker);
+
   int print_final_average();
 
   //! 'true' for the duration of test
