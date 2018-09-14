@@ -300,12 +300,13 @@ void rvs::hsa::InitAgents() {
     for (uint32_t idx = 0; idx < size_len; idx++) {
       size_list.push_back(DEFAULT_SIZE_LIST[idx]);
     }
-  } else {
-    uint32_t size_len = size_list.size();
-    for (uint32_t idx = 0; idx < size_len; idx++) {
-      size_list[idx] = size_list[idx] * 1024 * 1024;
-    }
   }
+//   else {
+//     uint32_t size_len = size_list.size();
+//     for (uint32_t idx = 0; idx < size_len; idx++) {
+//       size_list[idx] = size_list[idx] * 1024 * 1024;
+//     }
+//   }
   std::sort(size_list.begin(), size_list.end());
 }
 

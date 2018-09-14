@@ -103,6 +103,56 @@ bool rvs::actionbase::has_property(const std::string& key) {
 }
 
 /**
+ * @brief Gets uint16_t list from the module's properties collection
+ * @param key jey name
+ * @param delimiter delimiter in YAML file
+ * @param pval ptr to reulting list
+ * @param pball ptr to flag to be set to 'true' when "all" is detected
+ * @param error ptr to error: 0 - OK, 1 - syntax error, 2 - not found
+ */
+void rvs::actionbase::property_get_uint_list(const std::string& key,
+                                   const std::string& delimiter,
+                                   std::vector<uint32_t>* pval,
+                                   bool* pball,
+                                   int *error) {
+  bool        bfound = false;
+  std::string strval;
+
+  // init with 'no error'
+  *error = 0;
+
+  // fetch key value if any
+  bfound = has_property(key, &strval);
+
+  // key not found - return
+  if (!bfound) {
+    *error = 2;
+    return;
+  }
+
+  // found and is "all" - set flag and return
+  if (strval == "all") {
+    *pball = true;
+    pval->clear();
+    return;
+  } else {
+    *pball = false;
+  }
+
+  // parse key value into std::vector<std::string>
+  auto strarray = str_split(strval, delimiter);
+
+  // convert str arary into uint16_t array
+  int sts = rvs_util_strarr_to_uintarr(strarray, pval);
+
+  if (sts < 0) {
+    *error = 1;
+    pval->clear();
+  }
+}
+
+
+/**
  * gets the deviceid from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  * @return deviceid value if valid, -1 otherwise

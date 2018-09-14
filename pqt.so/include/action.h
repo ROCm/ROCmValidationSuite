@@ -90,6 +90,10 @@ class pqtaction : public rvs::actionbase {
   int  prop_log_interval;
   //! 'true' if bidirectional data transfer is required
   bool prop_bidirectional;
+  //! list of test block sizes
+  std::vector<uint32_t> block_size;
+  //! set to 'true' if the default block sizes are to be used
+  bool b_block_size_all;
 
  protected:
   int is_peer(uint16_t Src, uint16_t Dst);

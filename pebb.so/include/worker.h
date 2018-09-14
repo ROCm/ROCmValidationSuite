@@ -26,6 +26,7 @@
 #define PEBB_SO_INCLUDE_WORKER_H_
 
 #include <string>
+#include <vector>
 #include <mutex>
 
 #include "rvsthreadbase.h"
@@ -79,6 +80,8 @@ class pebbworker : public rvs::ThreadBase {
   void set_transfer_num(uint16_t val) { transfer_num = val; }
   //! Get total number of transfers
   uint16_t get_transfer_num() { return transfer_num; }
+  //! Set list of test sizes
+  void set_block_sizes(const std::vector<uint32_t>& val) { block_size = val; }
 
  protected:
   virtual void run(void);
@@ -123,6 +126,9 @@ class pebbworker : public rvs::ThreadBase {
   uint16_t transfer_ix;
   //! total number of transfers
   uint16_t transfer_num;
+
+  //! list of test block sizes
+  std::vector<uint32_t> block_size;
 
   //! synchronization mutex
   std::mutex cntmutex;
