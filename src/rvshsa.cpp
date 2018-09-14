@@ -88,11 +88,24 @@ rvs::hsa::~hsa() {
 void rvs::hsa::print_hsa_status(const std::string& file,
                                 int line,
                                 const std::string& function,
+                                const std::string& msg,
                                 hsa_status_t st) {
-  string log_msg = "pqt   " + std::string(file)+ "  " + function + ":"
-  + std::to_string(line);
-
-  print_hsa_status(log_msg, st);
+  if (st != HSA_STATUS_SUCCESS) {
+    string log_msg = std::string(file)+ "  " + function + ":"
+    + std::to_string(line);
+    rvs::lp::Log(log_msg, rvs::logdebug);
+  }
+  print_hsa_status(msg, st);
+}
+/**
+ * @brief helper method used in debbuging
+ *
+ */
+void rvs::hsa::print_hsa_status(const std::string& file,
+                                int line,
+                                const std::string& function,
+                                hsa_status_t st) {
+  print_hsa_status(file, line, function, "", st);
 }
 
 /**
@@ -244,52 +257,44 @@ void rvs::hsa::InitAgents() {
   hsa_status_t status;
   string log_msg;
 
+  RVSTRACE_
   // Initialize Roc Runtime
-  rvs::lp::Log("[RVSHSA] Before hsa_init ...", rvs::logtrace);
   status = hsa_init();
-  rvs::lp::Log("[RVSHSA] After hsa_init ...", rvs::logtrace);
-  print_hsa_status("[RVSHSA] InitAgents - hsa_init()", status);
+  print_hsa_status(__FILE__, __LINE__, __func__, "hsa_init()", status);
 
   // Initialize profiling
-  rvs::lp::Log("[RVSHSA] Before hsa_amd_profiling_async_copy_enable ...",
-               rvs::logtrace);
   status = hsa_amd_profiling_async_copy_enable(true);
-  rvs::lp::Log("[RVSHSA] Before hsa_amd_profiling_async_copy_enable ...",
-               rvs::logtrace);
-  print_hsa_status(
-    "[RVSHSA] InitAgents - hsa_amd_profiling_async_copy_enable()",
-                   status);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_amd_profiling_async_copy_enable()", status);
 
   // Populate the lists of agents
-  rvs::lp::Log("[RVSHSA] Before hsa_iterate_agents ...", rvs::logtrace);
   status = hsa_iterate_agents(ProcessAgent, &agent_list);
-  rvs::lp::Log("[RVSHSA] After hsa_iterate_agents ...", rvs::logtrace);
-  print_hsa_status("[RVSHSA] InitAgents - hsa_iterate_agents()", status);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_iterate_agents()", status);
 
   for (uint32_t i = 0; i < agent_list.size(); i++) {
-    rvs::lp::Log("[RVSHSA] ============================", rvs::logtrace);
+    rvs::lp::Log("[RVSHSA] ============================", rvs::logdebug);
     log_msg = "[RVSHSA] InitAgents - agent with name = "  +
       agent_list[i].agent_name + " and device_type = " +
       agent_list[i].agent_device_type;
     rvs::lp::Log(log_msg.c_str(), rvs::logtrace);
-    rvs::lp::Log("[RVSHSA] ============================", rvs::logtrace);
+    rvs::lp::Log("[RVSHSA] ============================", rvs::logdebug);
 
     // Populate the list of memory pools
-    rvs::lp::Log("[RVSHSA] Before hsa_amd_agent_iterate_memory_pools ...",
-                 rvs::logtrace);
+    RVSTRACE_
     status = hsa_amd_agent_iterate_memory_pools(agent_list[i].agent,
                                                 ProcessMemPool, &agent_list[i]);
-    rvs::lp::Log("[RVSHSA] After hsa_amd_agent_iterate_memory_pools ...",
-                 rvs::logtrace);
-    print_hsa_status(
-      "[RVSHSA] InitAgents - hsa_amd_agent_iterate_memory_pools()",
-                     status);
+    print_hsa_status(__FILE__, __LINE__, __func__,
+                     "hsa_amd_agent_iterate_memory_pools()", status);
 
     // separate the lists
     if (agent_list[i].agent_device_type == "CPU") {
       cpu_list.push_back(agent_list[i]);
     } else if (agent_list[i].agent_device_type == "GPU") {
       gpu_list.push_back(agent_list[i]);
+    } else {
+      log_msg = "Unexpected agent type: " + agent_list[i].agent_device_type;
+      rvs::lp::Log(log_msg, rvs::logdebug);
     }
   }
 
@@ -301,12 +306,7 @@ void rvs::hsa::InitAgents() {
       size_list.push_back(DEFAULT_SIZE_LIST[idx]);
     }
   }
-//   else {
-//     uint32_t size_len = size_list.size();
-//     for (uint32_t idx = 0; idx < size_len; idx++) {
-//       size_list[idx] = size_list[idx] * 1024 * 1024;
-//     }
-//   }
+
   std::sort(size_list.begin(), size_list.end());
 }
 
@@ -332,21 +332,24 @@ hsa_status_t rvs::hsa::ProcessAgent(hsa_agent_t agent, void* data) {
   vector<AgentInformation>* agent_l =
   reinterpret_cast<vector<AgentInformation>*>(data);
 
-  rvs::lp::Log("[RVSHSA] Called ProcessAgent() ...", rvs::logtrace);
+  RVSTRACE_;
 
   // Get the name of the agent
   status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, agent_name);
-  print_hsa_status("[RVSHSA] HSA_AGENT_INFO_NAME", status);
-  rvs::lp::Log(string("pqt agent_name: ") + agent_name, rvs::logtrace);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "[HSA_AGENT_INFO_NAME", status);
+  rvs::lp::Log(string("agent_name: ") + agent_name, rvs::logdebug);
 
   // Get device type
   status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
-  print_hsa_status("[RVSHSA] HSA_AGENT_INFO_DEVICE", status);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "[RVSHSA] HSA_AGENT_INFO_DEVICE", status);
 
   status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NODE, &node);
-  print_hsa_status("[RVSHSA] HSA_AGENT_INFO_NODE", status);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "[RVSHSA] HSA_AGENT_INFO_NODE", status);
   agent_info.node = node;
-  rvs::lp::Log("pqt node: " + std::to_string(node), rvs::logtrace);
+  rvs::lp::Log("node: " + std::to_string(node), rvs::logdebug);
 
   log_agent_name = agent_name;
   log_msg = "[RVSHSA] Found agent with name = "  + log_agent_name +
@@ -368,7 +371,8 @@ hsa_status_t rvs::hsa::ProcessAgent(hsa_agent_t agent, void* data) {
       break;
     };
   }
-  rvs::lp::Log(log_msg.c_str(), rvs::logtrace);
+  rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
+
   // add agent to list
   agent_info.agent = agent;
   agent_info.agent_name = log_agent_name;
@@ -390,6 +394,7 @@ hsa_status_t rvs::hsa::ProcessAgent(hsa_agent_t agent, void* data) {
 hsa_status_t rvs::hsa::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
   hsa_status_t status;
 
+  RVSTRACE_
   // get current agents memory pools
   AgentInformation* agent_info = reinterpret_cast<AgentInformation*>(data);
 
@@ -398,29 +403,35 @@ hsa_status_t rvs::hsa::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
   status = hsa_amd_memory_pool_get_info(pool,
                                         HSA_AMD_MEMORY_POOL_INFO_SEGMENT,
                                         &segment);
-  RVSTRACE_
-  print_hsa_status(__FILE__, __LINE__, __func__, status);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_amd_memory_pool_get_info()", status);
   if (HSA_AMD_SEGMENT_GLOBAL != segment) {
+    RVSTRACE_
     return HSA_STATUS_SUCCESS;
   }
 
+  RVSTRACE_
   // Determine if allocation is allowed in this pool
   // Report only pools that allow an alloction by user
   bool alloc = false;
   status = hsa_amd_memory_pool_get_info(pool,
                             HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
                             &alloc);
-  print_hsa_status(__FILE__, __LINE__, __func__, status);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED", status);
   if (alloc != true) {
+    RVSTRACE_
     return HSA_STATUS_SUCCESS;
   }
 
+  RVSTRACE_
   // Query the max allocatable size
   size_t max_size = 0;
   status = hsa_amd_memory_pool_get_info(pool,
                                         HSA_AMD_MEMORY_POOL_INFO_SIZE,
                                         &max_size);
-  print_hsa_status(__FILE__, __LINE__, __func__, status);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "HSA_AMD_MEMORY_POOL_INFO_SIZE", status);
   agent_info->max_size_list.push_back(max_size);
 
   // Determine if the pools is accessible to all agents
@@ -428,7 +439,8 @@ hsa_status_t rvs::hsa::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
   status = hsa_amd_memory_pool_get_info(pool,
                                 HSA_AMD_MEMORY_POOL_INFO_ACCESSIBLE_BY_ALL,
                                 &access_to_all);
-  print_hsa_status(__FILE__, __LINE__, __func__, status);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "HSA_AMD_MEMORY_POOL_INFO_ACCESSIBLE_BY_ALL", status);
 
   // Determine type of access to owner agent
   hsa_amd_memory_pool_access_t owner_access;
@@ -443,21 +455,22 @@ hsa_status_t rvs::hsa::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
   status = hsa_amd_memory_pool_get_info(pool,
                                         HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS,
                                         &flag);
-  print_hsa_status(__FILE__, __LINE__, __func__, status);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS", status);
   bool is_kernarg = (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT & flag);
 
   // Update the pool handle for system memory if kernarg is true
   rvs::lp::Log("[RVSHSA] ****************************************",
-               rvs::logtrace);
+               rvs::logdebug);
   if (is_kernarg) {
     agent_info->sys_pool = pool;
-    rvs::lp::Log("[RVSHSA] Found system memory region", rvs::logtrace);
+    rvs::lp::Log("[RVSHSA] Found system memory region", rvs::logdebug);
   } else if (owner_access != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
     agent_info->mem_pool_list.push_back(pool);
-    rvs::lp::Log("[RVSHSA] Found regular memory region", rvs::logtrace);
+    rvs::lp::Log("[RVSHSA] Found regular memory region", rvs::logdebug);
   }
   rvs::lp::Log("[RVSHSA] ****************************************",
-               rvs::logtrace);
+               rvs::logdebug);
 
   return HSA_STATUS_SUCCESS;
 }
@@ -474,6 +487,7 @@ int rvs::hsa::FindAgent(const uint32_t Node) {
     if (agent_list[i].node == Node)
       return i;
   }
+  RVSTRACE_
   return -1;
 }
 
@@ -494,18 +508,19 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
   // Obtain time taken for forward copy
   hsa_amd_profiling_async_copy_time_t async_time_fwd {0, 0};
   status = hsa_amd_profiling_get_async_copy_time(signal_fwd, &async_time_fwd);
-  print_hsa_status(
-    "[RVSHSA] GetCopyTime - hsa_amd_profiling_get_async_copy_time(forward)",
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_amd_profiling_get_async_copy_time(forward)",
                    status);
   if (bidirectional == false) {
     RVSTRACE_
     return(async_time_fwd.end - async_time_fwd.start);
   }
+  RVSTRACE_
 
   hsa_amd_profiling_async_copy_time_t async_time_rev {0, 0};
   status = hsa_amd_profiling_get_async_copy_time(signal_rev, &async_time_rev);
-  print_hsa_status(
-    "[RVSHSA] GetCopyTime - hsa_amd_profiling_get_async_copy_time(backward)",
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_amd_profiling_get_async_copy_time(backward)",
                    status);
   double start = std::min(async_time_fwd.start, async_time_rev.start);
   double end = std::max(async_time_fwd.end, async_time_rev.end);
@@ -535,23 +550,34 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
 
   // iterate over src pools
   for (size_t i = 0; i < agent_list[SrcAgent].mem_pool_list.size(); i++) {
+    RVSTRACE_
     // size too small, continue
-    if (Size > agent_list[SrcAgent].max_size_list[i])
+    if (Size > agent_list[SrcAgent].max_size_list[i]) {
+      RVSTRACE_
       continue;
+    }
 
+    RVSTRACE_
     // try allocating source buffer
     status = hsa_amd_memory_pool_allocate(
-      agent_list[SrcAgent].mem_pool_list[i], Size, 0, &srcbuff);
-    if (status != HSA_STATUS_SUCCESS)
+                agent_list[SrcAgent].mem_pool_list[i], Size, 0, &srcbuff);
+    if (status != HSA_STATUS_SUCCESS) {
+      print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_amd_memory_pool_allocate()",
+                   status);
       continue;
+    }
 
-
+    RVSTRACE_
     // iterate over dst pools
     for (size_t j = 0; j < agent_list[DstAgent].mem_pool_list.size(); j++) {
+      RVSTRACE_
       // size too small, continue
-      if (Size > agent_list[DstAgent].max_size_list[j])
+      if (Size > agent_list[DstAgent].max_size_list[j]) {
+        RVSTRACE_
         continue;
-
+      }
+      RVSTRACE_
       // check if src agent has access to this dst agent's pool
       hsa_amd_memory_pool_access_t access =
         HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
@@ -560,44 +586,148 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
         agent_list[DstAgent].mem_pool_list[j],
         HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS,
         &access);
+      print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_amd_agent_memory_pool_get_info()",
+                   status);
 
-      if (access == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED)
+      if (access == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
+        RVSTRACE_
         continue;
-
+      }
+      RVSTRACE_
       // try allocating destination buffer
       status = hsa_amd_memory_pool_allocate(
         agent_list[DstAgent].mem_pool_list[j], Size, 0, &dstbuff);
-      if (status != HSA_STATUS_SUCCESS)
+      print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_amd_memory_pool_allocate()",
+                   status);
+      if (status != HSA_STATUS_SUCCESS) {
+        RVSTRACE_
         continue;
-
-      // grant src agen access to destination buffer
-      if (agent_list[SrcAgent].agent_device_type == "CPU" ||
-        agent_list[DstAgent].agent_device_type == "GPU") {
-        status = hsa_amd_agents_allow_access(1,
-                                            &agent_list[DstAgent].agent,
-                                            NULL,
-                                            srcbuff);
-        if (status != HSA_STATUS_SUCCESS)
-          continue;
+      }
+      RVSTRACE_
+//       // grant src agen access to destination buffer
+//       if (agent_list[SrcAgent].agent_device_type == "CPU" ||
+//         agent_list[DstAgent].agent_device_type == "GPU") {
+//         RVSTRACE_
+//         status = hsa_amd_agents_allow_access(1,
+//                                             &agent_list[DstAgent].agent,
+//                                             NULL,
+//                                             srcbuff);
+//         print_hsa_status(__FILE__, __LINE__, __func__,
+//                    "hsa_amd_agents_allow_access()",
+//                    status);
+//         if (status != HSA_STATUS_SUCCESS) {
+//           RVSTRACE_
+//           continue;
+//         }
+//         RVSTRACE_
+//         status = hsa_amd_agents_allow_access(1,
+//                                              &agent_list[SrcAgent].agent,
+//                                              NULL,
+//                                              dstbuff);
+//         print_hsa_status(__FILE__, __LINE__, __func__,
+//                    "hsa_amd_agents_allow_access()",
+//                    status);
+//         if (status != HSA_STATUS_SUCCESS) {
+//           RVSTRACE_
+//           continue;
+//         }
+//       } else {
+//         RVSTRACE_
+//         status = hsa_amd_agents_allow_access(1,
+//                                             &agent_list[SrcAgent].agent,
+//                                             NULL,
+//                                             dstbuff);
+//         print_hsa_status(__FILE__, __LINE__, __func__,
+//                    "hsa_amd_agents_allow_access()",
+//                    status);
+//      }
+      int peer_status = GetPeerStatusAgent(SrcAgent, DstAgent);
+      if (peer_status == 2) {
+        RVSTRACE_
         status = hsa_amd_agents_allow_access(1,
                                              &agent_list[SrcAgent].agent,
                                              NULL,
                                              dstbuff);
-        if (status != HSA_STATUS_SUCCESS)
+        print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_amd_agents_allow_access()",
+                   status);
+        if (status != HSA_STATUS_SUCCESS) {
+          RVSTRACE_
+          // do cleanup
+          hsa_amd_memory_pool_free(dstbuff);
+          dstbuff = nullptr;
           continue;
-      } else {
+        }
         status = hsa_amd_agents_allow_access(1,
-                                            &agent_list[SrcAgent].agent,
+                                            &agent_list[DstAgent].agent,
                                             NULL,
-                                            dstbuff);
+                                            srcbuff);
+        print_hsa_status(__FILE__, __LINE__, __func__,
+                   "hsa_amd_agents_allow_access()",
+                   status);
+        if (status != HSA_STATUS_SUCCESS) {
+          RVSTRACE_
+          // do cleanup
+          hsa_amd_memory_pool_free(dstbuff);
+          dstbuff = nullptr;
+          continue;
+        }
+      } else if (peer_status == 1) {
+        RVSTRACE_
+
+        // determine which one is a cpu and allow access on the other agent
+        if (agent_list[SrcAgent].agent_device_type == "CPU") {
+          status = hsa_amd_agents_allow_access(1,
+                                              &agent_list[DstAgent].agent,
+                                              NULL,
+                                              srcbuff);
+          print_hsa_status(__FILE__, __LINE__, __func__,
+                    "hsa_amd_agents_allow_access()",
+                    status);
+          if (status != HSA_STATUS_SUCCESS) {
+            RVSTRACE_
+            // do cleanup
+            hsa_amd_memory_pool_free(dstbuff);
+            dstbuff = nullptr;
+            continue;
+          }
+        }
+        if (agent_list[DstAgent].agent_device_type == "CPU") {
+          status = hsa_amd_agents_allow_access(1,
+                                              &agent_list[SrcAgent].agent,
+                                              NULL,
+                                              dstbuff);
+          print_hsa_status(__FILE__, __LINE__, __func__,
+                    "hsa_amd_agents_allow_access()",
+                    status);
+          if (status != HSA_STATUS_SUCCESS) {
+            RVSTRACE_
+            // do cleanup
+            hsa_amd_memory_pool_free(dstbuff);
+            dstbuff = nullptr;
+            continue;
+          }
+        } else {
+          RVSTRACE_
+          rvs::lp::Log("peer status does not match pool access", rvs::logerror);
+          // do cleanup
+          hsa_amd_memory_pool_free(dstbuff);
+          dstbuff = nullptr;
+          continue;
+        }
       }
+
+      RVSTRACE_
       if (status != HSA_STATUS_SUCCESS) {
+        RVSTRACE_
         // cannot grant access, release buffer and skip to the next pool
         hsa_amd_memory_pool_free(dstbuff);
         dstbuff = nullptr;
         continue;
       }
-
+      RVSTRACE_
       // all OK, set output parameters:
       *pSrcPool = agent_list[SrcAgent].mem_pool_list[i];
       *pDstPool = agent_list[DstAgent].mem_pool_list[j];
@@ -605,14 +735,12 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
       *DstBuff = dstbuff;
 
       return 0;
-    }
-
-    // suitable destination buffer not foud, deallocate src buff and exit
-    hsa_amd_memory_pool_free(srcbuff);
+    } // end of dst agent pool loop
 
     RVSTRACE_
-    return -1;
-  }
+    // suitable destination buffer not foud, deallocate src buff and exit
+    hsa_amd_memory_pool_free(srcbuff);
+  } // end of src agent pool loop
 
   RVSTRACE_
   return -1;
@@ -672,6 +800,9 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
 
   // Create a signal to wait on copy operation
   status = hsa_signal_create(1, 0, NULL, &signal_fwd);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+              "hsa_signal_create()",
+              status);
   if (status != HSA_STATUS_SUCCESS) {
       hsa_amd_memory_pool_free(src_ptr_fwd);
       hsa_amd_memory_pool_free(dst_ptr_fwd);
@@ -680,6 +811,7 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
   }
 
   if (bidirectional) {
+    RVSTRACE_
     src_ix_rev = dst_ix_fwd;
     dst_ix_rev = src_ix_fwd;
 
@@ -689,21 +821,24 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
             &dst_pool_rev, &dst_ptr_rev);
 
     if (sts) {
+      RVSTRACE_
       hsa_amd_memory_pool_free(src_ptr_fwd);
       hsa_amd_memory_pool_free(dst_ptr_fwd);
-      RVSTRACE_
       return -1;
     }
 
     // Create a signal to wait on for reverse copy operation
     status = hsa_signal_create(1, 0, NULL, &signal_rev);
+    print_hsa_status(__FILE__, __LINE__, __func__,
+              "hsa_signal_create()",
+              status);
     if (status != HSA_STATUS_SUCCESS) {
+      RVSTRACE_
       hsa_amd_memory_pool_free(src_ptr_fwd);
       hsa_amd_memory_pool_free(dst_ptr_fwd);
       hsa_amd_memory_pool_free(src_ptr_rev);
       hsa_amd_memory_pool_free(dst_ptr_rev);
       hsa_signal_destroy(signal_fwd);
-      RVSTRACE_
       return -1;
     }
   }
@@ -714,6 +849,9 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
                                      src_ptr_fwd, agent_list[src_ix_fwd].agent,
                                      Size,
                                      0, NULL, signal_fwd);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+              "hsa_amd_memory_async_copy()",
+              status);
   if (bidirectional) {
     RVSTRACE_
     // initiate reverse transfer
@@ -725,16 +863,18 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
   }
 
   // wait for transfer to complete
+  RVSTRACE_
   while (hsa_signal_wait_acquire(signal_fwd, HSA_SIGNAL_CONDITION_LT,
     1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)) {}
 
   // if bidirectional, also wait for reverse transfer to complete
   if (bidirectional == true) {
+    RVSTRACE_
     while (hsa_signal_wait_acquire(signal_rev, HSA_SIGNAL_CONDITION_LT,
     1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)) {}
-    RVSTRACE_
   }
 
+  RVSTRACE_
   // get transfer duration
   *Duration = GetCopyTime(bidirectional, signal_fwd, signal_rev)/1000000000;
 
@@ -743,10 +883,12 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
   hsa_signal_destroy(signal_fwd);
 
   if (bidirectional) {
+    RVSTRACE_
     hsa_amd_memory_pool_free(src_ptr_rev);
     hsa_amd_memory_pool_free(dst_ptr_rev);
     hsa_signal_destroy(signal_rev);
   }
+  RVSTRACE_
 
   return 0;
 }
@@ -763,37 +905,74 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
 int rvs::hsa::GetPeerStatus(uint32_t SrcNode, uint32_t DstNode) {
   int32_t SrcAgent;
   int32_t DstAgent;
+  std::string msg;
+
+  RVSTRACE_
+  // given NUMA nodes, find agent indexes
+  SrcAgent = FindAgent(SrcNode);
+  DstAgent = FindAgent(DstNode);
+  if (SrcAgent < 0 || DstAgent < 0) {
+    RVSTRACE_
+    return 0;
+  }
+
+  int peer_status = GetPeerStatusAgent(SrcAgent, DstAgent);
+
+  msg = "Src: " + std::to_string(SrcNode) + "  Dst: " + std::to_string(DstNode)
+      + "  access: " + std::to_string(peer_status);
+  rvs::lp::Log(msg, rvs::logdebug);
+
+  return peer_status;
+}
+
+/**
+ * @brief Get peer status between Src and Dst agents
+ *
+ * @param SrcAgent source NUMA agent
+ * @param DstAgent destination NUMA agent
+ * @return 0 - no access, 1 - Src can acces Dst, 2 - both have access
+ *
+ * */
+int rvs::hsa::GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent) {
   hsa_amd_memory_pool_access_t access_fwd;
   hsa_amd_memory_pool_access_t access_bck;
   hsa_status_t status;
   int cur_access_rights;
   int res_access_rights;
-
-  // given NUMA nodes, find agent indexes
-  SrcAgent = FindAgent(SrcNode);
-  DstAgent = FindAgent(DstNode);
-  if (SrcAgent < 0 || DstAgent < 0) {
-    return 0;
-  }
+  std::string msg;
 
   res_access_rights = 0;
   for (size_t i = 0; i < agent_list[SrcAgent].mem_pool_list.size(); i++) {
+    RVSTRACE_
     for (size_t j = 0; j < agent_list[DstAgent].mem_pool_list.size(); j++) {
+      RVSTRACE_
       // check if Src can access Dst
       status = hsa_amd_agent_memory_pool_get_info(
         agent_list[SrcAgent].agent,
         agent_list[DstAgent].mem_pool_list[j],
         HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_fwd);
-      print_hsa_status("GetPeerStatus(SRC->DST)", status);
-      if (status != HSA_STATUS_SUCCESS) return 0;
+      print_hsa_status(__FILE__, __LINE__, __func__,
+              "GetPeerStatus(SRC->DST)",
+              status);
 
+      if (status != HSA_STATUS_SUCCESS) {
+        RVSTRACE_
+        return 0;
+      }
+      RVSTRACE_
       // also check if Dst can access Src
       status = hsa_amd_agent_memory_pool_get_info(
         agent_list[DstAgent].agent, agent_list[SrcAgent].mem_pool_list[i],
         HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_bck);
-      print_hsa_status("GetPeerStatus(DST->SRC)", status);
-      if (status != HSA_STATUS_SUCCESS) return 0;
+      print_hsa_status(__FILE__, __LINE__, __func__,
+              "GetPeerStatus(DST->SRC)",
+              status);
+      if (status != HSA_STATUS_SUCCESS) {
+        RVSTRACE_
+        return 0;
+      }
 
+      RVSTRACE_
       if (access_fwd != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED &&
           access_bck != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
         cur_access_rights = 2;
@@ -804,10 +983,13 @@ int rvs::hsa::GetPeerStatus(uint32_t SrcNode, uint32_t DstNode) {
       }
 
       // in case of multiple memory pools return the best access rights
-      if (cur_access_rights > res_access_rights)
+      if (cur_access_rights > res_access_rights) {
+        RVSTRACE_
         res_access_rights = cur_access_rights;
+      }
     }
   }
+
   return res_access_rights;
 }
 
