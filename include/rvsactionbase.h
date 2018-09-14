@@ -40,8 +40,6 @@
 #define KFD_QUERYING_ERROR              "An error occurred while querying "\
                                         "the GPU properties"
 
-#define YAML_DEVICE_PROP_DELIMITER      " "
-
 #define RVS_CONF_NAME_KEY               "name"
 #define RVS_CONF_DEVICE_KEY             "device"
 #define RVS_CONF_PARALLEL_KEY           "parallel"
@@ -88,7 +86,11 @@ class actionbase {
   int  property_get_sample_interval(int *error);
   int  property_get_log_interval(int *error);
   bool property_get_terminate(int* error);
-
+  void property_get_uint_list(const std::string& key,
+                                   const std::string& delimiter,
+                                   std::vector<uint32_t>* pval,
+                                   bool* pball,
+                                   int *error);
 
  protected:
 /**

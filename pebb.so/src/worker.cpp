@@ -156,8 +156,12 @@ int pebbworker::do_transfer() {
 
   rvs::lp::get_ticks(&startsec, &startusec);
 
-  for (size_t i = 0; brun && i < pHsa->size_list.size(); i++) {
-    current_size = pHsa->size_list[i];
+  if (block_size.size() == 0) {
+    block_size = pHsa->size_list;
+  }
+
+  for (size_t i = 0; brun && i < block_size.size(); i++) {
+    current_size = block_size[i];
 
     if (rvs::lp::Stopping()) {
       return -1;
