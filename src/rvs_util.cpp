@@ -80,13 +80,39 @@ int rvs_util_strarr_to_intarr(const std::vector<string>& sArr,
 }
 
 /**
- * Conert array of strings into array of integers
+ * Conert array of strings into array of uint16_t
  * @param sArr input string
  * @param iArr tokens' delimiter
  * @return -1 if error, 0 <= otherwise
  */
 int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
                               std::vector<uint16_t>* piArr) {
+  piArr->clear();
+
+  for (auto it = sArr.begin(); it != sArr.end(); ++it) {
+    try {
+      if (is_positive_integer(*it)) {
+        piArr->push_back(std::stoi(*it));
+      }
+    }
+    catch(...) {
+    }
+  }
+
+  if (sArr.size() != piArr->size())
+    return -1;
+
+  return piArr->size();
+}
+
+/**
+ * Conert array of strings into array of uint32_t
+ * @param sArr input string
+ * @param iArr tokens' delimiter
+ * @return -1 if error, 0 <= otherwise
+ */
+int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
+                              std::vector<uint32_t>* piArr) {
   piArr->clear();
 
   for (auto it = sArr.begin(); it != sArr.end(); ++it) {

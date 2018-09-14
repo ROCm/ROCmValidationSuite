@@ -55,6 +55,7 @@ extern "C" {
 
 #define MODULE_NAME "pebb"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
+#define RVS_CONF_BLOCK_SIZE_KEY "block_size"
 
 using std::cout;
 using std::endl;
@@ -113,7 +114,7 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
   prop_log_interval = property_get_log_interval(&error);
   if (error == 1) {
     cerr << "RVS-PEBB: action: " << action_name <<
-    "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "'" << std::endl;
+    "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "' key" << std::endl;
     return false;
   } else if (error == 2) {
     prop_log_interval = DEFAULT_LOG_INTERVAL;
@@ -121,6 +122,17 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
 
   property_get_h2d();
   property_get_d2h();
+
+  property_get_uint_list(RVS_CONF_BLOCK_SIZE_KEY, YAML_DEVICE_PROP_DELIMITER,
+                         &block_size, &b_block_size_all, &error);
+  if (error == 1) {
+      cerr << "RVS-PEBB: action: " << action_name << "  invalid '"
+           << RVS_CONF_BLOCK_SIZE_KEY << "' key" << std::endl;
+      return false;
+  } else if (error == 2) {
+    b_block_size_all = true;
+    block_size.clear();
+  }
 
   return true;
 }
@@ -266,6 +278,7 @@ int pebbaction::create_threads() {
       p->set_name(action_name);
       p->set_stop_name(action_name);
       p->set_transfer_ix(transfer_ix);
+      p->set_block_sizes(block_size);
       test_array.push_back(p);
     }
   }
