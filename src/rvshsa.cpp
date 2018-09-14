@@ -466,11 +466,11 @@ hsa_status_t rvs::hsa::ProcessMemPool(hsa_amd_memory_pool_t pool, void* data) {
     agent_info->sys_pool = pool;
     rvs::lp::Log("[RVSHSA] Found system memory region", rvs::logdebug);
   } else if (owner_access != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
-    agent_info->mem_pool_list.push_back(pool);
     rvs::lp::Log("[RVSHSA] Found regular memory region", rvs::logdebug);
   }
   rvs::lp::Log("[RVSHSA] ****************************************",
                rvs::logdebug);
+  agent_info->mem_pool_list.push_back(pool);
 
   return HSA_STATUS_SUCCESS;
 }
@@ -735,12 +735,12 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
       *DstBuff = dstbuff;
 
       return 0;
-    } // end of dst agent pool loop
+    }  // end of dst agent pool loop
 
     RVSTRACE_
     // suitable destination buffer not foud, deallocate src buff and exit
     hsa_amd_memory_pool_free(srcbuff);
-  } // end of src agent pool loop
+  }  // end of src agent pool loop
 
   RVSTRACE_
   return -1;
@@ -973,13 +973,30 @@ int rvs::hsa::GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent) {
       }
 
       RVSTRACE_
+
+      if (access_fwd == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED &&
+          access_bck == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
+        RVSTRACE_
+        cur_access_rights = 0;
+      }
+
+      // Access between the two agents is Unidirectional
+      if ((access_fwd == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) ||
+          (access_bck == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED)) {
+        if ((agent_list[SrcAgent].agent_device_type == "GPU") &&
+            (agent_list[DstAgent].agent_device_type == "GPU")) {
+          RVSTRACE_
+          cur_access_rights = 0;
+        } else {
+          RVSTRACE_
+          cur_access_rights = 1;
+        }
+      }
+
       if (access_fwd != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED &&
           access_bck != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
+        RVSTRACE_
         cur_access_rights = 2;
-      } else if (access_fwd != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
-        cur_access_rights = 1;
-      } else {
-        cur_access_rights = 0;
       }
 
       // in case of multiple memory pools return the best access rights
@@ -987,9 +1004,12 @@ int rvs::hsa::GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent) {
         RVSTRACE_
         res_access_rights = cur_access_rights;
       }
+      RVSTRACE_
     }
+    RVSTRACE_
   }
 
+  RVSTRACE_
   return res_access_rights;
 }
 
