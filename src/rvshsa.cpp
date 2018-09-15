@@ -581,11 +581,19 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
       // check if src agent has access to this dst agent's pool
       hsa_amd_memory_pool_access_t access =
         HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
-      status = hsa_amd_agent_memory_pool_get_info(
+      if (agent_list[SrcAgent].agent_device_type == "CPU") {
+        status = hsa_amd_agent_memory_pool_get_info(
+        agent_list[DstAgent].agent,
+        agent_list[SrcAgent].mem_pool_list[j],
+        HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS,
+        &access);
+      } else {
+        status = hsa_amd_agent_memory_pool_get_info(
         agent_list[SrcAgent].agent,
         agent_list[DstAgent].mem_pool_list[j],
         HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS,
         &access);
+      }
       print_hsa_status(__FILE__, __LINE__, __func__,
                    "hsa_amd_agent_memory_pool_get_info()",
                    status);
@@ -1012,200 +1020,3 @@ int rvs::hsa::GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent) {
   RVSTRACE_
   return res_access_rights;
 }
-
-
-/*
-double rvs::hsa::send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
-                              hsa_amd_memory_pool_t src_buff,
-                              hsa_amd_memory_pool_t dst_buff,
-                              bool bidirectional, size_t curr_size) {
-  hsa_status_t status;
-  void* src_pool_pointer_fwd;
-  void* dst_pool_pointer_fwd;
-  void* src_pool_pointer_rev;
-  void* dst_pool_pointer_rev;
-  string log_msg;
-  hsa_signal_t signal_fwd, signal_rev;
-  char s_buff[256];
-  uint64_t total_size = 0;
-  double curr_time;
-  double bandwidth;
-
-  rvs::lp::Log("[RVSHSA] ++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
-  rvs::lp::Log("[RVSHSA] send_traffic called ... ", rvs::logdebug);
-  rvs::lp::Log("[RVSHSA] ++++++++++++++++++++++++++++++++++++++", rvs::logdebug);
-
-  snprintf(s_buff, sizeof(s_buff), "%lX", src_agent.handle);
-  rvs::lp::Log(std::string("src_agent = ") + s_buff, rvs::logdebug);
-
-  snprintf(s_buff, sizeof(s_buff), "%lX", dst_agent.handle);
-  rvs::lp::Log(std::string("dst_agent = ") + s_buff, rvs::logdebug);
-
-  // print current size
-  rvs::lp::Log("[RVSHSA] ---------------------------------------", rvs::logdebug);
-  log_msg = "[RVSHSA] send_traffic - curr_size = " +
-    std::to_string(curr_size) + " Bytes";
-  rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
-  rvs::lp::Log("[RVSHSA] ---------------------------------------", rvs::logdebug);
-
-  // Allocate buffers in src and dst pools
-  status = hsa_amd_memory_pool_allocate(src_buff, curr_size, 0,
-                                    static_cast<void**>(&src_pool_pointer_fwd));
-  print_hsa_status("[RVSHSA] send_traffic - hsa_amd_memory_pool_allocate(SRC)",
-                   status);
-  snprintf(s_buff, sizeof(s_buff), "%p", src_pool_pointer_fwd);
-  rvs::lp::Log(std::string("src_pool_pointer_fwd = ") + s_buff, rvs::logdebug);
-
-  status = hsa_amd_memory_pool_allocate(dst_buff, curr_size, 0,
-                                  static_cast<void**>(&dst_pool_pointer_fwd));
-  print_hsa_status("[RVSHSA] send_traffic - hsa_amd_memory_pool_allocate(DST)",
-                   status);
-  snprintf(s_buff, sizeof(s_buff), "%p", dst_pool_pointer_fwd);
-  rvs::lp::Log(std::string("dst_pool_pointer_fwd = ") + s_buff, rvs::logdebug);
-
-  if (bidirectional == true) {
-    status = hsa_amd_memory_pool_allocate(src_buff, curr_size, 0,
-                                  static_cast<void**>(&src_pool_pointer_rev));
-    print_hsa_status(
-      "[RVSHSA] send_traffic BIDIRECTIONAL - hsa_amd_memory_pool_allocate(SRC)",
-                     status);
-    snprintf(s_buff, sizeof(s_buff), "%p", src_pool_pointer_rev);
-    rvs::lp::Log(std::string("src_pool_pointer_rev = ") + s_buff,
-                 rvs::logdebug);
-
-    status = hsa_amd_memory_pool_allocate(dst_buff, curr_size, 0,
-                                  static_cast<void**>(&dst_pool_pointer_rev));
-    print_hsa_status(
-      "[RVSHSA] send_traffic BIDIRECTIONAL - hsa_amd_memory_pool_allocate(DST)",
-                     status);
-    snprintf(s_buff, sizeof(s_buff), "%p", dst_pool_pointer_rev);
-    rvs::lp::Log(std::string("dst_pool_pointer_rev = ") + s_buff,
-                 rvs::logdebug);
-  }
-
-  // Create a signal to wait on copy operation
-  status = hsa_signal_create(1, 0, NULL, &signal_fwd);
-  print_hsa_status("[RVSHSA] send_traffic - hsa_signal_create()", status);
-
-  // get agent access
-  status = hsa_amd_agents_allow_access(1, &src_agent,
-                                       NULL, dst_pool_pointer_fwd);
-  print_hsa_status(
-    "[RVSHSA] send_traffic - hsa_amd_agents_allow_access(SRC)", status);
-
-  status = hsa_amd_agents_allow_access(1, &dst_agent,
-                                       NULL, src_pool_pointer_fwd);
-  print_hsa_status(
-    "[RVSHSA] send_traffic - hsa_amd_agents_allow_access(DST)", status);
-
-  // store signal
-  hsa_signal_store_relaxed(signal_fwd, 1);
-
-  if (bidirectional == true) {
-    status = hsa_signal_create(1, 0, NULL, &signal_rev);
-    print_hsa_status(
-      "[RVSHSA] send_traffic BIDIRECTIONAL - hsa_signal_create()", status);
-
-    status = hsa_amd_agents_allow_access(1, &src_agent,
-                                         NULL, dst_pool_pointer_rev);
-    print_hsa_status(
-      "[RVSHSA] send_traffic BIDIRECTIONAL - hsa_amd_agents_allow_access(SRC)",
-                     status);
-
-    status = hsa_amd_agents_allow_access(1, &dst_agent,
-                                         NULL, src_pool_pointer_rev);
-    print_hsa_status(
-      "[RVSHSA] send_traffic BIDIRECTIONAL - hsa_amd_agents_allow_access(DST)",
-                     status);
-
-    hsa_signal_store_relaxed(signal_rev, 1);
-  }
-
-  // Determine if accessibility to dst pool for src agent is not denied
-  hsa_amd_memory_pool_access_t access;
-  status = hsa_amd_agent_memory_pool_get_info(src_agent, dst_buff,
-        HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
-  print_hsa_status(
-    "[RVSHSA] send_traffic - hsa_amd_agent_memory_pool_get_info(SRC->DST)",
-                   status);
-
-  if (access == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
-    log_msg = std::string("[RVSHSA] send_traffic - HSA_AMD_MEMORY_POOL_ACCESS_") +
-    "NEVER_ALLOWED for SRC -> DST), so skip it ...";
-    rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
-    return 0;
-  }
-
-  if (bidirectional == true) {
-    status = hsa_amd_agent_memory_pool_get_info(dst_agent, src_buff,
-                                HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
-    print_hsa_status(std::string("[RVSHSA] send_traffic BIDIRECTIONAL - ") +
-    "hsa_amd_agent_memory_pool_get_info(DST->SRC)", status);
-
-    if (access == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
-      log_msg = std::string("[RVSHSA] send_traffic BIDIRECTIONAL - HSA_AMD_") +
-      "MEMORY_POOL_ACCESS_NEVER_ALLOWED for DST -> SRC), so skip it ...";
-      rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
-      return 0;
-    }
-  }
-
-  // Add current transfer size
-  total_size += curr_size;
-
-  // Copy from src into dst buffer
-  status = hsa_amd_memory_async_copy(dst_pool_pointer_fwd, dst_agent,
-                                     src_pool_pointer_fwd, src_agent, curr_size,
-                                     0, NULL, signal_fwd);
-  print_hsa_status(
-    "[RVSHSA] send_traffic - hsa_amd_memory_async_copy(SRC -> DST)", status);
-
-  if (bidirectional == true) {
-    status = hsa_amd_memory_async_copy(src_pool_pointer_rev, src_agent,
-                                       dst_pool_pointer_rev, dst_agent,
-                                       curr_size, 0, NULL, signal_rev);
-    print_hsa_status(
-      "[RVSHSA] send_traffic BIDIRECTIONAL - hsa_amd_memory_async_copy(DST -> SRC)"
-      , status);
-  }
-
-  // Wait for the forward copy operation to complete
-  log_msg = std::string("[RVSHSA] send_traffic - ") +
-      "hsa_signal_wait_acquire(SRC -> DST) before ...";
-  rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
-  while (hsa_signal_wait_acquire(signal_fwd, HSA_SIGNAL_CONDITION_LT,
-    1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)) {}
-  log_msg =
-    "[RVSHSA] send_traffic - hsa_signal_wait_acquire(SRC -> DST) after ...";
-  rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
-
-  if (bidirectional == true) {
-    log_msg = std::string("[RVSHSA] send_traffic BIDIRECTIONAL - ") +
-    "hsa_signal_wait_acquire(DST -> SRC) before ...";
-    rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
-    while (hsa_signal_wait_acquire(signal_rev, HSA_SIGNAL_CONDITION_LT,
-      1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)) {}
-    log_msg =
-      std::string("[RVSHSA] send_traffic BIDIRECTIONAL - ") +
-      "hsa_signal_wait_acquire(DST -> SRC) after ...";
-    rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
-  }
-
-  curr_time = GetCopyTime(bidirectional, signal_fwd, signal_rev)/1000000000;
-  log_msg = "[RVSHSA] send_traffic - curr_time = " + std::to_string(curr_time);
-  rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
-
-  // convert to GB/s
-  if (bidirectional == true) {
-    curr_size *= 2;
-  }
-  bandwidth = (curr_size / curr_time);
-  bandwidth /= (1024*1024*1024);
-  log_msg = "[RVSHSA] send_traffic - curr_size = " + std::to_string(curr_size) +
-    " Bytes and curr_time = " + std::to_string(curr_time) + " bandwidth = " +
-    std::to_string(bandwidth) + " GBytes/s";
-  rvs::lp::Log(log_msg.c_str(), rvs::logdebug);
-
-  return bandwidth;
-}
-*/
