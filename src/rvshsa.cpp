@@ -577,17 +577,20 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
         RVSTRACE_
         continue;
       }
+
       RVSTRACE_
       // check if src agent has access to this dst agent's pool
       hsa_amd_memory_pool_access_t access =
         HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
       if (agent_list[SrcAgent].agent_device_type == "CPU") {
+        RVSTRACE_
         status = hsa_amd_agent_memory_pool_get_info(
         agent_list[DstAgent].agent,
         agent_list[SrcAgent].mem_pool_list[j],
         HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS,
         &access);
       } else {
+        RVSTRACE_
         status = hsa_amd_agent_memory_pool_get_info(
         agent_list[SrcAgent].agent,
         agent_list[DstAgent].mem_pool_list[j],
@@ -613,128 +616,38 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
         RVSTRACE_
         continue;
       }
+
       RVSTRACE_
-//       // grant src agen access to destination buffer
-//       if (agent_list[SrcAgent].agent_device_type == "CPU" ||
-//         agent_list[DstAgent].agent_device_type == "GPU") {
-//         RVSTRACE_
-//         status = hsa_amd_agents_allow_access(1,
-//                                             &agent_list[DstAgent].agent,
-//                                             NULL,
-//                                             srcbuff);
-//         print_hsa_status(__FILE__, __LINE__, __func__,
-//                    "hsa_amd_agents_allow_access()",
-//                    status);
-//         if (status != HSA_STATUS_SUCCESS) {
-//           RVSTRACE_
-//           continue;
-//         }
-//         RVSTRACE_
-//         status = hsa_amd_agents_allow_access(1,
-//                                              &agent_list[SrcAgent].agent,
-//                                              NULL,
-//                                              dstbuff);
-//         print_hsa_status(__FILE__, __LINE__, __func__,
-//                    "hsa_amd_agents_allow_access()",
-//                    status);
-//         if (status != HSA_STATUS_SUCCESS) {
-//           RVSTRACE_
-//           continue;
-//         }
-//       } else {
-//         RVSTRACE_
-//         status = hsa_amd_agents_allow_access(1,
-//                                             &agent_list[SrcAgent].agent,
-//                                             NULL,
-//                                             dstbuff);
-//         print_hsa_status(__FILE__, __LINE__, __func__,
-//                    "hsa_amd_agents_allow_access()",
-//                    status);
-//      }
-      int peer_status = GetPeerStatusAgent(SrcAgent, DstAgent);
-      if (peer_status == 2) {
+      // destination buffer allocated,
+      // give access to agents
+
+      RVSTRACE_
+
+      // determine which one is a cpu and allow access on the other agent
+      if (agent_list[SrcAgent].agent_device_type == "CPU") {
         RVSTRACE_
-        status = hsa_amd_agents_allow_access(1,
-                                             &agent_list[SrcAgent].agent,
-                                             NULL,
-                                             dstbuff);
-        print_hsa_status(__FILE__, __LINE__, __func__,
-                   "hsa_amd_agents_allow_access()",
-                   status);
-        if (status != HSA_STATUS_SUCCESS) {
-          RVSTRACE_
-          // do cleanup
-          hsa_amd_memory_pool_free(dstbuff);
-          dstbuff = nullptr;
-          continue;
-        }
         status = hsa_amd_agents_allow_access(1,
                                             &agent_list[DstAgent].agent,
                                             NULL,
                                             srcbuff);
-        print_hsa_status(__FILE__, __LINE__, __func__,
-                   "hsa_amd_agents_allow_access()",
-                   status);
-        if (status != HSA_STATUS_SUCCESS) {
-          RVSTRACE_
-          // do cleanup
-          hsa_amd_memory_pool_free(dstbuff);
-          dstbuff = nullptr;
-          continue;
-        }
-      } else if (peer_status == 1) {
+      } else {
         RVSTRACE_
-
-        // determine which one is a cpu and allow access on the other agent
-        if (agent_list[SrcAgent].agent_device_type == "CPU") {
-          status = hsa_amd_agents_allow_access(1,
-                                              &agent_list[DstAgent].agent,
-                                              NULL,
-                                              srcbuff);
-          print_hsa_status(__FILE__, __LINE__, __func__,
-                    "hsa_amd_agents_allow_access()",
-                    status);
-          if (status != HSA_STATUS_SUCCESS) {
-            RVSTRACE_
-            // do cleanup
-            hsa_amd_memory_pool_free(dstbuff);
-            dstbuff = nullptr;
-            continue;
-          }
-        }
-        if (agent_list[DstAgent].agent_device_type == "CPU") {
-          status = hsa_amd_agents_allow_access(1,
-                                              &agent_list[SrcAgent].agent,
-                                              NULL,
-                                              dstbuff);
-          print_hsa_status(__FILE__, __LINE__, __func__,
-                    "hsa_amd_agents_allow_access()",
-                    status);
-          if (status != HSA_STATUS_SUCCESS) {
-            RVSTRACE_
-            // do cleanup
-            hsa_amd_memory_pool_free(dstbuff);
-            dstbuff = nullptr;
-            continue;
-          }
-        } else {
-          RVSTRACE_
-          rvs::lp::Log("peer status does not match pool access", rvs::logerror);
-          // do cleanup
-          hsa_amd_memory_pool_free(dstbuff);
-          dstbuff = nullptr;
-          continue;
-        }
+        status = hsa_amd_agents_allow_access(1,
+                                            &agent_list[SrcAgent].agent,
+                                            NULL,
+                                            dstbuff);
       }
-
-      RVSTRACE_
+      print_hsa_status(__FILE__, __LINE__, __func__,
+                "hsa_amd_agents_allow_access()",
+                status);
       if (status != HSA_STATUS_SUCCESS) {
         RVSTRACE_
-        // cannot grant access, release buffer and skip to the next pool
+        // do cleanup
         hsa_amd_memory_pool_free(dstbuff);
         dstbuff = nullptr;
         continue;
       }
+
       RVSTRACE_
       // all OK, set output parameters:
       *pSrcPool = agent_list[SrcAgent].mem_pool_list[i];
