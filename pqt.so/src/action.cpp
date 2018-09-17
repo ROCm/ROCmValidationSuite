@@ -451,8 +451,7 @@ int pqtaction::create_threads() {
     }
   }
 
-  if (prop_test_bandwidth && test_array.size() < 1)
-  {
+  if (prop_test_bandwidth && test_array.size() < 1) {
     std::string diag;
     if (bmatch_found) {
       diag = "No peers found";
