@@ -236,57 +236,107 @@ int pebbaction::create_threads() {
   std::vector<uint16_t> gpu_id;
   std::vector<uint16_t> gpu_device_id;
   uint16_t transfer_ix = 0;
+  bool bmatch_found = false;
 
   RVSTRACE_
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&gpu_device_id);
 
+  RVSTRACE_
   for (size_t i = 0; i < gpu_id.size(); i++) {
+    RVSTRACE_
     if (prop_device_id_filtering) {
+      RVSTRACE_
       if (prop_deviceid != gpu_device_id[i]) {
+        RVSTRACE_
         continue;
       }
     }
+
     // filter out by listed sources
+    RVSTRACE_
     if (!prop_device_all_selected) {
+      RVSTRACE_
       const auto it = std::find(device_prop_gpu_id_list.cbegin(),
                                 device_prop_gpu_id_list.cend(),
                                 std::to_string(gpu_id[i]));
       if (it == device_prop_gpu_id_list.cend()) {
+        RVSTRACE_
         continue;
       }
     }
 
+    bmatch_found = true;
 
     int dstnode;
     int srcnode;
 
+    RVSTRACE_
     for (uint cpu_index = 0;
          cpu_index < rvs::hsa::Get()->cpu_list.size();
          cpu_index++) {
+      RVSTRACE_
       // GPUs are peers, create transaction for them
       dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
       if (dstnode < 0) {
+        RVSTRACE_
         std::cerr << "RVS-PEBB: no node found for destination GPU ID "
           << std::to_string(gpu_id[i]);
         return -1;
       }
+      RVSTRACE_
       transfer_ix += 1;
       srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
-      pebbworker* p = new pebbworker;
-      p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
-      p->set_name(action_name);
-      p->set_stop_name(action_name);
-      p->set_transfer_ix(transfer_ix);
-      p->set_block_sizes(block_size);
-      test_array.push_back(p);
+      if (rvs::hsa::Get()->GetPeerStatus(srcnode, dstnode)) {
+        RVSTRACE_
+        pebbworker* p = new pebbworker;
+        if (p == nullptr) {
+          RVSTRACE_
+          std::cerr << "RVS-PEBB: internal error";
+          return -1;
+        }
+        p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
+        p->set_name(action_name);
+        p->set_stop_name(action_name);
+        p->set_transfer_ix(transfer_ix);
+        p->set_block_sizes(block_size);
+        test_array.push_back(p);
+      }
     }
   }
 
+  RVSTRACE_
+  if (test_array.size() < 1) {
+    std::string diag;
+    if (bmatch_found) {
+      diag = "No peers found";
+    } else {
+      diag = "No devices match criteria from the test configuation";
+    }
+    msg = "[" + action_name + "] pcie-bandwidth  " + diag;
+    rvs::lp::Log(msg, rvs::logerror);
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate("pcie-bandwidth",
+                              action_name.c_str(), rvs::logerror, sec, usec);
+      if (json_rcqt_node != NULL) {
+        rvs::lp::AddString(json_rcqt_node,
+          "message",
+          diag);
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+    }
+    return 0;
+  }
+
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    RVSTRACE_
     (*it)->set_transfer_num(test_array.size());
   }
 
+  RVSTRACE_
   return 0;
 }
 
@@ -369,16 +419,20 @@ int pebbaction::run_single() {
 
   // start timers
   if (gst_run_duration_ms) {
+    RVSTRACE_
     timer_final.start(gst_run_duration_ms, true);  // ticks only once
   }
 
   if (prop_log_interval) {
+    RVSTRACE_
     timer_running.start(prop_log_interval);        // ticks continuously
   }
 
   // iterate through test array and invoke tests one by one
   do {
+    RVSTRACE_
     for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
+      RVSTRACE_
       (*it)->do_transfer();
 
       // if log interval is zero, print current results immediately
@@ -388,24 +442,29 @@ int pebbaction::run_single() {
       sleep(1);
 
       if (rvs::lp::Stopping()) {
+        RVSTRACE_
         brun = false;
         break;
       }
     }
 
+    RVSTRACE_
     iter -= step;
 
     // insert wait between runs if needed
     if (iter > 0 && gst_run_wait_ms > 0) {
+      RVSTRACE_
       sleep(gst_run_wait_ms);
     }
   } while (brun && iter);
 
+  RVSTRACE_
   timer_running.stop();
   timer_final.stop();
 
   print_final_average();
 
+  RVSTRACE_
   return rvs::lp::Stopping() ? -1 : 0;
 }
 

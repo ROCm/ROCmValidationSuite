@@ -132,8 +132,8 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-c", sp));
   grammar.insert(gpair("--config", sp));
 
-  sp = std::make_shared<optbase>("--configless", command);
-  grammar.insert(gpair("--configless", sp));
+//   sp = std::make_shared<optbase>("--configless", command);
+//   grammar.insert(gpair("--configless", sp));
 
   sp = std::make_shared<optbase>("-d", command, value);
   grammar.insert(gpair("-d", sp));
