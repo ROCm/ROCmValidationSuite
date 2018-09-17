@@ -129,7 +129,7 @@ class hsa {
                   double*  Duration);
 
   int GetPeerStatus(uint32_t SrcNode, uint32_t DstNode);
-
+  int GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent);
 //   double send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
 //                       hsa_amd_memory_pool_t src_buff,
 //                       hsa_amd_memory_pool_t dst_buff,
@@ -147,6 +147,11 @@ class hsa {
   static void print_hsa_status(string message, hsa_status_t st);
   static void print_hsa_status(const std::string& file, int line,
                                const std::string& function, hsa_status_t st);
+  static void print_hsa_status(const std::string& file,
+                                int line,
+                                const std::string& function,
+                                const std::string& msg,
+                                hsa_status_t st);
   double GetCopyTime(bool bidirectional,
                      hsa_signal_t signal_fwd, hsa_signal_t signal_rev);
 
