@@ -333,6 +333,7 @@ int pqtaction::create_threads() {
   std::vector<uint16_t> gpu_id;
   std::vector<uint16_t> gpu_device_id;
   uint16_t transfer_ix = 0;
+  bool bmatch_found = false;
 
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&gpu_device_id);
@@ -372,6 +373,10 @@ int pqtaction::create_threads() {
           continue;
         }
       }
+
+      // signal that at lease one matching src-dst combination
+      // has been found:
+      bmatch_found = true;
 
       // perform peer check
       if (is_peer(gpu_id[i], gpu_id[j])) {
@@ -447,23 +452,28 @@ int pqtaction::create_threads() {
   }
 
   if (prop_test_bandwidth && test_array.size() < 1) {
-    msg = "[" + action_name + "]" +
-          " No GPU/peer combination matches criteria from test configuation";
-    rvs::lp::Log(msg, rvs::loginfo);
+    std::string diag;
+    if (bmatch_found) {
+      diag = "No peers found";
+    } else {
+      diag = "No devices match criteria from the test configuation";
+    }
+    msg = "[" + action_name + "] p2p-bandwidth " + diag;
+    rvs::lp::Log(msg, rvs::logerror);
     if (bjson) {
       unsigned int sec;
       unsigned int usec;
       rvs::lp::get_ticks(&sec, &usec);
-      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::loginfo, sec, usec);
+      json_rcqt_node = rvs::lp::LogRecordCreate("p2p-bandwidth",
+                              action_name.c_str(), rvs::logerror, sec, usec);
       if (json_rcqt_node != NULL) {
         rvs::lp::AddString(json_rcqt_node,
           "message",
-          "No GPU/peer combination matches criteria from test configuation");
+          diag);
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
     }
-    return -1;
+    return 0;
   }
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
@@ -523,7 +533,7 @@ int pqtaction::run() {
   if (sts)
     return sts;
 
-  if (prop_test_bandwidth) {
+  if (prop_test_bandwidth && test_array.size() > 0) {
     if (gst_runs_parallel) {
       sts = run_parallel();
     } else {
@@ -581,27 +591,34 @@ int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
  *
  * */
 int pqtaction::run_single() {
+  RVSTRACE_
   // define timers
   rvs::timer<pqtaction> timer_running(&pqtaction::do_running_average, this);
   rvs::timer<pqtaction> timer_final(&pqtaction::do_final_average, this);
 
-  // let the test run
-  brun = true;
   unsigned int iter = gst_run_count > 0 ? gst_run_count : 1;
   unsigned int step = gst_run_count == 0 ? 0 : 1;
 
+  // let the test run
+  brun = true;
+
   // start timers
   if (gst_run_duration_ms) {
+    RVSTRACE_
     timer_final.start(gst_run_duration_ms, true);  // ticks only once
   }
 
   if (prop_log_interval) {
+    RVSTRACE_
     timer_running.start(prop_log_interval);        // ticks continuously
   }
 
   // iterate through test array and invoke tests one by one
+  RVSTRACE_
   do {
+    RVSTRACE_
     for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
+      RVSTRACE_
       (*it)->do_transfer();
 
       // if log interval is zero, print current results immediately
@@ -611,24 +628,29 @@ int pqtaction::run_single() {
       sleep(1);
 
       if (rvs::lp::Stopping()) {
+        RVSTRACE_
         brun = false;
         break;
       }
     }
+    RVSTRACE_
 
     iter -= step;
 
     // insert wait between runs if needed
     if (iter > 0 && gst_run_wait_ms > 0) {
+      RVSTRACE_
       sleep(gst_run_wait_ms);
     }
   } while (brun && iter);
 
+  RVSTRACE_
   timer_running.stop();
   timer_final.stop();
 
   print_final_average();
 
+  RVSTRACE_
   return rvs::lp::Stopping() ? -1 : 0;
 }
 
