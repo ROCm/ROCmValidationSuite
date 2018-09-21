@@ -25,6 +25,7 @@
 
 #include "rvslognoderec.h"
 #include <string>
+#include "rvstrace.h"
 
 /**
  * @brief Constructor
@@ -91,6 +92,7 @@ int rvs::LogNodeRec::LogLevel() {
  *
  */
 std::string rvs::LogNodeRec::ToJson(const std::string& Lead) {
+  DTRACE_
   std::string result(RVSENDL);
   result += Lead + "{";
 
