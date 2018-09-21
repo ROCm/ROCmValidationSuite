@@ -45,6 +45,22 @@ using std::vector;
 namespace rvs {
 
 /**
+ * @class linkinfo_s
+ * @ingroup RVS
+ *
+ * @brief Utility class used to store HSA agent information
+ *
+ */
+typedef struct linkinfo_s {
+  //! NUMA distance of this hop
+  uint32_t distance;
+  //! link type of this hop (as string)
+  std::string strtype;
+  //! link type of this hop
+  hsa_amd_link_info_type_t etype;
+} linkinfo_t;
+
+/**
  * @class hsa
  * @ingroup RVS
  *
@@ -129,11 +145,10 @@ class hsa {
                   double*  Duration);
 
   int GetPeerStatus(uint32_t SrcNode, uint32_t DstNode);
-  int GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent);
-//   double send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
-//                       hsa_amd_memory_pool_t src_buff,
-//                       hsa_amd_memory_pool_t dst_buff,
-//                       bool bidirectional, size_t curr_size);
+  int GetPeerStatusAgent(const AgentInformation& SrcAgent,
+                         const AgentInformation& DstAgent);
+  int GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
+                  uint32_t* pDistance, std::vector<linkinfo_t>* pInfoarr);
 
  protected:
   void InitAgents();

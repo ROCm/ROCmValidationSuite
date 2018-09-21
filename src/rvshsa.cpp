@@ -824,20 +824,20 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
  *
  * */
 int rvs::hsa::GetPeerStatus(uint32_t SrcNode, uint32_t DstNode) {
-  int32_t SrcAgent;
-  int32_t DstAgent;
+  int32_t srcix;
+  int32_t dstix;
   std::string msg;
 
   RVSTRACE_
   // given NUMA nodes, find agent indexes
-  SrcAgent = FindAgent(SrcNode);
-  DstAgent = FindAgent(DstNode);
-  if (SrcAgent < 0 || DstAgent < 0) {
+  srcix = FindAgent(SrcNode);
+  dstix = FindAgent(DstNode);
+  if (srcix < 0 || dstix < 0) {
     RVSTRACE_
     return 0;
   }
 
-  int peer_status = GetPeerStatusAgent(SrcAgent, DstAgent);
+  int peer_status = GetPeerStatusAgent(agent_list[srcix], agent_list[dstix]);
 
   msg = "Src: " + std::to_string(SrcNode) + "  Dst: " + std::to_string(DstNode)
       + "  access: " + std::to_string(peer_status);
@@ -849,12 +849,13 @@ int rvs::hsa::GetPeerStatus(uint32_t SrcNode, uint32_t DstNode) {
 /**
  * @brief Get peer status between Src and Dst agents
  *
- * @param SrcAgent source NUMA agent
- * @param DstAgent destination NUMA agent
+ * @param SrcAgent source agent
+ * @param DstAgent destination agent
  * @return 0 - no access, 1 - Src can acces Dst, 2 - both have access
  *
  * */
-int rvs::hsa::GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent) {
+int rvs::hsa::GetPeerStatusAgent(const AgentInformation&  SrcAgent,
+                                 const AgentInformation&  DstAgent) {
   hsa_amd_memory_pool_access_t access_fwd;
   hsa_amd_memory_pool_access_t access_bck;
   hsa_status_t status;
@@ -863,14 +864,14 @@ int rvs::hsa::GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent) {
   std::string msg;
 
   res_access_rights = 0;
-  for (size_t i = 0; i < agent_list[SrcAgent].mem_pool_list.size(); i++) {
+  for (size_t i = 0; i < SrcAgent.mem_pool_list.size(); i++) {
     RVSTRACE_
-    for (size_t j = 0; j < agent_list[DstAgent].mem_pool_list.size(); j++) {
+    for (size_t j = 0; j < DstAgent.mem_pool_list.size(); j++) {
       RVSTRACE_
       // check if Src can access Dst
       status = hsa_amd_agent_memory_pool_get_info(
-        agent_list[SrcAgent].agent,
-        agent_list[DstAgent].mem_pool_list[j],
+        SrcAgent.agent,
+        DstAgent.mem_pool_list[j],
         HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_fwd);
       print_hsa_status(__FILE__, __LINE__, __func__,
               "GetPeerStatus(SRC->DST)",
@@ -883,7 +884,7 @@ int rvs::hsa::GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent) {
       RVSTRACE_
       // also check if Dst can access Src
       status = hsa_amd_agent_memory_pool_get_info(
-        agent_list[DstAgent].agent, agent_list[SrcAgent].mem_pool_list[i],
+        DstAgent.agent, SrcAgent.mem_pool_list[i],
         HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access_bck);
       print_hsa_status(__FILE__, __LINE__, __func__,
               "GetPeerStatus(DST->SRC)",
@@ -904,8 +905,8 @@ int rvs::hsa::GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent) {
       // Access between the two agents is Unidirectional
       if ((access_fwd == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) ||
           (access_bck == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED)) {
-        if ((agent_list[SrcAgent].agent_device_type == "GPU") &&
-            (agent_list[DstAgent].agent_device_type == "GPU")) {
+        if ((SrcAgent.agent_device_type == "GPU") &&
+            (DstAgent.agent_device_type == "GPU")) {
           RVSTRACE_
           cur_access_rights = 0;
         } else {
@@ -932,4 +933,97 @@ int rvs::hsa::GetPeerStatusAgent(int32_t SrcAgent, int32_t DstAgent) {
 
   RVSTRACE_
   return res_access_rights;
+}
+
+/**
+ * @brief Get link information between Src and Dst nodes
+ *
+ * @param SrcNode source node
+ * @param DstNode destination node
+ * @param pDistance ptr to NUMA distance
+ * @param pInfoarr ptr to list of hop infos
+ * @return 0 - OK, non-zero otherwise
+ *
+ * */
+int rvs::hsa::GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
+                  uint32_t* pDistance, std::vector<linkinfo_t>* pInfoarr) {
+  int32_t srcix;
+  int32_t dstix;
+  hsa_status_t sts;
+
+  RVSTRACE_
+  // given NUMA nodes, find agent indexes
+  srcix = FindAgent(SrcNode);
+  dstix = FindAgent(DstNode);
+  if (srcix < 0 || dstix < 0) {
+    RVSTRACE_
+    return -1;
+  }
+
+  RVSTRACE_
+
+  *pDistance = 0xFFFFFFFF;
+  pInfoarr->clear();
+  hsa_agent_t& srcagent = agent_list[srcix].agent;
+
+  // Agent has no pools so no need to look for numa distance
+  if (agent_list[dstix].mem_pool_list.size() == 0) {
+    RVSTRACE_
+    return 0;
+  }
+
+  uint32_t hops = 0;
+  hsa_amd_memory_pool_t& dstpool = agent_list[dstix].mem_pool_list[0];
+  sts = hsa_amd_agent_memory_pool_get_info(srcagent, dstpool,
+                   HSA_AMD_AGENT_MEMORY_POOL_INFO_NUM_LINK_HOPS, &hops);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                  "[RVSHSA] HSA_AMD_AGENT_MEMORY_POOL_INFO_NUM_LINK_HOPS", sts);
+  if (hops < 1) {
+    RVSTRACE_
+    return 0;
+  }
+
+  RVSTRACE_
+  hsa_amd_memory_pool_link_info_t *link_info;
+  uint32_t link_info_sz = hops * sizeof(hsa_amd_memory_pool_link_info_t);
+  link_info =
+    static_cast<hsa_amd_memory_pool_link_info_t*>(malloc(link_info_sz));
+  memset(link_info, 0, (hops * sizeof(hsa_amd_memory_pool_link_info_t)));
+
+  sts = hsa_amd_agent_memory_pool_get_info(srcagent, dstpool,
+                 HSA_AMD_AGENT_MEMORY_POOL_INFO_LINK_INFO, link_info);
+  print_hsa_status(__FILE__, __LINE__, __func__,
+                   "[RVSHSA] HSA_AMD_AGENT_MEMORY_POOL_INFO_LINK_INFO", sts);
+  *pDistance = 0;
+  pInfoarr->clear();
+  for (uint32_t hopIdx = 0; hopIdx < hops; hopIdx++) {
+    RVSTRACE_
+    linkinfo_t rvslinkinfo;
+    *pDistance += (link_info[hopIdx]).numa_distance;
+    rvslinkinfo.distance = (link_info[hopIdx]).numa_distance;
+    rvslinkinfo.etype = (link_info[hopIdx]).link_type;
+    switch (rvslinkinfo.etype) {
+      case HSA_AMD_LINK_INFO_TYPE_HYPERTRANSPORT:
+        rvslinkinfo.strtype = "HyperTransport";
+        break;
+      case HSA_AMD_LINK_INFO_TYPE_QPI:
+        rvslinkinfo.strtype = "QPI";
+        break;
+      case HSA_AMD_LINK_INFO_TYPE_PCIE:
+        rvslinkinfo.strtype = "PCIe";
+        break;
+      case HSA_AMD_LINK_INFO_TYPE_INFINBAND:
+        rvslinkinfo.strtype = "InfiniBand";
+        break;
+      default:
+        RVSTRACE_
+        rvslinkinfo.strtype = "unknown-"
+                            + std::to_string(rvslinkinfo.etype);
+    }
+    pInfoarr->push_back(rvslinkinfo);
+  }
+  free(link_info);
+
+  RVSTRACE_
+  return 0;
 }
