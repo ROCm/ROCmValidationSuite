@@ -524,6 +524,29 @@ int pqtaction::create_threads() {
                                "dst", std::to_string(gpu_id[j]));
             rvs::lp::AddString(json_rcqt_node,
                                "p2p", "false");
+            if (distance == 0xFFFFFFFF) {
+                rvs::lp::AddInt(json_rcqt_node, "distance", -1);
+            } else {
+                rvs::lp::AddInt(json_rcqt_node, "distance", distance);
+            }
+
+            void* phops = rvs::lp::CreateNode(json_rcqt_node, "hops");
+            rvs::lp::AddNode(json_rcqt_node, phops);
+
+            // iterate through individual hops
+            for (uint i = 0; i < arr_linkinfo.size(); i++) {
+              char sbuff[64];
+              snprintf(sbuff, sizeof(sbuff), "hop%d", i);
+             void* phop = rvs::lp::CreateNode(phops, sbuff);
+              rvs::lp::AddString(phop, "type", arr_linkinfo[i].strtype);
+              if (arr_linkinfo[i].distance == 0xFFFFFFFF) {
+                rvs::lp::AddInt(phop, "distance", -1);
+              } else {
+                rvs::lp::AddInt(phop, "distance", arr_linkinfo[i].distance);
+              }
+             rvs::lp::AddNode(phops, phop);
+            }
+
             rvs::lp::LogRecordFlush(json_rcqt_node);
           }
         }
