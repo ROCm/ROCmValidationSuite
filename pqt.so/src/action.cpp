@@ -64,6 +64,7 @@ pqtaction::pqtaction() {
   prop_deviceid = -1;
   prop_device_id_filtering = false;
   prop_peer_deviceid = -1;
+  bjson = false;
 }
 
 //! Default destructor
@@ -357,65 +358,124 @@ int pqtaction::create_threads() {
     }
 
     for (size_t j = 0; j < gpu_id.size(); j++) {  // all possible peers
+      RVSTRACE_
       // filter out by peer id
       if (prop_peer_deviceid > 0) {
+        RVSTRACE_
         if (prop_peer_deviceid != gpu_device_id[j]) {
+          RVSTRACE_
           continue;
         }
       }
 
+      RVSTRACE_
       // filter out by listed peers
       if (!prop_peer_device_all_selected) {
+        RVSTRACE_
         const auto it = std::find(prop_peers.cbegin(),
                                   prop_peers.cend(),
                                   std::to_string(gpu_id[j]));
         if (it == prop_peers.cend()) {
+          RVSTRACE_
           continue;
         }
       }
 
+      RVSTRACE_
       // signal that at lease one matching src-dst combination
       // has been found:
       bmatch_found = true;
 
+      // get NUMA nodes
+      int srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
+      if (srcnode < 0) {
+        std::cerr << "RVS-PQT: no node found for GPU ID "
+        << std::to_string(gpu_id[i]);
+        return -1;
+      }
+
+      int dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[j]);
+      if (srcnode < 0) {
+        RVSTRACE_
+        std::cerr << "RVS-PQT: no node found for GPU ID "
+        << std::to_string(gpu_id[j]);
+        return -1;
+      }
+
+      RVSTRACE_
+      uint32_t distance = 0;
+      std::vector<rvs::linkinfo_t> arr_linkinfo;
+      rvs::hsa::Get()->GetLinkInfo(srcnode, dstnode,
+                                         &distance, &arr_linkinfo);
+
       // perform peer check
       if (is_peer(gpu_id[i], gpu_id[j])) {
+        RVSTRACE_
         msg = "[" + action_name + "] p2p "
             + std::to_string(gpu_id[i]) + " "
-            + std::to_string(gpu_id[j]) + " true";
+            + std::to_string(gpu_id[j]) + " true ";
+
+        if (distance == 0xFFFFFFFF) {
+          msg += "distance:-1";
+        } else {
+          msg += "distance:" + std::to_string(distance);
+        }
+        // iterate through individual hops
+        for (auto it = arr_linkinfo.begin(); it != arr_linkinfo.end(); it++) {
+          msg += " " + it->strtype + ":";
+          if (it->distance == 0xFFFFFFFF) {
+            msg += "-1";
+          } else {
+            msg +=std::to_string(it->distance);
+          }
+        }
         rvs::lp::Log(msg, rvs::logresults);
+
         if (bjson) {
+          RVSTRACE_
           unsigned int sec;
           unsigned int usec;
           rvs::lp::get_ticks(&sec, &usec);
           json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::logresults, sec, usec);
           if (json_rcqt_node != NULL) {
+            RVSTRACE_
             rvs::lp::AddString(json_rcqt_node, "src",
                                std::to_string(gpu_id[i]));
             rvs::lp::AddString(json_rcqt_node, "dst",
                                std::to_string(gpu_id[j]));
             rvs::lp::AddString(json_rcqt_node, "p2p", "true");
+            if (distance == 0xFFFFFFFF) {
+                rvs::lp::AddInt(json_rcqt_node, "distance", -1);
+            } else {
+                rvs::lp::AddInt(json_rcqt_node, "distance", distance);
+            }
+
+            void* phops = rvs::lp::CreateNode(json_rcqt_node, "hops");
+            rvs::lp::AddNode(json_rcqt_node, phops);
+
+            // iterate through individual hops
+            for (uint i = 0; i < arr_linkinfo.size(); i++) {
+              char sbuff[64];
+              snprintf(sbuff, sizeof(sbuff), "hop%d", i);
+             void* phop = rvs::lp::CreateNode(phops, sbuff);
+              rvs::lp::AddString(phop, "type", arr_linkinfo[i].strtype);
+              if (arr_linkinfo[i].distance == 0xFFFFFFFF) {
+                rvs::lp::AddInt(phop, "distance", -1);
+              } else {
+                rvs::lp::AddInt(phop, "distance", arr_linkinfo[i].distance);
+              }
+             rvs::lp::AddNode(phops, phop);
+            }
+
             rvs::lp::LogRecordFlush(json_rcqt_node);
           }
         }
 
+        RVSTRACE_
         // GPUs are peers, create transaction for them
-        int srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
-        if (srcnode < 0) {
-          std::cerr << "RVS-PQT: no node found for GPU ID "
-          << std::to_string(gpu_id[i]);
-          return -1;
-        }
-
-        int dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[j]);
-        if (srcnode < 0) {
-          std::cerr << "RVS-PQT: no node found for GPU ID "
-          << std::to_string(gpu_id[j]);
-          return -1;
-        }
-
         if (prop_test_bandwidth) {
+          RVSTRACE_
           transfer_ix += 1;
           pqtworker* p = new pqtworker;
           p->initialize(srcnode, dstnode, prop_bidirectional);
@@ -427,17 +487,37 @@ int pqtaction::create_threads() {
         }
 
       } else {
+        RVSTRACE_
         msg = "[" + action_name + "] p2p "
             + std::to_string(gpu_id[i]) + " "
-            + std::to_string(gpu_id[j]) + " false";
+            + std::to_string(gpu_id[j]) + " false ";
+
+        if (distance == 0xFFFFFFFF) {
+          msg += "distance:-1";
+        } else {
+          msg += "distance:" + std::to_string(distance);
+        }
+        // iterate through individual hops
+        for (auto it = arr_linkinfo.begin(); it != arr_linkinfo.end(); it++) {
+          msg += " " + it->strtype + ":";
+          if (it->distance == 0xFFFFFFFF) {
+            msg += "-1";
+          } else {
+            msg +=std::to_string(it->distance);
+          }
+        }
+
         rvs::lp::Log(msg, rvs::logresults);
+
         if (bjson) {
+          RVSTRACE_
           unsigned int sec;
           unsigned int usec;
           rvs::lp::get_ticks(&sec, &usec);
           json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::logresults, sec, usec);
           if (json_rcqt_node != NULL) {
+            RVSTRACE_
             rvs::lp::AddString(json_rcqt_node,
                                "src", std::to_string(gpu_id[i]));
             rvs::lp::AddString(json_rcqt_node,
@@ -451,35 +531,46 @@ int pqtaction::create_threads() {
     }
   }
 
+  RVSTRACE_
   if (prop_test_bandwidth && test_array.size() < 1) {
+    RVSTRACE_
     std::string diag;
     if (bmatch_found) {
+      RVSTRACE_
       diag = "No peers found";
     } else {
+      RVSTRACE_
       diag = "No devices match criteria from the test configuation";
     }
+    RVSTRACE_
     msg = "[" + action_name + "] p2p-bandwidth " + diag;
     rvs::lp::Log(msg, rvs::logerror);
     if (bjson) {
+      RVSTRACE_
       unsigned int sec;
       unsigned int usec;
       rvs::lp::get_ticks(&sec, &usec);
       json_rcqt_node = rvs::lp::LogRecordCreate("p2p-bandwidth",
                               action_name.c_str(), rvs::logerror, sec, usec);
       if (json_rcqt_node != NULL) {
+        RVSTRACE_
         rvs::lp::AddString(json_rcqt_node,
           "message",
           diag);
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
     }
+    RVSTRACE_
     return 0;
   }
 
+  RVSTRACE_
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    RVSTRACE_
     (*it)->set_transfer_num(test_array.size());
   }
 
+  RVSTRACE_
   return 0;
 }
 
@@ -510,6 +601,10 @@ int pqtaction::run() {
   string msg;
 
   rvs::lp::Log("int pqtaction::run()", rvs::logtrace);
+
+  if (property.find("cli.-j") != property.end()) {
+    bjson = true;
+  }
 
   if (!get_all_common_config_keys()) {
     cerr << "RVS-PQT: " << "Error in get_all_common_config_keys()"<< std::endl;
