@@ -38,8 +38,7 @@
 
 #include "rvsactionbase.h"
 #include "worker.h"
-#include "hsa/hsa.h"
-#include "hsa/hsa_ext_amd.h"
+#include "rvshsa.h"
 
 
 /**
@@ -102,6 +101,9 @@ class pebbaction : public rvs::actionbase {
   int run_single();
   int run_parallel();
 
+  int print_link_info(int SrcNode, int DstNode, int DstGpuID,
+                      uint32_t Distance,
+                      const std::vector<rvs::linkinfo_t>& arrLinkInfo);
   int print_running_average();
   int print_running_average(pebbworker* pWorker);
   int print_final_average();
@@ -110,8 +112,6 @@ class pebbaction : public rvs::actionbase {
   bool brun;
   //! bjson field indicates if the json flag is set
   bool bjson;
-  //! json_rcqt_node is json node shared through submodules
-  void *json_rcqt_node;
 
  private:
   void do_running_average(void);
