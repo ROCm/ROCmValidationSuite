@@ -67,6 +67,7 @@ using std::vector;
 pebbaction::pebbaction() {
   prop_deviceid = -1;
   prop_device_id_filtering = false;
+  bjson = false;
 }
 
 //! Default destructor
@@ -367,6 +368,10 @@ int pebbaction::run() {
   string msg;
 
   RVSTRACE_
+  if (property.find("cli.-j") != property.end()) {
+    bjson = true;
+  }
+
   if (!get_all_common_config_keys())
     return -1;
   if (!get_all_pebb_config_keys())

@@ -25,6 +25,7 @@
 #include <string>
 
 #include "rvslognode.h"
+#include "rvstrace.h"
 
 using std::string;
 
@@ -82,6 +83,7 @@ void rvs::LogNode::Add(LogNodeBase* pChild) {
  *
  */
 std::string rvs::LogNode::ToJson(const std::string& Lead) {
+  DTRACE_
   string result(RVSENDL);
   result += Lead + "\"" + Name + "\"" + " : {";
 
@@ -92,7 +94,7 @@ std::string rvs::LogNode::ToJson(const std::string& Lead) {
       result += ",";
     }
   }
-  result += Lead + "}";
+  result += RVSENDL + Lead + "}";
 
   return result;
 }
