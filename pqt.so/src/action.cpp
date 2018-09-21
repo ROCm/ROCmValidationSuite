@@ -436,23 +436,23 @@ int pqtaction::create_threads() {
           unsigned int sec;
           unsigned int usec;
           rvs::lp::get_ticks(&sec, &usec);
-          json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+          void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::logresults, sec, usec);
-          if (json_rcqt_node != NULL) {
+          if (pjson != NULL) {
             RVSTRACE_
-            rvs::lp::AddString(json_rcqt_node, "src",
+            rvs::lp::AddString(pjson, "src",
                                std::to_string(gpu_id[i]));
-            rvs::lp::AddString(json_rcqt_node, "dst",
+            rvs::lp::AddString(pjson, "dst",
                                std::to_string(gpu_id[j]));
-            rvs::lp::AddString(json_rcqt_node, "p2p", "true");
+            rvs::lp::AddString(pjson, "p2p", "true");
             if (distance == 0xFFFFFFFF) {
-                rvs::lp::AddInt(json_rcqt_node, "distance", -1);
+                rvs::lp::AddInt(pjson, "distance", -1);
             } else {
-                rvs::lp::AddInt(json_rcqt_node, "distance", distance);
+                rvs::lp::AddInt(pjson, "distance", distance);
             }
 
-            void* phops = rvs::lp::CreateNode(json_rcqt_node, "hops");
-            rvs::lp::AddNode(json_rcqt_node, phops);
+            void* phops = rvs::lp::CreateNode(pjson, "hops");
+            rvs::lp::AddNode(pjson, phops);
 
             // iterate through individual hops
             for (uint i = 0; i < arr_linkinfo.size(); i++) {
@@ -468,7 +468,7 @@ int pqtaction::create_threads() {
              rvs::lp::AddNode(phops, phop);
             }
 
-            rvs::lp::LogRecordFlush(json_rcqt_node);
+            rvs::lp::LogRecordFlush(pjson);
           }
         }
 
@@ -514,24 +514,24 @@ int pqtaction::create_threads() {
           unsigned int sec;
           unsigned int usec;
           rvs::lp::get_ticks(&sec, &usec);
-          json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+          void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::logresults, sec, usec);
-          if (json_rcqt_node != NULL) {
+          if (pjson != NULL) {
             RVSTRACE_
-            rvs::lp::AddString(json_rcqt_node,
+            rvs::lp::AddString(pjson,
                                "src", std::to_string(gpu_id[i]));
-            rvs::lp::AddString(json_rcqt_node,
+            rvs::lp::AddString(pjson,
                                "dst", std::to_string(gpu_id[j]));
-            rvs::lp::AddString(json_rcqt_node,
+            rvs::lp::AddString(pjson,
                                "p2p", "false");
             if (distance == 0xFFFFFFFF) {
-                rvs::lp::AddInt(json_rcqt_node, "distance", -1);
+                rvs::lp::AddInt(pjson, "distance", -1);
             } else {
-                rvs::lp::AddInt(json_rcqt_node, "distance", distance);
+                rvs::lp::AddInt(pjson, "distance", distance);
             }
 
-            void* phops = rvs::lp::CreateNode(json_rcqt_node, "hops");
-            rvs::lp::AddNode(json_rcqt_node, phops);
+            void* phops = rvs::lp::CreateNode(pjson, "hops");
+            rvs::lp::AddNode(pjson, phops);
 
             // iterate through individual hops
             for (uint i = 0; i < arr_linkinfo.size(); i++) {
@@ -547,7 +547,7 @@ int pqtaction::create_threads() {
              rvs::lp::AddNode(phops, phop);
             }
 
-            rvs::lp::LogRecordFlush(json_rcqt_node);
+            rvs::lp::LogRecordFlush(pjson);
           }
         }
       }
@@ -573,14 +573,14 @@ int pqtaction::create_threads() {
       unsigned int sec;
       unsigned int usec;
       rvs::lp::get_ticks(&sec, &usec);
-      json_rcqt_node = rvs::lp::LogRecordCreate("p2p-bandwidth",
+      void* pjson = rvs::lp::LogRecordCreate("p2p-bandwidth",
                               action_name.c_str(), rvs::logerror, sec, usec);
-      if (json_rcqt_node != NULL) {
+      if (pjson != NULL) {
         RVSTRACE_
-        rvs::lp::AddString(json_rcqt_node,
+        rvs::lp::AddString(pjson,
           "message",
           diag);
-        rvs::lp::LogRecordFlush(json_rcqt_node);
+        rvs::lp::LogRecordFlush(pjson);
       }
     }
     RVSTRACE_
@@ -901,20 +901,20 @@ int pqtaction::print_running_average(pqtworker* pWorker) {
     unsigned int sec;
     unsigned int usec;
     rvs::lp::get_ticks(&sec, &usec);
-    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::loginfo, sec, usec);
-    if (json_rcqt_node != NULL) {
-      rvs::lp::AddString(json_rcqt_node,
+    if (pjson != NULL) {
+      rvs::lp::AddString(pjson,
                           "transfer_ix", std::to_string(transfer_ix));
-      rvs::lp::AddString(json_rcqt_node,
+      rvs::lp::AddString(pjson,
                           "transfer_num", std::to_string(transfer_num));
-      rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
-      rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
-      rvs::lp::AddString(json_rcqt_node, "p2p", "true");
-      rvs::lp::AddString(json_rcqt_node, "bidirectional",
+      rvs::lp::AddString(pjson, "src", std::to_string(src_id));
+      rvs::lp::AddString(pjson, "dst", std::to_string(dst_id));
+      rvs::lp::AddString(pjson, "p2p", "true");
+      rvs::lp::AddString(pjson, "bidirectional",
                           std::string(bidir ? "true" : "false"));
-      rvs::lp::AddString(json_rcqt_node, "bandwidth (GBs)", buff);
-      rvs::lp::LogRecordFlush(json_rcqt_node);
+      rvs::lp::AddString(pjson, "bandwidth (GBs)", buff);
+      rvs::lp::LogRecordFlush(pjson);
     }
   }
 
@@ -969,22 +969,22 @@ int pqtaction::print_final_average() {
       unsigned int sec;
       unsigned int usec;
       rvs::lp::get_ticks(&sec, &usec);
-      json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+      void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                               action_name.c_str(), rvs::logresults, sec, usec);
-      if (json_rcqt_node != NULL) {
-        rvs::lp::AddString(json_rcqt_node,
+      if (pjson != NULL) {
+        rvs::lp::AddString(pjson,
                             "transfer_ix", std::to_string(transfer_ix));
-        rvs::lp::AddString(json_rcqt_node,
+        rvs::lp::AddString(pjson,
                             "transfer_num", std::to_string(transfer_num));
-        rvs::lp::AddString(json_rcqt_node, "src", std::to_string(src_id));
-        rvs::lp::AddString(json_rcqt_node, "dst", std::to_string(dst_id));
-        rvs::lp::AddString(json_rcqt_node, "p2p", "true");
-        rvs::lp::AddString(json_rcqt_node, "bidirectional",
+        rvs::lp::AddString(pjson, "src", std::to_string(src_id));
+        rvs::lp::AddString(pjson, "dst", std::to_string(dst_id));
+        rvs::lp::AddString(pjson, "p2p", "true");
+        rvs::lp::AddString(pjson, "bidirectional",
                            std::string(bidir ? "true" : "false"));
-        rvs::lp::AddString(json_rcqt_node, "bandwidth (GBps)", buff);
-        rvs::lp::AddString(json_rcqt_node, "duration (sec)",
+        rvs::lp::AddString(pjson, "bandwidth (GBps)", buff);
+        rvs::lp::AddString(pjson, "duration (sec)",
                            std::to_string(duration));
-        rvs::lp::LogRecordFlush(json_rcqt_node);
+        rvs::lp::LogRecordFlush(pjson);
       }
     }
     sleep(1);
@@ -1010,11 +1010,11 @@ void pqtaction::do_final_average() {
   rvs::lp::Log(msg, rvs::logtrace, sec, usec);
 
   if (bjson) {
-    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::logtrace, sec, usec);
-    if (json_rcqt_node != NULL) {
-      rvs::lp::AddString(json_rcqt_node, "message", "pqt in do_final_average");
-      rvs::lp::LogRecordFlush(json_rcqt_node);
+    if (pjson != NULL) {
+      rvs::lp::AddString(pjson, "message", "pqt in do_final_average");
+      rvs::lp::LogRecordFlush(pjson);
     }
   }
 
@@ -1037,13 +1037,13 @@ void pqtaction::do_running_average() {
   msg = "[" + action_name + "] pqt in do_running_average";
   rvs::lp::Log(msg, rvs::logtrace, sec, usec);
   if (bjson) {
-    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::logtrace, sec, usec);
-    if (json_rcqt_node != NULL) {
-      rvs::lp::AddString(json_rcqt_node,
+    if (pjson != NULL) {
+      rvs::lp::AddString(pjson,
                          "message",
                          "in do_running_average");
-      rvs::lp::LogRecordFlush(json_rcqt_node);
+      rvs::lp::LogRecordFlush(pjson);
     }
   }
   print_running_average();
