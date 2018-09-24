@@ -40,6 +40,7 @@
 
 // ptr to singletone instance
 rvs::hsa* rvs::hsa::pDsc;
+const uint32_t rvs::hsa::NO_CONN;
 
 /**
  * @brief Initialize RVS HSA wrapper
@@ -962,7 +963,7 @@ int rvs::hsa::GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
 
   RVSTRACE_
 
-  *pDistance = 0xFFFFFFFF;
+  *pDistance = NO_CONN;
   pInfoarr->clear();
   hsa_agent_t& srcagent = agent_list[srcix].agent;
 

@@ -413,9 +413,9 @@ int pqtaction::create_threads() {
         RVSTRACE_
         msg = "[" + action_name + "] p2p "
             + std::to_string(gpu_id[i]) + " "
-            + std::to_string(gpu_id[j]) + " true ";
+            + std::to_string(gpu_id[j]) + " peers:true ";
 
-        if (distance == 0xFFFFFFFF) {
+        if (distance == rvs::hsa::NO_CONN) {
           msg += "distance:-1";
         } else {
           msg += "distance:" + std::to_string(distance);
@@ -423,7 +423,7 @@ int pqtaction::create_threads() {
         // iterate through individual hops
         for (auto it = arr_linkinfo.begin(); it != arr_linkinfo.end(); it++) {
           msg += " " + it->strtype + ":";
-          if (it->distance == 0xFFFFFFFF) {
+          if (it->distance == rvs::hsa::NO_CONN) {
             msg += "-1";
           } else {
             msg +=std::to_string(it->distance);
@@ -445,7 +445,7 @@ int pqtaction::create_threads() {
             rvs::lp::AddString(pjson, "dst",
                                std::to_string(gpu_id[j]));
             rvs::lp::AddString(pjson, "p2p", "true");
-            if (distance == 0xFFFFFFFF) {
+            if (distance == rvs::hsa::NO_CONN) {
                 rvs::lp::AddInt(pjson, "distance", -1);
             } else {
                 rvs::lp::AddInt(pjson, "distance", distance);
@@ -460,7 +460,7 @@ int pqtaction::create_threads() {
               snprintf(sbuff, sizeof(sbuff), "hop%d", i);
              void* phop = rvs::lp::CreateNode(phops, sbuff);
               rvs::lp::AddString(phop, "type", arr_linkinfo[i].strtype);
-              if (arr_linkinfo[i].distance == 0xFFFFFFFF) {
+              if (arr_linkinfo[i].distance == rvs::hsa::NO_CONN) {
                 rvs::lp::AddInt(phop, "distance", -1);
               } else {
                 rvs::lp::AddInt(phop, "distance", arr_linkinfo[i].distance);
@@ -490,9 +490,9 @@ int pqtaction::create_threads() {
         RVSTRACE_
         msg = "[" + action_name + "] p2p "
             + std::to_string(gpu_id[i]) + " "
-            + std::to_string(gpu_id[j]) + " false ";
+            + std::to_string(gpu_id[j]) + " peers:false ";
 
-        if (distance == 0xFFFFFFFF) {
+        if (distance == rvs::hsa::NO_CONN) {
           msg += "distance:-1";
         } else {
           msg += "distance:" + std::to_string(distance);
@@ -500,7 +500,7 @@ int pqtaction::create_threads() {
         // iterate through individual hops
         for (auto it = arr_linkinfo.begin(); it != arr_linkinfo.end(); it++) {
           msg += " " + it->strtype + ":";
-          if (it->distance == 0xFFFFFFFF) {
+          if (it->distance == rvs::hsa::NO_CONN) {
             msg += "-1";
           } else {
             msg +=std::to_string(it->distance);
@@ -524,7 +524,7 @@ int pqtaction::create_threads() {
                                "dst", std::to_string(gpu_id[j]));
             rvs::lp::AddString(pjson,
                                "p2p", "false");
-            if (distance == 0xFFFFFFFF) {
+            if (distance == rvs::hsa::NO_CONN) {
                 rvs::lp::AddInt(pjson, "distance", -1);
             } else {
                 rvs::lp::AddInt(pjson, "distance", distance);
@@ -539,7 +539,7 @@ int pqtaction::create_threads() {
               snprintf(sbuff, sizeof(sbuff), "hop%d", i);
              void* phop = rvs::lp::CreateNode(phops, sbuff);
               rvs::lp::AddString(phop, "type", arr_linkinfo[i].strtype);
-              if (arr_linkinfo[i].distance == 0xFFFFFFFF) {
+              if (arr_linkinfo[i].distance == rvs::hsa::NO_CONN) {
                 rvs::lp::AddInt(phop, "distance", -1);
               } else {
                 rvs::lp::AddInt(phop, "distance", arr_linkinfo[i].distance);
