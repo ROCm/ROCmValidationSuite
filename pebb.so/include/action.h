@@ -103,7 +103,8 @@ class pebbaction : public rvs::actionbase {
 
   int print_link_info(int SrcNode, int DstNode, int DstGpuID,
                       uint32_t Distance,
-                      const std::vector<rvs::linkinfo_t>& arrLinkInfo);
+                      const std::vector<rvs::linkinfo_t>& arrLinkInfo,
+                      bool bReverse);
   int print_running_average();
   int print_running_average(pebbworker* pWorker);
   int print_final_average();

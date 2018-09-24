@@ -100,6 +100,8 @@ class hsa {
     vector<size_t>                max_size_list;
   };
 
+  //! constant for "no connection" distance value
+  static const uint32_t NO_CONN = 0xFFFFFFFF;
 
   //! list of test transfer sizes
   const uint32_t DEFAULT_SIZE_LIST[20] = {  1 * 1024,
