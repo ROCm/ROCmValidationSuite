@@ -35,6 +35,7 @@
 #include <string>
 #include <mutex>
 
+#include "rvstrace.h"
 #include "rvslognode.h"
 #include "rvslognodestring.h"
 #include "rvslognodeint.h"
@@ -275,10 +276,12 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
  */
 int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   std::string val;
+  DTRACE_
 
   LogNodeRec* r = static_cast<LogNodeRec*>(pLogRecord);
   // no JSON loggin requested
   if (!to_json()) {
+    DTRACE_
     delete r;
     return 0;
   }
@@ -293,6 +296,7 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
 
   // if too high, ignore record
   if (level > loglevel_m) {
+    DTRACE_
     delete r;
     return 0;
   }
@@ -300,8 +304,10 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   // do not pre-pend "," separator for the first row
   std::string row;
   if (isfirstrecord_m) {
+    DTRACE_
     isfirstrecord_m = false;
   } else {
+    DTRACE_
     row = ",";
   }
 
@@ -314,6 +320,7 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   // dealloc memory
   delete r;
 
+  DTRACE_
   // return OK
   return 0;
 }
