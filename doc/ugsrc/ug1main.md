@@ -1907,6 +1907,12 @@ Module specific output keys are described in the table below:
 <td>Indicates if the gpu and the specified peer have P2P capabilities. If this
 quantity is true, the GPU pair tested has p2p capabilities. If false, they are
 not peers.</td></tr>
+<tr><td>distance</td><td>Integer</td>
+<td>NUMA distance for these two peers</td></tr>
+<tr><td>hop_type</td><td>String</td>
+<td>Link type for each link hop (e.g., PCIe, HyperTransport, QPI, ...)</td></tr>
+<tr><td>hop_distance</td><td>Integer</td>
+<td>NUMA distance for this particular hop</td></tr>
 <tr><td>transfer_id</td><td>String</td>
 <td>String with format "<transfer_index>/<transfer_number>" where
 - transfer_index - is number, starting from 1, for each device-peer combination
@@ -1941,7 +1947,7 @@ a gpu is a P2P peer to the device the test will pass, otherwise it will fail. A
 message indicating the result will be provided for each GPUs specified. It will
 have the following format:
 
-    [RESULT][<timestamp>][<action name>] p2p <gpu id> <peer gpu id> <p2p_result>
+    [RESULT][<timestamp>][<action name>] p2p <gpu id> <peer gpu id> peers:<p2p_result> distance:<distance> <hop_type>:<hop_dist>[ <hop_type>:<hop_dist>]
 
 If the value of test_bandwidth is true bandwidth testing between the device and
 each of its peers will take place in parallel or in sequence, depending on the
@@ -1976,15 +1982,15 @@ tested for p2p capability with no bandwidth testing (test_bandwidth: false).
 
 Possible result is:
 
-    [RESULT] [167896.97743 ] [action_1] p2p 3254 3254 false
-    [RESULT] [167896.97764 ] [action_1] p2p 3254 50599 true
-    [RESULT] [167896.97818 ] [action_1] p2p 3254 33367 true
-    [RESULT] [167896.97848 ] [action_1] p2p 50599 3254 true
-    [RESULT] [167896.97873 ] [action_1] p2p 50599 50599 false
-    [RESULT] [167896.97881 ] [action_1] p2p 50599 33367 true
-    [RESULT] [167896.97907 ] [action_1] p2p 33367 3254 true
-    [RESULT] [167896.97935 ] [action_1] p2p 33367 50599 true
-    [RESULT] [167896.97960 ] [action_1] p2p 33367 33367 false
+    [RESULT] [1656631.262875] [action_1] p2p 3254 3254 peers:false distance:-1
+    [RESULT] [1656631.262968] [action_1] p2p 3254 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263039] [action_1] p2p 3254 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263103] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263151] [action_1] p2p 50599 50599 peers:false distance:-1
+    [RESULT] [1656631.263203] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263265] [action_1] p2p 33367 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263321] [action_1] p2p 33367 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263360] [action_1] p2p 33367 33367 peers:false distance:-1
 
 From the first line of result, we can see that GPU (ID 3254) can't access itself.
 From the second line of result, we can see that source GPU (ID 3254) can access destination GPU (ID 50599).
@@ -2008,27 +2014,39 @@ for each completed transfer (log_interval: 0)
 
 When run with "-d 3" switch, possible result is:
 
-    [RESULT] [624248.707370] [action_1] p2p 3254 3254 false
-    [RESULT] [624248.707388] [action_1] p2p 3254 50599 true
-    [RESULT] [624248.707396] [action_1] p2p 3254 33367 true
-    [RESULT] [624248.707401] [action_1] p2p 50599 3254 true
-    [RESULT] [624248.707405] [action_1] p2p 50599 50599 false
-    [RESULT] [624248.707409] [action_1] p2p 50599 33367 true
-    [RESULT] [624248.707414] [action_1] p2p 33367 3254 true
-    [RESULT] [624248.707419] [action_1] p2p 33367 50599 true
-    [RESULT] [624248.707422] [action_1] p2p 33367 33367 false
-    [INFO  ] [624249.410898] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  8.927 GBps
-    [INFO  ] [624250.109043] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.442 GBps
-    [INFO  ] [624250.798294] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  8.286 GBps
-    [INFO  ] [624251.474330] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  8.811 GBps
-    [INFO  ] [624252.153166] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  8.680 GBps
-    [INFO  ] [624252.834819] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  8.584 GBps
-    [RESULT] [624252.835895] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  8.927 GBps  duration: 0.224042 sec
-    [RESULT] [624252.836956] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.442 GBps  duration: 0.236908 sec
-    [RESULT] [624252.838016] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  8.286 GBps  duration: 0.241365 sec
-    [RESULT] [624252.839075] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  8.811 GBps  duration: 0.226997 sec
-    [RESULT] [624252.840135] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  8.680 GBps  duration: 0.230413 sec
-    [RESULT] [624252.841194] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  8.584 GBps  duration: 0.232981 sec
+    [RESULT] [1657122.364752] [action_1] p2p 3254 3254 peers:false distance:-1
+    [RESULT] [1657122.364845] [action_1] p2p 3254 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.364917] [action_1] p2p 3254 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.364985] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.365037] [action_1] p2p 50599 50599 peers:false distance:-1
+    [RESULT] [1657122.365094] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.365157] [action_1] p2p 33367 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.365221] [action_1] p2p 33367 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.365270] [action_1] p2p 33367 33367 peers:false distance:-1
+    [INFO  ] [1657123.644203] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  7.013 GBps
+    [INFO  ] [1657123.644376] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  6.615 GBps
+    [INFO  ] [1657123.644453] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  2.367 GBps
+    [INFO  ] [1657123.644522] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  7.504 GBps
+    [INFO  ] [1657123.644590] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  8.207 GBps
+    [INFO  ] [1657123.644673] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  7.680 GBps
+    [INFO  ] [1657124.926221] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  6.646 GBps
+    [INFO  ] [1657124.926368] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.418 GBps
+    [INFO  ] [1657124.926438] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  7.402 GBps
+    [INFO  ] [1657124.926506] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  6.161 GBps
+    [INFO  ] [1657124.926573] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  9.024 GBps
+    [INFO  ] [1657124.926640] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  8.740 GBps
+    [INFO  ] [1657126.208742] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  5.680 GBps
+    [INFO  ] [1657126.208905] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.011 GBps
+    [INFO  ] [1657126.208990] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  3.918 GBps
+    [INFO  ] [1657126.209066] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  6.058 GBps
+    [INFO  ] [1657126.209140] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  6.650 GBps
+    [INFO  ] [1657126.209213] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  0.000 GBps
+    [RESULT] [1657126.742128] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  5.767 GBps  duration: 0.368453 sec
+    [RESULT] [1657126.743287] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  6.013 GBps  duration: 0.498944 sec
+    [RESULT] [1657126.744411] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  5.278 GBps  duration: 0.380393 sec
+    [RESULT] [1657126.745534] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  4.160 GBps  duration: 0.484577 sec
+    [RESULT] [1657126.746684] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  5.219 GBps  duration: 0.407190 sec
+    [RESULT] [1657126.747827] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  4.001 GBps  duration: 0.562350 sec
 
 We can see that on this particular machine there are three GPUs and six
 possible device-to-peer transfers.
@@ -2055,18 +2073,18 @@ false).
 
 Possible output is:
 
-    [RESULT] [625162.421322] [action_1] p2p 50599 3254 true
-    [RESULT] [625162.421343] [action_1] p2p 50599 33367 true
-    [INFO  ] [625163.492977] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.583 GBps
-    [INFO  ] [625163.493011] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.433 GBps
-    [INFO  ] [625164.562386] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.460 GBps
-    [INFO  ] [625164.562420] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.606 GBps
-    [INFO  ] [625165.630977] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.426 GBps
-    [INFO  ] [625165.631004] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.472 GBps
-    [INFO  ] [625166.698738] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.633 GBps
-    [INFO  ] [625166.698766] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.514 GBps
-    [RESULT] [625167.848775] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.495 GBps  duration: 1.334948 sec
-    [RESULT] [625167.849847] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.495 GBps  duration: 1.334697 sec
+    [RESULT] [1657218.801555] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657218.801655] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
+    [INFO  ] [1657219.871532] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.517 GBps
+    [INFO  ] [1657219.871717] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.475 GBps
+    [INFO  ] [1657220.940263] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.476 GBps
+    [INFO  ] [1657220.940461] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.601 GBps
+    [INFO  ] [1657222.7589  ] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.488 GBps
+    [INFO  ] [1657222.7760  ] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.470 GBps
+    [INFO  ] [1657223.74647 ] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.666 GBps
+    [INFO  ] [1657223.74810 ] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.576 GBps
+    [RESULT] [1657224.181106] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.539 GBps  duration: 1.321909 sec
+    [RESULT] [1657224.182255] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.551 GBps  duration: 1.318517 sec
 
 From the last line of result, we can see that source GPU (ID 50599) can access
 destination GPU (ID 33367) and that the bandwidth is 4.495 GBps.
@@ -2089,39 +2107,39 @@ of tests:
 
 Possible output is:
 
-    [RESULT] [625353.12956 ] [action_1] p2p 3254 3254 false
-    [RESULT] [625353.12980 ] [action_1] p2p 3254 50599 true
-    [RESULT] [625353.12988 ] [action_1] p2p 3254 33367 true
-    [RESULT] [625353.12995 ] [action_1] p2p 50599 3254 true
-    [RESULT] [625353.13000 ] [action_1] p2p 50599 50599 false
-    [RESULT] [625353.13009 ] [action_1] p2p 50599 33367 true
-    [RESULT] [625353.13014 ] [action_1] p2p 33367 3254 true
-    [RESULT] [625353.13021 ] [action_1] p2p 33367 50599 true
-    [RESULT] [625353.13027 ] [action_1] p2p 33367 33367 false
-    [INFO  ] [625354.290093] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  7.042 GBps
-    [INFO  ] [625354.290113] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  7.569 GBps
-    [INFO  ] [625354.290119] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  6.729 GBps
-    [INFO  ] [625354.290125] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  7.025 GBps
-    [INFO  ] [625354.290132] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  7.837 GBps
-    [INFO  ] [625354.290140] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  7.827 GBps
-    [INFO  ] [625355.562282] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  8.531 GBps
-    [INFO  ] [625355.562305] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  7.57 GBps (*)
-    [INFO  ] [625355.562317] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  4.805 GBps
-    [INFO  ] [625355.562326] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  4.680 GBps
-    [INFO  ] [625355.562334] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  4.591 GBps
-    [INFO  ] [625355.562342] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  7.83 GBps (*)
-    [INFO  ] [625356.845096] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  0.000 GBps
-    [INFO  ] [625356.845124] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  5.344 GBps
-    [INFO  ] [625356.845135] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  3.022 GBps
-    [INFO  ] [625356.845146] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  8.069 GBps
-    [INFO  ] [625356.845156] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  4.853 GBps
-    [INFO  ] [625356.845167] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  7.169 GBps
-    [RESULT] [625357.369891] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  3.858 GBps  duration: 0.518692 sec
-    [RESULT] [625357.370966] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  5.245 GBps  duration: 0.571967 sec
-    [RESULT] [625357.372036] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  2.872 GBps  duration: 0.696568 sec
-    [RESULT] [625357.373103] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  5.383 GBps  duration: 0.371582 sec
-    [RESULT] [625357.374188] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  4.377 GBps  duration: 0.514093 sec
-    [RESULT] [625357.375277] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  6.399 GBps  duration: 0.312555 sec
+    [RESULT] [1657295.937184] [action_1] p2p 3254 3254 peers:false distance:-1
+    [RESULT] [1657295.937267] [action_1] p2p 3254 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937324] [action_1] p2p 3254 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937379] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937429] [action_1] p2p 50599 50599 peers:false distance:-1
+    [RESULT] [1657295.937482] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937543] [action_1] p2p 33367 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937607] [action_1] p2p 33367 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937655] [action_1] p2p 33367 33367 peers:false distance:-1
+    [INFO  ] [1657297.216212] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  4.972 GBps
+    [INFO  ] [1657297.216351] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.183 GBps
+    [INFO  ] [1657297.216423] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  8.911 GBps
+    [INFO  ] [1657297.216490] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  7.690 GBps
+    [INFO  ] [1657297.216558] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  7.768 GBps
+    [INFO  ] [1657297.216642] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  4.589 GBps
+    [INFO  ] [1657298.487427] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  8.778 GBps
+    [INFO  ] [1657298.487593] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  7.921 GBps
+    [INFO  ] [1657298.487730] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  8.164 GBps
+    [INFO  ] [1657298.487807] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  8.921 GBps
+    [INFO  ] [1657298.487878] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  8.487 GBps
+    [INFO  ] [1657298.487956] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  7.648 GBps
+    [INFO  ] [1657299.760175] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  7.210 GBps
+    [INFO  ] [1657299.760249] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  4.274 GBps
+    [INFO  ] [1657299.760284] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  0.000 GBps
+    [INFO  ] [1657299.760318] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  5.942 GBps
+    [INFO  ] [1657299.760349] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  0.001 GBps
+    [INFO  ] [1657299.760381] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  5.490 GBps
+    [RESULT] [1657300.293126] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  6.964 GBps  duration: 0.287248 sec
+    [RESULT] [1657300.294334] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  3.960 GBps  duration: 0.536554 sec
+    [RESULT] [1657300.295528] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  5.442 GBps  duration: 0.368977 sec
+    [RESULT] [1657300.296691] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  4.187 GBps  duration: 0.477756 sec
+    [RESULT] [1657300.297840] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  4.942 GBps  duration: 0.607009 sec
+    [RESULT] [1657300.299016] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  3.828 GBps  duration: 0.523495 sec
 
 It can be seen that transfers [2/6] and [5/6] did not take place in the second
 log interval so average from the previous cycle is displayed instead and
@@ -2230,6 +2248,12 @@ Module specific output keys are described in the table below:
 <tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>CPU node</td><td>Integer</td>
 <td>Particular CPU node involved in transfer</td></tr>
+<tr><td>distance</td><td>Integer</td>
+<td>NUMA distance for these two peers</td></tr>
+<tr><td>hop_type</td><td>String</td>
+<td>Link type for each link hop (e.g., PCIe, HyperTransport, QPI, ...)</td></tr>
+<tr><td>hop_distance</td><td>Integer</td>
+<td>NUMA distance for this particular hop</td></tr>
 <tr><td>transfer_id</td><td>String</td>
 <td>String with format "<transfer_index>/<transfer_number>" where
 - transfer_index - is number, starting from 1, for each device-peer combination
@@ -2256,6 +2280,10 @@ peers. You may need to increase test duration.
 <tr><td>duration</td><td>Float</td>
 <td>Cumulative duration of all transfers between the two particular nodes</td></tr>
 </table>
+
+At the beginning, test will display link infor for every CPU/GPU pair:
+
+    [RESULT][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu node> <gpu id> distance:<distance> <hop_type>:<hop_dist>[ <hop_type>:<hop_dist>]
 
 During the execution of the benchmark, informational output providing the moving
 average of the bandwidth of the transfer will be calculated and logged. This
@@ -2290,30 +2318,42 @@ This will initiate host to device transfer to all GPUs with immediate output
 (**parallel: false**, **log_interval: 0**)\n
 Output from this action might look like:
 
-    [INFO  ] [699574.889128] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: false  12.144 GBps
-    [INFO  ] [699575.208837] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: false  9.938 GBps
-    [INFO  ] [699575.544842] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: false  8.689 GBps
-    [INFO  ] [699575.880440] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: false  8.519 GBps
-    [INFO  ] [699576.193559] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: false  10.606 GBps
-    [INFO  ] [699576.514048] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: false  9.830 GBps
-    [INFO  ] [699576.839034] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: false  9.569 GBps
-    [INFO  ] [699577.149376] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: false  11.185 GBps
-    [INFO  ] [699577.452533] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: false  12.150 GBps
-    [INFO  ] [699577.752850] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: false  12.216 GBps
-    [INFO  ] [699578.55403 ] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: false  12.122 GBps
-    [INFO  ] [699578.357162] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: false  12.167 GBps
-    [RESULT] [699578.358249] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: false  12.144 GBps  duration: 0.082342 sec
-    [RESULT] [699578.358259] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: false  9.938 GBps  duration: 0.100625 sec
-    [RESULT] [699578.358266] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: false  8.689 GBps  duration: 0.115090 sec
-    [RESULT] [699578.358272] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: false  8.519 GBps  duration: 0.117382 sec
-    [RESULT] [699578.358279] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: false  10.606 GBps  duration: 0.094289 sec
-    [RESULT] [699578.358286] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: false  9.830 GBps  duration: 0.101731 sec
-    [RESULT] [699578.358295] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: false  9.569 GBps  duration: 0.104506 sec
-    [RESULT] [699578.358302] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: false  11.185 GBps  duration: 0.089405 sec
-    [RESULT] [699578.358309] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: false  12.150 GBps  duration: 0.082306 sec
-    [RESULT] [699578.358318] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: false  12.216 GBps  duration: 0.081859 sec
-    [RESULT] [699578.358324] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: false  12.122 GBps  duration: 0.082494 sec
-    [RESULT] [699578.358345] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: false  12.167 GBps  duration: 0.082187 sec
+    [RESULT] [1658774.978614] [action_1] pcie-bandwidth 0 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1658774.978664] [action_1] pcie-bandwidth 1 4 3254  distance:20 PCIe:20
+    [RESULT] [1658774.978695] [action_1] pcie-bandwidth 2 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1658774.978728] [action_1] pcie-bandwidth 3 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1658774.978763] [action_1] pcie-bandwidth 0 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1658774.978795] [action_1] pcie-bandwidth 1 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1658774.978825] [action_1] pcie-bandwidth 2 5 50599  distance:20 PCIe:20
+    [RESULT] [1658774.978856] [action_1] pcie-bandwidth 3 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1658774.978889] [action_1] pcie-bandwidth 0 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1658774.978922] [action_1] pcie-bandwidth 1 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1658774.978952] [action_1] pcie-bandwidth 2 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1658774.978982] [action_1] pcie-bandwidth 3 6 33367  distance:20 PCIe:20
+    [INFO  ] [1658774.983743] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: false  12.233 GBps
+    [INFO  ] [1658774.988272] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: false  12.227 GBps
+    [INFO  ] [1658774.993197] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: false  11.770 GBps
+    [INFO  ] [1658774.998105] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: false  11.313 GBps
+    [INFO  ] [1658775.4457  ] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: false  12.218 GBps
+    [INFO  ] [1658775.9589  ] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: false  10.292 GBps
+    [INFO  ] [1658775.14627 ] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: false  10.456 GBps
+    [INFO  ] [1658775.19664 ] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: false  10.614 GBps
+    [INFO  ] [1658775.26210 ] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: false  12.222 GBps
+    [INFO  ] [1658775.31188 ] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: false  12.215 GBps
+    [INFO  ] [1658775.36137 ] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: false  12.219 GBps
+    [INFO  ] [1658775.41117 ] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: false  12.219 GBps
+    [RESULT] [1658775.42219 ] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: false  12.233 GBps  duration: 0.000780 sec
+    [RESULT] [1658775.42235 ] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: false  12.227 GBps  duration: 0.000780 sec
+    [RESULT] [1658775.42246 ] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: false  11.770 GBps  duration: 0.000810 sec
+    [RESULT] [1658775.42256 ] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: false  11.313 GBps  duration: 0.000843 sec
+    [RESULT] [1658775.42271 ] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: false  12.218 GBps  duration: 0.000781 sec
+    [RESULT] [1658775.42286 ] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: false  10.292 GBps  duration: 0.000927 sec
+    [RESULT] [1658775.42297 ] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: false  10.456 GBps  duration: 0.000912 sec
+    [RESULT] [1658775.42309 ] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: false  10.614 GBps  duration: 0.000898 sec
+    [RESULT] [1658775.42321 ] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: false  12.222 GBps  duration: 0.000780 sec
+    [RESULT] [1658775.42332 ] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: false  12.215 GBps  duration: 0.000781 sec
+    [RESULT] [1658775.42344 ] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: false  12.219 GBps  duration: 0.000780 sec
+    [RESULT] [1658775.42355 ] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: false  12.219 GBps  duration: 0.000780 sec
 
 **Example 2:**
 
@@ -2329,49 +2369,52 @@ Consider action:
       host_to_device: true
       parallel: true
 
-Here, although parallel execution of transfers is requested, log_interval is to short for some transfers to complete.
-For them, cumulative average is displayed and marked with (*):
+Here, although parallel execution of transfers is requested, log_interval is to
+short for some transfers to complete. For them, cumulative average is displayed
+and marked with (*):
 
-    [INFO  ] [700076.814989] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  11.429 GBps
-    [INFO  ] [700076.815047] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  9.805 GBps
-    [INFO  ] [700076.815072] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  14.917 GBps
-    [INFO  ] [700076.815092] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: true  12.091 GBps
-    [INFO  ] [700076.815113] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: true  0.380 GBps
-    [INFO  ] [700076.815133] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: true  12.396 GBps
-    [INFO  ] [700076.815153] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: true  12.832 GBps
-    [INFO  ] [700076.815172] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: true  15.351 GBps
-    [INFO  ] [700076.815190] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: true  15.529 GBps
-    [INFO  ] [700076.815208] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: true  11.936 GBps
-    [INFO  ] [700076.815225] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: true  9.289 GBps
-    [INFO  ] [700076.815242] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: true  11.884 GBps
-    [INFO  ] [700077.349147] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  13.669 GBps
-    [INFO  ] [700077.349194] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  9.805 GBps (*)
+    [RESULT] [1659672.517170] [action_1] pcie-bandwidth 0 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1659672.517222] [action_1] pcie-bandwidth 1 4 3254  distance:20 PCIe:20
+    [RESULT] [1659672.517257] [action_1] pcie-bandwidth 2 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1659672.517290] [action_1] pcie-bandwidth 3 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1659672.517324] [action_1] pcie-bandwidth 0 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1659672.517357] [action_1] pcie-bandwidth 1 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1659672.517388] [action_1] pcie-bandwidth 2 5 50599  distance:20 PCIe:20
+    [RESULT] [1659672.517419] [action_1] pcie-bandwidth 3 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1659672.517452] [action_1] pcie-bandwidth 0 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1659672.517483] [action_1] pcie-bandwidth 1 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1659672.517515] [action_1] pcie-bandwidth 2 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1659672.517546] [action_1] pcie-bandwidth 3 6 33367  distance:20 PCIe:20
+    [INFO  ] [1659673.49782 ] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  1.489 GBps
+    [INFO  ] [1659673.49814 ] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  2.701 GBps
     ...
-    [INFO  ] [700080.16105 ] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: true  7.190 GBps (*)
-    [INFO  ] [700080.16120 ] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: true  17.576 GBps (*)
-    [INFO  ] [700080.16145 ] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: true  15.975 GBps (*)
-    [INFO  ] [700080.548789] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  16.089 GBps
-    [INFO  ] [700080.548832] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.334 GBps (*)
-    [INFO  ] [700080.548847] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  0.002 GBps
-    [INFO  ] [700080.548870] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: true  14.907 GBps (*)
-    [INFO  ] [700080.548891] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: true  13.370 GBps
-    [INFO  ] [700080.548911] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: true  20.086 GBps
+    [INFO  ] [1659673.582639] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  1.489 GBps (*)
+    [INFO  ] [1659673.582686] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.367 GBps
+    [INFO  ] [1659673.582700] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  17.300 GBps
     ...
-    [INFO  ] [700081.613785] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: true  17.304 GBps
-    [INFO  ] [700081.613799] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: true  17.574 GBps (*)
-    [INFO  ] [700081.613813] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: true  16.474 GBps (*)
-    [RESULT] [700081.954171] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  16.617 GBps  duration: 0.120357 sec
-    [RESULT] [700081.954216] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  17.179 GBps  duration: 0.029106 sec
-    [RESULT] [700081.954231] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  14.535 GBps  duration: 0.137609 sec
-    [RESULT] [700081.954260] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: true  14.689 GBps  duration: 0.136156 sec
-    [RESULT] [700081.954284] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: true  15.087 GBps  duration: 0.132562 sec
-    [RESULT] [700081.954325] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: true  17.511 GBps  duration: 0.114212 sec
-    [RESULT] [700081.954345] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: true  14.044 GBps  duration: 0.142414 sec
-    [RESULT] [700081.954371] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: true  14.918 GBps  duration: 0.134132 sec
-    [RESULT] [700081.954395] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: true  15.478 GBps  duration: 0.129224 sec
-    [RESULT] [700081.954419] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: true  16.973 GBps  duration: 0.117837 sec
-    [RESULT] [700081.954441] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: true  17.573 GBps  duration: 0.113812 sec
-    [RESULT] [700081.954464] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: true  17.085 GBps  duration: 0.117064 sec
+    [INFO  ] [1659677.851697] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  16.793 GBps
+    [INFO  ] [1659677.851727] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.872 GBps (*)
+    [INFO  ] [1659677.851741] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  14.796 GBps (*)
+    [INFO  ] [1659677.851754] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: true  20.358 GBps
+    [INFO  ] [1659677.851770] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: true  15.632 GBps (*)
+    [INFO  ] [1659677.851828] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: true  14.541 GBps (*)
+    ...
+    [RESULT] [1659678.148280] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  16.309 GBps  duration: 0.061316 sec
+    [RESULT] [1659678.148318] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.871 GBps  duration: 0.118547 sec
+    [RESULT] [1659678.148332] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  13.360 GBps  duration: 0.149705 sec
+    [RESULT] [1659678.148349] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: true  15.371 GBps  duration: 0.130115 sec
+    [RESULT] [1659678.148363] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: true  15.631 GBps  duration: 0.127954 sec
+    [RESULT] [1659678.148377] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: true  14.185 GBps  duration: 0.140989 sec
+    [RESULT] [1659678.148390] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: true  15.242 GBps  duration: 0.131245 sec
+    [RESULT] [1659678.148404] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: true  16.071 GBps  duration: 0.124452 sec
+    [RESULT] [1659678.148418] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: true  16.505 GBps  duration: 0.121178 sec
+    [RESULT] [1659678.148432] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: true  16.720 GBps  duration: 0.059807 sec
+    [RESULT] [1659678.148445] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: true  15.604 GBps  duration: 0.128168 sec
+    [RESULT] [1659678.148458] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: true  16.193 GBps  duration: 0.123525 sec
+
+Please note that in link information results, some records could be marked with
+(R). This means, that communication is possible if initiated by the destination
+NUMA node HSA agent.
 
 @section usg12 12 GST Module
 The GPU Stress Test modules purpose is to bring the CUs of the specified GPU(s)
