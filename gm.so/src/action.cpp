@@ -164,6 +164,7 @@ int action::run(void) {
 
     // check if  -j flag is passed
     if (has_property("cli.-j")) {
+      bjson = true;
       pworker->json(true);
     }
 
