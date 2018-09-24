@@ -50,7 +50,6 @@ extern "C" {
 }
 #endif
 
-#include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
