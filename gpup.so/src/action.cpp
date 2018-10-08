@@ -262,8 +262,9 @@ void action::property_get_value(string gpu_id, int node_id) {
                 while (f_prop >> prop_name) {
                     if (prop_name == *it_prop_name) {
                         f_prop >> prop_val;
-                        msg = action_name + " " + MODULE_NAME  + " " + gpu_id +
-                        " "+ prop_name + " " + prop_val;
+                        msg = "["+action_name + "] " + MODULE_NAME +
+                        " " + gpu_id +
+                        " " + prop_name + " " + prop_val;
                         log(msg.c_str(), rvs::logresults);
                     if (bjson && json_gpuprop_node != NULL) {
                         rvs::lp::AddString(json_gpuprop_node, prop_name,
@@ -328,7 +329,8 @@ void action::property_io_links_get_value(string gpu_id, int node_id) {
                 ++it_io_prop_name) {
                     // file doesn't contain property name "count" and its value
                     if (*it_io_prop_name == "count") {
-                        msg = action_name + " " + MODULE_NAME + " " + gpu_id +
+                        msg = "["+action_name + "] " + MODULE_NAME +
+                        " " + gpu_id +
                         " " + std::to_string(link_id) + " "+ "count" + " " +
                         std::to_string(num_links);
                         log(msg.c_str(), rvs::logresults);
@@ -339,7 +341,7 @@ void action::property_io_links_get_value(string gpu_id, int node_id) {
                     while (f_link_prop >> prop_name) {
                         if (prop_name == *it_io_prop_name) {
                             f_link_prop >> prop_val;
-                            msg = action_name + " " + MODULE_NAME + " " +
+                            msg = "["+action_name + "] " + MODULE_NAME + " " +
                             gpu_id + " " + std::to_string(link_id) + " "+
                             prop_name + " " + prop_val;
                             log(msg.c_str(), rvs::logresults);

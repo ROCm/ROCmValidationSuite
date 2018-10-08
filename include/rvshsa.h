@@ -45,6 +45,22 @@ using std::vector;
 namespace rvs {
 
 /**
+ * @class linkinfo_s
+ * @ingroup RVS
+ *
+ * @brief Utility class used to store HSA agent information
+ *
+ */
+typedef struct linkinfo_s {
+  //! NUMA distance of this hop
+  uint32_t distance;
+  //! link type of this hop (as string)
+  std::string strtype;
+  //! link type of this hop
+  hsa_amd_link_info_type_t etype;
+} linkinfo_t;
+
+/**
  * @class hsa
  * @ingroup RVS
  *
@@ -84,6 +100,8 @@ class hsa {
     vector<size_t>                max_size_list;
   };
 
+  //! constant for "no connection" distance value
+  static const uint32_t NO_CONN = 0xFFFFFFFF;
 
   //! list of test transfer sizes
   const uint32_t DEFAULT_SIZE_LIST[20] = {  1 * 1024,
@@ -129,11 +147,10 @@ class hsa {
                   double*  Duration);
 
   int GetPeerStatus(uint32_t SrcNode, uint32_t DstNode);
-
-//   double send_traffic(hsa_agent_t src_agent, hsa_agent_t dst_agent,
-//                       hsa_amd_memory_pool_t src_buff,
-//                       hsa_amd_memory_pool_t dst_buff,
-//                       bool bidirectional, size_t curr_size);
+  int GetPeerStatusAgent(const AgentInformation& SrcAgent,
+                         const AgentInformation& DstAgent);
+  int GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
+                  uint32_t* pDistance, std::vector<linkinfo_t>* pInfoarr);
 
  protected:
   void InitAgents();
@@ -147,6 +164,11 @@ class hsa {
   static void print_hsa_status(string message, hsa_status_t st);
   static void print_hsa_status(const std::string& file, int line,
                                const std::string& function, hsa_status_t st);
+  static void print_hsa_status(const std::string& file,
+                                int line,
+                                const std::string& function,
+                                const std::string& msg,
+                                hsa_status_t st);
   double GetCopyTime(bool bidirectional,
                      hsa_signal_t signal_fwd, hsa_signal_t signal_rev);
 

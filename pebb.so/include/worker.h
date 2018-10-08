@@ -26,6 +26,7 @@
 #define PEBB_SO_INCLUDE_WORKER_H_
 
 #include <string>
+#include <vector>
 #include <mutex>
 
 #include "rvsthreadbase.h"
@@ -69,7 +70,18 @@ class pebbworker : public rvs::ThreadBase {
   void get_running_data(int* Src, int* Dst, bool* Bidirect,
                         size_t* Size, double* Duration);
   void get_final_data(int* Src, int* Dst, bool* Bidirect,
-                      size_t* Size, double* Duration);
+                      size_t* Size, double* Duration, bool bReset = true);
+
+  //! Set transfer index
+  void set_transfer_ix(uint16_t val) { transfer_ix = val; }
+  //! Get transfer index
+  uint16_t get_transfer_ix() { return transfer_ix; }
+  //! Set total number of transfers
+  void set_transfer_num(uint16_t val) { transfer_num = val; }
+  //! Get total number of transfers
+  uint16_t get_transfer_num() { return transfer_num; }
+  //! Set list of test sizes
+  void set_block_sizes(const std::vector<uint32_t>& val) { block_size = val; }
 
  protected:
   virtual void run(void);
@@ -109,6 +121,14 @@ class pebbworker : public rvs::ThreadBase {
   size_t total_size;
   //! final total duration (sec)
   double total_duration;
+
+  //! transfer index
+  uint16_t transfer_ix;
+  //! total number of transfers
+  uint16_t transfer_num;
+
+  //! list of test block sizes
+  std::vector<uint32_t> block_size;
 
   //! synchronization mutex
   std::mutex cntmutex;

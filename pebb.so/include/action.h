@@ -38,8 +38,7 @@
 
 #include "rvsactionbase.h"
 #include "worker.h"
-#include "hsa/hsa.h"
-#include "hsa/hsa_ext_amd.h"
+#include "rvshsa.h"
 
 
 /**
@@ -72,7 +71,6 @@ class pebbaction : public rvs::actionbase {
   bool      prop_device_id_filtering;
 
   // PQT specific config keys
-  void property_get_log_interval(int *error);
   void property_get_h2d();
   void property_get_d2h();
 
@@ -91,6 +89,10 @@ class pebbaction : public rvs::actionbase {
   bool prop_h2d;
   //! 'true' if device to host transfer is required
   bool prop_d2h;
+  //! list of test block sizes
+  std::vector<uint32_t> block_size;
+  //! set to 'true' if the default block sizes are to be used
+  bool b_block_size_all;
 
  protected:
   int create_threads();
@@ -99,15 +101,18 @@ class pebbaction : public rvs::actionbase {
   int run_single();
   int run_parallel();
 
+  int print_link_info(int SrcNode, int DstNode, int DstGpuID,
+                      uint32_t Distance,
+                      const std::vector<rvs::linkinfo_t>& arrLinkInfo,
+                      bool bReverse);
   int print_running_average();
+  int print_running_average(pebbworker* pWorker);
   int print_final_average();
 
   //! 'true' for the duration of test
   bool brun;
   //! bjson field indicates if the json flag is set
   bool bjson;
-  //! json_rcqt_node is json node shared through submodules
-  void *json_rcqt_node;
 
  private:
   void do_running_average(void);
