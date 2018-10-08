@@ -47,7 +47,11 @@ extern "C" {
 #include "rvshsa.h"
 
 
-pqtworker::pqtworker() {}
+pqtworker::pqtworker() {
+  // set to 'true' so that do_transfer() will also work
+  // when parallel: false
+  brun = true;
+}
 pqtworker::~pqtworker() {}
 
 /**
@@ -57,11 +61,27 @@ pqtworker::~pqtworker() {}
  *
  * */
 void pqtworker::run() {
+  std::string msg;
+
+  msg = "[" + action_name + "] pqt thread " + std::to_string(src_node) + " "
+  + std::to_string(dst_node) + " has started";
+  rvs::lp::Log(msg, rvs::logdebug);
+
+  brun = true;
+
   while (brun) {
     do_transfer();
     std::this_thread::yield();
+
+    if (rvs::lp::Stopping()) {
+      brun = false;
+      RVSTRACE_
+    }
   }
-  log("pqt worker thread has finished", rvs::logdebug);
+
+  msg = "[" + action_name + "] pqt thread " + std::to_string(src_node) + " "
+  + std::to_string(dst_node) + " has finished";
+  rvs::lp::Log(msg, rvs::logdebug);
 }
 
 /**
@@ -72,17 +92,13 @@ void pqtworker::run() {
  *
  * */
 void pqtworker::stop() {
-  log("pqt in pqtworker::stop()", rvs::logdebug);
+  std::string msg;
+
+  msg = "[" + stop_action_name + "] pqt transfer " + std::to_string(src_node)
+      + " " + std::to_string(dst_node) + " in pqtworker::stop()";
+  rvs::lp::Log(msg, rvs::logtrace);
 
   brun = false;
-
-  // wait a bit to make sure thread has exited
-  try {
-    if (t.joinable())
-      t.join();
-  }
-  catch(...) {
-  }
 }
 
 /**
@@ -121,9 +137,23 @@ int pqtworker::initialize(int Src, int Dst, bool Bidirect) {
 int pqtworker::do_transfer() {
   double duration;
   int sts;
+  unsigned int startsec;
+  unsigned int startusec;
+  unsigned int endsec;
+  unsigned int endusec;
+  std::string msg;
 
-  for (size_t i = 0; i < pHsa->size_list.size(); i++) {
-    current_size = pHsa->size_list[i];
+  msg = "[" + action_name + "] pqt transfer " + std::to_string(src_node) + " "
+      + std::to_string(dst_node) + " ";
+
+  rvs::lp::get_ticks(&startsec, &startusec);
+
+  if (block_size.size() == 0) {
+    block_size = pHsa->size_list;
+  }
+
+  for (size_t i = 0; brun && i < block_size.size(); i++) {
+    current_size = block_size[i];
     sts = pHsa->SendTraffic(src_node, dst_node, current_size,
                             bidirect, &duration);
 
@@ -139,14 +169,11 @@ int pqtworker::do_transfer() {
       running_size += current_size;
       running_duration += duration;
     }
-
-    /*
-    std::string msg = "pqt packet size: " + std::to_string(phsa->size_list[i])
-      + "   throughput: "
-      + std::to_string(phsa->size_list[i]/duration/(1024*1024*1024)*2);
-    rvs::lp::Log(msg, rvs::logresults);
-    */
   }
+
+  rvs::lp::get_ticks(&endsec, &endusec);
+  rvs::lp::Log(msg + "start", rvs::logdebug, startsec, startusec);
+  rvs::lp::Log(msg + "finish", rvs::logdebug, endsec, endusec);
 
   return 0;
 }
@@ -193,10 +220,11 @@ void pqtworker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
  * this test (in bytes)
  * @param Duration [out] cumulative duration of transfers in
  * this test (in seconds)
+ * @param bReset [in] if 'true' set final totals to zero
  *
  * */
 void pqtworker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
-                           size_t* Size, double* Duration) {
+                           size_t* Size, double* Duration, bool bReset) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
 
@@ -214,7 +242,9 @@ void pqtworker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
   running_size = 0;
   running_duration = 0;
 
-  // reset final toral
-  total_size = 0;
-  total_duration = 0;
+  // reset final totals
+  if (bReset) {
+    total_size = 0;
+    total_duration = 0;
+  }
 }

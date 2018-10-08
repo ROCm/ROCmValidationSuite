@@ -50,7 +50,6 @@ extern "C" {
 }
 #endif
 
-#include "rvsliblogger.h"
 #include "rvs_module.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
@@ -76,7 +75,7 @@ using std::fstream;
 
 // collection of allowed metrics
 const char* metric_names[] =
-        { GM_TEMP, GM_TEMP, GM_MEM_CLOCK, GM_FAN, GM_POWER
+        { GM_TEMP, GM_CLOCK, GM_MEM_CLOCK, GM_FAN, GM_POWER
         };
 
 /**

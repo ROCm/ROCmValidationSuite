@@ -77,7 +77,7 @@ class pqtaction : public rvs::actionbase {
   bool property_get_peers(int *error);
   int  property_get_peer_deviceid(int *error);
   void property_get_test_bandwidth(int *error);
-  void property_get_log_interval(int *error);
+//  void property_get_log_interval(int *error);
   void property_get_bidirectional(int *error);
 
   //! array of peer GPU IDs to be used in data trasfers
@@ -90,6 +90,10 @@ class pqtaction : public rvs::actionbase {
   int  prop_log_interval;
   //! 'true' if bidirectional data transfer is required
   bool prop_bidirectional;
+  //! list of test block sizes
+  std::vector<uint32_t> block_size;
+  //! set to 'true' if the default block sizes are to be used
+  bool b_block_size_all;
 
  protected:
   int is_peer(uint16_t Src, uint16_t Dst);
@@ -100,6 +104,8 @@ class pqtaction : public rvs::actionbase {
   int run_parallel();
 
   int print_running_average();
+  int print_running_average(pqtworker* pWorker);
+
   int print_final_average();
 
   //! 'true' for the duration of test
@@ -107,8 +113,6 @@ class pqtaction : public rvs::actionbase {
 
   //! bjson field indicates if the json flag is set
   bool bjson;
-  //! json_rcqt_node is json node shared through submodules
-  void *json_rcqt_node;
 
  private:
   void do_running_average(void);

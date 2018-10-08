@@ -595,19 +595,19 @@ with the following format:
 In addition, an informational message is provided for each for each metric
 being monitored:
 
-    [INFO ][<timestamp>][<action name>] gm <gpu id> monitoring < metric> bounds min:<min_metric> max: <max_metric>
+    [INFO ][<timestamp>][<action name>] gm <gpu id> monitoring <metric> bounds min:<min_metric> max: <max_metric>
 
 During the monitoring informational output regarding the metrics of the GPU will
 be sampled at every interval specified by the sample_rate key. If a bounding box
 violation is discovered during a sampling interval, a warning message is
 logged with the following format:
 
-    [INFO ][<timestamp>][<action name>] gm <gpu id> < metric> bounds violation <metric value>
+    [INFO ][<timestamp>][<action name>] gm <gpu id> <metric> bounds violation <metric value>
 
 If the log_interval value is set an information message for each metric is
 logged at every interval using the following format:
 
-    [INFO ][<timestamp>][<action name>] gm <gpu id> < metric> <metric_value>
+    [INFO ][<timestamp>][<action name>] gm <gpu id> <metric> <metric_value>
 
 When monitoring is stopped for a target GPU, a result message is logged
 with the following format:
@@ -1817,17 +1817,18 @@ devices pass the P2P check.</td></tr>
 <tr><td>bidirectional</td><td>Bool</td>
 <td>This option is only used if test_bandwidth key is true. This specifies the
 type of transfer to run:\n
-true – Do a bidirectional transfer test\n
-false – Do a unidirectional transfer test
-from the agent to its peers.
+- true – Do a bidirectional transfer test\n
+- false – Do a unidirectional transfer test
+from one node to another.
+
 </td></tr>
 <tr><td>parallel</td><td>Bool</td>
 <td>This option is only used if the test_bandwidth
 key is true.\n
-true – Run transfer testing to all peers
-in parallel.\n
-false – Run transfer testing to a single
-peer at a time.
+- true – Run all test transfers in parallel.
+**count** and **wait** keys are ignored.\n
+- false – Run test transfers one by one.
+
 </td></tr>
 <tr><td>duration</td><td>Integer</td>
 <td>This option is only used if test_bandwidth is true. This key specifies the
@@ -1838,24 +1839,105 @@ specified, the default value is 10000 (10 seconds).
 <td>This option is only used if test_bandwidth is true. This is a positive
 integer, given in milliseconds, that specifies an interval over which the moving
 average of the bandwidth will be calculated and logged. The default value is
-1000 (1 second). It must be smaller than the duration key.</td></tr>
+1000 (1 second). It must be smaller than the duration key.\n
+if this key is 0 (zero), results are displayed as soon as the test transfer
+is completed.</td></tr>
+<tr><td>block_size</td><td>Collection of Integers</td>
+<td>Optional. Defines list of block sizes to be used in transfer tests.\n
+If "all" or missing list of block sizes used in rocm_bandwidth_test is used:
+- 1 * 1024
+- 2 * 1024
+- 4 * 1024
+- 8 * 1024
+- 16 * 1024
+- 32 * 1024
+- 64 * 1024
+- 128 * 1024
+- 256 * 1024
+- 512 * 1024
+- 1 * 1024 * 1024
+- 2 * 1024 * 1024
+- 4 * 1024 * 1024
+- 8 * 1024 * 1024
+- 16 * 1024 * 1024
+- 32 * 1024 * 1024
+- 64 * 1024 * 1024
+- 128 * 1024 * 1024
+- 256 * 1024 * 1024
+- 512 * 1024 * 1024
+</td></tr>
 </table>
+
+Please note that suitable values for **log\_interval** and **duration** depend
+on your system.
+
+- **log_interval**, in sequential mode, should be long enough to allow all
+transfer tests to finish at lest once or "(pending)" and "(*)" will be displayed
+(see below). Number of transfers depends on number of peer NUMA nodes in your
+system. In parallel mode, it should be roughly 1.5 times the duration of single
+longest individual test.
+- **duration**, regardless of mode should be at least, 4 * log_interval.
+
+You may obtain indication of how long single transfer between two NUMA nodes
+take by running test with "-d 4" switch and observing DEBUG messages for
+transfer start/finish. An output may look like this:
+
+    [DEBUG ] [183940.634118] [action_1] pqt transfer 6 5 start
+    [DEBUG ] [183941.311671] [action_1] pqt transfer 6 5 finish
+    [DEBUG ] [183941.312746] [action_1] pqt transfer 4 5 start
+    [DEBUG ] [183941.990174] [action_1] pqt transfer 4 5 finish
+    [DEBUG ] [183941.991244] [action_1] pqt transfer 4 6 start
+    [DEBUG ] [183942.668687] [action_1] pqt transfer 4 6 finish
+    [DEBUG ] [183942.669756] [action_1] pqt transfer 5 4 start
+    [DEBUG ] [183943.340957] [action_1] pqt transfer 5 4 finish
+    [DEBUG ] [183943.342037] [action_1] pqt transfer 5 6 start
+    [DEBUG ] [183944.17957 ] [action_1] pqt transfer 5 6 finish
+    [DEBUG ] [183944.19032 ] [action_1] pqt transfer 6 4 start
+    [DEBUG ] [183944.700868] [action_1] pqt transfer 6 4 finish
+
+From this printout, it can be concluded that single transfer takes on average
+800ms. Values for **log\_interval** and **duration** should be set accordingly.
 
 @subsection usg102 10.2 Output
 
 Module specific output keys are described in the table below:
 <table>
 <tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>p2p_result</td><td>Collection of Result Bools</td>
+<tr><td>p2p_result</td><td>Bool</td>
 <td>Indicates if the gpu and the specified peer have P2P capabilities. If this
 quantity is true, the GPU pair tested has p2p capabilities. If false, they are
 not peers.</td></tr>
-<tr><td>interval_bandwidth</td><td>Collection of Time Series Floats</td>
+<tr><td>distance</td><td>Integer</td>
+<td>NUMA distance for these two peers</td></tr>
+<tr><td>hop_type</td><td>String</td>
+<td>Link type for each link hop (e.g., PCIe, HyperTransport, QPI, ...)</td></tr>
+<tr><td>hop_distance</td><td>Integer</td>
+<td>NUMA distance for this particular hop</td></tr>
+<tr><td>transfer_id</td><td>String</td>
+<td>String with format "<transfer_index>/<transfer_number>" where
+- transfer_index - is number, starting from 1, for each device-peer combination
+- transfer_number - is total number of device-peer combinations
+
+</td></tr>
+
+<tr><td>interval_bandwidth</td><td>Float</td>
 <td>The average bandwidth of a p2p transfer, during the log_interval time
-period. </td></tr>
-<tr><td>bandwidth</td><td>Collection of Floats</td>
+period.\n This field may also take values:
+- (pending) - this means that no measurement has taken place
+yet.
+- xxxGBps (*) - this means no measurement within current log_interval but
+average from previous measurements is displayed.
+
+</td></tr>
+<tr><td>bandwidth</td><td>Float</td>
 <td>The average bandwidth of a p2p transfer, averaged over the entire test
-duration of the interval.</td></tr>
+duration of the interval. This field may also take value:
+- (not measured) - this means no test transfer completed for those
+peers. You may need to increase test duration.
+
+</td></tr>
+<tr><td>duration</td><td>Float</td>
+<td>Cumulative duration of all transfers between the two particular nodes</td></tr>
 </table>
 
 If the value of test_bandwidth key is false, the tool will only try to determine
@@ -1865,7 +1947,7 @@ a gpu is a P2P peer to the device the test will pass, otherwise it will fail. A
 message indicating the result will be provided for each GPUs specified. It will
 have the following format:
 
-    [RESULT][<timestamp>][<action name>] p2p <gpu id> <peer gpu id> <p2p_result>
+    [RESULT][<timestamp>][<action name>] p2p <gpu id> <peer gpu id> peers:<p2p_result> distance:<distance> <hop_type>:<hop_dist>[ <hop_type>:<hop_dist>]
 
 If the value of test_bandwidth is true bandwidth testing between the device and
 each of its peers will take place in parallel or in sequence, depending on the
@@ -1874,12 +1956,13 @@ informational output providing the moving average of the transfer’s bandwidth
 will be calculated and logged at every time increment specified by the
 log_interval parameter. The messages will have the following output:
 
-    [INFO  ][<timestamp>][<action name>] p2p-bandwidth <gpu id> <peer gpu id> bidirectional: <bidirectional> <interval_bandwidth >
+    [INFO  ][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <interval_bandwidth>
 
 At the end of the test the average bytes/second will be calculated over the
 entire test duration, and will be logged as a result:
 
-    [RESULT][<timestamp>][<action name>] p2p-bandwidth <gpu id> <peer gpu id> bidirectional: <bidirectional> <bandwidth > <duration>
+    [RESULT][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <bandwidth> <duration>
+
 
 @subsection usg103 10.3 Examples
 
@@ -1899,15 +1982,15 @@ tested for p2p capability with no bandwidth testing (test_bandwidth: false).
 
 Possible result is:
 
-    [RESULT] [167896.97743 ] [action_1] p2p 3254 3254 false
-    [RESULT] [167896.97764 ] [action_1] p2p 3254 50599 true
-    [RESULT] [167896.97818 ] [action_1] p2p 3254 33367 true
-    [RESULT] [167896.97848 ] [action_1] p2p 50599 3254 true
-    [RESULT] [167896.97873 ] [action_1] p2p 50599 50599 false
-    [RESULT] [167896.97881 ] [action_1] p2p 50599 33367 true
-    [RESULT] [167896.97907 ] [action_1] p2p 33367 3254 true
-    [RESULT] [167896.97935 ] [action_1] p2p 33367 50599 true
-    [RESULT] [167896.97960 ] [action_1] p2p 33367 33367 false
+    [RESULT] [1656631.262875] [action_1] p2p 3254 3254 peers:false distance:-1
+    [RESULT] [1656631.262968] [action_1] p2p 3254 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263039] [action_1] p2p 3254 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263103] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263151] [action_1] p2p 50599 50599 peers:false distance:-1
+    [RESULT] [1656631.263203] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263265] [action_1] p2p 33367 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263321] [action_1] p2p 33367 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1656631.263360] [action_1] p2p 33367 33367 peers:false distance:-1
 
 From the first line of result, we can see that GPU (ID 3254) can't access itself.
 From the second line of result, we can see that source GPU (ID 3254) can access destination GPU (ID 50599).
@@ -1916,50 +1999,63 @@ From the second line of result, we can see that source GPU (ID 3254) can access 
 
 Here all source GPUs (device: all) with all destination GPUs (peers: all) are
 tested for p2p capability including bandwidth testing (test_bandwidth: true)
-with bidirectional transfers (bidirectional: true) and running in parallel
-(parallel : true) - default values are used for duration and log_interval.
+with bidirectional transfers (bidirectional: true) and with emmediate output
+for each completed transfer (log_interval: 0)
 
     actions:
     - name: action_1
       device: all
       module: pqt
+      log_interval: 0
+      duration: 0
       peers: all
       test_bandwidth: true
       bidirectional: true
-      parallel : true
 
-Possible result is:
+When run with "-d 3" switch, possible result is:
 
-    [RESULT] [170487.818898] [action_1] p2p 3254 3254 false
-    [RESULT] [170487.818918] [action_1] p2p 3254 50599 true
-    [RESULT] [170487.818969] [action_1] p2p 3254 33367 true
-    [RESULT] [170487.818997] [action_1] p2p 50599 3254 true
-    [RESULT] [170487.819022] [action_1] p2p 50599 50599 false
-    [RESULT] [170487.819029] [action_1] p2p 50599 33367 true
-    [RESULT] [170487.819054] [action_1] p2p 33367 3254 true
-    [RESULT] [170487.819080] [action_1] p2p 33367 50599 true
-    [RESULT] [170487.819105] [action_1] p2p 33367 33367 false
-    [INFO  ] [170488.351341] [action_1] p2p-bandwidth  3254 50599  bidirectional: true  7.46 GBps
-    [INFO  ] [170488.352438] [action_1] p2p-bandwidth  3254 33367  bidirectional: true  7.91 GBps
-    [INFO  ] [170488.353512] [action_1] p2p-bandwidth  50599 3254  bidirectional: true  7.58 GBps
-    [INFO  ] [170488.354581] [action_1] p2p-bandwidth  50599 33367  bidirectional: true  6.93 GBps
-    [INFO  ] [170488.355652] [action_1] p2p-bandwidth  33367 3254  bidirectional: true  5.69 GBps
-    [INFO  ] [170488.356725] [action_1] p2p-bandwidth  33367 50599  bidirectional: true  5.67 GBps
-    [RESULT] [170488.880108] [action_1] p2p-bandwidth  3254 50599  bidirectional: true  7.95 GBps  duration: 0.031455 ms
-    [RESULT] [170488.881314] [action_1] p2p-bandwidth  3254 33367  bidirectional: true  7.50 GBps  duration: 0.133382 ms
-    [RESULT] [170488.882453] [action_1] p2p-bandwidth  50599 3254  bidirectional: true  7.58 GBps  duration: 0.016483 ms
-    [RESULT] [170488.883580] [action_1] p2p-bandwidth  50599 33367  bidirectional: true  8.31 GBps  duration: 0.060156 ms
-    [RESULT] [170488.884702] [action_1] p2p-bandwidth  33367 3254  bidirectional: true  6.90 GBps  duration: 0.036216 ms
-    [RESULT] [170488.885863] [action_1] p2p-bandwidth  33367 50599  bidirectional: true  2.58 GBps  duration: 0.096949 ms
+    [RESULT] [1657122.364752] [action_1] p2p 3254 3254 peers:false distance:-1
+    [RESULT] [1657122.364845] [action_1] p2p 3254 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.364917] [action_1] p2p 3254 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.364985] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.365037] [action_1] p2p 50599 50599 peers:false distance:-1
+    [RESULT] [1657122.365094] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.365157] [action_1] p2p 33367 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.365221] [action_1] p2p 33367 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657122.365270] [action_1] p2p 33367 33367 peers:false distance:-1
+    [INFO  ] [1657123.644203] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  7.013 GBps
+    [INFO  ] [1657123.644376] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  6.615 GBps
+    [INFO  ] [1657123.644453] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  2.367 GBps
+    [INFO  ] [1657123.644522] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  7.504 GBps
+    [INFO  ] [1657123.644590] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  8.207 GBps
+    [INFO  ] [1657123.644673] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  7.680 GBps
+    [INFO  ] [1657124.926221] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  6.646 GBps
+    [INFO  ] [1657124.926368] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.418 GBps
+    [INFO  ] [1657124.926438] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  7.402 GBps
+    [INFO  ] [1657124.926506] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  6.161 GBps
+    [INFO  ] [1657124.926573] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  9.024 GBps
+    [INFO  ] [1657124.926640] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  8.740 GBps
+    [INFO  ] [1657126.208742] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  5.680 GBps
+    [INFO  ] [1657126.208905] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.011 GBps
+    [INFO  ] [1657126.208990] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  3.918 GBps
+    [INFO  ] [1657126.209066] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  6.058 GBps
+    [INFO  ] [1657126.209140] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  6.650 GBps
+    [INFO  ] [1657126.209213] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  0.000 GBps
+    [RESULT] [1657126.742128] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  5.767 GBps  duration: 0.368453 sec
+    [RESULT] [1657126.743287] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  6.013 GBps  duration: 0.498944 sec
+    [RESULT] [1657126.744411] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  5.278 GBps  duration: 0.380393 sec
+    [RESULT] [1657126.745534] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  4.160 GBps  duration: 0.484577 sec
+    [RESULT] [1657126.746684] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  5.219 GBps  duration: 0.407190 sec
+    [RESULT] [1657126.747827] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  4.001 GBps  duration: 0.562350 sec
 
-From the last line of result, we can see that source GPU (ID 33367) can access
-destination GPU (ID 50599) and that bidirectional bandwidth is 2.58 GBps.
+We can see that on this particular machine there are three GPUs and six
+possible device-to-peer transfers.
 
 **Example 3:**
 
 Here some source GPUs (device: 50599) are targeting some destination GPUs
-(peers: 33367 3254) with specified log interval (log_interval: 500) and duration
-(duration: 1000). Bandwidth is tested (test_bandwidth: true) but only
+(peers: 33367 3254) with specified log interval (log_interval: 1000) and duration
+(duration: 5000). Bandwidth is tested (test_bandwidth: true) but only
 unidirectional (bidirectional: false) without parallel execution (parallel:
 false).
 
@@ -1967,8 +2063,9 @@ false).
     - name: action_1
       device: 50599
       module: pqt
-      log_interval: 500
-      duration: 1000
+      log_interval: 1000
+      duration: 5000
+      count: 0
       peers: 33367 3254
       test_bandwidth: true
       bidirectional: false
@@ -1976,44 +2073,77 @@ false).
 
 Possible output is:
 
-    [RESULT] [175852.862778] [action_1] p2p 50599 3254 true
-    [RESULT] [175852.862837] [action_1] p2p 50599 33367 true
-    [INFO  ] [175853.393991] [action_1] p2p-bandwidth  50599 3254  bidirectional: false  4.56 GBps
-    [INFO  ] [175853.395080] [action_1] p2p-bandwidth  50599 33367  bidirectional: false  4.60 GBps
-    [INFO  ] [175853.928202] [action_1] p2p-bandwidth  50599 3254  bidirectional: false  4.40 GBps
-    [RESULT] [175854.235624] [action_1] p2p-bandwidth  50599 3254  bidirectional: false  4.50 GBps  duration: 0.444359 ms
-    [RESULT] [175854.236772] [action_1] p2p-bandwidth  50599 33367  bidirectional: false  4.57 GBps  duration: 0.218679 ms
+    [RESULT] [1657218.801555] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657218.801655] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
+    [INFO  ] [1657219.871532] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.517 GBps
+    [INFO  ] [1657219.871717] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.475 GBps
+    [INFO  ] [1657220.940263] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.476 GBps
+    [INFO  ] [1657220.940461] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.601 GBps
+    [INFO  ] [1657222.7589  ] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.488 GBps
+    [INFO  ] [1657222.7760  ] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.470 GBps
+    [INFO  ] [1657223.74647 ] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.666 GBps
+    [INFO  ] [1657223.74810 ] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.576 GBps
+    [RESULT] [1657224.181106] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.539 GBps  duration: 1.321909 sec
+    [RESULT] [1657224.182255] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.551 GBps  duration: 1.318517 sec
 
 From the last line of result, we can see that source GPU (ID 50599) can access
-destination GPU (ID 33367) and that bidirectional bandwidth is 4.57 GBps.
+destination GPU (ID 33367) and that the bandwidth is 4.495 GBps.
 
 **Example 4:**
 
-Here some source GPUs (device: 3254) are targeting some destination GPUs (peers:
-33367) with specified log interval (log_interval: 500) and duration (duration:
-1000). Bandwidth is tested (test_bandwidth: true) but only unidirectional
-(bidirectional: false) without parallel execution (parallel: false). Also, only
-GPUs with specified device id are considered (peer_deviceid: 26720).
+Here, all GPUs are targeted with bidirectional transfers and parallel execution
+of tests:
 
     actions:
     - name: action_1
-      device: 3254
+      device: all
       module: pqt
-      log_interval: 500
-      duration: 1000
-      peers: 33367
-      peer_deviceid: 26720
+      log_interval: 1200
+      duration: 4000
+      peers: all
       test_bandwidth: true
-      bidirectional: false
-      parallel: false
+      bidirectional: true
+      parallel: true
 
 Possible output is:
 
-    [RESULT] [176419.658547] [action_1] p2p 3254 33367 true
-    [INFO  ] [176420.192962] [action_1] p2p-bandwidth  3254 33367  bidirectional: false  4.61 GBps
-    [INFO  ] [176420.726227] [action_1] p2p-bandwidth  3254 33367  bidirectional: false  4.67 GBps
-    [RESULT] [176421.1565  ] [action_1] p2p-bandwidth  3254 33367  bidirectional: false  4.65 GBps  duration: 0.645375 ms
+    [RESULT] [1657295.937184] [action_1] p2p 3254 3254 peers:false distance:-1
+    [RESULT] [1657295.937267] [action_1] p2p 3254 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937324] [action_1] p2p 3254 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937379] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937429] [action_1] p2p 50599 50599 peers:false distance:-1
+    [RESULT] [1657295.937482] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937543] [action_1] p2p 33367 3254 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937607] [action_1] p2p 33367 50599 peers:true distance:56 HyperTransport:56
+    [RESULT] [1657295.937655] [action_1] p2p 33367 33367 peers:false distance:-1
+    [INFO  ] [1657297.216212] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  4.972 GBps
+    [INFO  ] [1657297.216351] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.183 GBps
+    [INFO  ] [1657297.216423] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  8.911 GBps
+    [INFO  ] [1657297.216490] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  7.690 GBps
+    [INFO  ] [1657297.216558] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  7.768 GBps
+    [INFO  ] [1657297.216642] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  4.589 GBps
+    [INFO  ] [1657298.487427] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  8.778 GBps
+    [INFO  ] [1657298.487593] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  7.921 GBps
+    [INFO  ] [1657298.487730] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  8.164 GBps
+    [INFO  ] [1657298.487807] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  8.921 GBps
+    [INFO  ] [1657298.487878] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  8.487 GBps
+    [INFO  ] [1657298.487956] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  7.648 GBps
+    [INFO  ] [1657299.760175] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  7.210 GBps
+    [INFO  ] [1657299.760249] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  4.274 GBps
+    [INFO  ] [1657299.760284] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  0.000 GBps
+    [INFO  ] [1657299.760318] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  5.942 GBps
+    [INFO  ] [1657299.760349] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  0.001 GBps
+    [INFO  ] [1657299.760381] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  5.490 GBps
+    [RESULT] [1657300.293126] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  6.964 GBps  duration: 0.287248 sec
+    [RESULT] [1657300.294334] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  3.960 GBps  duration: 0.536554 sec
+    [RESULT] [1657300.295528] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  5.442 GBps  duration: 0.368977 sec
+    [RESULT] [1657300.296691] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  4.187 GBps  duration: 0.477756 sec
+    [RESULT] [1657300.297840] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  4.942 GBps  duration: 0.607009 sec
+    [RESULT] [1657300.299016] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  3.828 GBps  duration: 0.523495 sec
 
+It can be seen that transfers [2/6] and [5/6] did not take place in the second
+log interval so average from the previous cycle is displayed instead and
+marked with "(*)"
 
 @section usg11 11 PEBB Module
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
@@ -2032,11 +2162,84 @@ will be considered. The default value is true.</td></tr>
 <td>This key indicates if device to host transfers
 will be considered. The default value is true.
 </td></tr>
+<tr><td>parallel</td><td>Bool</td>
+<td>This option is only used if the test_bandwidth
+key is true.\n
+- true – Run all test transfers in parallel.
+**count** and **wait** keys are ignored.\n
+- false – Run test transfers one by one.
+
+</td></tr>
+<tr><td>duration</td><td>Integer</td>
+<td>This option is only used if test_bandwidth is true. This key specifies the
+duration a transfer test should run, given in milliseconds. If this key is not
+specified, the default value is 10000 (10 seconds).
+</td></tr>
 <tr><td>log_interval</td><td>Integer</td>
-<td>This is a positive integer, given in milliseconds, that specifies an
-interval over which the moving average of the bandwidth will be calculated and
-logged.</td></tr>
+<td>This option is only used if test_bandwidth is true. This is a positive
+integer, given in milliseconds, that specifies an interval over which the moving
+average of the bandwidth will be calculated and logged. The default value is
+1000 (1 second). It must be smaller than the duration key.\n
+if this key is 0 (zero), results are displayed as soon as the test transfer
+is completed.</td></tr>
+<tr><td>block_size</td><td>Collection of Integers</td>
+<td>Optional. Defines list of block sizes to be used in transfer tests.\n
+If "all" or missing list of block sizes used in rocm_bandwidth_test is used:
+- 1 * 1024
+- 2 * 1024
+- 4 * 1024
+- 8 * 1024
+- 16 * 1024
+- 32 * 1024
+- 64 * 1024
+- 128 * 1024
+- 256 * 1024
+- 512 * 1024
+- 1 * 1024 * 1024
+- 2 * 1024 * 1024
+- 4 * 1024 * 1024
+- 8 * 1024 * 1024
+- 16 * 1024 * 1024
+- 32 * 1024 * 1024
+- 64 * 1024 * 1024
+- 128 * 1024 * 1024
+- 256 * 1024 * 1024
+- 512 * 1024 * 1024
+</td></tr>
 </table>
+
+Please note that suitable values for **log\_interval** and **duration** depend
+on your system.
+
+- **log_interval**, in sequential mode, should be long enough to allow all
+transfer tests to finish at lest once or "(pending)" and "(*)" will be displayed
+(see below). Number of transfers depends on number of peer NUMA nodes in your
+system. In parallel mode, it should be roughly 1.5 times the duration of single
+longest individual test.
+- **duration**, regardless of mode should be at least, 4 * log_interval.
+
+You may obtain indication of how long single transfer between two NUMA nodes
+take by running test with "-d 4" switch and observing DEBUG messages for
+transfer start/finish. An output may look like this:
+
+    [DEBUG ] [187024.729433] [action_1] pebb transfer 0 6 start
+    [DEBUG ] [187029.327818] [action_1] pebb transfer 0 6 finish
+    [DEBUG ] [187024.299150] [action_1] pebb transfer 1 6 start
+    [DEBUG ] [187029.473378] [action_1] pebb transfer 1 6 finish
+    [DEBUG ] [187023.227009] [action_1] pebb transfer 1 5 start
+    [DEBUG ] [187029.530203] [action_1] pebb transfer 1 5 finish
+    [DEBUG ] [187025.737675] [action_1] pebb transfer 3 5 start
+    [DEBUG ] [187030.134100] [action_1] pebb transfer 3 5 finish
+    [DEBUG ] [187027.19961 ] [action_1] pebb transfer 2 6 start
+    [DEBUG ] [187030.421181] [action_1] pebb transfer 2 6 finish
+    [DEBUG ] [187027.41475 ] [action_1] pebb transfer 2 5 start
+    [DEBUG ] [187031.293998] [action_1] pebb transfer 2 5 finish
+    [DEBUG ] [187027.71717 ] [action_1] pebb transfer 0 5 start
+    [DEBUG ] [187031.605326] [action_1] pebb transfer 0 5 finish
+
+From this printout, it can be concluded that single transfer takes on average
+5500ms. Values for **log\_interval** and **duration** should be set accordingly.
+
 
 @subsection usg112 11.2 Output
 
@@ -2045,27 +2248,55 @@ Module specific output keys are described in the table below:
 <tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>CPU node</td><td>Integer</td>
 <td>Particular CPU node involved in transfer</td></tr>
-<tr><td>interval_bandwidth</td><td>Collection of Time Series Floats</td>
-<td>The average bandwidth of a transfer, during the log_interval time
-period. </td></tr>
-<tr><td>bandwidth</td><td>Collection of Floats</td>
-<td>The average bandwidth of a transfer, averaged over the entire test
-duration of the interval.</td></tr>
-<tr><td>duration</td><td>Collection of Floats</td>
-<td>Cumulative duration of transfers between particular CPU node and particular GPU</td></tr>
+<tr><td>distance</td><td>Integer</td>
+<td>NUMA distance for these two peers</td></tr>
+<tr><td>hop_type</td><td>String</td>
+<td>Link type for each link hop (e.g., PCIe, HyperTransport, QPI, ...)</td></tr>
+<tr><td>hop_distance</td><td>Integer</td>
+<td>NUMA distance for this particular hop</td></tr>
+<tr><td>transfer_id</td><td>String</td>
+<td>String with format "<transfer_index>/<transfer_number>" where
+- transfer_index - is number, starting from 1, for each device-peer combination
+- transfer_number - is total number of device-peer combinations
+
+</td></tr>
+
+<tr><td>interval_bandwidth</td><td>Float</td>
+<td>The average bandwidth of a p2p transfer, during the log_interval time
+period.\n This field may also take values:
+- (pending) - this means that no measurement has taken place
+yet.
+- xxxGBps (*) - this means no measurement within current log_interval but
+average from previous measurements is displayed.
+
+</td></tr>
+<tr><td>bandwidth</td><td>Float</td>
+<td>The average bandwidth of a p2p transfer, averaged over the entire test
+duration of the interval. This field may also take value:
+- (not measured) - this means no test transfer completed for those
+peers. You may need to increase test duration.
+
+</td></tr>
+<tr><td>duration</td><td>Float</td>
+<td>Cumulative duration of all transfers between the two particular nodes</td></tr>
 </table>
+
+At the beginning, test will display link infor for every CPU/GPU pair:
+
+    [RESULT][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu node> <gpu id> distance:<distance> <hop_type>:<hop_dist>[ <hop_type>:<hop_dist>]
 
 During the execution of the benchmark, informational output providing the moving
 average of the bandwidth of the transfer will be calculated and logged. This
 interval is provided by the log_interval parameter and will have the following
 output format:
 
-    [INFO ][<timestamp>][<action name>] pcie-bandwidth <gpu id> h2d: <host_to_device> d2h: <device_to_host> <interval_bandwidth >
+    [INFO ][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> <interval_bandwidth>
 
-At the end of the test the average bytes/second will be calculated over the
+At the end of test, the average bytes/second will be calculated over the
 entire test duration, and will be logged as a result:
 
-    [RESULT][<timestamp>][<action name>] pcie-bandwidth <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> < bandwidth > <duration>
+    [RESULT][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> <bandwidth> <duration>
+
 
 
 @subsection usg113 11.3 Examples
@@ -2075,36 +2306,115 @@ Consider action:
 
     actions:
     - name: action_1
-      device: 50599 3254
+      device: all
       module: pebb
-      log_interval: 1000
-      duration: 10000
+      log_interval: 0
+      duration: 0
       device_to_host: false
       host_to_device: true
       parallel: false
 
-This will initiate host to device transfer test for two GPUs.\n
+This will initiate host to device transfer to all GPUs with immediate output
+(**parallel: false**, **log_interval: 0**)\n
 Output from this action might look like:
 
-    [INFO  ] [  3766.789326] [action_1] pcie-bandwidth  0 3254  h2d: true  d2h: false  10.24GBps
-    [INFO  ] [  3766.789382] [action_1] pcie-bandwidth  1 3254  h2d: true  d2h: false  11.03GBps
-    [INFO  ] [  3766.789403] [action_1] pcie-bandwidth  2 3254  h2d: true  d2h: false  10.01GBps
-    [INFO  ] [  3766.789443] [action_1] pcie-bandwidth  3 3254  h2d: true  d2h: false  10.25GBps
-    ...
-    [INFO  ] [  3767.856848] [action_1] pcie-bandwidth  0 50599  h2d: true  d2h: false  11.09GBps
-    [INFO  ] [  3767.856862] [action_1] pcie-bandwidth  1 50599  h2d: true  d2h: false  10.60GBps
-    [INFO  ] [  3767.856877] [action_1] pcie-bandwidth  2 50599  h2d: true  d2h: false  11.32GBps
-    [INFO  ] [  3767.856889] [action_1] pcie-bandwidth  3 50599  h2d: true  d2h: false  11.22GBps
-    ...
-    [RESULT] [  3776.617594] [action_1] pcie-bandwidth  0 3254  h2d: true  d2h: false  11.61GBps  duration: 0.430710 ms
-    [RESULT] [  3776.617620] [action_1] pcie-bandwidth  1 3254  h2d: true  d2h: false  11.82GBps  duration: 0.423176 ms
-    [RESULT] [  3776.617625] [action_1] pcie-bandwidth  2 3254  h2d: true  d2h: false  11.05GBps  duration: 0.452555 ms
-    [RESULT] [  3776.617630] [action_1] pcie-bandwidth  3 3254  h2d: true  d2h: false  11.29GBps  duration: 0.354260 ms
-    [RESULT] [  3776.617636] [action_1] pcie-bandwidth  0 50599  h2d: true  d2h: false  10.93GBps  duration: 0.365892 ms
-    [RESULT] [  3776.617642] [action_1] pcie-bandwidth  1 50599  h2d: true  d2h: false  10.68GBps  duration: 0.374698 ms
-    [RESULT] [  3776.617647] [action_1] pcie-bandwidth  2 50599  h2d: true  d2h: false  11.04GBps  duration: 0.362272 ms
-    [RESULT] [  3776.617653] [action_1] pcie-bandwidth  3 50599  h2d: true  d2h: false  11.36GBps  duration: 0.352116 ms
+    [RESULT] [1658774.978614] [action_1] pcie-bandwidth 0 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1658774.978664] [action_1] pcie-bandwidth 1 4 3254  distance:20 PCIe:20
+    [RESULT] [1658774.978695] [action_1] pcie-bandwidth 2 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1658774.978728] [action_1] pcie-bandwidth 3 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1658774.978763] [action_1] pcie-bandwidth 0 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1658774.978795] [action_1] pcie-bandwidth 1 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1658774.978825] [action_1] pcie-bandwidth 2 5 50599  distance:20 PCIe:20
+    [RESULT] [1658774.978856] [action_1] pcie-bandwidth 3 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1658774.978889] [action_1] pcie-bandwidth 0 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1658774.978922] [action_1] pcie-bandwidth 1 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1658774.978952] [action_1] pcie-bandwidth 2 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1658774.978982] [action_1] pcie-bandwidth 3 6 33367  distance:20 PCIe:20
+    [INFO  ] [1658774.983743] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: false  12.233 GBps
+    [INFO  ] [1658774.988272] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: false  12.227 GBps
+    [INFO  ] [1658774.993197] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: false  11.770 GBps
+    [INFO  ] [1658774.998105] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: false  11.313 GBps
+    [INFO  ] [1658775.4457  ] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: false  12.218 GBps
+    [INFO  ] [1658775.9589  ] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: false  10.292 GBps
+    [INFO  ] [1658775.14627 ] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: false  10.456 GBps
+    [INFO  ] [1658775.19664 ] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: false  10.614 GBps
+    [INFO  ] [1658775.26210 ] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: false  12.222 GBps
+    [INFO  ] [1658775.31188 ] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: false  12.215 GBps
+    [INFO  ] [1658775.36137 ] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: false  12.219 GBps
+    [INFO  ] [1658775.41117 ] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: false  12.219 GBps
+    [RESULT] [1658775.42219 ] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: false  12.233 GBps  duration: 0.000780 sec
+    [RESULT] [1658775.42235 ] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: false  12.227 GBps  duration: 0.000780 sec
+    [RESULT] [1658775.42246 ] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: false  11.770 GBps  duration: 0.000810 sec
+    [RESULT] [1658775.42256 ] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: false  11.313 GBps  duration: 0.000843 sec
+    [RESULT] [1658775.42271 ] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: false  12.218 GBps  duration: 0.000781 sec
+    [RESULT] [1658775.42286 ] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: false  10.292 GBps  duration: 0.000927 sec
+    [RESULT] [1658775.42297 ] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: false  10.456 GBps  duration: 0.000912 sec
+    [RESULT] [1658775.42309 ] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: false  10.614 GBps  duration: 0.000898 sec
+    [RESULT] [1658775.42321 ] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: false  12.222 GBps  duration: 0.000780 sec
+    [RESULT] [1658775.42332 ] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: false  12.215 GBps  duration: 0.000781 sec
+    [RESULT] [1658775.42344 ] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: false  12.219 GBps  duration: 0.000780 sec
+    [RESULT] [1658775.42355 ] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: false  12.219 GBps  duration: 0.000780 sec
 
+**Example 2:**
+
+Consider action:
+
+    actions:
+    - name: action_1
+      device: all
+      module: pebb
+      log_interval: 500
+      duration: 5000
+      device_to_host: true
+      host_to_device: true
+      parallel: true
+
+Here, although parallel execution of transfers is requested, log_interval is to
+short for some transfers to complete. For them, cumulative average is displayed
+and marked with (*):
+
+    [RESULT] [1659672.517170] [action_1] pcie-bandwidth 0 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1659672.517222] [action_1] pcie-bandwidth 1 4 3254  distance:20 PCIe:20
+    [RESULT] [1659672.517257] [action_1] pcie-bandwidth 2 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1659672.517290] [action_1] pcie-bandwidth 3 4 3254  distance:36 HyperTransport:36
+    [RESULT] [1659672.517324] [action_1] pcie-bandwidth 0 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1659672.517357] [action_1] pcie-bandwidth 1 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1659672.517388] [action_1] pcie-bandwidth 2 5 50599  distance:20 PCIe:20
+    [RESULT] [1659672.517419] [action_1] pcie-bandwidth 3 5 50599  distance:36 HyperTransport:36
+    [RESULT] [1659672.517452] [action_1] pcie-bandwidth 0 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1659672.517483] [action_1] pcie-bandwidth 1 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1659672.517515] [action_1] pcie-bandwidth 2 6 33367  distance:36 HyperTransport:36
+    [RESULT] [1659672.517546] [action_1] pcie-bandwidth 3 6 33367  distance:20 PCIe:20
+    [INFO  ] [1659673.49782 ] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  1.489 GBps
+    [INFO  ] [1659673.49814 ] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  2.701 GBps
+    ...
+    [INFO  ] [1659673.582639] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  1.489 GBps (*)
+    [INFO  ] [1659673.582686] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.367 GBps
+    [INFO  ] [1659673.582700] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  17.300 GBps
+    ...
+    [INFO  ] [1659677.851697] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  16.793 GBps
+    [INFO  ] [1659677.851727] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.872 GBps (*)
+    [INFO  ] [1659677.851741] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  14.796 GBps (*)
+    [INFO  ] [1659677.851754] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: true  20.358 GBps
+    [INFO  ] [1659677.851770] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: true  15.632 GBps (*)
+    [INFO  ] [1659677.851828] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: true  14.541 GBps (*)
+    ...
+    [RESULT] [1659678.148280] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  16.309 GBps  duration: 0.061316 sec
+    [RESULT] [1659678.148318] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.871 GBps  duration: 0.118547 sec
+    [RESULT] [1659678.148332] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  13.360 GBps  duration: 0.149705 sec
+    [RESULT] [1659678.148349] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: true  15.371 GBps  duration: 0.130115 sec
+    [RESULT] [1659678.148363] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: true  15.631 GBps  duration: 0.127954 sec
+    [RESULT] [1659678.148377] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: true  14.185 GBps  duration: 0.140989 sec
+    [RESULT] [1659678.148390] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: true  15.242 GBps  duration: 0.131245 sec
+    [RESULT] [1659678.148404] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: true  16.071 GBps  duration: 0.124452 sec
+    [RESULT] [1659678.148418] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: true  16.505 GBps  duration: 0.121178 sec
+    [RESULT] [1659678.148432] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: true  16.720 GBps  duration: 0.059807 sec
+    [RESULT] [1659678.148445] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: true  15.604 GBps  duration: 0.128168 sec
+    [RESULT] [1659678.148458] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: true  16.193 GBps  duration: 0.123525 sec
+
+Please note that in link information results, some records could be marked with
+(R). This means, that communication is possible if initiated by the destination
+NUMA node HSA agent.
 
 @section usg12 12 GST Module
 The GPU Stress Test modules purpose is to bring the CUs of the specified GPU(s)
@@ -2219,7 +2529,7 @@ during that time a violation message will be logged:
 
 When the test completes, the following result message will be printed:
 
-    [RESULT][<timestamp>][<action name>] gst <gpu id> Gflop: < max_gflops> flops_per_op:<flops_per_op> bytes_copied_per_op: <bytes_copied_per_op> try_ops_per_sec: <try_ops_per_sec> pass: <pass>
+    [RESULT][<timestamp>][<action name>] gst <gpu id> Gflop: <max_gflops> flops_per_op:<flops_per_op> bytes_copied_per_op: <bytes_copied_per_op> try_ops_per_sec: <try_ops_per_sec> pass: <pass>
 
 The test will pass if the target_stress is reached before the end of the
 ramp_interval and the stress_violations value is less than the given
