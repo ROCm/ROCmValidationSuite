@@ -158,20 +158,11 @@ void rvs::actionbase::property_get_uint_list(const std::string& key,
  * @return deviceid value if valid, -1 otherwise
  */
 int rvs::actionbase::property_get_deviceid(int *error) {
-    auto it = property.find(RVS_CONF_DEVICEID_KEY);
-    int deviceid = -1;
-    *error = 0;  // init with 'no error'
-
-    if (it != property.end()) {
-        if (it->second != "") {
-            if (is_positive_integer(it->second)) {
-                deviceid = std::stoi(it->second);
-            } else {
-                *error = 1;  // we have something but it's not a number
-            }
-        } else {
-            *error = 1;  // we have an empty string
-        }
+    uint32_t deviceid = 0;
+    std::string val;
+    *error = 0; // init with 'no error'
+    if (has_property(RVS_CONF_DEVICEID_KEY, &val)) {
+      rvs_util_parse<uint32_t>(val, &deviceid, error);
     }
     return deviceid;
 }
@@ -254,16 +245,10 @@ void rvs::actionbase::property_get_run_parallel(int *error) {
  */
 void rvs::actionbase::property_get_run_count(int *error) {
   gst_run_count = 1;
-  auto it = property.find(RVS_CONF_COUNT_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      gst_run_count = std::stoi(it->second);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_COUNT_KEY, &val)) {
+    rvs_util_parse<uint64_t>(val, &gst_run_count, error);
   }
 }
 
@@ -273,16 +258,10 @@ void rvs::actionbase::property_get_run_count(int *error) {
  */
 void rvs::actionbase::property_get_run_wait(int *error) {
   gst_run_wait_ms = 0;
-  auto it = property.find(RVS_CONF_WAIT_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      gst_run_wait_ms = std::stoul(it->second);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_WAIT_KEY, &val)) {
+    rvs_util_parse<uint64_t>(val, &gst_run_wait_ms, error);
   }
 }
 
@@ -291,16 +270,10 @@ void rvs::actionbase::property_get_run_wait(int *error) {
  */
 void rvs::actionbase::property_get_run_duration(int *error) {
   gst_run_duration_ms = 0;
-  auto it = property.find(RVS_CONF_DURATION_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      gst_run_duration_ms = std::stoul(it->second);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_DURATION_KEY, &val)) {
+    rvs_util_parse<uint64_t>(val, &gst_run_duration_ms, error);
   }
 }
 
@@ -308,18 +281,11 @@ void rvs::actionbase::property_get_run_duration(int *error) {
  * @brief reads the sample interval from the module's properties collection
  */
 int rvs::actionbase::property_get_sample_interval(int *error) {
-  int sample_int = -1;
-  auto it = property.find(RVS_CONF_SAMPLE_INTERVAL_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      sample_int = std::stoi(it->second);
-      property.erase(it);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  uint32_t sample_int = -1;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_SAMPLE_INTERVAL_KEY, &val)) {
+    rvs_util_parse<uint32_t>(val, &sample_int, error);
   }
   return sample_int;
 }
@@ -329,17 +295,10 @@ int rvs::actionbase::property_get_sample_interval(int *error) {
  */
 int rvs::actionbase::property_get_log_interval(int *error) {
   int log_int = -1;
-  auto it = property.find(RVS_CONF_LOG_INTERVAL_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      log_int = std::stoul(it->second);
-      property.erase(it);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_LOG_INTERVAL_KEY, &val)) {
+    rvs_util_parse<int>(val, &log_int, error);
   }
   return log_int;
 }
