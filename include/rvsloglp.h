@@ -71,6 +71,9 @@ class lp {
   static bool  get_ticks(unsigned int* psec, unsigned int* pusec);
   static void  Stop(uint16_t flags);
   static bool  Stopping();
+  static int   Err(const std::string &Msg);
+  static int   Err(const std::string &Module, const std::string &Msg);
+  static int   Err(const std::string &Module, const std::string &Action, const std::string &Msg);
 
  protected:
   //! Module init structure passed through Initialize() method
