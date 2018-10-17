@@ -122,7 +122,12 @@ void rvs::cli::extract_path() {
 void rvs::cli::init_grammar() {
   std::shared_ptr<optbase> sp;
 
+  while(!context.empty()) context.pop();
   grammar.clear();
+  itoken = 1;
+  errstr.clear();
+  current_option.clear();
+  current_value.clear();
 
   sp = std::make_shared<optbase>("-a", command);
   grammar.insert(gpair("-a", sp));
