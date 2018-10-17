@@ -46,6 +46,18 @@ set(CMAKE_BUILD_TYPE Debug)
 
 project ( ${RVS_TARGET} )
 
+## Set default unit test framework include path
+if ( NOT DEFINED UT_INC )
+    set ( UT_INC "${CMAKE_CURRENT_SOURCE_DIR}/../../gtest/googletest/include" )
+    message ( "UT_INC ${UT_INC}" )
+endif ()
+
+## Set default unit test framework include path
+if ( NOT DEFINED UT_LIB )
+    set ( UT_LIB "${CMAKE_CURRENT_SOURCE_DIR}/../../gtest/build/lib" )
+    message ( "UT_LIB ${UT_LIB}" )
+endif ()
+
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
@@ -79,19 +91,25 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set ( PROJECT_LINK_LIBS libdl.so "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../yaml-cpp/libyaml-cpp.a" libpthread.so)
 
 ## define include directories
-include_directories(include ../include ${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/include )
+include_directories(include ../include ${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/include ${UT_INC})
 
 ## define source files
 set(SOURCES
-  src/rvs.cpp src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp src/rvscli.cpp src/rvsexec.cpp src/rvsexec_do_yaml.cpp 
+  src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp src/rvscli.cpp src/rvsexec.cpp src/rvsexec_do_yaml.cpp
   src/rvsoptions.cpp
   ../src/rvsliblogger.cpp ../src/rvslognodebase.cpp ../src/rvslognoderec.cpp ../src/rvslognode.cpp ../src/rvslognodestring.cpp ../src/rvslognodeint.cpp
 )
 
 ## define target
-add_executable(${RVS_TARGET} ${SOURCES})
-
+add_executable(${RVS_TARGET} src/rvs.cpp ${SOURCES})
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+
+## define test target
+file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
+message ( "TESTSOURCES ${TESTSOURCES}" )
+
+add_executable(rvstest ${TESTSOURCES} ${SOURCES})
+target_link_libraries(rvstest ${PROJECT_LINK_LIBS} ${UT_LIB}/libgtest.a ${UT_LIB}/libgtest_main.a )
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
