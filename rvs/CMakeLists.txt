@@ -42,26 +42,13 @@ set ( RVS "rvs" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
-set(CMAKE_BUILD_TYPE Debug)
 
 project ( ${RVS_TARGET} )
 
-## Set default unit test framework include path
-if ( NOT DEFINED UT_INC )
-    set ( UT_INC "${CMAKE_CURRENT_SOURCE_DIR}/../../gtest/googletest/include" )
-    message ( "UT_INC ${UT_INC}" )
-endif ()
-
-## Set default unit test framework include path
-if ( NOT DEFINED UT_LIB )
-    set ( UT_LIB "${CMAKE_CURRENT_SOURCE_DIR}/../../gtest/build/lib" )
-    message ( "UT_LIB ${UT_LIB}" )
-endif ()
-
-## Set default module path if not already set
-if ( NOT DEFINED CMAKE_MODULE_PATH )
-    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
-endif ()
+# ## Set default module path if not already set
+# if ( NOT DEFINED CMAKE_MODULE_PATH )
+#     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
+# endif ()
 
 ## Include common cmake modules
 include ( utils )
@@ -109,7 +96,7 @@ file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 message ( "TESTSOURCES ${TESTSOURCES}" )
 
 add_executable(rvstest ${TESTSOURCES} ${SOURCES})
-target_link_libraries(rvstest ${PROJECT_LINK_LIBS} ${UT_LIB}/libgtest.a ${UT_LIB}/libgtest_main.a )
+target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
