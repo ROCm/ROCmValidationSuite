@@ -122,7 +122,7 @@ void rvs::cli::extract_path() {
 void rvs::cli::init_grammar() {
   std::shared_ptr<optbase> sp;
 
-  while(!context.empty()) context.pop();
+  while (!context.empty()) context.pop();
   grammar.clear();
   itoken = 1;
   errstr.clear();
