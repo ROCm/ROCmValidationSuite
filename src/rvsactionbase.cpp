@@ -30,9 +30,12 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "rvs_util.h"
 
+using std::cout;
+using std::endl;
 /**
  * @brief Default constructor.
  *
@@ -158,9 +161,9 @@ void rvs::actionbase::property_get_uint_list(const std::string& key,
  * @return deviceid value if valid, -1 otherwise
  */
 int rvs::actionbase::property_get_deviceid(int *error) {
-    uint32_t deviceid = 0;
+    uint32_t deviceid;
     std::string val;
-    *error = 0; // init with 'no error'
+    *error = 2;  // init with 'no error'   
     if (has_property(RVS_CONF_DEVICEID_KEY, &val)) {
       rvs_util_parse<uint32_t>(val, &deviceid, error);
     }
