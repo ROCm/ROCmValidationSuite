@@ -72,7 +72,8 @@ class logger {
   static  int    JsonPatchAppend(void);
   static  void   Stop(uint16_t flags);
   static  bool   Stopping(void);
-  static  int    Err(const char *Module, const char *Action, const char *Message);
+  static  int    Err(const char *Mesage,
+                     const char *Action, const char *Module);
 
  protected:
   //! Current logging level (0..5)

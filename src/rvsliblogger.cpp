@@ -560,11 +560,13 @@ bool rvs::logger::Stopping(void) {
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::logger::Err(const char* Module, const char* Action
-        , const char* Message) {
-
+int rvs::logger::Err(const char* Message, const char* Action
+        , const char* Module) {
+  if (Message == nullptr) {
+    return 1;
+  }
   std::string module =
-      Module != nullptr ? std::string("[") + Module + "] " : ""; 
+      Module != nullptr ? std::string("[") + Module + "] " : "";
   std::string action =
       Action != nullptr ? std::string("[") + Action + "] " : "";
   std::string message = Message;

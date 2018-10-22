@@ -64,7 +64,6 @@
 
 #define BUFFER_SIZE 3000
 
-using std::cerr;
 using std::string;
 using std::iterator;
 using std::endl;
@@ -104,9 +103,9 @@ int action::run() {
   // get the action name
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
-    msg = "action field is missing in gst module";
-    cerr << "RVS-RCQT: " << msg;
-    return -1;
+    msg = "action field is missing";
+    rvs::lp::Err(msg, action_name, MODULE_NAME);
+    return 1;
   }
 
   // check for -j flag (json logging)
@@ -122,7 +121,8 @@ int action::run() {
       msg =
       action_name + " " + MODULE_NAME + " "
       + JSON_CREATE_NODE_ERROR;
-      cerr << "RVS-RCQT: " << msg;
+      rvs::lp::Err(msg, action_name, MODULE_NAME);
+      return 1;
     }
   }
 
@@ -253,7 +253,7 @@ int action::pkgchk_run() {
       }
     } else {
       // fork process error
-      cerr << "RVS-RCQT: INTERNAL_ERROR" << '\n';
+      rvs::lp::Err(MODULE_NAME, action_name, "INTERNAL_ERROR");
       return -1;
     }
     return 0;
@@ -290,8 +290,8 @@ int action::usrchk_run() {
     // Check for given user
     if (getpwnam_r(user_name.c_str()
       , &pwd, pwdbuffer, pwdbufflenght, &result) != 0) {
-      cerr << "RVS-RCQT: Error with getpwnam_r" << endl;
-      return -1;
+      rvs::lp::Err(MODULE_NAME, action_name, "Error with getpwnam_r");
+      return 1;
     }
     if (result == nullptr) {
       log(user_not_exists.c_str(), rvs::logresults);
@@ -318,29 +318,32 @@ int action::usrchk_run() {
 
         if ((error_group =  getgrnam_r(vector_iter->c_str()
           , &grp, pwdbuffer, pwdbufflenght, &grprst)) != 0) {
-          cerr << "RVS-RCQT: Error with getgrnam_r" << endl;
-          return -1;
+          rvs::lp::Err(MODULE_NAME, action_name, "Error with getpwnam_r");
+          return 1;
         }
         if (error_group == EIO) {
-          cerr << "RVS-RCQT: IO error" << endl;
-          return -1;
+          rvs::lp::Err(MODULE_NAME, action_name, "IO error");
+          return 1;
         } else if (error_group == EINTR) {
-          cerr << "RVS-RCQT: Error sginal was caught during getgrnam_r" << endl;
-          return -1;
+          rvs::lp::Err(MODULE_NAME, action_name
+              , "Error sginal was caught during getgrnam_r");
+          return 1;
         } else if (error_group == EMFILE) {
-          cerr << "RVS-RCQT: Error file descriptors are currently open" << endl;
-          return -1;
+          rvs::lp::Err(MODULE_NAME, action_name
+              , "Error file descriptors are currently open");
+          return 1;
         } else if (error_group == ERANGE) {
-          cerr << "RVS-RCQT: Error insufficient buffer in getgrnam_r" << endl;
-          return -1;
+          rvs::lp::Err(MODULE_NAME, action_name
+              , "Error insufficient buffer in getgrnam_r");
+          return 1;
         }
         string err_msg;
         if (grprst == nullptr) {
           err_msg = "group ";
           err_msg += vector_iter->c_str();
           err_msg += " does not exist";
-          cerr << "RVS-RCQT: " << err_msg << endl;
-          return -1;
+          rvs::lp::Err(MODULE_NAME, action_name, err_msg);
+          return 1;
         }
 
         int i;
@@ -398,8 +401,9 @@ int action::kernelchk_run() {
     // Check kernel version
     if (has_property(KERNEL_VERSION,
       &kernel_version_values) == false) {
-      cerr << "RVS-RCQT: Kernel version missing in config" << endl;
-      return -1;
+      rvs::lp::Err(MODULE_NAME, action_name
+            , "Kernel version missing in config");
+      return 1;
     }
 
     /*
@@ -438,15 +442,16 @@ int action::kernelchk_run() {
       }
     }
     if (os_version_found_in_system == false) {
-      cerr << "RVS-RCQT: Unable to locate actual OS installed" << endl;
-      return -1;
+      rvs::lp::Err(MODULE_NAME, action_name
+            , "Unable to locate actual OS installed");
+      return 1;
     }
 
     // Get data about the kernel version
     struct utsname kernel_version_struct;
     if (uname(&kernel_version_struct) != 0) {
-      cerr << "RVS-RCQT: Unable to read kernel version" << endl;
-      return -1;
+      rvs::lp::Err(MODULE_NAME, action_name, "Unable to read kernel version");
+      return 1;
     }
 
     string kernel_actual = kernel_version_struct.release;
@@ -489,12 +494,14 @@ int action::ldcfgchk_run() {
   string ldpath_requested;
   if (has_property(SONAME, &soname_requested)) {
     if (has_property(ARCH, &arch_requested) == false) {
-      cerr << "RVS-RCQT: acrhitecture field missing in config" << endl;
-      return -1;
+      rvs::lp::Err(MODULE_NAME, action_name
+          , "acrhitecture field missing in config");
+      return 1;
     }
     if (has_property(LDPATH, &ldpath_requested) == false) {
-      cerr << "RVS-RCQT: library path field missing in config" << endl;
-      return -1;
+      rvs::lp::Err(MODULE_NAME, action_name
+          , "library path field missing in config");
+      return 1;
     }
     // Full path of shared object
     string full_ld_path = ldpath_requested + "/" + soname_requested;
@@ -563,13 +570,12 @@ int action::ldcfgchk_run() {
         }
       }
     } else {
-      cerr << "RVS-RCQT: Internal Error" << endl;
-      return -1;
+      rvs::lp::Err(MODULE_NAME, action_name, " Internal Error");
+      return 1;
     }
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
-
     return 0;
   }
   return -1;
@@ -644,9 +650,8 @@ int action::filechk_run() {
         struct passwd p, *result;
         char pbuff[256];
         if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0)) {
-          cerr << "RVS-RCQT: ["<< action_name << "] Error with getpwuid_r"
-          << endl;
-          return -1;
+          rvs::lp::Err(MODULE_NAME, action_name, " Error with getpwuid_r");
+          return 1;
         }
         if (p.pw_name == owner)
           check = "true";
@@ -668,9 +673,8 @@ int action::filechk_run() {
         struct group g, *result;
         char pbuff[256];
         if ((getgrgid_r(info.st_gid, &g, pbuff, sizeof(pbuff), &result) != 0)) {
-          cerr << "RVS-RCQT: [" << action_name <<
-            "] Error with getgrgid_r" << endl;
-          return -1;
+            rvs::lp::Err(MODULE_NAME, action_name, "Error with getgrgid_r");
+          return 1;
         }
         if (g.gr_name == group)
           check = "true";
