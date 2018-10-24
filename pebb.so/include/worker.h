@@ -82,6 +82,8 @@ class pebbworker : public rvs::ThreadBase {
   uint16_t get_transfer_num() { return transfer_num; }
   //! Set list of test sizes
   void set_block_sizes(const std::vector<uint32_t>& val) { block_size = val; }
+  //! Set logging level
+  void set_loglevel(const int level) { loglevel = level; }
 
  protected:
   virtual void run(void);
@@ -126,6 +128,8 @@ class pebbworker : public rvs::ThreadBase {
   uint16_t transfer_ix;
   //! total number of transfers
   uint16_t transfer_num;
+  //! logging level
+  int loglevel;
 
   //! list of test block sizes
   std::vector<uint32_t> block_size;

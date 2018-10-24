@@ -572,7 +572,13 @@ void pebbaction::do_final_average() {
     }
   }
 
+  // signal main thread to stop
   brun = false;
+
+  // signal worker threads to stop
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
+  }
 }
 
 /**
