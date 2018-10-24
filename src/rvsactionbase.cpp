@@ -161,9 +161,9 @@ void rvs::actionbase::property_get_uint_list(const std::string& key,
  * @return deviceid value if valid, -1 otherwise
  */
 int rvs::actionbase::property_get_deviceid(int *error) {
-    uint32_t deviceid;
+    uint32_t deviceid = -1;
     std::string val;
-    *error = 2;  // init with 'no error'   
+    *error = 2;  // init with 'no error'
     if (has_property(RVS_CONF_DEVICEID_KEY, &val)) {
       rvs_util_parse<uint32_t>(val, &deviceid, error);
     }
@@ -187,7 +187,7 @@ bool rvs::actionbase::property_get_device(int *error) {
                     YAML_DEVICE_PROP_DELIMITER);
 
             if (device_prop_gpu_id_list.empty()) {
-                *error = 1;  // list of gpu_id cannot be empty
+                *error = 2;  // list of gpu_id cannot be empty
             } else {
                 for (vector<string>::iterator it_gpu_id =
                         device_prop_gpu_id_list.begin();
