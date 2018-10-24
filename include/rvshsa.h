@@ -42,6 +42,13 @@
 using std::string;
 using std::vector;
 
+#ifdef TRACEHSA
+  #define RVSHSATRACE_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
+  +std::to_string(__LINE__), rvs::logtrace);
+#else
+  #define RVSHSATRACE_
+#endif
+
 namespace rvs {
 
 /**
@@ -161,13 +168,13 @@ class hsa {
 
   static hsa_status_t ProcessAgent(hsa_agent_t agent, void* data);
   static hsa_status_t ProcessMemPool(hsa_amd_memory_pool_t pool, void* data);
-  static void print_hsa_status(string message, hsa_status_t st);
-  static void print_hsa_status(const std::string& file, int line,
-                               const std::string& function, hsa_status_t st);
-  static void print_hsa_status(const std::string& file,
+  static void print_hsa_status(const char* message, hsa_status_t st);
+  static void print_hsa_status(const char* file, int line,
+                               const char* function, hsa_status_t st);
+  static void print_hsa_status(const char* file,
                                 int line,
-                                const std::string& function,
-                                const std::string& msg,
+                                const char* function,
+                                const char* msg,
                                 hsa_status_t st);
   double GetCopyTime(bool bidirectional,
                      hsa_signal_t signal_fwd, hsa_signal_t signal_rev);

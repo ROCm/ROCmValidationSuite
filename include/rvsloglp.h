@@ -32,8 +32,12 @@
 #define RVSDEBUG_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
 +std::to_string(__LINE__), rvs::logdebug);
 
-#define RVSTRACE_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
-+std::to_string(__LINE__), rvs::logtrace);
+#ifdef DEBUG
+  #define RVSTRACE_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
+  +std::to_string(__LINE__), rvs::logtrace);
+#else
+  #define RVSTRACE_
+#endif
 
 namespace rvs {
 
