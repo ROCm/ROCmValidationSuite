@@ -63,7 +63,7 @@ Compile RVS:
 
     cd $RVS
 
-    cmake ./ -B../build
+    cmake -DCMAKE_BUILD_TYPE=Debug ./ -B../build
     make -C ../build
 
 Build package:
