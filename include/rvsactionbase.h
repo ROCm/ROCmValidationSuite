@@ -51,6 +51,7 @@
 #define RVS_CONF_SAMPLE_INTERVAL_KEY    "sample_interval"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
 #define RVS_CONF_TERMINATE_KEY          "terminate"
+#define RVS_CONF_LOG_LEVEL_KEY          "cli.-d"
 
 namespace rvs {
 /**
@@ -85,6 +86,7 @@ class actionbase {
   void property_get_run_duration(int *error);
   int  property_get_sample_interval(int *error);
   int  property_get_log_interval(int *error);
+  void property_get_log_level(int *error);
   bool property_get_terminate(int* error);
   void property_get_uint_list(const std::string& key,
                                    const std::string& delimiter,
@@ -118,6 +120,9 @@ class actionbase {
 
   //! List of all gpu_id in the action's "device" property in .config file
   std::vector<std::string> device_prop_gpu_id_list;
+
+  //! logging level
+  int property_log_level;
 };
 }  // namespace rvs
 #endif  // INCLUDE_RVSACTIONBASE_H_

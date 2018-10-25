@@ -47,7 +47,7 @@ extern "C" {
 
 
 #include "rvs_module.h"
-#include "worker.h"
+#include "worker_b2b.h"
 
 #define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
 #define DEFAULT_LOG_INTERVAL 1000
@@ -56,6 +56,8 @@ extern "C" {
 #define MODULE_NAME "pebb"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 #define RVS_CONF_BLOCK_SIZE_KEY "block_size"
+#define RVS_CONF_B2B_BLOCK_SIZE_KEY "b2b_block_size"
+#define RVS_CONF_LINK_TYPE_KEY "link_type"
 
 using std::cout;
 using std::endl;
@@ -68,6 +70,8 @@ pebbaction::pebbaction() {
   prop_deviceid = -1;
   prop_device_id_filtering = false;
   bjson = false;
+  b2b_block_size = 0;
+  link_type = -1;
 }
 
 //! Default destructor
@@ -89,7 +93,7 @@ void pebbaction::property_get_h2d() {
 }
 
 /**
- *  * @brief reads the module's properties collection to see if
+ *  @brief reads the module's properties collection to see if
  * device to host transfers will be considered
  */
 void pebbaction::property_get_d2h() {
@@ -99,6 +103,85 @@ void pebbaction::property_get_d2h() {
     if (it->second == "false")
       prop_d2h = false;
   }
+}
+
+/**
+ * gets the b2b_block_size key from the module's properties collection
+ * @param error pointer to a memory location where the error code will be stored
+ * @return size of data block to be used in b2b transfer
+ */
+uint32_t pebbaction::property_get_b2b_size(int* error) {
+  std::string val;
+  if (!has_property(RVS_CONF_B2B_BLOCK_SIZE_KEY, &val)) {
+    *error = 2;
+    return 0;
+  }
+
+  if (!is_positive_integer(val)) {
+    *error = 1;
+    return 0;
+  }
+
+  uint32_t retval = 0;
+  try {
+    retval = std::stoul(val);
+  } catch(...) {
+    *error = 1;
+    return 0;
+  }
+
+  return retval;
+}
+
+/**
+ * gets value for link_type key. This value is used to filter host-device links.
+ * @param error pointer to a memory location where the error code will be stored
+ * @return link type (in line with hsa_amd_link_info_type_t)
+ */
+int pebbaction::property_get_link_type(int* error) {
+  std::string val;
+  if (!has_property(RVS_CONF_LINK_TYPE_KEY, &val)) {
+    *error = 2;
+    return -1;
+  }
+
+  if (!is_positive_integer(val)) {
+    *error = 1;
+    return -1;
+  }
+
+  int retval = -1;
+  try {
+    retval = std::stoi(val);
+  } catch(...) {
+    *error = 1;
+    return -1;
+  }
+
+  return retval;
+}
+
+/**
+ * checks if all the links in @p arrLinkInfo are of type returned by
+ * @p property_get_link_type() func
+ * @param arrLinkInfo array of links between two HSA nodes
+ * @return 'true' if all links are of type defined by link_type key
+ * @return 'false' otherwise
+ */
+bool pebbaction::check_link_type(
+  const std::vector<rvs::linkinfo_t>& arrLinkInfo) {
+  // nothing to check - just return
+  if (link_type < 0)
+    return true;
+
+  // all link segmenst should have the requested type or the test fails
+  bool retval = true;
+  for (auto it = arrLinkInfo.begin(); it != arrLinkInfo.end(); ++it) {
+    if (it->etype != link_type) {
+      retval = false;
+    }
+  }
+  return retval;
 }
 
 /**
@@ -135,6 +218,20 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
     block_size.clear();
   }
 
+  b2b_block_size = property_get_b2b_size(&error);
+  if (error == 1) {
+    cerr << "RVS-PEBB: action: " << action_name <<
+    "  invalid '" << RVS_CONF_B2B_BLOCK_SIZE_KEY << "' key" << std::endl;
+    return false;
+  }
+
+  link_type = property_get_link_type(&error);
+  if (error == 1) {
+    cerr << "RVS-PEBB: action: " << action_name <<
+    "  invalid '" << RVS_CONF_LINK_TYPE_KEY << "' key" << std::endl;
+    return false;
+  }
+
   return true;
 }
 
@@ -160,12 +257,12 @@ bool pebbaction::get_all_common_config_keys(void) {
   if (has_property("device", &sdev)) {
     prop_device_all_selected = property_get_device(&error);
     if (error) {  // log the error & abort GST
-      cerr << "RVS-PQT: action: " << action_name <<
+      cerr << "RVS-PEBB: action: " << action_name <<
       "  invalid 'device' key value " << sdev << std::endl;
       return false;
     }
   } else {
-    cerr << "RVS-PQT: action: " << action_name <<
+    cerr << "RVS-PEBB: action: " << action_name <<
     "  key 'device' was not found" << std::endl;
     return false;
   }
@@ -179,7 +276,7 @@ bool pebbaction::get_all_common_config_keys(void) {
         prop_device_id_filtering = true;
       }
     } else {
-      cerr << "RVS-PQT: action: " << action_name <<
+      cerr << "RVS-PEBB: action: " << action_name <<
       "  invalid 'deviceid' key value " << sdevid << std::endl;
       return false;
     }
@@ -190,7 +287,7 @@ bool pebbaction::get_all_common_config_keys(void) {
   // get the other action/GST related properties
   rvs::actionbase::property_get_run_parallel(&error);
   if (error == 1) {
-    cerr << "RVS-PQT: action: " << action_name <<
+    cerr << "RVS-PEBB: action: " << action_name <<
     "  invalid '" << RVS_CONF_PARALLEL_KEY <<
     "' key value" << std::endl;
     return false;
@@ -198,26 +295,32 @@ bool pebbaction::get_all_common_config_keys(void) {
 
   rvs::actionbase::property_get_run_count(&error);
   if (error == 1) {
-      cerr << "RVS-PQT: action: " << action_name <<
+      cerr << "RVS-PEBB: action: " << action_name <<
           "  invalid '" << RVS_CONF_COUNT_KEY << "' key value" << std::endl;
       return false;
   }
 
   rvs::actionbase::property_get_run_wait(&error);
   if (error == 1) {
-      cerr << "RVS-PQT: action: " << action_name <<
+      cerr << "RVS-PEBB: action: " << action_name <<
           "  invalid '" << RVS_CONF_WAIT_KEY << "' key value" << std::endl;
       return false;
   }
 
   rvs::actionbase::property_get_run_duration(&error);
   if (error == 1) {
-    cerr << "RVS-PQT: action: " << action_name <<
+    cerr << "RVS-PEBB: action: " << action_name <<
     "  invalid '" << RVS_CONF_DURATION_KEY <<
     "' key value" << std::endl;
     return false;
   }
 
+  property_get_log_level(&error);
+  if (error == 1) {
+    cerr << "RVS-PEBB: action: " << action_name <<
+    "  invalid logging level value" << std::endl;
+    return false;
+  }
   return true;
 }
 
@@ -267,8 +370,6 @@ int pebbaction::create_threads() {
       }
     }
 
-    bmatch_found = true;
-
     int dstnode;
     int srcnode;
 
@@ -278,8 +379,6 @@ int pebbaction::create_threads() {
          cpu_index++) {
       RVSTRACE_
 
-      bool b_reverse = false;
-
       dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
       if (dstnode < 0) {
         RVSTRACE_
@@ -288,11 +387,12 @@ int pebbaction::create_threads() {
         return -1;
       }
       RVSTRACE_
-      transfer_ix += 1;
       srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
 
       // get link info regardless of peer status (just in case...)
       uint32_t distance = 0;
+      bool b_reverse = false;
+
       std::vector<rvs::linkinfo_t> arr_linkinfo;
       rvs::hsa::Get()->GetLinkInfo(srcnode, dstnode,
                                          &distance, &arr_linkinfo);
@@ -307,23 +407,48 @@ int pebbaction::create_threads() {
           b_reverse = true;
         }
       }
+
+      // if link type is specified, check that it matches
+      if (!check_link_type(arr_linkinfo))
+        continue;
+
+      bmatch_found = true;
+      transfer_ix += 1;
+
       print_link_info(srcnode, dstnode, gpu_id[i],
                       distance, arr_linkinfo, b_reverse);
 
       // if GPUs are peers, create transaction for them
       if (rvs::hsa::Get()->GetPeerStatus(srcnode, dstnode)) {
         RVSTRACE_
-        pebbworker* p = new pebbworker;
-        if (p == nullptr) {
+        pebbworker* p = nullptr;
+        if (gst_runs_parallel && b2b_block_size > 0) {
           RVSTRACE_
-          std::cerr << "RVS-PEBB: internal error";
-          return -1;
+          pebbworker_b2b* pb2b = new pebbworker_b2b;
+          if (pb2b == nullptr) {
+            RVSTRACE_
+            std::cerr << "RVS-PEBB: internal error";
+            return -1;
+          }
+          pb2b->initialize(srcnode, dstnode,
+                           prop_h2d, prop_d2h, b2b_block_size);
+          p = pb2b;
+        } else {
+          RVSTRACE_
+          p = new pebbworker;
+          if (p == nullptr) {
+            RVSTRACE_
+            std::cerr << "RVS-PEBB: internal error";
+            return -1;
+          }
+          p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
         }
-        p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
+        RVSTRACE_
         p->set_name(action_name);
         p->set_stop_name(action_name);
         p->set_transfer_ix(transfer_ix);
         p->set_block_sizes(block_size);
+        p->set_loglevel(property_log_level);
         test_array.push_back(p);
       }
     }
@@ -555,20 +680,22 @@ int pebbaction::print_final_average() {
  *
  * */
 void pebbaction::do_final_average() {
-  std::string msg;
-  unsigned int sec;
-  unsigned int usec;
-  rvs::lp::get_ticks(&sec, &usec);
+  if (property_log_level >= rvs::logtrace) {
+    std::string msg;
+    unsigned int sec;
+    unsigned int usec;
+    rvs::lp::get_ticks(&sec, &usec);
 
-  msg = "[" + action_name + "] pebb in do_final_average";
-  rvs::lp::Log(msg, rvs::logtrace, sec, usec);
+    msg = "[" + action_name + "] pebb in do_final_average";
+    rvs::lp::Log(msg, rvs::logtrace, sec, usec);
 
-  if (bjson) {
-    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::logtrace, sec, usec);
-    if (pjson != NULL) {
-      rvs::lp::AddString(pjson, "message", "pebb in do_final_average");
-      rvs::lp::LogRecordFlush(pjson);
+    if (bjson) {
+      void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
+                              action_name.c_str(), rvs::logtrace, sec, usec);
+      if (pjson != NULL) {
+        rvs::lp::AddString(pjson, "message", "pebb in do_final_average");
+        rvs::lp::LogRecordFlush(pjson);
+      }
     }
   }
 
@@ -592,6 +719,10 @@ void pebbaction::do_running_average() {
   unsigned int sec;
   unsigned int usec;
   std::string msg;
+
+  if (!brun) {
+    return;
+  }
 
   rvs::lp::get_ticks(&sec, &usec);
   msg = "[" + action_name + "] pebb in do_running_average";

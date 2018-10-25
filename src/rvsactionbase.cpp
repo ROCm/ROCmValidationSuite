@@ -38,6 +38,7 @@
  *
  * */
 rvs::actionbase::actionbase() {
+  property_log_level = 2;
 }
 
 /**
@@ -363,5 +364,30 @@ bool rvs::actionbase::property_get_terminate(int *error) {
   }
 
   return term;
+}
+
+/**
+ * @brief reads the log level from the module's properties collection
+ */
+void rvs::actionbase::property_get_log_level(int *error) {
+  property_log_level = 2;
+  auto it = property.find(RVS_CONF_LOG_LEVEL_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      try {
+        property_log_level = std::stoul(it->second);
+      } catch(...) {
+        *error = 1;
+      }
+      if (property_log_level < 1 || property_log_level > 5) {
+        property_log_level = 2;
+        *error = 1;
+      }
+    } else {
+      *error = 1;
+    }
+  } else {
+    *error = 2;
+  }
 }
 

@@ -66,7 +66,7 @@ class pebbworker : public rvs::ThreadBase {
   const std::string& get_name(void) { return action_name; }
 
   int initialize(int iSrc, int iDst, bool h2d, bool d2h);
-  int do_transfer();
+  virtual int do_transfer();
   void get_running_data(int* Src, int* Dst, bool* Bidirect,
                         size_t* Size, double* Duration);
   void get_final_data(int* Src, int* Dst, bool* Bidirect,

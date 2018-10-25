@@ -149,6 +149,10 @@ class hsa {
 
   int FindAgent(uint32_t Node);
 
+  int Allocate(int SrcAgent, int DstAgent, size_t Size,
+                     hsa_amd_memory_pool_t* pSrcPool, void** SrcBuff,
+                     hsa_amd_memory_pool_t* pDstPool, void** DstBuff);
+
   int SendTraffic(uint32_t SrcNode, uint32_t DstNode,
                   size_t   Size,    bool     bidirectional,
                   double*  Duration);
@@ -158,16 +162,9 @@ class hsa {
                          const AgentInformation& DstAgent);
   int GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
                   uint32_t* pDistance, std::vector<linkinfo_t>* pInfoarr);
+  double GetCopyTime(bool bidirectional,
+                     hsa_signal_t signal_fwd, hsa_signal_t signal_rev);
 
- protected:
-  void InitAgents();
-
-  int Allocate(int SrcAgent, int DstAgent, size_t Size,
-                     hsa_amd_memory_pool_t* pSrcPool, void** SrcBuff,
-                     hsa_amd_memory_pool_t* pDstPool, void** DstBuff);
-
-  static hsa_status_t ProcessAgent(hsa_agent_t agent, void* data);
-  static hsa_status_t ProcessMemPool(hsa_amd_memory_pool_t pool, void* data);
   static void print_hsa_status(const char* message, hsa_status_t st);
   static void print_hsa_status(const char* file, int line,
                                const char* function, hsa_status_t st);
@@ -176,8 +173,12 @@ class hsa {
                                 const char* function,
                                 const char* msg,
                                 hsa_status_t st);
-  double GetCopyTime(bool bidirectional,
-                     hsa_signal_t signal_fwd, hsa_signal_t signal_rev);
+
+ protected:
+  void InitAgents();
+
+  static hsa_status_t ProcessAgent(hsa_agent_t agent, void* data);
+  static hsa_status_t ProcessMemPool(hsa_amd_memory_pool_t pool, void* data);
 
  protected:
   //! pointer to RVS HSA singleton

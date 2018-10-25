@@ -36,6 +36,11 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   message(STATUS "DEBUG defined")
 endif( )
 
+if (${RVS_DO_TRACE} STREQUAL "1")
+  add_definitions(-DRVS_DO_TRACE)
+  message(STATUS "RVS_DO_TRACE defined")
+endif( )
+
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
