@@ -29,10 +29,14 @@
 
 #include "rvsliblog.h"
 
-#define RVSDEBUG_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
-+std::to_string(__LINE__), rvs::logdebug);
+#define RVSDEBUG_(ATTR, VAL) \
+{std::string msg = std::string(__FILE__)+"   "+__func__+":" \
++std::to_string(__LINE__) + "\n" + std::string(ATTR) + ": " + \
+std::string(VAL); \
+rvs::lp::Log(msg, rvs::logdebug); \
+}
 
-#ifdef DEBUG
+#ifdef RVS_DO_TRACE
   #define RVSTRACE_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
   +std::to_string(__LINE__), rvs::logtrace);
 #else

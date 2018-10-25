@@ -36,7 +36,6 @@ extern "C" {
 #include <cstring>
 #include <string>
 #include <vector>
-#include <thread>
 
 #include "pci_caps.h"
 #include "gpu_util.h"
@@ -63,7 +62,6 @@ using std::endl;
 using std::cerr;
 using std::string;
 using std::vector;
-
 
 /**
  * @brief Main action execution entry point. Implements test logic.
@@ -100,57 +98,11 @@ int pebbaction::run() {
     return sts;
   }
 
-  // define timers
-  rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
-  rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
-
-  unsigned int iter = gst_run_count > 0 ? gst_run_count : 1;
-//  unsigned int step = gst_run_count == 0 ? 0 : 1;
-  unsigned int step = 1;
-
-  do {
-    // let the test run in this iteration
-    brun = true;
-
-    // start timers
-    if (gst_run_duration_ms) {
-      RVSTRACE_
-      timer_final.start(gst_run_duration_ms, true);  // ticks only once
-    }
-
-    if (prop_log_interval) {
-      RVSTRACE_
-      timer_running.start(prop_log_interval);        // ticks continuously
-    }
-
-    do {
-      RVSTRACE_
-
-      if (gst_runs_parallel) {
-        sts = run_parallel();
-      } else {
-        sts = run_single();
-      }
-    } while (brun);
-
-    RVSTRACE_
-    timer_running.stop();
-    timer_final.stop();
-
-    iter -= step;
-
-    // insert wait between runs if needed
-    if (iter > 0 && gst_run_wait_ms > 0) {
-      RVSTRACE_
-      sleep(gst_run_wait_ms);
-    }
-
-  } while (iter && !rvs::lp::Stopping());
-
-  RVSTRACE_
-  sts = rvs::lp::Stopping() ? -1 : 0;
-
-  print_final_average();
+  if (gst_runs_parallel) {
+    sts = run_parallel();
+  } else {
+    sts = run_single();
+  }
 
   destroy_threads();
 
@@ -166,27 +118,65 @@ int pebbaction::run() {
  * */
 int pebbaction::run_single() {
   RVSTRACE_
-  int sts = 0;
+  // define timers
+  rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
+  rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
 
-  // iterate through test array and invoke tests one by one
-  for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
+  // let the test run
+  brun = true;
+
+  unsigned int iter = gst_run_count > 0 ? gst_run_count : 1;
+  unsigned int step = gst_run_count == 0 ? 0 : 1;
+
+  // start timers
+  if (gst_run_duration_ms) {
     RVSTRACE_
-    (*it)->do_transfer();
-
-    // if log interval is zero, print current results immediately
-    if (prop_log_interval == 0) {
-      print_running_average(*it);
-    }
-
-    if (rvs::lp::Stopping()) {
-      RVSTRACE_
-      brun = false;
-      sts = -1;
-      break;
-    }
+    timer_final.start(gst_run_duration_ms, true);  // ticks only once
   }
 
-  return sts;
+  if (prop_log_interval) {
+    RVSTRACE_
+    timer_running.start(prop_log_interval);        // ticks continuously
+  }
+
+  // iterate through test array and invoke tests one by one
+  do {
+    RVSTRACE_
+    for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
+      RVSTRACE_
+      (*it)->do_transfer();
+
+      // if log interval is zero, print current results immediately
+      if (prop_log_interval == 0) {
+        print_running_average(*it);
+      }
+      sleep(1);
+
+      if (rvs::lp::Stopping()) {
+        RVSTRACE_
+        brun = false;
+        break;
+      }
+    }
+
+    RVSTRACE_
+    iter -= step;
+
+    // insert wait between runs if needed
+    if (iter > 0 && gst_run_wait_ms > 0) {
+      RVSTRACE_
+      sleep(gst_run_wait_ms);
+    }
+  } while (brun && iter);
+
+  RVSTRACE_
+  timer_running.stop();
+  timer_final.stop();
+
+  print_final_average();
+
+  RVSTRACE_
+  return rvs::lp::Stopping() ? -1 : 0;
 }
 
 /**
@@ -198,16 +188,51 @@ int pebbaction::run_single() {
  * */
 int pebbaction::run_parallel() {
   RVSTRACE_
+  // define timers
+  rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
+  rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
+
+  // let the test run
+  brun = true;
 
   // start all worker threads
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->start();
   }
 
+  // start timers
+  if (gst_run_duration_ms) {
+    timer_final.start(gst_run_duration_ms, true);  // ticks only once
+  }
+
+  if (prop_log_interval) {
+    timer_running.start(prop_log_interval);        // ticks continuously
+  }
+
+  // wait for test to complete
+  while (brun) {
+    if (rvs::lp::Stopping()) {
+      RVSTRACE_
+      brun = false;
+    }
+    sleep(1);
+  }
+
+  timer_running.stop();
+  timer_final.stop();
+
+  // signal all worker threads to stop
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
+  }
+  sleep(10);
+
   // join all worker threads
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->join();
   }
+
+  print_final_average();
 
   return rvs::lp::Stopping() ? -1 : 0;
 }
