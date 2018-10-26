@@ -163,7 +163,7 @@ void rvs::actionbase::property_get_uint_list(const std::string& key,
 int rvs::actionbase::property_get_deviceid(int *error) {
     uint32_t deviceid = -1;
     std::string val;
-    *error = 2;  // init with 'no error'
+    *error = 0;  // init with 'no error'
     if (has_property(RVS_CONF_DEVICEID_KEY, &val)) {
       rvs_util_parse<uint32_t>(val, &deviceid, error);
     }

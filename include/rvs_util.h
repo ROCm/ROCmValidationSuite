@@ -51,7 +51,7 @@ bool is_positive_integer(const std::string& str_val);
 template <class T> void rvs_util_parse(const string& buff,
                                     T* pval,
                                     int *error) {
-  if (buff.empty()) { //method empty
+  if (buff.empty()) {  // method empty
     *error = 2;
   } else {
     if (is_positive_integer(buff)) {
@@ -62,9 +62,9 @@ template <class T> void rvs_util_parse(const string& buff,
         *error = 1;  // we have an empty string
       }
     } else {
-      *error = 1;      
+      *error = 1;
     }
-  } 
+  }
 }
 
 #endif  // INCLUDE_RVS_UTIL_H_
