@@ -313,6 +313,16 @@ bool pebbaction::get_all_common_config_keys(void) {
     "  invalid '" << RVS_CONF_DURATION_KEY <<
     "' key value" << std::endl;
     return false;
+  } else if (error == 2) {
+    cerr << "RVS-PEBB: action: " << action_name <<
+    "  missing '" << RVS_CONF_DURATION_KEY <<
+    "' key" << std::endl;
+    return false;
+  } else if (gst_run_duration_ms == 0) {
+    cerr << "RVS-PEBB: action: " << action_name <<
+    "  '" << RVS_CONF_DURATION_KEY <<
+    "' key must be greater then zero" << std::endl;
+    return false;
   }
 
   property_get_log_level(&error);
