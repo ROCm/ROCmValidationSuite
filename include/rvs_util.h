@@ -27,9 +27,12 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 
 using std::vector;
 using std::string;
+using std::cout;
+using std::endl;
 
 extern vector<string> str_split(const string& str_val,
         const string& delimiter);
@@ -44,5 +47,24 @@ extern int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
                                      std::vector<uint32_t>* piArr);
 
 bool is_positive_integer(const std::string& str_val);
+
+template <class T> void rvs_util_parse(const string& buff,
+                                    T* pval,
+                                    int *error) {
+  if (buff.empty()) {  // method empty
+    *error = 2;
+  } else {
+    if (is_positive_integer(buff)) {
+      try {
+        *pval = std::stoul(buff);
+        *error = 0;
+      } catch(...) {
+        *error = 1;  // we have an empty string
+      }
+    } else {
+      *error = 1;
+    }
+  }
+}
 
 #endif  // INCLUDE_RVS_UTIL_H_
