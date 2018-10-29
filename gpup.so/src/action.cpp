@@ -24,6 +24,8 @@
  * 
  *******************************************************************************/
 
+#include "action.h"
+
 #include <string>
 #include <vector>
 #include <fstream>
@@ -31,19 +33,18 @@
 #include <map>
 #include <iostream>
 #include <sstream>
-#include "action.h"
+
+#include "rvs_key_def.h"
 #include "rvs_module.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvsloglp.h"
 
 
-#define KFD_SYS_PATH_NODES "/sys/class/kfd/kfd/topology/nodes"
+#define KFD_QUERYING_ERROR              "An error occurred while querying "\
+                                        "the GPU properties"
 
-#define RVS_CONF_NAME_KEY               "name"
-#define RVS_CONF_DEVICE_KEY             "device"
-#define RVS_CONF_DEVICE_ID_KEY          "device_id"
-#define RVS_JSON_LOG_GPU_ID_KEY         "gpu_id"
+#define KFD_SYS_PATH_NODES "/sys/class/kfd/kfd/topology/nodes"
 
 #define JSON_PROP_NODE_NAME             "properties"
 #define JSON_IO_LINK_PROP_NODE_NAME     "io_links-properties"
@@ -157,7 +158,7 @@ bool action::device_id_correct(int node_id, int dev_id) {
 
     if (dev_id != -1) {
         while (f_prop >> s) {
-            if (s == RVS_CONF_DEVICE_ID_KEY) {
+            if (s == RVS_CONF_DEVICEID_KEY) {
                 f_prop >> s;
                 if (std::to_string(dev_id) != s)  // skip this node
                     dev_id_corr = false;

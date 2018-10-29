@@ -73,8 +73,6 @@ class pebbaction : public rvs::actionbase {
   // module specific config keys
   void property_get_h2d();
   void property_get_d2h();
-  uint32_t property_get_b2b_size(int* error);
-  int property_get_link_type(int* error);
 
   //! array of peer GPU IDs to be used in data trasfers
   std::vector<std::string> prop_peers;
@@ -111,7 +109,6 @@ class pebbaction : public rvs::actionbase {
                       uint32_t Distance,
                       const std::vector<rvs::linkinfo_t>& arrLinkInfo,
                       bool bReverse);
-  bool check_link_type(const std::vector<rvs::linkinfo_t>& arrLinkInfo);
   int print_running_average();
   int print_running_average(pebbworker* pWorker);
   int print_final_average();
