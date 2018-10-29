@@ -72,9 +72,9 @@ class lp {
   static void  Stop(uint16_t flags);
   static bool  Stopping();
   static int   Err(const std::string &Msg);
-  static int   Err(const std::string &Module, const std::string &Msg);
-  static int   Err(const std::string &Message
-  , const std::string &Action, const std::string &Module);
+  static int   Err(const std::string &Msg, const std::string &Module);
+  static int   Err(const std::string &Msg
+    , const std::string &Module, const std::string &Action);
 
  protected:
   //! Module init structure passed through Initialize() method

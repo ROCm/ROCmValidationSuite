@@ -560,8 +560,8 @@ bool rvs::logger::Stopping(void) {
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::logger::Err(const char* Message, const char* Action
-        , const char* Module) {
+int rvs::logger::Err(const char* Message, const char* Module
+        , const char* Action) {
   if (Message == nullptr) {
     return 1;
   }

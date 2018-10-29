@@ -41,6 +41,7 @@
 #include "rvsloglp.h"
 
 #define MODULE_NAME "rcqt"
+#define MODULE_NAME_CAPS "RCQT"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 #define JSON_PKGCHK_NODE_NAME "pkgchk"
 #define JSON_USRCHK_NODE_NAME "usrckh"
@@ -104,7 +105,7 @@ int action::run() {
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing";
-    rvs::lp::Err(msg, action_name, MODULE_NAME);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return 1;
   }
 
@@ -121,7 +122,7 @@ int action::run() {
       msg =
       action_name + " " + MODULE_NAME + " "
       + JSON_CREATE_NODE_ERROR;
-      rvs::lp::Err(msg, action_name, MODULE_NAME);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return 1;
     }
   }
@@ -253,7 +254,7 @@ int action::pkgchk_run() {
       }
     } else {
       // fork process error
-      rvs::lp::Err(MODULE_NAME, action_name, "INTERNAL_ERROR");
+      rvs::lp::Err("INTERNAL_ERROR", MODULE_NAME_CAPS, action_name);
       return -1;
     }
     return 0;
@@ -290,7 +291,7 @@ int action::usrchk_run() {
     // Check for given user
     if (getpwnam_r(user_name.c_str()
       , &pwd, pwdbuffer, pwdbufflenght, &result) != 0) {
-      rvs::lp::Err(MODULE_NAME, action_name, "Error with getpwnam_r");
+      rvs::lp::Err("Error with getpwnam_r", MODULE_NAME_CAPS, action_name);
       return 1;
     }
     if (result == nullptr) {
@@ -318,23 +319,23 @@ int action::usrchk_run() {
 
         if ((error_group =  getgrnam_r(vector_iter->c_str()
           , &grp, pwdbuffer, pwdbufflenght, &grprst)) != 0) {
-          rvs::lp::Err(MODULE_NAME, action_name, "Error with getpwnam_r");
+          rvs::lp::Err("Error with getpwnam_r", MODULE_NAME_CAPS, action_name);
           return 1;
         }
         if (error_group == EIO) {
-          rvs::lp::Err(MODULE_NAME, action_name, "IO error");
+          rvs::lp::Err("IO error", MODULE_NAME_CAPS, action_name);
           return 1;
         } else if (error_group == EINTR) {
-          rvs::lp::Err(MODULE_NAME, action_name
-              , "Error sginal was caught during getgrnam_r");
+          rvs::lp::Err("Error sginal was caught during getgrnam_r"
+              , MODULE_NAME_CAPS, action_name);
           return 1;
         } else if (error_group == EMFILE) {
-          rvs::lp::Err(MODULE_NAME, action_name
-              , "Error file descriptors are currently open");
+          rvs::lp::Err("Error file descriptors are currently open"
+              , MODULE_NAME_CAPS, action_name);
           return 1;
         } else if (error_group == ERANGE) {
-          rvs::lp::Err(MODULE_NAME, action_name
-              , "Error insufficient buffer in getgrnam_r");
+          rvs::lp::Err("Error insufficient buffer in getgrnam_r"
+              , MODULE_NAME_CAPS, action_name);
           return 1;
         }
         string err_msg;
@@ -342,7 +343,7 @@ int action::usrchk_run() {
           err_msg = "group ";
           err_msg += vector_iter->c_str();
           err_msg += " does not exist";
-          rvs::lp::Err(MODULE_NAME, action_name, err_msg);
+          rvs::lp::Err(err_msg, MODULE_NAME, action_name);
           return 1;
         }
 
@@ -401,8 +402,8 @@ int action::kernelchk_run() {
     // Check kernel version
     if (has_property(KERNEL_VERSION,
       &kernel_version_values) == false) {
-      rvs::lp::Err(MODULE_NAME, action_name
-            , "Kernel version missing in config");
+      rvs::lp::Err("Kernel version missing in config"
+          , MODULE_NAME, action_name);
       return 1;
     }
 
@@ -442,15 +443,16 @@ int action::kernelchk_run() {
       }
     }
     if (os_version_found_in_system == false) {
-      rvs::lp::Err(MODULE_NAME, action_name
-            , "Unable to locate actual OS installed");
+      rvs::lp::Err("Unable to locate actual OS installed"
+          , MODULE_NAME_CAPS, action_name);
       return 1;
     }
 
     // Get data about the kernel version
     struct utsname kernel_version_struct;
     if (uname(&kernel_version_struct) != 0) {
-      rvs::lp::Err(MODULE_NAME, action_name, "Unable to read kernel version");
+      rvs::lp::Err("Unable to read kernel version"
+      , MODULE_NAME_CAPS, action_name);
       return 1;
     }
 
@@ -494,13 +496,13 @@ int action::ldcfgchk_run() {
   string ldpath_requested;
   if (has_property(SONAME, &soname_requested)) {
     if (has_property(ARCH, &arch_requested) == false) {
-      rvs::lp::Err(MODULE_NAME, action_name
-          , "acrhitecture field missing in config");
+      rvs::lp::Err("acrhitecture field missing in config"
+          , MODULE_NAME_CAPS, action_name);
       return 1;
     }
     if (has_property(LDPATH, &ldpath_requested) == false) {
-      rvs::lp::Err(MODULE_NAME, action_name
-          , "library path field missing in config");
+      rvs::lp::Err("library path field missing in config"
+          , MODULE_NAME_CAPS, action_name);
       return 1;
     }
     // Full path of shared object
@@ -570,7 +572,7 @@ int action::ldcfgchk_run() {
         }
       }
     } else {
-      rvs::lp::Err(MODULE_NAME, action_name, " Internal Error");
+      rvs::lp::Err("Internal Error", MODULE_NAME_CAPS, action_name);
       return 1;
     }
     if (bjson && json_rcqt_node != nullptr) {
@@ -650,7 +652,7 @@ int action::filechk_run() {
         struct passwd p, *result;
         char pbuff[256];
         if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0)) {
-          rvs::lp::Err(MODULE_NAME, action_name, " Error with getpwuid_r");
+          rvs::lp::Err("Error with getpwuid_r", MODULE_NAME_CAPS, action_name);
           return 1;
         }
         if (p.pw_name == owner)
@@ -673,7 +675,7 @@ int action::filechk_run() {
         struct group g, *result;
         char pbuff[256];
         if ((getgrgid_r(info.st_gid, &g, pbuff, sizeof(pbuff), &result) != 0)) {
-            rvs::lp::Err(MODULE_NAME, action_name, "Error with getgrgid_r");
+          rvs::lp::Err("Error with getgrgid_r", MODULE_NAME, action_name);
           return 1;
         }
         if (g.gr_name == group)

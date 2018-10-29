@@ -54,12 +54,12 @@ extern "C" {
 #define DEFAULT_DURATION 10000
 
 #define MODULE_NAME "pebb"
+#define MODULE_NAME_CAPS "PEBB"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 #define RVS_CONF_BLOCK_SIZE_KEY "block_size"
 
 using std::cout;
 using std::endl;
-using std::cerr;
 using std::string;
 using std::vector;
 
@@ -114,8 +114,8 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
   RVSTRACE_
   prop_log_interval = property_get_log_interval(&error);
   if (error == 1) {
-    cerr << "RVS-PEBB: action: " << action_name <<
-    "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "' key" << std::endl;
+    msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   } else if (error == 2) {
     prop_log_interval = DEFAULT_LOG_INTERVAL;
@@ -127,8 +127,8 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
   property_get_uint_list(RVS_CONF_BLOCK_SIZE_KEY, YAML_DEVICE_PROP_DELIMITER,
                          &block_size, &b_block_size_all, &error);
   if (error == 1) {
-      cerr << "RVS-PEBB: action: " << action_name << "  invalid '"
-           << RVS_CONF_BLOCK_SIZE_KEY << "' key" << std::endl;
+      msg = "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   } else if (error == 2) {
     b_block_size_all = true;
@@ -160,13 +160,13 @@ bool pebbaction::get_all_common_config_keys(void) {
   if (has_property("device", &sdev)) {
     prop_device_all_selected = property_get_device(&error);
     if (error) {  // log the error & abort GST
-      cerr << "RVS-PQT: action: " << action_name <<
-      "  invalid 'device' key value " << sdev << std::endl;
+      msg = "invalid 'device' key value " + sdev;
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
     }
   } else {
-    cerr << "RVS-PQT: action: " << action_name <<
-    "  key 'device' was not found" << std::endl;
+    msg = "key 'device' was not found";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
@@ -179,8 +179,8 @@ bool pebbaction::get_all_common_config_keys(void) {
         prop_device_id_filtering = true;
       }
     } else {
-      cerr << "RVS-PQT: action: " << action_name <<
-      "  invalid 'deviceid' key value " << sdevid << std::endl;
+      msg = "invalid 'deviceid' key value " + std::string(sdevid);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
     }
   } else {
@@ -190,31 +190,31 @@ bool pebbaction::get_all_common_config_keys(void) {
   // get the other action/GST related properties
   rvs::actionbase::property_get_run_parallel(&error);
   if (error == 1) {
-    cerr << "RVS-PQT: action: " << action_name <<
-    "  invalid '" << RVS_CONF_PARALLEL_KEY <<
-    "' key value" << std::endl;
+    msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
+    "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
   rvs::actionbase::property_get_run_count(&error);
   if (error == 1) {
-      cerr << "RVS-PQT: action: " << action_name <<
-          "  invalid '" << RVS_CONF_COUNT_KEY << "' key value" << std::endl;
+      msg ="invalid '" + std::string(RVS_CONF_COUNT_KEY) +"' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
   rvs::actionbase::property_get_run_wait(&error);
   if (error == 1) {
-      cerr << "RVS-PQT: action: " << action_name <<
-          "  invalid '" << RVS_CONF_WAIT_KEY << "' key value" << std::endl;
+      msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
   rvs::actionbase::property_get_run_duration(&error);
   if (error == 1) {
-    cerr << "RVS-PQT: action: " << action_name <<
-    "  invalid '" << RVS_CONF_DURATION_KEY <<
-    "' key value" << std::endl;
+    msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
+    "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
@@ -283,8 +283,9 @@ int pebbaction::create_threads() {
       dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
       if (dstnode < 0) {
         RVSTRACE_
-        std::cerr << "RVS-PEBB: no node found for destination GPU ID "
-          << std::to_string(gpu_id[i]);
+        msg = "no node found for destination GPU ID "
+          + std::to_string(gpu_id[i]);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
       RVSTRACE_
@@ -316,7 +317,8 @@ int pebbaction::create_threads() {
         pebbworker* p = new pebbworker;
         if (p == nullptr) {
           RVSTRACE_
-          std::cerr << "RVS-PEBB: internal error";
+          msg = "RVS-PEBB: internal error";
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
         }
         p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
@@ -403,8 +405,8 @@ int pebbaction::run() {
   // log_interval must be less than duration
   if (prop_log_interval > 0 && gst_run_duration_ms > 0) {
     if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
-      cerr << "RVS-PEBB: action: " << action_name <<
-          "  log_interval must be less than duration" << std::endl;
+      msg = "log_interval must be less than duration";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
   }

@@ -295,8 +295,8 @@ int rvs::lp::Err(const std::string &Message) {
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::lp::Err(const std::string &Module, const std::string &Message) {
-  return (*mi.cbErr)(Message.c_str(), Module.c_str(),nullptr);
+int rvs::lp::Err(const std::string &Message, const std::string &Module) {
+  return (*mi.cbErr)(Message.c_str(), Module.c_str(), nullptr);
 }
 
 /**
@@ -308,7 +308,7 @@ int rvs::lp::Err(const std::string &Module, const std::string &Message) {
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::lp::Err(const std::string &Module
-      , const std::string &Action, const std::string &Message) {
+int rvs::lp::Err(const std::string &Message
+      , const std::string &Module, const std::string &Action) {
   return (*mi.cbErr)(Message.c_str(), Module.c_str(), Action.c_str());
 }
