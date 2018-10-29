@@ -29,30 +29,6 @@
 #include <string>
 #include <vector>
 
-#define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
-#define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\
-                                        "property"
-#define YAML_TARGET_STRESS_PROP_ERROR   "Error while parsing <target_stress> "\
-                                        "property"
-#define YAML_DEVICE_PROP_DELIMITER      " "
-#define YAML_REGULAR_EXPRESSION_ERROR   "Regular expression error"
-
-#define KFD_QUERYING_ERROR              "An error occurred while querying "\
-                                        "the GPU properties"
-
-#define RVS_CONF_NAME_KEY               "name"
-#define RVS_CONF_DEVICE_KEY             "device"
-#define RVS_CONF_PARALLEL_KEY           "parallel"
-#define RVS_CONF_COUNT_KEY              "count"
-#define RVS_CONF_WAIT_KEY               "wait"
-#define RVS_CONF_DURATION_KEY           "duration"
-#define RVS_CONF_DEVICEID_KEY           "deviceid"
-#define RVS_JSON_LOG_GPU_ID_KEY         "gpu_id"
-#define RVS_CONF_SAMPLE_INTERVAL_KEY    "sample_interval"
-#define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
-#define RVS_CONF_TERMINATE_KEY          "terminate"
-#define RVS_CONF_LOG_LEVEL_KEY          "cli.-d"
-
 namespace rvs {
 /**
  * @class actionbase
@@ -93,6 +69,8 @@ class actionbase {
                                    std::vector<uint32_t>* pval,
                                    bool* pball,
                                    int *error);
+  uint32_t property_get_b2b_size(int* error);
+  int property_get_link_type(int* error);
 
  protected:
 /**

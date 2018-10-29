@@ -245,6 +245,29 @@ void rvs::hsa::print_hsa_status(const char* message, hsa_status_t st) {
   rvs::lp::Log(log_msg, rvs::logdebug);
 }
 
+/**
+ * checks if all the links in @p arrLinkInfo are of type @p LinkType
+ * @param arrLinkInfo array of links between two HSA nodes
+ * @param LinkType type of HSA link (in line with hsa_amd_link_info_type_t)
+ * @return 'true' if all links are of type defined by link_type key
+ * @return 'false' otherwise
+ */
+bool rvs::hsa::check_link_type(
+  const std::vector<rvs::linkinfo_t>& arrLinkInfo, int LinkType) {
+  // nothing to check - just return
+  if (LinkType < 0)
+    return true;
+
+  // all link segmenst should have the requested type or the test fails
+  bool retval = true;
+  for (auto it = arrLinkInfo.begin(); it != arrLinkInfo.end(); ++it) {
+    if (it->etype != LinkType) {
+      retval = false;
+    }
+  }
+  return retval;
+}
+
 
 /**
  * @brief Fetch all HSA agents
