@@ -270,7 +270,7 @@ int action::run(void) {
     bool device_all_selected = false;
     bool device_id_filtering = false;
     int error = 0;
-    uint16_t deviceid;
+    uint16_t deviceid = 0;
     vector<uint16_t> gpus_location_id;
     vector<uint16_t> gpus_id;
     uint8_t i;
