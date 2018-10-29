@@ -37,29 +37,23 @@ extern "C" {
 #include <string>
 #include <vector>
 
+#include "hsa/hsa.h"
+
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvsloglp.h"
 #include "rvshsa.h"
 #include "rvstimer.h"
-#include "hsa/hsa.h"
 
-
+#include "rvs_key_def.h"
 #include "rvs_module.h"
-#include "worker.h"
-
-#define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
-#define DEFAULT_LOG_INTERVAL 1000
-#define DEFAULT_DURATION 10000
+#include "worker_b2b.h"
 
 #define MODULE_NAME "pebb"
 #define MODULE_NAME_CAPS "PEBB"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
-#define RVS_CONF_BLOCK_SIZE_KEY "block_size"
 
-using std::cout;
-using std::endl;
 using std::string;
 using std::vector;
 
@@ -68,6 +62,8 @@ pebbaction::pebbaction() {
   prop_deviceid = -1;
   prop_device_id_filtering = false;
   bjson = false;
+  b2b_block_size = 0;
+  link_type = -1;
 }
 
 //! Default destructor
@@ -89,7 +85,7 @@ void pebbaction::property_get_h2d() {
 }
 
 /**
- *  * @brief reads the module's properties collection to see if
+ *  @brief reads the module's properties collection to see if
  * device to host transfers will be considered
  */
 void pebbaction::property_get_d2h() {
@@ -133,6 +129,20 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
   } else if (error == 2) {
     b_block_size_all = true;
     block_size.clear();
+  }
+
+  b2b_block_size = property_get_b2b_size(&error);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  }
+
+  link_type = property_get_link_type(&error);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
   }
 
   return true;
@@ -179,8 +189,10 @@ bool pebbaction::get_all_common_config_keys(void) {
         prop_device_id_filtering = true;
       }
     } else {
+
       msg = "invalid 'deviceid' key value " + std::string(sdevid);
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
       return false;
     }
   } else {
@@ -216,8 +228,24 @@ bool pebbaction::get_all_common_config_keys(void) {
     "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
+  } else if (error == 2) {
+    msg = "missing '" + std::string(RVS_CONF_DURATION_KEY) +
+    "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  } else if (gst_run_duration_ms == 0) {
+    msg = "'" + std::string(RVS_CONF_DURATION_KEY) +
+    "' key must be greater then zero";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
   }
 
+  property_get_log_level(&error);
+  if (error == 1) {
+    msg = "invalid logging level value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  }
   return true;
 }
 
@@ -267,8 +295,6 @@ int pebbaction::create_threads() {
       }
     }
 
-    bmatch_found = true;
-
     int dstnode;
     int srcnode;
 
@@ -277,8 +303,6 @@ int pebbaction::create_threads() {
          cpu_index < rvs::hsa::Get()->cpu_list.size();
          cpu_index++) {
       RVSTRACE_
-
-      bool b_reverse = false;
 
       dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
       if (dstnode < 0) {
@@ -289,11 +313,12 @@ int pebbaction::create_threads() {
         return -1;
       }
       RVSTRACE_
-      transfer_ix += 1;
       srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
 
       // get link info regardless of peer status (just in case...)
       uint32_t distance = 0;
+      bool b_reverse = false;
+
       std::vector<rvs::linkinfo_t> arr_linkinfo;
       rvs::hsa::Get()->GetLinkInfo(srcnode, dstnode,
                                          &distance, &arr_linkinfo);
@@ -308,24 +333,50 @@ int pebbaction::create_threads() {
           b_reverse = true;
         }
       }
+
+      // if link type is specified, check that it matches
+      if (!rvs::hsa::check_link_type(arr_linkinfo, link_type))
+        continue;
+
+      bmatch_found = true;
+      transfer_ix += 1;
+
       print_link_info(srcnode, dstnode, gpu_id[i],
                       distance, arr_linkinfo, b_reverse);
 
       // if GPUs are peers, create transaction for them
       if (rvs::hsa::Get()->GetPeerStatus(srcnode, dstnode)) {
         RVSTRACE_
-        pebbworker* p = new pebbworker;
-        if (p == nullptr) {
+        pebbworker* p = nullptr;
+        if (gst_runs_parallel && b2b_block_size > 0) {
           RVSTRACE_
-          msg = "RVS-PEBB: internal error";
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return -1;
+          pebbworker_b2b* pb2b = new pebbworker_b2b;
+          if (pb2b == nullptr) {
+            RVSTRACE_
+            msg = "internal error";
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+            return -1;
+          }
+          pb2b->initialize(srcnode, dstnode,
+                           prop_h2d, prop_d2h, b2b_block_size);
+          p = pb2b;
+        } else {
+          RVSTRACE_
+          p = new pebbworker;
+          if (p == nullptr) {
+            RVSTRACE_
+            msg = "internal error";
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+            return -1;
+          }
+          p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
         }
-        p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
+        RVSTRACE_
         p->set_name(action_name);
         p->set_stop_name(action_name);
         p->set_transfer_ix(transfer_ix);
         p->set_block_sizes(block_size);
+        p->set_loglevel(property_log_level);
         test_array.push_back(p);
       }
     }
@@ -380,180 +431,6 @@ int pebbaction::destroy_threads() {
     delete *it;
   }
   return 0;
-}
-
-/**
- * @brief Main action execution entry point. Implements test logic.
- *
- * @return 0 - if successfull, non-zero otherwise
- *
- * */
-int pebbaction::run() {
-  int sts;
-  string msg;
-
-  RVSTRACE_
-  if (property.find("cli.-j") != property.end()) {
-    bjson = true;
-  }
-
-  if (!get_all_common_config_keys())
-    return -1;
-  if (!get_all_pebb_config_keys())
-    return -1;
-
-  // log_interval must be less than duration
-  if (prop_log_interval > 0 && gst_run_duration_ms > 0) {
-    if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
-      msg = "log_interval must be less than duration";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
-    }
-  }
-
-  sts = create_threads();
-
-  if (sts != 0) {
-    return sts;
-  }
-
-  if (gst_runs_parallel) {
-    sts = run_parallel();
-  } else {
-    sts = run_single();
-  }
-
-  destroy_threads();
-
-  return sts;
-}
-
-/**
- * @brief Execute test transfers one by one, in round robin fashion, for the
- * duration of the action.
- *
- * @return 0 - if successfull, non-zero otherwise
- *
- * */
-int pebbaction::run_single() {
-  RVSTRACE_
-  // define timers
-  rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
-  rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
-
-  // let the test run
-  brun = true;
-
-  unsigned int iter = gst_run_count > 0 ? gst_run_count : 1;
-  unsigned int step = gst_run_count == 0 ? 0 : 1;
-
-  // start timers
-  if (gst_run_duration_ms) {
-    RVSTRACE_
-    timer_final.start(gst_run_duration_ms, true);  // ticks only once
-  }
-
-  if (prop_log_interval) {
-    RVSTRACE_
-    timer_running.start(prop_log_interval);        // ticks continuously
-  }
-
-  // iterate through test array and invoke tests one by one
-  do {
-    RVSTRACE_
-    for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
-      RVSTRACE_
-      (*it)->do_transfer();
-
-      // if log interval is zero, print current results immediately
-      if (prop_log_interval == 0) {
-        print_running_average(*it);
-      }
-      sleep(1);
-
-      if (rvs::lp::Stopping()) {
-        RVSTRACE_
-        brun = false;
-        break;
-      }
-    }
-
-    RVSTRACE_
-    iter -= step;
-
-    // insert wait between runs if needed
-    if (iter > 0 && gst_run_wait_ms > 0) {
-      RVSTRACE_
-      sleep(gst_run_wait_ms);
-    }
-  } while (brun && iter);
-
-  RVSTRACE_
-  timer_running.stop();
-  timer_final.stop();
-
-  print_final_average();
-
-  RVSTRACE_
-  return rvs::lp::Stopping() ? -1 : 0;
-}
-
-/**
- * @brief Execute test transfers all at once, for the
- * duration of the action.
- *
- * @return 0 - if successfull, non-zero otherwise
- *
- * */
-int pebbaction::run_parallel() {
-  RVSTRACE_
-  // define timers
-  rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
-  rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
-
-  // let the test run
-  brun = true;
-
-  // start all worker threads
-  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
-    (*it)->start();
-  }
-
-  // start timers
-  if (gst_run_duration_ms) {
-    timer_final.start(gst_run_duration_ms, true);  // ticks only once
-  }
-
-  if (prop_log_interval) {
-    timer_running.start(prop_log_interval);        // ticks continuously
-  }
-
-  // wait for test to complete
-  while (brun) {
-    if (rvs::lp::Stopping()) {
-      RVSTRACE_
-      brun = false;
-    }
-    sleep(1);
-  }
-
-  timer_running.stop();
-  timer_final.stop();
-
-  // signal all worker threads to stop
-  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
-    (*it)->stop();
-  }
-  sleep(10);
-
-  // join all worker threads
-  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
-    (*it)->join();
-  }
-
-  print_final_average();
-
-  return rvs::lp::Stopping() ? -1 : 0;
 }
 
 /**
@@ -731,24 +608,32 @@ int pebbaction::print_final_average() {
  *
  * */
 void pebbaction::do_final_average() {
-  std::string msg;
-  unsigned int sec;
-  unsigned int usec;
-  rvs::lp::get_ticks(&sec, &usec);
+  if (property_log_level >= rvs::logtrace) {
+    std::string msg;
+    unsigned int sec;
+    unsigned int usec;
+    rvs::lp::get_ticks(&sec, &usec);
 
-  msg = "[" + action_name + "] pebb in do_final_average";
-  rvs::lp::Log(msg, rvs::logtrace, sec, usec);
+    msg = "[" + action_name + "] pebb in do_final_average";
+    rvs::lp::Log(msg, rvs::logtrace, sec, usec);
 
-  if (bjson) {
-    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::logtrace, sec, usec);
-    if (pjson != NULL) {
-      rvs::lp::AddString(pjson, "message", "pebb in do_final_average");
-      rvs::lp::LogRecordFlush(pjson);
+    if (bjson) {
+      void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
+                              action_name.c_str(), rvs::logtrace, sec, usec);
+      if (pjson != NULL) {
+        rvs::lp::AddString(pjson, "message", "pebb in do_final_average");
+        rvs::lp::LogRecordFlush(pjson);
+      }
     }
   }
 
+  // signal main thread to stop
   brun = false;
+
+  // signal worker threads to stop
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
+  }
 }
 
 /**
@@ -762,6 +647,10 @@ void pebbaction::do_running_average() {
   unsigned int sec;
   unsigned int usec;
   std::string msg;
+
+  if (!brun) {
+    return;
+  }
 
   rvs::lp::get_ticks(&sec, &usec);
   msg = "[" + action_name + "] pebb in do_running_average";

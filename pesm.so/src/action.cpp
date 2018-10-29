@@ -36,6 +36,7 @@ extern "C" {
 #include <algorithm>
 #include <iomanip>
 
+#include "rvs_key_def.h"
 #include "rvs_module.h"
 #include "worker.h"
 #include "pci_caps.h"

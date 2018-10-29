@@ -47,6 +47,7 @@ extern "C" {
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
 
+#include "rvs_key_def.h"
 #include "iet_worker.h"
 #include "blas_worker.h"
 #include "gpu_util.h"

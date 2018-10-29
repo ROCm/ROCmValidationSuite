@@ -24,11 +24,22 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
-
 project ("rocm-validation-suite" )
+enable_testing()
+include ( CTest )
 
 message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+  add_definitions(-DDEBUG)
+  message(STATUS "DEBUG defined")
+endif( )
+
+if (${RVS_DO_TRACE} STREQUAL "1")
+  add_definitions(-DRVS_DO_TRACE)
+  message(STATUS "RVS_DO_TRACE defined")
+endif( )
 
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
@@ -164,5 +175,10 @@ add_custom_target(userguide ALL
 
 install(FILES "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib COMPONENT rvsmodule)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf" DESTINATION /etc/ld.so.conf.d COMPONENT rvsmodule)
+
+# TEST SECTION
+
+#add_test(NAME test1 COMMAND rvs)
+
 
 include (CPack)
