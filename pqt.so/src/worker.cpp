@@ -45,6 +45,7 @@ extern "C" {
 #include "gpu_util.h"
 #include "rvsloglp.h"
 #include "rvshsa.h"
+#define MODULE_NAME "PQT"
 
 
 pqtworker::pqtworker() {
@@ -158,9 +159,10 @@ int pqtworker::do_transfer() {
                             bidirect, &duration);
 
     if (sts) {
-      std::cerr << "RVS-PQT: internal error, src: " << src_node
-                << "   dst: " << dst_node
-                << "   current size: " << current_size << std::endl;
+      msg = "internal error, src: " + std::to_string(src_node)
+                + "   dst: " + std::to_string(dst_node)
+                + "   current size: " + std::to_string(current_size);
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
       return sts;
     }
 

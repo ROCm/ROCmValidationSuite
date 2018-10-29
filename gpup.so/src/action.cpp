@@ -52,12 +52,12 @@
 #define CHAR_MAX_BUFF_SIZE              256
 
 #define MODULE_NAME                     "gpup"
+#define MODULE_NAME_CAPS                "GPUP"
 
 using std::string;
 using std::regex;
 using std::vector;
 using std::map;
-using std::cerr;
 // collection of allowed GPU properties
 const char* gpu_prop_names[] =
         { "cpu_cores_count", "simd_count", "mem_banks_count", "caches_count",
@@ -244,9 +244,8 @@ void action::property_get_value(string gpu_id, int node_id) {
                     JSON_PROP_NODE_NAME);
                     if (json_gpuprop_node == NULL) {
                         // log the error
-                        msg = action_name + " " + MODULE_NAME + " " +
-                        JSON_CREATE_NODE_ERROR;
-                        cerr << "RVS-GPUP: " << msg;
+                        msg = std::string(JSON_CREATE_NODE_ERROR);
+                        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
                     }
                 }
             }
@@ -300,9 +299,8 @@ void action::property_io_links_get_value(string gpu_id, int node_id) {
                     JSON_IO_LINK_PROP_NODE_NAME);
                     if (json_gpuprop_node == NULL) {
                         // log the error
-                        msg = action_name + " " + MODULE_NAME + " " +
-                        JSON_CREATE_NODE_ERROR;
-                        cerr << "RVS-GPUP: " << msg;
+                        msg = std::string(JSON_CREATE_NODE_ERROR);
+                        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
                     }
                 }
             }
@@ -383,7 +381,7 @@ int action::run(void) {
     rvs::actionbase::property_get_action_name(&error);
     if (error == 2) {
       msg = "action field is missing in gst module";
-      cerr << "RVS-GPUP: " << msg;
+      rvs::lp::Err(msg, MODULE_NAME_CAPS);
       return -1;
     }
 
@@ -430,9 +428,10 @@ int action::run(void) {
                 // io_links properties
                 property_io_links_get_value(gpu_id, node_id);
               } else {
-                  cerr << "RVS-GPUP: action: " << property["name"] <<
-                  "  invalid 'deviceid' key value: " <<
-                  dev_id << std::endl;
+                  msg = property["name"] +
+                  "  invalid 'deviceid' key value: " +
+                  std::to_string(dev_id);
+                  rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
                   return -1;
              }
             }
