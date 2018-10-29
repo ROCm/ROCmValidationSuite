@@ -204,8 +204,6 @@ void pebbworker_b2b::run() {
     if (prop_h2d) {
       RVSTRACE_
       hsa_signal_store_relaxed(ctx_fwd.Sig, 1);
-      hsa_amd_agents_allow_access(1, &ctx_fwd.SrcAgent, NULL,
-                                            ctx_fwd.pDstBuff);
       if (HSA_STATUS_SUCCESS !=
         (status = hsa_amd_memory_async_copy(
                     ctx_fwd.pDstBuff, ctx_fwd.DstAgent,

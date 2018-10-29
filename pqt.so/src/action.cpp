@@ -47,6 +47,7 @@ extern "C" {
 
 #include "rvs_module.h"
 #include "worker.h"
+#include "worker_b2b.h"
 
 
 #define MODULE_NAME "pqt"
@@ -487,9 +488,34 @@ int pqtaction::create_threads() {
         // GPUs are peers, create transaction for them
         if (prop_test_bandwidth) {
           RVSTRACE_
+          pqtworker* p = nullptr;
+
           transfer_ix += 1;
-          pqtworker* p = new pqtworker;
-          p->initialize(srcnode, dstnode, prop_bidirectional);
+          if (b2b_block_size > 0 && gst_runs_parallel) {
+            RVSTRACE_
+            pqtworker_b2b* pb2b = new pqtworker_b2b;
+            if (pb2b == nullptr) {
+              RVSTRACE_
+              msg = "internal error";
+              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+              return -1;
+            }
+            pb2b->initialize(srcnode, dstnode, prop_bidirectional,
+                             b2b_block_size);
+            p = pb2b;
+
+          } else {
+            RVSTRACE_
+            p = new pqtworker;
+            if (p == nullptr) {
+              RVSTRACE_
+              msg = "internal error";
+              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+              return -1;
+            }
+            p->initialize(srcnode, dstnode, prop_bidirectional);
+          }
+          RVSTRACE_
           p->set_name(action_name);
           p->set_stop_name(action_name);
           p->set_transfer_ix(transfer_ix);
