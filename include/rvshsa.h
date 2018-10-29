@@ -173,6 +173,8 @@ class hsa {
                                 const char* function,
                                 const char* msg,
                                 hsa_status_t st);
+  static bool check_link_type(const std::vector<rvs::linkinfo_t>& arrLinkInfo,
+                              int LinkType);
 
  protected:
   void InitAgents();

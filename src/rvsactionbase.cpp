@@ -32,6 +32,7 @@
 #include <vector>
 #include <iostream>
 
+#include "rvs_key_def.h"
 #include "rvs_util.h"
 
 using std::cout;
@@ -352,4 +353,62 @@ void rvs::actionbase::property_get_log_level(int *error) {
     *error = 2;
   }
 }
+
+/**
+ * gets the b2b_block_size key from the module's properties collection
+ * @param error pointer to a memory location where the error code will be stored
+ * @return size of data block to be used in b2b transfer
+ */
+uint32_t rvs::actionbase::property_get_b2b_size(int* error) {
+  std::string val;
+  if (!has_property(RVS_CONF_B2B_BLOCK_SIZE_KEY, &val)) {
+    *error = 2;
+    return 0;
+  }
+
+  if (!is_positive_integer(val)) {
+    *error = 1;
+    return 0;
+  }
+
+  uint32_t retval = 0;
+  try {
+    retval = std::stoul(val);
+  } catch(...) {
+    *error = 1;
+    return 0;
+  }
+
+  return retval;
+}
+
+/**
+ * gets value for link_type key. This value is used to filter host-device links.
+ * @param error pointer to a memory location where the error code will be stored
+ * @return link type (in line with hsa_amd_link_info_type_t)
+ */
+int rvs::actionbase::property_get_link_type(int* error) {
+  std::string val;
+  if (!has_property(RVS_CONF_LINK_TYPE_KEY, &val)) {
+    *error = 2;
+    return -1;
+  }
+
+  if (!is_positive_integer(val)) {
+    *error = 1;
+    return -1;
+  }
+
+  int retval = -1;
+  try {
+    retval = std::stoi(val);
+  } catch(...) {
+    *error = 1;
+    return -1;
+  }
+
+  return retval;
+}
+
+
 
