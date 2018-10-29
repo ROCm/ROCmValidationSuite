@@ -176,8 +176,10 @@ int action::pkgchk_run() {
     version_exists = has_property(VERSION, &version_name);
     pid_t pid;
     int fd[2];
-    pipe(fd);
-
+    if (pipe(fd) == -1) {
+      rvs::lp::Err("pipe() error", MODULE_NAME_CAPS, action_name);
+      return 1;
+    }
     pid = fork();
     if (pid == 0) {
       // Child process
@@ -191,7 +193,10 @@ int action::pkgchk_run() {
       "dpkg-query -W -f='${Status} ${Version}\n' %s", package_name.c_str());
 
       // We execute the dpkg-querry
-      system(buffer);
+      if (system(buffer) == -1) {
+        rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+        return 1;
+      }
       exit(0);
     } else if (pid > 0) {
       // Parent
@@ -511,7 +516,10 @@ int action::ldcfgchk_run() {
 
     int fd[2];
     pid_t pid;
-    pipe(fd);
+    if (pipe(fd) == -1) {
+      rvs::lp::Err("pipe() error", MODULE_NAME_CAPS, action_name);
+      return 1;
+    }
     pid = fork();
     if (pid == 0) {
       // child process
@@ -520,7 +528,10 @@ int action::ldcfgchk_run() {
       char buffer[256];
       snprintf(buffer, sizeof(buffer), "objdump -f %s", full_ld_path.c_str());
 
-      system(buffer);
+      if (system(buffer) == -1) {
+        rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+        return 1;
+      }
       exit(0);
     } else if (pid > 0) {
       // Parent process
@@ -528,7 +539,10 @@ int action::ldcfgchk_run() {
       close(fd[1]);
       string ld_config_result = "[" + action_name + "] " +
       "rcqt ldconfigcheck ";
-      read(fd[0], result, BUFFER_SIZE);
+      if (read(fd[0], result, BUFFER_SIZE) < 0) {
+        rvs::lp::Err("read() error", MODULE_NAME_CAPS, action_name);
+        return 1;
+      }
       string result_string = result;
 
       if (strstr(result, "architecture:") != nullptr) {

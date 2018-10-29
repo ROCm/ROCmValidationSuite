@@ -391,9 +391,9 @@ int action::run(void) {
     // get the <deviceid> property value if provided
     int dev_id = property_get_deviceid(&error);
     if (error != 0) {
-      cerr << "RVS-GPUP: action: " << property["name"] <<
-                  "  invalid 'deviceid' key value: " <<
-                  dev_id << std::endl;
+      msg = property["name"] + " invalid 'deviceid' key value: "
+      + std::to_string(dev_id);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
     // extract properties and io_links properties names
