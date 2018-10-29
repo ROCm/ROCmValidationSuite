@@ -52,6 +52,7 @@ project ( ${RVS_TARGET} )
 
 ## Include common cmake modules
 include ( utils )
+include (CTest)
 
 ## Setup the package version default (the actual one is taken from the latest Git tag).
 get_version ( "0.0.0" )
@@ -132,3 +133,9 @@ install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/userguide/html
   COMPONENT applications
 )
 
+# TEST SECTION
+
+add_test(NAME unittest
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvstest
+)

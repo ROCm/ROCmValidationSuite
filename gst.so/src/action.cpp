@@ -36,6 +36,7 @@
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
 
+#include "rvs_key_def.h"
 #include "gst_worker.h"
 #include "gpu_util.h"
 #include "rvs_util.h"

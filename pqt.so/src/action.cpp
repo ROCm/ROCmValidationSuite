@@ -37,6 +37,7 @@ extern "C" {
 #include <string>
 #include <vector>
 
+#include "rvs_key_def.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
@@ -46,15 +47,12 @@ extern "C" {
 
 #include "rvs_module.h"
 #include "worker.h"
+#include "worker_b2b.h"
 
-#define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
-#define DEFAULT_LOG_INTERVAL 1000
-#define DEFAULT_DURATION 10000
 
 #define MODULE_NAME "pqt"
 #define MODULE_NAME_CAPS "PQT"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
-#define RVS_CONF_BLOCK_SIZE_KEY "block_size"
 
 using std::string;
 using std::vector;
@@ -232,6 +230,20 @@ bool pqtaction::get_all_pqt_config_keys(void) {
   } else if (error == 2) {
     b_block_size_all = true;
     block_size.clear();
+  }
+
+  b2b_block_size = property_get_b2b_size(&error);
+  if (error == 1) {
+    msg =  "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  }
+
+  link_type = property_get_link_type(&error);
+  if (error == 1) {
+    msg =  "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
   }
 
   return true;
@@ -476,9 +488,34 @@ int pqtaction::create_threads() {
         // GPUs are peers, create transaction for them
         if (prop_test_bandwidth) {
           RVSTRACE_
+          pqtworker* p = nullptr;
+
           transfer_ix += 1;
-          pqtworker* p = new pqtworker;
-          p->initialize(srcnode, dstnode, prop_bidirectional);
+          if (b2b_block_size > 0 && gst_runs_parallel) {
+            RVSTRACE_
+            pqtworker_b2b* pb2b = new pqtworker_b2b;
+            if (pb2b == nullptr) {
+              RVSTRACE_
+              msg = "internal error";
+              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+              return -1;
+            }
+            pb2b->initialize(srcnode, dstnode, prop_bidirectional,
+                             b2b_block_size);
+            p = pb2b;
+
+          } else {
+            RVSTRACE_
+            p = new pqtworker;
+            if (p == nullptr) {
+              RVSTRACE_
+              msg = "internal error";
+              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+              return -1;
+            }
+            p->initialize(srcnode, dstnode, prop_bidirectional);
+          }
+          RVSTRACE_
           p->set_name(action_name);
           p->set_stop_name(action_name);
           p->set_transfer_ix(transfer_ix);
@@ -613,59 +650,6 @@ int pqtaction::destroy_threads() {
   return 0;
 }
 
-/**
- * @brief Main action execution entry point. Implements test logic.
- *
- * @return 0 - if successfull, non-zero otherwise
- *
- * */
-int pqtaction::run() {
-  int sts;
-  string msg;
-
-  rvs::lp::Log("int pqtaction::run()", rvs::logtrace);
-
-  if (property.find("cli.-j") != property.end()) {
-    bjson = true;
-  }
-
-  if (!get_all_common_config_keys()) {
-    msg = "Error in get_all_common_config_keys()";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
-  }
-  if (!get_all_pqt_config_keys()) {
-    msg = "Error in get_all_pqt_config_keys()";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
-  }
-
-  // log_interval must be less than duration
-  if (prop_log_interval > 0 && gst_run_duration_ms > 0) {
-    if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
-      msg = "log_interval must be less than duration";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
-    }
-  }
-
-  sts = create_threads();
-  if (sts)
-    return sts;
-
-  if (prop_test_bandwidth && test_array.size() > 0) {
-    if (gst_runs_parallel) {
-      sts = run_parallel();
-    } else {
-      sts = run_single();
-    }
-  }
-
-  // do cleanup
-  destroy_threads();
-
-  return sts;
-}
 
 /**
  * @brief Check if two GPU can access each other memory
@@ -702,129 +686,6 @@ int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
   }
 
   return pHsa->rvs::hsa::GetPeerStatus(srcnode, dstnode);
-}
-
-/**
- * @brief Execute test transfers one by one, in round robin fashion, for the
- * duration of the action.
- *
- * @return 0 - if successfull, non-zero otherwise
- *
- * */
-int pqtaction::run_single() {
-  RVSTRACE_
-  // define timers
-  rvs::timer<pqtaction> timer_running(&pqtaction::do_running_average, this);
-  rvs::timer<pqtaction> timer_final(&pqtaction::do_final_average, this);
-
-  unsigned int iter = gst_run_count > 0 ? gst_run_count : 1;
-  unsigned int step = gst_run_count == 0 ? 0 : 1;
-
-  // let the test run
-  brun = true;
-
-  // start timers
-  if (gst_run_duration_ms) {
-    RVSTRACE_
-    timer_final.start(gst_run_duration_ms, true);  // ticks only once
-  }
-
-  if (prop_log_interval) {
-    RVSTRACE_
-    timer_running.start(prop_log_interval);        // ticks continuously
-  }
-
-  // iterate through test array and invoke tests one by one
-  RVSTRACE_
-  do {
-    RVSTRACE_
-    for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
-      RVSTRACE_
-      (*it)->do_transfer();
-
-      // if log interval is zero, print current results immediately
-      if (prop_log_interval == 0) {
-        print_running_average(*it);
-      }
-      sleep(1);
-
-      if (rvs::lp::Stopping()) {
-        RVSTRACE_
-        brun = false;
-        break;
-      }
-    }
-    RVSTRACE_
-
-    iter -= step;
-
-    // insert wait between runs if needed
-    if (iter > 0 && gst_run_wait_ms > 0) {
-      RVSTRACE_
-      sleep(gst_run_wait_ms);
-    }
-  } while (brun && iter);
-
-  RVSTRACE_
-  timer_running.stop();
-  timer_final.stop();
-
-  print_final_average();
-
-  RVSTRACE_
-  return rvs::lp::Stopping() ? -1 : 0;
-}
-
-/**
- * @brief Execute test transfers all at once, for the
- * duration of the action.
- *
- * @return 0 - if successfull, non-zero otherwise
- *
- * */
-int pqtaction::run_parallel() {
-  // define timers
-  rvs::timer<pqtaction> timer_running(&pqtaction::do_running_average, this);
-  rvs::timer<pqtaction> timer_final(&pqtaction::do_final_average, this);
-
-  // let the test run
-  brun = true;
-
-  // start all worker threads
-  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
-    (*it)->start();
-  }
-
-  // start timers
-  timer_final.start(gst_run_duration_ms, true);  // ticks only once
-  timer_running.start(prop_log_interval);        // ticks continuously
-
-  // wait for test to complete
-  while (brun) {
-    sleep(1);
-    if (rvs::lp::Stopping()) {
-      RVSTRACE_
-      brun = false;
-    }
-  }
-
-  timer_running.stop();
-  timer_final.stop();
-
-  // signal all worker threads to stop
-  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
-    (*it)->stop();
-  }
-  sleep(10);
-
-  // join all worker threads
-  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
-    (*it)->join();
-  }
-
-  print_final_average();
-
-  return rvs::lp::Stopping() ? -1 : 0;
 }
 
 /**
@@ -1022,6 +883,11 @@ void pqtaction::do_final_average() {
   }
 
   brun = false;
+
+  // signal worker threads to stop
+  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    (*it)->stop();
+  }
 }
 
 /**
@@ -1051,5 +917,3 @@ void pqtaction::do_running_average() {
   }
   print_running_average();
 }
-
-
