@@ -49,12 +49,12 @@ extern "C" {
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 #define MODULE_NAME                     "gm"
+#define MODULE_NAME_CAPS                "GM"
 
 using std::map;
 using std::string;
 using std::vector;
 using std::thread;
-using std::cerr;
 using std::endl;
 
 extern Worker* pworker;
@@ -104,8 +104,9 @@ int action::run(void) {
     if (rvs::actionbase::has_property("log_interval")) {
         log_interval = rvs::actionbase::property_get_log_interval(&error);
         if ( log_interval < sample_interval ) {
-          msg = "Log interval has the lower value than the sample interval ";
-          cerr << "RVS-GM: action: " << property["name"] << msg << endl;
+          msg = property["name"] +
+          "Log interval has the lower value than the sample interval ";
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
         }
     }
@@ -151,8 +152,8 @@ int action::run(void) {
             metric_min = std::stoi(values[2]);
             metric_bound = true;
           } else {
-            msg = " Wrong number of metric parameters ";
-            cerr << "RVS-GM: action: " << property["name"] << msg << endl;
+            msg = property["name"] +" Wrong number of metric parameters ";
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
             return -1;
         }
 
@@ -176,13 +177,15 @@ int action::run(void) {
           pworker->set_deviceid(std::stoi(sdevid));
         }
         catch(...) {
-          cerr << "RVS-GM: action: " << property["name"] <<
-          "  invalide 'deviceid' key value: " << sdevid << std::endl;
+          msg = property["name"] +
+          "  invalide 'deviceid' key value: " + sdevid;
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
         }
       } else {
-        cerr << "RVS-GM: action: " << property["name"] <<
-        "  invalide 'deviceid' key value: " << sdevid << std::endl;
+        msg = property["name"] +
+        "  invalide 'deviceid' key value: " + sdevid;
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
     }
@@ -195,8 +198,9 @@ int action::run(void) {
         vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
         int sts = rvs_util_strarr_to_uintarr(sarr, &iarr);
         if (sts < 0) {
-          cerr << "RVS-GM: action: " << property["name"] <<
-          "  invalide 'device' key value: " << sdev << std::endl;
+          msg = property["name"] +
+          "  invalide 'device' key value: " + sdev;
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
         }
         pworker->set_gpuids(iarr);
@@ -204,8 +208,9 @@ int action::run(void) {
          pworker->set_gpuids(gpu_id);
       }
     } else {
-          cerr << "RVS-GM: action: " << property["name"] <<
-          "  key 'device' not found" << std::endl;
+          msg = property["name"] +
+          "  key 'device' not found";
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
     }
     // set stop name before start

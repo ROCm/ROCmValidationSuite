@@ -45,6 +45,8 @@ typedef void  (*t_cbAddInt)(void* Parent, const char* Key, const int Val);
 typedef void  (*t_cbAddNode)(void* Parent, void* Child);
 typedef void  (*t_cbStop)(uint16_t flags);
 typedef bool  (*t_cbStopping)(void);
+typedef int   (*t_rvs_module_err)(const char*, const char*, const char*);
+
 
 /**
  * @brief Module initialization structure
@@ -70,6 +72,8 @@ typedef struct tag_module_init {
   t_cbStop             cbStop;
   //! pointer to rvs::logger::Stopping() function
   t_cbStopping         cbStopping;
+  //! pointer to rvs::logger::Err() function
+  t_rvs_module_err     cbErr;
 } T_MODULE_INIT;
 
 #ifdef __cplusplus

@@ -46,6 +46,8 @@ extern "C" {
 #include "rvsloglp.h"
 #include "rvshsa.h"
 
+#define MODULE_NAME "PEBB"
+
 using std::string;
 using std::vector;
 using std::map;
@@ -175,9 +177,11 @@ int pebbworker::do_transfer() {
                               bidirect, &duration);
     }
     if (sts) {
-      std::cerr << "RVS-PEBB: internal error, src: " << src_node
-      << "   dst: " << dst_node
-      << "   current size: " << current_size << " status "<< sts <<std::endl;
+      msg = "internal error, src: " + std::to_string(src_node)
+      + "   dst: " +std::to_string(dst_node)
+      + "   current size: " + std::to_string(current_size)
+      + " status "+ std::to_string(sts);
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
       return sts;
     }
 

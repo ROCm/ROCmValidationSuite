@@ -50,6 +50,7 @@ int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
   mi.cbAddNode         = pMi->cbAddNode;
   mi.cbStop            = pMi->cbStop;
   mi.cbStopping        = pMi->cbStopping;
+  mi.cbErr             = pMi->cbErr;
 
   return 0;
 }
@@ -272,4 +273,42 @@ void  rvs::lp::Stop(uint16_t flags) {
  */
 bool  rvs::lp::Stopping() {
   return (*mi.cbStopping)();
+}
+
+/**
+ * @brief Log Error output
+ *
+ * @param Message Message to log
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+
+int rvs::lp::Err(const std::string &Message) {
+  return (*mi.cbErr)(Message.c_str(), nullptr, nullptr);
+}
+
+/**
+ * @brief Log Error output
+ *
+ * @param Module  Module where error happend
+ * @param Message Message to log
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+int rvs::lp::Err(const std::string &Message, const std::string &Module) {
+  return (*mi.cbErr)(Message.c_str(), Module.c_str(), nullptr);
+}
+
+/**
+ * @brief Log Error output
+ *
+ * @param Module  Module where error happened
+ * @param Action  Action where error happened
+ * @param Message Message to log
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+int rvs::lp::Err(const std::string &Message
+      , const std::string &Module, const std::string &Action) {
+  return (*mi.cbErr)(Message.c_str(), Module.c_str(), Action.c_str());
 }
