@@ -225,6 +225,7 @@ int rvs::module::initialize() {
   d.cbAddNode         = rvs::logger::AddNode;
   d.cbStop            = rvs::logger::Stop;
   d.cbStopping        = rvs::logger::Stopping;
+  d.cbErr             = rvs::logger::Err;
 
   return (*rvs_module_init)(reinterpret_cast<void*>(&d));
 }

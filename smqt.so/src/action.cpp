@@ -44,10 +44,10 @@ extern "C" {
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvsloglp.h"
+#define MODULE_NAME "SMQT"
 
 using std::string;
 using std::vector;
-using std::cerr;
 
 // Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
 string action::pretty_print(ulong bytes, string action_name, string bar_name) {
@@ -74,8 +74,9 @@ ulong action::get_property(string property) {
   if (has_property(property, &value)) {
     result = std::stoul(value);
   } else {
-    std::cerr << "RVS-SMQT: Error fetching " << property
-              << ". Cannot continue without it. Exiting!\n";
+    string msg =  "Error fetching " + property
+              + ". Cannot continue without it. Exiting!";
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
     exit(EXIT_FAILURE);
   }
   return result;
@@ -101,13 +102,13 @@ bool action::get_all_common_config_keys() {
   if (has_property("device", &sdev)) {
     property_get_device(&error);
     if (error) {  // log the error & abort GST
-      cerr << "RVS-SMQT: action: " << action_name <<
-            "  invalid 'device' key value " << sdev << '\n';
+      string msg = "invalid 'device' key value "  + sdev;
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
       return false;
     }
   } else {
-    cerr << "RVS-SMQT: action: " << action_name <<
-        "  key 'device' was not found" << std::endl;
+    string msg = "key 'device' was not found";
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
     return false;
   }
 
@@ -136,13 +137,13 @@ int action::run(void) {
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing in smqt module";
-    cerr << "RVS-SMQT: " << msg;
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
     return -1;
   }
 
   if (!get_all_common_config_keys()) {
-    std::cerr << "RVS-SMQT: Couldn't fetch common config keys "
-              << "from the configuration file!\n";
+    msg = "Couldn't fetch common config keys from the configuration file!";
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
     return -1;
   }
 
@@ -157,7 +158,8 @@ int action::run(void) {
   dev = pacc->devices;
 
   if (!has_property("name", &action_name)) {
-    std::cerr << "RVS-SMQT: Error fetching action_name\n";
+    msg = "Error fetching action_name";
+    rvs::lp::Err(msg, MODULE_NAME);
     return false;
   }
   bar1_req_size      = get_property("bar1_req_size");

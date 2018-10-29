@@ -38,6 +38,7 @@ extern "C" {
 #include <vector>
 #include <thread>
 
+#include "rvs_key_def.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
@@ -46,21 +47,13 @@ extern "C" {
 #include "rvstimer.h"
 #include "hsa/hsa.h"
 
-
 #include "rvs_module.h"
 #include "worker.h"
 
-#define RVS_CONF_LOG_INTERVAL_KEY "log_interval"
-#define DEFAULT_LOG_INTERVAL 1000
-#define DEFAULT_DURATION 10000
-
 #define MODULE_NAME "pebb"
+#define MODULE_NAME_CAPS "PEBB"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
-#define RVS_CONF_BLOCK_SIZE_KEY "block_size"
 
-using std::cout;
-using std::endl;
-using std::cerr;
 using std::string;
 using std::vector;
 
@@ -88,8 +81,8 @@ int pebbaction::run() {
   // log_interval must be less than duration
   if (prop_log_interval > 0 && gst_run_duration_ms > 0) {
     if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
-      cerr << "RVS-PEBB: action: " << action_name <<
-          "  log_interval must be less than duration" << std::endl;
+      msg = "log_interval must be less than duration";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
   }
