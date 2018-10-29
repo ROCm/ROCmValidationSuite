@@ -140,7 +140,6 @@ int pqtaction::run() {
       RVSTRACE_
       sleep(gst_run_wait_ms);
     }
-
   } while (iter && !rvs::lp::Stopping());
 
   RVSTRACE_
