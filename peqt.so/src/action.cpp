@@ -40,6 +40,8 @@ extern "C" {
 #endif
 
 #include "pci_caps.h"
+
+#include "rvs_key_def.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvs_module.h"

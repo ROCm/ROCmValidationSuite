@@ -24,6 +24,8 @@
  * 
  *******************************************************************************/
 
+#include "action.h"
+
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -39,10 +41,10 @@ extern "C" {
 }
 #endif
 
+#include "rvs_key_def.h"
 #include "rvsloglp.h"
 #include "rvs_module.h"
 #include "rvs_util.h"
-#include "action.h"
 #include "worker.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
