@@ -37,6 +37,7 @@ extern "C" {
 #include <string>
 #include <vector>
 
+#include "rvs_key_def.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
@@ -49,10 +50,8 @@ extern "C" {
 
 
 #define MODULE_NAME "pqt"
-#define JSON_CREATE_NODE_ERROR "JSON cannot create node"
-#define RVS_CONF_BLOCK_SIZE_KEY "block_size"
+#define MODULE_NAME_CAPS "PQT"
 
-using std::cerr;
 using std::string;
 using std::vector;
 
@@ -74,19 +73,21 @@ int pqtaction::run() {
   }
 
   if (!get_all_common_config_keys()) {
-    cerr << "RVS-PQT: " << "Error in get_all_common_config_keys()"<< std::endl;
+    msg = "Error in get_all_common_config_keys()";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return -1;
   }
   if (!get_all_pqt_config_keys()) {
-    cerr << "RVS-PQT: " << "Error in get_all_pqt_config_keys()"<< std::endl;
+    msg = "Error in get_all_pqt_config_keys()";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return -1;
   }
 
   // log_interval must be less than duration
   if (prop_log_interval > 0 && gst_run_duration_ms > 0) {
     if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
-      cerr << "RVS-PQT: action: " << action_name <<
-          "  log_interval must be less than duration" << std::endl;
+      msg = "log_interval must be less than duration";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
   }

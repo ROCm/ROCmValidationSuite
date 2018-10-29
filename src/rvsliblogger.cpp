@@ -549,3 +549,41 @@ bool rvs::logger::Stopping(void) {
   // return stop flag
   return bStop;
 }
+
+
+/**
+ * @brief Output Error message
+ * 
+ * @param Module module where error happened
+ * @param Action action where error happened
+ * @param Message Message to log
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+int rvs::logger::Err(const char* Message, const char* Module
+        , const char* Action) {
+  if (Message == nullptr) {
+    return 1;
+  }
+  std::string module =
+      Module != nullptr ? std::string("[") + Module + "] " : "";
+  std::string action =
+      Action != nullptr ? std::string("[") + Action + "] " : "";
+  std::string message = Message;
+  std::string out;
+  out = "RVS-ERROR ";
+  out += module + action + message;
+  std::cerr << out << std::endl;
+  return 0;
+}
+
+/**
+ * @brief Output log message
+ *
+ * @param Message Message to log
+ * @param LogLevel Logging level
+ * @param Sec secconds from system start
+ * @param uSec microseconds in current second
+ * @return 0 - success, non-zero otherwise
+ *
+ */

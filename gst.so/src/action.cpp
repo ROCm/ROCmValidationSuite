@@ -48,7 +48,6 @@ using std::string;
 using std::vector;
 using std::map;
 using std::regex;
-using std::cerr;
 
 #define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_interval"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
@@ -59,6 +58,7 @@ using std::cerr;
 #define RVS_CONF_MATRIX_SIZE_KEY        "matrix_size"
 
 #define MODULE_NAME                     "gst"
+#define MODULE_NAME_CAPS                "GST"
 
 #define GST_DEFAULT_RAMP_INTERVAL       5000
 #define GST_DEFAULT_LOG_INTERVAL        1000
@@ -320,57 +320,63 @@ bool action::get_all_gst_config_keys(void) {
     if (has_property(RVS_CONF_TARGET_STRESS_KEY, &ststress)) {
         property_get_gst_target_stress(&error);
         if (error) {  // <target_stress> is mandatory => GST cannot continue
-            cerr << "RVS-GST: action: " << action_name <<
-                "  invalid '" << RVS_CONF_TARGET_STRESS_KEY <<
-                "' key value " << ststress << std::endl;
+            msg = "invalid '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
+                "' key value " + ststress;
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
             return false;
         }
     } else {
-        cerr << "RVS-GST: action: " << action_name <<
-            "  key '" << RVS_CONF_TARGET_STRESS_KEY <<
-            "' was not found" << std::endl;
+        msg = "key '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
+            "' was not found";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
     property_get_gst_ramp_interval(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-        RVS_CONF_RAMP_INTERVAL_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+        std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
     property_get_gst_log_interval(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-        RVS_CONF_LOG_INTERVAL_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+        std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
     property_get_gst_max_violations(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-        RVS_CONF_MAX_VIOLATIONS_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+        std::string(RVS_CONF_MAX_VIOLATIONS_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
     property_get_gst_copy_matrix(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-        RVS_CONF_COPY_MATRIX_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+        std::string(RVS_CONF_COPY_MATRIX_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
     property_get_gst_tolerance(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-        RVS_CONF_TOLERANCE_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+        std::string(RVS_CONF_TOLERANCE_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
     property_get_gst_matrix_size(&error);
     if (error) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-        RVS_CONF_MATRIX_SIZE_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+        std::string(RVS_CONF_MATRIX_SIZE_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
     return true;
@@ -389,13 +395,15 @@ bool action::get_all_common_config_keys(void) {
     if (has_property("device", &sdev)) {
         device_all_selected = property_get_device(&error);
         if (error) {  // log the error & abort GST
-            cerr << "RVS-GST: action: " << action_name << "  invalid '"
-                    RVS_CONF_DEVICE_KEY << "' key value " << sdev << std::endl;
+            msg = "invalid '" +
+                std::string(RVS_CONF_DEVICE_KEY) + "' key value " + sdev;
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
             return false;
         }
     } else {
-        cerr << "RVS-GST: action: " << action_name << "  key '"
-                RVS_CONF_DEVICE_KEY << "' was not found" << std::endl;
+        msg = "key '" +
+            std::string(RVS_CONF_DEVICE_KEY) + "' was not found";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
@@ -408,8 +416,9 @@ bool action::get_all_common_config_keys(void) {
                 device_id_filtering = true;
             }
         } else {
-            cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-                RVS_CONF_DEVICEID_KEY << "' key value " << sdevid << std::endl;
+            msg = "invalid '" +
+                std::string(RVS_CONF_DEVICEID_KEY) + "' key value " + sdevid;
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
             return false;
         }
     }
@@ -417,29 +426,32 @@ bool action::get_all_common_config_keys(void) {
     // get the other action/GST related properties
     rvs::actionbase::property_get_run_parallel(&error);
     if (error == 1) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-                RVS_CONF_PARALLEL_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+            std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
     rvs::actionbase::property_get_run_count(&error);
     if (error == 1) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-                RVS_CONF_COUNT_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+            std::string(RVS_CONF_COUNT_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
     rvs::actionbase::property_get_run_wait(&error);
     if (error == 1) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-                RVS_CONF_WAIT_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+            std::string(RVS_CONF_WAIT_KEY) + "' key value";
         return false;
     }
 
     rvs::actionbase::property_get_run_duration(&error);
     if (error == 1) {
-        cerr << "RVS-GST: action: " << action_name << "  invalid '" <<
-                RVS_CONF_DURATION_KEY << "' key value" << std::endl;
+        msg = "invalid '" +
+            std::string(RVS_CONF_DURATION_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
@@ -467,9 +479,8 @@ int action::get_num_amd_gpu_devices(void) {
                             action_name.c_str(), rvs::loginfo, sec, usec);
             if (!json_root_node) {
                 // log the error
-                string msg = action_name + " " + MODULE_NAME + " "
-                                            + JSON_CREATE_NODE_ERROR;
-                cerr << "RVS-GST: " << msg;
+                string msg = std::string(JSON_CREATE_NODE_ERROR);
+                rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
                 return -1;
             }
 
@@ -563,7 +574,7 @@ int action::run(void) {
     rvs::actionbase::property_get_action_name(&error);
     if (error == 2) {
       msg = "action name field is missing in gst module";
-      cerr << "RVS-GST: " << msg;
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
 
@@ -580,9 +591,10 @@ int action::run(void) {
         return -1;
 
     if (gst_run_duration_ms > 0 && (gst_run_duration_ms < gst_ramp_interval)) {
-        cerr << "RVS-GST: action: " << action_name << "  '" <<
-                RVS_CONF_DURATION_KEY << "' cannot be less than '" <<
-                RVS_CONF_RAMP_INTERVAL_KEY << "'" << std::endl;
+        msg = "'" +
+            std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
+            std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "'";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
     }
 

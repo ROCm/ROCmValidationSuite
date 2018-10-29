@@ -50,9 +50,9 @@ extern "C" {
 
 
 #define MODULE_NAME "pqt"
+#define MODULE_NAME_CAPS "PQT"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 
-using std::cerr;
 using std::string;
 using std::vector;
 
@@ -183,29 +183,29 @@ bool pqtaction::get_all_pqt_config_keys(void) {
 
   prop_peer_device_all_selected = property_get_peers(&error);
   if (error) {
-    cerr << "RVS-PQT: action: " << action_name <<
-        "  invalid '" << "peers" << "'" << std::endl;
+    msg =  "invalid peers";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
   prop_peer_deviceid = property_get_peer_deviceid(&error);
   if (error) {
-    cerr << "RVS-PQT: action: " << action_name <<
-        "  invalid 'peer_deviceid '" << std::endl;
+    msg = "invalid 'peer_deviceid '";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
   property_get_test_bandwidth(&error);
   if (error) {
-    cerr << "RVS-PQT: action: " << action_name <<
-        "  invalid 'test_bandwidth'" << std::endl;
+    msg = "invalid 'test_bandwidth'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
   prop_log_interval = property_get_log_interval(&error);
   if (error == 1) {
-    cerr << "RVS-PQT: action: " << action_name <<
-        "  invalid '" << RVS_CONF_LOG_INTERVAL_KEY << "'" << std::endl;
+    msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   } else if (error == 2) {
     prop_log_interval = DEFAULT_LOG_INTERVAL;
@@ -214,8 +214,8 @@ bool pqtaction::get_all_pqt_config_keys(void) {
   property_get_bidirectional(&error);
   if (error) {
     if (prop_test_bandwidth == true) {
-      cerr << "RVS-PQT: action: " << action_name <<
-          "  invalid 'bidirectional'" << std::endl;
+      msg = "invalid 'bidirectional'";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
     }
   }
@@ -223,8 +223,8 @@ bool pqtaction::get_all_pqt_config_keys(void) {
   property_get_uint_list(RVS_CONF_BLOCK_SIZE_KEY, YAML_DEVICE_PROP_DELIMITER,
                          &block_size, &b_block_size_all, &error);
   if (error == 1) {
-      cerr << "RVS-PQT: action: " << action_name << "  invalid '"
-           << RVS_CONF_BLOCK_SIZE_KEY << "' key" << std::endl;
+      msg =  "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   } else if (error == 2) {
     b_block_size_all = true;
@@ -233,15 +233,15 @@ bool pqtaction::get_all_pqt_config_keys(void) {
 
   b2b_block_size = property_get_b2b_size(&error);
   if (error == 1) {
-    cerr << "RVS-PEBPQTB: action: " << action_name <<
-    "  invalid '" << RVS_CONF_B2B_BLOCK_SIZE_KEY << "' key" << std::endl;
+    msg =  "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
   link_type = property_get_link_type(&error);
   if (error == 1) {
-    cerr << "RVS-PQT: action: " << action_name <<
-    "  invalid '" << RVS_CONF_LINK_TYPE_KEY << "' key" << std::endl;
+    msg =  "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
@@ -261,7 +261,7 @@ bool pqtaction::get_all_common_config_keys(void) {
   property_get_action_name(&error);
   if (error) {
     msg = "action field is missing";
-    cerr << "RVS-PQT: " << msg;
+    rvs::lp::Err(msg, MODULE_NAME_CAPS);
     return false;
   }
 
@@ -269,13 +269,13 @@ bool pqtaction::get_all_common_config_keys(void) {
   if (has_property("device", &sdev)) {
       prop_device_all_selected = property_get_device(&error);
       if (error) {  // log the error & abort GST
-          cerr << "RVS-PQT: action: " << action_name <<
-              "  invalid 'device' key value " << sdev << std::endl;
+          msg = "invalid 'device' key value " + sdev;
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return false;
       }
   } else {
-      cerr << "RVS-PQT: action: " << action_name <<
-          "  key 'device' was not found" << std::endl;
+      msg = "key 'device' was not found";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
@@ -288,8 +288,8 @@ bool pqtaction::get_all_common_config_keys(void) {
               prop_device_id_filtering = true;
           }
       } else {
-          cerr << "RVS-PQT: action: " << action_name <<
-              "  invalid 'deviceid' key value " << sdevid << std::endl;
+          msg = "invalid 'deviceid' key value " + sdevid;
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return false;
       }
   }
@@ -297,31 +297,31 @@ bool pqtaction::get_all_common_config_keys(void) {
   // get the other action/GST related properties
   rvs::actionbase::property_get_run_parallel(&error);
   if (error == 1) {
-      cerr << "RVS-PQT: action: " << action_name <<
-          "  invalid '" << RVS_CONF_PARALLEL_KEY <<
-          "' key value" << std::endl;
+      msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
+          "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
   rvs::actionbase::property_get_run_count(&error);
   if (error == 1) {
-      cerr << "RVS-PQT: action: " << action_name <<
-          "  invalid '" << RVS_CONF_COUNT_KEY << "' key value" << std::endl;
+      msg = "invalid '" + std::string(RVS_CONF_COUNT_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
   rvs::actionbase::property_get_run_wait(&error);
   if (error == 1) {
-      cerr << "RVS-PQT: action: " << action_name <<
-          "  invalid '" << RVS_CONF_WAIT_KEY << "' key value" << std::endl;
+      msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
   rvs::actionbase::property_get_run_duration(&error);
   if (error == 1) {
-      cerr << "RVS-PQT: action: " << action_name <<
-          "  invalid '" << RVS_CONF_DURATION_KEY <<
-          "' key value" << std::endl;
+      msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
+          "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
@@ -400,16 +400,16 @@ int pqtaction::create_threads() {
       // get NUMA nodes
       int srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
       if (srcnode < 0) {
-        std::cerr << "RVS-PQT: no node found for GPU ID "
-        << std::to_string(gpu_id[i]);
+        msg + "no node found for GPU ID " + std::to_string(gpu_id[i]);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
 
       int dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[j]);
       if (srcnode < 0) {
         RVSTRACE_
-        std::cerr << "RVS-PQT: no node found for GPU ID "
-        << std::to_string(gpu_id[j]);
+        msg = "no node found for GPU ID " + std::to_string(gpu_id[j]);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
 
@@ -624,6 +624,7 @@ int pqtaction::destroy_threads() {
   return 0;
 }
 
+
 /**
  * @brief Check if two GPU can access each other memory
  *
@@ -636,6 +637,7 @@ int pqtaction::destroy_threads() {
 int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
   //! ptr to RVS HSA singleton wrapper
   rvs::hsa* pHsa;
+  string msg;
 
   if (Src == Dst) {
     return 0;
@@ -645,15 +647,15 @@ int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
   // GPUs are peers, create transaction for them
   int srcnode = rvs::gpulist::GetNodeIdFromGpuId(Src);
   if (srcnode < 0) {
-    std::cerr << "RVS-PQT: no node found for GPU ID "
-    << std::to_string(Src);
+    msg = "no node found for GPU ID " + std::to_string(Src);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return 0;
   }
 
   int dstnode = rvs::gpulist::GetNodeIdFromGpuId(Dst);
   if (srcnode < 0) {
-    std::cerr << "RVS-PQT: no node found for GPU ID "
-    << std::to_string(Dst);
+    msg = "RVS-PQT: no node found for GPU ID " + std::to_string(Dst);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return 0;
   }
 
