@@ -706,7 +706,10 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
   // given NUMA nodes, find agent indexes
   src_ix_fwd = FindAgent(SrcNode);
   dst_ix_fwd = FindAgent(DstNode);
-  if (src_ix_fwd < 0 || dst_ix_fwd < 0) {
+  src_ix_rev = dst_ix_fwd;
+  dst_ix_rev = src_ix_fwd;
+
+    if (src_ix_fwd < 0 || dst_ix_fwd < 0) {
     RVSTRACE_
     return -1;
   }
@@ -734,8 +737,8 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
 
   if (bidirectional) {
     RVSTRACE_
-    src_ix_rev = dst_ix_fwd;
-    dst_ix_rev = src_ix_fwd;
+//     src_ix_rev = dst_ix_fwd;
+//     dst_ix_rev = src_ix_fwd;
 
     // allocate buffers and grant permissions for reverse transfer
     sts = Allocate(src_ix_rev, dst_ix_rev, Size,

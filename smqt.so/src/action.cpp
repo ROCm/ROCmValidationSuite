@@ -129,7 +129,7 @@ int action::run(void) {
   // output
   ulong bar1_size, bar1_base_addr, bar2_size, bar2_base_addr;
   ulong bar4_size, bar4_base_addr, bar5_size;
-  bool pass;
+  bool pass = true;
   int error = 0;
   string msg;
   struct pci_access *pacc;
@@ -240,11 +240,11 @@ int action::run(void) {
     // formating bar5 size for print
     msgs5 = pretty_print(bar5_size, action_name, "bar5_size");
 
-    snprintf(hex_value, 0xFF, "%lX", bar1_base_addr);
+    snprintf(hex_value, sizeof(hex_value), "%lX", bar1_base_addr);
     msga1 = "[" + action_name + "] " + " smqt bar1_base_addr " + hex_value;
-    snprintf(hex_value, 0xFF, "%lX", bar2_base_addr);
+    snprintf(hex_value, sizeof(hex_value), "%lX", bar2_base_addr);
     msga2 = "[" + action_name + "] " + " smqt bar2_base_addr " + hex_value;
-    snprintf(hex_value, 0xFF, "%lX", bar4_base_addr);
+    snprintf(hex_value, sizeof(hex_value), "%lX", bar4_base_addr);
     msga4 = "[" + action_name + "] " + " smqt bar4_base_addr " + hex_value;
     pmsg = "[" + action_name + "] " + " smqt " + pass_str;
 

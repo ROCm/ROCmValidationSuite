@@ -390,7 +390,12 @@ int action::run(void) {
 
     // get the <deviceid> property value if provided
     int dev_id = property_get_deviceid(&error);
-
+    if (error != 0) {
+      cerr << "RVS-GPUP: action: " << property["name"] <<
+                  "  invalid 'deviceid' key value: " <<
+                  dev_id << std::endl;
+      return -1;
+    }
     // extract properties and io_links properties names
     property_split(JSON_PROP_NODE_NAME);
     property_split(JSON_IO_LINK_PROP_NODE_NAME);

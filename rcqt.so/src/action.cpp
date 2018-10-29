@@ -167,6 +167,7 @@ int action::run() {
 int action::pkgchk_run() {
   string package_name;
   string msg;
+
   if (has_property(PACKAGE, &package_name)) {
     bool version_exists = false;
 

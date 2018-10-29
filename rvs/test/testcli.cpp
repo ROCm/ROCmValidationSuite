@@ -22,49 +22,26 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef INCLUDE_RVS_UTIL_H_
-#define INCLUDE_RVS_UTIL_H_
 
-#include <vector>
-#include <string>
+
+
 #include <iostream>
 
-using std::vector;
-using std::string;
-using std::cout;
-using std::endl;
+#include "gtest/gtest.h"
 
-extern vector<string> str_split(const string& str_val,
-        const string& delimiter);
+#include "rvscli.h"
 
-extern int rvs_util_strarr_to_intarr(const std::vector<string>& sArr,
-                                     std::vector<int>* piArr);
+const char* testpass[] = {"./rvs", "-c", "conf"};
+const char* testfail[] = {"./rvs", "-c",};
 
-extern int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
-                                     std::vector<uint16_t>* piArr);
+TEST(rvs, cli) {
+  int sts;
+  rvs::cli cli;
 
-extern int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
-                                     std::vector<uint32_t>* piArr);
+  sts =  cli.parse(sizeof(testpass)/sizeof(char*), const_cast<char**>(testpass));
+  EXPECT_EQ(sts, 0);
 
-bool is_positive_integer(const std::string& str_val);
+  sts =  cli.parse(sizeof(testfail)/sizeof(char*), const_cast<char**>(testfail));
+  EXPECT_EQ(sts, -1);
 
-template <class T> void rvs_util_parse(const string& buff,
-                                    T* pval,
-                                    int *error) {
-  if (buff.empty()) {  // method empty
-    *error = 2;
-  } else {
-    if (is_positive_integer(buff)) {
-      try {
-        *pval = std::stoul(buff);
-        *error = 0;
-      } catch(...) {
-        *error = 1;  // we have an empty string
-      }
-    } else {
-      *error = 1;
-    }
-  }
 }
-
-#endif  // INCLUDE_RVS_UTIL_H_
