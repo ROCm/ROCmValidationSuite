@@ -46,6 +46,8 @@ extern "C" {
 #include "rvsloglp.h"
 #include "rvshsa.h"
 
+#define MODULE_NAME "PEBB"
+
 using std::string;
 using std::vector;
 using std::map;
@@ -54,6 +56,7 @@ pebbworker::pebbworker() {
   // set to 'true' so that do_transfer() will also work
   // when parallel: false
   brun = true;
+  loglevel = rvs::logerror;
 }
 pebbworker::~pebbworker() {}
 
@@ -149,48 +152,64 @@ int pebbworker::do_transfer() {
   unsigned int startusec;
   unsigned int endsec;
   unsigned int endusec;
-  std::string msg;
 
-  msg = "[" + action_name + "] pebb transfer " + std::to_string(src_node) + " "
-      + std::to_string(dst_node) + " ";
+  RVSTRACE_
 
-  rvs::lp::get_ticks(&startsec, &startusec);
+  brun = true;
+  if (loglevel >= rvs::logdebug)
+    rvs::lp::get_ticks(&startsec, &startusec);
 
   if (block_size.size() == 0) {
+    RVSTRACE_
     block_size = pHsa->size_list;
   }
 
   for (size_t i = 0; brun && i < block_size.size(); i++) {
+    RVSTRACE_
     current_size = block_size[i];
 
     if (rvs::lp::Stopping()) {
+      RVSTRACE_
       return -1;
     }
     // if needed, swap source and destination
     if (!prop_h2d && prop_d2h) {
+      RVSTRACE_
       sts = pHsa->SendTraffic(dst_node, src_node, current_size,
                               bidirect, &duration);
     } else {
+      RVSTRACE_
       sts = pHsa->SendTraffic(src_node, dst_node, current_size,
                               bidirect, &duration);
     }
     if (sts) {
-      std::cerr << "RVS-PEBB: internal error, src: " << src_node
-      << "   dst: " << dst_node
-      << "   current size: " << current_size << " status "<< sts <<std::endl;
+      std::string msg = "internal error, src: " + std::to_string(src_node)
+      + "   dst: " +std::to_string(dst_node)
+      + "   current size: " + std::to_string(current_size)
+      + " status "+ std::to_string(sts);
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
       return sts;
     }
 
     {
+      RVSTRACE_
       std::lock_guard<std::mutex> lk(cntmutex);
       running_size += current_size;
       running_duration += duration;
     }
   }
 
-  rvs::lp::get_ticks(&endsec, &endusec);
-  rvs::lp::Log(msg + "start", rvs::logdebug, startsec, startusec);
-  rvs::lp::Log(msg + "finish", rvs::logdebug, endsec, endusec);
+  RVSTRACE_
+  if (loglevel >= rvs::logdebug) {
+    RVSTRACE_
+    std::string msg;
+    msg = "[" + action_name + "] pebb transfer " + std::to_string(src_node) + " "
+        + std::to_string(dst_node) + " ";
+
+    rvs::lp::get_ticks(&endsec, &endusec);
+    rvs::lp::Log(msg + "start", rvs::logdebug, startsec, startusec);
+    rvs::lp::Log(msg + "finish", rvs::logdebug, endsec, endusec);
+  }
 
   return 0;
 }

@@ -44,6 +44,7 @@ extern "C" {
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvsloglp.h"
+#define MODULE_NAME "PESM"
 
 using std::string;
 using std::vector;

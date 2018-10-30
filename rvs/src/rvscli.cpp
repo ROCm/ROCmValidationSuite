@@ -39,7 +39,9 @@
 #include <stack>
 
 #include "rvsoptions.h"
+#include "rvsliblogger.h"
 
+#define MODULE_NAME_CAPS "CLI"
 
 /**
  * @brief Constructor
@@ -102,7 +104,7 @@ void rvs::cli::extract_path() {
   pid_t pid = getpid();
   snprintf(path, sizeof(path), "/proc/%d/exe", pid);
   if (readlink(path, dest, PATH_MAX) == -1) {
-    std::cerr << "RVS-CLI: could not extract path to executable\n";
+    rvs::logger::Err("could not extract path to executable", MODULE_NAME_CAPS);
     return;
   }
 
@@ -122,7 +124,12 @@ void rvs::cli::extract_path() {
 void rvs::cli::init_grammar() {
   std::shared_ptr<optbase> sp;
 
+  while (!context.empty()) context.pop();
   grammar.clear();
+  itoken = 1;
+  errstr.clear();
+  current_option.clear();
+  current_value.clear();
 
   sp = std::make_shared<optbase>("-a", command);
   grammar.insert(gpair("-a", sp));

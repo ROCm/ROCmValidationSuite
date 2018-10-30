@@ -441,7 +441,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 void GSTWorker::run() {
     string msg, err_description;
     int error = 0;
-    bool gst_test_passed;
+    bool gst_test_passed = true;
 
     max_gflops = 0;
 
