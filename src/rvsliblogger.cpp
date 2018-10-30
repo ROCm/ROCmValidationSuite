@@ -171,8 +171,6 @@ int rvs::logger::Log(const char* Message, const int LogLevel) {
  */
 int rvs::logger::LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec) {
-  // lock cout_mutex for the duration of this block
-  std::lock_guard<std::mutex> lk(cout_mutex);
 
   // stop logging requested?
   if (bStop) {
@@ -182,7 +180,9 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   }
 
   if (LogLevel < lognone || LogLevel > logtrace) {
-    cerr << "ERROR: unknown logging level: " << LogLevel << '\n';
+    char buff[128];
+    snprintf(buff, sizeof(buff), "unknown logging level: %d", LogLevel);
+    Err( buff, "CLI");
     return -1;
   }
 
@@ -212,6 +212,8 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
 
   // if no quiet option given, output to cout
   if (!rvs::options::has_option("-q")) {
+    // lock cout_mutex for the duration of this block
+    std::lock_guard<std::mutex> lk(cout_mutex);
     cout << row << '\n';
   }
 
@@ -289,7 +291,9 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   // assert log levl
   int level = r->LogLevel();
   if (level < lognone || level > logtrace) {
-    cerr << "ERROR: unknown logging level: " << level << '\n';
+    char buff[128];
+    snprintf(buff, sizeof(buff), "unknown logging level: %d", r->LogLevel());
+    Err( buff, "CLI");
     delete r;
     return -1;
   }
@@ -573,17 +577,10 @@ int rvs::logger::Err(const char* Message, const char* Module
   std::string out;
   out = "RVS-ERROR ";
   out += module + action + message;
-  std::cerr << out << std::endl;
+  {
+    // lock cout_mutex for the duration of this block
+    std::lock_guard<std::mutex> lk(cout_mutex);
+    std::cerr << out << std::endl;
+  }
   return 0;
 }
-
-/**
- * @brief Output log message
- *
- * @param Message Message to log
- * @param LogLevel Logging level
- * @param Sec secconds from system start
- * @param uSec microseconds in current second
- * @return 0 - success, non-zero otherwise
- *
- */
