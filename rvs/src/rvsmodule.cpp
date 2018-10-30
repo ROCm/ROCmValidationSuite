@@ -41,6 +41,7 @@
 #include "rvsliblog.h"
 #include "rvsoptions.h"
 
+#define MODULE_NAME_CAPS "CLI"
 
 std::map<std::string, rvs::module*> rvs::module::modulemap;
 std::map<std::string, std::string>  rvs::module::filemap;
@@ -80,7 +81,9 @@ int rvs::module::initialize(const char* pConfig) {
   std::ifstream file(pConfig);
 
   if (!file.good()) {
-    std::cerr << "RVS-CLI: " << pConfig << " file does not exist.\n";
+    char buff[1024];
+    snprintf(buff, sizeof(buff), "file does not exist: %s", pConfig);
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
     return -1;
   } else {
     file.close();
@@ -92,8 +95,8 @@ int rvs::module::initialize(const char* pConfig) {
   // verify that that the file format is supported
   YAML::const_iterator it = config.begin();
   if (it == config.end()) {
-    std::cerr << "RVS-CLI: unsupported file format. Version string not found."
-              << std::endl;
+    rvs::logger::Err("unsupported file format. Version string not found.",
+                     MODULE_NAME_CAPS);
     return -1;
   }
 
@@ -101,13 +104,16 @@ int rvs::module::initialize(const char* pConfig) {
     std::string value = it->second.as<std::string>();
 
   if (key != "version") {
-    std::cerr << "RVS-CLI: unsupported file format. Version string not found."
-              << std::endl;
+    rvs::logger::Err("unsupported file format. Version string not found.",
+                     MODULE_NAME_CAPS);
     return -1;
   }
 
   if (value != "1") {
-    std::cerr << "RVS-CLI: version is not 1" << std::endl;
+    char buff[1024];
+    snprintf(buff, sizeof(buff), "file version is %s, expected 1",
+             value.c_str());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
     return -1;
   }
 
@@ -146,8 +152,10 @@ rvs::module* rvs::module::find_create_module(const char* name) {
     // not found...
     if (it == filemap.end()) {
       // this should never happen if .config is OK
-      std::cerr << "RVS-CLI: module '" << name << "' not found in configuration."
-                << std::endl;
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+               "module '%s' not found in configuration.", name);
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return NULL;
     }
 
@@ -164,8 +172,13 @@ rvs::module* rvs::module::find_create_module(const char* name) {
 
     // error?
     if (!psolib) {
-      std::cerr << "RVS-CLI: could not load .so '" << sofullname << "' reason: "
-                << dlerror() << std::endl;
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+               "could not load .so '%s'", sofullname.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      snprintf(buff, sizeof(buff),
+               "reason: '%s'", dlerror());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return NULL;  // fail
     }
 
@@ -178,8 +191,10 @@ rvs::module* rvs::module::find_create_module(const char* name) {
 
     // initialize API function pointers
     if (m->init_interfaces()) {
-      std::cerr << "RVS-CLI: could not init interfaces for '"
-                << it->second.c_str() << "'" << std::endl;
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+               "could not init interfaces for '%s'", it->second.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
       dlclose(psolib);
       delete m;
       return nullptr;
@@ -187,8 +202,10 @@ rvs::module* rvs::module::find_create_module(const char* name) {
 
     // initialize newly loaded module
     if (m->initialize()) {
-      std::cerr << "RVS-CLI: could not initialize '" << it->second.c_str() << "'"
-                << std::endl;
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+               "could not initialize '%s'", it->second.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
       dlclose(psolib);
       delete m;
       return nullptr;
@@ -242,23 +259,30 @@ rvs::action* rvs::module::action_create(const char* name) {
   // find module
   rvs::module* m = module::find_create_module(name);
   if (!m) {
-    std::cerr << "RVS-CLI: module '" << name << "' not available." << std::endl;
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+              "module '%s' not available.", name);
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
     return nullptr;
   }
 
   // create lib action objct
   void* plibaction = m->action_create();
   if (!plibaction)  {
-    std::cerr << "RVS-CLI: module '" << name << "' could not create lib action."
-         << std::endl;
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+              "module '%s' could not create lib action.", name);
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
     return nullptr;
   }
 
   // create action proxy object
   rvs::action* pa = new rvs::action(name, plibaction);
   if (!pa) {
-    std::cerr << "RVS-CLI: module '" << name << "' could not create action proxy."
-              << std::endl;
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+              "module '%s' could not create action proxy.", name);
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
     return nullptr;
   }
 
@@ -404,13 +428,15 @@ int rvs::module::init_interfaces() {
  */
 int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName) {
   if (!psolib) {
-    std::cerr << "RVS-CLI: psolib is null. " << std::endl;
+    rvs::logger::Err("psolib is null.", MODULE_NAME_CAPS);
     return -1;
   }
   void* pf = dlsym(psolib, pMethodName);
   if (!pf) {
-    std::cerr << "RVS-CLI: could not find .so method '" << pMethodName << "'"
-              << std::endl;
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+              "could not find .so method '%s'", pMethodName);
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
   }
 
   *ppfunc = pf;
@@ -520,8 +546,10 @@ void rvs::module::do_list_modules(void) {
     // create action
     rvs::action* pa = rvs::module::action_create(it->first.c_str());
     if (!pa) {
-      std::cerr << "RVS-CLI: could not open module: " << it->first.c_str()
-                << std::endl;
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+                "could not open module '%s'", it->first.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
       continue;
     }
 
@@ -533,8 +561,7 @@ void rvs::module::do_list_modules(void) {
     if (!pif0) {
       // action no longer needed so destroy it
       rvs::module::action_destroy(pa);
-
-      std::cerr << "RVS-CLI: could not obtain data." << std::endl;
+      rvs::logger::Err("could not obtain interface if0", MODULE_NAME_CAPS);
       continue;
     }
 
