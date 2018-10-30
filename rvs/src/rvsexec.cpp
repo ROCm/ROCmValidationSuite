@@ -38,11 +38,10 @@
 #include "rvsliblogger.h"
 #include "rvsoptions.h"
 
-#define VER "BUILD_VERSION_STRING"
+#define MODULE_NAME_CAPS "CLI"
 
 using std::string;
 using std::cout;
-using std::cerr;
 using std::endl;
 
 //! Default constructor
@@ -86,12 +85,17 @@ int rvs::exec::run() {
       level = std::stoi(val);
     }
     catch(...) {
-      cerr << "RVS-CLI: syntax error: logging level not integer: " << val <<endl;
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+                "logging level not integer: %s", val.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return -1;
     }
     if (level < 0 || level > 5) {
-      cerr << "RVS-CLI: syntax error: logging level not in range [0..5]: "
-      << val <<endl;
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+                "logging level not in range [0..5]: %s", val.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return -1;
     }
     logger::log_level(level);
@@ -124,7 +128,10 @@ int rvs::exec::run() {
   std::ifstream file(config_file);
 
   if (!file.good()) {
-    cerr << "RVS-CLI: " << config_file << " file is missing.\n";
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+              "%s file is missing.", config_file.c_str());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
     return -1;
   } else {
     file.close();
@@ -155,8 +162,13 @@ int rvs::exec::run() {
     sts = do_yaml(config_file);
   } catch(std::exception& e) {
     sts = -999;
-    cerr << "RVS-CLI: error processing configuration file " << config_file << endl;
-    cerr << "RVS-CLI: exception: " << e.what() << endl;
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+             "error processing configuration file: %s", config_file.c_str());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
+    snprintf(buff, sizeof(buff),
+             "exception: %s", e.what());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
   }
 
   logger::terminate();
@@ -213,14 +225,14 @@ int rvs::exec::do_gpu_list() {
   // create action excutor in .so
   rvs::action* pa = module::action_create("pesm");
   if (!pa) {
-    cerr << "RVS-CLI: could not list GPUs\n";
+    rvs::logger::Err("could not list GPUs.", MODULE_NAME_CAPS);
     return 1;
   }
 
   // obtain interface to set parameters and execute action
   if1* pif1 = static_cast<if1*>(pa->get_interface(1));
   if (!pif1) {
-    cerr << "RVS-CLI: could not obtain interface IF1\n";
+    rvs::logger::Err("could not obtain interface if1.", MODULE_NAME_CAPS);
     module::action_destroy(pa);
     return 1;
   }

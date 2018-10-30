@@ -787,7 +787,7 @@ int pqtaction::print_running_average(pqtworker* pWorker) {
 
 /**
  * @brief Collect bandwidth totals for all the tests and prints
- * them on cout at the end of action execution
+ * them out at the end of action execution
  *
  * @return 0 - if successfull, non-zero otherwise
  *
