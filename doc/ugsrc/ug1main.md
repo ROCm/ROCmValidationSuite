@@ -15,7 +15,7 @@ of options that it defines and a configuration file that supports its execution.
 
 @section usg2 2 Installing RVS
 
-RVS cab be obtained by building it fro source code base or by installing from
+RVS can be obtained by building it from source code base or by installing from
 pre-built package.
 
 @subsection ugs21 2.1 Building from Source Code
@@ -1825,8 +1825,7 @@ from one node to another.
 <tr><td>parallel</td><td>Bool</td>
 <td>This option is only used if the test_bandwidth
 key is true.\n
-- true – Run all test transfers in parallel.
-**count** and **wait** keys are ignored.\n
+- true – Run all test transfers in parallel.\n
 - false – Run test transfers one by one.
 
 </td></tr>
@@ -1866,6 +1865,16 @@ If "all" or missing list of block sizes used in rocm_bandwidth_test is used:
 - 256 * 1024 * 1024
 - 512 * 1024 * 1024
 </td></tr>
+<tr><td>b2b_block_size</td><td>Integer</td>
+<td>This option is only used if both 'test_bandwidth' and 'parallel' keys are
+true. This is a positive integer indicating size in Bytes of a data block to be
+transferred continuously ("back-to-back") for the duration of one test pass. If
+the key is not present, ordinary transfers with size indicated in 'block_size'
+key will be performed.</td></tr>
+<tr><td>link_type</td><td>Integer</td>
+<td>This is a positive integer indicating type of link to be included in
+bandwidth test. Numbering follows that listed in **hsa\_amd\_link\_info\_type\_t** in
+**hsa\_ext\_amd.h** file.</td></tr>
 </table>
 
 Please note that suitable values for **log\_interval** and **duration** depend
@@ -2165,8 +2174,7 @@ will be considered. The default value is true.
 <tr><td>parallel</td><td>Bool</td>
 <td>This option is only used if the test_bandwidth
 key is true.\n
-- true – Run all test transfers in parallel.
-**count** and **wait** keys are ignored.\n
+- true – Run all test transfers in parallel.\n
 - false – Run test transfers one by one.
 
 </td></tr>
@@ -2206,6 +2214,16 @@ If "all" or missing list of block sizes used in rocm_bandwidth_test is used:
 - 256 * 1024 * 1024
 - 512 * 1024 * 1024
 </td></tr>
+<tr><td>b2b_block_size</td><td>Integer</td>
+<td>This option is only used if both 'test_bandwidth' and 'parallel' keys are
+true. This is a positive integer indicating size in Bytes of a data block to be
+transferred continuously ("back-to-back") for the duration of one test pass. If
+the key is not present, ordinary transfers with size indicated in 'block_size'
+key will be performed.</td></tr>
+<tr><td>link_type</td><td>Integer</td>
+<td>This is a positive integer indicating type of link to be included in
+bandwidth test. Numbering follows that listed in **hsa\_amd\_link\_info\_type\_t** in
+**hsa\_ext\_amd.h** file.</td></tr>
 </table>
 
 Please note that suitable values for **log\_interval** and **duration** depend

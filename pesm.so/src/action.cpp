@@ -36,17 +36,17 @@ extern "C" {
 #include <algorithm>
 #include <iomanip>
 
+#include "rvs_key_def.h"
 #include "rvs_module.h"
 #include "worker.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvsloglp.h"
-
+#define MODULE_NAME "PESM"
 
 using std::string;
 using std::cout;
-using std::cerr;
 using std::endl;
 using std::hex;
 
@@ -86,7 +86,7 @@ int action::run(void) {
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing in gst module";
-    cerr << "RVS-PESM: " << msg;
+    rvs::lp::Err(msg, MODULE_NAME);
     return -1;
   }
   rvs::lp::Log("[" + property["name"]+ "] pesm in run()", rvs::logtrace);
@@ -134,13 +134,15 @@ int action::run(void) {
           pworker->set_deviceid(std::stoi(sdevid));
         }
         catch(...) {
-          cerr << "RVS-PESM: action: " << property["name"] <<
-          "  invalide 'deviceid' key value: " << sdevid << std::endl;
+          msg = property["name"] +
+          "  invalide 'deviceid' key value: " + sdevid;
+          rvs::lp::Err(msg, MODULE_NAME, action_name);
           return -1;
         }
       } else {
-        cerr << "RVS-PESM: action: " << property["name"] <<
-        "  invalide 'deviceid' key value: " << sdevid << std::endl;
+        msg = property["name"] +
+        "  invalide 'deviceid' key value: " + sdevid;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
         return -1;
       }
     }
@@ -154,15 +156,17 @@ int action::run(void) {
         vector<int> iarr;
         int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
         if (sts < 0) {
-          cerr << "RVS-PESM: action: " << property["name"] <<
-          "  invalide 'device' key value: " << sdev << std::endl;
+          msg = property["name"] +
+          "  invalide 'device' key value: " + sdev;
+          rvs::lp::Err(msg, MODULE_NAME, action_name);
           return -1;
         }
         pworker->set_gpuids(iarr);
       }
     } else {
-          cerr << "RVS-PESM: action: " << property["name"] <<
-          "  key 'device' not found" << std::endl;
+          msg = property["name"] +
+          "  key 'device' not found";
+          rvs::lp::Err(msg, MODULE_NAME, action_name);
           return -1;
     }
 

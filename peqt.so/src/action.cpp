@@ -40,6 +40,8 @@ extern "C" {
 #endif
 
 #include "pci_caps.h"
+
+#include "rvs_key_def.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvs_module.h"
@@ -56,6 +58,7 @@ extern "C" {
 #define PEQT_RESULT_FAIL_MESSAGE        "FALSE"
 
 #define MODULE_NAME                     "peqt"
+#define MODULE_NAME_CAPS                "PEQT"
 
 #define YAML_CAPABILITY_TAG             "capability"
 #define PB_OP_COND_DYN_DELIMITER        "_"
@@ -68,7 +71,6 @@ using std::string;
 using std::regex;
 using std::vector;
 using std::map;
-using std::cerr;
 
 // collection of allowed PCIe capabilities
 const char* pcie_cap_names[] =
@@ -139,9 +141,8 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                     JSON_CAPS_NODE_NAME);
             if (json_pcaps_node == NULL) {
                 // log the error
-                msg = action_name + " " + MODULE_NAME + " "
-                        + JSON_CREATE_NODE_ERROR;
-                cerr << "RVS-PEQT: " << msg;
+                msg = JSON_CREATE_NODE_ERROR;
+                rvs::lp::Err(msg, MODULE_NAME, action_name);
             }
         }
     }
@@ -180,10 +181,10 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                         }
                     } catch (const std::regex_error& e) {
                         // log the regex error
-                        msg = action_name + " " + MODULE_NAME + " "
-                                + YAML_REGULAR_EXPRESSION_ERROR + " at '"
+                        msg = std::string(YAML_REGULAR_EXPRESSION_ERROR)
+                                + " at '"
                                 + it->second + "'";
-                        cerr << "RVS-PEQT: " << msg;
+                        rvs::lp::Err(msg, MODULE_NAME, action_name);;
                     }
                 }
                 break;
@@ -245,7 +246,7 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                         msg = action_name + " " + MODULE_NAME + " "
                                 + YAML_REGULAR_EXPRESSION_ERROR + " at '"
                                 + it->second + "'";
-                        cerr << "RVS-PEQT: " << msg;
+                        rvs::lp::Err(msg, MODULE_NAME, action_name);
                     }
                 }
             }
@@ -271,7 +272,7 @@ int action::run(void) {
     bool device_all_selected = false;
     bool device_id_filtering = false;
     int error = 0;
-    uint16_t deviceid;
+    uint16_t deviceid = 0;
     vector<uint16_t> gpus_location_id;
     vector<uint16_t> gpus_id;
     uint8_t i;
@@ -283,7 +284,7 @@ int action::run(void) {
     rvs::actionbase::property_get_action_name(&error);
     if (error == 2) {
       msg = "action field is missing in gst module";
-      cerr << "RVS-PEQT: " << msg;
+      rvs::lp::Err(msg, MODULE_NAME);
       return -1;
     }
 
@@ -301,9 +302,8 @@ int action::run(void) {
                 action_name.c_str(), rvs::loginfo, sec, usec);
         if (json_root_node == NULL) {
             // log the error
-            msg = action_name + " " + MODULE_NAME + " " +
-                    JSON_CREATE_NODE_ERROR;
-            cerr << "RVS-PEQT: " << msg;
+            msg = JSON_CREATE_NODE_ERROR;
+            rvs::lp::Err(msg, MODULE_NAME, action_name);
         }
     }
 
@@ -311,14 +311,13 @@ int action::run(void) {
     device_all_selected = property_get_device(&error);
     if (error) {
         // log the error
-        msg = action_name + " " + MODULE_NAME + " " +
-                YAML_DEVICE_PROPERTY_ERROR;
-        cerr << "RVS-PEQT: " << msg;
+        msg = YAML_DEVICE_PROPERTY_ERROR;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
 
         // log the module's result (FALSE) and abort PCIe qualification check
         // (<device> parameter is mandatory)
-        msg = action_name + " " + MODULE_NAME + " " + PEQT_RESULT_FAIL_MESSAGE;
-        cerr << "RVS-PEQT: " << msg;
+        msg = PEQT_RESULT_FAIL_MESSAGE;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);;
 
         return -1;  // PCIe qualification check cannot continue
     }
@@ -332,14 +331,13 @@ int action::run(void) {
         }
     } else {
         // log the error
-        msg = action_name + " " + MODULE_NAME + " " +
-                YAML_DEVICEID_PROPERTY_ERROR;
-        cerr << "RVS-PEQT: " << msg;
+        msg = YAML_DEVICEID_PROPERTY_ERROR;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
 
         // log the module's result (FALSE) and abort PCIe qualification check
         // (<device> parameter is mandatory)
-        msg = action_name + " " + MODULE_NAME + " " + PEQT_RESULT_FAIL_MESSAGE;
-        cerr << "RVS-PEQT: " << msg;
+        msg = PEQT_RESULT_FAIL_MESSAGE;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
 
         return -1;  // PCIe qualification check cannot continue
     }
@@ -349,12 +347,12 @@ int action::run(void) {
 
     if (pacc == NULL) {
         // log the error
-        msg = action_name + " " + MODULE_NAME + " " + PCI_ALLOC_ERROR;
-        cerr << "RVS-PEQT: " << msg;
+        msg = PCI_ALLOC_ERROR;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
 
         // log the module's result (FALSE)
-        msg = action_name + " " + MODULE_NAME + " " + PEQT_RESULT_FAIL_MESSAGE;
-        cerr << "RVS-PEQT: " << msg;
+        msg = PEQT_RESULT_FAIL_MESSAGE;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
         return 1;  // PCIe qualification check cannot continue
     }
 

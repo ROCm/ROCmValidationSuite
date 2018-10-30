@@ -38,12 +38,15 @@
 
 #include "rvscli.h"
 #include "rvsexec.h"
+#include "rvsliblogger.h"
+
+#define MODULE_NAME_CAPS "CLI"
 
 
 /**
  *
- * \ingroup Launcher
- * \brief Main method
+ * @ingroup Launcher
+ * @brief Main method
  *
  * Standard C main() method.
  *
@@ -58,8 +61,10 @@ int main(int Argc, char**Argv) {
 
   sts =  cli.parse(Argc, Argv);
   if (sts) {
-    std::cerr << "RVS-CLI: error parsing command line:"
-      << cli.get_error_string() << std::endl;
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+              "error parssing command line: %s", cli.get_error_string());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
     return -1;
   }
 

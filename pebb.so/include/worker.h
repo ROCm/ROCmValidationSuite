@@ -66,7 +66,7 @@ class pebbworker : public rvs::ThreadBase {
   const std::string& get_name(void) { return action_name; }
 
   int initialize(int iSrc, int iDst, bool h2d, bool d2h);
-  int do_transfer();
+  virtual int do_transfer();
   void get_running_data(int* Src, int* Dst, bool* Bidirect,
                         size_t* Size, double* Duration);
   void get_final_data(int* Src, int* Dst, bool* Bidirect,
@@ -82,6 +82,8 @@ class pebbworker : public rvs::ThreadBase {
   uint16_t get_transfer_num() { return transfer_num; }
   //! Set list of test sizes
   void set_block_sizes(const std::vector<uint32_t>& val) { block_size = val; }
+  //! Set logging level
+  void set_loglevel(const int level) { loglevel = level; }
 
  protected:
   virtual void run(void);
@@ -126,6 +128,8 @@ class pebbworker : public rvs::ThreadBase {
   uint16_t transfer_ix;
   //! total number of transfers
   uint16_t transfer_num;
+  //! logging level
+  int loglevel;
 
   //! list of test block sizes
   std::vector<uint32_t> block_size;

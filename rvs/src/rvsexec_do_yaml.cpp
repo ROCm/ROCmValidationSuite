@@ -38,6 +38,8 @@
 #include "rvsoptions.h"
 #include "rvs_util.h"
 
+#define MODULE_NAME_CAPS "CLI"
+
 /*** Example rvs.conf file structure
 
 actions:
@@ -86,25 +88,31 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     // not found or empty
     if (rvsmodule == "") {
       // report error and go to next action
-      std::cerr << "RVS-CLI: action '"<< action["name"].as<std::string>()
-           << "' does not specify module.\n";
+      char buff[1024];
+      snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
+               action["name"].as<std::string>().c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
       continue;
     }
 
     // create action excutor in .so
     rvs::action* pa = module::action_create(rvsmodule.c_str());
     if (!pa) {
-      std::cerr << "RVS-CLI: action '"<< action["name"].as<std::string>()
-          << "' could not crate action object in module '" << rvsmodule.c_str()
-          << "'\n";
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+               "action '%s' could not crate action object in module '%s'",
+               action["name"].as<std::string>().c_str(),
+               rvsmodule.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
       continue;
     }
 
     if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
     if (!pif1) {
-      std::cerr << "RVS-CLI: action '"<< action["name"].as<std::string>()
-           << "' could not obtain interface IF1\n";
-
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+               "action '%s' could not obtain interface if1",
+               action["name"].as<std::string>().c_str());
       module::action_destroy(pa);
       continue;
     }
@@ -127,7 +135,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     // execute action
     sts = pif1->run();
 
-    // procssin finished, release action object
+    // processing finished, release action object
     module::action_destroy(pa);
 
     // errors?

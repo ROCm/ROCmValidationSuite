@@ -42,17 +42,17 @@ set ( RVS "rvs" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
-set(CMAKE_BUILD_TYPE Debug)
 
 project ( ${RVS_TARGET} )
 
-## Set default module path if not already set
-if ( NOT DEFINED CMAKE_MODULE_PATH )
-    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
-endif ()
+# ## Set default module path if not already set
+# if ( NOT DEFINED CMAKE_MODULE_PATH )
+#     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
+# endif ()
 
 ## Include common cmake modules
 include ( utils )
+include (CTest)
 
 ## Setup the package version default (the actual one is taken from the latest Git tag).
 get_version ( "0.0.0" )
@@ -79,19 +79,25 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set ( PROJECT_LINK_LIBS libdl.so "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../yaml-cpp/libyaml-cpp.a" libpthread.so)
 
 ## define include directories
-include_directories(include ../include ${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/include )
+include_directories(include ../include ${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/include ${UT_INC})
 
 ## define source files
 set(SOURCES
-  src/rvs.cpp src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp src/rvscli.cpp src/rvsexec.cpp src/rvsexec_do_yaml.cpp 
+  src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp src/rvscli.cpp src/rvsexec.cpp src/rvsexec_do_yaml.cpp
   src/rvsoptions.cpp
   ../src/rvsliblogger.cpp ../src/rvslognodebase.cpp ../src/rvslognoderec.cpp ../src/rvslognode.cpp ../src/rvslognodestring.cpp ../src/rvslognodeint.cpp
 )
 
 ## define target
-add_executable(${RVS_TARGET} ${SOURCES})
-
+add_executable(${RVS_TARGET} src/rvs.cpp ${SOURCES})
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+
+## define test target
+file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
+message ( "TESTSOURCES ${TESTSOURCES}" )
+
+add_executable(rvstest ${TESTSOURCES} ${SOURCES})
+target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
@@ -127,3 +133,9 @@ install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/userguide/html
   COMPONENT applications
 )
 
+# TEST SECTION
+
+add_test(NAME unittest
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvstest
+)
