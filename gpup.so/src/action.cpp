@@ -24,6 +24,8 @@
  * 
  *******************************************************************************/
 
+#include "action.h"
+
 #include <string>
 #include <vector>
 #include <fstream>
@@ -31,19 +33,18 @@
 #include <map>
 #include <iostream>
 #include <sstream>
-#include "action.h"
+
+#include "rvs_key_def.h"
 #include "rvs_module.h"
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvsloglp.h"
 
 
-#define KFD_SYS_PATH_NODES "/sys/class/kfd/kfd/topology/nodes"
+#define KFD_QUERYING_ERROR              "An error occurred while querying "\
+                                        "the GPU properties"
 
-#define RVS_CONF_NAME_KEY               "name"
-#define RVS_CONF_DEVICE_KEY             "device"
-#define RVS_CONF_DEVICE_ID_KEY          "device_id"
-#define RVS_JSON_LOG_GPU_ID_KEY         "gpu_id"
+#define KFD_SYS_PATH_NODES "/sys/class/kfd/kfd/topology/nodes"
 
 #define JSON_PROP_NODE_NAME             "properties"
 #define JSON_IO_LINK_PROP_NODE_NAME     "io_links-properties"
@@ -52,12 +53,12 @@
 #define CHAR_MAX_BUFF_SIZE              256
 
 #define MODULE_NAME                     "gpup"
+#define MODULE_NAME_CAPS                "GPUP"
 
 using std::string;
 using std::regex;
 using std::vector;
 using std::map;
-using std::cerr;
 // collection of allowed GPU properties
 const char* gpu_prop_names[] =
         { "cpu_cores_count", "simd_count", "mem_banks_count", "caches_count",
@@ -157,7 +158,7 @@ bool action::device_id_correct(int node_id, int dev_id) {
 
     if (dev_id != -1) {
         while (f_prop >> s) {
-            if (s == RVS_CONF_DEVICE_ID_KEY) {
+            if (s == RVS_CONF_DEVICEID_KEY) {
                 f_prop >> s;
                 if (std::to_string(dev_id) != s)  // skip this node
                     dev_id_corr = false;
@@ -244,9 +245,8 @@ void action::property_get_value(string gpu_id, int node_id) {
                     JSON_PROP_NODE_NAME);
                     if (json_gpuprop_node == NULL) {
                         // log the error
-                        msg = action_name + " " + MODULE_NAME + " " +
-                        JSON_CREATE_NODE_ERROR;
-                        cerr << "RVS-GPUP: " << msg;
+                        msg = std::string(JSON_CREATE_NODE_ERROR);
+                        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
                     }
                 }
             }
@@ -300,9 +300,8 @@ void action::property_io_links_get_value(string gpu_id, int node_id) {
                     JSON_IO_LINK_PROP_NODE_NAME);
                     if (json_gpuprop_node == NULL) {
                         // log the error
-                        msg = action_name + " " + MODULE_NAME + " " +
-                        JSON_CREATE_NODE_ERROR;
-                        cerr << "RVS-GPUP: " << msg;
+                        msg = std::string(JSON_CREATE_NODE_ERROR);
+                        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
                     }
                 }
             }
@@ -383,7 +382,7 @@ int action::run(void) {
     rvs::actionbase::property_get_action_name(&error);
     if (error == 2) {
       msg = "action field is missing in gst module";
-      cerr << "RVS-GPUP: " << msg;
+      rvs::lp::Err(msg, MODULE_NAME_CAPS);
       return -1;
     }
 
@@ -392,7 +391,12 @@ int action::run(void) {
 
     // get the <deviceid> property value if provided
     int dev_id = property_get_deviceid(&error);
-
+    if (error != 0) {
+      msg = property["name"] + " invalid 'deviceid' key value: "
+      + std::to_string(dev_id);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
     // extract properties and io_links properties names
     property_split(JSON_PROP_NODE_NAME);
     property_split(JSON_IO_LINK_PROP_NODE_NAME);
@@ -430,9 +434,10 @@ int action::run(void) {
                 // io_links properties
                 property_io_links_get_value(gpu_id, node_id);
               } else {
-                  cerr << "RVS-GPUP: action: " << property["name"] <<
-                  "  invalid 'deviceid' key value: " <<
-                  dev_id << std::endl;
+                  msg = property["name"] +
+                  "  invalid 'deviceid' key value: " +
+                  std::to_string(dev_id);
+                  rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
                   return -1;
              }
             }

@@ -34,7 +34,6 @@ set ( RVS "gm" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
-set(CMAKE_BUILD_TYPE Debug)
 
 project ( ${RVS_TARGET} )
 

@@ -33,8 +33,11 @@ Compile yaml-cpp (this needs to be done only once after cloning):
     make -C ../build/yaml-cpp
 
 
-Compile rocm_smi_lib (this needs to be done only once after cloning):
+Compile rocm_smi_lib (this needs to be done only once after cloning).
+_**Note:**_ current master branch uses pre 1.9.x `rocm_smi_lib`:
 
+    cd $RVS/rocm_smi_lib/
+    git checkout 87e7a6fad4ab976be25b7a620d8e1b411b633f0b
     cd $RVS
     cmake ./rocm_smi_lib -DROCM_SMI_BLD_BITS=64 -B../build/rocm_smi_lib
     make -C ../build/rocm_smi_lib
@@ -60,7 +63,7 @@ Compile RVS:
 
     cd $RVS
 
-    cmake ./ -B../build
+    cmake -DCMAKE_BUILD_TYPE=Debug ./ -B../build
     make -C ../build
 
 Build package:
