@@ -29,11 +29,19 @@
 
 #include "rvsliblog.h"
 
-#define RVSDEBUG_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
-+std::to_string(__LINE__), rvs::logdebug);
+#define RVSDEBUG_(ATTR, VAL) \
+{std::string msg = std::string(__FILE__)+"   "+__func__+":" \
++std::to_string(__LINE__) + "\n" + std::string(ATTR) + ": " + \
+std::string(VAL); \
+rvs::lp::Log(msg, rvs::logdebug); \
+}
 
-#define RVSTRACE_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
-+std::to_string(__LINE__), rvs::logtrace);
+#ifdef RVS_DO_TRACE
+  #define RVSTRACE_ rvs::lp::Log(std::string(__FILE__)+"   "+__func__+":"\
+  +std::to_string(__LINE__), rvs::logtrace);
+#else
+  #define RVSTRACE_
+#endif
 
 namespace rvs {
 
@@ -71,6 +79,10 @@ class lp {
   static bool  get_ticks(unsigned int* psec, unsigned int* pusec);
   static void  Stop(uint16_t flags);
   static bool  Stopping();
+  static int   Err(const std::string &Msg);
+  static int   Err(const std::string &Msg, const std::string &Module);
+  static int   Err(const std::string &Msg
+    , const std::string &Module, const std::string &Action);
 
  protected:
   //! Module init structure passed through Initialize() method

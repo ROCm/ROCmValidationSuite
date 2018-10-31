@@ -30,14 +30,19 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <iostream>
 
+#include "rvs_key_def.h"
 #include "rvs_util.h"
 
+using std::cout;
+using std::endl;
 /**
  * @brief Default constructor.
  *
  * */
 rvs::actionbase::actionbase() {
+  property_log_level = 2;
 }
 
 /**
@@ -158,20 +163,11 @@ void rvs::actionbase::property_get_uint_list(const std::string& key,
  * @return deviceid value if valid, -1 otherwise
  */
 int rvs::actionbase::property_get_deviceid(int *error) {
-    auto it = property.find(RVS_CONF_DEVICEID_KEY);
-    int deviceid = -1;
+    uint32_t deviceid = -1;
+    std::string val;
     *error = 0;  // init with 'no error'
-
-    if (it != property.end()) {
-        if (it->second != "") {
-            if (is_positive_integer(it->second)) {
-                deviceid = std::stoi(it->second);
-            } else {
-                *error = 1;  // we have something but it's not a number
-            }
-        } else {
-            *error = 1;  // we have an empty string
-        }
+    if (has_property(RVS_CONF_DEVICEID_KEY, &val)) {
+      rvs_util_parse<uint32_t>(val, &deviceid, error);
     }
     return deviceid;
 }
@@ -193,7 +189,7 @@ bool rvs::actionbase::property_get_device(int *error) {
                     YAML_DEVICE_PROP_DELIMITER);
 
             if (device_prop_gpu_id_list.empty()) {
-                *error = 1;  // list of gpu_id cannot be empty
+                *error = 2;  // list of gpu_id cannot be empty
             } else {
                 for (vector<string>::iterator it_gpu_id =
                         device_prop_gpu_id_list.begin();
@@ -254,16 +250,10 @@ void rvs::actionbase::property_get_run_parallel(int *error) {
  */
 void rvs::actionbase::property_get_run_count(int *error) {
   gst_run_count = 1;
-  auto it = property.find(RVS_CONF_COUNT_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      gst_run_count = std::stoi(it->second);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_COUNT_KEY, &val)) {
+    rvs_util_parse<uint64_t>(val, &gst_run_count, error);
   }
 }
 
@@ -273,16 +263,10 @@ void rvs::actionbase::property_get_run_count(int *error) {
  */
 void rvs::actionbase::property_get_run_wait(int *error) {
   gst_run_wait_ms = 0;
-  auto it = property.find(RVS_CONF_WAIT_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      gst_run_wait_ms = std::stoul(it->second);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_WAIT_KEY, &val)) {
+    rvs_util_parse<uint64_t>(val, &gst_run_wait_ms, error);
   }
 }
 
@@ -291,16 +275,10 @@ void rvs::actionbase::property_get_run_wait(int *error) {
  */
 void rvs::actionbase::property_get_run_duration(int *error) {
   gst_run_duration_ms = 0;
-  auto it = property.find(RVS_CONF_DURATION_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      gst_run_duration_ms = std::stoul(it->second);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_DURATION_KEY, &val)) {
+    rvs_util_parse<uint64_t>(val, &gst_run_duration_ms, error);
   }
 }
 
@@ -308,18 +286,11 @@ void rvs::actionbase::property_get_run_duration(int *error) {
  * @brief reads the sample interval from the module's properties collection
  */
 int rvs::actionbase::property_get_sample_interval(int *error) {
-  int sample_int = -1;
-  auto it = property.find(RVS_CONF_SAMPLE_INTERVAL_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      sample_int = std::stoi(it->second);
-      property.erase(it);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  uint32_t sample_int = -1;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_SAMPLE_INTERVAL_KEY, &val)) {
+    rvs_util_parse<uint32_t>(val, &sample_int, error);
   }
   return sample_int;
 }
@@ -329,17 +300,10 @@ int rvs::actionbase::property_get_sample_interval(int *error) {
  */
 int rvs::actionbase::property_get_log_interval(int *error) {
   int log_int = -1;
-  auto it = property.find(RVS_CONF_LOG_INTERVAL_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      log_int = std::stoul(it->second);
-      property.erase(it);
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(RVS_CONF_LOG_INTERVAL_KEY, &val)) {
+    rvs_util_parse<int>(val, &log_int, error);
   }
   return log_int;
 }
@@ -364,4 +328,87 @@ bool rvs::actionbase::property_get_terminate(int *error) {
 
   return term;
 }
+
+/**
+ * @brief reads the log level from the module's properties collection
+ */
+void rvs::actionbase::property_get_log_level(int *error) {
+  property_log_level = 2;
+  auto it = property.find(RVS_CONF_LOG_LEVEL_KEY);
+  if (it != property.end()) {
+    if (is_positive_integer(it->second)) {
+      try {
+        property_log_level = std::stoul(it->second);
+      } catch(...) {
+        *error = 1;
+      }
+      if (property_log_level < 1 || property_log_level > 5) {
+        property_log_level = 2;
+        *error = 1;
+      }
+    } else {
+      *error = 1;
+    }
+  } else {
+    *error = 2;
+  }
+}
+
+/**
+ * gets the b2b_block_size key from the module's properties collection
+ * @param error pointer to a memory location where the error code will be stored
+ * @return size of data block to be used in b2b transfer
+ */
+uint32_t rvs::actionbase::property_get_b2b_size(int* error) {
+  std::string val;
+  if (!has_property(RVS_CONF_B2B_BLOCK_SIZE_KEY, &val)) {
+    *error = 2;
+    return 0;
+  }
+
+  if (!is_positive_integer(val)) {
+    *error = 1;
+    return 0;
+  }
+
+  uint32_t retval = 0;
+  try {
+    retval = std::stoul(val);
+  } catch(...) {
+    *error = 1;
+    return 0;
+  }
+
+  return retval;
+}
+
+/**
+ * gets value for link_type key. This value is used to filter host-device links.
+ * @param error pointer to a memory location where the error code will be stored
+ * @return link type (in line with hsa_amd_link_info_type_t)
+ */
+int rvs::actionbase::property_get_link_type(int* error) {
+  std::string val;
+  if (!has_property(RVS_CONF_LINK_TYPE_KEY, &val)) {
+    *error = 2;
+    return -1;
+  }
+
+  if (!is_positive_integer(val)) {
+    *error = 1;
+    return -1;
+  }
+
+  int retval = -1;
+  try {
+    retval = std::stoi(val);
+  } catch(...) {
+    *error = 1;
+    return -1;
+  }
+
+  return retval;
+}
+
+
 

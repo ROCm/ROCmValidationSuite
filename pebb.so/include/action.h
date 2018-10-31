@@ -70,7 +70,7 @@ class pebbaction : public rvs::actionbase {
   //! 'true' if prop_device_id is valid number
   bool      prop_device_id_filtering;
 
-  // PQT specific config keys
+  // module specific config keys
   void property_get_h2d();
   void property_get_d2h();
 
@@ -93,6 +93,10 @@ class pebbaction : public rvs::actionbase {
   std::vector<uint32_t> block_size;
   //! set to 'true' if the default block sizes are to be used
   bool b_block_size_all;
+  //! test block size for back-to-back transfers
+  uint32_t b2b_block_size;
+  //! link type
+  int link_type;
 
  protected:
   int create_threads();
