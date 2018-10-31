@@ -154,7 +154,8 @@ int action::run(void) {
             msg = " Wrong number of metric parameters ";
             cerr << "RVS-GM: action: " << property["name"] << msg << endl;
             return -1;
-        }
+          }
+        
 
         pworker->set_metr_mon(metric, metric_true);
         pworker->set_bound(metric, metric_bound, metric_max, metric_min);
