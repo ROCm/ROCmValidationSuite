@@ -158,7 +158,6 @@ int action::run(void) {
             rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
             return -1;
           }
-        
 
         pworker->set_metr_mon(metric, metric_true);
         pworker->set_bound(metric, metric_bound, metric_max, metric_min);

@@ -55,7 +55,6 @@ class action : public rvs::actionbase {
     void* json_root_node;
 
  protected:
-   
 /**
  * @brief gets the number of ROCm compatible AMD GPUs
  * @return run number of GPUs
