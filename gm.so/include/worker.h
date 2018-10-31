@@ -170,13 +170,13 @@ struct Metric_value {
 };
 
   //! device irq, gpu_id and average metric
-  std::map<std::string, Dev_metrics> irq_gpu_ids;
+  std::map<uint16_t, Dev_metrics> irq_gpu_ids;
   //! device_irq and metric bounds
   std::map<std::string, Metric_bound> bounds;
   //! device_irq and metrics violation
-  std::map<std::string, Metric_violation> met_violation;
+  std::map<uint16_t, Metric_violation> met_violation;
   //! device_irq and current metric values
-  std::map<std::string, Metric_value> met_value;
+  std::map<uint16_t, Metric_value> met_value;
 };
 
 #endif  // GM_SO_INCLUDE_WORKER_H_
