@@ -193,7 +193,6 @@ void Worker::do_metric_values() {
       rvs::lp::Log(msg, rvs::loginfo, sec, usec);
       rvs::lp::AddString(r,  "info ", msg);
     }
-
   }
   rvs::lp::LogRecordFlush(r);
 }
@@ -210,16 +209,21 @@ void Worker::run() {
   std::string val_str;
   std::vector<std::string> val_vec;
 
-  char path[IRQ_PATH_MAX_LENGTH];
-  uint32_t value;
-  uint32_t value2;
   uint16_t dev_idx = 0;
   string msg;
-  int ret;
+  rsmi_status_t status;
+  rsmi_frequencies f;
+  uint32_t sensor_ind = 0;
+  int64_t temperature;
+  int64_t speed;
+  uint64_t power;
 
   struct pci_access *pacc;
   struct pci_dev *dev_pci;
 
+  uint64_t id;
+  uint32_t dv_ind = 0;
+  uint32_t num_devices;
   unsigned int sec;
   unsigned int usec;
   void* r;
@@ -228,17 +232,9 @@ void Worker::run() {
 
   // get timestamp
   rvs::lp::get_ticks(&sec, &usec);
-  
-          rsmi_init(0);
-          uint64_t id;
-          uint32_t dv_ind=0;
-          uint32_t num_devices;
-          rsmi_status_t number_status =rsmi_num_monitor_devices(&num_devices);
-          for(int i=0; i<num_devices;i++) {
-          rsmi_status_t status = rsmi_dev_id_get(i, &id);
-          std::cout << i << " " << id << std::endl;
-          }
 
+  rsmi_init(0);
+  status = rsmi_num_monitor_devices(&num_devices);
 
   // add JSON output
   r = rvs::lp::LogRecordCreate("gm", action_name.c_str(), rvs::loginfo,
@@ -261,7 +257,7 @@ void Worker::run() {
       uint16_t dev_location_id = ((((uint16_t) (dev_pci->bus)) << 8)
                  | (dev_pci->func));
 
-        uint32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+        int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
                 if (gpu_id == -1)
             continue;
 
@@ -297,43 +293,34 @@ void Worker::run() {
           met_value.insert(std::pair<uint16_t, Metric_value>
                 (dev_idx, {0, 0, 0, 0, 0}));
           count = 0;
-                  
-          rsmi_status_t status = rsmi_dev_id_get(dev_idx, &id);
-        
+
+          status = rsmi_dev_id_get(dev_idx, &id);
+
           dev_idx++;
           break;
         }
     }
-    
-
 
   rvs::lp::LogRecordFlush(r);
   // if log_interval timer starts
   if (log_interval) {
     timer_running.start(log_interval);
   }
-  
+
   // worker thread has started
   while (brun) {
     rvs::lp::Log("[" + action_name + "] gm worker thread is running...",
                  rvs::logtrace);
-    
-    rsmi_frequencies f;
-    rsmi_temperature_metric t;
-    uint32_t sensor_ind = 0;
-    int64_t temperature;
-    int64_t speed;
-    uint64_t power;
-    for(dv_ind=0; dv_ind<num_devices;dv_ind++)  {
-      // if dv_ind is not in map skip monitoring this device
 
+    for (dv_ind = 0; dv_ind < num_devices; dv_ind++) {
+      // if dv_ind is not in map skip monitoring this device
       auto it = irq_gpu_ids.find(dv_ind);
       if (it == irq_gpu_ids.end()) {
         break;
       }
 
       if (bounds[GM_MEM_CLOCK].mon_metric) {
-        rsmi_status_t status = rsmi_dev_gpu_clk_freq_get(dv_ind,
+            status = rsmi_dev_gpu_clk_freq_get(dv_ind,
                                  RSMI_CLK_TYPE_MEM, &f);
             int mhz = f.current;
             met_value[dv_ind].mem_clock = mhz;
@@ -365,11 +352,10 @@ void Worker::run() {
         if (!brun) {
           break;
         }
-        //val_vec.clear();
       }
 
       if (bounds[GM_CLOCK].mon_metric) {
-        rsmi_status_t status = rsmi_dev_gpu_clk_freq_get(dv_ind,
+            status = rsmi_dev_gpu_clk_freq_get(dv_ind,
                                  RSMI_CLK_TYPE_SYS, &f);
             int mhz = f.current;
             met_value[dv_ind].clock = mhz;
@@ -404,9 +390,9 @@ void Worker::run() {
       }
 
       if (bounds[GM_TEMP].mon_metric) {
-        rsmi_status_t status = rsmi_dev_temp_metric_get(dv_ind, sensor_ind,
+        status = rsmi_dev_temp_metric_get(dv_ind, sensor_ind,
                         RSMI_TEMP_CURRENT, &temperature);
-        if ( status == RSMI_STATUS_SUCCESS) {
+        if (status == RSMI_STATUS_SUCCESS) {
           int temper = temperature/1000;
           met_value[dv_ind].temp = temper;
           irq_gpu_ids[dv_ind].av_temp += temper;
@@ -441,9 +427,9 @@ void Worker::run() {
             log(msg.c_str(), rvs::loginfo);
           }
       }
- 
+
       if (bounds[GM_FAN].mon_metric) {
-        rsmi_status_t status = rsmi_dev_fan_speed_get( dv_ind,
+          status = rsmi_dev_fan_speed_get(dv_ind,
                                          sensor_ind, &speed);
           if (status == RSMI_STATUS_SUCCESS) {
             met_value[dv_ind].fan = speed;
@@ -481,11 +467,12 @@ void Worker::run() {
       }
 
        if (bounds[GM_POWER].mon_metric) {
-            rsmi_status_t status = 
-            rsmi_dev_power_ave_get( dv_ind, sensor_ind, &power);
+            status =
+            rsmi_dev_power_ave_get(dv_ind, sensor_ind, &power);
             met_value[dv_ind].power = power;
             irq_gpu_ids[dv_ind].av_power += power;
-            if (!(power >= bounds[GM_POWER].min_val && power <=
+            if (!(static_cast<int>(power) >= bounds[GM_POWER].min_val &&
+                        static_cast<int>(power) <=
                         bounds[GM_POWER].max_val) &&
                         bounds[GM_POWER].check_bounds) {
               // write info
@@ -514,8 +501,6 @@ void Worker::run() {
     count++;
     sleep(sample_interval);
   }
-
-  
 
   pci_cleanup(pacc);
   rsmi_shut_down();

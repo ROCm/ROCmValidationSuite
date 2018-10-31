@@ -119,7 +119,7 @@ class Worker : public rvs::ThreadBase {
 //! gpu_id and average metrics values
 struct Dev_metrics {
     //! gpu_id
-    uint32_t gpu_id;
+    int32_t gpu_id;
     //! average temperature
     uint32_t av_temp;
     //! average clock
