@@ -167,22 +167,31 @@ add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
 
 add_custom_target(doc ALL
+COMMAND ${CMAKE_COMMAND} -E make_directory "doc"
+WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+COMMENT "Create the doc directory"
+VERBATIM)
+
+add_custom_target(progguide ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS Programmer's Reference Guide"
     VERBATIM)
+add_dependencies(progguide doc)
 
 add_custom_target(man1 ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyMan1
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS man.1 files"
     VERBATIM)
+add_dependencies(man1 doc)
 
 add_custom_target(userguide ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyGuide
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS User Guide"
     VERBATIM)
+add_dependencies(userguide doc)
 
 install(FILES "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib COMPONENT rvsmodule)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf" DESTINATION /etc/ld.so.conf.d COMPONENT rvsmodule)
