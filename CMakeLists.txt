@@ -33,15 +33,24 @@ message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
 if ( DEFINED CMAKE_BUILD_TYPE)
-if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-  add_definitions(-DDEBUG)
-  message(STATUS "DEBUG defined")
-endif( )
+  if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    add_definitions(-DDEBUG)
+    message(STATUS "DEBUG defined")
+  endif( )
+else()
+    add_definitions(-DDEBUG)
+    message(STATUS "DEBUG defined")
 endif()
 
 if (DEFINED RVS_DO_TRACE)
-  add_definitions(-DRVS_DO_TRACE)
-  message(STATUS "RVS_DO_TRACE defined")
+  if (${CMAKE_BUILD_TYPE} STREQUAL "1")
+    add_definitions(-DRVS_DO_TRACE)
+    message(STATUS "RVS_DO_TRACE defined")
+  else()
+      message(STATUS "RVS_DO_TRACE not defined")
+  endif()
+else()
+    message(STATUS "RVS_DO_TRACE not defined")
 endif( )
 
 ## Support for in-source compilaton
@@ -142,7 +151,8 @@ set(ROCBLAS_LIB_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/li
 set(ROCM_SMI_INC_DIR "$ENV{RVS}/rocm_smi_lib/include" CACHE PATH "Contains header files exported by rocm_smi")
 set(ROCM_SMI_LIB_DIR "$ENV{RVS}/../build/rocm_smi_lib" CACHE PATH "Contains library files exported by rocm_smi")
 set(ROCM_SMI_LIB "rocm_smi64" CACHE PATH "rocm_smi library name")
-#add_subdirectory(yaml-cpp)
+set(CMAKE_BUILD_TYPE "Debug" CACHE PATH "Build type")
+set(RVS_DO_TRACE "1" CACHE PATH "Expand RVSTRACE_ macro")
 
 add_subdirectory(rvs)
 add_subdirectory(gpup.so)
@@ -155,8 +165,6 @@ add_subdirectory(gm.so)
 add_subdirectory(gst.so)
 add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
-
-#add_dependencies(rvs yaml-cpp)
 
 add_custom_target(doc ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen
