@@ -13,7 +13,7 @@ this [link](./PREREQUISITES.md).
 ## Building from Source
 This section explains how to get and compile current development stream of RVS.
 
-Clone repository:
+### Clone repository
 
     cd /your/work/bench/folder
     git clone https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.git
@@ -27,14 +27,19 @@ Init environment variables and submodule:
     git submodule init
     git submodule update
     
-Compile yaml-cpp (this needs to be done only once after cloning):
+### Compile yaml-cpp
+
+This needs to be done only once after cloning.
 
     cd $RVS
     cmake ./yaml-cpp -B../build/yaml-cpp
     make -C ../build/yaml-cpp
 
 
-Compile rocm_smi_lib (this needs to be done only once after cloning).
+### Compile rocm_smi_lib
+
+This needs to be done only once after cloning.
+
 _**Note:**_ current master branch uses pre 1.9.x `rocm_smi_lib`:
 
     cd $RVS/rocm_smi_lib/
@@ -43,10 +48,20 @@ _**Note:**_ current master branch uses pre 1.9.x `rocm_smi_lib`:
     cmake ./rocm_smi_lib -DROCM_SMI_BLD_BITS=64 -B../build/rocm_smi_lib
     make -C ../build/rocm_smi_lib
 
-_**Note:**_ `rocm_smi_lib` handling will need to be changed once `rocm_smi_lib`
+_**Note:**_ `rocm_smi_lib` handling will be changed once `rocm_smi_lib`
 is included into ROCm package
 
-Compile rocBLAS (this needs to be done only once after cloning):
+### Compile rocBLAS
+
+This needs to be done only once after cloning.
+
+Note:
+
+- if the latest version of rocBLAS is already installed on your system, you may
+skip this step, but you need to set `ROCBLAS_INC_DIR` and `ROCBLAS_LIB_DIR`
+environment variables based on your rocBLAS installation location
+
+.
 
     cd $RVS
     cd ../build
@@ -55,16 +70,14 @@ Compile rocBLAS (this needs to be done only once after cloning):
     ./install.sh -d
 
 Note:
-- in case you want to install rocBLAS after compiling then you can use the _-i_
-option (e.g.: _./install.sh -i_). In this case, _ROCBLAS_INC_DIR_ and
-_ROCBLAS_LIB_DIR_ have to be updated based on your rocBLAS installation location
-(e.g.: _/opt/rocm/rocblas/.._)
-- if the latest version of rocBLAS is already installed on your system you may
-skip this step but you need to update the _ROCBLAS_INC_DIR_ and
-_ROCBLAS_LIB_DIR_ based on your rocBLAS installation location
-- if rocBLAS dependencies are already satisfied then you can skip the _-d_
+
+- in case you want to install rocBLAS after compiling then you can use the `-i`
+option (e.g.: `./install.sh -i`). In this case, `ROCBLAS_INC_DIR` and
+`ROCBLAS_LIB_DIR` have to be updated based on your rocBLAS installation location
+(e.g.: `/opt/rocm/rocblas/...`)
+- if rocBLAS dependencies are already satisfied then you can skip the `-d`
 option
-- in case _./install.sh -d_ fails please try without _-d_
+- in case `./install.sh -d` fails please try without `-d`
 
 Compile RVS:
 
