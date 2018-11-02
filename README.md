@@ -16,12 +16,13 @@ This section explains how to get and compile current development stream of RVS.
 Clone repository:
 
     cd /your/work/bench/folder
-    export WB=$PWD
     git clone https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.git
-    
+
 Init environment variables and submodule:
 
+    export WB=$PWD
     export RVS=$WB/ROCmValidationSuite
+    export RVS_BUILD=$WB/build
     cd $RVS
     git submodule init
     git submodule update
@@ -49,14 +50,20 @@ Compile rocBLAS (this needs to be done only once after cloning):
 
     cd $RVS
     cd ../build
-    git clone https://github.com/ROCmSoftwarePlatform/rocBLAS.git
+    git clone https://github.com/ROCmSoftwarePlatform/rocBLAS.git -b v14.3.0
     cd rocBLAS
     ./install.sh -d
 
 Note:
-- in case you want to install rocBLAS after compiling then you can use the _-i_ option (e.g.: _./install.sh -i_). In this case, _ROCBLAS_INC_DIR_ and _ROCBLAS_LIB_DIR_ have to be updated based on your rocBLAS installation location (e.g.: _/opt/rocm/rocblas/.._)
-- if the latest version of rocBLAS is already installed on your system you may skip this step but you need to update the _ROCBLAS_INC_DIR_ and _ROCBLAS_LIB_DIR_ based on your rocBLAS installation location
-- if rocBLAS dependencies are already satisfied then you can skip the _-d_ option
+- in case you want to install rocBLAS after compiling then you can use the _-i_
+option (e.g.: _./install.sh -i_). In this case, _ROCBLAS_INC_DIR_ and
+_ROCBLAS_LIB_DIR_ have to be updated based on your rocBLAS installation location
+(e.g.: _/opt/rocm/rocblas/.._)
+- if the latest version of rocBLAS is already installed on your system you may
+skip this step but you need to update the _ROCBLAS_INC_DIR_ and
+_ROCBLAS_LIB_DIR_ based on your rocBLAS installation location
+- if rocBLAS dependencies are already satisfied then you can skip the _-d_
+option
 - in case _./install.sh -d_ fails please try without _-d_
 
 Compile RVS:
