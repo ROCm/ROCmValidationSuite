@@ -48,6 +48,8 @@ extern "C" {
 using std::string;
 using std::vector;
 using std::cerr;
+using std::cout;
+using std::endl;
 
 // Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
 string action::pretty_print(ulong bytes, string action_name, string bar_name) {
@@ -171,6 +173,8 @@ int action::run(void) {
   bar2_base_addr_max = get_property("bar2_base_addr_max");
   bar4_base_addr_max = get_property("bar4_base_addr_max");
 
+  cout<<"bar1: "<<bar1_base_addr_max<< "   "<<bar1_req_size<< "  bar2: "<<bar2_base_addr_max<< "    "<<bar2_req_size<<endl;
+  
   // iterate over devices
   for (dev = pacc->devices; dev; dev = dev->next) {
     // fil in the info
@@ -195,6 +199,8 @@ int action::run(void) {
     bar4_size = dev->size[5];
     bar5_size = dev->rom_size;
 
+    cout<<"bar1: "<<bar1_base_addr<< "   "<<bar1_size<<endl;
+    
     // check if values are as expected
     pass = true;
 

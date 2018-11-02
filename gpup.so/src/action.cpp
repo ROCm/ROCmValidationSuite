@@ -391,7 +391,12 @@ int action::run(void) {
     property_get_device(&error, num_nodes);
 
     // get the <deviceid> property value if provided
-    int dev_id = property_get_deviceid(&error);
+    std::string val;
+    bool hasp= has_property(RVS_CONF_DEVICE_ID_KEY,&val);
+    std::cout<<"hasp"<<hasp<<std::endl;
+    int dev_id = property_get_int(RVS_CONF_DEVICE_ID_KEY, &error);
+    std::cout<<"deviceid: "<<dev_id<<std::endl;
+    //property_get_deviceid(&error);
     if (error != 0) {
       cerr << "RVS-GPUP: action: " << property["name"] <<
                   "  invalid 'deviceid' key value: " <<

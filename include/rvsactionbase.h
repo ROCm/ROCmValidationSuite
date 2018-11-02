@@ -77,7 +77,9 @@ class actionbase {
   bool has_property(const std::string& key);
   int  property_get_deviceid(int *error);
   bool property_get_device(int *error);
-
+  int  property_get_int(const std::string& prop_name, int *error);
+  void property_get_run(const std::string& prop_name, int *error);
+  
   void property_get_action_name(int *error);
   void property_get_run_parallel(int *error);
   void property_get_run_count(int *error);

@@ -36,6 +36,7 @@
 
 using std::cout;
 using std::endl;
+using std::string;
 /**
  * @brief Default constructor.
  *
@@ -170,6 +171,16 @@ int rvs::actionbase::property_get_deviceid(int *error) {
     return deviceid;
 }
 
+  int rvs::actionbase::property_get_int(const std::string& prop_name,int *error) {
+  uint32_t key = -1;
+  std::string val;
+  *error = 0;  // init with 'no error'
+  if (has_property(prop_name, &val)) {
+    rvs_util_parse<uint32_t>(val, &key, error);
+  }
+  return key;
+}
+
 /**
  * gets the gpu_id list from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
@@ -279,7 +290,14 @@ void rvs::actionbase::property_get_run_duration(int *error) {
     rvs_util_parse<uint64_t>(val, &gst_run_duration_ms, error);
   }
 }
-
+/*void rvs::actionbase::property_get_run(std::string property,int *error){
+  prop = 0;
+  std::string val;
+  *error = 2;  // init with 'no error'
+  if (has_property(property, &val)) {
+    rvs_util_parse<uint64_t>(val, &prop, error);
+  } 
+}*/
 /**
  * @brief reads the sample interval from the module's properties collection
  */
