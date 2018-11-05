@@ -93,9 +93,19 @@ int pqtaction::run() {
   }
 
   sts = create_threads();
-  if (sts)
+  if (sts) {
+    RVSTRACE_
     return sts;
+  }
 
+  if (!prop_test_bandwidth || test_array.size() < 1) {
+    RVSTRACE_
+    // do cleanup
+    destroy_threads();
+    return 0;
+  }
+
+  RVSTRACE_
   // define timers
   rvs::timer<pqtaction> timer_running(&pqtaction::do_running_average, this);
   rvs::timer<pqtaction> timer_final(&pqtaction::do_final_average, this);
@@ -105,6 +115,7 @@ int pqtaction::run() {
   unsigned int step = 1;
 
   do {
+    RVSTRACE_
     // let the test run in this iteration
     brun = true;
 
