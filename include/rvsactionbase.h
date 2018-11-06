@@ -29,29 +29,6 @@
 #include <string>
 #include <vector>
 
-#define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
-#define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\
-                                        "property"
-#define YAML_TARGET_STRESS_PROP_ERROR   "Error while parsing <target_stress> "\
-                                        "property"
-#define YAML_DEVICE_PROP_DELIMITER      " "
-#define YAML_REGULAR_EXPRESSION_ERROR   "Regular expression error"
-
-#define KFD_QUERYING_ERROR              "An error occurred while querying "\
-                                        "the GPU properties"
-
-#define RVS_CONF_NAME_KEY               "name"
-#define RVS_CONF_DEVICE_KEY             "device"
-#define RVS_CONF_PARALLEL_KEY           "parallel"
-#define RVS_CONF_COUNT_KEY              "count"
-#define RVS_CONF_WAIT_KEY               "wait"
-#define RVS_CONF_DURATION_KEY           "duration"
-#define RVS_CONF_DEVICEID_KEY           "deviceid"
-#define RVS_JSON_LOG_GPU_ID_KEY         "gpu_id"
-#define RVS_CONF_SAMPLE_INTERVAL_KEY    "sample_interval"
-#define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
-#define RVS_CONF_TERMINATE_KEY          "terminate"
-
 namespace rvs {
 /**
  * @class actionbase
@@ -87,12 +64,15 @@ class actionbase {
   void property_get_run_duration(int *error);
   int  property_get_sample_interval(int *error);
   int  property_get_log_interval(int *error);
+  void property_get_log_level(int *error);
   bool property_get_terminate(int* error);
   void property_get_uint_list(const std::string& key,
                                    const std::string& delimiter,
                                    std::vector<uint32_t>* pval,
                                    bool* pball,
                                    int *error);
+  uint32_t property_get_b2b_size(int* error);
+  int property_get_link_type(int* error);
 
  protected:
 /**
@@ -120,6 +100,9 @@ class actionbase {
 
   //! List of all gpu_id in the action's "device" property in .config file
   std::vector<std::string> device_prop_gpu_id_list;
+
+  //! logging level
+  int property_log_level;
 };
 }  // namespace rvs
 #endif  // INCLUDE_RVSACTIONBASE_H_

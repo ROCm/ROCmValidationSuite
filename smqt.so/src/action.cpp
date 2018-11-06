@@ -44,6 +44,7 @@ extern "C" {
 #include "pci_caps.h"
 #include "gpu_util.h"
 #include "rvsloglp.h"
+#define MODULE_NAME "SMQT"
 
 using std::string;
 using std::vector;
@@ -69,20 +70,6 @@ string action::pretty_print(ulong bytes, string action_name, string bar_name) {
   return ss.str();
 }
 
-ulong action::get_property(string property) {
-  string value;
-  ulong result;
-
-  if (has_property(property, &value)) {
-    result = std::stoul(value);
-  } else {
-    std::cerr << "RVS-SMQT: Error fetching " << property
-              << ". Cannot continue without it. Exiting!\n";
-    exit(EXIT_FAILURE);
-  }
-  return result;
-}
-
 action::action() {
 }
 
@@ -103,13 +90,13 @@ bool action::get_all_common_config_keys() {
   if (has_property("device", &sdev)) {
     property_get_device(&error);
     if (error) {  // log the error & abort GST
-      cerr << "RVS-SMQT: action: " << action_name <<
-            "  invalid 'device' key value " << sdev << '\n';
+      string msg = "invalid 'device' key value "  + sdev;
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
       return false;
     }
   } else {
-    cerr << "RVS-SMQT: action: " << action_name <<
-        "  key 'device' was not found" << std::endl;
+    string msg = "key 'device' was not found";
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
     return false;
   }
 
@@ -138,13 +125,13 @@ int action::run(void) {
   rvs::actionbase::property_get_action_name(&error);
   if (error == 2) {
     msg = "action field is missing in smqt module";
-    cerr << "RVS-SMQT: " << msg;
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
     return -1;
   }
 
   if (!get_all_common_config_keys()) {
-    std::cerr << "RVS-SMQT: Couldn't fetch common config keys "
-              << "from the configuration file!\n";
+    msg = "Couldn't fetch common config keys from the configuration file!";
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
     return -1;
   }
 
@@ -159,21 +146,21 @@ int action::run(void) {
   dev = pacc->devices;
 
   if (!has_property("name", &action_name)) {
-    std::cerr << "RVS-SMQT: Error fetching action_name\n";
+    msg = "Error fetching action_name";
+    rvs::lp::Err(msg, MODULE_NAME);
     return false;
   }
-  bar1_req_size      = get_property("bar1_req_size");
-  bar2_req_size      = get_property("bar2_req_size");
-  bar4_req_size      = get_property("bar4_req_size");
-  bar5_req_size      = get_property("bar5_req_size");
-  bar1_base_addr_min = get_property("bar1_base_addr_min");
-  bar2_base_addr_min = get_property("bar2_base_addr_min");
-  bar4_base_addr_min = get_property("bar4_base_addr_min");
-  bar1_base_addr_max = get_property("bar1_base_addr_max");
-  bar2_base_addr_max = get_property("bar2_base_addr_max");
-  bar4_base_addr_max = get_property("bar4_base_addr_max");
+  bar1_req_size      = property_get_int("bar1_req_size", &error);
+  bar2_req_size      = property_get_int("bar2_req_size", &error);
+  bar4_req_size      = property_get_int("bar4_req_size", &error);
+  bar5_req_size      = property_get_int("bar5_req_size", &error);
+  bar1_base_addr_min = property_get_int("bar1_base_addr_min", &error);
+  bar2_base_addr_min = property_get_int("bar2_base_addr_min", &error);
+  bar4_base_addr_min = property_get_int("bar4_base_addr_min", &error);
+  bar1_base_addr_max = property_get_int("bar1_base_addr_max", &error);
+  bar2_base_addr_max = property_get_int("bar2_base_addr_max", &error);
+  bar4_base_addr_max = property_get_int("bar4_base_addr_max", &error);
 
-  cout<<"bar1: "<<bar1_base_addr_max<< "   "<<bar1_req_size<< "  bar2: "<<bar2_base_addr_max<< "    "<<bar2_req_size<<endl;
   
   // iterate over devices
   for (dev = pacc->devices; dev; dev = dev->next) {
@@ -199,7 +186,6 @@ int action::run(void) {
     bar4_size = dev->size[5];
     bar5_size = dev->rom_size;
 
-    cout<<"bar1: "<<bar1_base_addr<< "   "<<bar1_size<<endl;
     
     // check if values are as expected
     pass = true;

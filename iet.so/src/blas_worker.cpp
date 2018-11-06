@@ -35,6 +35,7 @@
 #define IET_MEM_ALLOC_ERROR                     1
 #define IET_BLAS_ERROR                          2
 #define IET_BLAS_MEMCPY_ERROR                   3
+#define MODULE_NAME "IET"
 
 #define USLEEP_MAX_VAL                          (1000000 - 1)
 

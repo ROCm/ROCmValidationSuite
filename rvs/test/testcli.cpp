@@ -23,8 +23,6 @@
  *
  *******************************************************************************/
 
-
-
 #include <iostream>
 
 #include "gtest/gtest.h"
@@ -32,16 +30,17 @@
 #include "rvscli.h"
 
 const char* testpass[] = {"./rvs", "-c", "conf"};
-const char* testfail[] = {"./rvs", "-c",};
+const char* testfail[] = {"./rvs", "-c"};
 
 TEST(rvs, cli) {
   int sts;
   rvs::cli cli;
 
-  sts =  cli.parse(sizeof(testpass)/sizeof(char*), const_cast<char**>(testpass));
+  sts =  cli.parse(sizeof(testpass)/sizeof(char*),
+                   const_cast<char**>(testpass));
   EXPECT_EQ(sts, 0);
 
-  sts =  cli.parse(sizeof(testfail)/sizeof(char*), const_cast<char**>(testfail));
+  sts =  cli.parse(sizeof(testfail)/sizeof(char*),
+                   const_cast<char**>(testfail));
   EXPECT_EQ(sts, -1);
-
 }
