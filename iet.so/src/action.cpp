@@ -55,7 +55,7 @@ extern "C" {
 #include "rvs_module.h"
 #include "rvsactionbase.h"
 #include "rvsloglp.h"
-#include "rocm_smi/rocm_smi.h"
+#include "rsmi_util.h"
 
 using std::string;
 using std::vector;
@@ -410,6 +410,7 @@ bool action::get_all_common_config_keys(void) {
  * @return true if no error occured, false otherwise
  */
 bool action::do_edp_test(void) {
+    std::string msg;
     size_t k = 0;
     for (;;) {
         unsigned int i = 0;
@@ -422,12 +423,26 @@ bool action::do_edp_test(void) {
         // all worker instances have the same json settings
         IETWorker::set_use_json(bjson);
 
+        rsmi_init(0);
+
         for (it = edpp_gpus.begin(); it != edpp_gpus.end(); ++it) {
             // set worker thread params
             workers[i].set_name(action_name);
             workers[i].set_gpu_id((*it).gpu_id);
             workers[i].set_gpu_device_index((*it).hip_gpu_deviceid);
-            workers[i].set_pwr_device_id((*it).pwr_device_id);
+            uint32_t dev_idx;
+            msg = std::string("BDF: ") + rvs::bdf2string((*it).bdf_id);
+            rvs::lp::Log(msg, rvs::logdebug);
+            if (RSMI_STATUS_SUCCESS != rvs::rsmi_dev_ind_get((*it).bdf_id,
+                                                             &dev_idx)) {
+              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+              rvs::lp::Err(std::string("rsmi device index not found"),
+                                       MODULE_NAME_CAPS, action_name);
+            }
+            rvs::lp::Log(std::string("dev_idx: ") + std::to_string(dev_idx),
+                         rvs::logdebug);
+
+            workers[i].set_pwr_device_id(dev_idx);
             workers[i].set_run_wait_ms(gst_run_wait_ms);
             workers[i].set_run_duration_ms(gst_run_duration_ms);
             workers[i].set_ramp_interval(iet_ramp_interval);
@@ -440,7 +455,6 @@ bool action::do_edp_test(void) {
             i++;
         }
 
-        rsmi_init(0);
 
         if (gst_runs_parallel) {
             for (i = 0; i < edpp_gpus.size(); i++)
@@ -515,14 +529,13 @@ int action::get_num_amd_gpu_devices(void) {
  * @brief retrieves the GPU identification data  and adds it to the list of 
  * those that will run the EDPp test
  * @param dev_location_id GPU device location ID
- * @param dev_idx index of the GPU device as required by the rocm_smi lib
  * @param gpu_id GPU's ID as exported by KFD
  * @param hip_num_gpu_devices number of GPU devices (as reported by HIP API)
  * @return true if all info could be retrieved and the gpu was successfully to
  * the EDPp test list, false otherwise
  */
-bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, uint32_t dev_idx,
-                                  int32_t gpu_id, int hip_num_gpu_devices) {
+bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
+                                  int hip_num_gpu_devices) {
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
         hipDeviceProp_t props;
@@ -536,7 +549,7 @@ bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, uint32_t dev_idx,
             gpu_hwmon_info cgpu_info;
             cgpu_info.hip_gpu_deviceid = i;
             cgpu_info.gpu_id = gpu_id;
-            cgpu_info.pwr_device_id = dev_idx;
+            cgpu_info.bdf_id = hip_dev_location_id;
             edpp_gpus.push_back(cgpu_info);
 
             return true;
@@ -557,7 +570,6 @@ int action::get_all_selected_gpus(void) {
     int hip_num_gpu_devices;
     struct pci_access *pacc;
     struct pci_dev *pci_cdev;
-    uint16_t dev_idx = 0;
 
     hip_num_gpu_devices = get_num_amd_gpu_devices();
     if (hip_num_gpu_devices == 0)
@@ -617,12 +629,10 @@ int action::get_all_selected_gpus(void) {
             }
 
             if (cur_gpu_selected) {
-                if (add_gpu_to_edpp_list(dev_location_id, dev_idx,
-                    gpu_id, hip_num_gpu_devices))
+                if (add_gpu_to_edpp_list(dev_location_id, gpu_id,
+                  hip_num_gpu_devices))
                     amd_gpus_found = true;
             }
-
-            dev_idx++;
         }
     }
 

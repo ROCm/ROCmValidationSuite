@@ -165,7 +165,7 @@ bool IETWorker::do_gpu_init_training(string *err_description) {
         rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
                                     &last_avg_power);
         if (rmsi_stat == RSMI_STATUS_SUCCESS) {
-            cur_power_value = static_cast<float>(last_avg_power)/1e3;
+            cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power_training += cur_power_value;
             power_sampling_iters++;
         }
@@ -313,7 +313,7 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
         rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
                                     &last_avg_power);
         if (rmsi_stat == RSMI_STATUS_SUCCESS) {
-            cur_power_value = static_cast<float>(last_avg_power)/1e3;
+            cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power += cur_power_value;
             power_sampling_iters++;
         }
@@ -385,7 +385,7 @@ bool IETWorker::do_iet_power_stress(void) {
         rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
                                     &last_avg_power);
         if (rmsi_stat == RSMI_STATUS_SUCCESS) {
-            cur_power_value = static_cast<float>(last_avg_power)/1e3;
+            cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power += cur_power_value;
             power_sampling_iters++;
         }
