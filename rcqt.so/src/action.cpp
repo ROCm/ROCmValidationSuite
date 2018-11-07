@@ -37,6 +37,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <regex>
 
 #include "rvsloglp.h"
 
@@ -221,6 +222,7 @@ int action::pkgchk_run() {
       string failed =  "[" + action_name + "] " + "rcqt packagecheck "
       + package_name + " false";
 
+			std::regex version_pattern(version_name);
       /* 
        * If result start with dpkg-querry: then we haven't found the package
        * If we get something different, then we confirme that the package is found
@@ -241,7 +243,7 @@ int action::pkgchk_run() {
           rvs::lp::AddString(json_rcqt_node, "pkgchk", "true");
           rvs::lp::LogRecordFlush(json_rcqt_node);
         }
-      } else if (version_name.compare(version_value) == 0) {
+      } else if (regex_match(version_value, version_pattern) == true) {
         log(passed.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node, package_name, "exists");
@@ -439,7 +441,9 @@ int action::kernelchk_run() {
         vector<string>::iterator os_iter;
         for (os_iter = os_version_vector.begin()
             ; os_iter != os_version_vector.end(); os_iter++) {
-          if (strcmp(os_iter->c_str(), os_actual.c_str()) == 0) {
+					std::regex os_pattern(*os_iter);
+          //if (strcmp(os_iter->c_str(), os_actual.c_str()) == 0) {
+					if(regex_match(os_actual, os_pattern) == true) {
             os_version_correct = true;
             break;
           }
