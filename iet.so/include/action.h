@@ -47,13 +47,12 @@ using std::string;
 
 //! structure containing GPU identification related data
 struct gpu_hwmon_info {
-    //! GPU device index (0.n) as reported by HIP API
+    //! GPU device index (0..n) as reported by HIP API
     int hip_gpu_deviceid;
     //! real GPU ID (e.g.: 53645) as exported by kfd
     uint16_t gpu_id;
-    //! device index as required by the rocm_smi lib
-    //! can be different from hip_gpu_deviceid
-    uint32_t pwr_device_id;
+    //! BDF id
+    uint32_t bdf_id;
 };
 
 /**
@@ -122,8 +121,8 @@ class action: public rvs::actionbase {
     * @return true if no fatal error occured, false otherwise
     */
     bool get_all_common_config_keys(void);
-    bool add_gpu_to_edpp_list(uint16_t dev_location_id, uint32_t dev_idx,
-                              int32_t gpu_id, int hip_num_gpu_devices);
+    bool add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id, 
+                              int hip_num_gpu_devices);
 
 /**
  * @brief gets the number of ROCm compatible AMD GPUs

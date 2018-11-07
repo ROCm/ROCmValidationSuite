@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 #include <vector>
+#include <string>
 
 #define KFD_SYS_PATH_NODES              "/sys/class/kfd/kfd/topology/nodes"
 #define KFD_PATH_MAX_LENGTH             256
@@ -37,7 +38,10 @@ extern void gpu_get_all_gpu_id(std::vector<uint16_t>* pgpus_id);
 extern void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id);
 extern void gpu_get_all_node_id(std::vector<uint16_t>* pgpus_node_id);
 
+
 namespace rvs {
+
+  ::std::string bdf2string(uint32_t BDF);
 
 /**
  * @class gpulist
@@ -68,6 +72,7 @@ class gpulist {
   //! Array of node IDs
   static std::vector<uint16_t> node_id;
 };
+
 
 }  // namespace rvs
 

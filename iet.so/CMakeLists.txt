@@ -117,7 +117,8 @@ set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 ## define include directories
 include_directories(include ../include)
 
-set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
+set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsloglp.cpp ../src/rsmi_util.cpp
+  ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp 
   src/rvs_module.cpp src/action.cpp src/iet_worker.cpp ../src/rvs_blas.cpp src/blas_worker.cpp src/log_worker.cpp)
 
 ## define target
