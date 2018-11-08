@@ -26,38 +26,28 @@
 
 #include "action.h"
 
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <map>
 #include <vector>
-#include <memory>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <pci/pci.h>
-#ifdef __cplusplus
-}
-#endif
+#include <utility>
 
 #include "rvs_key_def.h"
 #include "rvsloglp.h"
 #include "rvs_module.h"
 #include "rvs_util.h"
-#include "worker.h"
-#include "pci_caps.h"
 #include "gpu_util.h"
+#include "rsmi_util.h"
+#include "worker.h"
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 #define MODULE_NAME                     "gm"
 #define MODULE_NAME_CAPS                "GM"
 
-using std::map;
-using std::string;
-using std::vector;
-using std::thread;
-using std::endl;
+#define GM_TEMP                       "temp"
+#define GM_CLOCK                      "clock"
+#define GM_MEM_CLOCK                  "mem_clock"
+#define GM_FAN                        "fan"
+#define GM_POWER                      "power"
 
 extern Worker* pworker;
 
@@ -65,8 +55,19 @@ extern Worker* pworker;
  * default class constructor
  */
 action::action() {
-    bjson = false;
-    json_root_node = NULL;
+  bjson = false;
+  json_root_node = nullptr;
+
+  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+    (GM_TEMP, {false, false, 0, 0}));
+  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+    (GM_CLOCK, {false, false, 0, 0}));
+  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+    (GM_MEM_CLOCK, {false, false, 0, 0}));
+  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+    (GM_FAN, {false, false, 0, 0}));
+  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+    (GM_POWER, {false, false, 0, 0}));
 }
 
 /**
@@ -77,6 +78,167 @@ action::~action() {
 }
 
 /**
+ * @brief reads all common configuration keys from
+ * the module's properties collection
+ * @return true if no fatal error occured, false otherwise
+ */
+bool action::get_all_common_config_keys(void) {
+    string msg;
+    int error;
+
+    // check if  -j flag is passed
+    if (has_property("cli.-j")) {
+      bjson = true;
+    }
+
+    property_get_action_name(&error);
+    if (error) {
+      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+      return false;
+    }
+    // get <device> property value ("all" or a list of gpu id)
+
+    device_all_selected = property_get_device(&error);
+    if (error == 1) {  // log the error & abort IET
+      msg = "Invalid '" +
+              std::string(RVS_CONF_DEVICE_KEY) + "' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
+    }
+    if (error == 2) {
+      device_all_selected = true;
+    }
+
+    // get the <deviceid> property value
+    device_id = property_get_deviceid(&error);
+    if (error == 1) {
+      msg = "Invalid '" +std::string(RVS_CONF_DEVICEID_KEY) + "' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
+    } else if (error == 2) {
+      device_id = -1;
+    }
+
+    property_get_run_duration(&error);
+    if (error == 1) {
+      msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) + "' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
+    }
+
+    log_interval = property_get_log_interval(&error);
+    if (error == 1) {
+      msg = "Invalid '" +std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
+    } else if (error == 2) {
+      log_interval = DEFAULT_LOG_INTERVAL;
+    }
+
+    sample_interval = property_get_sample_interval(&error);
+    if (error == 1) {
+      msg = "Invalid '" +std::string(RVS_CONF_SAMPLE_INTERVAL_KEY) + "' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
+    } else if (error == 2) {
+      sample_interval = 500;
+    }
+
+    if (log_interval < sample_interval) {
+      msg = "Log interval has the lower value than the sample interval.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
+    }
+
+    prop_terminate = property_get_terminate(&error);
+    switch (error) {
+      case 1:
+        msg = "Invalid 'terminate' key.";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return false;
+      case 2: prop_terminate = false; break;
+    }
+
+    return true;
+}
+
+int action::get_bounds(const char* pMetric) {
+  std::string smetric("metrics.");
+  smetric += pMetric;
+
+  std::string sval;
+  if (!has_property(smetric, &sval)) {
+    return 2;
+  }
+
+  Worker::Metric_bound bound_;
+  int error;
+  vector<string> values = str_split(sval, YAML_DEVICE_PROP_DELIMITER);
+  if (values.size() == 3) {
+    bound_.mon_metric = true;
+    bound_.check_bounds = (values[0] == "true") ? true : false;
+    rvs_util_parse<uint32_t>(values[1], &bound_.max_val, &error);
+    if (error) {
+      return 1;
+    }
+    rvs_util_parse<uint32_t>(values[1], &bound_.min_val, &error);
+    if (error) {
+      return 1;
+    }
+    property_bounds[std::string(pMetric)] = bound_;
+  } else {
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * @brief reads all GM specific configuration keys from
+ * the module's properties collection
+ * @return true if no fatal error occured, false otherwise
+ */
+bool action::get_all_gm_config_keys(void) {
+  string msg;
+
+  if (get_bounds(GM_TEMP) == 1) {
+    msg = "Invalid 'metrics." +
+            std::string(GM_TEMP) + "' key.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  }
+
+  if (get_bounds(GM_CLOCK) == 1) {
+    msg = "Invalid 'metrics." +
+            std::string(GM_CLOCK) + "' key.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  }
+
+  if (get_bounds(GM_MEM_CLOCK) == 1) {
+    msg = "Invalid 'metrics." +
+            std::string(GM_MEM_CLOCK) + "' key.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  }
+
+  if (get_bounds(GM_FAN) == 1) {
+    msg = "Invalid 'metrics." +
+            std::string(GM_FAN) + "' key.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  }
+
+  if (get_bounds(GM_POWER) == 1) {
+    msg = "Invalid 'metrics." +
+            std::string(GM_POWER) + "' key.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  }
+
+  return true;
+}
+/**
  * @brief Implements action functionality
  *
  * Functionality:
@@ -85,162 +247,126 @@ action::~action() {
  *
  * */
 int action::run(void) {
-    map<string, string>::iterator it;  // module's properties map iterator
+  string msg;
+  int error = 0;
 
-    string msg;
-    int sample_interval = 1000, log_interval = 0;
-    int error = 0;
-    bool metric_true, metric_bound;
-    int metric_min, metric_max;
-    bool terminate = false;
-    uint64_t duration = 1;
-    std::vector<uint16_t> gpu_id;
-
-    gpu_get_all_gpu_id(&gpu_id);
-
-    if (rvs::actionbase::has_property("sample_interval")) {
-        sample_interval =
-        rvs::actionbase::property_get_sample_interval(&error);
-    }
-
-    if (rvs::actionbase::has_property("log_interval")) {
-        log_interval = rvs::actionbase::property_get_log_interval(&error);
-        if ( log_interval < sample_interval ) {
-          msg = property["name"] +
-          "Log interval has the lower value than the sample interval ";
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return -1;
-        }
-    }
-
-    if (rvs::actionbase::has_property("terminate")) {
-        terminate = rvs::actionbase::property_get_terminate(&error);
-    }
-
-    // start of monitoring?
-    if (property["monitor"] == "true") {
-      if (pworker) {
-        rvs::lp::Log("[" + property["name"]+ "] gm monitoring already started",
-                  rvs::logresults);
-      return 0;
-      }
-
-      pworker = new Worker();
-      pworker->set_name(property["name"]);
-      pworker->set_sample_int(sample_interval);
-      pworker->set_log_int(log_interval);
-      pworker->set_terminate(terminate);
-      if (property["force"] == "true")
-        pworker->set_force(true);
-
-      if (rvs::actionbase::has_property("duration")) {
-        rvs::actionbase::property_get_run_duration(&error);
-        duration = rvs::actionbase::gst_run_duration_ms;
-      }
-
-      for (it = property.begin(); it != property.end(); ++it) {
-        metric_bound = false;
-        string word;
-        string s = it->first;
-        if (s.find(".") != std::string::npos && s.substr(0, s.find(".")) ==
-          "metrics") {
-          string metric = s.substr(s.find(".")+1);
-          s = it->second;
-          vector<string> values = str_split(s, YAML_DEVICE_PROP_DELIMITER);
-
-          if (values.size() == 3) {
-            metric_true = (values[0] == "true") ? true : false;
-            metric_max = std::stoi(values[1]);
-            metric_min = std::stoi(values[2]);
-            metric_bound = true;
-          } else {
-            msg = property["name"] +" Wrong number of metric parameters ";
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return -1;
-          }
-
-        pworker->set_metr_mon(metric, metric_true);
-        pworker->set_bound(metric, metric_bound, metric_max, metric_min);
-        values.clear();
-      }
-    }
-
-    // check if  -j flag is passed
-    if (has_property("cli.-j")) {
-      bjson = true;
-      pworker->json(true);
-    }
-
-    // checki if deviceid filtering is required
-    string sdevid;
-    if (has_property("deviceid", &sdevid)) {
-      if (::is_positive_integer(sdevid)) {
-        try {
-          pworker->set_deviceid(std::stoi(sdevid));
-        }
-        catch(...) {
-          msg = property["name"] +
-          "  invalide 'deviceid' key value: " + sdevid;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return -1;
-        }
-      } else {
-        msg = property["name"] +
-        "  invalide 'deviceid' key value: " + sdevid;
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
-      }
-    }
-
-    // check if GPU id filtering is requied
-    string sdev;
-    if (has_property("device", &sdev)) {
-      vector<uint16_t> iarr;
-      if (sdev != "all") {
-        vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
-        int sts = rvs_util_strarr_to_uintarr(sarr, &iarr);
-        if (sts < 0) {
-          msg = property["name"] +
-          "  invalide 'device' key value: " + sdev;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return -1;
-        }
-        pworker->set_gpuids(iarr);
-      } else {
-         pworker->set_gpuids(gpu_id);
-      }
-    } else {
-          msg = property["name"] +
-          "  key 'device' not found";
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return -1;
-    }
-    // set stop name before start
+  // if monitoring is already running, stop it
+  // (it will be restarted if needed)
+  RVSTRACE_
+  if (pworker) {
+    RVSTRACE_
+    // (give thread chance to start)
+    sleep(2);
     pworker->set_stop_name(property["name"]);
-    // start worker thread
-    rvs::lp::Log("[" + property["name"]+ "] gm starting Worker",
-                 rvs::logtrace);
-    pworker->start();
-    sleep(duration);
+    pworker->stop();
+    delete pworker;
+    pworker = nullptr;
+  }
+  // this action should stop monitoring?
+  if (property["monitor"] != "true") {
+    RVSTRACE_
+    // already done, just return
+    return 0;
+  }
 
-    rvs::lp::Log("[" + property["name"]+ "] gm Monitoring started",
-                 rvs::logtrace);
+  RVSTRACE_
+  // start new monitoring
+  if (!get_all_common_config_keys()) {
+    RVSTRACE_
+    return -1;
+  }
+
+  if (!get_all_gm_config_keys()) {
+    RVSTRACE_
+    return -1;
+  }
+
+  // get list of actual GPU IDs
+  std::vector<uint16_t> gpu_id;
+  if (device_all_selected) {
+    RVSTRACE_
+    gpu_get_all_gpu_id(&gpu_id);
   } else {
-    rvs::lp::Log("[" + property["name"]+
-    "] gm property[\"monitor\"] != \"true\"", rvs::logtrace);
-    if (pworker) {
-      // (give thread chance to start)
-      sleep(2);
-      pworker->set_stop_name(property["name"]);
-      pworker->stop();
-      delete pworker;
-      pworker = nullptr;
+    RVSTRACE_
+    error = rvs_util_strarr_to_uintarr(device_prop_gpu_id_list, &gpu_id);
+    if (error) {
+      msg = "Invalide 'device' key value.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
   }
 
-     if (bjson && json_root_node != NULL) {  // json logging stuff
-         rvs::lp::LogRecordFlush(json_root_node);
-     }
+  RVSTRACE_
+
+  // apply device_id filtering if needed
+  if (device_id != -1) {
+    RVSTRACE_
+    std::vector<uint16_t> gpu_id_filtered;
+    for (auto it = gpu_id.begin(); it != gpu_id.end(); it++) {
+      RVSTRACE_
+      if (device_id == rvs::gpulist::GetDeviceIdFromGpuId(*it)) {
+        RVSTRACE_
+        gpu_id_filtered.push_back(*it);
+      }
+    }
+    gpu_id = gpu_id_filtered;
+  }
+
+  RVSTRACE_
+
+  // verify that the resulting array is not empty
+  if (gpu_id.size() < 1) {
+    rvs::lp::Err("No devices match filtering criteria.",
+                 MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+
+  // convert GPU ID into rocm_smi_lib device index
+  std::map<uint32_t, int32_t> dv_ind;
+  for (auto it = gpu_id.begin(); it != gpu_id.end(); it++) {
+    RVSTRACE_
+    int32_t location_id = rvs::gpulist::GetLocation(*it);
+    if (location_id < 0) {
+      msg = "Could not obtain BDF for GPU ID: ";
+      msg += std::to_string(*it);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+    uint32_t ix;
+    rvs::rsmi_dev_ind_get(static_cast<uint64_t>(location_id), &ix);
+    dv_ind.insert(std::pair<uint32_t, int32_t>(ix, *it));
+  }
+
+  pworker = new Worker();
+  pworker->set_name(action_name);
+  pworker->json(bjson);
+  pworker->set_sample_int(sample_interval);
+  pworker->set_log_int(log_interval);
+  pworker->set_terminate(prop_terminate);
+  if (property["force"] == "true")
+    pworker->set_force(true);
+
+  // set stop name before start
+  pworker->set_stop_name(action_name);
+  // set array of device indices to monitor
+  pworker->set_dv_ind(dv_ind);
+  // set bounds map
+  pworker->set_bound(property_bounds);
+
+  RVSTRACE_
+  // start worker thread
+  pworker->start();
+
+  if (gst_run_duration_ms) {
+    RVSTRACE_
+    sleep(gst_run_duration_ms);
+  }
+
+  RVSTRACE_
+  if (bjson && json_root_node != NULL) {  // json logging stuff
+    RVSTRACE_
+      rvs::lp::LogRecordFlush(json_root_node);
+  }
 
   return 0;
 }
