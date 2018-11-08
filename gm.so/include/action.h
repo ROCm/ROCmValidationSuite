@@ -28,7 +28,9 @@
 #define GM_SO_INCLUDE_ACTION_H_
 
 #include <string>
+#include <map>
 
+#include "worker.h"
 #include "rvsactionbase.h"
 
 using std::string;
@@ -50,16 +52,29 @@ class action : public rvs::actionbase {
     virtual ~action();
 
     virtual int run(void);
- private:
-    bool bjson;
-    void* json_root_node;
+
+ protected:
+  bool  bjson;
+  void* json_root_node;
+  bool  device_all_selected;
+  int   device_id;
+  int   log_interval;
+  bool  prop_terminate;
+  int   sample_interval;
 
  protected:
 /**
  * @brief gets the number of ROCm compatible AMD GPUs
  * @return run number of GPUs
  */
-    int get_num_amd_gpu_devices(void);
+  int get_num_amd_gpu_devices(void);
+  bool get_all_common_config_keys(void);
+  bool get_all_gm_config_keys(void);
+  int get_bounds(const char* pMetric);
+
+ protected:
+  //! device_irq and metric bounds
+  std::map<std::string, Worker::Metric_bound> property_bounds;
 };
 
 #endif  // GM_SO_INCLUDE_ACTION_H_

@@ -570,13 +570,13 @@ int rvs::logger::Err(const char* Message, const char* Module
     return 1;
   }
   std::string module =
-      Module != nullptr ? std::string("[") + Module + "] " : "";
+      Module != nullptr ? std::string(" [") + Module + "]" : "";
   std::string action =
-      Action != nullptr ? std::string("[") + Action + "] " : "";
+      Action != nullptr ? std::string(" [") + Action + "]" : "";
   std::string message = Message;
   std::string out;
-  out = "RVS-ERROR ";
-  out += module + action + message;
+  out = "RVS-ERROR";
+  out += module + action + std::string(" ") + message;
   {
     // lock cout_mutex for the duration of this block
     std::lock_guard<std::mutex> lk(cout_mutex);
