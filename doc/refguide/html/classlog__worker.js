@@ -1,0 +1,27 @@
+var classlog__worker =
+[
+    [ "log_worker", "classlog__worker.html#a049254db757cdf70a1a934ee13b0df4b", null ],
+    [ "~log_worker", "classlog__worker.html#aa040e09bded39db4cb5a9a8fba79388d", null ],
+    [ "get_gpu_hwmon_entry", "classlog__worker.html#ac362701ca1b3da28368560035b7e0d19", null ],
+    [ "get_gpu_id", "classlog__worker.html#aa04cf5dbb141e124e6ce28fb161102f8", null ],
+    [ "get_log_interval", "classlog__worker.html#a7d7f40194b0979af697d3483dc19b68f", null ],
+    [ "get_name", "classlog__worker.html#a17580a90bfff05a320e98c44f3c2a82b", null ],
+    [ "log_to_json", "classlog__worker.html#ac7fc2576a9d034fda33c5249f753e4f2", null ],
+    [ "pause", "classlog__worker.html#afac2e26f8fbe362efac83894fe3a86ce", null ],
+    [ "resume", "classlog__worker.html#ad8f504dabf938009b69226df53ed2fe7", null ],
+    [ "run", "classlog__worker.html#a9e6b2095d6dd4d719c33a107430ad654", null ],
+    [ "set_gpu_hwmon_entry", "classlog__worker.html#ad00dccf8cb5c10a40921cbc78503a672", null ],
+    [ "set_gpu_id", "classlog__worker.html#a1b00796cbb96aca34140edf582fb76a3", null ],
+    [ "set_log_interval", "classlog__worker.html#ad4c7251d6844ae7f99f95b228b24d384", null ],
+    [ "set_name", "classlog__worker.html#a125f32b1fe0bdd962b7346cf78f94975", null ],
+    [ "stop", "classlog__worker.html#af9daeab3bf6fef538e9b921afe7e0b38", null ],
+    [ "action_name", "classlog__worker.html#a532692b8839769a7f498874ff2412ab3", null ],
+    [ "bjson", "classlog__worker.html#a7d24a8ca5ed77ff9769533e93a475d98", null ],
+    [ "bpaused", "classlog__worker.html#aca99cf240492b4f173121467331628a5", null ],
+    [ "brun", "classlog__worker.html#a3848dc8c1b12121b65576bdecf65cc96", null ],
+    [ "gpu_hwmon_entry", "classlog__worker.html#aa03d4dcfd193d1e16a2e46fd97fd3602", null ],
+    [ "gpu_id", "classlog__worker.html#af97c79934cffe0f5f76cc01fd4e6a58c", null ],
+    [ "log_interval", "classlog__worker.html#a1c35e35e7ee35ff84de72fbbdda94879", null ],
+    [ "mtx_bpaused", "classlog__worker.html#aa114f78439306d5917c6eaff62607f9e", null ],
+    [ "mtx_brun", "classlog__worker.html#a891dcdd33b86a7f16c9eb7552aa521d7", null ]
+];

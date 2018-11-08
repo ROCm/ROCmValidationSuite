@@ -167,7 +167,6 @@ bool action::device_id_correct(int node_id, int dev_id) {
         }
         f_prop.close();
     }
-    std::cout<<"devid correct: "<<dev_id_corr<<std::endl;
     return dev_id_corr;
 }
 
@@ -392,11 +391,9 @@ int action::run(void) {
 
     // get the <deviceid> property value if provided
     std::string val;
-    bool hasp= has_property(RVS_CONF_DEVICEID_KEY,&val);
-    std::cout<<"hasp"<<hasp<<std::endl;
-    int dev_id = property_get_int(RVS_CONF_DEVICEID_KEY, &error);
-    std::cout<<"deviceid: "<<dev_id<<std::endl;
-    //property_get_deviceid(&error);
+    bool hasp = has_property(RVS_CONF_DEVICEID_KEY, &val);
+    int dev_id;
+    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &dev_id);
     if (error != 0) {
       msg = property["name"] + " invalid 'deviceid' key value: "
       + std::to_string(dev_id);
