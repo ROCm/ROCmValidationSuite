@@ -133,7 +133,8 @@ int action::run(void) {
       if (property["force"] == "true")
         pworker->set_force(true);
 
-      duration = rvs::actionbase::property_get_int("duration", &error);
+      error = rvs::actionbase::property_get_int<uint64_t>
+      ("duration", &duration);
 /*      if (rvs::actionbase::has_property("duration")) {
         rvs::actionbase::property_get_run_duration(&error);
         duration = rvs::actionbase::gst_run_duration_ms;
@@ -171,12 +172,12 @@ int action::run(void) {
       bjson = true;
       pworker->json(true);
     }
-    
+
     // check if deviceid filtering is required
-    int error;
-    int devid = property_get_int(RVS_CONF_DEVICEID_KEY, &error);
+    int devid;
+    int error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &error);
     pworker->set_deviceid(devid);
-    if (error !=0 ) {
+    if (error !=0) {
       msg = property["name"] +
       "  invalid 'deviceid' key value: " + std::to_string(devid);
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
