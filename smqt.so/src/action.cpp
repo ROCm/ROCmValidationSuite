@@ -52,15 +52,6 @@ using std::cerr;
 using std::cout;
 using std::endl;
 
-
-// config
-ulong bar1_req_size, bar1_base_addr_min, bar1_base_addr_max;
-ulong bar2_req_size, bar2_base_addr_min, bar2_base_addr_max;
-ulong bar4_req_size, bar4_base_addr_min, bar4_base_addr_max, bar5_req_size;
-// output
-ulong bar1_size, bar1_base_addr, bar2_size, bar2_base_addr;
-ulong bar4_size, bar4_base_addr, bar5_size;
-
 // Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
 string action::pretty_print(ulong bytes, string action_name, string bar_name) {
   std::string suffix[5] = { " B", " KB", " MB", " GB", " TB"};
@@ -94,13 +85,7 @@ action::~action() {
 bool action::get_all_common_config_keys() {
   string msg, sdevid, sdev;
   int error;
-  // get the action name
-  rvs::actionbase::property_get_action_name(&error);
-  if (error == 2) {
-    msg = "action field is missing in smqt module";
-    rvs::lp::Err(msg, MODULE_NAME, action_name);
-    return -1;
-  }
+
   // get <device> property value (a list of gpu id)
   if (has_property("device", &sdev)) {
     property_get_device(&error);
@@ -118,26 +103,6 @@ bool action::get_all_common_config_keys() {
   return true;
 }
 
-
-bool action::get_all_smqt_config_keys() {
-  int err = 0;
-  err = property_get_int<ulong>("bar1_req_size", &bar1_req_size);
-  err = property_get_int<ulong>("bar2_req_size", &bar2_req_size);
-  err = property_get_int<ulong>("bar4_req_size", &bar4_req_size);
-  err = property_get_int<ulong>("bar5_req_size", &bar5_req_size);
-  err = property_get_int<ulong>("bar1_base_addr_min", &bar1_base_addr_min);
-  err = property_get_int<ulong>("bar2_base_addr_min", &bar2_base_addr_min);
-  err = property_get_int<ulong>("bar4_base_addr_min", &bar4_base_addr_min);
-  err = property_get_int<ulong>("bar1_base_addr_max", &bar1_base_addr_max);
-  err = property_get_int<ulong>("bar2_base_addr_max", &bar2_base_addr_max);
-  err = property_get_int<ulong>("bar4_base_addr_max", &bar4_base_addr_max);
-
-  if (err == 0) {
-    return true;
-  } else {
-    return false;
-  }
-}
 /**
  * @brief Implements action functionality
  * Check if the sizes and addresses of BARs match the given ones
@@ -145,19 +110,27 @@ bool action::get_all_smqt_config_keys() {
  * */ 
 
 int action::run(void) {
+  // config
+  ulong bar1_req_size, bar1_base_addr_min, bar1_base_addr_max;
+  ulong bar2_req_size, bar2_base_addr_min, bar2_base_addr_max;
+  ulong bar4_req_size, bar4_base_addr_min, bar4_base_addr_max, bar5_req_size;
+  // output
+  ulong bar1_size, bar1_base_addr, bar2_size, bar2_base_addr;
+  ulong bar4_size, bar4_base_addr, bar5_size;
   bool pass = true;
+  int error = 0;
   string msg;
   struct pci_access *pacc;
-
-
-  if (!get_all_common_config_keys()) {
-    msg = "Couldn't fetch common config keys from the configuration file!";
+  // get the action name
+  rvs::actionbase::property_get_action_name(&error);
+  if (error == 2) {
+    msg = "action field is missing in smqt module";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
     return -1;
   }
 
-  if (!get_all_smqt_config_keys()) {
-    msg = "Couldn't fetch bar config keys from the configuration file!";
+  if (!get_all_common_config_keys()) {
+    msg = "Couldn't fetch common config keys from the configuration file!";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
     return -1;
   }
@@ -172,6 +145,23 @@ int action::run(void) {
   struct pci_dev *dev;
   dev = pacc->devices;
 
+  if (!has_property("name", &action_name)) {
+    msg = "Error fetching action_name";
+    rvs::lp::Err(msg, MODULE_NAME);
+    return false;
+  }
+  bar1_req_size      = property_get_int("bar1_req_size", &error);
+  bar2_req_size      = property_get_int("bar2_req_size", &error);
+  bar4_req_size      = property_get_int("bar4_req_size", &error);
+  bar5_req_size      = property_get_int("bar5_req_size", &error);
+  bar1_base_addr_min = property_get_int("bar1_base_addr_min", &error);
+  bar2_base_addr_min = property_get_int("bar2_base_addr_min", &error);
+  bar4_base_addr_min = property_get_int("bar4_base_addr_min", &error);
+  bar1_base_addr_max = property_get_int("bar1_base_addr_max", &error);
+  bar2_base_addr_max = property_get_int("bar2_base_addr_max", &error);
+  bar4_base_addr_max = property_get_int("bar4_base_addr_max", &error);
+
+  
   // iterate over devices
   for (dev = pacc->devices; dev; dev = dev->next) {
     // fil in the info
@@ -196,6 +186,7 @@ int action::run(void) {
     bar4_size = dev->size[5];
     bar5_size = dev->rom_size;
 
+    
     // check if values are as expected
     pass = true;
 

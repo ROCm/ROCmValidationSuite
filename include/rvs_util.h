@@ -48,7 +48,7 @@ extern int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
 
 bool is_positive_integer(const std::string& str_val);
 
-template <class T> int rvs_util_parse(const string& buff,
+template <class T> void rvs_util_parse(const string& buff,
                                     T* pval,
                                     int *error) {
   if (buff.empty()) {  // method empty
@@ -65,7 +65,6 @@ template <class T> int rvs_util_parse(const string& buff,
       *error = 1;
     }
   }
-  return *error;
 }
 
 #endif  // INCLUDE_RVS_UTIL_H_
