@@ -29,8 +29,6 @@
 #include <string>
 #include <vector>
 
-#include "rvs_util.h"
-
 namespace rvs {
 /**
  * @class actionbase
@@ -56,7 +54,9 @@ class actionbase {
   bool has_property(const std::string& key);
   int  property_get_deviceid(int *error);
   bool property_get_device(int *error);
-
+  int  property_get_int(const std::string& prop_name, int *error);
+  void property_get_run(const std::string& prop_name, int *error);
+  
   void property_get_action_name(int *error);
   void property_get_run_parallel(int *error);
   void property_get_run_count(int *error);
@@ -73,16 +73,6 @@ class actionbase {
                                    int *error);
   uint32_t property_get_b2b_size(int* error);
   int property_get_link_type(int* error);
-
-  template <typename T>
-  int property_get_int(const std::string& prop_name, T* key) {
-    std::string val;
-    int error = 0;  // init with 'no error'
-    if (has_property(prop_name, &val)) {
-       error = rvs_util_parse<T>(val, key, &error);
-    }
-    return error;
-  }
 
  protected:
 /**

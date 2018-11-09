@@ -47,7 +47,6 @@ class action : public rvs::actionbase {
     ulong  get_property(std::string);
     std::string pretty_print(ulong, std::string, std::string);
     bool get_all_common_config_keys();
-    bool get_all_smqt_config_keys();
     std::string action_name;
 };
 
