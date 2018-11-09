@@ -58,7 +58,7 @@ set ( BUILD_VERSION_PATCH ${VERSION_PATCH} )
 set ( LIB_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
 
 if ( DEFINED VERSION_BUILD AND NOT ${VERSION_BUILD} STREQUAL "" )
-    message ( "VERSION BUILD DEFINED ${VERSION_BUILD}" )
+#    message ( "VERSION BUILD DEFINED ${VERSION_BUILD}" )
     set ( BUILD_VERSION_PATCH "${BUILD_VERSION_PATCH}-${VERSION_BUILD}" )
 endif ()
 set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
@@ -72,7 +72,6 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "hip_hcc")
-
 
 # Determine Roc Runtime header files are accessible
 if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime.h)
@@ -118,8 +117,9 @@ set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 ## define include directories
 include_directories(include ../include)
 
-set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
-  src/rvs_module.cpp src/action.cpp src/iet_worker.cpp src/hwmon_util.cpp ../src/rvs_blas.cpp src/blas_worker.cpp src/log_worker.cpp)
+set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsloglp.cpp ../src/rsmi_util.cpp
+  ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp 
+  src/rvs_module.cpp src/action.cpp src/iet_worker.cpp ../src/rvs_blas.cpp src/blas_worker.cpp src/log_worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
