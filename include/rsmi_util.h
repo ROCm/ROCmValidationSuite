@@ -25,8 +25,8 @@
 #ifndef INCLUDE_RSMI_UTIL_H_
 #define INCLUDE_RSMI_UTIL_H_
 
-#include <cstddef>
 #include <stdint.h>
+#include <cstddef>
 
 #include "rocm_smi/rocm_smi.h"
 
