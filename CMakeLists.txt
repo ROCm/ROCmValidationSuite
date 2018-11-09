@@ -150,9 +150,9 @@ set(ROCBLAS_INC_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/in
 set(ROCBLAS_LIB_DIR "$ENV{RVS}/../build/rocBLAS/build/release/rocblas-install/lib/" CACHE PATH "Contains library files exported by rocBLAS")
 set(ROCM_SMI_INC_DIR "$ENV{RVS}/rocm_smi_lib/include" CACHE PATH "Contains header files exported by rocm_smi")
 set(ROCM_SMI_LIB_DIR "$ENV{RVS}/../build/rocm_smi_lib" CACHE PATH "Contains library files exported by rocm_smi")
-set(ROCM_SMI_LIB "rocm_smi64" CACHE PATH "rocm_smi library name")
-set(CMAKE_BUILD_TYPE "Debug" CACHE PATH "Build type")
-set(RVS_DO_TRACE "1" CACHE PATH "Expand RVSTRACE_ macro")
+set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
+set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type")
+set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
 
 add_subdirectory(rvs)
 add_subdirectory(gpup.so)

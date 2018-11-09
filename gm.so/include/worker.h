@@ -26,12 +26,9 @@
 #define GM_SO_INCLUDE_WORKER_H_
 
 #include <string>
-#include <vector>
-#include <memory>
 #include <map>
 
 #include "rvsthreadbase.h"
-#include "rocm_smi/rocm_smi.h"
 
 
 /**
@@ -47,6 +44,64 @@
 
 class Worker : public rvs::ThreadBase {
  public:
+  //! monitored metric and its bound values
+  struct Metric_bound {
+    //! true if metric observed
+    bool mon_metric;
+    //! true if bounds checked
+    bool check_bounds;
+    //! bound max_val
+    uint32_t max_val;
+    //! bound min_val
+    uint32_t min_val;
+  };
+  //! number of violations for metrics
+  struct Metric_violation {
+    //! gpu_id
+    int32_t gpu_id;
+    //! number of temperature violation
+    int temp_violation;
+    //! number of clock violation
+    int clock_violation;
+    //! number of mem_clock violation
+    int mem_clock_violation;
+    //! number of fan violation
+    int fan_violation;
+    //! number of power violation
+    int power_violation;
+  };
+  //! current metric values
+  struct Metric_value {
+    //! gpu_id
+    int32_t gpu_id;
+    //! current temperature value
+    uint32_t temp;
+    //! current clock value
+    uint32_t clock;
+    //! current mem_clock value
+    uint32_t mem_clock;
+    //! current fan value
+    uint32_t fan;
+    //! current power value
+    uint32_t power;
+  };
+  //! average metric values
+  struct Metric_avg {
+    //! gpu_id
+    int32_t gpu_id;
+    //! average temperature
+    uint32_t av_temp;
+    //! average clock
+    uint32_t av_clock;
+    //! average mem_clock
+    uint32_t av_mem_clock;
+    //! average fan
+    uint32_t av_fan;
+    //! average power
+    float av_power;
+  };
+
+ public:
   Worker();
   virtual ~Worker();
 
@@ -55,17 +110,14 @@ class Worker : public rvs::ThreadBase {
   void set_name(const std::string& name) { action_name = name; }
   //! sets stopping action name
   void set_stop_name(const std::string& name) { stop_action_name = name; }
-  //! Sets device id for filtering
-  void set_deviceid(const int id) { device_id = id; }
-  //! Sets GPU IDs for filtering
-  void set_gpuids(const std::vector<uint16_t>& GpuIds);
-  //! Sets GPU IDs for filtering (string used in messages)
-  //! @param Devices List of devices to monitor
-  void set_strgpuids(const std::string& Devices) { strgpuids = Devices; }
+  //! Sets device indices for filtering
+  void set_dv_ind(const std::map<uint32_t, int32_t>& DvInd) {
+    dv_ind = DvInd;
+  }
   //! Sets JSON flag
   void json(const bool flag) { bjson = flag; }
   //! Returns initiating action name
-  const std::string& get_name(void) { return action_name; }
+//  const std::string& get_name(void) { return action_name; }
   //! sets sample interval
   void set_sample_int(int interval) { sample_interval = interval; }
   //! sets log interval
@@ -77,8 +129,9 @@ class Worker : public rvs::ThreadBase {
   //! sets true/false for metric
   void set_metr_mon(std::string metr_name, bool metr_true);
   //! sets bound values for metric
-  void set_bound(std::string metr_name, bool met_bound, int metr_max,
-                 int metr_min);
+  void set_bound(const std::map<std::string, Metric_bound>& Bound) {
+    bounds = Bound;
+  }
   //! gets irq of device
   const std::string get_irq(const std::string path);
   //! gets power of device
@@ -90,18 +143,6 @@ class Worker : public rvs::ThreadBase {
   virtual void run(void);
 
  protected:
-  //! TRUE if JSON output is required
-  bool bjson;
-  //! Loops while TRUE
-  bool brun;
-  //! device id to filter for. 0 if no filtering.
-  int device_id;
-  //! GPU id filtering flag
-  bool bfiltergpu;
-  //! list of GPU devices to monitor
-  std::vector<uint16_t> gpuids;
-  //! list of GPU devices to monitor (string used in messages)
-  std::string strgpuids;
   //! Name of the action which initiated monitoring
   std::string  action_name;
   //! Name of the action which stops monitoring
@@ -114,69 +155,22 @@ class Worker : public rvs::ThreadBase {
   bool term;
   //! force key
   bool force;
+  //! TRUE if JSON output is required
+  bool bjson;
+  //! Loops while TRUE
+  bool brun;
+  //! list of rocm_smi_lib device indices to monitor
+  std::map<uint32_t, int32_t> dv_ind;
   //! number of times of get metric
   int count;
-//! gpu_id and average metrics values
-struct Dev_metrics {
-    //! gpu_id
-    uint32_t gpu_id;
-    //! average temperature
-    uint32_t av_temp;
-    //! average clock
-    uint32_t av_clock;
-    //! average mem_clock
-    uint32_t av_mem_clock;
-    //! average fan
-    uint32_t av_fan;
-    //! average power
-    uint32_t av_power;
-};
-//! monitored metric and its bound values
-struct Metric_bound {
-    //! true if metric observed
-    bool mon_metric;
-    //! true if bounds checked
-    bool check_bounds;
-    //! bound max_val
-    int max_val;
-    //! bound min_val
-    int min_val;
-};
-//! number of violations for metrics
-struct Metric_violation {
-    //! number of temperature violation
-    int temp_violation;
-    //! number of clock violation
-    int clock_violation;
-    //! number of mem_clock violation
-    int mem_clock_violation;
-    //! number of fan violation
-    int fan_violation;
-    //! number of power violation
-    int power_violation;
-};
-//! current metric values
-struct Metric_value {
-    //! current temperature value
-    int temp;
-    //! current clock value
-    int clock;
-    //! current mem_clock value
-    int mem_clock;
-    //! current fan value
-    int fan;
-    //! current power value
-    int power;
-};
-
-  //! device irq, gpu_id and average metric
-  std::map<std::string, Dev_metrics> irq_gpu_ids;
-  //! device_irq and metric bounds
+  //! dv_ind and metric bounds
   std::map<std::string, Metric_bound> bounds;
-  //! device_irq and metrics violation
-  std::map<std::string, Metric_violation> met_violation;
-  //! device_irq and current metric values
-  std::map<std::string, Metric_value> met_value;
+  //! dv_ind and metrics violation
+  std::map<uint32_t, Metric_violation> met_violation;
+  //! dv_ind and current metric values
+  std::map<uint32_t, Metric_value> met_value;
+  //! dv_ind and current metric values
+  std::map<uint32_t, Metric_avg> met_avg;
 };
 
 #endif  // GM_SO_INCLUDE_WORKER_H_

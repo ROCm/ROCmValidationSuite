@@ -32,6 +32,7 @@
 #include <vector>
 #include <iostream>
 
+#include "rvsloglp.h"
 #include "rvs_key_def.h"
 #include "rvs_util.h"
 
@@ -178,36 +179,37 @@ int rvs::actionbase::property_get_deviceid(int *error) {
  * @return true if "all" is selected, false otherwise
  */
 bool rvs::actionbase::property_get_device(int *error) {
-    *error = 0;  // init with 'no error'
-    auto it = property.find(RVS_CONF_DEVICE_KEY);
-    if (it != property.end()) {
-        if (it->second == "all") {
-            return true;
-        } else {
-            // split the list of gpu_id
-            device_prop_gpu_id_list = str_split(it->second,
-                    YAML_DEVICE_PROP_DELIMITER);
+  std::string val;
+  *error = 0;
+  if (!has_property(RVS_CONF_DEVICE_KEY, &val)) {
+    RVSTRACE_
+    *error = 2;
+    return false;
+  }
 
-            if (device_prop_gpu_id_list.empty()) {
-                *error = 2;  // list of gpu_id cannot be empty
-            } else {
-                for (vector<string>::iterator it_gpu_id =
-                        device_prop_gpu_id_list.begin();
-                        it_gpu_id != device_prop_gpu_id_list.end(); ++it_gpu_id)
-                    if (!is_positive_integer(*it_gpu_id)) {
-                        *error = 1;
-                        break;
-                    }
-            }
-            return false;
-        }
+  if (val == "all") {
+    return true;
+  }
+  // split the list of gpu_id
+  device_prop_gpu_id_list = str_split(val, YAML_DEVICE_PROP_DELIMITER);
 
-    } else {
-        *error = 1;
-        // when error is set, it doesn't really matter whether the method
-        // returns true or false
-        return false;
+  if (device_prop_gpu_id_list.empty()) {
+    RVSTRACE_
+    *error = 2;  // list of gpu_id cannot be empty
+    return false;
+  }
+
+  for (auto it_gpu_id = device_prop_gpu_id_list.begin();
+       it_gpu_id != device_prop_gpu_id_list.end(); ++it_gpu_id) {
+    RVSTRACE_
+    if (!is_positive_integer(*it_gpu_id)) {
+      RVSTRACE_
+      *error = 1;
+      return false;
     }
+  }
+  RVSTRACE_
+  return false;
 }
 
 /**
