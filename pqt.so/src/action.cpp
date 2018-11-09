@@ -325,6 +325,9 @@ bool pqtaction::get_all_common_config_keys(void) {
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
+  if (gst_run_duration_ms == 0) {
+    gst_run_duration_ms = DEFAULT_DURATION;
+  }
 
   return true;
 }
