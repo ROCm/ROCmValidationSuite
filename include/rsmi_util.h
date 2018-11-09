@@ -22,11 +22,19 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef IET_SO_INCLUDE_HWMON_UTIL_H_
-#define IET_SO_INCLUDE_HWMON_UTIL_H_
+#ifndef INCLUDE_RSMI_UTIL_H_
+#define INCLUDE_RSMI_UTIL_H_
 
-#include <string>
+#include <stdint.h>
+#include <cstddef>
 
-extern float get_power_data(std::string hwmon_path);
+#include "rocm_smi/rocm_smi.h"
 
-#endif  // IET_SO_INCLUDE_HWMON_UTIL_H_
+namespace rvs {
+
+
+rsmi_status_t rsmi_dev_ind_get(uint64_t bdfid, uint32_t* pdv_ind);
+
+}
+
+#endif  // INCLUDE_RSMI_UTIL_H_
