@@ -54,15 +54,6 @@ class action : public rvs::actionbase {
     virtual int run(void);
 
  protected:
-  bool  bjson;
-  void* json_root_node;
-  bool  device_all_selected;
-  int   device_id;
-  int   log_interval;
-  bool  prop_terminate;
-  int   sample_interval;
-
- protected:
 /**
  * @brief gets the number of ROCm compatible AMD GPUs
  * @return run number of GPUs
@@ -73,8 +64,26 @@ class action : public rvs::actionbase {
   int get_bounds(const char* pMetric);
 
  protected:
+  //! 'true' if JSON logging is required
+  bool  bjson;
+  //! 'true' if configuration has key 'device: all'
+  bool  device_all_selected;
+  //! configuration device_id key
+  int   device_id;
+  //! configuration 'log_interval' key
+  int   log_interval;
+  //! true if test has to be aborted on bounds violation
+  bool  prop_terminate;
+  //! configuration 'sample_interval'' key
+  int   sample_interval;
+
+ protected:
   //! device_irq and metric bounds
   std::map<std::string, Worker::Metric_bound> property_bounds;
+
+ private:
+  //! JSON roor node helper var
+  void* json_root_node;
 };
 
 #endif  // GM_SO_INCLUDE_ACTION_H_

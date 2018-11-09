@@ -171,7 +171,6 @@ int rvs::logger::Log(const char* Message, const int LogLevel) {
  */
 int rvs::logger::LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec) {
-
   // stop logging requested?
   if (bStop) {
     if (stop_flags)
@@ -182,7 +181,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   if (LogLevel < lognone || LogLevel > logtrace) {
     char buff[128];
     snprintf(buff, sizeof(buff), "unknown logging level: %d", LogLevel);
-    Err( buff, "CLI");
+    Err(buff, "CLI");
     return -1;
   }
 
@@ -293,7 +292,7 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   if (level < lognone || level > logtrace) {
     char buff[128];
     snprintf(buff, sizeof(buff), "unknown logging level: %d", r->LogLevel());
-    Err( buff, "CLI");
+    Err(buff, "CLI");
     delete r;
     return -1;
   }

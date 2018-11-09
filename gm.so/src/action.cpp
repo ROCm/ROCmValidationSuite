@@ -162,6 +162,13 @@ bool action::get_all_common_config_keys(void) {
     return true;
 }
 
+/**
+ * @brief Read configuration 'metric:' key and store it into property_bounds
+ * array.
+ * @param pMetric Metric name
+ * @return 0 - OK
+ * @return 1 - syntax error
+ */
 int action::get_bounds(const char* pMetric) {
   std::string smetric("metrics.");
   smetric += pMetric;
@@ -181,7 +188,7 @@ int action::get_bounds(const char* pMetric) {
     if (error) {
       return 1;
     }
-    rvs_util_parse<uint32_t>(values[1], &bound_.min_val, &error);
+    rvs_util_parse<uint32_t>(values[2], &bound_.min_val, &error);
     if (error) {
       return 1;
     }
@@ -248,7 +255,6 @@ bool action::get_all_gm_config_keys(void) {
  * */
 int action::run(void) {
   string msg;
-  int error = 0;
 
   // if monitoring is already running, stop it
   // (it will be restarted if needed)
@@ -288,8 +294,8 @@ int action::run(void) {
     gpu_get_all_gpu_id(&gpu_id);
   } else {
     RVSTRACE_
-    error = rvs_util_strarr_to_uintarr(device_prop_gpu_id_list, &gpu_id);
-    if (error) {
+    int sts = rvs_util_strarr_to_uintarr(device_prop_gpu_id_list, &gpu_id);
+    if (sts < 0) {
       msg = "Invalide 'device' key value.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
