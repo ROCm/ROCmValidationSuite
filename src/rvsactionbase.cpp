@@ -259,39 +259,7 @@ void rvs::actionbase::property_get_run_parallel(int *error) {
 /**
  * @brief reads the run count from the module's properties collection
  */
-void rvs::actionbase::property_get_run_count(int *error) {
-  gst_run_count = 1;
-  std::string val;
-  *error = 2;  // init with 'no error'
-  if (has_property(RVS_CONF_COUNT_KEY, &val)) {
-    rvs_util_parse<uint64_t>(val, &gst_run_count, error);
-  }
-}
 
-/**
- * @brief reads the module's properties collection to check how much to delay
- * each stress test session
- */
-void rvs::actionbase::property_get_run_wait(int *error) {
-  gst_run_wait_ms = 0;
-  std::string val;
-  *error = 2;  // init with 'no error'
-  if (has_property(RVS_CONF_WAIT_KEY, &val)) {
-    rvs_util_parse<uint64_t>(val, &gst_run_wait_ms, error);
-  }
-}
-
-/**
- * @brief reads the total run duration from the module's properties collection
- */
-void rvs::actionbase::property_get_run_duration(int *error) {
-  gst_run_duration_ms = 0;
-  std::string val;
-  *error = 2;  // init with 'no error'
-  if (has_property(RVS_CONF_DURATION_KEY, &val)) {
-    rvs_util_parse<uint64_t>(val, &gst_run_duration_ms, error);
-  }
-}
 
 /**
  * @brief reads the sample interval from the module's properties collection
