@@ -1456,6 +1456,7 @@ link_stat_cur_speed\n
 link_stat_neg_width\n
 slot_pwr_limit_value\n
 slot_physical_num\n
+bus_id\n
 atomic_op_32_completer\n
 atomic_op_64_completer\n
 atomic_op_128_CAS_completer\n

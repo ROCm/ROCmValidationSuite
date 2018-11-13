@@ -54,8 +54,8 @@ extern "C" {
 #define JSON_CAPS_NODE_NAME             "capabilities"
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 
-#define PEQT_RESULT_PASS_MESSAGE        "TRUE"
-#define PEQT_RESULT_FAIL_MESSAGE        "FALSE"
+#define PEQT_RESULT_PASS_MESSAGE        "true"
+#define PEQT_RESULT_FAIL_MESSAGE        "false"
 
 #define MODULE_NAME                     "peqt"
 #define MODULE_NAME_CAPS                "PEQT"
@@ -76,7 +76,8 @@ using std::map;
 const char* pcie_cap_names[] =
         {   "link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed",
             "link_stat_neg_width", "slot_pwr_limit_value",
-            "slot_physical_num", "device_id", "vendor_id", "kernel_driver",
+            "slot_physical_num", "bus_id", "device_id", "vendor_id",
+            "kernel_driver",
             "dev_serial_num", "atomic_op_routing",  "atomic_op_32_completer",
             "atomic_op_64_completer", "atomic_op_128_CAS_completer"
         };
@@ -85,7 +86,7 @@ const char* pcie_cap_names[] =
 void (*arr_prop_pfunc_names[])(struct pci_dev *dev, char *) = {
     get_link_cap_max_speed, get_link_cap_max_width,
     get_link_stat_cur_speed, get_link_stat_neg_width,
-    get_slot_pwr_limit_value, get_slot_physical_num,
+    get_slot_pwr_limit_value, get_slot_physical_num, get_pci_bus_id,
     get_device_id, get_vendor_id, get_kernel_driver,
     get_dev_serial_num, get_atomic_op_routing,
     get_atomic_op_32_completer, get_atomic_op_64_completer,
