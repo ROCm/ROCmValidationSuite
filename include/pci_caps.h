@@ -36,6 +36,7 @@ void get_link_stat_cur_speed(struct pci_dev *dev, char *buff);
 void get_link_stat_neg_width(struct pci_dev *dev, char *buff);
 void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff);
 void get_slot_physical_num(struct pci_dev *dev, char *buff);
+void get_pci_bus_id(struct pci_dev *dev, char *buff);
 void get_device_id(struct pci_dev *dev, char *buff);
 void get_dev_serial_num(struct pci_dev *dev, char *buff);
 void get_vendor_id(struct pci_dev *dev, char *buff);
