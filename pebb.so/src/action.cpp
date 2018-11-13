@@ -208,32 +208,34 @@ bool pebbaction::get_all_common_config_keys(void) {
     return false;
   }
 
-  rvs::actionbase::property_get_run_count(&error);
-  if (error == 1) {
+  //! number of GST stress test iterations to run
+  uint64_t run_count = 1;
+  //! stress test run delay
+  uint64_t run_wait_ms = 0;
+  //! stress test run duration
+  uint64_t run_duration_ms = 0;
+  
+  error = property_get_int<uint64_t>(RVS_CONF_COUNT_KEY, &run_count);
+  if (error != 0) {
       msg ="invalid '" + std::string(RVS_CONF_COUNT_KEY) +"' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  rvs::actionbase::property_get_run_wait(&error);
-  if (error == 1) {
+  error = property_get_int<uint64_t>(RVS_CONF_WAIT_KEY, &run_wait_ms);
+  if (error != 0) {
       msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  rvs::actionbase::property_get_run_duration(&error);
-  if (error == 1) {
+  error = property_get_int<uint64_t>(RVS_CONF_DURATION_KEY, &run_duration_ms);
+  if (error != 0) {
     msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
     "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
-  } else if (error == 2) {
-    msg = "missing '" + std::string(RVS_CONF_DURATION_KEY) +
-    "' key";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
-  } else if (gst_run_duration_ms == 0) {
+  } else if (run_duration_ms == 0) {
     msg = "'" + std::string(RVS_CONF_DURATION_KEY) +
     "' key must be greater then zero";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
