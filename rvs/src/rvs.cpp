@@ -71,7 +71,12 @@ int main(int Argc, char**Argv) {
   rvs::exec executor;
   sts = executor.run();
 
+#ifdef RVS_INVERT_RETURN_STATUS
+  return sts ? 0 : 1;
+#else
   return sts;
+#endif
+
 }
 
 
