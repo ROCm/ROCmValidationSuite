@@ -88,7 +88,12 @@ set(SOURCES
 add_executable(${RVS_TARGET} src/rvs.cpp ${SOURCES})
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
-## define test target
+## define target for "test-to-fail"
+add_executable(${RVS_TARGET}fail src/rvs.cpp ${SOURCES})
+target_link_libraries(${RVS_TARGET}fail ${PROJECT_LINK_LIBS} )
+target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
+
+## define unit testing targets
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 # message ( "TESTSOURCES ${TESTSOURCES}" )
 
@@ -131,7 +136,4 @@ install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/userguide/html
 
 # TEST SECTION
 
-add_test(NAME unittest
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvstest
-)
+include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
