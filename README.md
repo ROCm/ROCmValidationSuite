@@ -27,14 +27,6 @@ Init environment variables and submodule:
     git submodule init
     git submodule update
     
-### Compile yaml-cpp
-
-This needs to be done only once after cloning.
-
-    cd $RVS
-    cmake ./yaml-cpp -B../build/yaml-cpp
-    make -C ../build/yaml-cpp
-
 
 ### Compile rocm_smi_lib
 
