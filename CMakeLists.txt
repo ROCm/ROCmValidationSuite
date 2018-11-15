@@ -86,6 +86,29 @@ if ( NOT DEFINED CMAKE_PACKAGING_INSTALL_PREFIX )
     set (CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
 endif ()
 
+# Download and unpack yaml-cpp at configure time
+configure_file(CMakeLists.txt.yaml yaml-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
+if(result)
+  message(FATAL_ERROR "CMake step for yaml-cpp failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
+if(result)
+  message(FATAL_ERROR "Build step for yaml-cpp failed: ${result}")
+endif()
+
+
+# Add yaml directly to our build. This defines
+# the yaml and targets.
+add_subdirectory(${CMAKE_BINARY_DIR}/yaml-src
+                 ${CMAKE_BINARY_DIR}/yaml-build
+#                 EXCLUDE_FROM_ALL
+)
+
 # Download and unpack googletest at configure time
 configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -141,6 +164,8 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
 
 # Set PATH variables
+set(YAML_INC_DIR "${CMAKE_BINARY_DIR}/yaml-src/include/" CACHE PATH "Contains header files exported by yaml-cpp")
+set(YAML_LIB_DIR "${CMAKE_BINARY_DIR}/yaml-build/" CACHE PATH "Contains library files exported by yaml-cpp")
 set(ROCR_INC_DIR "/opt/rocm/include/" CACHE PATH "Contains header files exported by ROC Runtime")
 set(ROCR_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by ROC Runtime")
 set(ROCT_INC_DIR "/opt/rocm/include/libhsakmt" CACHE PATH "Contains header files exported by ROC Trunk")
@@ -155,16 +180,18 @@ set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type")
 set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
 
 add_subdirectory(rvs)
-add_subdirectory(gpup.so)
-add_subdirectory(pesm.so)
-add_subdirectory(rcqt.so)
-add_subdirectory(peqt.so)
-add_subdirectory(smqt.so)
-add_subdirectory(pebb.so)
-add_subdirectory(gm.so)
-add_subdirectory(gst.so)
-add_subdirectory(pqt.so)
-add_subdirectory(iet.so)
+# add_subdirectory(gpup.so)
+# add_subdirectory(pesm.so)
+# add_subdirectory(rcqt.so)
+# add_subdirectory(peqt.so)
+# add_subdirectory(smqt.so)
+# add_subdirectory(pebb.so)
+# add_subdirectory(gm.so)
+# add_subdirectory(gst.so)
+# add_subdirectory(pqt.so)
+# add_subdirectory(iet.so)
+
+add_dependencies(rvs doc)
 
 add_custom_target(doc ALL
 COMMAND ${CMAKE_COMMAND} -E make_directory "doc"
