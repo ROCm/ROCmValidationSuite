@@ -23,8 +23,8 @@
 ##
 ################################################################################
 
-set(CTEST_SOURCE_DIRECTORY "$ENV{RVS}")
-set(CTEST_BINARY_DIRECTORY "$ENV{RVS_BUILD}")
+set(CTEST_SOURCE_DIRECTORY ".")
+set(CTEST_BINARY_DIRECTORY "./build")
 
 set(CTEST_SITE "prj47-rack-07")
 set(CTEST_BUILD_NAME "linux-gcc-default")

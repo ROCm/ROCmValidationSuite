@@ -24,23 +24,18 @@
 ################################################################################
 
 
-add_test(NAME unittest
+add_test(NAME unit.rvs.1
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   COMMAND rvstest -d 3
 )
 
-add_test(NAME cli1
+add_test(NAME unit.rvs.cli1
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   COMMAND rvs -g
 )
 
-add_test(NAME cli2
+add_test(NAME unit.rvs.cli2
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   COMMAND rvs -t
-)
-
-add_test(NAME conf.gm1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gm1.conf
 )
 
