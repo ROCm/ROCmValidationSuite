@@ -189,7 +189,10 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
+  std::string val;
+  if (has_property("peer_deviceid", &val)) {
   error = property_get_int<int>("peer_deviceid", &prop_peer_deviceid);
+  }
   if (error != 0) {
     msg = "invalid 'peer_deviceid '";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -233,14 +236,14 @@ bool pqtaction::get_all_pqt_config_keys(void) {
 
   error = property_get_int<uint32_t>
   (RVS_CONF_B2B_BLOCK_SIZE_KEY, &b2b_block_size);
-  if (error) {
+  if (error == 1) {
     msg =  "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
   error = property_get_int<int>(RVS_CONF_LINK_TYPE_KEY, &link_type);
-  if (error) {
+  if (error == 1) {
     msg =  "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
@@ -284,7 +287,7 @@ bool pqtaction::get_all_common_config_keys(void) {
   // get the <deviceid> property value
   if (has_property("deviceid", &sdevid)) {
     error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
-      if (!error) {
+      if (error == 0) {
           if (devid != -1) {
               prop_deviceid = static_cast<uint16_t>(devid);
               prop_device_id_filtering = true;
