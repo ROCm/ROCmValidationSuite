@@ -30,11 +30,11 @@
 #include <chrono>
 #include <memory>
 
-#include "hwmon_util.h"
 #include "blas_worker.h"
 #include "log_worker.h"
 #include "rvs_module.h"
 #include "rvsloglp.h"
+#include "rocm_smi/rocm_smi.h"
 
 #define MODULE_NAME                             "iet"
 #define POWER_PROCESS_DELAY                     5
@@ -119,7 +119,7 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
 bool IETWorker::do_gpu_init_training(string *err_description) {
     std::chrono::time_point<std::chrono::system_clock>  start_time, end_time;
     float cur_power_value;
-    uint64_t power_sampling_iters = 0;
+    uint64_t power_sampling_iters = 0, last_avg_power;
 
     // init with no error
     *err_description = "";
@@ -156,15 +156,16 @@ bool IETWorker::do_gpu_init_training(string *err_description) {
 
     // record inital time
     start_time = std::chrono::system_clock::now();
-
     for (;;) {
         // check if stop signal was received
         if (rvs::lp::Stopping())
             return false;
 
         // get power data
-        cur_power_value = get_power_data(gpu_hwmon_entry);
-        if (cur_power_value != 0) {
+        rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
+                                    &last_avg_power);
+        if (rmsi_stat == RSMI_STATUS_SUCCESS) {
+            cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power_training += cur_power_value;
             power_sampling_iters++;
         }
@@ -264,7 +265,7 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time,
                                                         sampling_start_time;
     float cur_power_value, avg_power = 0;
-    uint64_t power_sampling_iters = 0, cur_milis_sampling;
+    uint64_t power_sampling_iters = 0, cur_milis_sampling, last_avg_power;
     string msg;
 
     *error = 0;
@@ -284,9 +285,9 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
     }
 
     pwr_log_worker->set_name(action_name);
-    pwr_log_worker->set_gpu_hwmon_entry(gpu_hwmon_entry);
     pwr_log_worker->set_gpu_id(gpu_id);
     pwr_log_worker->set_log_interval(log_interval);
+    pwr_log_worker->set_pwr_device_id(pwr_device_id);
 
     compute_gpu_stats();
 
@@ -309,8 +310,10 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
             return false;
 
         // get GPU's current average power
-        cur_power_value = get_power_data(gpu_hwmon_entry);
-        if (cur_power_value != 0) {
+        rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
+                                    &last_avg_power);
+        if (rmsi_stat == RSMI_STATUS_SUCCESS) {
+            cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power += cur_power_value;
             power_sampling_iters++;
         }
@@ -362,6 +365,7 @@ bool IETWorker::do_iet_power_stress(void) {
                                                         sampling_start_time;
     float cur_power_value, avg_power = 0;
     uint64_t power_sampling_iters = 0, cur_milis_sampling, total_time_ms;
+    uint64_t last_avg_power;
     uint16_t num_power_violations = 0;
     string msg;
 
@@ -378,8 +382,10 @@ bool IETWorker::do_iet_power_stress(void) {
             break;
 
         // get GPU's current average power
-        cur_power_value = get_power_data(gpu_hwmon_entry);
-        if (cur_power_value != 0) {
+        rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
+                                    &last_avg_power);
+        if (rmsi_stat == RSMI_STATUS_SUCCESS) {
+            cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power += cur_power_value;
             power_sampling_iters++;
         }

@@ -32,6 +32,7 @@
 #include <vector>
 #include <iostream>
 
+#include "rvsloglp.h"
 #include "rvs_key_def.h"
 #include "rvs_util.h"
 
@@ -62,7 +63,7 @@ rvs::actionbase::~actionbase() {
  *
  * */
 int rvs::actionbase::property_set(const char* pKey, const char* pVal) {
-  property.insert(std::pair<string, string>(pKey, pVal));
+  property.insert(property.cend(), std::pair<string, string>(pKey, pVal));
   return 0;
 }
 
@@ -84,7 +85,7 @@ void rvs::actionbase::sleep(const unsigned int ms) {
  *
  * @param key Property key
  * @param pval Property value. Not changed if propery is not set.
- * @return TRUE - property set, FALSE - othewise
+ * @return TRUE - property set, FALSE - otherwise
  *
  * */
 bool rvs::actionbase::has_property(const std::string& key, std::string* pval) {
@@ -100,7 +101,7 @@ bool rvs::actionbase::has_property(const std::string& key, std::string* pval) {
  * @brief Checks if property is set.
  *
  * @param key Property key
- * @return TRUE - property set, FALSE - othewise
+ * @return TRUE - property set, FALSE - otherwise
  *
  * */
 bool rvs::actionbase::has_property(const std::string& key) {
@@ -159,66 +160,42 @@ void rvs::actionbase::property_get_uint_list(const std::string& key,
 
 
 /**
- * gets the deviceid from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return deviceid value if valid, -1 otherwise
- */
-int rvs::actionbase::property_get_deviceid(int *error) {
-    uint32_t deviceid = -1;
-    std::string val;
-    *error = 0;  // init with 'no error'
-    if (has_property(RVS_CONF_DEVICEID_KEY, &val)) {
-      rvs_util_parse<uint32_t>(val, &deviceid, error);
-    }
-    return deviceid;
-}
-
-/*  int rvs::actionbase::property_get_int(const std::string& prop_name,int *error) {
-  uint32_t key = -1;
-  std::string val;
-  *error = 0;  // init with 'no error'
-  if (has_property(prop_name, &val)) {
-    rvs_util_parse<uint32_t>(val, &key, error);
-  }
-  return key;
-}*/
-
-/**
  * gets the gpu_id list from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  * @return true if "all" is selected, false otherwise
  */
 bool rvs::actionbase::property_get_device(int *error) {
-    *error = 0;  // init with 'no error'
-    auto it = property.find(RVS_CONF_DEVICE_KEY);
-    if (it != property.end()) {
-        if (it->second == "all") {
-            return true;
-        } else {
-            // split the list of gpu_id
-            device_prop_gpu_id_list = str_split(it->second,
-                    YAML_DEVICE_PROP_DELIMITER);
+  std::string val;
+  *error = 0;
+  if (!has_property(RVS_CONF_DEVICE_KEY, &val)) {
+    RVSTRACE_
+    *error = 2;
+    return false;
+  }
 
-            if (device_prop_gpu_id_list.empty()) {
-                *error = 2;  // list of gpu_id cannot be empty
-            } else {
-                for (vector<string>::iterator it_gpu_id =
-                        device_prop_gpu_id_list.begin();
-                        it_gpu_id != device_prop_gpu_id_list.end(); ++it_gpu_id)
-                    if (!is_positive_integer(*it_gpu_id)) {
-                        *error = 1;
-                        break;
-                    }
-            }
-            return false;
-        }
+  if (val == "all") {
+    return true;
+  }
+  // split the list of gpu_id
+  device_prop_gpu_id_list = str_split(val, YAML_DEVICE_PROP_DELIMITER);
 
-    } else {
-        *error = 1;
-        // when error is set, it doesn't really matter whether the method
-        // returns true or false
-        return false;
+  if (device_prop_gpu_id_list.empty()) {
+    RVSTRACE_
+    *error = 2;  // list of gpu_id cannot be empty
+    return false;
+  }
+
+  for (auto it_gpu_id = device_prop_gpu_id_list.begin();
+       it_gpu_id != device_prop_gpu_id_list.end(); ++it_gpu_id) {
+    RVSTRACE_
+    if (!is_positive_integer(*it_gpu_id)) {
+      RVSTRACE_
+      *error = 1;
+      return false;
     }
+  }
+  RVSTRACE_
+  return false;
 }
 
 /**
@@ -256,36 +233,6 @@ void rvs::actionbase::property_get_run_parallel(int *error) {
   }
 }
 
-/**
- * @brief reads the run count from the module's properties collection
- */
-
-
-/**
- * @brief reads the sample interval from the module's properties collection
- */
-int rvs::actionbase::property_get_sample_interval(int *error) {
-  uint32_t sample_int = -1;
-  std::string val;
-  *error = 2;  // init with 'no error'
-  if (has_property(RVS_CONF_SAMPLE_INTERVAL_KEY, &val)) {
-    rvs_util_parse<uint32_t>(val, &sample_int, error);
-  }
-  return sample_int;
-}
-
-/**
- * @brief reads the log interval from the module's properties collection
- */
-int rvs::actionbase::property_get_log_interval(int *error) {
-  int log_int = -1;
-  std::string val;
-  *error = 2;  // init with 'no error'
-  if (has_property(RVS_CONF_LOG_INTERVAL_KEY, &val)) {
-    rvs_util_parse<int>(val, &log_int, error);
-  }
-  return log_int;
-}
 
 /**
  * @brief reads terminate from the module's properties collection
@@ -333,61 +280,6 @@ void rvs::actionbase::property_get_log_level(int *error) {
   }
 }
 
-/**
- * gets the b2b_block_size key from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return size of data block to be used in b2b transfer
- */
-uint32_t rvs::actionbase::property_get_b2b_size(int* error) {
-  std::string val;
-  if (!has_property(RVS_CONF_B2B_BLOCK_SIZE_KEY, &val)) {
-    *error = 2;
-    return 0;
-  }
-
-  if (!is_positive_integer(val)) {
-    *error = 1;
-    return 0;
-  }
-
-  uint32_t retval = 0;
-  try {
-    retval = std::stoul(val);
-  } catch(...) {
-    *error = 1;
-    return 0;
-  }
-
-  return retval;
-}
-
-/**
- * gets value for link_type key. This value is used to filter host-device links.
- * @param error pointer to a memory location where the error code will be stored
- * @return link type (in line with hsa_amd_link_info_type_t)
- */
-int rvs::actionbase::property_get_link_type(int* error) {
-  std::string val;
-  if (!has_property(RVS_CONF_LINK_TYPE_KEY, &val)) {
-    *error = 2;
-    return -1;
-  }
-
-  if (!is_positive_integer(val)) {
-    *error = 1;
-    return -1;
-  }
-
-  int retval = -1;
-  try {
-    retval = std::stoi(val);
-  } catch(...) {
-    *error = 1;
-    return -1;
-  }
-
-  return retval;
-}
 
 
 

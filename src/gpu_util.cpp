@@ -340,3 +340,10 @@ int32_t rvs::gpulist::GetNodeIdFromLocationId(const uint32_t LocationID) {
   }
   return -1;
 }
+
+std::string rvs::bdf2string(uint32_t BDF) {
+  char buff[32];
+  snprintf(buff, sizeof(buff), "%02X:%02X.%d",
+           BDF>>8, (BDF & 0xFF), 0);
+  return buff;
+}

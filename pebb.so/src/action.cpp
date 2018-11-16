@@ -108,7 +108,7 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
 
 
   RVSTRACE_
-  prop_log_interval = property_get_log_interval(&error);
+  error = property_get_int<int>(RVS_CONF_LOG_INTERVAL_KEY, &prop_log_interval);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -131,14 +131,16 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
     block_size.clear();
   }
 
-  b2b_block_size = property_get_b2b_size(&error);
+  error = property_get_int<uint32_t>
+  (RVS_CONF_B2B_BLOCK_SIZE_KEY, &b2b_block_size);
+//  b2b_block_size = property_get_b2b_size(&error);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
-  link_type = property_get_link_type(&error);
+  error = property_get_int<int>(RVS_CONF_LINK_TYPE_KEY, &link_type);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -182,14 +184,14 @@ bool pebbaction::get_all_common_config_keys(void) {
 
   // get the <deviceid> property value
   if (has_property("deviceid", &sdevid)) {
-    int devid = property_get_deviceid(&error);
+    int devid;
+    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
     if (!error) {
       if (devid != -1) {
         prop_deviceid = static_cast<uint16_t>(devid);
         prop_device_id_filtering = true;
       }
     } else {
-
       msg = "invalid 'deviceid' key value " + std::string(sdevid);
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 
@@ -207,42 +209,37 @@ bool pebbaction::get_all_common_config_keys(void) {
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
-
-  //! number of GST stress test iterations to run
-  uint64_t run_count = 1;
-  //! stress test run delay
-  uint64_t run_wait_ms = 0;
-  //! stress test run duration
-  uint64_t run_duration_ms = 0;
-  
-  error = property_get_int<uint64_t>(RVS_CONF_COUNT_KEY, &run_count);
-  if (error != 0) {
-      msg ="invalid '" + std::string(RVS_CONF_COUNT_KEY) +"' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+  error = property_get_int_default<uint64_t>
+  (RVS_CONF_COUNT_KEY, &gst_run_count, 1);
+  if (error == 1) {
+    msg ="invalid '" + std::string(RVS_CONF_COUNT_KEY) +"' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
   }
 
-  error = property_get_int<uint64_t>(RVS_CONF_WAIT_KEY, &run_wait_ms);
-  if (error != 0) {
-      msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+  error = property_get_int_default<uint64_t>
+  (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, 0);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
   }
 
-  error = property_get_int<uint64_t>(RVS_CONF_DURATION_KEY, &run_duration_ms);
+  error = property_get_int<uint64_t>
+  (RVS_CONF_DURATION_KEY, &gst_run_duration_ms);
   if (error != 0) {
     msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
     "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
-  } else if (run_duration_ms == 0) {
+  } else if (gst_run_duration_ms == 0) {
     msg = "'" + std::string(RVS_CONF_DURATION_KEY) +
     "' key must be greater then zero";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
-  property_get_log_level(&error);
+  error = property_get_int<int>(RVS_CONF_LOG_INTERVAL_KEY, &error);
   if (error == 1) {
     msg = "invalid logging level value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);

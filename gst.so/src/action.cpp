@@ -92,65 +92,6 @@ action::~action() {
     property.clear();
 }
 
-
-/**
- * @brief reads the stress test ramp time from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_gst_ramp_interval(int *error) {
-    *error = 0;
-    gst_ramp_interval = GST_DEFAULT_RAMP_INTERVAL;
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_RAMP_INTERVAL_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second))
-            gst_ramp_interval = std::stoul(it->second);
-        else
-            *error = 1;
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads the log interval from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_gst_log_interval(int *error) {
-    *error = 0;
-    gst_log_interval = GST_DEFAULT_LOG_INTERVAL;
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_LOG_INTERVAL_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second)) {
-            gst_log_interval = std::stoul(it->second);
-            if (gst_log_interval == 0)
-                gst_log_interval = GST_DEFAULT_LOG_INTERVAL;
-        } else {
-            *error = 1;
-        }
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads the max_violations (maximum allowed number of GFLOPS violations)
- * from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_gst_max_violations(int *error) {
-    *error = 0;
-    gst_max_violations = GST_DEFAULT_MAX_VIOLATIONS;
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_MAX_VIOLATIONS_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second))
-            gst_max_violations = std::stoi(it->second);
-        else
-            *error = 1;
-        property.erase(it);
-    }
-}
-
 /**
  * @brief reads the module's properties collection to see whether the GST should
  * copy the matrices to GPU before each SGEMM/DGEMM operation
@@ -217,24 +158,6 @@ void action::property_get_gst_tolerance(int *error) {
         } catch (const std::regex_error& e) {
             *error = 1;
         }
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads matrix size from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_gst_matrix_size(int *error) {
-    *error = 0;
-    gst_matrix_size = GST_DEFAULT_MATRIX_SIZE;
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_MATRIX_SIZE_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second))
-            gst_matrix_size = std::stoul(it->second);
-        else
-            *error = 1;
         property.erase(it);
     }
 }
@@ -332,7 +255,8 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
-    property_get_gst_ramp_interval(&error);
+    error = property_get_int_default<uint64_t>
+    (RVS_CONF_RAMP_INTERVAL_KEY, &gst_ramp_interval, GST_DEFAULT_RAMP_INTERVAL);
     if (error) {
         msg = "invalid '" +
         std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "' key value";
@@ -340,15 +264,18 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
-    property_get_gst_log_interval(&error);
-    if (error) {
+    error = property_get_int_default<uint64_t>
+    (RVS_CONF_LOG_INTERVAL_KEY, &gst_log_interval, GST_DEFAULT_LOG_INTERVAL);
+    if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
-    property_get_gst_max_violations(&error);
+    error = property_get_int_default<int>
+    (RVS_CONF_MAX_VIOLATIONS_KEY, &gst_max_violations,
+     GST_DEFAULT_MAX_VIOLATIONS);
     if (error) {
         msg = "invalid '" +
         std::string(RVS_CONF_MAX_VIOLATIONS_KEY) + "' key value";
@@ -372,8 +299,9 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
-    property_get_gst_matrix_size(&error);
-    if (error) {
+    error = property_get_int_default<uint64_t>
+    (RVS_CONF_MATRIX_SIZE_KEY, &gst_matrix_size, GST_DEFAULT_MATRIX_SIZE);
+    if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_MATRIX_SIZE_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -408,8 +336,9 @@ bool action::get_all_common_config_keys(void) {
     }
 
     // get the <deviceid> property value
+    int devid;
     if (has_property("deviceid", &sdevid)) {
-        int devid = property_get_deviceid(&error);
+      error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
         if (!error) {
             if (devid != -1) {
                 deviceid = static_cast<uint16_t>(devid);
@@ -432,22 +361,25 @@ bool action::get_all_common_config_keys(void) {
         return false;
     }
 
-    rvs::actionbase::property_get_run_count(&error);
-    if (error == 1) {
+    error = property_get_int_default<uint64_t>
+    (RVS_CONF_COUNT_KEY, &gst_run_count, RVS_DEFAULT_COUNT);
+    if (error != 0) {
         msg = "invalid '" +
             std::string(RVS_CONF_COUNT_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
-    rvs::actionbase::property_get_run_wait(&error);
+    rvs::actionbase::property_get_int_default<uint64_t>
+    (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, RVS_DEFAULT_WAIT);
     if (error == 1) {
         msg = "invalid '" +
             std::string(RVS_CONF_WAIT_KEY) + "' key value";
         return false;
     }
 
-    rvs::actionbase::property_get_run_duration(&error);
+    error = property_get_int_default<uint64_t>
+    (RVS_CONF_DURATION_KEY, &gst_run_duration_ms, RVS_DEFAULT_DURATION);
     if (error == 1) {
         msg = "invalid '" +
             std::string(RVS_CONF_DURATION_KEY) + "' key value";
