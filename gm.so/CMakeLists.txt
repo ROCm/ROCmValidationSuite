@@ -72,46 +72,20 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
-set(ROCBLAS_LIB "rocblas")
-set(HIP_HCC_LIB "hip_hcc")
-
-# Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime.h)
-  message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
-  RETURN()
-endif()
-
-if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime_api.h)
-  message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
-  RETURN()
-endif()
-
-# Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${ROCBLAS_INC_DIR}/rocblas.h)
-  message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
-  RETURN()
-endif()
-
-if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
-  message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
-  RETURN()
-endif()
-
-if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
-  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set ROCR_LIB_DIR path. Current value is : " ${ROCR_LIB_DIR})
-  RETURN()
-endif()
-
-if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
-  message("ERROR: rocm_smi library can't be found!...")
-  RETURN()
+if(DEFINED RVS_ROCMSMI)
+  if(NOT RVS_ROCMSMI EQUAL 1)
+    if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
+      message("ERROR: rocm_smi library can't be found!...")
+      RETURN()
+    endif()
+  endif()
 endif()
 
 # Add directories to look for header files to compile
-INCLUDE_DIRECTORIES(${ROCM_SMI_INC_DIR} ${ROCBLAS_INC_DIR} ${ROCR_INC_DIR} ${HIP_INC_DIR})
+INCLUDE_DIRECTORIES(${ROCM_SMI_INC_DIR} )
 
 # Add directories to look for library files to link 
-LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
+LINK_DIRECTORIES( ${ROCM_SMI_LIB_DIR})
 
 ## additional libraries
 set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
