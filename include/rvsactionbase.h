@@ -54,16 +54,10 @@ class actionbase {
   virtual int     run(void) = 0;
   bool has_property(const std::string& key, std::string* pval);
   bool has_property(const std::string& key);
-  int  property_get_deviceid(int *error);
   bool property_get_device(int *error);
 
   void property_get_action_name(int *error);
   void property_get_run_parallel(int *error);
-  void property_get_run_count(int *error);
-  void property_get_run_wait(int *error);
-  void property_get_run_duration(int *error);
-  int  property_get_sample_interval(int *error);
-  int  property_get_log_interval(int *error);
   void property_get_log_level(int *error);
   bool property_get_terminate(int* error);
   void property_get_uint_list(const std::string& key,
@@ -71,15 +65,29 @@ class actionbase {
                                    std::vector<uint32_t>* pval,
                                    bool* pball,
                                    int *error);
-  uint32_t property_get_b2b_size(int* error);
-  int property_get_link_type(int* error);
+//  int property_get_link_type(int* error);
 
   template <typename T>
   int property_get_int(const std::string& prop_name, T* key) {
     std::string val;
     int error = 0;  // init with 'no error'
     if (has_property(prop_name, &val)) {
-       error = rvs_util_parse<T>(val, key, &error);
+       error = rvs_util_parse<T>(val, key);
+    } else {
+      error = 2;
+    }
+    return error;
+  }
+
+  template <typename T>
+  int property_get_int_default
+  (const std::string& prop_name, T* key, int def_value) {
+    std::string val;
+    int error = 0;  // init with 'no error'
+    if (has_property(prop_name, &val)) {
+      error = rvs_util_parse<T>(val, key);
+    } else {
+      *key = def_value;
     }
     return error;
   }
@@ -114,5 +122,6 @@ class actionbase {
   //! logging level
   int property_log_level;
 };
+
 }  // namespace rvs
 #endif  // INCLUDE_RVSACTIONBASE_H_

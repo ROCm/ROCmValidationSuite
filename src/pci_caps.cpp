@@ -258,6 +258,16 @@ void get_slot_physical_num(struct pci_dev *dev, char *buff) {
 }
 
 /**
+ * gets PCI dev bus id
+ * @param dev a pci_dev structure containing the PCI device information
+ * @param buff pre-allocated char buffer 
+ * @return 
+ */
+void get_pci_bus_id(struct pci_dev *dev, char *buff) {
+  snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%0X", dev->bus);
+}
+
+/**
  * gets PCI device id (it appears as a function just to keep compatibility with the array of pointer to function)
  * @param dev a pci_dev structure containing the PCI device information
  * @param buff pre-allocated char buffer 

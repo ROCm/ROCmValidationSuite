@@ -49,12 +49,12 @@ class log_worker : public rvs::ThreadBase {
     //! returns action name
     const std::string& get_name(void) { return action_name; }
 
-    //! sets GPU's hwmon entry
-    void set_gpu_hwmon_entry(const std::string& _gpu_hwmon_entry) {
-        gpu_hwmon_entry = _gpu_hwmon_entry;
+    //! sets the GPU power-index
+    void set_pwr_device_id(int _pwr_device_id) {
+        pwr_device_id = _pwr_device_id;
     }
-    //! returns the GPU's hwmon entry
-    const std::string& get_gpu_hwmon_entry(void) { return gpu_hwmon_entry; }
+    //! returns the GPU power-index
+    int get_pwr_device_id(void) { return pwr_device_id; }
 
     //! sets GPU ID
     void set_gpu_id(uint16_t _gpu_id) { gpu_id = _gpu_id; }
@@ -80,8 +80,8 @@ class log_worker : public rvs::ThreadBase {
  protected:
     //! name of the action
     std::string action_name;
-    //! GPU's hwmon entry
-    std::string gpu_hwmon_entry;
+    //! GPU's power-index
+    uint32_t pwr_device_id;
     //! ID of the GPU that will run the EDPp test
     uint16_t gpu_id;
     //! time interval at which the GPU power is computed and logged out

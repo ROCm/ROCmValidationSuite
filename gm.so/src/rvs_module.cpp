@@ -23,6 +23,12 @@
  *
  *******************************************************************************/
 #include "rvs_module.h"
+
+#include <stdint.h>
+#include <cstddef>
+
+#include "rocm_smi/rocm_smi.h"
+
 #include "action.h"
 #include "rvsloglp.h"
 #include "worker.h"
@@ -81,25 +87,24 @@ extern "C" const char* rvs_module_get_output(void) {
 
 extern "C" int   rvs_module_init(void* pMi) {
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+  RVSTRACE_
   rvs::gpulist::Initialize();
+  rsmi_init(0);
   return 0;
 }
 
 extern "C" int   rvs_module_terminate(void) {
-  rvs::lp::Log("[module_terminate] gm rvs_module_terminate() - entered",
-               rvs::logtrace);
+  RVSTRACE_
   if (pworker) {
-    rvs::lp::Log(
-      "[module_terminate] gm rvs_module_terminate() - pworker exists",
-                 rvs::logtrace);
+    RVSTRACE_
     pworker->set_stop_name("module_terminate");
     pworker->stop();
     delete pworker;
     pworker = nullptr;
-    rvs::lp::Log(
-      "[module_terminate] gm rvs_module_terminate() - monitoring stopped",
-                 rvs::logtrace);
   }
+  RVSTRACE_
+  rsmi_shut_down();
+
   return 0;
 }
 

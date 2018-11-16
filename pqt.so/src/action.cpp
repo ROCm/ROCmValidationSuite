@@ -203,13 +203,12 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  error = property_get_int<int>(RVS_CONF_LOG_INTERVAL_KEY, &prop_log_interval);    // default function
+  error = property_get_int_default<int>
+  (RVS_CONF_LOG_INTERVAL_KEY, &prop_log_interval, DEFAULT_LOG_INTERVAL);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "'";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
-  } else if (error == 2) {
-    prop_log_interval = DEFAULT_LOG_INTERVAL;
   }
 
   property_get_bidirectional(&error);
@@ -232,7 +231,8 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     block_size.clear();
   }
 
-  error = property_get_int<uint32_t>(RVS_CONF_B2B_BLOCK_SIZE_KEY, &b2b_block_size);
+  error = property_get_int<uint32_t>
+  (RVS_CONF_B2B_BLOCK_SIZE_KEY, &b2b_block_size);
   if (error) {
     msg =  "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -304,37 +304,30 @@ bool pqtaction::get_all_common_config_keys(void) {
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
-  
-  //! number of GST stress test iterations to run
-  uint64_t gst_run_count = 1;
-  //! stress test run delay
-  uint64_t gst_run_wait_ms = 0;
-  //! stress test run duration
-  uint64_t gst_run_duration_ms = 0;
-  
-  error = property_get_int<uint64_t>(RVS_CONF_COUNT_KEY, &gst_run_count);
-  if (error != 0) {
+
+  error = property_get_int_default<uint64_t>
+  (RVS_CONF_COUNT_KEY, &gst_run_count, 1);
+  if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_COUNT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  error = property_get_int<uint64_t>(RVS_CONF_WAIT_KEY, &gst_run_wait_ms);
-  if (error != 0) {
+  error = property_get_int_default<uint64_t>
+  (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, 0);
+  if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  error = property_get_int<uint64_t>(RVS_CONF_DURATION_KEY, &gst_run_duration_ms);
-  if (error != 0) {
+  error = property_get_int_default<uint64_t>
+  (RVS_CONF_DURATION_KEY, &gst_run_duration_ms, DEFAULT_DURATION);
+  if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
           "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
-  }
-  if (gst_run_duration_ms == 0) {
-    gst_run_duration_ms = DEFAULT_DURATION;
   }
 
   return true;

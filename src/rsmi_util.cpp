@@ -1,4 +1,3 @@
-
 /********************************************************************************
  *
  * Copyright (c) 2018 ROCm Developer Tools
@@ -23,30 +22,36 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include <string>
-#include <iostream>
-#include <fstream>
+#include "rsmi_util.h"
 
-#include "hwmon_util.h"
+#include <cassert>
 
-using std::string;
+namespace rvs {
 
-/**
- * @brief gets the latest average GPU power data
- * @param hwmon_path file containing the power data
- * @return average power data
- */
-float get_power_data(string hwmon_path) {
-    uint64_t avg_power;
-    std::ifstream f_power;
-    f_power.open(hwmon_path);
 
-    if (f_power.is_open()) {
-        f_power >> avg_power;
-        f_power.close();
-        return static_cast<float>(avg_power) / 1e6l;
+rsmi_status_t  rsmi_dev_ind_get(uint64_t bdfid, uint32_t* pdv_ind) {
+  assert(pdv_ind != nullptr);
+
+  uint32_t ix = 0;
+  uint64_t _bdfid = 0;
+  uint32_t num_devices = 0;
+  rsmi_status_t sts;
+
+  if (RSMI_STATUS_SUCCESS != (sts = rsmi_num_monitor_devices(&num_devices))) {
+    return sts;
+  }
+
+  for (ix = 0; ix < num_devices; ix++) {
+    if (RSMI_STATUS_SUCCESS == rsmi_dev_pci_id_get(ix, &_bdfid)) {
+      if (_bdfid == bdfid) {
+        *pdv_ind = ix;
+        return RSMI_STATUS_SUCCESS;
+      }
     }
-
-    return 0;
+  }
+  return RSMI_STATUS_INVALID_ARGS;
 }
+
+}  // namespace rvs
+
 
