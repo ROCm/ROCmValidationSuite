@@ -28,6 +28,24 @@ project ("rocm-validation-suite" )
 enable_testing()
 include ( CTest )
 
+## Support for in-source compilaton
+if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
+else()
+    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+endif ()
+
+## Set default module path if not already set
+if ( NOT DEFINED CMAKE_MODULE_PATH )
+    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/" )
+endif ()
+
+## Include common cmake modules
+include ( utils )
+
+## Setup the package version default (the actual one is taken from the latest Git tag).
+get_version ( "0.0.0" )
+
 # Package Generator  #######################################################
 # set(CPACK_GENERATOR "DEB")
 # set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm")
@@ -85,17 +103,6 @@ else()
     message(STATUS "RVS_DO_TRACE not defined")
 endif( )
 
-## Support for in-source compilaton
-if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
-else()
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
-endif ()
-
-## Set default module path if not already set
-if ( NOT DEFINED CMAKE_MODULE_PATH )
-    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/" )
-endif ()
 
 ## Set default unit test framework include path
 if ( NOT DEFINED UT_INC )
@@ -124,21 +131,44 @@ execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
 if(result)
-  message(FATAL_ERROR "CMake step for yaml-cpp failed: ${result}")
+  message(FATAL_ERROR "CMake step for yaml-download failed: ${result}")
 endif()
 execute_process(COMMAND ${CMAKE_COMMAND} --build .
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
 if(result)
-  message(FATAL_ERROR "Build step for yaml-cpp failed: ${result}")
+  message(FATAL_ERROR "Build step for yaml-download failed: ${result}")
 endif()
+execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/yaml-src -B${CMAKE_BINARY_DIR}/yaml-build
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-src )
+if(result)
+  message(FATAL_ERROR "Config step for yaml-src failed: ${result}")
+endif()
+
+add_custom_target(rvs_yaml_target
+  DEPENDS ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
+)
+
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
+  COMMAND make -C ${CMAKE_BINARY_DIR}/yaml-build
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-src
+  COMMENT "Generating yaml-cpp targets"
+  VERBATIM)
+###
+# execute_process(COMMAND make -C ${CMAKE_BINARY_DIR}/yaml-build
+#   RESULT_VARIABLE result
+#   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-build )
+# if(result)
+#   message(FATAL_ERROR "make step for yaml-cpp failed: ${result}")
+# endif()
 
 
 # Add yaml directly to our build. This defines yaml targets.
-add_subdirectory(${CMAKE_BINARY_DIR}/yaml-src
-                 ${CMAKE_BINARY_DIR}/yaml-build
+# add_subdirectory(${CMAKE_BINARY_DIR}/yaml-src
+#                  ${CMAKE_BINARY_DIR}/yaml-build
 #                 EXCLUDE_FROM_ALL
-)
+#)
 
 # Download and unpack googletest at configure time
 configure_file(CMakeGtestDownload.cmake googletest-download/CMakeLists.txt)
@@ -223,13 +253,6 @@ add_subdirectory(${CMAKE_BINARY_DIR}/rvs_smi-src
                  EXCLUDE_FROM_ALL
 )
 
-
-## Include common cmake modules
-include ( utils )
-
-## Setup the package version default (the actual one is taken from the latest Git tag).
-get_version ( "0.0.0" )
-
 if (RVS_ROCBLAS EQUAL 1)
   set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/include/")
   set(ROCBLAS_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/lib/")
@@ -260,6 +283,9 @@ add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
 
 add_dependencies(rvs rvs_doc)
+add_dependencies(rvs rvs_yaml_target)
+add_dependencies(rvstest rvs_yaml_target)
+add_dependencies(rvsfail rvs_yaml_target)
 
 if(RVS_SMI EQUAL 1)
   add_dependencies(gm rocm_smi64)
