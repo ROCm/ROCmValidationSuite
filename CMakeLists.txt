@@ -28,19 +28,51 @@ project ("rocm-validation-suite" )
 enable_testing()
 include ( CTest )
 
+# Package Generator  #######################################################
+# set(CPACK_GENERATOR "DEB")
+# set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm")
+set(CPACK_PACKAGE_NAME "rocm-validation-suite")
+set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The ROCm Validation Suite – The ROCm Validation Suite is a system administrator and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPUs running in high performance computing environments, enabled using the ROCm software stack on a compatible platform.")
+set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
+set(CPACK_PACKAGE_VENDOR "AMD")
+set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
+set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
+set(CPACK_COMPONENTS_ALL applications rvsmodule)
+
+# Set PATH variables
+set(rvs_build_type "Debug")
+set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
+set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
+set(RVS_ROCMSMI "1" CACHE STRING "1 = use local rocm_smi_lib")
+
+set(YAML_INC_DIR "${CMAKE_BINARY_DIR}/yaml-src/include/" CACHE PATH "Contains header files exported by yaml-cpp")
+set(YAML_LIB_DIR "${CMAKE_BINARY_DIR}/yaml-build/" CACHE PATH "Contains library files exported by yaml-cpp")
+set(ROCR_INC_DIR "/opt/rocm/include/" CACHE PATH "Contains header files exported by ROC Runtime")
+set(ROCR_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by ROC Runtime")
+set(ROCT_INC_DIR "/opt/rocm/include/libhsakmt" CACHE PATH "Contains header files exported by ROC Trunk")
+set(ROCT_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by ROC Trunk")
+set(HIP_INC_DIR "/opt/rocm/hip/include/hip/" CACHE PATH "Contains header files exported by ROC Runtime")
+
 message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
-message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
-if ( DEFINED CMAKE_BUILD_TYPE)
-  if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    add_definitions(-DDEBUG)
-    message(STATUS "DEBUG defined")
-  endif( )
-else()
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE ${rvs_build_type} CACHE STRING "Build type" FORCE)
+    # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     add_definitions(-DDEBUG)
     message(STATUS "DEBUG defined")
 endif()
+
+message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
 if (DEFINED RVS_DO_TRACE)
   if (${RVS_DO_TRACE} STREQUAL "1")
@@ -87,7 +119,7 @@ if ( NOT DEFINED CMAKE_PACKAGING_INSTALL_PREFIX )
 endif ()
 
 # Download and unpack yaml-cpp at configure time
-configure_file(CMakeLists.txt.yaml yaml-download/CMakeLists.txt)
+configure_file(CMakeYamlDownload.cmake yaml-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
@@ -102,15 +134,14 @@ if(result)
 endif()
 
 
-# Add yaml directly to our build. This defines
-# the yaml and targets.
+# Add yaml directly to our build. This defines yaml targets.
 add_subdirectory(${CMAKE_BINARY_DIR}/yaml-src
                  ${CMAKE_BINARY_DIR}/yaml-build
 #                 EXCLUDE_FROM_ALL
 )
 
 # Download and unpack googletest at configure time
-configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
+configure_file(CMakeGtestDownload.cmake googletest-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
@@ -142,52 +173,74 @@ if (CMAKE_VERSION VERSION_LESS 2.8.11)
   include_directories("${gtest_SOURCE_DIR}/include")
 endif()
 
+if(RVS_ROCBLAS EQUAL 1)
+
+  # Download and unpack rocBLAS at configure time
+  configure_file(CMakeRBLASDownload.cmake rvs_rblas-download/CMakeLists.txt)
+  execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_rblas-download )
+  if(result)
+    message(FATAL_ERROR "CMake step for rocBLAS failed: ${result}")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} --build .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_rblas-download )
+  if(result)
+    message(FATAL_ERROR "Build step for rocBLAS failed: ${result}")
+  endif()
+
+  add_custom_target(rvs_rblas_target
+    DEPENDS ${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/lib/librocblas.so
+  )
+  add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/lib/librocblas.so
+    COMMAND ${CMAKE_BINARY_DIR}/rvs_rblas-src/install.sh
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_rblas-src
+    COMMENT "Generating rocBLAS libraries"
+    VERBATIM)
+
+endif()  # if(RVS_ROCBLAS EQUAL 1)
+
+# Download and unpack rocm_smi_lib at configure time
+configure_file(CMakeRSMIDownload.cmake rvs_smi-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
+if(result)
+  message(FATAL_ERROR "CMake step for rocm_smi_lib failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
+if(result)
+  message(FATAL_ERROR "Build step for rocm_smi_lib failed: ${result}")
+endif()
+
+
+# Add rvs_smi directly to our build. This defines rocm_smi_lib targets.
+add_subdirectory(${CMAKE_BINARY_DIR}/rvs_smi-src
+                 ${CMAKE_BINARY_DIR}/rvs_smi-build
+                 EXCLUDE_FROM_ALL
+)
+
+
 ## Include common cmake modules
 include ( utils )
 
 ## Setup the package version default (the actual one is taken from the latest Git tag).
 get_version ( "0.0.0" )
 
-# Package Generator  #######################################################
-# set(CPACK_GENERATOR "DEB")
-# set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm")
-set(CPACK_PACKAGE_NAME "rocm-validation-suite")
-set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The ROCm Validation Suite – The ROCm Validation Suite is a system administrator and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPUs running in high performance computing environments, enabled using the ROCm software stack on a compatible platform.")
-set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
-set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
-set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
-set(CPACK_PACKAGE_VENDOR "AMD")
-set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
-set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
-set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
-set(CPACK_COMPONENTS_ALL applications rvsmodule)
-
-# Set PATH variables
-set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type")
-set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
-set(RVS_ROCBLAS "0" CACHE STRING "User local rocBLAS")
-set(RVS_ROCMSMI "1" CACHE STRING "User local rocm_smi_lib")
-
-set(YAML_INC_DIR "${CMAKE_BINARY_DIR}/yaml-src/include/" CACHE PATH "Contains header files exported by yaml-cpp")
-set(YAML_LIB_DIR "${CMAKE_BINARY_DIR}/yaml-build/" CACHE PATH "Contains library files exported by yaml-cpp")
-set(ROCR_INC_DIR "/opt/rocm/include/" CACHE PATH "Contains header files exported by ROC Runtime")
-set(ROCR_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by ROC Runtime")
-set(ROCT_INC_DIR "/opt/rocm/include/libhsakmt" CACHE PATH "Contains header files exported by ROC Trunk")
-set(ROCT_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by ROC Trunk")
-set(HIP_INC_DIR "/opt/rocm/hip/include/hip/" CACHE PATH "Contains header files exported by ROC Runtime")
-
 if (RVS_ROCBLAS EQUAL 1)
-  set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rocBLAS/build/release/rocblas-install/include/")
-  set(ROCBLAS_LIB_DIR "${CMAKE_BINARY_DIR}/rocBLAS/build/release/rocblas-install/lib/")
+  set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/include/")
+  set(ROCBLAS_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/lib/")
 else()
   set(ROCBLAS_INC_DIR "/opt/rocm/include/")
   set(ROCBLAS_LIB_DIR "/opt/rocm/lib/")
 endif()
 
 if (RVS_ROCMSMI EQUAL 1)
-  set(ROCM_SMI_INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/rocm_smi_lib/include")
-  set(ROCM_SMI_LIB_DIR "${CMAKE_BINARY_DIR}/rocm_smi_lib")
+  set(ROCM_SMI_INC_DIR "${CMAKE_BINARY_DIR}/rvs_smi-src/include")
+  set(ROCM_SMI_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_smi-build")
 else()
   set(ROCM_SMI_INC_DIR "/opt/rocm/include/")
   set(ROCM_SMI_LIB_DIR "/opt/rocm/lib/")
@@ -206,9 +259,19 @@ add_subdirectory(gst.so)
 add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
 
-add_dependencies(rvs doc)
+add_dependencies(rvs rvs_doc)
 
-add_custom_target(doc ALL
+if(RVS_SMI EQUAL 1)
+  add_dependencies(gm rocm_smi64)
+  add_dependencies(iet rocm_smi64)
+endif()
+
+if(RVS_ROCBLAS EQUAL 1)
+  add_dependencies(gst rvs_rblas_target)
+  add_dependencies(iet rvs_rblas_target)
+endif()
+
+add_custom_target(rvs_doc ALL
 COMMAND ${CMAKE_COMMAND} -E make_directory "doc"
 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 COMMENT "Create the doc directory"
@@ -219,21 +282,21 @@ add_custom_target(progguide ALL
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS Programmer's Reference Guide"
     VERBATIM)
-add_dependencies(progguide doc)
+add_dependencies(progguide rvs_doc)
 
 add_custom_target(man1 ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyMan1
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS man.1 files"
     VERBATIM)
-add_dependencies(man1 doc)
+add_dependencies(man1 rvs_doc)
 
 add_custom_target(userguide ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyGuide
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS User Guide"
     VERBATIM)
-add_dependencies(userguide doc)
+add_dependencies(userguide rvs_doc)
 
 install(FILES "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib COMPONENT rvsmodule)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf" DESTINATION /etc/ld.so.conf.d COMPONENT rvsmodule)
