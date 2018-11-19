@@ -1,9 +1,0 @@
-[submodule "yaml-cpp"]
-	path = yaml-cpp
-	url = https://github.com/jbeder/yaml-cpp.git
-[submodule "jsoncpp"]
-	path = jsoncpp
-	url = https://github.com/open-source-parsers/jsoncpp
-[submodule "rocm_smi_lib"]
-	path = rocm_smi_lib
-	url = https://github.com/RadeonOpenCompute/rocm_smi_lib.git
