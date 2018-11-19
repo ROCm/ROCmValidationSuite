@@ -106,13 +106,13 @@ endif( )
 
 ## Set default unit test framework include path
 if ( NOT DEFINED UT_INC )
-    set ( UT_INC "${gtest_SOURCE_DIR}/include" )
+    set ( UT_INC "${CMAKE_BINARY_DIR}/googletest-src/googletest/include" )
     message ( "UT_INC ${UT_INC}" )
 endif ()
 
 ## Set default unit test framework include path
 if ( NOT DEFINED UT_LIB )
-    set ( UT_LIB "${CMAKE_BINARY_DIR}/lib" )
+    set ( UT_LIB "${CMAKE_BINARY_DIR}/googletest-build/lib" )
     message ( "UT_LIB ${UT_LIB}" )
 endif ()
 
@@ -125,6 +125,7 @@ if ( NOT DEFINED CMAKE_PACKAGING_INSTALL_PREFIX )
     set (CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
 endif ()
 
+################################################################################
 # Download and unpack yaml-cpp at configure time
 configure_file(CMakeYamlDownload.cmake yaml-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -155,20 +156,9 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-src
   COMMENT "Generating yaml-cpp targets"
   VERBATIM)
-###
-# execute_process(COMMAND make -C ${CMAKE_BINARY_DIR}/yaml-build
-#   RESULT_VARIABLE result
-#   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-build )
-# if(result)
-#   message(FATAL_ERROR "make step for yaml-cpp failed: ${result}")
-# endif()
 
-
-# Add yaml directly to our build. This defines yaml targets.
-# add_subdirectory(${CMAKE_BINARY_DIR}/yaml-src
-#                  ${CMAKE_BINARY_DIR}/yaml-build
-#                 EXCLUDE_FROM_ALL
-#)
+################################################################################
+## GOOGLE TEST
 
 # Download and unpack googletest at configure time
 configure_file(CMakeGtestDownload.cmake googletest-download/CMakeLists.txt)
@@ -184,24 +174,25 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build .
 if(result)
   message(FATAL_ERROR "Build step for googletest failed: ${result}")
 endif()
+execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/googletest-src -B${CMAKE_BINARY_DIR}/googletest-build
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src )
+if(result)
+  message(FATAL_ERROR "Config step for googletest-src failed: ${result}")
+endif()
 
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-# Add googletest directly to our build. This defines
-# the gtest and gtest_main targets.
-add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
-                 ${CMAKE_BINARY_DIR}/googletest-build
-#                 EXCLUDE_FROM_ALL
+add_custom_target(rvs_gtest_target
+  DEPENDS ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
 )
 
-# The gtest/gtest_main targets carry header search path
-# dependencies automatically when using CMake 2.8.11 or
-# later. Otherwise we have to add them here ourselves.
-if (CMAKE_VERSION VERSION_LESS 2.8.11)
-  include_directories("${gtest_SOURCE_DIR}/include")
-endif()
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
+  COMMAND make -C ${CMAKE_BINARY_DIR}/googletest-build
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src
+  COMMENT "Generating googletest targets"
+  VERBATIM)
+
+################################################################################
+## rocBLAS
 
 if(RVS_ROCBLAS EQUAL 1)
 
@@ -231,27 +222,57 @@ if(RVS_ROCBLAS EQUAL 1)
 
 endif()  # if(RVS_ROCBLAS EQUAL 1)
 
+################################################################################
+## rocm_smi_lib
+
+if (RVS_ROCMSMI EQUAL 1)
+
 # Download and unpack rocm_smi_lib at configure time
 configure_file(CMakeRSMIDownload.cmake rvs_smi-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
 if(result)
-  message(FATAL_ERROR "CMake step for rocm_smi_lib failed: ${result}")
+  message(FATAL_ERROR "CMake step for rvs_smi-download failed: ${result}")
 endif()
+
+# execute download
 execute_process(COMMAND ${CMAKE_COMMAND} --build .
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
 if(result)
-  message(FATAL_ERROR "Build step for rocm_smi_lib failed: ${result}")
+  message(FATAL_ERROR "Build step for rvs_smi-download failed: ${result}")
 endif()
 
+# generate MAKE script
+execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/rvs_smi-src -B${CMAKE_BINARY_DIR}/rvs_smi-build
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-src )
+if(result)
+  message(FATAL_ERROR "CMake step for rvs_smi-src failed: ${result}")
+endif()
 
-# Add rvs_smi directly to our build. This defines rocm_smi_lib targets.
-add_subdirectory(${CMAKE_BINARY_DIR}/rvs_smi-src
-                 ${CMAKE_BINARY_DIR}/rvs_smi-build
-                 EXCLUDE_FROM_ALL
+# Add target for rocm_smi_lib
+add_custom_target(rvs_rsmi_target
+  DEPENDS ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so
 )
+
+# Define build command for rocm_smi_lib
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so
+  COMMAND make -C ${CMAKE_BINARY_DIR}/rvs_smi-build
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-src
+  COMMENT "Generating rocm_smi_lib targets"
+  VERBATIM
+)
+
+# post build step to create symbolic link
+# (we want .so i /bin folder to simplify packaging when local smi lib is used)
+# add_custom_command(TARGET rvs_rsmi_target POST_BUILD
+#   COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/librocm_smi64*
+#   COMMAND ln -s ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so ${CMAKE_BINARY_DIR}/bin/librocm_smi64.so
+# )
+
+endif()  # if (RVS_ROCMSMI EQUAL 1)
 
 if (RVS_ROCBLAS EQUAL 1)
   set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/include/")
@@ -282,14 +303,15 @@ add_subdirectory(gst.so)
 add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
 
+add_dependencies(rvstest rvs_gtest_target)
 add_dependencies(rvs rvs_doc)
 add_dependencies(rvs rvs_yaml_target)
-add_dependencies(rvstest rvs_yaml_target)
 add_dependencies(rvsfail rvs_yaml_target)
+add_dependencies(rvstest rvs_yaml_target)
 
-if(RVS_SMI EQUAL 1)
-  add_dependencies(gm rocm_smi64)
-  add_dependencies(iet rocm_smi64)
+if(RVS_ROCMSMI EQUAL 1)
+  add_dependencies(gm rvs_rsmi_target)
+  add_dependencies(iet rvs_rsmi_target)
 endif()
 
 if(RVS_ROCBLAS EQUAL 1)
@@ -324,8 +346,16 @@ add_custom_target(userguide ALL
     VERBATIM)
 add_dependencies(userguide rvs_doc)
 
-install(FILES "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib COMPONENT rvsmodule)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf" DESTINATION /etc/ld.so.conf.d COMPONENT rvsmodule)
+if(RVS_ROCMSMI EQUAL 1)
+  install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
+                "${ROCM_SMI_LIB_DIR}/librocm_smi64.so.1"
+                "${ROCM_SMI_LIB_DIR}/librocm_smi64.so.1.0.0"
+          DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib
+          COMPONENT rvsmodule)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf"
+          DESTINATION /etc/ld.so.conf.d
+          COMPONENT rvsmodule)
+endif()  # if(RVS_ROCMSMI EQUAL 1)
 
 # TEST SECTION
 

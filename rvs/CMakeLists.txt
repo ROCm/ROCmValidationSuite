@@ -97,8 +97,9 @@ target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 # message ( "TESTSOURCES ${TESTSOURCES}" )
 
+LINK_DIRECTORIES(${UT_LIB})
 add_executable(rvstest ${TESTSOURCES} ${SOURCES})
-target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main)
+target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
