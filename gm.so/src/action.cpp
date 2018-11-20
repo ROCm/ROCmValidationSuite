@@ -126,7 +126,7 @@ bool action::get_all_common_config_keys(void) {
       return false;
     }
 
-    error = property_get_int_default<int>
+    error = property_get_int<int>
     (RVS_CONF_LOG_INTERVAL_KEY, &log_interval, DEFAULT_LOG_INTERVAL);
     if (error == 1) {
       msg = "Invalid '" +std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key.";
@@ -134,7 +134,7 @@ bool action::get_all_common_config_keys(void) {
       return false;
     }
 
-    error = property_get_int_default<int>
+    error = property_get_int<int>
     (RVS_CONF_SAMPLE_INTERVAL_KEY, &sample_interval, 500);
     if (error == 1) {
       msg = "Invalid '" +std::string(RVS_CONF_SAMPLE_INTERVAL_KEY) + "' key.";

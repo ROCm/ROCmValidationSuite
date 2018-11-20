@@ -209,16 +209,17 @@ bool pebbaction::get_all_common_config_keys(void) {
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
-  error = property_get_int_default<uint64_t>
-  (RVS_CONF_COUNT_KEY, &gst_run_count, 1);
+
+  error = property_get_int<uint64_t>
+  (RVS_CONF_COUNT_KEY, &gst_run_count, DEFAULT_COUNT);
   if (error == 1) {
     msg ="invalid '" + std::string(RVS_CONF_COUNT_KEY) +"' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
-  error = property_get_int_default<uint64_t>
-  (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, 0);
+  error = property_get_int<uint64_t>
+  (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, DEFAULT_WAIT);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);

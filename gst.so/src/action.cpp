@@ -68,8 +68,6 @@ using std::regex;
 #define GST_DEFAULT_MATRIX_SIZE         5760
 
 #define RVS_DEFAULT_PARALLEL            false
-#define RVS_DEFAULT_COUNT               1
-#define RVS_DEFAULT_WAIT                0
 #define RVS_DEFAULT_DURATION            0
 
 #define GST_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
@@ -255,7 +253,7 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
-    error = property_get_int_default<uint64_t>
+    error = property_get_int<uint64_t>
     (RVS_CONF_RAMP_INTERVAL_KEY, &gst_ramp_interval, GST_DEFAULT_RAMP_INTERVAL);
     if (error) {
         msg = "invalid '" +
@@ -264,7 +262,7 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
-    error = property_get_int_default<uint64_t>
+    error = property_get_int<uint64_t>
     (RVS_CONF_LOG_INTERVAL_KEY, &gst_log_interval, GST_DEFAULT_LOG_INTERVAL);
     if (error == 1) {
         msg = "invalid '" +
@@ -273,7 +271,7 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
-    error = property_get_int_default<int>
+    error = property_get_int<int>
     (RVS_CONF_MAX_VIOLATIONS_KEY, &gst_max_violations,
      GST_DEFAULT_MAX_VIOLATIONS);
     if (error) {
@@ -299,7 +297,7 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
-    error = property_get_int_default<uint64_t>
+    error = property_get_int<uint64_t>
     (RVS_CONF_MATRIX_SIZE_KEY, &gst_matrix_size, GST_DEFAULT_MATRIX_SIZE);
     if (error == 1) {
         msg = "invalid '" +
@@ -361,8 +359,8 @@ bool action::get_all_common_config_keys(void) {
         return false;
     }
 
-    error = property_get_int_default<uint64_t>
-    (RVS_CONF_COUNT_KEY, &gst_run_count, RVS_DEFAULT_COUNT);
+    error = property_get_int<uint64_t>
+    (RVS_CONF_COUNT_KEY, &gst_run_count, DEFAULT_COUNT);
     if (error != 0) {
         msg = "invalid '" +
             std::string(RVS_CONF_COUNT_KEY) + "' key value";
@@ -370,15 +368,15 @@ bool action::get_all_common_config_keys(void) {
         return false;
     }
 
-    rvs::actionbase::property_get_int_default<uint64_t>
-    (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, RVS_DEFAULT_WAIT);
+    error = property_get_int<uint64_t>
+    (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, DEFAULT_WAIT);
     if (error == 1) {
         msg = "invalid '" +
             std::string(RVS_CONF_WAIT_KEY) + "' key value";
         return false;
     }
 
-    error = property_get_int_default<uint64_t>
+    error = property_get_int<uint64_t>
     (RVS_CONF_DURATION_KEY, &gst_run_duration_ms, RVS_DEFAULT_DURATION);
     if (error == 1) {
         msg = "invalid '" +

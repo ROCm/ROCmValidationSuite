@@ -206,7 +206,7 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  error = property_get_int_default<int>
+  error = property_get_int<int>
   (RVS_CONF_LOG_INTERVAL_KEY, &prop_log_interval, DEFAULT_LOG_INTERVAL);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "'";
@@ -308,7 +308,7 @@ bool pqtaction::get_all_common_config_keys(void) {
       return false;
   }
 
-  error = property_get_int_default<uint64_t>
+  error = property_get_int<uint64_t>
   (RVS_CONF_COUNT_KEY, &gst_run_count, 1);
   if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_COUNT_KEY) + "' key value";
@@ -316,7 +316,7 @@ bool pqtaction::get_all_common_config_keys(void) {
       return false;
   }
 
-  error = property_get_int_default<uint64_t>
+  error = property_get_int<uint64_t>
   (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, 0);
   if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
@@ -324,7 +324,7 @@ bool pqtaction::get_all_common_config_keys(void) {
       return false;
   }
 
-  error = property_get_int_default<uint64_t>
+  error = property_get_int<uint64_t>
   (RVS_CONF_DURATION_KEY, &gst_run_duration_ms, DEFAULT_DURATION);
   if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
