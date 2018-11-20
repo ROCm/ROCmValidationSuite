@@ -85,14 +85,18 @@ if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime_api.h)
 endif()
 
 # Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${ROCBLAS_INC_DIR}/rocblas.h)
-  message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
-  RETURN()
-endif()
+if(DEFINED RVS_ROCMSMI)
+  if(NOT RVS_ROCMSMI EQUAL 1)
+    if(NOT EXISTS ${ROCBLAS_INC_DIR}/rocblas.h)
+    message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
+    RETURN()
+    endif()
 
-if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
-  message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
-  RETURN()
+    if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
+      message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
+      RETURN()
+    endif()
+  endif()
 endif()
 
 if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
@@ -100,9 +104,13 @@ if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
   RETURN()
 endif()
 
-if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
-  message("ERROR: rocm_smi library can't be found!")
-  RETURN()
+if(DEFINED RVS_ROCMSMI)
+  if(NOT RVS_ROCMSMI EQUAL 1)
+    if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
+      message("ERROR: rocm_smi library can't be found!...")
+      RETURN()
+    endif()
+  endif()
 endif()
 
 # Add directories to look for header files to compile
@@ -136,3 +144,7 @@ COMMAND ln -s ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR}
 
 install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
+
+# TEST SECTION
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
