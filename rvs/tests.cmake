@@ -39,3 +39,26 @@ add_test(NAME unit.rvs.cli2
   COMMAND rvs -t
 )
 
+add_test(NAME conf.gm1
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvs -d 3 -c conf/gm1.conf
+)
+
+# add tests
+FOREACH(SINGLE_TEST ${TESTSOURCES})
+  MESSAGE("${SINGLE_TEST}")
+  string(REPLACE "test/" "unit.rvs." TMP_TEST_NAME ${SINGLE_TEST})
+  string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
+  MESSAGE("${TEST_NAME}")
+
+  add_executable(${TEST_NAME} ${SINGLE_TEST} ${SOURCES})
+  target_link_libraries(${TEST_NAME} ${PROJECT_LINK_LIBS} gtest_main gtest)
+
+  MESSAGE("${TEST_NAME}")
+  MESSAGE("${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+
+  add_test(NAME ${TEST_NAME}
+    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    COMMAND ${TEST_NAME}
+  )
+ENDFOREACH()
