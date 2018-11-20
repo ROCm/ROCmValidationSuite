@@ -23,7 +23,7 @@
 ##
 ################################################################################
 
-set(CTEST_SOURCE_DIRECTORY ".")
+set(CTEST_SOURCE_DIRECTORY "./ROCmValidationSuite")
 set(CTEST_BINARY_DIRECTORY "./build")
 
 set(CTEST_SITE "prj47-rack-07")
@@ -47,7 +47,7 @@ find_program(CTEST_MEMORYCHECK_COMMAND NAMES valgrind)
 set(CTEST_MEMORYCHECK_SUPPRESSIONS_FILE ${CTEST_SOURCE_DIRECTORY}/tests/valgrind.supp)
 
 if(NOT EXISTS "${CTEST_SOURCE_DIRECTORY}")
-    message(FATAL_ERROR "Source directory does not exist.")
+    message(STATUS "Source directory does not exist.")
 #    return()
   set(CTEST_CHECKOUT_COMMAND "${CTEST_GIT_COMMAND} clone https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.git ${CTEST_SOURCE_DIRECTORY}")
 endif()
@@ -63,7 +63,7 @@ set(CTEST_UPDATE_COMMAND "${CTEST_GIT_COMMAND}")
 set(CTEST_CONFIGURE_COMMAND "${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE:STRING=${CTEST_BUILD_CONFIGURATION}")
 set(CTEST_CONFIGURE_COMMAND "${CTEST_CONFIGURE_COMMAND} -DWITH_TESTING:BOOL=ON ${CTEST_BUILD_OPTIONS}")
 set(CTEST_CONFIGURE_COMMAND "${CTEST_CONFIGURE_COMMAND} \"-G${CTEST_CMAKE_GENERATOR}\"")
-set(CTEST_CONFIGURE_COMMAND "${CTEST_CONFIGURE_COMMAND} \"${CTEST_SOURCE_DIRECTORY}\"")
+set(CTEST_CONFIGURE_COMMAND "${CTEST_CONFIGURE_COMMAND} \"../${CTEST_SOURCE_DIRECTORY}\"")
 
 ctest_start("Nightly")
 ctest_update()
