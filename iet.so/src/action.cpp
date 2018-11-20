@@ -83,8 +83,6 @@ using std::fstream;
 #define IET_DEFAULT_MATRIX_SIZE         5760
 
 #define RVS_DEFAULT_PARALLEL            false
-#define RVS_DEFAULT_COUNT               1
-#define RVS_DEFAULT_WAIT                0
 #define RVS_DEFAULT_DURATION            0
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
@@ -276,7 +274,7 @@ bool action::get_all_iet_config_keys(void) {
         return false;
     }
 
-    error = property_get_int_default<uint64_t>
+    error = property_get_int<uint64_t>
     (RVS_CONF_RAMP_INTERVAL_KEY, &iet_ramp_interval, IET_DEFAULT_RAMP_INTERVAL);
     if (error == 1) {
         msg = "invalid '" + std::string(RVS_CONF_RAMP_INTERVAL_KEY)
@@ -285,7 +283,7 @@ bool action::get_all_iet_config_keys(void) {
         return false;
     }
 
-    error = property_get_int_default<uint64_t>
+    error = property_get_int<uint64_t>
     (RVS_CONF_LOG_INTERVAL_KEY, &iet_log_interval, IET_DEFAULT_LOG_INTERVAL);
     if (error) {
         msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY)
@@ -381,8 +379,8 @@ bool action::get_all_common_config_keys(void) {
         return false;
     }
 
-    error = property_get_int_default<uint64_t>
-    (RVS_CONF_COUNT_KEY, &gst_run_count, 1);
+    error = property_get_int<uint64_t>
+    (RVS_CONF_COUNT_KEY, &gst_run_count, DEFAULT_COUNT);
     if (error == 1) {
         msg = "invalid '" +
                 std::string(RVS_CONF_COUNT_KEY) + "' key value";
@@ -390,8 +388,8 @@ bool action::get_all_common_config_keys(void) {
         return false;
     }
 
-    error = property_get_int_default<uint64_t>
-    (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, 0);
+    error = property_get_int<uint64_t>
+    (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, DEFAULT_WAIT);
     if (error == 1) {
         msg = "invalid '" +
                 std::string(RVS_CONF_WAIT_KEY) + "' key value";

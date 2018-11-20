@@ -65,8 +65,11 @@ class actionbase {
                                    std::vector<uint32_t>* pval,
                                    bool* pball,
                                    int *error);
-//  int property_get_link_type(int* error);
 
+/**
+ * @brief reads key integer type from the module's properties collection
+ * returns 1 for invalid key, 2 for missing key 
+*/    
   template <typename T>
   int property_get_int(const std::string& prop_name, T* key) {
     std::string val;
@@ -79,9 +82,14 @@ class actionbase {
     return error;
   }
 
+  /**
+   * @brief reads key integer type from the module's properties collection
+   * returns 1 for invalid key
+   * takes default value if key is missing 
+   */
   template <typename T>
-  int property_get_int_default
-  (const std::string& prop_name, T* key, int def_value) {
+  int property_get_int
+  (const std::string& prop_name, T* key, T def_value) {
     std::string val;
     int error = 0;  // init with 'no error'
     if (has_property(prop_name, &val)) {
