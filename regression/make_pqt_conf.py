@@ -79,7 +79,7 @@ for test_bandwidth_f in test_bandwidth:
                                 break
 
                             # for each combination create the conf file
-                            filename = conf_location + module_name + "_module_" + str(counter) + ".conf"
+                            filename = conf_location + "rand_" + module_name + str(counter) + ".conf"
                             print 'Iteration is %d' % (counter) + ", working on conf file " + filename
                             f = open(filename, "w")
 
