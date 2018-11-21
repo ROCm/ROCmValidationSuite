@@ -112,7 +112,7 @@ bool pqtaction::property_get_peers(int *error) {
  * @param error pointer to a memory location where the error code will be stored
  * @return deviceid value if valid, -1 otherwise
  */
-int pqtaction::property_get_peer_deviceid(int *error) {
+/*int pqtaction::property_get_peer_deviceid(int *error) {
     auto it = property.find("peer_deviceid");
     int deviceid = -1;
     *error = 0;  // init with 'no error'
@@ -129,7 +129,7 @@ int pqtaction::property_get_peer_deviceid(int *error) {
         }
     }
     return deviceid;
-}
+}*/
 
 /**
  * @brief reads the module's properties collection to see whether bandwidth
@@ -189,8 +189,9 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  prop_peer_deviceid = property_get_peer_deviceid(&error);
-  if (error) {
+  prop_peer_deviceid = -1;
+  error = property_get_int<int>("peer_deviceid", &prop_peer_deviceid);
+  if (error == 1) {
     msg = "invalid 'peer_deviceid '";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
@@ -203,13 +204,12 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  prop_log_interval = property_get_log_interval(&error);
+  error = property_get_int<int>
+  (RVS_CONF_LOG_INTERVAL_KEY, &prop_log_interval, DEFAULT_LOG_INTERVAL);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "'";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
-  } else if (error == 2) {
-    prop_log_interval = DEFAULT_LOG_INTERVAL;
   }
 
   property_get_bidirectional(&error);
@@ -232,14 +232,15 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     block_size.clear();
   }
 
-  b2b_block_size = property_get_b2b_size(&error);
+  error = property_get_int<uint32_t>
+  (RVS_CONF_B2B_BLOCK_SIZE_KEY, &b2b_block_size);
   if (error == 1) {
     msg =  "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
-  link_type = property_get_link_type(&error);
+  error = property_get_int<int>(RVS_CONF_LINK_TYPE_KEY, &link_type);
   if (error == 1) {
     msg =  "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -280,10 +281,11 @@ bool pqtaction::get_all_common_config_keys(void) {
       return false;
   }
 
+  int devid;
   // get the <deviceid> property value
   if (has_property("deviceid", &sdevid)) {
-      int devid = property_get_deviceid(&error);
-      if (!error) {
+    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
+      if (error == 0) {
           if (devid != -1) {
               prop_deviceid = static_cast<uint16_t>(devid);
               prop_device_id_filtering = true;
@@ -304,29 +306,29 @@ bool pqtaction::get_all_common_config_keys(void) {
       return false;
   }
 
-  rvs::actionbase::property_get_run_count(&error);
+  error = property_get_int<uint64_t>
+  (RVS_CONF_COUNT_KEY, &gst_run_count, 1);
   if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_COUNT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  rvs::actionbase::property_get_run_wait(&error);
+  error = property_get_int<uint64_t>
+  (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, 0);
   if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  rvs::actionbase::property_get_run_duration(&error);
+  error = property_get_int<uint64_t>
+  (RVS_CONF_DURATION_KEY, &gst_run_duration_ms, DEFAULT_DURATION);
   if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
           "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
-  }
-  if (gst_run_duration_ms == 0) {
-    gst_run_duration_ms = DEFAULT_DURATION;
   }
 
   return true;
