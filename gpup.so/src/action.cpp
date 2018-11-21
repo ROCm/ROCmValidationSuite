@@ -390,12 +390,17 @@ int action::run(void) {
     property_get_device(&error, num_nodes);
 
     // get the <deviceid> property value if provided
-    int dev_id = property_get_deviceid(&error);
+    std::string val;
+    bool hasp = has_property(RVS_CONF_DEVICEID_KEY, &val);
+    int dev_id;
+    if (hasp) {
+    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &dev_id);
     if (error != 0) {
       msg = property["name"] + " invalid 'deviceid' key value: "
       + std::to_string(dev_id);
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
+    }
     }
     // extract properties and io_links properties names
     property_split(JSON_PROP_NODE_NAME);

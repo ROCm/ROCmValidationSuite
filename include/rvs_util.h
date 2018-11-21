@@ -48,23 +48,28 @@ extern int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
 
 bool is_positive_integer(const std::string& str_val);
 
-template <class T> void rvs_util_parse(const string& buff,
-                                    T* pval,
-                                    int *error) {
+/**
+ * @brief turns string value into right type of integer, else returns error
+ */
+
+template <class T> int rvs_util_parse(const string& buff,
+                                    T* pval) {
+  int error;
   if (buff.empty()) {  // method empty
-    *error = 2;
+    error = 2;
   } else {
     if (is_positive_integer(buff)) {
       try {
         *pval = std::stoul(buff);
-        *error = 0;
+        error = 0;
       } catch(...) {
-        *error = 1;  // we have an empty string
+        error = 1;  // we have an empty string
       }
     } else {
-      *error = 1;
+      error = 1;
     }
   }
+  return error;
 }
 
 #endif  // INCLUDE_RVS_UTIL_H_
