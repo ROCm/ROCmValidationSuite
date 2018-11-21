@@ -75,7 +75,6 @@ class pqtaction : public rvs::actionbase {
 
   // PQT specific config keys
   bool property_get_peers(int *error);
-  int  property_get_peer_deviceid(int *error);
   void property_get_test_bandwidth(int *error);
 //  void property_get_log_interval(int *error);
   void property_get_bidirectional(int *error);
