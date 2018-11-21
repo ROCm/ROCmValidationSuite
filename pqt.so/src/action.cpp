@@ -189,11 +189,9 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  std::string val;
-  if (has_property("peer_deviceid", &val)) {
+  prop_peer_deviceid = -1;
   error = property_get_int<int>("peer_deviceid", &prop_peer_deviceid);
-  }
-  if (error != 0) {
+  if (error == 1) {
     msg = "invalid 'peer_deviceid '";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
