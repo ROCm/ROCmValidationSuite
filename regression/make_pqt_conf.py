@@ -3,6 +3,7 @@
 # This script only creates valid combinations, invalid ones will be created as special cases
 
 import os
+import itertools
 
 from random import seed
 from random import random
@@ -64,59 +65,64 @@ print "Total number of combinations (including invalid) is " + str(total_iterati
 
 gpu_ids_size = len(gpu_ids)
 
-for test_bandwidth_f in test_bandwidth:
-    for log_interval_f in log_interval:
-        for duration_f in duration:
-            for bidirectional_f in bidirectional:
-                for parralel_f in parralel:
-                    for device_id_f in device_id:
-                        # crete several combinations of gpu_ids
-                        sample_size = 0
-                        while True:
-                            # skip invalid combinations of test_bandwidth x (other bandwidth calculation parameters)
-                            if test_bandwidth_f == 'false' and (bidirectional_f == 'true' or parralel_f == 'true'):
-                                # skip
-                                break
+# go through all combinations
+for element in itertools.product(test_bandwidth, log_interval, duration, bidirectional, parralel, device_id):
+    #print(element)
+    test_bandwidth_f = element[0]
+    log_interval_f   = element[1]
+    duration_f       = element[2]
+    bidirectional_f  = element[3]
+    parralel_f       = element[4]
+    device_id_f      = element[5]
 
-                            # for each combination create the conf file
-                            filename = conf_location + "rand_" + module_name + str(counter) + ".conf"
-                            print 'Iteration is %d' % (counter) + ", working on conf file " + filename
-                            f = open(filename, "w")
+    # create several combinations of gpu_ids
+    sample_size = 0
+    while True:
+        # skip invalid combinations of test_bandwidth x (other bandwidth calculation parameters)
+        if test_bandwidth_f == 'false' and (bidirectional_f == 'true' or parralel_f == 'true'):
+            # skip
+            break
 
-                            # for each conf file add the new test in the cmake unit test list
-                            cmake_file.write("add_test(NAME rand." + module_name + "." + str(counter) + "\n")
-                            cmake_file.write("  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}\n")
-                            cmake_file.write("  COMMAND rvs -d 3 -c conf/" + module_name + "_module_" + str(counter) + ".conf" + "\n")
-                            cmake_file.write(")\n\n")
+        # for each combination create the conf file
+        filename = conf_location + "rand_" + module_name + str(counter) + ".conf"
+        print 'Iteration is %d' % (counter) + ", working on conf file " + filename
+        f = open(filename, "w")
 
-                            # go to the next conf file
-                            counter = counter + 1
-                            
-                            f.write("actions:" + "\n")
-                            f.write("- name: action_1 " + "\n")
-                            f.write("  device: all" + "\n")
-                            f.write("  module: pqt" + "\n")
-                            f.write("  log_interval: " + str(log_interval_f) + "\n")
-                            f.write("  duration: " + str(duration_f) + "\n")
+        # for each conf file add the new test in the cmake unit test list
+        cmake_file.write("add_test(NAME rand." + module_name + "." + str(counter) + "\n")
+        cmake_file.write("  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}\n")
+        cmake_file.write("  COMMAND rvs -d 3 -c conf/" + module_name + "_module_" + str(counter) + ".conf" + "\n")
+        cmake_file.write(")\n\n")
 
-                            if sample_size == 0:
-                                f.write("  peers: all" + "\n")
-                            else:
-                                sample_gpus = sample(gpu_ids, sample_size)
-                                f.write("  peers:")
-                                for p in sample_gpus:
-                                    f.write(" " + str(p))
-                                f.write("\n")
+        # go to the next conf file
+        counter = counter + 1
 
-                            # device id is optional parameter
-                            if device_id_f > -1:
-                                f.write("  peer_deviceid: " + str(device_id_f) + "\n")
-                            f.write("  test_bandwidth: " + str(test_bandwidth_f) + "\n")
-                            f.write("  bidirectional: " + str(bidirectional_f) + "\n")
-                            f.write("  parallel: " + str(parralel_f) + "\n")
-                            f.close()
+        f.write("actions:" + "\n")
+        f.write("- name: action_1 " + "\n")
+        f.write("  device: all" + "\n")
+        f.write("  module: pqt" + "\n")
+        f.write("  log_interval: " + str(log_interval_f) + "\n")
+        f.write("  duration: " + str(duration_f) + "\n")
 
-                            sample_size += 1
-                            if sample_size == gpu_ids_size + 1:
-                                break
+        if sample_size == 0:
+            f.write("  peers: all" + "\n")
+        else:
+            sample_gpus = sample(gpu_ids, sample_size)
+            f.write("  peers:")
+            for p in sample_gpus:
+                f.write(" " + str(p))
+            f.write("\n")
+
+        # device id is optional parameter
+        if device_id_f > -1:
+            f.write("  peer_deviceid: " + str(device_id_f) + "\n")
+        f.write("  test_bandwidth: " + str(test_bandwidth_f) + "\n")
+        f.write("  bidirectional: " + str(bidirectional_f) + "\n")
+        f.write("  parallel: " + str(parralel_f) + "\n")
+        f.close()
+
+        sample_size += 1
+        if sample_size == gpu_ids_size + 1:
+            break
+
 cmake_file.close()
