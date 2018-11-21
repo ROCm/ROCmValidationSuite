@@ -6,4 +6,5 @@
 /Makefile
 /.project
 /lib*.so.*
+/rand*.*
 
