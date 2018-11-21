@@ -110,32 +110,32 @@ bool action::get_all_common_config_keys(void) {
     }
 
     // get the <deviceid> property value
-    device_id = property_get_deviceid(&error);
-    if (error == 1) {
+    error = property_get_int<int>
+    (RVS_CONF_DEVICEID_KEY, &device_id);
+    if (error != 0) {
       msg = "Invalid '" +std::string(RVS_CONF_DEVICEID_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
-    } else if (error == 2) {
-      device_id = -1;
     }
 
-    property_get_run_duration(&error);
+    error = property_get_int<uint64_t>
+    (RVS_CONF_DURATION_KEY, &gst_run_duration_ms);
     if (error == 1) {
       msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
     }
 
-    log_interval = property_get_log_interval(&error);
+    error = property_get_int<int>
+    (RVS_CONF_LOG_INTERVAL_KEY, &log_interval, DEFAULT_LOG_INTERVAL);
     if (error == 1) {
       msg = "Invalid '" +std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
-    } else if (error == 2) {
-      log_interval = DEFAULT_LOG_INTERVAL;
     }
 
-    sample_interval = property_get_sample_interval(&error);
+    error = property_get_int<int>
+    (RVS_CONF_SAMPLE_INTERVAL_KEY, &sample_interval, 500);
     if (error == 1) {
       msg = "Invalid '" +std::string(RVS_CONF_SAMPLE_INTERVAL_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -184,11 +184,11 @@ int action::get_bounds(const char* pMetric) {
   if (values.size() == 3) {
     bound_.mon_metric = true;
     bound_.check_bounds = (values[0] == "true") ? true : false;
-    rvs_util_parse<uint32_t>(values[1], &bound_.max_val, &error);
+    error = rvs_util_parse<uint32_t>(values[1], &bound_.max_val);
     if (error) {
       return 1;
     }
-    rvs_util_parse<uint32_t>(values[2], &bound_.min_val, &error);
+    error = rvs_util_parse<uint32_t>(values[2], &bound_.min_val);
     if (error) {
       return 1;
     }
