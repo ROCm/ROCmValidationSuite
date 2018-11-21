@@ -324,8 +324,11 @@ int action::run(void) {
     }
 
     // get the <deviceid> property value
-    int devid = property_get_deviceid(&error);
-    if (!error) {
+    int devid;
+    std::string val;
+    if (has_property(RVS_CONF_DEVICEID_KEY, &val)) {
+    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
+    if (error == 0) {
         if (devid != -1) {
             deviceid = static_cast<uint16_t>(devid);
             device_id_filtering = true;
@@ -341,6 +344,7 @@ int action::run(void) {
         rvs::lp::Err(msg, MODULE_NAME, action_name);
 
         return -1;  // PCIe qualification check cannot continue
+    }
     }
 
     // get the pci_access structure

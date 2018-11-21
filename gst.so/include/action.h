@@ -92,14 +92,10 @@ class action: public rvs::actionbase {
 
 
     // GST specific config keys
-    void property_get_gst_ramp_interval(int *error);
-    void property_get_gst_log_interval(int *error);
-    void property_get_gst_max_violations(int *error);
     void property_get_gst_copy_matrix(int *error);
 
     void property_get_gst_target_stress(int *error);
     void property_get_gst_tolerance(int *error);
-    void property_get_gst_matrix_size(int *error);
 
     bool get_all_gst_config_keys(void);
   /**
