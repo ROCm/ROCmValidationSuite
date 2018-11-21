@@ -95,7 +95,7 @@ target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
 
 ## define unit testing targets
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
-# message ( "TESTSOURCES ${TESTSOURCES}" )
+message ( "TESTSOURCES ${TESTSOURCES}" )
 
 LINK_DIRECTORIES(${UT_LIB})
 add_executable(rvstest ${TESTSOURCES} ${SOURCES})

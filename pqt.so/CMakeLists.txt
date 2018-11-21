@@ -82,6 +82,12 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
+## generate conf files
+MESSAGE("RVS PATH: ${CMAKE_CURRENT_SOURCE_DIR}")
+set(MAKE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../regression/make_pqt_conf.py")
+MESSAGE("COMMAND: ${MAKE_CMD}")
+execute_process(COMMAND ${MAKE_CMD})
+
 # Set project requirements
 set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
@@ -137,3 +143,4 @@ install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" 
 # TEST SECTION
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/rand_tests.cmake)
