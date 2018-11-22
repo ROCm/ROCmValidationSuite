@@ -56,10 +56,6 @@ class actionbase {
   bool has_property(const std::string& key);
   bool property_get_device(int *error);
 
-  void property_get_action_name(int *error);
-  void property_get_run_parallel(int *error);
-  void property_get_log_level(int *error);
-  bool property_get_terminate(int* error);
   void property_get_uint_list(const std::string& key,
                                    const std::string& delimiter,
                                    std::vector<uint32_t>* pval,
@@ -100,6 +96,13 @@ class actionbase {
     return error;
   }
 
+  int property_get(const std::string& prop_name, bool* pVal);
+  int property_get(const std::string& prop_name, bool* pVal, bool bDefault);
+
+  int property_get(const std::string& prop_name, std::string* pVal);
+  int property_get(const std::string& prop_name,
+                   std::string* pVal, const std::string& bDefault);
+
  protected:
 /**
  *  @brief Collection of properties
@@ -112,17 +115,19 @@ class actionbase {
 
   //! name of the action
   std::string action_name;
-  //! TRUE if the GST action will run on all selected devices in parallel
-  bool gst_runs_parallel;
-  //! number of GST stress test iterations to run
-  uint64_t gst_run_count;
+  //! TRUE if the action will run on all selected devices in parallel
+  bool property_parallel;
+  //! number of stress test iterations to run
+  uint64_t property_count;
   //! stress test run delay
-  uint64_t gst_run_wait_ms;
+  uint64_t property_wait;
   //! stress test run duration
-  uint64_t gst_run_duration_ms;
+  uint64_t property_duration;
+  //! logging interval
+  uint64_t property_log_interval;
 
   //! data from config file
-  std::map<std::string, std::string>  property;
+  std::map<std::string, std::string> property;
 
   //! List of all gpu_id in the action's "device" property in .config file
   std::vector<std::string> device_prop_gpu_id_list;

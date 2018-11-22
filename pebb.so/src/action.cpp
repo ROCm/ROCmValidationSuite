@@ -72,32 +72,6 @@ pebbaction::~pebbaction() {
 }
 
 /**
- *  * @brief reads the module's properties collection to see if
- * device to host transfers will be considered
- */
-void pebbaction::property_get_h2d() {
-  prop_h2d = true;
-  auto it = property.find("host_to_device");
-  if (it != property.end()) {
-    if (it->second == "false")
-      prop_h2d = false;
-  }
-}
-
-/**
- *  @brief reads the module's properties collection to see if
- * device to host transfers will be considered
- */
-void pebbaction::property_get_d2h() {
-  prop_d2h = true;
-  auto it = property.find("device_to_host");
-  if (it != property.end()) {
-    if (it->second == "false")
-      prop_d2h = false;
-  }
-}
-
-/**
  * @brief reads all PQT related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
@@ -106,19 +80,19 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
   string msg;
   int error;
 
-
   RVSTRACE_
-  error = property_get_int<int>(RVS_CONF_LOG_INTERVAL_KEY, &prop_log_interval);
-  if (error == 1) {
-    msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
-  } else if (error == 2) {
-    prop_log_interval = DEFAULT_LOG_INTERVAL;
+
+  if (property_get("h2d", &prop_h2d, true)) {
+      msg = "invalid 'h2d'' key";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
   }
 
-  property_get_h2d();
-  property_get_d2h();
+  if (property_get("d2h", &prop_d2h, false)) {
+      msg = "invalid 'd2h'' key";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
+  }
 
   property_get_uint_list(RVS_CONF_BLOCK_SIZE_KEY, YAML_DEVICE_PROP_DELIMITER,
                          &block_size, &b_block_size_all, &error);
@@ -161,10 +135,8 @@ bool pebbaction::get_all_common_config_keys(void) {
 
   RVSTRACE_
   // get the action name
-  property_get_action_name(&error);
-  if (error) {
-    msg = "pqt [] action field is missing";
-    log(msg.c_str(), rvs::logerror);
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
     return false;
   }
 
@@ -201,9 +173,8 @@ bool pebbaction::get_all_common_config_keys(void) {
     prop_device_id_filtering = false;
   }
 
-  // get the other action/GST related properties
-  rvs::actionbase::property_get_run_parallel(&error);
-  if (error == 1) {
+  // get the other action related properties
+  if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
     msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
     "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -211,7 +182,7 @@ bool pebbaction::get_all_common_config_keys(void) {
   }
 
   error = property_get_int<uint64_t>
-  (RVS_CONF_COUNT_KEY, &gst_run_count, DEFAULT_COUNT);
+  (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
   if (error == 1) {
     msg ="invalid '" + std::string(RVS_CONF_COUNT_KEY) +"' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -219,33 +190,29 @@ bool pebbaction::get_all_common_config_keys(void) {
   }
 
   error = property_get_int<uint64_t>
-  (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, DEFAULT_WAIT);
+  (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
-  error = property_get_int<uint64_t>
-  (RVS_CONF_DURATION_KEY, &gst_run_duration_ms);
-  if (error != 0) {
-    msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
-    "' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
-  } else if (gst_run_duration_ms == 0) {
-    msg = "'" + std::string(RVS_CONF_DURATION_KEY) +
-    "' key must be greater then zero";
+  if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
+    &property_duration, DEFAULT_DURATION)) {
+    msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
+    "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
-  error = property_get_int<int>(RVS_CONF_LOG_INTERVAL_KEY, &error);
-  if (error == 1) {
-    msg = "invalid logging level value";
+  if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+    &property_log_interval, DEFAULT_LOG_INTERVAL)) {
+    msg = "Invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) +
+    "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
+
   return true;
 }
 
@@ -348,7 +315,7 @@ int pebbaction::create_threads() {
       if (rvs::hsa::Get()->GetPeerStatus(srcnode, dstnode)) {
         RVSTRACE_
         pebbworker* p = nullptr;
-        if (gst_runs_parallel && b2b_block_size > 0) {
+        if (property_parallel && b2b_block_size > 0) {
           RVSTRACE_
           pebbworker_b2b* pb2b = new pebbworker_b2b;
           if (pb2b == nullptr) {

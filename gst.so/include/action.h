@@ -66,8 +66,6 @@ class action: public rvs::actionbase {
 
     //! stress test ramp duration
     uint64_t gst_ramp_interval;
-    //! time interval at which the module reports the average GFlops
-    uint64_t gst_log_interval;
     //! maximum allowed number of target_stress violations
     int gst_max_violations;
     //! specifies whether to copy the matrices to the GPU before each

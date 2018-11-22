@@ -43,7 +43,7 @@ extern "C" {
 #include "gpu_util.h"
 #include "rvs_util.h"
 #include "rvsloglp.h"
-#define MODULE_NAME "PESM"
+#define MODULE_NAME_CAPS "PESM"
 
 using std::string;
 using std::cout;
@@ -78,18 +78,14 @@ action::~action() {
  *
  * */
 int action::run(void) {
-  int error = 0;
   string msg;
-  log("[PESM] in run()", rvs::logdebug);
+  RVSTRACE_
 
   // get the action name
-  rvs::actionbase::property_get_action_name(&error);
-  if (error == 2) {
-    msg = "action field is missing in gst module";
-    rvs::lp::Err(msg, MODULE_NAME);
-    return -1;
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+    return 1;
   }
-  rvs::lp::Log("[" + property["name"]+ "] pesm in run()", rvs::logtrace);
 
   // debugging help
   string val;
@@ -136,13 +132,13 @@ int action::run(void) {
         catch(...) {
           msg = property["name"] +
           "  invalide 'deviceid' key value: " + sdevid;
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
         }
       } else {
         msg = property["name"] +
         "  invalide 'deviceid' key value: " + sdevid;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
     }
@@ -158,7 +154,7 @@ int action::run(void) {
         if (sts < 0) {
           msg = property["name"] +
           "  invalide 'device' key value: " + sdev;
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
         }
         pworker->set_gpuids(iarr);
@@ -166,7 +162,7 @@ int action::run(void) {
     } else {
           msg = property["name"] +
           "  key 'device' not found";
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
     }
 
