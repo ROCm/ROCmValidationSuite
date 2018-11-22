@@ -110,17 +110,14 @@ bool action::get_all_common_config_keys(void) {
     }
 
     // get the <deviceid> property value
-    error = property_get_int<int>
-    (RVS_CONF_DEVICEID_KEY, &device_id);
-    if (error != 0) {
+    if (property_get_int<int>(RVS_CONF_DEVICEID_KEY, &device_id, 0u)) {
       msg = "Invalid '" +std::string(RVS_CONF_DEVICEID_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
     }
 
-    error = property_get_int<uint64_t>
-    (RVS_CONF_DURATION_KEY, &gst_run_duration_ms);
-    if (error == 1) {
+    if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
+                                   &gst_run_duration_ms, 0u)) {
       msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
@@ -305,7 +302,7 @@ int action::run(void) {
   RVSTRACE_
 
   // apply device_id filtering if needed
-  if (device_id != -1) {
+  if (device_id > 0) {
     RVSTRACE_
     std::vector<uint16_t> gpu_id_filtered;
     for (auto it = gpu_id.begin(); it != gpu_id.end(); it++) {
