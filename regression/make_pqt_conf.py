@@ -91,7 +91,7 @@ for element in itertools.product(test_bandwidth, log_interval, duration, bidirec
         # for each conf file add the new test in the cmake unit test list
         cmake_file.write("add_test(NAME rand." + module_name + "." + str(counter) + "\n")
         cmake_file.write("  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}\n")
-        cmake_file.write("  COMMAND rvs -d 3 -c conf/" + module_name + "_module_" + str(counter) + ".conf" + "\n")
+        cmake_file.write("  COMMAND rvs -d 3 -c conf/rand_" + module_name + str(counter) + ".conf" + "\n")
         cmake_file.write(")\n\n")
 
         # go to the next conf file
