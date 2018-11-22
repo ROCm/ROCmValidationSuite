@@ -38,6 +38,7 @@
 #include <map>
 #include <vector>
 #include <regex>
+#include <set>
 
 #include "rvsloglp.h"
 
@@ -63,6 +64,11 @@
 #define ARCH    "arch"
 
 #define FILE "file"
+#define ETC_PASSWD "/etc/passwd"
+#define ETC_GROUP  "/etc/group"
+#define STREAM_SIZE 512
+#define USR_REG "([^/:]*)"
+#define GRP_REG "([^/:]*):([^/:]*):([^/:]*):([^/:]+)"
 
 #define BUFFER_SIZE 3000
 
@@ -71,6 +77,7 @@ using std::iterator;
 using std::endl;
 using std::ifstream;
 using std::map;
+using std::regex;
 
 action::action() {
   bjson = false;
@@ -284,7 +291,7 @@ int action::usrchk_run() {
 
     // Check if gruop exists
     group_exists = has_property(GROUP, &group_values_string);
-
+		/*
     // Structures for checking group and user
     struct passwd pwd, *result;
 
@@ -392,6 +399,92 @@ int action::usrchk_run() {
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
     return 0;
+		*/
+		vector<string> users_vector;
+		ifstream passwd_stream(ETC_PASSWD);
+		char file_line[STREAM_SIZE];
+		regex usr_pattern(user_name);
+		while (passwd_stream.getline(file_line, STREAM_SIZE)) {
+			const string line = std::string(file_line);
+			std::smatch match;
+			const std::regex get_user_pattern(USR_REG);
+			if (std::regex_search(line.begin(), line.end()
+							, match, get_user_pattern)) {
+				string result = match[1];
+				if (regex_match(result, usr_pattern) == true) {
+					users_vector.push_back(result);
+					string user_exists = "[" + action_name + "] " + "rcqt usercheck "
+					+ result + " true";
+					rvs::lp::Log(user_exists, rvs::logresults);
+				}
+			}
+		}
+		passwd_stream.close();
+		if (users_vector.empty()) {
+			string user_not_exists = "[" + action_name + "] " + "rcqt usercheck "
+			+ user_name + " false";
+			rvs::lp::Log(user_not_exists, rvs::logresults);
+		}
+		if (group_exists) {
+			vector<regex>group_patterns;
+			vector<string> group_vector;
+			group_vector = str_split(group_values_string, ",");
+			vector<string> group_found_vector;
+			for (vector<string>::iterator it = group_vector.begin();
+						it != group_vector.end(); it++) {
+				//cout << *it << endl;
+				group_patterns.push_back(std::regex(*it));
+			}
+			ifstream group_stream(ETC_GROUP);
+			while (group_stream.getline(file_line, STREAM_SIZE)) {
+				const string line = std::string(file_line);
+				std::smatch match;
+				const std::regex get_group_pattern(GRP_REG);
+				if (std::regex_search(line.begin(), line.end()
+							, match, get_group_pattern)) {
+					if (std::regex_search(line.begin(), line.end()
+						, match, get_group_pattern)) {
+						string result = match[1];
+						//cout << result << endl;
+						
+						for (vector<regex>::iterator it = group_patterns.begin();
+								it != group_patterns.end(); it++) {
+							if (std::regex_match(result, *it)) {
+								group_found_vector.push_back(result);
+								cout << result << endl;
+								cout << "group users " << match[4] << endl;
+								vector<string> group_users_found =
+								str_split(match[4], ",");
+								std::set<string>user_group_set (group_users_found.begin()
+									, group_users_found.end());
+								for (string user_string : users_vector) {
+									cout << "User " << user_string << endl;
+									if (user_group_set.find(user_string) 
+											!= user_group_set.end()) {
+										string user_group_found = "[" + action_name + "] " 
+										+ result + \
+										" " + user_string+ " true";
+										rvs::lp::Log(user_group_found, rvs::logresults);
+									} else {
+										string user_group_found = "[" + action_name + "] " 
+										+ result + \
+										" " + user_string+ " false";
+										rvs::lp::Log(user_group_found, rvs::logresults);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			if (group_found_vector.empty()) {
+				string groups_not_found = "[" + action_name + "] " 
+				+ "rcqt" + " group "
+				+ group_values_string + " not found";
+				rvs::lp::Log(groups_not_found, rvs::logerror);
+			}
+		}
+		
   }
   return -1;
 }
@@ -548,7 +641,7 @@ int action::ldcfgchk_run() {
         return 1;
       }
       string result_string = result;
-
+			cout << result_string << endl;
       if (strstr(result, "architecture:") != nullptr) {
         vector<string> objdump_lines = str_split(result_string, "\n");
         int begin_of_the_arch_string = 0;
