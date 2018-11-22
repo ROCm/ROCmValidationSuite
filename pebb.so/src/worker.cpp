@@ -203,8 +203,8 @@ int pebbworker::do_transfer() {
   if (loglevel >= rvs::logdebug) {
     RVSTRACE_
     std::string msg;
-    msg = "[" + action_name + "] pebb transfer " + std::to_string(src_node) + " "
-        + std::to_string(dst_node) + " ";
+    msg = "[" + action_name + "] pebb transfer " + std::to_string(src_node)
+        + " " + std::to_string(dst_node) + " ";
 
     rvs::lp::get_ticks(&endsec, &endusec);
     rvs::lp::Log(msg + "start", rvs::logdebug, startsec, startusec);

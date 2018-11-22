@@ -91,13 +91,12 @@ bool action::get_all_common_config_keys(void) {
       bjson = true;
     }
 
-    property_get_action_name(&error);
-    if (error) {
+    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
       rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
       return false;
     }
-    // get <device> property value ("all" or a list of gpu id)
 
+    // get <device> property value ("all" or a list of gpu id)
     device_all_selected = property_get_device(&error);
     if (error == 1) {  // log the error & abort IET
       msg = "Invalid '" +
@@ -117,43 +116,37 @@ bool action::get_all_common_config_keys(void) {
     }
 
     if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
-                                   &gst_run_duration_ms, 0u)) {
+                                   &property_duration, 0u)) {
       msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
     }
 
-    error = property_get_int<int>
-    (RVS_CONF_LOG_INTERVAL_KEY, &log_interval, DEFAULT_LOG_INTERVAL);
+    error = property_get_int<uint64_t>
+    (RVS_CONF_LOG_INTERVAL_KEY, &property_log_interval, DEFAULT_LOG_INTERVAL);
     if (error == 1) {
       msg = "Invalid '" +std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
     }
 
-    error = property_get_int<int>
-    (RVS_CONF_SAMPLE_INTERVAL_KEY, &sample_interval, 500);
-    if (error == 1) {
+    if (property_get_int<uint64_t>(RVS_CONF_SAMPLE_INTERVAL_KEY,
+                                       &sample_interval, 500u)) {
       msg = "Invalid '" +std::string(RVS_CONF_SAMPLE_INTERVAL_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
-    } else if (error == 2) {
-      sample_interval = 500;
     }
 
-    if (log_interval < sample_interval) {
+    if (property_log_interval < sample_interval) {
       msg = "Log interval has the lower value than the sample interval.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
     }
 
-    prop_terminate = property_get_terminate(&error);
-    switch (error) {
-      case 1:
-        msg = "Invalid 'terminate' key.";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
-      case 2: prop_terminate = false; break;
+    if (property_get(RVS_CONF_TERMINATE_KEY, &prop_terminate, false)) {
+      msg = "Invalid 'terminate' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
     }
 
     return true;
@@ -344,7 +337,7 @@ int action::run(void) {
   pworker->set_name(action_name);
   pworker->json(bjson);
   pworker->set_sample_int(sample_interval);
-  pworker->set_log_int(log_interval);
+  pworker->set_log_int(property_log_interval);
   pworker->set_terminate(prop_terminate);
   if (property["force"] == "true")
     pworker->set_force(true);
@@ -360,9 +353,10 @@ int action::run(void) {
   // start worker thread
   pworker->start();
 
-  if (gst_run_duration_ms) {
+  // this should be used only for testing purposes
+  if (property_duration) {
     RVSTRACE_
-    sleep(gst_run_duration_ms);
+    sleep(property_duration);
   }
 
   RVSTRACE_

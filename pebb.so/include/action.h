@@ -70,18 +70,12 @@ class pebbaction : public rvs::actionbase {
   //! 'true' if prop_device_id is valid number
   bool      prop_device_id_filtering;
 
-  // module specific config keys
-  void property_get_h2d();
-  void property_get_d2h();
-
   //! array of peer GPU IDs to be used in data trasfers
   std::vector<std::string> prop_peers;
   //! deviceid of peer GPUs
   int  prop_peer_deviceid;
   //! 'true' if bandwidth test is to be executed for verified peers
   bool prop_test_bandwidth;
-  //! log interval for running totals (in msec)
-  int  prop_log_interval;
   //! 'true' if bidirectional data transfer is required
   bool prop_bidirectional;
 
@@ -89,6 +83,7 @@ class pebbaction : public rvs::actionbase {
   bool prop_h2d;
   //! 'true' if device to host transfer is required
   bool prop_d2h;
+
   //! list of test block sizes
   std::vector<uint32_t> block_size;
   //! set to 'true' if the default block sizes are to be used

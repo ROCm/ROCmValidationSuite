@@ -41,10 +41,10 @@
 #define RVS_CONF_B2B_BLOCK_SIZE_KEY     "b2b_block_size"
 #define RVS_CONF_LINK_TYPE_KEY          "link_type"
 
-#define DEFAULT_LOG_INTERVAL (1000)
-#define DEFAULT_DURATION (10000)
-#define DEFAULT_COUNT (1)
-#define DEFAULT_WAIT (0)
+#define DEFAULT_LOG_INTERVAL (1000u)
+#define DEFAULT_DURATION (10000u)
+#define DEFAULT_COUNT (1u)
+#define DEFAULT_WAIT (0u)
 
 #define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
 #define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\

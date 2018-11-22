@@ -201,14 +201,6 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  error = property_get_int<int>
-  (RVS_CONF_LOG_INTERVAL_KEY, &prop_log_interval, DEFAULT_LOG_INTERVAL);
-  if (error == 1) {
-    msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "'";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
-  }
-
   property_get_bidirectional(&error);
   if (error) {
     if (prop_test_bandwidth == true) {
@@ -257,10 +249,8 @@ bool pqtaction::get_all_common_config_keys(void) {
   int error;
 
   // get the action name
-  property_get_action_name(&error);
-  if (error) {
-    msg = "action field is missing";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS);
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
     return false;
   }
 
@@ -286,32 +276,38 @@ bool pqtaction::get_all_common_config_keys(void) {
   }
 
   // get the other action/GST related properties
-  rvs::actionbase::property_get_run_parallel(&error);
-  if (error == 1) {
+  if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
       msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
           "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  if (property_get_int<uint64_t>(RVS_CONF_COUNT_KEY, &gst_run_count, 1)) {
+  if (property_get_int<uint64_t>(RVS_CONF_COUNT_KEY, &property_count, 1)) {
       msg = "invalid '" + std::string(RVS_CONF_COUNT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  if (property_get_int<uint64_t>(RVS_CONF_WAIT_KEY, &gst_run_wait_ms, 0)) {
+  if (property_get_int<uint64_t>(RVS_CONF_WAIT_KEY, &property_wait, 0)) {
       msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
   if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
-                                 &gst_run_duration_ms, DEFAULT_DURATION)) {
+                                 &property_duration, DEFAULT_DURATION)) {
       msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
           "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
+  }
+
+  if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+                            &property_log_interval, DEFAULT_LOG_INTERVAL)) {
+    msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
   }
 
   return true;
@@ -479,7 +475,7 @@ int pqtaction::create_threads() {
           pqtworker* p = nullptr;
 
           transfer_ix += 1;
-          if (b2b_block_size > 0 && gst_runs_parallel) {
+          if (b2b_block_size > 0 && property_parallel) {
             RVSTRACE_
             pqtworker_b2b* pb2b = new pqtworker_b2b;
             if (pb2b == nullptr) {

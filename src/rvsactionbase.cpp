@@ -199,87 +199,57 @@ bool rvs::actionbase::property_get_device(int *error) {
 }
 
 /**
- * @brief gets the action name from the module's properties collection
+ * @brief Reads boolean property value from properties collection
  */
-void rvs::actionbase::property_get_action_name(int *error) {
-  action_name = "[]";
-  auto it = property.find(RVS_CONF_NAME_KEY);
-  if (it != property.end()) {
-    action_name = it->second;
-    *error = 0;
-  } else {
-    *error = 2;
+int rvs::actionbase::property_get(const std::string& prop_name,
+                                       bool* pVal) {
+  std::string sval;
+  if (!has_property(prop_name, &sval)) {
+    return 2;
   }
+  return rvs_util_parse(sval, pVal);
 }
 
 /**
- * @brief reads the module's properties collection to see whether the GST should
- * run the stress test in parallel
+ * @brief Reads boolean property value from properties collection.
+ * Assigns the default value if not found.
  */
-void rvs::actionbase::property_get_run_parallel(int *error) {
-  gst_runs_parallel = false;
-  auto it = property.find(RVS_CONF_PARALLEL_KEY);
-  if (it != property.end()) {
-    if (it->second == "true") {
-      gst_runs_parallel = true;
-      *error = 0;
-    } else if (it->second == "false") {
-      *error = 0;
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
-  }
-}
-
-
-/**
- * @brief reads terminate from the module's properties collection
- */
-bool rvs::actionbase::property_get_terminate(int *error) {
-  bool term = -1;
-  auto it = property.find(RVS_CONF_TERMINATE_KEY);
-  if (it != property.end()) {
-    if (it->second == "true") {
-      term = true;
-      property.erase(it);
-    } else if (it->second == "false") {
-      term = false;
-      property.erase(it);
-    } else {
-      *error = 0;
-    }
+int rvs::actionbase::property_get(const std::string& prop_name,
+                                       bool* pVal, bool bDef) {
+  int sts = property_get(prop_name, pVal);
+  if (sts == 2) {
+    *pVal = bDef;
+    return 0;
   }
 
-  return term;
+  return sts;
 }
 
 /**
- * @brief reads the log level from the module's properties collection
+ * @brief Reads string property value from properties collection
  */
-void rvs::actionbase::property_get_log_level(int *error) {
-  property_log_level = 2;
-  auto it = property.find(RVS_CONF_LOG_LEVEL_KEY);
-  if (it != property.end()) {
-    if (is_positive_integer(it->second)) {
-      try {
-        property_log_level = std::stoul(it->second);
-      } catch(...) {
-        *error = 1;
-      }
-      if (property_log_level < 1 || property_log_level > 5) {
-        property_log_level = 2;
-        *error = 1;
-      }
-    } else {
-      *error = 1;
-    }
-  } else {
-    *error = 2;
+int rvs::actionbase::property_get(const std::string& prop_name,
+                                       std::string* pVal) {
+  if (!has_property(prop_name, pVal)) {
+    return 2;
   }
+  return 0;
 }
 
+/**
+ * @brief Reads string property value from properties collection.
+ * Assigns the default value if not found.
+ */
+int rvs::actionbase::property_get(
+  const std::string& prop_name,
+  std::string* pVal,
+  const std::string& bDefault) {
+  int sts = property_get(prop_name, pVal);
+  if (sts == 2) {
+    *pVal = bDefault;
+    return 0;
+  }
 
-
+  return sts;
+}
 

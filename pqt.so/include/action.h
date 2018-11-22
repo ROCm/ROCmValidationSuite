@@ -83,8 +83,6 @@ class pqtaction : public rvs::actionbase {
   uint32_t  prop_peer_deviceid;
   //! 'true' if bandwidth test is to be executed for verified peers
   bool prop_test_bandwidth;
-  //! log interval for running totals (in msec)
-  int  prop_log_interval;
   //! 'true' if bidirectional data transfer is required
   bool prop_bidirectional;
   //! list of test block sizes
