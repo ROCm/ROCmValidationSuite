@@ -59,9 +59,8 @@ using std::vector;
 
 //! Default constructor
 pqtaction::pqtaction() {
-  prop_deviceid = -1;
-  prop_device_id_filtering = false;
-  prop_peer_deviceid = -1;
+  prop_deviceid = 0u;
+  prop_peer_deviceid = 0u;
   bjson = false;
 }
 
@@ -189,10 +188,8 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  prop_peer_deviceid = -1;
-  error = property_get_int<int>("peer_deviceid", &prop_peer_deviceid);
-  if (error == 1) {
-    msg = "invalid 'peer_deviceid '";
+  if (property_get_int<uint32_t>("peer_deviceid", &prop_peer_deviceid, 0u)) {
+    msg = "invalid 'peer_deviceid ' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
@@ -281,20 +278,11 @@ bool pqtaction::get_all_common_config_keys(void) {
       return false;
   }
 
-  int devid;
   // get the <deviceid> property value
-  if (has_property("deviceid", &sdevid)) {
-    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
-      if (error == 0) {
-          if (devid != -1) {
-              prop_deviceid = static_cast<uint16_t>(devid);
-              prop_device_id_filtering = true;
-          }
-      } else {
-          msg = "invalid 'deviceid' key value " + sdevid;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return false;
-      }
+  if (property_get_int<uint32_t>(RVS_CONF_DEVICEID_KEY, &prop_deviceid, 0u)) {
+      msg = "invalid '" + std::string(RVS_CONF_DEVICEID_KEY) + "' key value ";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
   }
 
   // get the other action/GST related properties
@@ -306,25 +294,20 @@ bool pqtaction::get_all_common_config_keys(void) {
       return false;
   }
 
-  error = property_get_int<uint64_t>
-  (RVS_CONF_COUNT_KEY, &gst_run_count, 1);
-  if (error == 1) {
+  if (property_get_int<uint64_t>(RVS_CONF_COUNT_KEY, &gst_run_count, 1)) {
       msg = "invalid '" + std::string(RVS_CONF_COUNT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  error = property_get_int<uint64_t>
-  (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, 0);
-  if (error == 1) {
+  if (property_get_int<uint64_t>(RVS_CONF_WAIT_KEY, &gst_run_wait_ms, 0)) {
       msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  error = property_get_int<uint64_t>
-  (RVS_CONF_DURATION_KEY, &gst_run_duration_ms, DEFAULT_DURATION);
-  if (error == 1) {
+  if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
+                                 &gst_run_duration_ms, DEFAULT_DURATION)) {
       msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
           "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -358,7 +341,7 @@ int pqtaction::create_threads() {
 
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
     // filter out by source device id
-    if (prop_device_id_filtering) {
+    if (prop_deviceid > 0) {
       if (prop_deviceid != gpu_device_id[i]) {
         continue;
       }
