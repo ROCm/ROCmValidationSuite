@@ -48,6 +48,8 @@ extern int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
 
 bool is_positive_integer(const std::string& str_val);
 
+extern int rvs_util_parse(const std::string& buff, bool* pval);
+
 /**
  * @brief turns string value into right type of integer, else returns error
  */

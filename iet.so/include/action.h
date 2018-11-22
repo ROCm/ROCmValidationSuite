@@ -87,8 +87,6 @@ class action: public rvs::actionbase {
     int iet_max_violations;
     //! sampling rate for the target_power
     uint64_t iet_sample_interval;
-    //! time interval at which the module reports the GPU's power
-    uint64_t iet_log_interval;
     //! matrix size for SGEMM
     uint64_t iet_matrix_size;
 
@@ -111,7 +109,6 @@ class action: public rvs::actionbase {
     void property_get_iet_tolerance(int *error);
     void property_get_iet_max_violations(int *error);
     void property_get_iet_sample_interval(int *error);
-    void property_get_iet_log_interval(int *error);
     void property_get_iet_matrix_size(int *error);
 
     bool get_all_iet_config_keys(void);
@@ -121,7 +118,7 @@ class action: public rvs::actionbase {
     * @return true if no fatal error occured, false otherwise
     */
     bool get_all_common_config_keys(void);
-    bool add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id, 
+    bool add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
                               int hip_num_gpu_devices);
 
 /**
