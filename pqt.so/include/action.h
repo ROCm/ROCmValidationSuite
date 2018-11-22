@@ -69,9 +69,7 @@ class pqtaction : public rvs::actionbase {
   //! 'true' if "all" is found under "peer" key for this action
   bool      prop_peer_device_all_selected;
   //! deviceid key from config file
-  uint16_t  prop_deviceid;
-  //! 'true' if prop_device_id is valid number
-  bool      prop_device_id_filtering;
+  uint32_t  prop_deviceid;
 
   // PQT specific config keys
   bool property_get_peers(int *error);
@@ -82,7 +80,7 @@ class pqtaction : public rvs::actionbase {
   //! array of peer GPU IDs to be used in data trasfers
   std::vector<std::string> prop_peers;
   //! deviceid of peer GPUs
-  int  prop_peer_deviceid;
+  uint32_t  prop_peer_deviceid;
   //! 'true' if bandwidth test is to be executed for verified peers
   bool prop_test_bandwidth;
   //! log interval for running totals (in msec)

@@ -69,7 +69,7 @@ class action : public rvs::actionbase {
   //! 'true' if configuration has key 'device: all'
   bool  device_all_selected;
   //! configuration device_id key
-  int   device_id;
+  int device_id;
   //! configuration 'log_interval' key
   int   log_interval;
   //! true if test has to be aborted on bounds violation
