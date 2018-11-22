@@ -65,17 +65,15 @@ class action : public rvs::actionbase {
 
  protected:
   //! 'true' if JSON logging is required
-  bool  bjson;
+  bool     bjson;
   //! 'true' if configuration has key 'device: all'
-  bool  device_all_selected;
+  bool     device_all_selected;
   //! configuration device_id key
-  int device_id;
-  //! configuration 'log_interval' key
-  int   log_interval;
+  int      device_id;
   //! true if test has to be aborted on bounds violation
-  bool  prop_terminate;
+  bool     prop_terminate;
   //! configuration 'sample_interval'' key
-  int   sample_interval;
+  uint64_t sample_interval;
 
  protected:
   //! device_irq and metric bounds

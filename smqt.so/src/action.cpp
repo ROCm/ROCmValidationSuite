@@ -40,6 +40,7 @@ extern "C" {
 }
 #endif
 
+#include "rvs_key_def.h"
 #include "rvs_module.h"
 #include "pci_caps.h"
 #include "gpu_util.h"
@@ -94,13 +95,13 @@ action::~action() {
 bool action::get_all_common_config_keys() {
   string msg, sdevid, sdev;
   int error;
+
   // get the action name
-  rvs::actionbase::property_get_action_name(&error);
-  if (error == 2) {
-    msg = "action field is missing in smqt module";
-    rvs::lp::Err(msg, MODULE_NAME, action_name);
-    return -1;
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME);
+    return false;
   }
+
   // get <device> property value (a list of gpu id)
   if (has_property("device", &sdev)) {
     property_get_device(&error);

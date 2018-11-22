@@ -141,3 +141,21 @@ bool is_positive_integer(const std::string& str_val) {
             && std::find_if(str_val.begin(), str_val.end(),
                     [](char c) {return !std::isdigit(c);}) == str_val.end();
 }
+
+int rvs_util_parse(const std::string& buff, bool* pval) {
+  if (buff.empty()) {  // method empty
+    return 2;  // not found
+  }
+
+  if (buff == "true") {
+    *pval = true;
+    return 0;  // OK - true
+  }
+
+  if (buff == "false") {
+    *pval = false;
+    return 0;  // OK - false
+  }
+
+  return 1;  // syntax error
+}
