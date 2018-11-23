@@ -395,52 +395,52 @@ int action::run(void) {
 
     // iterate over devices
     for (dev = pacc->devices; dev; dev = dev->next) {
-        // fill in the info
-        pci_fill_info(dev,
-                PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
-                | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
+      // fill in the info
+      pci_fill_info(dev,
+              PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
+              | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
 
-        // computes the actual dev's location_id (sysfs entry)
-        uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
-                | (dev->func));
+      // computes the actual dev's location_id (sysfs entry)
+      uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
+              | (dev->func));
 
         // check if this pci_dev corresponds to one of the AMD GPUs
-        int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+      uint16_t gpu_id;
+      // if not and AMD GPU just continue
+      if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+        continue;
 
-        if (-1 != gpu_id) {
-            // that should be an AMD GPU
 
-            // check for deviceid filtering
-            if (!device_id_filtering
-                    || (device_id_filtering && dev->device_id == deviceid)) {
-                // check if the GPU is part of the PCIe check
-                // (either device: all or the gpu_id is in
-                // the device: <gpu id> list
+      // check for deviceid filtering
+      if (!device_id_filtering
+            || (device_id_filtering && dev->device_id == deviceid)) {
+        // check if the GPU is part of the PCIe check
+        // (either device: all or the gpu_id is in
+        // the device: <gpu id> list
 
-                bool cur_gpu_selected = false;
+        bool cur_gpu_selected = false;
 
-                if (device_all_selected) {
-                    cur_gpu_selected = true;
-                } else {
-                    // search for this gpu in the list
-                    // provided under the <device> property
-                    vector<string>::iterator it_gpu_id = find(
-                            device_prop_gpu_id_list.begin(),
-                            device_prop_gpu_id_list.end(),
-                            std::to_string(gpu_id));
+        if (device_all_selected) {
+          cur_gpu_selected = true;
+        } else {
+          // search for this gpu in the list
+          // provided under the <device> property
+          vector<string>::iterator it_gpu_id = find(
+                  device_prop_gpu_id_list.begin(),
+                  device_prop_gpu_id_list.end(),
+                  std::to_string(gpu_id));
 
-                    if (it_gpu_id != device_prop_gpu_id_list.end())
-                        cur_gpu_selected = true;
-                }
-
-                if (cur_gpu_selected) {
-                    amd_gpus_found = true;
-                    if (!get_gpu_all_pcie_capabilities(dev,
-                        static_cast<uint16_t>(gpu_id)))
-                        pci_infra_qual_result = false;
-                }
-            }
+          if (it_gpu_id != device_prop_gpu_id_list.end())
+            cur_gpu_selected = true;
         }
+
+        if (cur_gpu_selected) {
+          amd_gpus_found = true;
+          if (!get_gpu_all_pcie_capabilities(dev,
+              static_cast<uint16_t>(gpu_id)))
+            pci_infra_qual_result = false;
+        }
+      }
     }
 
     pci_cleanup(pacc);

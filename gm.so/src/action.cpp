@@ -300,7 +300,15 @@ int action::run(void) {
     std::vector<uint16_t> gpu_id_filtered;
     for (auto it = gpu_id.begin(); it != gpu_id.end(); it++) {
       RVSTRACE_
-      if (device_id == rvs::gpulist::GetDeviceIdFromGpuId(*it)) {
+
+      uint16_t _dev_id;
+      if (rvs::gpulist::gpu2device(*it, &_dev_id)) {
+        RVSTRACE_
+        // if not found just continue
+        continue;
+      }
+
+      if (_dev_id == device_id) {
         RVSTRACE_
         gpu_id_filtered.push_back(*it);
       }
@@ -321,15 +329,15 @@ int action::run(void) {
   std::map<uint32_t, int32_t> dv_ind;
   for (auto it = gpu_id.begin(); it != gpu_id.end(); it++) {
     RVSTRACE_
-    int32_t location_id = rvs::gpulist::GetLocation(*it);
-    if (location_id < 0) {
+    uint16_t location_id;
+    if (rvs::gpulist::gpu2location(*it, &location_id)) {
       msg = "Could not obtain BDF for GPU ID: ";
       msg += std::to_string(*it);
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
     uint32_t ix;
-    rvs::rsmi_dev_ind_get(static_cast<uint64_t>(location_id), &ix);
+    rvs::rsmi_dev_ind_get(location_id, &ix);
     dv_ind.insert(std::pair<uint32_t, int32_t>(ix, *it));
   }
 

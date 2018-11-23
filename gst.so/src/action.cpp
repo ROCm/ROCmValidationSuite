@@ -253,28 +253,24 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
-    error = property_get_int<uint64_t>
-    (RVS_CONF_RAMP_INTERVAL_KEY, &gst_ramp_interval, GST_DEFAULT_RAMP_INTERVAL);
-    if (error) {
+    if (property_get_int<uint64_t>(RVS_CONF_RAMP_INTERVAL_KEY,
+      &gst_ramp_interval, GST_DEFAULT_RAMP_INTERVAL)) {
         msg = "invalid '" +
         std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
-    error = property_get_int<uint64_t>
-    (RVS_CONF_LOG_INTERVAL_KEY, &property_log_interval, GST_DEFAULT_LOG_INTERVAL);
-    if (error == 1) {
+    if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+      &property_log_interval, GST_DEFAULT_LOG_INTERVAL)) {
         msg = "invalid '" +
         std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
-    error = property_get_int<int>
-    (RVS_CONF_MAX_VIOLATIONS_KEY, &gst_max_violations,
-     GST_DEFAULT_MAX_VIOLATIONS);
-    if (error) {
+    if (property_get_int<int>(RVS_CONF_MAX_VIOLATIONS_KEY, &gst_max_violations,
+     GST_DEFAULT_MAX_VIOLATIONS)) {
         msg = "invalid '" +
         std::string(RVS_CONF_MAX_VIOLATIONS_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -445,20 +441,23 @@ int action::get_all_selected_gpus(void) {
         unsigned int dev_location_id =
             ((((unsigned int) (props.pciBusID)) << 8) | (props.pciDeviceID));
 
-        int32_t devId =
-            rvs::gpulist::GetDeviceIdFromLocationId(dev_location_id);
-        if (-1 == devId) {
-            continue;
+        uint16_t devId;
+        if (rvs::gpulist::location2device(dev_location_id, &devId)) {
+          continue;
         }
 
         // check for deviceid filtering
         if (!device_id_filtering ||
-            (device_id_filtering && static_cast<uint16_t>(devId)
-                                                        == deviceid)) {
+            (device_id_filtering && devId == deviceid)) {
             // check if this GPU is part of the GPU stress test
             // (device = "all" or the gpu_id is in the device: <gpu id> list)
             bool cur_gpu_selected = false;
-            uint16_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+            uint16_t gpu_id;
+            // if not and AMD GPU just continue
+            if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+              continue;
+
+
             if (device_all_selected) {
                 cur_gpu_selected = true;
             } else {

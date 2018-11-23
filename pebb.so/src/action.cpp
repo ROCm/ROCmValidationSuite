@@ -262,7 +262,7 @@ int pebbaction::create_threads() {
       }
     }
 
-    int dstnode;
+    uint16_t dstnode;
     int srcnode;
 
     RVSTRACE_
@@ -271,8 +271,7 @@ int pebbaction::create_threads() {
          cpu_index++) {
       RVSTRACE_
 
-      dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
-      if (dstnode < 0) {
+      if (rvs::gpulist::gpu2node(gpu_id[i], &dstnode)) {
         RVSTRACE_
         msg = "no node found for destination GPU ID "
           + std::to_string(gpu_id[i]);
@@ -424,8 +423,8 @@ int pebbaction::print_running_average() {
  *
  * */
 int pebbaction::print_running_average(pebbworker* pWorker) {
-  int         src_node, dst_node;
-  int         dst_id;
+  uint16_t    src_node, dst_node;
+  uint16_t    dst_id;
   bool        bidir;
   size_t      current_size;
   double      duration;
@@ -435,34 +434,51 @@ int pebbaction::print_running_average(pebbworker* pWorker) {
   uint16_t    transfer_ix;
   uint16_t    transfer_num;
 
+  RVSTRACE_
   // get running average
   pWorker->get_running_data(&src_node, &dst_node, &bidir,
                             &current_size, &duration);
 
   if (duration > 0) {
+    RVSTRACE_
     bandwidth = current_size/duration/(1024*1024*1024);
     if (bidir) {
+      RVSTRACE_
       bandwidth *=2;
     }
     snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
   } else {
+    RVSTRACE_
     // no running average in this iteration, try getting total so far
     // (do not reset final totals as this is just intermediate query)
     pWorker->get_final_data(&src_node, &dst_node, &bidir,
                             &current_size, &duration, false);
     if (duration > 0) {
+      RVSTRACE_
       bandwidth = current_size/duration/(1024*1024*1024);
       if (bidir) {
+        RVSTRACE_
         bandwidth *=2;
       }
       snprintf( buff, sizeof(buff), "%.3f GBps (*)", bandwidth);
     } else {
+      RVSTRACE_
       // not transfers at all - print "pending"
       snprintf( buff, sizeof(buff), "(pending)");
     }
   }
 
-  dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+//  dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+  RVSTRACE_
+  if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+    RVSTRACE_
+    std::string msg = "could not find GPU id for node " +
+                      std::to_string(dst_node);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+  RVSTRACE_
   transfer_ix = pWorker->get_transfer_ix();
   transfer_num = pWorker->get_transfer_num();
 
@@ -477,12 +493,14 @@ int pebbaction::print_running_average(pebbworker* pWorker) {
   rvs::lp::Log(msg, rvs::loginfo);
 
   if (bjson) {
+    RVSTRACE_
     unsigned int sec;
     unsigned int usec;
     rvs::lp::get_ticks(&sec, &usec);
     void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                         action_name.c_str(), rvs::loginfo, sec, usec);
     if (pjson != NULL) {
+      RVSTRACE_
       rvs::lp::AddString(pjson,
                           "transfer_ix", std::to_string(transfer_ix));
       rvs::lp::AddString(pjson,
@@ -494,6 +512,7 @@ int pebbaction::print_running_average(pebbworker* pWorker) {
     }
   }
 
+  RVSTRACE_
   return 0;
 }
 
@@ -505,8 +524,8 @@ int pebbaction::print_running_average(pebbworker* pWorker) {
  *
  * */
 int pebbaction::print_final_average() {
-  int         src_node, dst_node;
-  int         dst_id;
+  uint16_t    src_node, dst_node;
+  uint16_t    dst_id;
   bool        bidir;
   size_t      current_size;
   double      duration;
@@ -517,20 +536,32 @@ int pebbaction::print_final_average() {
   uint16_t    transfer_num;
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    RVSTRACE_
     (*it)->get_final_data(&src_node, &dst_node, &bidir,
                           &current_size, &duration);
 
     if (duration) {
+      RVSTRACE_
       bandwidth = current_size/duration/(1024*1024*1024);
       if (bidir) {
+        RVSTRACE_
         bandwidth *=2;
       }
       snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
     } else {
+      RVSTRACE_
       snprintf( buff, sizeof(buff), "(not measured)");
     }
 
-    dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+    RVSTRACE_
+    if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+      RVSTRACE_
+      std::string msg = "could not find GPU id for node " +
+                        std::to_string(dst_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+    RVSTRACE_
     transfer_ix = (*it)->get_transfer_ix();
     transfer_num = (*it)->get_transfer_num();
 
@@ -545,12 +576,14 @@ int pebbaction::print_final_average() {
 
     rvs::lp::Log(msg, rvs::logresults);
     if (bjson) {
+      RVSTRACE_
       unsigned int sec;
       unsigned int usec;
       rvs::lp::get_ticks(&sec, &usec);
       void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                           action_name.c_str(), rvs::logresults, sec, usec);
       if (pjson != NULL) {
+        RVSTRACE_
         rvs::lp::AddString(pjson,
                             "transfer_ix", std::to_string(transfer_ix));
         rvs::lp::AddString(pjson,
@@ -563,7 +596,9 @@ int pebbaction::print_final_average() {
         rvs::lp::LogRecordFlush(pjson);
       }
     }
+    RVSTRACE_
   }
+  RVSTRACE_
   return 0;
 }
 

@@ -383,15 +383,15 @@ int pqtaction::create_threads() {
       bmatch_found = true;
 
       // get NUMA nodes
-      int srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
-      if (srcnode < 0) {
+      uint16_t srcnode;
+      if (rvs::gpulist::gpu2node(gpu_id[i], &srcnode)) {
         msg + "no node found for GPU ID " + std::to_string(gpu_id[i]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
 
-      int dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[j]);
-      if (srcnode < 0) {
+      uint16_t dstnode;
+      if (rvs::gpulist::gpu2node(gpu_id[j], &dstnode)) {
         RVSTRACE_
         msg = "no node found for GPU ID " + std::to_string(gpu_id[j]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -655,18 +655,20 @@ int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
   pHsa = rvs::hsa::Get();
 
   // GPUs are peers, create transaction for them
-  int srcnode = rvs::gpulist::GetNodeIdFromGpuId(Src);
-  if (srcnode < 0) {
-    msg = "no node found for GPU ID " + std::to_string(Src);
+  // get NUMA nodes
+  uint16_t srcnode;
+  if (rvs::gpulist::gpu2node(Src, &srcnode)) {
+    msg + "no node found for GPU ID " + std::to_string(Src);
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return 0;
+    return -1;
   }
 
-  int dstnode = rvs::gpulist::GetNodeIdFromGpuId(Dst);
-  if (srcnode < 0) {
-    msg = "RVS-PQT: no node found for GPU ID " + std::to_string(Dst);
+  uint16_t dstnode;
+  if (rvs::gpulist::gpu2node(Dst, &dstnode)) {
+    RVSTRACE_
+    msg = "no node found for GPU ID " + std::to_string(Dst);
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return 0;
+    return -1;
   }
 
   return pHsa->rvs::hsa::GetPeerStatus(srcnode, dstnode);
@@ -696,8 +698,8 @@ int pqtaction::print_running_average() {
  *
  * */
 int pqtaction::print_running_average(pqtworker* pWorker) {
-  int         src_node, dst_node;
-  int         src_id, dst_id;
+  uint16_t    src_node, dst_node;
+  uint16_t    src_id, dst_id;
   bool        bidir;
   size_t      current_size;
   double      duration;
@@ -734,8 +736,26 @@ int pqtaction::print_running_average(pqtworker* pWorker) {
     }
   }
 
-  src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
-  dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+//   src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
+//   dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+  RVSTRACE_
+  if (rvs::gpulist::node2gpu(src_node, &src_id)) {
+    RVSTRACE_
+    std::string msg = "could not find GPU id for node " +
+                      std::to_string(src_node);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+  RVSTRACE_
+  if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+    RVSTRACE_
+    std::string msg = "could not find GPU id for node " +
+                      std::to_string(dst_node);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+
   transfer_ix = pWorker->get_transfer_ix();
   transfer_num = pWorker->get_transfer_num();
 
@@ -777,8 +797,8 @@ int pqtaction::print_running_average(pqtworker* pWorker) {
  *
  * */
 int pqtaction::print_final_average() {
-  int         src_node, dst_node;
-  int         src_id, dst_id;
+  uint16_t    src_node, dst_node;
+  uint16_t    src_id, dst_id;
   bool        bidir;
   size_t      current_size;
   double      duration;
@@ -801,8 +821,26 @@ int pqtaction::print_final_average() {
     } else {
       snprintf( buff, sizeof(buff), "(not measured)");
     }
-    src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
-    dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+//     src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
+//     dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+    RVSTRACE_
+    if (rvs::gpulist::node2gpu(src_node, &src_id)) {
+      RVSTRACE_
+      std::string msg = "could not find GPU id for node " +
+                        std::to_string(src_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+    RVSTRACE_
+    if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+      RVSTRACE_
+      std::string msg = "could not find GPU id for node " +
+                        std::to_string(dst_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+
     transfer_ix = (*it)->get_transfer_ix();
     transfer_num = (*it)->get_transfer_num();
 
