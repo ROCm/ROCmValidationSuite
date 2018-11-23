@@ -65,11 +65,11 @@ class pqtworker : public rvs::ThreadBase {
   //! Returns initiating action name
   const std::string& get_name(void) { return action_name; }
 
-  int initialize(int iSrc, int iDst, bool Bidirect);
+  int initialize(uint16_t Src, uint16_t Dst, bool Bidirect);
   int do_transfer();
-  void get_running_data(int* Src, int* Dst, bool* Bidirect,
+  void get_running_data(uint16_t* Src, uint16_t* Dst, bool* Bidirect,
                         size_t* Size, double* Duration);
-  void get_final_data(int* Src, int* Dst, bool* Bidirect,
+  void get_final_data(uint16_t* Src, uint16_t* Dst, bool* Bidirect,
                       size_t* Size, double* Duration, bool bReset = true);
   //! Set transfer index
   void set_transfer_ix(uint16_t val) { transfer_ix = val; }
@@ -98,9 +98,9 @@ class pqtworker : public rvs::ThreadBase {
   //! ptr to RVS HSA singleton wrapper
   rvs::hsa* pHsa;
   //! source NUMA node
-  int src_node;
+  uint16_t src_node;
   //! destination NUMA node
-  int dst_node;
+  uint16_t dst_node;
   //! 'true' for bidirectional transfer
   bool bidirect;
 

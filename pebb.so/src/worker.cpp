@@ -117,7 +117,7 @@ void pebbworker::stop() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbworker::initialize(int Src, int Dst, bool h2d, bool d2h) {
+int pebbworker::initialize(uint16_t Src, uint16_t Dst, bool h2d, bool d2h) {
   src_node = Src;
   dst_node = Dst;
   bidirect = d2h && h2d;
@@ -226,7 +226,7 @@ int pebbworker::do_transfer() {
  * interval (in seconds)
  *
  * */
-void pebbworker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
+void pebbworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
                                  size_t* Size, double* Duration) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
@@ -259,7 +259,7 @@ void pebbworker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
  * @param bReset [in] if 'true' set final totals to zero
  *
  * */
-void pebbworker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
+void pebbworker::get_final_data(uint16_t* Src, uint16_t* Dst, bool* Bidirect,
                                size_t* Size, double* Duration, bool bReset) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);

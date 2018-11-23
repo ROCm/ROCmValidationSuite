@@ -54,13 +54,14 @@ namespace rvs {
 class gpulist {
  public:
   static int Initialize();
-  static int32_t GetLocation(const uint32_t GpuID);
-  static int32_t GetGpuId(const uint32_t LocationID);
-  static int32_t GetGpuIdFromNodeId(const uint32_t NodeID);
-  static int32_t GetDeviceIdFromLocationId(const uint32_t LocationID);
-  static int32_t GetDeviceIdFromGpuId(const uint32_t GpuID);
-  static int32_t GetNodeIdFromGpuId(const uint32_t GpuID);
-  static int32_t GetNodeIdFromLocationId(const uint32_t LocationID);
+
+  static int location2gpu(const uint16_t LocationID, uint16_t* pGpuID);
+  static int gpu2location(const uint16_t GpuID, uint16_t* pLocationID);
+  static int node2gpu(const uint16_t NodeID, uint16_t* pGpuID);
+  static int location2device(const uint16_t LocationID, uint16_t* pDeviceID);
+  static int gpu2device(const uint16_t GpuID, uint16_t* pDeviceID);
+  static int location2node(const uint16_t LocationID, uint16_t* pNodeID);
+  static int gpu2node(const uint16_t GpuID, uint16_t* pNodeID);
 
  protected:
   //! Array of GPU location IDs

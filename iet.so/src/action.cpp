@@ -580,12 +580,13 @@ int action::get_all_selected_gpus(void) {
 
         // computes the actual dev's location_id (sysfs entry)
         uint16_t dev_location_id = ((((uint16_t) (pci_cdev->bus)) << 8)
-                | (pci_cdev->func));
+                | (pci_cdev->dev));
 
         // check if this pci_dev corresponds to one of the AMD GPUs
-        int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-        if (gpu_id == -1)
-            continue;
+        uint16_t gpu_id;
+        // if not and AMD GPU just continue
+        if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+          continue;
 
         // that should be an AMD GPU
         // check for deviceid filtering
