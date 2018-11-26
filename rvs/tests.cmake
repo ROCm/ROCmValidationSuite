@@ -51,11 +51,8 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
   string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
   MESSAGE("${TEST_NAME}")
 
-  add_executable(${TEST_NAME} ${SINGLE_TEST} ${SOURCES})
-  target_link_libraries(${TEST_NAME} ${PROJECT_LINK_LIBS} gtest_main gtest)
-
-  MESSAGE("${TEST_NAME}")
-  MESSAGE("${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+  add_executable(${TEST_NAME} ${SINGLE_TEST} ${TEST_SOURCES} ${SOURCES})
+  target_link_libraries(${TEST_NAME} ${PROJECT_LINK_LIBS} ${PROJECT_TEST_LINK_LIBS} gtest_main gtest)
 
   add_test(NAME ${TEST_NAME}
     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

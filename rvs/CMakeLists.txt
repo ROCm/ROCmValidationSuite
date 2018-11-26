@@ -73,6 +73,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 ## additional libraries
 set ( PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
+set ( PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
 
 ## define include directories
 include_directories(include ../include ${YAML_INC_DIR} ${UT_INC})
@@ -82,6 +83,11 @@ set(SOURCES
   src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp src/rvscli.cpp src/rvsexec.cpp src/rvsexec_do_yaml.cpp
   src/rvsoptions.cpp
   ../src/rvsliblogger.cpp ../src/rvslognodebase.cpp ../src/rvslognoderec.cpp ../src/rvslognode.cpp ../src/rvslognodestring.cpp ../src/rvslognodeint.cpp
+)
+
+## define test sources
+set(TEST_SOURCES
+   ../src/gpu_util.cpp ../src/pci_caps.cpp
 )
 
 ## define target
@@ -98,7 +104,7 @@ file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 message ( "TESTSOURCES ${TESTSOURCES}" )
 
 LINK_DIRECTORIES(${UT_LIB})
-add_executable(rvstest ${TESTSOURCES} ${SOURCES})
+add_executable(rvstest ${SOURCES})
 target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
