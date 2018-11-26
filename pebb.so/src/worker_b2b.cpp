@@ -66,7 +66,7 @@ pebbworker_b2b::~pebbworker_b2b() {}
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbworker_b2b::initialize(int Src, int Dst,
+int pebbworker_b2b::initialize(uint16_t Src, uint16_t Dst,
                                bool h2d, bool d2h, size_t Size) {
   pebbworker::initialize(Src, Dst, h2d, d2h);
 

@@ -237,16 +237,22 @@ int action::do_gpu_list() {
 
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id =
-      ((((uint16_t)(dev->bus)) << 8) | (dev->func));
+      ((((uint16_t)(dev->bus)) << 8) | (dev->dev));
 
-    // if not and AMD GPU just continue
-    int32_t node_id = rvs::gpulist::GetNodeIdFromLocationId(dev_location_id);
-    if (node_id < 0)
+    // if not AMD GPU just continue
+    uint16_t node_id;
+    if (rvs::gpulist::location2node(dev_location_id, &node_id)) {
       continue;
+    }
 
-    int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-    if (gpu_id < 0)
+//     int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+//     if (gpu_id < 0)
+//       continue;
+
+    uint16_t gpu_id;
+    if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id)) {
       continue;
+    }
 
     snprintf(buff, sizeof(buff), "%02X:%02X.%d", dev->bus, dev->dev, dev->func);
 
