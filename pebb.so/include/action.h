@@ -61,14 +61,8 @@ class pebbaction : public rvs::actionbase {
  protected:
   bool get_all_pebb_config_keys(void);
   bool get_all_common_config_keys(void);
-  //! 'true' if "all" is found under "device" key for this action
-  bool      prop_device_all_selected;
   //! 'true' if "all" is found under "peer" key for this action
   bool      prop_peer_device_all_selected;
-  //! deviceid key from config file
-  uint16_t  prop_deviceid;
-  //! 'true' if prop_device_id is valid number
-  bool      prop_device_id_filtering;
 
   //! array of peer GPU IDs to be used in data trasfers
   std::vector<std::string> prop_peers;

@@ -90,13 +90,6 @@ class action: public rvs::actionbase {
     //! matrix size for SGEMM
     uint64_t iet_matrix_size;
 
-    //! TRUE if device config key is "all"
-    bool device_all_selected;
-    //! TRUE if deviceid filtering was enabled
-    bool device_id_filtering;
-    //! GPU device type config key value
-    uint16_t deviceid;
-
     //! list of GPUs (along with some identification data) which are
     //! selected for EDPp test
     std::vector<gpu_hwmon_info> edpp_gpus;
