@@ -71,6 +71,7 @@ using std::iterator;
 using std::endl;
 using std::ifstream;
 using std::map;
+using std::vector;
 
 action::action() {
   bjson = false;
