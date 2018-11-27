@@ -66,6 +66,8 @@
 #define FILE "file"
 #define ETC_PASSWD "/etc/passwd"
 #define ETC_GROUP  "/etc/group"
+#define DPKG_FILE  "/var/lib/dpkg/status"
+#define PKG_CMD_FILE "installed_pkg.txt"
 #define STREAM_SIZE 512
 #define USR_REG "([^/:]*)"
 #define GRP_REG "([^/:]*):([^/:]*):([^/:]*):([^/:]+)"
@@ -182,6 +184,7 @@ int action::pkgchk_run() {
     // Checking if version field exists
     string version_name;
     version_exists = has_property(VERSION, &version_name);
+		/*
     pid_t pid;
     int fd[2];
     if (pipe(fd) == -1) {
@@ -228,14 +231,15 @@ int action::pkgchk_run() {
       + package_name + " true";
       string failed =  "[" + action_name + "] " + "rcqt packagecheck "
       + package_name + " false";
-
-			std::regex version_pattern(version_name);
+				*/
+			///std::regex version_pattern(version_name);
       /* 
        * If result start with dpkg-querry: then we haven't found the package
        * If we get something different, then we confirme that the package is found
        * if version is equal to the required then the test pass
        */
-
+/*
+		
       if (strstr(result, "dpkg-query:") == result) {
         log(failed.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
@@ -272,6 +276,64 @@ int action::pkgchk_run() {
       rvs::lp::Err("INTERNAL_ERROR", MODULE_NAME_CAPS, action_name);
       return -1;
     }
+    */
+		pid_t pid;
+		int fd[2];
+		if (pipe(fd) == -1) {
+			rvs::lp::Err("pipe() error", MODULE_NAME_CAPS, action_name);
+			return 1;
+		}
+		pid = fork();
+		if (pid == 0) {
+			// Child process
+			// Pipe the standard output to the fd[1]
+			dup2(fd[1], STDOUT_FILENO);
+			dup2(fd[1], STDERR_FILENO);
+			char buffer[BUFFER_SIZE];
+			string command_string = "dpkg --get-selections > ";
+			command_string += PKG_CMD_FILE;
+			//snprintf(buffer, BUFFER_SIZE, command_string.c_str());
+		 
+			// We execute the dpkg-querry
+			if (system(command_string.c_str()) == -1) {
+				rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+				return 1;
+			}
+			exit(0);
+		} else if (pid > 0) {
+			// Parent
+			char result_cmnd[BUFFER_SIZE];
+			int count;
+			close(fd[1]);
+			cout  << package_name << endl;
+			// We read the result from the dpk-querry from the fd[0]
+			vector <string> package_vector;
+			count = read(fd[0], result_cmnd, BUFFER_SIZE);
+			std::regex pkg_pattern(package_name);
+			result_cmnd[count] = 0;
+			string result_cmnd_string = result_cmnd;
+			ifstream pkg_stream(std::string(PKG_CMD_FILE));
+			char file_line[STREAM_SIZE];
+			while (pkg_stream.getline(file_line, STREAM_SIZE)) {
+				string line_result = file_line;
+				line_result = line_result.substr(0, line_result.length() - 7);
+				line_result.erase(line_result.find_last_not_of(" \n\r\t")+1);
+				//cout << line_result << "***" << endl;
+				if (regex_match(line_result, pkg_pattern) == true) {
+					string package_exists = "[" + action_name + "] " + "rcqt pkgcheck "
+					+ line_result + " true";
+					rvs::lp::Log(package_exists, rvs::logresults);
+					package_vector.push_back(line_result);
+				}
+			}
+			if (package_vector.size() == 0) {
+				string pkg_not_exists = "[" + action_name + "] " + "rcqt pkgcheck "
+				+ package_name + " false";
+				rvs::lp::Log(pkg_not_exists, rvs::logresults);
+			}
+		
+		}
+		//cout << " ***" << endl;
     return 0;
   }
   return -1;
@@ -568,11 +630,13 @@ int action::kernelchk_run() {
     // Check if the given kernel version matches one from the list
     vector<string>::iterator kernel_iter;
     for (kernel_iter = kernel_version_vector.begin() ; \
-      kernel_iter != kernel_version_vector.end(); kernel_iter++)
-      if (kernel_actual.compare(*kernel_iter) == 0) {
+      kernel_iter != kernel_version_vector.end(); kernel_iter++) {
+			std::regex kernel_pattern(*kernel_iter);
+      if (regex_match(kernel_actual, kernel_pattern)) {
         kernel_version_correct = true;
         break;
       }
+		}
       string result = "[" + action_name + "] " + "rcqt kernelcheck " + \
       os_actual + " " + kernel_actual + " " + \
     (os_version_correct && kernel_version_correct ? "true" : "false");
