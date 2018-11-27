@@ -314,36 +314,25 @@ bool action::get_all_common_config_keys(void) {
     int error;
 
     // get <device> property value (a list of gpu id)
-    if (has_property("device", &sdev)) {
-        device_all_selected = property_get_device(&error);
-        if (error) {  // log the error & abort GST
-            msg = "invalid '" +
-                std::string(RVS_CONF_DEVICE_KEY) + "' key value " + sdev;
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return false;
-        }
-    } else {
-        msg = "key '" +
-            std::string(RVS_CONF_DEVICE_KEY) + "' was not found";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    if (int sts = property_get_device()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device' key.";
+        break;
+      }
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
 
-    // get the <deviceid> property value
-    int devid;
-    if (has_property("deviceid", &sdevid)) {
-      error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
-        if (!error) {
-            if (devid != -1) {
-                deviceid = static_cast<uint16_t>(devid);
-                device_id_filtering = true;
-            }
-        } else {
-            msg = "invalid '" +
-                std::string(RVS_CONF_DEVICEID_KEY) + "' key value " + sdevid;
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return false;
-        }
+    // get the <deviceid> property value if provided
+    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                  &property_device_id, 0u)) {
+      msg = "Invalid 'deviceid' key value.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
 
     // get the other action/GST related properties
@@ -446,37 +435,36 @@ int action::get_all_selected_gpus(void) {
           continue;
         }
 
-        // check for deviceid filtering
-        if (!device_id_filtering ||
-            (device_id_filtering && devId == deviceid)) {
-            // check if this GPU is part of the GPU stress test
-            // (device = "all" or the gpu_id is in the device: <gpu id> list)
-            bool cur_gpu_selected = false;
-            uint16_t gpu_id;
-            // if not and AMD GPU just continue
-            if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
-              continue;
+        // filter by device id if needed
+        if (property_device_id > 0 && property_device_id != devId)
+          continue;
+
+        // check if this GPU is part of the GPU stress test
+        // (device = "all" or the gpu_id is in the device: <gpu id> list)
+        bool cur_gpu_selected = false;
+        uint16_t gpu_id;
+        // if not and AMD GPU just continue
+        if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+          continue;
 
 
-            if (device_all_selected) {
+        if (property_device_all) {
+            cur_gpu_selected = true;
+        } else {
+            // search for this gpu in the list
+            // provided under the <device> property
+            auto it_gpu_id = find(property_device.begin(),
+                                  property_device.end(),
+                                  gpu_id);
+
+            if (it_gpu_id != property_device.end())
                 cur_gpu_selected = true;
-            } else {
-                // search for this gpu in the list
-                // provided under the <device> property
-                vector<string>::iterator it_gpu_id = find(
-                    device_prop_gpu_id_list.begin(),
-                    device_prop_gpu_id_list.end(),
-                    std::to_string(gpu_id));
+        }
 
-                if (it_gpu_id != device_prop_gpu_id_list.end())
-                    cur_gpu_selected = true;
-            }
-
-            if (cur_gpu_selected) {
-                gst_gpus_device_index.insert
-                    (std::pair<int, uint16_t>(i, gpu_id));
-                amd_gpus_found = true;
-            }
+        if (cur_gpu_selected) {
+            gst_gpus_device_index.insert
+                (std::pair<int, uint16_t>(i, gpu_id));
+            amd_gpus_found = true;
         }
     }
 
@@ -502,9 +490,6 @@ int action::run(void) {
       rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
       return -1;
     }
-
-    device_all_selected = false;
-    device_id_filtering = false;
 
     // check for -j flag (json logging)
     if (property.find("cli.-j") != property.end())

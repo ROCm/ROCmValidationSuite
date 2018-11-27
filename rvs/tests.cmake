@@ -39,10 +39,6 @@ add_test(NAME unit.rvs.cli2
   COMMAND rvs -t
 )
 
-add_test(NAME conf.gm1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gm1.conf
-)
 
 # add tests
 FOREACH(SINGLE_TEST ${TESTSOURCES})

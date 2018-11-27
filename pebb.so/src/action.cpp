@@ -59,8 +59,6 @@ using std::vector;
 
 //! Default constructor
 pebbaction::pebbaction() {
-  prop_deviceid = -1;
-  prop_device_id_filtering = false;
   bjson = false;
   b2b_block_size = 0;
   link_type = -1;
@@ -94,8 +92,9 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
       return false;
   }
 
-  property_get_uint_list(RVS_CONF_BLOCK_SIZE_KEY, YAML_DEVICE_PROP_DELIMITER,
-                         &block_size, &b_block_size_all, &error);
+  error = property_get_uint_list<uint32_t>(RVS_CONF_BLOCK_SIZE_KEY,
+                                   YAML_DEVICE_PROP_DELIMITER,
+                                   &block_size, &b_block_size_all);
   if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -141,36 +140,25 @@ bool pebbaction::get_all_common_config_keys(void) {
   }
 
   // get <device> property value (a list of gpu id)
-  if (has_property("device", &sdev)) {
-    prop_device_all_selected = property_get_device(&error);
-    if (error) {  // log the error & abort GST
-      msg = "invalid 'device' key value " + sdev;
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+  if (int sts = property_get_device()) {
+    switch (sts) {
+    case 1:
+      msg = "Invalid 'device' key value.";
+      break;
+    case 2:
+      msg = "Missing 'device' key.";
+      break;
     }
-  } else {
-    msg = "key 'device' was not found";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    return -1;
   }
 
-  // get the <deviceid> property value
-  if (has_property("deviceid", &sdevid)) {
-    int devid;
-    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
-    if (!error) {
-      if (devid != -1) {
-        prop_deviceid = static_cast<uint16_t>(devid);
-        prop_device_id_filtering = true;
-      }
-    } else {
-      msg = "invalid 'deviceid' key value " + std::string(sdevid);
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-
-      return false;
-    }
-  } else {
-    prop_device_id_filtering = false;
+  // get the <deviceid> property value if provided
+  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                &property_device_id, 0u)) {
+    msg = "Invalid 'deviceid' key value.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
   }
 
   // get the other action related properties
@@ -241,9 +229,9 @@ int pebbaction::create_threads() {
   RVSTRACE_
   for (size_t i = 0; i < gpu_id.size(); i++) {
     RVSTRACE_
-    if (prop_device_id_filtering) {
+    if (property_device_id > 0) {
       RVSTRACE_
-      if (prop_deviceid != gpu_device_id[i]) {
+      if (property_device_id != gpu_device_id[i]) {
         RVSTRACE_
         continue;
       }
@@ -251,12 +239,12 @@ int pebbaction::create_threads() {
 
     // filter out by listed sources
     RVSTRACE_
-    if (!prop_device_all_selected) {
+    if (!property_device_all) {
       RVSTRACE_
-      const auto it = std::find(device_prop_gpu_id_list.cbegin(),
-                                device_prop_gpu_id_list.cend(),
-                                std::to_string(gpu_id[i]));
-      if (it == device_prop_gpu_id_list.cend()) {
+      const auto it = std::find(property_device.cbegin(),
+                                property_device.cend(),
+                                gpu_id[i]);
+      if (it == property_device.cend()) {
         RVSTRACE_
         continue;
       }
