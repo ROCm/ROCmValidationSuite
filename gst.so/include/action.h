@@ -79,13 +79,6 @@ class action: public rvs::actionbase {
     //! matrix size for SGEMM
     uint64_t gst_matrix_size;
 
-    //! TRUE if device config key is "all"
-    bool device_all_selected;
-    //! TRUE if deviceid filtering was enabled
-    bool device_id_filtering;
-    //! GPU device type config key value
-    uint16_t deviceid;
-
     // configuration properties getters
 
 

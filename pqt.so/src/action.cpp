@@ -59,7 +59,6 @@ using std::vector;
 
 //! Default constructor
 pqtaction::pqtaction() {
-  prop_deviceid = 0u;
   prop_peer_deviceid = 0u;
   bjson = false;
 }
@@ -210,8 +209,9 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     }
   }
 
-  property_get_uint_list(RVS_CONF_BLOCK_SIZE_KEY, YAML_DEVICE_PROP_DELIMITER,
-                         &block_size, &b_block_size_all, &error);
+  error = property_get_uint_list<uint32_t>(RVS_CONF_BLOCK_SIZE_KEY,
+                                 YAML_DEVICE_PROP_DELIMITER,
+                                &block_size, &b_block_size_all);
   if (error == 1) {
       msg =  "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -255,24 +255,25 @@ bool pqtaction::get_all_common_config_keys(void) {
   }
 
   // get <device> property value (a list of gpu id)
-  if (has_property("device", &sdev)) {
-      prop_device_all_selected = property_get_device(&error);
-      if (error) {  // log the error & abort GST
-          msg = "invalid 'device' key value " + sdev;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return false;
-      }
-  } else {
-      msg = "key 'device' was not found";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+  if ((error = property_get_device())) {
+    switch (error) {
+    case 1:
+      msg = "Invalid 'device' key value.";
+      break;
+    case 2:
+      msg = "Missing 'device' key.";
+      break;
+    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
   }
 
-  // get the <deviceid> property value
-  if (property_get_int<uint32_t>(RVS_CONF_DEVICEID_KEY, &prop_deviceid, 0u)) {
-      msg = "invalid '" + std::string(RVS_CONF_DEVICEID_KEY) + "' key value ";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+  // get the <deviceid> property value if provided
+  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                &property_device_id, 0u)) {
+    msg = "Invalid 'deviceid' key value.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
   }
 
   // get the other action/GST related properties
@@ -337,18 +338,18 @@ int pqtaction::create_threads() {
 
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
     // filter out by source device id
-    if (prop_deviceid > 0) {
-      if (prop_deviceid != gpu_device_id[i]) {
+    if (property_device_id > 0) {
+      if (property_device_id != gpu_device_id[i]) {
         continue;
       }
     }
 
     // filter out by listed sources
-    if (!prop_device_all_selected) {
-      const auto it = std::find(device_prop_gpu_id_list.cbegin(),
-                                device_prop_gpu_id_list.cend(),
-                                std::to_string(gpu_id[i]));
-      if (it == device_prop_gpu_id_list.cend()) {
+    if (!property_device_all) {
+      const auto it = std::find(property_device.cbegin(),
+                                property_device.cend(),
+                                gpu_id[i]);
+      if (it == property_device.cend()) {
             continue;
       }
     }

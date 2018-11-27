@@ -148,8 +148,8 @@ int action::run(void) {
     if (has_property("device", &sdev)) {
       pworker->set_strgpuids(sdev);
       if (sdev != "all") {
-        vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
-        vector<int> iarr;
+        std::vector<std::string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
+        std::vector<int> iarr;
         int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
         if (sts < 0) {
           msg = property["name"] +
@@ -204,7 +204,7 @@ int action::run(void) {
 int action::do_gpu_list() {
   log("pesm in do_gpu_list()", rvs::logtrace);
 
-  std::map<string, string>::iterator it;
+  std::map<std::string, std::string>::iterator it;
 
   struct device_info {
     std::string bus;
