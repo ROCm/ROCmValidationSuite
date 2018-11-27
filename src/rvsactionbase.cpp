@@ -45,6 +45,8 @@ using std::string;
  * */
 rvs::actionbase::actionbase() {
   property_log_level = 2;
+  property_device_all = true;
+  property_device_id = 0u;
 }
 
 /**
@@ -109,93 +111,20 @@ bool rvs::actionbase::has_property(const std::string& key) {
   return has_property(key, &val);
 }
 
-/**
- * @brief Gets uint16_t list from the module's properties collection
- * @param key jey name
- * @param delimiter delimiter in YAML file
- * @param pval ptr to reulting list
- * @param pball ptr to flag to be set to 'true' when "all" is detected
- * @param error ptr to error: 0 - OK, 1 - syntax error, 2 - not found
- */
-void rvs::actionbase::property_get_uint_list(const std::string& key,
-                                   const std::string& delimiter,
-                                   std::vector<uint32_t>* pval,
-                                   bool* pball,
-                                   int *error) {
-  bool        bfound = false;
-  std::string strval;
-
-  // init with 'no error'
-  *error = 0;
-
-  // fetch key value if any
-  bfound = has_property(key, &strval);
-
-  // key not found - return
-  if (!bfound) {
-    *error = 2;
-    return;
-  }
-
-  // found and is "all" - set flag and return
-  if (strval == "all") {
-    *pball = true;
-    pval->clear();
-    return;
-  } else {
-    *pball = false;
-  }
-
-  // parse key value into std::vector<std::string>
-  auto strarray = str_split(strval, delimiter);
-
-  // convert str arary into uint16_t array
-  int sts = rvs_util_strarr_to_uintarr(strarray, pval);
-
-  if (sts < 0) {
-    *error = 1;
-    pval->clear();
-  }
-}
-
 
 /**
  * gets the gpu_id list from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return true if "all" is selected, false otherwise
+ * @return 0 - OK
+ * @return 1 - syntax error in 'device' configuration key
+ * @return 2 - missing 'device' key
  */
-bool rvs::actionbase::property_get_device(int *error) {
-  std::string val;
-  *error = 0;
-  if (!has_property(RVS_CONF_DEVICE_KEY, &val)) {
-    RVSTRACE_
-    *error = 2;
-    return false;
-  }
-
-  if (val == "all") {
-    return true;
-  }
-  // split the list of gpu_id
-  device_prop_gpu_id_list = str_split(val, YAML_DEVICE_PROP_DELIMITER);
-
-  if (device_prop_gpu_id_list.empty()) {
-    RVSTRACE_
-    *error = 2;  // list of gpu_id cannot be empty
-    return false;
-  }
-
-  for (auto it_gpu_id = device_prop_gpu_id_list.begin();
-       it_gpu_id != device_prop_gpu_id_list.end(); ++it_gpu_id) {
-    RVSTRACE_
-    if (!is_positive_integer(*it_gpu_id)) {
-      RVSTRACE_
-      *error = 1;
-      return false;
-    }
-  }
-  RVSTRACE_
-  return false;
+int rvs::actionbase::property_get_device() {
+  return property_get_uint_list<uint16_t>(
+    RVS_CONF_DEVICE_KEY,
+    YAML_DEVICE_PROP_DELIMITER,
+    &property_device,
+    &property_device_all
+  );
 }
 
 /**
@@ -252,4 +181,3 @@ int rvs::actionbase::property_get(
 
   return sts;
 }
-

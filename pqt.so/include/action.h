@@ -64,19 +64,14 @@ class pqtaction : public rvs::actionbase {
   bool get_all_pqt_config_keys(void);
   bool get_all_common_config_keys(void);
 
-  //! 'true' if "all" is found under "device" key for this action
-  bool      prop_device_all_selected;
-  //! 'true' if "all" is found under "peer" key for this action
-  bool      prop_peer_device_all_selected;
-  //! deviceid key from config file
-  uint32_t  prop_deviceid;
-
   // PQT specific config keys
   bool property_get_peers(int *error);
   void property_get_test_bandwidth(int *error);
 //  void property_get_log_interval(int *error);
   void property_get_bidirectional(int *error);
 
+  //! 'true' if "all" is found under "peer" key for this action
+  bool      prop_peer_device_all_selected;
   //! array of peer GPU IDs to be used in data trasfers
   std::vector<std::string> prop_peers;
   //! deviceid of peer GPUs
