@@ -26,11 +26,11 @@
 #include "gtest/gtest.h"
 
 #include "pci_caps.h"
-
-#include <pci/pci.h>
-#include <linux/pci.h>
+#include "rvs_unit_testing_defs.h"
 
 #include <vector>
+
+using namespace rvs;
 
 class PcieCapsTest : public ::testing::Test {
  protected:
@@ -66,18 +66,10 @@ class PcieCapsTest : public ::testing::Test {
 
 };
 
-// return value for pci_read_long
-u32 pci_read_long_return_value = 0;
-// override function to return pci_read_long_return_value
-u32 pci_read_long(struct pci_dev *, int pos) PCI_ABI {
-  return pci_read_long_return_value;
-}
-
-
 TEST_F(PcieCapsTest, pcie_caps) {
   int return_value;
   char* buff;
-  char* exp_buff;  
+  char* exp_buff;
 
   // ---------------------------------------
   // pci_dev_find_cap_offset
@@ -120,10 +112,10 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[type_f]->type       = 0;
       test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
-      pci_read_long_return_value = 15;
+      rvs_pci_read_long_return_value = 15;
       buff = new char[1024];
       get_link_cap_max_speed(test_dev, buff);
-EXPECT_EQ(1, 0);
+
       if (id_f == type_f) {
         // other one is valid
         EXPECT_STREQ(buff, "Unknown speed");
@@ -133,32 +125,32 @@ EXPECT_EQ(1, 0);
       }
     }
   }
-//   // 2. valid Id / Type values and iterate pci_read_long_return_value
-//   test_cap[0]->id   = PCI_CAP_ID_EXP;
-//   test_cap[0]->type = PCI_CAP_NORMAL;
-//   test_cap[1]->id   = PCI_CAP_ID_EXP;
-//   test_cap[1]->type = PCI_CAP_NORMAL;
-//   for (pci_read_long_return_value = 0; pci_read_long_return_value < 15; pci_read_long_return_value++) {
-//     buff = new char[1024];
-//     get_link_cap_max_speed(test_dev, buff);
-//     switch (pci_read_long_return_value) {
-//     case 1:
-//       EXPECT_STREQ(buff, "2.5 GT/s");
-//       break;
-//     case 2:
-//       EXPECT_STREQ(buff, "5 GT/s");
-//       break;
-//     case 3:
-//       EXPECT_STREQ(buff, "8 GT/s");
-//       break;
-//     case 4:
-//       EXPECT_STREQ(buff, "16 GT/s");
-//       break;
-//     default:
-//       EXPECT_STREQ(buff, "Unknown speed");
-//       break;
-//     }
-//   }
+  // 2. valid Id / Type values and iterate rvs_pci_read_long_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  for (rvs_pci_read_long_return_value = 0; rvs_pci_read_long_return_value < 15; rvs_pci_read_long_return_value++) {
+    buff = new char[1024];
+    get_link_cap_max_speed(test_dev, buff);
+    switch (rvs_pci_read_long_return_value) {
+    case 1:
+      EXPECT_STREQ(buff, "2.5 GT/s");
+      break;
+    case 2:
+      EXPECT_STREQ(buff, "5 GT/s");
+      break;
+    case 3:
+      EXPECT_STREQ(buff, "8 GT/s");
+      break;
+    case 4:
+      EXPECT_STREQ(buff, "16 GT/s");
+      break;
+    default:
+      EXPECT_STREQ(buff, "Unknown speed");
+      break;
+    }
+  }
   
 }
 
