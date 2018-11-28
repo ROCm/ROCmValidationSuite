@@ -41,6 +41,13 @@ extern "C" {
 #define PCI_CAP_NOT_SUPPORTED "NOT SUPPORTED"
 #define MEM_BAR_MAX_INDEX 5
 
+#ifdef RVS_UNIT_TEST
+  #include "rvs_unit_testing_defs.h"
+  #define pci_read_long rvs_pci_read_long
+  #define pci_read_word rvs_pci_read_word
+  using namespace rvs;
+#endif
+
 extern "C" {
 
 /**

@@ -87,7 +87,7 @@ set(SOURCES
 
 ## define test sources
 set(TEST_SOURCES
-   ../src/gpu_util.cpp ../src/pci_caps.cpp
+   ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvs_unit_testing_defs.cpp
 )
 
 ## define target
