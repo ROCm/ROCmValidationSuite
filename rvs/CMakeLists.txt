@@ -42,6 +42,8 @@ set ( RVS_TARGET "${RVS}" )
 
 project ( ${RVS_TARGET} )
 
+message(STATUS "MODULE: ${RVS}")
+
 # ## Set default module path if not already set
 # if ( NOT DEFINED CMAKE_MODULE_PATH )
 #     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
@@ -102,10 +104,8 @@ add_executable(rvstest ${TESTSOURCES} ${SOURCES})
 target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
-COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
-COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
-COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/conf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
+COMMAND ln -fs ${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
+COMMAND ln -fs ${CMAKE_CURRENT_SOURCE_DIR}/conf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
 )
 
 install(TARGETS ${RVS_TARGET}
