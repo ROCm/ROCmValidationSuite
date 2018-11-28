@@ -103,11 +103,6 @@ LINK_DIRECTORIES(${UT_LIB})
 add_executable(rvstest ${TESTSOURCES} ${SOURCES})
 target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
 
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND ln -fs ${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
-COMMAND ln -fs ${CMAKE_CURRENT_SOURCE_DIR}/conf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
-)
-
 install(TARGETS ${RVS_TARGET}
   RUNTIME
   DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
