@@ -291,6 +291,8 @@ else()
 endif()
 set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
+set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
+
 add_subdirectory(rvs)
 add_subdirectory(gpup.so)
 add_subdirectory(pesm.so)
@@ -303,11 +305,9 @@ add_subdirectory(gst.so)
 add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
 
-add_dependencies(rvstest rvs_gtest_target)
-add_dependencies(rvs rvs_doc)
-add_dependencies(rvs rvs_yaml_target)
-add_dependencies(rvsfail rvs_yaml_target)
-add_dependencies(rvstest rvs_yaml_target)
+add_dependencies(rvs rvs_doc rvs_yaml_target)
+add_dependencies(rvsfail rvs rvs_bintest_folder)
+add_dependencies(rvstest rvs rvs_gtest_target rvs_bintest_folder)
 
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_rsmi_target)
@@ -319,32 +319,48 @@ if(RVS_ROCBLAS EQUAL 1)
   add_dependencies(iet rvs_rblas_target)
 endif()
 
+add_custom_target(rvs_bintest_folder ALL
+COMMAND ${CMAKE_COMMAND} -E make_directory "bin"
+COMMAND ${CMAKE_COMMAND} -E make_directory "bintest"
+COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/.rvsmodules.config
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/.rvsmodules.config ${CMAKE_BINARY_DIR}/bin/.rvsmodules.config
+COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/conf
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf ${CMAKE_BINARY_DIR}/bin
+
+COMMAND rm -f ${RVS_BINTEST_FOLDER}/.rvsmodules.config
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/.rvsmodules.config ${RVS_BINTEST_FOLDER}/.rvsmodules.config
+COMMAND rm -f ${RVS_BINTEST_FOLDER}/conf
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf ${RVS_BINTEST_FOLDER}
+WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+COMMENT "Create the bintest directory"
+VERBATIM)
+
 add_custom_target(rvs_doc ALL
 COMMAND ${CMAKE_COMMAND} -E make_directory "doc"
 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 COMMENT "Create the doc directory"
 VERBATIM)
 
-add_custom_target(progguide ALL
+add_custom_target(rvs_progguide ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS Programmer's Reference Guide"
     VERBATIM)
-add_dependencies(progguide rvs_doc)
+add_dependencies(rvs_progguide rvs_doc)
 
-add_custom_target(man1 ALL
+add_custom_target(rvs_man1 ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyMan1
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS man.1 files"
     VERBATIM)
-add_dependencies(man1 rvs_doc)
+add_dependencies(rvs_man1 rvs_doc)
 
-add_custom_target(userguide ALL
+add_custom_target(rvs_userguide ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyGuide
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS User Guide"
     VERBATIM)
-add_dependencies(userguide rvs_doc)
+add_dependencies(rvs_userguide rvs_doc)
 
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
