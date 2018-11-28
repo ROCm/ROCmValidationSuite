@@ -49,6 +49,7 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
 
   add_executable(${TEST_NAME} ${SINGLE_TEST} ${TEST_SOURCES} ${SOURCES})
   target_link_libraries(${TEST_NAME} ${PROJECT_LINK_LIBS} ${PROJECT_TEST_LINK_LIBS} gtest_main gtest)
+  target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
   add_compile_options(-Wall -Wextra -save-temps)
 
   add_test(NAME ${TEST_NAME}
