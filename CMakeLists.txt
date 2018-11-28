@@ -320,9 +320,17 @@ if(RVS_ROCBLAS EQUAL 1)
 endif()
 
 add_custom_target(rvs_bintest_folder ALL
+COMMAND ${CMAKE_COMMAND} -E make_directory "bin"
 COMMAND ${CMAKE_COMMAND} -E make_directory "bintest"
-COMMAND ln -fs ${CMAKE_CURRENT_SOURCE_DIR}/rvs/.rvsmodules.config ${RVS_BINTEST_FOLDER}/.rvsmodules.config
-COMMAND ln -fs ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf ${RVS_BINTEST_FOLDER}/conf
+COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/.rvsmodules.config
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/.rvsmodules.config ${CMAKE_BINARY_DIR}/bin/.rvsmodules.config
+COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/conf
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf ${CMAKE_BINARY_DIR}/bin
+
+COMMAND rm -f ${RVS_BINTEST_FOLDER}/.rvsmodules.config
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/.rvsmodules.config ${RVS_BINTEST_FOLDER}/.rvsmodules.config
+COMMAND rm -f ${RVS_BINTEST_FOLDER}/conf
+COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf ${RVS_BINTEST_FOLDER}
 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 COMMENT "Create the bintest directory"
 VERBATIM)
