@@ -32,9 +32,12 @@
 #include <grp.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <stdio.h>
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstdlib>
+#include <array>
 #include <map>
 #include <vector>
 #include <regex>
@@ -68,6 +71,7 @@
 #define ETC_GROUP  "/etc/group"
 #define DPKG_FILE  "/var/lib/dpkg/status"
 #define PKG_CMD_FILE "installed_pkg.txt"
+#define VERSION_FILE "version_file.txt"
 #define STREAM_SIZE 512
 #define USR_REG "([^/:]*)"
 #define GRP_REG "([^/:]*):([^/:]*):([^/:]*):([^/:]+)"
@@ -289,7 +293,7 @@ int action::pkgchk_run() {
 			// Pipe the standard output to the fd[1]
 			dup2(fd[1], STDOUT_FILENO);
 			dup2(fd[1], STDERR_FILENO);
-			char buffer[BUFFER_SIZE];
+			//char buffer[BUFFER_SIZE];
 			string command_string = "dpkg --get-selections > ";
 			command_string += PKG_CMD_FILE;
 			//snprintf(buffer, BUFFER_SIZE, command_string.c_str());
@@ -308,6 +312,7 @@ int action::pkgchk_run() {
 			cout  << package_name << endl;
 			// We read the result from the dpk-querry from the fd[0]
 			vector <string> package_vector;
+			bool package_found = false;
 			count = read(fd[0], result_cmnd, BUFFER_SIZE);
 			std::regex pkg_pattern(package_name);
 			result_cmnd[count] = 0;
@@ -320,18 +325,47 @@ int action::pkgchk_run() {
 				line_result.erase(line_result.find_last_not_of(" \n\r\t")+1);
 				//cout << line_result << "***" << endl;
 				if (regex_match(line_result, pkg_pattern) == true) {
-					string package_exists = "[" + action_name + "] " + "rcqt pkgcheck "
-					+ line_result + " true";
-					rvs::lp::Log(package_exists, rvs::logresults);
-					package_vector.push_back(line_result);
+					cout << line_result << endl;
+					if (version_exists) {
+						char cmd_buffer[BUFFER_SIZE];
+						snprintf(cmd_buffer, BUFFER_SIZE, \
+						"dpkg -s %s | grep -i version > %s", line_result.c_str(),(std::string(VERSION_FILE)).c_str());
+						cout << cmd_buffer << endl;
+						if (system(cmd_buffer) == -1) {
+							rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+							return 1;
+						}
+						std::regex version_pattern(std::string("Version: ") + version_name);
+						ifstream version_stream(std::string(VERSION_FILE));
+						char file_line[STREAM_SIZE];
+						version_stream.getline(file_line, STREAM_SIZE);
+						cout << "==="<< std::string(file_line) << endl;
+						string line_result = file_line;
+						if (regex_match(line_result, version_pattern) == true) {
+							string package_exists = "[" + action_name + "] " + "rcqt pkgcheck * "
+							+ line_result.substr(8, line_result.size()-8) + " true";
+							rvs::lp::Log(package_exists, rvs::logresults);
+							package_found = true;
+						} else {
+							string pkg_not_exists = "[" + action_name + "] " + "rcqt pkgcheck &"
+							+ package_name + " false";
+							rvs::lp::Log(pkg_not_exists, rvs::logresults);
+							package_found = true;
+						}
+					} else {
+						string package_exists = "[" + action_name + "] " + "rcqt pkgcheck #"
+						+ line_result + " true";
+						rvs::lp::Log(package_exists, rvs::logresults);
+						package_found = true;
+					}
 				}
 			}
-			if (package_vector.size() == 0) {
+			if (!package_found) {
 				string pkg_not_exists = "[" + action_name + "] " + "rcqt pkgcheck "
 				+ package_name + " false";
 				rvs::lp::Log(pkg_not_exists, rvs::logresults);
 			}
-		
+			
 		}
 		//cout << " ***" << endl;
     return 0;
