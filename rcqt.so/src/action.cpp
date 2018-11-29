@@ -43,6 +43,7 @@
 #include <regex>
 #include <set>
 
+#include "rvs_key_def.h"
 #include "rvsloglp.h"
 
 #define MODULE_NAME "rcqt"
@@ -84,6 +85,7 @@ using std::endl;
 using std::ifstream;
 using std::map;
 using std::regex;
+using std::vector;
 
 action::action() {
   bjson = false;
@@ -107,7 +109,6 @@ action::~action() {
  * */
 
 int action::run() {
-  int error = 0;
   string msg;
   bool pkgchk_bool = false;
   bool usrchk_bool = false;
@@ -116,10 +117,8 @@ int action::run() {
   bool filechk_bool = false;
 
   // get the action name
-  rvs::actionbase::property_get_action_name(&error);
-  if (error == 2) {
-    msg = "action field is missing";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
     return 1;
   }
 

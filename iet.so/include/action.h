@@ -45,14 +45,14 @@ extern "C" {
 using std::vector;
 using std::string;
 
-//! structure containing hwmon related info
+//! structure containing GPU identification related data
 struct gpu_hwmon_info {
-    //! GPU device index (0.n)
+    //! GPU device index (0..n) as reported by HIP API
     int hip_gpu_deviceid;
     //! real GPU ID (e.g.: 53645) as exported by kfd
     uint16_t gpu_id;
-    //! gpu_hwmon_power_entry
-    std::string gpu_hwmon_power_entry;
+    //! BDF id
+    uint32_t bdf_id;
 };
 
 /**
@@ -87,22 +87,13 @@ class action: public rvs::actionbase {
     int iet_max_violations;
     //! sampling rate for the target_power
     uint64_t iet_sample_interval;
-    //! time interval at which the module reports the GPU's power
-    uint64_t iet_log_interval;
     //! matrix size for SGEMM
     uint64_t iet_matrix_size;
 
-    //! TRUE if device config key is "all"
-    bool device_all_selected;
-    //! TRUE if deviceid filtering was enabled
-    bool device_id_filtering;
-    //! GPU device type config key value
-    uint16_t deviceid;
-
-    //! list of GPUs (along with some hwmon data) selected for EDPp test
+    //! list of GPUs (along with some identification data) which are
+    //! selected for EDPp test
     std::vector<gpu_hwmon_info> edpp_gpus;
-    //! list of SMI monitor devices
-    std::vector<std::shared_ptr<amd::smi::Device>> monitor_devices;
+
     // configuration properties getters
 
     // IET specific config keys
@@ -111,7 +102,6 @@ class action: public rvs::actionbase {
     void property_get_iet_tolerance(int *error);
     void property_get_iet_max_violations(int *error);
     void property_get_iet_sample_interval(int *error);
-    void property_get_iet_log_interval(int *error);
     void property_get_iet_matrix_size(int *error);
 
     bool get_all_iet_config_keys(void);
@@ -121,9 +111,8 @@ class action: public rvs::actionbase {
     * @return true if no fatal error occured, false otherwise
     */
     bool get_all_common_config_keys(void);
-    const std::string get_irq(const std::string dev_path);
-    bool add_gpu_to_edpp_list(uint16_t dev_location_id, uint16_t gpu_irq,
-                              int32_t gpu_id, int hip_num_gpu_devices);
+    bool add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
+                              int hip_num_gpu_devices);
 
 /**
  * @brief gets the number of ROCm compatible AMD GPUs

@@ -34,6 +34,8 @@ set ( RVS_TARGET "${RVS}" )
 
 project ( ${RVS_TARGET} )
 
+message(STATUS "MODULE: ${RVS}")
+
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
@@ -58,7 +60,7 @@ set ( BUILD_VERSION_PATCH ${VERSION_PATCH} )
 set ( LIB_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
 
 if ( DEFINED VERSION_BUILD AND NOT ${VERSION_BUILD} STREQUAL "" )
-    message ( "VERSION BUILD DEFINED ${VERSION_BUILD}" )
+#    message ( "VERSION BUILD DEFINED ${VERSION_BUILD}" )
     set ( BUILD_VERSION_PATCH "${BUILD_VERSION_PATCH}-${VERSION_BUILD}" )
 endif ()
 set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
@@ -73,7 +75,6 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "hip_hcc")
 
-
 # Determine Roc Runtime header files are accessible
 if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
@@ -86,14 +87,18 @@ if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime_api.h)
 endif()
 
 # Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${ROCBLAS_INC_DIR}/rocblas.h)
-  message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
-  RETURN()
-endif()
+if(DEFINED RVS_ROCMSMI)
+  if(NOT RVS_ROCMSMI EQUAL 1)
+    if(NOT EXISTS ${ROCBLAS_INC_DIR}/rocblas.h)
+    message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
+    RETURN()
+    endif()
 
-if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
-  message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
-  RETURN()
+    if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
+      message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
+      RETURN()
+    endif()
+  endif()
 endif()
 
 if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
@@ -101,9 +106,13 @@ if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
   RETURN()
 endif()
 
-if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
-  message("ERROR: rocm_smi library can't be found!")
-  RETURN()
+if(DEFINED RVS_ROCMSMI)
+  if(NOT RVS_ROCMSMI EQUAL 1)
+    if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
+      message("ERROR: rocm_smi library can't be found!...")
+      RETURN()
+    endif()
+  endif()
 endif()
 
 # Add directories to look for header files to compile
@@ -118,8 +127,9 @@ set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 ## define include directories
 include_directories(include ../include)
 
-set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
-  src/rvs_module.cpp src/action.cpp src/iet_worker.cpp src/hwmon_util.cpp ../src/rvs_blas.cpp src/blas_worker.cpp src/log_worker.cpp)
+set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsloglp.cpp ../src/rsmi_util.cpp
+  ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp 
+  src/rvs_module.cpp src/action.cpp src/iet_worker.cpp ../src/rvs_blas.cpp src/blas_worker.cpp src/log_worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
@@ -130,9 +140,15 @@ set_target_properties(${RVS_TARGET} PROPERTIES
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB} ${ROCM_SMI_LIB})
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -s ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
 
 install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
+
+# TEST SECTION
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)

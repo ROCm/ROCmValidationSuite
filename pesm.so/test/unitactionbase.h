@@ -1,4 +1,3 @@
-
 /********************************************************************************
  *
  * Copyright (c) 2018 ROCm Developer Tools
@@ -23,30 +22,19 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include <string>
-#include <iostream>
-#include <fstream>
+#ifndef PESM_SO_INCLUDE_UNITACTIONBASE_H_
+#define PESM_SO_INCLUDE_UNITACTIONBASE_H_
 
-#include "hwmon_util.h"
+#include "rvsactionbase.h"
 
-using std::string;
 
-/**
- * @brief gets the latest average GPU power data
- * @param hwmon_path file containing the power data
- * @return average power data
- */
-float get_power_data(string hwmon_path) {
-    uint64_t avg_power;
-    std::ifstream f_power;
-    f_power.open(hwmon_path);
+class unitactionbase : public rvs::actionbase {
+ public:
+  unitactionbase();
+  virtual ~unitactionbase();
 
-    if (f_power.is_open()) {
-        f_power >> avg_power;
-        f_power.close();
-        return static_cast<float>(avg_power) / 1e6l;
-    }
+  virtual int run(void);
 
-    return 0;
-}
+};
 
+#endif  // PESM_SO_INCLUDE_UNITACTIONBASE_H_

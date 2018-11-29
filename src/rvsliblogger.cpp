@@ -40,7 +40,6 @@
 #include "rvslognodestring.h"
 #include "rvslognodeint.h"
 #include "rvslognoderec.h"
-#include "rvsoptions.h"
 
 using std::cerr;
 using std::cout;
@@ -53,6 +52,8 @@ std::mutex  rvs::logger::cout_mutex;
 std::mutex  rvs::logger::log_mutex;
 bool  rvs::logger::bStop;
 uint16_t rvs::logger::stop_flags;
+bool rvs::logger::b_quiet;
+std::string rvs::logger::log_file;
 
 const char*  rvs::logger::loglevelname[] = {
   "NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
@@ -171,7 +172,6 @@ int rvs::logger::Log(const char* Message, const int LogLevel) {
  */
 int rvs::logger::LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec) {
-
   // stop logging requested?
   if (bStop) {
     if (stop_flags)
@@ -182,7 +182,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   if (LogLevel < lognone || LogLevel > logtrace) {
     char buff[128];
     snprintf(buff, sizeof(buff), "unknown logging level: %d", LogLevel);
-    Err( buff, "CLI");
+    Err(buff, "CLI");
     return -1;
   }
 
@@ -211,7 +211,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   row += Message;
 
   // if no quiet option given, output to cout
-  if (!rvs::options::has_option("-q")) {
+  if (!b_quiet) {
     // lock cout_mutex for the duration of this block
     std::lock_guard<std::mutex> lk(cout_mutex);
     cout << row << '\n';
@@ -293,7 +293,7 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   if (level < lognone || level > logtrace) {
     char buff[128];
     snprintf(buff, sizeof(buff), "unknown logging level: %d", r->LogLevel());
-    Err( buff, "CLI");
+    Err(buff, "CLI");
     delete r;
     return -1;
   }
@@ -348,7 +348,7 @@ int rvs::logger::ToFile(const std::string& Row) {
   }
 
   std::string logfile;
-  if (!rvs::options::has_option("-l", &logfile))
+  if (log_file == "")
     return -1;
 
   std::fstream fs;
@@ -373,7 +373,7 @@ int rvs::logger::ToFile(const std::string& Row) {
  */
 int rvs::logger::JsonPatchAppend() {
   std::string logfile;
-  if (!rvs::options::has_option("-l", &logfile))
+  if (log_file == "")
     return -1;
 
   FILE * pFile;
@@ -463,11 +463,13 @@ int rvs::logger::initialize() {
   bStop = false;
   stop_flags = 0;
 
+  b_quiet = false;
+  log_file = "";
   std::string row;
   std::string logfile;
 
   // if no logg to file requested, just return
-  if (!rvs::options::has_option("-l", &logfile))
+  if (log_file == "")
     return 0;
 
   if (append()) {
@@ -505,7 +507,7 @@ int rvs::logger::initialize() {
  */
 int rvs::logger::terminate() {
   // if no logg to file requested, just return
-  if (!rvs::options::has_option("-l"))
+  if (log_file == "")
     return 0;
 
   std::string row(RVSENDL);
@@ -570,13 +572,13 @@ int rvs::logger::Err(const char* Message, const char* Module
     return 1;
   }
   std::string module =
-      Module != nullptr ? std::string("[") + Module + "] " : "";
+      Module != nullptr ? std::string(" [") + Module + "]" : "";
   std::string action =
-      Action != nullptr ? std::string("[") + Action + "] " : "";
+      Action != nullptr ? std::string(" [") + Action + "]" : "";
   std::string message = Message;
   std::string out;
-  out = "RVS-ERROR ";
-  out += module + action + message;
+  out = "RVS-ERROR";
+  out += module + action + std::string(" ") + message;
   {
     // lock cout_mutex for the duration of this block
     std::lock_guard<std::mutex> lk(cout_mutex);

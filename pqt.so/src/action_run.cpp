@@ -84,8 +84,8 @@ int pqtaction::run() {
   }
 
   // log_interval must be less than duration
-  if (prop_log_interval > 0 && gst_run_duration_ms > 0) {
-    if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
+  if (property_log_interval > 0 && property_duration > 0) {
+    if (static_cast<uint64_t>(property_log_interval) > property_duration) {
       msg = "log_interval must be less than duration";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
@@ -93,36 +93,46 @@ int pqtaction::run() {
   }
 
   sts = create_threads();
-  if (sts)
+  if (sts) {
+    RVSTRACE_
     return sts;
+  }
 
+  if (!prop_test_bandwidth || test_array.size() < 1) {
+    RVSTRACE_
+    // do cleanup
+    destroy_threads();
+    return 0;
+  }
+
+  RVSTRACE_
   // define timers
   rvs::timer<pqtaction> timer_running(&pqtaction::do_running_average, this);
   rvs::timer<pqtaction> timer_final(&pqtaction::do_final_average, this);
 
-  unsigned int iter = gst_run_count > 0 ? gst_run_count : 1;
-//  unsigned int step = gst_run_count == 0 ? 0 : 1;
+  unsigned int iter = property_count > 0 ? property_count : 1;
   unsigned int step = 1;
 
   do {
+    RVSTRACE_
     // let the test run in this iteration
     brun = true;
 
     // start timers
-    if (gst_run_duration_ms) {
+    if (property_duration) {
       RVSTRACE_
-      timer_final.start(gst_run_duration_ms, true);  // ticks only once
+      timer_final.start(property_duration, true);  // ticks only once
     }
 
-    if (prop_log_interval) {
+    if (property_log_interval) {
       RVSTRACE_
-      timer_running.start(prop_log_interval);        // ticks continuously
+      timer_running.start(property_log_interval);        // ticks continuously
     }
 
     do {
       RVSTRACE_
 
-      if (gst_runs_parallel) {
+      if (property_parallel) {
         sts = run_parallel();
       } else {
         sts = run_single();
@@ -136,9 +146,9 @@ int pqtaction::run() {
     iter -= step;
 
     // insert wait between runs if needed
-    if (iter > 0 && gst_run_wait_ms > 0) {
+    if (iter > 0 && property_wait > 0) {
       RVSTRACE_
-      sleep(gst_run_wait_ms);
+      sleep(property_wait);
     }
   } while (iter && !rvs::lp::Stopping());
 
@@ -172,7 +182,7 @@ int pqtaction::run_single() {
     (*it)->do_transfer();
 
     // if log interval is zero, print current results immediately
-    if (prop_log_interval == 0) {
+    if (property_log_interval == 0) {
       print_running_average(*it);
     }
 

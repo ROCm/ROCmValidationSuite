@@ -51,13 +51,6 @@ class IETWorker : public rvs::ThreadBase {
     //! returns action name
     const std::string& get_name(void) { return action_name; }
 
-    //! sets GPU's hwmon entry
-    void set_gpu_hwmon_entry(const std::string& _gpu_hwmon_entry) {
-        gpu_hwmon_entry = _gpu_hwmon_entry;
-    }
-    //! returns the GPU's hwmon entry
-    const std::string& get_gpu_hwmon_entry(void) { return gpu_hwmon_entry; }
-
     //! sets GPU ID
     void set_gpu_id(uint16_t _gpu_id) { gpu_id = _gpu_id; }
     //! returns GPU ID
@@ -69,6 +62,13 @@ class IETWorker : public rvs::ThreadBase {
     }
     //! returns the GPU index
     int get_gpu_device_index(void) { return gpu_device_index; }
+
+    //! sets the GPU power-index
+    void set_pwr_device_id(int _pwr_device_id) {
+        pwr_device_id = _pwr_device_id;
+    }
+    //! returns the GPU power-index
+    int get_pwr_device_id(void) { return pwr_device_id; }
 
     //! sets the run delay
     void set_run_wait_ms(uint64_t _run_wait_ms) {
@@ -150,12 +150,12 @@ class IETWorker : public rvs::ThreadBase {
  protected:
     //! name of the action
     std::string action_name;
-    //! GPU's hwmon entry
-    std::string gpu_hwmon_entry;
-    //! index of the GPU that will run the EDPp test
+    //! index of the GPU (as reported by HIP API) that will run the EDPp test
     int gpu_device_index;
     //! ID of the GPU that will run the EDPp test
     uint16_t gpu_id;
+    //! index of the GPU device as requested by rocm_smi
+    uint32_t pwr_device_id;
     //! EDPp test run delay
     uint64_t run_wait_ms;
     //! EDPp test run duration

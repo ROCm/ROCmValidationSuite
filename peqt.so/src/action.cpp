@@ -54,8 +54,8 @@ extern "C" {
 #define JSON_CAPS_NODE_NAME             "capabilities"
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 
-#define PEQT_RESULT_PASS_MESSAGE        "TRUE"
-#define PEQT_RESULT_FAIL_MESSAGE        "FALSE"
+#define PEQT_RESULT_PASS_MESSAGE        "true"
+#define PEQT_RESULT_FAIL_MESSAGE        "false"
 
 #define MODULE_NAME                     "peqt"
 #define MODULE_NAME_CAPS                "PEQT"
@@ -76,7 +76,8 @@ using std::map;
 const char* pcie_cap_names[] =
         {   "link_cap_max_speed", "link_cap_max_width", "link_stat_cur_speed",
             "link_stat_neg_width", "slot_pwr_limit_value",
-            "slot_physical_num", "device_id", "vendor_id", "kernel_driver",
+            "slot_physical_num", "bus_id", "device_id", "vendor_id",
+            "kernel_driver",
             "dev_serial_num", "atomic_op_routing",  "atomic_op_32_completer",
             "atomic_op_64_completer", "atomic_op_128_CAS_completer"
         };
@@ -85,7 +86,7 @@ const char* pcie_cap_names[] =
 void (*arr_prop_pfunc_names[])(struct pci_dev *dev, char *) = {
     get_link_cap_max_speed, get_link_cap_max_width,
     get_link_stat_cur_speed, get_link_stat_neg_width,
-    get_slot_pwr_limit_value, get_slot_physical_num,
+    get_slot_pwr_limit_value, get_slot_physical_num, get_pci_bus_id,
     get_device_id, get_vendor_id, get_kernel_driver,
     get_dev_serial_num, get_atomic_op_routing,
     get_atomic_op_32_completer, get_atomic_op_64_completer,
@@ -269,23 +270,15 @@ int action::run(void) {
     map<string, string>::iterator it;  // module's properties map iterator
     bool pci_infra_qual_result = true;  // PCI qualification result
     bool amd_gpus_found = false;
-    bool device_all_selected = false;
-    bool device_id_filtering = false;
-    int error = 0;
-    uint16_t deviceid = 0;
-    vector<uint16_t> gpus_location_id;
-    vector<uint16_t> gpus_id;
     uint8_t i;
 
     struct pci_access *pacc;
     struct pci_dev *dev;
 
     // get the action name
-    rvs::actionbase::property_get_action_name(&error);
-    if (error == 2) {
-      msg = "action field is missing in gst module";
-      rvs::lp::Err(msg, MODULE_NAME);
-      return -1;
+    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+      rvs::lp::Err("Action name missing", MODULE_NAME);
+      return 1;
     }
 
     bjson = false;  // already initialized in the default constructor
@@ -308,39 +301,27 @@ int action::run(void) {
     }
 
     // get <device> property value (a list of gpu id)
-    device_all_selected = property_get_device(&error);
-    if (error) {
-        // log the error
-        msg = YAML_DEVICE_PROPERTY_ERROR;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-        // log the module's result (FALSE) and abort PCIe qualification check
-        // (<device> parameter is mandatory)
-        msg = PEQT_RESULT_FAIL_MESSAGE;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);;
-
-        return -1;  // PCIe qualification check cannot continue
+    if (int sts = property_get_device()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device' key.";
+        break;
+      }
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      return -1;
     }
 
-    // get the <deviceid> property value
-    int devid = property_get_deviceid(&error);
-    if (!error) {
-        if (devid != -1) {
-            deviceid = static_cast<uint16_t>(devid);
-            device_id_filtering = true;
-        }
-    } else {
-        // log the error
-        msg = YAML_DEVICEID_PROPERTY_ERROR;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-        // log the module's result (FALSE) and abort PCIe qualification check
-        // (<device> parameter is mandatory)
-        msg = PEQT_RESULT_FAIL_MESSAGE;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-        return -1;  // PCIe qualification check cannot continue
+    // get the <deviceid> property value if provided
+    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                  &property_device_id, 0u)) {
+      msg = "Invalid 'deviceid' key value.";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      return -1;
     }
+
 
     // get the pci_access structure
     pacc = pci_alloc();
@@ -392,52 +373,35 @@ int action::run(void) {
 
     // iterate over devices
     for (dev = pacc->devices; dev; dev = dev->next) {
-        // fill in the info
-        pci_fill_info(dev,
-                PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
-                | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
+      // fill in the info
+      pci_fill_info(dev,
+              PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
+              | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
 
-        // computes the actual dev's location_id (sysfs entry)
-        uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
-                | (dev->func));
+      // computes the actual dev's location_id (sysfs entry)
+      uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
+              | (dev->func));
 
         // check if this pci_dev corresponds to one of the AMD GPUs
-        int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+      uint16_t gpu_id;
+      // if not and AMD GPU just continue
+      if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+        continue;
 
-        if (-1 != gpu_id) {
-            // that should be an AMD GPU
+      // check for deviceid filtering
+      if (property_device_id > 0 && dev->device_id != property_device_id)
+        continue;
 
-            // check for deviceid filtering
-            if (!device_id_filtering
-                    || (device_id_filtering && dev->device_id == deviceid)) {
-                // check if the GPU is part of the PCIe check
-                // (either device: all or the gpu_id is in
-                // the device: <gpu id> list
-
-                bool cur_gpu_selected = false;
-
-                if (device_all_selected) {
-                    cur_gpu_selected = true;
-                } else {
-                    // search for this gpu in the list
-                    // provided under the <device> property
-                    vector<string>::iterator it_gpu_id = find(
-                            device_prop_gpu_id_list.begin(),
-                            device_prop_gpu_id_list.end(),
-                            std::to_string(gpu_id));
-
-                    if (it_gpu_id != device_prop_gpu_id_list.end())
-                        cur_gpu_selected = true;
-                }
-
-                if (cur_gpu_selected) {
-                    amd_gpus_found = true;
-                    if (!get_gpu_all_pcie_capabilities(dev,
-                        static_cast<uint16_t>(gpu_id)))
-                        pci_infra_qual_result = false;
-                }
-            }
+      if (!property_device_all) {
+        if (find(property_device.begin(), property_device.end(), gpu_id) ==
+                 property_device.end()) {
+            continue;
         }
+      }
+
+      amd_gpus_found = true;
+      if (!get_gpu_all_pcie_capabilities(dev, gpu_id))
+        pci_infra_qual_result = false;
     }
 
     pci_cleanup(pacc);

@@ -29,6 +29,8 @@
 #include <string>
 #include <vector>
 
+#include "rvs_util.h"
+
 namespace rvs {
 /**
  * @class actionbase
@@ -52,25 +54,94 @@ class actionbase {
   virtual int     run(void) = 0;
   bool has_property(const std::string& key, std::string* pval);
   bool has_property(const std::string& key);
-  int  property_get_deviceid(int *error);
-  bool property_get_device(int *error);
+  int property_get_device();
 
-  void property_get_action_name(int *error);
-  void property_get_run_parallel(int *error);
-  void property_get_run_count(int *error);
-  void property_get_run_wait(int *error);
-  void property_get_run_duration(int *error);
-  int  property_get_sample_interval(int *error);
-  int  property_get_log_interval(int *error);
-  void property_get_log_level(int *error);
-  bool property_get_terminate(int* error);
-  void property_get_uint_list(const std::string& key,
+  /**
+  * @brief Gets uint16_t list from the module's properties collection
+  * @param key jey name
+  * @param delimiter delimiter in YAML file
+  * @param pval ptr to reulting list
+  * @param pball ptr to flag to be set to 'true' when "all" is detected
+  * @return 0 - OK
+  * @return 1 - syntax error in 'device' configuration key
+  * @return 2 - missing 'device' key
+  */
+  template <typename T>
+  int property_get_uint_list(const std::string& key,
                                    const std::string& delimiter,
-                                   std::vector<uint32_t>* pval,
-                                   bool* pball,
-                                   int *error);
-  uint32_t property_get_b2b_size(int* error);
-  int property_get_link_type(int* error);
+                                   std::vector<T>* pval,
+                                   bool* pball) {
+    std::string strval;
+
+    // fetch key value if any
+    if (!has_property(key, &strval)) {
+      return 2;
+    }
+
+    // found and is "all" - set flag and return
+    if (strval == "all") {
+      *pball = true;
+      pval->clear();
+      return 0;
+    } else {
+      *pball = false;
+    }
+
+    // parse key value into std::vector<std::string>
+    auto strarray = str_split(strval, delimiter);
+
+    // convert str arary into uint16_t array
+    int sts = rvs_util_strarr_to_uintarr<T>(strarray, pval);
+
+    if (sts < 0) {
+      pval->clear();
+      return 1;
+    }
+
+    return 0;
+  }
+
+
+/**
+ * @brief reads key integer type from the module's properties collection
+ * returns 1 for invalid key, 2 for missing key 
+*/    
+  template <typename T>
+  int property_get_int(const std::string& prop_name, T* key) {
+    std::string val;
+    int error = 0;  // init with 'no error'
+    if (has_property(prop_name, &val)) {
+       error = rvs_util_parse<T>(val, key);
+    } else {
+      error = 2;
+    }
+    return error;
+  }
+
+  /**
+   * @brief reads key integer type from the module's properties collection
+   * returns 1 for invalid key
+   * takes default value if key is missing 
+   */
+  template <typename T>
+  int property_get_int
+  (const std::string& prop_name, T* key, T def_value) {
+    std::string val;
+    int error = 0;  // init with 'no error'
+    if (has_property(prop_name, &val)) {
+      error = rvs_util_parse<T>(val, key);
+    } else {
+      *key = def_value;
+    }
+    return error;
+  }
+
+  int property_get(const std::string& prop_name, bool* pVal);
+  int property_get(const std::string& prop_name, bool* pVal, bool bDefault);
+
+  int property_get(const std::string& prop_name, std::string* pVal);
+  int property_get(const std::string& prop_name,
+                   std::string* pVal, const std::string& bDefault);
 
  protected:
 /**
@@ -84,23 +155,32 @@ class actionbase {
 
   //! name of the action
   std::string action_name;
-  //! TRUE if the GST action will run on all selected devices in parallel
-  bool gst_runs_parallel;
-  //! number of GST stress test iterations to run
-  uint64_t gst_run_count;
+  //! device_id - non-zero if filtering of device id is required
+  uint16_t property_device_id;
+  //! array of GPU IDs listed in config 'device' key
+  std::vector<uint16_t> property_device;
+  //! 'true' when all devices are selected ('device: all')
+  bool property_device_all;
+  //! TRUE if the action will run on all selected devices in parallel
+  bool property_parallel;
+  //! number of stress test iterations to run
+  uint64_t property_count;
   //! stress test run delay
-  uint64_t gst_run_wait_ms;
+  uint64_t property_wait;
   //! stress test run duration
-  uint64_t gst_run_duration_ms;
+  uint64_t property_duration;
+  //! logging interval
+  uint64_t property_log_interval;
 
   //! data from config file
-  std::map<std::string, std::string>  property;
+  std::map<std::string, std::string> property;
 
-  //! List of all gpu_id in the action's "device" property in .config file
-  std::vector<std::string> device_prop_gpu_id_list;
+//   //! List of all gpu_id in the action's "device" property in .config file
+//   std::vector<std::string> device_prop_gpu_id_list;
 
   //! logging level
   int property_log_level;
 };
+
 }  // namespace rvs
 #endif  // INCLUDE_RVSACTIONBASE_H_

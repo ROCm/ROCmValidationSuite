@@ -29,6 +29,6 @@
 
 
 TEST(rvs, sanity) {
-  EXPECT_EQ(strlen("Test"), 4);
-  EXPECT_EQ(strlen(""), 0);
+  EXPECT_EQ(strlen("Test"), 4u);
+  EXPECT_EQ(strlen(""), 0u);
 }

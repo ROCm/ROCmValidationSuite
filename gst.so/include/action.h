@@ -66,8 +66,6 @@ class action: public rvs::actionbase {
 
     //! stress test ramp duration
     uint64_t gst_ramp_interval;
-    //! time interval at which the module reports the average GFlops
-    uint64_t gst_log_interval;
     //! maximum allowed number of target_stress violations
     int gst_max_violations;
     //! specifies whether to copy the matrices to the GPU before each
@@ -81,35 +79,28 @@ class action: public rvs::actionbase {
     //! matrix size for SGEMM
     uint64_t gst_matrix_size;
 
-    //! TRUE if device config key is "all"
-    bool device_all_selected;
-    //! TRUE if deviceid filtering was enabled
-    bool device_id_filtering;
-    //! GPU device type config key value
-    uint16_t deviceid;
-
     // configuration properties getters
 
 
     // GST specific config keys
-    void property_get_gst_ramp_interval(int *error);
-    void property_get_gst_log_interval(int *error);
-    void property_get_gst_max_violations(int *error);
     void property_get_gst_copy_matrix(int *error);
 
     void property_get_gst_target_stress(int *error);
     void property_get_gst_tolerance(int *error);
-    void property_get_gst_matrix_size(int *error);
 
     bool get_all_gst_config_keys(void);
-/**
- * @brief reads all common configuration keys from
- * the module's properties collection
- * @return true if no fatal error occured, false otherwise
- */    
+  /**
+  * @brief reads all common configuration keys from
+  * the module's properties collection
+  * @return true if no fatal error occured, false otherwise
+  */
     bool get_all_common_config_keys(void);
 
-    int get_num_amd_gpu_devices(void);
+  /**
+  * @brief gets the number of ROCm compatible AMD GPUs
+  * @return run number of GPUs
+  */
+  int get_num_amd_gpu_devices(void);
     int get_all_selected_gpus(void);
     bool do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
 };

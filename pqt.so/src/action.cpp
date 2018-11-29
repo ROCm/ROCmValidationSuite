@@ -59,9 +59,7 @@ using std::vector;
 
 //! Default constructor
 pqtaction::pqtaction() {
-  prop_deviceid = -1;
-  prop_device_id_filtering = false;
-  prop_peer_deviceid = -1;
+  prop_peer_deviceid = 0u;
   bjson = false;
 }
 
@@ -112,7 +110,7 @@ bool pqtaction::property_get_peers(int *error) {
  * @param error pointer to a memory location where the error code will be stored
  * @return deviceid value if valid, -1 otherwise
  */
-int pqtaction::property_get_peer_deviceid(int *error) {
+/*int pqtaction::property_get_peer_deviceid(int *error) {
     auto it = property.find("peer_deviceid");
     int deviceid = -1;
     *error = 0;  // init with 'no error'
@@ -129,7 +127,7 @@ int pqtaction::property_get_peer_deviceid(int *error) {
         }
     }
     return deviceid;
-}
+}*/
 
 /**
  * @brief reads the module's properties collection to see whether bandwidth
@@ -189,9 +187,8 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  prop_peer_deviceid = property_get_peer_deviceid(&error);
-  if (error) {
-    msg = "invalid 'peer_deviceid '";
+  if (property_get_int<uint32_t>("peer_deviceid", &prop_peer_deviceid, 0u)) {
+    msg = "invalid 'peer_deviceid ' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
@@ -203,15 +200,6 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     return false;
   }
 
-  prop_log_interval = property_get_log_interval(&error);
-  if (error == 1) {
-    msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "'";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
-  } else if (error == 2) {
-    prop_log_interval = DEFAULT_LOG_INTERVAL;
-  }
-
   property_get_bidirectional(&error);
   if (error) {
     if (prop_test_bandwidth == true) {
@@ -221,8 +209,9 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     }
   }
 
-  property_get_uint_list(RVS_CONF_BLOCK_SIZE_KEY, YAML_DEVICE_PROP_DELIMITER,
-                         &block_size, &b_block_size_all, &error);
+  error = property_get_uint_list<uint32_t>(RVS_CONF_BLOCK_SIZE_KEY,
+                                 YAML_DEVICE_PROP_DELIMITER,
+                                &block_size, &b_block_size_all);
   if (error == 1) {
       msg =  "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -232,14 +221,15 @@ bool pqtaction::get_all_pqt_config_keys(void) {
     block_size.clear();
   }
 
-  b2b_block_size = property_get_b2b_size(&error);
+  error = property_get_int<uint32_t>
+  (RVS_CONF_B2B_BLOCK_SIZE_KEY, &b2b_block_size);
   if (error == 1) {
     msg =  "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
-  link_type = property_get_link_type(&error);
+  error = property_get_int<int>(RVS_CONF_LINK_TYPE_KEY, &link_type);
   if (error == 1) {
     msg =  "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -259,71 +249,66 @@ bool pqtaction::get_all_common_config_keys(void) {
   int error;
 
   // get the action name
-  property_get_action_name(&error);
-  if (error) {
-    msg = "action field is missing";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS);
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
     return false;
   }
 
   // get <device> property value (a list of gpu id)
-  if (has_property("device", &sdev)) {
-      prop_device_all_selected = property_get_device(&error);
-      if (error) {  // log the error & abort GST
-          msg = "invalid 'device' key value " + sdev;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return false;
-      }
-  } else {
-      msg = "key 'device' was not found";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+  if ((error = property_get_device())) {
+    switch (error) {
+    case 1:
+      msg = "Invalid 'device' key value.";
+      break;
+    case 2:
+      msg = "Missing 'device' key.";
+      break;
+    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
   }
 
-  // get the <deviceid> property value
-  if (has_property("deviceid", &sdevid)) {
-      int devid = property_get_deviceid(&error);
-      if (!error) {
-          if (devid != -1) {
-              prop_deviceid = static_cast<uint16_t>(devid);
-              prop_device_id_filtering = true;
-          }
-      } else {
-          msg = "invalid 'deviceid' key value " + sdevid;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return false;
-      }
+  // get the <deviceid> property value if provided
+  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                &property_device_id, 0u)) {
+    msg = "Invalid 'deviceid' key value.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
   }
 
   // get the other action/GST related properties
-  rvs::actionbase::property_get_run_parallel(&error);
-  if (error == 1) {
+  if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
       msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
           "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  rvs::actionbase::property_get_run_count(&error);
-  if (error == 1) {
+  if (property_get_int<uint64_t>(RVS_CONF_COUNT_KEY, &property_count, 1)) {
       msg = "invalid '" + std::string(RVS_CONF_COUNT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  rvs::actionbase::property_get_run_wait(&error);
-  if (error == 1) {
+  if (property_get_int<uint64_t>(RVS_CONF_WAIT_KEY, &property_wait, 0)) {
       msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  rvs::actionbase::property_get_run_duration(&error);
-  if (error == 1) {
+  if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
+                                 &property_duration, DEFAULT_DURATION)) {
       msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
           "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
+  }
+
+  if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+                            &property_log_interval, DEFAULT_LOG_INTERVAL)) {
+    msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
   }
 
   return true;
@@ -353,18 +338,18 @@ int pqtaction::create_threads() {
 
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
     // filter out by source device id
-    if (prop_device_id_filtering) {
-      if (prop_deviceid != gpu_device_id[i]) {
+    if (property_device_id > 0) {
+      if (property_device_id != gpu_device_id[i]) {
         continue;
       }
     }
 
     // filter out by listed sources
-    if (!prop_device_all_selected) {
-      const auto it = std::find(device_prop_gpu_id_list.cbegin(),
-                                device_prop_gpu_id_list.cend(),
-                                std::to_string(gpu_id[i]));
-      if (it == device_prop_gpu_id_list.cend()) {
+    if (!property_device_all) {
+      const auto it = std::find(property_device.cbegin(),
+                                property_device.cend(),
+                                gpu_id[i]);
+      if (it == property_device.cend()) {
             continue;
       }
     }
@@ -399,15 +384,15 @@ int pqtaction::create_threads() {
       bmatch_found = true;
 
       // get NUMA nodes
-      int srcnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
-      if (srcnode < 0) {
+      uint16_t srcnode;
+      if (rvs::gpulist::gpu2node(gpu_id[i], &srcnode)) {
         msg + "no node found for GPU ID " + std::to_string(gpu_id[i]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
 
-      int dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[j]);
-      if (srcnode < 0) {
+      uint16_t dstnode;
+      if (rvs::gpulist::gpu2node(gpu_id[j], &dstnode)) {
         RVSTRACE_
         msg = "no node found for GPU ID " + std::to_string(gpu_id[j]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -491,7 +476,7 @@ int pqtaction::create_threads() {
           pqtworker* p = nullptr;
 
           transfer_ix += 1;
-          if (b2b_block_size > 0 && gst_runs_parallel) {
+          if (b2b_block_size > 0 && property_parallel) {
             RVSTRACE_
             pqtworker_b2b* pb2b = new pqtworker_b2b;
             if (pb2b == nullptr) {
@@ -671,18 +656,20 @@ int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
   pHsa = rvs::hsa::Get();
 
   // GPUs are peers, create transaction for them
-  int srcnode = rvs::gpulist::GetNodeIdFromGpuId(Src);
-  if (srcnode < 0) {
-    msg = "no node found for GPU ID " + std::to_string(Src);
+  // get NUMA nodes
+  uint16_t srcnode;
+  if (rvs::gpulist::gpu2node(Src, &srcnode)) {
+    msg + "no node found for GPU ID " + std::to_string(Src);
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return 0;
+    return -1;
   }
 
-  int dstnode = rvs::gpulist::GetNodeIdFromGpuId(Dst);
-  if (srcnode < 0) {
-    msg = "RVS-PQT: no node found for GPU ID " + std::to_string(Dst);
+  uint16_t dstnode;
+  if (rvs::gpulist::gpu2node(Dst, &dstnode)) {
+    RVSTRACE_
+    msg = "no node found for GPU ID " + std::to_string(Dst);
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return 0;
+    return -1;
   }
 
   return pHsa->rvs::hsa::GetPeerStatus(srcnode, dstnode);
@@ -712,8 +699,8 @@ int pqtaction::print_running_average() {
  *
  * */
 int pqtaction::print_running_average(pqtworker* pWorker) {
-  int         src_node, dst_node;
-  int         src_id, dst_id;
+  uint16_t    src_node, dst_node;
+  uint16_t    src_id, dst_id;
   bool        bidir;
   size_t      current_size;
   double      duration;
@@ -750,8 +737,26 @@ int pqtaction::print_running_average(pqtworker* pWorker) {
     }
   }
 
-  src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
-  dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+//   src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
+//   dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+  RVSTRACE_
+  if (rvs::gpulist::node2gpu(src_node, &src_id)) {
+    RVSTRACE_
+    std::string msg = "could not find GPU id for node " +
+                      std::to_string(src_node);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+  RVSTRACE_
+  if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+    RVSTRACE_
+    std::string msg = "could not find GPU id for node " +
+                      std::to_string(dst_node);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+
   transfer_ix = pWorker->get_transfer_ix();
   transfer_num = pWorker->get_transfer_num();
 
@@ -793,8 +798,8 @@ int pqtaction::print_running_average(pqtworker* pWorker) {
  *
  * */
 int pqtaction::print_final_average() {
-  int         src_node, dst_node;
-  int         src_id, dst_id;
+  uint16_t    src_node, dst_node;
+  uint16_t    src_id, dst_id;
   bool        bidir;
   size_t      current_size;
   double      duration;
@@ -817,8 +822,26 @@ int pqtaction::print_final_average() {
     } else {
       snprintf( buff, sizeof(buff), "(not measured)");
     }
-    src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
-    dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+//     src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
+//     dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+    RVSTRACE_
+    if (rvs::gpulist::node2gpu(src_node, &src_id)) {
+      RVSTRACE_
+      std::string msg = "could not find GPU id for node " +
+                        std::to_string(src_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+    RVSTRACE_
+    if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+      RVSTRACE_
+      std::string msg = "could not find GPU id for node " +
+                        std::to_string(dst_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+
     transfer_ix = (*it)->get_transfer_ix();
     transfer_num = (*it)->get_transfer_num();
 

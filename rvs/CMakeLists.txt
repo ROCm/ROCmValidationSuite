@@ -28,9 +28,6 @@ add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall -Wextra)
 
-message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
-message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
-
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
@@ -44,6 +41,8 @@ set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
 
 project ( ${RVS_TARGET} )
+
+message(STATUS "MODULE: ${RVS}")
 
 # ## Set default module path if not already set
 # if ( NOT DEFINED CMAKE_MODULE_PATH )
@@ -63,7 +62,6 @@ set ( BUILD_VERSION_PATCH ${VERSION_PATCH} )
 set ( LIB_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
 
 if ( DEFINED VERSION_BUILD AND NOT ${VERSION_BUILD} STREQUAL "" )
-    message ( "VERSION BUILD DEFINED ${VERSION_BUILD}" )
     set ( BUILD_VERSION_PATCH "${BUILD_VERSION_PATCH}-${VERSION_BUILD}" )
 endif ()
 set ( BUILD_VERSION_STRING "${BUILD_VERSION_MAJOR}.${BUILD_VERSION_MINOR}.${BUILD_VERSION_PATCH}" )
@@ -76,10 +74,10 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 ## additional libraries
-set ( PROJECT_LINK_LIBS libdl.so "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../yaml-cpp/libyaml-cpp.a" libpthread.so)
+set ( PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
 
 ## define include directories
-include_directories(include ../include ${CMAKE_CURRENT_SOURCE_DIR}/../yaml-cpp/include ${UT_INC})
+include_directories(include ../include ${YAML_INC_DIR} ${UT_INC})
 
 ## define source files
 set(SOURCES
@@ -92,19 +90,18 @@ set(SOURCES
 add_executable(${RVS_TARGET} src/rvs.cpp ${SOURCES})
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
-## define test target
+## define target for "test-to-fail"
+add_executable(${RVS_TARGET}fail src/rvs.cpp ${SOURCES})
+target_link_libraries(${RVS_TARGET}fail ${PROJECT_LINK_LIBS} )
+target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
+
+## define unit testing targets
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 message ( "TESTSOURCES ${TESTSOURCES}" )
 
+LINK_DIRECTORIES(${UT_LIB})
 add_executable(rvstest ${TESTSOURCES} ${SOURCES})
-target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main)
-
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
-COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
-COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
-COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/conf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
-)
+target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
 
 install(TARGETS ${RVS_TARGET}
   RUNTIME
@@ -135,7 +132,4 @@ install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/userguide/html
 
 # TEST SECTION
 
-add_test(NAME unittest
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvstest
-)
+include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
