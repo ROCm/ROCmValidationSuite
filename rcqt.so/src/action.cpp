@@ -308,7 +308,7 @@ int action::pkgchk_run() {
 			char result_cmnd[BUFFER_SIZE];
 			int count;
 			close(fd[1]);
-			cout  << package_name << endl;
+			std::cout  << package_name << std::endl;
 			// We read the result from the dpk-querry from the fd[0]
 			vector <string> package_vector;
 			bool package_found = false;
@@ -324,12 +324,12 @@ int action::pkgchk_run() {
 				line_result.erase(line_result.find_last_not_of(" \n\r\t")+1);
 				//cout << line_result << "***" << endl;
 				if (regex_match(line_result, pkg_pattern) == true) {
-					cout << line_result << endl;
+					std::cout << line_result << std::endl;
 					if (version_exists) {
 						char cmd_buffer[BUFFER_SIZE];
 						snprintf(cmd_buffer, BUFFER_SIZE, \
 						"dpkg -s %s | grep -i version > %s", line_result.c_str(),(std::string(VERSION_FILE)).c_str());
-						cout << cmd_buffer << endl;
+						std::cout << cmd_buffer << std::endl;
 						if (system(cmd_buffer) == -1) {
 							rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
 							return 1;
@@ -338,7 +338,7 @@ int action::pkgchk_run() {
 						ifstream version_stream(std::string(VERSION_FILE));
 						char file_line[STREAM_SIZE];
 						version_stream.getline(file_line, STREAM_SIZE);
-						cout << "==="<< std::string(file_line) << endl;
+						std::cout << "==="<< std::string(file_line) << std::endl;
 						string line_result = file_line;
 						if (regex_match(line_result, version_pattern) == true) {
 							string package_exists = "[" + action_name + "] " + "rcqt pkgcheck * "
@@ -546,14 +546,14 @@ int action::usrchk_run() {
 								it != group_patterns.end(); it++) {
 							if (std::regex_match(result, *it)) {
 								group_found_vector.push_back(result);
-								cout << result << endl;
-								cout << "group users " << match[4] << endl;
+								std::cout << result << std::endl;
+								std::cout << "group users " << match[4] << std::endl;
 								vector<string> group_users_found =
 								str_split(match[4], ",");
 								std::set<string>user_group_set (group_users_found.begin()
 									, group_users_found.end());
 								for (string user_string : users_vector) {
-									cout << "User " << user_string << endl;
+									std::cout << "User " << user_string << std::endl;
 									if (user_group_set.find(user_string) 
 											!= user_group_set.end()) {
 										string user_group_found = "[" + action_name + "] " 
@@ -738,7 +738,7 @@ int action::ldcfgchk_run() {
         return 1;
       }
       string result_string = result;
-			cout << result_string << endl;
+			std::cout << result_string << std::endl;
       if (strstr(result, "architecture:") != nullptr) {
         vector<string> objdump_lines = str_split(result_string, "\n");
         int begin_of_the_arch_string = 0;
