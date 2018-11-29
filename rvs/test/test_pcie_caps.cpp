@@ -28,6 +28,9 @@
 #include "pci_caps.h"
 #include "rvs_unit_testing_defs.h"
 
+#include <pci/pci.h>
+#include <linux/pci.h>
+
 #include <vector>
 
 using namespace rvs;
@@ -52,6 +55,9 @@ class PcieCapsTest : public ::testing::Test {
 
     // fill up the struct
     test_dev->first_cap = test_cap[0];
+    test_dev->bus = 9;
+    test_dev->device_id = 54;
+    test_dev->vendor_id = 98;
   }
 
   void TearDown() override {
@@ -64,12 +70,40 @@ class PcieCapsTest : public ::testing::Test {
   // pci caps struct
   pci_cap* test_cap[2];
 
+  // utility function
+  void get_num_bits(uint32_t input_num, uint32_t* num_ones, int* first_one, uint32_t* max_value) {
+    *num_ones = 0;
+    *first_one = -1;
+    for (int i = 0; i < 32; i++) {
+      if (((input_num >> i) & 0x1) == 1) {
+        (*num_ones)++;
+        if (*first_one == -1) {
+          *first_one = i;
+        }
+      }
+    }
+    *max_value = (1 << *num_ones);
+  }
+  
 };
 
 TEST_F(PcieCapsTest, pcie_caps) {
   int return_value;
   char* buff;
-  char* exp_buff;
+  std::string exp_string;
+  uint32_t num_ones;
+  int first_one;
+  uint32_t max_value;
+
+  get_num_bits(0xf, &num_ones, &first_one, &max_value);
+  EXPECT_EQ(num_ones, 4);
+  EXPECT_EQ(first_one, 0);
+  EXPECT_EQ(max_value, 16);
+
+  get_num_bits(0x3f0, &num_ones, &first_one, &max_value);
+  EXPECT_EQ(num_ones, 6);
+  EXPECT_EQ(first_one, 4);
+  EXPECT_EQ(max_value, 64);
 
   // ---------------------------------------
   // pci_dev_find_cap_offset
@@ -93,17 +127,8 @@ TEST_F(PcieCapsTest, pcie_caps) {
   return_value = pci_dev_find_cap_offset(test_dev, 0, 0);
   EXPECT_EQ(return_value, 0);
 
-//       buff = new char[1024];
-//       exp_buff = new char[1024];
-//       snprintf(buff, 1024, "%s", "12345");
-// //       snprintf(exp_buff, 1024, "%s", "12345");
-//       exp_buff = "12345";
-//       EXPECT_STREQ(buff, "12345");
-// //       EXPECT_STREQ(buff, exp_buff);      
-//       EXPECT_EQ(1, 0);
-
   // ---------------------------------------
-  // pci_dev_find_cap_offset
+  // get_link_cap_max_speed
   // ---------------------------------------
   // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
   for (int id_f = 0; id_f < 2; id_f++) {
@@ -130,9 +155,12 @@ TEST_F(PcieCapsTest, pcie_caps) {
   test_cap[0]->type = PCI_CAP_NORMAL;
   test_cap[1]->id   = PCI_CAP_ID_EXP;
   test_cap[1]->type = PCI_CAP_NORMAL;
-  for (rvs_pci_read_long_return_value = 0; rvs_pci_read_long_return_value < 15; rvs_pci_read_long_return_value++) {
+  get_num_bits(PCI_EXP_LNKCAP_SLS, &num_ones, &first_one, &max_value);
+  for (int k = 0; k < max_value; k++) {
     buff = new char[1024];
+    rvs_pci_read_long_return_value = (k << first_one);
     get_link_cap_max_speed(test_dev, buff);
+    rvs_pci_read_long_return_value = k;
     switch (rvs_pci_read_long_return_value) {
     case 1:
       EXPECT_STREQ(buff, "2.5 GT/s");
@@ -151,233 +179,278 @@ TEST_F(PcieCapsTest, pcie_caps) {
       break;
     }
   }
-  
+
+  // ---------------------------------------
+  // get_link_cap_max_width
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (int id_f = 0; id_f < 2; id_f++) {
+    for (int type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
+      rvs_pci_read_long_return_value = 15;
+      buff = new char[1024];
+      get_link_cap_max_width(test_dev, buff);
+
+      if (id_f == type_f) {
+        // other one is valid
+        continue;
+      } else {
+        // none is valid
+        EXPECT_STREQ(buff, "NOT SUPPORTED");
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_long_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  get_num_bits(PCI_EXP_LNKCAP_MLW, &num_ones, &first_one, &max_value);
+  for (int k = 0; k < max_value; k++) {
+    rvs_pci_read_long_return_value = (k << first_one);
+    buff = new char[1024];
+    get_link_cap_max_width(test_dev, buff);
+    exp_string = "x" + std::to_string(k);
+    EXPECT_STREQ(buff, exp_string.c_str());
+  }
+
+  // ---------------------------------------
+  // get_link_stat_cur_speed
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (int id_f = 0; id_f < 2; id_f++) {
+    for (int type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
+      rvs_pci_read_word_return_value = 15;
+      buff = new char[1024];
+      get_link_stat_cur_speed(test_dev, buff);
+
+      if (id_f == type_f) {
+        // other one is valid
+        EXPECT_STREQ(buff, "Unknown speed");
+      } else {
+        // none is valid
+        EXPECT_STREQ(buff, "NOT SUPPORTED");
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  get_num_bits(PCI_EXP_LNKSTA_CLS, &num_ones, &first_one, &max_value);
+  for (int k = 0; k < max_value; k++) {
+    buff = new char[1024];
+    rvs_pci_read_word_return_value = (k << first_one);
+    get_link_stat_cur_speed(test_dev, buff);
+    rvs_pci_read_word_return_value = k;
+    switch (rvs_pci_read_word_return_value) {
+    case 1:
+      EXPECT_STREQ(buff, "2.5 GT/s");
+      break;
+    case 2:
+      EXPECT_STREQ(buff, "5 GT/s");
+      break;
+    case 3:
+      EXPECT_STREQ(buff, "8 GT/s");
+      break;
+#ifdef PCI_EXP_LNKSTA_CLS_16_0GB
+    case 4:
+      EXPECT_STREQ(buff, "16 GT/s");
+      break;
+#endif
+    default:
+      EXPECT_STREQ(buff, "Unknown speed");
+      break;
+    }
+  }
+
+  // ---------------------------------------
+  // get_link_stat_neg_width
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (int id_f = 0; id_f < 2; id_f++) {
+    for (int type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
+      rvs_pci_read_word_return_value = 15;
+      buff = new char[1024];
+      get_link_stat_neg_width(test_dev, buff);
+
+      if (id_f == type_f) {
+        // other one is valid
+        continue;
+      } else {
+        // none is valid
+        EXPECT_STREQ(buff, "NOT SUPPORTED");
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  get_num_bits(PCI_EXP_LNKSTA_NLW, &num_ones, &first_one, &max_value);
+  for (int k = 0; k < max_value; k++) {
+    rvs_pci_read_word_return_value = (k << first_one);
+    buff = new char[1024];
+    get_link_stat_neg_width(test_dev, buff);
+    exp_string = "x" + std::to_string(k);
+    EXPECT_STREQ(buff, exp_string.c_str());
+  }
+
+  // ---------------------------------------
+  // get_slot_pwr_limit_value
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (int id_f = 0; id_f < 2; id_f++) {
+    for (int type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
+      rvs_pci_read_long_return_value = 15;
+      buff = new char[1024];
+      get_slot_pwr_limit_value(test_dev, buff);
+
+      if (id_f == type_f) {
+        // other one is valid
+        continue;
+      } else {
+        // none is valid
+        EXPECT_STREQ(buff, "NOT SUPPORTED");
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_long_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  get_num_bits(PCI_EXP_SLTCAP_SPLV, &num_ones, &first_one, &max_value);
+  for (int k = 0; k < max_value; k++) {
+    rvs_pci_read_long_return_value = (k << first_one);
+    buff = new char[1024];
+    get_slot_pwr_limit_value(test_dev, buff);
+    rvs_pci_read_long_return_value = k;
+    if (rvs_pci_read_long_return_value > 0xEF) {
+      switch (k) {
+      case 0xF0:
+          exp_string = "250.000W";
+          break;
+      case 0xF1:
+          exp_string = "270.000W";
+          break;
+      case 0xF2:
+          exp_string = "300.000W";
+          break;
+      default:
+          exp_string = "-1.000W";
+      }
+    } else {
+      exp_string = std::to_string(rvs_pci_read_long_return_value) + ".000W";
+    }
+    EXPECT_STREQ(buff, exp_string.c_str());
+  }
+
+  // ---------------------------------------
+  // get_slot_physical_num
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (int id_f = 0; id_f < 2; id_f++) {
+    for (int type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
+      rvs_pci_read_long_return_value = 15;
+      buff = new char[1024];
+      get_slot_physical_num(test_dev, buff);
+
+      if (id_f == type_f) {
+        // other one is valid
+        continue;
+      } else {
+        // none is valid
+        EXPECT_STREQ(buff, "NOT SUPPORTED");
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_long_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  get_num_bits(PCI_EXP_SLTCAP_PSN, &num_ones, &first_one, &max_value);
+  for (int k = 0; k < max_value; k++) {
+    rvs_pci_read_long_return_value = (k << first_one);
+    buff = new char[1024];
+    get_slot_physical_num(test_dev, buff);
+    rvs_pci_read_long_return_value = k;
+    exp_string = "#" + std::to_string(rvs_pci_read_long_return_value);
+    EXPECT_STREQ(buff, exp_string.c_str());
+  }
+
+  // ---------------------------------------
+  // get_pci_bus_id
+  // ---------------------------------------
+  get_pci_bus_id(test_dev, buff);
+  exp_string = std::to_string(test_dev->bus);
+  EXPECT_STREQ(buff, exp_string.c_str());
+
+  // ---------------------------------------
+  // get_device_id
+  // ---------------------------------------
+  get_device_id(test_dev, buff);
+  exp_string = std::to_string(test_dev->device_id);
+  EXPECT_STREQ(buff, exp_string.c_str());
+
+  // ---------------------------------------
+  // get_vendor_id
+  // ---------------------------------------
+  get_vendor_id(test_dev, buff);
+  exp_string = std::to_string(test_dev->vendor_id);
+  EXPECT_STREQ(buff, exp_string.c_str());
+
+  for (int p = 0; p < 8; p++) {
+    // ---------------------------------------
+    // get_pci_bus_id
+    // ---------------------------------------
+    test_dev->bus = p;
+    get_pci_bus_id(test_dev, buff);
+    exp_string = std::to_string(test_dev->bus);
+    EXPECT_STREQ(buff, exp_string.c_str());
+
+    // ---------------------------------------
+    // get_device_id
+    // ---------------------------------------
+    test_dev->device_id = (p + 1) % 8;
+    get_device_id(test_dev, buff);
+    exp_string = std::to_string(test_dev->device_id);
+    EXPECT_STREQ(buff, exp_string.c_str());
+
+    // ---------------------------------------
+    // get_vendor_id
+    // ---------------------------------------
+    test_dev->vendor_id = (p + 2) % 8;
+    get_vendor_id(test_dev, buff);
+    exp_string = std::to_string(test_dev->vendor_id);
+    EXPECT_STREQ(buff, exp_string.c_str());
+  }
+
 }
 
-// /**
-//  * gets the max link speed
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buff pre-allocated char buffer
-//  * @return 
-//  */
-// void get_link_cap_max_speed(struct pci_dev *dev, char *buff) {
-//     const char *link_max_speed;
-// 
-//     // get pci dev capabilities offset
-//     unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
-//     PCI_CAP_NORMAL);
-// 
-//     if (cap_offset != 0) {
-//         unsigned int pci_dev_lnk_cap = pci_read_long(dev,
-//                 cap_offset + PCI_EXP_LNKCAP);
-// 
-//         // using 1,2,3 & 4 instead of the dedicated constants
-//         // (that can be found in pci_regs.h) is the ugly way of doing it
-//         // however, this is because in some linux versions the #define stops
-//         // at PCI_EXP_LNKCAP_SLS_5_0GB (no 8, 16)
-//         switch (pci_dev_lnk_cap & PCI_EXP_LNKCAP_SLS) {
-//         case 1:
-//             link_max_speed = "2.5 GT/s";
-//             break;
-//         case 2:
-//             link_max_speed = "5 GT/s";
-//             break;
-//         case 3:
-//             link_max_speed = "8 GT/s";
-//             break;
-//         case 4:
-//             link_max_speed = "16 GT/s";
-//             break;
-//         default:
-//             link_max_speed = "Unknown speed";
-//         }
-// 
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", link_max_speed);
-//     } else {
-//       snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//     }
-// }
-// 
-// /**
-//  * gets the PCI dev max link width
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buff pre-allocated char buffer
-//  * @return 
-//  */
-// void get_link_cap_max_width(struct pci_dev *dev, char *buff) {
-//     // get pci dev capabilities offset
-//     unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
-//     PCI_CAP_NORMAL);
-// 
-//     if (cap_offset != 0) {
-//         unsigned int pci_dev_lnk_cap = pci_read_long(dev,
-//                 cap_offset + PCI_EXP_LNKCAP);
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "x%d",
-//                 ((pci_dev_lnk_cap & PCI_EXP_LNKCAP_MLW) >> 4));
-//     } else {
-//       snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//     }
-// }
-// 
-// /**
-//  * gets the current link speed
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buff pre-allocated char buffer
-//  * @return 
-//  */
-// void get_link_stat_cur_speed(struct pci_dev *dev, char *buff) {
-//     const char *link_cur_speed;
-// 
-//     // get pci dev capabilities offset
-//     unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
-//     PCI_CAP_NORMAL);
-// 
-//     if (cap_offset != 0) {
-//         u16 pci_dev_lnk_stat = pci_read_word(dev, cap_offset + PCI_EXP_LNKSTA);
-// 
-//         switch (pci_dev_lnk_stat & PCI_EXP_LNKSTA_CLS) {
-//         case PCI_EXP_LNKSTA_CLS_2_5GB:
-//             link_cur_speed = "2.5 GT/s";
-//             break;
-//         case PCI_EXP_LNKSTA_CLS_5_0GB:
-//             link_cur_speed = "5 GT/s";
-//             break;
-//         case PCI_EXP_LNKSTA_CLS_8_0GB:
-//             link_cur_speed = "8 GT/s";
-//             break;
-// #ifdef PCI_EXP_LNKSTA_CLS_16_0GB
-//             case PCI_EXP_LNKSTA_CLS_16_0GB:
-//             link_cur_speed = "16 GT/s";
-//             break;
-// #endif
-//         default:
-//             link_cur_speed = "Unknown speed";
-//         }
-// 
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", link_cur_speed);
-//     } else {
-//       snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//     }
-// }
-// 
-// /**
-//  * gets the negotiated link width
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buff pre-allocated char buffer
-//  * @return 
-//  */
-// void get_link_stat_neg_width(struct pci_dev *dev, char *buff) {
-//     // get pci dev capabilities offset
-//     unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
-//     PCI_CAP_NORMAL);
-// 
-//     if (cap_offset != 0) {
-//         u16 pci_dev_lnk_stat = pci_read_word(dev, cap_offset + PCI_EXP_LNKSTA);
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "x%d",
-//                 ((pci_dev_lnk_stat & PCI_EXP_LNKSTA_NLW)
-//                         >> PCI_EXP_LNKSTA_NLW_SHIFT));
-//     } else {
-//       snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//     }
-// }
-// 
-// /**
-//  * gets the power limit value
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buff pre-allocated char buffer
-//  * @return 
-//  */
-// void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff) {
-//     // get pci dev capabilities offset
-//     unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
-//     PCI_CAP_NORMAL);
-//     float pwr;
-// 
-//     if (cap_offset != 0) {
-//         unsigned int slot_cap = pci_read_long(dev, cap_offset + PCI_EXP_SLTCAP);
-//         unsigned char slot_pwr_limit_scale = (slot_cap & PCI_EXP_SLTCAP_SPLS)
-//                 >> 15;
-//         u16 slot_pwr_limit_value = (slot_cap & PCI_EXP_SLTCAP_SPLV) >> 7;
-// 
-//         if (slot_pwr_limit_value > 0xEF) {
-//             switch (slot_pwr_limit_value) {
-//             // according to the PCI Express Base Specification Revision 3.0
-//             case 0xF0:
-//                 pwr = 250.0;
-//                 break;
-//             case 0xF1:
-//                 pwr = 270.0;
-//                 break;
-//             case 0xF2:
-//                 pwr = 300.0;
-//                 break;
-//             default:
-//                 pwr = -1.0;
-//                 // (F3h to FFh = Reserved for Slot Power Limit
-//                 // values above 300W)
-//             }
-//         } else {
-//             // according to the PCI Express Base Specification Revision 3.0
-//             pwr = static_cast<float>(slot_pwr_limit_value)
-//                     * pow(10, -slot_pwr_limit_scale);
-//         }
-// 
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%0.3fW", pwr);
-// 
-//     } else {
-//       snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//     }
-// }
-// 
-// /**
-//  * gets PCI dev physical slot number
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buff pre-allocated char buffer 
-//  * @return 
-//  */
-// void get_slot_physical_num(struct pci_dev *dev, char *buff) {
-//     // get pci dev capabilities offset
-//     unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
-//     PCI_CAP_NORMAL);
-// 
-//     if (cap_offset != 0) {
-//         unsigned int slot_cap = pci_read_long(dev, cap_offset + PCI_EXP_SLTCAP);
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "#%u",
-//                 ((slot_cap & PCI_EXP_SLTCAP_PSN) >> 19));
-//     } else {
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//     }
-// }
-// 
-// /**
-//  * gets PCI dev bus id
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buff pre-allocated char buffer 
-//  * @return 
-//  */
-// void get_pci_bus_id(struct pci_dev *dev, char *buff) {
-//   snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%0X", dev->bus);
-// }
-// 
-// /**
-//  * gets PCI device id (it appears as a function just to keep compatibility with the array of pointer to function)
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buff pre-allocated char buffer 
-//  * @return 
-//  */
-// void get_device_id(struct pci_dev *dev, char *buff) {
-//     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%u", dev->device_id);
-// }
-// 
-// /**
-//  * gets PCI device's vendor id (it appears as a function just to keep compatibility with the array of pointer to function)
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buff pre-allocated char buffer 
-//  * @return 
-//  */
-// void get_vendor_id(struct pci_dev *dev, char *buff) {
-//     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%u", dev->vendor_id);
-// }
+
 // 
 // /**
 //  * gets the PCI dev driver name
