@@ -59,7 +59,9 @@ char* rvs_pci_get_param(struct pci_access *acc, char *param) PCI_ABI {
 
 // override function to return rvs_pci_get_param_return_value
 ssize_t rvs_readlink(char* path, char* buf, size_t bufsize) {
-  *buf = *rvs_readlink_buff_return_value;
+  for (int i = 0; i < sizeof(rvs_readlink_buff_return_value); i++) {
+    *(buf + i) = *(rvs_readlink_buff_return_value + i);
+  }
   return rvs_readlink_return_value;
 }
 
