@@ -105,6 +105,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   uint32_t num_ones;
   int first_one;
   uint32_t max_value;
+  uint index;
 
   get_num_bits(0xf, &num_ones, &first_one, &max_value);
   EXPECT_EQ(num_ones, 4);
@@ -502,74 +503,53 @@ TEST_F(PcieCapsTest, pcie_caps) {
   rvs_readlink_buff_return_value = (char*) "def/bla";
   get_kernel_driver(test_dev, buff);
   EXPECT_STREQ(buff, exp_string.c_str());
+
+  // ---------------------------------------
+  // get_dev_serial_num
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (uint id_f = 0; id_f < 2; id_f++) {
+    for (uint type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_EXT_CAP_ID_DSN;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_EXTENDED;
+      rvs_pci_read_long_return_value = 15;
+      buff = new char[1024];
+      get_dev_serial_num(test_dev, buff);
+
+      if (id_f == type_f) {
+        // other one is valid
+        continue;
+      } else {
+        // none is valid
+        EXPECT_STREQ(buff, "NOT SUPPORTED");
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_long_return_value
+  test_cap[0]->id   = PCI_EXT_CAP_ID_DSN;
+  test_cap[0]->type = PCI_CAP_EXTENDED;
+  test_cap[1]->id   = PCI_EXT_CAP_ID_DSN;
+  test_cap[1]->type = PCI_CAP_EXTENDED;
+  index = 0;
+  while (true) {
+    char expect_string[1024];
+    rvs_pci_read_long_return_value = index;
+    buff = new char[1024];
+    get_dev_serial_num(test_dev, buff);
+    snprintf(expect_string, 1024, "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x",
+        index >> 24, (index >> 16) & 0xff, (index >> 8) & 0xff, index & 0xff,
+        index >> 24, (index >> 16) & 0xff, (index >> 8) & 0xff, index & 0xff);
+    EXPECT_STREQ(buff, expect_string);
+    if (index > 0xffffffff - 0x01020304) {
+      break;
+    }
+    index = index + 0x01020304;
+  }
   
 }
 
-
-// 
-// /**
-//  * gets the PCI dev driver name
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buf pre-allocated char buffer
-//  * @return 
-//  */
-// void get_kernel_driver(struct pci_dev *dev, char *buff) {
-//     char name[1024], *drv, *base;
-//     int n;
-// 
-//     buff[0] = '\0';
-// 
-//     if (dev->access->method != PCI_ACCESS_SYS_BUS_PCI) {
-//         return;
-//     }
-// 
-//     base = pci_get_param(dev->access, const_cast<char *>("sysfs.path"));
-//     if (!base || !base[0]) {
-//         return;
-//     }
-// 
-//     n = snprintf(name, sizeof(name), "%s/devices/%04x:%02x:%02x.%d/driver",
-//             base, dev->domain, dev->bus, dev->dev, dev->func);
-//     if (n < 0 || n >= static_cast<int>(sizeof(name))) {
-//         return;
-//     }
-// 
-//     n = readlink(name, buff, PCI_CAP_DATA_MAX_BUF_SIZE);
-//     if (n < 0) {
-//         return;
-//     }
-// 
-//     if (n >= PCI_CAP_DATA_MAX_BUF_SIZE) {
-//         return;
-//     }
-// 
-//     buff[n] = 0;
-// 
-//     if ((drv = strrchr(buff, '/')) != NULL)
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", drv + 1);
-// }
-// 
-// /**
-//  * gets the device serial number
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buf pre-allocated char buffer
-//  */
-// void get_dev_serial_num(struct pci_dev *dev, char *buff) {
-//     unsigned int cap_offset_dsn = pci_dev_find_cap_offset(dev,
-//     PCI_EXT_CAP_ID_DSN, PCI_CAP_EXTENDED);
-// 
-//     if (cap_offset_dsn != 0) {
-//         unsigned int t1, t2;
-//         t1 = pci_read_long(dev, cap_offset_dsn + 4);
-//         t2 = pci_read_long(dev, cap_offset_dsn + 8);
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE,
-//                 "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x", t2 >> 24,
-//                 (t2 >> 16) & 0xff, (t2 >> 8) & 0xff, t2 & 0xff, t1 >> 24,
-//                 (t1 >> 16) & 0xff, (t1 >> 8) & 0xff, t1 & 0xff);
-//     } else {
-//       snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//     }
-// }
 // 
 // /**
 //  * gets the device power budgeting capabilities
