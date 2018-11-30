@@ -478,17 +478,28 @@ TEST_F(PcieCapsTest, pcie_caps) {
   rvs_readlink_buff_return_value = (char*) "";
   get_kernel_driver(test_dev, buff);
   EXPECT_STREQ(buff, exp_string.c_str());
-  // 4. method is PCI_ACCESS_SYS_BUS_PCI and base = 1
-  exp_string = "driver"; // std::to_string(7);
+  // 4. method is PCI_ACCESS_SYS_BUS_PCI and base = 1 and n = 0
+  exp_string = "";
+  test_access->method = PCI_ACCESS_SYS_BUS_PCI;
+  rvs_pci_get_param_return_value = (char*) "abc";
+  rvs_readlink_return_value = 0;
+  rvs_readlink_buff_return_value = (char*) "def";
+  get_kernel_driver(test_dev, buff);
+  EXPECT_STREQ(buff, exp_string.c_str());
+  // 5. method is PCI_ACCESS_SYS_BUS_PCI and base = 1 and n > 0
+  exp_string = "bla";
+  test_access->method = PCI_ACCESS_SYS_BUS_PCI;
+  rvs_pci_get_param_return_value = (char*) "abc";
+  rvs_readlink_return_value = 10;
+  rvs_readlink_buff_return_value = (char*) "def/bla";
+  get_kernel_driver(test_dev, buff);
+  EXPECT_STREQ(buff, exp_string.c_str());
+  // 6. method is PCI_ACCESS_SYS_BUS_PCI and base = 1 and n > 0
+  exp_string = "def";
   test_access->method = PCI_ACCESS_SYS_BUS_PCI;
   rvs_pci_get_param_return_value = (char*) "abc";
   rvs_readlink_return_value = 3;
-  rvs_readlink_buff_return_value = (char*) "def";
-//   rvs_readlink_buff_return_value = new char[1024];
-//   rvs_readlink_buff_return_value[0] = 'd';
-//   rvs_readlink_buff_return_value[1] = 'e';
-//   rvs_readlink_buff_return_value[2] = 'f';
-//   rvs_readlink_buff_return_value[3] = '\0';
+  rvs_readlink_buff_return_value = (char*) "def/bla";
   get_kernel_driver(test_dev, buff);
   EXPECT_STREQ(buff, exp_string.c_str());
   
