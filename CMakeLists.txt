@@ -341,26 +341,42 @@ WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 COMMENT "Create the doc directory"
 VERBATIM)
 
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
 add_custom_target(rvs_progguide ALL
-    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen
+    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS Programmer's Reference Guide"
     VERBATIM)
 add_dependencies(rvs_progguide rvs_doc)
 
 add_custom_target(rvs_man1 ALL
-    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyMan1
+    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE} DoxyMan1
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS man.1 files"
     VERBATIM)
 add_dependencies(rvs_man1 rvs_doc)
 
 add_custom_target(rvs_userguide ALL
-    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyGuide
+    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE} DoxyGuide
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS User Guide"
     VERBATIM)
 add_dependencies(rvs_userguide rvs_doc)
+
+install(FILES "${CMAKE_BINARY_DIR}/doc/man/man1/rvs.1"
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/man
+  COMPONENT applications
+)
+
+install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/userguide
+  COMPONENT applications
+)
+
+else()
+  message("Doxygen is not found. Will not generate documentation.")
+endif(DOXYGEN_FOUND)
 
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
