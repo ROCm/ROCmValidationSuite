@@ -33,6 +33,15 @@ u32 rvs_pci_read_long_return_value = 0;
 // return value for pci_read_word
 u16 rvs_pci_read_word_return_value = 0;
 
+// return value for pci_get_param
+char* rvs_pci_get_param_return_value;
+
+// return value for pci_read_word
+ssize_t rvs_readlink_return_value = 0;
+
+// return value for pci_get_param
+char* rvs_readlink_buff_return_value;
+
 // override function to return rvs_pci_read_long_return_value
 u32 rvs_pci_read_long(struct pci_dev *, int pos) PCI_ABI {
   return rvs_pci_read_long_return_value;
@@ -41,6 +50,17 @@ u32 rvs_pci_read_long(struct pci_dev *, int pos) PCI_ABI {
 // override function to return rvs_pci_read_word_return_value
 u16 rvs_pci_read_word(struct pci_dev *, int pos) PCI_ABI {
   return rvs_pci_read_word_return_value;
+}
+
+// override function to return rvs_pci_get_param_return_value
+char* rvs_pci_get_param(struct pci_access *acc, char *param) PCI_ABI {
+  return rvs_pci_get_param_return_value;
+}
+
+// override function to return rvs_pci_get_param_return_value
+ssize_t rvs_readlink(char* path, char* buf, size_t bufsize) {
+  *buf = *rvs_readlink_buff_return_value;
+  return rvs_readlink_return_value;
 }
 
 }
