@@ -65,6 +65,10 @@ class PcieCapsTest : public ::testing::Test {
     test_access = new pci_access();
     test_dev->access = test_access;
 
+    for (int k = 0; k < 6; k++) {
+      test_dev->base_addr[k] = k;
+      test_dev->size[k] = k;
+    }
 
   }
 
@@ -710,129 +714,267 @@ TEST_F(PcieCapsTest, pcie_caps) {
       EXPECT_STREQ(buff, "NOT SUPPORTED");
     }
   }
-  
-  
-  
-  
-  
-  
 
+  // ---------------------------------------
+  // get_atomic_op_register_value
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (uint id_f = 0; id_f < 2; id_f++) {
+    for (uint type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
+      rvs_pci_read_word_return_value = std::queue<u16>();
+      rvs_pci_read_word_return_value.push(15);
+      return_value = get_atomic_op_register_value(test_dev);
+
+      if (id_f == type_f) {
+        // other one is valid
+        continue;
+      } else {
+        // none is valid
+        EXPECT_EQ(return_value, -1);
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  for (int i = 0; i < 6; i++) {
+    test_dev->base_addr[i] = PCI_BASE_ADDRESS_SPACE_IO;
+  }
+  get_num_bits(PCI_EXP_FLAGS_VERS, &num_ones, &first_one, &max_value);
+  for (uint k = 0; k < max_value; k++) {
+    rvs_pci_read_word_return_value = std::queue<u16>();
+    rvs_pci_read_word_return_value.push(k << first_one);
+    return_value = get_atomic_op_register_value(test_dev);
+    EXPECT_EQ(return_value, -1);
+  }
+  // 3. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  for (int i = 0; i < 6; i++) {
+    test_dev->base_addr[i] = i;
+  }
+  get_num_bits(PCI_EXP_FLAGS_VERS, &num_ones, &first_one, &max_value);
+  for (uint k = 0; k < max_value; k++) {
+    rvs_pci_read_word_return_value = std::queue<u16>();
+    rvs_pci_read_word_return_value.push(k << first_one);
+    rvs_pci_read_long_return_value = std::queue<u32>();
+    rvs_pci_read_long_return_value.push(2*k);
+    return_value = get_atomic_op_register_value(test_dev);
+    if (k >= 2) {
+      EXPECT_EQ(return_value, 2*k);
+    } else {
+      EXPECT_EQ(return_value, -1);
+    }
+  }
+
+  // ---------------------------------------
+  // get_atomic_op_32_completer
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (uint id_f = 0; id_f < 2; id_f++) {
+    for (uint type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
+      rvs_pci_read_word_return_value = std::queue<u16>();
+      rvs_pci_read_word_return_value.push(15);
+      buff = new char[1024];
+      get_atomic_op_32_completer(test_dev, buff);
+
+      if (id_f == type_f) {
+        // other one is valid
+        continue;
+      } else {
+        // none is valid
+        EXPECT_STREQ(buff, "NOT SUPPORTED");
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  for (int i = 0; i < 6; i++) {
+    test_dev->base_addr[i] = PCI_BASE_ADDRESS_SPACE_IO;
+  }
+  get_num_bits(PCI_EXP_FLAGS_VERS, &num_ones, &first_one, &max_value);
+  for (uint k = 0; k < max_value; k++) {
+    rvs_pci_read_word_return_value = std::queue<u16>();
+    rvs_pci_read_word_return_value.push(k << first_one);
+    buff = new char[1024];
+    get_atomic_op_32_completer(test_dev, buff);
+    EXPECT_STREQ(buff, "NOT SUPPORTED");
+  }
+  // 3. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  for (int i = 0; i < 6; i++) {
+    test_dev->base_addr[i] = i;
+  }
+  get_num_bits(PCI_EXP_FLAGS_VERS, &num_ones, &first_one, &max_value);
+  for (uint k = 0; k < max_value; k++) {
+    rvs_pci_read_word_return_value = std::queue<u16>();
+    rvs_pci_read_word_return_value.push(k << first_one);
+    rvs_pci_read_long_return_value = std::queue<u32>();
+    rvs_pci_read_long_return_value.push(2*k);
+    buff = new char[1024];
+    get_atomic_op_32_completer(test_dev, buff);
+    if (k >= 2) {
+      if (((2*k) & 0x80) == 1) {
+        EXPECT_STREQ(buff, "TRUE");
+      } else {
+        EXPECT_STREQ(buff, "FALSE");
+      }
+    } else {
+      EXPECT_STREQ(buff, "NOT SUPPORTED");
+    }
+  }
+
+  // ---------------------------------------
+  // get_atomic_op_64_completer
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (uint id_f = 0; id_f < 2; id_f++) {
+    for (uint type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
+      rvs_pci_read_word_return_value = std::queue<u16>();
+      rvs_pci_read_word_return_value.push(15);
+      buff = new char[1024];
+      get_atomic_op_64_completer(test_dev, buff);
+
+      if (id_f == type_f) {
+        // other one is valid
+        continue;
+      } else {
+        // none is valid
+        EXPECT_STREQ(buff, "NOT SUPPORTED");
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  for (int i = 0; i < 6; i++) {
+    test_dev->base_addr[i] = PCI_BASE_ADDRESS_SPACE_IO;
+  }
+  get_num_bits(PCI_EXP_FLAGS_VERS, &num_ones, &first_one, &max_value);
+  for (uint k = 0; k < max_value; k++) {
+    rvs_pci_read_word_return_value = std::queue<u16>();
+    rvs_pci_read_word_return_value.push(k << first_one);
+    buff = new char[1024];
+    get_atomic_op_64_completer(test_dev, buff);
+    EXPECT_STREQ(buff, "NOT SUPPORTED");
+  }
+  // 3. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  for (int i = 0; i < 6; i++) {
+    test_dev->base_addr[i] = i;
+  }
+  get_num_bits(PCI_EXP_FLAGS_VERS, &num_ones, &first_one, &max_value);
+  for (uint k = 0; k < max_value; k++) {
+    rvs_pci_read_word_return_value = std::queue<u16>();
+    rvs_pci_read_word_return_value.push(k << first_one);
+    rvs_pci_read_long_return_value = std::queue<u32>();
+    rvs_pci_read_long_return_value.push(2*k);
+    buff = new char[1024];
+    get_atomic_op_64_completer(test_dev, buff);
+    if (k >= 2) {
+      if (((2*k) & 0x0100) == 1) {
+        EXPECT_STREQ(buff, "TRUE");
+      } else {
+        EXPECT_STREQ(buff, "FALSE");
+      }
+    } else {
+      EXPECT_STREQ(buff, "NOT SUPPORTED");
+    }
+  }
+
+  // ---------------------------------------
+  // get_atomic_op_128_CAS_completer
+  // ---------------------------------------
+  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  for (uint id_f = 0; id_f < 2; id_f++) {
+    for (uint type_f = 0; type_f < 2; type_f++) {
+      test_cap[id_f]->id           = 0;
+      test_cap[type_f]->type       = 0;
+      test_cap[(id_f+1)%2]->id     = PCI_CAP_ID_EXP;
+      test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
+      rvs_pci_read_word_return_value = std::queue<u16>();
+      rvs_pci_read_word_return_value.push(15);
+      buff = new char[1024];
+      get_atomic_op_128_CAS_completer(test_dev, buff);
+
+      if (id_f == type_f) {
+        // other one is valid
+        continue;
+      } else {
+        // none is valid
+        EXPECT_STREQ(buff, "NOT SUPPORTED");
+      }
+    }
+  }
+  // 2. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  for (int i = 0; i < 6; i++) {
+    test_dev->base_addr[i] = PCI_BASE_ADDRESS_SPACE_IO;
+  }
+  get_num_bits(PCI_EXP_FLAGS_VERS, &num_ones, &first_one, &max_value);
+  for (uint k = 0; k < max_value; k++) {
+    rvs_pci_read_word_return_value = std::queue<u16>();
+    rvs_pci_read_word_return_value.push(k << first_one);
+    buff = new char[1024];
+    get_atomic_op_128_CAS_completer(test_dev, buff);
+    EXPECT_STREQ(buff, "NOT SUPPORTED");
+  }
+  // 3. valid Id / Type values and iterate rvs_pci_read_word_return_value
+  test_cap[0]->id   = PCI_CAP_ID_EXP;
+  test_cap[0]->type = PCI_CAP_NORMAL;
+  test_cap[1]->id   = PCI_CAP_ID_EXP;
+  test_cap[1]->type = PCI_CAP_NORMAL;
+  for (int i = 0; i < 6; i++) {
+    test_dev->base_addr[i] = i;
+  }
+  get_num_bits(PCI_EXP_FLAGS_VERS, &num_ones, &first_one, &max_value);
+  for (uint k = 0; k < max_value; k++) {
+    rvs_pci_read_word_return_value = std::queue<u16>();
+    rvs_pci_read_word_return_value.push(k << first_one);
+    rvs_pci_read_long_return_value = std::queue<u32>();
+    rvs_pci_read_long_return_value.push(2*k);
+    buff = new char[1024];
+    get_atomic_op_128_CAS_completer(test_dev, buff);
+    if (k >= 2) {
+      if (((2*k) & 0x0200) == 1) {
+        EXPECT_STREQ(buff, "TRUE");
+      } else {
+        EXPECT_STREQ(buff, "FALSE");
+      }
+    } else {
+      EXPECT_STREQ(buff, "NOT SUPPORTED");
+    }
+  }
 
 }
 
-
-// /**
-//  * gets the device atomic capabilities register value
-//  * @param dev a pci_dev structure containing the PCI device information
-//  */
-// int64_t get_atomic_op_register_value(struct pci_dev *dev) {
-//     unsigned char i, has_memory_bar = 0;
-// 
-//     // get pci dev capabilities offset
-//     unsigned int cap_offset = pci_dev_find_cap_offset(dev, PCI_CAP_ID_EXP,
-//     PCI_CAP_NORMAL);
-// 
-//     if (cap_offset != 0) {
-//         // get Capability version via
-//         // PCI Express Capabilities Register (offset 02h)
-//         u16 cap_flags = pci_read_word(dev, cap_offset + 2);
-// 
-//         // check if it's capability version 2
-//         if (!((cap_flags & PCI_EXP_FLAGS_VERS) < 2)) {
-//             // check if the device has memory space BAR
-//             // (basically it should have but let us be sure about it)
-//             for (i = 0; i < MEM_BAR_MAX_INDEX + 1; i++)
-//                 if (dev->base_addr[i] && dev->size[i]) {
-//                     if (!(dev->base_addr[i] & PCI_BASE_ADDRESS_SPACE_IO)) {
-//                         has_memory_bar = 1;
-//                         break;
-//                     }
-//                 }
-// 
-//             if (has_memory_bar) {
-//                 return pci_read_long(dev, cap_offset + PCI_EXP_DEVCAP2);
-// 
-//             } else {
-//               return -1;
-//             }
-//         } else {
-//           return -1;
-//         }
-//     } else {
-//       return -1;
-//     }
-// }
-// 
-// /**
-//  * gets the device atomic 32-bit completer capabilities
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buf pre-allocated char buffer
-//  */
-// void get_atomic_op_32_completer(struct pci_dev *dev, char *buff) {
-//   int64_t atomic_op_completer_value;
-//   bool atomic_op_completer_supported_32_bit = false;
-// 
-//   atomic_op_completer_value = get_atomic_op_register_value(dev);
-// 
-//   if (atomic_op_completer_value != -1) {
-//         atomic_op_completer_supported_32_bit =
-//             static_cast<bool>(static_cast
-//                 <unsigned int>(atomic_op_completer_value) & 0x0080);
-// 
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-//                 atomic_op_completer_supported_32_bit ?
-//                     "TRUE" : "FALSE");
-//   } else {
-//     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//   }
-// }
-// 
-// /**
-//  * gets the device atomic 64-bit completer capabilities
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buf pre-allocated char buffer
-//  */
-// void get_atomic_op_64_completer(struct pci_dev *dev, char *buff) {
-//   int64_t atomic_op_completer_value;
-//   bool atomic_op_completer_supported_64_bit = false;
-// 
-//   atomic_op_completer_value = get_atomic_op_register_value(dev);
-// 
-//   if (atomic_op_completer_value != -1) {
-//         atomic_op_completer_supported_64_bit =
-//                 static_cast<bool>(static_cast
-//                     <unsigned int>(atomic_op_completer_value) & 0x0100);
-// 
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-//                 atomic_op_completer_supported_64_bit ?
-//                     "TRUE" : "FALSE");
-//   } else {
-//     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//   }
-// }
-// 
-// /**
-//  * gets the device atomic 128-bit CAS completer capabilities
-//  * @param dev a pci_dev structure containing the PCI device information
-//  * @param buf pre-allocated char buffer
-//  */
-// void get_atomic_op_128_CAS_completer(struct pci_dev *dev, char *buff) {
-//   int64_t atomic_op_completer_value;
-//   bool atomic_op_completer_supported_128_bit_CAS = false;
-// 
-//   atomic_op_completer_value = get_atomic_op_register_value(dev);
-// 
-//   if (atomic_op_completer_value != -1) {
-//     atomic_op_completer_supported_128_bit_CAS =
-//                 static_cast<bool>(static_cast
-//                     <unsigned int>(atomic_op_completer_value) & 0x0200);
-// 
-//         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s",
-//             atomic_op_completer_supported_128_bit_CAS ?
-//                     "TRUE" : "FALSE");
-//   } else {
-//     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-//   }
-// }
-
-// */
