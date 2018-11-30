@@ -479,11 +479,16 @@ TEST_F(PcieCapsTest, pcie_caps) {
   get_kernel_driver(test_dev, buff);
   EXPECT_STREQ(buff, exp_string.c_str());
   // 4. method is PCI_ACCESS_SYS_BUS_PCI and base = 1
-  exp_string = std::to_string(7);
+  exp_string = "driver"; // std::to_string(7);
   test_access->method = PCI_ACCESS_SYS_BUS_PCI;
   rvs_pci_get_param_return_value = (char*) "abc";
-  rvs_readlink_return_value = 4;
-  rvs_readlink_buff_return_value = (char*) "driver/";
+  rvs_readlink_return_value = 3;
+  rvs_readlink_buff_return_value = (char*) "def";
+//   rvs_readlink_buff_return_value = new char[1024];
+//   rvs_readlink_buff_return_value[0] = 'd';
+//   rvs_readlink_buff_return_value[1] = 'e';
+//   rvs_readlink_buff_return_value[2] = 'f';
+//   rvs_readlink_buff_return_value[3] = '\0';
   get_kernel_driver(test_dev, buff);
   EXPECT_STREQ(buff, exp_string.c_str());
   

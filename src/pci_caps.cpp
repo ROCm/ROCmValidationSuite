@@ -45,6 +45,8 @@ extern "C" {
   #include "rvs_unit_testing_defs.h"
   #define pci_read_long rvs_pci_read_long
   #define pci_read_word rvs_pci_read_word
+  #define pci_get_param rvs_pci_get_param
+  #define readlink rvs_readlink
   using namespace rvs;
 #endif
 
