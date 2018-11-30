@@ -47,6 +47,7 @@ extern "C" {
   #define pci_read_word rvs_pci_read_word
   #define pci_get_param rvs_pci_get_param
   #define readlink rvs_readlink
+  #define pci_write_byte rvs_pci_write_byte
   using namespace rvs;
 #endif
 
