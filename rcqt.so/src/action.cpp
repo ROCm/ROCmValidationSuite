@@ -28,6 +28,7 @@
 #include <sys/utsname.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 #include <pwd.h>
 #include <grp.h>
 #include <sys/stat.h>
@@ -73,6 +74,7 @@
 #define DPKG_FILE  "/var/lib/dpkg/status"
 #define PKG_CMD_FILE "installed_pkg.txt"
 #define VERSION_FILE "version_file.txt"
+#define LDCFG_FILE "rvs_ldcfg_file.txt"
 #define STREAM_SIZE 512
 #define USR_REG "([^/:]*)"
 #define GRP_REG "([^/:]*):([^/:]*):([^/:]*):([^/:]+)"
@@ -705,6 +707,69 @@ int action::ldcfgchk_run() {
           , MODULE_NAME_CAPS, action_name);
       return 1;
     }
+    char cmd_buffer[BUFFER_SIZE];
+		snprintf(cmd_buffer, BUFFER_SIZE, \
+		"ls -p %s | grep -v / > %s", ldpath_requested.c_str(), (char*)LDCFG_FILE);
+		
+		if (system(cmd_buffer) == -1) {
+			rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+			return 1;
+		}
+		ifstream lib_stream(std::string(LDCFG_FILE));
+		char file_line[STREAM_SIZE];
+		vector<string> found_files_vector;
+		std::regex file_pattern(soname_requested);
+		while (lib_stream.getline(file_line, STREAM_SIZE)) {
+			//std::cout << file_line << std::endl;
+			if (regex_match(std::string(file_line), file_pattern))
+				found_files_vector.push_back(std::string(file_line));
+		}
+		string arch_found_string;
+		bool arch_found_bool = false;
+		string ld_config_result = "[" + action_name + "] " +
+		"rcqt ldconfigcheck ";
+		for (auto it = found_files_vector.begin(); it != found_files_vector.end(); it++) {
+			// Full path of shared object
+			string full_ld_path = ldpath_requested + "/" + std::string(*it);
+			snprintf(cmd_buffer, sizeof(cmd_buffer), "file %s | grep \"shared object,\" > %s", full_ld_path.c_str(), (char*)LDCFG_FILE);
+			ifstream arch_stream(std::string(LDCFG_FILE));
+// // // // // // // // // // 			//std::cout << cmd_buffer << std::endl;
+			if (system(cmd_buffer) == -1) {
+				rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+				return 1;
+			}
+			char file_line[STREAM_SIZE];
+			std::regex arch_pattern(arch_requested);
+			arch_stream.getline(file_line, STREAM_SIZE);
+			string line_result = file_line;
+			arch_stream.close();
+			if (line_result.empty())
+				continue;
+			char arch_cmd_buffer[BUFFER_SIZE];
+			snprintf(arch_cmd_buffer, sizeof(arch_cmd_buffer), "objdump -f %s | grep ^architecture> %s",full_ld_path.c_str(), (char*)LDCFG_FILE);
+			if (system(arch_cmd_buffer) == -1) {
+				rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+				return 1;
+			}
+			arch_stream.open(std::string(LDCFG_FILE));
+			arch_stream.getline(file_line, STREAM_SIZE);
+			arch_found_string = file_line;
+			arch_found_string = str_split(arch_found_string, ",")[0];
+			arch_found_string.erase(0, arch_found_string.find_first_not_of("architecture: ") - 1);
+			arch_found_bool = true;
+			//std::cout << arch_found_string << "***" << arch_requested << std::endl;
+			if (regex_match(arch_found_string, arch_pattern)) {
+				string arch_pass = ld_config_result + *it
+				+ " " + arch_found_string + " " + ldpath_requested + " true";
+				log(arch_pass.c_str(), rvs::logresults);
+			}
+		}
+		if (!arch_found_bool) {
+			string lib_fail = ld_config_result + soname_requested
+			+ " " + arch_requested + ldpath_requested + + " false";
+			log(lib_fail.c_str(), rvs::logresults);
+		}
+			/*
     // Full path of shared object
     string full_ld_path = ldpath_requested + "/" + soname_requested;
 
@@ -738,7 +803,7 @@ int action::ldcfgchk_run() {
         return 1;
       }
       string result_string = result;
-			std::cout << result_string << std::endl;
+			std::cout << "***" << result_string << "***"<< std::endl;
       if (strstr(result, "architecture:") != nullptr) {
         vector<string> objdump_lines = str_split(result_string, "\n");
         int begin_of_the_arch_string = 0;
@@ -786,7 +851,7 @@ int action::ldcfgchk_run() {
     }
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::LogRecordFlush(json_rcqt_node);
-    }
+    }*/
     return 0;
   }
   return -1;
