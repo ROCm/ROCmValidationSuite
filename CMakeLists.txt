@@ -28,6 +28,22 @@ project ("rocm-validation-suite" )
 enable_testing()
 include ( CTest )
 
+execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rvs_os_helper.sh
+  RESULT_VARIABLE result
+  OUTPUT_VARIABLE RVS_OS_TYPE
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+if(result)
+   message(FATAL_ERROR "Could not obtain OS type: ${result}")
+endif()
+message(STATUS "OS TYPE: ${RVS_OS_TYPE}")
+if (${RVS_OS_TYPE} STREQUAL "ubuntu")
+  set(RVS_OS_TYPE_NUM 1)
+elseif (${RVS_OS_TYPE} STREQUAL "centos")
+  set(RVS_OS_TYPE_NUM 2)
+else()
+  set(RVS_OS_TYPE_NUM 0)
+endif()
+
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
