@@ -760,14 +760,24 @@ int action::ldcfgchk_run() {
 			//std::cout << arch_found_string << "***" << arch_requested << std::endl;
 			if (regex_match(arch_found_string, arch_pattern)) {
 				string arch_pass = ld_config_result + *it
-				+ " " + arch_found_string + " " + ldpath_requested + " true";
+				+ " " + arch_found_string + " " + ldpath_requested + " pass";
+				log(arch_pass.c_str(), rvs::logresults);
+				
+			} else {
+				string arch_fail = ld_config_result + *it
+				+ " NA " + ldpath_requested + " fail";
 				log(arch_pass.c_str(), rvs::logresults);
 			}
+			arch_stream.close();
 		}
 		if (!arch_found_bool) {
-			string lib_fail = ld_config_result + soname_requested
-			+ " " + arch_requested + ldpath_requested + + " false";
+			string lib_fail = ld_config_result
+			+ " not found NA " +  + ldpath_requested +  " fail";
 			log(lib_fail.c_str(), rvs::logresults);
+			if (bjson && json_rcqt_node != nullptr) {
+				rvs::lp::AddString(json_rcqt_node, "soname", soname_requested);
+				rvs::lp::AddString(json_rcqt_node, "ldchk", "false");
+			}
 		}
 			/*
     // Full path of shared object
@@ -852,6 +862,9 @@ int action::ldcfgchk_run() {
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }*/
+		if (bjson && json_rcqt_node != nullptr) {
+			rvs::lp::LogRecordFlush(json_rcqt_node);
+		}
     return 0;
   }
   return -1;
@@ -897,7 +910,51 @@ int action::filechk_run() {
     exists = false;
   else if (exists_string == "true")
     exists = true;
-
+	std::cout << file << std::endl;
+	std::size_t found = file.find_last_of("/\\");
+	std::cout << file.substr(0,found) << '\n';
+	std::cout << file.substr(found+1) << '\n';
+	string file_path = file.substr(0,found);
+	string file_requested = file.substr(found+1);
+	char cmd_buffer[BUFFER_SIZE];
+	snprintf(cmd_buffer, BUFFER_SIZE, \
+	"ls %s | grep -v / > %s", file_path.c_str(), (char*)LDCFG_FILE);
+	
+	if (system(cmd_buffer) == -1) {
+		rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+		return 1;
+	}
+	ifstream file_stream(std::string(LDCFG_FILE));
+	char file_line[STREAM_SIZE];
+	vector<string> found_files_vector;
+	std::regex file_pattern(file_requested);
+	while (file_stream.getline(file_line, STREAM_SIZE)) {
+		//std::cout << file_line << std::endl;
+		if (regex_match(std::string(file_line), file_pattern))
+			found_files_vector.push_back(std::string(file_line));
+	}
+	if (exists == false && found_files_vector.empty()) {
+		check = "true";
+		msg = "[" + action_name + "] " + "rcqt filecheck "+ file_path +" DNE " + check;
+		log(msg.c_str(), rvs::logresults);
+		if (bjson && json_rcqt_node != nullptr) {
+			rvs::lp::AddString(json_rcqt_node
+			, "exists", file_path);
+		}
+	}
+	if (found_files_vector.empty() && exists == true) {
+		check = "false";
+		msg = "[" + action_name + "] " + "rcqt filecheck "+ file_path +" DNE " + check;
+		log(msg.c_str(), rvs::logresults);
+		if (bjson && json_rcqt_node != nullptr) {
+			rvs::lp::AddString(json_rcqt_node
+			, "exists", file_path);
+		}
+	}
+	for (auto file_it = found_files_vector.begin();
+			 file_it != found_files_vector.end(); file_it++) {
+		file = file_path + "/" + std::string(*file_it);
+		std::cout << file << std::endl;
   // check if exists property corresponds to real existence of the file
   if (exists == false) {
     if (stat(file.c_str(), &info) < 0)
@@ -923,13 +980,15 @@ int action::filechk_run() {
       if (iter != property.end()) {
         // check if value from property is equal to real one
         owner = iter->second;
+				std::regex owner_pattern(owner);
         struct passwd p, *result;
         char pbuff[256];
         if ((getpwuid_r(info.st_uid, &p, pbuff, sizeof(pbuff), &result) != 0)) {
           rvs::lp::Err("Error with getpwuid_r", MODULE_NAME_CAPS, action_name);
           return 1;
         }
-        if (p.pw_name == owner)
+        //if (p.pw_name == owner)
+        if (regex_match(p.pw_name, owner_pattern))
           check = "true";
         else
           check = "false";
@@ -946,13 +1005,15 @@ int action::filechk_run() {
       if (iter != property.end()) {
         // check if value from property is equal to real one
         group = iter->second;
+				std::regex group_pattern(group);
         struct group g, *result;
         char pbuff[256];
         if ((getgrgid_r(info.st_gid, &g, pbuff, sizeof(pbuff), &result) != 0)) {
           rvs::lp::Err("Error with getgrgid_r", MODULE_NAME, action_name);
           return 1;
         }
-        if (g.gr_name == group)
+        //if (g.gr_name == group)
+        if (regex_match(g.gr_name, group_pattern))
           check = "true";
         else
           check = "false";
@@ -1002,6 +1063,7 @@ int action::filechk_run() {
       }
     }
   }
+}
       if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::LogRecordFlush(json_rcqt_node);
     }
