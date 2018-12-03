@@ -27,6 +27,7 @@ cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall -Wextra)
+add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
 
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
@@ -41,6 +42,8 @@ set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
 
 project ( ${RVS_TARGET} )
+
+message(STATUS "MODULE: ${RVS}")
 
 # ## Set default module path if not already set
 # if ( NOT DEFINED CMAKE_MODULE_PATH )
@@ -99,13 +102,6 @@ message ( "TESTSOURCES ${TESTSOURCES}" )
 
 LINK_DIRECTORIES(${UT_LIB})
 
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
-COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/.rvsmodules.config
-COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
-COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/conf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/conf
-)
-
 install(TARGETS ${RVS_TARGET}
   RUNTIME
   DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
@@ -120,16 +116,6 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/conf
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
   DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
-  COMPONENT applications
-)
-
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/man/man1/rvs.1"
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/man
-  COMPONENT applications
-)
-
-install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../doc/userguide/html
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/userguide
   COMPONENT applications
 )
 
