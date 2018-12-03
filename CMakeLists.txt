@@ -28,6 +28,25 @@ project ("rocm-validation-suite" )
 enable_testing()
 include ( CTest )
 
+execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rvs_os_helper.sh
+  RESULT_VARIABLE result
+  OUTPUT_VARIABLE RVS_OS_TYPE
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+if(result)
+   message(FATAL_ERROR "Could not obtain OS type: ${result}")
+endif()
+message(STATUS "RVS_OS_TYPE: ${RVS_OS_TYPE}")
+if (${RVS_OS_TYPE} STREQUAL "ubuntu")
+  set(RVS_OS_TYPE_NUM 1)
+elseif (${RVS_OS_TYPE} STREQUAL "centos")
+  set(RVS_OS_TYPE_NUM 2)
+else()
+  set(RVS_OS_TYPE_NUM 0)
+endif()
+message(STATUS "RVS_OS_TYPE_NUM: ${RVS_OS_TYPE_NUM}")
+
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
@@ -117,9 +136,16 @@ if ( NOT DEFINED UT_LIB )
 endif ()
 
 ## Set default module path if not already set
-if ( NOT DEFINED CPACK_GENERATOR )
-    set ( CPACK_GENERATOR "DEB;RPM" )
-endif ()
+if (NOT DEFINED CPACK_GENERATOR )
+  if (RVS_OS_TYPE_NUM EQUAL 1)
+    set (CPACK_GENERATOR "DEB")
+  elseif (RVS_OS_TYPE_NUM EQUAL 2)
+    set (CPACK_GENERATOR "RPM")
+  else()
+    set (CPACK_GENERATOR "DEB;RPM")
+  endif()
+endif()
+message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 if ( NOT DEFINED CMAKE_PACKAGING_INSTALL_PREFIX )
     set (CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
