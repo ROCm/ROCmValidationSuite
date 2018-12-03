@@ -23,6 +23,16 @@
 ##
 ################################################################################
 
+## additional libraries
+set ( PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
+
+## define test sources
+set(TEST_SOURCES
+   ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvs_unit_testing_defs.cpp
+)
+
+add_executable(rvstest ${SOURCES})
+target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
 
 add_test(NAME unit.rvs.1
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
