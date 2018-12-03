@@ -26,5 +26,5 @@
 
 add_test(NAME conf.smqt.1
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/smqt.conf
+  COMMAND rvsfail -d 3 -c conf/smqt.conf
 )

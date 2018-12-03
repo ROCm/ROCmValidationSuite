@@ -28,23 +28,22 @@
 #include <string>
 #include <regex>
 
-using std::vector;
-using std::string;
 
 /**
- * splits a string based on a given delimiter
- * @param str_val input string
+ * splits a std::string based on a given delimiter
+ * @param str_val input std::string
  * @param delimiter tokens' delimiter
- * @return vector containing all tokens
+ * @return std::vector containing all tokens
  */
-vector<string> str_split(const string& str_val, const string& delimiter) {
-    vector<string> str_tokens;
+std::vector<std::string> str_split(const std::string& str_val,
+                                   const std::string& delimiter) {
+    std::vector<std::string> str_tokens;
     size_t prev_pos = 0, cur_pos = 0;
     do {
         cur_pos = str_val.find(delimiter, prev_pos);
-        if (cur_pos == string::npos)
+        if (cur_pos == std::string::npos)
             cur_pos = str_val.length();
-        string token = str_val.substr(prev_pos, cur_pos - prev_pos);
+        std::string token = str_val.substr(prev_pos, cur_pos - prev_pos);
         if (!token.empty())
             str_tokens.push_back(token);
         prev_pos = cur_pos + delimiter.length();
@@ -54,90 +53,30 @@ vector<string> str_split(const string& str_val, const string& delimiter) {
 
 
 /**
- * Conert array of strings into array of integers
- * @param sArr input string
- * @param iArr tokens' delimiter
- * @return -1 if error, 0 <= otherwise
- */
-int rvs_util_strarr_to_intarr(const std::vector<string>& sArr,
-                              std::vector<int>* piArr) {
-  piArr->clear();
-
-  for (auto it = sArr.begin(); it != sArr.end(); ++it) {
-    try {
-      if (is_positive_integer(*it)) {
-        piArr->push_back(std::stoi(*it));
-      }
-    }
-    catch(...) {
-    }
-  }
-
-  if (sArr.size() != piArr->size())
-    return -1;
-
-  return piArr->size();
-}
-
-/**
- * Conert array of strings into array of uint16_t
- * @param sArr input string
- * @param iArr tokens' delimiter
- * @return -1 if error, 0 <= otherwise
- */
-int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
-                              std::vector<uint16_t>* piArr) {
-  piArr->clear();
-
-  for (auto it = sArr.begin(); it != sArr.end(); ++it) {
-    try {
-      if (is_positive_integer(*it)) {
-        piArr->push_back(std::stoi(*it));
-      }
-    }
-    catch(...) {
-    }
-  }
-
-  if (sArr.size() != piArr->size())
-    return -1;
-
-  return piArr->size();
-}
-
-/**
- * Conert array of strings into array of uint32_t
- * @param sArr input string
- * @param iArr tokens' delimiter
- * @return -1 if error, 0 <= otherwise
- */
-int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
-                              std::vector<uint32_t>* piArr) {
-  piArr->clear();
-
-  for (auto it = sArr.begin(); it != sArr.end(); ++it) {
-    try {
-      if (is_positive_integer(*it)) {
-        piArr->push_back(std::stoi(*it));
-      }
-    }
-    catch(...) {
-    }
-  }
-
-  if (sArr.size() != piArr->size())
-    return -1;
-
-  return piArr->size();
-}
-
-/**
- * checks if input string is a positive integer number
- * @param str_val the input string
- * @return true if string is a positive integer number, false otherwise
+ * checks if input std::string is a positive integer number
+ * @param str_val the input std::string
+ * @return true if std::string is a positive integer number, false otherwise
  */
 bool is_positive_integer(const std::string& str_val) {
     return !str_val.empty()
             && std::find_if(str_val.begin(), str_val.end(),
                     [](char c) {return !std::isdigit(c);}) == str_val.end();
+}
+
+int rvs_util_parse(const std::string& buff, bool* pval) {
+  if (buff.empty()) {  // method empty
+    return 2;  // not found
+  }
+
+  if (buff == "true") {
+    *pval = true;
+    return 0;  // OK - true
+  }
+
+  if (buff == "false") {
+    *pval = false;
+    return 0;  // OK - false
+  }
+
+  return 1;  // syntax error
 }

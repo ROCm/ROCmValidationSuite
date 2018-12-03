@@ -123,26 +123,6 @@ void action::property_get_iet_ramp_interval(int *error) {
     }
 }
 
-/**
- * @brief reads the log interval from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void action::property_get_iet_log_interval(int *error) {
-    *error = 0;
-    iet_log_interval = IET_DEFAULT_LOG_INTERVAL;
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_LOG_INTERVAL_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second)) {
-            iet_log_interval = std::stoul(it->second);
-            if (iet_log_interval == 0)
-                iet_log_interval = IET_DEFAULT_LOG_INTERVAL;
-        } else {
-            *error = 1;
-        }
-        property.erase(it);
-    }
-}
 
 /**
  * @brief reads the sample interval from the module's properties collection
@@ -283,9 +263,8 @@ bool action::get_all_iet_config_keys(void) {
         return false;
     }
 
-    error = property_get_int<uint64_t>
-    (RVS_CONF_LOG_INTERVAL_KEY, &iet_log_interval, IET_DEFAULT_LOG_INTERVAL);
-    if (error) {
+    if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+        &property_log_interval, IET_DEFAULT_LOG_INTERVAL)) {
         msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY)
         + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -299,7 +278,6 @@ bool action::get_all_iet_config_keys(void) {
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
-
 
     property_get_iet_max_violations(&error);
     if (error) {
@@ -336,43 +314,30 @@ bool action::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
 
-    // get <device> property value ("all" or a list of gpu id)
-    if (has_property("device", &sdev)) {
-        device_all_selected = property_get_device(&error);
-        if (error) {  // log the error & abort IET
-            msg = "invalid '" +
-                    std::string(RVS_CONF_DEVICE_KEY) + "' key value " + sdev;
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return false;
-        }
-    } else {
-        // log the error & abort IET
-        msg = "key '" +
-                std::string(RVS_CONF_DEVICE_KEY) + "' was not found";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    // get <device> property value (a list of gpu id)
+    if ((error = property_get_device())) {
+      switch (error) {
+      case 1:
+        msg = "Invalid 'device' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device' key.";
+        break;
+      }
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
 
-    // get the <deviceid> property value
-    if (has_property(RVS_CONF_DEVICEID_KEY, &sdevid)) {
-        int devid;
-        error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
-        if (error == 0) {
-            if (devid != -1) {
-                deviceid = static_cast<uint16_t>(devid);
-                device_id_filtering = true;
-            }
-        } else {
-            msg = "invalid '" +
-                std::string(RVS_CONF_DEVICEID_KEY) + "' key value " + sdevid;
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return false;
-        }
+    // get the <deviceid> property value if provided
+    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                  &property_device_id, 0u)) {
+      msg = "Invalid 'deviceid' key value.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
 
     // get the other action/IET related properties
-    rvs::actionbase::property_get_run_parallel(&error);
-    if (error == 1) {
+    if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
         msg = "invalid '" +
                 std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -380,7 +345,7 @@ bool action::get_all_common_config_keys(void) {
     }
 
     error = property_get_int<uint64_t>
-    (RVS_CONF_COUNT_KEY, &gst_run_count, DEFAULT_COUNT);
+    (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
     if (error == 1) {
         msg = "invalid '" +
                 std::string(RVS_CONF_COUNT_KEY) + "' key value";
@@ -389,7 +354,7 @@ bool action::get_all_common_config_keys(void) {
     }
 
     error = property_get_int<uint64_t>
-    (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, DEFAULT_WAIT);
+    (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
     if (error == 1) {
         msg = "invalid '" +
                 std::string(RVS_CONF_WAIT_KEY) + "' key value";
@@ -398,7 +363,7 @@ bool action::get_all_common_config_keys(void) {
     }
 
     error = property_get_int<uint64_t>
-    (RVS_CONF_DURATION_KEY, &gst_run_duration_ms);
+    (RVS_CONF_DURATION_KEY, &property_duration);
     if (error == 1) {
         msg = "invalid '" +
                 std::string(RVS_CONF_DURATION_KEY) + "' key value";
@@ -418,8 +383,8 @@ bool action::do_edp_test(void) {
     size_t k = 0;
     for (;;) {
         unsigned int i = 0;
-        if (gst_run_wait_ms != 0)  // delay iet execution
-            sleep(gst_run_wait_ms);
+        if (property_wait != 0)  // delay iet execution
+            sleep(property_wait);
 
         vector<IETWorker> workers(edpp_gpus.size());
         vector<gpu_hwmon_info>::iterator it;
@@ -447,10 +412,10 @@ bool action::do_edp_test(void) {
                          rvs::logdebug);
 
             workers[i].set_pwr_device_id(dev_idx);
-            workers[i].set_run_wait_ms(gst_run_wait_ms);
-            workers[i].set_run_duration_ms(gst_run_duration_ms);
+            workers[i].set_run_wait_ms(property_wait);
+            workers[i].set_run_duration_ms(property_duration);
             workers[i].set_ramp_interval(iet_ramp_interval);
-            workers[i].set_log_interval(iet_log_interval);
+            workers[i].set_log_interval(property_log_interval);
             workers[i].set_sample_interval(iet_sample_interval);
             workers[i].set_max_violations(iet_max_violations);
             workers[i].set_target_power(iet_target_power);
@@ -460,7 +425,7 @@ bool action::do_edp_test(void) {
         }
 
 
-        if (gst_runs_parallel) {
+        if (property_parallel) {
             for (i = 0; i < edpp_gpus.size(); i++)
                 workers[i].start();
 
@@ -486,9 +451,9 @@ bool action::do_edp_test(void) {
         if (rvs::lp::Stopping())
             return false;
 
-        if (gst_run_count != 0) {
+        if (property_count != 0) {
             k++;
-            if (k == gst_run_count)
+            if (k == property_count)
                 break;
         }
     }
@@ -603,40 +568,43 @@ int action::get_all_selected_gpus(void) {
 
         // computes the actual dev's location_id (sysfs entry)
         uint16_t dev_location_id = ((((uint16_t) (pci_cdev->bus)) << 8)
-                | (pci_cdev->func));
+                | (pci_cdev->dev));
 
         // check if this pci_dev corresponds to one of the AMD GPUs
-        int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-        if (gpu_id == -1)
-            continue;
+        uint16_t gpu_id;
+        // if not and AMD GPU just continue
+        if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+          continue;
 
         // that should be an AMD GPU
         // check for deviceid filtering
-        if (!device_id_filtering || (device_id_filtering &&
-                        pci_cdev->device_id == deviceid)) {
-            // check if the GPU is part of the EDPp test  (either <device>: all
-            // or the gpu_id is in the device: <gpu id> list)
-            bool cur_gpu_selected = false;
+        if (property_device_id > 0) {
+          if (pci_cdev->device_id != property_device_id) {
+            continue;
+          }
+        }
 
-            if (device_all_selected) {
+        // check if the GPU is part of the EDPp test  (either <device>: all
+        // or the gpu_id is in the device: <gpu id> list)
+        bool cur_gpu_selected = false;
+
+        if (property_device_all) {
+            cur_gpu_selected = true;
+        } else {
+            // search for this gpu in the list
+            // provided under the <device> property
+            auto it_gpu_id = find(property_device.begin(),
+                                  property_device.end(),
+                                  gpu_id);
+
+            if (it_gpu_id != property_device.end())
                 cur_gpu_selected = true;
-            } else {
-                // search for this gpu in the list
-                // provided under the <device> property
-                vector<string>::iterator it_gpu_id = find(
-                    device_prop_gpu_id_list.begin(),
-                    device_prop_gpu_id_list.end(),
-                    std::to_string(gpu_id));
+        }
 
-                if (it_gpu_id != device_prop_gpu_id_list.end())
-                    cur_gpu_selected = true;
-            }
-
-            if (cur_gpu_selected) {
-                if (add_gpu_to_edpp_list(dev_location_id, gpu_id,
-                  hip_num_gpu_devices))
-                    amd_gpus_found = true;
-            }
+        if (cur_gpu_selected) {
+            if (add_gpu_to_edpp_list(dev_location_id, gpu_id,
+              hip_num_gpu_devices))
+                amd_gpus_found = true;
         }
     }
 
@@ -657,18 +625,12 @@ int action::get_all_selected_gpus(void) {
  */
 int action::run(void) {
     string msg;
-    int error;
 
     // get the action name
-    rvs::actionbase::property_get_action_name(&error);
-    if (error == 2) {
-      msg = "action name field is missing in iet module";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS);;
+    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
       return -1;
     }
-
-    device_all_selected = false;
-    device_id_filtering = false;
 
     // check for -j flag (json logging)
     if (property.find("cli.-j") != property.end())
@@ -680,7 +642,7 @@ int action::run(void) {
     if (!get_all_iet_config_keys())
         return -1;
 
-    if (gst_run_duration_ms > 0 && (gst_run_duration_ms < iet_ramp_interval)) {
+    if (property_duration > 0 && (property_duration < iet_ramp_interval)) {
         msg = std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
         RVS_CONF_RAMP_INTERVAL_KEY + "'";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);

@@ -66,8 +66,6 @@ class action: public rvs::actionbase {
 
     //! stress test ramp duration
     uint64_t gst_ramp_interval;
-    //! time interval at which the module reports the average GFlops
-    uint64_t gst_log_interval;
     //! maximum allowed number of target_stress violations
     int gst_max_violations;
     //! specifies whether to copy the matrices to the GPU before each
@@ -80,13 +78,6 @@ class action: public rvs::actionbase {
     float gst_tolerance;
     //! matrix size for SGEMM
     uint64_t gst_matrix_size;
-
-    //! TRUE if device config key is "all"
-    bool device_all_selected;
-    //! TRUE if deviceid filtering was enabled
-    bool device_id_filtering;
-    //! GPU device type config key value
-    uint16_t deviceid;
 
     // configuration properties getters
 

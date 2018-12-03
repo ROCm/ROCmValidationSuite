@@ -62,9 +62,6 @@ class action : public rvs::actionbase {
     bool bjson;
     void* json_root_node;
 
-    // get the device property value (list of gpu_id) from the module's
-    // properties collection
-    bool property_get_device(int *error, int num_nodes);
     // get gpu id
     string property_get_gpuid(int node_id);
     // check device id is correct
@@ -72,9 +69,9 @@ class action : public rvs::actionbase {
     // split properties and io_links properties
     bool property_split(string prop);
     // get properties values
-    void property_get_value(string gpu_id, int node_id);
+    void property_get_value(uint16_t gpu_id);
     // get io links properties values
-    void property_io_links_get_value(string gpu_id, int node_id);
+    void property_io_links_get_value(uint16_t gpu_id);
 };
 
 #endif  // GPUP_SO_INCLUDE_ACTION_H_

@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 #include "rvs_module.h"
+#include "gpu_util.h"
 #include "action.h"
 #include "rvsloglp.h"
 
@@ -76,6 +77,7 @@ extern "C" const char* rvs_module_get_output(void) {
 
 extern "C" int rvs_module_init(void* pMi) {
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+  rvs::gpulist::Initialize();
   return 0;
 }
 

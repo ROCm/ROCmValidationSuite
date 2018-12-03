@@ -22,33 +22,23 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef SMQT_SO_INCLUDE_ACTION_H_
-#define SMQT_SO_INCLUDE_ACTION_H_
+#include "unitactionbase.h"
+#include "rvsloglp.h"
+#define MODULE_NAME_CAPS "UNITPESM"
 
-#include <string>
-#include "rvsactionbase.h"
 
-/**
- * @class action
- * @ingroup SMQT
- *
- * @brief SMQT action implementation class
- *
- * Derives from rvs::actionbase and implements actual action functionality
- * in its run() method.
- *
- */
-class action : public rvs::actionbase {
- public:
-    action();
-    virtual ~action();
-    virtual int run(void);
- private:
-    ulong  get_property(std::string);
-    std::string pretty_print(ulong, uint16_t, std::string, std::string);
-    bool get_all_common_config_keys();
-    bool get_all_smqt_config_keys();
-    std::string action_name;
-};
+//! Default constructor
+unitactionbase::unitactionbase() {
+}
 
-#endif /* SMQT_SO_INCLUDE_ACTION_H_ */
+//! Default destructor
+unitactionbase::~unitactionbase() {
+  property.clear();
+}
+
+
+int unitactionbase::run(void) {
+  RVSTRACE_
+  // agreed upon return value for this run() method
+  return 3;
+}

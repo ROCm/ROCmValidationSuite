@@ -22,33 +22,13 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef SMQT_SO_INCLUDE_ACTION_H_
-#define SMQT_SO_INCLUDE_ACTION_H_
 
-#include <string>
-#include "rvsactionbase.h"
 
-/**
- * @class action
- * @ingroup SMQT
- *
- * @brief SMQT action implementation class
- *
- * Derives from rvs::actionbase and implements actual action functionality
- * in its run() method.
- *
- */
-class action : public rvs::actionbase {
- public:
-    action();
-    virtual ~action();
-    virtual int run(void);
- private:
-    ulong  get_property(std::string);
-    std::string pretty_print(ulong, uint16_t, std::string, std::string);
-    bool get_all_common_config_keys();
-    bool get_all_smqt_config_keys();
-    std::string action_name;
-};
 
-#endif /* SMQT_SO_INCLUDE_ACTION_H_ */
+#include "gtest/gtest.h"
+
+
+TEST(pesm, sanity) {
+  EXPECT_EQ(strlen("Test"), 4u);
+  EXPECT_EQ(strlen(""), 0u);
+}

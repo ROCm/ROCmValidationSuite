@@ -59,8 +59,6 @@ using std::vector;
 
 //! Default constructor
 pebbaction::pebbaction() {
-  prop_deviceid = -1;
-  prop_device_id_filtering = false;
   bjson = false;
   b2b_block_size = 0;
   link_type = -1;
@@ -72,32 +70,6 @@ pebbaction::~pebbaction() {
 }
 
 /**
- *  * @brief reads the module's properties collection to see if
- * device to host transfers will be considered
- */
-void pebbaction::property_get_h2d() {
-  prop_h2d = true;
-  auto it = property.find("host_to_device");
-  if (it != property.end()) {
-    if (it->second == "false")
-      prop_h2d = false;
-  }
-}
-
-/**
- *  @brief reads the module's properties collection to see if
- * device to host transfers will be considered
- */
-void pebbaction::property_get_d2h() {
-  prop_d2h = true;
-  auto it = property.find("device_to_host");
-  if (it != property.end()) {
-    if (it->second == "false")
-      prop_d2h = false;
-  }
-}
-
-/**
  * @brief reads all PQT related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
@@ -106,22 +78,23 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
   string msg;
   int error;
 
-
   RVSTRACE_
-  error = property_get_int<int>(RVS_CONF_LOG_INTERVAL_KEY, &prop_log_interval);
-  if (error == 1) {
-    msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
-  } else if (error == 2) {
-    prop_log_interval = DEFAULT_LOG_INTERVAL;
+
+  if (property_get("h2d", &prop_h2d, true)) {
+      msg = "invalid 'h2d'' key";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
   }
 
-  property_get_h2d();
-  property_get_d2h();
+  if (property_get("d2h", &prop_d2h, false)) {
+      msg = "invalid 'd2h'' key";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return false;
+  }
 
-  property_get_uint_list(RVS_CONF_BLOCK_SIZE_KEY, YAML_DEVICE_PROP_DELIMITER,
-                         &block_size, &b_block_size_all, &error);
+  error = property_get_uint_list<uint32_t>(RVS_CONF_BLOCK_SIZE_KEY,
+                                   YAML_DEVICE_PROP_DELIMITER,
+                                   &block_size, &b_block_size_all);
   if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -161,49 +134,35 @@ bool pebbaction::get_all_common_config_keys(void) {
 
   RVSTRACE_
   // get the action name
-  property_get_action_name(&error);
-  if (error) {
-    msg = "pqt [] action field is missing";
-    log(msg.c_str(), rvs::logerror);
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
     return false;
   }
 
   // get <device> property value (a list of gpu id)
-  if (has_property("device", &sdev)) {
-    prop_device_all_selected = property_get_device(&error);
-    if (error) {  // log the error & abort GST
-      msg = "invalid 'device' key value " + sdev;
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+  if (int sts = property_get_device()) {
+    switch (sts) {
+    case 1:
+      msg = "Invalid 'device' key value.";
+      break;
+    case 2:
+      msg = "Missing 'device' key.";
+      break;
     }
-  } else {
-    msg = "key 'device' was not found";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    return -1;
   }
 
-  // get the <deviceid> property value
-  if (has_property("deviceid", &sdevid)) {
-    int devid;
-    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
-    if (!error) {
-      if (devid != -1) {
-        prop_deviceid = static_cast<uint16_t>(devid);
-        prop_device_id_filtering = true;
-      }
-    } else {
-      msg = "invalid 'deviceid' key value " + std::string(sdevid);
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-
-      return false;
-    }
-  } else {
-    prop_device_id_filtering = false;
+  // get the <deviceid> property value if provided
+  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                &property_device_id, 0u)) {
+    msg = "Invalid 'deviceid' key value.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
   }
 
-  // get the other action/GST related properties
-  rvs::actionbase::property_get_run_parallel(&error);
-  if (error == 1) {
+  // get the other action related properties
+  if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
     msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
     "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -211,7 +170,7 @@ bool pebbaction::get_all_common_config_keys(void) {
   }
 
   error = property_get_int<uint64_t>
-  (RVS_CONF_COUNT_KEY, &gst_run_count, DEFAULT_COUNT);
+  (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
   if (error == 1) {
     msg ="invalid '" + std::string(RVS_CONF_COUNT_KEY) +"' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -219,33 +178,29 @@ bool pebbaction::get_all_common_config_keys(void) {
   }
 
   error = property_get_int<uint64_t>
-  (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, DEFAULT_WAIT);
+  (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
-  error = property_get_int<uint64_t>
-  (RVS_CONF_DURATION_KEY, &gst_run_duration_ms);
-  if (error != 0) {
-    msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
-    "' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
-  } else if (gst_run_duration_ms == 0) {
-    msg = "'" + std::string(RVS_CONF_DURATION_KEY) +
-    "' key must be greater then zero";
+  if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
+    &property_duration, DEFAULT_DURATION)) {
+    msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
+    "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
 
-  error = property_get_int<int>(RVS_CONF_LOG_INTERVAL_KEY, &error);
-  if (error == 1) {
-    msg = "invalid logging level value";
+  if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+    &property_log_interval, DEFAULT_LOG_INTERVAL)) {
+    msg = "Invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) +
+    "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return false;
   }
+
   return true;
 }
 
@@ -274,9 +229,9 @@ int pebbaction::create_threads() {
   RVSTRACE_
   for (size_t i = 0; i < gpu_id.size(); i++) {
     RVSTRACE_
-    if (prop_device_id_filtering) {
+    if (property_device_id > 0) {
       RVSTRACE_
-      if (prop_deviceid != gpu_device_id[i]) {
+      if (property_device_id != gpu_device_id[i]) {
         RVSTRACE_
         continue;
       }
@@ -284,18 +239,18 @@ int pebbaction::create_threads() {
 
     // filter out by listed sources
     RVSTRACE_
-    if (!prop_device_all_selected) {
+    if (!property_device_all) {
       RVSTRACE_
-      const auto it = std::find(device_prop_gpu_id_list.cbegin(),
-                                device_prop_gpu_id_list.cend(),
-                                std::to_string(gpu_id[i]));
-      if (it == device_prop_gpu_id_list.cend()) {
+      const auto it = std::find(property_device.cbegin(),
+                                property_device.cend(),
+                                gpu_id[i]);
+      if (it == property_device.cend()) {
         RVSTRACE_
         continue;
       }
     }
 
-    int dstnode;
+    uint16_t dstnode;
     int srcnode;
 
     RVSTRACE_
@@ -304,8 +259,7 @@ int pebbaction::create_threads() {
          cpu_index++) {
       RVSTRACE_
 
-      dstnode = rvs::gpulist::GetNodeIdFromGpuId(gpu_id[i]);
-      if (dstnode < 0) {
+      if (rvs::gpulist::gpu2node(gpu_id[i], &dstnode)) {
         RVSTRACE_
         msg = "no node found for destination GPU ID "
           + std::to_string(gpu_id[i]);
@@ -348,7 +302,7 @@ int pebbaction::create_threads() {
       if (rvs::hsa::Get()->GetPeerStatus(srcnode, dstnode)) {
         RVSTRACE_
         pebbworker* p = nullptr;
-        if (gst_runs_parallel && b2b_block_size > 0) {
+        if (property_parallel && b2b_block_size > 0) {
           RVSTRACE_
           pebbworker_b2b* pb2b = new pebbworker_b2b;
           if (pb2b == nullptr) {
@@ -405,7 +359,7 @@ int pebbaction::create_threads() {
         rvs::lp::LogRecordFlush(pjson);
       }
     }
-    return 0;
+    return -1;
   }
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
@@ -457,8 +411,8 @@ int pebbaction::print_running_average() {
  *
  * */
 int pebbaction::print_running_average(pebbworker* pWorker) {
-  int         src_node, dst_node;
-  int         dst_id;
+  uint16_t    src_node, dst_node;
+  uint16_t    dst_id;
   bool        bidir;
   size_t      current_size;
   double      duration;
@@ -468,34 +422,51 @@ int pebbaction::print_running_average(pebbworker* pWorker) {
   uint16_t    transfer_ix;
   uint16_t    transfer_num;
 
+  RVSTRACE_
   // get running average
   pWorker->get_running_data(&src_node, &dst_node, &bidir,
                             &current_size, &duration);
 
   if (duration > 0) {
+    RVSTRACE_
     bandwidth = current_size/duration/(1024*1024*1024);
     if (bidir) {
+      RVSTRACE_
       bandwidth *=2;
     }
     snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
   } else {
+    RVSTRACE_
     // no running average in this iteration, try getting total so far
     // (do not reset final totals as this is just intermediate query)
     pWorker->get_final_data(&src_node, &dst_node, &bidir,
                             &current_size, &duration, false);
     if (duration > 0) {
+      RVSTRACE_
       bandwidth = current_size/duration/(1024*1024*1024);
       if (bidir) {
+        RVSTRACE_
         bandwidth *=2;
       }
       snprintf( buff, sizeof(buff), "%.3f GBps (*)", bandwidth);
     } else {
+      RVSTRACE_
       // not transfers at all - print "pending"
       snprintf( buff, sizeof(buff), "(pending)");
     }
   }
 
-  dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+//  dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+
+  RVSTRACE_
+  if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+    RVSTRACE_
+    std::string msg = "could not find GPU id for node " +
+                      std::to_string(dst_node);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+  RVSTRACE_
   transfer_ix = pWorker->get_transfer_ix();
   transfer_num = pWorker->get_transfer_num();
 
@@ -510,12 +481,14 @@ int pebbaction::print_running_average(pebbworker* pWorker) {
   rvs::lp::Log(msg, rvs::loginfo);
 
   if (bjson) {
+    RVSTRACE_
     unsigned int sec;
     unsigned int usec;
     rvs::lp::get_ticks(&sec, &usec);
     void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                         action_name.c_str(), rvs::loginfo, sec, usec);
     if (pjson != NULL) {
+      RVSTRACE_
       rvs::lp::AddString(pjson,
                           "transfer_ix", std::to_string(transfer_ix));
       rvs::lp::AddString(pjson,
@@ -527,6 +500,7 @@ int pebbaction::print_running_average(pebbworker* pWorker) {
     }
   }
 
+  RVSTRACE_
   return 0;
 }
 
@@ -538,8 +512,8 @@ int pebbaction::print_running_average(pebbworker* pWorker) {
  *
  * */
 int pebbaction::print_final_average() {
-  int         src_node, dst_node;
-  int         dst_id;
+  uint16_t    src_node, dst_node;
+  uint16_t    dst_id;
   bool        bidir;
   size_t      current_size;
   double      duration;
@@ -550,20 +524,32 @@ int pebbaction::print_final_average() {
   uint16_t    transfer_num;
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+    RVSTRACE_
     (*it)->get_final_data(&src_node, &dst_node, &bidir,
                           &current_size, &duration);
 
     if (duration) {
+      RVSTRACE_
       bandwidth = current_size/duration/(1024*1024*1024);
       if (bidir) {
+        RVSTRACE_
         bandwidth *=2;
       }
       snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
     } else {
+      RVSTRACE_
       snprintf( buff, sizeof(buff), "(not measured)");
     }
 
-    dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+    RVSTRACE_
+    if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+      RVSTRACE_
+      std::string msg = "could not find GPU id for node " +
+                        std::to_string(dst_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+    RVSTRACE_
     transfer_ix = (*it)->get_transfer_ix();
     transfer_num = (*it)->get_transfer_num();
 
@@ -578,12 +564,14 @@ int pebbaction::print_final_average() {
 
     rvs::lp::Log(msg, rvs::logresults);
     if (bjson) {
+      RVSTRACE_
       unsigned int sec;
       unsigned int usec;
       rvs::lp::get_ticks(&sec, &usec);
       void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                           action_name.c_str(), rvs::logresults, sec, usec);
       if (pjson != NULL) {
+        RVSTRACE_
         rvs::lp::AddString(pjson,
                             "transfer_ix", std::to_string(transfer_ix));
         rvs::lp::AddString(pjson,
@@ -596,7 +584,9 @@ int pebbaction::print_final_average() {
         rvs::lp::LogRecordFlush(pjson);
       }
     }
+    RVSTRACE_
   }
+  RVSTRACE_
   return 0;
 }
 

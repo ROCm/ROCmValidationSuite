@@ -69,7 +69,7 @@ Worker::~Worker() {}
  * @brief Prints current metric values at every log_interval msec.
  */
 void Worker::do_metric_values() {
-  string msg;
+  std::string msg;
   unsigned int sec;
   unsigned int usec;
   void* r;
@@ -133,7 +133,7 @@ void Worker::run() {
 //  std::string val_str;
 //  std::vector<std::string> val_vec;
 
-  string msg;
+  std::string msg;
   rsmi_status_t status;
   rsmi_frequencies f;
   uint32_t sensor_ind = 0;
@@ -437,7 +437,7 @@ void Worker::run() {
   for (auto it = met_avg.begin();
         it != met_avg.end(); it++) {
     RVSTRACE_
-    // add string output
+    // add std::string output
     msg = "[" + action_name + "] gm " +
         std::to_string((it->second).gpu_id) + " stopped";
     rvs::lp::Log(msg, rvs::logresults, sec, usec);
@@ -458,7 +458,7 @@ void Worker::stop() {
   RVSTRACE_
   rvs::lp::Log("[" + stop_action_name + "] gm in Worker::stop()",
                rvs::logtrace);
-  string msg;
+  std::string msg;
   unsigned int sec;
   unsigned int usec;
   void* r;
