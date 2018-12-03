@@ -27,6 +27,7 @@ cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall -Wextra)
+add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
 
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})

@@ -26,6 +26,7 @@
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
 add_compile_options(-Wall -Wextra)
+add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
 
 set ( RVS "rcqt" )
 set ( RVS_PACKAGE "rvs-roct" )

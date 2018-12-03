@@ -359,7 +359,7 @@ int pebbaction::create_threads() {
         rvs::lp::LogRecordFlush(pjson);
       }
     }
-    return 0;
+    return -1;
   }
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
