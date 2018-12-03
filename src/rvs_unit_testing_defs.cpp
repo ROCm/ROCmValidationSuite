@@ -45,6 +45,8 @@ char* rvs_readlink_buff_return_value;
 // override function to return rvs_pci_read_long_return_value
 u32 rvs_pci_read_long(struct pci_dev *, int pos) PCI_ABI {
   u32 result;
+  // fix unused variable warning
+  pos = pos;
   if (rvs_pci_read_long_return_value.size() == 1) {
     return rvs_pci_read_long_return_value.front();
   } else {
@@ -57,6 +59,8 @@ u32 rvs_pci_read_long(struct pci_dev *, int pos) PCI_ABI {
 // override function to return rvs_pci_read_word_return_value
 u16 rvs_pci_read_word(struct pci_dev *, int pos) PCI_ABI {
   u16 result;
+  // fix unused variable warning
+  pos = pos;
   if (rvs_pci_read_word_return_value.size() == 1) {
     return rvs_pci_read_word_return_value.front();
   } else {
@@ -68,12 +72,18 @@ u16 rvs_pci_read_word(struct pci_dev *, int pos) PCI_ABI {
 
 // override function to return rvs_pci_get_param_return_value
 char* rvs_pci_get_param(struct pci_access *acc, char *param) PCI_ABI {
+  // fix unused variable warning
+  param = param;
+  acc = acc;
   return rvs_pci_get_param_return_value;
 }
 
 // override function to return rvs_pci_get_param_return_value
 ssize_t rvs_readlink(char* path, char* buf, size_t bufsize) {
-  for (int i = 0; i < sizeof(rvs_readlink_buff_return_value); i++) {
+  // fix unused variable warning
+  path = path;
+  bufsize = bufsize;
+  for (int i = 0; i < (int) sizeof(rvs_readlink_buff_return_value); i++) {
     *(buf + i) = *(rvs_readlink_buff_return_value + i);
   }
   return rvs_readlink_return_value;
@@ -81,6 +91,9 @@ ssize_t rvs_readlink(char* path, char* buf, size_t bufsize) {
 
 // override function
 int rvs_pci_write_byte(struct pci_dev *, int pos, u8 data) PCI_ABI {
+  // fix unused variable warning
+  pos = pos;
+  data = data;
   return 0;
 }
 
