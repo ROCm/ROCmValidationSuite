@@ -343,12 +343,14 @@ int action::pkgchk_run() {
 						std::cout << "==="<< std::string(file_line) << std::endl;
 						string line_result = file_line;
 						if (regex_match(line_result, version_pattern) == true) {
-							string package_exists = "[" + action_name + "] " + "rcqt pkgcheck * "
+							string package_exists = "[" + action_name + "] "
+							+ "rcqt pkgcheck * "
 							+ line_result.substr(8, line_result.size()-8) + " true";
 							rvs::lp::Log(package_exists, rvs::logresults);
 							package_found = true;
 						} else {
-							string pkg_not_exists = "[" + action_name + "] " + "rcqt pkgcheck &"
+							string pkg_not_exists = "[" + action_name + "] "
+							+ "rcqt pkgcheck &"
 							+ package_name + " false";
 							rvs::lp::Log(pkg_not_exists, rvs::logresults);
 							package_found = true;
@@ -366,9 +368,7 @@ int action::pkgchk_run() {
 				+ package_name + " false";
 				rvs::lp::Log(pkg_not_exists, rvs::logresults);
 			}
-			
 		}
-		//cout << " ***" << endl;
     return 0;
   }
   return -1;
@@ -529,7 +529,6 @@ int action::usrchk_run() {
 			vector<string> group_found_vector;
 			for (vector<string>::iterator it = group_vector.begin();
 						it != group_vector.end(); it++) {
-				//cout << *it << endl;
 				group_patterns.push_back(std::regex(*it));
 			}
 			ifstream group_stream(ETC_GROUP);
@@ -542,8 +541,6 @@ int action::usrchk_run() {
 					if (std::regex_search(line.begin(), line.end()
 						, match, get_group_pattern)) {
 						string result = match[1];
-						//cout << result << endl;
-						
 						for (vector<regex>::iterator it = group_patterns.begin();
 								it != group_patterns.end(); it++) {
 							if (std::regex_match(result, *it)) {
@@ -581,7 +578,6 @@ int action::usrchk_run() {
 				rvs::lp::Log(groups_not_found, rvs::logerror);
 			}
 		}
-		
   }
   return -1;
 }
@@ -613,7 +609,7 @@ int action::kernelchk_run() {
     vector<string> kernel_version_vector =
       str_split(kernel_version_values, ",");
 
-    /*
+    /* 
      * Parsing /etc/os-release file for pretty name to extract 
      */
     std::ifstream os_version_read("/etc/os-release");
@@ -632,7 +628,6 @@ int action::kernelchk_run() {
         for (os_iter = os_version_vector.begin()
             ; os_iter != os_version_vector.end(); os_iter++) {
 					std::regex os_pattern(*os_iter);
-          //if (strcmp(os_iter->c_str(), os_actual.c_str()) == 0) {
 					if(regex_match(os_actual, os_pattern) == true) {
             os_version_correct = true;
             break;
@@ -720,7 +715,6 @@ int action::ldcfgchk_run() {
 		vector<string> found_files_vector;
 		std::regex file_pattern(soname_requested);
 		while (lib_stream.getline(file_line, STREAM_SIZE)) {
-			//std::cout << file_line << std::endl;
 			if (regex_match(std::string(file_line), file_pattern))
 				found_files_vector.push_back(std::string(file_line));
 		}
@@ -728,12 +722,14 @@ int action::ldcfgchk_run() {
 		bool arch_found_bool = false;
 		string ld_config_result = "[" + action_name + "] " +
 		"rcqt ldconfigcheck ";
-		for (auto it = found_files_vector.begin(); it != found_files_vector.end(); it++) {
+		for (auto it = found_files_vector.begin()
+					; it != found_files_vector.end(); it++) {
 			// Full path of shared object
 			string full_ld_path = ldpath_requested + "/" + std::string(*it);
-			snprintf(cmd_buffer, sizeof(cmd_buffer), "file %s | grep \"shared object,\" > %s", full_ld_path.c_str(), (char*)LDCFG_FILE);
+			snprintf(cmd_buffer, sizeof(cmd_buffer)
+				, "file %s | grep \"shared object,\" > %s"
+				, full_ld_path.c_str(), (char*)LDCFG_FILE);
 			ifstream arch_stream(std::string(LDCFG_FILE));
-// // // // // // // // // // 			//std::cout << cmd_buffer << std::endl;
 			if (system(cmd_buffer) == -1) {
 				rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
 				return 1;
@@ -746,7 +742,9 @@ int action::ldcfgchk_run() {
 			if (line_result.empty())
 				continue;
 			char arch_cmd_buffer[BUFFER_SIZE];
-			snprintf(arch_cmd_buffer, sizeof(arch_cmd_buffer), "objdump -f %s | grep ^architecture> %s",full_ld_path.c_str(), (char*)LDCFG_FILE);
+			snprintf(arch_cmd_buffer, sizeof(arch_cmd_buffer)
+					, "objdump -f %s | grep ^architecture> %s"
+					,full_ld_path.c_str(), (char*)LDCFG_FILE);
 			if (system(arch_cmd_buffer) == -1) {
 				rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
 				return 1;
@@ -755,9 +753,9 @@ int action::ldcfgchk_run() {
 			arch_stream.getline(file_line, STREAM_SIZE);
 			arch_found_string = file_line;
 			arch_found_string = str_split(arch_found_string, ",")[0];
-			arch_found_string.erase(0, arch_found_string.find_first_not_of("architecture: ") - 1);
+			arch_found_string.erase(0, arch_found_string
+					.find_first_not_of("architecture: ") - 1);
 			arch_found_bool = true;
-			//std::cout << arch_found_string << "***" << arch_requested << std::endl;
 			if (regex_match(arch_found_string, arch_pattern)) {
 				string arch_pass = ld_config_result + *it
 				+ " " + arch_found_string + " " + ldpath_requested + " pass";
@@ -766,13 +764,13 @@ int action::ldcfgchk_run() {
 			} else {
 				string arch_fail = ld_config_result + *it
 				+ " NA " + ldpath_requested + " fail";
-				log(arch_pass.c_str(), rvs::logresults);
+				log(arch_fail.c_str(), rvs::logresults);
 			}
 			arch_stream.close();
 		}
 		if (!arch_found_bool) {
 			string lib_fail = ld_config_result
-			+ " not found NA " +  + ldpath_requested +  " fail";
+			+ " not found NA " + ldpath_requested +  " fail";
 			log(lib_fail.c_str(), rvs::logresults);
 			if (bjson && json_rcqt_node != nullptr) {
 				rvs::lp::AddString(json_rcqt_node, "soname", soname_requested);
@@ -935,7 +933,8 @@ int action::filechk_run() {
 	}
 	if (exists == false && found_files_vector.empty()) {
 		check = "true";
-		msg = "[" + action_name + "] " + "rcqt filecheck "+ file_path +" DNE " + check;
+		msg = "[" + action_name + "] " + "rcqt filecheck "
+		+ file_path +" DNE " + check;
 		log(msg.c_str(), rvs::logresults);
 		if (bjson && json_rcqt_node != nullptr) {
 			rvs::lp::AddString(json_rcqt_node
@@ -944,7 +943,8 @@ int action::filechk_run() {
 	}
 	if (found_files_vector.empty() && exists == true) {
 		check = "false";
-		msg = "[" + action_name + "] " + "rcqt filecheck "+ file_path +" DNE " + check;
+		msg = "[" + action_name + "] " + "rcqt filecheck "
+		+ file_path +" DNE " + check;
 		log(msg.c_str(), rvs::logresults);
 		if (bjson && json_rcqt_node != nullptr) {
 			rvs::lp::AddString(json_rcqt_node
@@ -987,7 +987,6 @@ int action::filechk_run() {
           rvs::lp::Err("Error with getpwuid_r", MODULE_NAME_CAPS, action_name);
           return 1;
         }
-        //if (p.pw_name == owner)
         if (regex_match(p.pw_name, owner_pattern))
           check = "true";
         else
@@ -1012,7 +1011,6 @@ int action::filechk_run() {
           rvs::lp::Err("Error with getgrgid_r", MODULE_NAME, action_name);
           return 1;
         }
-        //if (g.gr_name == group)
         if (regex_match(g.gr_name, group_pattern))
           check = "true";
         else
