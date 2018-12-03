@@ -91,54 +91,6 @@ action::~action() {
     property.clear();
 }
 
-/**
- * gets the gpu_id list from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- * @return true if "all" is selected, false otherwise
- */
-bool action::property_get_device(int *error, int num_nodes) {
-    map<string, string>::iterator it;
-    std::ifstream f_id;
-    char path[CHAR_MAX_BUFF_SIZE];
-    string gpu_id;
-    *error = 0;  // init with 'no error'
-    it = property.find(RVS_CONF_DEVICE_KEY);
-    if (it != property.end()) {
-        if (it->second == "all") {
-          for (int node_id = 0; node_id < num_nodes; node_id++) {
-                snprintf(path, CHAR_MAX_BUFF_SIZE, "%s/%d/gpu_id",
-                KFD_SYS_PATH_NODES, node_id);
-                f_id.open(path);
-                f_id >> gpu_id;
-                if (gpu_id != "0") {
-                    gpus_id.push_back(gpu_id);
-                }
-                f_id.close();
-        }
-            property.erase(it);
-            return true;
-        } else {
-            // split the list of gpu_id
-            gpus_id = str_split(it->second, YAML_DEVICE_PROP_DELIMITER);
-            property.erase(it);
-            if (gpus_id.empty()) {
-                *error = 1;  // list of gpu_id cannot be empty
-            } else {
-                for (vector<string>::iterator it_gpu_id =
-                        gpus_id.begin();
-                        it_gpu_id != gpus_id.end(); ++it_gpu_id) {
-                    if (!is_positive_integer(*it_gpu_id)) {
-                        *error = 1;
-                        break;
-                    }}
-            }
-            return false;
-        }
-    } else {
-        *error = 1;
-        return false;
-    }
-}
 
 /**
  * checks if device id is correct
@@ -156,7 +108,7 @@ bool action::device_id_correct(int node_id, int dev_id) {
     node_id);
     f_prop.open(path);
 
-    if (dev_id != -1) {
+    if (dev_id > 0) {
         while (f_prop >> s) {
             if (s == RVS_CONF_DEVICEID_KEY) {
                 f_prop >> s;
@@ -227,60 +179,63 @@ bool action::property_split(string props) {
 /**
  * gets properties values
  * @param gpu_id value of gpu_id of device
- * @param node_id represents node folder
  */
-void action::property_get_value(string gpu_id, int node_id) {
-    char path[CHAR_MAX_BUFF_SIZE];
-    void *json_gpuprop_node = NULL;
-    string prop_name, prop_val, msg;
-    std::ifstream f_prop;
+void action::property_get_value(uint16_t gpu_id) {
+  uint16_t node_id;
+  char path[CHAR_MAX_BUFF_SIZE];
+  void *json_gpuprop_node = NULL;
+  string prop_name, prop_val, msg;
+  std::ifstream f_prop;
 
-            snprintf(path, CHAR_MAX_BUFF_SIZE, "%s/%d/properties",
-            KFD_SYS_PATH_NODES, node_id);
-            f_prop.open(path);
+  if (rvs::gpulist::gpu2node(gpu_id, &node_id))
+    return;
 
-            if (bjson) {
-                if (json_root_node != NULL) {
-                    json_gpuprop_node = rvs::lp::CreateNode(json_root_node,
-                    JSON_PROP_NODE_NAME);
-                    if (json_gpuprop_node == NULL) {
-                        // log the error
-                        msg = std::string(JSON_CREATE_NODE_ERROR);
-                        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-                    }
-                }
-            }
+  snprintf(path, CHAR_MAX_BUFF_SIZE, "%s/%d/properties",
+           KFD_SYS_PATH_NODES, node_id);
+  f_prop.open(path);
 
-            if (bjson && json_gpuprop_node != NULL) {  // json logging stuff
-                rvs::lp::AddString(json_gpuprop_node, RVS_JSON_LOG_GPU_ID_KEY,
-                gpu_id);
-            }
+  if (bjson) {
+    if (json_root_node != NULL) {
+      json_gpuprop_node = rvs::lp::CreateNode(json_root_node,
+                                              JSON_PROP_NODE_NAME);
+      if (json_gpuprop_node == NULL) {
+        // log the error
+        msg = std::string(JSON_CREATE_NODE_ERROR);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      }
+    }
+  }
 
-            // properties
-            for (vector<string>::iterator it_prop_name=property_name.begin();
-            it_prop_name != property_name.end(); ++it_prop_name) {
-                while (f_prop >> prop_name) {
-                    if (prop_name == *it_prop_name) {
-                        f_prop >> prop_val;
-                        msg = "["+action_name + "] " + MODULE_NAME +
-                        " " + gpu_id +
-                        " " + prop_name + " " + prop_val;
-                        log(msg.c_str(), rvs::logresults);
-                    if (bjson && json_gpuprop_node != NULL) {
-                        rvs::lp::AddString(json_gpuprop_node, prop_name,
-                        prop_val);
-                    }
-                        break;
-                    }
-                    f_prop >> prop_val;
-                }
-                f_prop.clear();
-                f_prop.seekg(0, std::ios::beg);
-            }
-        f_prop.close();
+  if (bjson && json_gpuprop_node != NULL) {  // json logging stuff
+    rvs::lp::AddString(json_gpuprop_node, RVS_JSON_LOG_GPU_ID_KEY,
+                       std::to_string(gpu_id));
+  }
 
-        if (bjson && json_gpuprop_node != NULL)  // json logging stuff
-        rvs::lp::AddNode(json_root_node, json_gpuprop_node);
+  // properties
+  for (vector<string>::iterator it_prop_name=property_name.begin();
+       it_prop_name != property_name.end(); ++it_prop_name) {
+    while (f_prop >> prop_name) {
+      if (prop_name == *it_prop_name) {
+        f_prop >> prop_val;
+        msg = "["+action_name + "] " + MODULE_NAME +
+        " " + std::to_string(gpu_id) +
+        " " + prop_name + " " + prop_val;
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_gpuprop_node != NULL) {
+          rvs::lp::AddString(json_gpuprop_node, prop_name, prop_val);
+        }
+        break;
+      }
+      f_prop >> prop_val;
+    }
+    f_prop.clear();
+    f_prop.seekg(0, std::ios::beg);
+  }
+
+  f_prop.close();
+
+  if (bjson && json_gpuprop_node != NULL)  // json logging stuff
+    rvs::lp::AddNode(json_root_node, json_gpuprop_node);
 }
 
 /**
@@ -288,79 +243,80 @@ void action::property_get_value(string gpu_id, int node_id) {
  * @param gpu_id unique gpu_id
  * @param node_id represents node folder
  */
-void action::property_io_links_get_value(string gpu_id, int node_id) {
-    void *json_gpuprop_node = NULL;
-    char path[CHAR_MAX_BUFF_SIZE];
-    string prop_name, prop_val, msg;
-    std::ifstream f_link_prop;
+void action::property_io_links_get_value(uint16_t gpu_id) {
+  void *json_gpuprop_node = NULL;
+  char path[CHAR_MAX_BUFF_SIZE];
+  string prop_name, prop_val, msg;
+  std::ifstream f_link_prop;
+  uint16_t node_id;
 
-            if (bjson) {
-                if (json_root_node != NULL) {
-                    json_gpuprop_node = rvs::lp::CreateNode(json_root_node,
-                    JSON_IO_LINK_PROP_NODE_NAME);
-                    if (json_gpuprop_node == NULL) {
-                        // log the error
-                        msg = std::string(JSON_CREATE_NODE_ERROR);
-                        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-                    }
-                }
-            }
+  if (rvs::gpulist::gpu2node(gpu_id, &node_id))
+    return;
 
-            if (bjson && json_gpuprop_node != NULL) {  // json logging stuff
-                rvs::lp::AddString(json_gpuprop_node, RVS_JSON_LOG_GPU_ID_KEY,
-                gpu_id);
-            }
+  if (bjson) {
+    if (json_root_node != NULL) {
+      json_gpuprop_node = rvs::lp::CreateNode(json_root_node,
+                                              JSON_IO_LINK_PROP_NODE_NAME);
+      if (json_gpuprop_node == NULL) {
+        // log the error
+        msg = std::string(JSON_CREATE_NODE_ERROR);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      }
+    }
+  }
 
-            snprintf(path, CHAR_MAX_BUFF_SIZE, "%s/%d/io_links",
-            KFD_SYS_PATH_NODES, node_id);
-            int num_links = gpu_num_subdirs(const_cast<char*>(path),
-            const_cast<char*>(""));
+  if (bjson && json_gpuprop_node != NULL) {  // json logging stuff
+    rvs::lp::AddInt(json_gpuprop_node, RVS_JSON_LOG_GPU_ID_KEY, gpu_id);
+  }
 
-            for (int link_id = 0; link_id < num_links; link_id++) {
-                snprintf(path, CHAR_MAX_BUFF_SIZE,
-                "%s/%d/io_links/%d/properties", KFD_SYS_PATH_NODES, node_id,
-                link_id);
-                f_link_prop.open(path);
+  snprintf(path, CHAR_MAX_BUFF_SIZE, "%s/%d/io_links",
+           KFD_SYS_PATH_NODES, node_id);
+  int num_links = gpu_num_subdirs(const_cast<char*>(path),
+                                  const_cast<char*>(""));
 
-                for (vector<string>::iterator it_io_prop_name =
-                io_link_property_name.begin(); it_io_prop_name !=
-                io_link_property_name.end();
-                ++it_io_prop_name) {
-                    // file doesn't contain property name "count" and its value
-                    if (*it_io_prop_name == "count") {
-                        msg = "["+action_name + "] " + MODULE_NAME +
-                        " " + gpu_id +
-                        " " + std::to_string(link_id) + " "+ "count" + " " +
-                        std::to_string(num_links);
-                        log(msg.c_str(), rvs::logresults);
-                        if (bjson && json_gpuprop_node != NULL)
-                            rvs::lp::AddString(json_gpuprop_node, "count" ,
-                            std::to_string(num_links));
-                    }
-                    while (f_link_prop >> prop_name) {
-                        if (prop_name == *it_io_prop_name) {
-                            f_link_prop >> prop_val;
-                            msg = "["+action_name + "] " + MODULE_NAME + " " +
-                            gpu_id + " " + std::to_string(link_id) + " "+
-                            prop_name + " " + prop_val;
-                            log(msg.c_str(), rvs::logresults);
-                            if (bjson && json_gpuprop_node != NULL) {
-                                rvs::lp::AddString(json_gpuprop_node, prop_name
-                                , prop_val);
-                            }
-                                break;
-                        }
-                        f_link_prop >> prop_val;
-                    }
-                    f_link_prop.clear();
-                    f_link_prop.seekg(0, std::ios::beg);
-                }
-            }
+  for (int link_id = 0; link_id < num_links; link_id++) {
+    snprintf(path, CHAR_MAX_BUFF_SIZE,
+             "%s/%d/io_links/%d/properties", KFD_SYS_PATH_NODES, node_id,
+             link_id);
+    f_link_prop.open(path);
 
-        f_link_prop.close();
+    for (vector<string>::iterator it_io_prop_name =
+      io_link_property_name.begin(); it_io_prop_name !=
+      io_link_property_name.end();
+    ++it_io_prop_name) {
+      // file doesn't contain property name "count" and its value
+      if (*it_io_prop_name == "count") {
+        msg = "["+action_name + "] " + MODULE_NAME +
+        " " + std::to_string(gpu_id) +
+        " " + std::to_string(link_id) + " "+ "count" + " " +
+        std::to_string(num_links);
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_gpuprop_node != NULL)
+          rvs::lp::AddInt(json_gpuprop_node, "count" , num_links);
+      }
+      while (f_link_prop >> prop_name) {
+        if (prop_name == *it_io_prop_name) {
+          f_link_prop >> prop_val;
+          msg = "[" + action_name + "] " + MODULE_NAME + " " +
+          std::to_string(gpu_id) + " " + std::to_string(link_id) + " "+
+          prop_name + " " + prop_val;
+          log(msg.c_str(), rvs::logresults);
+          if (bjson && json_gpuprop_node != NULL) {
+            rvs::lp::AddString(json_gpuprop_node, prop_name, prop_val);
+          }
+          break;
+        }
+        f_link_prop >> prop_val;
+      }
+      f_link_prop.clear();
+      f_link_prop.seekg(0, std::ios::beg);
+    }
+  }
 
-        if (bjson && json_gpuprop_node != NULL)  // json logging stuff
-        rvs::lp::AddNode(json_root_node, json_gpuprop_node);
+  f_link_prop.close();
+
+  if (bjson && json_gpuprop_node != NULL)  // json logging stuff
+    rvs::lp::AddNode(json_root_node, json_gpuprop_node);
 }
 
 /**
@@ -368,40 +324,36 @@ void action::property_io_links_get_value(string gpu_id, int node_id) {
  * @return run result
  */
 int action::run(void) {
-    string gpu_id, msg;
-    int num_nodes;
-    bool dev_id_corr;
-    int error = 0;
-
-    // discover the number of nodes: Inside nodes folder there are only folders
-    // that represent the node number
-    num_nodes = gpu_num_subdirs(const_cast<char*>(KFD_SYS_PATH_NODES),
-    const_cast<char*>(""));
+    std::string msg;
 
     // get the action name
-    rvs::actionbase::property_get_action_name(&error);
-    if (error == 2) {
-      msg = "action field is missing in gst module";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS);
-      return -1;
+    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+      return false;
     }
 
     // get <device> property value (a list of gpu id)
-    property_get_device(&error, num_nodes);
-
-    // get the <deviceid> property value if provided
-    std::string val;
-    bool hasp = has_property(RVS_CONF_DEVICEID_KEY, &val);
-    int dev_id;
-    if (hasp) {
-    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &dev_id);
-    if (error != 0) {
-      msg = property["name"] + " invalid 'deviceid' key value: "
-      + std::to_string(dev_id);
+    if (int sts = property_get_device()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device' key.";
+        break;
+      }
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
+
+    // get the <deviceid> property value if provided
+    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                  &property_device_id, 0u)) {
+      msg = "Invalid 'deviceid' key value.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
+
     // extract properties and io_links properties names
     property_split(JSON_PROP_NODE_NAME);
     property_split(JSON_IO_LINK_PROP_NODE_NAME);
@@ -409,49 +361,70 @@ int action::run(void) {
     bjson = false;  // already initialized in the default constructor
 
     // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end()) {
-        unsigned int sec;
-        unsigned int usec;
-        rvs::lp::get_ticks(&sec, &usec);
-
+    if (has_property("cli.-j")) {
         bjson = true;
-
-        json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-        action_name.c_str(), rvs::loginfo, sec, usec);
-        if (json_root_node == NULL) {
-            // log the error
-            msg = action_name + " " + MODULE_NAME + " " +
-            JSON_CREATE_NODE_ERROR;
-        }
     }
 
-    for (vector<string>::iterator it_gpu_id = gpus_id.begin(); it_gpu_id !=
-    gpus_id.end(); ++it_gpu_id) {
-        for (int node_id = 0; node_id < num_nodes; node_id++) {
-            dev_id_corr = device_id_correct(node_id, dev_id);
+    // if JSON required
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
 
-            gpu_id = property_get_gpuid(node_id);
+      json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+      action_name.c_str(), rvs::loginfo, sec, usec);
+      if (json_root_node == NULL) {
+        // log the error
+        msg = JSON_CREATE_NODE_ERROR;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+        return -1;
+      }
+    }
 
-            if (gpu_id == *it_gpu_id) {
-              if (dev_id_corr) {
-                // properties values
-                property_get_value(gpu_id, node_id);
-                // io_links properties
-                property_io_links_get_value(gpu_id, node_id);
-              } else {
-                  msg = property["name"] +
-                  "  invalid 'deviceid' key value: " +
-                  std::to_string(dev_id);
-                  rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-                  return -1;
-             }
-            }
+    // get all AMD GPUs
+    vector<uint16_t> gpu;
+    gpu_get_all_gpu_id(&gpu);
+    bool b_gpu_found = false;
+
+    // iterate over AMD GPUs
+    for (auto it = gpu.begin(); it !=gpu.end(); ++it) {
+      // filter by gpu_id if needed
+      if (property_device_id > 0) {
+        uint16_t dev_id;
+        if (!rvs::gpulist::gpu2device(*it, &dev_id)) {
+          if (dev_id != property_device_id) {
+            continue;
           }
+        } else {
+          msg = "Device ID not found for GPU " + std::to_string(*it);
+          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          return -1;
+        }
       }
 
-    if (bjson && json_root_node != NULL) {  // json logging stuff
+      // filter by device if needed
+      if (!property_device_all) {
+        if (std::find(property_device.begin(), property_device.end(), *it) ==
+          property_device.end()) {
+            continue;
+        }
+      }
+
+      b_gpu_found = true;
+      // properties values
+      property_get_value(*it);
+      // io_links properties
+      property_io_links_get_value(*it);
+    }
+
+    if (bjson) {  // json logging stuff
         rvs::lp::LogRecordFlush(json_root_node);
     }
 
+    if (!b_gpu_found) {
+      msg = "No device matches criteria from configuration. ";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      return -1;
+    }
     return 0;
 }

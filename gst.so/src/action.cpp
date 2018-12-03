@@ -169,8 +169,8 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     size_t k = 0;
     for (;;) {
         unsigned int i = 0;
-        if (gst_run_wait_ms != 0)  // delay gst execution
-            sleep(gst_run_wait_ms);
+        if (property_wait != 0)  // delay gst execution
+            sleep(property_wait);
 
         vector<GSTWorker> workers(gst_gpus_device_index.size());
 
@@ -185,10 +185,10 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             workers[i].set_name(action_name);
             workers[i].set_gpu_id(it->second);
             workers[i].set_gpu_device_index(it->first);
-            workers[i].set_run_wait_ms(gst_run_wait_ms);
-            workers[i].set_run_duration_ms(gst_run_duration_ms);
+            workers[i].set_run_wait_ms(property_wait);
+            workers[i].set_run_duration_ms(property_duration);
             workers[i].set_ramp_interval(gst_ramp_interval);
-            workers[i].set_log_interval(gst_log_interval);
+            workers[i].set_log_interval(property_log_interval);
             workers[i].set_max_violations(gst_max_violations);
             workers[i].set_copy_matrix(gst_copy_matrix);
             workers[i].set_target_stress(gst_target_stress);
@@ -197,7 +197,7 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             i++;
         }
 
-        if (gst_runs_parallel) {
+        if (property_parallel) {
             for (i = 0; i < gst_gpus_device_index.size(); i++)
                 workers[i].start();
 
@@ -219,9 +219,9 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
         if (rvs::lp::Stopping())
             return false;
 
-        if (gst_run_count != 0) {
+        if (property_count != 0) {
             k++;
-            if (k == gst_run_count)
+            if (k == property_count)
                 break;
         }
     }
@@ -253,28 +253,24 @@ bool action::get_all_gst_config_keys(void) {
         return false;
     }
 
-    error = property_get_int<uint64_t>
-    (RVS_CONF_RAMP_INTERVAL_KEY, &gst_ramp_interval, GST_DEFAULT_RAMP_INTERVAL);
-    if (error) {
+    if (property_get_int<uint64_t>(RVS_CONF_RAMP_INTERVAL_KEY,
+      &gst_ramp_interval, GST_DEFAULT_RAMP_INTERVAL)) {
         msg = "invalid '" +
         std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
-    error = property_get_int<uint64_t>
-    (RVS_CONF_LOG_INTERVAL_KEY, &gst_log_interval, GST_DEFAULT_LOG_INTERVAL);
-    if (error == 1) {
+    if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+      &property_log_interval, GST_DEFAULT_LOG_INTERVAL)) {
         msg = "invalid '" +
         std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return false;
     }
 
-    error = property_get_int<int>
-    (RVS_CONF_MAX_VIOLATIONS_KEY, &gst_max_violations,
-     GST_DEFAULT_MAX_VIOLATIONS);
-    if (error) {
+    if (property_get_int<int>(RVS_CONF_MAX_VIOLATIONS_KEY, &gst_max_violations,
+     GST_DEFAULT_MAX_VIOLATIONS)) {
         msg = "invalid '" +
         std::string(RVS_CONF_MAX_VIOLATIONS_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -318,41 +314,29 @@ bool action::get_all_common_config_keys(void) {
     int error;
 
     // get <device> property value (a list of gpu id)
-    if (has_property("device", &sdev)) {
-        device_all_selected = property_get_device(&error);
-        if (error) {  // log the error & abort GST
-            msg = "invalid '" +
-                std::string(RVS_CONF_DEVICE_KEY) + "' key value " + sdev;
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return false;
-        }
-    } else {
-        msg = "key '" +
-            std::string(RVS_CONF_DEVICE_KEY) + "' was not found";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    if (int sts = property_get_device()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device' key.";
+        break;
+      }
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
 
-    // get the <deviceid> property value
-    int devid;
-    if (has_property("deviceid", &sdevid)) {
-      error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
-        if (!error) {
-            if (devid != -1) {
-                deviceid = static_cast<uint16_t>(devid);
-                device_id_filtering = true;
-            }
-        } else {
-            msg = "invalid '" +
-                std::string(RVS_CONF_DEVICEID_KEY) + "' key value " + sdevid;
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return false;
-        }
+    // get the <deviceid> property value if provided
+    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                  &property_device_id, 0u)) {
+      msg = "Invalid 'deviceid' key value.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
 
     // get the other action/GST related properties
-    rvs::actionbase::property_get_run_parallel(&error);
-    if (error == 1) {
+    if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
         msg = "invalid '" +
             std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -360,7 +344,7 @@ bool action::get_all_common_config_keys(void) {
     }
 
     error = property_get_int<uint64_t>
-    (RVS_CONF_COUNT_KEY, &gst_run_count, DEFAULT_COUNT);
+    (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
     if (error != 0) {
         msg = "invalid '" +
             std::string(RVS_CONF_COUNT_KEY) + "' key value";
@@ -369,7 +353,7 @@ bool action::get_all_common_config_keys(void) {
     }
 
     error = property_get_int<uint64_t>
-    (RVS_CONF_WAIT_KEY, &gst_run_wait_ms, DEFAULT_WAIT);
+    (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
     if (error == 1) {
         msg = "invalid '" +
             std::string(RVS_CONF_WAIT_KEY) + "' key value";
@@ -377,7 +361,7 @@ bool action::get_all_common_config_keys(void) {
     }
 
     error = property_get_int<uint64_t>
-    (RVS_CONF_DURATION_KEY, &gst_run_duration_ms, RVS_DEFAULT_DURATION);
+    (RVS_CONF_DURATION_KEY, &property_duration, RVS_DEFAULT_DURATION);
     if (error == 1) {
         msg = "invalid '" +
             std::string(RVS_CONF_DURATION_KEY) + "' key value";
@@ -446,39 +430,41 @@ int action::get_all_selected_gpus(void) {
         unsigned int dev_location_id =
             ((((unsigned int) (props.pciBusID)) << 8) | (props.pciDeviceID));
 
-        int32_t devId =
-            rvs::gpulist::GetDeviceIdFromLocationId(dev_location_id);
-        if (-1 == devId) {
-            continue;
+        uint16_t devId;
+        if (rvs::gpulist::location2device(dev_location_id, &devId)) {
+          continue;
         }
 
-        // check for deviceid filtering
-        if (!device_id_filtering ||
-            (device_id_filtering && static_cast<uint16_t>(devId)
-                                                        == deviceid)) {
-            // check if this GPU is part of the GPU stress test
-            // (device = "all" or the gpu_id is in the device: <gpu id> list)
-            bool cur_gpu_selected = false;
-            uint16_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-            if (device_all_selected) {
+        // filter by device id if needed
+        if (property_device_id > 0 && property_device_id != devId)
+          continue;
+
+        // check if this GPU is part of the GPU stress test
+        // (device = "all" or the gpu_id is in the device: <gpu id> list)
+        bool cur_gpu_selected = false;
+        uint16_t gpu_id;
+        // if not and AMD GPU just continue
+        if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+          continue;
+
+
+        if (property_device_all) {
+            cur_gpu_selected = true;
+        } else {
+            // search for this gpu in the list
+            // provided under the <device> property
+            auto it_gpu_id = find(property_device.begin(),
+                                  property_device.end(),
+                                  gpu_id);
+
+            if (it_gpu_id != property_device.end())
                 cur_gpu_selected = true;
-            } else {
-                // search for this gpu in the list
-                // provided under the <device> property
-                vector<string>::iterator it_gpu_id = find(
-                    device_prop_gpu_id_list.begin(),
-                    device_prop_gpu_id_list.end(),
-                    std::to_string(gpu_id));
+        }
 
-                if (it_gpu_id != device_prop_gpu_id_list.end())
-                    cur_gpu_selected = true;
-            }
-
-            if (cur_gpu_selected) {
-                gst_gpus_device_index.insert
-                    (std::pair<int, uint16_t>(i, gpu_id));
-                amd_gpus_found = true;
-            }
+        if (cur_gpu_selected) {
+            gst_gpus_device_index.insert
+                (std::pair<int, uint16_t>(i, gpu_id));
+            amd_gpus_found = true;
         }
     }
 
@@ -498,18 +484,12 @@ int action::get_all_selected_gpus(void) {
  */
 int action::run(void) {
     string msg;
-    int error;
 
     // get the action name
-    rvs::actionbase::property_get_action_name(&error);
-    if (error == 2) {
-      msg = "action name field is missing in gst module";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
       return -1;
     }
-
-    device_all_selected = false;
-    device_id_filtering = false;
 
     // check for -j flag (json logging)
     if (property.find("cli.-j") != property.end())
@@ -520,7 +500,7 @@ int action::run(void) {
     if (!get_all_gst_config_keys())
         return -1;
 
-    if (gst_run_duration_ms > 0 && (gst_run_duration_ms < gst_ramp_interval)) {
+    if (property_duration > 0 && (property_duration < gst_ramp_interval)) {
         msg = "'" +
             std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
             std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "'";
