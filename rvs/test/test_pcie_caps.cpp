@@ -73,7 +73,10 @@ class PcieCapsTest : public ::testing::Test {
   }
 
   void TearDown() override {
-
+    delete test_access;
+    delete test_cap[0];
+    delete test_cap[1];
+    delete test_dev;
   }
 
   // pci device struct
@@ -110,6 +113,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   int first_one;
   uint32_t max_value;
   uint index;
+  buff = new char[1024];
 
   get_num_bits(0xf, &num_ones, &first_one, &max_value);
   EXPECT_EQ(num_ones, 4);
@@ -173,7 +177,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_long_return_value = std::queue<u32>();
       rvs_pci_read_long_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_link_cap_max_speed(test_dev, buff);
 
       if (id_f == type_f) {
@@ -192,7 +196,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   test_cap[1]->type = PCI_CAP_NORMAL;
   get_num_bits(PCI_EXP_LNKCAP_SLS, &num_ones, &first_one, &max_value);
   for (uint k = 0; k < max_value; k++) {
-    buff = new char[1024];
+    buff[0] = '\0';
     rvs_pci_read_long_return_value = std::queue<u32>();
     rvs_pci_read_long_return_value.push(k << first_one);
     get_link_cap_max_speed(test_dev, buff);
@@ -227,7 +231,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_long_return_value = std::queue<u32>();
       rvs_pci_read_long_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_link_cap_max_width(test_dev, buff);
 
       if (id_f == type_f) {
@@ -248,7 +252,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint k = 0; k < max_value; k++) {
     rvs_pci_read_long_return_value = std::queue<u32>();
     rvs_pci_read_long_return_value.push(k << first_one);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_link_cap_max_width(test_dev, buff);
     exp_string = "x" + std::to_string(k);
     EXPECT_STREQ(buff, exp_string.c_str());
@@ -266,7 +270,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_word_return_value = std::queue<u16>();
       rvs_pci_read_word_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_link_stat_cur_speed(test_dev, buff);
 
       if (id_f == type_f) {
@@ -285,7 +289,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   test_cap[1]->type = PCI_CAP_NORMAL;
   get_num_bits(PCI_EXP_LNKSTA_CLS, &num_ones, &first_one, &max_value);
   for (uint k = 0; k < max_value; k++) {
-    buff = new char[1024];
+    buff[0] = '\0';
     rvs_pci_read_word_return_value = std::queue<u16>();
     rvs_pci_read_word_return_value.push(k << first_one);
     get_link_stat_cur_speed(test_dev, buff);
@@ -322,7 +326,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_word_return_value = std::queue<u16>();
       rvs_pci_read_word_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_link_stat_neg_width(test_dev, buff);
 
       if (id_f == type_f) {
@@ -343,7 +347,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint k = 0; k < max_value; k++) {
     rvs_pci_read_word_return_value = std::queue<u16>();
     rvs_pci_read_word_return_value.push(k << first_one);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_link_stat_neg_width(test_dev, buff);
     exp_string = "x" + std::to_string(k);
     EXPECT_STREQ(buff, exp_string.c_str());
@@ -361,7 +365,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_long_return_value = std::queue<u32>();
       rvs_pci_read_long_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_slot_pwr_limit_value(test_dev, buff);
 
       if (id_f == type_f) {
@@ -382,7 +386,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint k = 0; k < max_value; k++) {
     rvs_pci_read_long_return_value = std::queue<u32>();
     rvs_pci_read_long_return_value.push(k << first_one);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_slot_pwr_limit_value(test_dev, buff);
     if (k > 0xEF) {
       switch (k) {
@@ -416,7 +420,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_long_return_value = std::queue<u32>();
       rvs_pci_read_long_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_slot_physical_num(test_dev, buff);
 
       if (id_f == type_f) {
@@ -437,7 +441,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint k = 0; k < max_value; k++) {
     rvs_pci_read_long_return_value = std::queue<u32>();
     rvs_pci_read_long_return_value.push(k << first_one);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_slot_physical_num(test_dev, buff);
     exp_string = "#" + std::to_string(k);
     EXPECT_STREQ(buff, exp_string.c_str());
@@ -490,7 +494,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // get_kernel_driver
   // ---------------------------------------
   // 1. method is not PCI_ACCESS_SYS_BUS_PCI
-  buff = new char[1024];
+  buff[0] = '\0';
   exp_string = "";
   test_access->method = PCI_ACCESS_AUTO;
   get_kernel_driver(test_dev, buff);
@@ -546,7 +550,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_EXTENDED;
       rvs_pci_read_long_return_value = std::queue<u32>();
       rvs_pci_read_long_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_dev_serial_num(test_dev, buff);
 
       if (id_f == type_f) {
@@ -572,7 +576,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
     k2 = ~index;
     rvs_pci_read_long_return_value.push(k2);
     rvs_pci_read_long_return_value.push(k1);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_dev_serial_num(test_dev, buff);
     snprintf(expect_string, 1024, "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x",
         k1 >> 24, (k1 >> 16) & 0xff, (k1 >> 8) & 0xff, k1 & 0xff,
@@ -596,7 +600,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_EXTENDED;
       rvs_pci_read_long_return_value = std::queue<u32>();
       rvs_pci_read_long_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_pwr_budgeting(test_dev, 0x0, 0x0, 0x0, buff);
 
       if (id_f == type_f) {
@@ -615,7 +619,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   test_cap[1]->type = PCI_CAP_EXTENDED;
   rvs_pci_read_word_return_value = std::queue<u16>();
   rvs_pci_read_word_return_value.push(0x0);
-  buff = new char[1024];
+  buff[0] = '\0';
   get_pwr_budgeting(test_dev, 0x0, 0x0, 0x0, buff);
   EXPECT_STREQ(buff, "NOT SUPPORTED");
   // 3. valid Id / Type values and iterate rvs_pci_read_long_return_value
@@ -627,7 +631,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
     rvs_pci_read_word_return_value = std::queue<u16>();
     rvs_pci_read_word_return_value.push(k);
     rvs_pci_read_word_return_value.push(0x0);
-    buff = new char[1024];
+    buff[0] = '\0';
     exp_string = std::to_string(k) + ".000W";
     get_pwr_budgeting(test_dev, 0x0, 0x0, 0x0, buff);
     EXPECT_STREQ(buff, exp_string.c_str());
@@ -645,7 +649,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_word_return_value = std::queue<u16>();
       rvs_pci_read_word_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_pwr_curr_state(test_dev, buff);
 
       if (id_f == type_f) {
@@ -666,7 +670,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint k = 0; k < max_value; k++) {
     rvs_pci_read_word_return_value = std::queue<u16>();
     rvs_pci_read_word_return_value.push(k << first_one);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_pwr_curr_state(test_dev, buff);
     exp_string = "D" + std::to_string(k);
     EXPECT_STREQ(buff, exp_string.c_str());
@@ -684,7 +688,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_word_return_value = std::queue<u16>();
       rvs_pci_read_word_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_atomic_op_routing(test_dev, buff);
 
       if (id_f == type_f) {
@@ -706,7 +710,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
     rvs_pci_read_word_return_value = std::queue<u16>();
     rvs_pci_read_word_return_value.push(k << first_one);
     rvs_pci_read_word_return_value.push((k%2==0) ? 0x0 : 0x40);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_atomic_op_routing(test_dev, buff);
     if (k >= 2) {
       EXPECT_STREQ(buff, (k%2==0) ? "FALSE" : "TRUE");
@@ -787,7 +791,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_word_return_value = std::queue<u16>();
       rvs_pci_read_word_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_atomic_op_32_completer(test_dev, buff);
 
       if (id_f == type_f) {
@@ -811,7 +815,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint k = 0; k < max_value; k++) {
     rvs_pci_read_word_return_value = std::queue<u16>();
     rvs_pci_read_word_return_value.push(k << first_one);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_atomic_op_32_completer(test_dev, buff);
     EXPECT_STREQ(buff, "NOT SUPPORTED");
   }
@@ -829,7 +833,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
     rvs_pci_read_word_return_value.push(k << first_one);
     rvs_pci_read_long_return_value = std::queue<u32>();
     rvs_pci_read_long_return_value.push(2*k);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_atomic_op_32_completer(test_dev, buff);
     if (k >= 2) {
       if (((2*k) & 0x80) == 1) {
@@ -854,7 +858,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_word_return_value = std::queue<u16>();
       rvs_pci_read_word_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_atomic_op_64_completer(test_dev, buff);
 
       if (id_f == type_f) {
@@ -878,7 +882,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint k = 0; k < max_value; k++) {
     rvs_pci_read_word_return_value = std::queue<u16>();
     rvs_pci_read_word_return_value.push(k << first_one);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_atomic_op_64_completer(test_dev, buff);
     EXPECT_STREQ(buff, "NOT SUPPORTED");
   }
@@ -896,7 +900,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
     rvs_pci_read_word_return_value.push(k << first_one);
     rvs_pci_read_long_return_value = std::queue<u32>();
     rvs_pci_read_long_return_value.push(2*k);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_atomic_op_64_completer(test_dev, buff);
     if (k >= 2) {
       if (((2*k) & 0x0100) == 1) {
@@ -921,7 +925,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
       test_cap[(type_f+1)%2]->type = PCI_CAP_NORMAL;
       rvs_pci_read_word_return_value = std::queue<u16>();
       rvs_pci_read_word_return_value.push(15);
-      buff = new char[1024];
+      buff[0] = '\0';
       get_atomic_op_128_CAS_completer(test_dev, buff);
 
       if (id_f == type_f) {
@@ -945,7 +949,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint k = 0; k < max_value; k++) {
     rvs_pci_read_word_return_value = std::queue<u16>();
     rvs_pci_read_word_return_value.push(k << first_one);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_atomic_op_128_CAS_completer(test_dev, buff);
     EXPECT_STREQ(buff, "NOT SUPPORTED");
   }
@@ -963,7 +967,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
     rvs_pci_read_word_return_value.push(k << first_one);
     rvs_pci_read_long_return_value = std::queue<u32>();
     rvs_pci_read_long_return_value.push(2*k);
-    buff = new char[1024];
+    buff[0] = '\0';
     get_atomic_op_128_CAS_completer(test_dev, buff);
     if (k >= 2) {
       if (((2*k) & 0x0200) == 1) {
@@ -976,5 +980,6 @@ TEST_F(PcieCapsTest, pcie_caps) {
     }
   }
 
+  delete buff;
 }
 
