@@ -149,6 +149,9 @@ int rvs::exec::run() {
     return 0;
   }
 
+  if (rvs::options::has_option("-q")) {
+    rvs::logger::quiet();
+  }
   logger::initialize();
 
   if (rvs::options::has_option("-g")) {

@@ -27,7 +27,7 @@ set(CTEST_SOURCE_DIRECTORY "ROCmValidationSuite")
 set(CTEST_BINARY_DIRECTORY "build")
 
 set(CTEST_SITE "prj47-rack-07")
-set(CTEST_BUILD_NAME "Ubuntu 16.04  branch: ${RVS_BRANCH}")
+set(CTEST_BUILD_NAME "${RVS_HOST}  branch ${RVS_BRANCH}")
 
 set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
 set(CTEST_BUILD_CONFIGURATION "Debug")

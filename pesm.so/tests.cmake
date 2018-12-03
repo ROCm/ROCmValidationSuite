@@ -24,6 +24,44 @@
 ################################################################################
 
 
+LINK_DIRECTORIES(${UT_LIB})
+file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
+#message ( "TESTSOURCES: ${TESTSOURCES}" )
+set (UT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvsloglp_utest.cpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvsliblogger.cpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognode.cpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognodebase.cpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognodeint.cpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognodestring.cpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognoderec.cpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/test/unitactionbase.cpp
+    )
+message("UT_SOURCES: ${UT_SOURCES}")
+
+# add unit tests
+FOREACH(SINGLE_TEST ${TESTSOURCES})
+#  MESSAGE("${SINGLE_TEST}")
+  string(REPLACE "test/test" "unit.${RVS}." TMP_TEST_NAME ${SINGLE_TEST})
+  string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
+  MESSAGE("unit test: ${TEST_NAME}")
+
+  add_executable(${TEST_NAME}
+    ${SINGLE_TEST} ${TEST_SOURCES} ${SOURCES} ${UT_SOURCES}
+  )
+  target_link_libraries(${TEST_NAME}
+    ${PROJECT_LINK_LIBS} ${PROJECT_TEST_LINK_LIBS} gtest_main gtest
+  )
+  set_target_properties(${TEST_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
+  )
+
+  add_test(NAME ${TEST_NAME}
+    WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+    COMMAND ${TEST_NAME}
+  )
+ENDFOREACH()
+
+# add .conf file tests
 add_test(NAME conf.pesm.0
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   COMMAND rvs -d 3 -c conf/pesm.conf
@@ -68,4 +106,3 @@ add_test(NAME conf.pesm.8
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   COMMAND rvs -d 3 -c conf/pesm8.conf
 )
-
