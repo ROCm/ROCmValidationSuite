@@ -116,32 +116,32 @@ TEST_F(PcieCapsTest, pcie_caps) {
   buff = new char[1024];
 
   get_num_bits(0xf, &num_ones, &first_one, &max_value);
-  EXPECT_EQ(num_ones, 4);
+  EXPECT_EQ(num_ones, 4u);
   EXPECT_EQ(first_one, 0);
-  EXPECT_EQ(max_value, 16);
+  EXPECT_EQ(max_value, 16u);
 
   get_num_bits(0x3f0, &num_ones, &first_one, &max_value);
-  EXPECT_EQ(num_ones, 6);
+  EXPECT_EQ(num_ones, 6u);
   EXPECT_EQ(first_one, 4);
-  EXPECT_EQ(max_value, 64);
+  EXPECT_EQ(max_value, 64u);
 
   rvs_pci_read_word_return_value = std::queue<u16>();
   rvs_pci_read_word_return_value.push(0x1);
   rvs_pci_read_word_return_value.push(0x2);
   rvs_pci_read_word_return_value.push(0x3);
-  EXPECT_EQ(rvs_pci_read_word(test_dev, 0x0), 0x1);
-  EXPECT_EQ(rvs_pci_read_word(test_dev, 0x0), 0x2);
-  EXPECT_EQ(rvs_pci_read_word(test_dev, 0x0), 0x3);
-  EXPECT_EQ(rvs_pci_read_word(test_dev, 0x0), 0x3);
+  EXPECT_EQ(rvs_pci_read_word(test_dev, 0x0), 0x1u);
+  EXPECT_EQ(rvs_pci_read_word(test_dev, 0x0), 0x2u);
+  EXPECT_EQ(rvs_pci_read_word(test_dev, 0x0), 0x3u);
+  EXPECT_EQ(rvs_pci_read_word(test_dev, 0x0), 0x3u);
 
   rvs_pci_read_long_return_value = std::queue<u32>();
   rvs_pci_read_long_return_value.push(0x1);
   rvs_pci_read_long_return_value.push(0x2);
   rvs_pci_read_long_return_value.push(0x3);
-  EXPECT_EQ(rvs_pci_read_long(test_dev, 0x0), 0x1);
-  EXPECT_EQ(rvs_pci_read_long(test_dev, 0x0), 0x2);
-  EXPECT_EQ(rvs_pci_read_long(test_dev, 0x0), 0x3);
-  EXPECT_EQ(rvs_pci_read_long(test_dev, 0x0), 0x3);
+  EXPECT_EQ(rvs_pci_read_long(test_dev, 0x0), 0x1u);
+  EXPECT_EQ(rvs_pci_read_long(test_dev, 0x0), 0x2u);
+  EXPECT_EQ(rvs_pci_read_long(test_dev, 0x0), 0x3u);
+  EXPECT_EQ(rvs_pci_read_long(test_dev, 0x0), 0x3u);
 
   // ---------------------------------------
   // pci_dev_find_cap_offset
@@ -154,7 +154,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint i = 0; i < 2; i++) {
     // 2. both correct
     return_value = pci_dev_find_cap_offset(test_dev, test_cap[i]->id, test_cap[i]->type);
-    EXPECT_EQ(return_value, test_cap[i]->addr);
+    EXPECT_EQ(return_value, static_cast<int>(test_cap[i]->addr));
     // 3. one correct
     return_value = pci_dev_find_cap_offset(test_dev, test_cap[i]->id, 0);
     EXPECT_EQ(return_value, 0);
@@ -773,7 +773,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
     rvs_pci_read_long_return_value.push(2*k);
     return_value = get_atomic_op_register_value(test_dev);
     if (k >= 2) {
-      EXPECT_EQ(return_value, 2*k);
+      EXPECT_EQ(return_value, static_cast<int>(2*k));
     } else {
       EXPECT_EQ(return_value, -1);
     }
