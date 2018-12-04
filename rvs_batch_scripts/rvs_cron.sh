@@ -3,6 +3,7 @@
 
 export RVS_BATCH_SCRIPTS=/work/rvs_batch_scripts
 export RVS_BATCH_BUILD=/work/rvs_batch_build
+export RVS_BATCH_UTC=`date -u`
 
 rm -rf ${RVS_BATCH_BUILD}
 mkdir -p ${RVS_BATCH_BUILD}
