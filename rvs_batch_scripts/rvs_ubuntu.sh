@@ -20,7 +20,7 @@ then
     mv ${RVS_WB}/Testing build/Testing
 fi
 
-ctest -DRVS_BRANCH:STRING=iss330 -DRVS_HOST:STRING="${RVS_HOST}" -S ${RVS_BATCH_SCRIPTS}/rvs_ctest_nightly.cmake
+ctest -DRVS_BRANCH:STRING=develop -DRVS_HOST:STRING="${RVS_HOST}" -S ${RVS_BATCH_SCRIPTS}/rvs_ctest_nightly.cmake
 
 # build and test branch master
 
