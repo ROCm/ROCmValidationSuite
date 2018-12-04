@@ -52,7 +52,7 @@ message(STATUS "MODULE: ${RVS}")
 
 ## Include common cmake modules
 include ( utils )
-include (CTest)
+#include (CTest)
 
 ## Setup the package version default (the actual one is taken from the latest Git tag).
 get_version ( "0.0.0" )

@@ -26,7 +26,7 @@
 cmake_minimum_required ( VERSION 3.5.0 )
 project ("rocm-validation-suite" )
 enable_testing()
-include ( CTest )
+#include ( CTest )
 
 execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rvs_os_helper.sh
   RESULT_VARIABLE result
@@ -333,7 +333,7 @@ add_subdirectory(iet.so)
 
 add_dependencies(rvs rvs_doc rvs_yaml_target)
 add_dependencies(rvsfail rvs rvs_bintest_folder)
-add_dependencies(rvstest rvs rvs_gtest_target rvs_bintest_folder)
+add_dependencies(rvstest rvs rvs_gtest_target rvs_bintest_folder rvs_yaml_target)
 
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_rsmi_target)
@@ -369,6 +369,7 @@ VERBATIM)
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
+message(STATUS "Doxygen: ${DOXYGEN_EXECUTABLE}")
 add_custom_target(rvs_progguide ALL
     COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
