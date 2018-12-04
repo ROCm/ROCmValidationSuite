@@ -23,17 +23,24 @@
  *
  *******************************************************************************/
 
+#include <pci/pci.h>
+#include <linux/pci.h>
+#include <vector>
+#include <queue>
+#include <string>
+
 #include "gtest/gtest.h"
 
 #include "pci_caps.h"
 #include "rvs_unit_testing_defs.h"
 
-#include <pci/pci.h>
-#include <linux/pci.h>
-
-#include <vector>
-
-using namespace rvs;
+using rvs::rvs_pci_read_word_return_value;
+using rvs::rvs_pci_read_word;
+using rvs::rvs_pci_read_long_return_value;
+using rvs::rvs_pci_read_long;
+using rvs::rvs_pci_get_param_return_value;
+using rvs::rvs_readlink_return_value;
+using rvs::rvs_readlink_buff_return_value;
 
 class PcieCapsTest : public ::testing::Test {
  protected:
@@ -69,7 +76,6 @@ class PcieCapsTest : public ::testing::Test {
       test_dev->base_addr[k] = k;
       test_dev->size[k] = k;
     }
-
   }
 
   void TearDown() override {
@@ -89,7 +95,8 @@ class PcieCapsTest : public ::testing::Test {
   pci_access* test_access;
 
   // utility function
-  void get_num_bits(uint32_t input_num, uint32_t* num_ones, int* first_one, uint32_t* max_value) {
+  void get_num_bits(uint32_t input_num, uint32_t* num_ones,
+                    int* first_one, uint32_t* max_value) {
     *num_ones = 0;
     *first_one = -1;
     for (uint i = 0; i < 32; i++) {
@@ -102,7 +109,6 @@ class PcieCapsTest : public ::testing::Test {
     }
     *max_value = (1 << *num_ones);
   }
-  
 };
 
 TEST_F(PcieCapsTest, pcie_caps) {
@@ -153,7 +159,8 @@ TEST_F(PcieCapsTest, pcie_caps) {
   test_dev->first_cap = test_cap[0];
   for (uint i = 0; i < 2; i++) {
     // 2. both correct
-    return_value = pci_dev_find_cap_offset(test_dev, test_cap[i]->id, test_cap[i]->type);
+    return_value = pci_dev_find_cap_offset(test_dev, test_cap[i]->id,
+                                           test_cap[i]->type);
     EXPECT_EQ(return_value, static_cast<int>(test_cap[i]->addr));
     // 3. one correct
     return_value = pci_dev_find_cap_offset(test_dev, test_cap[i]->id, 0);
@@ -168,7 +175,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_link_cap_max_speed
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -222,7 +229,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_link_cap_max_width
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -261,7 +268,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_link_stat_cur_speed
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -317,7 +324,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_link_stat_neg_width
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -356,7 +363,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_slot_pwr_limit_value
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -411,7 +418,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_slot_physical_num
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -508,40 +515,40 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // 3. method is PCI_ACCESS_SYS_BUS_PCI and base = 1
   exp_string = "";
   test_access->method = PCI_ACCESS_SYS_BUS_PCI;
-  rvs_pci_get_param_return_value = (char*) "abc";
+  rvs_pci_get_param_return_value = const_cast<char*>("abc");
   rvs_readlink_return_value = -1;
-  rvs_readlink_buff_return_value = (char*) "";
+  rvs_readlink_buff_return_value = const_cast<char*>("");
   get_kernel_driver(test_dev, buff);
   EXPECT_STREQ(buff, exp_string.c_str());
   // 4. method is PCI_ACCESS_SYS_BUS_PCI and base = 1 and n = 0
   exp_string = "";
   test_access->method = PCI_ACCESS_SYS_BUS_PCI;
-  rvs_pci_get_param_return_value = (char*) "abc";
+  rvs_pci_get_param_return_value = const_cast<char*>("abc");
   rvs_readlink_return_value = 0;
-  rvs_readlink_buff_return_value = (char*) "def";
+  rvs_readlink_buff_return_value = const_cast<char*>("def");
   get_kernel_driver(test_dev, buff);
   EXPECT_STREQ(buff, exp_string.c_str());
   // 5. method is PCI_ACCESS_SYS_BUS_PCI and base = 1 and n > 0
   exp_string = "bla";
   test_access->method = PCI_ACCESS_SYS_BUS_PCI;
-  rvs_pci_get_param_return_value = (char*) "abc";
+  rvs_pci_get_param_return_value = const_cast<char*>("abc");
   rvs_readlink_return_value = 10;
-  rvs_readlink_buff_return_value = (char*) "def/bla";
+  rvs_readlink_buff_return_value = const_cast<char*>("def/bla");
   get_kernel_driver(test_dev, buff);
   EXPECT_STREQ(buff, exp_string.c_str());
   // 6. method is PCI_ACCESS_SYS_BUS_PCI and base = 1 and n > 0
   exp_string = "def";
   test_access->method = PCI_ACCESS_SYS_BUS_PCI;
-  rvs_pci_get_param_return_value = (char*) "abc";
+  rvs_pci_get_param_return_value = const_cast<char*>("abc");
   rvs_readlink_return_value = 3;
-  rvs_readlink_buff_return_value = (char*) "def/bla";
+  rvs_readlink_buff_return_value = const_cast<char*>("def/bla");
   get_kernel_driver(test_dev, buff);
   EXPECT_STREQ(buff, exp_string.c_str());
 
   // ---------------------------------------
   // get_dev_serial_num
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -578,7 +585,8 @@ TEST_F(PcieCapsTest, pcie_caps) {
     rvs_pci_read_long_return_value.push(k1);
     buff[0] = '\0';
     get_dev_serial_num(test_dev, buff);
-    snprintf(expect_string, 1024, "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x",
+    snprintf(expect_string, sizeof(expect_string),
+        "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x",
         k1 >> 24, (k1 >> 16) & 0xff, (k1 >> 8) & 0xff, k1 & 0xff,
         k2 >> 24, (k2 >> 16) & 0xff, (k2 >> 8) & 0xff, k2 & 0xff);
     EXPECT_STREQ(buff, expect_string);
@@ -591,7 +599,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_pwr_budgeting
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_EXT_CAP_ID_PWR and Type = PCI_CAP_EXTENDED are valid)
+  // 1. invalid Id / Type (PCI_EXT_CAP_ID_PWR and PCI_CAP_EXTENDED are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -640,7 +648,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_pwr_curr_state
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_PM and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_PM and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -679,7 +687,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_atomic_op_routing
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -709,11 +717,11 @@ TEST_F(PcieCapsTest, pcie_caps) {
   for (uint k = 0; k < max_value; k++) {
     rvs_pci_read_word_return_value = std::queue<u16>();
     rvs_pci_read_word_return_value.push(k << first_one);
-    rvs_pci_read_word_return_value.push((k%2==0) ? 0x0 : 0x40);
+    rvs_pci_read_word_return_value.push((k % 2 == 0) ? 0x0 : 0x40);
     buff[0] = '\0';
     get_atomic_op_routing(test_dev, buff);
     if (k >= 2) {
-      EXPECT_STREQ(buff, (k%2==0) ? "FALSE" : "TRUE");
+      EXPECT_STREQ(buff, (k % 2 == 0) ? "FALSE" : "TRUE");
     } else {
       EXPECT_STREQ(buff, "NOT SUPPORTED");
     }
@@ -722,7 +730,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_atomic_op_register_value
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -782,7 +790,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_atomic_op_32_completer
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -849,7 +857,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_atomic_op_64_completer
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
@@ -916,7 +924,7 @@ TEST_F(PcieCapsTest, pcie_caps) {
   // ---------------------------------------
   // get_atomic_op_128_CAS_completer
   // ---------------------------------------
-  // 1. invalid Id / Type (Id = PCI_CAP_ID_EXP and Type = PCI_CAP_NORMAL are valid)
+  // 1. invalid Id / Type (PCI_CAP_ID_EXP and PCI_CAP_NORMAL are valid)
   for (uint id_f = 0; id_f < 2; id_f++) {
     for (uint type_f = 0; type_f < 2; type_f++) {
       test_cap[id_f]->id           = 0;
