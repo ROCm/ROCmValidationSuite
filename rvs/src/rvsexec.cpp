@@ -106,12 +106,17 @@ int rvs::exec::run() {
     logger::log_level(5);
   }
 
-  // check -a options
+  // check -a option
   if (rvs::options::has_option("-a", &val)) {
     logger::append(true);
   }
 
-  // check -j options
+  // check -l option
+  if (rvs::options::has_option("-l", &val)) {
+    logger::set_log_file(val);
+  }
+
+  // check -j option
   if (rvs::options::has_option("-j", &val)) {
     logger::to_json(true);
   }
@@ -152,7 +157,7 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-q")) {
     rvs::logger::quiet();
   }
-  logger::initialize();
+  logger::init_log_file();
 
   if (rvs::options::has_option("-g")) {
     int sts = do_gpu_list();
@@ -190,32 +195,48 @@ void rvs::exec::do_version() {
 void rvs::exec::do_help() {
   cout << "\nUsage: rvs [options]\n";
   cout << "\nOptions:\n\n";
-  cout << "-a --appendLog     When generating a debug logfile, do not overwrite the contents\n";
-  cout << "                   of a current log. Used in conjuction with the -d and -l options.\n";
+  cout << "-a --appendLog     When generating a debug logfile, do not "
+                              "overwrite the contents\n";
+  cout << "                   of a current log. Used in conjuction with the"
+                               "-d and -l options.\n";
   cout << "-c --config        Specify the configuration file to be used.\n";
   cout << "                   The default is <install base>/conf/RVS.conf\n";
-  cout << "   --configless    Run RVS in a configless mode. Executes a \"long\" test on all\n";
+  cout << "   --configless    Run RVS in a configless mode. Executes a "
+                              "\"long\" test on all\n";
   cout << "                   supported GPUs.\n";
-  cout << "-d --debugLevel    Specify the debug level for the output log. The range is\n";
+  cout << "-d --debugLevel    Specify the debug level for the output log. "
+                              "The range is\n";
   cout << "                   0 to 5 with 5 being the most verbose.\n";
   cout << "                   Used in conjunction with the -l flag.\n";
-  cout << "-g --listGpus      List the GPUs available and exit. This will only list GPUs\n";
+  cout << "-g --listGpus      List the GPUs available and exit. This will "
+                              "only list GPUs\n";
   cout << "                   that are supported by RVS.\n";
-  cout << "-i --indexes       Comma separated list of indexes devices to run RVS on. This will\n";
-  cout << "                   override the device values specified in the configuration file for\n";
-  cout << "                   every action in the configuration file, including the ‘all’ value.\n";
+  cout << "-i --indexes       Comma separated list of indexes devices to run "
+                              "RVS on. This will\n";
+  cout << "                   override the device values specified in the "
+                              "configuration file for\n";
+  cout << "                   every action in the configuration file, "
+                              "including the ‘all’ value.\n";
   cout << "-j --json          Output should use the JSON format.\n";
-  cout << "-l --debugLogFile  Specify the logfile for debug information. This will produce a log\n";
-  cout << "                   file intended for post-run analysis after an error.\n";
-  cout << "   --quiet         No console output given. See logs and return code for errors.\n";
+  cout << "-l --debugLogFile  Specify the logfile for debug information. "
+                              "This will produce a log\n";
+  cout << "                   file intended for post-run analysis after "
+                              "an error.\n";
+  cout << "   --quiet         No console output given. See logs and return "
+                              "code for errors.\n";
   cout << "-m --modulepath    Specify a custom path for the RVS modules.\n";
-  cout << "   --specifiedtest Run a specific test in a configless mode. Multiple word tests\n";
-  cout << "                   should be in quotes. This action will default to all devices,\n";
+  cout << "   --specifiedtest Run a specific test in a configless mode. "
+                              "Multiple word tests\n";
+  cout << "                   should be in quotes. This action will default "
+                              "to all devices,\n";
   cout << "                   unless the indexes option is specifie.\n";
-  cout << "-t --listTests     List the modules available to be executed through RVS and exit.\n";
-  cout << "                   This will list only the readily loadable modules\n";
+  cout << "-t --listTests     List the modules available to be executed "
+                              "through RVS and exit.\n";
+  cout << "                   This will list only the readily loadable "
+                              "modules\n";
   cout << "                   given the current path and library conditions.\n";
-  cout << "-v --verbose       Enable verbose reporting. This is equivalent to\n";
+  cout << "-v --verbose       Enable verbose reporting. This is "
+                              "equivalent to\n";
   cout << "                   specifying the -d 5 option.\n";
   cout << "   --version       Displays the version information and exits.\n";
   cout << "-h --help          Display usage information and exit.\n";
