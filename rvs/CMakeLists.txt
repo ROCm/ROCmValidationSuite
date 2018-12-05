@@ -101,8 +101,6 @@ file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 message ( "TESTSOURCES ${TESTSOURCES}" )
 
 LINK_DIRECTORIES(${UT_LIB})
-add_executable(rvstest ${TESTSOURCES} ${SOURCES})
-target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
 
 install(TARGETS ${RVS_TARGET}
   RUNTIME
