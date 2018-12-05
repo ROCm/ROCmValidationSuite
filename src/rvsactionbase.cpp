@@ -118,13 +118,12 @@ bool rvs::actionbase::has_property(const std::string& key) {
  * @return 1 - syntax error in 'device' configuration key
  * @return 2 - missing 'device' key
  */
-int rvs::actionbase::property_get_device(const std::string& device) {
+  int rvs::actionbase::property_get_device() {
   return property_get_uint_list<uint16_t>(
-    device,
+    RVS_CONF_DEVICE_KEY,
     YAML_DEVICE_PROP_DELIMITER,
     &property_device,
-    &property_device_all
-  );
+    &property_device_all);
 }
 
 /**

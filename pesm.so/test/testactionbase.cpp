@@ -30,6 +30,7 @@
 #include "rvsactionbase.h"
 
 #include <string>
+#include <vector>
 
 TEST(actionbase, run) {
   rvs::actionbase* p = new unitactionbase;
@@ -122,34 +123,40 @@ TEST(actionbase, uintttf) {
 TEST(actionbase, devicetf) {
   std::string val;
   int         intretval;
+  bool b_all;
+  std::vector<uint16_t> dev;
 
-  rvs::actionbase* p = new unitactionbase;
+  unitactionbase* p = new unitactionbase;
   assert(p);
 
   p->property_set("device", "26720");
 
   intretval = p->property_get_device();
   EXPECT_EQ(intretval, 0);
-  EXPECT_EQ(p->property_device[0], 26720);
+  p->test_get_device_all(&dev, &b_all);
+  EXPECT_EQ(dev[0], 26720);
 
-  p->property_set("device1", "123 456");
-
-  intretval = p->property_get_device("device1");
+  p->test_erase_property("device");
+  p->property_set("device", "123 456");
+  intretval = p->property_get_device();
+  p->test_get_device_all(&dev, &b_all);
   EXPECT_EQ(intretval, 0);
-  EXPECT_EQ(p->property_device[0], 123);
-  EXPECT_EQ(p->property_device[1], 456);
+  EXPECT_EQ(dev[0], 123);
+  EXPECT_EQ(dev[1], 456);
 
-  p->property_set("device2", "all");
-
-  intretval = p->property_get_device("device2");
+  p->test_erase_property("device");
+  p->property_set("device", "all");
+  intretval = p->property_get_device();
+  p->test_get_device_all(&dev, &b_all);
   EXPECT_EQ(intretval, 0);
-  EXPECT_TRUE(p->property_device_all);
+  EXPECT_TRUE(b_all);
 
-  p->property_set("device3", "abcd");
-
-  intretval = p->property_get_device("device3");
+  p->test_erase_property("device");
+  p->property_set("device", "abcd");
+  intretval = p->property_get_device();
+  p->test_get_device_all(&dev, &b_all);
   EXPECT_EQ(intretval, 1);
-  EXPECT_FALSE(p->property_device_all); 
+  EXPECT_FALSE(b_all);
 
   delete p;
 }
