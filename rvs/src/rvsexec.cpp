@@ -73,6 +73,7 @@ int rvs::exec::run() {
   }
 
   // check -v options
+  logger::log_level(rvs::logerror);
   if (rvs::options::has_option("-ver", &val)) {
     do_version();
     return 0;
