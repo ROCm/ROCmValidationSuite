@@ -29,6 +29,7 @@ set ( PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
 ## define test sources
 set(TEST_SOURCES
    ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvs_unit_testing_defs.cpp
+   ../src/rvslognode.cpp ../src/rvslognodebase.cpp
 )
 
 add_executable(rvstest ${SOURCES})
