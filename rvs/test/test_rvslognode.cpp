@@ -232,25 +232,34 @@ TEST_F(LogNodeTest, log_node_base) {
   // check json
   // ----------------------------------------
   json_string = level_1->ToJson();
-  EXPECT_STREQ(json_string.c_str(), "\n\"level_1\" : {\n  \"level_2_0\" : {\n    \"level_3_0\" : {\n    },\n    \"level_3_1\" : {\n    }\n  },\n  \"level_2_1\" : {\n    \"level_3_2\" : {\n      \"level_4_0\" : {\n      }\n    }\n  },\n  \"level_2_2\" : {\n    \"level_3_3\" : {\n    },\n    \"level_3_4\" : {\n      \"level_4_1\" : {\n      }\n    }\n  }\n}");
+  EXPECT_STREQ(json_string.c_str(), "\n\"level_1\" : {\n  \"level_2_0\" : {\n"
+  "    \"level_3_0\" : {\n    },\n    \"level_3_1\" : {\n    }\n  },\n"
+  "  \"level_2_1\" : {\n    \"level_3_2\" : {\n      \"level_4_0\" : {\n      }"
+  "\n    }\n  },\n  \"level_2_2\" : {\n    \"level_3_3\" : {\n    },\n"
+  "    \"level_3_4\" : {\n      \"level_4_1\" : {\n      }\n    }\n  }\n}");
 
   json_string = level_2[0]->ToJson();
-  EXPECT_STREQ(json_string.c_str(), "\n\"level_2_0\" : {\n  \"level_3_0\" : {\n  },\n  \"level_3_1\" : {\n  }\n}");
+  EXPECT_STREQ(json_string.c_str(), "\n\"level_2_0\" : {\n  \"level_3_0\" : {\n"
+                                           "  },\n  \"level_3_1\" : {\n  }\n}");
   json_string = level_2[1]->ToJson();
-  EXPECT_STREQ(json_string.c_str(), "\n\"level_2_1\" : {\n  \"level_3_2\" : {\n    \"level_4_0\" : {\n    }\n  }\n}");
+  EXPECT_STREQ(json_string.c_str(), "\n\"level_2_1\" : {\n  \"level_3_2\" : {\n"
+                                        "    \"level_4_0\" : {\n    }\n  }\n}");
   json_string = level_2[2]->ToJson();
-  EXPECT_STREQ(json_string.c_str(), "\n\"level_2_2\" : {\n  \"level_3_3\" : {\n  },\n  \"level_3_4\" : {\n    \"level_4_1\" : {\n    }\n  }\n}");
+  EXPECT_STREQ(json_string.c_str(), "\n\"level_2_2\" : {\n  \"level_3_3\" : {\n"
+             "  },\n  \"level_3_4\" : {\n    \"level_4_1\" : {\n    }\n  }\n}");
 
   json_string = level_3[0]->ToJson();
   EXPECT_STREQ(json_string.c_str(), "\n\"level_3_0\" : {\n}");
   json_string = level_3[1]->ToJson();
   EXPECT_STREQ(json_string.c_str(), "\n\"level_3_1\" : {\n}");
   json_string = level_3[2]->ToJson();
-  EXPECT_STREQ(json_string.c_str(), "\n\"level_3_2\" : {\n  \"level_4_0\" : {\n  }\n}");
+  EXPECT_STREQ(json_string.c_str(), "\n\"level_3_2\" : {\n  \"level_4_0\" : {\n"
+                                                                      "  }\n}");
   json_string = level_3[3]->ToJson();
   EXPECT_STREQ(json_string.c_str(), "\n\"level_3_3\" : {\n}");
   json_string = level_3[4]->ToJson();
-  EXPECT_STREQ(json_string.c_str(), "\n\"level_3_4\" : {\n  \"level_4_1\" : {\n  }\n}");
+  EXPECT_STREQ(json_string.c_str(), "\n\"level_3_4\" : {\n  \"level_4_1\" : {\n"
+                                                                      "  }\n}");
 
   json_string = level_4[0]->ToJson();
   EXPECT_STREQ(json_string.c_str(), "\n\"level_4_0\" : {\n}");
