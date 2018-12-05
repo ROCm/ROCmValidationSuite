@@ -106,7 +106,7 @@ endif()
 INCLUDE_DIRECTORIES(${ROCR_INC_DIR})
 
 # Add directories to look for library files to link 
-LINK_DIRECTORIES(${ROCR_LIB_DIR})
+LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCT_LIB_DIR})
 
 ## additional libraries
 set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )

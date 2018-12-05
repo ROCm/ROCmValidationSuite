@@ -3,6 +3,7 @@
 #sudo docker run --privileged=true -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video -v /work/rvs_batch_scripts:/work/batch_scripts -v /home/user1:/home/root d4fb34eba628 /work/nightly/centos.sh
 
 source scl_source enable devtoolset-7
+export RVS_BATCH_UTC=`date -u`
 
 # since we are now in docker image, we need to define vars again
 export RVS_BATCH_SCRIPTS=/work/batch_scripts
