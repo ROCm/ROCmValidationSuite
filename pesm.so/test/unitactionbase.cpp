@@ -22,13 +22,13 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include <string>
+#include <vector>
+
 #include "unitactionbase.h"
 #include "rvsloglp.h"
 #include "rvsactionbase.h"
 #define MODULE_NAME_CAPS "UNITPESM"
-
-#include <string>
-#include <vector>
 
 //! Default constructor
 unitactionbase::unitactionbase() {
