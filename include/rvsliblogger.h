@@ -54,11 +54,11 @@ class logger {
   //! set quiet mode
   static  void  quiet() { b_quiet = true; }
   //! set logging file
-  static  void  set_log_file(const std::string& fname) { log_file = fname; }
+  static  void  set_log_file(const std::string& fname);
 
   static  bool   get_ticks(uint32_t* psecs, uint32_t* pusecs);
 
-  static  int    initialize();
+  static  int    init_log_file();
   static  int    terminate();
 
   static  int    log(const std::string& Message, const int level = 1);
@@ -100,7 +100,7 @@ class logger {
   //! stop flags
   static uint16_t stop_flags;
   //! logging file
-  static std::string log_file;
+  static char log_file[1024];
   //! quiet mode
   static bool b_quiet;
 };
