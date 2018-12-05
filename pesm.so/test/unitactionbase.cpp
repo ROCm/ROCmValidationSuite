@@ -24,8 +24,11 @@
  *******************************************************************************/
 #include "unitactionbase.h"
 #include "rvsloglp.h"
+#include "rvsactionbase.h"
 #define MODULE_NAME_CAPS "UNITPESM"
 
+#include <string>
+#include <vector>
 
 //! Default constructor
 unitactionbase::unitactionbase() {
@@ -41,4 +44,14 @@ int unitactionbase::run(void) {
   RVSTRACE_
   // agreed upon return value for this run() method
   return 3;
+}
+
+void unitactionbase::test_get_device_all
+(std::vector<uint16_t>* pDev, bool* bAll) {
+  *pDev = property_device;
+  *bAll = property_device_all;
+}
+
+void unitactionbase::test_erase_property(const std::string& prop) {
+  property.erase(prop);
 }

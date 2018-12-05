@@ -30,7 +30,6 @@
 #include <vector>
 
 #include "rvs_util.h"
-#include "rvs_key_def.h"
 
 namespace rvs {
 /**
@@ -43,13 +42,7 @@ namespace rvs {
 class actionbase {
  public:
   virtual ~actionbase();
-  
-  //! array of GPU IDs listed in config 'device' key
-  std::vector<uint16_t> property_device;
-  
-  //! 'true' when all devices are selected ('device: all')
-  bool property_device_all;
-  
+
  protected:
   actionbase();
   void sleep(const unsigned int ms);
@@ -61,7 +54,7 @@ class actionbase {
   virtual int     run(void) = 0;
   bool has_property(const std::string& key, std::string* pval);
   bool has_property(const std::string& key);
-  int property_get_device(const std::string& device = RVS_CONF_DEVICE_KEY);
+  int property_get_device();
 
   /**
   * @brief Gets uint16_t list from the module's properties collection
@@ -164,8 +157,10 @@ class actionbase {
   std::string action_name;
   //! device_id - non-zero if filtering of device id is required
   uint16_t property_device_id;
-
-
+  //! array of GPU IDs listed in config 'device' key
+  std::vector<uint16_t> property_device;
+  //! 'true' when all devices are selected ('device: all')
+  bool property_device_all;
   //! TRUE if the action will run on all selected devices in parallel
   bool property_parallel;
   //! number of stress test iterations to run
