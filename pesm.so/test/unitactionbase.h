@@ -25,11 +25,10 @@
 #ifndef PESM_SO_TEST_UNITACTIONBASE_H_
 #define PESM_SO_TEST_UNITACTIONBASE_H_
 
-#include "rvsactionbase.h"
-
 #include <string>
 #include <vector>
 
+#include "rvsactionbase.h"
 
 class unitactionbase : public rvs::actionbase {
  public:

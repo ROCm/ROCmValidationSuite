@@ -23,14 +23,12 @@
  *
  *******************************************************************************/
 
-
+#include <string>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "unitactionbase.h"
 #include "rvsactionbase.h"
-
-#include <string>
-#include <vector>
 
 TEST(actionbase, run) {
   rvs::actionbase* p = new unitactionbase;
@@ -106,7 +104,7 @@ TEST(actionbase, uintttf) {
 
   intretval = p->property_get_int("uint1", &intval);
   EXPECT_EQ(intretval, 0);
-  EXPECT_EQ(intval, 123456);
+  EXPECT_EQ(intval, 123456u);
 
   intretval = p->property_get_int("uint2", &intval);
   EXPECT_EQ(intretval, 1);
@@ -134,15 +132,16 @@ TEST(actionbase, devicetf) {
   intretval = p->property_get_device();
   EXPECT_EQ(intretval, 0);
   p->test_get_device_all(&dev, &b_all);
-  EXPECT_EQ(dev[0], 26720);
+  EXPECT_EQ(dev[0], 26720u);
 
   p->test_erase_property("device");
   p->property_set("device", "123 456");
   intretval = p->property_get_device();
   p->test_get_device_all(&dev, &b_all);
   EXPECT_EQ(intretval, 0);
-  EXPECT_EQ(dev[0], 123);
-  EXPECT_EQ(dev[1], 456);
+  EXPECT_EQ(dev[0], 123u);
+  EXPECT_EQ(dev[1], 456u);
+  EXPECT_EQ(dev.size(), 2u);
 
   p->test_erase_property("device");
   p->property_set("device", "all");
@@ -157,6 +156,7 @@ TEST(actionbase, devicetf) {
   p->test_get_device_all(&dev, &b_all);
   EXPECT_EQ(intretval, 1);
   EXPECT_FALSE(b_all);
+  EXPECT_EQ(dev.size(), 0u);
 
   delete p;
 }
