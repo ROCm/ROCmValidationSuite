@@ -66,6 +66,13 @@
 
 #define BUFFER_SIZE 3000
 
+#if DRVS_OS_TYPE_NUM == 1
+// debian defines
+#elseif DRVS_OS_TYPE_NUM == 2
+// fedora defines
+#endif
+
+
 using std::string;
 using std::iterator;
 using std::endl;
