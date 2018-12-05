@@ -26,7 +26,26 @@
 cmake_minimum_required ( VERSION 3.5.0 )
 project ("rocm-validation-suite" )
 enable_testing()
-include ( CTest )
+#include ( CTest )
+
+execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rvs_os_helper.sh
+  RESULT_VARIABLE result
+  OUTPUT_VARIABLE RVS_OS_TYPE
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+if(result)
+   message(FATAL_ERROR "Could not obtain OS type: ${result}")
+endif()
+message(STATUS "RVS_OS_TYPE: ${RVS_OS_TYPE}")
+if (${RVS_OS_TYPE} STREQUAL "ubuntu")
+  set(RVS_OS_TYPE_NUM 1)
+elseif (${RVS_OS_TYPE} STREQUAL "centos")
+  set(RVS_OS_TYPE_NUM 2)
+else()
+  set(RVS_OS_TYPE_NUM 0)
+endif()
+message(STATUS "RVS_OS_TYPE_NUM: ${RVS_OS_TYPE_NUM}")
 
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
@@ -117,9 +136,16 @@ if ( NOT DEFINED UT_LIB )
 endif ()
 
 ## Set default module path if not already set
-if ( NOT DEFINED CPACK_GENERATOR )
-    set ( CPACK_GENERATOR "DEB;RPM" )
-endif ()
+if (NOT DEFINED CPACK_GENERATOR )
+  if (RVS_OS_TYPE_NUM EQUAL 1)
+    set (CPACK_GENERATOR "DEB")
+  elseif (RVS_OS_TYPE_NUM EQUAL 2)
+    set (CPACK_GENERATOR "RPM")
+  else()
+    set (CPACK_GENERATOR "DEB;RPM")
+  endif()
+endif()
+message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 if ( NOT DEFINED CMAKE_PACKAGING_INSTALL_PREFIX )
     set (CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
@@ -307,7 +333,7 @@ add_subdirectory(iet.so)
 
 add_dependencies(rvs rvs_doc rvs_yaml_target)
 add_dependencies(rvsfail rvs rvs_bintest_folder)
-add_dependencies(rvstest rvs rvs_gtest_target rvs_bintest_folder)
+add_dependencies(rvstest rvs rvs_gtest_target rvs_bintest_folder rvs_yaml_target)
 
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_rsmi_target)
@@ -341,26 +367,43 @@ WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 COMMENT "Create the doc directory"
 VERBATIM)
 
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+message(STATUS "Doxygen: ${DOXYGEN_EXECUTABLE}")
 add_custom_target(rvs_progguide ALL
-    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen
+    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS Programmer's Reference Guide"
     VERBATIM)
 add_dependencies(rvs_progguide rvs_doc)
 
 add_custom_target(rvs_man1 ALL
-    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyMan1
+    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE} DoxyMan1
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS man.1 files"
     VERBATIM)
 add_dependencies(rvs_man1 rvs_doc)
 
 add_custom_target(rvs_userguide ALL
-    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} doxygen DoxyGuide
+    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE} DoxyGuide
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating RVS User Guide"
     VERBATIM)
 add_dependencies(rvs_userguide rvs_doc)
+
+install(FILES "${CMAKE_BINARY_DIR}/doc/man/man1/rvs.1"
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/man
+  COMPONENT applications
+)
+
+install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/userguide
+  COMPONENT applications
+)
+
+else()
+  message("Doxygen is not found. Will not generate documentation.")
+endif(DOXYGEN_FOUND)
 
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
