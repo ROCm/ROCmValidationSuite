@@ -123,8 +123,7 @@ int rvs::actionbase::property_get_device() {
     RVS_CONF_DEVICE_KEY,
     YAML_DEVICE_PROP_DELIMITER,
     &property_device,
-    &property_device_all
-  );
+    &property_device_all);
 }
 
 /**
