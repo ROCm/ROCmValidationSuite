@@ -27,9 +27,9 @@
 
 #include "gtest/gtest.h"
 
-#include "rvslognodebase.h"
-#include "rvslognode.h"
-#include "rvs_unit_testing_defs.h"
+#include "include/rvslognodebase.h"
+#include "include/rvslognode.h"
+#include "include/rvs_unit_testing_defs.h"
 
 class ext_lognode : public rvs::LogNode {
  public:

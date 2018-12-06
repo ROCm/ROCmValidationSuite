@@ -25,8 +25,8 @@
 #include <string>
 #include <vector>
 
-#include "unitactionbase.h"
-#include "rvsloglp.h"
+#include "test/unitactionbase.h"
+#include "include/rvsloglp.h"
 
 #define MODULE_NAME_CAPS "UNITPESM"
 

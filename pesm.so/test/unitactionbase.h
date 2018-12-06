@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 
 class unitactionbase : public rvs::actionbase {
  public:
