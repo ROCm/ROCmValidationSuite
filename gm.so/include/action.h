@@ -30,13 +30,13 @@
 #include <string>
 #include <map>
 
-#include "worker.h"
-#include "rvsactionbase.h"
+#include "include/worker.h"
+#include "include/rvsactionbase.h"
 
 using std::string;
 
 /**
- * @class action
+ * @class gm_action
  * @ingroup GM
  *
  * @brief GM action implementation class
@@ -46,10 +46,10 @@ using std::string;
  *
  */
 
-class action : public rvs::actionbase {
+class gm_action : public rvs::actionbase {
  public:
-    action();
-    virtual ~action();
+    gm_action();
+    virtual ~gm_action();
 
     virtual int run(void);
 

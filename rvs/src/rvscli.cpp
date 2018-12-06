@@ -23,7 +23,7 @@
  *
  *******************************************************************************/
 
-#include "rvscli.h"
+#include "include/rvscli.h"
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -38,8 +38,8 @@
 #include <string>
 #include <stack>
 
-#include "rvsoptions.h"
-#include "rvsliblogger.h"
+#include "include/rvsoptions.h"
+#include "include/rvsliblogger.h"
 
 #define MODULE_NAME_CAPS "CLI"
 

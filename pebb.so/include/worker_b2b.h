@@ -32,7 +32,7 @@
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
 
-#include "worker.h"
+#include "include/worker.h"
 
 
 

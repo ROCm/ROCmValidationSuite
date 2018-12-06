@@ -27,7 +27,7 @@
 
 #include <string>
 
-#include "rvslognodebase.h"
+#include "include/rvslognodebase.h"
 
 namespace rvs {
 

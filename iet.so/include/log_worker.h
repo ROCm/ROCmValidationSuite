@@ -27,7 +27,7 @@
 
 #include <string>
 #include <mutex>
-#include "rvsthreadbase.h"
+#include "include/rvsthreadbase.h"
 
 /**
  * @class log_worker

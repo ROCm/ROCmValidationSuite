@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 extern "C" {
 #include <pci/pci.h>
@@ -36,13 +36,13 @@ extern "C" {
 #include <algorithm>
 #include <iomanip>
 
-#include "rvs_key_def.h"
-#include "rvs_module.h"
-#include "worker.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/rvs_module.h"
+#include "include/worker.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
 #define MODULE_NAME_CAPS "PESM"
 
 using std::string;
@@ -54,11 +54,11 @@ using std::hex;
 extern Worker* pworker;
 
 //! Default constructor
-action::action() {
+pesm_action::pesm_action() {
 }
 
 //! Default destructor
-action::~action() {
+pesm_action::~pesm_action() {
   property.clear();
 }
 
@@ -77,7 +77,7 @@ action::~action() {
  * @return 0 - success. non-zero otherwise
  *
  * */
-int action::run(void) {
+int pesm_action::run(void) {
   string msg;
   RVSTRACE_
 
@@ -201,7 +201,7 @@ int action::run(void) {
  * @return 0 - success. non-zero otherwise
  *
  * */
-int action::do_gpu_list() {
+int pesm_action::do_gpu_list() {
   log("pesm in do_gpu_list()", rvs::logtrace);
 
   std::map<std::string, std::string>::iterator it;
