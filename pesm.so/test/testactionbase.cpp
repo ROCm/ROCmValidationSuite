@@ -28,7 +28,6 @@
 
 #include "gtest/gtest.h"
 #include "unitactionbase.h"
-#include "rvsactionbase.h"
 
 TEST(actionbase, run) {
   rvs::actionbase* p = new unitactionbase;
