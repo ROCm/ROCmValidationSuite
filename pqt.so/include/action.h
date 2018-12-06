@@ -36,15 +36,15 @@
 #include <string>
 #include <vector>
 
-#include "rvsactionbase.h"
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
 
+#include "include/rvsactionbase.h"
 
 class pqtworker;
 
 /**
- * @class pqtaction
+ * @class pqt_action
  * @ingroup PQT
  *
  * @brief PQT action implementation class
@@ -53,10 +53,10 @@ class pqtworker;
  * in its run() method.
  *
  */
-class pqtaction : public rvs::actionbase {
+class pqt_action : public rvs::actionbase {
  public:
-  pqtaction();
-  virtual ~pqtaction();
+  pqt_action();
+  virtual ~pqt_action();
 
   virtual int run(void);
 

@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvs_util.h"
+#include "include/rvs_util.h"
 
 #include <vector>
 #include <string>

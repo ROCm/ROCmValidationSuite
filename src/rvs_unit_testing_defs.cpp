@@ -23,7 +23,7 @@
  *
  *******************************************************************************/
 
-#include "rvs_unit_testing_defs.h"
+#include "include/rvs_unit_testing_defs.h"
 
 namespace rvs {
 

@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 #include <stdlib.h>
 #include <sys/utsname.h>
@@ -38,8 +38,8 @@
 #include <map>
 #include <vector>
 
-#include "rvs_key_def.h"
-#include "rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/rvsloglp.h"
 
 #define MODULE_NAME "rcqt"
 #define MODULE_NAME_CAPS "RCQT"
@@ -80,11 +80,11 @@ using std::ifstream;
 using std::map;
 using std::vector;
 
-action::action() {
+rcqt_action::rcqt_action() {
   bjson = false;
 }
 
-action::~action() {
+rcqt_action::~rcqt_action() {
   property.clear();
 }
 
@@ -101,7 +101,7 @@ action::~action() {
  *
  * */
 
-int action::run() {
+int rcqt_action::run() {
   string msg;
   bool pkgchk_bool = false;
   bool usrchk_bool = false;
@@ -170,7 +170,7 @@ int action::run() {
  * @return 0 - success, non-zero otherwise
  * */
 
-int action::pkgchk_run() {
+int rcqt_action::pkgchk_run() {
   string package_name;
   string msg;
 
@@ -279,7 +279,7 @@ int action::pkgchk_run() {
  * @return 0 - success, non-zero otherwise
  * */
 
-int action::usrchk_run() {
+int rcqt_action::usrchk_run() {
   string err_msg, msg;
   string user_name;
   if (has_property(USER, &user_name)) {
@@ -405,7 +405,7 @@ int action::usrchk_run() {
  * @return 0 - success, non-zero otherwise
  * */
 
-int action::kernelchk_run() {
+int rcqt_action::kernelchk_run() {
   string msg;
   string os_version_values;
   string kernel_version_values;
@@ -501,7 +501,7 @@ int action::kernelchk_run() {
  * @return 0 - success, non-zero otherwise
  * */
 
-int action::ldcfgchk_run() {
+int rcqt_action::ldcfgchk_run() {
   string msg;
   string soname_requested;
   string arch_requested;
@@ -605,7 +605,7 @@ int action::ldcfgchk_run() {
 }
 
 // Converts decimal into octal
-int action::dectooct(int decnum) {
+int rcqt_action::dectooct(int decnum) {
   int rem, i = 1, octnum = 0;
   while (decnum !=0) {
     rem = decnum%8;
@@ -620,7 +620,7 @@ int action::dectooct(int decnum) {
  * @return 0 - success, non-zero otherwise
  * */ 
 
-int action::filechk_run() {
+int rcqt_action::filechk_run() {
   string exists_string, file, owner, group, msg, check;
   int permission, type;
   bool exists;

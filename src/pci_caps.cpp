@@ -42,7 +42,7 @@ extern "C" {
 #define MEM_BAR_MAX_INDEX 5
 
 #ifdef RVS_UNIT_TEST
-  #include "rvs_unit_testing_defs.h"
+  #include "include/rvs_unit_testing_defs.h"
   #define pci_read_long rvs_pci_read_long
   #define pci_read_word rvs_pci_read_word
   #define pci_get_param rvs_pci_get_param

@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsliblogger.h"
+#include "include/rvsliblogger.h"
 
 #include <unistd.h>
 #include <time.h>
@@ -36,11 +36,11 @@
 #include <string>
 #include <mutex>
 
-#include "rvstrace.h"
-#include "rvslognode.h"
-#include "rvslognodestring.h"
-#include "rvslognodeint.h"
-#include "rvslognoderec.h"
+#include "include/rvstrace.h"
+#include "include/rvslognode.h"
+#include "include/rvslognodestring.h"
+#include "include/rvslognodeint.h"
+#include "include/rvslognoderec.h"
 
 using std::cerr;
 using std::cout;
