@@ -22,11 +22,13 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PESM_SO_INCLUDE_UNITACTIONBASE_H_
-#define PESM_SO_INCLUDE_UNITACTIONBASE_H_
+#ifndef PESM_SO_TEST_UNITACTIONBASE_H_
+#define PESM_SO_TEST_UNITACTIONBASE_H_
 
-#include "include/rvsactionbase.h"
+#include <string>
+#include <vector>
 
+#include "rvsactionbase.h"
 
 class unitactionbase : public rvs::actionbase {
  public:
@@ -35,6 +37,8 @@ class unitactionbase : public rvs::actionbase {
 
   virtual int run(void);
 
+  void test_get_device_all(std::vector<uint16_t>* pDev, bool* bAll);
+  void test_erase_property(const std::string& prop);
 };
 
-#endif  // PESM_SO_INCLUDE_UNITACTIONBASE_H_
+#endif  // PESM_SO_TEST_UNITACTIONBASE_H_
