@@ -32,7 +32,7 @@
 
 #include "yaml-cpp/yaml.h"
 
-#include "rvsmodule_if.h"
+#include "include/rvsmodule_if.h"
 
 namespace rvs {
 

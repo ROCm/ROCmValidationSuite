@@ -31,8 +31,8 @@
 
 #include "gtest/gtest.h"
 
-#include "pci_caps.h"
-#include "rvs_unit_testing_defs.h"
+#include "include/pci_caps.h"
+#include "include/rvs_unit_testing_defs.h"
 
 using rvs::rvs_pci_read_word_return_value;
 using rvs::rvs_pci_read_word;

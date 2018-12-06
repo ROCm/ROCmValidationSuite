@@ -24,8 +24,8 @@
  *******************************************************************************/
 #include <string>
 
-#include "rvslognode.h"
-#include "rvstrace.h"
+#include "include/rvslognode.h"
+#include "include/rvstrace.h"
 
 using std::string;
 

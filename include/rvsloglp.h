@@ -27,7 +27,7 @@
 
 #include <string>
 
-#include "rvsliblog.h"
+#include "include/rvsliblog.h"
 
 #define RVSDEBUG_(ATTR, VAL) \
 {std::string msg = std::string(__FILE__)+"   "+__func__+":" \

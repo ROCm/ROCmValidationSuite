@@ -27,9 +27,9 @@
 
 #include <string>
 #include <memory>
-#include "rvsthreadbase.h"
-#include "blas_worker.h"
-#include "log_worker.h"
+#include "include/rvsthreadbase.h"
+#include "include/blas_worker.h"
+#include "include/log_worker.h"
 
 /**
  * @class IETWorker

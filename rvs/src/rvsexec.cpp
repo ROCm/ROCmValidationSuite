@@ -23,7 +23,7 @@
  *
  *******************************************************************************/
 
-#include "rvsexec.h"
+#include "include/rvsexec.h"
 
 #include <iostream>
 #include <memory>
@@ -31,12 +31,12 @@
 #include <fstream>
 #include "yaml-cpp/yaml.h"
 
-#include "rvsif0.h"
-#include "rvsif1.h"
-#include "rvsaction.h"
-#include "rvsmodule.h"
-#include "rvsliblogger.h"
-#include "rvsoptions.h"
+#include "include/rvsif0.h"
+#include "include/rvsif1.h"
+#include "include/rvsaction.h"
+#include "include/rvsmodule.h"
+#include "include/rvsliblogger.h"
+#include "include/rvsoptions.h"
 
 #define MODULE_NAME_CAPS "CLI"
 

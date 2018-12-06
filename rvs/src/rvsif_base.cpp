@@ -23,7 +23,7 @@
  *
  *******************************************************************************/
 
-#include "rvsif_base.h"
+#include "include/rvsif_base.h"
 
 rvs::ifbase::ifbase()
 :plibaction(nullptr) {

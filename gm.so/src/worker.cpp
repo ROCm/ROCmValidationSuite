@@ -27,19 +27,19 @@ all
  *
  
 *******************************************************************************/
-#include "worker.h"
+#include "include/worker.h"
 
 #include <map>
 #include <string>
 #include <memory>
 #include <utility>
 
-#include "rvs_module.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
-#include "rvstimer.h"
-#include "rsmi_util.h"
+#include "include/rvs_module.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvstimer.h"
+#include "include/rsmi_util.h"
 
 #define MODULE_NAME_CAPS                "GM"
 

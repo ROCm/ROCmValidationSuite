@@ -22,15 +22,15 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "gst_worker.h"
+#include "include/gst_worker.h"
 
 #include <unistd.h>
 #include <string>
 #include <memory>
 
-#include "rvs_blas.h"
-#include "rvs_module.h"
-#include "rvsloglp.h"
+#include "include/rvs_blas.h"
+#include "include/rvs_module.h"
+#include "include/rvsloglp.h"
 
 #define MODULE_NAME                             "gst"
 

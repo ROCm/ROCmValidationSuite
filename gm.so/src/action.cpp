@@ -24,20 +24,20 @@
  * 
  *******************************************************************************/
 
-#include "action.h"
+#include "include/action.h"
 
 #include <string>
 #include <map>
 #include <vector>
 #include <utility>
 
-#include "rvs_key_def.h"
-#include "rvsloglp.h"
-#include "rvs_module.h"
-#include "rvs_util.h"
-#include "gpu_util.h"
-#include "rsmi_util.h"
-#include "worker.h"
+#include "include/rvs_key_def.h"
+#include "include/rvsloglp.h"
+#include "include/rvs_module.h"
+#include "include/rvs_util.h"
+#include "include/gpu_util.h"
+#include "include/rsmi_util.h"
+#include "include/worker.h"
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 #define MODULE_NAME                     "gm"
@@ -54,7 +54,7 @@ extern Worker* pworker;
 /**
  * default class constructor
  */
-action::action() {
+gm_action::gm_action() {
   bjson = false;
   json_root_node = nullptr;
 
@@ -73,7 +73,7 @@ action::action() {
 /**
  * class destructor
  */
-action::~action() {
+gm_action::~gm_action() {
     property.clear();
 }
 
@@ -82,7 +82,7 @@ action::~action() {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_common_config_keys(void) {
+bool gm_action::get_all_common_config_keys(void) {
     string msg;
     int error;
 
@@ -162,7 +162,7 @@ bool action::get_all_common_config_keys(void) {
  * @return 0 - OK
  * @return 1 - syntax error
  */
-int action::get_bounds(const char* pMetric) {
+int gm_action::get_bounds(const char* pMetric) {
   std::string smetric("metrics.");
   smetric += pMetric;
 
@@ -198,7 +198,7 @@ int action::get_bounds(const char* pMetric) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_gm_config_keys(void) {
+bool gm_action::get_all_gm_config_keys(void) {
   string msg;
 
   if (get_bounds(GM_TEMP) == 1) {
@@ -246,7 +246,7 @@ bool action::get_all_gm_config_keys(void) {
  * @return 0 - success. non-zero otherwise
  *
  * */
-int action::run(void) {
+int gm_action::run(void) {
   string msg;
 
   // if monitoring is already running, stop it

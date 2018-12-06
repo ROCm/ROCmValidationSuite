@@ -125,7 +125,7 @@ LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
 set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 
 ## define include directories
-include_directories(include ../include)
+include_directories(./ ../)
 
 set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsloglp.cpp ../src/rsmi_util.cpp
   ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp 

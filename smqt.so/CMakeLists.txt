@@ -77,7 +77,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set ( PROJECT_LINK_LIBS libpci.so libm.so)
 
 ## define include directories
-include_directories(include pci ../include)
+include_directories(./ ../ pci)
 
 ## define source files
 set(SOURCES 
