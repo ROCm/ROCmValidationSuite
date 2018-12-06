@@ -22,12 +22,12 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsloglp.h"
+#include "include/rvsloglp.h"
 
 #include <chrono>
 #include <string>
 
-#include "rvsliblogger.h"
+#include "include/rvsliblogger.h"
 
 
 using std::string;

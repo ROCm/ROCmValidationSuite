@@ -22,17 +22,17 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvs_module.h"
+#include "include/rvs_module.h"
 
 #include <pci/pci.h>
 #include <unistd.h>
 #include <iostream>
 
-#include "gpu_util.h"
-#include "rvsloglp.h"
-#include "worker.h"
-#include "rvshsa.h"
-#include "action.h"
+#include "include/gpu_util.h"
+#include "include/rvsloglp.h"
+#include "include/worker.h"
+#include "include/rvshsa.h"
+#include "include/action.h"
 
 /**
  * @defgroup PEBB PEBB Module
@@ -120,7 +120,7 @@ extern "C" const char* rvs_module_get_errstring(int error) {
 }
 
 extern "C" void* rvs_module_action_create(void) {
-  return static_cast<void*>(new pebbaction);
+  return static_cast<void*>(new pebb_action);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {

@@ -42,13 +42,17 @@ extern "C" {
 #define MEM_BAR_MAX_INDEX 5
 
 #ifdef RVS_UNIT_TEST
-  #include "rvs_unit_testing_defs.h"
+  #include "include/rvs_unit_testing_defs.h"
   #define pci_read_long rvs_pci_read_long
   #define pci_read_word rvs_pci_read_word
   #define pci_get_param rvs_pci_get_param
   #define readlink rvs_readlink
   #define pci_write_byte rvs_pci_write_byte
-  using namespace rvs;
+  using rvs::rvs_pci_read_long;
+  using rvs::rvs_pci_read_word;
+  using rvs::rvs_pci_get_param;
+  using rvs::rvs_readlink;
+  using rvs::rvs_pci_write_byte;
 #endif
 
 extern "C" {

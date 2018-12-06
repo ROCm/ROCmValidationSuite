@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 #include <string>
 #include <vector>
@@ -36,13 +36,13 @@
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
 
-#include "rvs_key_def.h"
-#include "gst_worker.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvs_module.h"
-#include "rvsactionbase.h"
-#include "rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/gst_worker.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvs_module.h"
+#include "include/rvsactionbase.h"
+#include "include/rvsloglp.h"
 
 using std::string;
 using std::vector;
@@ -79,14 +79,14 @@ using std::regex;
 /**
  * @brief default class constructor
  */
-action::action() {
+gst_action::gst_action() {
     bjson = false;
 }
 
 /**
  * @brief class destructor
  */
-action::~action() {
+gst_action::~gst_action() {
     property.clear();
 }
 
@@ -95,7 +95,7 @@ action::~action() {
  * copy the matrices to GPU before each SGEMM/DGEMM operation
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_gst_copy_matrix(int *error) {
+void gst_action::property_get_gst_copy_matrix(int *error) {
     *error = 0;
     gst_copy_matrix = GST_DEFAULT_COPY_MATRIX;
     map<string, string>::iterator it = property.find(RVS_CONF_COPY_MATRIX_KEY);
@@ -116,7 +116,7 @@ void action::property_get_gst_copy_matrix(int *error) {
  * the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_gst_target_stress(int *error) {
+void gst_action::property_get_gst_target_stress(int *error) {
     *error = 0;  // init with 'no error'
     map<string, string>::iterator it =
                             property.find(RVS_CONF_TARGET_STRESS_KEY);
@@ -141,7 +141,7 @@ void action::property_get_gst_target_stress(int *error) {
  * the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_gst_tolerance(int *error) {
+void gst_action::property_get_gst_tolerance(int *error) {
     *error = 0;
     gst_tolerance = GST_DEFAULT_TOLERANCE;
     map<string, string>::iterator it = property.find(RVS_CONF_TOLERANCE_KEY);
@@ -165,7 +165,7 @@ void action::property_get_gst_tolerance(int *error) {
  * @param gst_gpus_device_index <gpu_index, gpu_id> map
  * @return true if no error occured, false otherwise
  */
-bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
+bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     size_t k = 0;
     for (;;) {
         unsigned int i = 0;
@@ -234,7 +234,7 @@ bool action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_gst_config_keys(void) {
+bool gst_action::get_all_gst_config_keys(void) {
     int error;
     string msg, ststress;
 
@@ -309,7 +309,7 @@ bool action::get_all_gst_config_keys(void) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_common_config_keys(void) {
+bool gst_action::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
 
@@ -376,7 +376,7 @@ bool action::get_all_common_config_keys(void) {
  * @brief gets the number of ROCm compatible AMD GPUs
  * @return run number of GPUs
  */
-int action::get_num_amd_gpu_devices(void) {
+int gst_action::get_num_amd_gpu_devices(void) {
     int hip_num_gpu_devices;
     string msg;
 
@@ -410,7 +410,7 @@ int action::get_num_amd_gpu_devices(void) {
  * @brief gets all selected GPUs and starts the worker threads
  * @return run result
  */
-int action::get_all_selected_gpus(void) {
+int gst_action::get_all_selected_gpus(void) {
     int hip_num_gpu_devices;
     bool amd_gpus_found = false;
     map<int, uint16_t> gst_gpus_device_index;
@@ -482,7 +482,7 @@ int action::get_all_selected_gpus(void) {
  * @brief runs the whole GST logic
  * @return run result
  */
-int action::run(void) {
+int gst_action::run(void) {
     string msg;
 
     // get the action name

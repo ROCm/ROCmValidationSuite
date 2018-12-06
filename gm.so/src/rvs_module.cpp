@@ -22,17 +22,17 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvs_module.h"
+#include "include/rvs_module.h"
 
 #include <stdint.h>
 #include <cstddef>
 
 #include "rocm_smi/rocm_smi.h"
 
-#include "action.h"
-#include "rvsloglp.h"
-#include "worker.h"
-#include "gpu_util.h"
+#include "include/action.h"
+#include "include/rvsloglp.h"
+#include "include/worker.h"
+#include "include/gpu_util.h"
 
 /**
  * @defgroup GM GM Module
@@ -116,7 +116,7 @@ extern "C" const char* rvs_module_get_errstring(int error) {
 }
 
 extern "C" void* rvs_module_action_create(void) {
-  return static_cast<void*>(new action);
+  return static_cast<void*>(new gm_action);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {

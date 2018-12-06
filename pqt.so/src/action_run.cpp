@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 extern "C" {
 #include <pci/pci.h>
@@ -37,16 +37,16 @@ extern "C" {
 #include <string>
 #include <vector>
 
-#include "rvs_key_def.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
-#include "rvshsa.h"
-#include "rvstimer.h"
+#include "include/rvs_key_def.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvshsa.h"
+#include "include/rvstimer.h"
 
-#include "rvs_module.h"
-#include "worker.h"
+#include "include/rvs_module.h"
+#include "include/worker.h"
 
 
 #define MODULE_NAME "pqt"
@@ -62,11 +62,11 @@ using std::vector;
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::run() {
+int pqt_action::run() {
   int sts;
   string msg;
 
-  rvs::lp::Log("int pqtaction::run()", rvs::logtrace);
+  rvs::lp::Log("int pqt_action::run()", rvs::logtrace);
 
   if (property.find("cli.-j") != property.end()) {
     bjson = true;
@@ -107,8 +107,8 @@ int pqtaction::run() {
 
   RVSTRACE_
   // define timers
-  rvs::timer<pqtaction> timer_running(&pqtaction::do_running_average, this);
-  rvs::timer<pqtaction> timer_final(&pqtaction::do_final_average, this);
+  rvs::timer<pqt_action> timer_running(&pqt_action::do_running_average, this);
+  rvs::timer<pqt_action> timer_final(&pqt_action::do_final_average, this);
 
   unsigned int iter = property_count > 0 ? property_count : 1;
   unsigned int step = 1;
@@ -172,7 +172,7 @@ int pqtaction::run() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::run_single() {
+int pqt_action::run_single() {
   RVSTRACE_
   int sts = 0;
 
@@ -204,7 +204,7 @@ int pqtaction::run_single() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::run_parallel() {
+int pqt_action::run_parallel() {
   RVSTRACE_
 
   // start all worker threads
