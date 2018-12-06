@@ -78,7 +78,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set ( PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
 
 ## define include directories
-include_directories(include ../include ${YAML_INC_DIR} ${UT_INC})
+include_directories(./ ../ ${YAML_INC_DIR} ${UT_INC})
 
 ## define source files
 set(SOURCES

@@ -53,6 +53,6 @@ char* rvs_pci_get_param(struct pci_access *acc, char *param) PCI_ABI;
 ssize_t rvs_readlink(char* path, char* buf, size_t bufsize);
 int rvs_pci_write_byte(struct pci_dev *, int pos, u8 data) PCI_ABI;
 
-}
+}  // namespace rvs
 
 #endif  // INCLUDE_RVS_UNIT_TESTING_DEFS_H_

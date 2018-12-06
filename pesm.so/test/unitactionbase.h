@@ -25,7 +25,7 @@
 #ifndef PESM_SO_INCLUDE_UNITACTIONBASE_H_
 #define PESM_SO_INCLUDE_UNITACTIONBASE_H_
 
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 
 
 class unitactionbase : public rvs::actionbase {

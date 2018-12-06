@@ -93,7 +93,7 @@ LINK_DIRECTORIES( ${ROCM_SMI_LIB_DIR})
 set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 
 ## define include directories
-include_directories(include ../include)
+include_directories(./ ../)
 
 ## define source files
 set(SOURCES

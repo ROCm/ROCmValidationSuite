@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "worker.h"
+#include "include/worker.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,11 +40,11 @@ extern "C" {
 #include <iostream>
 #include <mutex>
 
-#include "rvs_module.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvsloglp.h"
-#include "rvshsa.h"
+#include "include/rvs_module.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvshsa.h"
 
 #define MODULE_NAME "PEBB"
 

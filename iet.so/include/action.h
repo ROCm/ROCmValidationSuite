@@ -39,7 +39,7 @@ extern "C" {
 #include <memory>
 
 
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 #include "rocm_smi/rocm_smi.h"
 
 using std::vector;
@@ -56,7 +56,7 @@ struct gpu_hwmon_info {
 };
 
 /**
- * @class action
+ * @class iet_action
  * @ingroup IET
  *
  * @brief IET action implementation class
@@ -65,10 +65,10 @@ struct gpu_hwmon_info {
  * in its run() method.
  *
  */
-class action: public rvs::actionbase {
+class iet_action: public rvs::actionbase {
  public:
-    action();
-    virtual ~action();
+    iet_action();
+    virtual ~iet_action();
 
     virtual int run(void);
 

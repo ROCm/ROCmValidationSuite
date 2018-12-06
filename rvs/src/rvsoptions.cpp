@@ -23,7 +23,7 @@
  *
  *******************************************************************************/
 
-#include "rvsoptions.h"
+#include "include/rvsoptions.h"
 
 #include <map>
 #include <string>

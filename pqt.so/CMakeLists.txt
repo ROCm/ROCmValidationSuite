@@ -118,7 +118,7 @@ LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCT_LIB_DIR})
 set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )
 
 ## define include directories
-include_directories(include pci ../include)
+include_directories(./ ../ pci)
 
 ## define source files
 set(SOURCES ../src/rvsthreadbase.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp

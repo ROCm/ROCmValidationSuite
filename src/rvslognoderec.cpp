@@ -23,9 +23,10 @@
  *
  *******************************************************************************/
 
-#include "rvslognoderec.h"
+#include "include/rvslognoderec.h"
+
 #include <string>
-#include "rvstrace.h"
+#include "include/rvstrace.h"
 
 /**
  * @brief Constructor

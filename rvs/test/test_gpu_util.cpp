@@ -27,8 +27,8 @@
 
 #include "gtest/gtest.h"
 
-#include "gpu_util.h"
-#include "rvs_unit_testing_defs.h"
+#include "include/gpu_util.h"
+#include "include/rvs_unit_testing_defs.h"
 
 using rvs::gpulist;
 

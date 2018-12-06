@@ -74,7 +74,7 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 ## define include directories
-include_directories(include ../include)
+include_directories(./ ../)
 
 ## define source files
 set(SOURCES src/rvs_module.cpp src/action.cpp
