@@ -27,7 +27,6 @@
 
 #include "unitactionbase.h"
 #include "rvsloglp.h"
-#include "rvsactionbase.h"
 #define MODULE_NAME_CAPS "UNITPESM"
 
 //! Default constructor
