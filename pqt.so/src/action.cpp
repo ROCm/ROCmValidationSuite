@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 extern "C" {
 #include <pci/pci.h>
@@ -37,17 +37,17 @@ extern "C" {
 #include <string>
 #include <vector>
 
-#include "rvs_key_def.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
-#include "rvshsa.h"
-#include "rvstimer.h"
+#include "include/rvs_key_def.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvshsa.h"
+#include "include/rvstimer.h"
 
-#include "rvs_module.h"
-#include "worker.h"
-#include "worker_b2b.h"
+#include "include/rvs_module.h"
+#include "include/worker.h"
+#include "include/worker_b2b.h"
 
 
 #define MODULE_NAME "pqt"
@@ -58,13 +58,13 @@ using std::string;
 using std::vector;
 
 //! Default constructor
-pqtaction::pqtaction() {
+pqt_action::pqt_action() {
   prop_peer_deviceid = 0u;
   bjson = false;
 }
 
 //! Default destructor
-pqtaction::~pqtaction() {
+pqt_action::~pqt_action() {
   property.clear();
 }
 
@@ -73,7 +73,7 @@ pqtaction::~pqtaction() {
  * @param error pointer to a memory location where the error code will be stored
  * @return true if "all" is selected, false otherwise
  */
-bool pqtaction::property_get_peers(int *error) {
+bool pqt_action::property_get_peers(int *error) {
     *error = 0;  // init with 'no error'
     auto it = property.find("peers");
     if (it != property.end()) {
@@ -110,7 +110,7 @@ bool pqtaction::property_get_peers(int *error) {
  * @param error pointer to a memory location where the error code will be stored
  * @return deviceid value if valid, -1 otherwise
  */
-/*int pqtaction::property_get_peer_deviceid(int *error) {
+/*int pqt_action::property_get_peer_deviceid(int *error) {
     auto it = property.find("peer_deviceid");
     int deviceid = -1;
     *error = 0;  // init with 'no error'
@@ -133,7 +133,7 @@ bool pqtaction::property_get_peers(int *error) {
  * @brief reads the module's properties collection to see whether bandwidth
  * tests should be run after peer check
  */
-void pqtaction::property_get_test_bandwidth(int *error) {
+void pqt_action::property_get_test_bandwidth(int *error) {
   prop_test_bandwidth = false;
   auto it = property.find("test_bandwidth");
   if (it != property.end()) {
@@ -154,7 +154,7 @@ void pqtaction::property_get_test_bandwidth(int *error) {
  * @brief reads the module's properties collection to see whether bandwidth
  * tests should be run in both directions
  */
-void pqtaction::property_get_bidirectional(int *error) {
+void pqt_action::property_get_bidirectional(int *error) {
   prop_bidirectional = false;
   auto it = property.find("bidirectional");
   if (it != property.end()) {
@@ -176,7 +176,7 @@ void pqtaction::property_get_bidirectional(int *error) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool pqtaction::get_all_pqt_config_keys(void) {
+bool pqt_action::get_all_pqt_config_keys(void) {
   int    error;
   string msg;
 
@@ -244,7 +244,7 @@ bool pqtaction::get_all_pqt_config_keys(void) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool pqtaction::get_all_common_config_keys(void) {
+bool pqt_action::get_all_common_config_keys(void) {
   string msg, sdevid, sdev;
   int error;
 
@@ -325,7 +325,7 @@ bool pqtaction::get_all_common_config_keys(void) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::create_threads() {
+int pqt_action::create_threads() {
   std::string msg;
 
   std::vector<uint16_t> gpu_id;
@@ -625,7 +625,7 @@ int pqtaction::create_threads() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::destroy_threads() {
+int pqt_action::destroy_threads() {
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->set_stop_name(action_name);
     (*it)->stop();
@@ -645,7 +645,7 @@ int pqtaction::destroy_threads() {
  * @return 0 - no access, 1 - Src can acces Dst, 2 - both have access
  *
  * */
-int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
+int pqt_action::is_peer(uint16_t Src, uint16_t Dst) {
   //! ptr to RVS HSA singleton wrapper
   rvs::hsa* pHsa;
   string msg;
@@ -682,7 +682,7 @@ int pqtaction::is_peer(uint16_t Src, uint16_t Dst) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::print_running_average() {
+int pqt_action::print_running_average() {
   for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
     print_running_average(*it);
   }
@@ -698,7 +698,7 @@ int pqtaction::print_running_average() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::print_running_average(pqtworker* pWorker) {
+int pqt_action::print_running_average(pqtworker* pWorker) {
   uint16_t    src_node, dst_node;
   uint16_t    src_id, dst_id;
   bool        bidir;
@@ -797,7 +797,7 @@ int pqtaction::print_running_average(pqtworker* pWorker) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::print_final_average() {
+int pqt_action::print_final_average() {
   uint16_t    src_node, dst_node;
   uint16_t    src_id, dst_id;
   bool        bidir;
@@ -887,7 +887,7 @@ int pqtaction::print_final_average() {
  * calculation of final average
  *
  * */
-void pqtaction::do_final_average() {
+void pqt_action::do_final_average() {
   std::string msg;
   unsigned int sec;
   unsigned int usec;
@@ -920,7 +920,7 @@ void pqtaction::do_final_average() {
  * calculation of moving average
  *
  * */
-void pqtaction::do_running_average() {
+void pqt_action::do_running_average() {
   unsigned int sec;
   unsigned int usec;
   std::string msg;

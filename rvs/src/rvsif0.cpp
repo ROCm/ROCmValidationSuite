@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsif0.h"
+#include "include/rvsif0.h"
 
 //! Default constructor
 rvs::if0::if0()

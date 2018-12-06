@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "gpu_util.h"
+#include "include/gpu_util.h"
 
 #include <stdlib.h>
 #include <dirent.h>

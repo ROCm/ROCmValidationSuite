@@ -36,9 +36,9 @@
 #include <iostream>
 
 
-#include "rvscli.h"
-#include "rvsexec.h"
-#include "rvsliblogger.h"
+#include "include/rvscli.h"
+#include "include/rvsexec.h"
+#include "include/rvsliblogger.h"
 
 #define MODULE_NAME_CAPS "CLI"
 

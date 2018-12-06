@@ -27,8 +27,8 @@
 
 #include <string>
 
-#include "rvsmodule_if1.h"
-#include "rvsif_base.h"
+#include "include/rvsmodule_if1.h"
+#include "include/rvsif_base.h"
 
 
 namespace rvs {

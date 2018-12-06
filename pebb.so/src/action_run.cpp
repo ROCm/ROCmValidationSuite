@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 extern "C" {
   #include <pci/pci.h>
@@ -38,17 +38,18 @@ extern "C" {
 #include <vector>
 #include <thread>
 
-#include "rvs_key_def.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
-#include "rvshsa.h"
-#include "rvstimer.h"
 #include "hsa/hsa.h"
 
-#include "rvs_module.h"
-#include "worker.h"
+#include "include/rvs_key_def.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvshsa.h"
+#include "include/rvstimer.h"
+
+#include "include/rvs_module.h"
+#include "include/worker.h"
 
 #define MODULE_NAME "pebb"
 #define MODULE_NAME_CAPS "PEBB"
@@ -64,7 +65,7 @@ using std::vector;
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::run() {
+int pebb_action::run() {
   int sts;
   string msg;
 
@@ -94,8 +95,8 @@ int pebbaction::run() {
   }
 
   // define timers
-  rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
-  rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
+  rvs::timer<pebb_action> timer_running(&pebb_action::do_running_average, this);
+  rvs::timer<pebb_action> timer_final(&pebb_action::do_final_average, this);
 
   unsigned int iter = property_count > 0 ? property_count : 1;
   unsigned int step = 1;
@@ -155,7 +156,7 @@ int pebbaction::run() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::run_single() {
+int pebb_action::run_single() {
   RVSTRACE_
   int sts = 0;
 
@@ -187,7 +188,7 @@ int pebbaction::run_single() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::run_parallel() {
+int pebb_action::run_parallel() {
   RVSTRACE_
 
   // start all worker threads

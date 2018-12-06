@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvs_blas.h"
+#include "include/rvs_blas.h"
 
 #include <time.h>
 

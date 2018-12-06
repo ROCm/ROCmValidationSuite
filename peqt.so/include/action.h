@@ -38,7 +38,7 @@ extern "C" {
 #include <regex>
 #include <map>
 
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 
 using std::vector;
 using std::string;
@@ -46,7 +46,7 @@ using std::regex;
 using std::map;
 
 /**
- * @class action
+ * @class peqt_action
  * @ingroup PEQT
  *
  * @brief PEQT action implementation class
@@ -55,10 +55,10 @@ using std::map;
  * in its run() method.
  *
  */
-class action: public rvs::actionbase {
+class peqt_action: public rvs::actionbase {
  public:
-    action();
-    virtual ~action();
+    peqt_action();
+    virtual ~peqt_action();
 
     virtual int run(void);
 

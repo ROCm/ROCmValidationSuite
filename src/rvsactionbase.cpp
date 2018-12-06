@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 
 #include <unistd.h>
 #include <chrono>
@@ -32,9 +32,9 @@
 #include <vector>
 #include <iostream>
 
-#include "rvsloglp.h"
-#include "rvs_key_def.h"
-#include "rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/rvs_util.h"
 
 using std::cout;
 using std::endl;

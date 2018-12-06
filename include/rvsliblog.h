@@ -25,7 +25,7 @@
 #ifndef INCLUDE_RVSLIBLOG_H_
 #define INCLUDE_RVSLIBLOG_H_
 
-#include "stdint.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
