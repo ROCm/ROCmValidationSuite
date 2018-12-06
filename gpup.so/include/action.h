@@ -29,12 +29,12 @@
 #include <vector>
 #include <string>
 
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 
 using std::vector;
 using std::string;
 /**
- * @class action
+ * @class gpup_action
  * @ingroup GPUP
  *
  * @brief GPUP action implementation class
@@ -44,22 +44,26 @@ using std::string;
  *
  */
 
-class action : public rvs::actionbase {
+class gpup_action : public rvs::actionbase {
  public:
-    action();
-    virtual ~action();
+    gpup_action();
+    virtual ~gpup_action();
 
     virtual int run(void);
 
- private:
-    // the list of all gpu_id in the <device> property
+ protected:
+    //! the list of all gpu_id in the 'device' property
     vector<string> gpus_id;
-    // the list of properties that are in query
+    //! the list of properties that are in query
     vector<string> property_name;
-    // the list of io_links properties that are in query
+    //! the list of io_links properties that are in query
     vector<string> io_link_property_name;
+    //! property names to validate
+    vector<string> property_name_validate;
 
+    //! 'true' for JSON logging
     bool bjson;
+    //! ptr to JSON root node
     void* json_root_node;
 
     // get gpu id
@@ -69,9 +73,11 @@ class action : public rvs::actionbase {
     // split properties and io_links properties
     bool property_split(string prop);
     // get properties values
-    void property_get_value(uint16_t gpu_id);
+    int property_get_value(uint16_t gpu_id);
     // get io links properties values
-    void property_io_links_get_value(uint16_t gpu_id);
+    int property_io_links_get_value(uint16_t gpu_id);
+    // validate property names
+    int validate_property_name(const std::string& name);
 };
 
 #endif  // GPUP_SO_INCLUDE_ACTION_H_
