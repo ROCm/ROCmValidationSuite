@@ -83,6 +83,8 @@ class LogNodeTest : public ::testing::Test {
   }
 
   void TearDown() override {
+    delete level_1;
+    delete empty;
   }
 
   // tree structure of nodes
@@ -108,8 +110,8 @@ TEST_F(LogNodeTest, log_node_base) {
   EXPECT_EQ(node->Child.size(), 0u);
   tmp_node = static_cast<ext_lognode*>(node->get_Parent());
   EXPECT_EQ(tmp_node, nullptr);
-  json_string = node->ToJson();
-  EXPECT_STREQ(json_string.c_str(), "\n\"empty\" : {\n}");
+  json_string = node->ToJson("Test ");
+  EXPECT_STREQ(json_string.c_str(), "\nTest \"empty\" : {\nTest }");
 
   // ----------------------------------------
   // check name and type for each node
