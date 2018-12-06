@@ -23,6 +23,8 @@
  *
  *******************************************************************************/
 
+#include <queue>
+
 #include "include/rvs_unit_testing_defs.h"
 
 namespace rvs {
@@ -83,7 +85,7 @@ ssize_t rvs_readlink(char* path, char* buf, size_t bufsize) {
   // fix unused variable warning
   path = path;
   bufsize = bufsize;
-  for (int i = 0; i < (int) sizeof(rvs_readlink_buff_return_value); i++) {
+  for (unsigned int i = 0u; i < sizeof(rvs_readlink_buff_return_value); i++) {
     *(buf + i) = *(rvs_readlink_buff_return_value + i);
   }
   return rvs_readlink_return_value;
@@ -97,5 +99,4 @@ int rvs_pci_write_byte(struct pci_dev *, int pos, u8 data) PCI_ABI {
   return 0;
 }
 
-}
-
+}  // namespace rvs
