@@ -27,7 +27,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "unitactionbase.h"
+#include "test/unitactionbase.h"
 
 TEST(actionbase, run) {
   rvs::actionbase* p = new unitactionbase;
