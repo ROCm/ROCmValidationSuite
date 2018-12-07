@@ -24,11 +24,11 @@
  *******************************************************************************/
 
 #include <string>
+#include <vector>
 
 #include "gtest/gtest.h"
 
 #include "test/unitactionbase.h"
-
 
 TEST(actionbase, run) {
   rvs::actionbase* p = new unitactionbase;
@@ -86,6 +86,77 @@ TEST(actionbase, boolttf) {
 
   intretval = p->property_get("bool6", &bval);
   EXPECT_EQ(intretval, 2);
+
+  delete p;
+}
+
+TEST(actionbase, uintttf) {
+  std::string val;
+  int         intretval;
+  uint64_t    intval;
+
+  rvs::actionbase* p = new unitactionbase;
+  assert(p);
+
+  p->property_set("uint1", "123456");
+  p->property_set("uint2", "abcd");
+  p->property_set("uint3", "-123");
+
+  intretval = p->property_get_int("uint1", &intval);
+  EXPECT_EQ(intretval, 0);
+  EXPECT_EQ(intval, 123456u);
+
+  intretval = p->property_get_int("uint2", &intval);
+  EXPECT_EQ(intretval, 1);
+
+  intretval = p->property_get_int("uint3", &intval);
+  EXPECT_EQ(intretval, 1);
+
+  intretval = p->property_get_int("uint4", &intval);
+  EXPECT_EQ(intretval, 2);
+
+  delete p;
+}
+
+TEST(actionbase, devicetf) {
+  std::string val;
+  int         intretval;
+  bool b_all;
+  std::vector<uint16_t> dev;
+
+  unitactionbase* p = new unitactionbase;
+  assert(p);
+
+  p->property_set("device", "26720");
+
+  intretval = p->property_get_device();
+  EXPECT_EQ(intretval, 0);
+  p->test_get_device_all(&dev, &b_all);
+  EXPECT_EQ(dev[0], 26720u);
+
+  p->test_erase_property("device");
+  p->property_set("device", "123 456");
+  intretval = p->property_get_device();
+  p->test_get_device_all(&dev, &b_all);
+  EXPECT_EQ(intretval, 0);
+  EXPECT_EQ(dev[0], 123u);
+  EXPECT_EQ(dev[1], 456u);
+  EXPECT_EQ(dev.size(), 2u);
+
+  p->test_erase_property("device");
+  p->property_set("device", "all");
+  intretval = p->property_get_device();
+  p->test_get_device_all(&dev, &b_all);
+  EXPECT_EQ(intretval, 0);
+  EXPECT_TRUE(b_all);
+
+  p->test_erase_property("device");
+  p->property_set("device", "abcd");
+  intretval = p->property_get_device();
+  p->test_get_device_all(&dev, &b_all);
+  EXPECT_EQ(intretval, 1);
+  EXPECT_FALSE(b_all);
+  EXPECT_EQ(dev.size(), 0u);
 
   delete p;
 }

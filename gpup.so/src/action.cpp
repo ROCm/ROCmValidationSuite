@@ -372,6 +372,7 @@ int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
  */
 int gpup_action::run(void) {
     std::string msg;
+    int sts = 0;
 
     // get the action name
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -462,7 +463,6 @@ int gpup_action::run(void) {
         rvs::lp::AddInt(json_root_node, RVS_JSON_LOG_GPU_ID_KEY, *it);
       }
 
-      int sts = 0;
       // properties values
       sts = property_get_value(*it);
 
@@ -490,5 +490,5 @@ int gpup_action::run(void) {
       rvs::lp::Err(msg, MODULE_NAME, action_name);
       return -1;
     }
-    return 0;
+    return sts;
 }
