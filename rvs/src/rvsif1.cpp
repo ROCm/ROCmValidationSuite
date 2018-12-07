@@ -22,10 +22,10 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsif1.h"
+#include "include/rvsif1.h"
 
 #include <string>
-#include "rvsliblogger.h"
+#include "include/rvsliblogger.h"
 
 using std::string;
 

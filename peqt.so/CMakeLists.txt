@@ -75,7 +75,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set ( PROJECT_LINK_LIBS libpci.so libm.so)
 
 ## define include directories
-include_directories(include ../include)
+include_directories(./ ../)
 
 ## define source files
 set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp

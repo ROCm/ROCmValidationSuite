@@ -36,13 +36,13 @@
 #include <string>
 #include <vector>
 
-#include "rvsactionbase.h"
-#include "worker.h"
-#include "rvshsa.h"
+#include "include/rvsactionbase.h"
+#include "include/worker.h"
+#include "include/rvshsa.h"
 
 
 /**
- * @class pebbaction
+ * @class pebb_action
  * @ingroup PEBB
  *
  * @brief PEBB action implementation class
@@ -51,10 +51,10 @@
  * in its run() method.
  *
  */
-class pebbaction : public rvs::actionbase {
+class pebb_action : public rvs::actionbase {
  public:
-  pebbaction();
-  virtual ~pebbaction();
+  pebb_action();
+  virtual ~pebb_action();
 
   virtual int run(void);
 

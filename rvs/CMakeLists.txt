@@ -78,7 +78,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set ( PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
 
 ## define include directories
-include_directories(include ../include ${YAML_INC_DIR} ${UT_INC})
+include_directories(./ ../ ${YAML_INC_DIR} ${UT_INC})
 
 ## define source files
 set(SOURCES
@@ -95,14 +95,15 @@ target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 add_executable(${RVS_TARGET}fail src/rvs.cpp ${SOURCES})
 target_link_libraries(${RVS_TARGET}fail ${PROJECT_LINK_LIBS} )
 target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
+set_target_properties(${RVS_TARGET}fail PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
+)
 
 ## define unit testing targets
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 message ( "TESTSOURCES ${TESTSOURCES}" )
 
 LINK_DIRECTORIES(${UT_LIB})
-add_executable(rvstest ${TESTSOURCES} ${SOURCES})
-target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
 
 install(TARGETS ${RVS_TARGET}
   RUNTIME

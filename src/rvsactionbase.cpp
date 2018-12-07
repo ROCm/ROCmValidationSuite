@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 
 #include <unistd.h>
 #include <chrono>
@@ -32,9 +32,9 @@
 #include <vector>
 #include <iostream>
 
-#include "rvsloglp.h"
-#include "rvs_key_def.h"
-#include "rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/rvs_util.h"
 
 using std::cout;
 using std::endl;
@@ -123,8 +123,7 @@ int rvs::actionbase::property_get_device() {
     RVS_CONF_DEVICE_KEY,
     YAML_DEVICE_PROP_DELIMITER,
     &property_device,
-    &property_device_all
-  );
+    &property_device_all);
 }
 
 /**

@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "log_worker.h"
+#include "include/log_worker.h"
 
 #include <unistd.h>
 #include <string>
@@ -30,9 +30,10 @@
 #include <mutex>
 #include <chrono>
 
-#include "rvs_module.h"
-#include "rvsloglp.h"
 #include "rocm_smi/rocm_smi.h"
+
+#include "include/rvs_module.h"
+#include "include/rvsloglp.h"
 
 #define MODULE_NAME                             "iet"
 #define POWER_PROCESS_DELAY                     5

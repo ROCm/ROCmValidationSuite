@@ -22,10 +22,10 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvs_module.h"
-#include "action.h"
-#include "rvsloglp.h"
-#include "gpu_util.h"
+#include "include/rvs_module.h"
+#include "include/action.h"
+#include "include/rvsloglp.h"
+#include "include/gpu_util.h"
 
 /**
  * @defgroup GST GST Module
@@ -98,7 +98,7 @@ extern "C" const char* rvs_module_get_errstring(int error) {
 }
 
 extern "C" void* rvs_module_action_create(void) {
-    return static_cast<void*>(new action);
+    return static_cast<void*>(new gst_action);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {

@@ -37,14 +37,14 @@ extern "C" {
 #include <string>
 #include <map>
 
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 
 using std::vector;
 using std::string;
 using std::map;
 
 /**
- * @class action
+ * @class gst_action
  * @ingroup GST
  *
  * @brief GST action implementation class
@@ -53,10 +53,10 @@ using std::map;
  * in its run() method.
  *
  */
-class action: public rvs::actionbase {
+class gst_action: public rvs::actionbase {
  public:
-    action();
-    virtual ~action();
+    gst_action();
+    virtual ~gst_action();
 
     virtual int run(void);
 

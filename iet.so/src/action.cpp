@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 #include <string>
 #include <vector>
@@ -47,15 +47,15 @@ extern "C" {
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
 
-#include "rvs_key_def.h"
-#include "iet_worker.h"
-#include "blas_worker.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvs_module.h"
-#include "rvsactionbase.h"
-#include "rvsloglp.h"
-#include "rsmi_util.h"
+#include "include/rvs_key_def.h"
+#include "include/iet_worker.h"
+#include "include/blas_worker.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvs_module.h"
+#include "include/rvsactionbase.h"
+#include "include/rvsloglp.h"
+#include "include/rsmi_util.h"
 
 using std::string;
 using std::vector;
@@ -95,13 +95,13 @@ using std::fstream;
 /**
  * @brief default class constructor
  */
-action::action() {
+iet_action::iet_action() {
 }
 
 /**
  * @brief class destructor
  */
-action::~action() {
+iet_action::~iet_action() {
     property.clear();
 }
 
@@ -109,7 +109,7 @@ action::~action() {
  * @brief reads the EDPp test ramp time from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_iet_ramp_interval(int *error) {
+void iet_action::property_get_iet_ramp_interval(int *error) {
     *error = 0;
     iet_ramp_interval = IET_DEFAULT_RAMP_INTERVAL;
     map<string, string>::iterator it =
@@ -128,7 +128,7 @@ void action::property_get_iet_ramp_interval(int *error) {
  * @brief reads the sample interval from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_iet_sample_interval(int *error) {
+void iet_action::property_get_iet_sample_interval(int *error) {
     *error = 0;
     iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
     map<string, string>::iterator it =
@@ -150,7 +150,7 @@ void action::property_get_iet_sample_interval(int *error) {
  * violations) from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_iet_max_violations(int *error) {
+void iet_action::property_get_iet_max_violations(int *error) {
     *error = 0;
     iet_max_violations = IET_DEFAULT_MAX_VIOLATIONS;
     map<string, string>::iterator it =
@@ -168,7 +168,7 @@ void action::property_get_iet_max_violations(int *error) {
  * @brief reads the target power level from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_iet_target_power(int *error) {
+void iet_action::property_get_iet_target_power(int *error) {
     *error = 0;  // init with 'no error'
     map<string, string>::iterator it =
                             property.find(RVS_CONF_TARGET_POWER_KEY);
@@ -192,7 +192,7 @@ void action::property_get_iet_target_power(int *error) {
  * @brief reads the power tolerance from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_iet_tolerance(int *error) {
+void iet_action::property_get_iet_tolerance(int *error) {
     *error = 0;
     iet_tolerance = IET_DEFAULT_TOLERANCE;
     map<string, string>::iterator it = property.find(RVS_CONF_TOLERANCE_KEY);
@@ -215,7 +215,7 @@ void action::property_get_iet_tolerance(int *error) {
  * @brief reads matrix size from the module's properties collection
  * @param error pointer to a memory location where the error code will be stored
  */
-void action::property_get_iet_matrix_size(int *error) {
+void iet_action::property_get_iet_matrix_size(int *error) {
     *error = 0;
     iet_matrix_size = IET_DEFAULT_MATRIX_SIZE;
     map<string, string>::iterator it =
@@ -234,7 +234,7 @@ void action::property_get_iet_matrix_size(int *error) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_iet_config_keys(void) {
+bool iet_action::get_all_iet_config_keys(void) {
     int error;
     string msg, ststress;
 
@@ -310,7 +310,7 @@ bool action::get_all_iet_config_keys(void) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_common_config_keys(void) {
+bool iet_action::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
 
@@ -378,7 +378,7 @@ bool action::get_all_common_config_keys(void) {
  * @brief runs the edp test
  * @return true if no error occured, false otherwise
  */
-bool action::do_edp_test(void) {
+bool iet_action::do_edp_test(void) {
     std::string msg;
     size_t k = 0;
     for (;;) {
@@ -464,7 +464,7 @@ bool action::do_edp_test(void) {
  * @brief gets the number of ROCm compatible AMD GPUs
  * @return run number of GPUs
  */
-int action::get_num_amd_gpu_devices(void) {
+int iet_action::get_num_amd_gpu_devices(void) {
     int hip_num_gpu_devices;
     string msg;
 
@@ -503,7 +503,7 @@ int action::get_num_amd_gpu_devices(void) {
  * @return true if all info could be retrieved and the gpu was successfully to
  * the EDPp test list, false otherwise
  */
-bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
+bool iet_action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
                                   int hip_num_gpu_devices) {
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
@@ -533,7 +533,7 @@ bool action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
  * @brief gets all selected GPUs and starts the worker threads
  * @return run result
  */
-int action::get_all_selected_gpus(void) {
+int iet_action::get_all_selected_gpus(void) {
     string msg;
     bool amd_gpus_found = false;
     int hip_num_gpu_devices;
@@ -623,7 +623,7 @@ int action::get_all_selected_gpus(void) {
  * @brief runs the whole IET logic
  * @return run result
  */
-int action::run(void) {
+int iet_action::run(void) {
     string msg;
 
     // get the action name

@@ -22,9 +22,9 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvs_module.h"
-#include "action.h"
-#include "rvsloglp.h"
+#include "include/rvs_module.h"
+#include "include/action.h"
+#include "include/rvsloglp.h"
 
 /**
  * @defgroup RCQT RCQT Module
@@ -93,7 +93,7 @@ extern "C" const char* rvs_module_get_errstring(int error) {
 }
 
 extern "C" void* rvs_module_action_create(void) {
-  return static_cast<void*>(new action);
+  return static_cast<void*>(new rcqt_action);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {
