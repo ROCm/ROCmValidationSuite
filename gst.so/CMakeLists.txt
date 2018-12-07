@@ -75,12 +75,12 @@ set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "hip_hcc")
 
 # Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime.h)
+if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
 
-if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime_api.h)
+if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime_api.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
