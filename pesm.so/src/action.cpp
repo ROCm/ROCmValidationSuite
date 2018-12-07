@@ -148,7 +148,8 @@ int pesm_action::run(void) {
     if (has_property("device", &sdev)) {
       pworker->set_strgpuids(sdev);
       if (sdev != "all") {
-        std::vector<std::string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
+        std::vector<std::string> sarr =
+          str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
         std::vector<int> iarr;
         int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
         if (sts < 0) {

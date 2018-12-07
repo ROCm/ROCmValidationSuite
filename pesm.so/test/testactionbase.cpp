@@ -23,12 +23,11 @@
  *
  *******************************************************************************/
 
-
+#include <string>
 
 #include "gtest/gtest.h"
-#include "unitactionbase.h"
 
-#include <string>
+#include "test/unitactionbase.h"
 
 
 TEST(actionbase, run) {
