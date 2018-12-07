@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 extern "C" {
   #include <pci/pci.h>
@@ -39,16 +39,16 @@ extern "C" {
 
 #include "hsa/hsa.h"
 
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
-#include "rvshsa.h"
-#include "rvstimer.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvshsa.h"
+#include "include/rvstimer.h"
 
-#include "rvs_key_def.h"
-#include "rvs_module.h"
-#include "worker_b2b.h"
+#include "include/rvs_key_def.h"
+#include "include/rvs_module.h"
+#include "include/worker_b2b.h"
 
 #define MODULE_NAME "pebb"
 #define MODULE_NAME_CAPS "PEBB"
@@ -58,14 +58,14 @@ using std::string;
 using std::vector;
 
 //! Default constructor
-pebbaction::pebbaction() {
+pebb_action::pebb_action() {
   bjson = false;
   b2b_block_size = 0;
   link_type = -1;
 }
 
 //! Default destructor
-pebbaction::~pebbaction() {
+pebb_action::~pebb_action() {
   property.clear();
 }
 
@@ -74,7 +74,7 @@ pebbaction::~pebbaction() {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool pebbaction::get_all_pebb_config_keys(void) {;
+bool pebb_action::get_all_pebb_config_keys(void) {;
   string msg;
   int error;
 
@@ -128,7 +128,7 @@ bool pebbaction::get_all_pebb_config_keys(void) {;
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool pebbaction::get_all_common_config_keys(void) {
+bool pebb_action::get_all_common_config_keys(void) {
   string msg, sdevid, sdev;
   int error;
 
@@ -215,7 +215,7 @@ bool pebbaction::get_all_common_config_keys(void) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::create_threads() {
+int pebb_action::create_threads() {
   std::string msg;
   std::vector<uint16_t> gpu_id;
   std::vector<uint16_t> gpu_device_id;
@@ -377,7 +377,7 @@ int pebbaction::create_threads() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::destroy_threads() {
+int pebb_action::destroy_threads() {
   RVSTRACE_
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->set_stop_name(action_name);
@@ -394,7 +394,7 @@ int pebbaction::destroy_threads() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::print_running_average() {
+int pebb_action::print_running_average() {
   for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
     print_running_average(*it);
   }
@@ -410,7 +410,7 @@ int pebbaction::print_running_average() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::print_running_average(pebbworker* pWorker) {
+int pebb_action::print_running_average(pebbworker* pWorker) {
   uint16_t    src_node, dst_node;
   uint16_t    dst_id;
   bool        bidir;
@@ -511,7 +511,7 @@ int pebbaction::print_running_average(pebbworker* pWorker) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::print_final_average() {
+int pebb_action::print_final_average() {
   uint16_t    src_node, dst_node;
   uint16_t    dst_id;
   bool        bidir;
@@ -597,7 +597,7 @@ int pebbaction::print_final_average() {
  * calculation of final average
  *
  * */
-void pebbaction::do_final_average() {
+void pebb_action::do_final_average() {
   if (property_log_level >= rvs::logtrace) {
     std::string msg;
     unsigned int sec;
@@ -633,7 +633,7 @@ void pebbaction::do_final_average() {
  * calculation of moving average
  *
  * */
-void pebbaction::do_running_average() {
+void pebb_action::do_running_average() {
   unsigned int sec;
   unsigned int usec;
   std::string msg;
@@ -674,7 +674,7 @@ void pebbaction::do_running_average() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::print_link_info(int SrcNode, int DstNode, int DstGpuID,
+int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
                       uint32_t Distance,
                       const std::vector<rvs::linkinfo_t>& arrLinkInfo,
                       bool bReverse) {

@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "worker.h"
+#include "include/worker.h"
 
 #include <chrono>
 #include <map>
@@ -40,10 +40,10 @@ extern "C" {
 }
 #endif
 
-#include "rvs_module.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvsloglp.h"
+#include "include/rvs_module.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvsloglp.h"
 #define MODULE_NAME "PESM"
 
 using std::string;

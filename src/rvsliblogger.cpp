@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsliblogger.h"
+#include "include/rvsliblogger.h"
 
 #include <unistd.h>
 #include <time.h>
@@ -36,11 +36,11 @@
 #include <string>
 #include <mutex>
 
-#include "rvstrace.h"
-#include "rvslognode.h"
-#include "rvslognodestring.h"
-#include "rvslognodeint.h"
-#include "rvslognoderec.h"
+#include "include/rvstrace.h"
+#include "include/rvslognode.h"
+#include "include/rvslognodestring.h"
+#include "include/rvslognodeint.h"
+#include "include/rvslognoderec.h"
 
 using std::cerr;
 using std::cout;
@@ -177,14 +177,19 @@ int rvs::logger::Log(const char* Message, const int LogLevel) {
  */
 int rvs::logger::LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec) {
+  DTRACE_
   // stop logging requested?
   if (bStop) {
-    if (stop_flags)
+    DTRACE_
+    if (stop_flags) {
+      DTRACE_
       // just return
       return 0;
+    }
   }
 
   if (LogLevel < lognone || LogLevel > logtrace) {
+    DTRACE_
     char buff[128];
     snprintf(buff, sizeof(buff), "unknown logging level: %d", LogLevel);
     Err(buff, "CLI");
@@ -192,19 +197,24 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   }
 
   // log level too high?
-  if (LogLevel > loglevel_m)
+  if (LogLevel > loglevel_m) {
+    DTRACE_
     return 0;
+  }
 
   uint32_t   secs;
   uint32_t   usecs;
 
   if (Sec|uSec) {
+    DTRACE_
     secs = Sec;
     usecs = uSec;
   } else {
+    DTRACE_
     get_ticks(&secs, &usecs);
   }
 
+  DTRACE_
   char  buff[64];
   snprintf(buff, sizeof(buff), "%6d.%-6d", secs, usecs);
 
@@ -217,23 +227,31 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
 
   // if no quiet option given, output to cout
   if (!b_quiet) {
+    DTRACE_
     // lock cout_mutex for the duration of this block
     std::lock_guard<std::mutex> lk(cout_mutex);
     cout << row << '\n';
   }
 
   // this stream does not output JSON
-  if (to_json())
+  if (to_json()) {
+    DTRACE_
     return 0;
+  }
 
+  DTRACE_
   // send to file if requested
   if (isfirstrecord_m) {
+    DTRACE_
     isfirstrecord_m = false;
   } else {
+    DTRACE_
     row = RVSENDL + row;
   }
+  DTRACE_
   ToFile(row);
 
+  DTRACE_
   return 0;
 }
 
@@ -475,7 +493,6 @@ int rvs::logger::init_log_file() {
   bStop = false;
   stop_flags = 0;
 
-  b_quiet = false;
   std::string row;
   std::string logfile(log_file);
 

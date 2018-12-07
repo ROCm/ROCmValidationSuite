@@ -75,12 +75,12 @@ set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "hip_hcc")
 
 # Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime.h)
+if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
 
-if(NOT EXISTS ${HIP_INC_DIR}/hip_runtime_api.h)
+if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime_api.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
@@ -117,7 +117,7 @@ LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR})
 set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 
 ## define include directories
-include_directories(include ../include)
+include_directories(./ ../)
 
 ## define source files
 set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp

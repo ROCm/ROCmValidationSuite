@@ -24,7 +24,7 @@
  * 
  *******************************************************************************/
 
-#include "action.h"
+#include "include/action.h"
 
 #include <string>
 #include <vector>
@@ -34,11 +34,11 @@
 #include <iostream>
 #include <sstream>
 
-#include "rvs_key_def.h"
-#include "rvs_module.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/rvs_module.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
 
 
 #define KFD_QUERYING_ERROR              "An error occurred while querying "\
@@ -59,27 +59,12 @@ using std::string;
 using std::regex;
 using std::vector;
 using std::map;
-// collection of allowed GPU properties
-const char* gpu_prop_names[] =
-        { "cpu_cores_count", "simd_count", "mem_banks_count", "caches_count",
-"io_links_count", "cpu_core_id_base", "simd_id_base", "max_waves_per_simd",
-"lds_size_in_kb", "gds_size_in_kb", "wave_front_size", "array_count",
-"simd_arrays_per_engine", "cu_per_simd_array", "simd_per_cu",
-"max_slots_scratch_cu", "vendor_id", "device_id", "location_id",
-"drm_render_minor", "max_engine_clk_ccompute", "local_mem_size", "fw_version",
-"capability", "max_engine_clk_ccompute"
-        };
-// collection of allowed io links properties
-const char* gpu_io_link_prop_names[] =
-        { "count", "type", "version_major", "version_minor", "node_from",
-"node_to", "weight", "min_latency", "max_latency", "min_bandwidth",
-"max_bandwidth", "recommended_transfer_size", "flags"
-        };
+
 
 /**
  * default class constructor
  */
-action::action() {
+gpup_action::gpup_action() {
     bjson = false;
     json_root_node = NULL;
 }
@@ -87,10 +72,9 @@ action::action() {
 /**
  * class destructor
  */
-action::~action() {
+gpup_action::~gpup_action() {
     property.clear();
 }
-
 
 /**
  * checks if device id is correct
@@ -98,7 +82,7 @@ action::~action() {
  * @param dev_id unique device id
  * @return true if dev_id is correct, false otherwise
  */            
-bool action::device_id_correct(int node_id, int dev_id) {
+bool gpup_action::device_id_correct(int node_id, int dev_id) {
     std::ifstream f_prop;
     bool dev_id_corr = true;
     string s;
@@ -109,6 +93,7 @@ bool action::device_id_correct(int node_id, int dev_id) {
     f_prop.open(path);
 
     if (dev_id > 0) {
+      RVSTRACE_
         while (f_prop >> s) {
             if (s == RVS_CONF_DEVICEID_KEY) {
                 f_prop >> s;
@@ -127,7 +112,7 @@ bool action::device_id_correct(int node_id, int dev_id) {
  * @param node_id represents node folder
  * @return gpu_id value
  */
-string action::property_get_gpuid(int node_id) {
+string gpup_action::property_get_gpuid(int node_id) {
     std::ifstream f_id;
     string gpu_id;
     char path[CHAR_MAX_BUFF_SIZE];
@@ -145,128 +130,168 @@ string action::property_get_gpuid(int node_id) {
  * @param props JSON_PROP_NODE_NAME or JSON_IO_LINK_PROP_NODE_NAME
  * @return true if success, false otherwise
  */
-bool action::property_split(string props) {
-    map<string, string>::iterator it;
-    string s;
-    auto prop_length = std::end(gpu_prop_names) - std::begin(gpu_prop_names);
-    auto io_prop_length = std::end(gpu_io_link_prop_names) -
-    std::begin(gpu_io_link_prop_names);
+bool gpup_action::property_split(string props) {
+  string s;
+//   auto prop_length = std::end(gpu_prop_names) - std::begin(gpu_prop_names);
+//   auto io_prop_length = std::end(gpu_io_link_prop_names) -
+//  std::begin(gpu_io_link_prop_names);
+  std::string prop_name_;
 
-     for (it = property.begin(); it != property.end(); ++it) {
-         s = it->first;
-        if (s.find(".") != std::string::npos && s.substr(0, s.find(".")) ==
-        props) {
-            if (!(s.substr(s.find(".")+1) == "all")) {
-                if (props == JSON_PROP_NODE_NAME)
-                    property_name.push_back(s.substr(s.find(".")+1));
-                else
-                    io_link_property_name.push_back(s.substr(s.find(".")+1));
-            } else {
-                if (props == JSON_PROP_NODE_NAME) {
-                    for (int i = 0; i < prop_length; i++)
-                        property_name.push_back(gpu_prop_names[i]);
-                } else {
-                    for (int i = 0; i < io_prop_length; i++)
-                    io_link_property_name.push_back(gpu_io_link_prop_names[i]);
-                }
-                return 1;
-            }
+  RVSTRACE_
+  for (auto it = property.begin(); it != property.end(); ++it) {
+    RVSTRACE_
+    s = it->first;
+    if (s.find(".") != std::string::npos && s.substr(0, s.find(".")) ==
+      props) {
+      RVSTRACE_
+      prop_name_ = s.substr(s.find(".")+1);
+      if (prop_name_ == "all") {
+        RVSTRACE_
+        if (props == JSON_PROP_NODE_NAME) {
+          RVSTRACE_
+          property_name.clear();
+        } else {
+          RVSTRACE_
+          io_link_property_name.clear();
         }
+        RVSTRACE_
+        return true;
+      } else {
+        RVSTRACE_
+        if (props == JSON_PROP_NODE_NAME) {
+          RVSTRACE_
+          RVSDEBUG("property", prop_name_);
+          property_name.push_back(prop_name_);
+        } else if (props == JSON_IO_LINK_PROP_NODE_NAME) {
+          RVSTRACE_
+          RVSDEBUG("io_link_property", prop_name_);
+          io_link_property_name.push_back(prop_name_);
+        }
+        RVSTRACE_
+      }
+      RVSTRACE_
     }
-    return 0;
+    RVSTRACE_
+  }
+  RVSTRACE_
+  return false;
+}
+
+/**
+ * Remove all accurances of 'name' in vector property_name_validate
+ * @param name string to look for
+ * @return 0 all the time
+ */
+int gpup_action::validate_property_name(const std::string& name) {
+  auto it = std::find(property_name_validate.begin(),
+                      property_name_validate.end(), name);
+  while (it != property_name_validate.end()) {
+    property_name_validate.erase(it);
+    it = std::find(property_name_validate.begin(), property_name_validate.end()
+                   , name);
+  }
+  return 0;
 }
 
 /**
  * gets properties values
  * @param gpu_id value of gpu_id of device
  */
-void action::property_get_value(uint16_t gpu_id) {
+int gpup_action::property_get_value(uint16_t gpu_id) {
   uint16_t node_id;
   char path[CHAR_MAX_BUFF_SIZE];
   void *json_gpuprop_node = NULL;
   string prop_name, prop_val, msg;
   std::ifstream f_prop;
 
-  if (rvs::gpulist::gpu2node(gpu_id, &node_id))
-    return;
+  RVSTRACE_
+  if (rvs::gpulist::gpu2node(gpu_id, &node_id)) {
+    RVSTRACE_
+    return -1;
+  }
+
+  // cache property names to validate for existance
+  property_name_validate = property_name;
 
   snprintf(path, CHAR_MAX_BUFF_SIZE, "%s/%d/properties",
            KFD_SYS_PATH_NODES, node_id);
-  f_prop.open(path);
 
   if (bjson) {
-    if (json_root_node != NULL) {
-      json_gpuprop_node = rvs::lp::CreateNode(json_root_node,
-                                              JSON_PROP_NODE_NAME);
-      if (json_gpuprop_node == NULL) {
-        // log the error
-        msg = std::string(JSON_CREATE_NODE_ERROR);
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    RVSTRACE_
+    if (json_root_node == NULL) {
+      RVSTRACE_
+      return -1;
+    }
+    json_gpuprop_node = rvs::lp::CreateNode(json_root_node,
+                                            JSON_PROP_NODE_NAME);
+    if (json_gpuprop_node == NULL) {
+      RVSTRACE_
+      // log the error
+      msg = std::string(JSON_CREATE_NODE_ERROR);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+    rvs::lp::AddNode(json_root_node, json_gpuprop_node);
+  }
+
+  RVSTRACE_
+  f_prop.open(path);
+  while (f_prop >> prop_name) {
+    RVSTRACE_
+    f_prop >> prop_val;
+
+    validate_property_name(prop_name);
+    // check if filtering by property is needed
+    if (io_link_property_name.size() > 0) {
+      auto it = std::find(property_name.begin(),
+                          property_name.end(),
+                          prop_name);
+      // not found - skip to next property
+      if (it == property_name.end()) {
+        continue;
       }
     }
-  }
-
-  if (bjson && json_gpuprop_node != NULL) {  // json logging stuff
-    rvs::lp::AddString(json_gpuprop_node, RVS_JSON_LOG_GPU_ID_KEY,
-                       std::to_string(gpu_id));
-  }
-
-  // properties
-  for (vector<string>::iterator it_prop_name=property_name.begin();
-       it_prop_name != property_name.end(); ++it_prop_name) {
-    while (f_prop >> prop_name) {
-      if (prop_name == *it_prop_name) {
-        f_prop >> prop_val;
-        msg = "["+action_name + "] " + MODULE_NAME +
-        " " + std::to_string(gpu_id) +
-        " " + prop_name + " " + prop_val;
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_gpuprop_node != NULL) {
-          rvs::lp::AddString(json_gpuprop_node, prop_name, prop_val);
-        }
-        break;
-      }
-      f_prop >> prop_val;
+    msg = "["+action_name + "] " + MODULE_NAME +
+    " " + std::to_string(gpu_id) +
+    " " + prop_name + " " + prop_val;
+    log(msg.c_str(), rvs::logresults);
+    if (bjson && json_gpuprop_node != NULL) {
+      rvs::lp::AddString(json_gpuprop_node, prop_name, prop_val);
     }
-    f_prop.clear();
-    f_prop.seekg(0, std::ios::beg);
   }
-
+  RVSTRACE_
   f_prop.close();
 
-  if (bjson && json_gpuprop_node != NULL)  // json logging stuff
-    rvs::lp::AddNode(json_root_node, json_gpuprop_node);
+  if (property_name_validate.size() > 0) {
+    RVSTRACE_
+    msg = "Properties not found for GPU " + std::to_string(gpu_id) + ":";
+    for (auto it = property_name_validate.begin();
+         it != property_name_validate.end(); it++) {
+      msg += " " + *it;
+    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+
+  RVSTRACE_
+  return 0;
 }
 
 /**
  * get io links properties values
  * @param gpu_id unique gpu_id
- * @param node_id represents node folder
  */
-void action::property_io_links_get_value(uint16_t gpu_id) {
-  void *json_gpuprop_node = NULL;
+int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
+  void* json_iolinks_node = nullptr;
   char path[CHAR_MAX_BUFF_SIZE];
   string prop_name, prop_val, msg;
-  std::ifstream f_link_prop;
+  std::ifstream f_prop;
   uint16_t node_id;
 
-  if (rvs::gpulist::gpu2node(gpu_id, &node_id))
-    return;
-
-  if (bjson) {
-    if (json_root_node != NULL) {
-      json_gpuprop_node = rvs::lp::CreateNode(json_root_node,
-                                              JSON_IO_LINK_PROP_NODE_NAME);
-      if (json_gpuprop_node == NULL) {
-        // log the error
-        msg = std::string(JSON_CREATE_NODE_ERROR);
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      }
-    }
-  }
-
-  if (bjson && json_gpuprop_node != NULL) {  // json logging stuff
-    rvs::lp::AddInt(json_gpuprop_node, RVS_JSON_LOG_GPU_ID_KEY, gpu_id);
+  RVSTRACE_
+  if (rvs::gpulist::gpu2node(gpu_id, &node_id)) {
+    RVSTRACE_
+    return -1;
   }
 
   snprintf(path, CHAR_MAX_BUFF_SIZE, "%s/%d/io_links",
@@ -274,57 +299,80 @@ void action::property_io_links_get_value(uint16_t gpu_id) {
   int num_links = gpu_num_subdirs(const_cast<char*>(path),
                                   const_cast<char*>(""));
 
-  for (int link_id = 0; link_id < num_links; link_id++) {
-    snprintf(path, CHAR_MAX_BUFF_SIZE,
-             "%s/%d/io_links/%d/properties", KFD_SYS_PATH_NODES, node_id,
-             link_id);
-    f_link_prop.open(path);
-
-    for (vector<string>::iterator it_io_prop_name =
-      io_link_property_name.begin(); it_io_prop_name !=
-      io_link_property_name.end();
-    ++it_io_prop_name) {
-      // file doesn't contain property name "count" and its value
-      if (*it_io_prop_name == "count") {
-        msg = "["+action_name + "] " + MODULE_NAME +
-        " " + std::to_string(gpu_id) +
-        " " + std::to_string(link_id) + " "+ "count" + " " +
-        std::to_string(num_links);
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_gpuprop_node != NULL)
-          rvs::lp::AddInt(json_gpuprop_node, "count" , num_links);
-      }
-      while (f_link_prop >> prop_name) {
-        if (prop_name == *it_io_prop_name) {
-          f_link_prop >> prop_val;
-          msg = "[" + action_name + "] " + MODULE_NAME + " " +
-          std::to_string(gpu_id) + " " + std::to_string(link_id) + " "+
-          prop_name + " " + prop_val;
-          log(msg.c_str(), rvs::logresults);
-          if (bjson && json_gpuprop_node != NULL) {
-            rvs::lp::AddString(json_gpuprop_node, prop_name, prop_val);
-          }
-          break;
-        }
-        f_link_prop >> prop_val;
-      }
-      f_link_prop.clear();
-      f_link_prop.seekg(0, std::ios::beg);
+  // construct node for IO links collection
+  if (bjson) {
+    RVSTRACE_
+    json_iolinks_node = rvs::lp::CreateNode(json_root_node,
+                                            JSON_IO_LINK_PROP_NODE_NAME);
+    if (json_iolinks_node == NULL) {
+      RVSTRACE_
+      // log the error
+      msg = std::string(JSON_CREATE_NODE_ERROR);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
+    rvs::lp::AddNode(json_root_node, json_iolinks_node);
   }
+  RVSTRACE_
 
-  f_link_prop.close();
+  // for all links
+  for (int link_id = 0; link_id < num_links; link_id++) {
+    void* json_link_ptr_;
 
-  if (bjson && json_gpuprop_node != NULL)  // json logging stuff
-    rvs::lp::AddNode(json_root_node, json_gpuprop_node);
+    snprintf(path, CHAR_MAX_BUFF_SIZE,
+             "%s/%d/io_links/%d/properties",
+             KFD_SYS_PATH_NODES, node_id, link_id);
+
+    if (bjson) {
+      RVSTRACE_
+      json_link_ptr_ = rvs::lp::CreateNode(json_iolinks_node,
+                                           std::to_string(link_id).c_str());
+      if (json_link_ptr_ == NULL) {
+        // log the error
+        msg = std::string(JSON_CREATE_NODE_ERROR);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
+      rvs::lp::AddNode(json_iolinks_node, json_link_ptr_);
+    }
+
+    RVSTRACE_
+    f_prop.open(path);
+    while (f_prop >> prop_name) {
+      RVSTRACE_
+      f_prop >> prop_val;
+
+      // filter by property name if needed
+      if (io_link_property_name.size() > 0) {
+        auto it = std::find(io_link_property_name.begin(),
+                            io_link_property_name.end(),
+                            prop_name);
+        if (it == io_link_property_name.end()) {
+          continue;
+        }
+      }
+      msg = "["+action_name + "] " + MODULE_NAME +
+      " " + std::to_string(gpu_id) +
+      " " + std::to_string(link_id) +
+      " " + prop_name + " " + prop_val;
+      log(msg.c_str(), rvs::logresults);
+      if (bjson && json_link_ptr_ != NULL) {
+        rvs::lp::AddString(json_link_ptr_, prop_name, prop_val);
+      }
+    }
+    RVSTRACE_
+    f_prop.close();
+  }
+  return 0;
 }
 
 /**
  * runs the whole GPUP logic
  * @return run result
  */
-int action::run(void) {
+int gpup_action::run(void) {
     std::string msg;
+    int sts = 0;
 
     // get the action name
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -365,22 +413,6 @@ int action::run(void) {
         bjson = true;
     }
 
-    // if JSON required
-    if (bjson) {
-      unsigned int sec;
-      unsigned int usec;
-      rvs::lp::get_ticks(&sec, &usec);
-
-      json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-      action_name.c_str(), rvs::loginfo, sec, usec);
-      if (json_root_node == NULL) {
-        // log the error
-        msg = JSON_CREATE_NODE_ERROR;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-        return -1;
-      }
-    }
-
     // get all AMD GPUs
     vector<uint16_t> gpu;
     gpu_get_all_gpu_id(&gpu);
@@ -411,20 +443,52 @@ int action::run(void) {
       }
 
       b_gpu_found = true;
-      // properties values
-      property_get_value(*it);
-      // io_links properties
-      property_io_links_get_value(*it);
-    }
 
-    if (bjson) {  // json logging stuff
+      // if JSON required
+      if (bjson) {
+        unsigned int sec;
+        unsigned int usec;
+        rvs::lp::get_ticks(&sec, &usec);
+
+        json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+        action_name.c_str(), rvs::logresults, sec, usec);
+        if (json_root_node == nullptr) {
+          // log the error
+          msg = JSON_CREATE_NODE_ERROR;
+          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          return -1;
+        }
+
+        // Add GPU ID
+        rvs::lp::AddInt(json_root_node, RVS_JSON_LOG_GPU_ID_KEY, *it);
+      }
+
+      // properties values
+      sts = property_get_value(*it);
+
+      // so far so good?
+      if (sts == 0) {
+        RVSTRACE_
+        // do io_links properties
+        sts = property_io_links_get_value(*it);
+      }
+
+      if (bjson) {  // json logging stuff
+        RVSTRACE_
         rvs::lp::LogRecordFlush(json_root_node);
-    }
+        json_root_node = nullptr;
+      }
+
+      if (sts) {
+        RVSTRACE_
+        break;
+      }
+    }  // for all gpu_id
 
     if (!b_gpu_found) {
       msg = "No device matches criteria from configuration. ";
       rvs::lp::Err(msg, MODULE_NAME, action_name);
       return -1;
     }
-    return 0;
+    return sts;
 }

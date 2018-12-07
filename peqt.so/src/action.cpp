@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 #include <string>
 #include <vector>
@@ -39,13 +39,13 @@ extern "C" {
 }
 #endif
 
-#include "pci_caps.h"
+#include "include/pci_caps.h"
 
-#include "rvs_key_def.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvs_module.h"
-#include "rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvs_module.h"
+#include "include/rvsloglp.h"
 
 #define CHAR_BUFF_MAX_SIZE              1024
 #define PCI_DEV_NUM_CAPABILITIES        14
@@ -107,7 +107,7 @@ const uint8_t pb_op_power_rails_encoding[] = {0, 1, 2, 7};
 /**
  * @brief default class constructor
  */
-action::action() {
+peqt_action::peqt_action() {
     bjson = false;
     json_root_node = NULL;
 }
@@ -115,7 +115,7 @@ action::action() {
 /**
  * class destructor
  */
-action::~action() {
+peqt_action::~peqt_action() {
     property.clear();
 }
 
@@ -127,7 +127,7 @@ action::~action() {
  * @param gpu_id unique gpu id
  * @return false if regex check failed, true otherwise
  */
-bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
+bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
         uint16_t gpu_id) {
     char buff[CHAR_BUFF_MAX_SIZE];
     string prop_name, msg;
@@ -265,7 +265,7 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
  * @brief runs the whole PEQT logic
  * @return run result
  */
-int action::run(void) {
+int peqt_action::run(void) {
     string msg;
     map<string, string>::iterator it;  // module's properties map iterator
     bool pci_infra_qual_result = true;  // PCI qualification result

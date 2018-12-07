@@ -22,15 +22,15 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "blas_worker.h"
+#include "include/blas_worker.h"
 
 #include <unistd.h>
 #include <string>
 #include <memory>
 #include <mutex>
 
-#include "rvs_blas.h"
-#include "rvsloglp.h"
+#include "include/rvs_blas.h"
+#include "include/rvsloglp.h"
 
 #define IET_MEM_ALLOC_ERROR                     1
 #define IET_BLAS_ERROR                          2

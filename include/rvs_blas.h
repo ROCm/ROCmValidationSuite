@@ -27,9 +27,9 @@
 
 #define __HIP_PLATFORM_HCC__
 
-#include "rocblas.h"
-#include "hip_runtime.h"
-#include "hip_runtime_api.h"
+#include "include/rocblas.h"
+#include "include/hip/hip_runtime.h"
+#include "include/hip/hip_runtime_api.h"
 
 /**
  * @class rvs_blas

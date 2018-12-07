@@ -92,7 +92,7 @@ set(ROCR_INC_DIR "/opt/rocm/include/" CACHE PATH "Contains header files exported
 set(ROCR_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by ROC Runtime")
 set(ROCT_INC_DIR "/opt/rocm/include/libhsakmt" CACHE PATH "Contains header files exported by ROC Trunk")
 set(ROCT_LIB_DIR "/opt/rocm/lib/" CACHE PATH "Contains library files exported by ROC Trunk")
-set(HIP_INC_DIR "/opt/rocm/hip/include/hip/" CACHE PATH "Contains header files exported by ROC Runtime")
+set(HIP_INC_DIR "/opt/rocm/hip" CACHE PATH "Contains header files exported by ROC Runtime")
 
 message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
@@ -301,10 +301,10 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so
 endif()  # if (RVS_ROCMSMI EQUAL 1)
 
 if (RVS_ROCBLAS EQUAL 1)
-  set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/include/")
+  set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install")
   set(ROCBLAS_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/lib/")
 else()
-  set(ROCBLAS_INC_DIR "/opt/rocm/include/")
+  set(ROCBLAS_INC_DIR "/opt/rocm")
   set(ROCBLAS_LIB_DIR "/opt/rocm/lib/")
 endif()
 

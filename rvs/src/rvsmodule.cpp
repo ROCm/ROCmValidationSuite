@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsmodule.h"
+#include "include/rvsmodule.h"
 
 #include <dlfcn.h>
 #include <stdio.h>
@@ -34,12 +34,12 @@
 #include <iostream>
 #include <fstream>
 
-#include "rvsliblogger.h"
-#include "rvsif0.h"
-#include "rvsif1.h"
-#include "rvsaction.h"
-#include "rvsliblog.h"
-#include "rvsoptions.h"
+#include "include/rvsliblogger.h"
+#include "include/rvsif0.h"
+#include "include/rvsif1.h"
+#include "include/rvsaction.h"
+#include "include/rvsliblog.h"
+#include "include/rvsoptions.h"
 
 #define MODULE_NAME_CAPS "CLI"
 

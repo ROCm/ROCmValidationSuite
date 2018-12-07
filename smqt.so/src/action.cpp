@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -40,11 +40,11 @@ extern "C" {
 }
 #endif
 
-#include "rvs_key_def.h"
-#include "rvs_module.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/rvs_module.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvsloglp.h"
 #define MODULE_NAME "SMQT"
 
 using std::string;
@@ -63,7 +63,7 @@ ulong bar1_size, bar1_base_addr, bar2_size, bar2_base_addr;
 ulong bar4_size, bar4_base_addr, bar5_size;
 
 // Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
-string action::pretty_print(ulong bytes, uint16_t gpu_id,
+string smqt_action::pretty_print(ulong bytes, uint16_t gpu_id,
                             string action_name, string bar_name) {
   std::string suffix[5] = { " B", " KB", " MB", " GB", " TB"};
   std::stringstream ss;
@@ -82,10 +82,10 @@ string action::pretty_print(ulong bytes, uint16_t gpu_id,
   return ss.str();
 }
 
-action::action() {
+smqt_action::smqt_action() {
 }
 
-action::~action() {
+smqt_action::~smqt_action() {
   property.clear();
 }
 
@@ -94,7 +94,7 @@ action::~action() {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_common_config_keys() {
+bool smqt_action::get_all_common_config_keys() {
   string msg, sdevid, sdev;
 
   // get the action name
@@ -140,7 +140,7 @@ switch (err) { \
     return false; \
 }
 
-bool action::get_all_smqt_config_keys() {
+bool smqt_action::get_all_smqt_config_keys() {
   int err = 0;
   std::string msg;
 
@@ -173,7 +173,7 @@ bool action::get_all_smqt_config_keys() {
  * @return 0 - success, non-zero otherwise
  * */ 
 
-int action::run(void) {
+int smqt_action::run(void) {
   bool global_pass = true;
   string msg;
   struct pci_access *pacc;

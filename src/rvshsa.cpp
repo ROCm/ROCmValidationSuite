@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvshsa.h"
+#include "include/rvshsa.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,10 +33,11 @@
 #include <string>
 #include <vector>
 
-#include "rvs_util.h"
-#include "rvsloglp.h"
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
+
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
 
 // ptr to singletone instance
 rvs::hsa* rvs::hsa::pDsc;
