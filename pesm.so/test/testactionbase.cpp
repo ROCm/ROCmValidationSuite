@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+
 #include "test/unitactionbase.h"
 
 TEST(actionbase, run) {
