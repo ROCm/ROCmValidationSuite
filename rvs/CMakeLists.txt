@@ -90,9 +90,6 @@ set(SOURCES
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp ${SOURCES})
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
-set_target_properties(${RVS_TARGET} PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
-)
 
 ## define target for "test-to-fail"
 add_executable(${RVS_TARGET}fail src/rvs.cpp ${SOURCES})

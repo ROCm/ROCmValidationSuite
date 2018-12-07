@@ -34,6 +34,9 @@ set(TEST_SOURCES
 
 add_executable(rvstest ${SOURCES})
 target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
+set_target_properties(rvstest PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
+)
 
 add_test(NAME unit.rvs.1
   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
