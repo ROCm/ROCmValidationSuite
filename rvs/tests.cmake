@@ -34,19 +34,22 @@ set(TEST_SOURCES
 
 add_executable(rvstest ${SOURCES})
 target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
+set_target_properties(rvstest PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
+)
 
 add_test(NAME unit.rvs.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND rvstest -d 3
 )
 
 add_test(NAME unit.rvs.cli1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND rvs -g
 )
 
 add_test(NAME unit.rvs.cli2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND rvs -t
 )
 
@@ -62,9 +65,12 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
   target_link_libraries(${TEST_NAME} ${PROJECT_LINK_LIBS} ${PROJECT_TEST_LINK_LIBS} gtest_main gtest)
   target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
   add_compile_options(-Wall -Wextra -save-temps)
+  set_target_properties(${TEST_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
+  )
 
   add_test(NAME ${TEST_NAME}
-    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
     COMMAND ${TEST_NAME}
   )
 ENDFOREACH()

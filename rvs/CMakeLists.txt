@@ -95,6 +95,9 @@ target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 add_executable(${RVS_TARGET}fail src/rvs.cpp ${SOURCES})
 target_link_libraries(${RVS_TARGET}fail ${PROJECT_LINK_LIBS} )
 target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
+set_target_properties(${RVS_TARGET}fail PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
+)
 
 ## define unit testing targets
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
