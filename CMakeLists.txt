@@ -331,9 +331,9 @@ add_subdirectory(gst.so)
 add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
 
-add_dependencies(rvs rvs_doc rvs_yaml_target)
-add_dependencies(rvsfail rvs rvs_bintest_folder)
-add_dependencies(rvstest rvs rvs_gtest_target rvs_bintest_folder rvs_yaml_target)
+add_dependencies(rvs rvs_bintest_folder rvs_doc rvs_gtest_target rvs_yaml_target)
+add_dependencies(rvsfail rvs)
+add_dependencies(rvstest rvs)
 
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_rsmi_target)
