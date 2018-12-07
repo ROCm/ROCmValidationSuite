@@ -167,7 +167,6 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
 
   // for all child nodes
   for (YAML::const_iterator it = node.begin(); it != node.end(); it++) {
-
     // if property is collection of module specific properties,
     if (is_yaml_properties_collection(module_name,
         it->first.as<std::string>())) {
