@@ -144,4 +144,4 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parralel_f, d
         # go to the next conf file
         counter += 1
 
-cmake_file.close()
+cmake_file.close() 
