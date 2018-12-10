@@ -36,15 +36,15 @@
 #include <string>
 #include <vector>
 
-#include "rvsactionbase.h"
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
 
+#include "include/rvsactionbase.h"
 
 class pqtworker;
 
 /**
- * @class pqtaction
+ * @class pqt_action
  * @ingroup PQT
  *
  * @brief PQT action implementation class
@@ -53,10 +53,10 @@ class pqtworker;
  * in its run() method.
  *
  */
-class pqtaction : public rvs::actionbase {
+class pqt_action : public rvs::actionbase {
  public:
-  pqtaction();
-  virtual ~pqtaction();
+  pqt_action();
+  virtual ~pqt_action();
 
   virtual int run(void);
 
@@ -64,29 +64,20 @@ class pqtaction : public rvs::actionbase {
   bool get_all_pqt_config_keys(void);
   bool get_all_common_config_keys(void);
 
-  //! 'true' if "all" is found under "device" key for this action
-  bool      prop_device_all_selected;
-  //! 'true' if "all" is found under "peer" key for this action
-  bool      prop_peer_device_all_selected;
-  //! deviceid key from config file
-  uint16_t  prop_deviceid;
-  //! 'true' if prop_device_id is valid number
-  bool      prop_device_id_filtering;
-
   // PQT specific config keys
   bool property_get_peers(int *error);
   void property_get_test_bandwidth(int *error);
 //  void property_get_log_interval(int *error);
   void property_get_bidirectional(int *error);
 
+  //! 'true' if "all" is found under "peer" key for this action
+  bool      prop_peer_device_all_selected;
   //! array of peer GPU IDs to be used in data trasfers
   std::vector<std::string> prop_peers;
   //! deviceid of peer GPUs
-  int  prop_peer_deviceid;
+  uint32_t  prop_peer_deviceid;
   //! 'true' if bandwidth test is to be executed for verified peers
   bool prop_test_bandwidth;
-  //! log interval for running totals (in msec)
-  int  prop_log_interval;
   //! 'true' if bidirectional data transfer is required
   bool prop_bidirectional;
   //! list of test block sizes

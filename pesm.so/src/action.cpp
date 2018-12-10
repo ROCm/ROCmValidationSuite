@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 extern "C" {
 #include <pci/pci.h>
@@ -36,14 +36,14 @@ extern "C" {
 #include <algorithm>
 #include <iomanip>
 
-#include "rvs_key_def.h"
-#include "rvs_module.h"
-#include "worker.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
-#define MODULE_NAME "PESM"
+#include "include/rvs_key_def.h"
+#include "include/rvs_module.h"
+#include "include/worker.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
+#define MODULE_NAME_CAPS "PESM"
 
 using std::string;
 using std::cout;
@@ -54,11 +54,11 @@ using std::hex;
 extern Worker* pworker;
 
 //! Default constructor
-action::action() {
+pesm_action::pesm_action() {
 }
 
 //! Default destructor
-action::~action() {
+pesm_action::~pesm_action() {
   property.clear();
 }
 
@@ -77,19 +77,15 @@ action::~action() {
  * @return 0 - success. non-zero otherwise
  *
  * */
-int action::run(void) {
-  int error = 0;
+int pesm_action::run(void) {
   string msg;
-  log("[PESM] in run()", rvs::logdebug);
+  RVSTRACE_
 
   // get the action name
-  rvs::actionbase::property_get_action_name(&error);
-  if (error == 2) {
-    msg = "action field is missing in gst module";
-    rvs::lp::Err(msg, MODULE_NAME);
-    return -1;
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+    return 1;
   }
-  rvs::lp::Log("[" + property["name"]+ "] pesm in run()", rvs::logtrace);
 
   // debugging help
   string val;
@@ -136,13 +132,13 @@ int action::run(void) {
         catch(...) {
           msg = property["name"] +
           "  invalide 'deviceid' key value: " + sdevid;
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
         }
       } else {
         msg = property["name"] +
         "  invalide 'deviceid' key value: " + sdevid;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
     }
@@ -152,13 +148,14 @@ int action::run(void) {
     if (has_property("device", &sdev)) {
       pworker->set_strgpuids(sdev);
       if (sdev != "all") {
-        vector<string> sarr = str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
-        vector<int> iarr;
+        std::vector<std::string> sarr =
+          str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
+        std::vector<int> iarr;
         int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
         if (sts < 0) {
           msg = property["name"] +
           "  invalide 'device' key value: " + sdev;
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
         }
         pworker->set_gpuids(iarr);
@@ -166,7 +163,7 @@ int action::run(void) {
     } else {
           msg = property["name"] +
           "  key 'device' not found";
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
           return -1;
     }
 
@@ -205,10 +202,10 @@ int action::run(void) {
  * @return 0 - success. non-zero otherwise
  *
  * */
-int action::do_gpu_list() {
+int pesm_action::do_gpu_list() {
   log("pesm in do_gpu_list()", rvs::logtrace);
 
-  std::map<string, string>::iterator it;
+  std::map<std::string, std::string>::iterator it;
 
   struct device_info {
     std::string bus;
@@ -241,16 +238,22 @@ int action::do_gpu_list() {
 
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id =
-      ((((uint16_t)(dev->bus)) << 8) | (dev->func));
+      ((((uint16_t)(dev->bus)) << 8) | (dev->dev));
 
-    // if not and AMD GPU just continue
-    int32_t node_id = rvs::gpulist::GetNodeIdFromLocationId(dev_location_id);
-    if (node_id < 0)
+    // if not AMD GPU just continue
+    uint16_t node_id;
+    if (rvs::gpulist::location2node(dev_location_id, &node_id)) {
       continue;
+    }
 
-    int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-    if (gpu_id < 0)
+//     int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+//     if (gpu_id < 0)
+//       continue;
+
+    uint16_t gpu_id;
+    if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id)) {
       continue;
+    }
 
     snprintf(buff, sizeof(buff), "%02X:%02X.%d", dev->bus, dev->dev, dev->func);
 

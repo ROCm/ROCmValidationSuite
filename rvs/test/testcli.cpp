@@ -27,7 +27,7 @@
 
 #include "gtest/gtest.h"
 
-#include "rvscli.h"
+#include "include/rvscli.h"
 
 const char* testpass[] = {"./rvs", "-c", "conf"};
 const char* testfail[] = {"./rvs", "-c"};

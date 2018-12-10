@@ -36,13 +36,13 @@
 #include <string>
 #include <vector>
 
-#include "rvsactionbase.h"
-#include "worker.h"
-#include "rvshsa.h"
+#include "include/rvsactionbase.h"
+#include "include/worker.h"
+#include "include/rvshsa.h"
 
 
 /**
- * @class pebbaction
+ * @class pebb_action
  * @ingroup PEBB
  *
  * @brief PEBB action implementation class
@@ -51,28 +51,18 @@
  * in its run() method.
  *
  */
-class pebbaction : public rvs::actionbase {
+class pebb_action : public rvs::actionbase {
  public:
-  pebbaction();
-  virtual ~pebbaction();
+  pebb_action();
+  virtual ~pebb_action();
 
   virtual int run(void);
 
  protected:
   bool get_all_pebb_config_keys(void);
   bool get_all_common_config_keys(void);
-  //! 'true' if "all" is found under "device" key for this action
-  bool      prop_device_all_selected;
   //! 'true' if "all" is found under "peer" key for this action
   bool      prop_peer_device_all_selected;
-  //! deviceid key from config file
-  uint16_t  prop_deviceid;
-  //! 'true' if prop_device_id is valid number
-  bool      prop_device_id_filtering;
-
-  // module specific config keys
-  void property_get_h2d();
-  void property_get_d2h();
 
   //! array of peer GPU IDs to be used in data trasfers
   std::vector<std::string> prop_peers;
@@ -80,8 +70,6 @@ class pebbaction : public rvs::actionbase {
   int  prop_peer_deviceid;
   //! 'true' if bandwidth test is to be executed for verified peers
   bool prop_test_bandwidth;
-  //! log interval for running totals (in msec)
-  int  prop_log_interval;
   //! 'true' if bidirectional data transfer is required
   bool prop_bidirectional;
 
@@ -89,6 +77,7 @@ class pebbaction : public rvs::actionbase {
   bool prop_h2d;
   //! 'true' if device to host transfer is required
   bool prop_d2h;
+
   //! list of test block sizes
   std::vector<uint32_t> block_size;
   //! set to 'true' if the default block sizes are to be used

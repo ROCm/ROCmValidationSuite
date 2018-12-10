@@ -27,16 +27,16 @@
 #include <string>
 #include <algorithm>
 
-#include "rvsexec.h"
+#include "include/rvsexec.h"
 #include "yaml-cpp/yaml.h"
 
-#include "rvsif0.h"
-#include "rvsif1.h"
-#include "rvsaction.h"
-#include "rvsmodule.h"
-#include "rvsliblogger.h"
-#include "rvsoptions.h"
-#include "rvs_util.h"
+#include "include/rvsif0.h"
+#include "include/rvsif1.h"
+#include "include/rvsaction.h"
+#include "include/rvsmodule.h"
+#include "include/rvsliblogger.h"
+#include "include/rvsoptions.h"
+#include "include/rvs_util.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -167,8 +167,6 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
 
   // for all child nodes
   for (YAML::const_iterator it = node.begin(); it != node.end(); it++) {
-    const YAML::Node& child = *it;
-
     // if property is collection of module specific properties,
     if (is_yaml_properties_collection(module_name,
         it->first.as<std::string>())) {

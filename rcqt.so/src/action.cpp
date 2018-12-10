@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 #include <stdlib.h>
 #include <sys/utsname.h>
@@ -38,7 +38,8 @@
 #include <map>
 #include <vector>
 
-#include "rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/rvsloglp.h"
 
 #define MODULE_NAME "rcqt"
 #define MODULE_NAME_CAPS "RCQT"
@@ -65,17 +66,25 @@
 
 #define BUFFER_SIZE 3000
 
+#if DRVS_OS_TYPE_NUM == 1
+// debian defines
+#elseif DRVS_OS_TYPE_NUM == 2
+// fedora defines
+#endif
+
+
 using std::string;
 using std::iterator;
 using std::endl;
 using std::ifstream;
 using std::map;
+using std::vector;
 
-action::action() {
+rcqt_action::rcqt_action() {
   bjson = false;
 }
 
-action::~action() {
+rcqt_action::~rcqt_action() {
   property.clear();
 }
 
@@ -92,8 +101,7 @@ action::~action() {
  *
  * */
 
-int action::run() {
-  int error = 0;
+int rcqt_action::run() {
   string msg;
   bool pkgchk_bool = false;
   bool usrchk_bool = false;
@@ -102,10 +110,8 @@ int action::run() {
   bool filechk_bool = false;
 
   // get the action name
-  rvs::actionbase::property_get_action_name(&error);
-  if (error == 2) {
-    msg = "action field is missing";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
     return 1;
   }
 
@@ -164,7 +170,7 @@ int action::run() {
  * @return 0 - success, non-zero otherwise
  * */
 
-int action::pkgchk_run() {
+int rcqt_action::pkgchk_run() {
   string package_name;
   string msg;
 
@@ -273,7 +279,7 @@ int action::pkgchk_run() {
  * @return 0 - success, non-zero otherwise
  * */
 
-int action::usrchk_run() {
+int rcqt_action::usrchk_run() {
   string err_msg, msg;
   string user_name;
   if (has_property(USER, &user_name)) {
@@ -399,7 +405,7 @@ int action::usrchk_run() {
  * @return 0 - success, non-zero otherwise
  * */
 
-int action::kernelchk_run() {
+int rcqt_action::kernelchk_run() {
   string msg;
   string os_version_values;
   string kernel_version_values;
@@ -495,7 +501,7 @@ int action::kernelchk_run() {
  * @return 0 - success, non-zero otherwise
  * */
 
-int action::ldcfgchk_run() {
+int rcqt_action::ldcfgchk_run() {
   string msg;
   string soname_requested;
   string arch_requested;
@@ -599,7 +605,7 @@ int action::ldcfgchk_run() {
 }
 
 // Converts decimal into octal
-int action::dectooct(int decnum) {
+int rcqt_action::dectooct(int decnum) {
   int rem, i = 1, octnum = 0;
   while (decnum !=0) {
     rem = decnum%8;
@@ -614,7 +620,7 @@ int action::dectooct(int decnum) {
  * @return 0 - success, non-zero otherwise
  * */ 
 
-int action::filechk_run() {
+int rcqt_action::filechk_run() {
   string exists_string, file, owner, group, msg, check;
   int permission, type;
   bool exists;

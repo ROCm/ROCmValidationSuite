@@ -30,13 +30,13 @@
 #include <string>
 #include <map>
 
-#include "worker.h"
-#include "rvsactionbase.h"
+#include "include/worker.h"
+#include "include/rvsactionbase.h"
 
 using std::string;
 
 /**
- * @class action
+ * @class gm_action
  * @ingroup GM
  *
  * @brief GM action implementation class
@@ -46,10 +46,10 @@ using std::string;
  *
  */
 
-class action : public rvs::actionbase {
+class gm_action : public rvs::actionbase {
  public:
-    action();
-    virtual ~action();
+    gm_action();
+    virtual ~gm_action();
 
     virtual int run(void);
 
@@ -65,17 +65,11 @@ class action : public rvs::actionbase {
 
  protected:
   //! 'true' if JSON logging is required
-  bool  bjson;
-  //! 'true' if configuration has key 'device: all'
-  bool  device_all_selected;
-  //! configuration device_id key
-  int   device_id;
-  //! configuration 'log_interval' key
-  int   log_interval;
+  bool     bjson;
   //! true if test has to be aborted on bounds violation
-  bool  prop_terminate;
+  bool     prop_terminate;
   //! configuration 'sample_interval'' key
-  int   sample_interval;
+  uint64_t sample_interval;
 
  protected:
   //! device_irq and metric bounds

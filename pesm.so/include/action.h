@@ -28,10 +28,10 @@
 #include <string>
 #include <vector>
 
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 
 /**
- * @class action
+ * @class pesm_action
  * @ingroup PESM
  *
  * @brief PESM action implementation class
@@ -40,10 +40,10 @@
  * in its run() method.
  *
  */
-class action : public rvs::actionbase {
+class pesm_action : public rvs::actionbase {
  public:
-  action();
-  virtual ~action();
+  pesm_action();
+  virtual ~pesm_action();
 
   virtual int run(void);
 

@@ -29,30 +29,75 @@
 #include <string>
 #include <iostream>
 
-using std::vector;
-using std::string;
-using std::cout;
-using std::endl;
+extern bool is_positive_integer(const std::string& str_val);
 
-extern vector<string> str_split(const string& str_val,
-        const string& delimiter);
+extern std::vector<std::string> str_split(const std::string& str_val,
+        const std::string& delimiter);
 
-extern int rvs_util_strarr_to_intarr(const std::vector<string>& sArr,
-                                     std::vector<int>* piArr);
+/**
+ * Convert array of strings into array of signed integers of type T
+ * @param sArr input string
+ * @param iArr tokens' delimiter
+ * @return -1 if error, number of elements in the array otherwise
+ */
+template <typename T>
+int rvs_util_strarr_to_intarr(const std::vector<std::string>& sArr,
+                              std::vector<T>* piArr) {
+  piArr->clear();
 
-extern int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
-                                     std::vector<uint16_t>* piArr);
+  for (auto it = sArr.begin(); it != sArr.end(); ++it) {
+    try {
+      if (is_positive_integer(*it)) {
+        piArr->push_back(std::stoi(*it));
+      }
+    }
+    catch(...) {
+    }
+  }
 
-extern int rvs_util_strarr_to_uintarr(const std::vector<string>& sArr,
-                                     std::vector<uint32_t>* piArr);
+  if (sArr.size() != piArr->size())
+    return -1;
 
-bool is_positive_integer(const std::string& str_val);
+  return piArr->size();
+}
+
+
+/**
+ * Convert array of strings into array of unsigned integers of type T
+ * @param sArr input string
+ * @param iArr tokens' delimiter
+ * @return -1 if error, number of elements in the array otherwise
+ */
+template <typename T>
+int rvs_util_strarr_to_uintarr(const std::vector<std::string>& sArr,
+                              std::vector<T>* piArr) {
+  piArr->clear();
+
+  for (auto it = sArr.begin(); it != sArr.end(); ++it) {
+    try {
+      if (is_positive_integer(*it)) {
+        piArr->push_back(std::stoul(*it));
+      }
+    }
+    catch(...) {
+    }
+  }
+
+  if (sArr.size() != piArr->size())
+    return -1;
+
+  return piArr->size();
+}
+
+
+extern int rvs_util_parse(const std::string& buff, bool* pval);
 
 /**
  * @brief turns string value into right type of integer, else returns error
  */
 
-template <class T> int rvs_util_parse(const string& buff,
+template <typename T>
+int rvs_util_parse(const std::string& buff,
                                     T* pval) {
   int error;
   if (buff.empty()) {  // method empty

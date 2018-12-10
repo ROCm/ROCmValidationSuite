@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "worker.h"
+#include "include/worker.h"
 
 #include <chrono>
 #include <map>
@@ -40,10 +40,10 @@ extern "C" {
 }
 #endif
 
-#include "rvs_module.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvsloglp.h"
+#include "include/rvs_module.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvsloglp.h"
 #define MODULE_NAME "PESM"
 
 using std::string;
@@ -121,10 +121,10 @@ void Worker::run() {
       // computes the actual dev's location_id (sysfs entry)
       uint16_t dev_location_id =
         ((((uint16_t)(dev->bus)) << 8) | (dev->func));
-      int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
 
+      uint16_t gpu_id;
       // if not and AMD GPU just continue
-      if (gpu_id < 0)
+      if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
         continue;
 
       // device_id filtering

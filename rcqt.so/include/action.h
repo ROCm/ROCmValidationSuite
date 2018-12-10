@@ -25,12 +25,12 @@
 #ifndef RCQT_SO_INCLUDE_ACTION_H_
 #define RCQT_SO_INCLUDE_ACTION_H_
 
-#include "rvsactionbase.h"
-#include "rvs_module.h"
-#include "rvs_util.h"
+#include "include/rvsactionbase.h"
+#include "include/rvs_module.h"
+#include "include/rvs_util.h"
 
 /**
- * @class action
+ * @class rcqt_action
  * @ingroup RCQT
  *
  * @brief RCQT action implementation class
@@ -39,10 +39,10 @@
  * in its run() method.
  *
  */
-class action : public rvs::actionbase {
+class rcqt_action : public rvs::actionbase {
  public:
-    action();
-    virtual ~action();
+    rcqt_action();
+    virtual ~rcqt_action();
     virtual int run(void);
 
  protected:

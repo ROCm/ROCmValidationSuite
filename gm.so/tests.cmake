@@ -56,9 +56,9 @@ add_test(NAME conf.gm.7
 )
 add_test(NAME conf.gm.21
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gm21.conf
+  COMMAND rvsfail -d 3 -c conf/gm21.conf
 )
 add_test(NAME conf.gm.22
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gm22.conf
+  COMMAND rvsfail -d 3 -c conf/gm22.conf
 )

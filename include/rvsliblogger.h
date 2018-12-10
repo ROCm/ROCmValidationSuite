@@ -27,7 +27,7 @@
 
 #include <string>
 #include <mutex>
-#include "rvsliblog.h"
+#include "include/rvsliblog.h"
 
 
 namespace rvs {
@@ -51,9 +51,14 @@ class logger {
   static  void  append(const bool flag);
   static  bool  append();
 
+  //! set quiet mode
+  static  void  quiet() { b_quiet = true; }
+  //! set logging file
+  static  void  set_log_file(const std::string& fname);
+
   static  bool   get_ticks(uint32_t* psecs, uint32_t* pusecs);
 
-  static  int    initialize();
+  static  int    init_log_file();
   static  int    terminate();
 
   static  int    log(const std::string& Message, const int level = 1);
@@ -94,6 +99,10 @@ class logger {
   static bool bStop;
   //! stop flags
   static uint16_t stop_flags;
+  //! logging file
+  static char log_file[1024];
+  //! quiet mode
+  static bool b_quiet;
 };
 
 }  // namespace rvs

@@ -22,11 +22,12 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rvsliblogger.h"
+#include "include/rvsliblogger.h"
 
 #include <unistd.h>
 #include <time.h>
 #include <stdio.h>
+#include <cstring>
 
 #include <iostream>
 #include <chrono>
@@ -35,12 +36,11 @@
 #include <string>
 #include <mutex>
 
-#include "rvstrace.h"
-#include "rvslognode.h"
-#include "rvslognodestring.h"
-#include "rvslognodeint.h"
-#include "rvslognoderec.h"
-#include "rvsoptions.h"
+#include "include/rvstrace.h"
+#include "include/rvslognode.h"
+#include "include/rvslognodestring.h"
+#include "include/rvslognodeint.h"
+#include "include/rvslognoderec.h"
 
 using std::cerr;
 using std::cout;
@@ -53,6 +53,8 @@ std::mutex  rvs::logger::cout_mutex;
 std::mutex  rvs::logger::log_mutex;
 bool  rvs::logger::bStop;
 uint16_t rvs::logger::stop_flags;
+bool rvs::logger::b_quiet;
+char rvs::logger::log_file[1024];
 
 const char*  rvs::logger::loglevelname[] = {
   "NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
@@ -75,6 +77,10 @@ void rvs::logger::append(const bool flag) {
  */
 bool rvs::logger::append() {
   return append_m;
+}
+
+void rvs::logger::set_log_file(const std::string& fname) {
+    strncpy(log_file, fname.c_str(), sizeof(log_file));
 }
 
 /**
@@ -171,14 +177,19 @@ int rvs::logger::Log(const char* Message, const int LogLevel) {
  */
 int rvs::logger::LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec) {
+  DTRACE_
   // stop logging requested?
   if (bStop) {
-    if (stop_flags)
+    DTRACE_
+    if (stop_flags) {
+      DTRACE_
       // just return
       return 0;
+    }
   }
 
   if (LogLevel < lognone || LogLevel > logtrace) {
+    DTRACE_
     char buff[128];
     snprintf(buff, sizeof(buff), "unknown logging level: %d", LogLevel);
     Err(buff, "CLI");
@@ -186,19 +197,24 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   }
 
   // log level too high?
-  if (LogLevel > loglevel_m)
+  if (LogLevel > loglevel_m) {
+    DTRACE_
     return 0;
+  }
 
   uint32_t   secs;
   uint32_t   usecs;
 
   if (Sec|uSec) {
+    DTRACE_
     secs = Sec;
     usecs = uSec;
   } else {
+    DTRACE_
     get_ticks(&secs, &usecs);
   }
 
+  DTRACE_
   char  buff[64];
   snprintf(buff, sizeof(buff), "%6d.%-6d", secs, usecs);
 
@@ -210,24 +226,32 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   row += Message;
 
   // if no quiet option given, output to cout
-  if (!rvs::options::has_option("-q")) {
+  if (!b_quiet) {
+    DTRACE_
     // lock cout_mutex for the duration of this block
     std::lock_guard<std::mutex> lk(cout_mutex);
     cout << row << '\n';
   }
 
   // this stream does not output JSON
-  if (to_json())
+  if (to_json()) {
+    DTRACE_
     return 0;
+  }
 
+  DTRACE_
   // send to file if requested
   if (isfirstrecord_m) {
+    DTRACE_
     isfirstrecord_m = false;
   } else {
+    DTRACE_
     row = RVSENDL + row;
   }
+  DTRACE_
   ToFile(row);
 
+  DTRACE_
   return 0;
 }
 
@@ -306,14 +330,17 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
 
   // do not pre-pend "," separator for the first row
   std::string row;
-  if (isfirstrecord_m) {
-    DTRACE_
-    isfirstrecord_m = false;
-  } else {
+  if (append_m) {
     DTRACE_
     row = ",";
+  } else {
+    DTRACE_
+    if (!isfirstrecord_m) {
+      DTRACE_
+      row = ",";
+    }
   }
-
+  DTRACE_
   // get JSON formatted log record
   row += r->ToJson("  ");
 
@@ -323,6 +350,10 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   // dealloc memory
   delete r;
 
+  if (isfirstrecord_m) {
+    DTRACE_
+    isfirstrecord_m = false;
+  }
   DTRACE_
   // return OK
   return 0;
@@ -346,8 +377,8 @@ int rvs::logger::ToFile(const std::string& Row) {
       return 0;
   }
 
-  std::string logfile;
-  if (!rvs::options::has_option("-l", &logfile))
+  std::string logfile(log_file);
+  if (logfile == "")
     return -1;
 
   std::fstream fs;
@@ -371,8 +402,8 @@ int rvs::logger::ToFile(const std::string& Row) {
  *
  */
 int rvs::logger::JsonPatchAppend() {
-  std::string logfile;
-  if (!rvs::options::has_option("-l", &logfile))
+  std::string logfile(log_file);
+  if (logfile == "")
     return -1;
 
   FILE * pFile;
@@ -381,7 +412,7 @@ int rvs::logger::JsonPatchAppend() {
     return -1;
   }
   fseek(pFile , -1 , SEEK_END);
-  fputs("," , pFile);
+  fputs(" " , pFile);
   fclose(pFile);
   return 0;
 }
@@ -457,16 +488,16 @@ void  rvs::logger::AddNode(void* Parent, void* Child) {
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::logger::initialize() {
+int rvs::logger::init_log_file() {
   isfirstrecord_m = true;
   bStop = false;
   stop_flags = 0;
 
   std::string row;
-  std::string logfile;
+  std::string logfile(log_file);
 
   // if no logg to file requested, just return
-  if (!rvs::options::has_option("-l", &logfile))
+  if (logfile == "")
     return 0;
 
   if (append()) {
@@ -504,7 +535,8 @@ int rvs::logger::initialize() {
  */
 int rvs::logger::terminate() {
   // if no logg to file requested, just return
-  if (!rvs::options::has_option("-l"))
+  std::string logfile(log_file);
+  if (logfile == "")
     return 0;
 
   std::string row(RVSENDL);

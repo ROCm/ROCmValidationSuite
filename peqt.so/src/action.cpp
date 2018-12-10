@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 #include <string>
 #include <vector>
@@ -39,13 +39,13 @@ extern "C" {
 }
 #endif
 
-#include "pci_caps.h"
+#include "include/pci_caps.h"
 
-#include "rvs_key_def.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvs_module.h"
-#include "rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvs_module.h"
+#include "include/rvsloglp.h"
 
 #define CHAR_BUFF_MAX_SIZE              1024
 #define PCI_DEV_NUM_CAPABILITIES        14
@@ -107,7 +107,7 @@ const uint8_t pb_op_power_rails_encoding[] = {0, 1, 2, 7};
 /**
  * @brief default class constructor
  */
-action::action() {
+peqt_action::peqt_action() {
     bjson = false;
     json_root_node = NULL;
 }
@@ -115,7 +115,7 @@ action::action() {
 /**
  * class destructor
  */
-action::~action() {
+peqt_action::~peqt_action() {
     property.clear();
 }
 
@@ -127,7 +127,7 @@ action::~action() {
  * @param gpu_id unique gpu id
  * @return false if regex check failed, true otherwise
  */
-bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
+bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
         uint16_t gpu_id) {
     char buff[CHAR_BUFF_MAX_SIZE];
     string prop_name, msg;
@@ -265,28 +265,20 @@ bool action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
  * @brief runs the whole PEQT logic
  * @return run result
  */
-int action::run(void) {
+int peqt_action::run(void) {
     string msg;
     map<string, string>::iterator it;  // module's properties map iterator
     bool pci_infra_qual_result = true;  // PCI qualification result
     bool amd_gpus_found = false;
-    bool device_all_selected = false;
-    bool device_id_filtering = false;
-    int error = 0;
-    uint16_t deviceid = 0;
-    vector<uint16_t> gpus_location_id;
-    vector<uint16_t> gpus_id;
     uint8_t i;
 
     struct pci_access *pacc;
     struct pci_dev *dev;
 
     // get the action name
-    rvs::actionbase::property_get_action_name(&error);
-    if (error == 2) {
-      msg = "action field is missing in gst module";
-      rvs::lp::Err(msg, MODULE_NAME);
-      return -1;
+    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+      rvs::lp::Err("Action name missing", MODULE_NAME);
+      return 1;
     }
 
     bjson = false;  // already initialized in the default constructor
@@ -309,43 +301,27 @@ int action::run(void) {
     }
 
     // get <device> property value (a list of gpu id)
-    device_all_selected = property_get_device(&error);
-    if (error) {
-        // log the error
-        msg = YAML_DEVICE_PROPERTY_ERROR;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-        // log the module's result (FALSE) and abort PCIe qualification check
-        // (<device> parameter is mandatory)
-        msg = PEQT_RESULT_FAIL_MESSAGE;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);;
-
-        return -1;  // PCIe qualification check cannot continue
+    if (int sts = property_get_device()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device' key.";
+        break;
+      }
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      return -1;
     }
 
-    // get the <deviceid> property value
-    int devid;
-    std::string val;
-    if (has_property(RVS_CONF_DEVICEID_KEY, &val)) {
-    error = property_get_int<int>(RVS_CONF_DEVICEID_KEY, &devid);
-    if (error == 0) {
-        if (devid != -1) {
-            deviceid = static_cast<uint16_t>(devid);
-            device_id_filtering = true;
-        }
-    } else {
-        // log the error
-        msg = YAML_DEVICEID_PROPERTY_ERROR;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-        // log the module's result (FALSE) and abort PCIe qualification check
-        // (<device> parameter is mandatory)
-        msg = PEQT_RESULT_FAIL_MESSAGE;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-        return -1;  // PCIe qualification check cannot continue
+    // get the <deviceid> property value if provided
+    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                  &property_device_id, 0u)) {
+      msg = "Invalid 'deviceid' key value.";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      return -1;
     }
-    }
+
 
     // get the pci_access structure
     pacc = pci_alloc();
@@ -397,52 +373,35 @@ int action::run(void) {
 
     // iterate over devices
     for (dev = pacc->devices; dev; dev = dev->next) {
-        // fill in the info
-        pci_fill_info(dev,
-                PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
-                | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
+      // fill in the info
+      pci_fill_info(dev,
+              PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
+              | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
 
-        // computes the actual dev's location_id (sysfs entry)
-        uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
-                | (dev->func));
+      // computes the actual dev's location_id (sysfs entry)
+      uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
+              | (dev->func));
 
         // check if this pci_dev corresponds to one of the AMD GPUs
-        int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
+      uint16_t gpu_id;
+      // if not and AMD GPU just continue
+      if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+        continue;
 
-        if (-1 != gpu_id) {
-            // that should be an AMD GPU
+      // check for deviceid filtering
+      if (property_device_id > 0 && dev->device_id != property_device_id)
+        continue;
 
-            // check for deviceid filtering
-            if (!device_id_filtering
-                    || (device_id_filtering && dev->device_id == deviceid)) {
-                // check if the GPU is part of the PCIe check
-                // (either device: all or the gpu_id is in
-                // the device: <gpu id> list
-
-                bool cur_gpu_selected = false;
-
-                if (device_all_selected) {
-                    cur_gpu_selected = true;
-                } else {
-                    // search for this gpu in the list
-                    // provided under the <device> property
-                    vector<string>::iterator it_gpu_id = find(
-                            device_prop_gpu_id_list.begin(),
-                            device_prop_gpu_id_list.end(),
-                            std::to_string(gpu_id));
-
-                    if (it_gpu_id != device_prop_gpu_id_list.end())
-                        cur_gpu_selected = true;
-                }
-
-                if (cur_gpu_selected) {
-                    amd_gpus_found = true;
-                    if (!get_gpu_all_pcie_capabilities(dev,
-                        static_cast<uint16_t>(gpu_id)))
-                        pci_infra_qual_result = false;
-                }
-            }
+      if (!property_device_all) {
+        if (find(property_device.begin(), property_device.end(), gpu_id) ==
+                 property_device.end()) {
+            continue;
         }
+      }
+
+      amd_gpus_found = true;
+      if (!get_gpu_all_pcie_capabilities(dev, gpu_id))
+        pci_infra_qual_result = false;
     }
 
     pci_cleanup(pacc);

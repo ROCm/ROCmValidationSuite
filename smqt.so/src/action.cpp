@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -40,10 +40,11 @@ extern "C" {
 }
 #endif
 
-#include "rvs_module.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvsloglp.h"
+#include "include/rvs_key_def.h"
+#include "include/rvs_module.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvsloglp.h"
 #define MODULE_NAME "SMQT"
 
 using std::string;
@@ -62,7 +63,8 @@ ulong bar1_size, bar1_base_addr, bar2_size, bar2_base_addr;
 ulong bar4_size, bar4_base_addr, bar5_size;
 
 // Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
-string action::pretty_print(ulong bytes, string action_name, string bar_name) {
+string smqt_action::pretty_print(ulong bytes, uint16_t gpu_id,
+                            string action_name, string bar_name) {
   std::string suffix[5] = { " B", " KB", " MB", " GB", " TB"};
   std::stringstream ss;
 
@@ -72,17 +74,18 @@ string action::pretty_print(ulong bytes, string action_name, string bar_name) {
     s++;
     count /= 1024;
   }
-  ss << "[" << action_name << "]  smqt " << bar_name << "      "\
+  ss << "[" << action_name << "]  smqt " << gpu_id << " " <<
+  bar_name << "      "
   << bytes << " (" << std::fixed << std::setprecision(2) <<
   count << suffix[s] << ")";
 
   return ss.str();
 }
 
-action::action() {
+smqt_action::smqt_action() {
 }
 
-action::~action() {
+smqt_action::~smqt_action() {
   property.clear();
 }
 
@@ -91,52 +94,78 @@ action::~action() {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool action::get_all_common_config_keys() {
+bool smqt_action::get_all_common_config_keys() {
   string msg, sdevid, sdev;
-  int error;
+
   // get the action name
-  rvs::actionbase::property_get_action_name(&error);
-  if (error == 2) {
-    msg = "action field is missing in smqt module";
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME);
+    return false;
+  }
+
+  // get <device> property value (a list of gpu id)
+  if (int sts = property_get_device()) {
+    switch (sts) {
+    case 1:
+      msg = "Invalid 'device' key value.";
+      break;
+    case 2:
+      msg = "Missing 'device' key.";
+      break;
+    }
     rvs::lp::Err(msg, MODULE_NAME, action_name);
     return -1;
   }
-  // get <device> property value (a list of gpu id)
-  if (has_property("device", &sdev)) {
-    property_get_device(&error);
-    if (error) {  // log the error & abort GST
-      string msg = "invalid 'device' key value "  + sdev;
-      rvs::lp::Err(msg, MODULE_NAME, action_name);
-      return false;
-    }
-  } else {
-    string msg = "key 'device' was not found";
+
+  // get the <deviceid> property value if provided
+  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                &property_device_id, 0u)) {
+    msg = "Invalid 'deviceid' key value.";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
-    return false;
+    return -1;
   }
+
 
   return true;
 }
 
+#define SMQT_FETCH_AND_CHECK(bar) \
+err = property_get_int<ulong>(#bar, & bar); \
+switch (err) { \
+  case 1: msg = "Invalid '#bar' key"; \
+    rvs::lp::Err(msg, MODULE_NAME, action_name); \
+    return false; \
+  case 2: msg = "Missing '#bar' key"; \
+    rvs::lp::Err(msg, MODULE_NAME, action_name); \
+    return false; \
+}
 
-bool action::get_all_smqt_config_keys() {
+bool smqt_action::get_all_smqt_config_keys() {
   int err = 0;
-  err = property_get_int<ulong>("bar1_req_size", &bar1_req_size);
-  err = property_get_int<ulong>("bar2_req_size", &bar2_req_size);
-  err = property_get_int<ulong>("bar4_req_size", &bar4_req_size);
-  err = property_get_int<ulong>("bar5_req_size", &bar5_req_size);
-  err = property_get_int<ulong>("bar1_base_addr_min", &bar1_base_addr_min);
-  err = property_get_int<ulong>("bar2_base_addr_min", &bar2_base_addr_min);
-  err = property_get_int<ulong>("bar4_base_addr_min", &bar4_base_addr_min);
-  err = property_get_int<ulong>("bar1_base_addr_max", &bar1_base_addr_max);
-  err = property_get_int<ulong>("bar2_base_addr_max", &bar2_base_addr_max);
-  err = property_get_int<ulong>("bar4_base_addr_max", &bar4_base_addr_max);
+  std::string msg;
 
-  if (err == 0) {
-    return true;
-  } else {
-    return false;
-  }
+  SMQT_FETCH_AND_CHECK(bar1_req_size)
+  SMQT_FETCH_AND_CHECK(bar2_req_size)
+  SMQT_FETCH_AND_CHECK(bar4_req_size)
+  SMQT_FETCH_AND_CHECK(bar5_req_size)
+  SMQT_FETCH_AND_CHECK(bar1_base_addr_min)
+  SMQT_FETCH_AND_CHECK(bar2_base_addr_min)
+  SMQT_FETCH_AND_CHECK(bar4_base_addr_min)
+  SMQT_FETCH_AND_CHECK(bar1_base_addr_max)
+  SMQT_FETCH_AND_CHECK(bar2_base_addr_max)
+  SMQT_FETCH_AND_CHECK(bar4_base_addr_max)
+//   err = property_get_int<ulong>("bar1_req_size", &bar1_req_size);
+//   err = property_get_int<ulong>("bar2_req_size", &bar2_req_size);
+//   err = property_get_int<ulong>("bar4_req_size", &bar4_req_size);
+//   err = property_get_int<ulong>("bar5_req_size", &bar5_req_size);
+//   err = property_get_int<ulong>("bar1_base_addr_min", &bar1_base_addr_min);
+//   err = property_get_int<ulong>("bar2_base_addr_min", &bar2_base_addr_min);
+//   err = property_get_int<ulong>("bar4_base_addr_min", &bar4_base_addr_min);
+//   err = property_get_int<ulong>("bar1_base_addr_max", &bar1_base_addr_max);
+//   err = property_get_int<ulong>("bar2_base_addr_max", &bar2_base_addr_max);
+//   err = property_get_int<ulong>("bar4_base_addr_max", &bar4_base_addr_max);
+
+  return true;
 }
 /**
  * @brief Implements action functionality
@@ -144,8 +173,8 @@ bool action::get_all_smqt_config_keys() {
  * @return 0 - success, non-zero otherwise
  * */ 
 
-int action::run(void) {
-  bool pass = true;
+int smqt_action::run(void) {
+  bool global_pass = true;
   string msg;
   struct pci_access *pacc;
 
@@ -174,6 +203,7 @@ int action::run(void) {
 
   // iterate over devices
   for (dev = pacc->devices; dev; dev = dev->next) {
+    bool pass = true;
     // fil in the info
     pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES \
     | PCI_FILL_CLASS | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
@@ -181,11 +211,25 @@ int action::run(void) {
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id = ((((uint16_t)(dev->bus)) << 8) | (dev->func));
 
-    int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-
-    // if the device is not in the list, move on
-    if (-1 == gpu_id)
+    uint16_t gpu_id;
+    // if not and AMD GPU just continue
+    if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
       continue;
+
+    // filter by device id if needed
+    if (property_device_id > 0) {
+      uint16_t dev_id;
+      rvs::gpulist::gpu2device(gpu_id, &dev_id);
+      if (property_device_id != dev_id)
+        continue;
+    }
+
+    // filter by list of devices if needed
+    if (!property_device_all) {
+      if (property_device.end() ==
+          std::find(property_device.begin(), property_device.end(), gpu_id))
+        continue;
+    }
 
     // get actual values
     bar1_base_addr = dev->base_addr[0];
@@ -197,8 +241,6 @@ int action::run(void) {
     bar5_size = dev->rom_size;
 
     // check if values are as expected
-    pass = true;
-
     if (bar1_base_addr < bar1_base_addr_min ||
         bar1_base_addr > bar1_base_addr_max)
       pass = false;
@@ -223,29 +265,33 @@ int action::run(void) {
     char hex_value[30];
 
     if (pass)
-      pass_str = "pass";
+      pass_str = "true";
     else
-      pass_str = "fail";
+      pass_str = "false";
 
     // formating bar1 size for print
-    msgs1 = pretty_print(bar1_size, action_name, "bar1_size");
+    msgs1 = pretty_print(bar1_size, gpu_id, action_name, "bar1_size");
 
     // formating bar2 size for print
-    msgs2 = pretty_print(bar2_size, action_name, "bar2_size");
+    msgs2 = pretty_print(bar2_size, gpu_id, action_name, "bar2_size");
 
     // formating bar4 size for print
-    msgs4 = pretty_print(bar4_size, action_name, "bar4_size");
+    msgs4 = pretty_print(bar4_size, gpu_id, action_name, "bar4_size");
 
     // formating bar5 size for print
-    msgs5 = pretty_print(bar5_size, action_name, "bar5_size");
+    msgs5 = pretty_print(bar5_size, gpu_id, action_name, "bar5_size");
 
     snprintf(hex_value, sizeof(hex_value), "%lX", bar1_base_addr);
-    msga1 = "[" + action_name + "] " + " smqt bar1_base_addr " + hex_value;
+    msga1 = "[" + action_name + "] " + " smqt " + std::to_string(gpu_id) +
+    " bar1_base_addr " + hex_value;
     snprintf(hex_value, sizeof(hex_value), "%lX", bar2_base_addr);
-    msga2 = "[" + action_name + "] " + " smqt bar2_base_addr " + hex_value;
+    msga2 = "[" + action_name + "] " + " smqt " + std::to_string(gpu_id) +
+    " bar2_base_addr " + hex_value;
     snprintf(hex_value, sizeof(hex_value), "%lX", bar4_base_addr);
-    msga4 = "[" + action_name + "] " + " smqt bar4_base_addr " + hex_value;
-    pmsg = "[" + action_name + "] " + " smqt " + pass_str;
+    msga4 = "[" + action_name + "] " + " smqt " + std::to_string(gpu_id) +
+    " bar4_base_addr " + hex_value;
+    pmsg = "[" + action_name + "] " + " smqt "  + std::to_string(gpu_id) +
+    " " +pass_str;
 
     void* r = rvs::lp::LogRecordCreate("SMQT", action_name.c_str(),
                                        rvs::loginfo, sec, usec);
@@ -258,6 +304,7 @@ int action::run(void) {
     rvs::lp::Log(msga4, rvs::loginfo, sec, usec);
     rvs::lp::Log(msgs5, rvs::loginfo, sec, usec);
     rvs::lp::Log(pmsg, rvs::logresults);
+    rvs::lp::AddInt(r, "gpu", gpu_id);
     rvs::lp::AddString(r, "bar1_size", std::to_string(bar1_size));
     rvs::lp::AddString(r, "bar1_base_addr", std::to_string(bar1_base_addr));
     rvs::lp::AddString(r, "bar2_size", std::to_string(bar2_size));
@@ -267,6 +314,8 @@ int action::run(void) {
     rvs::lp::AddString(r, "bar5_size", std::to_string(bar4_size));
     rvs::lp::AddString(r, "pass", std::to_string(pass));
     rvs::lp::LogRecordFlush(r);
+    if (!pass)
+      global_pass = false;
   }
-  return pass;
+  return global_pass ? 0 : -1;
 }

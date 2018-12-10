@@ -61,5 +61,10 @@ add_test(NAME conf.gpup.7
 
 add_test(NAME conf.gpup.8
   WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gpup8.conf
+  COMMAND rvsfail -d 3 -c conf/gpup8.conf
+)
+
+add_test(NAME conf.gpup.9
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvsfail -d 3 -c conf/gpup9.conf
 )
