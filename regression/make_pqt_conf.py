@@ -7,8 +7,6 @@ import os
 import itertools
 import sys
 
-from random import seed
-from random import random
 from random import sample
 
 # global variables
