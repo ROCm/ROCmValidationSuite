@@ -36,6 +36,8 @@ set ( RVS_TARGET "${RVS}" )
 
 project ( ${RVS_TARGET} )
 
+message(STATUS "MODULE: ${RVS}")
+
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
@@ -76,29 +78,33 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )
 
 ## define include directories
-include_directories(include pci ../include)
+include_directories(./ ../ pci ${UT_INC})
 
 ## define source files
 set(SOURCES
-    ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvsloglp.cpp ../src/rvs_util.cpp
+    ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvs_util.cpp
     src/rvs_module.cpp src/action.cpp src/worker.cpp)
 
 ## define target
-add_library( ${RVS_TARGET} SHARED ${SOURCES})
+add_library( ${RVS_TARGET} SHARED ${SOURCES} ../src/rvsloglp.cpp )
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
 
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD 
-COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -s ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+
+add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
+COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
 
 install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 
 # TEST SECTION
 
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+

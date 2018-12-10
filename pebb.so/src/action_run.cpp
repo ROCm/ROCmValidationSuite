@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 extern "C" {
   #include <pci/pci.h>
@@ -38,17 +38,18 @@ extern "C" {
 #include <vector>
 #include <thread>
 
-#include "rvs_key_def.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
-#include "rvshsa.h"
-#include "rvstimer.h"
 #include "hsa/hsa.h"
 
-#include "rvs_module.h"
-#include "worker.h"
+#include "include/rvs_key_def.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvshsa.h"
+#include "include/rvstimer.h"
+
+#include "include/rvs_module.h"
+#include "include/worker.h"
 
 #define MODULE_NAME "pebb"
 #define MODULE_NAME_CAPS "PEBB"
@@ -64,7 +65,7 @@ using std::vector;
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::run() {
+int pebb_action::run() {
   int sts;
   string msg;
 
@@ -79,8 +80,8 @@ int pebbaction::run() {
     return -1;
 
   // log_interval must be less than duration
-  if (prop_log_interval > 0 && gst_run_duration_ms > 0) {
-    if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
+  if (property_log_interval > 0 && property_duration > 0) {
+    if (property_log_interval > property_duration) {
       msg = "log_interval must be less than duration";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
@@ -94,11 +95,10 @@ int pebbaction::run() {
   }
 
   // define timers
-  rvs::timer<pebbaction> timer_running(&pebbaction::do_running_average, this);
-  rvs::timer<pebbaction> timer_final(&pebbaction::do_final_average, this);
+  rvs::timer<pebb_action> timer_running(&pebb_action::do_running_average, this);
+  rvs::timer<pebb_action> timer_final(&pebb_action::do_final_average, this);
 
-  unsigned int iter = gst_run_count > 0 ? gst_run_count : 1;
-//  unsigned int step = gst_run_count == 0 ? 0 : 1;
+  unsigned int iter = property_count > 0 ? property_count : 1;
   unsigned int step = 1;
 
   do {
@@ -106,20 +106,20 @@ int pebbaction::run() {
     brun = true;
 
     // start timers
-    if (gst_run_duration_ms) {
+    if (property_duration) {
       RVSTRACE_
-      timer_final.start(gst_run_duration_ms, true);  // ticks only once
+      timer_final.start(property_duration, true);  // ticks only once
     }
 
-    if (prop_log_interval) {
+    if (property_log_interval) {
       RVSTRACE_
-      timer_running.start(prop_log_interval);        // ticks continuously
+      timer_running.start(property_log_interval);        // ticks continuously
     }
 
     do {
       RVSTRACE_
 
-      if (gst_runs_parallel) {
+      if (property_parallel) {
         sts = run_parallel();
       } else {
         sts = run_single();
@@ -133,11 +133,10 @@ int pebbaction::run() {
     iter -= step;
 
     // insert wait between runs if needed
-    if (iter > 0 && gst_run_wait_ms > 0) {
+    if (iter > 0 && property_wait > 0) {
       RVSTRACE_
-      sleep(gst_run_wait_ms);
+      sleep(property_wait);
     }
-
   } while (iter && !rvs::lp::Stopping());
 
   RVSTRACE_
@@ -157,7 +156,7 @@ int pebbaction::run() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::run_single() {
+int pebb_action::run_single() {
   RVSTRACE_
   int sts = 0;
 
@@ -167,7 +166,7 @@ int pebbaction::run_single() {
     (*it)->do_transfer();
 
     // if log interval is zero, print current results immediately
-    if (prop_log_interval == 0) {
+    if (property_log_interval == 0) {
       print_running_average(*it);
     }
 
@@ -189,7 +188,7 @@ int pebbaction::run_single() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbaction::run_parallel() {
+int pebb_action::run_parallel() {
   RVSTRACE_
 
   // start all worker threads

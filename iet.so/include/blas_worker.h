@@ -28,8 +28,8 @@
 #include <string>
 #include <memory>
 #include <mutex>
-#include "rvsthreadbase.h"
-#include "rvs_blas.h"
+#include "include/rvsthreadbase.h"
+#include "include/rvs_blas.h"
 
 /**
  * @class blas_worker

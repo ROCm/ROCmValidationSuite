@@ -17,13 +17,13 @@ cmake_file_name = "rand_tests.cmake"
 gpu_ids   = set()
 device_id = set()
 for root, dirs, files in os.walk('/sys/class/kfd/kfd/topology/nodes'):
-	for name in files:
-		if name == 'gpu_id':
-			gpuid = os.popen('cat {}'.format(os.path.join(root, name))).read().rstrip()
-			if gpuid not in ['0', '']:
-				devid = os.popen("grep 'device_id' {} | cut -f 2 -d ' '".format(os.path.join(root, 'properties'))).read().rstrip()
-				device_id.add(int(devid))
-				gpu_ids.add(int(gpuid))
+    for name in files:
+        if name == 'gpu_id':
+            gpuid = os.popen('cat {}'.format(os.path.join(root, name))).read().rstrip()
+            if gpuid not in ['0', '']:
+                devid = os.popen("grep 'device_id' {} | cut -f 2 -d ' '".format(os.path.join(root, 'properties'))).read().rstrip()
+                device_id.add(int(devid))
+                gpu_ids.add(int(gpuid))
 
 log_interval   = [1000]
 duration       = [10000]
@@ -41,10 +41,10 @@ conf_location = build_location + "/rvs/conf/"
 cmake_file_location = build_location + "/" + module_name + ".so/" + cmake_file_name
 
 try:
-	cmake_file = open(cmake_file_location, "w")
+    cmake_file = open(cmake_file_location, "w")
 except OSError:
-	print('Could not open file {} for writing. Terminating...'.format(cmake_file_location))
-	sys.exit(1)
+    print('Could not open file {} for writing. Terminating...'.format(cmake_file_location))
+    sys.exit(1)
 
 cmake_file_header = \
 """###################################################################################
@@ -106,10 +106,10 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parralel_f, d
         filename = conf_location + "rand_" + module_name + str(counter) + ".conf"
         print('Iteration is {}, working on conf file {}'.format(counter, filename))
         try:
-        	f = open(filename, "w")
+            f = open(filename, "w")
         except OSError:
-        	print('Could not open file {} for writing. Terminating...'.format(filename))
-        	sys.exit(1)
+            print('Could not open file {} for writing. Terminating...'.format(filename))
+            sys.exit(1)
 
         f.write('actions:\n')
         f.write('- name: action_1 \n')
@@ -125,7 +125,7 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parralel_f, d
                 f.write(' {}'.format(p))
             f.write('\n')
         else:
-        	f.write('  peers: all\n')
+            f.write('  peers: all\n')
 
         # device id is optional parameter
         if device_id_f > -1:

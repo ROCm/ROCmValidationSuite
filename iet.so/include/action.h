@@ -39,7 +39,7 @@ extern "C" {
 #include <memory>
 
 
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 #include "rocm_smi/rocm_smi.h"
 
 using std::vector;
@@ -56,7 +56,7 @@ struct gpu_hwmon_info {
 };
 
 /**
- * @class action
+ * @class iet_action
  * @ingroup IET
  *
  * @brief IET action implementation class
@@ -65,10 +65,10 @@ struct gpu_hwmon_info {
  * in its run() method.
  *
  */
-class action: public rvs::actionbase {
+class iet_action: public rvs::actionbase {
  public:
-    action();
-    virtual ~action();
+    iet_action();
+    virtual ~iet_action();
 
     virtual int run(void);
 
@@ -87,17 +87,8 @@ class action: public rvs::actionbase {
     int iet_max_violations;
     //! sampling rate for the target_power
     uint64_t iet_sample_interval;
-    //! time interval at which the module reports the GPU's power
-    uint64_t iet_log_interval;
     //! matrix size for SGEMM
     uint64_t iet_matrix_size;
-
-    //! TRUE if device config key is "all"
-    bool device_all_selected;
-    //! TRUE if deviceid filtering was enabled
-    bool device_id_filtering;
-    //! GPU device type config key value
-    uint16_t deviceid;
 
     //! list of GPUs (along with some identification data) which are
     //! selected for EDPp test
@@ -111,7 +102,6 @@ class action: public rvs::actionbase {
     void property_get_iet_tolerance(int *error);
     void property_get_iet_max_violations(int *error);
     void property_get_iet_sample_interval(int *error);
-    void property_get_iet_log_interval(int *error);
     void property_get_iet_matrix_size(int *error);
 
     bool get_all_iet_config_keys(void);
@@ -121,7 +111,7 @@ class action: public rvs::actionbase {
     * @return true if no fatal error occured, false otherwise
     */
     bool get_all_common_config_keys(void);
-    bool add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id, 
+    bool add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
                               int hip_num_gpu_devices);
 
 /**

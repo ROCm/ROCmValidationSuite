@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "worker_b2b.h"
+#include "include/worker_b2b.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,11 +40,11 @@ extern "C" {
 #include <iostream>
 #include <mutex>
 
-#include "rvs_module.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvsloglp.h"
-#include "rvshsa.h"
+#include "include/rvs_module.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvshsa.h"
 
 using std::string;
 using std::vector;
@@ -66,7 +66,7 @@ pebbworker_b2b::~pebbworker_b2b() {}
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbworker_b2b::initialize(int Src, int Dst,
+int pebbworker_b2b::initialize(uint16_t Src, uint16_t Dst,
                                bool h2d, bool d2h, size_t Size) {
   pebbworker::initialize(Src, Dst, h2d, d2h);
 

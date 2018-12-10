@@ -26,10 +26,10 @@
 #define SMQT_SO_INCLUDE_ACTION_H_
 
 #include <string>
-#include "rvsactionbase.h"
+#include "include/rvsactionbase.h"
 
 /**
- * @class action
+ * @class smqt_action
  * @ingroup SMQT
  *
  * @brief SMQT action implementation class
@@ -38,14 +38,14 @@
  * in its run() method.
  *
  */
-class action : public rvs::actionbase {
+class smqt_action : public rvs::actionbase {
  public:
-    action();
-    virtual ~action();
+    smqt_action();
+    virtual ~smqt_action();
     virtual int run(void);
  private:
     ulong  get_property(std::string);
-    std::string pretty_print(ulong, std::string, std::string);
+    std::string pretty_print(ulong, uint16_t, std::string, std::string);
     bool get_all_common_config_keys();
     bool get_all_smqt_config_keys();
     std::string action_name;

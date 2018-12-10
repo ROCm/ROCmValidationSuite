@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "worker.h"
+#include "include/worker.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,11 +40,11 @@ extern "C" {
 #include <iostream>
 #include <mutex>
 
-#include "rvs_module.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvsloglp.h"
-#include "rvshsa.h"
+#include "include/rvs_module.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvshsa.h"
 #define MODULE_NAME "PQT"
 
 
@@ -111,7 +111,7 @@ void pqtworker::stop() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtworker::initialize(int Src, int Dst, bool Bidirect) {
+int pqtworker::initialize(uint16_t Src, uint16_t Dst, bool Bidirect) {
   src_node = Src;
   dst_node = Dst;
   bidirect = Bidirect;
@@ -192,7 +192,7 @@ int pqtworker::do_transfer() {
  * interval (in seconds)
  *
  * */
-void pqtworker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
+void pqtworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
                              size_t* Size, double* Duration) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
@@ -225,7 +225,7 @@ void pqtworker::get_running_data(int*    Src,  int*    Dst,     bool* Bidirect,
  * @param bReset [in] if 'true' set final totals to zero
  *
  * */
-void pqtworker::get_final_data(int*    Src,  int*    Dst,     bool* Bidirect,
+void pqtworker::get_final_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
                            size_t* Size, double* Duration, bool bReset) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);

@@ -47,6 +47,8 @@ set ( RVS_TARGET "${RVS}" )
 
 project ( ${RVS_TARGET} )
 
+message(STATUS "MODULE: ${RVS}")
+
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
@@ -104,13 +106,13 @@ endif()
 INCLUDE_DIRECTORIES(${ROCR_INC_DIR})
 
 # Add directories to look for library files to link 
-LINK_DIRECTORIES(${ROCR_LIB_DIR})
+LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCT_LIB_DIR})
 
 ## additional libraries
 set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )
 
 ## define include directories
-include_directories(include pci ../include)
+include_directories(./ ../ pci)
 
 ## define source files
 set(SOURCES ../src/rvsthreadbase.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp
@@ -127,13 +129,15 @@ set_target_properties(${RVS_TARGET} PROPERTIES
 
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${CORE_RUNTIME_TARGET} ${ROC_THUNK_NAME})
 
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD 
-COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -s ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
+COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
 
 install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 
 # TEST SECTION
 

@@ -26,6 +26,7 @@
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
 add_compile_options(-Wall -Wextra)
+add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
 
 set ( RVS "rcqt" )
 set ( RVS_PACKAGE "rvs-roct" )
@@ -33,6 +34,8 @@ set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
 
 project ( ${RVS_TARGET} )
+
+message(STATUS "MODULE: ${RVS}")
 
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
@@ -71,7 +74,7 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 ## define include directories
-include_directories(include ../include)
+include_directories(./ ../)
 
 ## define source files
 set(SOURCES src/rvs_module.cpp src/action.cpp
@@ -84,12 +87,14 @@ set_target_properties(${RVS_TARGET} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND rm -f ./lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -s ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
 
 install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 
 # TEST SECTION
 

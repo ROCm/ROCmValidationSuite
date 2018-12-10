@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "action.h"
+#include "include/action.h"
 
 extern "C" {
 #include <pci/pci.h>
@@ -37,16 +37,16 @@ extern "C" {
 #include <string>
 #include <vector>
 
-#include "rvs_key_def.h"
-#include "pci_caps.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
-#include "rvshsa.h"
-#include "rvstimer.h"
+#include "include/rvs_key_def.h"
+#include "include/pci_caps.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvshsa.h"
+#include "include/rvstimer.h"
 
-#include "rvs_module.h"
-#include "worker.h"
+#include "include/rvs_module.h"
+#include "include/worker.h"
 
 
 #define MODULE_NAME "pqt"
@@ -62,11 +62,11 @@ using std::vector;
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::run() {
+int pqt_action::run() {
   int sts;
   string msg;
 
-  rvs::lp::Log("int pqtaction::run()", rvs::logtrace);
+  rvs::lp::Log("int pqt_action::run()", rvs::logtrace);
 
   if (property.find("cli.-j") != property.end()) {
     bjson = true;
@@ -84,8 +84,8 @@ int pqtaction::run() {
   }
 
   // log_interval must be less than duration
-  if (prop_log_interval > 0 && gst_run_duration_ms > 0) {
-    if (static_cast<uint64_t>(prop_log_interval) > gst_run_duration_ms) {
+  if (property_log_interval > 0 && property_duration > 0) {
+    if (static_cast<uint64_t>(property_log_interval) > property_duration) {
       msg = "log_interval must be less than duration";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
@@ -107,11 +107,10 @@ int pqtaction::run() {
 
   RVSTRACE_
   // define timers
-  rvs::timer<pqtaction> timer_running(&pqtaction::do_running_average, this);
-  rvs::timer<pqtaction> timer_final(&pqtaction::do_final_average, this);
+  rvs::timer<pqt_action> timer_running(&pqt_action::do_running_average, this);
+  rvs::timer<pqt_action> timer_final(&pqt_action::do_final_average, this);
 
-  unsigned int iter = gst_run_count > 0 ? gst_run_count : 1;
-//  unsigned int step = gst_run_count == 0 ? 0 : 1;
+  unsigned int iter = property_count > 0 ? property_count : 1;
   unsigned int step = 1;
 
   do {
@@ -120,20 +119,20 @@ int pqtaction::run() {
     brun = true;
 
     // start timers
-    if (gst_run_duration_ms) {
+    if (property_duration) {
       RVSTRACE_
-      timer_final.start(gst_run_duration_ms, true);  // ticks only once
+      timer_final.start(property_duration, true);  // ticks only once
     }
 
-    if (prop_log_interval) {
+    if (property_log_interval) {
       RVSTRACE_
-      timer_running.start(prop_log_interval);        // ticks continuously
+      timer_running.start(property_log_interval);        // ticks continuously
     }
 
     do {
       RVSTRACE_
 
-      if (gst_runs_parallel) {
+      if (property_parallel) {
         sts = run_parallel();
       } else {
         sts = run_single();
@@ -147,9 +146,9 @@ int pqtaction::run() {
     iter -= step;
 
     // insert wait between runs if needed
-    if (iter > 0 && gst_run_wait_ms > 0) {
+    if (iter > 0 && property_wait > 0) {
       RVSTRACE_
-      sleep(gst_run_wait_ms);
+      sleep(property_wait);
     }
   } while (iter && !rvs::lp::Stopping());
 
@@ -173,7 +172,7 @@ int pqtaction::run() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::run_single() {
+int pqt_action::run_single() {
   RVSTRACE_
   int sts = 0;
 
@@ -183,7 +182,7 @@ int pqtaction::run_single() {
     (*it)->do_transfer();
 
     // if log interval is zero, print current results immediately
-    if (prop_log_interval == 0) {
+    if (property_log_interval == 0) {
       print_running_average(*it);
     }
 
@@ -205,7 +204,7 @@ int pqtaction::run_single() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtaction::run_parallel() {
+int pqt_action::run_parallel() {
   RVSTRACE_
 
   // start all worker threads

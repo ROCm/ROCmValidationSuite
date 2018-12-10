@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "rsmi_util.h"
+#include "include/rsmi_util.h"
 
 #include <cassert>
 

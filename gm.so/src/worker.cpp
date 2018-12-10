@@ -27,19 +27,19 @@ all
  *
  
 *******************************************************************************/
-#include "worker.h"
+#include "include/worker.h"
 
 #include <map>
 #include <string>
 #include <memory>
 #include <utility>
 
-#include "rvs_module.h"
-#include "gpu_util.h"
-#include "rvs_util.h"
-#include "rvsloglp.h"
-#include "rvstimer.h"
-#include "rsmi_util.h"
+#include "include/rvs_module.h"
+#include "include/gpu_util.h"
+#include "include/rvs_util.h"
+#include "include/rvsloglp.h"
+#include "include/rvstimer.h"
+#include "include/rsmi_util.h"
 
 #define MODULE_NAME_CAPS                "GM"
 
@@ -69,7 +69,7 @@ Worker::~Worker() {}
  * @brief Prints current metric values at every log_interval msec.
  */
 void Worker::do_metric_values() {
-  string msg;
+  std::string msg;
   unsigned int sec;
   unsigned int usec;
   void* r;
@@ -133,7 +133,7 @@ void Worker::run() {
 //  std::string val_str;
 //  std::vector<std::string> val_vec;
 
-  string msg;
+  std::string msg;
   rsmi_status_t status;
   rsmi_frequencies f;
   uint32_t sensor_ind = 0;
@@ -201,14 +201,16 @@ void Worker::run() {
     for (auto it = dv_ind.begin(); it != dv_ind.end(); it++) {
       uint32_t ix = it->first;
       int32_t gpuid = it->second;
-
+      RVSTRACE_
       if (bounds[GM_MEM_CLOCK].mon_metric) {
+        RVSTRACE_
         status = rsmi_dev_gpu_clk_freq_get(ix, RSMI_CLK_TYPE_MEM, &f);
         uint32_t mhz = f.current;
         met_value[ix].mem_clock = mhz;
         if (!(mhz >= bounds[GM_MEM_CLOCK].min_val && mhz <=
                         bounds[GM_MEM_CLOCK].max_val) &&
                         bounds[GM_MEM_CLOCK].check_bounds) {
+          RVSTRACE_
           // write info and increase number of violations
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                 std::to_string(gpuid) + " " +
@@ -217,22 +219,29 @@ void Worker::run() {
           log(msg.c_str(), rvs::loginfo);
           met_violation[ix].mem_clock_violation++;
           if (term) {
+            RVSTRACE_
             if (force) {
+              RVSTRACE_
               // stop logging
               rvs::lp::Stop(1);
               // force exit
               exit(EXIT_FAILURE);
             } else {
+              RVSTRACE_
               // just signal stop processing
               rvs::lp::Stop(0);
             }
             brun = false;
           }
+          RVSTRACE_
         }
+        RVSTRACE_
         met_avg[ix].av_mem_clock += mhz;
       }
+      RVSTRACE_
 
       if (bounds[GM_CLOCK].mon_metric) {
+        RVSTRACE_
         status = rsmi_dev_gpu_clk_freq_get(ix,
                               RSMI_CLK_TYPE_SYS, &f);
         uint32_t mhz = f.current;
@@ -240,6 +249,7 @@ void Worker::run() {
         if (!(mhz >= bounds[GM_CLOCK].min_val && mhz <=
                     bounds[GM_CLOCK].max_val) &&
                     bounds[GM_CLOCK].check_bounds) {
+          RVSTRACE_
           // write info
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
               std::to_string(met_avg[ix].gpu_id) + " " +
@@ -248,31 +258,41 @@ void Worker::run() {
           log(msg.c_str(), rvs::loginfo);
           met_violation[ix].clock_violation++;
           if (term) {
+            RVSTRACE_
             if (force) {
+              RVSTRACE_
               // stop logging
               rvs::lp::Stop(1);
               // force exit
               exit(EXIT_FAILURE);
             } else {
+              RVSTRACE_
               // just signal stop processing
               rvs::lp::Stop(0);
             }
+            RVSTRACE_
             brun = false;
           }
+          RVSTRACE_
         }
         met_avg[ix].av_clock += mhz;
+        RVSTRACE_
       }
 
+      RVSTRACE_
       if (bounds[GM_TEMP].mon_metric) {
+        RVSTRACE_
         status = rsmi_dev_temp_metric_get(ix, sensor_ind,
                         RSMI_TEMP_CURRENT, &temperature);
         if (status == RSMI_STATUS_SUCCESS) {
+          RVSTRACE_
           uint32_t temper = temperature/1000;
           met_value[ix].temp = temper;
           met_avg[ix].av_temp += temper;
           if (!(temper >= bounds[GM_TEMP].min_val && temper <=
                         bounds[GM_TEMP].max_val) &&
                         bounds[GM_TEMP].check_bounds) {
+            RVSTRACE_
             // write info
             msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                 std::to_string(met_avg[ix].gpu_id) + " " +
@@ -281,35 +301,48 @@ void Worker::run() {
             log(msg.c_str(), rvs::loginfo);
             met_violation[ix].temp_violation++;
             if (term) {
+              RVSTRACE_
               if (force) {
+                RVSTRACE_
                 // stop logging
                 rvs::lp::Stop(1);
                 // force exit
+                RVSTRACE_
                 exit(EXIT_FAILURE);
               } else {
+                RVSTRACE_
                 // just signal stop processing
                 rvs::lp::Stop(0);
               }
               brun = false;
+              RVSTRACE_
             }
+            RVSTRACE_
           }
+          RVSTRACE_
         } else {
+          RVSTRACE_
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
           std::to_string(met_avg[ix].gpu_id) + " " +
           GM_TEMP + " Not available";
           log(msg.c_str(), rvs::loginfo);
         }
+        RVSTRACE_
       }
 
+      RVSTRACE_
       if (bounds[GM_FAN].mon_metric) {
+        RVSTRACE_
         status = rsmi_dev_fan_speed_get(ix,
                                         sensor_ind, &speed);
         if (status == RSMI_STATUS_SUCCESS) {
+          RVSTRACE_
           met_value[ix].fan = speed;
           met_avg[ix].av_fan += speed;
           if (!(speed >= bounds[GM_FAN].min_val && speed <=
                       bounds[GM_FAN].max_val) &&
                       bounds[GM_FAN].check_bounds) {
+            RVSTRACE_
             // write info
             msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                   std::to_string(met_avg[ix].gpu_id) + " " +
@@ -318,34 +351,46 @@ void Worker::run() {
             log(msg.c_str(), rvs::loginfo);
             met_violation[ix].fan_violation++;
             if (term) {
+              RVSTRACE_
               if (force) {
+                RVSTRACE_
                 // stop logging
                 rvs::lp::Stop(1);
                 // force exit
                 exit(EXIT_FAILURE);
               } else {
+                RVSTRACE_
                 // just signal stop processing
                 rvs::lp::Stop(0);
               }
               brun = false;
+              RVSTRACE_
               break;
             }
+            RVSTRACE_
           }
+          RVSTRACE_
         } else {
+          RVSTRACE_
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
           std::to_string(met_avg[ix].gpu_id) + " " +
           GM_FAN + " Not available";
           log(msg.c_str(), rvs::loginfo);
         }
+        RVSTRACE_
       }
 
+      RVSTRACE_
       if (bounds[GM_POWER].mon_metric) {
+        RVSTRACE_
         status = rsmi_dev_power_ave_get(ix, sensor_ind, &power);
         met_value[ix].power = power;
         met_avg[ix].av_power += power;
         if (bounds[GM_POWER].check_bounds) {
+          RVSTRACE_
           if (power < bounds[GM_POWER].min_val * 1000000 ||
               power > bounds[GM_POWER].max_val * 1000000) {
+            RVSTRACE_
             // write info
             msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                   std::to_string(met_avg[ix].gpu_id) + " " +
@@ -354,25 +399,35 @@ void Worker::run() {
             log(msg.c_str(), rvs::loginfo);
             met_violation[ix].power_violation++;
             if (term) {
+              RVSTRACE_
               if (force) {
+                RVSTRACE_
                 // stop logging
                 rvs::lp::Stop(1);
                 // force exit
                 exit(EXIT_FAILURE);
               } else {
+                RVSTRACE_
                 // just signal stop processing
                 rvs::lp::Stop(0);
               }
               brun = false;
+              RVSTRACE_
             }
+            RVSTRACE_
           }
+          RVSTRACE_
         }
+        RVSTRACE_
       }
+      RVSTRACE_
     }
     count++;
     sleep(sample_interval);
+    RVSTRACE_
   }
 
+  RVSTRACE_
   timer_running.stop();
   sleep(200);
 
@@ -381,7 +436,8 @@ void Worker::run() {
 
   for (auto it = met_avg.begin();
         it != met_avg.end(); it++) {
-    // add string output
+    RVSTRACE_
+    // add std::string output
     msg = "[" + action_name + "] gm " +
         std::to_string((it->second).gpu_id) + " stopped";
     rvs::lp::Log(msg, rvs::logresults, sec, usec);
@@ -399,9 +455,10 @@ void Worker::run() {
  *
  * */
 void Worker::stop() {
+  RVSTRACE_
   rvs::lp::Log("[" + stop_action_name + "] gm in Worker::stop()",
                rvs::logtrace);
-  string msg;
+  std::string msg;
   unsigned int sec;
   unsigned int usec;
   void* r;
@@ -416,9 +473,12 @@ void Worker::stop() {
   sleep(200);
 
   if (count != 0) {
+    RVSTRACE_
     for (auto it = met_avg.begin(); it !=
             met_avg.end(); it++) {
+      RVSTRACE_
       if (bounds[GM_TEMP].mon_metric) {
+        RVSTRACE_
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " +
             GM_TEMP + " violations " +
@@ -431,7 +491,9 @@ void Worker::stop() {
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
       }
+      RVSTRACE_
       if (bounds[GM_CLOCK].mon_metric) {
+        RVSTRACE_
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " +
             GM_CLOCK + " violations " +
@@ -444,7 +506,9 @@ void Worker::stop() {
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
       }
+      RVSTRACE_
       if (bounds[GM_MEM_CLOCK].mon_metric) {
+        RVSTRACE_
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) +
             " " + GM_MEM_CLOCK + " violations " +
@@ -458,7 +522,9 @@ void Worker::stop() {
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
       }
+      RVSTRACE_
       if (bounds[GM_FAN].mon_metric) {
+        RVSTRACE_
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " + GM_FAN +" violations " +
             std::to_string(met_violation[it->first].fan_violation);
@@ -468,7 +534,9 @@ void Worker::stop() {
             std::to_string((it->second).av_fan/count) + "%";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
       }
+      RVSTRACE_
       if (bounds[GM_POWER].mon_metric) {
+        RVSTRACE_
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " +
             GM_POWER + " violations " +
@@ -482,8 +550,11 @@ void Worker::stop() {
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
       }
+      RVSTRACE_
     }
+    RVSTRACE_
   }
+  RVSTRACE_
   rvs::lp::LogRecordFlush(r);
 
   // wait a bit to make sure thread has exited

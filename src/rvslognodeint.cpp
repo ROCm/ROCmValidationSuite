@@ -24,7 +24,7 @@
  *******************************************************************************/
 #include <string>
 
-#include "rvslognodeint.h"
+#include "include/rvslognodeint.h"
 
 using std::string;
 

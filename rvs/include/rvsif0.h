@@ -26,8 +26,8 @@
 #define RVS_INCLUDE_RVSIF0_H_
 
 
-#include "rvsmodule_if0.h"
-#include "rvsif_base.h"
+#include "include/rvsmodule_if0.h"
+#include "include/rvsif_base.h"
 
 namespace rvs {
 
