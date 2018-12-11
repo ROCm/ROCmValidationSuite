@@ -36,13 +36,15 @@ Example:
 ```
     cmake -DRVS_ROCMSMI=0 -DRVS_ROCBLAS=1 ./ -B../build
 ```
+_**Note:**_ for more details on how to speed up your build and install rocBLAS
+localy, follow link [Building local rocBLAS](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite/wiki/Building-local-rocBLAS)
 
 ### Build package:
 
-    cd /path/to/build/folder
-    make package
+     cd ./build
+     make package
 
-_**Note:**_ based on your OS, only DEB or RPM package will be built. You may
+**Note:**_ based on your OS, only DEB or RPM package will be built. You may
 ignore an error for the unrelated configuration
 
 
