@@ -27,7 +27,7 @@
 ## define additional unit testing include directories
 include_directories(${UT_INC})
 ## define additional unit testing lib directories
-link_directories(${UT_LIB})
+link_directories(${UT_LIB} ${RVS_LIB_DIR})
 
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 #message ( "TESTSOURCES: ${TESTSOURCES}" )
@@ -46,7 +46,7 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
     ${SINGLE_TEST} ${UT_SOURCES}
   )
   target_link_libraries(${TEST_NAME}
-    ${PROJECT_LINK_LIBS} rvslib rvslibut gtest_main gtest pthread
+    ${PROJECT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread
   )
   set_target_properties(${TEST_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}

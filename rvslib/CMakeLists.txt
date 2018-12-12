@@ -84,22 +84,35 @@ include_directories(./ ../
 
 ## define common source files
 set(SOURCES
-  ../src/gpu_util.cpp   ../src/rvsactionbase.cpp  ../src/rvslognodebase.cpp  ../src/rvslognoderec.cpp
-  ../src/pci_caps.cpp   ../src/rvs_blas.cpp       ../src/rvslognode.cpp
-  ../src/rvslognodestring.cpp  ../src/rvs_util.cpp
-  ../src/rsmi_util.cpp  ../src/rvshsa.cpp ../src/rvslognodeint.cpp ../src/rvsthreadbase.cpp)
+  ../src/gpu_util.cpp
+  ../src/rvs_util.cpp
+  ../src/rsmi_util.cpp
+
+  ../src/rvsactionbase.cpp
+  ../src/rvsthreadbase.cpp
+
+  ../src/rvsliblogger.cpp
+  ../src/rvslognodebase.cpp
+  ../src/rvslognoderec.cpp
+  ../src/rvslognode.cpp
+  ../src/rvslognodestring.cpp
+  ../src/rvslognodeint.cpp
+
+  ../src/rvs_blas.cpp
+  ../src/rvshsa.cpp
+  )
 
 ## define run-time specific source files
-set(SOURCES_RT ../src/rvsloglp.cpp)
+set(SOURCES_RT
+  ../src/rvsloglp.cpp
+  ../src/pci_caps.cpp
+  )
 
 ## define unit testing specific source files (mocking)
-set(SOURCES_UT ../src/rvsloglp_utest.cpp ../src/rvs_unit_testing_defs.cpp
-               ../src/rvsliblogger.cpp
-               ../src/rvslognodebase.cpp
-               ../src/rvslognode.cpp
-               ../src/rvslognoderec.cpp
-               ../src/rvslognodeint.cpp
-               ../src/rvslognodestring.cpp
+set(SOURCES_UT
+  ../src/rvsloglp_utest.cpp
+  ../src/pci_caps.cpp
+  ../src/rvs_unit_testing_defs.cpp
    )
 
 ## define rvslibrt (run-time) library
@@ -111,4 +124,5 @@ add_dependencies(${RVS_TARGET} ${RVS_TARGET}rt)
 
 ## define rvslibut (unit test) library
 add_library(${RVS_TARGET}ut  ${SOURCES_UT})
+target_compile_definitions(${RVS_TARGET}ut PRIVATE RVS_UNIT_TEST)
 add_dependencies(${RVS_TARGET}ut ${RVS_TARGET}rt)
