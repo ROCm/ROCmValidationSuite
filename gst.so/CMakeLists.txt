@@ -106,22 +106,15 @@ if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
   RETURN()
 endif()
 
-# Add directories to look for header files to compile
-INCLUDE_DIRECTORIES(${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
-
-# Add directories to look for library files to link 
-LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR})
-
-
-## additional libraries
-set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
-
 ## define include directories
-include_directories(./ ../)
+include_directories(./ ../ ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
+# Add directories to look for library files to link
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR})
+## additional libraries
+set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 
 ## define source files
-set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/pci_caps.cpp ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
-  src/rvs_module.cpp src/action.cpp src/gst_worker.cpp ../src/rvs_blas.cpp)
+set(SOURCES src/rvs_module.cpp src/action.cpp src/gst_worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})

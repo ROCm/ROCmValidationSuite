@@ -72,25 +72,23 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 
-
-## additional libraries
-set ( PROJECT_LINK_LIBS libpci.so libm.so)
-
 ## define include directories
 include_directories(./ ../ pci)
+# Add directories to look for library files to link
+link_directories(${RVS_LIB_DIR})
+## additional libraries
+set (PROJECT_LINK_LIBS rvslib libpci.so libm.so)
 
 ## define source files
-set(SOURCES 
-    ../src/rvsactionbase.cpp ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvsloglp.cpp ../src/rvs_util.cpp
-    src/rvs_module.cpp src/action.cpp)
+set(SOURCES src/rvs_module.cpp src/action.cpp)
 
 ## define target
-add_library( ${RVS_TARGET} SHARED ${SOURCES})
+add_library(${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS})
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

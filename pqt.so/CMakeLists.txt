@@ -108,23 +108,16 @@ if(NOT EXISTS ${ROCR_LIB_DIR}/${CORE_RUNTIME_LIBRARY}.so)
   RETURN()
 endif()
 
-# Add directories to look for header files to compile
-INCLUDE_DIRECTORIES(${ROCR_INC_DIR})
-
-# Add directories to look for library files to link 
-LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCT_LIB_DIR})
-
-## additional libraries
-set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )
-
 ## define include directories
-include_directories(./ ../ pci)
+include_directories(./ ../ pci ${ROCR_INC_DIR})
+# Add directories to look for library files to link
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCT_LIB_DIR})
+## additional libraries
+set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 
 ## define source files
-set(SOURCES ../src/rvsthreadbase.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp
-            ../src/pci_caps.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
-            ../src/rvshsa.cpp
-            src/rvs_module.cpp src/action.cpp src/action_run.cpp src/worker.cpp src/worker_b2b.cpp)
+set(SOURCES src/rvs_module.cpp src/action.cpp src/action_run.cpp
+            src/worker.cpp src/worker_b2b.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
