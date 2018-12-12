@@ -24,19 +24,16 @@
 ################################################################################
 
 
-LINK_DIRECTORIES(${UT_LIB})
+## define additional unit testing include directories
+include_directories(${UT_INC})
+## define additional unit testing lib directories
+link_directories(${UT_LIB})
+
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 #message ( "TESTSOURCES: ${TESTSOURCES}" )
-set (UT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvsloglp_utest.cpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvsliblogger.cpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognode.cpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognodebase.cpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognodeint.cpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognodestring.cpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/../src/rvslognoderec.cpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/test/unitactionbase.cpp
-    )
-message("UT_SOURCES: ${UT_SOURCES}")
+set (UT_SOURCES test/unitactionbase.cpp
+)
+#message("UT_SOURCES: ${UT_SOURCES}")
 
 # add unit tests
 FOREACH(SINGLE_TEST ${TESTSOURCES})
@@ -46,10 +43,10 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
   MESSAGE("unit test: ${TEST_NAME}")
 
   add_executable(${TEST_NAME}
-    ${SINGLE_TEST} ${TEST_SOURCES} ${SOURCES} ${UT_SOURCES}
+    ${SINGLE_TEST} ${UT_SOURCES}
   )
   target_link_libraries(${TEST_NAME}
-    ${PROJECT_LINK_LIBS} ${PROJECT_TEST_LINK_LIBS} gtest_main gtest
+    ${PROJECT_LINK_LIBS} rvslib rvslibut gtest_main gtest pthread
   )
   set_target_properties(${TEST_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}

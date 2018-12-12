@@ -82,13 +82,33 @@ include_directories(./ ../
 )
 
 
-## define source files
+## define common source files
 set(SOURCES
   ../src/gpu_util.cpp   ../src/rvsactionbase.cpp  ../src/rvslognodebase.cpp  ../src/rvslognoderec.cpp
-  ../src/pci_caps.cpp   ../src/rvs_blas.cpp       ../src/rvsloglp.cpp        ../src/rvslognode.cpp
+  ../src/pci_caps.cpp   ../src/rvs_blas.cpp       ../src/rvslognode.cpp
   ../src/rvslognodestring.cpp  ../src/rvs_util.cpp
   ../src/rsmi_util.cpp  ../src/rvshsa.cpp ../src/rvslognodeint.cpp ../src/rvsthreadbase.cpp)
 
-## define helper lib
-add_library(${RVS_TARGET}  ${SOURCES})
+## define run-time specific source files
+set(SOURCES_RT ../src/rvsloglp.cpp)
 
+## define unit testing specific source files (mocking)
+set(SOURCES_UT ../src/rvsloglp_utest.cpp ../src/rvs_unit_testing_defs.cpp
+               ../src/rvsliblogger.cpp
+               ../src/rvslognodebase.cpp
+               ../src/rvslognode.cpp
+               ../src/rvslognoderec.cpp
+               ../src/rvslognodeint.cpp
+               ../src/rvslognodestring.cpp
+   )
+
+## define rvslibrt (run-time) library
+add_library(${RVS_TARGET}rt  ${SOURCES_RT})
+
+## define rvslib library
+add_library(${RVS_TARGET}  ${SOURCES})
+add_dependencies(${RVS_TARGET} ${RVS_TARGET}rt)
+
+## define rvslibut (unit test) library
+add_library(${RVS_TARGET}ut  ${SOURCES_UT})
+add_dependencies(${RVS_TARGET}ut ${RVS_TARGET}rt)

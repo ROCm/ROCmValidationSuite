@@ -78,7 +78,7 @@ include_directories(./ ../)
 # Add directories to look for library files to link
 link_directories(${RVS_LIB_DIR})
 ## additional libraries
-set (PROJECT_LINK_LIBS rvslib)
+set (PROJECT_LINK_LIBS rvslibrt rvslib)
 
 ## define source files
 set(SOURCES src/rvs_module.cpp src/action.cpp)
