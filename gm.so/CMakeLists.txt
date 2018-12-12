@@ -88,7 +88,7 @@ include_directories(./ ../ ${ROCM_SMI_INC_DIR})
 # Add directories to look for library files to link
 link_directories(${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
 ## additional libraries
-set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
+set (PROJECT_LINK_LIBS rvslibrt rvslib libpthread.so libpci.so libm.so)
 
 ## define source files
 set(SOURCES  src/rvs_module.cpp src/action.cpp src/worker.cpp)
