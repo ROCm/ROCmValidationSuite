@@ -117,6 +117,9 @@ class timer : public ThreadBase {
       while (brun && timeleft-- > 0) {
         sleep(1);
       }
+      if (timeleft == -1) {
+        timeleft = 0;
+      }
 
       // if timer is not stopped, call the callback function
       if (brun) {

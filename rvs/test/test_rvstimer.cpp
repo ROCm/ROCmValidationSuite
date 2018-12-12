@@ -101,8 +101,8 @@ TEST_F(TimerTest, timer) {
   EXPECT_EQ(timer1.get_brun(), true);
   EXPECT_EQ(timer1.get_brunonce(), true);
   // check remaining time interval
-  EXPECT_LE(timer1.get_timeleft(), 30);
-  EXPECT_GE(timer1.get_timeleft(), 20);
+  EXPECT_LE(timer1.get_timeleft(), 25+10);
+  EXPECT_GE(timer1.get_timeleft(), 25-10);
   EXPECT_EQ(timer1.get_timeset(), 50);
   timer1.stop();
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -110,8 +110,8 @@ TEST_F(TimerTest, timer) {
   EXPECT_EQ(t_act1->action_final_done, 0);
   EXPECT_EQ(timer1.get_brun(), false);
   EXPECT_EQ(timer1.get_brunonce(), true);
-  EXPECT_LE(timer1.get_timeleft(), 30);
-  EXPECT_GE(timer1.get_timeleft(), 20);
+  EXPECT_LE(timer1.get_timeleft(), 25+10);
+  EXPECT_GE(timer1.get_timeleft(), 25-10);
   EXPECT_EQ(timer1.get_timeset(), 50);
 
   // 1.2 run and stop after tick
@@ -123,8 +123,8 @@ TEST_F(TimerTest, timer) {
   EXPECT_EQ(timer1.get_brun(), true);
   EXPECT_EQ(timer1.get_brunonce(), true);
   // check remaining time interval
-  EXPECT_LE(timer1.get_timeleft(), 30);
-  EXPECT_GE(timer1.get_timeleft(), 20);
+  EXPECT_LE(timer1.get_timeleft(), 25+10);
+  EXPECT_GE(timer1.get_timeleft(), 25-10);
   EXPECT_EQ(timer1.get_timeset(), 50);
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   EXPECT_EQ(t_act1->action_run_done, 0);
@@ -136,25 +136,81 @@ TEST_F(TimerTest, timer) {
   EXPECT_EQ(timer1.get_timeset(), 50);
   timer1.stop();
 
-  EXPECT_EQ(1, 1);
+  // 1.3 run for 1s and check calback
+  t_act1->clear_all();
+  timer1.start(1000, true);
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  EXPECT_LE(timer1.get_timeleft(), 100);
+  EXPECT_GE(timer1.get_timeleft(), 0);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  EXPECT_EQ(t_act1->action_final_done, 1);
+  EXPECT_EQ(timer1.get_brun(), false);
+  EXPECT_EQ(timer1.get_brunonce(), true);
+  // check remaining time interval
+  EXPECT_EQ(timer1.get_timeleft(), 0);
+  timer1.stop();
+
+  // --------------------------------
+  // 2. check tick continuous timer
+  // --------------------------------
+  // 1.1 run and stop before tick
+  t_act2->clear_all();
+  timer2.start(50, false);
+  std::this_thread::sleep_for(std::chrono::milliseconds(25));
+  EXPECT_EQ(t_act2->action_run_done, 0);
+  EXPECT_EQ(t_act2->action_final_done, 0);
+  EXPECT_EQ(timer2.get_brun(), true);
+  EXPECT_EQ(timer2.get_brunonce(), false);
+  // check remaining time interval
+  EXPECT_LE(timer2.get_timeleft(), 30);
+  EXPECT_GE(timer2.get_timeleft(), 20);
+  EXPECT_EQ(timer2.get_timeset(), 50);
+  timer2.stop();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  EXPECT_EQ(t_act2->action_run_done, 0);
+  EXPECT_EQ(t_act2->action_final_done, 0);
+  EXPECT_EQ(timer2.get_brun(), false);
+  EXPECT_EQ(timer2.get_brunonce(), false);
+  EXPECT_EQ(timer2.get_timeleft(), 50); // stop() will reinitialize timeleft
+  EXPECT_EQ(timer2.get_timeset(), 50);
+
+  // 1.2 run and stop after tick
+  t_act2->clear_all();
+  timer2.start(100, false);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  EXPECT_EQ(t_act2->action_run_done, 0);
+  EXPECT_EQ(t_act2->action_final_done, 0);
+  EXPECT_EQ(timer2.get_brun(), true);
+  EXPECT_EQ(timer2.get_brunonce(), false);
+  // check remaining time interval
+  EXPECT_LE(timer2.get_timeleft(), 50+15);
+  EXPECT_GE(timer2.get_timeleft(), 50-15);
+  EXPECT_EQ(timer2.get_timeset(), 100);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  EXPECT_EQ(t_act2->action_run_done, 1);
+  EXPECT_EQ(t_act2->action_final_done, 0);
+  EXPECT_EQ(timer2.get_brun(), true);
+  EXPECT_EQ(timer2.get_brunonce(), false);
+  // check remaining time interval
+  // check remaining time interval
+  EXPECT_LE(timer2.get_timeleft(), 50+15);
+  EXPECT_GE(timer2.get_timeleft(), 50-15);
+  EXPECT_EQ(timer2.get_timeset(), 100);
+  timer2.stop();
+
+  // 1.3 run for 1s and check calback
+  t_act2->clear_all();
+  timer2.start(1000, false);
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  EXPECT_LE(timer2.get_timeleft(), 100);
+  EXPECT_GE(timer2.get_timeleft(), 0);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  EXPECT_EQ(t_act2->action_run_done, 1);
+  EXPECT_EQ(timer2.get_brun(), true);
+  EXPECT_EQ(timer2.get_brunonce(), false);
+  // check remaining time interval
+  EXPECT_LE(timer2.get_timeleft(), 1000);
+  EXPECT_GE(timer2.get_timeleft(), 850);
+  timer2.stop();
+
 }
-
-/*
-  //! true for the duration of timer activity
-  bool        get_brun;
-  //! true if timer is to fire only once
-  bool        get_brunonce;
-  //! time left to next fire (ms)
-  int         get_timeleft;
-  //! timer interval (ms)
-  int         get_timeset;
-
-./pqt.so/src/action_run.cpp:109:  // define timers
-./pqt.so/src/action_run.cpp:110:  rvs::timer<pqt_action> timer_running(&pqt_action::do_running_average, this);
-./pqt.so/src/action_run.cpp:111:  rvs::timer<pqt_action> timer_final(&pqt_action::do_final_average, this);
-./pqt.so/src/action_run.cpp:121:    // start timers
-./pqt.so/src/action_run.cpp:124:      timer_final.start(property_duration, true);  // ticks only once
-./pqt.so/src/action_run.cpp:129:      timer_running.start(property_log_interval);        // ticks continuously
-./pqt.so/src/action_run.cpp:143:    timer_running.stop();
-./pqt.so/src/action_run.cpp:144:    timer_final.stop();
-*/
