@@ -30,8 +30,7 @@ set ( PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
 set(TEST_SOURCES
    ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvs_unit_testing_defs.cpp
    ../src/rvslognode.cpp ../src/rvslognodeint.cpp ../src/rvslognodestring.cpp
-   ../src/rvslognoderec.cpp ../src/rvslognodebase.cpp
-   ../src/rvsthreadbase.cpp
+   ../src/rvslognoderec.cpp ../src/rvslognodebase.cpp ../src/rvsthreadbase.cpp
 )
 
 add_executable(rvstest ${SOURCES})
