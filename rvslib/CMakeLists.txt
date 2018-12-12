@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018 ROCm Developer Tools
+## Copyright (c) 2018 2018 ROCm Developer Tools
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -28,20 +28,8 @@ add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wl,-no-as-needed)
 add_compile_options(-Wall -Wextra)
-
-set ( RVS "pesm" )
-set ( RVS_PACKAGE "rvs-roct" )
-set ( RVS_COMPONENT "lib${RVS}" )
-set ( RVS_TARGET "${RVS}" )
-
-project ( ${RVS_TARGET} )
-
-message(STATUS "MODULE: ${RVS}")
-
-## Set default module path if not already set
-if ( NOT DEFINED CMAKE_MODULE_PATH )
-    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
-endif ()
+add_compile_options(-fPIC)
+add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
 
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
@@ -50,10 +38,25 @@ else()
     set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
 endif ()
 
+set ( RVS "rvslib" )
+set ( RVS_PACKAGE "rvs-roct" )
+set ( RVS_COMPONENT "lib${RVS}" )
+set ( RVS_TARGET "${RVS}" )
+
+project ( ${RVS_TARGET} )
+
+message(STATUS "MODULE: ${RVS}")
+
+# ## Set default module path if not already set
+# if ( NOT DEFINED CMAKE_MODULE_PATH )
+#     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
+# endif ()
+
 ## Include common cmake modules
 include ( utils )
+#include (CTest)
 
-## Setup the package version.
+## Setup the package version default (the actual one is taken from the latest Git tag).
 get_version ( "0.0.0" )
 
 set ( BUILD_VERSION_MAJOR ${VERSION_MAJOR} )
@@ -73,37 +76,19 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
-
 ## define include directories
-include_directories(./ ../ pci ${UT_INC})
-# Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR})
-## additional libraries
-set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
-
-## define source files
-set(SOURCES  src/rvs_module.cpp src/action.cpp src/worker.cpp)
-
-## define target
-add_library( ${RVS_TARGET} SHARED ${SOURCES})
-set_target_properties(${RVS_TARGET} PROPERTIES
-        SUFFIX .so.${LIB_VERSION_STRING}
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
-
-
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+include_directories(./ ../
+  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR}
 )
 
-install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 
-# TEST SECTION
+## define source files
+set(SOURCES
+  ../src/gpu_util.cpp   ../src/rvsactionbase.cpp  ../src/rvslognodebase.cpp  ../src/rvslognoderec.cpp
+  ../src/pci_caps.cpp   ../src/rvs_blas.cpp       ../src/rvsloglp.cpp        ../src/rvslognode.cpp
+  ../src/rvslognodestring.cpp  ../src/rvs_util.cpp
+  ../src/rsmi_util.cpp  ../src/rvshsa.cpp ../src/rvslognodeint.cpp ../src/rvsthreadbase.cpp)
 
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+## define helper lib
+add_library(${RVS_TARGET}  ${SOURCES})
 

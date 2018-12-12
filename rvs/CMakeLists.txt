@@ -74,11 +74,12 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
-## additional libraries
-set ( PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
-
 ## define include directories
 include_directories(./ ../ ${YAML_INC_DIR} ${UT_INC})
+LINK_DIRECTORIES(${UT_LIB} ${CMAKE_CURRENT_BINARY_DIR})
+
+## additional libraries
+set ( PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
 
 ## define source files
 set(SOURCES
@@ -87,23 +88,14 @@ set(SOURCES
   ../src/rvsliblogger.cpp ../src/rvslognodebase.cpp ../src/rvslognoderec.cpp ../src/rvslognode.cpp ../src/rvslognodestring.cpp ../src/rvslognodeint.cpp
 )
 
+## define helper lib
+add_library(rvshelper ${SOURCES})
+
 ## define target
-add_executable(${RVS_TARGET} src/rvs.cpp ${SOURCES})
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+add_executable(${RVS_TARGET} src/rvs.cpp)
+target_link_libraries(${RVS_TARGET} librvshelper.a ${PROJECT_LINK_LIBS} )
+add_dependencies(${RVS_TARGET} rvshelper)
 
-## define target for "test-to-fail"
-add_executable(${RVS_TARGET}fail src/rvs.cpp ${SOURCES})
-target_link_libraries(${RVS_TARGET}fail ${PROJECT_LINK_LIBS} )
-target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
-set_target_properties(${RVS_TARGET}fail PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
-)
-
-## define unit testing targets
-file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
-message ( "TESTSOURCES ${TESTSOURCES}" )
-
-LINK_DIRECTORIES(${UT_LIB})
 
 install(TARGETS ${RVS_TARGET}
   RUNTIME
