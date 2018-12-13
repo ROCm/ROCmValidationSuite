@@ -138,11 +138,8 @@ TEST_F(TimerTest, timer) {
 
   // 1.3 run for 1s and check calback
   t_act1->clear_all();
-  timer1.start(1000, true);
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  EXPECT_LE(timer1.get_timeleft(), 100);
-  EXPECT_GE(timer1.get_timeleft(), 0);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  timer1.start(10000, true);
+  std::this_thread::sleep_for(std::chrono::milliseconds(10005));
   EXPECT_EQ(t_act1->action_final_done, 1);
   EXPECT_EQ(timer1.get_brun(), false);
   EXPECT_EQ(timer1.get_brunonce(), true);
@@ -192,7 +189,6 @@ TEST_F(TimerTest, timer) {
   EXPECT_EQ(timer2.get_brun(), true);
   EXPECT_EQ(timer2.get_brunonce(), false);
   // check remaining time interval
-  // check remaining time interval
   EXPECT_LE(timer2.get_timeleft(), 50+15);
   EXPECT_GE(timer2.get_timeleft(), 50-15);
   EXPECT_EQ(timer2.get_timeset(), 100);
@@ -200,17 +196,25 @@ TEST_F(TimerTest, timer) {
 
   // 1.3 run for 1s and check calback
   t_act2->clear_all();
-  timer2.start(1000, false);
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  EXPECT_LE(timer2.get_timeleft(), 100);
-  EXPECT_GE(timer2.get_timeleft(), 0);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  timer2.start(10000, false);
+  std::this_thread::sleep_for(std::chrono::milliseconds(10005));
   EXPECT_EQ(t_act2->action_run_done, 1);
   EXPECT_EQ(timer2.get_brun(), true);
   EXPECT_EQ(timer2.get_brunonce(), false);
   // check remaining time interval
-  EXPECT_LE(timer2.get_timeleft(), 1000);
-  EXPECT_GE(timer2.get_timeleft(), 850);
+  EXPECT_LE(timer2.get_timeleft(), 10000);
+  EXPECT_GE(timer2.get_timeleft(), 9950);
+  timer2.stop();
+
+  // 1.4 run periodicaly for 1s and check calback
+  t_act2->clear_all();
+  timer2.start(10000, false);
+  EXPECT_EQ(timer2.get_brunonce(), false);
+  for (int i = 0; i < 10; i++) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10005));
+    EXPECT_EQ(t_act2->action_run_done, i + 1);
+    EXPECT_EQ(timer2.get_brun(), true);
+  }
   timer2.stop();
 
 }
