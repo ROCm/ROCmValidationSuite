@@ -96,10 +96,13 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parralel_f, d
             # skip
             break
 
+        # go to the next conf file
+        counter += 1
+
         # for each conf file add the new test in the cmake unit test list
         cmake_file.write('add_test(NAME rand.{}.{}\n'.format(module_name, counter))
         cmake_file.write('  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}\n')
-        cmake_file.write('  COMMAND rvs -d 3 -c conf/{}_module_{}.conf\n'.format(module_name, counter))
+        cmake_file.write('  COMMAND rvs -d 3 -c conf/rand_{}{}.conf\n'.format(module_name, counter))
         cmake_file.write(')\n\n')
 
         # for each combination create the conf file
@@ -139,7 +142,5 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parralel_f, d
         if sample_size == gpu_ids_size + 1:
             break
 
-        # go to the next conf file
-        counter += 1
 
 cmake_file.close() 
