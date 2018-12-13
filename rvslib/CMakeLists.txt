@@ -26,7 +26,9 @@
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
+add_compile_options(-Wl,-no-as-needed)
 add_compile_options(-Wall -Wextra)
+add_compile_options(-fPIC)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
 
 ## Support for in-source compilaton
@@ -36,7 +38,7 @@ else()
     set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
 endif ()
 
-set ( RVS "rvs" )
+set ( RVS "rvslib" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
@@ -45,10 +47,10 @@ project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
 
-## Set default module path if not already set
-if ( NOT DEFINED CMAKE_MODULE_PATH )
-    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
-endif ()
+# ## Set default module path if not already set
+# if ( NOT DEFINED CMAKE_MODULE_PATH )
+#     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
+# endif ()
 
 ## Include common cmake modules
 include ( utils )
@@ -75,51 +77,52 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 ## define include directories
-include_directories(./ ../ ${YAML_INC_DIR})
-## define lib directories
-link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR})
-## additional libraries
-set (PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
+include_directories(./ ../
+  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR}
+)
 
-## define source files
+
+## define common source files
 set(SOURCES
-  src/rvsmodule.cpp
-  src/rvsif_base.cpp
-  src/rvsif0.cpp
-  src/rvsif1.cpp
-  src/rvsaction.cpp
-  src/rvscli.cpp
-  src/rvsexec.cpp
-  src/rvsexec_do_yaml.cpp
-  src/rvsoptions.cpp
-)
+  ../src/gpu_util.cpp
+  ../src/rvs_util.cpp
+  ../src/rsmi_util.cpp
 
-## define helper lib
-add_library(rvshelper ${SOURCES})
+  ../src/rvsactionbase.cpp
+  ../src/rvsthreadbase.cpp
 
-## define target
-add_executable(${RVS_TARGET} src/rvs.cpp)
-target_link_libraries(${RVS_TARGET} librvshelper.a rvslib ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvshelper)
+  ../src/rvsliblogger.cpp
+  ../src/rvslognodebase.cpp
+  ../src/rvslognoderec.cpp
+  ../src/rvslognode.cpp
+  ../src/rvslognodestring.cpp
+  ../src/rvslognodeint.cpp
 
+  ../src/rvs_blas.cpp
+  ../src/rvshsa.cpp
+  )
 
-install(TARGETS ${RVS_TARGET}
-  RUNTIME
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
-  COMPONENT applications
-)
+## define run-time specific source files
+set(SOURCES_RT
+  ../src/rvsloglp.cpp
+  ../src/pci_caps.cpp
+  )
 
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/conf
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
-  COMPONENT applications
-  FILES_MATCHING PATTERN "*.conf"
-)
+## define unit testing specific source files (mocking)
+set(SOURCES_UT
+  ../src/rvsloglp_utest.cpp
+  ../src/pci_caps.cpp
+  ../src/rvs_unit_testing_defs.cpp
+   )
 
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
-  COMPONENT applications
-)
+## define rvslibrt (run-time) library
+add_library(${RVS_TARGET}rt  ${SOURCES_RT})
 
-# TEST SECTION
+## define rvslib library
+add_library(${RVS_TARGET}  ${SOURCES})
+add_dependencies(${RVS_TARGET} ${RVS_TARGET}rt)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+## define rvslibut (unit test) library
+add_library(${RVS_TARGET}ut  ${SOURCES_UT})
+target_compile_definitions(${RVS_TARGET}ut PRIVATE RVS_UNIT_TEST)
+add_dependencies(${RVS_TARGET}ut ${RVS_TARGET}rt)
