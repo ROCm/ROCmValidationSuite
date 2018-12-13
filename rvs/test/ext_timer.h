@@ -23,8 +23,8 @@
  *
  *******************************************************************************/
 
-#ifndef INCLUDE_EXTTIMER_H_
-#define INCLUDE_EXTTIMER_H_
+#ifndef RVS_TEST_EXT_TIMER_H_
+#define RVS_TEST_EXT_TIMER_H_
 
 #include "include/rvstimer.h"
 
@@ -32,7 +32,7 @@ template<class T>
 class ext_timer : public rvs::timer<T> {
  public:
   // construtor
-  ext_timer(void (T::*cbFunc)(), T* cbArg) : rvs::timer<T>::timer(cbFunc, cbArg) {
+  ext_timer(void(T::*cbFunc)(), T* cbArg): rvs::timer<T>::timer(cbFunc, cbArg) {
   }
   // return used class
   T* get_cbarg() {
@@ -55,4 +55,5 @@ class ext_timer : public rvs::timer<T> {
   }
 };
 
-#endif // INCLUDE_EXTTIMER_H_
+#endif  // RVS_TEST_EXT_TIMER_H_
+
