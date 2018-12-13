@@ -48,11 +48,6 @@ class ext_timer : public rvs::timer<T> {
   bool get_brunonce() {
     return rvs::timer<T>::brunonce;
   }
-  // return timeleft
-  // NOTE: time left to next fire (ms)
-  int get_timeleft() {
-    return rvs::timer<T>::timeleft;
-  }
   // return timeset
   // NOTE: timer interval (ms)
   int get_timeset() {
