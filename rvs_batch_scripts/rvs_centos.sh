@@ -8,7 +8,8 @@ export RVS_BATCH_BUILD=/work/batch_build
 export RVS_WB=${RVS_BATCH_BUILD}/centos
 
 export RVS_BATCH_UTC=`date -u`
-echo " 31. before sourcing "${RVS_BATCH_UTC} > $RVS_BATCH_SCRIPTS/centos.log
+export RVS_UID=`id -u`:`id -g`
+echo " 31. before sourcing "${RVS_BATCH_UTC}"  "${RVS_UID} > $RVS_BATCH_SCRIPTS/centos.log
 source scl_source enable devtoolset-7
 
 echo " 32. before creating "${RVS_WB} >> $RVS_BATCH_SCRIPTS/centos.log
