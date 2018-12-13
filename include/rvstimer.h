@@ -78,10 +78,13 @@ class timer : public ThreadBase {
   void start(int Interval, bool RunOnce = false) {
     brunonce = RunOnce;
     timeset = Interval;
-    timeleft = timeset;
-
-    brun = true;
-    rvs::ThreadBase::start();
+    end_time = std::chrono::system_clock::now() +
+               std::chrono::milliseconds(timeset);
+    // recalculate the end time and only if thread is not started start it
+    if (brun == false) {
+      brun = true;
+      rvs::ThreadBase::start();
+    }
   }
 
 
@@ -113,12 +116,15 @@ class timer : public ThreadBase {
  * */
   virtual void run() {
     do {
+      std::chrono::time_point<std::chrono::system_clock> curr_time;
       // wait for time to ellsapse (or for timer to be stopped)
-      while (brun && timeleft-- > 0) {
-        sleep(1);
-      }
-      if (timeleft == -1) {
-        timeleft = 0;
+      while (brun) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        curr_time = std::chrono::system_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>
+                                         (curr_time - end_time).count() >= 0) {
+          break;
+        }
       }
 
       // if timer is not stopped, call the callback function
@@ -129,7 +135,8 @@ class timer : public ThreadBase {
       if (brunonce) {
         brun = false;
       } else {
-        timeleft = timeset;
+        end_time = std::chrono::system_clock::now() +
+                   std::chrono::milliseconds(timeset);
       }
     } while (brun);
   }
@@ -139,14 +146,14 @@ class timer : public ThreadBase {
   bool        brun;
   //! true if timer is to fire only once
   bool        brunonce;
-  //! time left to next fire (ms)
-  int         timeleft;
   //! timer interval (ms)
   int         timeset;
   //! call back function
   timerfunc_t cbfunc;
   //! ptr to instance of a class to be called-back through cbfunc.
   T*          cbarg;
+  //! time when timer will expire
+  std::chrono::time_point<std::chrono::system_clock> end_time;
 };
 
 }  // namespace rvs
