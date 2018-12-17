@@ -90,7 +90,7 @@ set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${RVS_TARGET} rvslib rvslibrt ${PROJECT_LINK_LIBS} )
-
+add_dependencies(${RVS_TARGET} rvslibrt rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

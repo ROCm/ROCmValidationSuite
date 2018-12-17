@@ -24,4 +24,34 @@
 ################################################################################
 
 
-include(tests_conf)
+## define additional unit testing include directories
+include_directories(${UT_INC})
+## define additional unit testing lib directories
+link_directories(${UT_LIB} ${RVS_LIB_DIR})
+
+file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
+#message ( "TESTSOURCES: ${TESTSOURCES}" )
+
+
+# add unit tests
+FOREACH(SINGLE_TEST ${TESTSOURCES})
+#  MESSAGE("${SINGLE_TEST}")
+  string(REPLACE "test/test" "unit.${RVS}." TMP_TEST_NAME ${SINGLE_TEST})
+  string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
+  MESSAGE("unit test: ${TEST_NAME}")
+
+  add_executable(${TEST_NAME}
+    ${SINGLE_TEST} ${UT_SOURCES}
+  )
+  target_link_libraries(${TEST_NAME}
+    ${PROJECT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread
+  )
+  set_target_properties(${TEST_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
+  )
+
+  add_test(NAME ${TEST_NAME}
+    WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+    COMMAND ${TEST_NAME}
+  )
+ENDFOREACH()
