@@ -196,8 +196,12 @@ int rcqt_action::pkgchk_run() {
     // Checking if version field exists
     string version_name;
     version_exists = has_property(VERSION, &version_name);
-
+		#if RVS_OS_TYPE_NUM == 1
     string command_string = "dpkg --get-selections > ";
+		#endif
+		#if RVS_OS_TYPE_NUM == 2
+		string command_string = "rpm -qa --qf \"%{NAME}\n\" > ";
+		#endif
     command_string += PKG_CMD_FILE;
 
     // We execute the dpkg-querry
@@ -218,8 +222,12 @@ int rcqt_action::pkgchk_run() {
     string PACKAGE_CONST = "package";
     while (pkg_stream.getline(file_line, STREAM_SIZE)) {
       string line_result = file_line;
+			//std::cout << line_result << endl;
+			#if RVS_OS_TYPE_NUM == 1
       line_result = line_result.substr(0, line_result.length() - 7);
+			//std::cout << line_result << std::endl;
       line_result.erase(line_result.find_last_not_of(" \n\r\t")+1);
+			#endif
       if (regex_match(line_result, pkg_pattern) == true) {
         if (bjson) {
           if (json_rcqt_node != NULL) {
@@ -231,9 +239,17 @@ int rcqt_action::pkgchk_run() {
         }
         if (version_exists) {
           char cmd_buffer[BUFFER_SIZE];
-          snprintf(cmd_buffer, BUFFER_SIZE, \
-          "dpkg -s %s | grep -i version > %s", line_result.c_str()
-          , (std::string(VERSION_FILE)).c_str());
+          #if RVS_OS_TYPE_NUM == 1
+					snprintf(cmd_buffer, BUFFER_SIZE,\
+          "dpkg -s %s | grep Version > %s", line_result.c_str(),
+					(std::string(VERSION_FILE)).c_str());
+					#endif
+					#if RVS_OS_TYPE_NUM == 2
+					snprintf(cmd_buffer, BUFFER_SIZE,\
+					"rpm -qi %s | grep Version > %s", line_result.c_str(),
+					(std::string(VERSION_FILE)).c_str());
+					#endif
+
           if (system(cmd_buffer) == -1) {
             rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
             return 1;
@@ -243,8 +259,13 @@ int rcqt_action::pkgchk_run() {
           char file_line[STREAM_SIZE];
           version_stream.getline(file_line, STREAM_SIZE);
           string group_line_result = file_line;
+					#if RVS_OS_TYPE_NUM == 1
           group_line_result = group_line_result
           .substr(9, group_line_result.length() - 9);
+					#endif
+					#if RVS_OS_TYPE_NUM == 2
+					group_line_result.erase(0 , group_line_result.find_first_of(":") + 2);
+					#endif
           if (bjson && json_child_node != NULL) {
             rvs::lp::AddString(json_child_node, "group"
             , group_line_result.c_str());
@@ -322,7 +343,8 @@ int rcqt_action::usrchk_run() {
     while (passwd_stream.getline(file_line, STREAM_SIZE)) {
       const string line = std::string(file_line);
       std::smatch match;
-      const std::regex get_user_pattern(USR_REG);
+			const std::regex get_user_pattern(USR_REG);
+
       if (std::regex_search(line.begin(), line.end()
         , match, get_user_pattern)) {
         string result = match[1];
@@ -605,6 +627,7 @@ int rcqt_action::ldcfgchk_run() {
     arch_stream.open(std::string(LDCFG_FILE));
     arch_stream.getline(file_line, STREAM_SIZE);
     arch_found_string = file_line;
+		std::cout << arch_found_string << std::endl;
     arch_found_string = str_split(arch_found_string, ",")[0];
     arch_found_string.erase(0, arch_found_string
     .find_first_not_of("architecture: ") - 1);
@@ -789,7 +812,7 @@ int rcqt_action::filechk_run() {
         else
           check = "false";
         msg = "[" + action_name + "] " + "rcqt filecheck " \
-        + (std::strcmp(check.c_str(), "true") == 0 ? p.pw_name : owner )
+        + (strcmp(check.c_str(), "true") == 0 ? p.pw_name : owner )
         + " " + check;
         log(msg.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
@@ -816,7 +839,7 @@ int rcqt_action::filechk_run() {
         else
           check = "false";
         msg = "[" + action_name + "] " + "rcqt filecheck "
-        + (std::strcmp(check.c_str(), "true") == 0 ? g.gr_name : group)
+        + (strcmp(check.c_str(), "true") == 0 ? g.gr_name : group)
         + " " + check;
         log(msg.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
