@@ -317,7 +317,7 @@ int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
 
   // for all links
   for (int link_id = 0; link_id < num_links; link_id++) {
-    void* json_link_ptr_;
+    void* json_link_ptr_ = nullptr;
 
     snprintf(path, CHAR_MAX_BUFF_SIZE,
              "%s/%d/io_links/%d/properties",
