@@ -81,11 +81,12 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
 
 # Set PATH variables
-set(rvs_build_type "Debug")
+set(RVS_BUILD_TYPE "Debug" CACHE STRING "Build type")
 set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
 set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
 set(RVS_ROCMSMI "1" CACHE STRING "1 = use local rocm_smi_lib")
 
+set(RVS_LIB_DIR "${CMAKE_BINARY_DIR}/rvslib" CACHE PATH "Contains RVS library")
 set(YAML_INC_DIR "${CMAKE_BINARY_DIR}/yaml-src/include" CACHE PATH "Contains header files exported by yaml-cpp")
 set(YAML_LIB_DIR "${CMAKE_BINARY_DIR}/yaml-build" CACHE PATH "Contains library files exported by yaml-cpp")
 set(ROCR_INC_DIR "/opt/rocm/include" CACHE PATH "Contains header files exported by ROC Runtime")
@@ -101,17 +102,17 @@ endif()
 message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
 
-if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE ${rvs_build_type} CACHE STRING "Build type" FORCE)
-    # Set the possible values of build type for cmake-gui
+set(CMAKE_BUILD_TYPE ${RVS_BUILD_TYPE} CACHE STRING "Build type" FORCE)
+if (NOT CMAKE_CONFIGURATION_TYPES)
+  # Set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    add_definitions(-DDEBUG)
-    message(STATUS "DEBUG defined")
-endif()
+# if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+#     add_definitions(-DDEBUG)
+#     message(STATUS "DEBUG defined")
+# endif()
 
 message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
@@ -257,6 +258,39 @@ endif()  # if(RVS_ROCBLAS EQUAL 1)
 
 if (RVS_ROCMSMI EQUAL 1)
 
+# This is in order to avoid unneccessary rebuild of rocm_smi_lib
+# (there is glitch in cmake when the included project also generates files in
+#  the buld process)
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so)
+
+execute_process(COMMAND rm -rf "${CMAKE_BINARY_DIR}/rvs_smi-src"
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
+# if(result)
+#   message(FATAL_ERROR "Error removing rocm_smi-src build folder: ${result}")
+# else()
+#   message( "rocm_smi-src folders removed: ${result}")
+# endif()
+
+execute_process(COMMAND rm -rf "${CMAKE_BINARY_DIR}/rvs_smi-download"
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
+# if(result)
+#   message(FATAL_ERROR "Error removing rocm_smi-download build folder: ${result}")
+# else()
+#   message( "rocm_smi-download folders removed: ${result}")
+# endif()
+
+execute_process(COMMAND rm -rf "${CMAKE_BINARY_DIR}/rvs_smi-build"
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-build )
+# if(result)
+#   message(FATAL_ERROR "Error removing rocm_smi-build build folder: ${result}")
+# else()
+#   message( "rocm_smi-build folders removed: ${result}")
+# endif()
+
+
 # Download and unpack rocm_smi_lib at configure time
 configure_file(CMakeRSMIDownload.cmake rvs_smi-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -274,6 +308,7 @@ if(result)
   message(FATAL_ERROR "Build step for rvs_smi-download failed: ${result}")
 endif()
 
+
 # generate MAKE script
 execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/rvs_smi-src -B${CMAKE_BINARY_DIR}/rvs_smi-build
   RESULT_VARIABLE result
@@ -281,6 +316,15 @@ execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/rvs_smi-src -B${CMA
 if(result)
   message(FATAL_ERROR "CMake step for rvs_smi-src failed: ${result}")
 endif()
+
+# post build step to create symbolic link
+# (we want .so i /bin folder to simplify packaging when local smi lib is used)
+# add_custom_command(TARGET rvs_rsmi_target POST_BUILD
+#   COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/librocm_smi64*
+#   COMMAND ln -s ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so ${CMAKE_BINARY_DIR}/bin/librocm_smi64.so
+# )
+
+endif()  # if(NOT EXISTS ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so)
 
 # Add target for rocm_smi_lib
 add_custom_target(rvs_rsmi_target
@@ -294,13 +338,6 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so
   COMMENT "Generating rocm_smi_lib targets"
   VERBATIM
 )
-
-# post build step to create symbolic link
-# (we want .so i /bin folder to simplify packaging when local smi lib is used)
-# add_custom_command(TARGET rvs_rsmi_target POST_BUILD
-#   COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/librocm_smi64*
-#   COMMAND ln -s ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so ${CMAKE_BINARY_DIR}/bin/librocm_smi64.so
-# )
 
 endif()  # if (RVS_ROCMSMI EQUAL 1)
 
@@ -324,21 +361,21 @@ set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
 
 add_subdirectory(rvs)
-add_subdirectory(gpup.so)
-add_subdirectory(pesm.so)
-add_subdirectory(rcqt.so)
-add_subdirectory(peqt.so)
-add_subdirectory(smqt.so)
-add_subdirectory(pebb.so)
+add_subdirectory(rvslib)
 add_subdirectory(gm.so)
+add_subdirectory(gpup.so)
 add_subdirectory(gst.so)
-add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
+add_subdirectory(pebb.so)
+add_subdirectory(peqt.so)
+add_subdirectory(pesm.so)
+add_subdirectory(pqt.so)
+add_subdirectory(rcqt.so)
+add_subdirectory(smqt.so)
 
-add_dependencies(rvs rvs_bintest_folder rvs_doc rvs_gtest_target rvs_yaml_target)
-add_dependencies(rvsfail rvs)
-add_dependencies(rvstest rvs)
+add_dependencies(rvshelper rvs_bintest_folder rvs_doc rvs_gtest_target rvs_yaml_target)
 
+add_dependencies(pesm rvslib rvslibrt)
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_rsmi_target)
   add_dependencies(iet rvs_rsmi_target)

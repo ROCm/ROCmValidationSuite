@@ -83,23 +83,15 @@ if(DEFINED RVS_ROCMSMI)
   endif()
 endif()
 
-# Add directories to look for header files to compile
-INCLUDE_DIRECTORIES(${ROCM_SMI_INC_DIR} )
-
-# Add directories to look for library files to link 
-LINK_DIRECTORIES( ${ROCM_SMI_LIB_DIR})
-
-## additional libraries
-set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
-
 ## define include directories
-include_directories(./ ../)
+include_directories(./ ../ ${ROCM_SMI_INC_DIR})
+# Add directories to look for library files to link
+link_directories(${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
+## additional libraries
+set (PROJECT_LINK_LIBS rvslibrt rvslib libpthread.so libpci.so libm.so)
 
 ## define source files
-set(SOURCES
-  ../src/rvsloglp.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rsmi_util.cpp 
-  ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp ../src/pci_caps.cpp
-  src/rvs_module.cpp src/action.cpp src/worker.cpp)
+set(SOURCES  src/rvs_module.cpp src/action.cpp src/worker.cpp)
 
 
 ## define target
@@ -107,8 +99,8 @@ add_library( ${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB} ${ROCM_SMI_LIB})
+add_dependencies(${RVS_TARGET} rvslibrt rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

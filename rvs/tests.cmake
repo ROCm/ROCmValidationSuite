@@ -23,27 +23,27 @@
 ##
 ################################################################################
 
-## additional libraries
-set ( PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
+# add_executable(rvstest test/test1.cpp)
+# target_link_libraries(rvstest rvshelper ${PROJECT_LINK_LIBS} gtest_main gtest libpci.so)
+# set_target_properties(rvstest PROPERTIES
+#   RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
+# )
+# add_dependencies(rvstest rvshelper)
 
-## define test sources
-set(TEST_SOURCES
-   ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvs_unit_testing_defs.cpp
-   ../src/rvslognode.cpp ../src/rvslognodeint.cpp ../src/rvslognodestring.cpp
-   ../src/rvslognoderec.cpp ../src/rvslognodebase.cpp
-   ../src/rvsthreadbase.cpp
-)
-
-add_executable(rvstest ${SOURCES})
-target_link_libraries(rvstest ${PROJECT_LINK_LIBS} gtest_main gtest)
-set_target_properties(rvstest PROPERTIES
+## define target for "test-to-fail"
+add_executable(${RVS_TARGET}fail src/rvs.cpp)
+target_link_libraries(${RVS_TARGET}fail librvshelper.a rvslib ${PROJECT_LINK_LIBS} )
+target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
+set_target_properties(${RVS_TARGET}fail PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
 )
+add_dependencies(${RVS_TARGET}fail rvshelper)
 
-add_test(NAME unit.rvs.1
-  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
-  COMMAND rvstest -d 3
-)
+
+# add_test(NAME unit.rvs.1
+#   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+#   COMMAND rvstest -d 3
+# )
 
 add_test(NAME unit.rvs.cli1
   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
@@ -56,21 +56,36 @@ add_test(NAME unit.rvs.cli2
 )
 
 
+## define include directories
+include_directories(${UT_INC})
+## define lib directories
+link_directories(${UT_LIB})
+## additional libraries for unit tests
+set (PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
+
+## define unit testing targets
+file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
+#message ( "TESTSOURCES ${TESTSOURCES}" )
+
 # add tests
 FOREACH(SINGLE_TEST ${TESTSOURCES})
-  MESSAGE("${SINGLE_TEST}")
+#  MESSAGE("${SINGLE_TEST}")
   string(REPLACE "test/" "unit.rvs." TMP_TEST_NAME ${SINGLE_TEST})
   string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
-  MESSAGE("${TEST_NAME}")
+  MESSAGE("unit test: ${TEST_NAME}")
 
-  add_executable(${TEST_NAME} ${SINGLE_TEST} ${TEST_SOURCES} ${SOURCES})
-  target_link_libraries(${TEST_NAME} ${PROJECT_LINK_LIBS} ${PROJECT_TEST_LINK_LIBS} gtest_main gtest)
+  add_executable(${TEST_NAME} ${SINGLE_TEST}
+    )
+  target_link_libraries(${TEST_NAME}
+    ${PROJECT_LINK_LIBS}
+    ${PROJECT_TEST_LINK_LIBS}
+    rvshelper rvslib rvslibut gtest_main gtest pthread
+  )
   target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
   add_compile_options(-Wall -Wextra -save-temps)
   set_target_properties(${TEST_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
   )
-  add_dependencies(${TEST_NAME} rvs)
   add_test(NAME ${TEST_NAME}
     WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
     COMMAND ${TEST_NAME}

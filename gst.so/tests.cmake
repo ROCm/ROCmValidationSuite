@@ -24,36 +24,4 @@
 ################################################################################
 
 
-add_test(NAME conf.gst.0
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gst.conf
-)
-add_test(NAME conf.gst.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gst_1.conf
-)
-
-add_test(NAME conf.gst.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gst_2.conf
-)
-
-add_test(NAME conf.gst.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gst_3.conf
-)
-
-add_test(NAME conf.gst.4
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gst_4.conf
-)
-
-add_test(NAME conf.gst.5
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gst_5.conf
-)
-
-add_test(NAME conf.gst.6
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gst_6.conf
-)
+include(tests_conf)
