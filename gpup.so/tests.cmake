@@ -24,47 +24,4 @@
 ################################################################################
 
 
-add_test(NAME conf.gpup.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gpup1.conf
-)
-
-add_test(NAME conf.gpup.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gpup2.conf
-)
-
-add_test(NAME conf.gpup.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gpup3.conf
-)
-
-add_test(NAME conf.gpup.4
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gpup4.conf
-)
-
-add_test(NAME conf.gpup.5
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gpup5.conf
-)
-
-add_test(NAME conf.gpup.6
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gpup6.conf
-)
-
-add_test(NAME conf.gpup.7
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/gpup7.conf
-)
-
-add_test(NAME conf.gpup.8
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvsfail -d 3 -c conf/gpup8.conf
-)
-
-add_test(NAME conf.gpup.9
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvsfail -d 3 -c conf/gpup9.conf
-)
+include(tests_conf)

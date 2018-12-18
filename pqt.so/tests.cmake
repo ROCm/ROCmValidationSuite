@@ -23,34 +23,15 @@
 ##
 ################################################################################
 
+# generate random test files
 
-add_test(NAME conf.pqt.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pqt1.conf
-)
+## generate conf files
+#MESSAGE("RVS PATH: ${CMAKE_CURRENT_SOURCE_DIR}")
+set(MAKE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../regression/make_pqt_conf.py")
+#MESSAGE("COMMAND: ${MAKE_CMD}")
+execute_process(COMMAND ${MAKE_CMD})
 
-add_test(NAME conf.pqt.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pqt12.conf
-)
+# include resulting .cmake file with random tests declarations
+include(${CMAKE_CURRENT_SOURCE_DIR}/rand_tests.cmake)
 
-add_test(NAME conf.pqt.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pqt13.conf
-)
-
-add_test(NAME conf.pqt.4
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pqt14.conf
-)
-
-add_test(NAME conf.pqt.5
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pqt15.conf
-)
-
-add_test(NAME conf.pqt.6
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pqt16.conf
-)
-
+include(tests_conf)

@@ -34,7 +34,7 @@ parralel       = [True, False]
 # RVS build folder
 build_location = os.path.dirname(os.path.realpath(__file__))
 build_location = build_location + "/.."
-print(build_location)
+# print(build_location)
 
 # location of configuration files
 conf_location = build_location + "/rvs/conf/"
@@ -79,20 +79,20 @@ cmake_file.write(cmake_file_header)
 
 counter = 0
 total_iterations = (len(gpu_ids) + 1) * len(log_interval) * len(duration) * len(test_bandwidth) * len(bidirectional) * len(parralel) * len(device_id)
-print('Total number of combinations (including invalid) is {}'.format(total_iterations))
+#print('Total number of combinations (including invalid) is {}'.format(total_iterations))
 
 gpu_ids_size = len(gpu_ids)
 
 combos = itertools.product(test_bandwidth, log_interval, duration, bidirectional, parralel, device_id)
 
 # go through all combinations
-for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parralel_f, device_id_f in combos:
+for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parallel_f, device_id_f in combos:
 
     # create several combinations of gpu_ids
     sample_size = 0
     while True:
         # skip invalid combinations of test_bandwidth x (other bandwidth calculation parameters)
-        if not test_bandwidth_f and (bidirectional_f or parralel_f):
+        if not test_bandwidth_f and (bidirectional_f or parallel_f):
             # skip
             break
 
@@ -100,14 +100,16 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parralel_f, d
         counter += 1
 
         # for each conf file add the new test in the cmake unit test list
-        cmake_file.write('add_test(NAME rand.{}.{}\n'.format(module_name, counter))
+        test_name = 'rand.{}.{}'.format(module_name, counter)
+        print('rnd test: {}'.format(test_name))
+        cmake_file.write('add_test(NAME {}'.format(test_name))
         cmake_file.write('  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}\n')
         cmake_file.write('  COMMAND rvs -d 3 -c conf/rand_{}{}.conf\n'.format(module_name, counter))
         cmake_file.write(')\n\n')
 
         # for each combination create the conf file
         filename = conf_location + "rand_" + module_name + str(counter) + ".conf"
-        print('Iteration is {}, working on conf file {}'.format(counter, filename))
+#        print('Iteration is {}, working on conf file {}'.format(counter, filename))
         try:
             f = open(filename, "w")
         except OSError:
@@ -135,7 +137,7 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parralel_f, d
             f.write('  peer_deviceid: {}\n'.format(device_id_f))
         f.write('  test_bandwidth: {}\n'.format(str(test_bandwidth_f).lower()))
         f.write('  bidirectional: {}\n'.format(str(bidirectional_f).lower()))
-        f.write('  parallel: {}\n'.format(str(parralel_f).lower()))
+        f.write('  parallel: {}\n'.format(str(parallel_f).lower()))
         f.close()
 
         sample_size += 1

@@ -24,47 +24,4 @@
 ################################################################################
 
 
-add_test(NAME conf.pebb.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pebb_test1.conf
-)
-
-add_test(NAME conf.pebb.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pebb_test2.conf
-)
-
-add_test(NAME conf.pebb.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pebb_test3.conf
-)
-
-add_test(NAME conf.pebb.4
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pebb_test4.conf
-)
-
-add_test(NAME conf.pebb.5
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pebb_test5.conf
-)
-
-add_test(NAME conf.pebb.6
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pebb_test6.conf
-)
-
-add_test(NAME conf.pebb.7
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pebb_test7.conf
-)
-
-add_test(NAME conf.pebb.8
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pebb_test8.conf
-)
-
-add_test(NAME conf.pebb.9
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pebb_test9.conf
-)
+include(tests_conf)
