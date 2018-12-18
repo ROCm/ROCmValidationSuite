@@ -63,30 +63,16 @@ link_directories(${UT_LIB})
 ## additional libraries for unit tests
 set (PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
 
-# ## additional sources used in unit tests
-# set(TEST_SOURCES
-#    ../src/gpu_util.cpp ../src/pci_caps.cpp ../src/rvs_unit_testing_defs.cpp
-#    ../src/rvslognode.cpp ../src/rvslognodeint.cpp ../src/rvslognodestring.cpp
-#    ../src/rvslognoderec.cpp ../src/rvslognodebase.cpp
-#    ../src/rvsthreadbase.cpp
-# )
-#
-# ## define test helper lib
-# add_library(rvstesthelper ${TEST_SOURCES})
-# target_compile_definitions(rvstesthelper PRIVATE RVS_UNIT_TEST)
-# #add_compile_options(-Wall -Wextra -save-temps)
-# add_dependencies(rvstesthelper rvshelper)
-
 ## define unit testing targets
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 #message ( "TESTSOURCES ${TESTSOURCES}" )
 
 # add tests
 FOREACH(SINGLE_TEST ${TESTSOURCES})
-  MESSAGE("${SINGLE_TEST}")
+#  MESSAGE("${SINGLE_TEST}")
   string(REPLACE "test/" "unit.rvs." TMP_TEST_NAME ${SINGLE_TEST})
   string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
-  MESSAGE("${TEST_NAME}")
+  MESSAGE("unit test: ${TEST_NAME}")
 
   add_executable(${TEST_NAME} ${SINGLE_TEST}
     )

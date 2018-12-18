@@ -23,99 +23,31 @@
 ##
 ################################################################################
 
+set(MAKE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../regression/make_ctest_conf.py" )
+include(tests_conf_group)
 
-add_test(NAME conf.rcqt.fc.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_fc1.conf
-)
+set(RVS_TEST_GROUP "usr")
+rvs_register_test_group(${RVS_TEST_GROUP})
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 
-add_test(NAME conf.rcqt.fc.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_fc2.conf
-)
+set(RVS_TEST_GROUP "kernel")
+rvs_register_test_group(${RVS_TEST_GROUP})
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 
-add_test(NAME conf.rcqt.fc.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_fc3.conf
-)
+set(RVS_TEST_GROUP "pkg")
+rvs_register_test_group(${RVS_TEST_GROUP})
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 
-add_test(NAME conf.rcqt.fc.4
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_fc4.conf
-)
+set(RVS_TEST_GROUP "ldchk")
+rvs_register_test_group(${RVS_TEST_GROUP})
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 
-add_test(NAME conf.rcqt.kc.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_kernel_fail1.conf
-)
-
-add_test(NAME conf.rcqt.kc.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_kernel_fail2.conf
-)
-
-add_test(NAME conf.rcqt.kc.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_kernel_pass.conf
-)
-
-add_test(NAME conf.rcqt.ld.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_ldchk_fail1.conf
-)
-
-add_test(NAME conf.rcqt.ld.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_ldchk_fail2.conf
-)
-
-add_test(NAME conf.rcqt.ld.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_ldchk_pass.conf
-)
-
-add_test(NAME conf.rcqt.pkg.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_pkg_fail1.conf
-)
-
-add_test(NAME conf.rcqt.pkg.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_pkg_fail2.conf
-)
-
-add_test(NAME conf.rcqt.pkg.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_pkg_pass.conf
-)
-
-add_test(NAME conf.rcqt.pkg.4
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_pkg_pass2.conf
-)
-
-add_test(NAME conf.rcqt.usr.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_usr_fail1.conf
-)
-
-add_test(NAME conf.rcqt.usr.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvsfail -d 3 -c conf/rcqt_usr_fail2.conf
-)
-
-add_test(NAME conf.rcqt.usr.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_usr_pass1.conf
-)
-
-add_test(NAME conf.rcqt.usr.4
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_usr_pass2.conf
-)
-
-add_test(NAME conf.rcqt.usr.5
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/rcqt_usr_pass3.conf
-)
+set(RVS_TEST_GROUP "fc")
+rvs_register_test_group(${RVS_TEST_GROUP})
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 
