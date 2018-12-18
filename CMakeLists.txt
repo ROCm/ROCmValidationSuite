@@ -81,7 +81,7 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
 
 # Set PATH variables
-set(rvs_build_type "Debug")
+set(RVS_BUILD_TYPE "Debug" CACHE STRING "Build type")
 set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
 set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
 set(RVS_ROCMSMI "1" CACHE STRING "1 = use local rocm_smi_lib")
@@ -102,17 +102,17 @@ endif()
 message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
 
-if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE ${rvs_build_type} CACHE STRING "Build type" FORCE)
-    # Set the possible values of build type for cmake-gui
+set(CMAKE_BUILD_TYPE ${RVS_BUILD_TYPE} CACHE STRING "Build type" FORCE)
+if (NOT CMAKE_CONFIGURATION_TYPES)
+  # Set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    add_definitions(-DDEBUG)
-    message(STATUS "DEBUG defined")
-endif()
+# if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+#     add_definitions(-DDEBUG)
+#     message(STATUS "DEBUG defined")
+# endif()
 
 message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
@@ -362,20 +362,20 @@ set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
 
 add_subdirectory(rvs)
 add_subdirectory(rvslib)
-add_subdirectory(gpup.so)
-add_subdirectory(pesm.so)
-add_subdirectory(rcqt.so)
-add_subdirectory(peqt.so)
-add_subdirectory(smqt.so)
-add_subdirectory(pebb.so)
 add_subdirectory(gm.so)
+add_subdirectory(gpup.so)
 add_subdirectory(gst.so)
-add_subdirectory(pqt.so)
 add_subdirectory(iet.so)
+add_subdirectory(pebb.so)
+add_subdirectory(peqt.so)
+add_subdirectory(pesm.so)
+add_subdirectory(pqt.so)
+add_subdirectory(rcqt.so)
+add_subdirectory(smqt.so)
 
 add_dependencies(rvshelper rvs_bintest_folder rvs_doc rvs_gtest_target rvs_yaml_target)
 
-add_dependencies(pesm rvslib)
+add_dependencies(pesm rvslib rvslibrt)
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_rsmi_target)
   add_dependencies(iet rvs_rsmi_target)

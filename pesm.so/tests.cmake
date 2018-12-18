@@ -24,82 +24,12 @@
 ################################################################################
 
 
-## define additional unit testing include directories
-include_directories(${UT_INC})
-## define additional unit testing lib directories
-link_directories(${UT_LIB} ${RVS_LIB_DIR})
-
-file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
-#message ( "TESTSOURCES: ${TESTSOURCES}" )
 set (UT_SOURCES test/unitactionbase.cpp
 )
-#message("UT_SOURCES: ${UT_SOURCES}")
 
 # add unit tests
-FOREACH(SINGLE_TEST ${TESTSOURCES})
-#  MESSAGE("${SINGLE_TEST}")
-  string(REPLACE "test/test" "unit.${RVS}." TMP_TEST_NAME ${SINGLE_TEST})
-  string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
-  MESSAGE("unit test: ${TEST_NAME}")
+include(tests_unit)
 
-  add_executable(${TEST_NAME}
-    ${SINGLE_TEST} ${UT_SOURCES}
-  )
-  target_link_libraries(${TEST_NAME}
-    ${PROJECT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread
-  )
-  set_target_properties(${TEST_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
-  )
+# Add configuration tests
+include(tests_conf)
 
-  add_test(NAME ${TEST_NAME}
-    WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
-    COMMAND ${TEST_NAME}
-  )
-ENDFOREACH()
-
-# add .conf file tests
-add_test(NAME conf.pesm.0
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pesm.conf
-)
-
-add_test(NAME conf.pesm.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pesm1.conf
-)
-
-add_test(NAME conf.pesm.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pesm2.conf
-)
-
-add_test(NAME conf.pesm.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvsfail -d 3 -c conf/pesm3.conf
-)
-
-add_test(NAME conf.pesm.4
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvsfail -d 3 -c conf/pesm4.conf
-)
-
-add_test(NAME conf.pesm.5
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pesm5.conf
-)
-
-add_test(NAME conf.pesm.6
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pesm6.conf
-)
-
-add_test(NAME conf.pesm.7
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pesm7.conf
-)
-
-add_test(NAME conf.pesm.8
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/pesm8.conf
-)

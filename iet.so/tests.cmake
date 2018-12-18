@@ -24,31 +24,4 @@
 ################################################################################
 
 
-add_test(NAME conf.iet.0
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/iet.conf
-)
-add_test(NAME conf.iet.1
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/iet1.conf
-)
-
-add_test(NAME conf.iet.2
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/iet2.conf
-)
-
-add_test(NAME conf.iet.3
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/iet3.conf
-)
-
-add_test(NAME conf.iet.4
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/iet4.conf
-)
-
-add_test(NAME conf.iet.5
-  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  COMMAND rvs -d 3 -c conf/iet5.conf
-)
+include(tests_conf)
