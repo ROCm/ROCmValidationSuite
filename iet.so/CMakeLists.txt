@@ -115,29 +115,23 @@ if(DEFINED RVS_ROCMSMI)
   endif()
 endif()
 
-# Add directories to look for header files to compile
-INCLUDE_DIRECTORIES(${ROCM_SMI_INC_DIR} ${ROCBLAS_INC_DIR} ${ROCR_INC_DIR} ${HIP_INC_DIR})
-
-# Add directories to look for library files to link 
-LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
-
-## additional libraries
-set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
-
 ## define include directories
-include_directories(./ ../)
+include_directories(./ ../ ${ROCM_SMI_INC_DIR} ${ROCBLAS_INC_DIR} ${ROCR_INC_DIR} ${HIP_INC_DIR})
+# Add directories to look for library files to link
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
+## additional libraries
+set (PROJECT_LINK_LIBS rvslibrt rvslib libpthread.so libpci.so libm.so)
 
-set(SOURCES ../src/gpu_util.cpp ../src/rvs_util.cpp ../src/rvsloglp.cpp ../src/rsmi_util.cpp
-  ../src/rvsthreadbase.cpp ../src/rvsactionbase.cpp 
-  src/rvs_module.cpp src/action.cpp src/iet_worker.cpp ../src/rvs_blas.cpp src/blas_worker.cpp src/log_worker.cpp)
+set(SOURCES src/rvs_module.cpp src/action.cpp
+            src/iet_worker.cpp src/blas_worker.cpp src/log_worker.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB} ${ROCM_SMI_LIB})
+add_dependencies(${RVS_TARGET} rvslibrt rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

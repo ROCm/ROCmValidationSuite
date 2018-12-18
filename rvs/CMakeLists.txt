@@ -45,10 +45,10 @@ project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
 
-# ## Set default module path if not already set
-# if ( NOT DEFINED CMAKE_MODULE_PATH )
-#     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
-# endif ()
+## Set default module path if not already set
+if ( NOT DEFINED CMAKE_MODULE_PATH )
+    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
+endif ()
 
 ## Include common cmake modules
 include ( utils )
@@ -74,36 +74,34 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
-## additional libraries
-set ( PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
-
 ## define include directories
-include_directories(./ ../ ${YAML_INC_DIR} ${UT_INC})
+include_directories(./ ../ ${YAML_INC_DIR})
+## define lib directories
+link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR})
+## additional libraries
+set (PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
 
 ## define source files
 set(SOURCES
-  src/rvsmodule.cpp src/rvsif_base.cpp src/rvsif0.cpp src/rvsif1.cpp src/rvsaction.cpp src/rvscli.cpp src/rvsexec.cpp src/rvsexec_do_yaml.cpp
+  src/rvsmodule.cpp
+  src/rvsif_base.cpp
+  src/rvsif0.cpp
+  src/rvsif1.cpp
+  src/rvsaction.cpp
+  src/rvscli.cpp
+  src/rvsexec.cpp
+  src/rvsexec_do_yaml.cpp
   src/rvsoptions.cpp
-  ../src/rvsliblogger.cpp ../src/rvslognodebase.cpp ../src/rvslognoderec.cpp ../src/rvslognode.cpp ../src/rvslognodestring.cpp ../src/rvslognodeint.cpp
 )
+
+## define helper lib
+add_library(rvshelper ${SOURCES})
 
 ## define target
-add_executable(${RVS_TARGET} src/rvs.cpp ${SOURCES})
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
+add_executable(${RVS_TARGET} src/rvs.cpp)
+target_link_libraries(${RVS_TARGET} librvshelper.a rvslib ${PROJECT_LINK_LIBS} )
+add_dependencies(${RVS_TARGET} rvshelper)
 
-## define target for "test-to-fail"
-add_executable(${RVS_TARGET}fail src/rvs.cpp ${SOURCES})
-target_link_libraries(${RVS_TARGET}fail ${PROJECT_LINK_LIBS} )
-target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
-set_target_properties(${RVS_TARGET}fail PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
-)
-
-## define unit testing targets
-file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
-message ( "TESTSOURCES ${TESTSOURCES}" )
-
-LINK_DIRECTORIES(${UT_LIB})
 
 install(TARGETS ${RVS_TARGET}
   RUNTIME

@@ -84,12 +84,6 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
-## generate conf files
-MESSAGE("RVS PATH: ${CMAKE_CURRENT_SOURCE_DIR}")
-set(MAKE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../regression/make_pqt_conf.py")
-MESSAGE("COMMAND: ${MAKE_CMD}")
-execute_process(COMMAND ${MAKE_CMD})
-
 # Set project requirements
 set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
@@ -108,31 +102,24 @@ if(NOT EXISTS ${ROCR_LIB_DIR}/${CORE_RUNTIME_LIBRARY}.so)
   RETURN()
 endif()
 
-# Add directories to look for header files to compile
-INCLUDE_DIRECTORIES(${ROCR_INC_DIR})
-
-# Add directories to look for library files to link 
-LINK_DIRECTORIES(${ROCR_LIB_DIR} ${ROCT_LIB_DIR})
-
-## additional libraries
-set ( PROJECT_LINK_LIBS libpthread.so libpci.so libm.so )
-
 ## define include directories
-include_directories(./ ../ pci)
+include_directories(./ ../ pci ${ROCR_INC_DIR})
+# Add directories to look for library files to link
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCT_LIB_DIR})
+## additional libraries
+set (PROJECT_LINK_LIBS rvslibrt rvslib libpthread.so libpci.so libm.so)
 
 ## define source files
-set(SOURCES ../src/rvsthreadbase.cpp ../src/gpu_util.cpp ../src/rvs_util.cpp
-            ../src/pci_caps.cpp ../src/rvsactionbase.cpp ../src/rvsloglp.cpp
-            ../src/rvshsa.cpp
-            src/rvs_module.cpp src/action.cpp src/action_run.cpp src/worker.cpp src/worker_b2b.cpp)
+set(SOURCES src/rvs_module.cpp src/action.cpp src/action_run.cpp
+            src/worker.cpp src/worker_b2b.cpp)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${CORE_RUNTIME_TARGET} ${ROC_THUNK_NAME})
+add_dependencies(${RVS_TARGET} rvslibrt rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
@@ -147,4 +134,3 @@ install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMA
 # TEST SECTION
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/rand_tests.cmake)
