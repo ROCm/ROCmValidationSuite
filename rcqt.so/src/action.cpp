@@ -563,6 +563,18 @@ int rcqt_action::ldcfgchk_run() {
       , MODULE_NAME_CAPS, action_name);
       return 1;
     }
+    string ld_config_result = "[" + action_name + "] " +
+    "rcqt ldconfigcheck ";
+    struct stat stat_buf;
+    if (stat(ldpath_requested.c_str(), &stat_buf) < 0) {
+        string arch_fail = ld_config_result + "not found"
+        + " NA " + ldpath_requested + " fail";
+        log(msg.c_str(), rvs::logresults);
+      if (bjson && json_rcqt_node != nullptr) {
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+      return 0;
+    }
     char cmd_buffer[BUFFER_SIZE];
     snprintf(cmd_buffer, BUFFER_SIZE, \
     "ls -p %s | grep -v / > %s", ldpath_requested.c_str(),
@@ -586,8 +598,7 @@ int rcqt_action::ldcfgchk_run() {
     }
     string arch_found_string;
     bool arch_found_bool = false;
-    string ld_config_result = "[" + action_name + "] " +
-    "rcqt ldconfigcheck ";
+
     for (auto it = found_files_vector.begin()
       ; it != found_files_vector.end(); it++) {
       // Full path of shared object
@@ -714,9 +725,34 @@ int rcqt_action::filechk_run() {
   else if (exists_string == "true")
     exists = true;
   std::size_t found = file.find_last_of("/\\");
-
   string file_path = file.substr(0, found);
   string file_requested = file.substr(found+1);
+  if (stat(file_path.c_str(), &info) < 0) {
+    string check;
+    if (exists == false) {
+      check = "false";
+      msg = "[" + action_name + "] " + "rcqt filecheck "
+      + file_path +" DNE " + check;
+      log(msg.c_str(), rvs::logresults);
+      if (bjson && json_rcqt_node != nullptr) {
+        rvs::lp::AddString(json_rcqt_node
+        , "exists", file);
+      }
+    } else {
+      msg = "[" + action_name + "] " + "rcqt filecheck "+ file +
+      " file is not found";
+      rvs::lp::Log(msg, rvs::logerror);
+      if (bjson && json_rcqt_node != nullptr) {
+        rvs::lp::AddString(json_rcqt_node
+        , "exists", file);
+      }
+    }
+    if (bjson && json_rcqt_node != nullptr) {
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }
+    return 0;
+    // if exists property is set to true and file is found,check each parameter
+  }
   char cmd_buffer[BUFFER_SIZE];
   snprintf(cmd_buffer, BUFFER_SIZE, \
   "ls %s | grep -v / > %s", file_path.c_str()
@@ -751,16 +787,6 @@ int rcqt_action::filechk_run() {
   }
   if (exists == false && found_files_vector.empty()) {
     check = "true";
-    msg = "[" + action_name + "] " + "rcqt filecheck "
-    + file_path +" DNE " + check;
-    log(msg.c_str(), rvs::logresults);
-    if (bjson && json_rcqt_node != nullptr) {
-      rvs::lp::AddString(json_rcqt_node
-      , "exists", file_path);
-    }
-  }
-  if (found_files_vector.empty() && exists == true) {
-    check = "false";
     msg = "[" + action_name + "] " + "rcqt filecheck "
     + file_path +" DNE " + check;
     log(msg.c_str(), rvs::logresults);
