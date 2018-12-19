@@ -382,6 +382,7 @@ if(RVS_ROCMSMI EQUAL 1)
 endif()
 
 if(RVS_ROCBLAS EQUAL 1)
+  add_dependencies(rvslib rvs_rblas_target)
   add_dependencies(gst rvs_rblas_target)
   add_dependencies(iet rvs_rblas_target)
 endif()
