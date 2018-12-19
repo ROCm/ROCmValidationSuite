@@ -28,12 +28,11 @@ add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall -Wextra)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
+add_compile_options(-fprofile-arcs -ftest-coverage)
 
 ## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
-else()
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+  message(FATAL "In-source build is not allowed")
 endif ()
 
 set ( RVS "rvs" )
