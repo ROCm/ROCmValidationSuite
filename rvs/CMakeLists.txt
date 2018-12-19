@@ -28,7 +28,7 @@ add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall -Wextra)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
-add_compile_options(-fprofile-arcs -ftest-coverage)
+add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
 set(CMAKE_EXE_LINKER_FLAGS "--coverage")
 set(CMAKE_SHARED_LINKER_FLAGS "--coverage")
 

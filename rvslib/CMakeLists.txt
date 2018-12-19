@@ -75,6 +75,9 @@ add_compile_options(-DBUILD_VERSION_MINOR=${VERSION_MINOR})
 add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
+add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
+set(CMAKE_EXE_LINKER_FLAGS "--coverage")
+set(CMAKE_SHARED_LINKER_FLAGS "--coverage")
 
 ## define include directories
 include_directories(./ ../

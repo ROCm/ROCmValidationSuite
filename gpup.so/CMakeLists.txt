@@ -26,6 +26,9 @@
 cmake_minimum_required ( VERSION 3.5.0 )
 add_compile_options(-std=c++11)
 add_compile_options(-Wall -Wextra)
+add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
+set(CMAKE_EXE_LINKER_FLAGS "--coverage")
+set(CMAKE_SHARED_LINKER_FLAGS "--coverage")
 
 set ( RVS "gpup" )
 set ( RVS_PACKAGE "rvs-roct" )
