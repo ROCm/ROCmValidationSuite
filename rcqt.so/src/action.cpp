@@ -569,7 +569,7 @@ int rcqt_action::ldcfgchk_run() {
     if (stat(ldpath_requested.c_str(), &stat_buf) < 0) {
         string arch_fail = ld_config_result + "not found"
         + " NA " + ldpath_requested + " fail";
-				log(arch_fail.c_str(), rvs::logresults);
+        log(arch_fail.c_str(), rvs::logresults);
       if (bjson && json_rcqt_node != nullptr) {
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
@@ -727,30 +727,63 @@ int rcqt_action::filechk_run() {
   std::size_t found = file.find_last_of("/\\");
   string file_path = file.substr(0, found);
   string file_requested = file.substr(found+1);
-	if (stat(file_path.c_str(), &info) < 0) {
-		string check;
-		if (exists == false) {
-			check = "false";
-			msg = "[" + action_name + "] " + "rcqt filecheck "
-			+ file_path +" DNE " + check;
-			log(msg.c_str(), rvs::logresults);
-			if (bjson && json_rcqt_node != nullptr) {
-				rvs::lp::AddString(json_rcqt_node
-				, "exists", file);
-			}
-		} else {
-			msg = "[" + action_name + "] " + "rcqt filecheck "+ file +
-			" file is not found";
-			rvs::lp::Log(msg, rvs::logerror);
-			if (bjson && json_rcqt_node != nullptr) {
-				rvs::lp::AddString(json_rcqt_node
-				, "exists", file);
-			}
-		}
-		if (bjson && json_rcqt_node != nullptr) {
-			rvs::lp::LogRecordFlush(json_rcqt_node);
-		}
-	
+  if (stat(file_path.c_str(), &info) < 0) {
+    string check;
+    if (exists == false) {
+      check = "false";
+      msg = "[" + action_name + "] " + "rcqt filecheck "
+      + file_path +" DNE " + check;
+      log(msg.c_str(), rvs::logresults);
+      if (bjson && json_rcqt_node != nullptr) {
+        rvs::lp::AddString(json_rcqt_node
+        , iter->second, file);
+      }
+    } else {
+      iter = property.find("owner");
+      if (iter != property.end()) {
+        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
+        " false";
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , iter->second, "false");
+        }
+      }
+      iter = property.find("group");
+      if (iter != property.end()) {
+        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
+        " false";
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , iter->second, "false");
+        }
+      }
+      iter = property.find("permission");
+      if (iter != property.end()) {
+        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
+        " false";
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , iter->second, "false");
+        }
+      }
+      iter = property.find("type");
+      if (iter != property.end()) {
+        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
+        " false";
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , iter->second, "false");
+        }
+      }
+    }
+    if (bjson && json_rcqt_node != nullptr) {
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }
+
     return 0;
     // if exists property is set to true and file is found,check each parameter
   }
@@ -786,6 +819,7 @@ int rcqt_action::filechk_run() {
       }
     }
   }
+
   if (exists == false && found_files_vector.empty()) {
     check = "true";
     msg = "[" + action_name + "] " + "rcqt filecheck "
@@ -793,7 +827,61 @@ int rcqt_action::filechk_run() {
     log(msg.c_str(), rvs::logresults);
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::AddString(json_rcqt_node
-      , "exists", file_path);
+      , "exists", file);
+    }
+  }
+  if (exists == true && found_files_vector.empty()) {
+    string check;
+    if (exists == false) {
+      check = "false";
+      msg = "[" + action_name + "] " + "rcqt filecheck "
+      + file_path +" DNE " + check;
+      log(msg.c_str(), rvs::logresults);
+      if (bjson && json_rcqt_node != nullptr) {
+        rvs::lp::AddString(json_rcqt_node
+        , "exists", file);
+      }
+    } else {
+      iter = property.find("owner");
+      if (iter != property.end()) {
+        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
+        " false";
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , iter->second, "false");
+        }
+      }
+      iter = property.find("group");
+      if (iter != property.end()) {
+        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
+        " false";
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , iter->second, "false");
+        }
+      }
+      iter = property.find("permission");
+      if (iter != property.end()) {
+        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
+        " false";
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , iter->second, "false");
+        }
+      }
+      iter = property.find("type");
+      if (iter != property.end()) {
+        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
+        " false";
+        log(msg.c_str(), rvs::logresults);
+        if (bjson && json_rcqt_node != nullptr) {
+          rvs::lp::AddString(json_rcqt_node
+          , iter->second, "false");
+        }
+      }
     }
   }
   for (auto file_it = found_files_vector.begin();
