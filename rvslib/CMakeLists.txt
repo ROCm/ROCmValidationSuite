@@ -124,7 +124,9 @@ add_library(${RVS_TARGET}rt  ${SOURCES_RT})
 add_library(${RVS_TARGET}  ${SOURCES})
 add_dependencies(${RVS_TARGET} ${RVS_TARGET}rt)
 
-## define rvslibut (unit test) library
-add_library(${RVS_TARGET}ut  ${SOURCES_UT})
-target_compile_definitions(${RVS_TARGET}ut PRIVATE RVS_UNIT_TEST)
-add_dependencies(${RVS_TARGET}ut ${RVS_TARGET}rt)
+if (RVS_BUILD_TESTS)
+  ## define rvslibut (unit test) library
+  add_library(${RVS_TARGET}ut  ${SOURCES_UT})
+  target_compile_definitions(${RVS_TARGET}ut PRIVATE RVS_UNIT_TEST)
+  add_dependencies(${RVS_TARGET}ut ${RVS_TARGET}rt)
+endif()

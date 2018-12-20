@@ -124,5 +124,6 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
 )
 
 # TEST SECTION
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+if (RVS_BUILD_TESTS)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+endif()
