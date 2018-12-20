@@ -1,8 +1,25 @@
 #!/bin/bash
 
+# arguments:
+#   bin path
+#   conf file
+#   json output
+#   console output
+
 cd $1
+
 if [ -f $4 ]
 then
    rm $4
 fi
-./rvs -d 3 -c $2 -l $3 -j > $4
+
+if [ "$3" = "no_json" ]
+then
+   ./rvs -d 3 -c $2 > $4
+else
+   if [ -f $3 ]
+   then
+      rm $3
+   fi
+   ./rvs -d 3 -c $2 -l $3 -j > $4
+fi
