@@ -24,6 +24,10 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
+if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+  message(FATAL "In-source build is not allowed")
+endif ()
+
 project ("rocm-validation-suite" )
 enable_testing()
 #include ( CTest )
@@ -48,13 +52,6 @@ else()
   set(RVS_OS_TYPE_NUM 0)
 endif()
 message(STATUS "RVS_OS_TYPE_NUM: ${RVS_OS_TYPE_NUM}")
-
-## Support for in-source compilaton
-if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
-else()
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
-endif ()
 
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
@@ -83,7 +80,8 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
 
 set(WITH_COVERAGE FALSE CACHE BOOL "TRUE if code coverage is to be provided")
-set(WITH_TESTING TRUE CACHE BOOL "TRUE if testing is to be enabled")
+set(WITH_TESTING TRUE CACHE BOOL "TRUE if tests are to be executed")
+set(RVS_BUILD_TESTS FALSE CACHE BOOL "TRUE if tests are to be built")
 
 set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
 set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
@@ -127,20 +125,8 @@ if (DEFINED RVS_DO_TRACE)
   endif()
 else()
     message(STATUS "RVS_DO_TRACE not defined")
-endif( )
+endif()
 
-
-## Set default unit test framework include path
-if ( NOT DEFINED UT_INC )
-    set ( UT_INC "${CMAKE_BINARY_DIR}/googletest-src/googletest/include" )
-    message ( "UT_INC ${UT_INC}" )
-endif ()
-
-## Set default unit test framework include path
-if ( NOT DEFINED UT_LIB )
-    set ( UT_LIB "${CMAKE_BINARY_DIR}/googletest-build/lib" )
-    message ( "UT_LIB ${UT_LIB}" )
-endif ()
 
 ## Set default module path if not already set
 if (NOT DEFINED CPACK_GENERATOR )
@@ -192,38 +178,51 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
 
 ################################################################################
 ## GOOGLE TEST
+if(RVS_BUILD_TESTS)
+  # Download and unpack googletest at configure time
+  configure_file(CMakeGtestDownload.cmake googletest-download/CMakeLists.txt)
+  execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+  if(result)
+    message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} --build .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+  if(result)
+    message(FATAL_ERROR "Build step for googletest failed: ${result}")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/googletest-src -B${CMAKE_BINARY_DIR}/googletest-build
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src )
+  if(result)
+    message(FATAL_ERROR "Config step for googletest-src failed: ${result}")
+  endif()
 
-# Download and unpack googletest at configure time
-configure_file(CMakeGtestDownload.cmake googletest-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-if(result)
-  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+  add_custom_target(rvs_gtest_target
+    DEPENDS ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
+  )
+
+  add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
+    COMMAND make -C ${CMAKE_BINARY_DIR}/googletest-build
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src
+    COMMENT "Generating googletest targets"
+    VERBATIM)
+
+  ## Set default unit test framework include path
+  if (NOT DEFINED UT_INC)
+      set (UT_INC "${CMAKE_BINARY_DIR}/googletest-src/googletest/include")
+      message ("UT_INC ${UT_INC}")
+  endif ()
+
+  ## Set default unit test framework include path
+  if (NOT DEFINED UT_LIB)
+      set (UT_LIB "${CMAKE_BINARY_DIR}/googletest-build/lib")
+      message ("UT_LIB ${UT_LIB}")
+  endif()
+
 endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-if(result)
-  message(FATAL_ERROR "Build step for googletest failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/googletest-src -B${CMAKE_BINARY_DIR}/googletest-build
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src )
-if(result)
-  message(FATAL_ERROR "Config step for googletest-src failed: ${result}")
-endif()
-
-add_custom_target(rvs_gtest_target
-  DEPENDS ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
-)
-
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
-  COMMAND make -C ${CMAKE_BINARY_DIR}/googletest-build
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src
-  COMMENT "Generating googletest targets"
-  VERBATIM)
-
 ################################################################################
 ## rocBLAS
 
@@ -375,7 +374,8 @@ add_subdirectory(pqt.so)
 add_subdirectory(rcqt.so)
 add_subdirectory(smqt.so)
 
-add_dependencies(rvshelper rvs_bintest_folder rvs_doc rvs_gtest_target rvs_yaml_target)
+add_dependencies(rvshelper rvs_bin_folder rvs_doc rvs_yaml_target)
+
 
 add_dependencies(pesm rvslib rvslibrt)
 if(RVS_ROCMSMI EQUAL 1)
@@ -389,21 +389,28 @@ if(RVS_ROCBLAS EQUAL 1)
   add_dependencies(iet rvs_rblas_target)
 endif()
 
-add_custom_target(rvs_bintest_folder ALL
+add_custom_target(rvs_bin_folder ALL
 COMMAND ${CMAKE_COMMAND} -E make_directory "bin"
-COMMAND ${CMAKE_COMMAND} -E make_directory "bintest"
 COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/.rvsmodules.config
 COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/.rvsmodules.config ${CMAKE_BINARY_DIR}/bin/.rvsmodules.config
 COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/conf
 COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf ${CMAKE_BINARY_DIR}/bin
-
-COMMAND rm -f ${RVS_BINTEST_FOLDER}/.rvsmodules.config
-COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/.rvsmodules.config ${RVS_BINTEST_FOLDER}/.rvsmodules.config
-COMMAND rm -f ${RVS_BINTEST_FOLDER}/conf
-COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf ${RVS_BINTEST_FOLDER}
 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-COMMENT "Create the bintest directory"
+COMMENT "Create the bin directory"
 VERBATIM)
+
+if (RVS_BUILD_TESTS)
+  add_custom_target(rvs_bintest_folder ALL
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${RVS_BINTEST_FOLDER}
+  COMMAND rm -f ${RVS_BINTEST_FOLDER}/.rvsmodules.config
+  COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/.rvsmodules.config ${RVS_BINTEST_FOLDER}/.rvsmodules.config
+  COMMAND rm -f ${RVS_BINTEST_FOLDER}/conf
+  COMMAND ln -s ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf ${RVS_BINTEST_FOLDER}
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  COMMENT "Create the bintest directory"
+  VERBATIM)
+  add_dependencies(rvshelper rvs_bintest_folder rvs_gtest_target)
+endif()
 
 add_custom_target(rvs_doc ALL
 COMMAND ${CMAKE_COMMAND} -E make_directory "doc"
