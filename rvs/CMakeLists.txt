@@ -24,17 +24,10 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
-add_compile_options(-std=c++11)
-add_compile_options(-pthread)
-add_compile_options(-Wall -Wextra)
-add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
-
-## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
-else()
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+  message(FATAL "In-source build is not allowed")
 endif ()
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 set ( RVS "rvs" )
 set ( RVS_PACKAGE "rvs-roct" )
@@ -44,6 +37,16 @@ set ( RVS_TARGET "${RVS}" )
 project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
+
+add_compile_options(-std=c++11)
+add_compile_options(-pthread)
+add_compile_options(-Wall -Wextra)
+add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
+if (WITH_COVERAGE)
+  add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
+  set(CMAKE_EXE_LINKER_FLAGS "--coverage")
+  set(CMAKE_SHARED_LINKER_FLAGS "--coverage")
+endif()
 
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
@@ -121,5 +124,6 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
 )
 
 # TEST SECTION
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+if (RVS_BUILD_TESTS)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+endif()

@@ -24,18 +24,8 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
-add_compile_options(-std=c++11)
-add_compile_options(-pthread)
-add_compile_options(-Wl,-no-as-needed)
-add_compile_options(-Wall -Wextra)
-add_compile_options(-fPIC)
-add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
-
-## Support for in-source compilaton
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
-else()
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+  message(FATAL "In-source build is not allowed")
 endif ()
 
 set ( RVS "rvslib" )
@@ -47,10 +37,22 @@ project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
 
-# ## Set default module path if not already set
-# if ( NOT DEFINED CMAKE_MODULE_PATH )
-#     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
-# endif ()
+add_compile_options(-std=c++11)
+add_compile_options(-pthread)
+add_compile_options(-Wl,-no-as-needed)
+add_compile_options(-Wall -Wextra)
+add_compile_options(-fPIC)
+add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
+if (WITH_COVERAGE)
+  add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
+  set(CMAKE_EXE_LINKER_FLAGS "--coverage")
+  set(CMAKE_SHARED_LINKER_FLAGS "--coverage")
+endif()
+
+## Set default module path if not already set
+if ( NOT DEFINED CMAKE_MODULE_PATH )
+    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
+endif ()
 
 ## Include common cmake modules
 include ( utils )
@@ -122,7 +124,9 @@ add_library(${RVS_TARGET}rt  ${SOURCES_RT})
 add_library(${RVS_TARGET}  ${SOURCES})
 add_dependencies(${RVS_TARGET} ${RVS_TARGET}rt)
 
-## define rvslibut (unit test) library
-add_library(${RVS_TARGET}ut  ${SOURCES_UT})
-target_compile_definitions(${RVS_TARGET}ut PRIVATE RVS_UNIT_TEST)
-add_dependencies(${RVS_TARGET}ut ${RVS_TARGET}rt)
+if (RVS_BUILD_TESTS)
+  ## define rvslibut (unit test) library
+  add_library(${RVS_TARGET}ut  ${SOURCES_UT})
+  target_compile_definitions(${RVS_TARGET}ut PRIVATE RVS_UNIT_TEST)
+  add_dependencies(${RVS_TARGET}ut ${RVS_TARGET}rt)
+endif()
