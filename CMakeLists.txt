@@ -28,6 +28,8 @@ project ("rocm-validation-suite" )
 enable_testing()
 #include ( CTest )
 
+set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type")
+
 execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rvs_os_helper.sh
   RESULT_VARIABLE result
   OUTPUT_VARIABLE RVS_OS_TYPE
@@ -80,8 +82,9 @@ set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_MAJOR}.${VERSION_MI
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
 
-# Set PATH variables
-set(RVS_BUILD_TYPE "Debug" CACHE STRING "Build type")
+set(WITH_COVERAGE FALSE CACHE BOOL "TRUE if code coverage is to be provided")
+set(WITH_TESTING TRUE CACHE BOOL "TRUE if testing is to be enabled")
+
 set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
 set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
 set(RVS_ROCMSMI "1" CACHE STRING "1 = use local rocm_smi_lib")
@@ -102,7 +105,6 @@ endif()
 message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
 
-set(CMAKE_BUILD_TYPE ${RVS_BUILD_TYPE} CACHE STRING "Build type" FORCE)
 if (NOT CMAKE_CONFIGURATION_TYPES)
   # Set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
@@ -382,6 +384,7 @@ if(RVS_ROCMSMI EQUAL 1)
 endif()
 
 if(RVS_ROCBLAS EQUAL 1)
+  add_dependencies(rvslib rvs_rblas_target)
   add_dependencies(gst rvs_rblas_target)
   add_dependencies(iet rvs_rblas_target)
 endif()

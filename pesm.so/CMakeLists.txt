@@ -24,13 +24,10 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
-add_compile_options(-std=c++11)
-add_compile_options(-pthread)
-add_compile_options(-Wl,-no-as-needed)
-add_compile_options(-Wall -Wextra)
-add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
-set(CMAKE_EXE_LINKER_FLAGS "--coverage")
-set(CMAKE_SHARED_LINKER_FLAGS "--coverage")
+if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+  message(FATAL "In-source build is not allowed")
+endif ()
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 set ( RVS "pesm" )
 set ( RVS_PACKAGE "rvs-roct" )
@@ -42,15 +39,18 @@ project ( ${RVS_TARGET} )
 message(STATUS "MODULE: ${RVS}")
 
 ## Set default module path if not already set
+add_compile_options(-std=c++11)
+add_compile_options(-pthread)
+add_compile_options(-Wl,-no-as-needed)
+add_compile_options(-Wall -Wextra)
+if (WITH_COVERAGE)
+  add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
+  set(CMAKE_EXE_LINKER_FLAGS "--coverage")
+  set(CMAKE_SHARED_LINKER_FLAGS "--coverage")
+endif()
+
 if ( NOT DEFINED CMAKE_MODULE_PATH )
     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
-endif ()
-
-## Support for in-source compilaton
-if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
-else()
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
 endif ()
 
 ## Include common cmake modules
