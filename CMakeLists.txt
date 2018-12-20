@@ -34,6 +34,12 @@ enable_testing()
 
 set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type")
 
+if (RVS_BUILD_TESTS)
+  message(STATUS "Tests are built")
+else()
+  message(STATUS "Tests are NOT built")
+endif()
+
 execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rvs_os_helper.sh
   RESULT_VARIABLE result
   OUTPUT_VARIABLE RVS_OS_TYPE
