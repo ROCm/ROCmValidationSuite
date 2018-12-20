@@ -739,45 +739,11 @@ int rcqt_action::filechk_run() {
         , iter->second, file);
       }
     } else {
-      iter = property.find("owner");
-      if (iter != property.end()) {
-        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
-        " false";
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_rcqt_node != nullptr) {
-          rvs::lp::AddString(json_rcqt_node
-          , iter->second, "false");
-        }
-      }
-      iter = property.find("group");
-      if (iter != property.end()) {
-        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
-        " false";
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_rcqt_node != nullptr) {
-          rvs::lp::AddString(json_rcqt_node
-          , iter->second, "false");
-        }
-      }
-      iter = property.find("permission");
-      if (iter != property.end()) {
-        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
-        " false";
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_rcqt_node != nullptr) {
-          rvs::lp::AddString(json_rcqt_node
-          , iter->second, "false");
-        }
-      }
-      iter = property.find("type");
-      if (iter != property.end()) {
-        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
-        " false";
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_rcqt_node != nullptr) {
-          rvs::lp::AddString(json_rcqt_node
-          , iter->second, "false");
-        }
+      msg = "[" + action_name + "] " + "rcqt filecheck exists false";
+      log(msg.c_str(), rvs::logresults);
+      if (bjson && json_rcqt_node != nullptr) {
+        rvs::lp::AddString(json_rcqt_node
+        , iter->second, file);
       }
     }
     if (bjson && json_rcqt_node != nullptr) {
@@ -831,57 +797,11 @@ int rcqt_action::filechk_run() {
     }
   }
   if (exists == true && found_files_vector.empty()) {
-    string check;
-    if (exists == false) {
-      check = "false";
-      msg = "[" + action_name + "] " + "rcqt filecheck "
-      + file_path +" DNE " + check;
-      log(msg.c_str(), rvs::logresults);
-      if (bjson && json_rcqt_node != nullptr) {
-        rvs::lp::AddString(json_rcqt_node
-        , "exists", file);
-      }
-    } else {
-      iter = property.find("owner");
-      if (iter != property.end()) {
-        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
-        " false";
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_rcqt_node != nullptr) {
-          rvs::lp::AddString(json_rcqt_node
-          , iter->second, "false");
-        }
-      }
-      iter = property.find("group");
-      if (iter != property.end()) {
-        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
-        " false";
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_rcqt_node != nullptr) {
-          rvs::lp::AddString(json_rcqt_node
-          , iter->second, "false");
-        }
-      }
-      iter = property.find("permission");
-      if (iter != property.end()) {
-        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
-        " false";
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_rcqt_node != nullptr) {
-          rvs::lp::AddString(json_rcqt_node
-          , iter->second, "false");
-        }
-      }
-      iter = property.find("type");
-      if (iter != property.end()) {
-        msg = "[" + action_name + "] " + "rcqt filecheck "+ iter->second +
-        " false";
-        log(msg.c_str(), rvs::logresults);
-        if (bjson && json_rcqt_node != nullptr) {
-          rvs::lp::AddString(json_rcqt_node
-          , iter->second, "false");
-        }
-      }
+    msg = "[" + action_name + "] " + "rcqt filecheck exists false";
+    log(msg.c_str(), rvs::logresults);
+    if (bjson && json_rcqt_node != nullptr) {
+      rvs::lp::AddString(json_rcqt_node
+      , iter->second, file);
     }
   }
   for (auto file_it = found_files_vector.begin();
