@@ -196,8 +196,12 @@ int rcqt_action::pkgchk_run() {
     // Checking if version field exists
     string version_name;
     version_exists = has_property(VERSION, &version_name);
-
+    #if RVS_OS_TYPE_NUM == 1
     string command_string = "dpkg --get-selections > ";
+    #endif
+    #if RVS_OS_TYPE_NUM == 2
+    string command_string = "rpm -qa --qf \"%{NAME}\n\" > ";
+    #endif
     command_string += PKG_CMD_FILE;
 
     // We execute the dpkg-querry
@@ -218,8 +222,12 @@ int rcqt_action::pkgchk_run() {
     string PACKAGE_CONST = "package";
     while (pkg_stream.getline(file_line, STREAM_SIZE)) {
       string line_result = file_line;
+
+      #if RVS_OS_TYPE_NUM == 1
       line_result = line_result.substr(0, line_result.length() - 7);
+
       line_result.erase(line_result.find_last_not_of(" \n\r\t")+1);
+      #endif
       if (regex_match(line_result, pkg_pattern) == true) {
         if (bjson) {
           if (json_rcqt_node != NULL) {
@@ -231,9 +239,17 @@ int rcqt_action::pkgchk_run() {
         }
         if (version_exists) {
           char cmd_buffer[BUFFER_SIZE];
+          #if RVS_OS_TYPE_NUM == 1
           snprintf(cmd_buffer, BUFFER_SIZE, \
-          "dpkg -s %s | grep -i version > %s", line_result.c_str()
-          , (std::string(VERSION_FILE)).c_str());
+          "dpkg -s %s | grep Version > %s", line_result.c_str(),
+          (std::string(VERSION_FILE)).c_str());
+          #endif
+          #if RVS_OS_TYPE_NUM == 2
+          snprintf(cmd_buffer, BUFFER_SIZE, \
+          "rpm -qi %s | grep Version > %s", line_result.c_str(),
+          (std::string(VERSION_FILE)).c_str());
+          #endif
+
           if (system(cmd_buffer) == -1) {
             rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
             return 1;
@@ -243,8 +259,13 @@ int rcqt_action::pkgchk_run() {
           char file_line[STREAM_SIZE];
           version_stream.getline(file_line, STREAM_SIZE);
           string group_line_result = file_line;
+          #if RVS_OS_TYPE_NUM == 1
           group_line_result = group_line_result
           .substr(9, group_line_result.length() - 9);
+          #endif
+          #if RVS_OS_TYPE_NUM == 2
+          group_line_result.erase(0 , group_line_result.find_first_of(":") + 2);
+          #endif
           if (bjson && json_child_node != NULL) {
             rvs::lp::AddString(json_child_node, "group"
             , group_line_result.c_str());
@@ -323,6 +344,7 @@ int rcqt_action::usrchk_run() {
       const string line = std::string(file_line);
       std::smatch match;
       const std::regex get_user_pattern(USR_REG);
+
       if (std::regex_search(line.begin(), line.end()
         , match, get_user_pattern)) {
         string result = match[1];
@@ -541,6 +563,18 @@ int rcqt_action::ldcfgchk_run() {
       , MODULE_NAME_CAPS, action_name);
       return 1;
     }
+    string ld_config_result = "[" + action_name + "] " +
+    "rcqt ldconfigcheck ";
+    struct stat stat_buf;
+    if (stat(ldpath_requested.c_str(), &stat_buf) < 0) {
+        string arch_fail = ld_config_result + "not found"
+        + " NA " + ldpath_requested + " fail";
+        log(arch_fail.c_str(), rvs::logresults);
+      if (bjson && json_rcqt_node != nullptr) {
+        rvs::lp::LogRecordFlush(json_rcqt_node);
+      }
+      return 0;
+    }
     char cmd_buffer[BUFFER_SIZE];
     snprintf(cmd_buffer, BUFFER_SIZE, \
     "ls -p %s | grep -v / > %s", ldpath_requested.c_str(),
@@ -564,8 +598,7 @@ int rcqt_action::ldcfgchk_run() {
     }
     string arch_found_string;
     bool arch_found_bool = false;
-    string ld_config_result = "[" + action_name + "] " +
-    "rcqt ldconfigcheck ";
+
     for (auto it = found_files_vector.begin()
       ; it != found_files_vector.end(); it++) {
       // Full path of shared object
@@ -692,9 +725,34 @@ int rcqt_action::filechk_run() {
   else if (exists_string == "true")
     exists = true;
   std::size_t found = file.find_last_of("/\\");
-
   string file_path = file.substr(0, found);
   string file_requested = file.substr(found+1);
+  if (stat(file_path.c_str(), &info) < 0) {
+    string check;
+    if (exists == false) {
+      check = "false";
+      msg = "[" + action_name + "] " + "rcqt filecheck "
+      + file_path +" DNE " + check;
+      log(msg.c_str(), rvs::logresults);
+      if (bjson && json_rcqt_node != nullptr) {
+        rvs::lp::AddString(json_rcqt_node
+        , iter->second, file);
+      }
+    } else {
+      msg = "[" + action_name + "] " + "rcqt filecheck exists false";
+      log(msg.c_str(), rvs::logresults);
+      if (bjson && json_rcqt_node != nullptr) {
+        rvs::lp::AddString(json_rcqt_node
+        , iter->second, file);
+      }
+    }
+    if (bjson && json_rcqt_node != nullptr) {
+      rvs::lp::LogRecordFlush(json_rcqt_node);
+    }
+
+    return 0;
+    // if exists property is set to true and file is found,check each parameter
+  }
   char cmd_buffer[BUFFER_SIZE];
   snprintf(cmd_buffer, BUFFER_SIZE, \
   "ls %s | grep -v / > %s", file_path.c_str()
@@ -727,6 +785,7 @@ int rcqt_action::filechk_run() {
       }
     }
   }
+
   if (exists == false && found_files_vector.empty()) {
     check = "true";
     msg = "[" + action_name + "] " + "rcqt filecheck "
@@ -734,17 +793,15 @@ int rcqt_action::filechk_run() {
     log(msg.c_str(), rvs::logresults);
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::AddString(json_rcqt_node
-      , "exists", file_path);
+      , "exists", file);
     }
   }
-  if (found_files_vector.empty() && exists == true) {
-    check = "false";
-    msg = "[" + action_name + "] " + "rcqt filecheck "
-    + file_path +" DNE " + check;
+  if (exists == true && found_files_vector.empty()) {
+    msg = "[" + action_name + "] " + "rcqt filecheck exists false";
     log(msg.c_str(), rvs::logresults);
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::AddString(json_rcqt_node
-      , "exists", file_path);
+      , iter->second, file);
     }
   }
   for (auto file_it = found_files_vector.begin();
@@ -789,7 +846,7 @@ int rcqt_action::filechk_run() {
         else
           check = "false";
         msg = "[" + action_name + "] " + "rcqt filecheck " \
-        + (std::strcmp(check.c_str(), "true") == 0 ? p.pw_name : owner )
+        + (strcmp(check.c_str(), "true") == 0 ? p.pw_name : owner )
         + " " + check;
         log(msg.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
@@ -816,7 +873,7 @@ int rcqt_action::filechk_run() {
         else
           check = "false";
         msg = "[" + action_name + "] " + "rcqt filecheck "
-        + (std::strcmp(check.c_str(), "true") == 0 ? g.gr_name : group)
+        + (strcmp(check.c_str(), "true") == 0 ? g.gr_name : group)
         + " " + check;
         log(msg.c_str(), rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
