@@ -9,7 +9,6 @@ import sys
 test_result_file_name = "tmp_test_result.txt"
 test_json_file_name = "tmp_json_result.txt"
 
-#print "This is the name of the script: ", sys.argv[0]
 #print "Number of arguments: ", len(sys.argv)
 #print "The arguments are: " , str(sys.argv)
 
@@ -41,6 +40,7 @@ test_result = True
 
 # check log output
 if log_usage == 'true':
+   print "log_usage is True"
    result_log = bin_path + "/" + test_result_file_name
    if os.path.isfile(result_log):
       f = open(result_log)
@@ -58,6 +58,7 @@ if log_usage == 'true':
 
 # check json output
 if json_usage == 'true':
+   print "json_usage is True"
    result_json = bin_path + "/" + test_json_file_name
    if os.path.isfile(result_json):
       f = open(result_json)
