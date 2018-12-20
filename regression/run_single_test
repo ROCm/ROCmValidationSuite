@@ -15,11 +15,11 @@ fi
 
 if [ "$3" = "no_json" ]
 then
-   ./rvs -d 3 -c $2 > $4
+   ./rvs -c $2 > $4
 else
    if [ -f $3 ]
    then
       rm $3
    fi
-   ./rvs -d 3 -c $2 -l $3 -j > $4
+   ./rvs -c $2 -l $3 -j > $4
 fi
