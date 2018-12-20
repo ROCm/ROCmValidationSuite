@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cd $1
+if [ -f $4 ]
+then
+   rm $4
+fi
+./rvs -d 3 -c $2 -l $3 -j > $4
