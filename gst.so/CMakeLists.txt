@@ -24,8 +24,10 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
-add_compile_options(-std=c++11)
-add_compile_options(-Wall -Wextra)
+if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+  message(FATAL "In-source build is not allowed")
+endif ()
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 set ( RVS "gst" )
 set ( RVS_PACKAGE "rvs-roct" )
@@ -35,17 +37,18 @@ set ( RVS_TARGET "${RVS}" )
 project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
+add_compile_options(-std=c++11)
+add_compile_options(-Wall -Wextra)
+if (RVS_COVERAGE)
+  add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
+  set(CMAKE_EXE_LINKER_FLAGS "--coverage")
+  set(CMAKE_SHARED_LINKER_FLAGS "--coverage")
+endif()
+
 
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
-endif ()
-
-## Support for in-source compilaton
-if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin" )
-else()
-    set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
 endif ()
 
 ## Include common cmake modules
@@ -127,7 +130,6 @@ add_dependencies(${RVS_TARGET} rvslibrt rvslib)
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
 
 install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
@@ -135,5 +137,9 @@ install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" 
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 
 # TEST SECTION
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+if (RVS_BUILD_TESTS)
+  add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
+  COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  )
+  include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+endif()
