@@ -85,9 +85,8 @@ set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_MAJOR}.${VERSION_MI
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
 
-set(WITH_COVERAGE FALSE CACHE BOOL "TRUE if code coverage is to be provided")
-set(WITH_TESTING TRUE CACHE BOOL "TRUE if tests are to be executed")
-set(RVS_BUILD_TESTS FALSE CACHE BOOL "TRUE if tests are to be built")
+set(RVS_COVERAGE FALSE CACHE BOOL "TRUE if code coverage is to be provided")
+set(RVS_BUILD_TESTS TRUE CACHE BOOL "TRUE if tests are to be built")
 
 set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
 set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
