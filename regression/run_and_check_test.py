@@ -4,6 +4,7 @@ import subprocess
 import os
 import mmap
 import sys
+import json
 
 # global variables
 test_result_file_name = "tmp_test_result.txt"
@@ -80,6 +81,15 @@ if json_usage == 'true':
       if s.find('ERROR') != -1:
          print "Found ERROR"
          test_result = False
+
+      # validate json format
+      print "check json format"
+      try:
+         json.load(f)
+      except ValueError as e:
+         print('Invalid json: %s' % e)
+         test_result = False
+
       f.close()
    else:
       print "No file found"
