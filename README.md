@@ -22,7 +22,7 @@ This section explains how to get and compile current development stream of RVS.
 
     cd ROCmValidationSuite
 
-    cmake -DRVS_BUILD_TESTS:BOOL=TRUE ./ -B../build
+    cmake ./ -B../build
     make -C ../build
 
 _**Note:**_
@@ -32,7 +32,7 @@ to the cmake command
 
 - To build RVS with local copy of rocBLAS add `-DRVS_ROCBLAS=1` to the cmake command
 
-- To build RVS without tests omit `RVS_BUILD_TESTS` define
+- To build RVS without tests insert  `-DRVS_BUILD_TESTS:BOOL=FALSE` define
 
 Example:
 ```
