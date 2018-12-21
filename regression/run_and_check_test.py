@@ -85,7 +85,15 @@ if json_usage == 'true':
       # validate json format
       print "check json format"
       try:
-         json.load(f)
+         data = json.load(f)
+         for d in data:
+           json_line = d['loglevelname']
+           print json_line
+           if json_line == 'RESULT':
+             print "Found RESULT"
+           if json_line == 'ERROR':
+             print "Found ERROR"
+             test_result = False
       except ValueError as e:
          print('Invalid json: %s' % e)
          test_result = False
