@@ -28,16 +28,31 @@ if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
 
+#
+# If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
+# definition and dump it in the cache along with proper documentation,
+# otherwise set CMAKE_BUILD_TYPE to Debug prior to calling PROJECT()
+#
+if(DEFINED CMAKE_BUILD_TYPE)
+   set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "Choose the type of
+build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug
+Release RelWithDebInfo MinSizeRel.")
+else()
+   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build,
+options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
+RelWithDebInfo MinSizeRel.")
+endif()
+
 project ("rocm-validation-suite" )
 enable_testing()
 #include ( CTest )
 
-set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type")
 
-if (RVS_BUILD_TESTS)
-  message(STATUS "Tests are built")
-else()
-  message(STATUS "Tests are NOT built")
+if (NOT CMAKE_CONFIGURATION_TYPES)
+#  message( "CMAKE_CONFIGURATION_TYPES not set")
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rvs_os_helper.sh
@@ -105,21 +120,13 @@ else()
   set(ROCT_LIB_DIR "/opt/rocm/lib" CACHE PATH "Contains library files exported by ROC Trunk")
 endif()
 
+message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+message(STATUS "RVS_COVERAGE = ${RVS_COVERAGE}")
+message(STATUS "RVS_BUILD_TESTS = ${RVS_BUILD_TESTS}")
+
 message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
 
-if (NOT CMAKE_CONFIGURATION_TYPES)
-  # Set the possible values of build type for cmake-gui
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
-
-# if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-#     add_definitions(-DDEBUG)
-#     message(STATUS "DEBUG defined")
-# endif()
-
-message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
 if (DEFINED RVS_DO_TRACE)
   if (${RVS_DO_TRACE} STREQUAL "1")

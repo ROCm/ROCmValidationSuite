@@ -46,14 +46,14 @@ using std::cerr;
 using std::cout;
 
 int   rvs::logger::loglevel_m(2);
-bool  rvs::logger::tojson_m;
-bool  rvs::logger::append_m;
-bool  rvs::logger::isfirstrecord_m;
+bool  rvs::logger::tojson_m(false);
+bool  rvs::logger::append_m(false);
+bool  rvs::logger::isfirstrecord_m(true);
 std::mutex  rvs::logger::cout_mutex;
 std::mutex  rvs::logger::log_mutex;
-bool  rvs::logger::bStop;
-uint16_t rvs::logger::stop_flags;
-bool rvs::logger::b_quiet;
+bool  rvs::logger::bStop(false);
+uint16_t rvs::logger::stop_flags(0u);
+bool rvs::logger::b_quiet(false);
 char rvs::logger::log_file[1024];
 
 const char*  rvs::logger::loglevelname[] = {
