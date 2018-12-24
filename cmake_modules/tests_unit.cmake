@@ -44,8 +44,9 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
     ${SINGLE_TEST} ${UT_SOURCES}
   )
   target_link_libraries(${TEST_NAME}
-    ${PROJECT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread
+    ${UT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread
   )
+  target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
   set_target_properties(${TEST_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
   )
