@@ -66,10 +66,6 @@ class gpup_action : public rvs::actionbase {
     //! ptr to JSON root node
     void* json_root_node;
 
-    // get gpu id
-    string property_get_gpuid(int node_id);
-    // check device id is correct
-    bool device_id_correct(int node_id, int dev_id);
     // split properties and io_links properties
     bool property_split(string prop);
     // get properties values
