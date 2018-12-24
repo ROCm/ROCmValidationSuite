@@ -23,5 +23,15 @@
 ##
 ################################################################################
 
+set (UT_SOURCES src/action.cpp test/unitsmqt.cpp
+)
 
+# add unit tests
+include(tests_unit)
+
+# Add configuration tests
 include(tests_conf)
+
+  target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
+  add_compile_options(-Wall -Wextra -save-temps)
+  
