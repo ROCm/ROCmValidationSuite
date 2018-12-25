@@ -395,13 +395,14 @@ int rvs::logger::ToFile(const std::string& Row) {
  * @brief Patch JSON log file
  *
  * In case when append "-a" option is given along with "-l --json",
- * replaces "]" terminating character with "," in order to
+ * replaces "]" terminating character with " " in order to
  * ensure well-formed JSON content.
  *
+ * @param pSts non zero if patching took place
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::logger::JsonPatchAppend() {
+int rvs::logger::JsonPatchAppend(int* pSts) {
   std::string logfile(log_file);
   if (logfile == "")
     return -1;
@@ -414,6 +415,7 @@ int rvs::logger::JsonPatchAppend() {
   fseek(pFile , -1 , SEEK_END);
   fputs(" " , pFile);
   fclose(pFile);
+  *pSts = 1;
   return 0;
 }
 
@@ -506,16 +508,20 @@ int rvs::logger::init_log_file() {
     int patch_status = -1;
 
     if (to_json()) {
-      patch_status = JsonPatchAppend();
-      if (patch_status) {
-        row += "[";
+      int sts = JsonPatchAppend(&patch_status);
+      if (sts) {
+        return -1;
       }
     }
   }  else {
     // logging but not appending - just truncate the file.
     std::fstream fs;
     fs.open(logfile, std::fstream::out);
+    bool berror = fs.fail();
     fs.close();
+    if (berror) {
+      return -1;
+    }
     if (to_json()) {
       row = "[";
     }
