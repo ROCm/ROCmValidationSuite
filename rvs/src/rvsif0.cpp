@@ -27,8 +27,6 @@
 //! Default constructor
 rvs::if0::if0()
 :
-rvs_module_get_version(nullptr),
-rvs_module_get_name(nullptr),
 rvs_module_get_description(nullptr),
 rvs_module_has_interface(nullptr) {
 }
@@ -58,8 +56,6 @@ rvs::if0& rvs::if0::operator=(const rvs::if0& rhs) {
   // self-assignment check
   if (this != &rhs) {
     ifbase::operator=(rhs);
-    rvs_module_get_version   = rhs.rvs_module_get_version;
-    rvs_module_get_name      = rhs.rvs_module_get_name;
     rvs_module_get_description  = rhs.rvs_module_get_description;
     rvs_module_has_interface = rhs.rvs_module_has_interface;
     rvs_module_get_config    = rhs.rvs_module_get_config;
@@ -77,31 +73,6 @@ rvs::if0& rvs::if0::operator=(const rvs::if0& rhs) {
  */
 rvs::ifbase* rvs::if0::clone(void) {
   return new rvs::if0(*this);
-}
-
-
-/**
- * @brief Fetch version number
- *
- * Fetch version number of the module where action has been instantiated.
- *
- * @param Major Major version number
- * @param Minor Minor version number
- * @param Patch Patch version number
- *
- */
-void  rvs::if0::get_version(int* Major, int* Minor, int* Patch) {
-  (*rvs_module_get_version)(Major, Minor, Patch);
-}
-
-/**
- * @brief Get module name
- *
- * @return pointer to C string holding module name
- *
- */
-const char* rvs::if0::get_name(void) {
-  return (*rvs_module_get_name)();
 }
 
 /**

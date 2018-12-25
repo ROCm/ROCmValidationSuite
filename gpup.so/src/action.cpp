@@ -205,7 +205,7 @@ int gpup_action::property_get_value(uint16_t gpu_id) {
     msg = "["+action_name + "] " + MODULE_NAME +
     " " + std::to_string(gpu_id) +
     " " + prop_name + " " + prop_val;
-    rvs::lp::Log(msg.c_str(), rvs::logresults);
+    rvs::lp::Log(msg, rvs::logresults);
     if (bjson && json_gpuprop_node != NULL) {
       rvs::lp::AddString(json_gpuprop_node, prop_name, prop_val);
     }
@@ -306,7 +306,7 @@ int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
       " " + std::to_string(gpu_id) +
       " " + std::to_string(link_id) +
       " " + prop_name + " " + prop_val;
-      rvs::lp::Log(msg.c_str(), rvs::logresults);
+      rvs::lp::Log(msg, rvs::logresults);
       if (bjson && json_link_ptr_ != NULL) {
         rvs::lp::AddString(json_link_ptr_, prop_name, prop_val);
       }
