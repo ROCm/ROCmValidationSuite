@@ -180,7 +180,7 @@ void Worker::run() {
           msg+= " bounds min: " + std::to_string(itb->second.min_val) +
           "  max: " + std::to_string(itb->second.max_val);
         }
-        log(msg.c_str(), rvs::loginfo);
+        rvs::lp::Log(msg, rvs::loginfo);
         rvs::lp::AddString(r, itb->first, msg);
       }
     }
@@ -216,7 +216,7 @@ void Worker::run() {
                 std::to_string(gpuid) + " " +
                 GM_MEM_CLOCK  + " " + "bounds violation " +
                 std::to_string(mhz) + "Mhz";
-          log(msg.c_str(), rvs::loginfo);
+          rvs::lp::Log(msg, rvs::loginfo);
           met_violation[ix].mem_clock_violation++;
           if (term) {
             RVSTRACE_
@@ -255,7 +255,7 @@ void Worker::run() {
               std::to_string(met_avg[ix].gpu_id) + " " +
               GM_CLOCK + " " + "bounds violation " +
               std::to_string(mhz) + "Mhz";
-          log(msg.c_str(), rvs::loginfo);
+          rvs::lp::Log(msg, rvs::loginfo);
           met_violation[ix].clock_violation++;
           if (term) {
             RVSTRACE_
@@ -298,7 +298,7 @@ void Worker::run() {
                 std::to_string(met_avg[ix].gpu_id) + " " +
                 + GM_TEMP + " " + "bounds violation " +
                 std::to_string(temper) + "C";
-            log(msg.c_str(), rvs::loginfo);
+            rvs::lp::Log(msg, rvs::loginfo);
             met_violation[ix].temp_violation++;
             if (term) {
               RVSTRACE_
@@ -325,7 +325,7 @@ void Worker::run() {
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
           std::to_string(met_avg[ix].gpu_id) + " " +
           GM_TEMP + " Not available";
-          log(msg.c_str(), rvs::loginfo);
+          rvs::lp::Log(msg, rvs::loginfo);
         }
         RVSTRACE_
       }
@@ -348,7 +348,7 @@ void Worker::run() {
                   std::to_string(met_avg[ix].gpu_id) + " " +
                   + GM_FAN + " " + "bounds violation " +
                   std::to_string(speed) + "%";
-            log(msg.c_str(), rvs::loginfo);
+            rvs::lp::Log(msg, rvs::loginfo);
             met_violation[ix].fan_violation++;
             if (term) {
               RVSTRACE_
@@ -375,7 +375,7 @@ void Worker::run() {
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
           std::to_string(met_avg[ix].gpu_id) + " " +
           GM_FAN + " Not available";
-          log(msg.c_str(), rvs::loginfo);
+          rvs::lp::Log(msg, rvs::loginfo);
         }
         RVSTRACE_
       }
@@ -396,7 +396,7 @@ void Worker::run() {
                   std::to_string(met_avg[ix].gpu_id) + " " +
                   GM_POWER + " " + "bounds violation " +
                   std::to_string(static_cast<float>(power) / 1e6) + "Watts";
-            log(msg.c_str(), rvs::loginfo);
+            rvs::lp::Log(msg, rvs::loginfo);
             met_violation[ix].power_violation++;
             if (term) {
               RVSTRACE_
