@@ -46,7 +46,6 @@ class if1 : public ifbase {
   virtual int   property_set(const char*, const char*);
   virtual int   property_set(const std::string&, const std::string&);
   virtual int   run(void);
-  virtual const char* get_errstring(int);
 
  protected:
   if1();
@@ -60,8 +59,6 @@ class if1 : public ifbase {
   t_rvs_module_action_property_set  rvs_module_action_property_set;
   //! Pointer to module function implementing run() functionality
   t_rvs_module_action_run           rvs_module_action_run;
-  //! Pointer to module function returning error string
-  t_rvs_module_get_errstring        rvs_module_get_errstring;
 
 friend class module;
 };

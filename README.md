@@ -32,6 +32,8 @@ to the cmake command
 
 - To build RVS with local copy of rocBLAS add `-DRVS_ROCBLAS=1` to the cmake command
 
+- To build RVS without tests insert  `-DRVS_BUILD_TESTS:BOOL=FALSE` define
+
 Example:
 ```
     cmake -DRVS_ROCMSMI=0 -DRVS_ROCBLAS=1 ./ -B../build
