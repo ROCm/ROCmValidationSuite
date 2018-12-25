@@ -1,25 +1,43 @@
 #!/bin/bash
 
 # arguments:
-#   bin path
-#   conf file
-#   json output
-#   console output
+#   bin path              $1
+#   conf file             $2
+#   log level             $3
+#   output file           $4
+#   has json output       $5
+#   console file          $6
+
+# possible rvs variants
+#   -l file -j (json log is writen to file)
+#   -l file (console log is writen to file)
+#   (no file is written to)
 
 cd $1
 
+# clear logs (file)
 if [ -f $4 ]
 then
    rm $4
 fi
 
-if [ "$3" = "no_json" ]
+# clear logs (console)
+if [ -f $6 ]
 then
-   ./rvs -c $2 > $4
+   rm $6
+fi
+
+if [ "$4" = "no_log" ]
+then
+   # no log file
+   ./rvs -d $3 -c $2 > $6
 else
-   if [ -f $3 ]
+   if [ "$5" = "true" ]
    then
-      rm $3
+      # json log file
+      ./rvs -d $3 -c $2 -l $4 -j > $6 
+   else
+      # console log file
+      ./rvs -d $3 -c $2 -l $4 > $6
    fi
-   ./rvs -c $2 -l $3 -j > $4
 fi
