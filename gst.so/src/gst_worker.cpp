@@ -324,7 +324,7 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " +
             std::to_string(gflops_interval);
-    log(msg.c_str(), rvs::loginfo);
+    rvs::lp::Log(msg, rvs::loginfo);
 
     log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);
@@ -343,7 +343,7 @@ bool GSTWorker::check_gflops_violation(double gflops_interval) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + GST_STRESS_VIOLATION_MSG + " " +
                 std::to_string(gflops_interval);
-        log(msg.c_str(), rvs::loginfo);
+        rvs::lp::Log(msg, rvs::loginfo);
 
         log_to_json(GST_STRESS_VIOLATION_MSG, std::to_string(gflops_interval),
                     rvs::loginfo);
@@ -450,7 +450,7 @@ void GSTWorker::run() {
             std::to_string(gpu_id) + " " + GST_START_MSG + " " +
             std::to_string(target_stress) + " " + GST_COPY_MATRIX_MSG + ":" +
             (copy_matrix ? "true":"false");
-    log(msg.c_str(), rvs::loginfo);
+    rvs::lp::Log(msg, rvs::loginfo);
 
     log_to_json(GST_START_MSG, std::to_string(target_stress), rvs::loginfo);
     log_to_json(GST_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),
@@ -463,7 +463,7 @@ void GSTWorker::run() {
     if (error) {
         string msg = "[" + action_name + "] " + MODULE_NAME + " "
                         + std::to_string(gpu_id) + " " + err_description;
-        log(msg.c_str(), rvs::logerror);
+        rvs::lp::Log(msg, rvs::logerror);
         log_to_json("err", err_description, rvs::logerror);
 
         return;
@@ -478,7 +478,7 @@ void GSTWorker::run() {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + GST_RAMP_EXCEEDED_MSG + " " +
                 std::to_string(ramp_interval);
-        log(msg.c_str(), rvs::loginfo);
+        rvs::lp::Log(msg, rvs::loginfo);
         log_to_json(GST_RAMP_EXCEEDED_MSG, std::to_string(ramp_interval),
                     rvs::loginfo);
         gst_test_passed = false;
@@ -488,7 +488,7 @@ void GSTWorker::run() {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + GST_TARGET_ACHIEVED_MSG + " " +
                 std::to_string(target_stress);
-        log(msg.c_str(), rvs::loginfo);
+        rvs::lp::Log(msg, rvs::loginfo);
         log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
                     rvs::loginfo);
         if (run_duration_ms > 0) {
@@ -501,7 +501,7 @@ void GSTWorker::run() {
                 // GPU didn't complete the test (HIP/rocBlas error(s) occurred)
                 string msg = "[" + action_name + "] " + MODULE_NAME + " " +
                                 std::to_string(gpu_id) + " " + err_description;
-                log(msg.c_str(), rvs::logerror);
+                rvs::lp::Log(msg, rvs::logerror);
                 log_to_json("err", err_description, rvs::logerror);
                 return;
             }
@@ -531,7 +531,7 @@ void GSTWorker::log_gst_test_result(bool gst_test_passed) {
         std::to_string(target_stress / gpu_blas->gemm_gflop_count()) +
         " "  + GST_PASS_KEY + ": " +
         (gst_test_passed ? GST_RESULT_PASS_MESSAGE : GST_RESULT_FAIL_MESSAGE);
-    log(msg.c_str(), rvs::logresults);
+    rvs::lp::Log(msg, rvs::logresults);
 
     log_to_json(GST_MAX_GFLOPS_OUTPUT_KEY, std::to_string(max_gflops),
                 rvs::loginfo);

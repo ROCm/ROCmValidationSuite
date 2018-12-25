@@ -539,7 +539,7 @@ int rcqt_action::kernelchk_run() {
         string result = "[" + action_name + "] " + "rcqt kernelcheck " + \
         os_actual + " " + kernel_actual + " " + \
         (os_version_correct && kernel_version_correct ? "true" : "false");
-        log(result.c_str(), rvs::logresults);
+        rvs::lp::Log(result, rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node, "kerelchk"
           , os_version_correct && kernel_version_correct ? "true" : "false");
@@ -577,7 +577,7 @@ int rcqt_action::ldcfgchk_run() {
     if (stat(ldpath_requested.c_str(), &stat_buf) < 0) {
         string arch_fail = ld_config_result + "not found"
         + " NA " + ldpath_requested + " fail";
-        log(arch_fail.c_str(), rvs::logresults);
+        rvs::lp::Log(arch_fail, rvs::logresults);
       if (bjson && json_rcqt_node != nullptr) {
         rvs::lp::LogRecordFlush(json_rcqt_node);
       }
@@ -660,18 +660,18 @@ int rcqt_action::ldcfgchk_run() {
     if (regex_match(arch_found_string, arch_pattern)) {
       string arch_pass = ld_config_result + *it
       + " " + arch_found_string + " " + ldpath_requested + " pass";
-      log(arch_pass.c_str(), rvs::logresults);
+      rvs::lp::Log(arch_pass, rvs::logresults);
     } else {
       string arch_fail = ld_config_result + *it
       + " NA " + ldpath_requested + " fail";
-      log(arch_fail.c_str(), rvs::logresults);
+      rvs::lp::Log(arch_fail, rvs::logresults);
     }
     arch_stream.close();
       }
       if (!arch_found_bool) {
         string lib_fail = ld_config_result
         + " not found NA " + ldpath_requested +  " fail";
-        log(lib_fail.c_str(), rvs::logresults);
+        rvs::lp::Log(lib_fail, rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           rvs::lp::AddString(json_rcqt_node, "soname", soname_requested);
           rvs::lp::AddString(json_rcqt_node, "ldchk", "false");
@@ -742,14 +742,14 @@ int rcqt_action::filechk_run() {
       check = "false";
       msg = "[" + action_name + "] " + "rcqt filecheck "
       + file_path +" DNE " + check;
-      log(msg.c_str(), rvs::logresults);
+      rvs::lp::Log(msg, rvs::logresults);
       if (bjson && json_rcqt_node != nullptr) {
         rvs::lp::AddString(json_rcqt_node
         , iter->second, file);
       }
     } else {
       msg = "[" + action_name + "] " + "rcqt filecheck exists false";
-      log(msg.c_str(), rvs::logresults);
+      rvs::lp::Log(msg, rvs::logresults);
       if (bjson && json_rcqt_node != nullptr) {
         rvs::lp::AddString(json_rcqt_node
         , iter->second, file);
@@ -799,7 +799,7 @@ int rcqt_action::filechk_run() {
     check = "true";
     msg = "[" + action_name + "] " + "rcqt filecheck "
     + file_path +" DNE " + check;
-    log(msg.c_str(), rvs::logresults);
+    rvs::lp::Log(msg, rvs::logresults);
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::AddString(json_rcqt_node
       , "exists", file);
@@ -807,7 +807,7 @@ int rcqt_action::filechk_run() {
   }
   if (exists == true && found_files_vector.empty()) {
     msg = "[" + action_name + "] " + "rcqt filecheck exists false";
-    log(msg.c_str(), rvs::logresults);
+    rvs::lp::Log(msg, rvs::logresults);
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::AddString(json_rcqt_node
       , iter->second, file);
@@ -823,7 +823,7 @@ int rcqt_action::filechk_run() {
     else
       check = "false";
     msg = "[" + action_name + "] " + "rcqt filecheck "+ file +" DNE " + check;
-    log(msg.c_str(), rvs::logresults);
+    rvs::lp::Log(msg, rvs::logresults);
     if (bjson && json_rcqt_node != nullptr) {
       json_child_node =
       reinterpret_cast<void*>(json_map[std::string(*file_it)]);
@@ -857,7 +857,7 @@ int rcqt_action::filechk_run() {
         msg = "[" + action_name + "] " + "rcqt filecheck " \
         + (strcmp(check.c_str(), "true") == 0 ? p.pw_name : owner )
         + " " + check;
-        log(msg.c_str(), rvs::logresults);
+        rvs::lp::Log(msg, rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           json_child_node =
           reinterpret_cast<void*>(json_map[std::string(*file_it)]);
@@ -884,7 +884,7 @@ int rcqt_action::filechk_run() {
         msg = "[" + action_name + "] " + "rcqt filecheck "
         + (strcmp(check.c_str(), "true") == 0 ? g.gr_name : group)
         + " " + check;
-        log(msg.c_str(), rvs::logresults);
+        rvs::lp::Log(msg, rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           json_child_node =
           reinterpret_cast<void*>(json_map[std::string(*file_it)]);
@@ -903,7 +903,7 @@ int rcqt_action::filechk_run() {
           check = "false";
         msg = "[" + action_name + "] " + "rcqt filecheck " + \
         std::to_string(permission)+" "+check;
-        log(msg.c_str(), rvs::logresults);
+        rvs::lp::Log(msg, rvs::logresults);
         if (bjson && json_rcqt_node != nullptr) {
           json_child_node =
           reinterpret_cast<void*>(json_map[std::string(*file_it)]);
@@ -924,7 +924,7 @@ int rcqt_action::filechk_run() {
             check = "false";
           msg = "[" + action_name + "] " + "rcqt filecheck " + \
           std::to_string(type)+" "+check;
-          log(msg.c_str(), rvs::logresults);
+          rvs::lp::Log(msg, rvs::logresults);
           if (bjson && json_rcqt_node != nullptr) {
             json_child_node =
             reinterpret_cast<void*>(json_map[std::string(*file_it)]);

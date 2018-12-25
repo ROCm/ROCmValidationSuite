@@ -48,17 +48,6 @@
 
 Worker* pworker;
 
-int log(const char* pMsg, const int level) {
-  return rvs::lp::Log(pMsg, level);
-}
-
-
-extern "C" void  rvs_module_get_version(int* Major, int* Minor, int* Revision) {
-  *Major = BUILD_VERSION_MAJOR;
-  *Minor = BUILD_VERSION_MINOR;
-  *Revision = BUILD_VERSION_PATCH;
-}
-
 extern "C" int rvs_module_has_interface(int iid) {
   switch (iid) {
   case 0:
@@ -67,10 +56,6 @@ extern "C" int rvs_module_has_interface(int iid) {
     }
 
   return 0;
-}
-
-extern "C" const char* rvs_module_get_name(void) {
-  return "pesm";
 }
 
 extern "C" const char* rvs_module_get_description(void) {
@@ -108,13 +93,6 @@ extern "C" int   rvs_module_terminate(void) {
                  rvs::logtrace);
   }
   return 0;
-}
-
-extern "C" const char* rvs_module_get_errstring(int error) {
-  switch (error) {
-    default:
-      return "General Error";
-  }
 }
 
 extern "C" void* rvs_module_action_create(void) {

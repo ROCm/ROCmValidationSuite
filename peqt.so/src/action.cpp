@@ -166,7 +166,7 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                 // log the capability's value
                 msg = "[" + action_name + "] " + MODULE_NAME + " " +
                         pcie_cap_names[i] + " " + buff;
-                log(msg.c_str(), rvs::loginfo);
+                rvs::lp::Log(msg, rvs::loginfo);
 
                 if (bjson && json_pcaps_node != NULL) {
                     rvs::lp::AddString(json_pcaps_node, pcie_cap_names[i],
@@ -228,7 +228,7 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                 // log the capability's value
                 msg = "[" + action_name + "] " + MODULE_NAME + " " + prop_name
                         + " " + buff;
-                log(msg.c_str(), rvs::loginfo);
+                rvs::lp::Log(msg, rvs::loginfo);
 
                 if (bjson && json_pcaps_node != NULL) {
                     rvs::lp::AddString(json_pcaps_node, prop_name,
@@ -412,7 +412,7 @@ int peqt_action::run(void) {
     msg = "[" + action_name + "] " + MODULE_NAME + " "
             + (pci_infra_qual_result ?
                     PEQT_RESULT_PASS_MESSAGE : PEQT_RESULT_FAIL_MESSAGE);
-    log(msg.c_str(), rvs::logresults);
+    rvs::lp::Log(msg, rvs::logresults);
 
     if (bjson && json_root_node != NULL) {
         rvs::lp::AddString(json_root_node, "RESULT",
