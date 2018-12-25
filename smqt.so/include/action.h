@@ -50,9 +50,23 @@ class smqt_action : public rvs::actionbase {
     bool get_all_smqt_config_keys();
     std::string action_name;
  protected:
+    //! specified device_id
     uint16_t dev_id;
-    ulong bar1_size, bar2_size, bar4_size, bar5_size;
-    ulong bar1_base_addr, bar2_base_addr, bar4_base_addr;
+    //! actual BAR1 size
+    ulong bar1_size;
+    //! actual BAR2 size
+    ulong bar2_size;
+    //! actual BAR4 size
+    ulong bar4_size;
+    //! actual BAR5 size
+    ulong bar5_size;
+    //! actual BAR1 address 
+    ulong bar1_base_addr;
+    //! actual BAR2 address
+    ulong bar2_base_addr;
+    //! actual BAR4 address
+    ulong bar4_base_addr;
+    
 #ifdef  RVS_UNIT_TEST
  protected:
   virtual void on_set_device_gpu_id();
