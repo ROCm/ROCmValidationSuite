@@ -116,13 +116,16 @@ for conf_file in listOfFiles:
         cmake_file.write('add_test(NAME {}'.format(test_name))
         print('conf test: {}'.format(test_name))
 
+        log_file = conf_file.replace(".conf", ".log")
+        log_file = "zz_" + log_file
+
         if ttpf == "ttp":
           cmake_file.write('  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}\n')
-          cmake_file.write('  COMMAND rvs -d 3 -c conf/{}\n'.format(conf_file))
+          cmake_file.write('  COMMAND rvs -d 3 -c conf/{} -j -l {}\n'.format(conf_file, log_file))
           cmake_file.write(')\n\n')
         else:
           cmake_file.write('  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}\n')
-          cmake_file.write('  COMMAND rvsfail -d 3 -c conf/{}\n'.format(conf_file))
+          cmake_file.write('  COMMAND rvsfail -d 3 -c conf/{} -j -l {}\n'.format(conf_file, log_file))
           cmake_file.write(')\n\n')
 
 cmake_file.close() 

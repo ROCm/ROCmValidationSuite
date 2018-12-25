@@ -406,7 +406,7 @@ bool IETWorker::do_iet_power_stress(void) {
                     msg = "[" + action_name + "] " + MODULE_NAME + " " +
                         std::to_string(gpu_id) + " " + IET_PWR_VIOLATION_MSG +
                         " " + std::to_string(avg_power);
-                    log(msg.c_str(), rvs::loginfo);
+                    rvs::lp::Log(msg, rvs::loginfo);
                     log_to_json(IET_PWR_VIOLATION_MSG,
                                 std::to_string(avg_power), rvs::loginfo);
                 }
@@ -450,7 +450,7 @@ void IETWorker::run() {
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " start " + std::to_string(target_power);
-    log(msg.c_str(), rvs::loginfo);
+    rvs::lp::Log(msg, rvs::loginfo);
     log_to_json("start", std::to_string(target_power), rvs::loginfo);
 
     if (ramp_interval < MAX_MS_TRAIN_GPU)
@@ -477,7 +477,7 @@ void IETWorker::run() {
             log_to_json("ERROR", err_description, rvs::logerror);
             msg = "[" + action_name + "] " + MODULE_NAME + " "
                     + std::to_string(gpu_id) + " " + err_description;
-            log(msg.c_str(), rvs::logerror);
+            rvs::lp::Log(msg, rvs::logerror);
         } else  {
             log_to_json(IET_PWR_RAMP_EXCEEDED_MSG,
                 std::to_string(ramp_interval), rvs::loginfo);
@@ -485,13 +485,13 @@ void IETWorker::run() {
             msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + IET_PWR_RAMP_EXCEEDED_MSG + " " +
                     std::to_string(ramp_interval);
-            log(msg.c_str(), rvs::loginfo);
+            rvs::lp::Log(msg, rvs::loginfo);
         }
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + IET_PASS_KEY + ": " +
                 IET_RESULT_FAIL_MESSAGE;
-        log(msg.c_str(), rvs::logresults);
+        rvs::lp::Log(msg, rvs::logresults);
 
         log_to_json(IET_PASS_KEY, IET_RESULT_FAIL_MESSAGE, rvs::logresults);
 
@@ -501,7 +501,7 @@ void IETWorker::run() {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + IET_PWR_TARGET_ACHIEVED_MSG +
                 " " + std::to_string(target_power);
-        log(msg.c_str(), rvs::loginfo);
+        rvs::lp::Log(msg, rvs::loginfo);
         log_to_json(IET_PWR_TARGET_ACHIEVED_MSG,
                     std::to_string(target_power), rvs::loginfo);
 
@@ -515,7 +515,7 @@ void IETWorker::run() {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + IET_PASS_KEY + ": " +
                     (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
-        log(msg.c_str(), rvs::logresults);
+        rvs::lp::Log(msg, rvs::logresults);
         log_to_json(IET_PASS_KEY,
                     (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE),
                         rvs::logresults);

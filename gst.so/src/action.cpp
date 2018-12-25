@@ -40,7 +40,7 @@
 #include "include/gst_worker.h"
 #include "include/gpu_util.h"
 #include "include/rvs_util.h"
-#include "include/rvs_module.h"
+//#include "include/rvs_module.h"
 #include "include/rvsactionbase.h"
 #include "include/rvsloglp.h"
 
@@ -383,7 +383,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
         msg = action_name + " " + MODULE_NAME + " " + GST_NO_COMPATIBLE_GPUS;
-        log(msg.c_str(), rvs::logerror);
+        rvs::lp::Log(msg, rvs::logerror);
 
         if (bjson) {
             unsigned int sec;
