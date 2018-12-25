@@ -43,12 +43,14 @@ class smqt_action : public rvs::actionbase {
     smqt_action();
     virtual ~smqt_action();
     virtual int run(void);
+
  private:
     ulong  get_property(std::string);
     std::string pretty_print(ulong, uint16_t, std::string, std::string);
     bool get_all_common_config_keys();
     bool get_all_smqt_config_keys();
     std::string action_name;
+
  protected:
     //! specified device_id
     uint16_t dev_id;
@@ -60,18 +62,19 @@ class smqt_action : public rvs::actionbase {
     ulong bar4_size;
     //! actual BAR5 size
     ulong bar5_size;
-    //! actual BAR1 address 
+    //! actual BAR1 address
     ulong bar1_base_addr;
     //! actual BAR2 address
     ulong bar2_base_addr;
     //! actual BAR4 address
     ulong bar4_base_addr;
-    
+
 #ifdef  RVS_UNIT_TEST
+
  protected:
   virtual void on_set_device_gpu_id();
   virtual void on_bar_data_read();
 #endif
 };
 
-#endif /* SMQT_SO_INCLUDE_ACTION_H_ */
+#endif  // SMQT_SO_INCLUDE_ACTION_H_
