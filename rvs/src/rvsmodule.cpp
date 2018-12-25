@@ -458,16 +458,6 @@ int rvs::module::init_interface_0(void) {
   int sts = 0;
 
   if (init_interface_method(
-    reinterpret_cast<void**>(&(pif0->rvs_module_get_version)),
-                            "rvs_module_get_version"))
-    sts--;
-
-  if (init_interface_method(
-    reinterpret_cast<void**>(&(pif0->rvs_module_get_name)),
-                            "rvs_module_get_name"))
-    sts--;
-
-  if (init_interface_method(
     reinterpret_cast<void**>(&(pif0->rvs_module_get_description)),
                             "rvs_module_get_description"))
     sts--;
@@ -518,11 +508,6 @@ int rvs::module::init_interface_1(void) {
   if (init_interface_method(
     reinterpret_cast<void**>(&(pif1->rvs_module_action_run)),
                             "rvs_module_action_run"))
-    sts--;
-
-  if (init_interface_method(
-    reinterpret_cast<void**>(&(pif1->rvs_module_get_errstring)),
-                            "rvs_module_get_errstring"))
     sts--;
 
   if (sts) {
