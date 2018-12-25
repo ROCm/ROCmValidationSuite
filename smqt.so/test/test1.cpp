@@ -22,59 +22,24 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef SMQT_SO_INCLUDE_ACTION_H_
-#define SMQT_SO_INCLUDE_ACTION_H_
+#include "gtest/gtest.h"
+#include "include/action.h"
+#include "test/unitsmqt.h"
 
-#include <string>
-#include "include/rvsactionbase.h"
-
-/**
- * @class smqt_action
- * @ingroup SMQT
- *
- * @brief SMQT action implementation class
- *
- * Derives from rvs::actionbase and implements actual action functionality
- * in its run() method.
- *
- */
-class smqt_action : public rvs::actionbase {
- public:
-    smqt_action();
-    virtual ~smqt_action();
-    virtual int run(void);
-
- private:
-    ulong  get_property(std::string);
-    std::string pretty_print(ulong, uint16_t, std::string, std::string);
-    bool get_all_common_config_keys();
-    bool get_all_smqt_config_keys();
-    std::string action_name;
-
- protected:
-    //! specified device_id
-    uint16_t dev_id;
-    //! actual BAR1 size
-    ulong bar1_size;
-    //! actual BAR2 size
-    ulong bar2_size;
-    //! actual BAR4 size
-    ulong bar4_size;
-    //! actual BAR5 size
-    ulong bar5_size;
-    //! actual BAR1 address
-    ulong bar1_base_addr;
-    //! actual BAR2 address
-    ulong bar2_base_addr;
-    //! actual BAR4 address
-    ulong bar4_base_addr;
-
-#ifdef  RVS_UNIT_TEST
-
- protected:
-  virtual void on_set_device_gpu_id();
-  virtual void on_bar_data_read();
-#endif
-};
-
-#endif  // SMQT_SO_INCLUDE_ACTION_H_
+TEST(smqt, action) {
+  bar_data* bd = new bar_data;
+  bd->on_set_device_gpu_id();
+  EXPECT_EQ(bd->get_dev_id(), 123);
+  bd->on_bar_data_read();
+  ulong bar1_size, bar2_size, bar4_size, bar5_size;
+  ulong bar1_base_addr, bar2_base_addr, bar4_base_addr;
+  std::tie(bar1_size, bar2_size, bar4_size, bar5_size) = bd->get_bar_sizes();
+  std::tie(bar1_base_addr, bar2_base_addr, bar4_base_addr) = bd->get_bar_addr();
+  EXPECT_EQ(bar1_size, 2UL);
+  EXPECT_EQ(bar2_size, 3UL);
+  EXPECT_EQ(bar4_size, 5UL);
+  EXPECT_EQ(bar5_size, 4UL);
+  EXPECT_EQ(bar1_base_addr, 1UL);
+  EXPECT_EQ(bar2_base_addr, 6UL);
+  EXPECT_EQ(bar4_base_addr, 7UL);
+}
