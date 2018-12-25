@@ -23,6 +23,7 @@
 ##
 ################################################################################
 
+set(UT_LINK_LIBS pci)
 set (UT_SOURCES src/action.cpp test/unitsmqt.cpp
 )
 
@@ -32,7 +33,3 @@ include(tests_unit)
 # Add configuration tests
 include(tests_conf)
 
-## additional libraries for unit tests
-set (PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
-
-set(UT_LINK_LIBS pci)
