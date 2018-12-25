@@ -32,6 +32,7 @@ include(tests_unit)
 # Add configuration tests
 include(tests_conf)
 
-  target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
-  add_compile_options(-Wall -Wextra -save-temps)
-  
+## additional libraries for unit tests
+set (PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
+
+set(UT_LINK_LIBS pci)
