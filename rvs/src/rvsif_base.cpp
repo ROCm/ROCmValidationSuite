@@ -54,17 +54,6 @@ rvs::ifbase& rvs::ifbase::operator=(const rvs::ifbase& rhs) {
 }
 
 /**
- * @brief Clone instance
- *
- * @return pointer to newly created instance
- *
- */
-rvs::ifbase* rvs::ifbase::clone(void) {
-  return new rvs::ifbase(*this);
-}
-
-
-/**
  * @brief Checks if action supports certain Inetrface ID
  *
  * @return 1 - IID is supporte, 0 - otherwise
