@@ -49,7 +49,8 @@ class ifbase {
   ifbase(const ifbase& rhs);
 
   virtual ifbase& operator=(const ifbase& rhs);
-  virtual ifbase* clone(void);
+  //! pure virtual function to enforce support for interface cloning
+  virtual ifbase* clone(void) = 0;
 
  protected:
   //! Pointer to action instance in an RVS module

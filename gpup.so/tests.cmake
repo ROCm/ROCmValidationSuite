@@ -30,4 +30,4 @@ set (UT_SOURCES src/action.cpp
 # add unit tests
 include(tests_unit)
 
-include(tests_conf)
+include(tests_conf_logging)

@@ -24,12 +24,37 @@
 ################################################################################
 
 
-set (UT_SOURCES test/unitactionbase.cpp
+
+function (rvs_register_test_group_logging RVS_TEST_GROUP)
+#set (RVS_EP_STS 0)
+execute_process(
+  COMMAND ${MAKE_CMD}
+    ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/bin ttp
+    ${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake
+    "${RVS}_${RVS_TEST_GROUP}*.conf" ${RVS} ${RVS_TEST_GROUP}
+  RESULT_VARIABLE RVS_EP_STS
+  ERROR_VARIABLE RVS_EP_ERROR
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
+if (RVS_EP_STS)
+  MESSAGE("RVS_EP_STS: ${RVS_EP_STS} ")
+  MESSAGE("RVS_EP_ERROR: ${RVS_EP_ERROR} ")
+  MESSAGE(FATAL_ERROR "Make file generation aborted.")
+endif()
 
-# add unit tests
-include(tests_unit)
+execute_process(
+  COMMAND ${MAKE_CMD}
+    ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/bin ttf
+    ${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake
+    "ttf_${RVS}_${RVS_TEST_GROUP}*.conf" ${RVS} ${RVS_TEST_GROUP}
+  RESULT_VARIABLE RVS_EP_STS
+  ERROR_VARIABLE RVS_EP_ERROR
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+if (RVS_EP_STS)
+  MESSAGE("RVS_EP_STS: ${RVS_EP_STS} ")
+  MESSAGE("RVS_EP_ERROR: ${RVS_EP_ERROR} ")
+  MESSAGE(FATAL_ERROR "Make file generation aborted.")
+endif()
 
-# Add configuration tests
-include(tests_conf_logging)
-
+endfunction()
