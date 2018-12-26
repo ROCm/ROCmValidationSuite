@@ -46,15 +46,44 @@ add_dependencies(${RVS_TARGET}fail rvshelper)
 # )
 
 add_test(NAME unit.rvs.cli1
-  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   COMMAND rvs -g
 )
 
 add_test(NAME unit.rvs.cli2
-  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   COMMAND rvs -t
 )
 
+add_test(NAME unit.rvs.cli3
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvs --version
+)
+
+add_test(NAME unit.rvs.cli4
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvs -h
+)
+
+add_test(NAME unit.rvs.cli5
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvs -q
+)
+
+add_test(NAME unit.ttf.rvs.cli.1
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -d adf
+)
+
+add_test(NAME unit.ttf.rvs.cli.2
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -d 7
+)
+
+add_test(NAME unit.ttf.rvs.cli.3
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -d -7
+)
 
 ## define include directories
 include_directories(${UT_INC})
