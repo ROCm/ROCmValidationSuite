@@ -406,6 +406,11 @@ int rvs::module::init_interfaces() {
                             "rvs_module_action_destroy"))
     return -1;
 
+  if (init_interface_method(
+    reinterpret_cast<void**>(&rvs_module_has_interface),
+                            "rvs_module_has_interface"))
+    return -1;
+
   if (init_interface_0())
     return -1;
 
@@ -451,11 +456,17 @@ int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName) {
  *
  */
 int rvs::module::init_interface_0(void) {
+  if (!(*rvs_module_has_interface)(0)) {
+    return -1;
+  }
+
   rvs::if0* pif0 = new rvs::if0();
   if (!pif0)
     return -1;
 
   int sts = 0;
+
+  pif0->rvs_module_has_interface = rvs_module_has_interface;
 
   if (init_interface_method(
     reinterpret_cast<void**>(&(pif0->rvs_module_get_description)),
@@ -495,11 +506,18 @@ int rvs::module::init_interface_0(void) {
  *
  */
 int rvs::module::init_interface_1(void) {
+  if (!(*rvs_module_has_interface)(1)) {
+    return -1;
+  }
+
   rvs::if1* pif1 = new rvs::if1();
   if (!pif1)
     return -1;
 
   int sts = 0;
+
+  pif1->rvs_module_has_interface = rvs_module_has_interface;
+
   if (init_interface_method(
     reinterpret_cast<void**>(&(pif1->rvs_module_action_property_set)),
                             "rvs_module_action_property_set"))
