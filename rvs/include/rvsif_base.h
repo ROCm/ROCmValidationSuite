@@ -25,6 +25,8 @@
 #ifndef RVS_INCLUDE_RVSIF_BASE_H_
 #define RVS_INCLUDE_RVSIF_BASE_H_
 
+#include "include/rvsmodule_if.h"
+
 namespace rvs {
 
 /**
@@ -38,6 +40,7 @@ class ifbase {
  public:
   //! Dfault destructor
   virtual ~ifbase();
+  virtual int    has_interface(int);
 
  protected:
   //! Default constructor
@@ -51,6 +54,8 @@ class ifbase {
  protected:
   //! Pointer to action instance in an RVS module
   void*  plibaction;
+  //! Pointer to module function checking interface existance
+  t_rvs_module_has_interface   rvs_module_has_interface;
 
 //! Factory class
 friend class module;

@@ -160,7 +160,7 @@ int rvs::exec::run() {
     rvs::logger::quiet();
   }
 
-  if(logger::init_log_file()) {
+  if (logger::init_log_file()) {
     char buff[1024];
     snprintf(buff, sizeof(buff),
               "could not access log file: %s", s_log_file.c_str());
