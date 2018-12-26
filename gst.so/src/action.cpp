@@ -40,7 +40,6 @@
 #include "include/gst_worker.h"
 #include "include/gpu_util.h"
 #include "include/rvs_util.h"
-//#include "include/rvs_module.h"
 #include "include/rvsactionbase.h"
 #include "include/rvsloglp.h"
 
