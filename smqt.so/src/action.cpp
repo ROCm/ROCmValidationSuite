@@ -124,7 +124,7 @@ bool smqt_action::get_all_common_config_keys() {
 
   // get the <deviceid> property value if provided
   if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                &property_device_id, 0u)) {
+                                &property_device_id, 0u) != 0) {
     msg = "Invalid 'deviceid' key value.";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
     keysts = false;
