@@ -100,11 +100,12 @@ void smqt_action::on_set_device_gpu_id() {
  */
 bool smqt_action::get_all_common_config_keys() {
   string msg, sdevid, sdev;
+  bool keysts = true;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     rvs::lp::Err("Action name missing", MODULE_NAME);
-    return false;
+    keysts = false;
   }
 
   // get <device> property value (a list of gpu id)
@@ -118,7 +119,7 @@ bool smqt_action::get_all_common_config_keys() {
       break;
     }
     rvs::lp::Err(msg, MODULE_NAME, action_name);
-    return -1;
+    keysts = false;
   }
 
   // get the <deviceid> property value if provided
@@ -126,11 +127,11 @@ bool smqt_action::get_all_common_config_keys() {
                                 &property_device_id, 0u)) {
     msg = "Invalid 'deviceid' key value.";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
-    return -1;
+    keysts = false;
   }
 
 
-  return true;
+  return keysts;
 }
 
 #define SMQT_FETCH_AND_CHECK(bar) \
