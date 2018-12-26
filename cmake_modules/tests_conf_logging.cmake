@@ -24,12 +24,27 @@
 ################################################################################
 
 
-set (UT_SOURCES test/unitactionbase.cpp
+set(MAKE_CMD "${CMAKE_SOURCE_DIR}/regression/make_ctest_conf_logging.py" )
+
+execute_process(COMMAND ${MAKE_CMD} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/bin ttp ${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp.cmake "${RVS}*.conf" ${RVS}
+  RESULT_VARIABLE RVS_EP_STS
+  ERROR_VARIABLE RVS_EP_ERROR
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
+if (RVS_EP_STS)
+  MESSAGE("RVS_EP_STS: ${RVS_EP_STS} ")
+  MESSAGE("RVS_EP_ERROR: ${RVS_EP_ERROR} ")
+endif()
 
-# add unit tests
-include(tests_unit)
+execute_process(COMMAND ${MAKE_CMD} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/bin ttf ${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf.cmake "ttf_${RVS}*.conf" ${RVS}
+  RESULT_VARIABLE RVS_EP_STS
+  ERROR_VARIABLE RVS_EP_ERROR
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+if (RVS_EP_STS)
+  MESSAGE("RVS_EP_STS: ${RVS_EP_STS} ")
+  MESSAGE("RVS_EP_ERROR: ${RVS_EP_ERROR} ")
+endif()
 
-# Add configuration tests
-include(tests_conf_logging)
-
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp.cmake)
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf.cmake)

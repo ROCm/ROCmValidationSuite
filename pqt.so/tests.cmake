@@ -34,4 +34,4 @@ execute_process(COMMAND ${MAKE_CMD})
 # include resulting .cmake file with random tests declarations
 include(${CMAKE_CURRENT_SOURCE_DIR}/rand_tests.cmake)
 
-include(tests_conf)
+include(tests_conf_logging)
