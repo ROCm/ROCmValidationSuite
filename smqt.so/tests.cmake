@@ -31,5 +31,5 @@ set (UT_SOURCES src/action.cpp test/unitsmqt.cpp
 include(tests_unit)
 
 # Add configuration tests
-include(tests_conf)
+include(tests_conf_logging)
 
