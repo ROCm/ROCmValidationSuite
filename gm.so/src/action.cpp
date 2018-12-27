@@ -370,10 +370,6 @@ int gm_action::run(void) {
   }
 
   RVSTRACE_
-  if (bjson && json_root_node != NULL) {  // json logging stuff
-    RVSTRACE_
-      rvs::lp::LogRecordFlush(json_root_node);
-  }
 
   return 0;
 }
