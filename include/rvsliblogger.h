@@ -74,7 +74,7 @@ class logger {
   static  void   AddInt(void* Parent, const char* Key, const int Val);
   static  void   AddNode(void* Parent, void* Child);
   static  int    ToFile(const std::string& Row);
-  static  int    JsonPatchAppend(void);
+  static  int    JsonPatchAppend(int*);
   static  void   Stop(uint16_t flags);
   static  bool   Stopping(void);
   static  int    Err(const char *Message,

@@ -41,10 +41,7 @@ namespace rvs {
 class if0 : public ifbase {
  public:
   virtual ~if0();
-  virtual void   get_version(int*, int*, int*);
-  virtual const char*  get_name(void);
   virtual const char*  get_description(void);
-  virtual int    has_interface(int);
   virtual const char*  get_config(void);
   virtual const char*  get_output(void);
 
@@ -56,14 +53,8 @@ class if0 : public ifbase {
   virtual ifbase* clone(void);
 
  protected:
-  //! Ponter to module function returning version number
-  t_rvs_module_get_version     rvs_module_get_version;
-  //! Pointer to module function returning module name
-  t_rvs_module_get_name        rvs_module_get_name;
   //! Pointer to module function returning module description
   t_rvs_module_get_description rvs_module_get_description;
-  //! Pointer to module function checking interface existance
-  t_rvs_module_has_interface   rvs_module_has_interface;
   //! Pointer to module function returning configuration info
   t_rvs_module_get_config      rvs_module_get_config;
   //! Pointer to module function returning output info

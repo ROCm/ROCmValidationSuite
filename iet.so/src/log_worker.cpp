@@ -178,7 +178,7 @@ void log_worker::run() {
                         std::to_string(gpu_id) + " " +
                         IET_LOGGER_CURRENT_POWER_MSG + " " +
                         std::to_string(avg_power);
-                log(msg.c_str(), rvs::loginfo);
+                rvs::lp::Log(msg, rvs::loginfo);
                 log_to_json(IET_LOGGER_CURRENT_POWER_MSG,
                                 std::to_string(avg_power), rvs::loginfo);
             }

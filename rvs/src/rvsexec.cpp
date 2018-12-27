@@ -113,8 +113,9 @@ int rvs::exec::run() {
   }
 
   // check -l option
-  if (rvs::options::has_option("-l", &val)) {
-    logger::set_log_file(val);
+  std::string s_log_file;
+  if (rvs::options::has_option("-l", &s_log_file)) {
+    logger::set_log_file(s_log_file);
   }
 
   // check -j option
@@ -158,7 +159,14 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-q")) {
     rvs::logger::quiet();
   }
-  logger::init_log_file();
+
+  if (logger::init_log_file()) {
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+              "could not access log file: %s", s_log_file.c_str());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
+    return -1;
+  }
 
   if (rvs::options::has_option("-g")) {
     int sts = do_gpu_list();
