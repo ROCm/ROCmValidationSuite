@@ -33,8 +33,7 @@ using std::string;
 rvs::if1::if1()
 :
 rvs_module_action_property_set(nullptr),
-rvs_module_action_run(nullptr),
-rvs_module_get_errstring(nullptr) {
+rvs_module_action_run(nullptr) {
 }
 
 //! Default descrutor
@@ -65,7 +64,6 @@ rvs::if1& rvs::if1::operator=(const rvs::if1& rhs) {
     ifbase::operator=(rhs);
     rvs_module_action_property_set = rhs.rvs_module_action_property_set;
     rvs_module_action_run = rhs.rvs_module_action_run;
-    rvs_module_get_errstring = rhs.rvs_module_get_errstring;
   }
 
   return *this;
@@ -115,15 +113,4 @@ int rvs::if1::property_set(const std::string& Key, const std::string& Val) {
  */
 int rvs::if1::run(void) {
   return (*rvs_module_action_run)(plibaction);
-}
-
-/**
- * @brief Get error string
- *
- * @param iErrCode Error code returned by run()
- * @return C string describing error code
- *
- */
-const char* rvs::if1::get_errstring(int iErrCode) {
-  return (*rvs_module_get_errstring)(iErrCode);
 }

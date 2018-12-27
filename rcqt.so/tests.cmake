@@ -23,31 +23,31 @@
 ##
 ################################################################################
 
-set(MAKE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../regression/make_ctest_conf.py" )
-include(tests_conf_group)
+set(MAKE_CMD "${CMAKE_SOURCE_DIR}/regression/make_ctest_conf_logging.py" )
+include(tests_conf_group_logging)
 
 set(RVS_TEST_GROUP "usr")
-rvs_register_test_group(${RVS_TEST_GROUP})
+rvs_register_test_group_logging(${RVS_TEST_GROUP})
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 
 set(RVS_TEST_GROUP "kernel")
-rvs_register_test_group(${RVS_TEST_GROUP})
+rvs_register_test_group_logging(${RVS_TEST_GROUP})
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 
 set(RVS_TEST_GROUP "pkg")
-rvs_register_test_group(${RVS_TEST_GROUP})
+rvs_register_test_group_logging(${RVS_TEST_GROUP})
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 
 set(RVS_TEST_GROUP "ldchk")
-rvs_register_test_group(${RVS_TEST_GROUP})
+rvs_register_test_group_logging(${RVS_TEST_GROUP})
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 
 set(RVS_TEST_GROUP "fc")
-rvs_register_test_group(${RVS_TEST_GROUP})
+rvs_register_test_group_logging(${RVS_TEST_GROUP})
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake)
 

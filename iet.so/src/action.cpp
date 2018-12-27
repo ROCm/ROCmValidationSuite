@@ -471,7 +471,7 @@ int iet_action::get_num_amd_gpu_devices(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
         msg = action_name + " " + MODULE_NAME + " " + IET_NO_COMPATIBLE_GPUS;
-        log(msg.c_str(), rvs::logerror);
+        rvs::lp::Log(msg, rvs::logerror);
 
         if (bjson) {
             unsigned int sec;

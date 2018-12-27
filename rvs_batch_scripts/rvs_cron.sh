@@ -1,6 +1,7 @@
 #!/bin/bash
 
 
+export RVS_CTEST_BUILD_TYPE=Nightly
 export RVS_BATCH_SCRIPTS=/work/rvs_batch_scripts
 export RVS_BATCH_BUILD=/work/rvs_batch_build
 
@@ -15,6 +16,7 @@ export RVS_BATCH_UTC=`date -u`
 echo " 2. run ubuntu "${RVS_BATCH_UTC} >> $RVS_BATCH_SCRIPTS/cron.log
 cd ${RVS_BATCH_SCRIPTS}
 ${RVS_BATCH_SCRIPTS}/rvs_ubuntu.sh
+
 
 # runc CentOS Docker image and test script
 export RVS_BATCH_UTC=`date -u`
