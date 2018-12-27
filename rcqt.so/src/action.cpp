@@ -138,7 +138,7 @@ int rcqt_action::run() {
     rvs::lp::get_ticks(&sec, &usec);
     bjson = true;
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-      action_name.c_str(), rvs::result, sec, usec);
+      action_name.c_str(), rvs::logresults, sec, usec);
     if (json_rcqt_node == NULL) {
       // log the error
       msg =
