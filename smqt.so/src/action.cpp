@@ -159,16 +159,6 @@ bool smqt_action::get_all_smqt_config_keys() {
   SMQT_FETCH_AND_CHECK(bar1_base_addr_max)
   SMQT_FETCH_AND_CHECK(bar2_base_addr_max)
   SMQT_FETCH_AND_CHECK(bar4_base_addr_max)
-//   err = property_get_int<ulong>("bar1_req_size", &bar1_req_size);
-//   err = property_get_int<ulong>("bar2_req_size", &bar2_req_size);
-//   err = property_get_int<ulong>("bar4_req_size", &bar4_req_size);
-//   err = property_get_int<ulong>("bar5_req_size", &bar5_req_size);
-//   err = property_get_int<ulong>("bar1_base_addr_min", &bar1_base_addr_min);
-//   err = property_get_int<ulong>("bar2_base_addr_min", &bar2_base_addr_min);
-//   err = property_get_int<ulong>("bar4_base_addr_min", &bar4_base_addr_min);
-//   err = property_get_int<ulong>("bar1_base_addr_max", &bar1_base_addr_max);
-//   err = property_get_int<ulong>("bar2_base_addr_max", &bar2_base_addr_max);
-//   err = property_get_int<ulong>("bar4_base_addr_max", &bar4_base_addr_max);
 
   return true;
 }
@@ -307,6 +297,9 @@ int smqt_action::run(void) {
     void* r = rvs::lp::LogRecordCreate("SMQT", action_name.c_str(),
                                        rvs::loginfo, sec, usec);
 
+    void* res = rvs::lp::LogRecordCreate("SMQT", action_name.c_str(),
+                                       rvs::logresults, sec, usec);
+
     rvs::lp::Log(msgs1, rvs::loginfo, sec, usec);
     rvs::lp::Log(msga1, rvs::loginfo, sec, usec);
     rvs::lp::Log(msgs2, rvs::loginfo, sec, usec);
@@ -323,8 +316,9 @@ int smqt_action::run(void) {
     rvs::lp::AddString(r, "bar4_size", std::to_string(bar4_size));
     rvs::lp::AddString(r, "bar4_base_addr", std::to_string(bar4_base_addr));
     rvs::lp::AddString(r, "bar5_size", std::to_string(bar4_size));
-    rvs::lp::AddString(r, "pass", std::to_string(pass));
+    rvs::lp::AddString(res, "pass", std::to_string(pass));
     rvs::lp::LogRecordFlush(r);
+    rvs::lp::LogRecordFlush(res);
     if (!pass)
       global_pass = false;
   }
