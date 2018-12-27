@@ -99,8 +99,8 @@ bool gm_action::get_all_common_config_keys(void) {
     }
 
     // get <device> property value (a list of gpu id)
-    if (int sts = property_get_device()) {
-      switch (sts) {
+    if (int ists = property_get_device()) {
+      switch (ists) {
       case 1:
         msg = "Invalid 'device' key value.";
         break;
