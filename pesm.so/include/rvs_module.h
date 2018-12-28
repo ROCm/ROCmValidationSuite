@@ -27,6 +27,4 @@
 
 #include "include/rvsliblog.h"
 
-int log(const char* pMasg, const int level = 1);
-
 #endif  // PESM_SO_INCLUDE_RVS_MODULE_H_

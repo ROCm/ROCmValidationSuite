@@ -77,55 +77,6 @@ gpup_action::~gpup_action() {
 }
 
 /**
- * checks if device id is correct
- * @param node_id represents node folder
- * @param dev_id unique device id
- * @return true if dev_id is correct, false otherwise
- */            
-bool gpup_action::device_id_correct(int node_id, int dev_id) {
-    std::ifstream f_prop;
-    bool dev_id_corr = true;
-    string s;
-    char path[CHAR_MAX_BUFF_SIZE];
-
-    snprintf(path, CHAR_MAX_BUFF_SIZE, "%s/%d/properties", KFD_SYS_PATH_NODES,
-    node_id);
-    f_prop.open(path);
-
-    if (dev_id > 0) {
-      RVSTRACE_
-        while (f_prop >> s) {
-            if (s == RVS_CONF_DEVICEID_KEY) {
-                f_prop >> s;
-                if (std::to_string(dev_id) != s)  // skip this node
-                    dev_id_corr = false;
-            }
-            f_prop>> s;
-        }
-        f_prop.close();
-    }
-    return dev_id_corr;
-}
-
-/**
- * gets the gpu_id from node
- * @param node_id represents node folder
- * @return gpu_id value
- */
-string gpup_action::property_get_gpuid(int node_id) {
-    std::ifstream f_id;
-    string gpu_id;
-    char path[CHAR_MAX_BUFF_SIZE];
-
-    snprintf(path, CHAR_MAX_BUFF_SIZE, "%s/%d/gpu_id", KFD_SYS_PATH_NODES,
-    node_id);
-    f_id.open(path);
-
-    f_id >> gpu_id;
-    return gpu_id;
-}
-
-/**
  * extract properties/io_links properties names
  * @param props JSON_PROP_NODE_NAME or JSON_IO_LINK_PROP_NODE_NAME
  * @return true if success, false otherwise
@@ -254,7 +205,7 @@ int gpup_action::property_get_value(uint16_t gpu_id) {
     msg = "["+action_name + "] " + MODULE_NAME +
     " " + std::to_string(gpu_id) +
     " " + prop_name + " " + prop_val;
-    log(msg.c_str(), rvs::logresults);
+    rvs::lp::Log(msg, rvs::logresults);
     if (bjson && json_gpuprop_node != NULL) {
       rvs::lp::AddString(json_gpuprop_node, prop_name, prop_val);
     }
@@ -355,7 +306,7 @@ int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
       " " + std::to_string(gpu_id) +
       " " + std::to_string(link_id) +
       " " + prop_name + " " + prop_val;
-      log(msg.c_str(), rvs::logresults);
+      rvs::lp::Log(msg, rvs::logresults);
       if (bjson && json_link_ptr_ != NULL) {
         rvs::lp::AddString(json_link_ptr_, prop_name, prop_val);
       }
@@ -377,7 +328,7 @@ int gpup_action::run(void) {
     // get the action name
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
       rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      return false;
+      return -1;
     }
 
     // get <device> property value (a list of gpu id)

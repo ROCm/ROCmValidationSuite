@@ -58,9 +58,6 @@ using std::endl;
 ulong bar1_req_size, bar1_base_addr_min, bar1_base_addr_max;
 ulong bar2_req_size, bar2_base_addr_min, bar2_base_addr_max;
 ulong bar4_req_size, bar4_base_addr_min, bar4_base_addr_max, bar5_req_size;
-// output
-ulong bar1_size, bar1_base_addr, bar2_size, bar2_base_addr;
-ulong bar4_size, bar4_base_addr, bar5_size;
 
 // Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
 string smqt_action::pretty_print(ulong bytes, uint16_t gpu_id,
@@ -89,6 +86,13 @@ smqt_action::~smqt_action() {
   property.clear();
 }
 
+#ifdef  RVS_UNIT_TEST
+void smqt_action::on_bar_data_read() {
+}
+void smqt_action::on_set_device_gpu_id() {
+}
+#endif
+
 /**
  * @brief reads all common configuration keys from
  * the module's properties collection
@@ -96,11 +100,12 @@ smqt_action::~smqt_action() {
  */
 bool smqt_action::get_all_common_config_keys() {
   string msg, sdevid, sdev;
+  bool keysts = true;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     rvs::lp::Err("Action name missing", MODULE_NAME);
-    return false;
+    keysts = false;
   }
 
   // get <device> property value (a list of gpu id)
@@ -114,28 +119,28 @@ bool smqt_action::get_all_common_config_keys() {
       break;
     }
     rvs::lp::Err(msg, MODULE_NAME, action_name);
-    return -1;
+    keysts = false;
   }
 
   // get the <deviceid> property value if provided
   if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                &property_device_id, 0u)) {
+                                &property_device_id, 0u) != 0) {
     msg = "Invalid 'deviceid' key value.";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
-    return -1;
+    keysts = false;
   }
 
 
-  return true;
+  return keysts;
 }
 
 #define SMQT_FETCH_AND_CHECK(bar) \
 err = property_get_int<ulong>(#bar, & bar); \
 switch (err) { \
-  case 1: msg = "Invalid '#bar' key"; \
+  case 1: msg = "Invalid #bar key"; \
     rvs::lp::Err(msg, MODULE_NAME, action_name); \
     return false; \
-  case 2: msg = "Missing '#bar' key"; \
+  case 2: msg = "Missing #bar key"; \
     rvs::lp::Err(msg, MODULE_NAME, action_name); \
     return false; \
 }
@@ -154,16 +159,6 @@ bool smqt_action::get_all_smqt_config_keys() {
   SMQT_FETCH_AND_CHECK(bar1_base_addr_max)
   SMQT_FETCH_AND_CHECK(bar2_base_addr_max)
   SMQT_FETCH_AND_CHECK(bar4_base_addr_max)
-//   err = property_get_int<ulong>("bar1_req_size", &bar1_req_size);
-//   err = property_get_int<ulong>("bar2_req_size", &bar2_req_size);
-//   err = property_get_int<ulong>("bar4_req_size", &bar4_req_size);
-//   err = property_get_int<ulong>("bar5_req_size", &bar5_req_size);
-//   err = property_get_int<ulong>("bar1_base_addr_min", &bar1_base_addr_min);
-//   err = property_get_int<ulong>("bar2_base_addr_min", &bar2_base_addr_min);
-//   err = property_get_int<ulong>("bar4_base_addr_min", &bar4_base_addr_min);
-//   err = property_get_int<ulong>("bar1_base_addr_max", &bar1_base_addr_max);
-//   err = property_get_int<ulong>("bar2_base_addr_max", &bar2_base_addr_max);
-//   err = property_get_int<ulong>("bar4_base_addr_max", &bar4_base_addr_max);
 
   return true;
 }
@@ -218,8 +213,10 @@ int smqt_action::run(void) {
 
     // filter by device id if needed
     if (property_device_id > 0) {
-      uint16_t dev_id;
       rvs::gpulist::gpu2device(gpu_id, &dev_id);
+      #ifdef  RVS_UNIT_TEST
+      on_set_device_gpu_id();
+      #endif
       if (property_device_id != dev_id)
         continue;
     }
@@ -250,6 +247,10 @@ int smqt_action::run(void) {
     if (bar4_base_addr < bar4_base_addr_min ||
         bar4_base_addr > bar4_base_addr_max)
       pass = false;
+
+    #ifdef  RVS_UNIT_TEST
+    on_bar_data_read();
+    #endif
 
     if (bar1_req_size > bar1_size ||
         bar2_req_size < bar2_size ||
@@ -296,6 +297,9 @@ int smqt_action::run(void) {
     void* r = rvs::lp::LogRecordCreate("SMQT", action_name.c_str(),
                                        rvs::loginfo, sec, usec);
 
+    void* res = rvs::lp::LogRecordCreate("SMQT", action_name.c_str(),
+                                       rvs::logresults, sec, usec);
+
     rvs::lp::Log(msgs1, rvs::loginfo, sec, usec);
     rvs::lp::Log(msga1, rvs::loginfo, sec, usec);
     rvs::lp::Log(msgs2, rvs::loginfo, sec, usec);
@@ -312,8 +316,9 @@ int smqt_action::run(void) {
     rvs::lp::AddString(r, "bar4_size", std::to_string(bar4_size));
     rvs::lp::AddString(r, "bar4_base_addr", std::to_string(bar4_base_addr));
     rvs::lp::AddString(r, "bar5_size", std::to_string(bar4_size));
-    rvs::lp::AddString(r, "pass", std::to_string(pass));
+    rvs::lp::AddString(res, "pass", std::to_string(pass));
     rvs::lp::LogRecordFlush(r);
+    rvs::lp::LogRecordFlush(res);
     if (!pass)
       global_pass = false;
   }
