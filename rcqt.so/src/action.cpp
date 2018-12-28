@@ -138,7 +138,7 @@ int rcqt_action::run() {
     rvs::lp::get_ticks(&sec, &usec);
     bjson = true;
     json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-      action_name.c_str(), rvs::loginfo, sec, usec);
+      action_name.c_str(), rvs::logresults, sec, usec);
     if (json_rcqt_node == NULL) {
       // log the error
       msg =
@@ -750,10 +750,6 @@ int rcqt_action::filechk_run() {
     } else {
       msg = "[" + action_name + "] " + "rcqt filecheck exists false";
       rvs::lp::Log(msg, rvs::logresults);
-      if (bjson && json_rcqt_node != nullptr) {
-        rvs::lp::AddString(json_rcqt_node
-        , iter->second, file);
-      }
     }
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::LogRecordFlush(json_rcqt_node);
@@ -808,10 +804,6 @@ int rcqt_action::filechk_run() {
   if (exists == true && found_files_vector.empty()) {
     msg = "[" + action_name + "] " + "rcqt filecheck exists false";
     rvs::lp::Log(msg, rvs::logresults);
-    if (bjson && json_rcqt_node != nullptr) {
-      rvs::lp::AddString(json_rcqt_node
-      , iter->second, file);
-    }
   }
   for (auto file_it = found_files_vector.begin();
        file_it != found_files_vector.end(); file_it++) {
