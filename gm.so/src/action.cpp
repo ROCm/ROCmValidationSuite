@@ -48,6 +48,7 @@
 #define GM_MEM_CLOCK                  "mem_clock"
 #define GM_FAN                        "fan"
 #define GM_POWER                      "power"
+#define GM_FORCE                      "force"
 
 extern Worker* pworker;
 
@@ -86,6 +87,7 @@ bool gm_action::get_all_common_config_keys(void) {
     string msg;
     int error;
 
+    bool sts = true;
     // check if  -j flag is passed
     if (has_property("cli.-j")) {
       bjson = true;
@@ -93,12 +95,12 @@ bool gm_action::get_all_common_config_keys(void) {
 
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
       rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      return false;
+      sts = false;
     }
 
     // get <device> property value (a list of gpu id)
-    if (int sts = property_get_device()) {
-      switch (sts) {
+    if (int ists = property_get_device()) {
+      switch (ists) {
       case 1:
         msg = "Invalid 'device' key value.";
         break;
@@ -107,7 +109,7 @@ bool gm_action::get_all_common_config_keys(void) {
         break;
       }
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      sts = false;
     }
 
     // get the <deviceid> property value if provided
@@ -115,14 +117,14 @@ bool gm_action::get_all_common_config_keys(void) {
                                   &property_device_id, 0u)) {
       msg = "Invalid 'deviceid' key value.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      sts = false;
     }
 
     if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
                                    &property_duration, 0u)) {
       msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      sts = false;
     }
 
     error = property_get_int<uint64_t>
@@ -130,29 +132,35 @@ bool gm_action::get_all_common_config_keys(void) {
     if (error == 1) {
       msg = "Invalid '" +std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      sts = false;
     }
 
     if (property_get_int<uint64_t>(RVS_CONF_SAMPLE_INTERVAL_KEY,
                                        &sample_interval, 500u)) {
       msg = "Invalid '" +std::string(RVS_CONF_SAMPLE_INTERVAL_KEY) + "' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
-    }
-
-    if (property_log_interval < sample_interval) {
-      msg = "Log interval has the lower value than the sample interval.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      sts = false;
     }
 
     if (property_get(RVS_CONF_TERMINATE_KEY, &prop_terminate, false)) {
       msg = "Invalid 'terminate' key.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      sts = false;
     }
 
-    return true;
+    if (property_get(GM_FORCE, &prop_force, false)) {
+      msg = "Invalid '" + std::string(GM_FORCE) + "' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
+    }
+
+    if (property_log_interval < sample_interval) {
+      msg = "Log interval has the lower value than the sample interval.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
+    }
+
+    return sts;
 }
 
 /**
@@ -200,43 +208,44 @@ int gm_action::get_bounds(const char* pMetric) {
  */
 bool gm_action::get_all_gm_config_keys(void) {
   string msg;
+  bool sts = true;
 
   if (get_bounds(GM_TEMP) == 1) {
     msg = "Invalid 'metrics." +
             std::string(GM_TEMP) + "' key.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    sts = false;
   }
 
   if (get_bounds(GM_CLOCK) == 1) {
     msg = "Invalid 'metrics." +
             std::string(GM_CLOCK) + "' key.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    sts = false;
   }
 
   if (get_bounds(GM_MEM_CLOCK) == 1) {
     msg = "Invalid 'metrics." +
             std::string(GM_MEM_CLOCK) + "' key.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    sts = false;
   }
 
   if (get_bounds(GM_FAN) == 1) {
     msg = "Invalid 'metrics." +
             std::string(GM_FAN) + "' key.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    sts = false;
   }
 
   if (get_bounds(GM_POWER) == 1) {
     msg = "Invalid 'metrics." +
             std::string(GM_POWER) + "' key.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    sts = false;
   }
 
-  return true;
+  return sts;
 }
 /**
  * @brief Implements action functionality
@@ -340,7 +349,7 @@ int gm_action::run(void) {
   pworker->set_sample_int(sample_interval);
   pworker->set_log_int(property_log_interval);
   pworker->set_terminate(prop_terminate);
-  if (property["force"] == "true")
+  if (prop_force)
     pworker->set_force(true);
 
   // set stop name before start
@@ -361,10 +370,6 @@ int gm_action::run(void) {
   }
 
   RVSTRACE_
-  if (bjson && json_root_node != NULL) {  // json logging stuff
-    RVSTRACE_
-      rvs::lp::LogRecordFlush(json_root_node);
-  }
 
   return 0;
 }
