@@ -24,4 +24,20 @@
 ################################################################################
 
 
+set(UT_LINK_LIBS  libpthread.so libpci.so libm.so "lib${ROCM_SMI_LIB}.so"
+)
+
+set (UT_SOURCES src/action.cpp src/worker.cpp
+)
+
+#define additional target compile definitions for tests (if any)
+set(tcd.unit.gm.1 UT_TCD_1)
+
+# add unit tests
+include(tests_unit)
+
+if(RVS_ROCMSMI EQUAL 1)
+  add_dependencies(unit.gm.1 rvs_rsmi_target)
+endif()
+
 include(tests_conf_logging)
