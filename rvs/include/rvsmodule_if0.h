@@ -30,7 +30,6 @@ extern "C" {
 extern void  rvs_module_get_version(int* Major, int* Minor, int* Revision);
 extern const char* rvs_module_get_name(void);
 extern const char* rvs_module_get_description(void);
-extern int   rvs_module_has_interface(int InterfaceID);
 extern const char* rvs_module_get_config(void);
 extern const char* rvs_module_get_output(void);
 
@@ -39,7 +38,6 @@ extern const char* rvs_module_get_output(void);
 typedef void  (*t_rvs_module_get_version)(int*, int*, int*);
 typedef const char* (*t_rvs_module_get_name)(void);
 typedef const char* (*t_rvs_module_get_description)(void);
-typedef int   (*t_rvs_module_has_interface)(int);
 typedef const char* (*t_rvs_module_get_config)(void);
 typedef const char* (*t_rvs_module_get_output)(void);
 

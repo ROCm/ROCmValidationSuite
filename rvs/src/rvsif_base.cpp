@@ -26,7 +26,8 @@
 #include "include/rvsif_base.h"
 
 rvs::ifbase::ifbase()
-:plibaction(nullptr) {
+:plibaction(nullptr),
+rvs_module_has_interface(nullptr) {
 }
 
 rvs::ifbase::~ifbase() {
@@ -47,16 +48,17 @@ rvs::ifbase& rvs::ifbase::operator=(const rvs::ifbase& rhs) {
   // self-assignment check
   if (this != &rhs) {
       plibaction = rhs.plibaction;
+      rvs_module_has_interface = rhs.rvs_module_has_interface;
   }
   return *this;
 }
 
 /**
- * @brief Clone instance
+ * @brief Checks if action supports certain Inetrface ID
  *
- * @return pointer to newly created instance
+ * @return 1 - IID is supporte, 0 - otherwise
  *
  */
-rvs::ifbase* rvs::ifbase::clone(void) {
-  return new rvs::ifbase(*this);
+int rvs::ifbase::has_interface(int iid) {
+  return (*rvs_module_has_interface)(iid);
 }

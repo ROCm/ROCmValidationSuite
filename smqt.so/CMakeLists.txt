@@ -85,6 +85,11 @@ set (PROJECT_LINK_LIBS rvslibrt rvslib libpci.so libm.so)
 ## define source files
 set(SOURCES src/rvs_module.cpp src/action.cpp)
 
+## define unit testing specific source files (mocking)
+set(SOURCES_UT
+  test/action.cpp
+   )
+
 ## define target
 add_library(${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES

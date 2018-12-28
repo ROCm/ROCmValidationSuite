@@ -203,7 +203,7 @@ int pesm_action::run(void) {
  *
  * */
 int pesm_action::do_gpu_list() {
-  log("pesm in do_gpu_list()", rvs::logtrace);
+  rvs::lp::Log("pesm in do_gpu_list()", rvs::logtrace);
 
   std::map<std::string, std::string>::iterator it;
 
