@@ -104,6 +104,8 @@ typedef std::pair<std::string, module*> t_mmpair;
   t_rvs_module_action_create  rvs_module_action_create;
   //! Pointer to module action destroy function
   t_rvs_module_action_destroy rvs_module_action_destroy;
+  //! Pointer to module function checking interface existance
+  t_rvs_module_has_interface   rvs_module_has_interface;
 };
 
 }  // namespace rvs

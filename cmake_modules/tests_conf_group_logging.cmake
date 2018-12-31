@@ -24,38 +24,37 @@
 ################################################################################
 
 
-## define additional unit testing include directories
-include_directories(${UT_INC})
-## define additional unit testing lib directories
-link_directories(${UT_LIB} ${RVS_LIB_DIR})
 
-file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
-#message ( "TESTSOURCES: ${TESTSOURCES}" )
+function (rvs_register_test_group_logging RVS_TEST_GROUP)
+#set (RVS_EP_STS 0)
+execute_process(
+  COMMAND ${MAKE_CMD}
+    ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/bin ttp
+    ${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp_${RVS_TEST_GROUP}.cmake
+    "${RVS}_${RVS_TEST_GROUP}*.conf" ${RVS} ${RVS_TEST_GROUP}
+  RESULT_VARIABLE RVS_EP_STS
+  ERROR_VARIABLE RVS_EP_ERROR
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+if (RVS_EP_STS)
+  MESSAGE("RVS_EP_STS: ${RVS_EP_STS} ")
+  MESSAGE("RVS_EP_ERROR: ${RVS_EP_ERROR} ")
+  MESSAGE(FATAL_ERROR "Make file generation aborted.")
+endif()
 
+execute_process(
+  COMMAND ${MAKE_CMD}
+    ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/bin ttf
+    ${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf_${RVS_TEST_GROUP}.cmake
+    "ttf_${RVS}_${RVS_TEST_GROUP}*.conf" ${RVS} ${RVS_TEST_GROUP}
+  RESULT_VARIABLE RVS_EP_STS
+  ERROR_VARIABLE RVS_EP_ERROR
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+if (RVS_EP_STS)
+  MESSAGE("RVS_EP_STS: ${RVS_EP_STS} ")
+  MESSAGE("RVS_EP_ERROR: ${RVS_EP_ERROR} ")
+  MESSAGE(FATAL_ERROR "Make file generation aborted.")
+endif()
 
-# add unit tests
-FOREACH(SINGLE_TEST ${TESTSOURCES})
-#  MESSAGE("${SINGLE_TEST}")
-  string(REPLACE "test/test" "unit.${RVS}." TMP_TEST_NAME ${SINGLE_TEST})
-  string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
-  MESSAGE("unit test: ${TEST_NAME}")
-
-  add_executable(${TEST_NAME}
-    ${SINGLE_TEST} ${UT_SOURCES}
-  )
-  target_link_libraries(${TEST_NAME}
-    ${UT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread
-  )
-  target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
-  if(DEFINED tcd.${TEST_NAME})
-    target_compile_definitions(${TEST_NAME} PRIVATE ${tcd.${TEST_NAME}})
-  endif()
-  set_target_properties(${TEST_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
-  )
-
-  add_test(NAME ${TEST_NAME}
-    WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
-    COMMAND ${TEST_NAME}
-  )
-ENDFOREACH()
+endfunction()

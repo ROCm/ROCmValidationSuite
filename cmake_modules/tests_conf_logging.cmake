@@ -24,38 +24,27 @@
 ################################################################################
 
 
-## define additional unit testing include directories
-include_directories(${UT_INC})
-## define additional unit testing lib directories
-link_directories(${UT_LIB} ${RVS_LIB_DIR})
+set(MAKE_CMD "${CMAKE_SOURCE_DIR}/regression/make_ctest_conf_logging.py" )
 
-file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
-#message ( "TESTSOURCES: ${TESTSOURCES}" )
+execute_process(COMMAND ${MAKE_CMD} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/bin ttp ${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp.cmake "${RVS}*.conf" ${RVS}
+  RESULT_VARIABLE RVS_EP_STS
+  ERROR_VARIABLE RVS_EP_ERROR
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+if (RVS_EP_STS)
+  MESSAGE("RVS_EP_STS: ${RVS_EP_STS} ")
+  MESSAGE("RVS_EP_ERROR: ${RVS_EP_ERROR} ")
+endif()
 
+execute_process(COMMAND ${MAKE_CMD} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/bin ttf ${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf.cmake "ttf_${RVS}*.conf" ${RVS}
+  RESULT_VARIABLE RVS_EP_STS
+  ERROR_VARIABLE RVS_EP_ERROR
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+if (RVS_EP_STS)
+  MESSAGE("RVS_EP_STS: ${RVS_EP_STS} ")
+  MESSAGE("RVS_EP_ERROR: ${RVS_EP_ERROR} ")
+endif()
 
-# add unit tests
-FOREACH(SINGLE_TEST ${TESTSOURCES})
-#  MESSAGE("${SINGLE_TEST}")
-  string(REPLACE "test/test" "unit.${RVS}." TMP_TEST_NAME ${SINGLE_TEST})
-  string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
-  MESSAGE("unit test: ${TEST_NAME}")
-
-  add_executable(${TEST_NAME}
-    ${SINGLE_TEST} ${UT_SOURCES}
-  )
-  target_link_libraries(${TEST_NAME}
-    ${UT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread
-  )
-  target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
-  if(DEFINED tcd.${TEST_NAME})
-    target_compile_definitions(${TEST_NAME} PRIVATE ${tcd.${TEST_NAME}})
-  endif()
-  set_target_properties(${TEST_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
-  )
-
-  add_test(NAME ${TEST_NAME}
-    WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
-    COMMAND ${TEST_NAME}
-  )
-ENDFOREACH()
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttp.cmake)
+include(${CMAKE_CURRENT_BINARY_DIR}/tests_conf_ttf.cmake)

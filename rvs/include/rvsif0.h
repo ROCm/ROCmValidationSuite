@@ -42,7 +42,6 @@ class if0 : public ifbase {
  public:
   virtual ~if0();
   virtual const char*  get_description(void);
-  virtual int    has_interface(int);
   virtual const char*  get_config(void);
   virtual const char*  get_output(void);
 
@@ -56,8 +55,6 @@ class if0 : public ifbase {
  protected:
   //! Pointer to module function returning module description
   t_rvs_module_get_description rvs_module_get_description;
-  //! Pointer to module function checking interface existance
-  t_rvs_module_has_interface   rvs_module_has_interface;
   //! Pointer to module function returning configuration info
   t_rvs_module_get_config      rvs_module_get_config;
   //! Pointer to module function returning output info

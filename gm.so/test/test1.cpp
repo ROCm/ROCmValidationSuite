@@ -22,43 +22,20 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include "gtest/gtest.h"
+#include "include/action.h"
 
-#include "include/rvsif_base.h"
+Worker* pworker;
 
-rvs::ifbase::ifbase()
-:plibaction(nullptr),
-rvs_module_has_interface(nullptr) {
-}
-
-rvs::ifbase::~ifbase() {
-}
-
-rvs::ifbase::ifbase(const ifbase& rhs) {
-  *this = rhs;
-}
-
-/**
- * @brief Assignment operator
- *
- * @param rhs reference to RHS instance
- * @return reference to LHS instance
- *
- */
-rvs::ifbase& rvs::ifbase::operator=(const rvs::ifbase& rhs) {
-  // self-assignment check
-  if (this != &rhs) {
-      plibaction = rhs.plibaction;
-      rvs_module_has_interface = rhs.rvs_module_has_interface;
-  }
-  return *this;
-}
-
-/**
- * @brief Checks if action supports certain Inetrface ID
- *
- * @return 1 - IID is supporte, 0 - otherwise
- *
- */
-int rvs::ifbase::has_interface(int iid) {
-  return (*rvs_module_has_interface)(iid);
+TEST(gm, coverage_rsmi_failure) {
+  pworker = nullptr;
+  gm_action* pa = new gm_action;
+  ASSERT_NE(pa, nullptr);
+  pa->property_set("name", "unit_test");
+  pa->property_set("device", "all");
+  pa->property_set("terminate", "true");
+  pa->property_set("metrics.temp", "true 20 0");
+  pa->run();
+  delete pa;
+  delete pworker;
 }

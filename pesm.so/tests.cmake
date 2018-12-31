@@ -31,5 +31,5 @@ set (UT_SOURCES test/unitactionbase.cpp
 include(tests_unit)
 
 # Add configuration tests
-include(tests_conf)
+include(tests_conf_logging)
 

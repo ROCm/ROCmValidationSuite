@@ -68,6 +68,8 @@ class gm_action : public rvs::actionbase {
   bool     bjson;
   //! true if test has to be aborted on bounds violation
   bool     prop_terminate;
+  //! true if forced termination is required
+  bool     prop_force;
   //! configuration 'sample_interval'' key
   uint64_t sample_interval;
 
