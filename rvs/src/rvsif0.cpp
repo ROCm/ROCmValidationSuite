@@ -28,7 +28,8 @@
 rvs::if0::if0()
 :
 rvs_module_get_description(nullptr),
-rvs_module_has_interface(nullptr) {
+rvs_module_get_config(nullptr),
+rvs_module_get_output(nullptr) {
 }
 
 //! Default destructor
@@ -57,7 +58,6 @@ rvs::if0& rvs::if0::operator=(const rvs::if0& rhs) {
   if (this != &rhs) {
     ifbase::operator=(rhs);
     rvs_module_get_description  = rhs.rvs_module_get_description;
-    rvs_module_has_interface = rhs.rvs_module_has_interface;
     rvs_module_get_config    = rhs.rvs_module_get_config;
     rvs_module_get_output    = rhs.rvs_module_get_output;
   }
@@ -83,16 +83,6 @@ rvs::ifbase* rvs::if0::clone(void) {
  */
 const char* rvs::if0::get_description(void) {
   return (*rvs_module_get_description)();
-}
-
-/**
- * @brief Checks if action supports certain Inetrface ID
- *
- * @return 1 - IID is supporte, 0 - otherwise
- *
- */
-int rvs::if0::has_interface(int iid) {
-  return (*rvs_module_has_interface)(iid);
 }
 
 /**
