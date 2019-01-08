@@ -86,13 +86,6 @@ smqt_action::~smqt_action() {
   property.clear();
 }
 
-#ifdef  RVS_UNIT_TEST
-void smqt_action::on_bar_data_read() {
-}
-void smqt_action::on_set_device_gpu_id() {
-}
-#endif
-
 /**
  * @brief reads all common configuration keys from
  * the module's properties collection
@@ -214,9 +207,6 @@ int smqt_action::run(void) {
     // filter by device id if needed
     if (property_device_id > 0) {
       rvs::gpulist::gpu2device(gpu_id, &dev_id);
-      #ifdef  RVS_UNIT_TEST
-      on_set_device_gpu_id();
-      #endif
       if (property_device_id != dev_id)
         continue;
     }
@@ -247,10 +237,6 @@ int smqt_action::run(void) {
     if (bar4_base_addr < bar4_base_addr_min ||
         bar4_base_addr > bar4_base_addr_max)
       pass = false;
-
-    #ifdef  RVS_UNIT_TEST
-    on_bar_data_read();
-    #endif
 
     if (bar1_req_size > bar1_size ||
         bar2_req_size < bar2_size ||
