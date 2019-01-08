@@ -73,7 +73,6 @@ class logger {
   static  void   AddString(void* Parent, const char* Key, const char* Val);
   static  void   AddInt(void* Parent, const char* Key, const int Val);
   static  void   AddNode(void* Parent, void* Child);
-  static  int    ToFile(const std::string& Row);
   static  int    JsonPatchAppend(int*);
   static  void   Stop(uint16_t flags);
   static  bool   Stopping(void);
@@ -81,6 +80,8 @@ class logger {
                    const char *Module = nullptr, const char *Action = nullptr);
 
  protected:
+  static  int    ToFile(const std::string& Row);
+
   //! Current logging level (0..5)
   static  int    loglevel_m;
   //! 'true' if JSON output is requested

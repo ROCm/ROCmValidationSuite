@@ -39,6 +39,7 @@
 #include "include/rvscli.h"
 #include "include/rvsexec.h"
 #include "include/rvsliblogger.h"
+#include "include/rvstrace.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -72,8 +73,10 @@ int main(int Argc, char**Argv) {
   sts = executor.run();
 
 #ifdef RVS_INVERT_RETURN_STATUS
+  DTRACE_
   return sts ? 0 : 1;
 #else
+//  std::cout << "sts: " << std::to_string(sts);
   return sts;
 #endif
 }
