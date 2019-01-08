@@ -144,6 +144,10 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       return sts;
     }
   }
+  // if stop was requested
+  if (rvs::logger::Stopping()) {
+    return -1;
+  }
 
   return 0;
 }
