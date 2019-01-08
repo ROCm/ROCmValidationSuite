@@ -31,7 +31,7 @@ bar_data::bar_data() {
 
 //! Default destructor
 bar_data::~bar_data() {
-//  property.clear();
+  property.clear();
 }
 void bar_data::on_set_device_gpu_id() {
   dev_id = 123;

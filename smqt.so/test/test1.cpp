@@ -42,4 +42,5 @@ TEST(smqt, action) {
   EXPECT_EQ(bar1_base_addr, 1UL);
   EXPECT_EQ(bar2_base_addr, 6UL);
   EXPECT_EQ(bar4_base_addr, 7UL);
+  delete bd;
 }
