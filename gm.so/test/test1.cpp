@@ -24,18 +24,26 @@
  *******************************************************************************/
 #include "gtest/gtest.h"
 #include "include/action.h"
+#include "include/gpu_util.h"
 
 Worker* pworker;
 
 TEST(gm, coverage_rsmi_failure) {
+  rvs::gpulist::Initialize();
   pworker = nullptr;
   gm_action* pa = new gm_action;
   ASSERT_NE(pa, nullptr);
+  pa->property_set("monitor", "true");
   pa->property_set("name", "unit_test");
   pa->property_set("device", "all");
   pa->property_set("terminate", "true");
-  pa->property_set("metrics.temp", "true 20 0");
+  pa->property_set("metrics.temp", "true 30 0");
+  pa->property_set("metrics.fan", "true 100 0");
+  pa->property_set("metrics.clock", "true 1500 0");
+  pa->property_set("metrics.mem_clock", "true 1500 0");
+  pa->property_set("duration", "1000");
   pa->run();
   delete pa;
+  pworker->stop();
   delete pworker;
 }
