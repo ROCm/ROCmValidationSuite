@@ -284,6 +284,10 @@ void Worker::run() {
         RVSTRACE_
         status = rsmi_dev_temp_metric_get(ix, sensor_ind,
                         RSMI_TEMP_CURRENT, &temperature);
+
+#ifdef UT_TCD_1
+        status = RSMI_STATUS_UNKNOWN_ERROR;
+#endif  // UT_TCD_1
         if (status == RSMI_STATUS_SUCCESS) {
           RVSTRACE_
           uint32_t temper = temperature/1000;
@@ -335,6 +339,9 @@ void Worker::run() {
         RVSTRACE_
         status = rsmi_dev_fan_speed_get(ix,
                                         sensor_ind, &speed);
+#ifdef UT_TCD_1
+        status = RSMI_STATUS_UNKNOWN_ERROR;
+#endif  // UT_TCD_1
         if (status == RSMI_STATUS_SUCCESS) {
           RVSTRACE_
           met_value[ix].fan = speed;

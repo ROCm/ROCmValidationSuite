@@ -750,10 +750,6 @@ int rcqt_action::filechk_run() {
     } else {
       msg = "[" + action_name + "] " + "rcqt filecheck exists false";
       rvs::lp::Log(msg, rvs::logresults);
-      if (bjson && json_rcqt_node != nullptr) {
-        rvs::lp::AddString(json_rcqt_node
-        , iter->second, file);
-      }
     }
     if (bjson && json_rcqt_node != nullptr) {
       rvs::lp::LogRecordFlush(json_rcqt_node);

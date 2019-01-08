@@ -72,8 +72,8 @@ class smqt_action : public rvs::actionbase {
 #ifdef  RVS_UNIT_TEST
 
  protected:
-  virtual void on_set_device_gpu_id();
-  virtual void on_bar_data_read();
+  virtual void on_set_device_gpu_id() = 0;
+  virtual void on_bar_data_read() = 0;
 #endif
 };
 
