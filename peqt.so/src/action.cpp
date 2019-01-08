@@ -137,15 +137,19 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
     uint8_t i;
 
     if (bjson) {
-        if (json_root_node != NULL) {
-            json_pcaps_node = rvs::lp::CreateNode(json_root_node,
-                    JSON_CAPS_NODE_NAME);
-            if (json_pcaps_node == NULL) {
-                // log the error
-                msg = JSON_CREATE_NODE_ERROR;
-                rvs::lp::Err(msg, MODULE_NAME, action_name);
-            }
-        }
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+
+      json_pcaps_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+          action_name.c_str(), rvs::loginfo, sec, usec);
+
+      if (json_pcaps_node == NULL) {
+          // log the error
+          msg = JSON_CREATE_NODE_ERROR;
+          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          return false;
+      }
     }
 
     if (bjson && json_pcaps_node != NULL) {
@@ -243,6 +247,7 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                             pci_infra_qual_result = false;
                         }
                     } catch (const std::regex_error& e) {
+                        pci_infra_qual_result = false;
                         // log the regex error
                         msg = action_name + " " + MODULE_NAME + " "
                                 + YAML_REGULAR_EXPRESSION_ERROR + " at '"
@@ -254,8 +259,7 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
         }
     }
 
-    if (bjson && json_pcaps_node != NULL)
-        rvs::lp::AddNode(json_root_node, json_pcaps_node);
+    rvs::lp::LogRecordFlush(json_pcaps_node);
 
     return pci_infra_qual_result;
 }
@@ -271,6 +275,8 @@ int peqt_action::run(void) {
     bool pci_infra_qual_result = true;  // PCI qualification result
     bool amd_gpus_found = false;
     uint8_t i;
+    unsigned int sec;
+    unsigned int usec;
 
     struct pci_access *pacc;
     struct pci_dev *dev;
@@ -285,19 +291,7 @@ int peqt_action::run(void) {
 
     // check for -j flag (json logging)
     if (property.find("cli.-j") != property.end()) {
-        unsigned int sec;
-        unsigned int usec;
-        rvs::lp::get_ticks(&sec, &usec);
-
         bjson = true;
-
-        json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                action_name.c_str(), rvs::loginfo, sec, usec);
-        if (json_root_node == NULL) {
-            // log the error
-            msg = JSON_CREATE_NODE_ERROR;
-            rvs::lp::Err(msg, MODULE_NAME, action_name);
-        }
     }
 
     // get <device> property value (a list of gpu id)
@@ -414,11 +408,30 @@ int peqt_action::run(void) {
                     PEQT_RESULT_PASS_MESSAGE : PEQT_RESULT_FAIL_MESSAGE);
     rvs::lp::Log(msg, rvs::logresults);
 
-    if (bjson && json_root_node != NULL) {
-        rvs::lp::AddString(json_root_node, "RESULT",
-                (pci_infra_qual_result ?
-                        PEQT_RESULT_PASS_MESSAGE : PEQT_RESULT_FAIL_MESSAGE));
-        rvs::lp::LogRecordFlush(json_root_node);
+    if (bjson) {
+      rvs::lp::get_ticks(&sec, &usec);
+      json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+              action_name.c_str(), rvs::logresults, sec, usec);
+      if (json_root_node == NULL) {
+          // log the error
+          msg = JSON_CREATE_NODE_ERROR;
+          rvs::lp::Err(msg, MODULE_NAME, action_name);
+          return -1;
+      }
+
+      if (pci_infra_qual_result) {
+        rvs::lp::AddInt(json_root_node, "Sts", 1);
+        rvs::lp::AddString(json_root_node, "pass", PEQT_RESULT_PASS_MESSAGE);
+      } else {
+        rvs::lp::AddInt(json_root_node, "Sts", 0);
+        rvs::lp::AddString(json_root_node, "pass", PEQT_RESULT_FAIL_MESSAGE);
+      }
+
+      if (!amd_gpus_found) {
+        rvs::lp::AddString(json_root_node, "Msg", "No matching GPUs found");
+      }
+
+      rvs::lp::LogRecordFlush(json_root_node);
     }
 
     return 0;

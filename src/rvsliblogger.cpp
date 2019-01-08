@@ -249,7 +249,12 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
     row = RVSENDL + row;
   }
   DTRACE_
-  ToFile(row);
+
+  if (true) {
+    // lock log_mutex for the duration of this block
+    std::lock_guard<std::mutex> lk(log_mutex);
+    ToFile(row);
+  }
 
   DTRACE_
   return 0;
@@ -300,6 +305,8 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
  *
  */
 int   rvs::logger::LogRecordFlush(void* pLogRecord) {
+  // lock log_mutex for the duration of this block
+  std::lock_guard<std::mutex> lk(log_mutex);
   std::string val;
   DTRACE_
 
@@ -369,9 +376,6 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
  *
  */
 int rvs::logger::ToFile(const std::string& Row) {
-  // lock log_mutex for the duration of this block
-  std::lock_guard<std::mutex> lk(log_mutex);
-
   if (bStop) {
     if (stop_flags)
       return 0;

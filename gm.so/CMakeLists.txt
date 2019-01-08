@@ -101,7 +101,7 @@ add_library( ${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB} ${ROCM_SMI_LIB})
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${ROCM_SMI_LIB})
 add_dependencies(${RVS_TARGET} rvslibrt rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD

@@ -30,8 +30,8 @@
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
 
-#define GST_RESULT_PASS_MESSAGE         "TRUE"
-#define GST_RESULT_FAIL_MESSAGE         "FALSE"
+#define GST_RESULT_PASS_MESSAGE         "true"
+#define GST_RESULT_FAIL_MESSAGE         "false"
 
 /**
  * @class GSTWorker
