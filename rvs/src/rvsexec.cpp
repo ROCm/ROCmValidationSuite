@@ -37,6 +37,7 @@
 #include "include/rvsmodule.h"
 #include "include/rvsliblogger.h"
 #include "include/rvsoptions.h"
+#include "include/rvstrace.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -170,11 +171,12 @@ int rvs::exec::run() {
 
   if (rvs::options::has_option("-g")) {
     int sts = do_gpu_list();
-    logger::terminate();
     rvs::module::terminate();
+    logger::terminate();
     return sts;
   }
 
+  DTRACE_
   try {
     sts = do_yaml(config_file);
   } catch(std::exception& e) {
@@ -188,11 +190,23 @@ int rvs::exec::run() {
     rvs::logger::Err(buff, MODULE_NAME_CAPS);
   }
 
+  rvs::module::terminate();
   logger::terminate();
 
-  rvs::module::terminate();
+  DTRACE_
+  if (sts) {
+    DTRACE_
+    return sts;
+  }
 
-  return sts;
+  // if stop was requested
+  if (rvs::logger::Stopping()) {
+    DTRACE_
+    return -1;
+  }
+
+  DTRACE_
+  return 0;
 }
 
 //! Reports version strin
