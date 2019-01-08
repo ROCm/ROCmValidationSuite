@@ -132,7 +132,7 @@ if json_usage == 'true' and log_usage == 'true':
              print "JSON Found RESULT"
              json_has_res_err = True
              break
-           if json_line == 'ERROR':
+           if json_line == 'ERROR ':
              print "JSON Found ERROR"
              json_has_res_err = True
              break
