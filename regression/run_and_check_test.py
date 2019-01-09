@@ -104,12 +104,16 @@ if console_usage == 'true':
    print "console_usage is True"
    result_log = bin_path + "/" + test_console_file_name
    if os.path.isfile(result_log):
-      f = open(result_log)
-      s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-      if s.find('RESULT') == -1 and s.find('ERROR') == -1:
-         print "No found RESULT/ERROR"
+      if os.path.getsize(result_log) > 0:
+         f = open(result_log)
+         s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+         if s.find('RESULT') == -1 and s.find('ERROR') == -1:
+            print "No found RESULT/ERROR"
+            test_result = False
+         f.close()
+      else:
+         print "Empty file"
          test_result = False
-      f.close()
    else:
       print "No file found"
       test_result = False
@@ -153,12 +157,16 @@ else:
       print "log_usage is True"
       result_log = bin_path + "/" + test_output_file_name
       if os.path.isfile(result_log):
-         f = open(result_log)
-         s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-         if s.find('RESULT') == -1 and s.find('ERROR') == -1:
-            print "No found RESULT/ERROR"
+         if os.path.getsize(result_log) > 0:
+            f = open(result_log)
+            s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+            if s.find('RESULT') == -1 and s.find('ERROR') == -1:
+               print "No found RESULT/ERROR"
+               test_result = False
+            f.close()
+         else:
+            print "Empty file"
             test_result = False
-         f.close()
       else:
          print "No file found"
          test_result = False

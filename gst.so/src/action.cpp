@@ -90,76 +90,6 @@ gst_action::~gst_action() {
 }
 
 /**
- * @brief reads the module's properties collection to see whether the GST should
- * copy the matrices to GPU before each SGEMM/DGEMM operation
- * @param error pointer to a memory location where the error code will be stored
- */
-void gst_action::property_get_gst_copy_matrix(int *error) {
-    *error = 0;
-    gst_copy_matrix = GST_DEFAULT_COPY_MATRIX;
-    map<string, string>::iterator it = property.find(RVS_CONF_COPY_MATRIX_KEY);
-    if (it != property.end()) {
-        if (it->second == "true")
-            gst_copy_matrix = true;
-        else
-        if (it->second == "false")
-            gst_copy_matrix = false;
-        else
-            *error = 1;
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads the GFLOPS value (that the GST will try to achieve) from
- * the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void gst_action::property_get_gst_target_stress(int *error) {
-    *error = 0;  // init with 'no error'
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_TARGET_STRESS_KEY);
-    if (it != property.end()) {
-        try {
-            regex float_number_regex(FLOATING_POINT_REGEX);
-            if (!regex_match(it->second, float_number_regex)) {
-                *error = 1;  // not a floating point number
-            } else {
-                gst_target_stress = std::stof(it->second);
-            }
-        } catch (const std::regex_error& e) {
-            *error = 1;  // something went wrong with the regex
-        }
-    } else {
-        *error = 1;
-    }
-}
-
-/**
- * @brief reads the maximum GFLOPS tolerance from
- * the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void gst_action::property_get_gst_tolerance(int *error) {
-    *error = 0;
-    gst_tolerance = GST_DEFAULT_TOLERANCE;
-    map<string, string>::iterator it = property.find(RVS_CONF_TOLERANCE_KEY);
-    if (it != property.end()) {
-        try {
-            regex float_number_regex(FLOATING_POINT_REGEX);
-            if (regex_match(it->second, float_number_regex)) {
-                gst_tolerance = std::stof(it->second);
-            } else {
-                *error = 1;  // not a floating point number
-            }
-        } catch (const std::regex_error& e) {
-            *error = 1;
-        }
-        property.erase(it);
-    }
-}
-
-/**
  * @brief runs the GST test stress session
  * @param gst_gpus_device_index <gpu_index, gpu_id> map
  * @return true if no error occured, false otherwise
@@ -236,20 +166,23 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
 bool gst_action::get_all_gst_config_keys(void) {
     int error;
     string msg, ststress;
+    bool bsts = true;
 
-    if (has_property(RVS_CONF_TARGET_STRESS_KEY, &ststress)) {
-        property_get_gst_target_stress(&error);
-        if (error) {  // <target_stress> is mandatory => GST cannot continue
-            msg = "invalid '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
-                "' key value " + ststress;
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return false;
-        }
-    } else {
-        msg = "key '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
-            "' was not found";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    if ((error =
+      property_get(RVS_CONF_TARGET_STRESS_KEY, &gst_target_stress))) {
+      switch (error) {  // <target_stress> is mandatory => GST cannot continue
+        case 1:
+          msg = "invalid '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
+              "' key value " + ststress;
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+          break;
+
+        case 2:
+          msg = "key '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
+          "' was not found";
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      }
+      bsts = false;
     }
 
     if (property_get_int<uint64_t>(RVS_CONF_RAMP_INTERVAL_KEY,
@@ -257,7 +190,7 @@ bool gst_action::get_all_gst_config_keys(void) {
         msg = "invalid '" +
         std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+        bsts = false;
     }
 
     if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
@@ -265,7 +198,7 @@ bool gst_action::get_all_gst_config_keys(void) {
         msg = "invalid '" +
         std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+        bsts = false;
     }
 
     if (property_get_int<int>(RVS_CONF_MAX_VIOLATIONS_KEY, &gst_max_violations,
@@ -273,23 +206,23 @@ bool gst_action::get_all_gst_config_keys(void) {
         msg = "invalid '" +
         std::string(RVS_CONF_MAX_VIOLATIONS_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+        bsts = false;
     }
 
-    property_get_gst_copy_matrix(&error);
-    if (error) {
+    if (property_get(RVS_CONF_COPY_MATRIX_KEY, &gst_copy_matrix,
+      GST_DEFAULT_COPY_MATRIX)) {
         msg = "invalid '" +
         std::string(RVS_CONF_COPY_MATRIX_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+        bsts = false;
     }
 
-    property_get_gst_tolerance(&error);
-    if (error) {
+    if (property_get<float>(RVS_CONF_TOLERANCE_KEY, &gst_tolerance,
+      GST_DEFAULT_TOLERANCE)) {
         msg = "invalid '" +
         std::string(RVS_CONF_TOLERANCE_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+        bsts = false;
     }
 
     error = property_get_int<uint64_t>
@@ -298,9 +231,9 @@ bool gst_action::get_all_gst_config_keys(void) {
         msg = "invalid '" +
         std::string(RVS_CONF_MATRIX_SIZE_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+        bsts = false;
     }
-    return true;
+    return bsts;
 }
 
 /**
@@ -311,6 +244,7 @@ bool gst_action::get_all_gst_config_keys(void) {
 bool gst_action::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
+    bool bsts = true;
 
     // get <device> property value (a list of gpu id)
     if (int sts = property_get_device()) {
@@ -323,7 +257,7 @@ bool gst_action::get_all_common_config_keys(void) {
         break;
       }
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      bsts = false;
     }
 
     // get the <deviceid> property value if provided
@@ -331,44 +265,44 @@ bool gst_action::get_all_common_config_keys(void) {
                                   &property_device_id, 0u)) {
       msg = "Invalid 'deviceid' key value.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      bsts = false;
     }
 
     // get the other action/GST related properties
     if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
-        msg = "invalid '" +
-            std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+      msg = "invalid '" +
+          std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
     error = property_get_int<uint64_t>
     (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
     if (error != 0) {
-        msg = "invalid '" +
-            std::string(RVS_CONF_COUNT_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+      msg = "invalid '" +
+          std::string(RVS_CONF_COUNT_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
     error = property_get_int<uint64_t>
     (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
-    if (error == 1) {
-        msg = "invalid '" +
-            std::string(RVS_CONF_WAIT_KEY) + "' key value";
-        return false;
+    if (error != 0) {
+      msg = "invalid '" +
+          std::string(RVS_CONF_WAIT_KEY) + "' key value";
+      bsts = false;
     }
 
     error = property_get_int<uint64_t>
     (RVS_CONF_DURATION_KEY, &property_duration, RVS_DEFAULT_DURATION);
     if (error == 1) {
-        msg = "invalid '" +
-            std::string(RVS_CONF_DURATION_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+      msg = "invalid '" +
+          std::string(RVS_CONF_DURATION_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
-    return true;
+    return bsts;
 }
 
 /**
