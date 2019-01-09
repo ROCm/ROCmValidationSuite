@@ -137,11 +137,26 @@ class actionbase {
   }
 
   int property_get(const std::string& prop_name, bool* pVal);
-  int property_get(const std::string& prop_name, bool* pVal, bool bDefault);
 
   int property_get(const std::string& prop_name, std::string* pVal);
-  int property_get(const std::string& prop_name,
-                   std::string* pVal, const std::string& bDefault);
+
+  int property_get(const std::string& prop_name, float* pVal);
+
+  /**
+   * @brief reads key value from the module's properties collection
+   * returns 1 for invalid key
+   * takes default value if key is missing
+   */
+  template <typename T>
+  int property_get(const std::string& prop_name, T* pVal, T Default) {
+    int sts = property_get(prop_name, pVal);
+    if (sts == 2) {
+      *pVal = Default;
+      return 0;
+    }
+
+    return sts;
+  }
 
  protected:
 /**
