@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <chrono>
 #include <utility>
+#include <regex>
 #include <map>
 #include <string>
 #include <vector>
@@ -35,6 +36,8 @@
 #include "include/rvsloglp.h"
 #include "include/rvs_key_def.h"
 #include "include/rvs_util.h"
+
+#define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 
 using std::cout;
 using std::endl;
@@ -139,21 +142,6 @@ int rvs::actionbase::property_get(const std::string& prop_name,
 }
 
 /**
- * @brief Reads boolean property value from properties collection.
- * Assigns the default value if not found.
- */
-int rvs::actionbase::property_get(const std::string& prop_name,
-                                       bool* pVal, bool bDef) {
-  int sts = property_get(prop_name, pVal);
-  if (sts == 2) {
-    *pVal = bDef;
-    return 0;
-  }
-
-  return sts;
-}
-
-/**
  * @brief Reads string property value from properties collection
  */
 int rvs::actionbase::property_get(const std::string& prop_name,
@@ -165,18 +153,18 @@ int rvs::actionbase::property_get(const std::string& prop_name,
 }
 
 /**
- * @brief Reads string property value from properties collection.
- * Assigns the default value if not found.
+ * @brief Reads float property value from properties collection
  */
-int rvs::actionbase::property_get(
-  const std::string& prop_name,
-  std::string* pVal,
-  const std::string& bDefault) {
-  int sts = property_get(prop_name, pVal);
-  if (sts == 2) {
-    *pVal = bDefault;
-    return 0;
+int rvs::actionbase::property_get(const std::string& prop_name,
+                                       float* pVal) {
+  std::string sval;
+  if (!has_property(prop_name, &sval)) {
+    return 2;
   }
-
-  return sts;
+  try {
+    *pVal = std::stof(sval);
+  } catch (...) {
+      return 1;  // something went wrong with the regex
+  }
+  return 0;
 }
