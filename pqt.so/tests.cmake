@@ -47,3 +47,9 @@ add_test(NAME pqt.coverage.4 COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE
 add_test(NAME pqt.coverage.5 COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/pqt_coverage5.conf true true false ttf 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_test(NAME pqt.coverage.6 COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/pqt_coverage6.conf true true false ttf 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_test(NAME pqt.coverage.7 COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/pqt_coverage7.conf true true false ttf 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_test(NAME pqt.coverage.8 COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/pqt_coverage8.conf true true false ttf 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_test(NAME pqt.coverage.9 COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/pqt_coverage9.conf true true false ttf 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
