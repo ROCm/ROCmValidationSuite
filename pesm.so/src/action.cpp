@@ -44,6 +44,7 @@ extern "C" {
 #include "include/rvs_util.h"
 #include "include/rvsloglp.h"
 #define MODULE_NAME_CAPS "PESM"
+#define RVS_CONF_DBGWAIT_KEY "debugwait"
 
 using std::string;
 using std::cout;
@@ -55,12 +56,87 @@ extern Worker* pworker;
 
 //! Default constructor
 pesm_action::pesm_action() {
+  bjson = false;
+  prop_monitor = true;
 }
 
 //! Default destructor
 pesm_action::~pesm_action() {
   property.clear();
 }
+
+/**
+ * @brief reads all common configuration keys from
+ * the module's properties collection
+ * @return true if no fatal error occured, false otherwise
+ */
+bool pesm_action::get_all_common_config_keys(void) {
+    string msg;
+
+    bool sts = true;
+
+    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+      return false;
+    }
+
+    // check if  -j flag is passed
+    if (has_property("cli.-j")) {
+      bjson = true;
+    }
+
+    // get <device> property value (a list of gpu id)
+    if (int ists = property_get_device()) {
+      switch (ists) {
+      case 1:
+        msg = "Invalid 'device' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device' key.";
+        break;
+      }
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
+    }
+
+    // get the <deviceid> property value if provided
+    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                  &property_device_id, 0u)) {
+      msg = "Invalid 'deviceid' key value.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
+    }
+
+    return sts;
+}
+
+/**
+ * @brief reads all PESM specific configuration keys from
+ * the module's properties collection
+ * @return true if no fatal error occured, false otherwise
+ */
+bool pesm_action::get_all_pesm_config_keys(void) {
+    string msg;
+
+    bool sts = true;
+
+    // get the <deviceid> property value if provided
+    if (property_get<bool>(RVS_CONF_MONITOR_KEY, &prop_monitor, true)) {
+      msg = "Invalid '" RVS_CONF_MONITOR_KEY "' key value.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
+    }
+
+    // get the <deviceid> property value if provided
+    if (property_get_int<int>(RVS_CONF_DBGWAIT_KEY, &prop_debugwait, 0)) {
+      msg = "Invalid '" RVS_CONF_DBGWAIT_KEY "' key value.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
+    }
+
+    return sts;
+}
+
 
 /**
  * @brief Implements action functionality
@@ -81,17 +157,6 @@ int pesm_action::run(void) {
   string msg;
   RVSTRACE_
 
-  // get the action name
-  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-    return 1;
-  }
-
-  // debugging help
-  string val;
-  if (has_property("debugwait", &val)) {
-    sleep(std::stoi(val));
-  }
   // this module implements --listGpu command line option
   // if this option is set, an internal input key 'do_gpu_list' is passed
   // to this action
@@ -99,96 +164,58 @@ int pesm_action::run(void) {
     return do_gpu_list();
   }
 
-  // start of monitoring?
-  if (property["monitor"] == "true") {
+  // get commong configuration keys
+  if (!get_all_common_config_keys()) {
+    return 1;
+  }
+
+  // get PESM specific configuration keys
+  if (!get_all_pesm_config_keys()) {
+    return 1;
+  }
+
+  // debugging help
+  if (prop_debugwait) {
+    sleep(prop_debugwait);
+  }
+
+  // end of monitoring requested?
+  if (!prop_monitor) {
+    RVSTRACE_
     if (pworker) {
-      rvs::lp::Log("[" + property["name"]+ "] pesm monitoring already started",
-                  rvs::logresults);
-      return 0;
-    }
-
-    rvs::lp::Log("[" + property["name"]+
-    "] pesm property[\"monitor\"] == \"true\"", rvs::logtrace);
-
-    // create worker thread object
-    rvs::lp::Log("[" + property["name"]+ "] pesm creating Worker",
-                 rvs::logtrace);
-
-    pworker = new Worker();
-    pworker->set_name(property["name"]);
-
-    // check if  -j flag is passed
-    if (has_property("cli.-j")) {
-      pworker->json(true);
-    }
-
-    // checki if deviceid filtering is required
-    string sdevid;
-    if (has_property("deviceid", &sdevid)) {
-      if (::is_positive_integer(sdevid)) {
-        try {
-          pworker->set_deviceid(std::stoi(sdevid));
-        }
-        catch(...) {
-          msg = property["name"] +
-          "  invalide 'deviceid' key value: " + sdevid;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return -1;
-        }
-      } else {
-        msg = property["name"] +
-        "  invalide 'deviceid' key value: " + sdevid;
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
-      }
-    }
-
-    // check if GPU id filtering is requied
-    string sdev;
-    if (has_property("device", &sdev)) {
-      pworker->set_strgpuids(sdev);
-      if (sdev != "all") {
-        std::vector<std::string> sarr =
-          str_split(sdev, YAML_DEVICE_PROP_DELIMITER);
-        std::vector<int> iarr;
-        int sts = rvs_util_strarr_to_intarr(sarr, &iarr);
-        if (sts < 0) {
-          msg = property["name"] +
-          "  invalide 'device' key value: " + sdev;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return -1;
-        }
-        pworker->set_gpuids(iarr);
-      }
-    } else {
-          msg = property["name"] +
-          "  key 'device' not found";
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          return -1;
-    }
-
-    // start worker thread
-    rvs::lp::Log("[" + property["name"]+ "] pesm starting Worker",
-                 rvs::logtrace);
-    pworker->start();
-    sleep(2);
-
-    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring started",
-                 rvs::logtrace);
-  } else {
-    rvs::lp::Log("[" + property["name"]+
-    "] pesm property[\"monitor\"] != \"true\"", rvs::logtrace);
-    if (pworker) {
+      RVSTRACE_
       // (give thread chance to start)
       sleep(2);
-      pworker->set_stop_name(property["name"]);
+      pworker->set_stop_name(action_name);
       pworker->stop();
       delete pworker;
       pworker = nullptr;
     }
-    rvs::lp::Log("[" + property["name"]+ "] pesm Monitoring stopped",
-                 rvs::logtrace);
+    RVSTRACE_
+    return 0;
   }
+
+  RVSTRACE_
+  if (pworker) {
+    rvs::lp::Log("[" + property["name"]+ "] pesm monitoring already started",
+                rvs::logdebug);
+    return 0;
+  }
+
+  RVSTRACE_
+  // create worker thread
+  pworker = new Worker();
+  pworker->set_name(action_name);
+  pworker->json(bjson);
+  pworker->set_gpuids(property_device);
+  pworker->set_deviceid(property_device_id);
+
+  // start worker thread
+  RVSTRACE_
+  pworker->start();
+  sleep(2);
+
+  RVSTRACE_
   return 0;
 }
 
@@ -245,10 +272,6 @@ int pesm_action::do_gpu_list() {
     if (rvs::gpulist::location2node(dev_location_id, &node_id)) {
       continue;
     }
-
-//     int32_t gpu_id = rvs::gpulist::GetGpuId(dev_location_id);
-//     if (gpu_id < 0)
-//       continue;
 
     uint16_t gpu_id;
     if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id)) {
