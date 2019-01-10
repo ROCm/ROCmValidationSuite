@@ -117,41 +117,6 @@ void* rvs::lp::LogRecordCreate(const char* Module, const char* Action,
 }
 
 /**
- * @brief Create log record
- *
- * Note: this API is used to construct JSON output. Use LogExt() to perform
- * unstructured output.
- *
- * @param Module Module from which record is originating
- * @param Action Action from which record is originating
- * @param LogLevel Logging level
- * @return 0 - success, non-zero otherwise
- *
- */
-void* rvs::lp::LogRecordCreate(const char* Module, const char* Action,
-                               const int LogLevel) {
-  return rvs::logger::LogRecordCreate(Module,  Action,  LogLevel, 0, 0);
-}
-
-/**
- * @brief Create log record
- *
- * Note: this API is used to construct JSON output. Use LogExt() to perform
- * unstructured output.
- *
- * @param Module Module from which record is originating
- * @param Action Action from which record is originating
- * @param LogLevel Logging level
- * @return 0 - success, non-zero otherwise
- *
- */
-void* rvs::lp::LogRecordCreate(const std::string& Module,
-                               const std::string& Action, const int LogLevel) {
-  return rvs::logger::LogRecordCreate(Module.c_str(),  Action.c_str(),
-                                 LogLevel, 0, 0);
-}
-
-/**
  * @brief Output log record
  *
  * Sends out record previously created using LogRecordCreate()
