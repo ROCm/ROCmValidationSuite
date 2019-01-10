@@ -41,8 +41,6 @@ namespace rvs {
  */
 class LogNodeInt : public LogNodeBase {
  public:
-  explicit LogNodeInt(const std::string& Name, const int Val,
-                      const LogNodeBase* pParent = nullptr);
   explicit LogNodeInt(const char* Name, const int Val,
                       const LogNodeBase* pParent = nullptr);
 
