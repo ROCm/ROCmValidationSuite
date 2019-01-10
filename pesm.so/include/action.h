@@ -59,7 +59,6 @@ class pesm_action : public rvs::actionbase {
   int prop_debugwait;
   //! 'true' if monitoring is to be initiated
   bool prop_monitor;
-
 };
 
 #endif  // PESM_SO_INCLUDE_ACTION_H_
