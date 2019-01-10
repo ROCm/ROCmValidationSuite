@@ -49,6 +49,17 @@ class pesm_action : public rvs::actionbase {
 
  protected:
   int do_gpu_list(void);
+  bool get_all_common_config_keys(void);
+  bool get_all_pesm_config_keys(void);
+
+ protected:
+  //! json logging flag
+  bool bjson;
+  //! debug wait helper
+  int prop_debugwait;
+  //! 'true' if monitoring is to be initiated
+  bool prop_monitor;
+
 };
 
 #endif  // PESM_SO_INCLUDE_ACTION_H_
