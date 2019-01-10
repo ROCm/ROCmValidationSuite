@@ -36,22 +36,6 @@ using std::string;
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNodeInt::LogNodeInt(const std::string& Name, const int Val,
-                            const LogNodeBase* Parent)
-:
-LogNodeBase(Name, Parent),
-Value(Val) {
-  Type = eLN::Integer;
-}
-
-/**
- * @brief Constructor
- *
- * @param Name Node name
- * @param Val Node value
- * @param Parent Pointer to parent node
- *
- */
 rvs::LogNodeInt::LogNodeInt(const char* Name, const int Val,
                             const LogNodeBase* Parent)
 :
