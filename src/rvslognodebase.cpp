@@ -29,20 +29,6 @@
 /**
  * @brief Constructor
  *
- * @param rName Node name
- * @param pParent Pointer to parent node
- *
- */
-rvs::LogNodeBase::LogNodeBase(const std::string& rName,
-                              const LogNodeBase* pParent)
-: Name(rName),
-Parent(pParent),
-Type(eLN::Unknown) {
-}
-
-/**
- * @brief Constructor
- *
  * @param pName Node name
  * @param pParent Pointer to parent node
  *
