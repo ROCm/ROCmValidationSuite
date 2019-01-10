@@ -42,8 +42,6 @@ namespace rvs {
  */
 class LogNodeRec : public LogNode {
  public:
-  LogNodeRec(const std::string& Name, int LogLevel, unsigned Sec,
-             unsigned uSec, const LogNodeBase* Parent = nullptr);
   LogNodeRec(const char* Name, int LogLevel, unsigned Sec,
              unsigned uSec, const LogNodeBase* Parent = nullptr);
   virtual ~LogNodeRec();

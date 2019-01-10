@@ -64,8 +64,6 @@ class LogNodeBase {
   virtual std::string ToJson(const std::string& Lead = "") = 0;
 
  protected:
-  explicit LogNodeBase(const std::string& rName,
-                       const LogNodeBase* pParent = nullptr);
   explicit LogNodeBase(const char* rName,
                        const LogNodeBase* pParent = nullptr);
 
