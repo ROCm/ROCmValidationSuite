@@ -70,6 +70,11 @@ add_test(NAME unit.rvs.cli5
   COMMAND rvs -q
 )
 
+add_test(NAME unit.rvs.cli6
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvs -v
+)
+
 add_test(NAME unit.ttf.rvs.cli.1
   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND rvsfail -d adf
@@ -83,6 +88,21 @@ add_test(NAME unit.ttf.rvs.cli.2
 add_test(NAME unit.ttf.rvs.cli.3
   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND rvsfail -d -7
+)
+
+add_test(NAME unit.ttf.rvs.cli.4
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -c xxx
+)
+
+add_test(NAME unit.ttf.rvs.cli.5
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -l //
+)
+
+add_test(NAME unit.ttf.rvs.cli.6
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -d
 )
 
 ## define include directories
