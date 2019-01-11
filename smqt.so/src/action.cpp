@@ -204,6 +204,10 @@ int smqt_action::run(void) {
     if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
       continue;
 
+#ifdef  RVS_UNIT_TEST
+    on_set_device_gpu_id();
+#endif
+
     // filter by device id if needed
     if (property_device_id > 0) {
       rvs::gpulist::gpu2device(gpu_id, &dev_id);
@@ -226,6 +230,10 @@ int smqt_action::run(void) {
     bar4_base_addr = dev->base_addr[5];
     bar4_size = dev->size[5];
     bar5_size = dev->rom_size;
+
+#ifdef  RVS_UNIT_TEST
+    on_bar_data_read();
+#endif
 
     // check if values are as expected
     if (bar1_base_addr < bar1_base_addr_min ||
