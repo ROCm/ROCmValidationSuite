@@ -179,25 +179,27 @@ void pqt_action::property_get_bidirectional(int *error) {
 bool pqt_action::get_all_pqt_config_keys(void) {
   int    error;
   string msg;
+  bool   res;
+  res = true;
 
   prop_peer_device_all_selected = property_get_peers(&error);
   if (error) {
     msg =  "invalid peers";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    res = false;
   }
 
   if (property_get_int<uint32_t>("peer_deviceid", &prop_peer_deviceid, 0u)) {
     msg = "invalid 'peer_deviceid ' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    res = false;
   }
 
   property_get_test_bandwidth(&error);
   if (error) {
     msg = "invalid 'test_bandwidth'";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    res = false;
   }
 
   property_get_bidirectional(&error);
@@ -205,7 +207,7 @@ bool pqt_action::get_all_pqt_config_keys(void) {
     if (prop_test_bandwidth == true) {
       msg = "invalid 'bidirectional'";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      res = false;
     }
   }
 
@@ -215,7 +217,7 @@ bool pqt_action::get_all_pqt_config_keys(void) {
   if (error == 1) {
       msg =  "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      res = false;
   } else if (error == 2) {
     b_block_size_all = true;
     block_size.clear();
@@ -226,17 +228,17 @@ bool pqt_action::get_all_pqt_config_keys(void) {
   if (error == 1) {
     msg =  "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    res = false;
   }
 
   error = property_get_int<int>(RVS_CONF_LINK_TYPE_KEY, &link_type);
   if (error == 1) {
     msg =  "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    res = false;
   }
 
-  return true;
+  return res;
 }
 
 /**
@@ -246,12 +248,14 @@ bool pqt_action::get_all_pqt_config_keys(void) {
  */
 bool pqt_action::get_all_common_config_keys(void) {
   string msg, sdevid, sdev;
-  int error;
+  int    error;
+  bool   res;
+  res = true;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-    return false;
+    res = false;
   }
 
   // get <device> property value (a list of gpu id)
@@ -265,7 +269,7 @@ bool pqt_action::get_all_common_config_keys(void) {
       break;
     }
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    res = false;
   }
 
   // get the <deviceid> property value if provided
@@ -273,7 +277,7 @@ bool pqt_action::get_all_common_config_keys(void) {
                                 &property_device_id, 0u)) {
     msg = "Invalid 'deviceid' key value.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    res = false;
   }
 
   // get the other action/GST related properties
@@ -281,19 +285,19 @@ bool pqt_action::get_all_common_config_keys(void) {
       msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
           "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      res = false;
   }
 
   if (property_get_int<uint64_t>(RVS_CONF_COUNT_KEY, &property_count, 1)) {
       msg = "invalid '" + std::string(RVS_CONF_COUNT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      res = false;
   }
 
   if (property_get_int<uint64_t>(RVS_CONF_WAIT_KEY, &property_wait, 0)) {
       msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      res = false;
   }
 
   if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
@@ -301,17 +305,17 @@ bool pqt_action::get_all_common_config_keys(void) {
       msg = "invalid '" + std::string(RVS_CONF_DURATION_KEY) +
           "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      res = false;
   }
 
   if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
                             &property_log_interval, DEFAULT_LOG_INTERVAL)) {
     msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) + "'";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    res = false;
   }
 
-  return true;
+  return res;
 }
 
 /**

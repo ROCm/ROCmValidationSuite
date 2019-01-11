@@ -95,7 +95,7 @@ bool gm_action::get_all_common_config_keys(void) {
 
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
       rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      sts = false;
+      return false;
     }
 
     // get <device> property value (a list of gpu id)
