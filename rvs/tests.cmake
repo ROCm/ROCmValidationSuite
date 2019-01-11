@@ -70,6 +70,11 @@ add_test(NAME unit.rvs.cli5
   COMMAND rvs -q
 )
 
+add_test(NAME unit.rvs.cli6
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvs -v
+)
+
 add_test(NAME unit.ttf.rvs.cli.1
   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND rvsfail -d adf
@@ -83,6 +88,36 @@ add_test(NAME unit.ttf.rvs.cli.2
 add_test(NAME unit.ttf.rvs.cli.3
   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND rvsfail -d -7
+)
+
+add_test(NAME unit.ttf.rvs.cli.4
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -c xxx
+)
+
+add_test(NAME unit.ttf.rvs.cli.5
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -l //
+)
+
+add_test(NAME unit.ttf.rvs.cli.6
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -d
+)
+
+add_test(NAME unit.ttf.rvs.cli.7
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -c conf/broken_no_module.conf 
+)
+
+add_test(NAME unit.ttf.rvs.cli.8
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -c conf/broken_wrong_module.conf 
+)
+
+add_test(NAME unit.ttf.rvs.cli.9
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND ${CMAKE_SOURCE_DIR}/regression/run_no_config.sh
 )
 
 ## define include directories
