@@ -83,7 +83,11 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     }
 
     // find module name
-    std::string rvsmodule = action["module"].as<std::string>();
+    std::string rvsmodule;
+    try {
+      rvsmodule = action["module"].as<std::string>();
+    } catch(...) {
+    }
 
     // not found or empty
     if (rvsmodule == "") {
@@ -92,7 +96,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
                action["name"].as<std::string>().c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      continue;
+      return -1;
     }
 
     // create action excutor in .so
@@ -104,7 +108,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
                action["name"].as<std::string>().c_str(),
                rvsmodule.c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      continue;
+      return -1;
     }
 
     if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
@@ -114,7 +118,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
                "action '%s' could not obtain interface if1",
                action["name"].as<std::string>().c_str());
       module::action_destroy(pa);
-      continue;
+      return -1;
     }
 
     // load action properties from yaml file

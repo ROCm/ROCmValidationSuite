@@ -66,7 +66,11 @@ int main(int Argc, char**Argv) {
     snprintf(buff, sizeof(buff),
               "error parssing command line: %s", cli.get_error_string());
     rvs::logger::Err(buff, MODULE_NAME_CAPS);
+#ifdef RVS_INVERT_RETURN_STATUS
+    return 0;
+#else
     return -1;
+#endif
   }
 
   rvs::exec executor;
