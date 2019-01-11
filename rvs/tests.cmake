@@ -105,6 +105,21 @@ add_test(NAME unit.ttf.rvs.cli.6
   COMMAND rvsfail -d
 )
 
+add_test(NAME unit.ttf.rvs.cli.7
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -c conf/broken_no_module.conf 
+)
+
+add_test(NAME unit.ttf.rvs.cli.8
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -c conf/broken_wrong_module.conf 
+)
+
+add_test(NAME unit.ttf.rvs.cli.9
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND ${CMAKE_SOURCE_DIR}/regression/run_no_config.sh
+)
+
 ## define include directories
 include_directories(${UT_INC})
 ## define lib directories

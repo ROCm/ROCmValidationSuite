@@ -102,7 +102,7 @@ add_library(rvshelper ${SOURCES})
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
-target_link_libraries(${RVS_TARGET} librvshelper.a rvslib ${PROJECT_LINK_LIBS} )
+target_link_libraries(${RVS_TARGET} rvshelper rvslib ${PROJECT_LINK_LIBS} )
 add_dependencies(${RVS_TARGET} rvshelper)
 
 
