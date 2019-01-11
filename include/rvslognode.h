@@ -44,8 +44,6 @@ namespace rvs {
  */
 class LogNode : public LogNodeBase {
  public:
-  explicit LogNode(const std::string& Name,
-                   const LogNodeBase* Parent = nullptr);
   explicit LogNode(const char* Name, const LogNodeBase* Parent = nullptr);
   virtual ~LogNode();
 
