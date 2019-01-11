@@ -59,8 +59,6 @@ ulong bar1_req_size, bar1_base_addr_min, bar1_base_addr_max;
 ulong bar2_req_size, bar2_base_addr_min, bar2_base_addr_max;
 ulong bar4_req_size, bar4_base_addr_min, bar4_base_addr_max, bar5_req_size;
 
-bool keysts = true;
-
 // Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
 string smqt_action::pretty_print(ulong bytes, uint16_t gpu_id,
                             string action_name, string bar_name) {
@@ -95,6 +93,7 @@ smqt_action::~smqt_action() {
  */
 bool smqt_action::get_all_common_config_keys() {
   string msg, sdevid, sdev;
+  bool keysts = true;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -189,7 +188,7 @@ int smqt_action::run(void) {
 
   struct pci_dev *dev;
   dev = pacc->devices;
-  bool dev_id_found = false;
+
   // iterate over devices
   for (dev = pacc->devices; dev; dev = dev->next) {
     bool pass = true;
@@ -204,20 +203,17 @@ int smqt_action::run(void) {
     // if not and AMD GPU just continue
     if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
       continue;
-    
-/*#ifdef  RVS_UNIT_TEST    
-    on_set_device_gpu_id()
-#endif */   
-    
+
+#ifdef  RVS_UNIT_TEST
+    on_set_device_gpu_id();
+#endif
+
     // filter by device id if needed
     if (property_device_id > 0) {
       rvs::gpulist::gpu2device(gpu_id, &dev_id);
-      if (property_device_id != dev_id) {
-        keysts = false;
+      if (property_device_id != dev_id)
         continue;
-      }
     }
-    dev_id_found = true;
 
     // filter by list of devices if needed
     if (!property_device_all) {
@@ -234,11 +230,11 @@ int smqt_action::run(void) {
     bar4_base_addr = dev->base_addr[5];
     bar4_size = dev->size[5];
     bar5_size = dev->rom_size;
-    
+
 #ifdef  RVS_UNIT_TEST
     on_bar_data_read();
 #endif
-    
+
     // check if values are as expected
     if (bar1_base_addr < bar1_base_addr_min ||
         bar1_base_addr > bar1_base_addr_max)
@@ -319,10 +315,6 @@ int smqt_action::run(void) {
     rvs::lp::LogRecordFlush(res);
     if (!pass)
       global_pass = false;
-  }
-  if (!dev_id_found) {
-    rvs::lp::Err("Wrong 'deviceid' key value", MODULE_NAME);
-    global_pass = false;
   }
   return global_pass ? 0 : -1;
 }
