@@ -347,6 +347,7 @@ int gst_action::get_all_selected_gpus(void) {
     int hip_num_gpu_devices;
     bool amd_gpus_found = false;
     map<int, uint16_t> gst_gpus_device_index;
+    std::string msg;
 
     hip_num_gpu_devices = get_num_amd_gpu_devices();
     if (hip_num_gpu_devices < 1)
@@ -406,6 +407,10 @@ int gst_action::get_all_selected_gpus(void) {
             return 0;
 
         return -1;
+    } else {
+      msg = "No devices match criteria from the test configuation.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
 
     return 0;
