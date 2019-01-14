@@ -147,7 +147,9 @@ int rvs::exec::run() {
 
   // construct modules configuration file relative path
   val = path + ".rvsmodules.config";
-  rvs::module::initialize(val.c_str());
+  if (rvs::module::initialize(val.c_str())) {
+    return 1;
+  }
 
   if (rvs::options::has_option("-t", &val)) {
         cout << endl << "ROCm Validation Suite (version " <<

@@ -27,7 +27,7 @@ set(CTEST_SOURCE_DIRECTORY "ROCmValidationSuite")
 set(CTEST_BINARY_DIRECTORY "build")
 
 set(CTEST_SITE "prj47-rack-07")
-set(CTEST_BUILD_NAME "${RVS_HOST} ${RVS_BRANCH} ${CTEST_BUILD_CONFIGURATION}")
+set(CTEST_BUILD_NAME "${RVS_HOST} ${RVS_TAG}${RVS_BRANCH} ${CTEST_BUILD_CONFIGURATION}")
 if (RVS_BUILD_TESTS)
   set(CTEST_BUILD_NAME "${CTEST_BUILD_NAME} TB")
 endif()
@@ -95,6 +95,9 @@ if (WITH_TESTING)
     ctest_test()
   endif()
 endif(WITH_TESTING)
+
+set(CTEST_COVERAGE_EXTRA_FLAGS " -s $ENV{RVS_WB}/build/yaml-src/include/yaml-cpp/")
+set(CTEST_COVERAGE_EXTRA_FLAGS "${CTEST_COVERAGE_EXTRA_FLAGS} -s $ENV{RVS_WB}/build/googletest-src")
 
 if (RVS_COVERAGE AND CTEST_COVERAGE_COMMAND)
   ctest_coverage()
