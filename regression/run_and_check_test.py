@@ -4,7 +4,6 @@ import subprocess
 import os
 import mmap
 import sys
-import json
 
 # global variables
 test_console_file_name = "tmp_console_result.txt"
@@ -122,33 +121,10 @@ if console_usage == 'true':
 if json_usage == 'true' and log_usage == 'true':
    print "json_usage is True and log_usage is True"
    result_json = bin_path + "/" + test_output_file_name
-   if os.path.isfile(result_json):
-      f = open(result_json)
-      # validate json format
-      print "check json format"
-      try:
-         data = json.load(f)
-         json_has_res_err = False
-         for d in data:
-           json_line = d['loglevelname']
-           print json_line
-           if json_line == 'RESULT':
-             print "JSON Found RESULT"
-             json_has_res_err = True
-             break
-           if json_line == 'ERROR ':
-             print "JSON Found ERROR"
-             json_has_res_err = True
-             break
-         if json_has_res_err == False:
-            print "JSON No found RESULT/ERROR"
-            test_result = False
-      except ValueError as e:
-         print('Invalid json: %s' % e)
-         test_result = False
-      f.close()
-   else:
-      print "No file found"
+
+   json_result = os.system("./check_json_file.py " + result_json)
+   if json_result == 1:
+      print "Json file is invalid"
       test_result = False
 
 # check console output file
