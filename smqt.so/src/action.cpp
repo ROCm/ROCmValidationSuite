@@ -58,7 +58,7 @@ using std::endl;
 ulong bar1_req_size, bar1_base_addr_min, bar1_base_addr_max;
 ulong bar2_req_size, bar2_base_addr_min, bar2_base_addr_max;
 ulong bar4_req_size, bar4_base_addr_min, bar4_base_addr_max, bar5_req_size;
-
+bool keysts = true;
 // Prints to the provided buffer a nice number of bytes (KB, MB, GB, etc)
 string smqt_action::pretty_print(ulong bytes, uint16_t gpu_id,
                             string action_name, string bar_name) {
@@ -93,7 +93,7 @@ smqt_action::~smqt_action() {
  */
 bool smqt_action::get_all_common_config_keys() {
   string msg, sdevid, sdev;
-  bool keysts = true;
+
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -165,7 +165,7 @@ int smqt_action::run(void) {
   bool global_pass = true;
   string msg;
   struct pci_access *pacc;
-
+  bool devid_found = false;
 
   if (!get_all_common_config_keys()) {
     msg = "Couldn't fetch common config keys from the configuration file!";
@@ -211,9 +211,13 @@ int smqt_action::run(void) {
     // filter by device id if needed
     if (property_device_id > 0) {
       rvs::gpulist::gpu2device(gpu_id, &dev_id);
-      if (property_device_id != dev_id)
+      if (property_device_id != dev_id) {
         continue;
+        keysts = false;
+      }
     }
+
+    devid_found = true;
 
     // filter by list of devices if needed
     if (!property_device_all) {
@@ -315,6 +319,12 @@ int smqt_action::run(void) {
     rvs::lp::LogRecordFlush(res);
     if (!pass)
       global_pass = false;
+  }
+  if (!devid_found) {
+    global_pass = false;
+    msg = "No devices match criteria from the test configuation.";
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
+    return -1;
   }
   return global_pass ? 0 : -1;
 }
