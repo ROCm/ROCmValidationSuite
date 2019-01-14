@@ -320,7 +320,11 @@ int smqt_action::run(void) {
     if (!pass)
       global_pass = false;
   }
-  if (!devid_found)
+  if (!devid_found) {
     global_pass = false;
+    msg = "No devices match criteria from the test configuation.";
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
+    return -1;
+  }
   return global_pass ? 0 : -1;
 }
