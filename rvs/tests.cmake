@@ -39,6 +39,11 @@ set_target_properties(${RVS_TARGET}fail PROPERTIES
 )
 add_dependencies(${RVS_TARGET}fail rvshelper)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/novernum.config ${RVS_BINTEST_FOLDER}/novernum.config)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/wrongvernum.config ${RVS_BINTEST_FOLDER}/wrongvernum.config)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/empty.config ${RVS_BINTEST_FOLDER}/empty.config)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/nomodule.config ${RVS_BINTEST_FOLDER}/nomodule.config)
+
 
 # add_test(NAME unit.rvs.1
 #   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
@@ -116,6 +121,36 @@ add_test(NAME unit.ttf.rvs.cli.8
 )
 
 add_test(NAME unit.ttf.rvs.cli.9
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND ${CMAKE_SOURCE_DIR}/regression/run_no_config.sh
+)
+
+add_test(NAME unit.ttf.rvs.cli.10
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -m /
+)
+
+add_test(NAME unit.ttf.rvs.config.empty
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND ${CMAKE_SOURCE_DIR}/regression/run_config.sh empty.config
+)
+
+add_test(NAME unit.ttf.rvs.config.wrongvernum
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND ${CMAKE_SOURCE_DIR}/regression/run_config.sh wrongvernum.config
+)
+
+add_test(NAME unit.ttf.rvs.config.novernum
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND ${CMAKE_SOURCE_DIR}/regression/run_config.sh novernum.config
+)
+
+add_test(NAME unit.ttf.rvs.config.nomodule
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND ${CMAKE_SOURCE_DIR}/regression/run_config.sh nomodule.config
+)
+
+add_test(NAME unit.ttf.rvs.config.noconfig
   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND ${CMAKE_SOURCE_DIR}/regression/run_no_config.sh
 )
