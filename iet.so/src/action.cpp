@@ -493,6 +493,10 @@ int iet_action::get_all_selected_gpus(void) {
         if (do_edp_test())
             return 0;
         return -1;
+    } else {
+      msg = "No devices match criteria from the test configuation.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
 
     return 0;
