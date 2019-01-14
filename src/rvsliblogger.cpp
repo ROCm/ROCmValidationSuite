@@ -94,16 +94,6 @@ void rvs::logger::log_level(const int rLevel) {
 }
 
 /**
- * @brief Get logging level
- *
- * @return Current logging level
- *
- */
-int rvs::logger::log_level() {
-  return loglevel_m;
-}
-
-/**
  * @brief Fetches times since system start
  *
  * @param psecs seconds since system start
@@ -408,8 +398,6 @@ int rvs::logger::ToFile(const std::string& Row) {
  */
 int rvs::logger::JsonPatchAppend(int* pSts) {
   std::string logfile(log_file);
-  if (logfile == "")
-    return -1;
 
   FILE * pFile;
   pFile = fopen(logfile.c_str() , "r+");

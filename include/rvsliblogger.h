@@ -43,7 +43,6 @@ namespace rvs {
 class logger {
  public:
   static  void  log_level(const int level);
-  static  int   log_level();
 
   static  void  to_json(const bool flag);
   static  bool  to_json();
