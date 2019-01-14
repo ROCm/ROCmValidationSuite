@@ -159,4 +159,7 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parallel_f, d
         if sample_size == gpu_ids_size + 1:
             break
 
+# add a single rand test with muliple runs and append
+cmake_file.write("add_test(NAME append.pqt.json COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/multi_run_and_check_json.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/rand_pqt0.conf 5 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)\n\n\n")
+
 cmake_file.close() 
