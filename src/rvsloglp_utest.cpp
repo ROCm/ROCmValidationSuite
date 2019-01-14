@@ -245,18 +245,6 @@ bool  rvs::lp::Stopping() {
 /**
  * @brief Log Error output
  *
- * @param Message Message to log
- * @return 0 - success, non-zero otherwise
- *
- */
-
-int rvs::lp::Err(const std::string &Message) {
-  return rvs::logger::Err(Message.c_str(), nullptr, nullptr);
-}
-
-/**
- * @brief Log Error output
- *
  * @param Module  Module where error happend
  * @param Message Message to log
  * @return 0 - success, non-zero otherwise
