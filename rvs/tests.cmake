@@ -43,6 +43,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/novernum.config ${RVS_BINTEST_FOLDER}
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/wrongvernum.config ${RVS_BINTEST_FOLDER}/wrongvernum.config)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/empty.config ${RVS_BINTEST_FOLDER}/empty.config)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/nomodule.config ${RVS_BINTEST_FOLDER}/nomodule.config)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/testif.config ${RVS_BINTEST_FOLDER}/testif.config)
 
 
 # add_test(NAME unit.rvs.1
