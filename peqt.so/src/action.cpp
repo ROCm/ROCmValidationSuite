@@ -121,6 +121,49 @@ peqt_action::~peqt_action() {
 
 
 /**
+ * @brief reads all common configuration keys from
+ * the module's properties collection
+ * @return true if no fatal error occured, false otherwise
+ */
+bool peqt_action::get_all_common_config_keys(void) {
+  string msg, sdevid, sdev;
+  int    error;
+  bool   res;
+  res = true;
+
+  // get the action name
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+    res = false;
+  }
+
+  // get <device> property value (a list of gpu id)
+  if ((error = property_get_device())) {
+    switch (error) {
+    case 1:
+      msg = "Invalid 'device' key value.";
+      break;
+    case 2:
+      msg = "Missing 'device' key.";
+      break;
+    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  // get the <deviceid> property value if provided
+  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                &property_device_id, 0u)) {
+    msg = "Invalid 'deviceid' key value.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  return res;
+}
+
+
+/**
  * @brief gets all PCIe capabilities for a given AMD compatible GPU and
  * checks the values against the given set of regular expressions
  * @param dev pointer to pci_dev corresponding to the current GPU
@@ -281,41 +324,19 @@ int peqt_action::run(void) {
     struct pci_access *pacc;
     struct pci_dev *dev;
 
-    // get the action name
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME);
-      return 1;
-    }
-
+    RVSTRACE_
     bjson = false;  // already initialized in the default constructor
 
     // check for -j flag (json logging)
     if (property.find("cli.-j") != property.end()) {
-        bjson = true;
+      bjson = true;
     }
 
-    // get <device> property value (a list of gpu id)
-    if (int sts = property_get_device()) {
-      switch (sts) {
-      case 1:
-        msg = "Invalid 'device' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device' key.";
-        break;
-      }
-      rvs::lp::Err(msg, MODULE_NAME, action_name);
+    if (!get_all_common_config_keys()) {
+      msg = "Error in get_all_common_config_keys()";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
-
-    // get the <deviceid> property value if provided
-    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                  &property_device_id, 0u)) {
-      msg = "Invalid 'deviceid' key value.";
-      rvs::lp::Err(msg, MODULE_NAME, action_name);
-      return -1;
-    }
-
 
     // get the pci_access structure
     pacc = pci_alloc();
@@ -323,10 +344,6 @@ int peqt_action::run(void) {
     if (pacc == NULL) {
         // log the error
         msg = PCI_ALLOC_ERROR;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-        // log the module's result (FALSE)
-        msg = PEQT_RESULT_FAIL_MESSAGE;
         rvs::lp::Err(msg, MODULE_NAME, action_name);
         return 1;  // PCIe qualification check cannot continue
     }
@@ -360,13 +377,16 @@ int peqt_action::run(void) {
     dyn_pb_regex_str += ")$";
     pb_dynamic_regex.assign(dyn_pb_regex_str);
 
+    RVSTRACE_
     // initialize the PCI library
     pci_init(pacc);
     // get the list of devices
     pci_scan_bus(pacc);
 
+    RVSTRACE_
     // iterate over devices
     for (dev = pacc->devices; dev; dev = dev->next) {
+      RVSTRACE_
       // fill in the info
       pci_fill_info(dev,
               PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
@@ -379,36 +399,52 @@ int peqt_action::run(void) {
         // check if this pci_dev corresponds to one of the AMD GPUs
       uint16_t gpu_id;
       // if not and AMD GPU just continue
-      if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+      if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id)) {
+        RVSTRACE_
         continue;
+      }
 
       // check for deviceid filtering
-      if (property_device_id > 0 && dev->device_id != property_device_id)
+      if (property_device_id > 0 && dev->device_id != property_device_id) {
+        RVSTRACE_
         continue;
+      }
 
       if (!property_device_all) {
+        RVSTRACE_
         if (find(property_device.begin(), property_device.end(), gpu_id) ==
                  property_device.end()) {
+          RVSTRACE_
             continue;
         }
       }
+      RVSTRACE_
 
       amd_gpus_found = true;
-      if (!get_gpu_all_pcie_capabilities(dev, gpu_id))
+      if (!get_gpu_all_pcie_capabilities(dev, gpu_id)) {
+        RVSTRACE_
         pci_infra_qual_result = false;
+      }
+      RVSTRACE_
     }
 
+    RVSTRACE_
     pci_cleanup(pacc);
 
-    if (!amd_gpus_found)
-        pci_infra_qual_result = false;
+    if (!amd_gpus_found) {
+      msg = "No matching GPUs found";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      return -1;
+    }
 
+    RVSTRACE_
     msg = "[" + action_name + "] " + MODULE_NAME + " "
             + (pci_infra_qual_result ?
                     PEQT_RESULT_PASS_MESSAGE : PEQT_RESULT_FAIL_MESSAGE);
     rvs::lp::Log(msg, rvs::logresults);
 
     if (bjson) {
+      RVSTRACE_
       rvs::lp::get_ticks(&sec, &usec);
       json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
               action_name.c_str(), rvs::logresults, sec, usec);
@@ -427,12 +463,9 @@ int peqt_action::run(void) {
         rvs::lp::AddString(json_root_node, "pass", PEQT_RESULT_FAIL_MESSAGE);
       }
 
-      if (!amd_gpus_found) {
-        rvs::lp::AddString(json_root_node, "Msg", "No matching GPUs found");
-      }
-
       rvs::lp::LogRecordFlush(json_root_node);
     }
 
+    RVSTRACE_
     return 0;
 }
