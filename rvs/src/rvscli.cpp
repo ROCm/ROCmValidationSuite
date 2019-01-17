@@ -281,20 +281,6 @@ const char* rvs::cli::get_token() {
   return argv[itoken++];
 }
 
-/**
- * @brief Checks if given token is in the list of command line options defined by grammar.
- *
- * @param token token being processed
- * @return true if found, false otherwise
- *
- */
-bool rvs::cli::is_command(const std::string& token) {
-  auto it = grammar.find(token);
-  if (it == grammar.end())
-    return false;
-
-  return true;
-}
 
 /**
  * @brief Sends accepted command line option, with parameter if any, into rvs::options
