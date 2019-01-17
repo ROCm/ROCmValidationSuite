@@ -38,26 +38,6 @@
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNodeRec::LogNodeRec(const std::string& Name, int LoggingLevel,
-  unsigned Sec, unsigned uSec, const LogNodeBase* Parent)
-:
-LogNode(Name, Parent),
-Level(LoggingLevel),
-sec(Sec),
-usec(uSec) {
-  Type = eLN::Record;
-}
-
-/**
- * @brief Constructor
- *
- * @param Name Node name
- * @param LoggingLevel Logging level
- * @param Sec secconds since system start
- * @param uSec microseconds in current second
- * @param Parent Pointer to parent node
- *
- */
 rvs::LogNodeRec::LogNodeRec(const char* Name, int LoggingLevel,
   const unsigned Sec, const unsigned uSec, const LogNodeBase* Parent)
 :

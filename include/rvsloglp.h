@@ -70,11 +70,6 @@ class lp {
   static void* LogRecordCreate(const char* Module, const char* Action,
                                const int LogLevel, const unsigned int Sec,
                                const unsigned int uSec);
-  static void* LogRecordCreate(const std::string& Module,
-                               const std::string& Action,
-                               const int LogLevel = rvs::logerror);
-  static void* LogRecordCreate(const char* Module, const char* Action,
-                               const int LogLevel = rvs::logerror);
   static int   LogRecordFlush(void* pLogRecord);
   static void* CreateNode(void* Parent, const char* Name);
   static void  AddString(void* Parent, const std::string& Key,
@@ -85,10 +80,9 @@ class lp {
   static bool  get_ticks(unsigned int* psec, unsigned int* pusec);
   static void  Stop(uint16_t flags);
   static bool  Stopping();
-  static int   Err(const std::string &Msg);
   static int   Err(const std::string &Msg, const std::string &Module);
-  static int   Err(const std::string &Msg
-    , const std::string &Module, const std::string &Action);
+  static int   Err(const std::string &Msg, const std::string &Module,
+                   const std::string &Action);
 
  protected:
   //! Module init structure passed through Initialize() method

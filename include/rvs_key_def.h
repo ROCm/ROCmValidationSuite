@@ -40,6 +40,7 @@
 #define RVS_CONF_BLOCK_SIZE_KEY         "block_size"
 #define RVS_CONF_B2B_BLOCK_SIZE_KEY     "b2b_block_size"
 #define RVS_CONF_LINK_TYPE_KEY          "link_type"
+#define RVS_CONF_MONITOR_KEY            "monitor"
 
 #define DEFAULT_LOG_INTERVAL (1000u)
 #define DEFAULT_DURATION (10000u)

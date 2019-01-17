@@ -36,19 +36,6 @@ using std::string;
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNode::LogNode(const std::string& Name, const LogNodeBase* Parent)
-:
-LogNodeBase(Name, Parent) {
-  Type = eLN::List;
-}
-
-/**
- * @brief Constructor
- *
- * @param Name Node name
- * @param Parent Pointer to parent node
- *
- */
 rvs::LogNode::LogNode(const char* Name, const LogNodeBase* Parent)
 :
 LogNodeBase(Name, Parent) {

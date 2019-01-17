@@ -94,15 +94,6 @@ class iet_action: public rvs::actionbase {
     //! selected for EDPp test
     std::vector<gpu_hwmon_info> edpp_gpus;
 
-    // configuration properties getters
-
-    // IET specific config keys
-    void property_get_iet_target_power(int *error);
-    void property_get_iet_ramp_interval(int *error);
-    void property_get_iet_tolerance(int *error);
-    void property_get_iet_max_violations(int *error);
-    void property_get_iet_sample_interval(int *error);
-    void property_get_iet_matrix_size(int *error);
 
     bool get_all_iet_config_keys(void);
     /**
