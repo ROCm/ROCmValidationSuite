@@ -38,9 +38,27 @@
 
 
 extern "C" int rvs_module_has_interface(int iid) {
-  return 0;
+  int sts = 0;
+  switch (iid) {
+  case 0:
+  case 1:
+    sts = 1;
+    break;  // i.e., no interface IF1 supported
+  }
+  return sts;
 }
 
+extern "C" const char* rvs_module_get_description(void) {
+  return "ROCm Validation Suite TESTIF module " __FILE__;
+}
+
+extern "C" const char* rvs_module_get_config(void) {
+  return "no parameters";
+}
+
+extern "C" const char* rvs_module_get_output(void) {
+  return "no parameters";
+}
 
 extern "C" int   rvs_module_init(void* pMi) {
   assert(pMi);
@@ -59,26 +77,14 @@ extern "C" int   rvs_module_action_destroy(void* pAction) {
   assert(pAction);
   return 0;
 }
-/*
-extern "C" const char* rvs_module_get_description(void) {
-  return "ROCm Validation Suite TESTIF module " __FILE__;
-}
-
-extern "C" const char* rvs_module_get_config(void) {
-  return "no parameters";
-}
-
-extern "C" const char* rvs_module_get_output(void) {
-  return "no parameters";
-}
 
 extern "C" int rvs_module_action_property_set(
   void* pAction, const char* Key, const char* Val) {
-  return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
+  return 0;
 }
 
 extern "C" int rvs_module_action_run(void* pAction) {
-  return static_cast<rvs::actionbase*>(pAction)->run();
+  return 0;
 }
 
-*/
+
