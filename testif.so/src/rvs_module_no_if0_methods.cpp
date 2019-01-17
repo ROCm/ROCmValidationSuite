@@ -38,9 +38,16 @@
 
 
 extern "C" int rvs_module_has_interface(int iid) {
-  return 0;
+  int sts = 0;
+  switch (iid) {
+  case 0:
+    sts = 1;
+    break;
+  case 1:  // i.e., no interface IF1 supported
+    break;
+  }
+  return sts;
 }
-
 
 extern "C" int   rvs_module_init(void* pMi) {
   assert(pMi);
