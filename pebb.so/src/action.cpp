@@ -131,7 +131,7 @@ bool pebb_action::get_all_pebb_config_keys(void) {;
 bool pebb_action::get_all_common_config_keys(void) {
   string msg, sdevid, sdev;
   int error;
-	int sts;
+  int sts;
   RVSTRACE_
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -592,24 +592,22 @@ int pebb_action::print_final_average() {
  *
  * */
 void pebb_action::do_final_average() {
-  //if (property_log_level >= rvs::logtrace) {
-    std::string msg;
-    unsigned int sec;
-    unsigned int usec;
-    rvs::lp::get_ticks(&sec, &usec);
+  std::string msg;
+  unsigned int sec;
+  unsigned int usec;
+  rvs::lp::get_ticks(&sec, &usec);
 
-    msg = "[" + action_name + "] pebb in do_final_average";
-    rvs::lp::Log(msg, rvs::logtrace, sec, usec);
+  msg = "[" + action_name + "] pebb in do_final_average";
+  rvs::lp::Log(msg, rvs::logtrace, sec, usec);
 
-    if (bjson) {
-      void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::logtrace, sec, usec);
-      if (pjson != NULL) {
-        rvs::lp::AddString(pjson, "message", "pebb in do_final_average");
-        rvs::lp::LogRecordFlush(pjson);
-      }
+  if (bjson) {
+    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::logtrace, sec, usec);
+    if (pjson != NULL) {
+      rvs::lp::AddString(pjson, "message", "pebb in do_final_average");
+      rvs::lp::LogRecordFlush(pjson);
     }
-  //}
+  }
 
   // signal main thread to stop
   brun = false;
