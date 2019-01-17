@@ -81,6 +81,16 @@ add_test(NAME unit.rvs.cli6
   COMMAND rvs -v
 )
 
+add_test(NAME unit.rvs.cli7
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvs -i all -c conf/gpup6.conf
+)
+
+add_test(NAME unit.rvs.cli8
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMAND rvs -i 6255,3254 -c conf/gpup6.conf
+)
+
 add_test(NAME unit.ttf.rvs.cli.1
   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND rvsfail -d adf
@@ -129,6 +139,16 @@ add_test(NAME unit.ttf.rvs.cli.9
 add_test(NAME unit.ttf.rvs.cli.10
   WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
   COMMAND rvsfail -m /
+)
+
+add_test(NAME unit.ttf.rvs.cli.11
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail -d -d
+)
+
+add_test(NAME unit.ttf.rvs.cli.12
+  WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+  COMMAND rvsfail d
 )
 
 add_test(NAME unit.ttf.rvs.config.empty
