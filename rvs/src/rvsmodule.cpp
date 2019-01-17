@@ -388,36 +388,48 @@ int rvs::module::terminate_internal() {
  */
 int rvs::module::init_interfaces() {
   // init global helper methods for this library
-  if (init_interface_method(
-    reinterpret_cast<void**>(&rvs_module_init), "rvs_module_init"))
-    return -1;
+  int sts = 0;
 
   if (init_interface_method(
-    reinterpret_cast<void**>(&rvs_module_terminate), "rvs_module_terminate"))
-    return -1;
+    reinterpret_cast<void**>(&rvs_module_init), "rvs_module_init")) {
+    --sts;
+    }
+
+  if (init_interface_method(
+    reinterpret_cast<void**>(&rvs_module_terminate), "rvs_module_terminate")) {
+    --sts;
+  }
 
   if (init_interface_method(
     reinterpret_cast<void**>(&rvs_module_action_create),
-                            "rvs_module_action_create"))
-    return -1;
+                            "rvs_module_action_create")) {
+    --sts;
+  }
 
   if (init_interface_method(
     reinterpret_cast<void**>(&rvs_module_action_destroy),
-                            "rvs_module_action_destroy"))
-    return -1;
+                            "rvs_module_action_destroy")) {
+    --sts;
+  }
 
   if (init_interface_method(
     reinterpret_cast<void**>(&rvs_module_has_interface),
-                            "rvs_module_has_interface"))
-    return -1;
+                            "rvs_module_has_interface")) {
+    --sts;
+  }
 
-  if (init_interface_0())
-    return -1;
+  if (sts)
+    return sts;
 
-  if (init_interface_1())
-    return -1;
+  if (init_interface_0()) {
+    return --sts;
+  }
 
-  return 0;
+  if (init_interface_1()) {
+    --sts;
+  }
+
+  return sts;
 }
 
 /**
@@ -442,6 +454,7 @@ int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName) {
     snprintf(buff, sizeof(buff),
               "could not find .so method '%s'", pMethodName);
     rvs::logger::Err(buff, MODULE_NAME_CAPS);
+    return -1;
   }
 
   *ppfunc = pf;
@@ -457,6 +470,7 @@ int rvs::module::init_interface_method(void** ppfunc, const char* pMethodName) {
  */
 int rvs::module::init_interface_0(void) {
   if (!(*rvs_module_has_interface)(0)) {
+    rvs::logger::Err("Interface IF0 not available.", MODULE_NAME_CAPS);
     return -1;
   }
 
@@ -467,15 +481,9 @@ int rvs::module::init_interface_0(void) {
   int sts = 0;
 
   pif0->rvs_module_has_interface = rvs_module_has_interface;
-
   if (init_interface_method(
     reinterpret_cast<void**>(&(pif0->rvs_module_get_description)),
                             "rvs_module_get_description"))
-    sts--;
-
-  if (init_interface_method(
-    reinterpret_cast<void**>(&(pif0->rvs_module_has_interface)),
-                            "rvs_module_has_interface"))
     sts--;
 
   if (init_interface_method(
@@ -507,6 +515,7 @@ int rvs::module::init_interface_0(void) {
  */
 int rvs::module::init_interface_1(void) {
   if (!(*rvs_module_has_interface)(1)) {
+    rvs::logger::Err("Interface IF1 not available.", MODULE_NAME_CAPS);
     return -1;
   }
 

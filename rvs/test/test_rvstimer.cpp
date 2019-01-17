@@ -211,7 +211,7 @@ TEST_F(TimerTest, timer) {
   t_act2->clear_all();
   timer2.start(10000, false);
   EXPECT_EQ(timer2.get_brunonce(), false);
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 2; i++) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10005));
     EXPECT_EQ(t_act2->action_run_done, i + 1);
     EXPECT_EQ(timer2.get_brun(), true);

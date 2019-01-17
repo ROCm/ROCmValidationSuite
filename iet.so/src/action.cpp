@@ -106,130 +106,6 @@ iet_action::~iet_action() {
 }
 
 /**
- * @brief reads the EDPp test ramp time from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void iet_action::property_get_iet_ramp_interval(int *error) {
-    *error = 0;
-    iet_ramp_interval = IET_DEFAULT_RAMP_INTERVAL;
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_RAMP_INTERVAL_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second))
-            iet_ramp_interval = std::stoul(it->second);
-        else
-            *error = 1;
-        property.erase(it);
-    }
-}
-
-
-/**
- * @brief reads the sample interval from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void iet_action::property_get_iet_sample_interval(int *error) {
-    *error = 0;
-    iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_SAMPLE_INTERVAL_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second)) {
-            iet_sample_interval = std::stoul(it->second);
-            if (iet_sample_interval == 0)
-                iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
-        } else {
-            *error = 1;
-        }
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads the max_violations (maximum allowed number of target_power 
- * violations) from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void iet_action::property_get_iet_max_violations(int *error) {
-    *error = 0;
-    iet_max_violations = IET_DEFAULT_MAX_VIOLATIONS;
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_MAX_VIOLATIONS_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second))
-            iet_max_violations = std::stoi(it->second);
-        else
-            *error = 1;
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads the target power level from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void iet_action::property_get_iet_target_power(int *error) {
-    *error = 0;  // init with 'no error'
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_TARGET_POWER_KEY);
-    if (it != property.end()) {
-        try {
-            regex float_number_regex(FLOATING_POINT_REGEX);
-            if (!regex_match(it->second, float_number_regex)) {
-                *error = 1;  // not a floating point number
-            } else {
-                iet_target_power = std::stof(it->second);
-            }
-        } catch (const std::regex_error& e) {
-            *error = 1;  // something went wrong with the regex
-        }
-    } else {
-        *error = 2;
-    }
-}
-
-/**
- * @brief reads the power tolerance from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void iet_action::property_get_iet_tolerance(int *error) {
-    *error = 0;
-    iet_tolerance = IET_DEFAULT_TOLERANCE;
-    map<string, string>::iterator it = property.find(RVS_CONF_TOLERANCE_KEY);
-    if (it != property.end()) {
-        try {
-            regex float_number_regex(FLOATING_POINT_REGEX);
-            if (regex_match(it->second, float_number_regex)) {
-                iet_tolerance = std::stof(it->second);
-            } else {
-                *error = 1;  // not a floating point number
-            }
-        } catch (const std::regex_error& e) {
-            *error = 1;  // something went wrong with the regex
-        }
-        property.erase(it);
-    }
-}
-
-/**
- * @brief reads matrix size from the module's properties collection
- * @param error pointer to a memory location where the error code will be stored
- */
-void iet_action::property_get_iet_matrix_size(int *error) {
-    *error = 0;
-    iet_matrix_size = IET_DEFAULT_MATRIX_SIZE;
-    map<string, string>::iterator it =
-                            property.find(RVS_CONF_MATRIX_SIZE_KEY);
-    if (it != property.end()) {
-        if (is_positive_integer(it->second))
-            iet_matrix_size = std::stoul(it->second);
-        else
-            *error = 1;
-        property.erase(it);
-    }
-}
-
-/**
  * @brief reads all IET's related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
@@ -237,72 +113,74 @@ void iet_action::property_get_iet_matrix_size(int *error) {
 bool iet_action::get_all_iet_config_keys(void) {
     int error;
     string msg, ststress;
+    bool bsts = true;
 
-    if (has_property(RVS_CONF_TARGET_POWER_KEY, &ststress)) {
-        property_get_iet_target_power(&error);
-        if (error) {  // <target_power> is mandatory => IET cannot continue
-            msg = "invalid '" + std::string(RVS_CONF_TARGET_POWER_KEY) +
-                "' key value " + ststress;
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return false;
-        }
-    } else {
-        // <target_power> is mandatory => IET cannot continue
-        msg = "key '" + std::string(RVS_CONF_TARGET_POWER_KEY) +
-            "' was not found";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    if ((error =
+      property_get(RVS_CONF_TARGET_POWER_KEY, &iet_target_power))) {
+      switch (error) {
+        case 1:
+          msg = "invalid '" + std::string(RVS_CONF_TARGET_POWER_KEY) +
+              "' key value " + ststress;
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+          break;
+
+        case 2:
+          msg = "key '" + std::string(RVS_CONF_TARGET_POWER_KEY) +
+          "' was not found";
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      }
+      bsts = false;
     }
 
-    error = property_get_int<uint64_t>
-    (RVS_CONF_RAMP_INTERVAL_KEY, &iet_ramp_interval, IET_DEFAULT_RAMP_INTERVAL);
-    if (error == 1) {
-        msg = "invalid '" + std::string(RVS_CONF_RAMP_INTERVAL_KEY)
-        + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    if (property_get_int<uint64_t>(RVS_CONF_RAMP_INTERVAL_KEY,
+      &iet_ramp_interval, IET_DEFAULT_RAMP_INTERVAL)) {
+      msg = "invalid '" + std::string(RVS_CONF_RAMP_INTERVAL_KEY)
+      + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
     if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
-        &property_log_interval, IET_DEFAULT_LOG_INTERVAL)) {
-        msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY)
-        + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+      &property_log_interval, IET_DEFAULT_LOG_INTERVAL)) {
+      msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY)
+      + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
-    property_get_iet_sample_interval(&error);
-    if (error) {
-        msg = "invalid '" + std::string(RVS_CONF_SAMPLE_INTERVAL_KEY)
-        + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    if (property_get_int<uint64_t>(RVS_CONF_SAMPLE_INTERVAL_KEY,
+      &iet_sample_interval, IET_DEFAULT_SAMPLE_INTERVAL)) {
+      msg = "invalid '" + std::string(RVS_CONF_SAMPLE_INTERVAL_KEY)
+      + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
-    property_get_iet_max_violations(&error);
-    if (error) {
-        msg = "invalid '" +
-                std::string(RVS_CONF_MAX_VIOLATIONS_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    if (property_get_int<int>(RVS_CONF_MAX_VIOLATIONS_KEY,
+      &iet_max_violations, IET_DEFAULT_MAX_VIOLATIONS)) {
+      msg = "invalid '" + std::string(RVS_CONF_MAX_VIOLATIONS_KEY)
+      + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
-    property_get_iet_tolerance(&error);
-    if (error) {
-        msg = "invalid '" +
-                std::string(RVS_CONF_TOLERANCE_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    if (property_get<float>(RVS_CONF_TOLERANCE_KEY,
+      &iet_tolerance, IET_DEFAULT_TOLERANCE)) {
+      msg = "invalid '" + std::string(RVS_CONF_TOLERANCE_KEY)
+      + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
-    property_get_iet_matrix_size(&error);
-    if (error) {
-        msg = "invalid '" +
-                std::string(RVS_CONF_MATRIX_SIZE_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+    if (property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEY,
+      &iet_matrix_size, IET_DEFAULT_MATRIX_SIZE)) {
+      msg = "invalid '" + std::string(RVS_CONF_MATRIX_SIZE_KEY)
+      + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
-    return true;
+
+    return bsts;
 }
 
 /**
@@ -313,6 +191,7 @@ bool iet_action::get_all_iet_config_keys(void) {
 bool iet_action::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
+    bool bsts = true;
 
     // get <device> property value (a list of gpu id)
     if ((error = property_get_device())) {
@@ -325,7 +204,7 @@ bool iet_action::get_all_common_config_keys(void) {
         break;
       }
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      bsts = false;
     }
 
     // get the <deviceid> property value if provided
@@ -333,45 +212,45 @@ bool iet_action::get_all_common_config_keys(void) {
                                   &property_device_id, 0u)) {
       msg = "Invalid 'deviceid' key value.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      bsts = false;
     }
 
     // get the other action/IET related properties
     if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
-        msg = "invalid '" +
-                std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+      msg = "invalid '" +
+              std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
     error = property_get_int<uint64_t>
     (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
     if (error == 1) {
-        msg = "invalid '" +
-                std::string(RVS_CONF_COUNT_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+      msg = "invalid '" +
+              std::string(RVS_CONF_COUNT_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
     error = property_get_int<uint64_t>
     (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
     if (error == 1) {
-        msg = "invalid '" +
-                std::string(RVS_CONF_WAIT_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+      msg = "invalid '" +
+              std::string(RVS_CONF_WAIT_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
     error = property_get_int<uint64_t>
     (RVS_CONF_DURATION_KEY, &property_duration);
     if (error == 1) {
-        msg = "invalid '" +
-                std::string(RVS_CONF_DURATION_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+      msg = "invalid '" +
+              std::string(RVS_CONF_DURATION_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
     }
 
-    return true;
+    return bsts;
 }
 
 /**
@@ -469,28 +348,6 @@ int iet_action::get_num_amd_gpu_devices(void) {
     string msg;
 
     hipGetDeviceCount(&hip_num_gpu_devices);
-    if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
-        msg = action_name + " " + MODULE_NAME + " " + IET_NO_COMPATIBLE_GPUS;
-        rvs::lp::Log(msg, rvs::logerror);
-
-        if (bjson) {
-            unsigned int sec;
-            unsigned int usec;
-            rvs::lp::get_ticks(&sec, &usec);
-            void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::loginfo, sec, usec);
-            if (!json_root_node) {
-                // log the error
-                string msg = std::string(JSON_CREATE_NODE_ERROR);
-                rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-                return -1;
-            }
-
-            rvs::lp::AddString(json_root_node, "ERROR", IET_NO_COMPATIBLE_GPUS);
-            rvs::lp::LogRecordFlush(json_root_node);
-        }
-        return 0;
-    }
     return hip_num_gpu_devices;
 }
 
@@ -614,6 +471,10 @@ int iet_action::get_all_selected_gpus(void) {
         if (do_edp_test())
             return 0;
         return -1;
+    } else {
+      msg = "No devices match criteria from the test configuation.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
     }
 
     return 0;

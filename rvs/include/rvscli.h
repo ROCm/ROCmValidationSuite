@@ -98,7 +98,6 @@ class cli {
 
  protected:
   const char*  get_token();
-  bool  is_command(const std::string& token);
   bool  try_command(const std::string& token);
   bool  try_value(const std::string& token);
   bool  emit_option(void);
