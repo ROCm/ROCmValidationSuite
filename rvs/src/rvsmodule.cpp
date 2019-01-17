@@ -418,6 +418,9 @@ int rvs::module::init_interfaces() {
     --sts;
   }
 
+  if (sts)
+    return sts;
+
   if (init_interface_0()) {
     return --sts;
   }
@@ -478,15 +481,9 @@ int rvs::module::init_interface_0(void) {
   int sts = 0;
 
   pif0->rvs_module_has_interface = rvs_module_has_interface;
-
   if (init_interface_method(
     reinterpret_cast<void**>(&(pif0->rvs_module_get_description)),
                             "rvs_module_get_description"))
-    sts--;
-
-  if (init_interface_method(
-    reinterpret_cast<void**>(&(pif0->rvs_module_has_interface)),
-                            "rvs_module_has_interface"))
     sts--;
 
   if (init_interface_method(
