@@ -40,15 +40,14 @@
  * 
  */
 
-
 extern "C" int rvs_module_has_interface(int iid) {
-    switch (iid) {
-    case 0:
-    case 1:
-        return 1;
-    }
-
-    return 0;
+  int sts = 0;
+  switch (iid) {
+  case 0:
+  case 1:
+    sts = 1;
+  }
+  return sts;
 }
 
 extern "C" const char* rvs_module_get_description(void) {

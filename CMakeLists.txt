@@ -385,6 +385,9 @@ add_subdirectory(pesm.so)
 add_subdirectory(pqt.so)
 add_subdirectory(rcqt.so)
 add_subdirectory(smqt.so)
+if (RVS_BUILD_TESTS)
+  add_subdirectory(testif.so)
+endif()
 
 add_dependencies(rvshelper rvs_bin_folder rvs_doc rvs_yaml_target)
 

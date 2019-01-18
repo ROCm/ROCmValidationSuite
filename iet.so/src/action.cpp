@@ -348,28 +348,6 @@ int iet_action::get_num_amd_gpu_devices(void) {
     string msg;
 
     hipGetDeviceCount(&hip_num_gpu_devices);
-    if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
-        msg = action_name + " " + MODULE_NAME + " " + IET_NO_COMPATIBLE_GPUS;
-        rvs::lp::Log(msg, rvs::logerror);
-
-        if (bjson) {
-            unsigned int sec;
-            unsigned int usec;
-            rvs::lp::get_ticks(&sec, &usec);
-            void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::loginfo, sec, usec);
-            if (!json_root_node) {
-                // log the error
-                string msg = std::string(JSON_CREATE_NODE_ERROR);
-                rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-                return -1;
-            }
-
-            rvs::lp::AddString(json_root_node, "ERROR", IET_NO_COMPATIBLE_GPUS);
-            rvs::lp::LogRecordFlush(json_root_node);
-        }
-        return 0;
-    }
     return hip_num_gpu_devices;
 }
 
