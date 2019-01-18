@@ -62,6 +62,9 @@ class peqt_action: public rvs::actionbase {
 
     virtual int run(void);
 
+ protected:
+  bool get_all_common_config_keys(void);
+
  private:
     //! TRUE if JSON output is required
     bool bjson;
