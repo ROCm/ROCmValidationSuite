@@ -140,7 +140,7 @@ bool pebb_action::get_all_common_config_keys(void) {
   }
 
   // get <device> property value (a list of gpu id)
-  if (sts = property_get_device()) {
+  if ((sts = property_get_device())) {
     switch (sts) {
     case 1:
       msg = "Invalid 'device' key value.";
@@ -150,7 +150,7 @@ bool pebb_action::get_all_common_config_keys(void) {
       break;
     }
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    return false;
   }
 
   // get the <deviceid> property value if provided
@@ -158,7 +158,7 @@ bool pebb_action::get_all_common_config_keys(void) {
                                 &property_device_id, 0u)) {
     msg = "Invalid 'deviceid' key value.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    return false;
   }
 
   // get the other action related properties
