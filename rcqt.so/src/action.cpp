@@ -190,133 +190,131 @@ int rcqt_action::pkgchk_run() {
   string package_name;
   string msg;
 
-  if (has_property(PACKAGE, &package_name)) {
-    bool version_exists = false;
+  has_property(PACKAGE, &package_name);
+  bool version_exists = false;
 
-    // Checking if version field exists
-    string version_name;
-    version_exists = has_property(VERSION, &version_name);
+  // Checking if version field exists
+  string version_name;
+  version_exists = has_property(VERSION, &version_name);
+  #if RVS_OS_TYPE_NUM == 1
+  string command_string = "dpkg --get-selections > ";
+  #endif
+  #if RVS_OS_TYPE_NUM == 2
+  string command_string = "rpm -qa --qf \"%{NAME}\n\" > ";
+  #endif
+  command_string += PKG_CMD_FILE;
+
+  // We execute the dpkg-querry
+  if (system(command_string.c_str()) == -1) {
+    rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+    return 1;
+  }
+  // We read the result from the dpk-querry from the fd[0]
+  vector <string> package_vector;
+  bool package_found = false;
+
+  std::regex pkg_pattern(package_name);
+
+  ifstream pkg_stream(std::string(PKG_CMD_FILE));
+  void *json_child_node = nullptr;
+  char file_line[STREAM_SIZE];
+  int i = 1;
+  string PACKAGE_CONST = "package";
+  while (pkg_stream.getline(file_line, STREAM_SIZE)) {
+    string line_result = file_line;
+
     #if RVS_OS_TYPE_NUM == 1
-    string command_string = "dpkg --get-selections > ";
+    line_result = line_result.substr(0, line_result.length() - 7);
+
+    line_result.erase(line_result.find_last_not_of(" \n\r\t")+1);
     #endif
-    #if RVS_OS_TYPE_NUM == 2
-    string command_string = "rpm -qa --qf \"%{NAME}\n\" > ";
-    #endif
-    command_string += PKG_CMD_FILE;
-
-    // We execute the dpkg-querry
-    if (system(command_string.c_str()) == -1) {
-      rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
-      return 1;
-    }
-    // We read the result from the dpk-querry from the fd[0]
-    vector <string> package_vector;
-    bool package_found = false;
-
-    std::regex pkg_pattern(package_name);
-
-    ifstream pkg_stream(std::string(PKG_CMD_FILE));
-    void *json_child_node = nullptr;
-    char file_line[STREAM_SIZE];
-    int i = 1;
-    string PACKAGE_CONST = "package";
-    while (pkg_stream.getline(file_line, STREAM_SIZE)) {
-      string line_result = file_line;
-
-      #if RVS_OS_TYPE_NUM == 1
-      line_result = line_result.substr(0, line_result.length() - 7);
-
-      line_result.erase(line_result.find_last_not_of(" \n\r\t")+1);
-      #endif
-      if (regex_match(line_result, pkg_pattern) == true) {
-        if (bjson) {
-          if (json_rcqt_node != NULL) {
-            json_child_node = rvs::lp::CreateNode(json_rcqt_node
-            , (PACKAGE_CONST + std::to_string(i++)).c_str());
-            rvs::lp::AddString(json_child_node, "package"
-            , line_result.c_str());
-          }
+    if (regex_match(line_result, pkg_pattern) == true) {
+      if (bjson) {
+        if (json_rcqt_node != NULL) {
+          json_child_node = rvs::lp::CreateNode(json_rcqt_node
+          , (PACKAGE_CONST + std::to_string(i++)).c_str());
+          rvs::lp::AddString(json_child_node, "package"
+          , line_result.c_str());
         }
-        if (version_exists) {
-          char cmd_buffer[BUFFER_SIZE];
-          #if RVS_OS_TYPE_NUM == 1
-          snprintf(cmd_buffer, BUFFER_SIZE, \
-          "dpkg -s %s | grep Version > %s", line_result.c_str(),
-          (std::string(VERSION_FILE)).c_str());
-          #endif
-          #if RVS_OS_TYPE_NUM == 2
-          snprintf(cmd_buffer, BUFFER_SIZE, \
-          "rpm -qi %s | grep Version > %s", line_result.c_str(),
-          (std::string(VERSION_FILE)).c_str());
-          #endif
+      }
+      if (version_exists) {
+        char cmd_buffer[BUFFER_SIZE];
+        #if RVS_OS_TYPE_NUM == 1
+        snprintf(cmd_buffer, BUFFER_SIZE, \
+        "dpkg -s %s | grep Version > %s", line_result.c_str(),
+        (std::string(VERSION_FILE)).c_str());
+        #endif
+        #if RVS_OS_TYPE_NUM == 2
+        snprintf(cmd_buffer, BUFFER_SIZE, \
+        "rpm -qi %s | grep Version > %s", line_result.c_str(),
+        (std::string(VERSION_FILE)).c_str());
+        #endif
 
-          if (system(cmd_buffer) == -1) {
-            rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
-            return 1;
-          }
-          std::regex version_pattern(version_name);
-          ifstream version_stream(std::string(VERSION_FILE));
-          char file_line[STREAM_SIZE];
-          version_stream.getline(file_line, STREAM_SIZE);
-          version_stream.close();
-          string group_line_result = file_line;
-          #if RVS_OS_TYPE_NUM == 1
-          group_line_result = group_line_result
-          .substr(9, group_line_result.length() - 9);
-          #endif
-          #if RVS_OS_TYPE_NUM == 2
-          group_line_result.erase(0 , group_line_result.find_first_of(":") + 2);
-          #endif
-          if (bjson && json_child_node != NULL) {
-            rvs::lp::AddString(json_child_node, "group"
-            , group_line_result.c_str());
-          }
-          if (regex_match(group_line_result, version_pattern) == true) {
-            string package_exists = "[" + action_name + "] "
-            + "rcqt pkgcheck "
-            + line_result + " true ";
-            rvs::lp::Log(package_exists, rvs::logresults);
-            package_found = true;
-          } else {
-            string pkg_not_exists = "[" + action_name + "] "
-            + "rcqt pkgcheck "
-            + line_result + " false ";
-            rvs::lp::Log(pkg_not_exists, rvs::logresults);
-            package_found = true;
-          }
-        } else {
-          string package_exists = "[" + action_name + "] " + "rcqt pkgcheck "
-          + line_result + " true";
+        if (system(cmd_buffer) == -1) {
+          rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+          return 1;
+        }
+        std::regex version_pattern(version_name);
+        ifstream version_stream(std::string(VERSION_FILE));
+        char file_line[STREAM_SIZE];
+        version_stream.getline(file_line, STREAM_SIZE);
+        version_stream.close();
+        string group_line_result = file_line;
+        #if RVS_OS_TYPE_NUM == 1
+        group_line_result = group_line_result
+        .substr(9, group_line_result.length() - 9);
+        #endif
+        #if RVS_OS_TYPE_NUM == 2
+        group_line_result.erase(0 , group_line_result.find_first_of(":") + 2);
+        #endif
+        if (bjson && json_child_node != NULL) {
+          rvs::lp::AddString(json_child_node, "group"
+          , group_line_result.c_str());
+        }
+        if (regex_match(group_line_result, version_pattern) == true) {
+          string package_exists = "[" + action_name + "] "
+          + "rcqt pkgcheck "
+          + line_result + " true ";
           rvs::lp::Log(package_exists, rvs::logresults);
           package_found = true;
+        } else {
+          string pkg_not_exists = "[" + action_name + "] "
+          + "rcqt pkgcheck "
+          + line_result + " false ";
+          rvs::lp::Log(pkg_not_exists, rvs::logresults);
+          package_found = true;
         }
-        if (bjson && json_child_node != NULL)
-          rvs::lp::AddNode(json_rcqt_node, json_child_node);
+      } else {
+        string package_exists = "[" + action_name + "] " + "rcqt pkgcheck "
+        + line_result + " true";
+        rvs::lp::Log(package_exists, rvs::logresults);
+        package_found = true;
       }
+      if (bjson && json_child_node != NULL)
+        rvs::lp::AddNode(json_rcqt_node, json_child_node);
     }
-    if (!package_found) {
-      string pkg_not_exists = "[" + action_name + "] " + "rcqt pkgcheck "
-      + package_name + " false";
-      rvs::lp::Log(pkg_not_exists, rvs::logresults);
-      if (bjson && json_child_node != NULL) {
-        rvs::lp::AddString(json_child_node, "package"
-        , "not exist");
-      }
-    }
-    string rm_command_string = std::string("rm ")
-    + std::string(PKG_CMD_FILE) +
-    (version_exists == true ? " " + std::string(VERSION_FILE) : "");
-    // We execute rm command
-    if (system(rm_command_string.c_str()) == -1) {
-      rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
-      return 1;
-    }
-    if (bjson && json_rcqt_node != NULL)
-      rvs::lp::LogRecordFlush(json_rcqt_node);
-
-    return 0;
   }
-  return -1;
+  if (!package_found) {
+    string pkg_not_exists = "[" + action_name + "] " + "rcqt pkgcheck "
+    + package_name + " false";
+    rvs::lp::Log(pkg_not_exists, rvs::logresults);
+    if (bjson && json_rcqt_node != NULL) {
+      rvs::lp::AddString(json_rcqt_node, "package"
+      , "not exist");
+    }
+  }
+  string rm_command_string = std::string("rm ")
+  + std::string(PKG_CMD_FILE) +
+  (version_exists == true ? " " + std::string(VERSION_FILE) : "");
+  // We execute rm command
+  if (system(rm_command_string.c_str()) == -1) {
+    rvs::lp::Err("system() error", MODULE_NAME_CAPS, action_name);
+    return 1;
+  }
+  if (bjson && json_rcqt_node != NULL)
+    rvs::lp::LogRecordFlush(json_rcqt_node);
+
+  return 0;
 }
 
 /**
