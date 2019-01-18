@@ -80,13 +80,13 @@ bool pebb_action::get_all_pebb_config_keys(void) {;
 
   RVSTRACE_
 
-  if (property_get("h2d", &prop_h2d, true)) {
+  if (property_get("host_to_device", &prop_h2d, true)) {
       msg = "invalid 'h2d'' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
   }
 
-  if (property_get("d2h", &prop_d2h, false)) {
+  if (property_get("device_to_host", &prop_d2h, true)) {
       msg = "invalid 'd2h'' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return false;
@@ -131,7 +131,7 @@ bool pebb_action::get_all_pebb_config_keys(void) {;
 bool pebb_action::get_all_common_config_keys(void) {
   string msg, sdevid, sdev;
   int error;
-
+  int sts;
   RVSTRACE_
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -140,7 +140,7 @@ bool pebb_action::get_all_common_config_keys(void) {
   }
 
   // get <device> property value (a list of gpu id)
-  if (int sts = property_get_device()) {
+  if ((sts = property_get_device())) {
     switch (sts) {
     case 1:
       msg = "Invalid 'device' key value.";
@@ -150,7 +150,7 @@ bool pebb_action::get_all_common_config_keys(void) {
       break;
     }
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    return false;
   }
 
   // get the <deviceid> property value if provided
@@ -158,7 +158,7 @@ bool pebb_action::get_all_common_config_keys(void) {
                                 &property_device_id, 0u)) {
     msg = "Invalid 'deviceid' key value.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    return false;
   }
 
   // get the other action related properties
@@ -441,7 +441,6 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
     // (do not reset final totals as this is just intermediate query)
     pWorker->get_final_data(&src_node, &dst_node, &bidir,
                             &current_size, &duration, false);
-    if (duration > 0) {
       RVSTRACE_
       bandwidth = current_size/duration/(1024*1024*1024);
       if (bidir) {
@@ -449,11 +448,6 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
         bandwidth *=2;
       }
       snprintf( buff, sizeof(buff), "%.3f GBps (*)", bandwidth);
-    } else {
-      RVSTRACE_
-      // not transfers at all - print "pending"
-      snprintf( buff, sizeof(buff), "(pending)");
-    }
   }
 
 //  dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
@@ -598,22 +592,20 @@ int pebb_action::print_final_average() {
  *
  * */
 void pebb_action::do_final_average() {
-  if (property_log_level >= rvs::logtrace) {
-    std::string msg;
-    unsigned int sec;
-    unsigned int usec;
-    rvs::lp::get_ticks(&sec, &usec);
+  std::string msg;
+  unsigned int sec;
+  unsigned int usec;
+  rvs::lp::get_ticks(&sec, &usec);
 
-    msg = "[" + action_name + "] pebb in do_final_average";
-    rvs::lp::Log(msg, rvs::logtrace, sec, usec);
+  msg = "[" + action_name + "] pebb in do_final_average";
+  rvs::lp::Log(msg, rvs::logtrace, sec, usec);
 
-    if (bjson) {
-      void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::logtrace, sec, usec);
-      if (pjson != NULL) {
-        rvs::lp::AddString(pjson, "message", "pebb in do_final_average");
-        rvs::lp::LogRecordFlush(pjson);
-      }
+  if (bjson) {
+    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
+                            action_name.c_str(), rvs::logtrace, sec, usec);
+    if (pjson != NULL) {
+      rvs::lp::AddString(pjson, "message", "pebb in do_final_average");
+      rvs::lp::LogRecordFlush(pjson);
     }
   }
 
