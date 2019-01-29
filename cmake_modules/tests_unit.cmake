@@ -36,7 +36,7 @@ file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 # add unit tests
 FOREACH(SINGLE_TEST ${TESTSOURCES})
 #  MESSAGE("${SINGLE_TEST}")
-  string(REPLACE "test/test" "unit.${RVS}." TMP_TEST_NAME ${SINGLE_TEST})
+  string(REPLACE "test/test_" "unit.${RVS}." TMP_TEST_NAME ${SINGLE_TEST})
   string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
   MESSAGE("unit test: ${TEST_NAME}")
 
