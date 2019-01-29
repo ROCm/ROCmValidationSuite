@@ -77,19 +77,20 @@ pebb_action::~pebb_action() {
 bool pebb_action::get_all_pebb_config_keys(void) {;
   string msg;
   int error;
+  bool bsts = true;
 
   RVSTRACE_
 
   if (property_get("host_to_device", &prop_h2d, true)) {
-      msg = "invalid 'h2d'' key";
+      msg = "invalid 'host_to_device' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      bsts = false;
   }
 
   if (property_get("device_to_host", &prop_d2h, true)) {
-      msg = "invalid 'd2h'' key";
+      msg = "invalid 'device_to_host' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      bsts = false;
   }
 
   error = property_get_uint_list<uint32_t>(RVS_CONF_BLOCK_SIZE_KEY,
@@ -98,7 +99,7 @@ bool pebb_action::get_all_pebb_config_keys(void) {;
   if (error == 1) {
       msg = "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      bsts = false;
   } else if (error == 2) {
     b_block_size_all = true;
     block_size.clear();
@@ -106,21 +107,20 @@ bool pebb_action::get_all_pebb_config_keys(void) {;
 
   error = property_get_int<uint32_t>
   (RVS_CONF_B2B_BLOCK_SIZE_KEY, &b2b_block_size);
-//  b2b_block_size = property_get_b2b_size(&error);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+      bsts = false;
   }
 
   error = property_get_int<int>(RVS_CONF_LINK_TYPE_KEY, &link_type);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+      bsts = false;
   }
 
-  return true;
+  return bsts;
 }
 
 /**
@@ -133,6 +133,8 @@ bool pebb_action::get_all_common_config_keys(void) {
   int error;
   int sts;
   RVSTRACE_
+
+  bool bsts = true;
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
@@ -150,7 +152,7 @@ bool pebb_action::get_all_common_config_keys(void) {
       break;
     }
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    bsts = false;
   }
 
   // get the <deviceid> property value if provided
@@ -158,7 +160,7 @@ bool pebb_action::get_all_common_config_keys(void) {
                                 &property_device_id, 0u)) {
     msg = "Invalid 'deviceid' key value.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    bsts = false;
   }
 
   // get the other action related properties
@@ -166,7 +168,7 @@ bool pebb_action::get_all_common_config_keys(void) {
     msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
     "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    bsts = false;
   }
 
   error = property_get_int<uint64_t>
@@ -174,7 +176,7 @@ bool pebb_action::get_all_common_config_keys(void) {
   if (error == 1) {
     msg ="invalid '" + std::string(RVS_CONF_COUNT_KEY) +"' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    bsts = false;
   }
 
   error = property_get_int<uint64_t>
@@ -182,7 +184,7 @@ bool pebb_action::get_all_common_config_keys(void) {
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    bsts = false;
   }
 
   if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
@@ -190,7 +192,7 @@ bool pebb_action::get_all_common_config_keys(void) {
     msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
     "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    bsts = false;
   }
 
   if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
@@ -198,10 +200,10 @@ bool pebb_action::get_all_common_config_keys(void) {
     msg = "Invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) +
     "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return false;
+    bsts = false;
   }
 
-  return true;
+  return bsts;
 }
 
 /**

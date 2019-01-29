@@ -186,4 +186,4 @@ set (PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
 set(UT_LINK_LIBS  librvshelper.a)
 
 # add unit tests
-include(tests_unit)
+#include(tests_unit)
