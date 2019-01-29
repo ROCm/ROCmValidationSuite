@@ -183,7 +183,31 @@ link_directories(${UT_LIB})
 ## additional libraries for unit tests
 set (PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
 
-set(UT_LINK_LIBS  librvshelper.a)
+## define unit testing targets
+file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
+#message ( "TESTSOURCES ${TESTSOURCES}" )
 
-# add unit tests
-include(tests_unit)
+# add tests
+FOREACH(SINGLE_TEST ${TESTSOURCES})
+#  MESSAGE("${SINGLE_TEST}")
+  string(REPLACE "test/test_" "unit.rvs." TMP_TEST_NAME ${SINGLE_TEST})
+  string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
+  MESSAGE("unit test: ${TEST_NAME}")
+
+  add_executable(${TEST_NAME} ${SINGLE_TEST}
+    )
+  target_link_libraries(${TEST_NAME}
+    ${PROJECT_LINK_LIBS}
+    ${PROJECT_TEST_LINK_LIBS}
+    rvshelper rvslib rvslibut gtest_main gtest pthread
+  )
+  target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
+  add_compile_options(-Wall -Wextra -save-temps)
+  set_target_properties(${TEST_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
+  )
+  add_test(NAME ${TEST_NAME}
+    WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
+    COMMAND ${TEST_NAME}
+  )
+ENDFOREACH()
