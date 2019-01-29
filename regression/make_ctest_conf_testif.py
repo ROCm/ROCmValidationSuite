@@ -92,7 +92,6 @@ cmake_file_header = \
 
 cmake_file.write(cmake_file_header)
 
-counter = 0
 listOfFiles = os.listdir(conf_location)
 #pattern = '{}*'.format(module_name)
 
@@ -103,15 +102,27 @@ for conf_file in listOfFiles:
 
     if fnmatch.fnmatch(conf_file, pattern):
 
-        # go to the next conf file
-        counter += 1
+        # find tail
+        if not family:
+          if ttpf == "ttp":
+            index = len(module_name)
+          else:
+            index = len("ttf_" + module_name)
+        else:
+          if ttpf == "ttp":
+            index = len(module_name+"_"+family)
+          else:
+            index = len("ttf_" + module_name+"_"+family)
+
+        confindex = conf_file.find(".conf")
+        tail = conf_file[index+1:confindex]
 
         # construct test name
         test_name = ""
         if not family:
-          test_name = '{}.conf.{}.{}'.format(ttpf, module_name, counter)
+          test_name = '{}.conf.{}.{}'.format(ttpf, module_name, tail)
         else:
-          test_name = '{}.conf.{}.{}.{}'.format(ttpf, module_name, family, counter)
+          test_name = '{}.conf.{}.{}.{}'.format(ttpf, module_name, family, tail)
 
         cmake_file.write('add_test(NAME {}'.format(test_name))
         print('conf test: {}'.format(test_name))
