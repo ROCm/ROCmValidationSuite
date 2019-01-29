@@ -424,8 +424,7 @@ if (RVS_BUILD_TESTS)
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   COMMENT "Create the bintest directory"
   VERBATIM)
-#  add_dependencies(rvshelper rvs_bintest_folder rvs_gtest_target)
-  add_dependencies(rvs_bintest_folder rvs_bin_folder)
+  add_dependencies(rvshelper rvs_bintest_folder rvs_gtest_target)
 endif()
 
 add_custom_target(rvs_doc ALL
