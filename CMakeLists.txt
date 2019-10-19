@@ -473,8 +473,8 @@ endif(DOXYGEN_FOUND)
 
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
-                "${ROCM_SMI_LIB_DIR}/librocm_smi64.so.1"
-                "${ROCM_SMI_LIB_DIR}/librocm_smi64.so.1.0.0"
+                "${ROCM_SMI_LIB_DIR}/librocm_smi64.so.2"
+                "${ROCM_SMI_LIB_DIR}/librocm_smi64.so.2.0"
           DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib
           COMPONENT rvsmodule)
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf"
