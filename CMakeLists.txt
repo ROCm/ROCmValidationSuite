@@ -105,7 +105,7 @@ set(RVS_BUILD_TESTS TRUE CACHE BOOL "TRUE if tests are to be built")
 
 set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
 set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
-set(RVS_ROCMSMI "1" CACHE STRING "1 = use local rocm_smi_lib")
+set(RVS_ROCMSMI "0" CACHE STRING "1 = use local rocm_smi_lib")
 
 set(RVS_LIB_DIR "${CMAKE_BINARY_DIR}/rvslib" CACHE PATH "Contains RVS library")
 set(YAML_INC_DIR "${CMAKE_BINARY_DIR}/yaml-src/include" CACHE PATH "Contains header files exported by yaml-cpp")
