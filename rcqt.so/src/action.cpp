@@ -119,11 +119,13 @@ rcqt_action::~rcqt_action() {
 
 int rcqt_action::run() {
   string msg;
+#if 0
   bool pkgchk_bool = false;
   bool usrchk_bool = false;
   bool kernelchk_os_bool = false;
   bool ldcfgchk_so_bool = false;
   bool filechk_bool = false;
+#endif
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -149,6 +151,7 @@ int rcqt_action::run() {
     }
   }
 
+#if NEEDED_PLEASE_ENABLE
   // check if package check action is going to trigger
   pkgchk_bool =  rvs::actionbase::has_property(PACKAGE);
   if (pkgchk_bool == true)
@@ -177,6 +180,7 @@ int rcqt_action::run() {
 
   if (filechk_bool == true)
     return filechk_run();
+#endif
 
   return -1;
 }
