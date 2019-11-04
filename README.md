@@ -22,8 +22,8 @@ This section explains how to get and compile current development stream of RVS.
 
     cd ROCmValidationSuite
 
-    cmake ./ -B../build
-    make -C ../build
+    cmake ./ -B./build
+    make -C ./build
 
 _**Note:**_
 
@@ -54,7 +54,7 @@ ignore an error for the unrelated configuration
 
 ### Running version built from source code:
 
-    cd ../build/bin
+    cd ./build/bin
     sudo ./rvs -d 3
 
 ### Running without install
