@@ -1,0 +1,15 @@
+Thu Aug  1 10:34:40 UTC 2019
+smqt_1
+[INFO  ] [ 15884.46524 ] [action_1]  smqt 63939 bar1_size      34359738368 (32.00 GB)
+[INFO  ] [ 15884.46524 ] [action_1]  smqt 63939 bar1_base_addr 38000000000C
+[INFO  ] [ 15884.46524 ] [action_1]  smqt 63939 bar2_size      2097152 (2.00 MB)
+[INFO  ] [ 15884.46524 ] [action_1]  smqt 63939 bar2_base_addr 38080000000C
+[INFO  ] [ 15884.46524 ] [action_1]  smqt 63939 bar4_size      524288 (512.00 KB)
+[INFO  ] [ 15884.46524 ] [action_1]  smqt 63939 bar4_base_addr F8100000
+[INFO  ] [ 15884.46524 ] [action_1]  smqt 63939 bar5_size      131072 (128.00 KB)
+[RESULT] [ 15884.46601 ] [action_1]  smqt 63939 false
+Thu Aug  1 10:34:40 UTC 2019
+smqt_2
+Thu Aug  1 10:34:40 UTC 2019
+smqt_3
+Thu Aug  1 10:34:40 UTC 2019
