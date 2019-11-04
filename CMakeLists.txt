@@ -433,6 +433,11 @@ WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 COMMENT "Create the doc directory"
 VERBATIM)
 
+add_custom_target(copy-files ALL
+  COMMAND ${CMAKE_COMMAND} -E copy
+      ${CMAKE_SOURCE_DIR}/testscripts/*.sh
+      ${CMAKE_BINARY_DIR}/bin/)
+
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
 message(STATUS "Doxygen: ${DOXYGEN_EXECUTABLE}")

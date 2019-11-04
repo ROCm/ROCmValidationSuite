@@ -1,0 +1,72 @@
+Thu Aug  1 10:21:05 UTC 2019
+gpup_1
+[RESULT] [ 15069.708956] [action_1] gpup 63939 cpu_cores_count 0
+[RESULT] [ 15069.708992] [action_1] gpup 63939 simd_count 480
+[RESULT] [ 15069.708998] [action_1] gpup 63939 mem_banks_count 1
+[RESULT] [ 15069.709003] [action_1] gpup 63939 caches_count 113
+[RESULT] [ 15069.709007] [action_1] gpup 63939 io_links_count 1
+[RESULT] [ 15069.709012] [action_1] gpup 63939 cpu_core_id_base 0
+[RESULT] [ 15069.709017] [action_1] gpup 63939 simd_id_base 2147487744
+[RESULT] [ 15069.709021] [action_1] gpup 63939 max_waves_per_simd 10
+[RESULT] [ 15069.709026] [action_1] gpup 63939 lds_size_in_kb 64
+[RESULT] [ 15069.709030] [action_1] gpup 63939 gds_size_in_kb 0
+[RESULT] [ 15069.709035] [action_1] gpup 63939 num_gws 0
+[RESULT] [ 15069.709039] [action_1] gpup 63939 wave_front_size 64
+[RESULT] [ 15069.709044] [action_1] gpup 63939 array_count 8
+[RESULT] [ 15069.709048] [action_1] gpup 63939 simd_arrays_per_engine 1
+[RESULT] [ 15069.709053] [action_1] gpup 63939 cu_per_simd_array 16
+[RESULT] [ 15069.709057] [action_1] gpup 63939 simd_per_cu 4
+[RESULT] [ 15069.709062] [action_1] gpup 63939 max_slots_scratch_cu 32
+[RESULT] [ 15069.709066] [action_1] gpup 63939 vendor_id 4098
+[RESULT] [ 15069.709071] [action_1] gpup 63939 device_id 29580
+[RESULT] [ 15069.709075] [action_1] gpup 63939 location_id 1024
+[RESULT] [ 15069.709080] [action_1] gpup 63939 drm_render_minor 128
+[RESULT] [ 15069.709084] [action_1] gpup 63939 hive_id 0
+[RESULT] [ 15069.709089] [action_1] gpup 63939 num_sdma_engines 2
+[RESULT] [ 15069.709093] [action_1] gpup 63939 num_sdma_xgmi_engines 6
+[RESULT] [ 15069.709098] [action_1] gpup 63939 max_engine_clk_fcompute 100
+[RESULT] [ 15069.709102] [action_1] gpup 63939 local_mem_size 34342961152
+[RESULT] [ 15069.709107] [action_1] gpup 63939 fw_version 26
+[RESULT] [ 15069.709111] [action_1] gpup 63939 capability 238208
+[RESULT] [ 15069.709115] [action_1] gpup 63939 debug_prop 32768
+[RESULT] [ 15069.709120] [action_1] gpup 63939 sdma_fw_version 32
+[RESULT] [ 15069.709124] [action_1] gpup 63939 max_engine_clk_ccompute 3200
+[RESULT] [ 15069.709202] [action_1] gpup 63939 0 type 2
+[RESULT] [ 15069.709209] [action_1] gpup 63939 0 version_major 0
+[RESULT] [ 15069.709214] [action_1] gpup 63939 0 version_minor 0
+[RESULT] [ 15069.709219] [action_1] gpup 63939 0 node_from 1
+[RESULT] [ 15069.709223] [action_1] gpup 63939 0 node_to 0
+[RESULT] [ 15069.709228] [action_1] gpup 63939 0 weight 20
+[RESULT] [ 15069.709233] [action_1] gpup 63939 0 min_latency 0
+[RESULT] [ 15069.709237] [action_1] gpup 63939 0 max_latency 0
+[RESULT] [ 15069.709242] [action_1] gpup 63939 0 min_bandwidth 0
+[RESULT] [ 15069.709246] [action_1] gpup 63939 0 max_bandwidth 0
+[RESULT] [ 15069.709251] [action_1] gpup 63939 0 recommended_transfer_size 0
+[RESULT] [ 15069.709256] [action_1] gpup 63939 0 flags 1
+Thu Aug  1 10:21:05 UTC 2019
+gpup_2
+[RESULT] [ 15069.723947] [action_1] gpup 63939 simd_count 480
+[RESULT] [ 15069.723971] [action_1] gpup 63939 mem_banks_count 1
+[RESULT] [ 15069.723981] [action_1] gpup 63939 io_links_count 1
+[RESULT] [ 15069.724013] [action_1] gpup 63939 vendor_id 4098
+[RESULT] [ 15069.724020] [action_1] gpup 63939 device_id 29580
+[RESULT] [ 15069.724026] [action_1] gpup 63939 location_id 1024
+[RESULT] [ 15069.724051] [action_1] gpup 63939 max_engine_clk_ccompute 3200
+[RESULT] [ 15069.724122] [action_1] gpup 63939 0 type 2
+[RESULT] [ 15069.724130] [action_1] gpup 63939 0 version_major 0
+[RESULT] [ 15069.724136] [action_1] gpup 63939 0 version_minor 0
+[RESULT] [ 15069.724141] [action_1] gpup 63939 0 node_from 1
+[RESULT] [ 15069.724146] [action_1] gpup 63939 0 node_to 0
+[RESULT] [ 15069.724161] [action_1] gpup 63939 0 recommended_transfer_size 0
+[RESULT] [ 15069.724166] [action_1] gpup 63939 0 flags 1
+Thu Aug  1 10:21:05 UTC 2019
+gpup_3
+Thu Aug  1 10:21:05 UTC 2019
+gpup_4
+Thu Aug  1 10:21:05 UTC 2019
+gpup_5
+Thu Aug  1 10:21:05 UTC 2019
+gpup_6
+Thu Aug  1 10:21:05 UTC 2019
+gpup_7
+Thu Aug  1 10:21:05 UTC 2019

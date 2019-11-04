@@ -1,0 +1,215 @@
+Thu Aug  1 10:21:35 UTC 2019
+gst
+[INFO  ] [ 15100.305897] [action_1] gst 63939 start 18000.000000 copy matrix:false
+[INFO  ] [ 15104.382755] [action_1] gst 63939 Gflops 121.373754
+[INFO  ] [ 15105.530877] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15106.679213] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15107.827253] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15108.975273] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15110.123378] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15111.271560] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15112.419775] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15113.567927] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15114.716188] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15115.864336] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15117.12625 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15118.160980] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15119.309045] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15120.457139] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15121.605345] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15122.753575] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15123.901757] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15125.49935 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15126.197973] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15127.345980] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15128.494136] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15129.642156] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15130.790337] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15131.938537] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15133.86811 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15134.235089] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15135.383283] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15136.531428] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15137.679818] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15138.828149] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15139.976328] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15141.124529] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15142.272628] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15143.420773] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15144.569001] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15145.717212] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15146.865458] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15148.13766 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15149.162080] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15150.310216] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15151.458365] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15152.606390] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15153.426652] [action_1] gst 63939 ramp time exceeded 50000
+[RESULT] [ 15153.426659] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 47.095028 pass: false
+[INFO  ] [ 15153.529386] [action_1] gst 63939 start 18000.000000 copy matrix:false
+[INFO  ] [ 15155.561838] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15156.709997] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15157.858217] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15159.6385  ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15160.154692] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15161.302810] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15162.451016] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15163.599226] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15164.747434] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15165.895539] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15167.43808 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15168.191979] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15169.340160] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15170.488365] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15171.636619] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15172.784791] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15173.932996] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15175.81173 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15176.229374] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15177.377528] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15178.525673] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15179.673893] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15180.822272] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15181.970395] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15183.118666] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15184.266883] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15185.415164] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15186.563406] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15187.711551] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15188.859724] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15190.8047  ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15191.156139] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15192.304387] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15193.452612] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15194.600812] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15195.748990] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15196.897245] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15198.45494 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15199.193781] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15200.342010] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15201.490353] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15202.638412] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15203.786496] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15204.606542] [action_1] gst 63939 ramp time exceeded 50000
+[RESULT] [ 15204.606550] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 47.095028 pass: false
+Thu Aug  1 10:23:20 UTC 2019
+gst_1
+[INFO  ] [ 15205.178691] [action_1] gst 63939 start 5000.000000 copy matrix:false
+[INFO  ] [ 15209.311065] [action_1] gst 63939 Gflops 119.215830
+[INFO  ] [ 15210.459202] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15211.607329] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15212.755536] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15213.903743] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15215.51780 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15215.379750] [action_1] gst 63939 ramp time exceeded 7000
+[RESULT] [ 15215.379757] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: false
+[INFO  ] [ 15215.482531] [action_1] gst 63939 start 5000.000000 copy matrix:false
+[INFO  ] [ 15217.521393] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15218.669575] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15219.817804] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15220.965933] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15222.114053] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15223.262354] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15223.590409] [action_1] gst 63939 ramp time exceeded 7000
+[RESULT] [ 15223.590416] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: false
+Thu Aug  1 10:23:39 UTC 2019
+gst_2
+[INFO  ] [ 15224.156758] [action_1] gst 63939 start 5000.000000 copy matrix:false
+[INFO  ] [ 15228.173639] [action_1] gst 63939 Gflops 120.760174
+[INFO  ] [ 15229.321745] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15230.470075] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15231.618283] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15232.766381] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15233.914682] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15234.242710] [action_1] gst 63939 ramp time exceeded 7000
+[RESULT] [ 15234.242716] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: false
+Thu Aug  1 10:23:50 UTC 2019
+gst_3
+[INFO  ] [ 15234.811028] [action_1] gst 63939 start 3500.000000 copy matrix:true
+[INFO  ] [ 15238.820583] [action_1] gst 63939 Gflops 119.104379
+[INFO  ] [ 15239.886344] [action_1] gst 63939 Gflops 1794.394141
+[INFO  ] [ 15240.952129] [action_1] gst 63939 Gflops 1794.394141
+[INFO  ] [ 15242.17924 ] [action_1] gst 63939 Gflops 1794.394141
+[INFO  ] [ 15243.83324 ] [action_1] gst 63939 Gflops 1794.394141
+[INFO  ] [ 15244.148627] [action_1] gst 63939 Gflops 1794.394141
+[INFO  ] [ 15245.1483  ] [action_1] gst 63939 ramp time exceeded 7000
+[RESULT] [ 15245.1496  ] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 9.157367 pass: false
+Thu Aug  1 10:24:01 UTC 2019
+gst_4
+[INFO  ] [ 15245.574422] [action_1] gst 63939 start 6000.000000 copy matrix:false
+[INFO  ] [ 15249.651104] [action_1] gst 63939 Gflops 121.104548
+[INFO  ] [ 15250.799249] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15251.947508] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15253.95775 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15254.243818] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15255.391992] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15255.720027] [action_1] gst 63939 ramp time exceeded 7000
+[RESULT] [ 15255.720035] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 15.698343 pass: false
+[INFO  ] [ 15255.822815] [action_1] gst 63939 start 6000.000000 copy matrix:false
+[INFO  ] [ 15257.862517] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15259.10682 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15260.158848] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15261.306903] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15262.455032] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15263.603396] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15263.931455] [action_1] gst 63939 ramp time exceeded 7000
+[RESULT] [ 15263.931462] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 15.698343 pass: false
+Thu Aug  1 10:24:20 UTC 2019
+gst_5
+[INFO  ] [ 15264.498313] [action_1] gst 63939 start 2300.000000 copy matrix:false
+[INFO  ] [ 15268.587099] [action_1] gst 63939 Gflops 120.912987
+[INFO  ] [ 15269.735314] [action_1] gst 63939 target achieved 2300.000000
+[INFO  ] [ 15270.884020] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15272.32666 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15273.181176] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15274.329640] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15275.478048] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15276.626648] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15277.775269] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15278.923856] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15280.72246 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15281.221078] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15282.369439] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15283.517978] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15284.666486] [action_1] gst 63939 Gflops 2330.524098
+[RESULT] [ 15285.650963] [action_1] gst 63939 Gflop: 2330.524098 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 6.017698 pass: true
+[INFO  ] [ 15285.753812] [action_1] gst 63939 start 2300.000000 copy matrix:false
+[INFO  ] [ 15287.793291] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15288.941513] [action_1] gst 63939 target achieved 2300.000000
+[INFO  ] [ 15290.90252 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15291.238706] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15292.387344] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15293.536010] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15294.684531] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15295.833226] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15296.981775] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15298.130329] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15299.278948] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15300.427654] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15301.576412] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15302.724829] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15303.873561] [action_1] gst 63939 Gflops 2330.524098
+[RESULT] [ 15304.858127] [action_1] gst 63939 Gflop: 2330.524098 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 6.017698 pass: true
+Thu Aug  1 10:25:01 UTC 2019
+gst_6
+[INFO  ] [ 15305.422450] [action_1] gst 63939 start 2500.000000 copy matrix:false
+[INFO  ] [ 15309.546740] [action_1] gst 63939 Gflops 118.771272
+[INFO  ] [ 15310.695111] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15311.843633] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15312.991876] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15314.140039] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15315.288286] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15315.616328] [action_1] gst 63939 ramp time exceeded 7000
+[RESULT] [ 15315.616353] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 6.540976 pass: false
+[INFO  ] [ 15315.718743] [action_1] gst 63939 start 2500.000000 copy matrix:false
+[INFO  ] [ 15317.720838] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15318.869167] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15320.17391 ] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15321.165665] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15322.313914] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15323.462413] [action_1] gst 63939 Gflops 2330.524098
+[INFO  ] [ 15323.790452] [action_1] gst 63939 ramp time exceeded 7000
+[RESULT] [ 15323.790478] [action_1] gst 63939 Gflop: 0.000000 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 6.540976 pass: false
+Thu Aug  1 10:25:20 UTC 2019
+gst_7
+Thu Aug  1 10:25:20 UTC 2019

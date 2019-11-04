@@ -1,0 +1,126 @@
+peqt_1
+[INFO  ] [ 15665.524868] [pcie_act_1] peqt D0_Maximum_Power_12V NOT SUPPORTED
+[INFO  ] [ 15665.524903] [pcie_act_1] peqt D0_Maximum_Power_3_3V NOT SUPPORTED
+[INFO  ] [ 15665.524920] [pcie_act_1] peqt D0_Sustained_Power_12V NOT SUPPORTED
+[INFO  ] [ 15665.524936] [pcie_act_1] peqt D0_Sustained_Power_3_3V NOT SUPPORTED
+[INFO  ] [ 15665.524950] [pcie_act_1] peqt atomic_op_32_completer NOT SUPPORTED
+[INFO  ] [ 15665.524953] [pcie_act_1] peqt atomic_op_64_completer NOT SUPPORTED
+[INFO  ] [ 15665.524956] [pcie_act_1] peqt atomic_op_routing NOT SUPPORTED
+[INFO  ] [ 15665.524958] [pcie_act_1] peqt dev_serial_num NOT SUPPORTED
+[INFO  ] [ 15665.524961] [pcie_act_1] peqt device_id 29580
+[INFO  ] [ 15665.524977] [pcie_act_1] peqt kernel_driver amdgpu
+[INFO  ] [ 15665.524980] [pcie_act_1] peqt link_cap_max_speed NOT SUPPORTED
+[INFO  ] [ 15665.524982] [pcie_act_1] peqt link_cap_max_width NOT SUPPORTED
+[INFO  ] [ 15665.524984] [pcie_act_1] peqt link_stat_cur_speed NOT SUPPORTED
+[INFO  ] [ 15665.524986] [pcie_act_1] peqt link_stat_neg_width NOT SUPPORTED
+[INFO  ] [ 15665.524989] [pcie_act_1] peqt slot_physical_num NOT SUPPORTED
+[INFO  ] [ 15665.524991] [pcie_act_1] peqt slot_pwr_limit_value NOT SUPPORTED
+[INFO  ] [ 15665.524993] [pcie_act_1] peqt vendor_id 4098
+[RESULT] [ 15665.526370] [pcie_act_1] peqt true
+Thu Aug  1 10:31:01 UTC 2019
+peqt_2
+[INFO  ] [ 15665.551012] [pcie_act_1] peqt atomic_op_32_completer NOT SUPPORTED
+[INFO  ] [ 15665.551029] [pcie_act_1] peqt atomic_op_64_completer NOT SUPPORTED
+[INFO  ] [ 15665.551033] [pcie_act_1] peqt atomic_op_routing NOT SUPPORTED
+[INFO  ] [ 15665.551036] [pcie_act_1] peqt device_id 29580
+[INFO  ] [ 15665.551049] [pcie_act_1] peqt kernel_driver amdgpu
+[INFO  ] [ 15665.551052] [pcie_act_1] peqt link_cap_max_speed NOT SUPPORTED
+[INFO  ] [ 15665.551054] [pcie_act_1] peqt link_cap_max_width NOT SUPPORTED
+[INFO  ] [ 15665.551056] [pcie_act_1] peqt link_stat_cur_speed NOT SUPPORTED
+[INFO  ] [ 15665.551058] [pcie_act_1] peqt link_stat_neg_width NOT SUPPORTED
+[INFO  ] [ 15665.551060] [pcie_act_1] peqt vendor_id 4098
+[RESULT] [ 15665.552328] [pcie_act_1] peqt true
+Thu Aug  1 10:31:01 UTC 2019
+peqt_3
+Thu Aug  1 10:31:01 UTC 2019
+peqt_4
+Thu Aug  1 10:31:01 UTC 2019
+peqt_5
+Thu Aug  1 10:31:01 UTC 2019
+peqt_6
+Thu Aug  1 10:31:01 UTC 2019
+peqt_7
+[INFO  ] [ 15665.666487] [pcie_act_1] peqt D0_Maximum_Power_12V NOT SUPPORTED
+[INFO  ] [ 15665.666523] [pcie_act_1] peqt D0_Maximum_Power_3_3V NOT SUPPORTED
+[INFO  ] [ 15665.666610] [pcie_act_1] peqt D0_Sustained_Power_12V NOT SUPPORTED
+[INFO  ] [ 15665.666667] [pcie_act_1] peqt D0_Sustained_Power_3_3V NOT SUPPORTED
+[INFO  ] [ 15665.666682] [pcie_act_1] peqt atomic_op_32_completer NOT SUPPORTED
+[INFO  ] [ 15665.666685] [pcie_act_1] peqt atomic_op_64_completer NOT SUPPORTED
+[INFO  ] [ 15665.666688] [pcie_act_1] peqt atomic_op_routing NOT SUPPORTED
+[INFO  ] [ 15665.666690] [pcie_act_1] peqt dev_serial_num NOT SUPPORTED
+[INFO  ] [ 15665.666693] [pcie_act_1] peqt device_id 29580
+[INFO  ] [ 15665.666708] [pcie_act_1] peqt kernel_driver amdgpu
+[INFO  ] [ 15665.666711] [pcie_act_1] peqt link_cap_max_speed NOT SUPPORTED
+[INFO  ] [ 15665.666785] [pcie_act_1] peqt link_cap_max_width NOT SUPPORTED
+[INFO  ] [ 15665.666789] [pcie_act_1] peqt link_stat_cur_speed NOT SUPPORTED
+[INFO  ] [ 15665.666791] [pcie_act_1] peqt link_stat_neg_width NOT SUPPORTED
+[INFO  ] [ 15665.666793] [pcie_act_1] peqt slot_physical_num NOT SUPPORTED
+[INFO  ] [ 15665.666795] [pcie_act_1] peqt slot_pwr_limit_value NOT SUPPORTED
+[INFO  ] [ 15665.666798] [pcie_act_1] peqt vendor_id 4098
+[RESULT] [ 15665.668077] [pcie_act_1] peqt false
+Thu Aug  1 10:31:01 UTC 2019
+peqt_8
+[INFO  ] [ 15665.691759] [pcie_act_1] peqt D0_Maximum_Power_12V NOT SUPPORTED
+[INFO  ] [ 15665.691797] [pcie_act_1] peqt D0_Maximum_Power_3_3V NOT SUPPORTED
+[INFO  ] [ 15665.691815] [pcie_act_1] peqt D0_Sustained_Power_12V NOT SUPPORTED
+[INFO  ] [ 15665.691831] [pcie_act_1] peqt D0_Sustained_Power_3_3V NOT SUPPORTED
+[INFO  ] [ 15665.691843] [pcie_act_1] peqt atomic_op_32_completer NOT SUPPORTED
+[INFO  ] [ 15665.691846] [pcie_act_1] peqt atomic_op_64_completer NOT SUPPORTED
+[INFO  ] [ 15665.691849] [pcie_act_1] peqt atomic_op_routing NOT SUPPORTED
+[INFO  ] [ 15665.691851] [pcie_act_1] peqt dev_serial_num NOT SUPPORTED
+[INFO  ] [ 15665.691854] [pcie_act_1] peqt device_id 29580
+[INFO  ] [ 15665.691868] [pcie_act_1] peqt kernel_driver amdgpu
+[INFO  ] [ 15665.691871] [pcie_act_1] peqt link_cap_max_speed NOT SUPPORTED
+[INFO  ] [ 15665.691960] [pcie_act_1] peqt link_cap_max_width NOT SUPPORTED
+[INFO  ] [ 15665.691965] [pcie_act_1] peqt link_stat_cur_speed NOT SUPPORTED
+[INFO  ] [ 15665.691998] [pcie_act_1] peqt link_stat_neg_width NOT SUPPORTED
+[INFO  ] [ 15665.692001] [pcie_act_1] peqt slot_physical_num NOT SUPPORTED
+[INFO  ] [ 15665.692003] [pcie_act_1] peqt slot_pwr_limit_value NOT SUPPORTED
+[INFO  ] [ 15665.692006] [pcie_act_1] peqt vendor_id 4098
+[RESULT] [ 15665.693297] [pcie_act_1] peqt false
+Thu Aug  1 10:31:01 UTC 2019
+peqt_9
+[INFO  ] [ 15665.716396] [pcie_act_1] peqt D0_Maximum_Power_12V NOT SUPPORTED
+[INFO  ] [ 15665.716436] [pcie_act_1] peqt D0_Maximum_Power_3_3V NOT SUPPORTED
+[INFO  ] [ 15665.716454] [pcie_act_1] peqt D0_Sustained_Power_12V NOT SUPPORTED
+[INFO  ] [ 15665.716472] [pcie_act_1] peqt D0_Sustained_Power_3_3V NOT SUPPORTED
+[INFO  ] [ 15665.716486] [pcie_act_1] peqt atomic_op_32_completer NOT SUPPORTED
+[INFO  ] [ 15665.716489] [pcie_act_1] peqt atomic_op_64_completer NOT SUPPORTED
+[INFO  ] [ 15665.716492] [pcie_act_1] peqt atomic_op_routing NOT SUPPORTED
+[INFO  ] [ 15665.716494] [pcie_act_1] peqt dev_serial_num NOT SUPPORTED
+[INFO  ] [ 15665.716497] [pcie_act_1] peqt device_id 29580
+[INFO  ] [ 15665.716512] [pcie_act_1] peqt kernel_driver amdgpu
+[INFO  ] [ 15665.716514] [pcie_act_1] peqt link_cap_max_speed NOT SUPPORTED
+[INFO  ] [ 15665.716606] [pcie_act_1] peqt link_cap_max_width NOT SUPPORTED
+[INFO  ] [ 15665.716611] [pcie_act_1] peqt link_stat_cur_speed NOT SUPPORTED
+[INFO  ] [ 15665.716675] [pcie_act_1] peqt link_stat_neg_width NOT SUPPORTED
+[INFO  ] [ 15665.716679] [pcie_act_1] peqt slot_physical_num NOT SUPPORTED
+[INFO  ] [ 15665.716681] [pcie_act_1] peqt slot_pwr_limit_value NOT SUPPORTED
+[INFO  ] [ 15665.717091] [pcie_act_1] peqt vendor_id 4098
+[RESULT] [ 15665.718454] [pcie_act_1] peqt false
+Thu Aug  1 10:31:01 UTC 2019
+peqt_10
+Thu Aug  1 10:31:01 UTC 2019
+peqt_11
+Thu Aug  1 10:31:01 UTC 2019
+peqt_12
+Thu Aug  1 10:31:01 UTC 2019
+peqt_13
+Thu Aug  1 10:31:01 UTC 2019
+peqt_14
+Thu Aug  1 10:31:01 UTC 2019
+peqt_15
+Thu Aug  1 10:31:02 UTC 2019
+peqt_16
+Thu Aug  1 10:31:02 UTC 2019
+peqt_17
+Thu Aug  1 10:31:02 UTC 2019
+peqt_18
+[INFO  ] [ 15665.941475] [pcie_act_1] peqt bus_id 4
+[INFO  ] [ 15665.941496] [pcie_act_1] peqt slot_physical_num NOT SUPPORTED
+[RESULT] [ 15665.943026] [pcie_act_1] peqt true
+Thu Aug  1 10:31:02 UTC 2019
+peqt_regex_no_match
+Thu Aug  1 10:31:02 UTC 2019
+peqt_wrong_regex
+Thu Aug  1 10:31:02 UTC 2019

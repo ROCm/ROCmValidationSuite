@@ -1,0 +1,90 @@
+pebb_test1
+[RESULT] [ 15595.66437 ] [h2d-sequential-51MB] pcie-bandwidth 0 1 63939  distance:20 PCIe:20 (R)
+[INFO  ] [ 15595.866515] [h2d-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.292 GBps
+[INFO  ] [ 15596.666315] [h2d-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.185 GBps
+[INFO  ] [ 15597.466023] [h2d-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.208 GBps
+[INFO  ] [ 15598.265478] [h2d-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.182 GBps
+[INFO  ] [ 15599.64580 ] [h2d-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.223 GBps
+[INFO  ] [ 15599.864469] [h2d-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.204 GBps
+[RESULT] [ 15600.69551 ] [h2d-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.216 GBps  duration: 1.713632 sec
+Thu Aug  1 10:29:56 UTC 2019
+pebb_test2
+[RESULT] [ 15600.165128] [d2h-sequential-51MB] pcie-bandwidth 0 1 63939  distance:20 PCIe:20 (R)
+[INFO  ] [ 15600.964996] [d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.043 GBps
+[INFO  ] [ 15601.764585] [d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.123 GBps
+[INFO  ] [ 15602.564333] [d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.110 GBps
+[INFO  ] [ 15603.364153] [d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.109 GBps
+[INFO  ] [ 15604.163540] [d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  12.673 GBps
+[INFO  ] [ 15604.963141] [d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  12.665 GBps
+[RESULT] [ 15605.172374] [d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  12.936 GBps  duration: 1.721382 sec
+Thu Aug  1 10:30:01 UTC 2019
+pebb_test3
+[RESULT] [ 15605.270288] [h2d-d2h-sequential-51MB] pcie-bandwidth 0 1 63939  distance:20 PCIe:20 (R)
+[INFO  ] [ 15606.70441 ] [h2d-d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  23.687 GBps
+[INFO  ] [ 15606.869913] [h2d-d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.161 GBps
+[INFO  ] [ 15607.669095] [h2d-d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.166 GBps
+[INFO  ] [ 15608.468671] [h2d-d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.195 GBps
+[INFO  ] [ 15609.267729] [h2d-d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.235 GBps
+[INFO  ] [ 15610.67638 ] [h2d-d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.191 GBps
+[RESULT] [ 15610.282655] [h2d-d2h-sequential-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.109 GBps  duration: 0.878148 sec
+Thu Aug  1 10:30:06 UTC 2019
+pebb_test4
+[RESULT] [ 15610.382654] [h2d-parallel-xMB] pcie-bandwidth 0 1 63939  distance:20 PCIe:20 (R)
+[INFO  ] [ 15611.182243] [h2d-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.198 GBps
+[INFO  ] [ 15611.982411] [h2d-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.202 GBps
+[INFO  ] [ 15612.781989] [h2d-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.191 GBps
+[INFO  ] [ 15613.581474] [h2d-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.188 GBps
+[INFO  ] [ 15614.381095] [h2d-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.283 GBps
+[INFO  ] [ 15615.180503] [h2d-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.248 GBps
+[RESULT] [ 15615.396683] [h2d-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.217 GBps  duration: 1.493816 sec
+Thu Aug  1 10:30:11 UTC 2019
+pebb_test5
+[RESULT] [ 15615.498778] [d2h-parallel-xMB] pcie-bandwidth 0 1 63939  distance:20 PCIe:20 (R)
+[INFO  ] [ 15616.299121] [d2h-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.309 GBps
+[INFO  ] [ 15617.98591 ] [d2h-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.313 GBps
+[INFO  ] [ 15617.898327] [d2h-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.311 GBps
+[INFO  ] [ 15618.697579] [d2h-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.310 GBps
+[INFO  ] [ 15619.497051] [d2h-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.311 GBps
+[INFO  ] [ 15620.296171] [d2h-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.313 GBps
+[RESULT] [ 15620.505320] [d2h-parallel-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.311 GBps  duration: 1.356919 sec
+Thu Aug  1 10:30:16 UTC 2019
+pebb_test6
+[RESULT] [ 15620.608758] [h2d-d2h-xMB] pcie-bandwidth 0 1 63939  distance:20 PCIe:20 (R)
+[INFO  ] [ 15621.408674] [h2d-d2h-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.013 GBps
+[INFO  ] [ 15622.208649] [h2d-d2h-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.300 GBps
+[INFO  ] [ 15623.8791  ] [h2d-d2h-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.298 GBps
+[INFO  ] [ 15623.808187] [h2d-d2h-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.297 GBps
+[INFO  ] [ 15624.608177] [h2d-d2h-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.283 GBps
+[INFO  ] [ 15625.407644] [h2d-d2h-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.308 GBps
+[RESULT] [ 15625.662060] [h2d-d2h-xMB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  24.256 GBps  duration: 0.865773 sec
+Thu Aug  1 10:30:21 UTC 2019
+pebb_test7
+[RESULT] [ 15625.759104] [h2d-b2b-51MB] pcie-bandwidth 0 1 63939  distance:20 PCIe:20 (R)
+[INFO  ] [ 15626.559026] [h2d-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.402 GBps
+[INFO  ] [ 15627.358683] [h2d-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.432 GBps
+[INFO  ] [ 15628.158310] [h2d-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.435 GBps
+[INFO  ] [ 15628.957804] [h2d-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.441 GBps
+[INFO  ] [ 15629.757337] [h2d-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.429 GBps
+[INFO  ] [ 15630.557451] [h2d-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.443 GBps
+[RESULT] [ 15630.762007] [h2d-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: false  12.424 GBps  duration: 4.974138 sec
+Thu Aug  1 10:30:26 UTC 2019
+pebb_test8
+[RESULT] [ 15630.862140] [d2h-b2b-51MB] pcie-bandwidth 0 1 63939  distance:20 PCIe:20 (R)
+[INFO  ] [ 15631.661825] [d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.250 GBps
+[INFO  ] [ 15632.461126] [d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.245 GBps
+[INFO  ] [ 15633.260293] [d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.244 GBps
+[INFO  ] [ 15634.59619 ] [d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.247 GBps
+[INFO  ] [ 15634.858791] [d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.245 GBps
+[INFO  ] [ 15635.658011] [d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.249 GBps
+[RESULT] [ 15635.864797] [d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: false  d2h: true  13.246 GBps  duration: 4.971325 sec
+Thu Aug  1 10:30:32 UTC 2019
+pebb_test9
+[RESULT] [ 15635.966269] [h2d-d2h-b2b-51MB] pcie-bandwidth 0 1 63939  distance:20 PCIe:20 (R)
+[INFO  ] [ 15636.766663] [h2d-d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  23.051 GBps
+[INFO  ] [ 15637.566380] [h2d-d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  22.985 GBps
+[INFO  ] [ 15638.365937] [h2d-d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  22.890 GBps
+[INFO  ] [ 15639.165517] [h2d-d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  22.882 GBps
+[INFO  ] [ 15639.965340] [h2d-d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  22.877 GBps
+[INFO  ] [ 15640.765087] [h2d-d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  22.893 GBps
+[RESULT] [ 15640.967092] [h2d-d2h-b2b-51MB] pcie-bandwidth  [1/1] 0 63939  h2d: true  d2h: true  22.927 GBps  duration: 4.807248 sec
+Thu Aug  1 10:30:37 UTC 2019
