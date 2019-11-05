@@ -18,5 +18,3 @@ echo 'peqt_17';sudo ./rvs -c conf/peqt_17.conf -d 3;date
 echo 'peqt_18';sudo ./rvs -c conf/peqt_18.conf -d 3;date
 echo 'peqt_regex_no_match';sudo ./rvs -c conf/peqt_regex_no_match.conf -d 3;date
 echo 'peqt_wrong_regex';sudo ./rvs -c conf/peqt_wrong_regex.conf -d 3;date 
-
-

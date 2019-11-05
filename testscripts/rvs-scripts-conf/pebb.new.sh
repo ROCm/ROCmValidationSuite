@@ -1,9 +1,0 @@
-echo 'pebb_test1';sudo ./rvs -c conf/pebb_test1.conf -d 3 && date
-echo 'pebb_test2';sudo ./rvs -c conf/pebb_test2.conf -d 3 && date
-echo 'pebb_test3';sudo ./rvs -c conf/pebb_test3.conf -d 3 && date
-echo 'pebb_test4';sudo ./rvs -c conf/pebb_test4.conf -d 3 && date
-echo 'pebb_test5';sudo ./rvs -c conf/pebb_test5.conf -d 3 && date
-echo 'pebb_test6';sudo ./rvs -c conf/pebb_test6.conf -d 3 && date
-echo 'pebb_test7';sudo ./rvs -c conf/pebb_test7.conf -d 3 && date
-echo 'pebb_test8';sudo ./rvs -c conf/pebb_test8.conf -d 3 && date
-echo 'pebb_test9';sudo ./rvs -c conf/pebb_test9.conf -d 3 && date
