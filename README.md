@@ -41,19 +41,6 @@ This section explains how to get and compile current development stream of RVS.
     cmake ./ -B./build
     make -C ./build
 
-_**Note:**_
-
-- To build RVS with local copy of `rocm_smi_lib64`  and rocBLAS, add `-DRVS_ROCMSMI=1` and `-DRVS_ROCBLAS=1` to the cmake command
-Example:
-```
-    cmake -DRVS_ROCMSMI=1 -DRVS_ROCBLAS=1 ./ -B../build
-```
-_**Note:**_ for more details on how to speed up your build and install rocBLAS
-localy, follow link [Building local rocBLAS](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite/wiki/Building-local-rocBLAS)
-
-- To build RVS without tests insert  `-DRVS_BUILD_TESTS:BOOL=FALSE` define
-- Default RVS will use already installed copy of rocblas and rocm_smi64
-
 ### Build package:
 
      cd ./build
