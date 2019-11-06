@@ -10,36 +10,49 @@ The function of each module see this [link](./FEATURES.md).
 In order to build RVS from source please install prerequisites by following
 this [link](./PREREQUISITES.md).
 
+Ubuntu : sudo apt-get -y update &&  sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git
+
+CentOS : yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git
+
+## Install ROCm stack, rocblas and rocm_smi64
+Install ROCm stack for Ubuntu/CentOS, Refer https://github.com/RadeonOpenCompute/ROCm
+ 
+Install rocBLAS and rocm_smi64 : 
+   Ubuntu : sudo apt-get install rocblas rocm_smi64
+   
+   CentOS : sudo yum install rocblas rocm_smi64
+
+_**Note:**_
+If  rocm_smi64 is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
+
+Ubuntu : sudo dpkg -r rocm_smi64 && sudo apt install rocm_smi64
+
+CentOS : sudo rpm -e rocm_smi64 && sudo yum install rocm_smi64
+
 ## Building from Source
 This section explains how to get and compile current development stream of RVS.
 
 ### Clone repository
-
-    cd /your/work/bench/folder
     git clone https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.git
 
 ### Configure and build RVS:
 
     cd ROCmValidationSuite
-
     cmake ./ -B./build
     make -C ./build
 
 _**Note:**_
 
-- To use `rocm_smi_lib64` library already installed on your system add `-DRVS_ROCMSMI=0`
-to the cmake command
-
-- To build RVS with local copy of rocBLAS add `-DRVS_ROCBLAS=1` to the cmake command
-
-- To build RVS without tests insert  `-DRVS_BUILD_TESTS:BOOL=FALSE` define
-
+- To build RVS with local copy of `rocm_smi_lib64`  and rocBLAS, add `-DRVS_ROCMSMI=1` and `-DRVS_ROCBLAS=1` to the cmake command
 Example:
 ```
-    cmake -DRVS_ROCMSMI=0 -DRVS_ROCBLAS=1 ./ -B../build
+    cmake -DRVS_ROCMSMI=1 -DRVS_ROCBLAS=1 ./ -B../build
 ```
 _**Note:**_ for more details on how to speed up your build and install rocBLAS
 localy, follow link [Building local rocBLAS](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite/wiki/Building-local-rocBLAS)
+
+- To build RVS without tests insert  `-DRVS_BUILD_TESTS:BOOL=FALSE` define
+- Default RVS will use already installed copy of rocblas and rocm_smi64
 
 ### Build package:
 
@@ -49,6 +62,10 @@ localy, follow link [Building local rocBLAS](https://github.com/ROCm-Developer-T
 **Note:**_ based on your OS, only DEB or RPM package will be built. You may
 ignore an error for the unrelated configuration
 
+### Install package:
+
+    Ubuntu : sudo dpkg -i rocm-validation-suite*.deb
+    CentOS : sudo rpm -i --replacefiles install rocm-validation-suite*.rpm
 
 ## Running RVS
 
@@ -56,31 +73,7 @@ ignore an error for the unrelated configuration
 
     cd ./build/bin
     sudo ./rvs -d 3
-
-### Running without install
-
-In general, it is possible to run RVS by simply coping all relevant files from
-`build/bin` folder onto another location (e.g., Docker image). Please note that
-if RVS was built using local copy of `rocm_smi_lib`  you will also need to copy
-`rocm_smi_lib64.so`
-
-In that case, you may run RVS using this command:
-
-    sudo LD_LIBRARY_PATH=<_rocm_smi_lib_path> ./rvs ...
-
-_**Note:**_ it is important to specify path to `rocm_smi_lib64.so` until this
-library is fully included into ROCm distribution.
-
-### Install package:
-
-    sudo dpkg -i rocm-validation-suite.0.0.23
-    sudo ldconfig
-
-_**Note:**_ it is important to run `ldconfig` after install in order to refresh
-dynamic linker cache.
-
-
-For CentOS specific instructions see this [link](./CentOS.md).
+    sudo ./rvsqa.new.sh  ; It will run complete rvs test suite
 
 
 ## Regression
