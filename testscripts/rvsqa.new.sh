@@ -1,3 +1,4 @@
+echo "=========================Starting RVS Suite========================="
 
 echo "===========================gpup========================="
 sudo ./gpup.new.sh 2>&1 | tee gpup.txt
@@ -23,3 +24,5 @@ echo "===========================smqt========================="
 sudo ./smqt.new.sh  2>&1 | tee smqt.txt
 echo "===========================ttf========================="
 sudo ./ttf.new.sh  2>&1 | tee ttf.txt
+
+echo "=========================RVS Suite completed, check txt for output============"
