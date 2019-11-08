@@ -27,7 +27,7 @@
 
 #define __HIP_PLATFORM_HCC__
 
-#include "include/rocblas.h"
+#include "rocblas.h"
 #include "include/hip/hip_runtime.h"
 #include "include/hip/hip_runtime_api.h"
 
