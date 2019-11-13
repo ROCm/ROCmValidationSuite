@@ -1055,6 +1055,9 @@ int rvs::hsa::GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
       case HSA_AMD_LINK_INFO_TYPE_INFINBAND:
         rvslinkinfo.strtype = "InfiniBand";
         break;
+      case HSA_AMD_LINK_INFO_TYPE_XGMI:
+        rvslinkinfo.strtype = "xGMI";
+        break;
       default:
         RVSHSATRACE_
         rvslinkinfo.strtype = "unknown-"
