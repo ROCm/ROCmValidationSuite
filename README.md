@@ -69,6 +69,9 @@ This section explains how to get and compile current development stream of RVS.
  If OS is Ubuntu and SLES, use cmake
     
      cmake ./ -B./build
+     
+     make -C ./build
+     
 If OS is CentOS and RHEL, use cmake3
 
     cmake3 ./ -B./build
