@@ -7,27 +7,55 @@ The function of each module see this [link](./FEATURES.md).
 
 ## Prerequisites
 
-In order to build RVS from source please install prerequisites by following
-this [link](./PREREQUISITES.md).
+Ubuntu : 
+      
+        sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git
 
-Ubuntu : sudo apt-get -y update &&  sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git
-
-CentOS : yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git
+ CentOS : 
+        
+        sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ 
+ 
+ RHEL : 
+        
+        sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ 
+        
+        wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
+        
+        sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
+		
+ SLES :  
+		    
+        sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
+       
+		      sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
+       
+		      sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
 
 ## Install ROCm stack, rocblas and rocm_smi64
 Install ROCm stack for Ubuntu/CentOS, Refer https://github.com/RadeonOpenCompute/ROCm
  
 Install rocBLAS and rocm_smi64 : 
-   Ubuntu : sudo apt-get install rocblas rocm_smi64
+
+   Ubuntu : 
    
-   CentOS : sudo yum install rocblas rocm_smi64
+          sudo apt-get install rocblas rocm_smi64
+   
+   CentOS & RHEL : 
+            
+            sudo yum install rocblas rocm_smi64
+   
+   SUSE : 
+         
+            sudo zypper install rocblas rocm_smi64
 
 _**Note:**_
 If  rocm_smi64 is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
 
 Ubuntu : sudo dpkg -r rocm_smi64 && sudo apt install rocm_smi64
 
-CentOS : sudo rpm -e rocm_smi64 && sudo yum install rocm_smi64
+CentOS & RHEL : sudo rpm -e rocm_smi64 && sudo yum install rocm_smi64
+
+SUSE : sudo rpm -e rocm_smi64 && sudo zypper install rocm_smi64
 
 ## Building from Source
 This section explains how to get and compile current development stream of RVS.
@@ -38,12 +66,19 @@ This section explains how to get and compile current development stream of RVS.
 ### Configure and build RVS:
 
     cd ROCmValidationSuite
-    cmake ./ -B./build
+ If OS is Ubuntu and SLES, use cmake
+    
+     cmake ./ -B./build
+If OS is CentOS and RHEL, use cmake3
+
+    cmake3 ./ -B./build
+ 
     make -C ./build
 
 ### Build package:
 
      cd ./build
+     
      make package
 
 **Note:**_ based on your OS, only DEB or RPM package will be built. You may
@@ -52,7 +87,7 @@ ignore an error for the unrelated configuration
 ### Install package:
 
     Ubuntu : sudo dpkg -i rocm-validation-suite*.deb
-    CentOS : sudo rpm -i --replacefiles install rocm-validation-suite*.rpm
+    CentOS & RHEL & SUSE : sudo rpm -i --replacefiles rocm-validation-suite*.rpm
 
 ## Running RVS
 
