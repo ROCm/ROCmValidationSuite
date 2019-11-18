@@ -76,7 +76,6 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "hip_hcc")
-set(ROCBLAS_INC_DIR "/opt/rocm/rocblas/include/")
 
 # Determine Roc Runtime header files are accessible
 if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)
