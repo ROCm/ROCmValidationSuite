@@ -5,6 +5,8 @@ The RVS is a collection of tests, benchmarks and qualification tools each target
 
 The function of each module see this [link](./FEATURES.md).
 
+Examples and about config files [link](./doc/ugsrc/ug1main.md).
+
 ## Prerequisites
 
 Ubuntu : 
@@ -27,9 +29,9 @@ Ubuntu :
 		    
         sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
        
-		      sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
+	sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
        
-		      sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
+	sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
 
 ## Install ROCm stack, rocblas and rocm_smi64
 Install ROCm stack for Ubuntu/CentOS, Refer https://github.com/RadeonOpenCompute/ROCm
@@ -42,11 +44,11 @@ Install rocBLAS and rocm_smi64 :
    
    CentOS & RHEL : 
             
-            sudo yum install rocblas rocm_smi64
+          sudo yum install rocblas rocm_smi64
    
    SUSE : 
          
-            sudo zypper install rocblas rocm_smi64
+          sudo zypper install rocblas rocm_smi64
 
 _**Note:**_
 If  rocm_smi64 is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
