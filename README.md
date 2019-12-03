@@ -19,19 +19,19 @@ Ubuntu :
  
  RHEL : 
         
-        sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ 
+       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ 
         
-        wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
+       wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
         
-        sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
+       sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
 		
  SLES :  
 		    
-        sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
+       sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
        
-	sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
+       sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
        
-	sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
+       sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
 
 ## Install ROCm stack, rocblas and rocm_smi64
 Install ROCm stack for Ubuntu/CentOS, Refer https://github.com/RadeonOpenCompute/ROCm
@@ -40,15 +40,15 @@ Install rocBLAS and rocm_smi64 :
 
    Ubuntu : 
    
-          sudo apt-get install rocblas rocm_smi64
+           sudo apt-get install rocblas rocm_smi64
    
    CentOS & RHEL : 
             
-          sudo yum install rocblas rocm_smi64
+           sudo yum install rocblas rocm_smi64
    
    SUSE : 
          
-          sudo zypper install rocblas rocm_smi64
+           sudo zypper install rocblas rocm_smi64
 
 _**Note:**_
 If  rocm_smi64 is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
