@@ -96,7 +96,7 @@ if(DEFINED RVS_ROCMSMI)
     RETURN()
     endif()
 
-    if(NOT EXISTS "${ROCBLAS_LIB_DIR}/${ROCBLAS_LIB}.so")
+    if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
       message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
       RETURN()
     endif()
@@ -104,11 +104,10 @@ if(DEFINED RVS_ROCMSMI)
 endif()
 
 
-if(NOT EXISTS "${ROCR_LIB_DIR}/${HIP_HCC_LIB}.so")
+if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
   message("ERROR: ROC Runtime libraries can't be found under specified path. Please set ROCR_LIB_DIR path. Current value is : " ${ROCR_LIB_DIR})
   RETURN()
 endif()
-
 
 ## define include directories
 include_directories(./ ../ ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
