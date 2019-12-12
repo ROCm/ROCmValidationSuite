@@ -92,7 +92,7 @@ ignore an error for the unrelated configuration
 ### Install package:
 
     Ubuntu : sudo dpkg -i rocm-validation-suite*.deb
-    CentOS & RHEL & SUSE : sudo rpm -i --replacefiles rocm-validation-suite*.rpm
+    CentOS & RHEL & SUSE : sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
 ## Running RVS
 
