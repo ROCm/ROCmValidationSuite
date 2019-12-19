@@ -93,7 +93,7 @@ function ( get_version DEFAULT_VERSION_STRING )
 
     if ( GIT )
 
-        execute_process ( COMMAND git tag --points-at HEAD
+        execute_process ( COMMAND git describe --dirty --long --match [0-9]*
                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                           OUTPUT_VARIABLE GIT_TAG_STRING
                           OUTPUT_STRIP_TRAILING_WHITESPACE
