@@ -497,5 +497,6 @@ endif()  # if(RVS_ROCMSMI EQUAL 1)
 
 #add_test(NAME test1 COMMAND rvs)
 
+set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
 include (CPack)
