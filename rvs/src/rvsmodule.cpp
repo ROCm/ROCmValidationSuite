@@ -355,7 +355,7 @@ int rvs::module::terminate() {
   for (auto it = rvs::module::modulemap.begin();
        it != rvs::module::modulemap.end(); it++) {
     it->second->terminate_internal();
-    dlclose(it->second->psolib);
+    //dlclose(it->second->psolib);
     delete it->second;
   }
 
