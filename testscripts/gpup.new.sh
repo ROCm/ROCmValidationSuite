@@ -1,4 +1,5 @@
 date
+./conf/deviceid.sh "conf/gpup_*.conf"
 echo 'gpup_1';sudo ./rvs -c conf/gpup_1.conf -d 3; date
 echo 'gpup_2';sudo ./rvs -c conf/gpup_2.conf -d 3; date
 echo 'gpup_3';sudo ./rvs -c conf/gpup_3.conf -d 3; date
