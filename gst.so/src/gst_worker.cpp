@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <string>
 #include <memory>
+#include <iostream>
 
 #include "include/rvs_blas.h"
 #include "include/rvs_module.h"
@@ -89,11 +90,20 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
         return;
     }
 
-    // generate random matrix & copy it to the GPU
-    gpu_blas->generate_random_matrix_data();
-    if (!copy_matrix) {
+    if(gst_ops_type == "sgemm") {
+        // generate random matrix & copy it to the GPU
+        gpu_blas->generate_random_matrix_data();
         // copy matrix only once
         if (!gpu_blas->copy_data_to_gpu()) {
+            *error = 1;
+            *err_description = GST_BLAS_MEMCPY_ERROR;
+        }
+    }
+    if(gst_ops_type == "dgemm") {
+        // generate random matrix & copy it to the GPU
+        gpu_blas->generate_random_dbl_matrix_data();
+        // copy matrix only once
+        if (!gpu_blas->copy_dbl_data_to_gpu()) {
             *error = 1;
             *err_description = GST_BLAS_MEMCPY_ERROR;
         }
@@ -129,17 +139,37 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
             break;
 
         if (copy_matrix) {
-            // copy matrix before each GEMM
-            if (!gpu_blas->copy_data_to_gpu()) {
-                *error = 1;
-                *err_description = GST_BLAS_MEMCPY_ERROR;
-                return;
+
+            if(gst_ops_type == "sgemm") {
+                // copy matrix before each GEMM
+                if (!gpu_blas->copy_data_to_gpu()) {
+                    *error = 1;
+                    *err_description = GST_BLAS_MEMCPY_ERROR;
+                    return;
+                }
+            }
+
+            if(gst_ops_type == "dgemm") {
+                // copy matrix before each GEMM
+                if (!gpu_blas->copy_dbl_data_to_gpu()) {
+                    *error = 1;
+                    *err_description = GST_BLAS_MEMCPY_ERROR;
+                    return;
+                }
             }
         }
 
         // run GEMM & wait for completion
-        if (!gpu_blas->run_blass_gemm())
-            continue;  // failed to run the current SGEMM
+        if(gst_ops_type == "sgemm") {
+             if (!gpu_blas->run_blass_gemm())
+                        continue;  // failed to run the current SGEMM
+        }
+
+        // run GEMM & wait for completion
+        if(gst_ops_type == "dgemm") {
+             if (!gpu_blas->run_blass_dgemm())
+                        continue;  // failed to run the current SGEMM
+        }
 
         while (!gpu_blas->is_gemm_op_complete()) {}
 
@@ -228,21 +258,44 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
         gst_last_sgemm_start_time = std::chrono::system_clock::now();
 
         if (copy_matrix) {
-            // copy matrix before each GEMM
-            if (!gpu_blas->copy_data_to_gpu()) {
-                *error = 1;
-                *err_description = GST_BLAS_MEMCPY_ERROR;
-                return false;
+            if(gst_ops_type == "sgemm") {
+                // copy matrix before each GEMM
+                if (!gpu_blas->copy_data_to_gpu()) {
+                    *error = 1;
+                    *err_description = GST_BLAS_MEMCPY_ERROR;
+                    return false;
+                }
+            }
+
+            if(gst_ops_type == "dgemm") {
+                // copy matrix before each GEMM
+                if (!gpu_blas->copy_dbl_data_to_gpu()) {
+                    *error = 1;
+                    *err_description = GST_BLAS_MEMCPY_ERROR;
+                    return false;
+                }
             }
         }
 
-        // run GEMM & wait for completion
-        if (!gpu_blas->run_blass_gemm())
-            continue;  // failed to run the current SGEMM
+        if(gst_ops_type == "sgemm") {
+            // run GEMM & wait for completion
+            if (!gpu_blas->run_blass_gemm())
+                continue;  // failed to run the current SGEMM
+        }
+
+        if(gst_ops_type == "dgemm") {
+            // run GEMM & wait for completion
+            if (!gpu_blas->run_blass_dgemm())
+                continue;  // failed to run the current SGEMM
+        }
+
         while (!gpu_blas->is_gemm_op_complete()) {}
+
         gst_last_sgemm_end_time = std::chrono::system_clock::now();
+
         millis_last_sgemm =
                 time_diff(gst_last_sgemm_end_time, gst_last_sgemm_start_time);
+
         if (static_cast<double>(
                 (1000 * gpu_blas->gemm_gflop_count()) /
                     target_stress) <

@@ -78,6 +78,8 @@ class gst_action: public rvs::actionbase {
     float gst_tolerance;
     //! matrix size for SGEMM
     uint64_t gst_matrix_size;
+    //type of matrix operation
+    std::string gst_ops_type;
 
     // configuration properties getters
 

@@ -55,6 +55,7 @@ using std::regex;
 #define RVS_CONF_TARGET_STRESS_KEY      "target_stress"
 #define RVS_CONF_TOLERANCE_KEY          "tolerance"
 #define RVS_CONF_MATRIX_SIZE_KEY        "matrix_size"
+#define RVS_CONF_GST_OPS_TYPE           "ops_type"
 
 #define MODULE_NAME                     "gst"
 #define MODULE_NAME_CAPS                "GST"
@@ -65,6 +66,7 @@ using std::regex;
 #define GST_DEFAULT_TOLERANCE           0.1
 #define GST_DEFAULT_COPY_MATRIX         true
 #define GST_DEFAULT_MATRIX_SIZE         5760
+#define GST_DEFAULT_OPS_TYPE            "sgemm"
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0
@@ -123,6 +125,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             workers[i].set_target_stress(gst_target_stress);
             workers[i].set_tolerance(gst_tolerance);
             workers[i].set_matrix_size(gst_matrix_size);
+            workers[i].set_gst_ops_type(gst_ops_type);
             i++;
         }
 
@@ -213,6 +216,14 @@ bool gst_action::get_all_gst_config_keys(void) {
       GST_DEFAULT_COPY_MATRIX)) {
         msg = "invalid '" +
         std::string(RVS_CONF_COPY_MATRIX_KEY) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get<std::string>(RVS_CONF_GST_OPS_TYPE, &gst_ops_type,
+      GST_DEFAULT_OPS_TYPE)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_GST_OPS_TYPE) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }

@@ -100,6 +100,10 @@ class GSTWorker : public rvs::ThreadBase {
 
     //! sets the copy_matrix (true = the matrix will be copied to GPU each
     //! time a new SGEMM will run, false = the matrix will be copied only once)
+    void set_gst_ops_type(std::string _ops_type) { gst_ops_type = _ops_type; }
+ 
+    //! sets the copy_matrix (true = the matrix will be copied to GPU each
+    //! time a new SGEMM will run, false = the matrix will be copied only once)
     void set_copy_matrix(bool _copy_matrix) { copy_matrix = _copy_matrix; }
     //! returns the copy_matrix value
     bool get_copy_matrix(void) { return copy_matrix; }
@@ -172,6 +176,8 @@ class GSTWorker : public rvs::ThreadBase {
     float tolerance;
     //! SGEMM matrix size
     uint64_t matrix_size;
+    //Type of operation
+    std::string gst_ops_type;
     //! actual ramp time in case the GPU achieves the given target_stress Gflops
     uint64_t ramp_actual_time;
     //! rvs_blas pointer
