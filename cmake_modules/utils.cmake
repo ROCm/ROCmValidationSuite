@@ -93,14 +93,13 @@ function ( get_version DEFAULT_VERSION_STRING )
 
     if ( GIT )
 
-        execute_process ( COMMAND git describe --dirty --long --match [0-9]*
+        execute_process ( COMMAND git describe --abbrev=0 --tags
                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                           OUTPUT_VARIABLE GIT_TAG_STRING
                           OUTPUT_STRIP_TRAILING_WHITESPACE
                           RESULT_VARIABLE RESULT )
 
         if ( ${RESULT} EQUAL 0 )
-
             parse_version ( ${GIT_TAG_STRING} )
 
         endif ()
@@ -110,7 +109,11 @@ function ( get_version DEFAULT_VERSION_STRING )
     set( VERSION_STRING "${VERSION_STRING}" PARENT_SCOPE )
     set( VERSION_MAJOR  "${VERSION_MAJOR}" PARENT_SCOPE )
     set( VERSION_MINOR  "${VERSION_MINOR}" PARENT_SCOPE )
-    set( VERSION_PATCH  "${VERSION_PATCH}" PARENT_SCOPE )
+    if (DEFINED ENV{ROCM_LIBPATCH_VERSION})
+        set (VERSION_PATCH $ENV{ROCM_LIBPATCH_VERSION} PARENT_SCOPE )
+    else ()
+        set (VERSION_PATCH ${VERSION_PATCH} PARENT_SCOPE )
+    endif()
     set( VERSION_BUILD  "${VERSION_BUILD}" PARENT_SCOPE )
 
 endfunction()
