@@ -48,7 +48,7 @@ using std::vector;
 using std::map;
 using std::regex;
 
-#define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_interval"
+#define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_level"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
 #define RVS_CONF_MAX_VIOLATIONS_KEY     "max_violations"
 #define RVS_CONF_COPY_MATRIX_KEY        "copy_matrix"
@@ -65,7 +65,7 @@ using std::regex;
 #define GST_DEFAULT_MAX_VIOLATIONS      0
 #define GST_DEFAULT_TOLERANCE           0.1
 #define GST_DEFAULT_COPY_MATRIX         true
-#define GST_DEFAULT_MATRIX_SIZE         5760
+#define GST_DEFAULT_MATRIX_SIZE         5076
 #define GST_DEFAULT_OPS_TYPE            "sgemm"
 
 #define RVS_DEFAULT_PARALLEL            false
@@ -130,12 +130,14 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
         }
 
         if (property_parallel) {
-            for (i = 0; i < gst_gpus_device_index.size(); i++)
+            for (i = 0; i < gst_gpus_device_index.size(); i++) {
                 workers[i].start();
+            }
 
             // join threads
-            for (i = 0; i < gst_gpus_device_index.size(); i++)
+            for (i = 0; i < gst_gpus_device_index.size(); i++) {
                 workers[i].join();
+            }
         } else {
             for (i = 0; i < gst_gpus_device_index.size(); i++) {
                 workers[i].start();
@@ -444,18 +446,13 @@ int gst_action::run(void) {
     if (property.find("cli.-j") != property.end())
         bjson = true;
 
+    //Get all common config keys
     if (!get_all_common_config_keys())
         return -1;
+
+    //Get all gst config keys
     if (!get_all_gst_config_keys())
         return -1;
-
-    if (property_duration > 0 && (property_duration < gst_ramp_interval)) {
-        msg = "'" +
-            std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
-            std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "'";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
-    }
 
     return get_all_selected_gpus();
 }

@@ -267,7 +267,8 @@ bool rvs_blas::is_gemm_op_complete(void) {
  */
 bool rvs_blas::run_blass_dgemm(void) {
     if (!is_error) {
-        double alpha = 1.999999999999, beta = 0.999999;
+        double alpha = 1.1, beta = 0.9;
+        hipDeviceSynchronize();
         if (rocblas_dgemm(blas_handle, transa, transb,
                     rvs_blas::m, rvs_blas::n, rvs_blas::k,
                     &alpha, ddbla, rvs_blas::m,
@@ -278,6 +279,7 @@ bool rvs_blas::run_blass_dgemm(void) {
         } else {
             return true;
         }
+        hipDeviceSynchronize();
     } else {
         return false;
     }
@@ -291,6 +293,7 @@ bool rvs_blas::run_blass_dgemm(void) {
 bool rvs_blas::run_blass_gemm(void) {
     if (!is_error) {
         float alpha = 1.1, beta = 0.9;
+        hipDeviceSynchronize();
         if (rocblas_sgemm(blas_handle, transa, transb,
                     rvs_blas::m, rvs_blas::n, rvs_blas::k,
                     &alpha, da, rvs_blas::m,

@@ -79,10 +79,10 @@ class GSTWorker : public rvs::ThreadBase {
 
     //! sets the stress test ramp duration
     void set_ramp_interval(uint64_t _ramp_interval) {
-        ramp_interval = _ramp_interval;
+        ramp_level = _ramp_interval;
     }
     //! returns the stress test ramp duration
-    uint64_t get_ramp_interval(void) { return ramp_interval; }
+    uint64_t get_ramp_interval(void) { return ramp_level; }
 
     //! sets the time interval at which the module reports the average GFlops
     void set_log_interval(uint64_t _log_interval) {
@@ -162,7 +162,7 @@ class GSTWorker : public rvs::ThreadBase {
     //! stress test run duration
     uint64_t run_duration_ms;
     //! stress test ramp duration
-    uint64_t ramp_interval;
+    uint64_t ramp_level;
     //! time interval at which the module reports the average GFlops
     uint64_t log_interval;
     //! maximum allowed number of target_stress violations
