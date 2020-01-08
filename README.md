@@ -40,15 +40,15 @@ Install rocBLAS and rocm_smi64 :
 
    Ubuntu : 
    
-           sudo apt-get install rocblas rocm_smi64
+           sudo apt-get install rocblas rocm-smi-lib64
    
    CentOS & RHEL : 
             
-           sudo yum install rocblas rocm_smi64
+           sudo yum install --nogpgcheck rocblas rocm-smi-lib64
    
    SUSE : 
          
-           sudo zypper install rocblas rocm_smi64
+           sudo zypper install rocblas rocm-smi-lib64
 
 _**Note:**_
 If  rocm_smi64 is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
