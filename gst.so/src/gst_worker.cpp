@@ -28,6 +28,8 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <limits>
+#include <vector>
 
 #include "include/rvs_blas.h"
 #include "include/rvs_module.h"
@@ -49,7 +51,7 @@
 
 #define PROC_DEC_INC_SGEMM_FREQ_DELAY           10
 
-#define NMAX_MS_GPU_RUN_PEAK_PERFORMANCE        1000
+#define NMAX_MS_GPU_RUN_PEAK_PERFORMANCE        2
 #define NMAX_MS_SGEMM_OPS_RAMP_SUB_INTERVAL     1000
 #define USLEEP_MAX_VAL                          (1000000 - 1)
 
@@ -78,13 +80,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
     gpu_blas = std::unique_ptr<rvs_blas>(
         new rvs_blas(gpu_device_index, matrix_size, matrix_size, matrix_size));
 
-    if (!gpu_blas) {
-        *error = 1;
-        *err_description = GST_MEM_ALLOC_ERROR;
-        return;
-    }
-
-    if (gpu_blas->error()) {
+    if ((!gpu_blas) || (gpu_blas->error()) )  {
         *error = 1;
         *err_description = GST_MEM_ALLOC_ERROR;
         return;
@@ -93,279 +89,40 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
     if(gst_ops_type == "sgemm") {
         // generate random matrix & copy it to the GPU
         gpu_blas->generate_random_matrix_data();
-        // copy matrix only once
+
+        //Copying host memory to device memory
         if (!gpu_blas->copy_data_to_gpu()) {
-            *error = 1;
-            *err_description = GST_BLAS_MEMCPY_ERROR;
+           *error = 1;
+           *err_description = GST_BLAS_MEMCPY_ERROR;
+           return ;
         }
     }
+
     if(gst_ops_type == "dgemm") {
         // generate random matrix & copy it to the GPU
         gpu_blas->generate_random_dbl_matrix_data();
-        // copy matrix only once
+
+        //Copying host memory to device memory
         if (!gpu_blas->copy_dbl_data_to_gpu()) {
-            *error = 1;
-            *err_description = GST_BLAS_MEMCPY_ERROR;
+           *error = 1;
+           *err_description = GST_BLAS_MEMCPY_ERROR;
+           return ;
         }
+
     }
-}
 
-/**
- * @brief attempts to hit the maximum Gflops value
- * @param error pointer to a memory location where the error code will be stored
- * @param err_description stores the error description if any
- */
-void GSTWorker::hit_max_gflops(int *error, string *err_description) {
-    std::chrono::time_point<std::chrono::system_clock> gst_start_time,
-                                                    gst_end_time,
-                                                    gst_log_interval_time;
-    double seconds_elapsed = 0, curr_gflops;
-    uint16_t num_sgemm_ops_log_interval = 0;
-    uint64_t millis_sgemm_ops;
-    string msg;
+    if(gst_ops_type == "hgemm") {
+        // generate random matrix & copy it to the GPU
+        gpu_blas->generate_random_half_matrix_data();
 
-    *error = 0;
-    gst_start_time = std::chrono::system_clock::now();
-    gst_log_interval_time = std::chrono::system_clock::now();
-
-    for (;;) {
-        // check if stop signal was received
-        if (rvs::lp::Stopping())
-            break;
-
-        gst_end_time = std::chrono::system_clock::now();
-        if (time_diff(gst_end_time, gst_start_time) >=
-                            NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
-            break;
-
-        if (copy_matrix) {
-
-            if(gst_ops_type == "sgemm") {
-                // copy matrix before each GEMM
-                if (!gpu_blas->copy_data_to_gpu()) {
-                    *error = 1;
-                    *err_description = GST_BLAS_MEMCPY_ERROR;
-                    return;
-                }
-            }
-
-            if(gst_ops_type == "dgemm") {
-                // copy matrix before each GEMM
-                if (!gpu_blas->copy_dbl_data_to_gpu()) {
-                    *error = 1;
-                    *err_description = GST_BLAS_MEMCPY_ERROR;
-                    return;
-                }
-            }
-        }
-
-        // run GEMM & wait for completion
-        if(gst_ops_type == "sgemm") {
-             if (!gpu_blas->run_blass_gemm())
-                        continue;  // failed to run the current SGEMM
-        }
-
-        // run GEMM & wait for completion
-        if(gst_ops_type == "dgemm") {
-             if (!gpu_blas->run_blass_dgemm())
-                        continue;  // failed to run the current SGEMM
-        }
-
-        while (!gpu_blas->is_gemm_op_complete()) {}
-
-        num_sgemm_ops_log_interval++;
-
-        gst_end_time = std::chrono::system_clock::now();
-        millis_sgemm_ops = time_diff(gst_end_time, gst_log_interval_time);
-
-        if (millis_sgemm_ops >= log_interval) {
-            // compute the GFLOPS
-            seconds_elapsed = static_cast<double> (millis_sgemm_ops) / 1000;
-            if (seconds_elapsed != 0) {
-                curr_gflops = static_cast<double>(gpu_blas->gemm_gflop_count() *
-                                num_sgemm_ops_log_interval) / seconds_elapsed;
-                log_interval_gflops(curr_gflops);
-            }
-
-            num_sgemm_ops_log_interval = 0;
-            gst_log_interval_time = std::chrono::system_clock::now();
-        }
-    }
-}
-
-/**
- * @brief performs the ramp-up on the given GPU (attempts to reach the given 
- * target stress Gflops)
- * @param error pointer to a memory location where the error code will be stored
- * @param err_description stores the error description if any
- * @return true if target stress is achieved within the ramp_interval,
- * false otherwise
- */
-bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
-    std::chrono::time_point<std::chrono::system_clock> gst_start_time,
-                                                    gst_end_time,
-                                                    gst_log_interval_time,
-                                                    gst_start_gflops_time,
-                                                    gst_last_sgemm_start_time,
-                                                    gst_last_sgemm_end_time;
-    double seconds_elapsed, curr_gflops, dyn_delay_target_stress;
-    uint16_t num_sgemm_ops = 0, num_sgemm_ops_log_interval = 0;
-    uint64_t millis_sgemm_ops, millis_last_sgemm;
-    uint16_t proc_delay = 0;
-    string msg;
-
-    // make sure that the ramp_interval & duration are not less than
-    // NMAX_MS_GPU_RUN_PEAK_PERFORMANCE (e.g.: 1000)
-    if (run_duration_ms < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
-        run_duration_ms += NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
-    if (ramp_interval < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
-        ramp_interval += NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
-
-    // stage 1. setup rvs blas
-    setup_blas(error, err_description);
-    if (*error)
-        return false;
-
-    // stage 2. run SGEMM with the given matrix_size for about
-    // NMAX_MS_GPU_RUN_PEAK_PERFORMANCE ms (e.g.: 1000) in order to hit the
-    // maximum Gflops value
-    hit_max_gflops(error, err_description);
-    if (*error)
-        return false;
-
-    // check if stop signal was received
-    if (rvs::lp::Stopping())
-        return false;
-
-    // stage 3. reduce the SGEMM frequency and try to achieve the desired Gflops
-    // the delay which gives the SGEMM frequency will be dynamically computed
-    delay_target_stress = 0;
-
-    gst_start_time = std::chrono::system_clock::now();
-    gst_log_interval_time = std::chrono::system_clock::now();
-    gst_start_gflops_time = std::chrono::system_clock::now();
-
-    for (;;) {
-        // check if stop signal was received
-        if (rvs::lp::Stopping())
-            return false;
-
-        gst_end_time = std::chrono::system_clock::now();
-        if (time_diff(gst_end_time,  gst_start_time) >
-                            ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
-            return false;
-
-        gst_last_sgemm_start_time = std::chrono::system_clock::now();
-
-        if (copy_matrix) {
-            if(gst_ops_type == "sgemm") {
-                // copy matrix before each GEMM
-                if (!gpu_blas->copy_data_to_gpu()) {
-                    *error = 1;
-                    *err_description = GST_BLAS_MEMCPY_ERROR;
-                    return false;
-                }
-            }
-
-            if(gst_ops_type == "dgemm") {
-                // copy matrix before each GEMM
-                if (!gpu_blas->copy_dbl_data_to_gpu()) {
-                    *error = 1;
-                    *err_description = GST_BLAS_MEMCPY_ERROR;
-                    return false;
-                }
-            }
-        }
-
-        if(gst_ops_type == "sgemm") {
-            // run GEMM & wait for completion
-            if (!gpu_blas->run_blass_gemm())
-                continue;  // failed to run the current SGEMM
-        }
-
-        if(gst_ops_type == "dgemm") {
-            // run GEMM & wait for completion
-            if (!gpu_blas->run_blass_dgemm())
-                continue;  // failed to run the current SGEMM
-        }
-
-        while (!gpu_blas->is_gemm_op_complete()) {}
-
-        gst_last_sgemm_end_time = std::chrono::system_clock::now();
-
-        millis_last_sgemm =
-                time_diff(gst_last_sgemm_end_time, gst_last_sgemm_start_time);
-
-        if (static_cast<double>(
-                (1000 * gpu_blas->gemm_gflop_count()) /
-                    target_stress) <
-                        millis_last_sgemm) {
-            // last SGEMM timed-out (it took more than it should)
-            dyn_delay_target_stress = 1;
-        } else {
-            dyn_delay_target_stress =
-                    static_cast<double>((
-                        1000 * gpu_blas->gemm_gflop_count()) /
-                        (target_stress + target_stress * tolerance / 2)) -
-                                millis_last_sgemm;
-            if (dyn_delay_target_stress > proc_delay + 1)
-                dyn_delay_target_stress -= proc_delay;
-        }
-
-        if (dyn_delay_target_stress > 1) {
-            usleep_ex(dyn_delay_target_stress * 1000);
-            delay_target_stress += dyn_delay_target_stress;
-        }
-
-        num_sgemm_ops++;
-        num_sgemm_ops_log_interval++;
-
-        gst_end_time = std::chrono::system_clock::now();
-        millis_sgemm_ops =
-                    time_diff(gst_end_time, gst_start_gflops_time);
-        if (millis_sgemm_ops >= NMAX_MS_SGEMM_OPS_RAMP_SUB_INTERVAL) {
-            // compute the GFLOPS
-            seconds_elapsed = static_cast<double>
-                                (millis_sgemm_ops) / 1000;
-            if (seconds_elapsed > 0) {
-                curr_gflops = static_cast<double>(
-                                    gpu_blas->gemm_gflop_count() *
-                                    num_sgemm_ops) / seconds_elapsed;
-                if (curr_gflops >= target_stress && curr_gflops <
-                        target_stress + target_stress * tolerance/2) {
-                    ramp_actual_time =
-                                time_diff(gst_end_time,  gst_start_time) +
-                                NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
-                    delay_target_stress /= num_sgemm_ops;
-                    return true;
-                }
-            }
-            proc_delay +=
-                (delay_target_stress * PROC_DEC_INC_SGEMM_FREQ_DELAY) / 100;
-            num_sgemm_ops = 0;
-            delay_target_stress = 0;
-            gst_start_gflops_time = std::chrono::system_clock::now();
-        }
-
-        millis_sgemm_ops =
-                    time_diff(gst_end_time, gst_log_interval_time);
-        if (millis_sgemm_ops >= log_interval) {
-            // compute the GFLOPS
-            seconds_elapsed = static_cast<double>
-                                (millis_sgemm_ops) / 1000;
-            if (seconds_elapsed > 0) {
-                curr_gflops = static_cast<double>(
-                                gpu_blas->gemm_gflop_count() *
-                                num_sgemm_ops_log_interval) / seconds_elapsed;
-                log_interval_gflops(curr_gflops);
-            }
-
-            num_sgemm_ops_log_interval = 0;
-            gst_log_interval_time = std::chrono::system_clock::now();
+        //Copying host memory to device memory
+        if (!gpu_blas->copy_hlf_data_to_gpu()) {
+           *error = 1;
+           *err_description = GST_BLAS_MEMCPY_ERROR;
+           return ;
         }
     }
 
-    return false;
 }
 
 /**
@@ -413,77 +170,87 @@ bool GSTWorker::check_gflops_violation(double gflops_interval) {
  * @return true if stress violations is less than max_violations, false otherwise
  */
 bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
-    uint16_t num_sgemm_ops = 0, num_gflops_violations = 0;
-    uint64_t total_milliseconds, log_interval_milliseconds;
-    double seconds_elapsed, gflops_interval;
-    string msg;
-    std::chrono::time_point<std::chrono::system_clock> gst_start_time,
-                                            gst_end_time, gst_log_interval_time;
 
-    *error = 0;
-    max_gflops = 0;
-    num_sgemm_ops = 0;
+    double min_seconds = std::numeric_limits<double>::max();
+    double max_seconds = std::numeric_limits<double>::min();
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time, end_time;
+    std::chrono::duration<double> timetaken;
+    double sum_seconds = 0.0;
+    double seconds = 0.0;
+    std::vector<double> times(target_stress);
 
-    gst_start_time = std::chrono::system_clock::now();
-    gst_log_interval_time = std::chrono::system_clock::now();
+    std::cout <<"\n GST Stress Test Started ";
 
-    for (;;) {
-        // check if stop signal was received
-        if (rvs::lp::Stopping())
-            return false;
+    // make sure that the ramp_interval & duration are not less than
+    // NMAX_MS_GPU_RUN_PEAK_PERFORMANCE (e.g.: 1000)
+    if (run_duration_ms < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
+        run_duration_ms += NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
+    if (ramp_level < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
+        ramp_level = NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
 
-        if (copy_matrix) {
-            // copy matrix before each GEMM
-            if (!gpu_blas->copy_data_to_gpu()) {
-                *error = 1;
-                *err_description = GST_BLAS_MEMCPY_ERROR;
-                return false;
-            }
+    // stage 1. setup rvs blas
+    setup_blas(error, err_description);
+
+    if (*error)
+        return false;
+
+    for (int i =0; i < target_stress; i++) {
+
+        hipDeviceSynchronize();
+        start_time = std::chrono::high_resolution_clock::now(); 
+
+        for(unsigned int i = 0; i < ramp_level; i++) {
+             if(gst_ops_type == "sgemm") {
+                   // run GEMM & wait for completion
+                   gpu_blas->run_blass_gemm();
+             }
+
+             if(gst_ops_type == "dgemm") {
+                  // run GEMM & wait for completion
+                  gpu_blas->run_blass_dgemm();
+             }
+
+             if(gst_ops_type == "hgemm") {
+                  // run GEMM & wait for completion
+                  gpu_blas->run_blass_hgemm();
+             }
+
         }
 
-        bool sgemm_success = true;
-        // run GEMM & wait for completion
-        if (gpu_blas->run_blass_gemm()) {
-            while (!gpu_blas->is_gemm_op_complete()) {}
-        } else {
-            sgemm_success = false;
-        }
+         end_time = std::chrono::high_resolution_clock::now();
+        hipDeviceSynchronize();
 
-        if (sgemm_success)
-            num_sgemm_ops++;
+        timetaken = (end_time - start_time);
+        seconds = timetaken.count();
 
-        usleep_ex(delay_target_stress * 1000);
-        gst_end_time = std::chrono::system_clock::now();
-        total_milliseconds = time_diff(gst_end_time, gst_start_time);
-        log_interval_milliseconds = time_diff(gst_end_time,
-                                              gst_log_interval_time);
+        min_seconds = min_seconds < seconds ? min_seconds : seconds;
+        max_seconds = max_seconds > seconds ? max_seconds : seconds;
+        sum_seconds = sum_seconds + seconds;
 
-        if (log_interval_milliseconds >= log_interval && num_sgemm_ops > 0) {
-            seconds_elapsed = static_cast<double> (log_interval_milliseconds) /
-                                1000;
-            if (seconds_elapsed != 0) {
-                gflops_interval =
-                        static_cast<double>(gpu_blas->gemm_gflop_count()
-                            * num_sgemm_ops) / seconds_elapsed;
-                if (gflops_interval > max_gflops)
-                    max_gflops = gflops_interval;
+        times[i] = seconds;
 
-                log_interval_gflops(gflops_interval);
-                if (check_gflops_violation(gflops_interval))
-                    num_gflops_violations++;
-
-                // reset time & gflops related data
-                num_sgemm_ops = 0;
-                gst_log_interval_time = std::chrono::system_clock::now();
-            }
-        }
-
-        if (total_milliseconds >= run_duration_ms - ramp_actual_time)
-            break;
     }
 
-    if (num_gflops_violations > max_violations)
-        return false;
+    double ave_seconds = sum_seconds / (double) target_stress;
+    double ops = ((double) target_stress) * 2.0 * ((double)ramp_level);
+    double max_gflops = ops / min_seconds / 1e9;
+    double min_gflops = ops / max_seconds / 1e9;
+    double ave_gflops = ops / ave_seconds / 1e9;
+
+    //calculate relative standard deviation (rsd). Also called coefficient of variation
+    double rsd_seconds = 0.0;
+
+    for(int i = 0; i < target_stress; i++) {
+        rsd_seconds += (times[i] - ave_seconds) * (times[i] - ave_seconds) ;
+    }
+    rsd_seconds = rsd_seconds / (double) target_stress;
+    rsd_seconds = sqrt(rsd_seconds) / ave_seconds * 100.0;
+
+    std::cout << "\n Time taken for Gflops in seconds :: Max : "<< max_seconds << " Min :" << min_seconds << " Average : " << ave_seconds << " Standard Deviation : " << rsd_seconds;
+
+    std::cout << "\n Average Gflops " << ave_gflops;
+    std::cout << "\n Min Gflops " << min_gflops;
+    std::cout << "\n Max Gflops " << max_gflops << "\n";
 
     return true;
 }
@@ -492,76 +259,20 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
  * @brief performs the stress test on the given GPU
  */
 void GSTWorker::run() {
-    string msg, err_description;
     int error = 0;
-    bool gst_test_passed = true;
+    string err_description;
 
-    max_gflops = 0;
+    //running gst stress test
+    do_gst_stress_test(&error, &err_description);
 
-    // log GST stress test - start message
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + GST_START_MSG + " " +
-            std::to_string(target_stress) + " " + GST_COPY_MATRIX_MSG + ":" +
-            (copy_matrix ? "true":"false");
-    rvs::lp::Log(msg, rvs::loginfo);
+    // check if stop signal was received
+    if (rvs::lp::Stopping())
+         return;
 
-    log_to_json(GST_START_MSG, std::to_string(target_stress), rvs::loginfo);
-    log_to_json(GST_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),
-                rvs::loginfo);
-
-    // let the GPU ramp-up and check the result
-    bool ramp_up_success = do_gst_ramp(&error, &err_description);
-
-    // GPU was not able to do the processing (HIP/rocBlas error(s) occurred)
-    if (error) {
-        string msg = "[" + action_name + "] " + MODULE_NAME + " "
-                        + std::to_string(gpu_id) + " " + err_description;
-        rvs::lp::Log(msg, rvs::logerror);
-        log_to_json("err", err_description, rvs::logerror);
-
-        return;
-    }
-
-    if (!ramp_up_success) {
-        // check if stop signal was received
-        if (rvs::lp::Stopping())
-            return;
-
-        // the selected GPU was not able to achieve the target_stress GFLOPS
-        msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                std::to_string(gpu_id) + " " + GST_RAMP_EXCEEDED_MSG + " " +
-                std::to_string(ramp_interval);
-        rvs::lp::Log(msg, rvs::loginfo);
-        log_to_json(GST_RAMP_EXCEEDED_MSG, std::to_string(ramp_interval),
-                    rvs::loginfo);
-        gst_test_passed = false;
-    } else {
-        // the GPU succeeded to achieve the target_stress GFLOPS
-        // continue with the same workload for the rest of the test duration
-        msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                std::to_string(gpu_id) + " " + GST_TARGET_ACHIEVED_MSG + " " +
-                std::to_string(target_stress);
-        rvs::lp::Log(msg, rvs::loginfo);
-        log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
-                    rvs::loginfo);
-        if (run_duration_ms > 0) {
-            gst_test_passed = do_gst_stress_test(&error, &err_description);
-            // check if stop signal was received
-            if (rvs::lp::Stopping())
-                return;
-
-            if (error) {
-                // GPU didn't complete the test (HIP/rocBlas error(s) occurred)
-                string msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                                std::to_string(gpu_id) + " " + err_description;
-                rvs::lp::Log(msg, rvs::logerror);
-                log_to_json("err", err_description, rvs::logerror);
-                return;
-            }
-        }
-    }
-
-    log_gst_test_result(gst_test_passed);
+     if (error) {
+       // GPU didn't complete the test (HIP/rocBlas error(s) occurred)
+       std::cout << "\n GST Error while running the stress test " << error;
+     }
 }
 
 /**
@@ -571,9 +282,8 @@ void GSTWorker::run() {
 void GSTWorker::log_gst_test_result(bool gst_test_passed) {
     string msg;
 
-    double flops_per_op = (2 * (static_cast<double>(gpu_blas->get_m())/1000) *
-                                (static_cast<double>(gpu_blas->get_n())/1000) *
-                                (static_cast<double>(gpu_blas->get_k())/1000));
+
+    double flops_per_op = 2;
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
         std::to_string(gpu_id) + " " + GST_MAX_GFLOPS_OUTPUT_KEY + ": " +
         std::to_string(max_gflops) + " " + GST_FLOPS_PER_OP_OUTPUT_KEY + ": " +
