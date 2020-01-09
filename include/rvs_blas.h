@@ -66,11 +66,15 @@ class rvs_blas {
     bool error(void) { return is_error; }
     void generate_random_matrix_data(void);
     void generate_random_dbl_matrix_data(void);
+    void generate_random_half_matrix_data(void);
+    
 
     bool copy_data_to_gpu(void);
     bool copy_dbl_data_to_gpu(void);
+    bool copy_hlf_data_to_gpu(void);
     bool run_blass_gemm(void);
     bool run_blass_dgemm(void);
+    bool run_blass_hgemm(void);
     bool is_gemm_op_complete(void);
 
  protected:
@@ -82,6 +86,7 @@ class rvs_blas {
     rocblas_int n;
     //! matrix size k
     rocblas_int k;
+
     //! amount of memory to allocate for the matrix
     rocblas_int size_a;
     //! amount of memory to allocate for the matrix
@@ -90,12 +95,14 @@ class rvs_blas {
     rocblas_int size_c;
 
     //DGEMM
+    //Device Memory
     //! pointer to device (GPU) memory
     double *ddbla;
     //! pointer to device (GPU) memory
     double *ddblb;
     //! pointer to device (GPU) memory
     double *ddblc;
+    //Host Memory
     //! pointer to host memory
     double *hdbla;
     //! pointer to host memory
@@ -103,6 +110,20 @@ class rvs_blas {
     //! pointer to host memory
     double *hdblc;
 
+    //HGEMM
+    //! pointer to host memory
+    rocblas_half *hlfa;
+    //! pointer to host memory
+    rocblas_half *hlfb;
+    //! pointer to host memory
+    rocblas_half *hlfc;
+    //! pointer to device (GPU) memory
+    rocblas_half *dhlfa;
+    //! pointer to device (GPU) memory
+    rocblas_half *dhlfb;
+    //! pointer to device (GPU) memory
+    rocblas_half *dhlfc;
+ 
     //SGEMM 
     //! pointer to device (GPU) memory
     float *da;
@@ -116,6 +137,7 @@ class rvs_blas {
     float *hb;
     //! pointer to host memory
     float *hc;
+
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;
     //! rocBlas related handle
@@ -132,8 +154,9 @@ class rvs_blas {
     bool alocate_host_matrix_mem(void);
     void release_host_matrix_mem(void);
 
-    float fast_pseudo_rand(u_long *nextr);
-    double fast_pseudo_dbl_rand(u_long *nextr);
+    double genDoubleRand();
+    float genFloatRand();
+    rocblas_half genHalfRand();
 };
 
 #endif  // INCLUDE_RVS_BLAS_H_
