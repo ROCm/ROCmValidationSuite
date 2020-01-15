@@ -54,7 +54,10 @@ using std::regex;
 #define RVS_CONF_COPY_MATRIX_KEY        "copy_matrix"
 #define RVS_CONF_TARGET_STRESS_KEY      "target_stress"
 #define RVS_CONF_TOLERANCE_KEY          "tolerance"
-#define RVS_CONF_MATRIX_SIZE_KEY        "matrix_size"
+#define RVS_CONF_MATRIX_SIZE_KEYA        "matrix_size_a"
+#define RVS_CONF_MATRIX_SIZE_KEYB        "matrix_size_b"
+#define RVS_CONF_MATRIX_SIZE_KEYC        "matrix_size_b"
+#define RVS_CONF_GST_OPS_TYPE           "ops_type"
 
 #define MODULE_NAME                     "gst"
 #define MODULE_NAME_CAPS                "GST"
@@ -74,6 +77,7 @@ using std::regex;
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
+#define GST_DEFAULT_OPS_TYPE            "sgemm"
 
 /**
  * @brief default class constructor
@@ -122,7 +126,10 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             workers[i].set_copy_matrix(gst_copy_matrix);
             workers[i].set_target_stress(gst_target_stress);
             workers[i].set_tolerance(gst_tolerance);
-            workers[i].set_matrix_size(gst_matrix_size);
+            workers[i].set_matrix_size_a(gst_matrix_size_a);
+            workers[i].set_matrix_size_b(gst_matrix_size_b);
+            workers[i].set_matrix_size_c(gst_matrix_size_c);
+            workers[i].set_gst_ops_type(gst_ops_type);
             i++;
         }
 
@@ -225,14 +232,39 @@ bool gst_action::get_all_gst_config_keys(void) {
         bsts = false;
     }
 
-    error = property_get_int<uint64_t>
-    (RVS_CONF_MATRIX_SIZE_KEY, &gst_matrix_size, GST_DEFAULT_MATRIX_SIZE);
+    if (property_get<std::string>(RVS_CONF_GST_OPS_TYPE, &gst_ops_type,
+            GST_DEFAULT_OPS_TYPE)) {
+         msg = "invalid '" +
+         std::string(RVS_CONF_GST_OPS_TYPE) + "' key value";
+         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+         bsts = false;
+    }
+
+    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYA, &gst_matrix_size_a, GST_DEFAULT_MATRIX_SIZE);
     if (error == 1) {
         msg = "invalid '" +
-        std::string(RVS_CONF_MATRIX_SIZE_KEY) + "' key value";
+        std::string(RVS_CONF_MATRIX_SIZE_KEYA) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
+
+    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYB, &gst_matrix_size_b, GST_DEFAULT_MATRIX_SIZE);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_MATRIX_SIZE_KEYB) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYC, &gst_matrix_size_c, GST_DEFAULT_MATRIX_SIZE);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_MATRIX_SIZE_KEYC) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+ 
+
     return bsts;
 }
 

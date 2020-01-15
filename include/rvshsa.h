@@ -35,6 +35,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <iomanip>
 
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
@@ -175,6 +176,8 @@ class hsa {
                                 hsa_status_t st);
   static bool check_link_type(const std::vector<rvs::linkinfo_t>& arrLinkInfo,
                               int LinkType);
+
+  void PrintTopology();
 
  protected:
   void InitAgents();

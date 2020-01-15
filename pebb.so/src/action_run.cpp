@@ -67,6 +67,7 @@ using std::vector;
  * */
 int pebb_action::run() {
   int sts;
+  int cnt = 0;
   string msg;
 
   RVSTRACE_
@@ -143,6 +144,12 @@ int pebb_action::run() {
   sts = rvs::lp::Stopping() ? -1 : 0;
 
   print_final_average();
+
+  std::cout << " \n =========================================================================================================================";
+  for(auto it = resultBandwidth.begin(); it != resultBandwidth.end(); it++) {
+     std::cout << " \n\n PCIE Bandwidth from , CPU::" << cnt << " to GPU Id::" << it[cnt].GPUId << " is " << it[cnt].finalBandwith << "\n\n";
+  }
+  std::cout << " ========================================================================================================================= \n";
 
   destroy_threads();
 
