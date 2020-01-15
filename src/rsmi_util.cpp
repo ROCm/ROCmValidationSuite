@@ -37,6 +37,9 @@ rsmi_status_t  rsmi_dev_ind_get(uint64_t bdfid, uint32_t* pdv_ind) {
   uint32_t num_devices = 0;
   rsmi_status_t sts;
 
+  //Initialize
+  *pdv_ind = 0;
+
   if (RSMI_STATUS_SUCCESS != (sts = rsmi_num_monitor_devices(&num_devices))) {
     return sts;
   }

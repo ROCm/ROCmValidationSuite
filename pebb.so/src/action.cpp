@@ -489,8 +489,8 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
                           "transfer_ix", std::to_string(transfer_ix));
       rvs::lp::AddString(pjson,
                           "transfer_num", std::to_string(transfer_num));
-      rvs::lp::AddString(pjson, "src", std::to_string(src_node));
-      rvs::lp::AddString(pjson, "dst", std::to_string(dst_id));
+      rvs::lp::AddString(pjson, "src ", std::to_string(src_node));
+      rvs::lp::AddString(pjson, "dst ", std::to_string(dst_id));
       rvs::lp::AddString(pjson, "pcie-bandwidth (GBps)", buff);
       rvs::lp::LogRecordFlush(pjson);
     }
@@ -508,9 +508,11 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
  *
  * */
 int pebb_action::print_final_average() {
+  bandwidth   bw; 
   uint16_t    src_node, dst_node;
   uint16_t    dst_id;
   bool        bidir;
+  string      str; 
   size_t      current_size;
   double      duration;
   std::string msg;
@@ -552,13 +554,20 @@ int pebb_action::print_final_average() {
     msg = "[" + action_name + "] pcie-bandwidth  ["
         + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
         + "] "
-        + std::to_string(src_node) + " " + std::to_string(dst_id)
-        + "  h2d: " + (prop_h2d ? "true" : "false")
-        + "  d2h: " + (prop_d2h ? "true" : "false")
+        + " CPU ::" + std::to_string(src_node) 
+        + " GPU ::" + std::to_string(dst_id)
+        + "  h2d::" + (prop_h2d ? "true" : "false")
+        + "  d2h::" + (prop_d2h ? "true" : "false")
         + "  " + buff
         + "  duration: " + std::to_string(duration) + " sec";
 
     rvs::lp::Log(msg, rvs::logresults);
+
+    bw.finalBandwith = buff;
+    bw.GPUId = dst_id;
+
+    resultBandwidth.push_back(bw);
+
     if (bjson) {
       RVSTRACE_
       unsigned int sec;

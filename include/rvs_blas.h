@@ -65,8 +65,8 @@ class rvs_blas {
     //! returns TRUE if an error occured
     bool error(void) { return is_error; }
     void generate_random_matrix_data(void);
-    bool copy_data_to_gpu(void);
-    bool run_blass_gemm(void);
+    bool copy_data_to_gpu(std::string);
+    bool run_blass_gemm(std::string);
     bool is_gemm_op_complete(void);
 
  protected:
@@ -84,6 +84,8 @@ class rvs_blas {
     rocblas_int size_b;
     //! amount of memory to allocate for the matrix
     rocblas_int size_c;
+
+    //SGEMM DECLARAION
     //! pointer to device (GPU) memory
     float *da;
     //! pointer to device (GPU) memory
@@ -96,6 +98,42 @@ class rvs_blas {
     float *hb;
     //! pointer to host memory
     float *hc;
+
+    //DGEMM Declaration
+    //! pointer to device (GPU) memory
+    double *ddbla;
+    //! pointer to device (GPU) memory
+    double *ddblb;
+    //! pointer to device (GPU) memory
+    double *ddblc;
+    //! pointer to host memory
+    double *hdbla;
+    //! pointer to host memory
+    double *hdblb;
+    //! pointer to host memory
+    double *hdblc;
+
+    //HGEMM Declaration
+    //! pointer to device (GPU) memory
+    rocblas_half *dhlfa;
+    //! pointer to device (GPU) memory
+    rocblas_half *dhlfb;
+    //! pointer to device (GPU) memory
+    rocblas_half *dhlfc;
+    //! pointer to host memory
+    rocblas_half *hhlfa;
+    //! pointer to host memory
+    rocblas_half *hhlfb;
+    //! pointer to host memory
+    rocblas_half *hhlfc;
+
+    rocblas_half  hostarrayA;
+    rocblas_half  hostarrayB;
+    rocblas_half  hostarrayC;
+
+
+
+
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;
     //! rocBlas related handle
