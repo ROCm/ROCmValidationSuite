@@ -257,6 +257,7 @@ bool gm_action::get_all_gm_config_keys(void) {
  * */
 int gm_action::run(void) {
   string msg;
+  rsmi_status_t status;
 
   // if monitoring is already running, stop it
   // (it will be restarted if needed)
@@ -339,8 +340,10 @@ int gm_action::run(void) {
       return -1;
     }
     uint32_t ix;
-    rvs::rsmi_dev_ind_get(location_id, &ix);
-    dv_ind.insert(std::pair<uint32_t, int32_t>(ix, *it));
+    status = rvs::rsmi_dev_ind_get(location_id, &ix);
+    if(status == RSMI_STATUS_SUCCESS) {
+       dv_ind.insert(std::pair<uint32_t, int32_t>(ix, *it));
+    }
   }
 
   pworker = new Worker();
