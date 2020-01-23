@@ -98,31 +98,64 @@ bool rvs_blas::init_gpu_device(void) {
  * @brief copy data matrix from host to gpu
  * @return true if everything went fine, otherwise false
  */
-bool rvs_blas::copy_data_to_gpu(void) {
+bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
     if (!is_error) {
-        if (da) {
-            if (hipMemcpy(da, ha, sizeof(float) * size_a, hipMemcpyHostToDevice)
-                    != hipSuccess) {
-                is_error = true;
-                return false;
-            }
-        }
 
-        if (db) {
-            if (hipMemcpy(db, hb, sizeof(float) * size_b, hipMemcpyHostToDevice)
-                     != hipSuccess) {
-                is_error = true;
-                return false;
-            }
-        }
+      if(ops_type == "sgemm") {
 
-        if (dc) {
-            if (hipMemcpy(dc, hc, sizeof(float) * size_c, hipMemcpyHostToDevice)
-                     != hipSuccess) {
-                is_error = true;
-                return false;
+            if (da) {
+                 if (hipMemcpy(da, ha, sizeof(float) * size_a, hipMemcpyHostToDevice)
+                                 != hipSuccess) {
+                      is_error = true;
+                      return false;
+                  }
             }
-        }
+
+            if (db) {
+                if (hipMemcpy(db, hb, sizeof(float) * size_b, hipMemcpyHostToDevice)
+                                != hipSuccess) {
+                      is_error = true;
+                      return false;
+                  }
+            }
+
+            if (dc) {
+                  if (hipMemcpy(dc, hc, sizeof(float) * size_c, hipMemcpyHostToDevice)
+                          != hipSuccess) {
+                       is_error = true;
+                       return false;
+                  }
+             }
+      }
+
+
+      if(ops_type == "dgemm") {
+
+            if (ddbla) {
+                  if (hipMemcpy(ddbla, hdbla, sizeof(double) * size_a, hipMemcpyHostToDevice)
+                                     != hipSuccess) {
+                        is_error = true;
+                        return false;
+                  }
+            }
+
+            if (ddblb) {
+                  if (hipMemcpy(ddblb, hdblb, sizeof(double) * size_b, hipMemcpyHostToDevice)
+                                    != hipSuccess) {
+                        is_error = true;
+                        return false;
+                  }
+            }
+
+            if (ddblc) {
+                  if (hipMemcpy(ddblc, hdblc, sizeof(double) * size_c, hipMemcpyHostToDevice)
+                                  != hipSuccess) {
+                       is_error = true;
+                       return false;
+                  }
+            }
+
+      }
 
         return true;
     } else {
@@ -142,6 +175,13 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
     if (hipMalloc(&dc, size_c * sizeof(float)) != hipSuccess)
         return false;
 
+    if (hipMalloc(&ddbla, size_a * sizeof(double)) != hipSuccess)
+        return false;
+    if (hipMalloc(&ddblb, size_b * sizeof(double)) != hipSuccess)
+        return false;
+    if (hipMalloc(&ddblc, size_c * sizeof(double)) != hipSuccess)
+        return false;
+
     return true;
 }
 
@@ -155,6 +195,14 @@ void rvs_blas::release_gpu_matrix_mem(void) {
         hipFree(db);
     if (dc)
         hipFree(dc);
+
+    if (ddbla)
+        hipFree(ddbla);
+    if (ddblb)
+        hipFree(ddblb);
+    if (ddblc)
+        hipFree(ddblc);
+
     if (is_handle_init)
         rocblas_destroy_handle(blas_handle);
 }
@@ -168,6 +216,11 @@ bool rvs_blas::alocate_host_matrix_mem(void) {
         ha = new float[size_a];
         hb = new float[size_b];
         hc = new float[size_c];
+
+        hdbla = new double[size_a];
+        hdblb = new double[size_b];
+        hdblc = new double[size_c];
+
         return true;
     } catch (std::bad_alloc&) {
         return false;
@@ -184,6 +237,13 @@ void rvs_blas::release_host_matrix_mem(void) {
         delete []hb;
     if (hc)
         delete []hc;
+
+    if (hdbla)
+        delete []hdbla;
+    if (hdblb)
+        delete []hdblb;
+    if (hdblc)
+        delete []hdblc;
 }
 
 /**
@@ -202,19 +262,40 @@ bool rvs_blas::is_gemm_op_complete(void) {
  * @brief performs the SGEMM matrix multiplication
  * @return true if GPU was able to enqueue the GEMM operation, otherwise false
  */
-bool rvs_blas::run_blass_gemm(void) {
+bool rvs_blas::run_blass_gemm(std::string ops_type) {
     if (!is_error) {
-        float alpha = 1.1, beta = 0.9;
-        if (rocblas_sgemm(blas_handle, transa, transb,
-                    rvs_blas::m, rvs_blas::n, rvs_blas::k,
-                    &alpha, da, rvs_blas::m,
-                    db, rvs_blas::n, &beta,
-                    dc, rvs_blas::m) != rocblas_status_success) {
-            is_error = true;  // GPU cannot enqueue the gemm
-            return false;
-        } else {
-            return true;
+      
+        if(ops_type == "sgemm") {
+
+                 float alpha = 1.1, beta = 0.9;
+
+                 if (rocblas_sgemm(blas_handle, transa, transb,
+                         rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                         &alpha, da, rvs_blas::m,
+                         db, rvs_blas::n, &beta,
+                         dc, rvs_blas::m) != rocblas_status_success) {
+                 is_error = true;  // GPU cannot enqueue the gemm
+                 return false;
+                 } else {
+                      return true;
+                 }
         }
+
+       if(ops_type == "dgemm") {
+                  double alpha = 1.1, beta = 0.9;
+
+                  if (rocblas_dgemm(blas_handle, transa, transb,
+                          rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                          &alpha, ddbla, rvs_blas::m,
+                          ddblb, rvs_blas::n, &beta,
+                          ddblc, rvs_blas::m) != rocblas_status_success) {
+                  is_error = true;  // GPU cannot enqueue the gemm
+                  return false;
+                  } else {
+                       return true;
+                  }
+       }
+
     } else {
         return false;
     }
@@ -237,6 +318,15 @@ void rvs_blas::generate_random_matrix_data(void) {
 
         for (int i = 0; i < size_c; ++i)
             hc[i] = fast_pseudo_rand(&nextr);
+
+        for (i = 0; i < size_a; ++i)
+            hdbla[i] = (double)fast_pseudo_rand(&nextr);
+
+        for (i = 0; i < size_b; ++i)
+            hdblb[i] = (double)fast_pseudo_rand(&nextr);
+
+        for (int i = 0; i < size_c; ++i)
+            hdblc[i] = (double)fast_pseudo_rand(&nextr);
     }
 }
 
