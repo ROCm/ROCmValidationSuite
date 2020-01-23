@@ -60,6 +60,8 @@ class gst_action: public rvs::actionbase {
 
     virtual int run(void);
 
+    std::string gst_ops_type;
+
  protected:
     //! TRUE if JSON output is required
     bool bjson;
@@ -77,7 +79,9 @@ class gst_action: public rvs::actionbase {
     //! the ramp period for the test to succeed)
     float gst_tolerance;
     //! matrix size for SGEMM
-    uint64_t gst_matrix_size;
+    uint64_t gst_matrix_size_a;
+    uint64_t gst_matrix_size_b;
+    uint64_t gst_matrix_size_c;
 
     // configuration properties getters
 

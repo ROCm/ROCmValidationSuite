@@ -112,11 +112,26 @@ class GSTWorker : public rvs::ThreadBase {
     float get_target_stress(void) { return target_stress; }
 
     //! sets the SGEMM matrix size
-    void set_matrix_size(uint64_t _matrix_size) {
-        matrix_size = _matrix_size;
+    void set_matrix_size_a(uint64_t _matrix_size_a) {
+        matrix_size_a = _matrix_size_a;
     }
+   //! sets the SGEMM matrix size
+    void set_matrix_size_b(uint64_t _matrix_size_b) {
+        matrix_size_b = _matrix_size_b;
+    }
+   //! sets the SGEMM matrix size
+    void set_matrix_size_c(uint64_t _matrix_size_c) {
+        matrix_size_c = _matrix_size_c;
+    }
+
     //! returns the SGEMM matrix size
-    uint64_t get_matrix_size(void) { return matrix_size; }
+    uint64_t get_matrix_size_a(void) { return matrix_size_a; }
+
+    //! returns the SGEMM matrix size
+    uint64_t get_matrix_size_b(void) { return matrix_size_b; }
+
+    //! returns the SGEMM matrix size
+    uint64_t get_matrix_size_c(void) { return matrix_size_b; }
 
     //! sets the GFlops tolerance
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }
@@ -132,6 +147,8 @@ class GSTWorker : public rvs::ThreadBase {
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
+
+    void set_gst_ops_type(std::string _ops_type) { gst_ops_type = _ops_type; }
 
  protected:
     void setup_blas(int *error, std::string *err_description);
@@ -171,7 +188,9 @@ class GSTWorker : public rvs::ThreadBase {
     //! the ramp period for the test to succeed)
     float tolerance;
     //! SGEMM matrix size
-    uint64_t matrix_size;
+    uint64_t matrix_size_a;
+    uint64_t matrix_size_b;
+    uint64_t matrix_size_c;
     //! actual ramp time in case the GPU achieves the given target_stress Gflops
     uint64_t ramp_actual_time;
     //! rvs_blas pointer
@@ -182,6 +201,8 @@ class GSTWorker : public rvs::ThreadBase {
     double delay_target_stress;
     //! TRUE if JSON output is required
     static bool bjson;
+    //Type of operation
+    std::string gst_ops_type;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_
