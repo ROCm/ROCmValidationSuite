@@ -25,6 +25,7 @@
 #include "include/rvs_blas.h"
 
 #include <time.h>
+#include <iostream>
 
 #define RANDOM_CT               320000
 #define RANDOM_DIV_CT           0.1234
@@ -157,7 +158,36 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
 
       }
 
-        return true;
+      if(ops_type == "hgemm") {
+
+            if (dhlfa) {
+                  if (hipMemcpy(dhlfa, hhlfa, sizeof(rocblas_half) * size_a, hipMemcpyHostToDevice)
+                                     != hipSuccess) {
+                        is_error = true;
+                        return false;
+                  }
+            }
+
+            if (dhlfb) {
+                  if (hipMemcpy(dhlfb, hhlfb, sizeof(rocblas_half) * size_b, hipMemcpyHostToDevice)
+                                    != hipSuccess) {
+                        is_error = true;
+                        return false;
+                  }
+            }
+
+            if (dhlfc) {
+                  if (hipMemcpy(dhlfc, hhlfc, sizeof(rocblas_half) * size_c, hipMemcpyHostToDevice)
+                                  != hipSuccess) {
+                       is_error = true;
+                       return false;
+                  }
+            }
+
+      }
+
+
+     return true;
     } else {
         return false;
     }
@@ -182,6 +212,13 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
     if (hipMalloc(&ddblc, size_c * sizeof(double)) != hipSuccess)
         return false;
 
+    if (hipMalloc(&dhlfa, size_a * sizeof(rocblas_half)) != hipSuccess)
+        return false;
+    if (hipMalloc(&dhlfb, size_b * sizeof(rocblas_half)) != hipSuccess)
+        return false;
+    if (hipMalloc(&dhlfc, size_c * sizeof(rocblas_half)) != hipSuccess)
+        return false;
+
     return true;
 }
 
@@ -203,6 +240,13 @@ void rvs_blas::release_gpu_matrix_mem(void) {
     if (ddblc)
         hipFree(ddblc);
 
+    if (dhlfa)
+        hipFree(dhlfa);
+    if (dhlfb)
+        hipFree(dhlfb);
+    if (dhlfc)
+        hipFree(dhlfc);
+
     if (is_handle_init)
         rocblas_destroy_handle(blas_handle);
 }
@@ -212,6 +256,7 @@ void rvs_blas::release_gpu_matrix_mem(void) {
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::alocate_host_matrix_mem(void) {
+
     try {
         ha = new float[size_a];
         hb = new float[size_b];
@@ -220,6 +265,10 @@ bool rvs_blas::alocate_host_matrix_mem(void) {
         hdbla = new double[size_a];
         hdblb = new double[size_b];
         hdblc = new double[size_c];
+
+        hhlfa = new rocblas_half[size_a];
+        hhlfb = new rocblas_half[size_b];
+        hhlfc = new rocblas_half[size_c];
 
         return true;
     } catch (std::bad_alloc&) {
@@ -244,6 +293,13 @@ void rvs_blas::release_host_matrix_mem(void) {
         delete []hdblb;
     if (hdblc)
         delete []hdblc;
+
+    if (hhlfa)
+        delete []hhlfa;
+    if (hhlfb)
+        delete []hhlfb;
+    if (hhlfc)
+        delete []hhlfc;
 }
 
 /**
@@ -296,6 +352,26 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
                   }
        }
 
+      if(ops_type == "hgemm") {
+                  rocblas_half alpha;
+                  rocblas_half beta;
+
+                  alpha.data = 11;
+                  beta.data = 2;
+
+                  if (rocblas_hgemm(blas_handle, transa, transb,
+                          rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                          &alpha, dhlfa, rvs_blas::m,
+                          dhlfb, rvs_blas::n, &beta,
+                          dhlfc, rvs_blas::m) != rocblas_status_success) {
+                  is_error = true;  // GPU cannot enqueue the gemm
+                  return false;
+                  } else {
+                       return true;
+                  }
+       }
+
+
     } else {
         return false;
     }
@@ -310,6 +386,7 @@ void rvs_blas::generate_random_matrix_data(void) {
     if (!is_error) {
         uint64_t nextr = time(NULL);
 
+        //SGEMM stuff
         for (i = 0; i < size_a; ++i)
             ha[i] = fast_pseudo_rand(&nextr);
 
@@ -319,6 +396,7 @@ void rvs_blas::generate_random_matrix_data(void) {
         for (int i = 0; i < size_c; ++i)
             hc[i] = fast_pseudo_rand(&nextr);
 
+        //DGEMM stuff
         for (i = 0; i < size_a; ++i)
             hdbla[i] = (double)fast_pseudo_rand(&nextr);
 
@@ -327,8 +405,21 @@ void rvs_blas::generate_random_matrix_data(void) {
 
         for (int i = 0; i < size_c; ++i)
             hdblc[i] = (double)fast_pseudo_rand(&nextr);
+
+        //DGEMM stuff
+        for (i = 0; i < size_a; ++i)
+            hhlfa[i].data = (uint16_t)fast_pseudo_rand(&nextr);
+
+        for (i = 0; i < size_b; ++i)
+            hhlfb[i].data = (uint16_t)fast_pseudo_rand(&nextr);
+
+        for (int i = 0; i < size_c; ++i)
+            hhlfc[i].data = (uint16_t)fast_pseudo_rand(&nextr);
+
     }
 }
+
+
 
 /**
  * @brief fast pseudo random generator 
