@@ -324,7 +324,7 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " +
             std::to_string(gflops_interval);
-    rvs::lp::Log(msg, rvs::loginfo);
+    rvs::lp::Log(msg, rvs::logresults);
 
     log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);
@@ -338,7 +338,7 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
  */
 bool GSTWorker::check_gflops_violation(double gflops_interval) {
     string msg;
-#if 1
+
     if (!(gflops_interval > target_stress - target_stress * tolerance &&
             gflops_interval < target_stress + target_stress * tolerance)) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -350,7 +350,7 @@ bool GSTWorker::check_gflops_violation(double gflops_interval) {
          //           rvs::loginfo);
         return true;
     }
-#endif
+
 
     return false;
 }
@@ -494,9 +494,9 @@ void GSTWorker::run() {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + GST_TARGET_ACHIEVED_MSG + " " +
                 std::to_string(target_stress);
-        rvs::lp::Log(msg, rvs::loginfo);
+        rvs::lp::Log(msg, rvs::logresults);
         log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
-                    rvs::loginfo);
+                    rvs::logresults);
         if (run_duration_ms > 0) {
             gst_test_passed = do_gst_stress_test(&error, &err_description);
             // check if stop signal was received
@@ -537,8 +537,7 @@ void GSTWorker::log_gst_test_result(bool gst_test_passed) {
         std::to_string(gpu_blas->get_bytes_copied_per_op()) +
         " " + GST_TRY_OPS_PER_SEC_OUTPUT_KEY + ": "+
         std::to_string(target_stress / gpu_blas->gemm_gflop_count()) +
-        " "  + GST_PASS_KEY + ": " +
-        (gst_test_passed ? GST_RESULT_PASS_MESSAGE : GST_RESULT_FAIL_MESSAGE);
+        " "  ;
     rvs::lp::Log(msg, rvs::logresults);
 
     log_to_json(GST_MAX_GFLOPS_OUTPUT_KEY, std::to_string(max_gflops),

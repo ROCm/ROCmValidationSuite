@@ -113,6 +113,27 @@ class rvs_blas {
     //! pointer to host memory
     double *hdblc;
 
+    //HGEMM Declaration
+    //! pointer to device (GPU) memory
+    rocblas_half *dhlfa;
+    //! pointer to device (GPU) memory
+    rocblas_half *dhlfb;
+    //! pointer to device (GPU) memory
+    rocblas_half *dhlfc;
+    //! pointer to host memory
+    rocblas_half *hhlfa;
+    //! pointer to host memory
+    rocblas_half *hhlfb;
+    //! pointer to host memory
+    rocblas_half *hhlfc;
+
+    rocblas_half  hostarrayA;
+    rocblas_half  hostarrayB;
+    rocblas_half  hostarrayC;
+
+
+
+
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;
     //! rocBlas related handle
