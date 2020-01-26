@@ -387,6 +387,14 @@ int peqt_action::run(void) {
     // iterate over devices
     for (dev = pacc->devices; dev; dev = dev->next) {
       RVSTRACE_
+
+      if(dev == NULL) {
+          msg = "[" + action_name + "] " + MODULE_NAME + " "
+            + "Device is null ";
+          rvs::lp::Log(msg, rvs::logresults);
+          return false;
+      }
+
       // fill in the info
       pci_fill_info(dev,
               PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
