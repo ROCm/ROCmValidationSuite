@@ -431,7 +431,7 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
 
   if (duration > 0) {
     RVSTRACE_
-    bandwidth = current_size/duration/(1024*1024*1024);
+    bandwidth = current_size/duration/1000/1000/1000;
     if (bidir) {
       RVSTRACE_
       bandwidth *=2;
@@ -444,7 +444,7 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
     pWorker->get_final_data(&src_node, &dst_node, &bidir,
                             &current_size, &duration, false);
       RVSTRACE_
-      bandwidth = current_size/duration/(1024*1024*1024);
+      bandwidth = current_size/duration/1000/1000/1000;
       if (bidir) {
         RVSTRACE_
         bandwidth *=2;
@@ -528,7 +528,7 @@ int pebb_action::print_final_average() {
 
     if (duration) {
       RVSTRACE_
-      bandwidth = current_size/duration/(1024*1024*1024);
+      bandwidth = current_size/duration/1000/1000/1000;
       if (bidir) {
         RVSTRACE_
         bandwidth *=2;

@@ -1,4 +1,5 @@
 date
+./conf/deviceid.sh "conf/gst*.conf"
 echo 'gst';sudo ./rvs -c conf/gst.conf -d 3; date 
 echo 'gst_1';sudo ./rvs -c conf/gst_1.conf -d 3; date
 echo 'gst_2';sudo ./rvs -c conf/gst_2.conf -d 3; date

@@ -82,6 +82,7 @@ class gst_action: public rvs::actionbase {
     uint64_t gst_matrix_size_a;
     uint64_t gst_matrix_size_b;
     uint64_t gst_matrix_size_c;
+    uint64_t gst_hot_calls;
 
     // configuration properties getters
 
