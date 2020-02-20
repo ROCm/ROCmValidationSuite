@@ -111,6 +111,16 @@ class GSTWorker : public rvs::ThreadBase {
     //! returns the target stress (in GFlops) that the GPU will try to achieve
     float get_target_stress(void) { return target_stress; }
 
+    //! sets hot calls
+    void set_gst_hot_calls(uint64_t _hot_calls) {
+        gst_hot_calls = _hot_calls;
+    }
+ 
+    //! sets hot calls
+    uint64_t get_gst_hot_calls(void) {
+        return gst_hot_calls;
+    }
+
     //! sets the SGEMM matrix size
     void set_matrix_size_a(uint64_t _matrix_size_a) {
         matrix_size_a = _matrix_size_a;
@@ -191,6 +201,8 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t matrix_size_a;
     uint64_t matrix_size_b;
     uint64_t matrix_size_c;
+    //num of hot calls
+    uint64_t gst_hot_calls;
     //! actual ramp time in case the GPU achieves the given target_stress Gflops
     uint64_t ramp_actual_time;
     //! rvs_blas pointer

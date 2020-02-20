@@ -719,7 +719,7 @@ int pqt_action::print_running_average(pqtworker* pWorker) {
                             &current_size, &duration);
 
   if (duration > 0) {
-    bandwidth = current_size/duration/(1024*1024*1024);
+    bandwidth = current_size/duration/1000 / 1000 / 1000;
     if (bidir) {
       bandwidth *=2;
     }
@@ -730,7 +730,7 @@ int pqt_action::print_running_average(pqtworker* pWorker) {
     pWorker->get_final_data(&src_node, &dst_node, &bidir,
                             &current_size, &duration, false);
     if (duration > 0) {
-      bandwidth = current_size/duration/(1024*1024*1024);
+      bandwidth = current_size/duration/1000 / 1000 / 1000;
       if (bidir) {
         bandwidth *=2;
       }
@@ -818,7 +818,7 @@ int pqt_action::print_final_average() {
                             &current_size, &duration);
 
     if (duration) {
-      bandwidth = current_size/duration/(1024*1024*1024);
+      bandwidth = current_size/duration/1000 / 1000 / 1000;
       if (bidir) {
         bandwidth *=2;
       }

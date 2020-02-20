@@ -73,9 +73,12 @@ int rvs::exec::do_yaml(const std::string& config_file) {
   // find "actions" map
   const YAML::Node& actions = config["actions"];
 
+
   // for all actions...
   for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
     const YAML::Node& action = *it;
+
+    rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
 
     // if stop was requested
     if (rvs::logger::Stopping()) {
@@ -168,6 +171,7 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
   if (rvs::options::has_option("-i", &indexes) && (!indexes.empty()))
     indexes_provided = true;
 
+  rvs::logger::log("Module name :" + module_name, rvs::logresults);
 
   // for all child nodes
   for (YAML::const_iterator it = node.begin(); it != node.end(); it++) {
@@ -225,6 +229,7 @@ int rvs::exec::do_yaml_properties_collection(const YAML::Node& node,
 bool rvs::exec::is_yaml_properties_collection(
   const std::string& module_name,
   const std::string& property_name) {
+
   if (module_name == "gpup") {
     if (property_name == "properties")
       return true;
