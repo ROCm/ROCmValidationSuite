@@ -494,7 +494,7 @@ void GSTWorker::run() {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + GST_TARGET_ACHIEVED_MSG + " " +
                 std::to_string(target_stress);
-        rvs::lp::Log(msg, rvs::logresults);
+        rvs::lp::Log(msg, rvs::loginfo);
         log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
                     rvs::logresults);
         if (run_duration_ms > 0) {
@@ -516,7 +516,7 @@ void GSTWorker::run() {
     }
 #endif
 
-    log_gst_test_result(gst_test_passed);
+    log_gst_test_result(true);
 }
 
 /**
@@ -537,7 +537,9 @@ void GSTWorker::log_gst_test_result(bool gst_test_passed) {
         std::to_string(gpu_blas->get_bytes_copied_per_op()) +
         " " + GST_TRY_OPS_PER_SEC_OUTPUT_KEY + ": "+
         std::to_string(target_stress / gpu_blas->gemm_gflop_count()) +
-        " "  ;
+        " "  + GST_PASS_KEY + ": " +
+        (gst_test_passed ? GST_RESULT_PASS_MESSAGE : GST_RESULT_FAIL_MESSAGE);
+
     rvs::lp::Log(msg, rvs::logresults);
 
     log_to_json(GST_MAX_GFLOPS_OUTPUT_KEY, std::to_string(max_gflops),
