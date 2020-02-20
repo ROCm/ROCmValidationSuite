@@ -1,4 +1,5 @@
 date
+./conf/deviceid.sh "conf/pqt_*.conf"
 echo 'pqt_1';sudo ./rvs -c conf/pqt_1.conf -d 3; date
 echo 'pqt_12';sudo ./rvs -c conf/pqt_12.conf -d 3; date
 echo 'pqt_13';sudo ./rvs -c conf/pqt_13.conf -d 3; date

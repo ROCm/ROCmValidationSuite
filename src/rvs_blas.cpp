@@ -100,7 +100,6 @@ bool rvs_blas::init_gpu_device(void) {
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
-    if (!is_error) {
 
       if(ops_type == "sgemm") {
 
@@ -187,10 +186,8 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
       }
 
 
-     return true;
-    } else {
-        return false;
-    }
+    is_error = false;
+    return true;
 }
 
 /**
@@ -221,6 +218,18 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
 
     return true;
 }
+
+/**
+ * @brief gets time
+ */
+double rvs_blas::get_time_us(void)
+{
+    hipDeviceSynchronize();
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (tv.tv_sec * 1000 * 1000) + tv.tv_usec;
+};
+ 
 
 /**
  * @brief releases GPU mem & destroys the rocBlas handle
