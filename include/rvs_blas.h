@@ -30,6 +30,7 @@
 #include "rocblas.h"
 #include "include/hip/hip_runtime.h"
 #include "include/hip/hip_runtime_api.h"
+#include <sys/time.h>
 
 /**
  * @class rvs_blas
@@ -59,9 +60,10 @@ class rvs_blas {
     }
     //! computes the gflop for a SGEMM operation
     double gemm_gflop_count(void) {
-        return static_cast<double>(2.0 * m * n * k) / 1e9;
+        return static_cast<double>(2.0 * m * n * k);
     }
 
+    double get_time_us(void);
     //! returns TRUE if an error occured
     bool error(void) { return is_error; }
     void generate_random_matrix_data(void);
