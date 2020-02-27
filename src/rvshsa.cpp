@@ -51,6 +51,7 @@ void rvs::hsa::Init() {
   if (pDsc == nullptr) {
     pDsc = new rvs::hsa();
     pDsc->InitAgents();
+
   }
 }
 
@@ -339,6 +340,8 @@ void rvs::hsa::InitAgents() {
   }
 
   std::sort(size_list.begin(), size_list.end());
+
+  PrintTopology();
 }
 
 /**
@@ -563,8 +566,21 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
                    status);
   double start = std::min(async_time_fwd.start, async_time_rev.start);
   double end = std::max(async_time_fwd.end, async_time_rev.end);
+  double copy_time = end - start;
+
+  // Forward copy completed before Reverse began
+  if (async_time_fwd.end < async_time_rev.start) {
+    return (copy_time - (async_time_rev.start - async_time_fwd.end));
+  }
+
+  // Reverse copy completed before Forward began
+  if (async_time_rev.end < async_time_fwd.start) {
+    return (copy_time - (async_time_fwd.start - async_time_rev.end));
+  }
+
   RVSHSATRACE_
-  return(end - start);
+  // Forward and Reverse copies overlapped
+  return copy_time;
 }
 
 /**
@@ -774,8 +790,6 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
 
   if (bidirectional) {
     RVSHSATRACE_
-//     src_ix_rev = dst_ix_fwd;
-//     dst_ix_rev = src_ix_fwd;
 
     // allocate buffers and grant permissions for reverse transfer
     sts = Allocate(src_ix_rev, dst_ix_rev, Size,
@@ -830,14 +844,12 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
 
   // wait for transfer to complete
   RVSHSATRACE_
-  while (hsa_signal_wait_acquire(signal_fwd, HSA_SIGNAL_CONDITION_LT,
-    1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)) {}
+  hsa_signal_wait_acquire(signal_fwd, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE);
 
   // if bidirectional, also wait for reverse transfer to complete
   if (bidirectional == true) {
     RVSHSATRACE_
-    while (hsa_signal_wait_acquire(signal_rev, HSA_SIGNAL_CONDITION_LT,
-    1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)) {}
+    hsa_signal_wait_acquire(signal_rev, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE);
   }
 
   RVSHSATRACE_
@@ -1070,3 +1082,21 @@ int rvs::hsa::GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
   RVSHSATRACE_
   return 0;
 }
+
+void rvs::hsa::PrintTopology() {
+  hsa_status_t status;
+  string log_msg;
+
+  std::cout <<"\n \t \t Discovered Nodes \n";
+  std::cout << "      ============================================== \n \n ";
+
+  std::cout << std::left << std::setw(80) << "     Node Name " << std::setw(20) <<  " Node Type  " << "\n";
+  std::cout << "==============================================================================================";
+
+  RVSHSATRACE_
+  for (uint32_t i = 0; i < agent_list.size(); i++) {
+     std::cout << "\n " << std::left << std::setw(80) << agent_list[i].agent_name <<  std::setw(20) << agent_list[i].agent_device_type << std::setw(10) << agent_list[i].node << "\n";
+  }
+  std::cout << "============================================================================================== \n";
+}
+

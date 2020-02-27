@@ -223,6 +223,18 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
 }
 
 /**
+ * @brief gets time
+ */
+double rvs_blas::get_time_us(void)
+{
+    hipDeviceSynchronize();
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (tv.tv_sec * 1000 * 1000) + tv.tv_usec;
+};
+ 
+
+/**
  * @brief releases GPU mem & destroys the rocBlas handle
  */
 void rvs_blas::release_gpu_matrix_mem(void) {
