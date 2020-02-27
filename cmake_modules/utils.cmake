@@ -117,7 +117,6 @@ function ( get_version DEFAULT_VERSION_STRING )
     set( VERSION_BUILD  "${VERSION_BUILD}" PARENT_SCOPE )
 
 endfunction()
-=======
 ################################################################################
 ##
 ## The University of Illinois/NCSA

@@ -544,7 +544,7 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
                              hsa_signal_t signal_fwd, hsa_signal_t signal_rev) {
   hsa_status_t status;
   // Obtain time taken for forward copy
-  hsa_amd_profiling_async_copy_time_t async_time_fwd {0, 0};
+  hsa_amd_profiling_async_copy_time_t async_time_fwd {0};
   if (HSA_STATUS_SUCCESS !=
      (status =
        hsa_amd_profiling_get_async_copy_time(signal_fwd, &async_time_fwd)))
@@ -557,7 +557,7 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
   }
   RVSHSATRACE_
 
-  hsa_amd_profiling_async_copy_time_t async_time_rev {0, 0};
+  hsa_amd_profiling_async_copy_time_t async_time_rev {0};
   if (HSA_STATUS_SUCCESS !=
      (status =
         hsa_amd_profiling_get_async_copy_time(signal_rev, &async_time_rev)))
