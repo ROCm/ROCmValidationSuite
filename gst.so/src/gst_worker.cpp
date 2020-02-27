@@ -400,8 +400,6 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         if (gflops_interval > max_gflops)
                     max_gflops = gflops_interval;
 
-        log_interval_gflops(gflops_interval);
-
         if (check_gflops_violation(gflops_interval))
                     num_gflops_violations++;
 
@@ -479,7 +477,7 @@ void GSTWorker::run() {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + GST_TARGET_ACHIEVED_MSG + " " +
                 std::to_string(target_stress);
-        rvs::lp::Log(msg, rvs::loginfo);
+        rvs::lp::Log(msg, rvs::logresults);
         log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
                     rvs::loginfo);
 #endif

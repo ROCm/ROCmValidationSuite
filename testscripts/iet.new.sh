@@ -1,3 +1,4 @@
+./conf/deviceid.sh "conf/iet_*.conf"
 echo 'iet_1';sudo ./rvs -c conf/iet_1.conf -d 3 && date
 echo 'iet_2';sudo ./rvs -c conf/iet_2.conf -d 3 && date
 echo 'iet_3';sudo ./rvs -c conf/iet_3.conf -d 3 && date
