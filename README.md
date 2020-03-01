@@ -36,9 +36,10 @@ Ubuntu :
 
 ## Install ROCm stack, rocblas and rocm-smi-lib64
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
-**Note:**
-rocm_smi64 package name changed to rocm-smi-lib64 from ROCm3.0 onwards.
-If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
+
+_**Note:**_
+
+rocm_smi64 package name changed to rocm-smi-lib64 from ROCm3.0 onwards. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
  
 Install rocBLAS and rocm-smi-lib64 : 
 
@@ -116,6 +117,7 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
 
 ### Running version pre-complied and packaged with ROCm release
 sudo /opt/rocm/rvs/rvs -d 3
+
 Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
 
 ## Regression
