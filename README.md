@@ -7,7 +7,8 @@ The function of each module see this [link](./FEATURES.md).
 
 Examples and about config files [link](./doc/ugsrc/ug1main.md).
 
-## Prerequisites
+## Prerequisites 
+Please do this before compilation/installing compiled package.
 
 Ubuntu : 
       
@@ -33,10 +34,13 @@ Ubuntu :
        
        sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
 
-## Install ROCm stack, rocblas and rocm_smi64
-Install ROCm stack for Ubuntu/CentOS, Refer https://github.com/RadeonOpenCompute/ROCm
+## Install ROCm stack, rocblas and rocm-smi-lib64
+Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
+**Note:**
+rocm_smi64 package name changed to rocm-smi-lib64 from ROCm3.0 onwards.
+If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
  
-Install rocBLAS and rocm_smi64 : 
+Install rocBLAS and rocm-smi-lib64 : 
 
    Ubuntu : 
    
@@ -51,13 +55,13 @@ Install rocBLAS and rocm_smi64 :
            sudo zypper install rocblas rocm-smi-lib64
 
 _**Note:**_
-If  rocm_smi64 is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
+If  rocm-smi-lib64 is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
 
-Ubuntu : sudo dpkg -r rocm_smi64 && sudo apt install rocm_smi64
+Ubuntu : sudo dpkg -r rocm-smi-lib64 && sudo apt install rocm-smi-lib64
 
-CentOS & RHEL : sudo rpm -e rocm_smi64 && sudo yum install rocm_smi64
+CentOS & RHEL : sudo rpm -e  rocm-smi-lib64 && sudo yum install  rocm-smi-lib64
 
-SUSE : sudo rpm -e rocm_smi64 && sudo zypper install rocm_smi64
+SUSE : sudo rpm -e  rocm-smi-lib64 && sudo zypper install  rocm-smi-lib64
 
 ## Building from Source
 This section explains how to get and compile current development stream of RVS.
@@ -94,14 +98,25 @@ ignore an error for the unrelated configuration
     Ubuntu : sudo dpkg -i rocm-validation-suite*.deb
     CentOS & RHEL & SUSE : sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
+**Note:**
+RVS is getting packaged as part of ROCm release starting from 3.0. You can install pre-compiled package as below.
+Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed
+
+    Ubuntu : sudo apt install rocm-validation-suite
+    CentOS & RHEL : sudo yum install rocm-validation-suite
+    SUSE : sudo zypper install rocm-validation-suite
+
 ## Running RVS
 
 ### Running version built from source code:
 
     cd ./build/bin
     sudo ./rvs -d 3
-    sudo ./rvsqa.new.sh  ; It will run complete rvs test suite
+    sudo ./rvsqa.new.sh ; It will run complete rvs test suite
 
+### Running version pre-complied and packaged with ROCm release
+sudo /opt/rocm/rvs/rvs -d 3
+Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
 
 ## Regression
 
