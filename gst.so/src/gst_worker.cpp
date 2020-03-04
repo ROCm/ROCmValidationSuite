@@ -389,13 +389,16 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         gst_start_time = gpu_blas->get_time_us();
         // run GEMM & wait for completion
         if (gpu_blas->run_blass_gemm(gst_ops_type)) {
+            while (!gpu_blas->is_gemm_op_complete()) {}
             num_sgemm_ops++;
         } 
         gst_end_time = gpu_blas->get_time_us();
 
-        timetakenforoneiteration = gst_end_time - gst_start_time;
+        // converting micro seconds to seconds by deviding 1e6
+        timetakenforoneiteration = (gst_end_time - gst_start_time) / 1e6;
 
-        gflops_interval = static_cast<double>(gpu_blas->gemm_gflop_count() ) / timetakenforoneiteration * 1e3;
+        // converting no of flops/sec to Gflops/Sec by deviding whole value by 1e9
+        gflops_interval = static_cast<double>((gpu_blas->gemm_gflop_count() ) / timetakenforoneiteration) / 1e9 ;
 
         if (gflops_interval > max_gflops)
                     max_gflops = gflops_interval;
@@ -404,7 +407,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
                     num_gflops_violations++;
 
         // reset time & gflops related data
-         num_sgemm_ops = 0;
+        num_sgemm_ops = 0;
     }
 
     if (num_gflops_violations > max_violations)
