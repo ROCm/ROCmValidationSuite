@@ -54,9 +54,10 @@ using std::regex;
 #define RVS_CONF_COPY_MATRIX_KEY        "copy_matrix"
 #define RVS_CONF_TARGET_STRESS_KEY      "target_stress"
 #define RVS_CONF_TOLERANCE_KEY          "tolerance"
-#define RVS_CONF_MATRIX_SIZE_KEYA        "matrix_size_a"
-#define RVS_CONF_MATRIX_SIZE_KEYB        "matrix_size_b"
-#define RVS_CONF_MATRIX_SIZE_KEYC        "matrix_size_b"
+#define RVS_CONF_HOT_CALLS              "hot_calls"
+#define RVS_CONF_MATRIX_SIZE_KEYA       "matrix_size_a"
+#define RVS_CONF_MATRIX_SIZE_KEYB       "matrix_size_b"
+#define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_b"
 #define RVS_CONF_GST_OPS_TYPE           "ops_type"
 
 #define MODULE_NAME                     "gst"
@@ -68,6 +69,7 @@ using std::regex;
 #define GST_DEFAULT_TOLERANCE           0.1
 #define GST_DEFAULT_COPY_MATRIX         true
 #define GST_DEFAULT_MATRIX_SIZE         5760
+#define GST_DEFAULT_HOT_CALLS           10
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0
@@ -126,6 +128,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             workers[i].set_copy_matrix(gst_copy_matrix);
             workers[i].set_target_stress(gst_target_stress);
             workers[i].set_tolerance(gst_tolerance);
+            workers[i].set_gst_hot_calls(gst_hot_calls);
             workers[i].set_matrix_size_a(gst_matrix_size_a);
             workers[i].set_matrix_size_b(gst_matrix_size_b);
             workers[i].set_matrix_size_c(gst_matrix_size_c);
@@ -239,6 +242,15 @@ bool gst_action::get_all_gst_config_keys(void) {
          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
          bsts = false;
     }
+
+    error = property_get_int<uint64_t>(RVS_CONF_HOT_CALLS, &gst_hot_calls, GST_DEFAULT_HOT_CALLS);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_HOT_CALLS) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
 
     error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYA, &gst_matrix_size_a, GST_DEFAULT_MATRIX_SIZE);
     if (error == 1) {
