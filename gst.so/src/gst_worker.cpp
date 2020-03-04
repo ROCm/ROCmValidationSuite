@@ -389,7 +389,6 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         gst_start_time = gpu_blas->get_time_us();
         // run GEMM & wait for completion
         if (gpu_blas->run_blass_gemm(gst_ops_type)) {
-            while (!gpu_blas->is_gemm_op_complete()) {}
             num_sgemm_ops++;
         } 
         gst_end_time = gpu_blas->get_time_us();
