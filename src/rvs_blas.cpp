@@ -100,7 +100,6 @@ bool rvs_blas::init_gpu_device(void) {
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
-    if (!is_error) {
 
       if(ops_type == "sgemm") {
 
@@ -187,10 +186,8 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
       }
 
 
-     return true;
-    } else {
-        return false;
-    }
+    is_error = false;
+    return true;
 }
 
 /**

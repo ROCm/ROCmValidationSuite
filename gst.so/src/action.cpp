@@ -69,7 +69,7 @@ using std::regex;
 #define GST_DEFAULT_TOLERANCE           0.1
 #define GST_DEFAULT_COPY_MATRIX         true
 #define GST_DEFAULT_MATRIX_SIZE         5760
-#define GST_DEFAULT_HOT_CALLS           10
+#define GST_DEFAULT_HOT_CALLS           0
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0
