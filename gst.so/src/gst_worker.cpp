@@ -183,6 +183,8 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     uint16_t num_sgemm_ops = 0, num_sgemm_ops_log_interval = 0;
     uint64_t millis_sgemm_ops, millis_last_sgemm;
     uint16_t proc_delay = 0;
+    uint64_t start_time, end_time;
+    double timetakenforoneiteration, gflops_interval;
     string msg;
 
     // make sure that the ramp_interval & duration are not less than
@@ -230,10 +232,21 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
             }
         }
 
+        //Start the timer
+        start_time = gpu_blas->get_time_us();
+
         // run GEMM & wait for completion
-        if (!gpu_blas->run_blass_gemm(gst_ops_type))
-            continue;  // failed to run the current SGEMM
-        while (!gpu_blas->is_gemm_op_complete()) {}
+        gpu_blas->run_blass_gemm(gst_ops_type);
+
+        //End the timer
+        end_time = gpu_blas->get_time_us();
+
+        //Converting microseconds to seconds
+        timetakenforoneiteration = (end_time - start_time)/1e6;
+
+        gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
+
+ 
         gst_last_sgemm_end_time = std::chrono::system_clock::now();
         millis_last_sgemm =
                 time_diff(gst_last_sgemm_end_time, gst_last_sgemm_start_time);
@@ -286,7 +299,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
                 curr_gflops = static_cast<double>(
                                 gpu_blas->gemm_gflop_count() *
                                 num_sgemm_ops_log_interval) / seconds_elapsed;
-                log_interval_gflops(curr_gflops);
+                log_interval_gflops(gflops_interval);
             }
 
             num_sgemm_ops_log_interval = 0;
@@ -419,10 +432,10 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         if(!gst_hot_calls) {
                msg = "[" + action_name + "] " + MODULE_NAME + " " +
                            std::to_string(gpu_id) + " " + GST_START_MSG + " " +
-                           " Execution time in milliseconds :" + std::to_string(total_milliseconds); 
+                           " Execution time in milliseconds :" + std::to_string(total_milliseconds) +
+                           " run_duration_ms :" + std::to_string(run_duration_ms); 
                rvs::lp::Log(msg, rvs::logtrace);
-
-               if (total_milliseconds >= run_duration_ms - ramp_actual_time)
+               if (total_milliseconds >= run_duration_ms)
                       break;
         }else{
             msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -470,15 +483,15 @@ void GSTWorker::run() {
         return;
     }
 
-        // the GPU succeeded to achieve the target_stress GFLOPS
-        // continue with the same workload for the rest of the test duration
-        msg = "[" + action_name + "] " + MODULE_NAME + " " +
+    // the GPU succeeded to achieve the target_stress GFLOPS
+    // continue with the same workload for the rest of the test duration
+    msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + " GST ramp completed for interval :" + " " +
                 std::to_string(ramp_interval);
-        rvs::lp::Log(msg, rvs::loginfo);
-        log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
+    rvs::lp::Log(msg, rvs::loginfo);
+    log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
                     rvs::loginfo);
-        if (run_duration_ms > 0) {
+    if (run_duration_ms > 0) {
             gst_test_passed = do_gst_stress_test(&error, &err_description);
             // check if stop signal was received
             if (rvs::lp::Stopping())
@@ -492,7 +505,7 @@ void GSTWorker::run() {
                 log_to_json("err", err_description, rvs::logerror);
                 return;
             }
-        }
+    }
 
     log_interval_gflops(max_gflops);
 }
