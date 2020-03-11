@@ -321,22 +321,13 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
 
         end_time = std::chrono::system_clock::now();
         cur_milis_sampling = time_diff(end_time, sampling_start_time);
-        if (cur_milis_sampling >= sample_interval &&
-                                    gpu_worker->is_sgemm_complete()) {
+        if (cur_milis_sampling >= sample_interval ) {
             gpu_worker->pause();
             // it's sampling time => check the power value against target_power
             if (power_sampling_iters != 0) {
                 avg_power /= power_sampling_iters;
-                if (!(avg_power >= target_power - tolerance * target_power &&
-                    avg_power <= target_power + tolerance * target_power)) {
-                    // compute the new SGEMMs frequency
-                    compute_new_sgemm_freq(avg_power);
-                    // set the new SGEMM frequency
-                    gpu_worker->set_sgemm_delay(sgemm_si_delay * 1000);
-
-                } else {
-                    ramp_actual_time = training_time_ms +
-                                        time_diff(end_time, iet_start_time);
+                if (avg_power >= target_power ){
+                    ramp_actual_time = time_diff(end_time, iet_start_time);
                     return true;
                 }
             }
@@ -348,8 +339,8 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
         }
 
         cur_milis_sampling = time_diff(end_time, iet_start_time);
-        if (cur_milis_sampling > ramp_interval - training_time_ms)
-            return false;
+        if (cur_milis_sampling > ramp_interval) 
+            return true;
 
         usleep(POWER_PROCESS_DELAY);
     }
@@ -393,18 +384,17 @@ bool IETWorker::do_iet_power_stress(void) {
 
         end_time = std::chrono::system_clock::now();
         cur_milis_sampling = time_diff(end_time, sampling_start_time);
-        if (cur_milis_sampling >= sample_interval &&
-                                    gpu_worker->is_sgemm_complete()) {
+        if (cur_milis_sampling >= sample_interval) {
             gpu_worker->pause();
             // it's sampling time => check the power value against target_power
             if (power_sampling_iters != 0) {
                 avg_power /= power_sampling_iters;
-                if (!(avg_power >= target_power - tolerance * target_power &&
+                if ((avg_power <= target_power - tolerance * target_power &&
                     avg_power <= target_power + tolerance * target_power)) {
                     // detected a target_power violation
                     num_power_violations++;
                     msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                        std::to_string(gpu_id) + " " + IET_PWR_VIOLATION_MSG +
+                        std::to_string(gpu_id) + " " + " Average power is less than target stress , will keep trying. " +
                         " " + std::to_string(avg_power);
                     rvs::lp::Log(msg, rvs::loginfo);
                     log_to_json(IET_PWR_VIOLATION_MSG,
@@ -419,7 +409,7 @@ bool IETWorker::do_iet_power_stress(void) {
         }
 
         total_time_ms = time_diff(end_time, iet_start_time);
-        if (total_time_ms > run_duration_ms - ramp_actual_time)
+        if (total_time_ms > run_duration_ms )
             break;
 
         usleep(POWER_PROCESS_DELAY);
@@ -482,28 +472,33 @@ void IETWorker::run() {
             log_to_json(IET_PWR_RAMP_EXCEEDED_MSG,
                 std::to_string(ramp_interval), rvs::loginfo);
 
+#if 0
             msg = "[" + action_name + "] " + MODULE_NAME + " " +
                 std::to_string(gpu_id) + " " + IET_PWR_RAMP_EXCEEDED_MSG + " " +
                     std::to_string(ramp_interval);
             rvs::lp::Log(msg, rvs::loginfo);
+#endif
         }
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                std::to_string(gpu_id) + " " + IET_PASS_KEY + ": " +
+                std::to_string(gpu_id) + " " + "ramp period complete " + " "+ IET_PASS_KEY + ": " +
                 IET_RESULT_FAIL_MESSAGE;
-        rvs::lp::Log(msg, rvs::logresults);
+        rvs::lp::Log(msg, rvs::logtrace);
 
         log_to_json(IET_PASS_KEY, IET_RESULT_FAIL_MESSAGE, rvs::logresults);
 
-    } else {
+    } 
+    {
+#if 1
         // the GPU succeeded in achieving the given target_power
         // => log a message and start the sustained stress test
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                std::to_string(gpu_id) + " " + IET_PWR_TARGET_ACHIEVED_MSG +
+                std::to_string(gpu_id) + " " + " Starting the IET test, target power is :" +
                 " " + std::to_string(target_power);
         rvs::lp::Log(msg, rvs::loginfo);
         log_to_json(IET_PWR_TARGET_ACHIEVED_MSG,
                     std::to_string(target_power), rvs::loginfo);
+#endif
 
 
         bool pass = do_iet_power_stress();
