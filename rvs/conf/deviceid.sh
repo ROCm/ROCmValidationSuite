@@ -4,6 +4,7 @@
 # Above command will add device_id : XXXX in all gpup_*.conf files
 # To change any single file use as below example
 # ./conf/deviceid.sh conf/gpup_1.conf
+set -e
  
 #Below  configLine function I got from https://stackoverflow.com/a/54909102
 # configLine will check for device_id string in current file and replace or
@@ -14,10 +15,6 @@ function configLine {
     local FILE=$1
     local NEW=$(echo "${NEW_LINE}" | sed 's/\//\\\//g')
     sed -i '/'"${OLD_LINE_PATTERN}"'/{s/.*/'"${NEW}"'/;h};${x;/./{x;q100};x}' "${FILE}"
-    if [[ $? -ne 100 ]] && [[ ${NEW_LINE} != '' ]]
-    then
-        echo "${NEW_LINE}" >> "${FILE}"
-    fi
 }
 
 gpu_dev_id_list=()
@@ -52,9 +49,30 @@ dev_num_list=(`./rvs -g | grep Device |  awk '{ print $6 }' | grep -o -E '[0-9]+
 dev_num_str=${dev_num_list[@]}
 #echo "dev_num_str $dev_num_str"
 
+function get_string_with_space {
+local str=$1 ; shift
+local file=$1
+local space=" "
+str_space=0
+str_space=(`grep "$str:" $file | awk -F ":" '{print $1}' | grep "$str" | awk -F'[^ ]' '{print length($1),NR}'`)
+echo $str_space
+str_space=$(($str_space + 0))
+while [ $str_space -gt 0 ]
+do
+    str=$(printf "%s%s" "$space" "$str")
+    str_space=$(($str_space - 1))
+    echo $str_space
+done
+echo $str
+ret_str=$str
+}
+
 # Below for loop is for going through all .conf files passed as argument to
 # deviceid.sh file
 for dev_id_line in $1; do
-    configLine  "device_id" "  device_id: $d_i" $dev_id_line
-    configLine  "device:" "  device: $dev_num_str" $dev_id_line
+    #echo $dev_id_line
+    get_string_with_space "deviceid" $dev_id_line
+    configLine  "deviceid" "$ret_str $d_i" $dev_id_line
+    get_string_with_space "device" $dev_id_line
+    configLine  "device:" "$ret_str: $dev_num_str" $dev_id_line
 done

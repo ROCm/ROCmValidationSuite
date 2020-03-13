@@ -1,22 +1,20 @@
 # Regression
 
-Regression is currently implemented for PQT module only.
+Regression is currently implemented for GST, PET, PEBB, PEQT, IET and RAND module only.
 It comes in the form of a Python script `run_regression.py`.
 
 The script will first create valid configuration files on
 `$RVS_BUILD/regression` folder. It is done by invoking `prq_create_conf.py`
-script to generate valid configuration files. If you need different tests,
-modify the `prq_create_conf.py` script to generate them.
+script to generate valid configuration files.
 
 Then, it will iterate through generated files and invoke RVS to specifying also
-JSON output and `-d 3` logging level.
+log output and `-d 3` logging level.
 
-Finally, it will iterate over generated JSON output files and search for `ERROR`
+Finally, it will iterate over generated log output files and search for `ERROR`
 string. Results are written into `$RVS_BUILD/regression/regression_res`
 file.
 
 Results are written into $RVS_BUILD/regression/
-
 
 ## Environment variables
 
