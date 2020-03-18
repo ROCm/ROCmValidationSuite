@@ -39,6 +39,7 @@
 #include "include/rvs_util.h"
 #include "include/rvsloglp.h"
 
+extern void gpu_get_all_gpu_id(std::vector<uint16_t>* pgpus_id);
 // ptr to singletone instance
 rvs::hsa* rvs::hsa::pDsc;
 const uint32_t rvs::hsa::NO_CONN;
@@ -355,12 +356,12 @@ void rvs::hsa::InitAgents() {
  *
  * */
 hsa_status_t rvs::hsa::ProcessAgent(hsa_agent_t agent, void* data) {
+  string log_msg, log_agent_name;
+  hsa_device_type_t device_type;
+  AgentInformation agent_info;
   hsa_status_t status;
   char agent_name[64];
-  hsa_device_type_t device_type;
-  string log_msg, log_agent_name;
   uint32_t node;
-  AgentInformation agent_info;
 
   // get agent list
   vector<AgentInformation>* agent_l =
@@ -1083,20 +1084,29 @@ int rvs::hsa::GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
   return 0;
 }
 
+
 void rvs::hsa::PrintTopology() {
+  vector<uint16_t> gpuId;
   hsa_status_t status;
   string log_msg;
+  int j = 0;
+
+  gpu_get_all_gpu_id(&gpuId);
 
   std::cout <<"\n \t \t Discovered Nodes \n";
   std::cout << "      ============================================== \n \n ";
 
-  std::cout << std::left << std::setw(80) << "     Node Name " << std::setw(20) <<  " Node Type  " << "\n";
-  std::cout << "==============================================================================================";
+  std::cout << std::left << std::setw(75) << "     Node Name " << std::setw(25) <<  " Node Type  " << std::setw(10) << "Index"<< std::setw(15) << " GPU ID " << "\n";
+  std::cout << "=============================================================================================================================";
 
   RVSHSATRACE_
   for (uint32_t i = 0; i < agent_list.size(); i++) {
-     std::cout << "\n " << std::left << std::setw(80) << agent_list[i].agent_name <<  std::setw(20) << agent_list[i].agent_device_type << std::setw(10) << agent_list[i].node << "\n";
+     if (agent_list[i].agent_device_type == "GPU") {
+          std::cout << "\n " << std::left << std::setw(80) << agent_list[i].agent_name <<  std::setw(20) << agent_list[i].agent_device_type << std::setw(10) << agent_list[i].node << gpuId[j++] << "\n";
+     }else{
+            std::cout << "\n " << std::left << std::setw(80) << agent_list[i].agent_name <<  std::setw(20) << agent_list[i].agent_device_type << std::setw(10) << agent_list[i].node << "N/A " << "\n";
+     }
   }
-  std::cout << "============================================================================================== \n";
+  std::cout << "============================================================================================================================= \n";
 }
 
