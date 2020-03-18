@@ -314,6 +314,34 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
  * @brief logs the Gflops computed over the last log_interval period 
  * @param gflops_interval the Gflops that the GPU achieved
  */
+void GSTWorker::check_target_stress(double gflops_interval) {
+    string msg;
+
+    if(gflops_interval >= target_stress){
+         msg = "[" + action_name + "] " + MODULE_NAME + " " +
+               std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(gflops_interval) + " " +
+                      "Met target stress :" + " " + std::to_string(target_stress) 
+                      + " " + "PASS";
+
+    }else{
+         msg = "[" + action_name + "] " + MODULE_NAME + " " +
+               std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(gflops_interval) + " " +
+                      "Couldnt meet target stress :" + " " + std::to_string(target_stress) 
+                      + " " + "FAIL";
+    }
+
+    rvs::lp::Log(msg, rvs::logresults);
+
+    log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
+                rvs::loginfo);
+}
+
+
+
+/**
+ * @brief logs the Gflops computed over the last log_interval period 
+ * @param gflops_interval the Gflops that the GPU achieved
+ */
 void GSTWorker::log_interval_gflops(double gflops_interval) {
     string msg;
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -508,6 +536,7 @@ void GSTWorker::run() {
     }
 
     log_interval_gflops(max_gflops);
+    check_target_stress(max_gflops);
 }
 
 /**
