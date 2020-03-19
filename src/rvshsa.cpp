@@ -39,6 +39,7 @@
 #include "include/rvs_util.h"
 #include "include/rvsloglp.h"
 
+extern void gpu_get_all_gpu_id(std::vector<uint16_t>* pgpus_id);
 // ptr to singletone instance
 rvs::hsa* rvs::hsa::pDsc;
 const uint32_t rvs::hsa::NO_CONN;
@@ -51,6 +52,7 @@ void rvs::hsa::Init() {
   if (pDsc == nullptr) {
     pDsc = new rvs::hsa();
     pDsc->InitAgents();
+
   }
 }
 
@@ -339,6 +341,8 @@ void rvs::hsa::InitAgents() {
   }
 
   std::sort(size_list.begin(), size_list.end());
+
+  PrintTopology();
 }
 
 /**
@@ -352,12 +356,12 @@ void rvs::hsa::InitAgents() {
  *
  * */
 hsa_status_t rvs::hsa::ProcessAgent(hsa_agent_t agent, void* data) {
+  string log_msg, log_agent_name;
+  hsa_device_type_t device_type;
+  AgentInformation agent_info;
   hsa_status_t status;
   char agent_name[64];
-  hsa_device_type_t device_type;
-  string log_msg, log_agent_name;
   uint32_t node;
-  AgentInformation agent_info;
 
   // get agent list
   vector<AgentInformation>* agent_l =
@@ -563,8 +567,21 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
                    status);
   double start = std::min(async_time_fwd.start, async_time_rev.start);
   double end = std::max(async_time_fwd.end, async_time_rev.end);
+  double copy_time = end - start;
+
+  // Forward copy completed before Reverse began
+  if (async_time_fwd.end < async_time_rev.start) {
+    return (copy_time - (async_time_rev.start - async_time_fwd.end));
+  }
+
+  // Reverse copy completed before Forward began
+  if (async_time_rev.end < async_time_fwd.start) {
+    return (copy_time - (async_time_fwd.start - async_time_rev.end));
+  }
+
   RVSHSATRACE_
-  return(end - start);
+  // Forward and Reverse copies overlapped
+  return copy_time;
 }
 
 /**
@@ -1066,3 +1083,30 @@ int rvs::hsa::GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
   RVSHSATRACE_
   return 0;
 }
+
+
+void rvs::hsa::PrintTopology() {
+  vector<uint16_t> gpuId;
+  hsa_status_t status;
+  string log_msg;
+  int j = 0;
+
+  gpu_get_all_gpu_id(&gpuId);
+
+  std::cout <<"\n \t \t Discovered Nodes \n";
+  std::cout << "      ============================================== \n \n ";
+
+  std::cout << std::left << std::setw(75) << "     Node Name " << std::setw(25) <<  " Node Type  " << std::setw(10) << "Index"<< std::setw(15) << " GPU ID " << "\n";
+  std::cout << "=============================================================================================================================";
+
+  RVSHSATRACE_
+  for (uint32_t i = 0; i < agent_list.size(); i++) {
+     if (agent_list[i].agent_device_type == "GPU") {
+          std::cout << "\n " << std::left << std::setw(80) << agent_list[i].agent_name <<  std::setw(20) << agent_list[i].agent_device_type << std::setw(10) << agent_list[i].node << gpuId[j++] << "\n";
+     }else{
+            std::cout << "\n " << std::left << std::setw(80) << agent_list[i].agent_name <<  std::setw(20) << agent_list[i].agent_device_type << std::setw(10) << agent_list[i].node << "N/A " << "\n";
+     }
+  }
+  std::cout << "============================================================================================================================= \n";
+}
+
