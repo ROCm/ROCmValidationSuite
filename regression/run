@@ -1,2 +1,2 @@
 cd bin
-./rvs -d 3 -c $1 -l $2 -j
+./rvs -d 3 -c $1 2>&1 | tee  $2
