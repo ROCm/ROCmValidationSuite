@@ -205,7 +205,8 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
         string prop_name = it->first.substr(it->first.find_last_of(".") + 1);
         bool prop_found = false;
         for (i = 0; i < PCI_DEV_NUM_CAPABILITIES; i++) {
-            if (prop_name == pcie_cap_names[i]) {
+            if ((prop_name == pcie_cap_names[i]) && 
+                ( dev != NULL )){
                 prop_found = true;
                 // call the capability's corresponding function
                 (*arr_prop_pfunc_names[i])(dev, buff);
