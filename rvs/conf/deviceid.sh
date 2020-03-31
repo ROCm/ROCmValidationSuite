@@ -11,23 +11,23 @@ function get_string_with_space {
 local str=$1 ; shift
 local line=$1; shift
 local new_str=$1
-echo $new_str
-echo "After new string"
-printf "%s" "$line"
+#echo $new_str
+#echo "After new string"
+#printf "%s" "$line"
 local space=" "
 ret_str=""
 str_space=0
 str_space=(`printf "%s" "$line" | awk -F ":" '{print $1}' | grep "$str" | awk -F'[^ ]' '{print length($1),NR}'`)
-echo $str_space
+#echo $str_space
 str_space=$(($str_space + 0))
 while [ $str_space -gt 0 ]
 do
     new_str=$(printf "%s%s" "$space" "$new_str")
     str_space=$(($str_space - 1))
-    echo $str_space
+#    echo $str_space
 done
-echo "before new_str"
-printf "%s" "$new_str"
+#echo "before new_str"
+#printf "%s" "$new_str"
 ret_str=$new_str
 }
 
@@ -41,14 +41,14 @@ function configLine {
     local line_num=1
     while IFS= read -r line
     do
-        printf "%s" $line > file.txt
+ #       printf "%s" $line > file.txt
         
         if printf "%s" "$line" | awk -F ":" '{print $1}' | grep "\b$OLD_LINE_PATTERN\b" ; then
             if  [[ $line !=  *"#"* ]] ; then 
                 #echo ${OLD_LINE_PATTERN} 
                 #echo "$line"
-                echo $NEW_LINE
-                echo "before get_string_with_space"
+ #               echo $NEW_LINE
+ #               echo "before get_string_with_space"
                 get_string_with_space "$OLD_LINE_PATTERN" "$line" "$NEW_LINE"
                 sed -i "${line_num}s/.*/${ret_str}/" "${FILE}"
             fi
