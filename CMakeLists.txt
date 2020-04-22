@@ -50,6 +50,7 @@ project ("rocm-validation-suite" )
 enable_testing()
 #include ( CTest )
 
+add_compile_options(-D__HIP_PLATFORM_HCC__)
 
 if (NOT CMAKE_CONFIGURATION_TYPES)
 #  message( "CMAKE_CONFIGURATION_TYPES not set")
@@ -92,6 +93,15 @@ include ( utils )
 ## Setup the package version default (the actual one is taken from the latest Git tag).
 get_version ( "0.0.0" )
 
+# Determine HCC_HOME
+if(NOT DEFINED HCC_HOME)
+   if(NOT DEFINED ENV{HCC_HOME})
+         set(HCC_HOME "${ROCM_PATH}/hcc" CACHE PATH "Path to which HCC has been installed")
+   else()
+         set(HCC_HOME $ENV{HCC_HOME} CACHE PATH "Path to which HCC has been installed")
+   endif()
+endif()
+
 # Package Generator  #######################################################
 # set(CPACK_GENERATOR "DEB")
 # set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm")
@@ -121,6 +131,7 @@ set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files export
 set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Runtime")
 set(HIP_INC_DIR "${ROCM_PATH}/hip" CACHE PATH "Contains header files exported by ROC Runtime")
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk")
+
 if (${RVS_OS_TYPE} STREQUAL "centos")
   set(ROCT_LIB_DIR "${ROCM_PATH}/lib64" CACHE PATH "Contains library files exported by ROC Trunk")
 elseif (${RVS_OS_TYPE} STREQUAL "rhel")
@@ -396,6 +407,7 @@ add_subdirectory(pesm.so)
 add_subdirectory(pqt.so)
 add_subdirectory(rcqt.so)
 add_subdirectory(smqt.so)
+add_subdirectory(mem.so)
 if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
 endif()
@@ -487,6 +499,11 @@ else()
   message("Doxygen is not found. Will not generate documentation.")
 endif(DOXYGEN_FOUND)
 
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/testscripts
+  COMPONENT rvsmodule
+)
+
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
           DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib
@@ -495,6 +512,7 @@ if(RVS_ROCMSMI EQUAL 1)
           DESTINATION /etc/ld.so.conf.d
           COMPONENT rvsmodule)
 endif()  # if(RVS_ROCMSMI EQUAL 1)
+
 
 # TEST SECTION
 

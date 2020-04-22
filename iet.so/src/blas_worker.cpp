@@ -82,7 +82,7 @@ void blas_worker::setup_blas(void) {
 
     // generate random matrix & copy it to the GPU
     gpu_blas->generate_random_matrix_data();
-    if (!gpu_blas->copy_data_to_gpu("sgemm")) {
+    if (!gpu_blas->copy_data_to_gpu("dgemm")) {
         blas_error = IET_BLAS_MEMCPY_ERROR;
         set_setup_complete();
         return;
@@ -190,7 +190,7 @@ uint64_t blas_worker::get_sgemm_delay(void) {
  * @brief performs SGEMMs on the selected GPU with a given frequency
  */
 void blas_worker::run() {
-    std::string   ops_type = "sgemm";
+    std::string   ops_type = "dgemm";
 
     setup_blas();
     if (blas_error)
