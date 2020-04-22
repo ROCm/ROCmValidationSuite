@@ -499,6 +499,11 @@ else()
   message("Doxygen is not found. Will not generate documentation.")
 endif(DOXYGEN_FOUND)
 
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/testscripts
+  COMPONENT rvsmodule
+)
+
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
           DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib
