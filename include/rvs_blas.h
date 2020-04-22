@@ -25,7 +25,7 @@
 #ifndef INCLUDE_RVS_BLAS_H_
 #define INCLUDE_RVS_BLAS_H_
 
-#define __HIP_PLATFORM_HCC__
+//#define __HIP_PLATFORM_HCC__
 
 #include "rocblas.h"
 #include "include/hip/hip_runtime.h"
