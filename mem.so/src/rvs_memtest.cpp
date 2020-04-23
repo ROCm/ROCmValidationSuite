@@ -98,24 +98,8 @@
 #define STRESS_BLOCKSIZE              64
 #define STRESS_GRIDSIZE               (1024*32)
 #define ERR_MSG_LENGTH                4096
-
-void InitRvsMemtest()
-{
-    *ptCntOfError = 0;
-    ptFailedAdress = 0;
-    tot_num_blocks = 0;
-    max_num_blocks = 0;
-    exit_on_error = 0;
-    num_iterations = 0;
-    blocks = 512;
-    threadsPerBlock = 256;
-    global_pattern = 0;
-    global_pattern_long = 0;
-    num_passes = 1;
-    verbose = 0;
-    interactive = 0;
-
-}
+#define RANDOM_CT                     320000
+#define RANDOM_DIV_CT                 0.1234
 
 void atomic_inc(unsigned int* value)
 {
@@ -142,7 +126,7 @@ unsigned int error_checking(const char* pmsg, unsigned int blockidx)
     unsigned int  numOfErrors = 0;
     unsigned int  i;
 
-    std::cout << "\n" <<  pmsg << " block id :" << blockidx << "\n";
+    //std::cout << "\n" <<  pmsg << " block id :" << blockidx << std::flush << "\n";
 
     HIP_CHECK(hipMemcpy(&numOfErrors, ptCntOfError, sizeof(unsigned int), hipMemcpyDeviceToHost));
     HIP_CHECK(hipMemcpy(&host_err_addr[0], &ptFailedAdress, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
@@ -177,23 +161,21 @@ unsigned int error_checking(const char* pmsg, unsigned int blockidx)
 	    hipMemset((void*)&expectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 	    hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 
-	    if (exit_on_error){
-	        hipDeviceReset();
-	        exit(ERR_BAD_STATE);
-	    }
+	    hipDeviceReset();
+	    exit(ERR_BAD_STATE);
     }
 
     return numOfErrors;
 }
 
-unsigned int get_random_num(void)
-{
+
+unsigned int get_random_num(void) {
     struct timeval t0;
 
     if (gettimeofday(&t0, NULL) !=0){
 
-	      fprintf(stderr, "ERROR: gettimeofday() failed\n");
-	      exit(ERR_GENERAL);
+	       fprintf(stderr, "ERROR: gettimeofday() failed\n");
+	       exit(ERR_GENERAL);
     }
 
     unsigned int seed= (unsigned int)t0.tv_sec;
@@ -201,6 +183,8 @@ unsigned int get_random_num(void)
 
     return rand_r(&seed);
 }
+
+
 
 uint64_t get_random_num_long(void)
 {
@@ -370,8 +354,6 @@ __global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* err, 
     return;
 }
 
-
-
 /************************************************************************
  * Test0 [Walking 1 bit]
  * This test changes one bit a time in memory address to see it
@@ -384,9 +366,10 @@ void test0(char* ptr, unsigned int tot_num_blocks)
 {
     unsigned int    i;
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
-    unsigned int debugValue;
+    unsigned int err = 0;
 
-    error_checking("\nStarting test0: Change one bit memory addresss  ",  0);
+    std::cout << "\nTest0: Change one bit memory addresss  ";
+    err += error_checking("\nStarting test0: Change one bit memory addresss  ",  0);
 
     //test global address
     hipLaunchKernelGGL(kernel_test0_global_write,   /* compute kernel*/
@@ -398,7 +381,7 @@ void test0(char* ptr, unsigned int tot_num_blocks)
                         dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                         ptr, end_ptr, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr);
 
-    error_checking("Test0 on global address",  0);
+    err += error_checking("Test0 on global address",  0);
 
     for(unsigned int ite = 0; ite < num_iterations; ite++){
 	    for (i = 0; i < tot_num_blocks; i += GRIDSIZE){
@@ -423,7 +406,11 @@ void test0(char* ptr, unsigned int tot_num_blocks)
 
     }
 
-    error_checking("Test0 checking complete :: ",  i);
+    err += error_checking("Test0 checking complete :: ",  i);
+
+    if(!err) {
+      std::cout << "\n Memory test0 passed , no errors detected";
+    }
     return;
 
 }
@@ -475,7 +462,10 @@ kernel_test1_read(char* _ptr, char* end_ptr, unsigned int* err, unsigned long* p
 void test1(char* ptr, unsigned int tot_num_blocks)
 {
     unsigned int i;
+    unsigned int err;
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
+
+    std::cout << "\nTest1: Each Memory location is filled with its own address";
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
 	    dim3 grid;
@@ -484,7 +474,7 @@ void test1(char* ptr, unsigned int tot_num_blocks)
       hipLaunchKernelGGL(kernel_test1_write,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                          ptr + i*BLOCKSIZE, end_ptr, ptCntOfError); 
-	    SHOW_PROGRESS("Test1 on writing", i, tot_num_blocks);
+	    //SHOW_PROGRESS("Test1 on writing", i, tot_num_blocks);
     }
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -494,9 +484,13 @@ void test1(char* ptr, unsigned int tot_num_blocks)
       hipLaunchKernelGGL(kernel_test1_read,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                          ptr + i*BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr);
-	    SHOW_PROGRESS("\nTest1 on reading", i, tot_num_blocks);
+      err += error_checking("Test1 checking :: ",  i);
+	    //SHOW_PROGRESS("\nTest1 on reading", i, tot_num_blocks);
     }
 
+    if(!err) {
+      std::cout << "\nMemory test1 passed, no errors detected";
+    }
     return;
 
 }
@@ -584,8 +578,8 @@ unsigned int  move_inv_test(char* ptr, unsigned int tot_num_blocks, unsigned int
 	      grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_move_inv_write,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                       ptr + i*BLOCKSIZE, end_ptr, p1); 
-	      error_checking("Move inv writing to blocks",  i);
+	                       ptr + i * BLOCKSIZE, end_ptr,  p1); 
+
         SHOW_PROGRESS("move_inv_write", i, tot_num_blocks);
 
     }
@@ -622,12 +616,21 @@ void test2(char* ptr, unsigned int tot_num_blocks)
 {
     unsigned int p1 = 0;
     unsigned int p2 = ~p1;
+    unsigned int err = 0;
 
     std::cout << "\nTest2: Moving inversions test, with pattern " << p1 << " and " << p2 << "\n";
-    move_inv_test(ptr, tot_num_blocks, p1, p2);
+    err = move_inv_test(ptr, tot_num_blocks, p1, p2);
+
+    if(!err) {
+      std::cout << "\nMemory test2 Moving inversions test p1 p2 passed, no errors detected";
+    }
 
     std::cout << "\nTest2: Moving inversions test, with pattern " << p2 << " and " << p1 << "\n";
-    move_inv_test(ptr, tot_num_blocks, p2, p1);
+    err = move_inv_test(ptr, tot_num_blocks, p2, p1);
+    if(!err) {
+      std::cout << "\nMemory test2 Moving inversions test p2 p1 passed, no errors detected";
+    }
+
 
 }
 
@@ -647,12 +650,21 @@ void test3(char* ptr, unsigned int tot_num_blocks)
     unsigned int p0=0x80;
     unsigned int p1 = p0 | (p0 << 8) | (p0 << 16) | (p0 << 24);
     unsigned int p2 = ~p1;
+    unsigned int err = 0;
 
-    std::cout << "Test3: Moving inversions test, with pattern " << p1 << " and " << p2 << "\n";
-    move_inv_test(ptr, tot_num_blocks, p1, p2);
+    std::cout << "\nTest3: Moving inversions test, with pattern " << p1 << " and " << p2 << "\n";
+    err = move_inv_test(ptr, tot_num_blocks, p1, p2);
 
-    std::cout << "Test3: Moving inversions test, with pattern " <<  p2 << " and " << p1 << "\n";
-    move_inv_test(ptr, tot_num_blocks, p2, p1);
+    if(!err) {
+      std::cout << "\nMemory test3 Moving inversions test p2 p1 passed, no errors detected";
+    }
+
+    std::cout << "\nTest3: Moving inversions test, with pattern " <<  p2 << " and " << p1 << "\n";
+    err = move_inv_test(ptr, tot_num_blocks, p2, p1);
+
+    if(!err) {
+      std::cout << "\nMemory test3 Moving inversions test p2 p1 passed, no errors detected";
+    }
 
 }
 
@@ -671,7 +683,6 @@ void test4(char* ptr, unsigned int tot_num_blocks)
 {
     unsigned int p1;
 
-
     if (global_pattern == 0){
 	    p1 = get_random_num();
     }else{
@@ -682,22 +693,26 @@ void test4(char* ptr, unsigned int tot_num_blocks)
     unsigned int err = 0;
     unsigned int iteration = 0;
 
-    std::cout << "Test4: Moving inversions test, with random pattern " << p1 << " and " <<  p2;
+    std::cout << "\nRandom number :: p1" << p1 << " p2 :: " << p2 << std::flush;
 
     repeat:
           err += move_inv_test(ptr, tot_num_blocks, p1, p2);
 
           if (err == 0 && iteration == 0){
+            std::cout << "\nMemory test4 passed, no errors detected , iterations are zero here" << std::flush;
 	          return;
           }
 
           if (iteration < MAX_ITERATION){
-
-            std::cout << iteration <<"th repeating test4 because there are " << err <<"errors found in last run \n";
 	          iteration++;
+            std::cout << "\n" << iteration << "th repeating test4 because there are" << err << "errors found in last run\n";
 	          err = 0;
 	          goto repeat;
           }
+
+    if(!err) {
+      std::cout << "\nMemory test4 passed, no errors detected " << std::flush;
+    }
 }
 
 
@@ -809,7 +824,9 @@ void test5(char* ptr, unsigned int tot_num_blocks)
 {
 
     unsigned int i;
+    unsigned int err;
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
+
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
 	      dim3 grid;
@@ -819,7 +836,7 @@ void test5(char* ptr, unsigned int tot_num_blocks)
         hipLaunchKernelGGL(kernel_test5_init,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                           ptr + i*BLOCKSIZE, end_ptr);
-        SHOW_PROGRESS("test5[init]", i, tot_num_blocks);
+        //SHOW_PROGRESS("test5[init]", i, tot_num_blocks);
     }
 
 
@@ -830,7 +847,7 @@ void test5(char* ptr, unsigned int tot_num_blocks)
         hipLaunchKernelGGL(kernel_test5_move,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                           ptr + i*BLOCKSIZE, end_ptr);
-        SHOW_PROGRESS("test5[move]", i, tot_num_blocks);
+        //SHOW_PROGRESS("test5[move]", i, tot_num_blocks);
     }
 
 
@@ -841,7 +858,12 @@ void test5(char* ptr, unsigned int tot_num_blocks)
         hipLaunchKernelGGL(kernel_test5_check,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                             ptr + i*BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr);
-	      SHOW_PROGRESS("test5[check]", i, tot_num_blocks);
+        err = error_checking("Test5 checking complete :: ",  i);
+	      //SHOW_PROGRESS("test5[check]", i, tot_num_blocks);
+    }
+
+    if(!err) {
+      std::cout << "\nMemory test5 passed, no errors detected";
     }
 
     return;
@@ -963,12 +985,13 @@ kernel_movinv32_read(char* _ptr, char* end_ptr, unsigned int pattern,
 }
 
 
-void movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
+int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
 	 unsigned int lb, unsigned int sval, unsigned int offset)
 {
 
-    unsigned int i;
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
+    unsigned int i;
+    unsigned int err = 0;
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
 	    dim3 grid;
@@ -977,7 +1000,7 @@ void movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
       hipLaunchKernelGGL(kernel_movinv32_write,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                           ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset); 
-      SHOW_PROGRESS("\nTest6[moving inversion 32 write]", i, tot_num_blocks);
+   //   SHOW_PROGRESS("\nTest6[moving inversion 32 write]", i, tot_num_blocks);
     }
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -987,7 +1010,8 @@ void movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
       hipLaunchKernelGGL(kernel_movinv32_readwrite,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                          ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
-	    SHOW_PROGRESS("\nTest6[moving inversion 32 readwrite]", i, tot_num_blocks);
+      err += error_checking("Test6 [movinv32], checking for errors :: ",  i);
+	    //SHOW_PROGRESS("\nTest6[moving inversion 32 readwrite]", i, tot_num_blocks);
     }
 
    for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -997,26 +1021,28 @@ void movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
        hipLaunchKernelGGL(kernel_movinv32_read,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                              ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
-	     error_checking("Test6 [movinv32]",  i);
-       SHOW_PROGRESS("\nTest6[moving inversion 32 read]", i, tot_num_blocks);
+	     err += error_checking("Test6 [movinv32]",  i);
+    //   SHOW_PROGRESS("\nTest6[moving inversion 32 read]", i, tot_num_blocks);
    }
 
-   return;
+   return err;
 
 }
 
 void  test6(char* ptr, unsigned int tot_num_blocks)
 {
     unsigned int i;
+    unsigned int err= 0;
     unsigned int pattern;
 
     for (i= 0, pattern = 1;i < 32; pattern = pattern << 1, i++){
 
-        std::cout << "\nTest6[move inversion 32 bits test]: pattern ::" << std::hex << pattern << " offset=" << i;
-	      movinv32(ptr, tot_num_blocks, pattern, 1, 0, i);
+	      err += movinv32(ptr, tot_num_blocks, pattern, 1, 0, i);
 
-        std::cout << "\nTest6[move inversion 32 bits test]: pattern :: " << std::hex <<  ~pattern << " offset=" << i;
-	      movinv32(ptr, tot_num_blocks, ~pattern, 0xfffffffe, 1, i);
+	      err += movinv32(ptr, tot_num_blocks, ~pattern, 0xfffffffe, 1, i);
+    }
+    if(!err) {
+       std::cout << "\nMemory test6 passed, pattern test, no errors detected";
     }
 }
 
@@ -1105,7 +1131,6 @@ void test7(char* ptr, unsigned int tot_num_blocks)
     unsigned int i;
     unsigned int iteration = 0;
 
-    
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int);i++){
       	host_buf[i] = get_random_num();
     }
@@ -1114,6 +1139,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
 
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
 
+    std::cout << "\nTest7 Random  sequence number " << std::flush;
     repeat:
 
         for (i=1;i < tot_num_blocks; i+= GRIDSIZE){
@@ -1152,14 +1178,19 @@ void test7(char* ptr, unsigned int tot_num_blocks)
 
 
         if (err == 0 && iteration == 0){
+            std::cout << "\nMemory test7 passed, no errors detected, iterations are zero here";
 	          return;
         }
 
         if (iteration < MAX_ITERATION){
-          std::cout << iteration << "repeating test7 because there are" << err << " errors found in last run\n";
+          std::cout << iteration << "repeating test7 because there are" << err << " errors found in last run" << std::flush << "\n";
 	        iteration++;
 	        err = 0;
 	        goto repeat;
+        }
+
+        if(!err) {
+            std::cout << "\nMemory test7 passed, no errors detected";
         }
 }
 /***********************************************************************************
@@ -1230,7 +1261,7 @@ unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset
       hipLaunchKernelGGL(kernel_modtest_write,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                       ptr + i*BLOCKSIZE, end_ptr, offset, p1, p2); 
-      SHOW_PROGRESS("test8[mod test, write]", i, tot_num_blocks);
+      ///SHOW_PROGRESS("test8[mod test, write]", i, tot_num_blocks);
     }
 
     for (i= 0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -1241,7 +1272,7 @@ unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                       ptr + i*BLOCKSIZE, end_ptr, offset, p1, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
 	    err += error_checking("test8[mod test, read", i);
-      SHOW_PROGRESS("test8[mod test, read]", i, tot_num_blocks);
+      //SHOW_PROGRESS("test8[mod test, read]", i, tot_num_blocks);
     }
 
     return err;
@@ -1265,7 +1296,7 @@ void test8(char* ptr, unsigned int tot_num_blocks)
 
  repeat:
 
-    std::cout << "test8[mod test]: p1=" << p1 << "p2= " << p2 << "\n";
+    std::cout << "\nTest8[mod test]: p1=" << p1 << "p2= " << p2 << "\n";
 
     for (i = 0;i < MOD_SZ; i++){
 	    err += modtest(ptr, tot_num_blocks,i, p1, p2);
@@ -1276,10 +1307,13 @@ void test8(char* ptr, unsigned int tot_num_blocks)
     }
 
     if (iteration < MAX_ITERATION){
-        std::cout << iteration << "th repeating test8 because there are "<< err << "errors found in last run, p1= " << p1 << " p2= "<< p2;
+        std::cout << iteration << "th repeating test8 because there are "<< err << "errors found in last run, p1= " << p1 << " p2= "<< p2 << "\n";
 	      iteration++;
 	      err = 0;
 	      goto repeat;
+    }
+    if(!err) {
+       std::cout << "\nMemory test8 passed, no errors detected";
     }
 }
 
@@ -1298,6 +1332,7 @@ void test9(char* ptr, unsigned int tot_num_blocks)
 
     unsigned int p1 = 0;
     unsigned int p2 = ~p1;
+    unsigned int err = 0;
 
     unsigned int i;
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
@@ -1322,7 +1357,7 @@ void test9(char* ptr, unsigned int tot_num_blocks)
       hipLaunchKernelGGL(kernel_move_inv_readwrite,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                        ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
-	    error_checking("test9[bit fade test, readwrite]",  i);
+	    err += error_checking("test9[bit fade test, readwrite]",  i);
       SHOW_PROGRESS("test9[bit fade test, readwrite]", i, tot_num_blocks);
     }
 
@@ -1336,10 +1371,13 @@ void test9(char* ptr, unsigned int tot_num_blocks)
       hipLaunchKernelGGL(kernel_move_inv_read,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                        ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
-	    error_checking("test9[bit fade test, read]",  i);
+	    err += error_checking("test9[bit fade test, read]",  i);
       SHOW_PROGRESS("test9[bit fade test, read]", i, tot_num_blocks);
     }
 
+    if(!err) {
+       std::cout << "\nMemory test9 passed, no errors detected";
+    }
     return;
 }
 
@@ -1414,6 +1452,7 @@ test10_kernel_readwrite(char* ptr, int memsize, TYPE p1, TYPE p2,  unsigned int*
 void test10(char* ptr, unsigned int tot_num_blocks)
 {
     TYPE p1;
+    unsigned int err = 0;
 
     if (global_pattern_long){
 	      p1 = global_pattern_long;
@@ -1427,6 +1466,7 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     hipEvent_t start, stop;
 
     std::cout << "\n Test10 with pattern =" << p1;
+
     HIP_CHECK(hipStreamCreate(&stream));
     HIP_CHECK(hipEventCreate(&start));
     HIP_CHECK(hipEventCreate(&stop));
@@ -1454,7 +1494,7 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     hipEventRecord(stop, stream);
     hipEventSynchronize(stop);
 
-    error_checking("test10[Memory stress test]",  0);
+    err += error_checking("test10[Memory stress test]",  0);
     hipEventElapsedTime(&elapsedtime, start, stop);
     std::cout << " \n Test10: elapsedtime = " << elapsedtime << " bandwidth = " << (2*n+1)*tot_num_blocks/elapsedtime << "GB/s \n";
 
@@ -1462,134 +1502,11 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     hipEventDestroy(stop);
 
     hipStreamDestroy(stream);
-}
 
-
-////////////////////////////////////////////////////////////////////////////////
-// These are hip Helper functions
-
-void allocate_small_mem(void)
-{
-    //Initialize memory
-    HIP_CHECK(hipMalloc((void**)&ptCntOfError, sizeof(unsigned int))); 
-    HIP_CHECK(hipMemset(ptCntOfError, 0, sizeof(unsigned int))); 
-
-    HIP_CHECK(hipMalloc((void**)&ptFailedAdress, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(ptFailedAdress, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-
-    HIP_CHECK(hipMalloc((void**)&expectedValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(expectedValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-
-    HIP_CHECK(hipMalloc((void**)&ptCurrentValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(ptCurrentValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-
-    HIP_CHECK(hipMalloc((void**)&ptValueOfStartAddr, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(ptValueOfStartAddr, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-
-    HIP_CHECK(hipMalloc((void**)&ptDebugValue, sizeof(unsigned int))); 
-    HIP_CHECK(hipMemset(ptDebugValue, 0, sizeof(unsigned int))); 
-}
-
-void free_small_mem(void)
-{
-    //Initialize memory
-    HIP_CHECK(hipFree((void*)ptFailedAdress));
-
-    HIP_CHECK(hipFree((void*)expectedValue));
-
-    HIP_CHECK(hipFree((void*)ptCurrentValue));
-
-    HIP_CHECK(hipFree((void*)ptValueOfStartAddr));
-
-    HIP_CHECK(hipFree((void*)ptDebugValue));
-}
-
-
-
-rvs_memtest_t rvs_memtests[]={
-    {test0, (char*)"Test0 [Walking 1 bit]",			1},
-    {test1, (char*)"Test1 [Own address test]",			1},
-    {test2, (char*)"Test2 [Moving inversions, ones&zeros]",	1},
-    {test3, (char*)"Test3 [Moving inversions, 8 bit pat]",	1},
-    {test4, (char*)"Test4 [Moving inversions, random pattern]",1},
-    {test5, (char*)"Test5 [Block move, 64 moves]",		1},
-    {test6, (char*)"Test6 [Moving inversions, 32 bit pat]",	1},
-    {test7, (char*)"Test7 [Random number sequence]",		1},
-    {test8, (char*)"Test8 [Modulo 20, random pattern]",	1},
-    {test9, (char*)"Test9 [Bit fade test]",			0},
-    {test10, (char*)"Test10 [Memory stress test]",		1},
-};
-
-void list_tests_info(void)
-{
-    size_t i;
-
-    for (i = 0;i < DIM(rvs_memtests); i++){
-	          printf("%s %s\n", rvs_memtests[i].desc, rvs_memtests[i].enabled?"":" ==disabled by default==");
-    }
-
-    return;
-}
-
-
-void usage(char** argv)
-{
-
-    char example_usage[] =
-	      "run on default setting:       ./rvs_memtest\n"
-	      "run on stress test only:      ./rvs_memtest --stress\n";
-
-    printf("Usage:%s [options]\n", argv[0]);
-    printf("options:\n");
-    printf("--mappedMem                 run all checks with rvs mapped memory instead of native device memory\n");
-    printf("--silent                    Do not print out progress message (default)\n");
-    printf("--device <idx>              Designate one device for test\n");
-    printf("--interactive               Progress info will be printed in the same line\n");
-    printf("--disable_all               Disable all tests\n");
-    printf("--enable_test <test_idx>    Enable the test <test_idx>\n");
-    printf("--disable_test <test_idx>   Disable the test <test_idx>\n");
-    printf("--max_num_blocks <n>        Set the maximum of blocks of memory to test\n");
-    printf("                            1 block = 1 MB in here\n");
-    printf("--exit_on_error             When finding error, print error message and exit\n");
-    printf("--monitor_temp <interval>   Monitoring temperature, the temperature will be updated every <interval> seconds\n");
-    printf("                            This feature is experimental\n");
-    printf("--emails <a@b,c@d,...>      Setting email notification\n");
-    printf("--report_interval <n>       Setting the interval in seconds between email notifications(default 1800)\n");
-    printf("--pattern <pattern>         Manually set test pattern for test4/test8/test10\n");
-    printf("--list_tests                List all test descriptions\n");
-    printf("--num_iterations <n>        Set the number of iterations (only effective on test0 and test10)\n");
-    printf("--num_passes <n>            Set the number of test passes (this affects all tests)\n");
-    printf("--verbose <n>               Setting verbose level\n");
-    printf("                              0 -- Print out test start and end message only (default)\n");
-    printf("                              1 -- Print out pattern messages in test\n");
-    printf("                              2 -- Print out progress messages\n");
-    printf("--stress                    Stress test. Equivalent to --disable_all --enable_test 10 --exit_on_error\n");
-    printf("--help                      Print this message\n");
-    printf("\nExample usage:\n\n");
-    printf("%s\n", example_usage);
-
-    exit(ERR_GENERAL);
-}
-
-void run_tests(char* ptr, unsigned int tot_num_blocks)
-{
-    struct timeval  t0, t1;
-    unsigned int pass = 0;
-    unsigned int i;
-
-    blocks = 512;
-    threadsPerBlock = 256;
-    num_iterations = 1;
-
-    for(int n = 0; n < num_iterations; n++) {
-        for (i = 0;i < DIM(rvs_memtests); i++){
-            gettimeofday(&t0, NULL);
-            rvs_memtests[i].func(ptr, tot_num_blocks);
-            gettimeofday(&t1, NULL);
-
-        }//for
-        hipDeviceReset(); 
-        std::cout << "\n Memory tests :: " << std::dec << i << " tests complete \n ";
+    if(!err) {
+       std::cout << "\nMemory test10 passed, no errors detected";
     }
 }
+
+
 

@@ -47,7 +47,8 @@
 #include "include/rvsthreadbase.h"
 #include <pthread.h>
 
-#define TDIFF(tb, ta) (tb.tv_sec - ta.tv_sec + 0.000001*(tb.tv_usec - ta.tv_usec))
+#define TDIFF(tb, ta) (tb.tv_sec - ta.tv_sec + \
+    0.000001*(tb.tv_usec - ta.tv_usec))
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 #define MIN(x,y) (x < y? x: y)
 #define MOD_SZ 20

@@ -27,6 +27,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <sys/time.h>
 
 #include "hip/hip_runtime.h"
 
@@ -36,11 +37,10 @@
 
 
 #define MODULE_NAME                             "mem"
-
 #define MEM_MEM_ALLOC_ERROR                     "memory allocation error!"
 #define MEM_BLAS_ERROR                          "memory/blas error!"
 #define MEM_BLAS_MEMCPY_ERROR                   "HostToDevice mem copy error!"
-
+#define MAX_ERR_RECORD_COUNT                    10
 #define MEM_NUM_SAVE_BLOCKS                     16
 
 #define MEM_START_MSG                           "start"
@@ -56,6 +56,128 @@ bool MemWorker::bjson = false;
 MemWorker::MemWorker() {}
 MemWorker::~MemWorker() {}
 
+rvs_memtest_t rvs_memtests[]={
+    {test0, (char*)"Test0 [Walking 1 bit]",			1},
+    {test1, (char*)"Test1 [Own address test]",			1},
+    {test2, (char*)"Test2 [Moving inversions, ones&zeros]",	1},
+    {test3, (char*)"Test3 [Moving inversions, 8 bit pat]",	1},
+    {test4, (char*)"Test4 [Moving inversions, random pattern]",1},
+    {test5, (char*)"Test5 [Block move, 64 moves]",		1},
+    {test6, (char*)"Test6 [Moving inversions, 32 bit pat]",	1},
+    {test7, (char*)"Test7 [Random number sequence]",		1},
+    {test8, (char*)"Test8 [Modulo 20, random pattern]",	1},
+    {test9, (char*)"Test9 [Bit fade test]",			0},
+    {test10, (char*)"Test10 [Memory stress test]",		1},
+};
+
+
+void MemWorker::allocate_small_mem(void)
+{
+    //Initialize memory
+    HIP_CHECK(hipMalloc((void**)&ptCntOfError, sizeof(unsigned int))); 
+    HIP_CHECK(hipMemset(ptCntOfError, 0, sizeof(unsigned int))); 
+
+    HIP_CHECK(hipMalloc((void**)&ptFailedAdress, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptFailedAdress, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+
+    HIP_CHECK(hipMalloc((void**)&expectedValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(expectedValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+
+    HIP_CHECK(hipMalloc((void**)&ptCurrentValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptCurrentValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+
+    HIP_CHECK(hipMalloc((void**)&ptValueOfStartAddr, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptValueOfStartAddr, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+
+    HIP_CHECK(hipMalloc((void**)&ptDebugValue, sizeof(unsigned int))); 
+    HIP_CHECK(hipMemset(ptDebugValue, 0, sizeof(unsigned int))); 
+}
+
+void MemWorker::free_small_mem(void)
+{
+    //Initialize memory
+    HIP_CHECK(hipFree((void*)ptFailedAdress));
+
+    HIP_CHECK(hipFree((void*)expectedValue));
+
+    HIP_CHECK(hipFree((void*)ptCurrentValue));
+
+    HIP_CHECK(hipFree((void*)ptValueOfStartAddr));
+
+    HIP_CHECK(hipFree((void*)ptDebugValue));
+}
+
+void MemWorker::list_tests_info(void)
+{
+    size_t i;
+
+    for (i = 0;i < DIM(rvs_memtests); i++){
+	          printf("%s %s\n", rvs_memtests[i].desc, rvs_memtests[i].enabled?"":" ==disabled by default==");
+    }
+
+    return;
+}
+
+
+void MemWorker::usage(char** argv)
+{
+
+    char example_usage[] =
+	      "run on default setting:       ./rvs_memtest\n"
+	      "run on stress test only:      ./rvs_memtest --stress\n";
+
+    printf("Usage:%s [options]\n", argv[0]);
+    printf("options:\n");
+    printf("--mappedMem                 run all checks with rvs mapped memory instead of native device memory\n");
+    printf("--silent                    Do not print out progress message (default)\n");
+    printf("--device <idx>              Designate one device for test\n");
+    printf("--interactive               Progress info will be printed in the same line\n");
+    printf("--disable_all               Disable all tests\n");
+    printf("--enable_test <test_idx>    Enable the test <test_idx>\n");
+    printf("--disable_test <test_idx>   Disable the test <test_idx>\n");
+    printf("--max_num_blocks <n>        Set the maximum of blocks of memory to test\n");
+    printf("                            1 block = 1 MB in here\n");
+    printf("--exit_on_error             When finding error, print error message and exit\n");
+    printf("--monitor_temp <interval>   Monitoring temperature, the temperature will be updated every <interval> seconds\n");
+    printf("                            This feature is experimental\n");
+    printf("--emails <a@b,c@d,...>      Setting email notification\n");
+    printf("--report_interval <n>       Setting the interval in seconds between email notifications(default 1800)\n");
+    printf("--pattern <pattern>         Manually set test pattern for test4/test8/test10\n");
+    printf("--list_tests                List all test descriptions\n");
+    printf("--num_iterations <n>        Set the number of iterations (only effective on test0 and test10)\n");
+    printf("--num_passes <n>            Set the number of test passes (this affects all tests)\n");
+    printf("--verbose <n>               Setting verbose level\n");
+    printf("                              0 -- Print out test start and end message only (default)\n");
+    printf("                              1 -- Print out pattern messages in test\n");
+    printf("                              2 -- Print out progress messages\n");
+    printf("--stress                    Stress test. Equivalent to --disable_all --enable_test 10 --exit_on_error\n");
+    printf("--help                      Print this message\n");
+    printf("\nExample usage:\n\n");
+    printf("%s\n", example_usage);
+
+    exit(ERR_GENERAL);
+}
+
+void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
+{
+    struct timeval  t0, t1;
+    unsigned int pass = 0;
+    unsigned int i;
+
+    blocks = 512;
+    threadsPerBlock = 256;
+    num_iterations = 1;
+
+    for(int n = 0; n < num_iterations; n++) {
+        for (i = 0;i < DIM(rvs_memtests); i++){
+            gettimeofday(&t0, NULL);
+            rvs_memtests[i].func(ptr, tot_num_blocks);
+            gettimeofday(&t1, NULL);
+
+        }//for
+        std::cout << "\n Memory tests :: " << std::dec << i << " tests complete \n ";
+    }
+}
 
 
 /**
