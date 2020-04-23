@@ -32,11 +32,12 @@
 #include "include/rvsthreadbase.h"
 
 
+#define TDIFF(tb, ta) (tb.tv_sec - ta.tv_sec + 0.000001*(tb.tv_usec - ta.tv_usec))
 #define MEM_RESULT_PASS_MESSAGE         "true"
 #define MEM_RESULT_FAIL_MESSAGE         "false"
 #define ERR_GENERAL             -999
 
- #define HIP_CHECK(status)                                                                          \
+#define HIP_CHECK(status)                                                                          \
      if (status != hipSuccess) {                                                                    \
          std::cout << "Got Status: " << status << " at Line: " << __LINE__ << std::endl;            \
          exit(0);                                                                                   \
@@ -57,6 +58,18 @@ class MemWorker : public rvs::ThreadBase {
  public:
     MemWorker();
     virtual ~MemWorker();
+
+    void list_tests_info(void);
+
+    void usage(char** argv);
+
+    void run_tests(char* ptr, unsigned int tot_num_blocks);
+
+    void allocate_small_mem(void);
+
+    void free_small_mem(void);
+
+    void test0(char* ptr, unsigned int tot_num_blocks);
 
     //! sets action name
     void set_name(const std::string& name) { action_name = name; }
