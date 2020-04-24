@@ -41,12 +41,6 @@
 #ifndef __RVS_MEMTEST_H__
 #define __RVS_MEMTEST_H__
 
-#include <iostream>
-#include <sstream>
-
-#include "include/rvsthreadbase.h"
-#include <pthread.h>
-
 #define TDIFF(tb, ta) (tb.tv_sec - ta.tv_sec + \
     0.000001*(tb.tv_usec - ta.tv_usec))
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
@@ -66,9 +60,6 @@
 #define KMAG "\x1B[35m"
 #define KCYN "\x1B[36m"
 #define KWHT "\x1B[37m"
-
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t atomic_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define passed()                                                                                   \
     printf("%sPASSED!%s\n", KGRN, KNRM);                                                           \
@@ -100,32 +91,6 @@ typedef struct rvs_memtest_s{
     unsigned int enabled;
 }rvs_memtest_t;
 
-   unsigned int num_passes; 
-   volatile int gpu_temp[MAX_GPU_NUM];
-   unsigned int verbose;
-   unsigned int interactive;
-   char hostname[64];
-   unsigned int monitor_temp; 
-   unsigned int global_pattern;
-   unsigned int global_pattern_long;
-   uint64_t     blocks;
-   uint64_t     threadsPerBlock;
-   uint64_t        num_iterations;
-   bool            useMappedMemory;
-   void*           mappedHostPtr;
-   unsigned long   gpu_idx;
-   unsigned long   devSerialNum;
-   std::mutex      mtx_mem_test;
-   unsigned int    *ptCntOfError;
-   unsigned long   *ptFailedAdress;
-   unsigned long   *expectedValue;
-   unsigned long   *ptCurrentValue;
-   unsigned long   *ptValueOfStartAddr;
-   unsigned long   *ptDebugValue;
-   unsigned int    tot_num_blocks;
-   unsigned int    max_num_blocks;
-   unsigned int    exit_on_error;
-
    char* time_string(void);
    void  atomic_inc(unsigned int* value);
    void  prepare_rvsMemTest();
@@ -141,8 +106,6 @@ typedef struct rvs_memtest_s{
    unsigned int  move_inv_test(char* ptr, unsigned int tot_num_blocks, unsigned int p1, unsigned p2);
    unsigned int error_checking(const char* msg, unsigned int blockidx);
    unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset, unsigned int p1, unsigned int p2);
-
-   void kernel_test0_global_write(char* _ptr, char* _end_ptr);
 
    void test0(char* ptr, unsigned int tot_num_blocks);
    void test1(char* ptr, unsigned int tot_num_blocks);

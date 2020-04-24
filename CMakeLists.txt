@@ -50,8 +50,6 @@ project ("rocm-validation-suite" )
 enable_testing()
 #include ( CTest )
 
-add_compile_options(-D__HIP_PLATFORM_HCC__)
-
 if (NOT CMAKE_CONFIGURATION_TYPES)
 #  message( "CMAKE_CONFIGURATION_TYPES not set")
   # Set the possible values of build type for cmake-gui
@@ -92,15 +90,6 @@ include ( utils )
 
 ## Setup the package version default (the actual one is taken from the latest Git tag).
 get_version ( "0.0.0" )
-
-# Determine HCC_HOME
-if(NOT DEFINED HCC_HOME)
-   if(NOT DEFINED ENV{HCC_HOME})
-         set(HCC_HOME "${ROCM_PATH}/hcc" CACHE PATH "Path to which HCC has been installed")
-   else()
-         set(HCC_HOME $ENV{HCC_HOME} CACHE PATH "Path to which HCC has been installed")
-   endif()
-endif()
 
 # Package Generator  #######################################################
 # set(CPACK_GENERATOR "DEB")

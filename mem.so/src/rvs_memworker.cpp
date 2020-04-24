@@ -28,6 +28,7 @@
 #include <memory>
 #include <iostream>
 #include <sys/time.h>
+#include <mutex>
 
 #include "hip/hip_runtime.h"
 
@@ -50,6 +51,18 @@
 #define MEM_STRESS_VIOLATION_MSG                "stress violation"
 
 using std::string;
+
+extern unsigned int    blocks;
+extern uint64_t        threadsPerBlock;
+extern bool            useMappedMemory;
+extern void*           mappedHostPtr;
+
+extern unsigned int    *ptCntOfError;
+extern unsigned long   *ptFailedAdress;
+extern unsigned long   *ptExpectedValue;
+extern unsigned long   *ptCurrentValue;
+extern unsigned long   *ptValueOfStartAddr;
+ 
 
 bool MemWorker::bjson = false;
 
@@ -74,37 +87,34 @@ rvs_memtest_t rvs_memtests[]={
 void MemWorker::allocate_small_mem(void)
 {
     //Initialize memory
-    HIP_CHECK(hipMalloc((void**)&ptCntOfError, sizeof(unsigned int))); 
-    HIP_CHECK(hipMemset(ptCntOfError, 0, sizeof(unsigned int))); 
+    HIP_CHECK(hipMalloc((void**)&ptCntOfError, sizeof(unsigned int) )); 
+    HIP_CHECK(hipMemset(ptCntOfError, 0, sizeof(unsigned int) )); 
 
     HIP_CHECK(hipMalloc((void**)&ptFailedAdress, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
     HIP_CHECK(hipMemset(ptFailedAdress, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
 
-    HIP_CHECK(hipMalloc((void**)&expectedValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(expectedValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMalloc((void**)&ptExpectedValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptExpectedValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
 
     HIP_CHECK(hipMalloc((void**)&ptCurrentValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
     HIP_CHECK(hipMemset(ptCurrentValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
 
     HIP_CHECK(hipMalloc((void**)&ptValueOfStartAddr, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
     HIP_CHECK(hipMemset(ptValueOfStartAddr, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-
-    HIP_CHECK(hipMalloc((void**)&ptDebugValue, sizeof(unsigned int))); 
-    HIP_CHECK(hipMemset(ptDebugValue, 0, sizeof(unsigned int))); 
 }
 
 void MemWorker::free_small_mem(void)
 {
     //Initialize memory
-    HIP_CHECK(hipFree((void*)ptFailedAdress));
+    hipFree((void*)&ptCntOfError);
 
-    HIP_CHECK(hipFree((void*)expectedValue));
+    hipFree((void*)ptFailedAdress);
 
-    HIP_CHECK(hipFree((void*)ptCurrentValue));
+    hipFree((void*)ptExpectedValue);
 
-    HIP_CHECK(hipFree((void*)ptValueOfStartAddr));
+    hipFree((void*)ptCurrentValue);
 
-    HIP_CHECK(hipFree((void*)ptDebugValue));
+    hipFree((void*)ptValueOfStartAddr);
 }
 
 void MemWorker::list_tests_info(void)
@@ -274,7 +284,6 @@ void MemWorker::run() {
 
     }while(hipGetLastError() != hipSuccess);
 
-    std::lock_guard<std::mutex> lck(mtx_mem_test);
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
                   std::to_string(gpu_id) + " " + "Starting running tests " + " " + 
