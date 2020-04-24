@@ -93,15 +93,6 @@ include ( utils )
 ## Setup the package version default (the actual one is taken from the latest Git tag).
 get_version ( "0.0.0" )
 
-# Determine HCC_HOME
-if(NOT DEFINED HCC_HOME)
-   if(NOT DEFINED ENV{HCC_HOME})
-         set(HCC_HOME "${ROCM_PATH}/hcc" CACHE PATH "Path to which HCC has been installed")
-   else()
-         set(HCC_HOME $ENV{HCC_HOME} CACHE PATH "Path to which HCC has been installed")
-   endif()
-endif()
-
 # Package Generator  #######################################################
 # set(CPACK_GENERATOR "DEB")
 # set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm")
@@ -407,7 +398,7 @@ add_subdirectory(pesm.so)
 add_subdirectory(pqt.so)
 add_subdirectory(rcqt.so)
 add_subdirectory(smqt.so)
-add_subdirectory(mem.so)
+#####add_subdirectory(mem.so)
 if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
 endif()
