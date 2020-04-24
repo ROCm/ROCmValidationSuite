@@ -173,10 +173,12 @@ void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
             gettimeofday(&t0, NULL);
             rvs_memtests[i].func(ptr, tot_num_blocks);
             gettimeofday(&t1, NULL);
-
+            hipDeviceReset();
+            std::cout << "\n To run memtest time taken : " << TDIFF(t1, t0) << " seconds with " << num_iterations << " passes\n";
         }//for
         std::cout << "\n Memory tests :: " << std::dec << i << " tests complete \n ";
     }
+
 }
 
 
