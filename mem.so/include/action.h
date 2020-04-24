@@ -81,8 +81,6 @@ class mem_action: public rvs::actionbase {
     bool stress;
     // Mapped memory
     bool useMappedMemory;
-    //mapped host memory
-    bool mappedHostPtr;
 
     // configuration properties getters
     bool get_all_mem_config_keys(void);
