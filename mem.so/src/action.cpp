@@ -172,7 +172,6 @@ bool mem_action::get_all_mem_config_keys(void) {
     string    msg;
 
     useMappedMemory=false;
-    mappedHostPtr=NULL;
     bsts = true;
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
