@@ -46,7 +46,9 @@
 #include <cstdio>
 #include <sys/time.h>
 #include <unistd.h>
-#include<sstream>
+#include <sstream>
+#include <mutex>
+
 
 
 #include "hip/hip_runtime.h"
@@ -56,6 +58,31 @@
 #include "include/rvs_memworker.h"
 #include "include/rvs_memtest.h"
 #include "include/rvsloglp.h"
+
+unsigned int    blocks;
+uint64_t        threadsPerBlock;
+bool            useMappedMemory;
+void*           mappedHostPtr;
+
+
+
+unsigned int    *ptCntOfError;
+unsigned long   *ptFailedAdress;
+unsigned long   *ptExpectedValue;
+unsigned long   *ptCurrentValue;
+unsigned long   *ptValueOfStartAddr;
+
+unsigned int    num_passes; 
+//volatile int    gpu_temp[MAX_GPU_NUM];
+unsigned int    global_pattern;
+unsigned int    global_pattern_long;
+uint64_t        num_iterations;
+unsigned long   gpu_idx;
+//unsigned long   devSerialNum;
+std::mutex      mtx_mem_test;
+unsigned int    max_num_blocks;
+unsigned int    exit_on_error;
+
 
 
 #define DEBUG_PRINTF(fmt,...) do {					\
@@ -77,7 +104,7 @@
 	unsigned int idx = atomicAdd(count_of_errors, 1);		\
 	idx = idx % MAX_ERR_RECORD_COUNT;		\
 	ptFailedAdress[idx] = (unsigned long)start_addr;		\
-	expectedValue[idx] = (unsigned long)expect;	\
+	ptExpectedValue[idx] = (unsigned long)expect;	\
 	ptCurrentValue[idx] = (unsigned long)current;	\
 	ptValueOfStartAddr[idx] = (unsigned long)(*start_addr);	\
 }while(0)
@@ -129,10 +156,10 @@ unsigned int error_checking(const char* pmsg, unsigned int blockidx)
     //std::cout << "\n" <<  pmsg << " block id :" << blockidx << std::flush << "\n";
 
     HIP_CHECK(hipMemcpy(&numOfErrors, ptCntOfError, sizeof(unsigned int), hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_addr[0], &ptFailedAdress, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_expect[0], &expectedValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_current[0], &ptCurrentValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_second_read[0], &ptValueOfStartAddr, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_addr[0], ptFailedAdress, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_expect[0], ptExpectedValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_current[0], ptCurrentValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_second_read[0], ptValueOfStartAddr, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
 
     std::string emsg;
     std::ostringstream msg;
@@ -158,7 +185,61 @@ unsigned int error_checking(const char* pmsg, unsigned int blockidx)
 
 	    hipMemset((void *)&ptCntOfError, 0, sizeof(unsigned int));
 	    hipMemset(&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
-	    hipMemset((void*)&expectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+	    hipMemset((void*)&ptExpectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+	    hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+
+	    hipDeviceReset();
+	    exit(ERR_BAD_STATE);
+    }
+
+    return numOfErrors;
+}
+
+
+
+unsigned int checkMemErrors(const char* pmsg, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
+			 unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+{
+    unsigned long host_err_addr[MAX_ERR_RECORD_COUNT];
+    unsigned long host_err_expect[MAX_ERR_RECORD_COUNT];
+    unsigned long host_err_current[MAX_ERR_RECORD_COUNT];
+    unsigned long host_err_second_read[MAX_ERR_RECORD_COUNT];
+    unsigned int  numOfErrors = 0;
+    unsigned int  i;
+
+    //std::cout << "\n" <<  pmsg << " block id :" << blockidx << std::flush << "\n";
+
+    HIP_CHECK(hipMemcpy(&numOfErrors, ptErrCount, sizeof(unsigned int), hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_addr[0], ptFailedAdress, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_expect[0], ptExpectedValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_current[0], ptCurrentValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_second_read[0], ptValueOfStartAddr, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+
+    std::string emsg;
+    std::ostringstream msg;
+    std::string driver_info;
+    std::string devSerialNum;
+
+    if (numOfErrors){
+      std::cerr << "ERROR: the last : " <<   MIN(MAX_ERR_RECORD_COUNT, numOfErrors) << " : error addresses are: \n";
+
+	      for (i = 0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
+            std::cerr << (void*)host_err_addr[i] << "\n";
+	      }
+
+        std::cerr << "\n";
+
+	      for (i =0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
+
+          std::cerr << " ERROR:" << i << " th error, expected value=0x" << host_err_expect[i] << "current value=0x" << host_err_current[i] << "current value=0x" << host_err_current[i] <<  "diff=0x" <<  (host_err_expect[i] ^ host_err_current[i]) << " second_ read=0x " << host_err_second_read[i] << "expect=0x" << host_err_expect[i] << "diff with expected value=0x" <<  (host_err_expect[i] ^ host_err_second_read[i]) << "\n";
+
+            //std::cerr << msg.str() << "\n";  
+	    }
+
+
+	    hipMemset((void *)&ptCntOfError, 0, sizeof(unsigned int));
+	    hipMemset(&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+	    hipMemset((void*)&ptExpectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 	    hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 
 	    hipDeviceReset();
@@ -207,7 +288,7 @@ uint64_t get_random_num_long(void)
     return ret;
 }
 
-__global__  void kernel_test0_global_write(char* _ptr, char* _end_ptr, unsigned long *ptDebugValue)
+__global__  void kernel_test0_global_write(char* _ptr, char* _end_ptr)
  {
      unsigned int* ptr = (unsigned int*)_ptr;
      unsigned int* end_ptr = (unsigned int*)_end_ptr;
@@ -273,23 +354,27 @@ __global__  void kernel_test0_global_write(char* _ptr, char* _end_ptr, unsigned 
     return;
 }
 
-__global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned int* err_count, unsigned long* ptFailedAdress,
-			 unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+__global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
+			 unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
-    unsigned int* ptr = (unsigned int*)_ptr;
-    unsigned int* end_ptr = (unsigned int*)_end_ptr;
-    unsigned int* orig_ptr = ptr;
+    unsigned long* ptr = (unsigned long*)_ptr;
+    unsigned long* end_ptr = (unsigned long*)_end_ptr;
+    unsigned long* orig_ptr = ptr;
     unsigned int pattern = 1;
     unsigned long mask = 4;
 
     if (*ptr != pattern){
-	      RECORD_ERR(err_count, ptr, pattern, *ptr);
+	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
+	      ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
+	      ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	\
+	      ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
+
+        if(*ptErrCount >= 10) 
+          *ptErrCount = 0;
     }
 
     while(ptr < end_ptr){
-	      ptr = (unsigned int*) ( ((unsigned long)orig_ptr) | mask);
-
-        *ptDebugValue = 4444;
+	      ptr = (unsigned long*) ( ((unsigned long)orig_ptr) | mask);
 
 	      if (ptr == orig_ptr){
 	        mask = mask << 1;
@@ -301,7 +386,13 @@ __global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned in
 	      }
 
 	      if (*ptr != pattern){
-	          RECORD_ERR(err_count, ptr, pattern, *ptr);
+    	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
+	          ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
+	          ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	\
+	          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
+
+            if(*ptErrCount >= 10) 
+               *ptErrCount = 0;
 	      }
 
 	      pattern = pattern << 1;
@@ -311,8 +402,8 @@ __global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned in
     return;
 }
 
-__global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* err, unsigned long* ptFailedAdress,
-		  unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+__global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
+		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     unsigned int* orig_ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);;
     unsigned int* ptr = orig_ptr;
@@ -328,7 +419,14 @@ __global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* err, 
     unsigned long mask = 4;
 
     if (*ptr != pattern){
-	    RECORD_ERR(err, ptr, pattern, *ptr);
+	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
+        ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
+        ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	\
+        ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
+
+        if(*ptErrCount >= 10) 
+           *ptErrCount = 0;
+
     }
 
     while(ptr < block_end){
@@ -344,7 +442,14 @@ __global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* err, 
 	    }
 
 	    if (*ptr != pattern){
-	      RECORD_ERR(err, ptr, pattern, *ptr);
+	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
+        ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
+        ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	\
+        ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
+
+        if(*ptErrCount >= 10) 
+           *ptErrCount = 0;
+
 	    }
 
 	    pattern = pattern << 1;
@@ -367,30 +472,32 @@ void test0(char* ptr, unsigned int tot_num_blocks)
     unsigned int    i;
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
     unsigned int err = 0;
-
+    unsigned int  memErrors = 0;
+   
     std::cout << "\nTest0: Change one bit memory addresss  ";
-    err += error_checking("\nStarting test0: Change one bit memory addresss  ",  0);
+
 
     //test global address
     hipLaunchKernelGGL(kernel_test0_global_write,   /* compute kernel*/
                           dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                        ptr , end_ptr, ptDebugValue);
+	                        ptr , end_ptr);
 
 
     hipLaunchKernelGGL(kernel_test0_global_read,   /* compute kernel*/
                         dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                        ptr, end_ptr, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr);
+                        ptr, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
 
-    err += error_checking("Test0 on global address",  0);
+    err += checkMemErrors("Test0 on global address",  ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
+
 
     for(unsigned int ite = 0; ite < num_iterations; ite++){
 	    for (i = 0; i < tot_num_blocks; i += GRIDSIZE){
 	        dim3 grid;
 
-	        grid.x= GRIDSIZE;
+          grid.x= GRIDSIZE;
           hipLaunchKernelGGL(kernel_test0_write,   /* compute kernel*/
-                                dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                              ptr + i * BLOCKSIZE, end_ptr); 
+                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                             ptr + i * BLOCKSIZE, end_ptr); 
 	    }
 
 	    for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -399,9 +506,10 @@ void test0(char* ptr, unsigned int tot_num_blocks)
 	        grid.x= GRIDSIZE;
 
           hipLaunchKernelGGL(kernel_test0_read,
-                        dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                        ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+                     dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                     ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
 
+          err += error_checking("Test0 checking complete :: ",  i);
 	    }
 
     }
@@ -421,8 +529,7 @@ void test0(char* ptr, unsigned int tot_num_blocks)
  * value in each memory location still agrees with the address.
  *
  ********************************************************************************/
-__global__ void 
-kernel_test1_write(char* _ptr, char* end_ptr, unsigned int* err)
+__global__ void kernel_test1_write(char* _ptr, char* end_ptr, unsigned int* err)
 {
     unsigned int i;
     unsigned long* ptr = (unsigned long*) (_ptr + blockIdx.x*BLOCKSIZE);
@@ -440,7 +547,7 @@ kernel_test1_write(char* _ptr, char* end_ptr, unsigned int* err)
 
 __global__ void 
 kernel_test1_read(char* _ptr, char* end_ptr, unsigned int* err, unsigned long* ptFailedAdress,
-		  unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     unsigned int i;
     unsigned long* ptr = (unsigned long*) (_ptr + blockIdx.x*BLOCKSIZE);
@@ -474,7 +581,7 @@ void test1(char* ptr, unsigned int tot_num_blocks)
       hipLaunchKernelGGL(kernel_test1_write,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                          ptr + i*BLOCKSIZE, end_ptr, ptCntOfError); 
-	    //SHOW_PROGRESS("Test1 on writing", i, tot_num_blocks);
+	    SHOW_PROGRESS("Test1 on writing", i, tot_num_blocks);
     }
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -483,9 +590,10 @@ void test1(char* ptr, unsigned int tot_num_blocks)
 	    grid.x= GRIDSIZE;
       hipLaunchKernelGGL(kernel_test1_read,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                          ptr + i*BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr);
+	                          ptr + i*BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
+
       err += error_checking("Test1 checking :: ",  i);
-	    //SHOW_PROGRESS("\nTest1 on reading", i, tot_num_blocks);
+	    SHOW_PROGRESS("\nTest1 on reading", i, tot_num_blocks);
     }
 
     if(!err) {
@@ -523,8 +631,8 @@ kernel_move_inv_write(char* _ptr, char* end_ptr, unsigned int pattern)
 
 
 __global__ void 
-kernel_move_inv_readwrite(char* _ptr, char* end_ptr, unsigned int p1, unsigned int p2, unsigned int* err,
-			  unsigned long* ptFailedAdress, unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+kernel_move_inv_readwrite(char* _ptr, char* end_ptr, unsigned int p1, unsigned int p2, unsigned int* ptErrCount,
+			  unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
@@ -535,7 +643,13 @@ kernel_move_inv_readwrite(char* _ptr, char* end_ptr, unsigned int p1, unsigned i
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
 	      if (ptr[i] != p1){
-	         RECORD_ERR(err, &ptr[i], p1, ptr[i]);
+	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		\
+          ptExpectedValue[*ptErrCount] = (unsigned int)p1;	\
+          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];	\
+          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr;	\
+
+          if(*ptErrCount >= 10) 
+              *ptErrCount = 0;
 	      }
 
 	      ptr[i] = p2;
@@ -546,8 +660,8 @@ kernel_move_inv_readwrite(char* _ptr, char* end_ptr, unsigned int p1, unsigned i
 
 
 __global__ void 
-kernel_move_inv_read(char* _ptr, char* end_ptr,  unsigned int pattern, unsigned int* err,
-		     unsigned long* ptFailedAdress, unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr )
+kernel_move_inv_read(char* _ptr, char* end_ptr,  unsigned int pattern, unsigned int* ptErrCount,
+		     unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr )
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
@@ -558,7 +672,13 @@ kernel_move_inv_read(char* _ptr, char* end_ptr,  unsigned int pattern, unsigned 
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
 	      if (ptr[i] != pattern){
-	          RECORD_ERR(err, &ptr[i], pattern, ptr[i]);
+	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		\
+          ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
+          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];	\
+          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr;	\
+
+          if(*ptErrCount >= 10) 
+              *ptErrCount = 0;
 	      }
     }
 
@@ -591,7 +711,8 @@ unsigned int  move_inv_test(char* ptr, unsigned int tot_num_blocks, unsigned int
 	      grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_move_inv_readwrite,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                       ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+	                       ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
+
 	      err += error_checking("Move inv reading and writing to blocks",  i);
         SHOW_PROGRESS("move_inv_readwrite", i, tot_num_blocks);
     }
@@ -602,7 +723,7 @@ unsigned int  move_inv_test(char* ptr, unsigned int tot_num_blocks, unsigned int
 	      grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_move_inv_read,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                       ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+	                       ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
 	      err += error_checking("Move inv reading from blocks",  i);
         SHOW_PROGRESS("move_inv_read", i, tot_num_blocks);
     }
@@ -801,8 +922,8 @@ kernel_test5_move(char* _ptr, char* end_ptr)
 
 
 __global__ void 
-kernel_test5_check(char* _ptr, char* end_ptr, unsigned int* err, unsigned long* ptFailedAdress,
-		   unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+kernel_test5_check(char* _ptr, char* end_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
+		   unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
@@ -813,7 +934,14 @@ kernel_test5_check(char* _ptr, char* end_ptr, unsigned int* err, unsigned long* 
 
     for (i=0;i < BLOCKSIZE/sizeof(unsigned int); i+=2){
 	      if (ptr[i] != ptr[i+1]){
-	          RECORD_ERR(err, &ptr[i], ptr[i+1], ptr[i]);
+	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		
+          ptExpectedValue[*ptErrCount] = (unsigned int)ptr[i];	
+          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i + 1];	
+          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr[i];
+
+          if(*ptErrCount >= 10) 
+              *ptErrCount = 0;
+	
 	      }
     }
 
@@ -857,7 +985,7 @@ void test5(char* ptr, unsigned int tot_num_blocks)
 	      grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_test5_check,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                             ptr + i*BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr);
+	                             ptr + i*BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
         err = error_checking("Test5 checking complete :: ",  i);
 	      //SHOW_PROGRESS("test5[check]", i, tot_num_blocks);
     }
@@ -914,11 +1042,11 @@ kernel_movinv32_write(char* _ptr, char* end_ptr, unsigned int pattern,
 
 __global__ void 
 kernel_movinv32_readwrite(char* _ptr, char* end_ptr, unsigned int pattern,
-			  unsigned int lb, unsigned int sval, unsigned int offset, unsigned int * err,
-			  unsigned long* ptFailedAdress, unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+			  unsigned int lb, unsigned int sval, unsigned int offset, unsigned int * ptErrCount,
+			  unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     unsigned int i;
-    unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
+    unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
 
     if (ptr >= (unsigned int*) end_ptr) {
 	    return;
@@ -929,7 +1057,13 @@ kernel_movinv32_readwrite(char* _ptr, char* end_ptr, unsigned int pattern,
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
 	      if (ptr[i] != pat){
-	          RECORD_ERR(err, &ptr[i], pat, ptr[i]);
+	        ptFailedAdress[*ptErrCount] = (unsigned long)ptr[i];		
+          ptExpectedValue[*ptErrCount] = (unsigned int)pat;
+          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];	
+          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr;
+
+          if(*ptErrCount >= 10) 
+              *ptErrCount = 0;
 	      }
 
 	      ptr[i] = ~pat;
@@ -952,11 +1086,11 @@ kernel_movinv32_readwrite(char* _ptr, char* end_ptr, unsigned int pattern,
 
 __global__ void 
 kernel_movinv32_read(char* _ptr, char* end_ptr, unsigned int pattern,
-		     unsigned int lb, unsigned int sval, unsigned int offset, unsigned int * err,
-		     unsigned long* ptFailedAdress, unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+		     unsigned int lb, unsigned int sval, unsigned int offset, unsigned int * ptErrCount,
+		     unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     unsigned int i;
-    unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
+    unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
 
     if (ptr >= (unsigned int*) end_ptr) {
 	      return;
@@ -967,7 +1101,13 @@ kernel_movinv32_read(char* _ptr, char* end_ptr, unsigned int pattern,
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
 	      if (ptr[i] != ~pat){
-	          RECORD_ERR(err, &ptr[i], ~pat, ptr[i]);
+	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		
+          ptExpectedValue[*ptErrCount] = (unsigned int)pat;
+          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];	
+          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr;
+
+          if(*ptErrCount >= 10) 
+              *ptErrCount = 0;
 	      }
 
 	      k++;
@@ -989,7 +1129,7 @@ int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
 	 unsigned int lb, unsigned int sval, unsigned int offset)
 {
 
-    char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
+    char* end_ptr = ptr + tot_num_blocks * BLOCKSIZE;
     unsigned int i;
     unsigned int err = 0;
 
@@ -1009,7 +1149,7 @@ int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
 	    grid.x= GRIDSIZE;
       hipLaunchKernelGGL(kernel_movinv32_readwrite,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                          ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+	                          ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
       err += error_checking("Test6 [movinv32], checking for errors :: ",  i);
 	    //SHOW_PROGRESS("\nTest6[moving inversion 32 readwrite]", i, tot_num_blocks);
     }
@@ -1020,7 +1160,7 @@ int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
        grid.x= GRIDSIZE;
        hipLaunchKernelGGL(kernel_movinv32_read,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                             ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+                             ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
 	     err += error_checking("Test6 [movinv32]",  i);
     //   SHOW_PROGRESS("\nTest6[moving inversion 32 read]", i, tot_num_blocks);
    }
@@ -1060,7 +1200,7 @@ void  test6(char* ptr, unsigned int tot_num_blocks)
 kernel_test7_write(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* err)
 {
     unsigned int i;
-    unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
+    unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
     unsigned int* start_ptr = (unsigned int*) _start_ptr;
 
     if (ptr >= (unsigned int*) end_ptr) {
@@ -1077,11 +1217,11 @@ kernel_test7_write(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* er
 
 
 __global__ void 
-kernel_test7_readwrite(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* err,
-		       unsigned long* ptFailedAdress, unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+kernel_test7_readwrite(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* ptErrCount,
+		       unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     unsigned int i;
-    unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
+    unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
     unsigned int* start_ptr = (unsigned int*) _start_ptr;
 
     if (ptr >= (unsigned int*) end_ptr) {
@@ -1091,7 +1231,13 @@ kernel_test7_readwrite(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
 	      if (ptr[i] != start_ptr[i]){
-	        RECORD_ERR(err, &ptr[i], start_ptr[i], ptr[i]);
+	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		
+          ptExpectedValue[*ptErrCount] = (unsigned int)start_ptr[i];
+          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];
+          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr[i];
+
+          if(*ptErrCount >= 10) 
+              *ptErrCount = 0;
 	      }
 
 	      ptr[i] = ~(start_ptr[i]);
@@ -1101,11 +1247,11 @@ kernel_test7_readwrite(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int
 }
 
 __global__ void 
-kernel_test7_read(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* err, unsigned long* ptFailedAdress,
-		  unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+kernel_test7_read(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
+		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     unsigned int i;
-    unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
+    unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
     unsigned int* start_ptr = (unsigned int*) _start_ptr;
 
     if (ptr >= (unsigned int*) end_ptr) {
@@ -1115,7 +1261,13 @@ kernel_test7_read(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* err
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
 	      if (ptr[i] != ~(start_ptr[i])){
-	          RECORD_ERR(err, &ptr[i], ~(start_ptr[i]), ptr[i]);
+	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		
+          ptExpectedValue[*ptErrCount] = (unsigned int)~(start_ptr[i]);
+          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];
+          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr[i];
+
+          if(*ptErrCount >= 10) 
+              *ptErrCount = 0;
 	      }
     }
 
@@ -1135,7 +1287,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
       	host_buf[i] = get_random_num();
     }
 
-    hipMemcpy(ptr, host_buf, BLOCKSIZE, hipMemcpyHostToDevice);
+    HIP_CHECK(hipMemcpy(ptr, host_buf, BLOCKSIZE, hipMemcpyHostToDevice));
 
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
 
@@ -1148,7 +1300,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
 	        grid.x= GRIDSIZE;
           hipLaunchKernelGGL(kernel_test7_write,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                                        ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError); 
+	                                        ptr + i* BLOCKSIZE, end_ptr, ptr, ptCntOfError); 
           SHOW_PROGRESS("test7_write", i, tot_num_blocks);
         }
 
@@ -1159,7 +1311,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
 	        grid.x= GRIDSIZE;
           hipLaunchKernelGGL(kernel_test7_readwrite,
                             dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                            ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr);
+	                            ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
 	        err += error_checking("test7_readwrite",  i);
           SHOW_PROGRESS("test7_readwrite", i, tot_num_blocks);
         }
@@ -1171,7 +1323,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
 	          grid.x= GRIDSIZE;
             hipLaunchKernelGGL(kernel_test7_read,
                                  dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                               ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+	                               ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
 	          err += error_checking("test7_read",  i);
             SHOW_PROGRESS("test7_read", i, tot_num_blocks); 
         }
@@ -1207,7 +1359,7 @@ __global__ void
 kernel_modtest_write(char* _ptr, char* end_ptr, unsigned int offset, unsigned int p1, unsigned int p2)
 {
     unsigned int i;
-    unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
+    unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
 
     if (ptr >= (unsigned int*) end_ptr) {
 	      return;
@@ -1229,10 +1381,10 @@ kernel_modtest_write(char* _ptr, char* end_ptr, unsigned int offset, unsigned in
 
 __global__ void 
 kernel_modtest_read(char* _ptr, char* end_ptr, unsigned int offset, unsigned int p1, unsigned int* err,
-		    unsigned long* ptFailedAdress, unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+		    unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     unsigned int i;
-    unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
+    unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
 
     if (ptr >= (unsigned int*) end_ptr) {
 	      return;
@@ -1270,7 +1422,7 @@ unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset
 	    grid.x= GRIDSIZE;
       hipLaunchKernelGGL(kernel_modtest_read,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                       ptr + i*BLOCKSIZE, end_ptr, offset, p1, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+	                       ptr + i*BLOCKSIZE, end_ptr, offset, p1, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
 	    err += error_checking("test8[mod test, read", i);
       //SHOW_PROGRESS("test8[mod test, read]", i, tot_num_blocks);
     }
@@ -1356,7 +1508,7 @@ void test9(char* ptr, unsigned int tot_num_blocks)
 	    grid.x= GRIDSIZE;
       hipLaunchKernelGGL(kernel_move_inv_readwrite,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                        ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+	                        ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
 	    err += error_checking("test9[bit fade test, readwrite]",  i);
       SHOW_PROGRESS("test9[bit fade test, readwrite]", i, tot_num_blocks);
     }
@@ -1370,7 +1522,7 @@ void test9(char* ptr, unsigned int tot_num_blocks)
 	    grid.x= GRIDSIZE;
       hipLaunchKernelGGL(kernel_move_inv_read,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                        ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+	                        ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
 	    err += error_checking("test9[bit fade test, read]",  i);
       SHOW_PROGRESS("test9[bit fade test, read]", i, tot_num_blocks);
     }
@@ -1398,15 +1550,15 @@ __global__ void
 test10_kernel_write(char* ptr, int memsize, TYPE p1)
 {
     int i;
-    int avenumber = memsize/(gridDim.x*gridDim.y);
+    int avenumber = memsize/(hipGridDim_x * hipGridDim_y);
     TYPE* mybuf = (TYPE*)(ptr + blockIdx.x* avenumber);
-    int n = avenumber/(blockDim.x*sizeof(TYPE));
+    int n = avenumber/(hipBlockDim_x * sizeof(TYPE));
 
     for(i=0;i < n;i++){
-        int index = i*blockDim.x + threadIdx.x;
+        int index = i* hipBlockDim_x + threadIdx.x;
         mybuf[index]= p1;
     }
-    int index = n*blockDim.x + threadIdx.x;
+    int index = n * hipBlockDim_x + threadIdx.x;
     if (index*sizeof(TYPE) < avenumber){
         mybuf[index] = p1;
     }
@@ -1416,16 +1568,16 @@ test10_kernel_write(char* ptr, int memsize, TYPE p1)
 
 __global__ void  
 test10_kernel_readwrite(char* ptr, int memsize, TYPE p1, TYPE p2,  unsigned int* err,
-					unsigned long* ptFailedAdress, unsigned long* expectedValue, unsigned long* currentError, unsigned long* ptValueOfStartAddr)
+					unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
 {
     int i;
     int avenumber = memsize/(gridDim.x*gridDim.y);
-    TYPE* mybuf = (TYPE*)(ptr + blockIdx.x* avenumber);
-    int n = avenumber/(blockDim.x*sizeof(TYPE));
+    TYPE* mybuf = (TYPE*)(ptr +  hipBlockDim_x * avenumber);
+    int n = avenumber/( hipBlockDim_x * sizeof(TYPE));
     TYPE localp;
 
     for(i=0;i < n;i++){
-        int index = i*blockDim.x + threadIdx.x;
+        int index = i * hipBlockDim_x  + threadIdx.x;
 
         localp = mybuf[index];
         if (localp != p1){
@@ -1435,7 +1587,7 @@ test10_kernel_readwrite(char* ptr, int memsize, TYPE p1, TYPE p2,  unsigned int*
 	      mybuf[index] = p2;
     }
 
-    int index = n*blockDim.x + threadIdx.x;
+    int index = n * hipBlockDim_x + threadIdx.x;
 
     if (index*sizeof(TYPE) < avenumber){
 	      localp = mybuf[index];
@@ -1486,7 +1638,7 @@ void test10(char* ptr, unsigned int tot_num_blocks)
                     hipLaunchKernelGGL(test10_kernel_readwrite,
                          dim3(blocks), dim3(threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                        ptr, tot_num_blocks*BLOCKSIZE, p1, p2,
-								          ptCntOfError, ptFailedAdress, expectedValue, ptCurrentValue, ptValueOfStartAddr); 
+								          ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
 	        p1 = ~p1;
 	        p2 = ~p2;
     }
@@ -1507,6 +1659,4 @@ void test10(char* ptr, unsigned int tot_num_blocks)
        std::cout << "\nMemory test10 passed, no errors detected";
     }
 }
-
-
 

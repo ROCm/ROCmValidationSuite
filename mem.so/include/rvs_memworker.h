@@ -25,10 +25,6 @@
 #ifndef MEM_SO_INCLUDE_MEM_WORKER_H_
 #define MEM_SO_INCLUDE_MEM_WORKER_H_
 
-#include <string>
-#include <memory>
-#include <iostream>
-
 #include "include/rvsthreadbase.h"
 
 

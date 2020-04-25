@@ -50,8 +50,6 @@ project ("rocm-validation-suite" )
 enable_testing()
 #include ( CTest )
 
-add_compile_options(-D__HIP_PLATFORM_HCC__)
-
 if (NOT CMAKE_CONFIGURATION_TYPES)
 #  message( "CMAKE_CONFIGURATION_TYPES not set")
   # Set the possible values of build type for cmake-gui
@@ -398,7 +396,7 @@ add_subdirectory(pesm.so)
 add_subdirectory(pqt.so)
 add_subdirectory(rcqt.so)
 add_subdirectory(smqt.so)
-#####add_subdirectory(mem.so)
+add_subdirectory(mem.so)
 if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
 endif()

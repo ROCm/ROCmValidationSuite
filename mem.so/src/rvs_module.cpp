@@ -22,10 +22,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+
+#include <map>
+
 #include "include/action.h"
 #include "include/rvsloglp.h"
 #include "include/gpu_util.h"
 #include "include/rvs_module.h"
+
 
 /**
  * @defgroup MEM MEM Module
