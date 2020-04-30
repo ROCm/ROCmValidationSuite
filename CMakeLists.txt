@@ -46,7 +46,7 @@ options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
 RelWithDebInfo MinSizeRel.")
 endif()
 
-project ("rocm-validation-suite" )
+project ("rvs")
 enable_testing()
 #include ( CTest )
 
@@ -488,6 +488,10 @@ else()
   message("Doxygen is not found. Will not generate documentation.")
 endif(DOXYGEN_FOUND)
 
+install(FILES ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/conf
+  COMPONENT rvsmodule
+)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
   DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/testscripts
   COMPONENT rvsmodule
