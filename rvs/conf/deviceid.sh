@@ -1,12 +1,17 @@
 #!/bin/bash
-# to Use this script need to set RVS_EXE_PATH where yor rvs executable is.
+# to Use this script need to set RVS_EXE_PATH where your rvs executable is.
 # ex. RVS_EXE_PATH=/opt/rocm/rvs/rvs for default rvs installation path
 # Run script as below
 # Example:  deviceid.sh "conf/gpup_*.conf"<-- conf file path
 # Above command will replace device_id/device_id/deviceid : XXXX in all gpup_*.conf files
 # To change any single file use as below example
 # ./conf/deviceid.sh conf/gpup_1.conf
- 
+
+# setting RVS_EXE_PATH to default if not set by user
+if [[ -z "${RVS_EXE_PATH}" ]]; then
+    export RVS_EXE_PATH=/opt/rocm/rvs/rvs
+fi
+
 function get_string_with_space {
 local str=$1 ; shift
 local line=$1; shift
