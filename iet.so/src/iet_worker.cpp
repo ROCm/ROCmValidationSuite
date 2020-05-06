@@ -38,6 +38,7 @@
 #include "include/rvsloglp.h"
 
 #define MODULE_NAME                             "iet"
+#define MODULE_NAME_CAPS                        "IET"
 #define POWER_PROCESS_DELAY                     5
 #define MAX_MS_TRAIN_GPU                        1000
 #define MAX_MS_WAIT_BLAS_THREAD                 (1000 * 100)
@@ -169,6 +170,9 @@ bool IETWorker::do_gpu_init_training(string *err_description) {
             cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power_training += cur_power_value;
             power_sampling_iters++;
+        } else {
+            rvs::lp::Err("rocm_smi lib rsmi_dev_power_ave_get failed", MODULE_NAME_CAPS, action_name);
+            return false;
         }
         usleep(POWER_PROCESS_DELAY);
 
@@ -317,7 +321,11 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
             cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power += cur_power_value;
             power_sampling_iters++;
+        } else {
+            rvs::lp::Err("rocm_smi lib rsmi_dev_power_ave_get failed", MODULE_NAME_CAPS, action_name);
+            return false;
         }
+
 
         end_time = std::chrono::system_clock::now();
         cur_milis_sampling = time_diff(end_time, sampling_start_time);
@@ -380,7 +388,11 @@ bool IETWorker::do_iet_power_stress(void) {
             cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power += cur_power_value;
             power_sampling_iters++;
+        } else {
+            rvs::lp::Err("rocm_smi lib rsmi_dev_power_ave_get failed", MODULE_NAME_CAPS, action_name);
+            return false;
         }
+
 
         end_time = std::chrono::system_clock::now();
         cur_milis_sampling = time_diff(end_time, sampling_start_time);

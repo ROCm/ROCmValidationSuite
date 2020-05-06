@@ -36,6 +36,7 @@
 #include "include/rvsloglp.h"
 
 #define MODULE_NAME                             "iet"
+#define MODULE_NAME_CAPS                        "IET"
 #define POWER_PROCESS_DELAY                     5
 
 #define IET_LOGGER_JSON_LOG_GPU_ID_KEY          "gpu_id"
@@ -167,6 +168,9 @@ void log_worker::run() {
             cur_power_value = static_cast<float>(last_avg_power)/1e6;
             avg_power += cur_power_value;
             power_sampling_iters++;
+        } else {
+            rvs::lp::Err("rocm_smi lib rsmi_dev_power_ave_get failed", MODULE_NAME_CAPS, action_name);
+            return;
         }
 
         end_time = std::chrono::system_clock::now();
