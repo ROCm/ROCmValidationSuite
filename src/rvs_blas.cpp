@@ -384,6 +384,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
     } else {
         return false;
     }
+
+    return true;
 }
 
 /**
@@ -415,7 +417,6 @@ void rvs_blas::generate_random_matrix_data(void) {
         for (int i = 0; i < size_c; ++i)
             hdblc[i] = (double)fast_pseudo_rand(&nextr);
 
-        //DGEMM stuff
         for (i = 0; i < size_a; ++i)
             hhlfa[i].data = (uint16_t)fast_pseudo_rand(&nextr);
 
@@ -424,7 +425,6 @@ void rvs_blas::generate_random_matrix_data(void) {
 
         for (int i = 0; i < size_c; ++i)
             hhlfc[i].data = (uint16_t)fast_pseudo_rand(&nextr);
-
     }
 }
 

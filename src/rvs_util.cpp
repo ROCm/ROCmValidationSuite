@@ -35,10 +35,11 @@
  * @param delimiter tokens' delimiter
  * @return std::vector containing all tokens
  */
+
 std::vector<std::string> str_split(const std::string& str_val,
                                    const std::string& delimiter) {
     std::vector<std::string> str_tokens;
-    size_t prev_pos = 0, cur_pos = 0;
+    int prev_pos = 0, cur_pos = 0;
     do {
         cur_pos = str_val.find(delimiter, prev_pos);
         if (cur_pos == std::string::npos)

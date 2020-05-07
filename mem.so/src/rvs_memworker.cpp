@@ -31,40 +31,17 @@
 #include <mutex>
 
 #include "hip/hip_runtime.h"
-
 #include "include/rvs_memworker.h"
 #include "include/rvs_memtest.h"
 #include "include/rvsloglp.h"
 
-
-#define MODULE_NAME                             "mem"
-#define MEM_MEM_ALLOC_ERROR                     "memory allocation error!"
-#define MEM_BLAS_ERROR                          "memory/blas error!"
-#define MEM_BLAS_MEMCPY_ERROR                   "HostToDevice mem copy error!"
-#define MAX_ERR_RECORD_COUNT                    10
-#define MEM_NUM_SAVE_BLOCKS                     16
-
-#define MEM_START_MSG                           "start"
-#define MEM_PASS_KEY                            "pass"
-#define MEM_RAMP_EXCEEDED_MSG                   "ramp time exceeded"
-#define MEM_TARGET_ACHIEVED_MSG                 "target achieved"
-#define MEM_STRESS_VIOLATION_MSG                "stress violation"
-
 using std::string;
 
-extern unsigned int    blocks;
-extern uint64_t        threadsPerBlock;
-extern bool            useMappedMemory;
-extern void*           mappedHostPtr;
-
-extern unsigned int    *ptCntOfError;
-extern unsigned long   *ptFailedAdress;
-extern unsigned long   *ptExpectedValue;
-extern unsigned long   *ptCurrentValue;
-extern unsigned long   *ptValueOfStartAddr;
+extern void allocate_small_mem(void);
+bool MemWorker::bjson = false;
+extern rvs_memdata   memdata;
  
 
-bool MemWorker::bjson = false;
 
 MemWorker::MemWorker() {}
 MemWorker::~MemWorker() {}
@@ -84,6 +61,7 @@ rvs_memtest_t rvs_memtests[]={
 };
 
 
+#if 0
 void MemWorker::allocate_small_mem(void)
 {
     //Initialize memory
@@ -99,8 +77,8 @@ void MemWorker::allocate_small_mem(void)
     HIP_CHECK(hipMalloc((void**)&ptCurrentValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
     HIP_CHECK(hipMemset(ptCurrentValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
 
-    HIP_CHECK(hipMalloc((void**)&ptValueOfStartAddr, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(ptValueOfStartAddr, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMalloc((void**)&ptValueOfSecondRead, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptValueOfSecondRead, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
 }
 
 void MemWorker::free_small_mem(void)
@@ -114,81 +92,43 @@ void MemWorker::free_small_mem(void)
 
     hipFree((void*)ptCurrentValue);
 
-    hipFree((void*)ptValueOfStartAddr);
+    hipFree((void*)ptValueOfSecondRead);
 }
+#endif
 
-void MemWorker::list_tests_info(void)
+void MemWorker::Initialization(void)
 {
-    size_t i;
-
-    for (i = 0;i < DIM(rvs_memtests); i++){
-	          printf("%s %s\n", rvs_memtests[i].desc, rvs_memtests[i].enabled?"":" ==disabled by default==");
-    }
-
-    return;
+    memdata.threadsPerBlock = get_threads_per_block();
+    memdata.blocks = get_num_mem_blocks();
+    memdata.num_passes = get_num_passes();
+    memdata.global_pattern = 0;
+    memdata.global_pattern_long = 0;
+    memdata.action_name = action_name;
+    memdata.gpu_idx = gpu_id;
+    memdata.num_iterations = num_iterations;
 }
-
-
-void MemWorker::usage(char** argv)
-{
-
-    char example_usage[] =
-	      "run on default setting:       ./rvs_memtest\n"
-	      "run on stress test only:      ./rvs_memtest --stress\n";
-
-    printf("Usage:%s [options]\n", argv[0]);
-    printf("options:\n");
-    printf("--mappedMem                 run all checks with rvs mapped memory instead of native device memory\n");
-    printf("--silent                    Do not print out progress message (default)\n");
-    printf("--device <idx>              Designate one device for test\n");
-    printf("--interactive               Progress info will be printed in the same line\n");
-    printf("--disable_all               Disable all tests\n");
-    printf("--enable_test <test_idx>    Enable the test <test_idx>\n");
-    printf("--disable_test <test_idx>   Disable the test <test_idx>\n");
-    printf("--max_num_blocks <n>        Set the maximum of blocks of memory to test\n");
-    printf("                            1 block = 1 MB in here\n");
-    printf("--exit_on_error             When finding error, print error message and exit\n");
-    printf("--monitor_temp <interval>   Monitoring temperature, the temperature will be updated every <interval> seconds\n");
-    printf("                            This feature is experimental\n");
-    printf("--emails <a@b,c@d,...>      Setting email notification\n");
-    printf("--report_interval <n>       Setting the interval in seconds between email notifications(default 1800)\n");
-    printf("--pattern <pattern>         Manually set test pattern for test4/test8/test10\n");
-    printf("--list_tests                List all test descriptions\n");
-    printf("--num_iterations <n>        Set the number of iterations (only effective on test0 and test10)\n");
-    printf("--num_passes <n>            Set the number of test passes (this affects all tests)\n");
-    printf("--verbose <n>               Setting verbose level\n");
-    printf("                              0 -- Print out test start and end message only (default)\n");
-    printf("                              1 -- Print out pattern messages in test\n");
-    printf("                              2 -- Print out progress messages\n");
-    printf("--stress                    Stress test. Equivalent to --disable_all --enable_test 10 --exit_on_error\n");
-    printf("--help                      Print this message\n");
-    printf("\nExample usage:\n\n");
-    printf("%s\n", example_usage);
-
-    exit(ERR_GENERAL);
-}
-
+ 
 void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
 {
     struct timeval  t0, t1;
     unsigned int pass = 0;
     unsigned int i;
+    std::string msg;
 
-    blocks = 512;
-    threadsPerBlock = 256;
-    num_iterations = 1;
+    Initialization();
 
-    for(int n = 0; n < num_iterations; n++) {
-        for (i = 0;i < DIM(rvs_memtests); i++){
-            gettimeofday(&t0, NULL);
-            rvs_memtests[i].func(ptr, tot_num_blocks);
-            gettimeofday(&t1, NULL);
-            hipDeviceReset();
-            std::cout << "\n To run memtest time taken : " << TDIFF(t1, t0) << " seconds with " << num_iterations << " passes\n";
-        }//for
-        std::cout << "\n Memory tests :: " << std::dec << i << " tests complete \n ";
-    }
+    for (i = 0; i < DIM(rvs_memtests); i++){
+          gettimeofday(&t0, NULL);
+          rvs_memtests[i].func(ptr, tot_num_blocks);
+          gettimeofday(&t1, NULL);
+          msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                   std::to_string(gpu_id) + " To run memtest time taken: " + std::to_string(TDIFF(t1, t0)) + " seconds with " + std::to_string(i) + " passes \n";
+          rvs::lp::Log(msg, rvs::loginfo);
+     }//for
 
+     msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                   std::to_string(gpu_id) + " " + " Memory tests : " + std::to_string(i) + " tests complete \n";
+     rvs::lp::Log(msg, rvs::loginfo);
 }
 
 
@@ -212,8 +152,7 @@ void MemWorker::run() {
 
     // log MEM stress test - start message
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " "  +
-            " Starting the Memory stress test "; 
+            std::to_string(gpu_id) + " "  + " Starting the Memory stress test "; 
     rvs::lp::Log(msg, rvs::loginfo);
 
     deviceId  = get_gpu_device_index();
@@ -269,24 +208,43 @@ void MemWorker::run() {
 
         }
 
-        if(useMappedMemory)
-        {
-            //create HIP mapped memory
-            hipHostMalloc((void**)&mappedHostPtr, tot_num_blocks* BLOCKSIZE, hipHostMallocWriteCombined | hipHostMallocMapped);
 
-            hipHostGetDevicePointer(&mappedHostPtr, &ptr, 0);
+         msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                             std::to_string(gpu_id) + " " + "Use mapped memory  " + " " +
+                             std::to_string(useMappedMemory) + " Block Size: " +  std::to_string(BLOCKSIZE); 
+
+         rvs::lp::Log(msg, rvs::loginfo);
+
+         unsigned int alloc_size =  tot_num_blocks* BLOCKSIZE;
+
+         if(useMappedMemory == true) {
+
+           msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                             std::to_string(gpu_id) + " " + "Memory to be allocated: " + std::to_string(alloc_size); 
+
+           rvs::lp::Log(msg, rvs::loginfo);
+
+            //create HIP mapped memory
+            HIP_CHECK(hipHostMalloc((void**)&mappedHostPtr, alloc_size, hipHostMallocWriteCombined | hipHostMallocMapped));
+
+            HIP_CHECK(hipHostGetDevicePointer((void**)&ptr, mappedHostPtr, 0));
 
         }
         else
         {
-             HIP_CHECK(hipMalloc((void**)&ptr, tot_num_blocks* BLOCKSIZE));
+
+             msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                             std::to_string(gpu_id) + " " + "Memory to be allocated: " + std::to_string(alloc_size); 
+
+             rvs::lp::Log(msg, rvs::loginfo);
+
+             HIP_CHECK(hipMalloc((void**)&ptr, alloc_size));
         }
 
     }while(hipGetLastError() != hipSuccess);
 
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                  std::to_string(gpu_id) + " " + "Starting running tests " + " " + 
+    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpu_id) + " " + "Starting running tests " + " " + 
                   "Total Num of blocks " + std::to_string(tot_num_blocks);
 
     rvs::lp::Log(msg, rvs::logtrace);
