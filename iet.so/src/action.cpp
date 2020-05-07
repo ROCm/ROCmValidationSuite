@@ -257,40 +257,34 @@ bool iet_action::get_all_common_config_keys(void) {
  * @brief runs the edp test
  * @return true if no error occured, false otherwise
  */
-bool iet_action::do_edp_test(void) {
-    std::string msg;
-    size_t k = 0;
+bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
+    std::string  msg;
+    uint32_t     dev_idx = 0;
+    size_t       k = 0;
+
     for (;;) {
         unsigned int i = 0;
         if (property_wait != 0)  // delay iet execution
             sleep(property_wait);
 
-        vector<IETWorker> workers(edpp_gpus.size());
-        vector<gpu_hwmon_info>::iterator it;
+        vector<IETWorker> workers(iet_gpus_device_index.size());
+        map<int, uint16_t>::iterator it;
 
         // all worker instances have the same json settings
         IETWorker::set_use_json(bjson);
 
-        rsmi_init(0);
+        if(rsmi_init(0) != RSMI_STATUS_SUCCESS) {
+           msg = "\n RSMI Init failed";
+           rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+	   return false;
+        }
 
-        for (it = edpp_gpus.begin(); it != edpp_gpus.end(); ++it) {
+        for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
             // set worker thread params
             workers[i].set_name(action_name);
-            workers[i].set_gpu_id((*it).gpu_id);
-            workers[i].set_gpu_device_index((*it).hip_gpu_deviceid);
-            uint32_t dev_idx;
-            msg = std::string("BDF: ") + rvs::bdf2string((*it).bdf_id);
-            rvs::lp::Log(msg, rvs::logdebug);
-            if (RSMI_STATUS_SUCCESS != rvs::rsmi_dev_ind_get((*it).bdf_id,
-                                                             &dev_idx)) {
-              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-              rvs::lp::Err(std::string("rsmi device index not found"),
-                                       MODULE_NAME_CAPS, action_name);
-            }
-            rvs::lp::Log(std::string("dev_idx: ") + std::to_string(dev_idx),
-                         rvs::logdebug);
-
-            workers[i].set_pwr_device_id(dev_idx);
+            workers[i].set_gpu_id(it->second);
+            workers[i].set_gpu_device_index(it->first);
+            workers[i].set_pwr_device_id(dev_idx++);
             workers[i].set_run_wait_ms(property_wait);
             workers[i].set_run_duration_ms(property_duration);
             workers[i].set_ramp_interval(iet_ramp_interval);
@@ -305,26 +299,33 @@ bool iet_action::do_edp_test(void) {
 
 
         if (property_parallel) {
-            for (i = 0; i < edpp_gpus.size(); i++)
+            for (i = 0; i < iet_gpus_device_index.size(); i++)
                 workers[i].start();
 
             // join threads
-            for (i = 0; i < edpp_gpus.size(); i++)
+            for (i = 0; i < iet_gpus_device_index.size(); i++)
                 workers[i].join();
         } else {
-            for (i = 0; i < edpp_gpus.size(); i++) {
+            for (i = 0; i < iet_gpus_device_index.size(); i++) {
                 workers[i].start();
                 workers[i].join();
 
                 // check if stop signal was received
                 if (rvs::lp::Stopping()) {
-                    rsmi_shut_down();
+                    if(rsmi_shut_down() != RSMI_STATUS_SUCCESS) {
+                         msg = "\n RSMI shut down failed";
+                         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+                    }
                     return false;
                 }
             }
         }
 
-        rsmi_shut_down();
+        if(rsmi_shut_down() != RSMI_STATUS_SUCCESS) {
+           msg = "\n RSMI shut down failed";
+           rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+	   return false;
+        }
 
         // check if stop signal was received
         if (rvs::lp::Stopping())
@@ -385,65 +386,47 @@ bool iet_action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
     return false;
 }
 
-
 /**
  * @brief gets all selected GPUs and starts the worker threads
  * @return run result
  */
 int iet_action::get_all_selected_gpus(void) {
-    string msg;
-    bool amd_gpus_found = false;
     int hip_num_gpu_devices;
-    struct pci_access *pacc;
-    struct pci_dev *pci_cdev;
+    bool amd_gpus_found = false;
+    map<int, uint16_t> iet_gpus_device_index;
+    std::string msg;
 
-    hip_num_gpu_devices = get_num_amd_gpu_devices();
-    if (hip_num_gpu_devices == 0)
-        return 0;  // no AMD compatible GPU found!
+    hipGetDeviceCount(&hip_num_gpu_devices);
+    if (hip_num_gpu_devices < 1)
+        return hip_num_gpu_devices;
 
-    // get the pci_access structure
-    pacc = pci_alloc();
+    // iterate over all available & compatible AMD GPUs
+    for (int i = 0; i < hip_num_gpu_devices; i++) {
+        // get GPU device properties
+        hipDeviceProp_t props;
+        hipGetDeviceProperties(&props, i);
 
-    if (pacc == NULL) {
-        // log the error
-        msg = std::string(PCI_ALLOC_ERROR);
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        // compute device location_id (needed in order to identify this device
+        // in the gpus_id/gpus_device_id list
+        unsigned int dev_location_id =
+            ((((unsigned int) (props.pciBusID)) << 8) | (props.pciDeviceID));
 
-        return -1;  // EDPp test cannot continue
-    }
+        uint16_t devId;
+        if (rvs::gpulist::location2device(dev_location_id, &devId)) {
+          continue;
+        }
 
-    // initialize the PCI library
-    pci_init(pacc);
-    // get the list of devices
-    pci_scan_bus(pacc);
+        // filter by device id if needed
+        if (property_device_id > 0 && property_device_id != devId)
+          continue;
 
-    // iterate over devices
-    for (pci_cdev = pacc->devices; pci_cdev; pci_cdev = pci_cdev->next) {
-        // fill in the info
-        pci_fill_info(pci_cdev,
-                PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS);
-
-        // computes the actual dev's location_id (sysfs entry)
-        uint16_t dev_location_id = ((((uint16_t) (pci_cdev->bus)) << 8)
-                | (pci_cdev->dev));
-
-        // check if this pci_dev corresponds to one of the AMD GPUs
+        // check if this GPU is part of the GPU stress test
+        // (device = "all" or the gpu_id is in the device: <gpu id> list)
+        bool cur_gpu_selected = false;
         uint16_t gpu_id;
         // if not and AMD GPU just continue
         if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
           continue;
-
-        // that should be an AMD GPU
-        // check for deviceid filtering
-        if (property_device_id > 0) {
-          if (pci_cdev->device_id != property_device_id) {
-            continue;
-          }
-        }
-
-        // check if the GPU is part of the EDPp test  (either <device>: all
-        // or the gpu_id is in the device: <gpu id> list)
-        bool cur_gpu_selected = false;
 
         if (property_device_all) {
             cur_gpu_selected = true;
@@ -459,18 +442,14 @@ int iet_action::get_all_selected_gpus(void) {
         }
 
         if (cur_gpu_selected) {
-            if (add_gpu_to_edpp_list(dev_location_id, gpu_id,
-              hip_num_gpu_devices))
-                amd_gpus_found = true;
+            iet_gpus_device_index.insert
+                (std::pair<int, uint16_t>(i, gpu_id));
+            amd_gpus_found = true;
         }
     }
 
-    pci_cleanup(pacc);
-
     if (amd_gpus_found) {
-        if (do_edp_test())
-            return 0;
-        return -1;
+        do_edp_test(iet_gpus_device_index);
     } else {
       msg = "No devices match criteria from the test configuation.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -479,6 +458,7 @@ int iet_action::get_all_selected_gpus(void) {
 
     return 0;
 }
+
 
 /**
  * @brief runs the whole IET logic

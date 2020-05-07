@@ -37,6 +37,7 @@ extern "C" {
 #include <string>
 #include <utility>
 #include <memory>
+#include <map>
 
 
 #include "include/rvsactionbase.h"
@@ -116,7 +117,7 @@ class iet_action: public rvs::actionbase {
  */    
     int get_all_selected_gpus(void);
 
-    bool do_edp_test(void);
+    bool do_edp_test(std::map<int, uint16_t> gst_gpus_device_index);
 };
 
 #endif  // IET_SO_INCLUDE_ACTION_H_
