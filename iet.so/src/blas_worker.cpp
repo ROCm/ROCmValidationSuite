@@ -190,8 +190,6 @@ uint64_t blas_worker::get_sgemm_delay(void) {
  * @brief performs SGEMMs on the selected GPU with a given frequency
  */
 void blas_worker::run() {
-    std::string   ops_type = "dgemm";
-
     setup_blas();
     if (blas_error)
         return;
@@ -225,11 +223,11 @@ void blas_worker::run() {
         }
 
         bool sgemm_success = true;
-        // run SGEMM & wait for completion
-        if (gpu_blas->run_blass_gemm(ops_type)) {
-            while (!gpu_blas->is_gemm_op_complete()) {}
-        } else {
-            sgemm_success = false;
+        for(int i = 0; i < 200; i++) {
+           // run SGEMM & wait for completion
+           if (!gpu_blas->run_blass_gemm("dgemm")) {
+               sgemm_success = false;
+           }
         }
 
         {
