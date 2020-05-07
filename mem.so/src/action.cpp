@@ -35,44 +35,31 @@
 #include <map>
 
 #include "include/rvs_key_def.h"
-#include "include/gpu_util.h"
 #include "include/rvs_util.h"
 #include "include/rvsactionbase.h"
 #include "include/rvsloglp.h"
 #include "include/action.h"
 #include "include/rvs_memworker.h"
+#include "include/gpu_util.h"
 
 using std::string;
 using std::vector;
 using std::map;
 using std::regex;
 
-#define RVS_CONF_MEM_MAPPED             "mappedMem"
-#define RVS_CONF_MEM_PATTERN            "mem_pattern"
-#define RVS_CONF_MEM_STRESS             "stress"
-#define RVS_CONF_NUM_BLOCKS             "num_blocks"
-#define RVS_CONF_PATTERN                "pattern"
-#define RVS_CONF_NUM_ITER               "num_iter"
-#define RVS_CONF_NUM_PASSES             "num_passes"
-#define RVS_CONF_STRESS                 "stress"
-
-#define MODULE_NAME                     "mem"
-#define MODULE_NAME_CAPS                "MEM"
-
-#define MEM_DEFAULT_NUM_BLOCKS          1
-#define MEM_DEFAULT_NUM_ITERATIONS      1
-#define MEM_DEFAULT_NUM_PASSES          1
-#define MEM_DEFAULT_CUDA_MEMTEST        1
-#define MEM_DEFAULT_MEM_MAP             false 
-#define MEM_DEFAULT_STRESS              false
-
-
-#define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
-
-#define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
-
-#define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
-#define MEM_DEFAULT_OPS_TYPE            "sgemm"
+std::string rvs_mem[]={
+    "Test0 [Walking 1 bit]",
+    "Test1 [Own address test",
+    "Test2 [Moving inversions, ones&zeros]",
+    "Test3 [Moving inversions, 8 bit pat]",
+    "Test4 [Moving inversions, random pattern]",
+    "Test5 [Block move, 64 moves]",
+    "Test6 [Moving inversions, 32 bit pat]",
+    "Test7 [Random number sequence]",
+    "Test8 [Modulo 20, random pattern]",
+    "Test9 [Bit fade test]",
+    "Test10 [Memory stress test]",
+};
 
 
 /**
@@ -111,6 +98,15 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
         MemWorker::set_use_json(bjson);
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            " " + " The following memory tests will run";
+        rvs::lp::Log(msg, rvs::logresults);
+
+        for (int i = 0; i < 11; i++) {
+            msg = "=============== " + rvs_mem[i] + "\n\n"; 
+            rvs::lp::Log(msg, rvs::logresults);
+        }
+
+        msg = "[" + action_name + "] " + MODULE_NAME + " " +
             " " + " Starting all workers"; 
         rvs::lp::Log(msg, rvs::logtrace);
 
@@ -123,12 +119,13 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
             workers[i].set_gpu_device_index(it->first);
             workers[i].set_run_wait_ms(property_wait);
             workers[i].set_run_duration_ms(property_duration);
-            workers[i].set_mapped_mem(mem_mapped);
-            workers[i].set_max_num_blocks(max_num_blocks);
+            workers[i].set_mapped_mem(useMappedMemory);
+            workers[i].set_num_mem_blocks(max_num_blocks);
+            workers[i].set_threads_per_block(threadsPerBlock);
             workers[i].set_pattern(pattern);
-            workers[i].set_num_iterations(num_iterations);
             workers[i].set_num_passes(num_passes);
             workers[i].set_stress(stress);
+            workers[i].set_num_iterations(num_iterations);
 
             i++;
         }
@@ -155,7 +152,11 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
         if (rvs::lp::Stopping())
             return false;
 
-        break;
+        if (property_count != 0) {
+            k++;
+            if (k == property_count)
+                break;
+        }
     }
 
     return rvs::lp::Stopping() ? false : true;
@@ -171,33 +172,16 @@ bool mem_action::get_all_mem_config_keys(void) {
     bool      bsts;
     string    msg;
 
-    useMappedMemory=false;
     bsts = true;
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             " " + " Getting all mem properties"; 
     rvs::lp::Log(msg, rvs::logtrace);
 
-    if (property_get(RVS_CONF_MEM_MAPPED, &mem_mapped, 
-          MEM_DEFAULT_MEM_MAP)) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_MEM_MAPPED) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
-
     if (property_get_int<uint64_t>(RVS_CONF_NUM_BLOCKS,
                      &max_num_blocks, MEM_DEFAULT_NUM_BLOCKS)) {
         msg = "invalid '" +
         std::string(RVS_CONF_NUM_BLOCKS) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
-
-    if (property_get_int<uint64_t>(RVS_CONF_NUM_ITER,
-                     &num_iterations, MEM_DEFAULT_NUM_ITERATIONS)) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_NUM_ITER) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
@@ -210,10 +194,34 @@ bool mem_action::get_all_mem_config_keys(void) {
         bsts = false;
     }
 
-    if (property_get(RVS_CONF_STRESS,
+    if (property_get_int<uint64_t>(RVS_CONF_THRDS_PER_BLK,
+                     &threadsPerBlock, MEM_DEFAULT_THRDS_BLK)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_THRDS_PER_BLK) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get<bool>(RVS_CONF_MEM_STRESS,
                      &stress, MEM_DEFAULT_STRESS)) {
         msg = "invalid '" +
-        std::string(RVS_CONF_STRESS) + "' key value";
+        std::string(RVS_CONF_MEM_STRESS) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get<bool>(RVS_CONF_MAPPED_MEM,
+                     &useMappedMemory, MEM_DEFAULT_MAPPED_MEM)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_MAPPED_MEM) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get_int<uint64_t>(RVS_CONF_NUM_ITER,
+                     &num_iterations, MEM_DEFAULT_NUM_ITERATIONS)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_NUM_ITER) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
