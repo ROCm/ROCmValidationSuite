@@ -96,23 +96,22 @@ ignore an error for the unrelated configuration
 
 ### Install package:
 
-    Ubuntu : sudo dpkg -i rocm-validation-suite*.deb
-    CentOS & RHEL & SUSE : sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
+    Ubuntu : sudo dpkg -i rvs*.deb
+    CentOS & RHEL & SUSE : sudo yum install rvs*.rpm
 
 **Note:**
 RVS is getting packaged as part of ROCm release starting from 3.0. You can install pre-compiled package as below.
 Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed
 
-    Ubuntu : sudo apt install rocm-validation-suite
-    CentOS & RHEL : sudo yum install rocm-validation-suite
-    SUSE : sudo zypper install rocm-validation-suite
+    Ubuntu : sudo apt install rvs
+    CentOS & RHEL : sudo yum install rvs
+    SUSE : sudo zypper install rvs
 
 ## Running RVS
 
 ### Running version built from source code:
 
     cd ./build/bin
-    sudo ./rvs -d 3
     sudo ./rvsqa.new.sh ; It will run complete rvs test suite
 
 ### Running version pre-complied and packaged with ROCm release
