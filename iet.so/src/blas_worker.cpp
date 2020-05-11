@@ -30,7 +30,13 @@
 #include <mutex>
 
 #include "include/rvs_blas.h"
+
+#include "rocm_smi/rocm_smi.h"
+
+#include "include/log_worker.h"
+#include "include/rvs_module.h"
 #include "include/rvsloglp.h"
+
 
 #define IET_MEM_ALLOC_ERROR                     1
 #define IET_BLAS_ERROR                          2
@@ -38,6 +44,7 @@
 #define MODULE_NAME "IET"
 
 #define USLEEP_MAX_VAL                          (1000000 - 1)
+#define GEMM_DELAY                              5000
 
 using std::string;
 
@@ -190,7 +197,9 @@ uint64_t blas_worker::get_sgemm_delay(void) {
  * @brief performs SGEMMs on the selected GPU with a given frequency
  */
 void blas_worker::run() {
+    std::string msg;
     setup_blas();
+
     if (blas_error)
         return;
 
@@ -199,22 +208,19 @@ void blas_worker::run() {
         brun = true;
     }
 
-    {
-        std::lock_guard<std::mutex> lck(mtx_num_sgemm);
-        num_sgemm_ops = 0;
-    }
 
     for (;;) {
-        {
-            std::lock_guard<std::mutex> lck(mtx_brun);
-            if (!brun)
-                break;
-        }
+
+	msg = " Running blas worker thread ";
+        rvs::lp::Log(msg, rvs::loginfo);
 
         {
-            std::lock_guard<std::mutex> lck(mtx_bpaused);
-            if (bpaused)
-                continue;
+            std::lock_guard<std::mutex> lck(mtx_brun);
+            if (!brun) {
+	        msg = " Blas worker stop signal recieved " ;
+                rvs::lp::Log(msg, rvs::loginfo);
+                break;
+	    }
         }
 
         {
@@ -223,11 +229,10 @@ void blas_worker::run() {
         }
 
         bool sgemm_success = true;
-        for(int i = 0; i < 200; i++) {
-           // run SGEMM & wait for completion
-           if (!gpu_blas->run_blass_gemm("dgemm")) {
+
+        // run SGEMM & wait for completion
+        if (!gpu_blas->run_blass_gemm("dgemm")) {
                sgemm_success = false;
-           }
         }
 
         {
@@ -235,27 +240,11 @@ void blas_worker::run() {
             sgemm_done = true;
         }
 
-        // increase number of SGEMM ops
-        if (sgemm_success) {
-            {
-                std::lock_guard<std::mutex> lck(mtx_bcount_sgemm);
-                if (bcount_sgemm) {
-                    // lock_guard [num_sgemm_ops]
-                    std::lock_guard<std::mutex> lck(mtx_num_sgemm);
-                    num_sgemm_ops++;
-                }
-            }
-
-            // lock_guard [sgemm_delay]
-            {
-                std::lock_guard<std::mutex> lck(mtx_sgemm_delay);
-                usleep_ex(sgemm_delay);
-            }
+        // lock_guard [sgemm_delay]
+        {
+            std::lock_guard<std::mutex> lck(mtx_sgemm_delay);
+            usleep_ex(GEMM_DELAY);
         }
-
-        // check if stop signal was received
-        if (rvs::lp::Stopping())
-            break;
     }
 }
 

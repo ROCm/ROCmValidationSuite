@@ -262,22 +262,20 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     uint32_t     dev_idx = 0;
     size_t       k = 0;
 
+    if(rsmi_init(0) != RSMI_STATUS_SUCCESS) {
+           msg = "\n RSMI Init failed";
+           rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+	   return false;
+    }
+
     for (;;) {
         unsigned int i = 0;
-        if (property_wait != 0)  // delay iet execution
-            sleep(property_wait);
 
         vector<IETWorker> workers(iet_gpus_device_index.size());
         map<int, uint16_t>::iterator it;
 
         // all worker instances have the same json settings
         IETWorker::set_use_json(bjson);
-
-        if(rsmi_init(0) != RSMI_STATUS_SUCCESS) {
-           msg = "\n RSMI Init failed";
-           rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-	   return false;
-        }
 
         for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
             // set worker thread params
@@ -309,35 +307,19 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             for (i = 0; i < iet_gpus_device_index.size(); i++) {
                 workers[i].start();
                 workers[i].join();
-
-                // check if stop signal was received
-                if (rvs::lp::Stopping()) {
-                    if(rsmi_shut_down() != RSMI_STATUS_SUCCESS) {
-                         msg = "\n RSMI shut down failed";
-                         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-                    }
-                    return false;
-                }
             }
         }
 
-        if(rsmi_shut_down() != RSMI_STATUS_SUCCESS) {
-           msg = "\n RSMI shut down failed";
-           rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-	   return false;
-        }
-
-        // check if stop signal was received
-        if (rvs::lp::Stopping())
-            return false;
-
-        if (property_count != 0) {
-            k++;
-            if (k == property_count)
-                break;
+        if (property_count == ++k) {
+            break;
         }
     }
-    return rvs::lp::Stopping() ? false : true;
+
+    if(rsmi_shut_down() != RSMI_STATUS_SUCCESS) {
+        msg = "\n RSMI shut down failed";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return false;
+    }
 }
 
 /**
