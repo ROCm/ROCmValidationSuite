@@ -46,7 +46,7 @@ options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
 RelWithDebInfo MinSizeRel.")
 endif()
 
-project ("rvs")
+project ("rocm-validation-suite")
 enable_testing()
 #include ( CTest )
 
