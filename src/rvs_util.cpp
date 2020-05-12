@@ -38,7 +38,31 @@
 std::vector<std::string> str_split(const std::string& str_val,
                                    const std::string& delimiter) {
     std::vector<std::string> str_tokens;
-    size_t prev_pos = 0, cur_pos = 0;
+    std::string token;
+    size_t pos = 0;
+    size_t len;
+
+    std::string s = str_val;
+
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        token = s.substr(0, pos);
+        if (!token.empty()) {
+            str_tokens.push_back(token);
+        }
+       
+        len =  pos + delimiter.length();
+        s = &str_val[len];
+    }
+
+    return str_tokens;
+}
+
+
+#if 0
+std::vector<std::string> str_split(const std::string& str_val,
+                                   const std::string& delimiter) {
+    std::vector<std::string> str_tokens;
+    int prev_pos = 0, cur_pos = 0;
     do {
         cur_pos = str_val.find(delimiter, prev_pos);
         if (cur_pos == std::string::npos)
@@ -50,6 +74,7 @@ std::vector<std::string> str_split(const std::string& str_val,
     } while (cur_pos < str_val.length() && prev_pos < str_val.length());
     return str_tokens;
 }
+#endif
 
 
 /**
