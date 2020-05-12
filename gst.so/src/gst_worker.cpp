@@ -419,8 +419,6 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
             }
         }
 
-        bool sgemm_success = true;
-
         //Start the timer
         start_time = gpu_blas->get_time_us();
 
