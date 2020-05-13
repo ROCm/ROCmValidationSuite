@@ -44,6 +44,9 @@ using std::vector;
 using std::string;
 using std::map;
 
+#define MODULE_NAME                     "mem"
+#define MODULE_NAME_CAPS                "MEM"
+
 /**
  * @class mem_action
  * @ingroup MEM
@@ -81,6 +84,10 @@ class mem_action: public rvs::actionbase {
     bool stress;
     // Mapped memory
     bool useMappedMemory;
+    // memory blocks
+    uint64_t numofMemblocks;
+    //threads per block
+    uint64_t threadsPerBlock;
 
     // configuration properties getters
     bool get_all_mem_config_keys(void);

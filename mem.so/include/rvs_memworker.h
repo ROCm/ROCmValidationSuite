@@ -33,6 +33,9 @@
 #define MEM_RESULT_FAIL_MESSAGE         "false"
 #define ERR_GENERAL             -999
 
+#define MODULE_NAME                     "mem"
+#define MODULE_NAME_CAPS                "MEM"
+
 #define HIP_CHECK(status)                                                                          \
      if (status != hipSuccess) {                                                                    \
          std::cout << "Got Status: " << status << " at Line: " << __LINE__ << std::endl;            \
@@ -98,17 +101,20 @@ class MemWorker : public rvs::ThreadBase {
 
     //! sets the mapped memory property
     void set_mapped_mem(bool _mapped_mem) {
-        mapped_mem = _mapped_mem;
+        useMappedMemory = _mapped_mem;
     }
     //! Gets the mapped memory property
-    uint64_t get_mapped_mem(void) { return mapped_mem; }
+    uint64_t get_mapped_mem(void) { 
+      return useMappedMemory; }
 
     //! sets the max num of blocks
-    void set_max_num_blocks(uint64_t _num_blocks) {
+    void set_num_mem_blocks(uint64_t _num_blocks) {
         max_num_blocks = _num_blocks;
     }
     //! returns the max num of blocks
-    uint64_t get_max_num_blocks(void) { return max_num_blocks; }
+    uint64_t get_num_mem_blocks(void) { 
+      return max_num_blocks; 
+    }
 
     //! sets the memory pattern
     void set_pattern(uint64_t _pattern) { pattern = _pattern; }
@@ -131,6 +137,16 @@ class MemWorker : public rvs::ThreadBase {
     //!get num passes
     uint64_t get_num_passes(void) {
         return num_passes;
+    }
+
+    //! set num passes
+    void set_threads_per_block(uint64_t _threads_per_blk) {
+        threadsPerBlock = _threads_per_blk;
+    }
+ 
+    //!get num passes
+    uint64_t get_threads_per_block(void) {
+        return threadsPerBlock;
     }
 
     //! sets the SGEMM matrix size
@@ -161,6 +177,7 @@ class MemWorker : public rvs::ThreadBase {
     bool check_gflops_violation(double gflops_interval);
     void check_target_stress(double gflops_interval);
     void usleep_ex(uint64_t microseconds);
+    void Initialization(void);
 
  protected:
     //! name of the action
@@ -178,7 +195,7 @@ class MemWorker : public rvs::ThreadBase {
     //! Max number of blocks
     uint64_t max_num_blocks;
     //! Mapped mem
-    uint64_t mapped_mem;
+    bool useMappedMemory;
     //! Num of passes
     uint64_t num_passes;
     //! Pattern
@@ -191,7 +208,10 @@ class MemWorker : public rvs::ThreadBase {
     static bool bjson;
     //! synchronization mutex
     std::mutex wrkrmutex;
-
+    //threads per block
+    uint64_t  threadsPerBlock;
+    //Mapped memory pointer
+    void*   mappedHostPtr;
 };
 
 #endif  // MEM_SO_INCLUDE_MEM_WORKER_H_

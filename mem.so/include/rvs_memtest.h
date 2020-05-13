@@ -41,8 +41,11 @@
 #ifndef __RVS_MEMTEST_H__
 #define __RVS_MEMTEST_H__
 
+
+//============== MACROS ====================================
 #define TDIFF(tb, ta) (tb.tv_sec - ta.tv_sec + \
     0.000001*(tb.tv_usec - ta.tv_usec))
+
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 #define MIN(x,y) (x < y? x: y)
 #define MOD_SZ 20
@@ -50,7 +53,6 @@
 #define MAX_STR_LEN 256
 #define ERR_BAD_STATE  -1
 #define ERR_GENERAL -999
-
 
 #define KNRM "\x1B[0m"
 #define KRED "\x1B[31m"
@@ -81,7 +83,11 @@
 #define MAX_GPU_NUM  4
 #define BLOCKSIZE ((unsigned long)(1024*1024))
 #define GRIDSIZE 128
+#define STRESS_GRIDSIZE (1024*32)
+#define STRESS_BLOCKSIZE 64
 
+
+//================== Structure ===============================
 
 typedef  void (*test_func_t)(char* , unsigned int );
 
@@ -91,37 +97,50 @@ typedef struct rvs_memtest_s{
     unsigned int enabled;
 }rvs_memtest_t;
 
-   char* time_string(void);
-   void  atomic_inc(unsigned int* value);
-   void  prepare_rvsMemTest();
-   void  list_tests_info(void);
-   void  allocate_small_mem(void);
-   void  free_small_mem(void);
-   void  movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
-   unsigned int lb, unsigned int sval, unsigned int offset, unsigned int p1, unsigned int p2);
-   uint64_t get_random_num_long(void);
-   unsigned int atomic_read(unsigned int* value);
-   unsigned int get_random_num(void);
+typedef struct rvs_memdata_t{
+  uint64_t    global_pattern;
+  uint64_t    global_pattern_long;
+  uint64_t    gpu_idx;
+  std::mutex  mtx_mem_test;
+  uint64_t    max_num_blocks;
+  uint64_t    num_iterations;
+  uint64_t    blocks;
+  uint64_t    threadsPerBlock;
+  uint64_t    num_passes;
+  std::string action_name;
+}rvs_memdata;
 
-   unsigned int  move_inv_test(char* ptr, unsigned int tot_num_blocks, unsigned int p1, unsigned p2);
-   unsigned int error_checking(const char* msg, unsigned int blockidx);
-   unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset, unsigned int p1, unsigned int p2);
+//================== Function prototypes ===============================
+char* time_string(void);
+void  free_small_mem(void);
+void  list_tests_info(void);
+void  prepare_rvsMemTest(void);
+void  allocate_small_mem(void);
+unsigned int get_random_num(void);
+uint64_t get_random_num_long(void);
+void  atomic_inc(unsigned int* value);
+unsigned int atomic_read(unsigned int* value);
+unsigned int error_checking(const char* msg, unsigned int blockidx);
+unsigned int  move_inv_test(char* ptr, unsigned int tot_num_blocks, unsigned int p1, unsigned p2);
+unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset, unsigned int p1, unsigned int p2);
+void  movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
+                          unsigned int lb, unsigned int sval, unsigned int offset, unsigned int p1, unsigned int p2);
 
-   void test0(char* ptr, unsigned int tot_num_blocks);
-   void test1(char* ptr, unsigned int tot_num_blocks);
-   void test2(char* ptr, unsigned int tot_num_blocks);
-   void test3(char* ptr, unsigned int tot_num_blocks);
-   void test4(char* ptr, unsigned int tot_num_blocks);
-   void test5(char* ptr, unsigned int tot_num_blocks);
-   void test6(char* ptr, unsigned int tot_num_blocks);
-   void test7(char* ptr, unsigned int tot_num_blocks);
-   void test8(char* ptr, unsigned int tot_num_blocks);
-   void test9(char* ptr, unsigned int tot_num_blocks);
-   void test10(char* ptr, unsigned int tot_num_blocks);
+//================== Function prototypes ===============================
+void test0(char* ptr, unsigned int tot_num_blocks);
+void test1(char* ptr, unsigned int tot_num_blocks);
+void test2(char* ptr, unsigned int tot_num_blocks);
+void test3(char* ptr, unsigned int tot_num_blocks);
+void test4(char* ptr, unsigned int tot_num_blocks);
+void test5(char* ptr, unsigned int tot_num_blocks);
+void test6(char* ptr, unsigned int tot_num_blocks);
+void test7(char* ptr, unsigned int tot_num_blocks);
+void test8(char* ptr, unsigned int tot_num_blocks);
+void test9(char* ptr, unsigned int tot_num_blocks);
+void test10(char* ptr, unsigned int tot_num_blocks);
 
-   void usage(char** argv); 
-   void rvs_memtest();
-   void run_tests(char* ptr, unsigned int tot_num_blocks);
+void rvs_memtest();
+void run_tests(char* ptr, unsigned int tot_num_blocks);
 
 
 #endif
