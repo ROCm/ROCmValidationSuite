@@ -224,6 +224,8 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
         gst_last_sgemm_start_time = std::chrono::system_clock::now();
 
         if (copy_matrix) {
+            // Genrate random matrix data
+            gpu_blas->generate_random_matrix_data();
             // copy matrix before each GEMM
             if (!gpu_blas->copy_data_to_gpu(gst_ops_type)) {
                 *error = 1;
