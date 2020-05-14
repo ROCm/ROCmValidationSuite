@@ -29,11 +29,10 @@
 
 #include "include/rvscli.h"
 
-//std::string  testpass[] = {"./rvs", "-c", "conf"};
-//std::string  testfail[] = {"./rvs", "-c"};
+const char* testpass[] = {"./rvs", "-c", "conf"};
+const char* testfail[] = {"./rvs", "-c"};
 
 TEST(rvs, cli) {
-#if 0
   int sts;
   rvs::cli cli;
 
@@ -44,5 +43,4 @@ TEST(rvs, cli) {
   sts =  cli.parse(sizeof(testfail)/sizeof(char*),
                    const_cast<char**>(testfail));
   EXPECT_EQ(sts, -1);
-#endif
 }

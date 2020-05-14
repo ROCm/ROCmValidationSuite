@@ -52,7 +52,7 @@ add_definitions(-DHSA_DEPRECATED=)
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wl,-no-as-needed)
-add_compile_options(-Wall )
+add_compile_options(-Wall -Wextra)
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
   set(CMAKE_EXE_LINKER_FLAGS "--coverage")
@@ -93,39 +93,6 @@ set(CORE_RUNTIME_NAME "hsa-runtime")
 set(ROC_THUNK_LIBRARY "lib${ROC_THUNK_NAME}")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 set(CORE_RUNTIME_LIBRARY "lib${CORE_RUNTIME_TARGET}")
-
-# Determine HSA_PATH
-if(NOT DEFINED HIPCC_PATH)
-  if(NOT DEFINED ENV{HIPCC_PATH})
-    set(HIPCC_PATH "${ROCM_PATH}/hip" CACHE PATH "Path to which hipcc runtime has been installed")
-     else()
-       set(HIPCC_PATH $ENV{HIPCC_PATH} CACHE PATH "Path to which hipcc runtime has been installed")
-     endif()
-endif()
-
-# Determine HSA_PATH
-if(NOT DEFINED HSA_PATH)
-     if(NOT DEFINED ENV{HSA_PATH})
-          set(HSA_PATH "/opt/rocm/hsa" CACHE PATH "Path to which HSA runtime has been installed")
-     else()
-          set(HSA_PATH $ENV{HSA_PATH} CACHE PATH "Path to which HSA runtime has been installed")
-     endif()
-endif()
-
-# Add HIP_VERSION to CMAKE_<LANG>_FLAGS
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
-
-# Add remaining flags
-set(HCC_CXX_FLAGS  "-Xlinker --enable-new-dtags -fno-gpu-rdc --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908 ")
-set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include")
-
-
-# Set compiler and compiler flags
-set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
-set(CMAKE_C_COMPILER   "${HIPCC_PATH}/bin/hipcc")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
 
 # Determine Roc Runtime header files are accessible
 if(NOT EXISTS ${ROCR_INC_DIR}/hsa/hsa.h)

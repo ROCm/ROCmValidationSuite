@@ -1087,6 +1087,7 @@ int rvs::hsa::GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
 
 void rvs::hsa::PrintTopology() {
   vector<uint16_t> gpuId;
+  hsa_status_t status;
   string log_msg;
   int j = 0;
 
