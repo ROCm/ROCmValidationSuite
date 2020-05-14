@@ -211,15 +211,14 @@ void blas_worker::run() {
 
     for (;;) {
 
-	      msg = " Running blas worker thread ";
+	msg = " Running blas worker thread ";
         rvs::lp::Log(msg, rvs::loginfo);
 
         {
             std::lock_guard<std::mutex> lck(mtx_brun);
             if (!brun) {
-	              msg = " Blas worker stop signal recieved " ;
+	        msg = " Blas worker stop signal recieved " ;
                 rvs::lp::Log(msg, rvs::loginfo);
-                gpu_blas.release();
                 break;
 	    }
         }
