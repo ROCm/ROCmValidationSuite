@@ -365,13 +365,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
                   rocblas_half alpha;
                   rocblas_half beta;
 
-#ifdef HCC
                   alpha.data = 11;
                   beta.data = 2;
-#else
-                  alpha = 1.1;
-                  beta = 1.9;
-#endif
 
                   if (rocblas_hgemm(blas_handle, transa, transb,
                           rvs_blas::m, rvs_blas::n, rvs_blas::k,
@@ -421,7 +416,7 @@ void rvs_blas::generate_random_matrix_data(void) {
 
         for (int i = 0; i < size_c; ++i)
             hdblc[i] = (double)fast_pseudo_rand(&nextr);
-#ifdef HCC
+
         for (i = 0; i < size_a; ++i)
             hhlfa[i].data = (uint16_t)fast_pseudo_rand(&nextr);
 
@@ -430,19 +425,6 @@ void rvs_blas::generate_random_matrix_data(void) {
 
         for (int i = 0; i < size_c; ++i)
             hhlfc[i].data = (uint16_t)fast_pseudo_rand(&nextr);
-#else
-
-        //DGEMM stuff
-        for (i = 0; i < size_a; ++i)
-            hhlfa[i] = (uint16_t)fast_pseudo_rand(&nextr);
-
-        for (i = 0; i < size_b; ++i)
-            hhlfb[i] = (uint16_t)fast_pseudo_rand(&nextr);
-
-        for (int i = 0; i < size_c; ++i)
-            hhlfc[i] = (uint16_t)fast_pseudo_rand(&nextr);
-#endif
-
     }
 }
 
