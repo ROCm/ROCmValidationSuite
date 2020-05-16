@@ -42,6 +42,17 @@
          exit(0);                                                                                   \
      }
 
+#if 1
+#define MEM_MEM_ALLOC_ERROR                     "memory allocation error!"
+#define MEM_BLAS_ERROR                          "memory/blas error!"
+#define MEM_BLAS_MEMCPY_ERROR                   "HostToDevice mem copy error!"
+#define MAX_ERR_RECORD_COUNT                    10
+#define MEM_NUM_SAVE_BLOCKS                     16
+
+#define MEM_START_MSG                           "start"
+#define MEM_PASS_KEY                            "pass"
+#endif
+
 
 /**
  * @class MEMWorker

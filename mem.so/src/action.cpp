@@ -47,28 +47,19 @@ using std::vector;
 using std::map;
 using std::regex;
 
-#define RVS_CONF_MAPPED_MEM             "mapped_memory"
-#define RVS_CONF_MEM_PATTERN            "mem_pattern"
-#define RVS_CONF_MEM_STRESS             "stress"
-#define RVS_CONF_NUM_BLOCKS             "mem_blocks"
-#define RVS_CONF_NUM_ITER               "num_iter"
-#define RVS_CONF_PATTERN                "pattern"
-#define RVS_CONF_NUM_PASSES             "num_passes"
-#define RVS_CONF_THRDS_PER_BLK          "thrds_per_blk"
-
-
-#define MEM_DEFAULT_NUM_BLOCKS          256
-#define MEM_DEFAULT_THRDS_BLK           128
-#define MEM_DEFAULT_NUM_ITERATIONS      1
-#define MEM_DEFAULT_NUM_PASSES          1
-#define MEM_DEFAULT_CUDA_MEMTEST        1
-#define MEM_DEFAULT_MAPPED_MEM          false 
-#define MEM_DEFAULT_STRESS              false
-
-
-#define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
-#define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
-#define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
+std::string rvs_mem[]={
+    "Test0 [Walking 1 bit]",
+    "Test1 [Own address test",
+    "Test2 [Moving inversions, ones&zeros]",
+    "Test3 [Moving inversions, 8 bit pat]",
+    "Test4 [Moving inversions, random pattern]",
+    "Test5 [Block move, 64 moves]",
+    "Test6 [Moving inversions, 32 bit pat]",
+    "Test7 [Random number sequence]",
+    "Test8 [Modulo 20, random pattern]",
+    "Test9 [Bit fade test]",
+    "Test10 [Memory stress test]",
+};
 
 
 /**
@@ -107,6 +98,15 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
         MemWorker::set_use_json(bjson);
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            " " + " The following memory tests will run";
+        rvs::lp::Log(msg, rvs::logresults);
+
+        for (int i = 0; i < 11; i++) {
+            msg = "=============== " + rvs_mem[i] + "\n\n"; 
+            rvs::lp::Log(msg, rvs::logresults);
+        }
+
+        msg = "[" + action_name + "] " + MODULE_NAME + " " +
             " " + " Starting all workers"; 
         rvs::lp::Log(msg, rvs::logtrace);
 
@@ -125,6 +125,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
             workers[i].set_pattern(pattern);
             workers[i].set_num_passes(num_passes);
             workers[i].set_stress(stress);
+            workers[i].set_num_iterations(num_iterations);
 
             i++;
         }
