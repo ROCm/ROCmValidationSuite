@@ -35,16 +35,6 @@
 #include "include/rvs_memtest.h"
 #include "include/rvsloglp.h"
 
-
-#define MEM_MEM_ALLOC_ERROR                     "memory allocation error!"
-#define MEM_BLAS_ERROR                          "memory/blas error!"
-#define MEM_BLAS_MEMCPY_ERROR                   "HostToDevice mem copy error!"
-#define MAX_ERR_RECORD_COUNT                    10
-#define MEM_NUM_SAVE_BLOCKS                     16
-
-#define MEM_START_MSG                           "start"
-#define MEM_PASS_KEY                            "pass"
-
 using std::string;
 
 extern unsigned int    *ptCntOfError;
@@ -52,10 +42,10 @@ extern unsigned long   *ptFailedAdress;
 extern unsigned long   *ptExpectedValue;
 extern unsigned long   *ptCurrentValue;
 extern unsigned long   *ptValueOfStartAddr;
- 
-
 bool MemWorker::bjson = false;
 extern rvs_memdata   memdata;
+ 
+
 
 MemWorker::MemWorker() {}
 MemWorker::~MemWorker() {}
@@ -117,6 +107,7 @@ void MemWorker::Initialization(void)
     memdata.global_pattern_long = 0;
     memdata.action_name = action_name;
     memdata.gpu_idx = gpu_id;
+    memdata.num_iterations = num_iterations;
 
 }
  

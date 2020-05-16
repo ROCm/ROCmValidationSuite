@@ -74,39 +74,6 @@ unsigned int     blocks = 512;
 unsigned int     threadsPerBlock = 256;
 
 
-#define DEBUG_PRINTF(fmt,...) do {					\
-	    PRINTF(fmt, ##__VA_ARGS__);					\
-}while(0)
-
-
-#define PRINTF(fmt,...) do{						\
-	printf("[%s][%s][%d]:" fmt, time_string(), hostname, gpu_idx, ##__VA_ARGS__); \
-	fflush(stdout);							\
-} while(0)
-
-#define FPRINTF(fmt,...) do{						\
-  fprintf(stderr, "[%s][%s][%d]:" fmt, time_string(), hostname, gpu_idx, ##__VA_ARGS__); \
-	fflush(stderr);							\
-} while(0)
-
-#define RECORD_ERR(count_of_errors, start_addr, expect, current) do{		\
-	unsigned int idx = atomicAdd(count_of_errors, 1);		\
-	idx = idx % MAX_ERR_RECORD_COUNT;		\
-	ptFailedAdress[idx] = (unsigned long)start_addr;		\
-	ptExpectedValue[idx] = (unsigned long)expect;	\
-	ptCurrentValue[idx] = (unsigned long)current;	\
-	ptValueOfStartAddr[idx] = (unsigned long)(*start_addr);	\
-}while(0)
-
-#define HIP_ASSERT(x) (assert((x)==hipSuccess))
-
-#define rvs_DEVICE_SERIAL_BUFFER_SIZE 0
-#define MAX_ERR_RECORD_COUNT          10
-#define MAX_NUM_GPUS                  128
-#define ERR_MSG_LENGTH                4096
-#define RANDOM_CT                     320000
-#define RANDOM_DIV_CT                 0.1234
-
 rvs_memdata   memdata;
 
 void show_progress(std::string msg, unsigned int i, unsigned int tot_num_blocks)	{
@@ -192,61 +159,6 @@ unsigned int error_checking(const char* pmsg, unsigned int blockidx)
 
     return numOfErrors;
 }
-
-
-
-unsigned int checkMemErrors(const char* pmsg, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
-			 unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
-{
-    unsigned long host_err_addr[MAX_ERR_RECORD_COUNT];
-    unsigned long host_err_expect[MAX_ERR_RECORD_COUNT];
-    unsigned long host_err_current[MAX_ERR_RECORD_COUNT];
-    unsigned long host_err_second_read[MAX_ERR_RECORD_COUNT];
-    unsigned int  numOfErrors = 0;
-    unsigned int  i;
-
-    //std::cout << "\n" <<  pmsg << " block id :" << blockidx << std::flush << "\n";
-
-    HIP_CHECK(hipMemcpy(&numOfErrors, ptErrCount, sizeof(unsigned int), hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_addr[0], ptFailedAdress, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_expect[0], ptExpectedValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_current[0], ptCurrentValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_second_read[0], ptValueOfStartAddr, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-
-    std::string emsg;
-    std::ostringstream msg;
-    std::string driver_info;
-    std::string devSerialNum;
-
-    if (numOfErrors){
-      std::cerr << "ERROR: the last : " <<   MIN(MAX_ERR_RECORD_COUNT, numOfErrors) << " : error addresses are: \n";
-
-	      for (i = 0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
-            std::cerr << (void*)host_err_addr[i] << "\n";
-	      }
-
-        std::cerr << "\n";
-
-	      for (i =0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
-
-          std::cerr << " ERROR:" << i << " th error, expected value=0x" << host_err_expect[i] << "current value=0x" << host_err_current[i] << "current value=0x" << host_err_current[i] <<  "diff=0x" <<  (host_err_expect[i] ^ host_err_current[i]) << " second_ read=0x " << host_err_second_read[i] << "expect=0x" << host_err_expect[i] << "diff with expected value=0x" <<  (host_err_expect[i] ^ host_err_second_read[i]) << "\n";
-
-            //std::cerr << msg.str() << "\n";  
-	    }
-
-
-	    hipMemset((void *)&ptCntOfError, 0, sizeof(unsigned int));
-	    hipMemset(&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
-	    hipMemset((void*)&ptExpectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
-	    hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
-
-	    hipDeviceReset();
-	    exit(ERR_BAD_STATE);
-    }
-
-    return numOfErrors;
-}
-
 
 unsigned int get_random_num(void) {
     struct timeval t0;
@@ -487,7 +399,7 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
                         dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                         ptr, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
 
-    err += checkMemErrors("Test0 on global address",  ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
+    error_checking("test0 on global address",  0);
 
 
     for(unsigned int ite = 0; ite < memdata.num_passes; ite++){

@@ -63,6 +63,39 @@
 #define KCYN "\x1B[36m"
 #define KWHT "\x1B[37m"
 
+#define DEBUG_PRINTF(fmt,...) do {					\
+	    PRINTF(fmt, ##__VA_ARGS__);					\
+}while(0)
+
+
+#define PRINTF(fmt,...) do{						\
+	printf("[%s][%s][%d]:" fmt, time_string(), hostname, gpu_idx, ##__VA_ARGS__); \
+	fflush(stdout);							\
+} while(0)
+
+#define FPRINTF(fmt,...) do{						\
+  fprintf(stderr, "[%s][%s][%d]:" fmt, time_string(), hostname, gpu_idx, ##__VA_ARGS__); \
+	fflush(stderr);							\
+} while(0)
+
+#define RECORD_ERR(count_of_errors, start_addr, expect, current) do{		\
+	unsigned int idx = atomicAdd(count_of_errors, 1);		\
+	idx = idx % MAX_ERR_RECORD_COUNT;		\
+	ptFailedAdress[idx] = (unsigned long)start_addr;		\
+	ptExpectedValue[idx] = (unsigned long)expect;	\
+	ptCurrentValue[idx] = (unsigned long)current;	\
+	ptValueOfStartAddr[idx] = (unsigned long)(*start_addr);	\
+}while(0)
+
+#define HIP_ASSERT(x) (assert((x)==hipSuccess))
+
+#define RVS_DEVICE_SERIAL_BUFFER_SIZE 0
+#define MAX_ERR_RECORD_COUNT          10
+#define MAX_NUM_GPUS                  128
+#define ERR_MSG_LENGTH                4096
+#define RANDOM_CT                     320000
+#define RANDOM_DIV_CT                 0.1234
+
 #define passed()                                                                                   \
     printf("%sPASSED!%s\n", KGRN, KNRM);                                                           \
     exit(0);
