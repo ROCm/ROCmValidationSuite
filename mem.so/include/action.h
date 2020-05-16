@@ -47,6 +47,33 @@ using std::map;
 #define MODULE_NAME                     "mem"
 #define MODULE_NAME_CAPS                "MEM"
 
+#if 1
+#define RVS_CONF_MAPPED_MEM             "mapped_memory"
+#define RVS_CONF_MEM_PATTERN            "mem_pattern"
+#define RVS_CONF_MEM_STRESS             "stress"
+#define RVS_CONF_NUM_BLOCKS             "mem_blocks"
+#define RVS_CONF_NUM_ITER               "num_iter"
+#define RVS_CONF_PATTERN                "pattern"
+#define RVS_CONF_NUM_PASSES             "num_passes"
+#define RVS_CONF_THRDS_PER_BLK          "thrds_per_blk"
+
+
+#define MEM_DEFAULT_NUM_BLOCKS          256
+#define MEM_DEFAULT_THRDS_BLK           128
+#define MEM_DEFAULT_NUM_ITERATIONS      1
+#define MEM_DEFAULT_NUM_PASSES          1
+#define MEM_DEFAULT_CUDA_MEMTEST        1
+#define MEM_DEFAULT_MAPPED_MEM          false 
+#define MEM_DEFAULT_STRESS              false
+
+
+#define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
+#define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
+#define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
+#endif
+
+
+
 /**
  * @class mem_action
  * @ingroup MEM
