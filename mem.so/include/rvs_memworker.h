@@ -36,11 +36,26 @@
 #define MODULE_NAME                     "mem"
 #define MODULE_NAME_CAPS                "MEM"
 
+#if 0
 #define HIP_CHECK(status)                                                                          \
      if (status != hipSuccess) {                                                                    \
          std::cout << "Got Status: " << status << " at Line: " << __LINE__ << std::endl;            \
          exit(0);                                                                                   \
      }
+#endif
+
+#define HIP_CHECK(error)                                                                            \
+    {                                                                                              \
+        hipError_t localError = error;                                                             \
+        if ((localError != hipSuccess)&& (localError != hipErrorPeerAccessAlreadyEnabled)&&        \
+                     (localError != hipErrorPeerAccessNotEnabled )) {                              \
+            printf("%serror: '%s'(%d) from %s at %s:%d%s\n", KRED, hipGetErrorString(localError),  \
+                   localError, #error, __FILE__, __LINE__, KNRM);                                  \
+            failed("API returned error code.");                                                    \
+        }                                                                                          \
+    }
+
+
 
 #if 1
 #define MEM_MEM_ALLOC_ERROR                     "memory allocation error!"

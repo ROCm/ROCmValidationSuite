@@ -119,7 +119,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
             workers[i].set_gpu_device_index(it->first);
             workers[i].set_run_wait_ms(property_wait);
             workers[i].set_run_duration_ms(property_duration);
-            workers[i].set_mapped_mem(mem_mapped);
+            workers[i].set_mapped_mem(useMappedMemory);
             workers[i].set_num_mem_blocks(max_num_blocks);
             workers[i].set_threads_per_block(threadsPerBlock);
             workers[i].set_pattern(pattern);
@@ -172,7 +172,6 @@ bool mem_action::get_all_mem_config_keys(void) {
     bool      bsts;
     string    msg;
 
-    useMappedMemory=false;
     bsts = true;
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
