@@ -264,8 +264,7 @@ __global__  void kernel_test0_global_write(char* _ptr, char* _end_ptr)
     return;
 }
 
-__global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
-			 unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+__global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr)
 {
     unsigned long* ptr = (unsigned long*)_ptr;
     unsigned long* end_ptr = (unsigned long*)_end_ptr;
@@ -273,15 +272,6 @@ __global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned in
     unsigned int pattern = 1;
     unsigned long mask = 4;
 
-    if (*ptr != pattern){
-	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
-	      ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
-	      ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	\
-	      ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
-
-        if(*ptErrCount >= 10) 
-          *ptErrCount = 0;
-    }
 
     while(ptr < end_ptr){
 	      ptr = (unsigned long*) ( ((unsigned long)orig_ptr) | mask);
@@ -295,15 +285,6 @@ __global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned in
 	          break;
 	      }
 
-	      if (*ptr != pattern){
-    	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
-	          ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
-	          ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	\
-	          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
-
-            if(*ptErrCount >= 10) 
-               *ptErrCount = 0;
-	      }
 
 	      pattern = pattern << 1;
 	      mask = mask << 1;
@@ -329,7 +310,7 @@ __global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* ptErr
     unsigned long mask = 4;
 
     if (*ptr != pattern){
-	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
+	ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
         ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
         ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	\
         ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
@@ -352,13 +333,13 @@ __global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* ptErr
 	    }
 
 	    if (*ptr != pattern){
-	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
-        ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
-        ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	\
-        ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
+	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		
+              ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	
+              ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	
+              ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
 
-        if(*ptErrCount >= 10) 
-           *ptErrCount = 0;
+           if(*ptErrCount >= 10) 
+              *ptErrCount = 0;
 
 	    }
 
@@ -391,13 +372,15 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
 
     //test global address
     hipLaunchKernelGGL(kernel_test0_global_write,   /* compute kernel*/
-                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                        ptr , end_ptr);
+                              dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+	                      ptr , end_ptr);
 
 
+#if 1
     hipLaunchKernelGGL(kernel_test0_global_read,   /* compute kernel*/
                         dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                        ptr, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
+                        ptr, end_ptr);
+#endif
 
     error_checking("test0 on global address",  0);
 
@@ -418,8 +401,8 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
 	        grid.x= GRIDSIZE;
 
           hipLaunchKernelGGL(kernel_test0_read,
-                     dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                     ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
+                                dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                                ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
 
           err += error_checking("Test0 checking complete :: ",  i);
 	    }
@@ -879,9 +862,9 @@ kernel_test5_check(char* _ptr, char* end_ptr, unsigned int* ptErrCount, unsigned
     for (i=0;i < BLOCKSIZE/sizeof(unsigned int); i+=2){
 	      if (ptr[i] != ptr[i+1]){
 	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		
-          ptExpectedValue[*ptErrCount] = (unsigned int)ptr[i];	
-          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i + 1];	
-          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr[i];
+                ptExpectedValue[*ptErrCount] = (unsigned int)ptr[i];	
+                ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i + 1];	
+                ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr[i];
 
           if(*ptErrCount >= 10) 
               *ptErrCount = 0;
