@@ -108,7 +108,6 @@ void MemWorker::Initialization(void)
     memdata.action_name = action_name;
     memdata.gpu_idx = gpu_id;
     memdata.num_iterations = num_iterations;
-
 }
  
 void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
@@ -211,17 +210,37 @@ void MemWorker::run() {
 
         }
 
-        if(useMappedMemory)
-        {
-            //create HIP mapped memory
-            HIP_CHECK(hipHostMalloc((void**)&mappedHostPtr, tot_num_blocks* BLOCKSIZE, hipHostMallocWriteCombined | hipHostMallocMapped));
 
-            HIP_CHECK(hipHostGetDevicePointer(&mappedHostPtr, &ptr, 0));
+         msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                             std::to_string(gpu_id) + " " + "Use mapped memory  " + " " +
+                             std::to_string(useMappedMemory) + " Block Size: " +  std::to_string(BLOCKSIZE); 
+
+         rvs::lp::Log(msg, rvs::loginfo);
+
+         unsigned int alloc_size =  tot_num_blocks* BLOCKSIZE;
+
+         if(useMappedMemory == true) {
+
+           msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                             std::to_string(gpu_id) + " " + "Memory to be allocated: " + std::to_string(alloc_size); 
+
+           rvs::lp::Log(msg, rvs::loginfo);
+
+            //create HIP mapped memory
+            HIP_CHECK(hipHostMalloc((void**)&mappedHostPtr, alloc_size, hipHostMallocWriteCombined | hipHostMallocMapped));
+
+            HIP_CHECK(hipHostGetDevicePointer((void**)&ptr, mappedHostPtr, 0));
 
         }
         else
         {
-             HIP_CHECK(hipMalloc((void**)&ptr, tot_num_blocks* BLOCKSIZE));
+
+             msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                             std::to_string(gpu_id) + " " + "Memory to be allocated: " + std::to_string(alloc_size); 
+
+             rvs::lp::Log(msg, rvs::loginfo);
+
+             HIP_CHECK(hipMalloc((void**)&ptr, alloc_size));
         }
 
     }while(hipGetLastError() != hipSuccess);
