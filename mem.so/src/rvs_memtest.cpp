@@ -65,14 +65,14 @@
 #include "include/rvs_memkernel.h"
 #include "include/rvs_memtest.h"
 
-unsigned int    *ptCntOfError;
-unsigned long   *ptFailedAdress;
-unsigned long   *ptExpectedValue;
-unsigned long   *ptCurrentValue;
-unsigned long   *ptValueOfStartAddr;
 unsigned int     blocks = 512;
 unsigned int     threadsPerBlock = 256;
 
+static __thread  unsigned long* ptFailedAdress;
+static __thread  unsigned long* ptExpectedValue;
+static __thread  unsigned long* ptCurrentValue;
+static __thread  unsigned long* ptValueOfSecondRead;
+static __thread  unsigned int*  ptCntOfError;
 
 rvs_memdata   memdata;
 
@@ -105,7 +105,7 @@ unsigned int atomic_read(unsigned int* value)
     return ret;
 }
 
-unsigned int error_checking(const char* pmsg, unsigned int blockidx)
+unsigned int error_checking(std::string pmsg, unsigned int blockidx)
 {
     unsigned long host_err_addr[MAX_ERR_RECORD_COUNT];
     unsigned long host_err_expect[MAX_ERR_RECORD_COUNT];
@@ -115,14 +115,17 @@ unsigned int error_checking(const char* pmsg, unsigned int blockidx)
     unsigned int  i;
     std::string   msg;
 
+    HIP_CHECK(hipMemcpy(&numOfErrors, (void*)ptCntOfError, sizeof(unsigned int), hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_addr[0], (void*)ptFailedAdress, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_expect[0], (void*)ptExpectedValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_current[0], (void*)ptCurrentValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    HIP_CHECK(hipMemcpy(&host_err_second_read[0], (void*)ptValueOfSecondRead, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + pmsg + " block id :" + std::to_string(blockidx);
     rvs::lp::Log(msg, rvs::loginfo);
 
-    HIP_CHECK(hipMemcpy(&numOfErrors, ptCntOfError, sizeof(unsigned int), hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_addr[0], ptFailedAdress, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_expect[0], ptExpectedValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_current[0], ptCurrentValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-    HIP_CHECK(hipMemcpy(&host_err_second_read[0], ptValueOfStartAddr, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " Number of errors :" + std::to_string(numOfErrors);
+    rvs::lp::Log(msg, rvs::loginfo);
 
     if (numOfErrors){
        msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last : " +  
@@ -148,8 +151,8 @@ unsigned int error_checking(const char* pmsg, unsigned int blockidx)
 	    }
 
 
-	    hipMemset((void *)&ptCntOfError, 0, sizeof(unsigned int));
-	    hipMemset(&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+	    hipMemset(ptCntOfError, 0, sizeof(unsigned int));
+	    hipMemset((void*)&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 	    hipMemset((void*)&ptExpectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 	    hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 
@@ -264,7 +267,8 @@ __global__  void kernel_test0_global_write(char* _ptr, char* _end_ptr)
     return;
 }
 
-__global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr)
+__global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
+		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueofSecondRead)
 {
     unsigned long* ptr = (unsigned long*)_ptr;
     unsigned long* end_ptr = (unsigned long*)_end_ptr;
@@ -272,29 +276,39 @@ __global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr)
     unsigned int pattern = 1;
     unsigned long mask = 4;
 
+    if (*ptr != pattern){
+	if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+           ptFailedAdress[*ptErrCount] = (unsigned long)ptr;        
+           ptExpectedValue[*ptErrCount] = (unsigned long)pattern;  
+           ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
+	}
+    }
 
     while(ptr < end_ptr){
-	      ptr = (unsigned long*) ( ((unsigned long)orig_ptr) | mask);
+        ptr = (unsigned long*) ( ((unsigned long)orig_ptr) | mask);
 
-	      if (ptr == orig_ptr){
-	        mask = mask << 1;
-	        continue;
-	      }
+        if (ptr == orig_ptr){
+	   mask = mask << 1;
+	   continue;
+        }
 
-	      if (ptr >= end_ptr){
-	          break;
-	      }
+	if (ptr >= end_ptr){
+	   if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+               ptFailedAdress[*ptErrCount] = (unsigned long)ptr;  
+               ptExpectedValue[*ptErrCount] = (unsigned long)pattern;  
+               ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
+	   }
+	}
 
-
-	      pattern = pattern << 1;
-	      mask = mask << 1;
+	pattern = pattern << 1;
+	mask = mask << 1;
     }
 
     return;
 }
 
 __global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
-		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead)
 {
     unsigned int* orig_ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);;
     unsigned int* ptr = orig_ptr;
@@ -310,18 +324,14 @@ __global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* ptErr
     unsigned long mask = 4;
 
     if (*ptr != pattern){
-	ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		\
-        ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
-        ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	\
-        ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
-
-        if(*ptErrCount >= 10) 
-           *ptErrCount = 0;
-
+	if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+              ptFailedAdress[*ptErrCount] = (unsigned long)ptr;                
+              ptExpectedValue[*ptErrCount] = (unsigned long)pattern;   
+              ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
+	}
     }
 
     while(ptr < block_end){
-
 	    ptr = (unsigned int*) ( ((unsigned long)orig_ptr) | mask);
 	    if (ptr == orig_ptr){
 	        mask = mask <<1;
@@ -333,14 +343,11 @@ __global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* ptErr
 	    }
 
 	    if (*ptr != pattern){
-	      ptFailedAdress[*ptErrCount] = (unsigned long)ptr;		
-              ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	
-              ptCurrentValue[*ptErrCount] = (unsigned long)*ptr;	
-              ptValueOfStartAddr[*ptErrCount++] = (unsigned long)(*_ptr);	\
-
-           if(*ptErrCount >= 10) 
-              *ptErrCount = 0;
-
+	       if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                   ptFailedAdress[*ptErrCount] = (unsigned long)ptr;          
+                   ptExpectedValue[*ptErrCount] = (unsigned long)pattern;  
+                   ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
+	       }
 	    }
 
 	    pattern = pattern << 1;
@@ -372,27 +379,25 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
 
     //test global address
     hipLaunchKernelGGL(kernel_test0_global_write,   /* compute kernel*/
-                              dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                      ptr , end_ptr);
+                           dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+	                   ptr , end_ptr);
 
-
-#if 1
     hipLaunchKernelGGL(kernel_test0_global_read,   /* compute kernel*/
-                        dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                        ptr, end_ptr);
-#endif
+                        dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                        ptr, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
-    error_checking("test0 on global address",  0);
-
+    msg = " test0 on global address";
+    error_checking(msg,  0);
 
     for(unsigned int ite = 0; ite < memdata.num_passes; ite++){
-	    for (i = 0; i < tot_num_blocks; i += GRIDSIZE){
+         for (i = 0; i < tot_num_blocks; i += GRIDSIZE){
 	        dim3 grid;
 
-          grid.x= GRIDSIZE;
-          hipLaunchKernelGGL(kernel_test0_write,   /* compute kernel*/
-                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                grid.x= GRIDSIZE;
+                hipLaunchKernelGGL(kernel_test0_write,   /* compute kernel*/
+                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                              ptr + i * BLOCKSIZE, end_ptr); 
+		show_progress(" test0 on writing :", i, tot_num_blocks);
 	    }
 
 	    for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -400,11 +405,12 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
 
 	        grid.x= GRIDSIZE;
 
-          hipLaunchKernelGGL(kernel_test0_read,
-                                dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                                ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
+                hipLaunchKernelGGL(kernel_test0_read,
+                                dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                                ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
-          err += error_checking("Test0 checking complete :: ",  i);
+		error_checking(__FUNCTION__,  i);
+		show_progress(" test0 on reading :", i, tot_num_blocks);
 	    }
 
     }
@@ -413,6 +419,7 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test0 passed , no errors detected";
       rvs::lp::Log(msg, rvs::logresults);
     }
+
     return;
 
 }
@@ -440,8 +447,8 @@ __global__ void kernel_test1_write(char* _ptr, char* end_ptr, unsigned int* err)
 }
 
 __global__ void 
-kernel_test1_read(char* _ptr, char* end_ptr, unsigned int* err, unsigned long* ptFailedAdress,
-		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+kernel_test1_read(char* _ptr, char* end_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
+		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead)
 {
     unsigned int i;
     unsigned long* ptr = (unsigned long*) (_ptr + blockIdx.x*BLOCKSIZE);
@@ -450,10 +457,13 @@ kernel_test1_read(char* _ptr, char* end_ptr, unsigned int* err, unsigned long* p
 	      return;
     }
 
-
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned long); i++){
 	    if (ptr[i] != (unsigned long)& ptr[i]){
-	        RECORD_ERR(err, &ptr[i], (unsigned long)&ptr[i], ptr[i]);
+	       if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                   ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];      
+                   ptExpectedValue[*ptErrCount] = (unsigned long)&ptr[i];   
+                   ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
+	       }
 	    }
     }
 
@@ -474,7 +484,7 @@ void test1(char* ptr, unsigned int tot_num_blocks)
 	    dim3 grid;
 
 	    grid.x= GRIDSIZE;
-      hipLaunchKernelGGL(kernel_test1_write, 
+            hipLaunchKernelGGL(kernel_test1_write, 
                      dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                   (ptr + (i * BLOCKSIZE)) , end_ptr, ptCntOfError); 
 
@@ -485,12 +495,12 @@ void test1(char* ptr, unsigned int tot_num_blocks)
 	    dim3 grid;
 
 	    grid.x= GRIDSIZE;
-      hipLaunchKernelGGL(kernel_test1_read,
+            hipLaunchKernelGGL(kernel_test1_read,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                          ptr + (i * BLOCKSIZE), end_ptr, ptCntOfError, 
-                            ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
+                            ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead);
 
-      err += error_checking("Test1 checking :: ",  i);
+            err += error_checking("Test1 checking :: ",  i);
 	    show_progress("\nTest1 on reading", i, tot_num_blocks);
     }
 
@@ -530,7 +540,7 @@ kernel_move_inv_write(char* _ptr, char* end_ptr, unsigned int pattern)
 
 __global__ void 
 kernel_move_inv_readwrite(char* _ptr, char* end_ptr, unsigned int p1, unsigned int p2, unsigned int* ptErrCount,
-			  unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+			  unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead)
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x * BLOCKSIZE);
@@ -540,17 +550,15 @@ kernel_move_inv_readwrite(char* _ptr, char* end_ptr, unsigned int p1, unsigned i
     }
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
-	      if (ptr[i] != p1){
-	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		\
-          ptExpectedValue[*ptErrCount] = (unsigned int)p1;	\
-          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];	\
-          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr;	\
+	 if (ptr[i] != p1){
+               if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                     ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
+                     ptExpectedValue[*ptErrCount] = (unsigned long)p1;   
+                     ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
+               }
+	 }
 
-          if(*ptErrCount >= 10) 
-              *ptErrCount = 0;
-	      }
-
-	      ptr[i] = p2;
+	 ptr[i] = p2;
     }
 
     return;
@@ -559,7 +567,7 @@ kernel_move_inv_readwrite(char* _ptr, char* end_ptr, unsigned int p1, unsigned i
 
 __global__ void 
 kernel_move_inv_read(char* _ptr, char* end_ptr,  unsigned int pattern, unsigned int* ptErrCount,
-		     unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr )
+		     unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead )
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x * BLOCKSIZE);
@@ -569,15 +577,13 @@ kernel_move_inv_read(char* _ptr, char* end_ptr,  unsigned int pattern, unsigned 
     }
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
-	      if (ptr[i] != pattern){
-	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		\
-          ptExpectedValue[*ptErrCount] = (unsigned int)pattern;	\
-          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];	\
-          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr;	\
-
-          if(*ptErrCount >= 10) 
-              *ptErrCount = 0;
-	      }
+        if (ptr[i] != pattern){
+            if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                  ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
+                  ptExpectedValue[*ptErrCount] = (unsigned long)pattern;   
+                  ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
+            }
+	}
     }
 
     return;
@@ -591,12 +597,12 @@ unsigned int  move_inv_test(char* ptr, unsigned int tot_num_blocks, unsigned int
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
 
     for (i= 0;i < tot_num_blocks; i+= GRIDSIZE){
-	      dim3 grid;
+        dim3 grid;
 
-	      grid.x= GRIDSIZE;
+        grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_move_inv_write,
                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                       ptr + i * BLOCKSIZE, end_ptr,  p1); 
+	                 ptr + i * BLOCKSIZE, end_ptr,  p1); 
 
         show_progress("move_inv_write", i, tot_num_blocks);
 
@@ -604,25 +610,25 @@ unsigned int  move_inv_test(char* ptr, unsigned int tot_num_blocks, unsigned int
 
 
     for (i=0; i < tot_num_blocks; i+= GRIDSIZE){
-	      dim3 grid;
+        dim3 grid;
 
-	      grid.x= GRIDSIZE;
+        grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_move_inv_readwrite,
                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                       ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
+	                 ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
-	      err += error_checking("Move inv reading and writing to blocks",  i);
+        err += error_checking("Move inv reading and writing to blocks",  i);
         show_progress("move_inv_readwrite", i, tot_num_blocks);
     }
 
     for (i=0; i < tot_num_blocks; i+= GRIDSIZE){
-	      dim3 grid;
+        dim3 grid;
 
-	      grid.x= GRIDSIZE;
+        grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_move_inv_read,
                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                       ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
-	      err += error_checking("Move inv reading from blocks",  i);
+	                       ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
+        err += error_checking("Move inv reading from blocks",  i);
         show_progress("move_inv_read", i, tot_num_blocks);
     }
 
@@ -826,22 +832,22 @@ kernel_test5_move(char* _ptr, char* end_ptr)
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x * BLOCKSIZE);
 
     if (ptr >= (unsigned int*) end_ptr) {
-	      return;
+        return;
     }
 
     unsigned int half_count = BLOCKSIZE/sizeof(unsigned int)/2;
     unsigned int* ptr_mid = ptr + half_count;
 
     for (i = 0;i < half_count; i++){
-	      ptr_mid[i] = ptr[i];
+	ptr_mid[i] = ptr[i];
     }
 
     for (i=0;i < half_count - 8; i++){
-	      ptr[i + 8] = ptr_mid[i];
+	ptr[i + 8] = ptr_mid[i];
     }
 
     for (i=0;i < 8; i++){
-	      ptr[i] = ptr_mid[half_count - 8 + i];
+	ptr[i] = ptr_mid[half_count - 8 + i];
     }
 
     return;
@@ -850,7 +856,7 @@ kernel_test5_move(char* _ptr, char* end_ptr)
 
 __global__ void 
 kernel_test5_check(char* _ptr, char* end_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
-		   unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+		   unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead)
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x*BLOCKSIZE);
@@ -860,16 +866,13 @@ kernel_test5_check(char* _ptr, char* end_ptr, unsigned int* ptErrCount, unsigned
     }
 
     for (i=0;i < BLOCKSIZE/sizeof(unsigned int); i+=2){
-	      if (ptr[i] != ptr[i+1]){
-	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		
-                ptExpectedValue[*ptErrCount] = (unsigned int)ptr[i];	
-                ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i + 1];	
-                ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr[i];
-
-          if(*ptErrCount >= 10) 
-              *ptErrCount = 0;
-	
-	      }
+	if (ptr[i] != ptr[i+1]){
+            if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                  ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
+                  ptExpectedValue[*ptErrCount] = (unsigned long)ptr[i + 1];
+                  ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
+            }
+	}
     }
 
     return;
@@ -900,10 +903,10 @@ void test5(char* ptr, unsigned int tot_num_blocks)
     rvs::lp::Log(msg, rvs::logresults);
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
-	      dim3 grid;
+        dim3 grid;
 
-	      error_checking("Intitalizing test 5 ",  i);
-	      grid.x= GRIDSIZE;
+	error_checking("Intitalizing test 5 ",  i);
+        grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_test5_init,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                           ptr + i*BLOCKSIZE, end_ptr);
@@ -912,9 +915,9 @@ void test5(char* ptr, unsigned int tot_num_blocks)
 
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
-	      dim3 grid;
+        dim3 grid;
 
-	      grid.x= GRIDSIZE;
+        grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_test5_move,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                           ptr + i*BLOCKSIZE, end_ptr);
@@ -923,12 +926,12 @@ void test5(char* ptr, unsigned int tot_num_blocks)
 
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
-	      dim3 grid;
+        dim3 grid;
 
-	      grid.x= GRIDSIZE;
+        grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_test5_check,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                             ptr + i*BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
+                            ptr + i*BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead);
         err = error_checking("Test5 checking complete :: ",  i);
 	      show_progress("test5[check]", i, tot_num_blocks);
     }
@@ -987,7 +990,7 @@ kernel_movinv32_write(char* _ptr, char* end_ptr, unsigned int pattern,
 __global__ void 
 kernel_movinv32_readwrite(char* _ptr, char* end_ptr, unsigned int pattern,
 			  unsigned int lb, unsigned int sval, unsigned int offset, unsigned int *ptErrCount,
-			  unsigned long *ptFailedAdress, unsigned long *ptExpectedValue, unsigned long *ptCurrentValue, unsigned long *ptValueOfStartAddr)
+			  unsigned long *ptFailedAdress, unsigned long *ptExpectedValue, unsigned long *ptCurrentValue, unsigned long *ptValueOfSecondRead)
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x * BLOCKSIZE);
@@ -1000,27 +1003,25 @@ kernel_movinv32_readwrite(char* _ptr, char* end_ptr, unsigned int pattern,
     unsigned pat = pattern;
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
-	      if (ptr[i] != pat){
-	        ptFailedAdress[*ptErrCount] = (unsigned long)ptr[i];		
-          ptExpectedValue[*ptErrCount] = (unsigned int)pat;
-          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];	
-          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr;
+	  if (ptr[i] != pat){
+              if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                   ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
+                   ptExpectedValue[*ptErrCount] = (unsigned long)pat;
+                   ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
+              }
+	  }
 
-          if(*ptErrCount >= 10) 
-              *ptErrCount = 0;
-	      }
+        ptr[i] = ~pat;
 
-	      ptr[i] = ~pat;
+        k++;
 
-	      k++;
-
-	      if (k >= 32){
-	        k=0;
-	        pat = lb;
-	      }else{
-	        pat = pat << 1;
-	        pat |= sval;
-	      }
+        if (k >= 32){
+             k=0;
+             pat = lb;
+        }else{
+           pat = pat << 1;
+           pat |= sval;
+        }
     }
 
     return;
@@ -1031,7 +1032,7 @@ kernel_movinv32_readwrite(char* _ptr, char* end_ptr, unsigned int pattern,
 __global__ void 
 kernel_movinv32_read(char* _ptr, char* end_ptr, unsigned int pattern,
 		     unsigned int lb, unsigned int sval, unsigned int offset, unsigned int * ptErrCount,
-		     unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+		     unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead)
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
@@ -1044,28 +1045,26 @@ kernel_movinv32_read(char* _ptr, char* end_ptr, unsigned int pattern,
     unsigned pat = pattern;
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
-	      if (ptr[i] != ~pat){
-	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		
-          ptExpectedValue[*ptErrCount] = (unsigned int)pat;
-          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];	
-          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr;
+        if (ptr[i] != ~pat){
+             if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                   ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
+                   ptExpectedValue[*ptErrCount] = (unsigned long)~pat;
+                   ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
+              }
+        }
 
-          if(*ptErrCount >= 10) 
-              *ptErrCount = 0;
-	      }
+        k++;
 
-	      k++;
-
-	      if (k >= 32){
-	        k=0;
-	        pat = lb;
-	      }else{
-	        pat = pat << 1;
-	        pat |= sval;
-	      }
+        if (k >= 32){
+             k=0;
+             pat = lb;
+        }else{
+            pat = pat << 1;
+            pat |= sval;
+        }
     }
 
-    return;
+   return;
 }
 
 
@@ -1078,24 +1077,26 @@ int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
     unsigned int err = 0;
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
-	    dim3 grid;
+        dim3 grid;
 
-	    grid.x= GRIDSIZE;
-      hipLaunchKernelGGL(kernel_movinv32_write,
-                            dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+        grid.x= GRIDSIZE;
+
+        hipLaunchKernelGGL(kernel_movinv32_write,
+                                   dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                           ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset); 
-      show_progress("\nTest6[moving inversion 32 write]", i, tot_num_blocks);
+        show_progress("\nTest6[moving inversion 32 write]", i, tot_num_blocks);
     }
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
-	    dim3 grid;
+      dim3 grid;
 
-	    grid.x= GRIDSIZE;
+      grid.x= GRIDSIZE;
       hipLaunchKernelGGL(kernel_movinv32_readwrite,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                          ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
+                            ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
+
       err += error_checking("Test6 [movinv32], checking for errors :: ",  i);
-	    show_progress("\nTest6[moving inversion 32 readwrite]", i, tot_num_blocks);
+      show_progress("\nTest6[moving inversion 32 readwrite]", i, tot_num_blocks);
     }
 
    for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -1104,8 +1105,8 @@ int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
        grid.x= GRIDSIZE;
        hipLaunchKernelGGL(kernel_movinv32_read,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                             ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
-	     err += error_checking("Test6 [movinv32]",  i);
+                             ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
+       err += error_checking("Test6 [movinv32]",  i);
        show_progress("\nTest6[moving inversion 32 read]", i, tot_num_blocks);
    }
 
@@ -1113,7 +1114,7 @@ int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
 
 }
 
-void  test6(char* ptr, unsigned int tot_num_blocks)
+void test6(char* ptr, unsigned int tot_num_blocks)
 {
     unsigned int i;
     unsigned int err= 0;
@@ -1125,9 +1126,9 @@ void  test6(char* ptr, unsigned int tot_num_blocks)
 
     for (i= 0, pattern = 1;i < 32; pattern = pattern << 1, i++){
 
-	      err += movinv32(ptr, tot_num_blocks, pattern, 1, 0, i);
+         err += movinv32(ptr, tot_num_blocks, pattern, 1, 0, i);
 
-	      err += movinv32(ptr, tot_num_blocks, ~pattern, 0xfffffffe, 1, i);
+	 err += movinv32(ptr, tot_num_blocks, ~pattern, 0xfffffffe, 1, i);
     }
     if(!err) {
        msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test6 passed, pattern test, no errors detected";
@@ -1167,7 +1168,7 @@ kernel_test7_write(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* er
 
 __global__ void 
 kernel_test7_readwrite(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* ptErrCount,
-		       unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+		       unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead)
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x * BLOCKSIZE);
@@ -1179,17 +1180,15 @@ kernel_test7_readwrite(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int
 
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
-	      if (ptr[i] != start_ptr[i]){
-	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		
-          ptExpectedValue[*ptErrCount] = (unsigned int)start_ptr[i];
-          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];
-          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr[i];
+	 if (ptr[i] != start_ptr[i]){
+               if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                     ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
+                     ptExpectedValue[*ptErrCount] = (unsigned long)start_ptr[i];
+                     ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
+               }
+	 }
 
-          if(*ptErrCount >= 10) 
-              *ptErrCount = 0;
-	      }
-
-	      ptr[i] = ~(start_ptr[i]);
+	 ptr[i] = ~(start_ptr[i]);
     }
 
     return;
@@ -1197,7 +1196,7 @@ kernel_test7_readwrite(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int
 
 __global__ void 
 kernel_test7_read(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* ptErrCount, unsigned long* ptFailedAdress,
-		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+		  unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead)
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + blockIdx.x  * BLOCKSIZE);
@@ -1210,13 +1209,11 @@ kernel_test7_read(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* ptE
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
 	      if (ptr[i] != ~(start_ptr[i])){
-	        ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];		
-          ptExpectedValue[*ptErrCount] = (unsigned int)~(start_ptr[i]);
-          ptCurrentValue[*ptErrCount] = (unsigned long)ptr[i];
-          ptValueOfStartAddr[*ptErrCount++] = (unsigned long)ptr[i];
-
-          if(*ptErrCount >= 10) 
-              *ptErrCount = 0;
+                   if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                          ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
+                          ptExpectedValue[*ptErrCount] = (unsigned long)~start_ptr[i];
+                          ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
+                    }
 	      }
     }
 
@@ -1263,7 +1260,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
 	        grid.x= GRIDSIZE;
           hipLaunchKernelGGL(kernel_test7_readwrite,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                            ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr);
+	                            ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead);
 	        err += error_checking("test7_readwrite",  i);
           show_progress("test7_readwrite", i, tot_num_blocks);
         }
@@ -1275,7 +1272,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
 	          grid.x= GRIDSIZE;
             hipLaunchKernelGGL(kernel_test7_read,
                                  dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                               ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
+	                               ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 	          err += error_checking("test7_read",  i);
             show_progress("test7_read", i, tot_num_blocks); 
         }
@@ -1317,17 +1314,17 @@ kernel_modtest_write(char* _ptr, char* end_ptr, unsigned int offset, unsigned in
     unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
 
     if (ptr >= (unsigned int*) end_ptr) {
-	      return;
+       return;
     }
 
     for (i = offset;i < BLOCKSIZE/sizeof(unsigned int); i+=MOD_SZ){
-	      ptr[i] =p1;
+        ptr[i] =p1;
     }
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
-	      if (i % MOD_SZ != offset){
-	          ptr[i] =p2;
-	      }
+      if (i % MOD_SZ != offset){
+          ptr[i] =p2;
+      }
     }
 
     return;
@@ -1335,8 +1332,8 @@ kernel_modtest_write(char* _ptr, char* end_ptr, unsigned int offset, unsigned in
 
 
 __global__ void 
-kernel_modtest_read(char* _ptr, char* end_ptr, unsigned int offset, unsigned int p1, unsigned int* err,
-		    unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+kernel_modtest_read(char* _ptr, char* end_ptr, unsigned int offset, unsigned int p1, unsigned int* ptErrCount,
+		    unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead)
 {
     unsigned int i;
     unsigned int* ptr = (unsigned int*) (_ptr + hipBlockDim_x * BLOCKSIZE);
@@ -1346,9 +1343,13 @@ kernel_modtest_read(char* _ptr, char* end_ptr, unsigned int offset, unsigned int
     }
 
     for (i = offset;i < BLOCKSIZE/sizeof(unsigned int); i+=MOD_SZ){
-	      if (ptr[i] !=p1){
-	        RECORD_ERR(err, &ptr[i], p1, ptr[i]);
-	      }
+       if (ptr[i] !=p1){
+            if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                   ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
+                   ptExpectedValue[*ptErrCount] = (unsigned long)p1;
+                   ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
+            }
+       }
     }
 
     return;
@@ -1362,24 +1363,24 @@ unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset
     unsigned int err = 0;
 
     for (i= 0;i < tot_num_blocks; i+= GRIDSIZE){
-	    dim3 grid;
+          dim3 grid;
 
-	    grid.x= GRIDSIZE;
-      hipLaunchKernelGGL(kernel_modtest_write,
+          grid.x= GRIDSIZE;
+          hipLaunchKernelGGL(kernel_modtest_write,
                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                       ptr + i*BLOCKSIZE, end_ptr, offset, p1, p2); 
-      show_progress("test8[mod test, write]", i, tot_num_blocks);
+                         ptr + i*BLOCKSIZE, end_ptr, offset, p1, p2); 
+          show_progress("test8[mod test, write]", i, tot_num_blocks);
     }
 
     for (i= 0;i < tot_num_blocks; i+= GRIDSIZE){
-	    dim3 grid;
+         dim3 grid;
 
-	    grid.x= GRIDSIZE;
-      hipLaunchKernelGGL(kernel_modtest_read,
+         grid.x= GRIDSIZE;
+         hipLaunchKernelGGL(kernel_modtest_read,
                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                       ptr + i*BLOCKSIZE, end_ptr, offset, p1, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
-	    err += error_checking("test8[mod test, read", i);
-      show_progress("test8[mod test, read]", i, tot_num_blocks);
+                         ptr + i*BLOCKSIZE, end_ptr, offset, p1, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
+         err += error_checking("test8[mod test, read", i);
+         show_progress("test8[mod test, read]", i, tot_num_blocks);
     }
 
     return err;
@@ -1459,47 +1460,48 @@ void test9(char* ptr, unsigned int tot_num_blocks)
     rvs::lp::Log(msg, rvs::logresults);
 
     for (i= 0;i < tot_num_blocks; i+= GRIDSIZE){
-	    dim3 grid;
+        dim3 grid;
 
-	    grid.x= GRIDSIZE;
-      hipLaunchKernelGGL(kernel_move_inv_write,
-                         dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                        ptr + i*BLOCKSIZE, end_ptr, p1); 
-      show_progress("test9[bit fade test, write]", i, tot_num_blocks);
+        grid.x= GRIDSIZE;
+        hipLaunchKernelGGL(kernel_move_inv_write,
+                               dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                               ptr + i*BLOCKSIZE, end_ptr, p1); 
+        show_progress("test9[bit fade test, write]", i, tot_num_blocks);
     }
 
     //sleep(60*90);
     std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
-	    dim3 grid;
+             dim3 grid;
 
-	    grid.x= GRIDSIZE;
-      hipLaunchKernelGGL(kernel_move_inv_readwrite,
-                         dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                        ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
+             grid.x= GRIDSIZE;
+             hipLaunchKernelGGL(kernel_move_inv_readwrite,
+                               dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                               ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 	    err += error_checking("test9[bit fade test, readwrite]",  i);
-      show_progress("test9[bit fade test, readwrite]", i, tot_num_blocks);
+            show_progress("test9[bit fade test, readwrite]", i, tot_num_blocks);
     }
 
     //sleep(60*90);
     std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
-	    dim3 grid;
+           dim3 grid;
+           grid.x= GRIDSIZE;
 
-	    grid.x= GRIDSIZE;
-      hipLaunchKernelGGL(kernel_move_inv_read,
-                         dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                        ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
+            hipLaunchKernelGGL(kernel_move_inv_read,
+                                 dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+	                          ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 	    err += error_checking("test9[bit fade test, read]",  i);
-      show_progress("test9[bit fade test, read]", i, tot_num_blocks);
+            show_progress("test9[bit fade test, read]", i, tot_num_blocks);
     }
 
     if(!err) {
        msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test9 passed, no errors detected"; 
        rvs::lp::Log(msg, rvs::logresults);
     }
+
     return;
 }
 
@@ -1537,8 +1539,8 @@ test10_kernel_write(char* ptr, int memsize, TYPE p1)
 }
 
 __global__ void  
-test10_kernel_readwrite(char* ptr, int memsize, TYPE p1, TYPE p2,  unsigned int* err,
-					unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfStartAddr)
+test10_kernel_readwrite(char* ptr, int memsize, TYPE p1, TYPE p2,  unsigned int* ptErrCount,
+					unsigned long* ptFailedAdress, unsigned long* ptExpectedValue, unsigned long* ptCurrentValue, unsigned long* ptValueOfSecondRead)
 {
     int   avenumber   = memsize/(gridDim.x*gridDim.y);
     TYPE* mybuf       = (TYPE*)(ptr +  blockIdx.x * avenumber);
@@ -1551,10 +1553,14 @@ test10_kernel_readwrite(char* ptr, int memsize, TYPE p1, TYPE p2,  unsigned int*
 
         localp = mybuf[index];
         if (localp != p1){
-	          RECORD_ERR(err, &mybuf[index], p1, localp);
-	      }
+            if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                  ptFailedAdress[*ptErrCount] = (unsigned long)&mybuf[index];
+                  ptExpectedValue[*ptErrCount] = (unsigned long)p1;
+                  ptCurrentValue[*ptErrCount++] = (unsigned long)localp;
+             }
+        }
 
-	      mybuf[index] = p2;
+	mybuf[index] = p2;
     }
 
     int index = n * blockDim.x + threadIdx.x;
@@ -1563,7 +1569,11 @@ test10_kernel_readwrite(char* ptr, int memsize, TYPE p1, TYPE p2,  unsigned int*
 	      localp = mybuf[index];
 
 	      if (localp!= p1){
-	        RECORD_ERR(err, &mybuf[index], p1, localp);
+                  if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                        ptFailedAdress[*ptErrCount] = (unsigned long)&mybuf[index];
+                        ptExpectedValue[*ptErrCount] = (unsigned long)p1;
+                        ptCurrentValue[*ptErrCount++] = (unsigned long)localp;
+                  }
 	      }
 	      mybuf[index] = p2;
     }
@@ -1609,11 +1619,11 @@ void test10(char* ptr, unsigned int tot_num_blocks)
                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                           ptr, tot_num_blocks*BLOCKSIZE, p1); 
 
-    for(int i =0;i < n ;i ++){
+    for(unsigned long i =0;i < n ;i ++){
         hipLaunchKernelGGL(test10_kernel_readwrite,
                           dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                        ptr, tot_num_blocks*BLOCKSIZE, p1, p2,
-								          ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfStartAddr); 
+			        ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 	        p1 = ~p1;
 	        p2 = ~p2;
     }
@@ -1638,3 +1648,35 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     }
 }
 
+void allocate_small_mem(void)
+{
+    //Initialize memory
+    HIP_CHECK(hipMalloc((void**)&ptCntOfError, sizeof(unsigned int) )); 
+    HIP_CHECK(hipMemset(ptCntOfError, 0, sizeof(unsigned int) )); 
+
+    HIP_CHECK(hipMalloc((void**)&ptFailedAdress, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptFailedAdress, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+
+    HIP_CHECK(hipMalloc((void**)&ptExpectedValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptExpectedValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+
+    HIP_CHECK(hipMalloc((void**)&ptCurrentValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptCurrentValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+
+    HIP_CHECK(hipMalloc((void**)&ptValueOfSecondRead, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptValueOfSecondRead, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+}
+
+void free_small_mem(void)
+{
+    //Initialize memory
+    hipFree((void*)ptCntOfError);
+
+    hipFree((void*)ptFailedAdress);
+
+    hipFree((void*)ptExpectedValue);
+
+    hipFree((void*)ptCurrentValue);
+
+    hipFree((void*)ptValueOfSecondRead);
+}
