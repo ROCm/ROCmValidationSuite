@@ -90,10 +90,6 @@ class MemWorker : public rvs::ThreadBase {
 
     void run_tests(char* ptr, unsigned int tot_num_blocks);
 
-    void allocate_small_mem(void);
-
-    void free_small_mem(void);
-
     void test0(char* ptr, unsigned int tot_num_blocks);
 
     //! sets action name

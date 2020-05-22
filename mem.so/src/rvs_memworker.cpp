@@ -37,11 +37,7 @@
 
 using std::string;
 
-extern unsigned int    *ptCntOfError;
-extern unsigned long   *ptFailedAdress;
-extern unsigned long   *ptExpectedValue;
-extern unsigned long   *ptCurrentValue;
-extern unsigned long   *ptValueOfStartAddr;
+extern void allocate_small_mem(void);
 bool MemWorker::bjson = false;
 extern rvs_memdata   memdata;
  
@@ -65,6 +61,7 @@ rvs_memtest_t rvs_memtests[]={
 };
 
 
+#if 0
 void MemWorker::allocate_small_mem(void)
 {
     //Initialize memory
@@ -80,8 +77,8 @@ void MemWorker::allocate_small_mem(void)
     HIP_CHECK(hipMalloc((void**)&ptCurrentValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
     HIP_CHECK(hipMemset(ptCurrentValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
 
-    HIP_CHECK(hipMalloc((void**)&ptValueOfStartAddr, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(ptValueOfStartAddr, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMalloc((void**)&ptValueOfSecondRead, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
+    HIP_CHECK(hipMemset(ptValueOfSecondRead, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
 }
 
 void MemWorker::free_small_mem(void)
@@ -95,8 +92,9 @@ void MemWorker::free_small_mem(void)
 
     hipFree((void*)ptCurrentValue);
 
-    hipFree((void*)ptValueOfStartAddr);
+    hipFree((void*)ptValueOfSecondRead);
 }
+#endif
 
 void MemWorker::Initialization(void)
 {
