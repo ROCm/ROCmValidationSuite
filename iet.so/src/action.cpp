@@ -262,12 +262,6 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     uint32_t     dev_idx = 0;
     size_t       k = 0;
 
-    if(rsmi_init(0) != RSMI_STATUS_SUCCESS) {
-           msg = "\n RSMI Init failed";
-           rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-	   return false;
-    }
-
     for (;;) {
         unsigned int i = 0;
 
@@ -276,6 +270,8 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
 
         // all worker instances have the same json settings
         IETWorker::set_use_json(bjson);
+
+        rsmi_init(0);
 
         for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
             // set worker thread params
@@ -310,16 +306,14 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             }
         }
 
+        rsmi_shut_down(); 
+
         if (property_count == ++k) {
             break;
         }
     }
 
-    if(rsmi_shut_down() != RSMI_STATUS_SUCCESS) {
-        msg = "\n RSMI shut down failed";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
-    }
+    return rvs::lp::Stopping() ? false : true;
 }
 
 /**
