@@ -264,8 +264,9 @@ bool IETWorker::do_iet_power_stress(void) {
         rvs::lp::Log(msg, rvs::logtrace);
 
         usleep(MAX_MS_WAIT_BLAS_THREAD * 10);
-        if (total_time_ms > run_duration_ms ) 
+        if (total_time_ms > run_duration_ms ) {
             break;
+	}
     }
 
     gpu_worker->stop();
