@@ -222,7 +222,6 @@ void blas_worker::run() {
              break;
         }
 
-	sleep(50);
         {
             std::lock_guard<std::mutex> lck(mtx_bsgemm_done);
             sgemm_done = false;
