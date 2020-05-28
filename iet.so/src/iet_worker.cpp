@@ -47,7 +47,6 @@
 #define IET_RESULT_FAIL_MESSAGE                 "FALSE"
 
 #define IET_BLAS_FAILURE                        "BLAS setup failed!"
-#define IET_MEM_ALLOC_ERROR                     "memory allocation error!"
 #define IET_POWER_PROC_ERROR                    "could not get/process the GPU"\
                                                 " power!"
 #define IET_SGEMM_FAILURE                       "GPU failed to run the SGEMMs!"
@@ -61,7 +60,7 @@
 #define IET_MEM_ALLOC_ERROR                     1
 #define IET_BLAS_ERROR                          2
 #define IET_BLAS_MEMCPY_ERROR                   3
-#define IET_BLAS_ITERATIONS                     1000
+#define IET_BLAS_ITERATIONS                     10
 
 using std::string;
 
@@ -91,6 +90,7 @@ IETWorker::IETWorker() {
 
 IETWorker::~IETWorker() {
 }
+
 
 /**
  * @brief logs a message to JSON
@@ -271,7 +271,15 @@ bool IETWorker::do_iet_power_stress(void) {
     totalpower = 0;
     result = true;;
 
-    setup_blas();
+    // setup rvsBlas
+    gpu_blas = std::unique_ptr<rvs_blas>(
+        new rvs_blas(gpu_device_index, matrix_size, matrix_size, matrix_size));
+
+    // generate random matrix & copy it to the GPU
+    gpu_blas->generate_random_matrix_data();
+    if (!gpu_blas->copy_data_to_gpu(iet_ops_type)) {
+        return false;
+    }
 
     // record EDPp ramp-up start time
     iet_start_time = std::chrono::system_clock::now();
@@ -333,6 +341,12 @@ bool IETWorker::do_iet_power_stress(void) {
             result = false;
             break;
 	     }
+
+       sleep(500);
+
+       // check if stop signal was received
+       if (rvs::lp::Stopping())
+         return true;
     }
 
     gpu_blas.release();
@@ -358,12 +372,8 @@ void IETWorker::run() {
     rvs::lp::Log(msg, rvs::loginfo);
     log_to_json("start", std::to_string(target_power), rvs::loginfo);
 
-    if (ramp_interval < MAX_MS_TRAIN_GPU)
-        ramp_interval += MAX_MS_TRAIN_GPU;
     if (run_duration_ms < MAX_MS_TRAIN_GPU)
         run_duration_ms += MAX_MS_TRAIN_GPU;
-
-    do_iet_ramp(&error, &err_description);
 
     bool pass = do_iet_power_stress();
 
@@ -371,7 +381,7 @@ void IETWorker::run() {
     if (rvs::lp::Stopping())
          return;
 
-     msg = "[" + action_name + "] " + MODULE_NAME + " " +
+    msg = "[" + action_name + "] " + MODULE_NAME + " " +
                std::to_string(gpu_id) + " " + IET_PASS_KEY + ": " +
                (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
      rvs::lp::Log(msg, rvs::logresults);
