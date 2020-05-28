@@ -60,11 +60,12 @@
 #define IET_MEM_ALLOC_ERROR                     1
 #define IET_BLAS_ERROR                          2
 #define IET_BLAS_MEMCPY_ERROR                   3
-#define IET_BLAS_ITERATIONS                     10
+#define IET_BLAS_ITERATIONS                     25
 
 using std::string;
 
 bool IETWorker::bjson = false;
+static blasThreadData blasinfo;
 
 /**
  * @brief computes the difference (in milliseconds) between 2 points in time
@@ -225,28 +226,34 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
  * @brief performs the rvsBlas setup
  */
 void IETWorker::setup_blas(void) {
-    blas_error = 0;
+   blasinfo.matrix_size = matrix_size;
+   blasinfo.iet_ops_type = iet_ops_type;
+   blasinfo.gpu_device_index = gpu_device_index;
+   blasinfo.start = false;
+}
+
+void blasThread()
+{
+    std::unique_ptr<rvs_blas> gpu_blas;
+    rvs_blas  *free_gpublas;
+
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(
-        new rvs_blas(gpu_device_index, matrix_size, matrix_size, matrix_size));
-
-    // no lock guard for blas_error atm because there are no sync issues
-    if (gpu_blas == nullptr) {
-        blas_error = IET_MEM_ALLOC_ERROR;
-        return;
-    }
-
-    if (gpu_blas->error()) {
-        blas_error = IET_BLAS_ERROR;
-        return;
-    }
+        new rvs_blas(blasinfo.gpu_device_index,  blasinfo.matrix_size,  blasinfo.matrix_size,  blasinfo.matrix_size));
 
     // generate random matrix & copy it to the GPU
     gpu_blas->generate_random_matrix_data();
-    if (!gpu_blas->copy_data_to_gpu(iet_ops_type)) {
-        blas_error = IET_BLAS_MEMCPY_ERROR;
-        return;
+    gpu_blas->copy_data_to_gpu(blasinfo.iet_ops_type);
+
+    //Hit the GPU with load to increase temperature
+    for(int i = 0; i < IET_BLAS_ITERATIONS ; i++) {
+         gpu_blas->run_blass_gemm(blasinfo.iet_ops_type);
     }
+
+    blasinfo.start = false;
+
+    free_gpublas = gpu_blas.release();
+    delete free_gpublas;
 }
 
 
@@ -271,16 +278,7 @@ bool IETWorker::do_iet_power_stress(void) {
     totalpower = 0;
     result = true;;
 
-    // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(
-        new rvs_blas(gpu_device_index, matrix_size, matrix_size, matrix_size));
-
-    // generate random matrix & copy it to the GPU
-    gpu_blas->generate_random_matrix_data();
-    if (!gpu_blas->copy_data_to_gpu(iet_ops_type)) {
-        return false;
-    }
-
+    setup_blas();
     // record EDPp ramp-up start time
     iet_start_time = std::chrono::system_clock::now();
 
@@ -289,10 +287,6 @@ bool IETWorker::do_iet_power_stress(void) {
         if (rvs::lp::Stopping())
             break;
 
-       //Hit the GPU with load to increase temperature
-       for(int i = 0; i < IET_BLAS_ITERATIONS ; i++) {
-           gpu_blas->run_blass_gemm(iet_ops_type);
-       }
 
        // get GPU's current average power
        rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
@@ -317,6 +311,12 @@ bool IETWorker::do_iet_power_stress(void) {
             rvs::lp::Log(msg, rvs::loginfo);
             result = true;
             break;
+        }else{
+              if( blasinfo.start == false) {
+                 blasinfo.start = true;
+                 std::thread t(blasThread);
+                 t.detach();
+              }
         }
 
         end_time = std::chrono::system_clock::now();
@@ -342,20 +342,20 @@ bool IETWorker::do_iet_power_stress(void) {
             break;
 	     }
 
-       sleep(500);
+       sleep(1000);
 
        // check if stop signal was received
        if (rvs::lp::Stopping())
          return true;
-    }
+       }
 
-    gpu_blas.release();
-
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
+       msg = "[" + action_name + "] " + MODULE_NAME + " " +
                    std::to_string(gpu_id) + " " + " End of worker thread " ;
-    rvs::lp::Log(msg, rvs::loginfo);
+       rvs::lp::Log(msg, rvs::loginfo);
 
-    return result;
+       blasinfo.start = false;
+
+       return result;
 }
 
 
@@ -384,8 +384,5 @@ void IETWorker::run() {
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
                std::to_string(gpu_id) + " " + IET_PASS_KEY + ": " +
                (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
-     rvs::lp::Log(msg, rvs::logresults);
-    log_to_json(IET_PASS_KEY,
-                (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE),
-                rvs::logresults);
+    rvs::lp::Log(msg, rvs::logresults);
 }
