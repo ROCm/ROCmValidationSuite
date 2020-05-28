@@ -223,34 +223,30 @@ bool IETWorker::do_iet_ramp(int *error, string *err_description) {
 
 
 /**
+    setup_blas();
  * @brief performs the rvsBlas setup
  */
 void IETWorker::setup_blas(void) {
-   blasinfo.matrix_size = matrix_size;
-   blasinfo.iet_ops_type = iet_ops_type;
-   blasinfo.gpu_device_index = gpu_device_index;
-   blasinfo.start = false;
 }
 
-void blasThread()
+void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, bool start )
 {
     std::unique_ptr<rvs_blas> gpu_blas;
     rvs_blas  *free_gpublas;
 
     // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(
-        new rvs_blas(blasinfo.gpu_device_index,  blasinfo.matrix_size,  blasinfo.matrix_size,  blasinfo.matrix_size));
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size));
 
     // generate random matrix & copy it to the GPU
-    gpu_blas->generate_random_matrix_data();
-    gpu_blas->copy_data_to_gpu(blasinfo.iet_ops_type);
+    //gpu_blas->generate_random_matrix_data();
+//    gpu_blas->copy_data_to_gpu(blasinfo.iet_ops_type);
 
     //Hit the GPU with load to increase temperature
     for(int i = 0; i < IET_BLAS_ITERATIONS ; i++) {
-         gpu_blas->run_blass_gemm(blasinfo.iet_ops_type);
+         gpu_blas->run_blass_gemm(iet_ops_type);
     }
 
-    blasinfo.start = false;
+    start = false;
 
     free_gpublas = gpu_blas.release();
     delete free_gpublas;
@@ -273,12 +269,16 @@ bool IETWorker::do_iet_power_stress(void) {
     float     totalpower;
     float     avg_power;
     bool      result;
+    bool      start;
    
     avg_power = 0;
     totalpower = 0;
-    result = true;;
+    result = true;
+    start = true;
 
-    setup_blas();
+    std::thread t(blasThread, gpu_device_index, matrix_size, iet_ops_type, start);
+    t.detach();
+ 
     // record EDPp ramp-up start time
     iet_start_time = std::chrono::system_clock::now();
 
@@ -313,8 +313,8 @@ bool IETWorker::do_iet_power_stress(void) {
             break;
         }else{
               if( blasinfo.start == false) {
-                 blasinfo.start = true;
-                 std::thread t(blasThread);
+                 start = true;
+                 std::thread t(blasThread, gpu_device_index, matrix_size, iet_ops_type, start);
                  t.detach();
               }
         }
@@ -340,7 +340,7 @@ bool IETWorker::do_iet_power_stress(void) {
             rvs::lp::Log(msg, rvs::loginfo);
             result = false;
             break;
-	     }
+	}
 
        sleep(1000);
 
