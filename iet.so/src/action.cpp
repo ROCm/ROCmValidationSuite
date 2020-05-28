@@ -107,6 +107,7 @@ iet_action::~iet_action() {
     property.clear();
 }
 
+
 /**
  * @brief reads all IET's related configuration keys from
  * the module's properties collection
@@ -270,19 +271,23 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     std::string  msg;
     uint32_t     dev_idx = 0;
     size_t       k = 0;
+    int          gpuId;
 
+    vector<IETWorker> workers(iet_gpus_device_index.size());
     for (;;) {
         unsigned int i = 0;
 
-        vector<IETWorker> workers(iet_gpus_device_index.size());
         map<int, uint16_t>::iterator it;
 
-        // all worker instances have the same json settings
-        IETWorker::set_use_json(bjson);
+
+        if (property_wait != 0)  // delay gst execution
+            sleep(property_wait);
 
         rsmi_init(0);
 
         for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
+
+            gpuId = it->second;
             // set worker thread params
             workers[i].set_name(action_name);
             workers[i].set_gpu_id(it->second);
@@ -301,29 +306,46 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             i++;
         }
 
-
         if (property_parallel) {
             for (i = 0; i < iet_gpus_device_index.size(); i++)
                 workers[i].start();
-
             // join threads
-            for (i = 0; i < iet_gpus_device_index.size(); i++)
+            for (i = 0; i < iet_gpus_device_index.size(); i++) 
                 workers[i].join();
+
         } else {
             for (i = 0; i < iet_gpus_device_index.size(); i++) {
                 workers[i].start();
                 workers[i].join();
+
+                // check if stop signal was received
+                if (rvs::lp::Stopping()) {
+                    rsmi_shut_down();
+                    return false;
+                }
             }
         }
 
+
+        msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Shutting down rocm-smi  ";
+        rvs::lp::Log(msg, rvs::loginfo);
+
         rsmi_shut_down(); 
+
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return false;
 
         if (property_count == ++k) {
             break;
         }
     }
 
-    return rvs::lp::Stopping() ? false : true;
+
+    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Done with edp test ";
+    rvs::lp::Log(msg, rvs::loginfo);
+
+    return true;
 }
 
 /**
@@ -435,7 +457,10 @@ int iet_action::get_all_selected_gpus(void) {
     }
 
     if (amd_gpus_found) {
-        do_edp_test(iet_gpus_device_index);
+        if(do_edp_test(iet_gpus_device_index))
+            return 0;
+
+        return -1;
     } else {
       msg = "No devices match criteria from the test configuation.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
