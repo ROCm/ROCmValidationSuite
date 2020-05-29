@@ -51,8 +51,6 @@ class IETWorker : public rvs::ThreadBase {
     //! returns action name
     const std::string& get_name(void) { return action_name; }
 
-    void setup_blas(void);
-
     //! sets GPU ID
     void set_gpu_id(uint16_t _gpu_id) { gpu_id = _gpu_id; }
     //! returns GPU ID
@@ -145,10 +143,9 @@ class IETWorker : public rvs::ThreadBase {
 
  protected:
     virtual void run(void);
-    bool do_gpu_init_training(std::string *err_description);
+    bool do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type);
     void compute_gpu_stats(void);
     void compute_new_sgemm_freq(float avg_power);
-    bool do_iet_ramp(int *error, std::string *err_description);
     bool do_iet_power_stress(void);
     void log_to_json(const std::string &key, const std::string &value,
                         int log_level);
@@ -208,12 +205,5 @@ class IETWorker : public rvs::ThreadBase {
     float sgemm_si_delay;
 };
 
-
-typedef struct blasThreadData_t {
-   uint64_t matrix_size;
-   std::string  iet_ops_type;
-   int gpu_device_index;
-   bool start;
-}blasThreadData;
 
 #endif  // IET_SO_INCLUDE_IET_WORKER_H_
