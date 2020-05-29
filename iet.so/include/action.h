@@ -77,6 +77,7 @@ class iet_action: public rvs::actionbase {
     //! TRUE if JSON output is required
     bool bjson;
 
+    std::string  iet_ops_type;
     //! target power level for the test
     float iet_target_power;
     //! IET test ramp duration

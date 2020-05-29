@@ -51,6 +51,8 @@ class IETWorker : public rvs::ThreadBase {
     //! returns action name
     const std::string& get_name(void) { return action_name; }
 
+    void setup_blas(void);
+
     //! sets GPU ID
     void set_gpu_id(uint16_t _gpu_id) { gpu_id = _gpu_id; }
     //! returns GPU ID
@@ -127,6 +129,11 @@ class IETWorker : public rvs::ThreadBase {
     uint64_t get_matrix_size(void) { return matrix_size; }
 
     //! sets the EDPp power tolerance
+    void set_ops_type(std::string ops_type) { iet_ops_type = ops_type; }
+    //! returns the EDPp power tolerance
+    std::string get_ops_type(void) { return iet_ops_type; }
+
+    //! sets the EDPp power tolerance
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }
     //! returns the EDPp power tolerance
     float get_tolerance(void) { return tolerance; }
@@ -148,19 +155,24 @@ class IETWorker : public rvs::ThreadBase {
 
 
  protected:
+    std::unique_ptr<rvs_blas> gpu_blas;
+
     //! name of the action
     std::string action_name;
     //! index of the GPU (as reported by HIP API) that will run the EDPp test
     int gpu_device_index;
     //! ID of the GPU that will run the EDPp test
     uint16_t gpu_id;
+
+    int blas_error;
+
     //! index of the GPU device as requested by rocm_smi
     uint32_t pwr_device_id;
     //! EDPp test run delay
     uint64_t run_wait_ms;
     //! EDPp test run duration
     uint64_t run_duration_ms;
-    //! stress test ramp duration
+      //! stress test ramp duration
     uint64_t ramp_interval;
     //! time interval at which the GPU's power is logged out
     uint64_t log_interval;
@@ -177,10 +189,12 @@ class IETWorker : public rvs::ThreadBase {
     uint64_t matrix_size;
     //! TRUE if JSON output is required
     static bool bjson;
+    bool sgemm_success;
     //! blas_worker pointer
     std::unique_ptr<blas_worker> gpu_worker;
     //! log_worker pointer
     std::unique_ptr<log_worker> pwr_log_worker;
+    std::string  iet_ops_type;
 
     //! actual training time
     uint64_t training_time_ms;
@@ -193,4 +207,13 @@ class IETWorker : public rvs::ThreadBase {
     //! the SGEMM delay which gives the actual GPU SGEMM frequency
     float sgemm_si_delay;
 };
+
+
+typedef struct blasThreadData_t {
+   uint64_t matrix_size;
+   std::string  iet_ops_type;
+   int gpu_device_index;
+   bool start;
+}blasThreadData;
+
 #endif  // IET_SO_INCLUDE_IET_WORKER_H_
