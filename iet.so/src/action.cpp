@@ -70,6 +70,7 @@ using std::fstream;
 #define RVS_CONF_SAMPLE_INTERVAL_KEY    "sample_interval"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
 #define RVS_CONF_MATRIX_SIZE_KEY        "matrix_size"
+#define RVS_CONF_IET_OPS_TYPE           "ops_type"
 
 #define MODULE_NAME                     "iet"
 #define MODULE_NAME_CAPS                "IET"
@@ -87,6 +88,7 @@ using std::fstream;
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
+#define IET_DEFAULT_OPS_TYPE            "sgemm"
 
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 
@@ -104,6 +106,7 @@ iet_action::iet_action() {
 iet_action::~iet_action() {
     property.clear();
 }
+
 
 /**
  * @brief reads all IET's related configuration keys from
@@ -175,6 +178,13 @@ bool iet_action::get_all_iet_config_keys(void) {
     if (property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEY,
       &iet_matrix_size, IET_DEFAULT_MATRIX_SIZE)) {
       msg = "invalid '" + std::string(RVS_CONF_MATRIX_SIZE_KEY)
+      + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+    if (property_get<std::string>(RVS_CONF_IET_OPS_TYPE, &iet_ops_type, IET_DEFAULT_OPS_TYPE)) {
+      msg = "invalid '" + std::string(RVS_CONF_IET_OPS_TYPE)
       + "' key value";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       bsts = false;
@@ -261,19 +271,23 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     std::string  msg;
     uint32_t     dev_idx = 0;
     size_t       k = 0;
+    int          gpuId;
 
+    vector<IETWorker> workers(iet_gpus_device_index.size());
     for (;;) {
         unsigned int i = 0;
 
-        vector<IETWorker> workers(iet_gpus_device_index.size());
         map<int, uint16_t>::iterator it;
 
-        // all worker instances have the same json settings
-        IETWorker::set_use_json(bjson);
+
+        if (property_wait != 0)  // delay gst execution
+            sleep(property_wait);
 
         rsmi_init(0);
 
         for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
+
+            gpuId = it->second;
             // set worker thread params
             workers[i].set_name(action_name);
             workers[i].set_gpu_id(it->second);
@@ -288,32 +302,50 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_target_power(iet_target_power);
             workers[i].set_tolerance(iet_tolerance);
             workers[i].set_matrix_size(iet_matrix_size);
+            workers[i].set_ops_type(iet_ops_type);
             i++;
         }
-
 
         if (property_parallel) {
             for (i = 0; i < iet_gpus_device_index.size(); i++)
                 workers[i].start();
-
             // join threads
-            for (i = 0; i < iet_gpus_device_index.size(); i++)
+            for (i = 0; i < iet_gpus_device_index.size(); i++) 
                 workers[i].join();
+
         } else {
             for (i = 0; i < iet_gpus_device_index.size(); i++) {
                 workers[i].start();
                 workers[i].join();
+
+                // check if stop signal was received
+                if (rvs::lp::Stopping()) {
+                    rsmi_shut_down();
+                    return false;
+                }
             }
         }
 
+
+        msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Shutting down rocm-smi  ";
+        rvs::lp::Log(msg, rvs::loginfo);
+
         rsmi_shut_down(); 
+
+        // check if stop signal was received
+        if (rvs::lp::Stopping())
+            return false;
 
         if (property_count == ++k) {
             break;
         }
     }
 
-    return rvs::lp::Stopping() ? false : true;
+
+    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Done with edp test ";
+    rvs::lp::Log(msg, rvs::loginfo);
+
+    return true;
 }
 
 /**
@@ -425,7 +457,10 @@ int iet_action::get_all_selected_gpus(void) {
     }
 
     if (amd_gpus_found) {
-        do_edp_test(iet_gpus_device_index);
+        if(do_edp_test(iet_gpus_device_index))
+            return 0;
+
+        return -1;
     } else {
       msg = "No devices match criteria from the test configuation.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
