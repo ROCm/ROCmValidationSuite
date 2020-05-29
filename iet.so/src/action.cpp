@@ -345,6 +345,8 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Done with edp test ";
     rvs::lp::Log(msg, rvs::loginfo);
 
+    sleep(1000);
+
     return true;
 }
 
