@@ -41,10 +41,10 @@
  * in its run() method.
  *
  */
-class blas_worker : public rvs::ThreadBase {
+class blas_worker {
  public:
     blas_worker(int _gpu_device_index, uint64_t _matrix_size);
-    virtual ~blas_worker();
+    ~blas_worker();
 
     void set_sgemm_delay(uint64_t _sgemm_delay);
     uint64_t get_sgemm_delay(void);
@@ -68,7 +68,7 @@ class blas_worker : public rvs::ThreadBase {
     int get_blas_error(void) { return blas_error; }
 
  protected:
-    virtual void run(void);
+    void run(void);
     void set_setup_complete(void);
     void setup_blas(void);
     void usleep_ex(uint64_t microseconds);
