@@ -294,9 +294,6 @@ bool IETWorker::do_iet_power_stress(void) {
 
        if (rmsi_stat == RSMI_STATUS_SUCCESS) {
             cur_power_value = static_cast<float>(last_avg_power)/1e6;
-            totalpower += cur_power_value;
-            power_sampling_iters++;
-            avg_power = totalpower/power_sampling_iters++;
        }
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -304,19 +301,13 @@ bool IETWorker::do_iet_power_stress(void) {
         rvs::lp::Log(msg, rvs::logtrace);
 
         //check whether we reached the target power
-        if((avg_power * 2) >= target_power){
+        if((cur_power_value) >= target_power){
             msg = "[" + action_name + "] " + MODULE_NAME + " " +
                      std::to_string(gpu_id) + " " + " Average power met the target \
                      power quitting the test, current power is : " + " " + std::to_string(cur_power_value);
             rvs::lp::Log(msg, rvs::loginfo);
             result = true;
             break;
-        }else{
-              if( blasinfo.start == false) {
-                 start = true;
-                 std::thread t(blasThread, gpu_device_index, matrix_size, iet_ops_type, start);
-                 t.detach();
-              }
         }
 
         end_time = std::chrono::system_clock::now();
@@ -324,7 +315,7 @@ bool IETWorker::do_iet_power_stress(void) {
         total_time_ms = time_diff(end_time, iet_start_time);
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                     std::to_string(gpu_id) + " " + " Average power" + " " + std::to_string(avg_power);
+                     std::to_string(gpu_id) + " " + " Average power" + " " + std::to_string(cur_power_value);
         rvs::lp::Log(msg, rvs::loginfo);
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -336,11 +327,11 @@ bool IETWorker::do_iet_power_stress(void) {
             msg = "[" + action_name + "] " + MODULE_NAME + " " +
                      std::to_string(gpu_id) + " " + " Average power couldnt meet the target power  \
                      in the given interval, increase the duration and try again, \
-                     Average power is :" + " " + std::to_string(avg_power);
+                     Average power is :" + " " + std::to_string(cur_power_value);
             rvs::lp::Log(msg, rvs::loginfo);
             result = false;
             break;
-	}
+	     }
 
        sleep(1000);
 
