@@ -65,7 +65,6 @@
 using std::string;
 
 bool IETWorker::bjson = false;
-static blasThreadData blasinfo;
 
 /**
  * @brief computes the difference (in milliseconds) between 2 points in time
@@ -123,27 +122,20 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
  * @param err_description stores the error description if any
  * @return true if gpu training succeeded, false otherwise
  */
-bool IETWorker::do_gpu_init_training(string *err_description) {
-    std::chrono::time_point<std::chrono::system_clock>  start_time, end_time;
-    float cur_power_value;
-    uint64_t power_sampling_iters = 0, last_avg_power;
+bool IETWorker::do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type){
+    std::unique_ptr<rvs_blas> gpu_blas;
+    rvs_blas  *free_gpublas;
 
-    // init with no error
-    *err_description = "";
+    // setup rvsBlas
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size));
 
-    // let the GPU run SGEMMs for MAX_MS_TRAIN_GPU ms (e.g.: 1000) and:
-    // 1. get the number of SGEMMs the GPU managed to run (needed in order
-    // to detect/change the SGEMMs frequency)
-    // 2. get the max power
-    num_sgemms_training = 0;
-    avg_power_training = 0;
-
-    gpu_worker = std::unique_ptr<blas_worker>(
-        new blas_worker(gpu_device_index, matrix_size));
-    if (gpu_worker == nullptr) {
-        *err_description = IET_MEM_ALLOC_ERROR;
-        return false;
+    //Hit the GPU with load to increase temperature
+    for(int i = 0; i < IET_BLAS_ITERATIONS ; i++) {
+         gpu_blas->run_blass_gemm(iet_ops_type);
     }
+
+    free_gpublas = gpu_blas.release();
+    delete free_gpublas;
 
     return true;
 }
@@ -197,37 +189,6 @@ void IETWorker::compute_new_sgemm_freq(float avg_power) {
     }
 }
 
-/**
- * @brief performs the EDPp ramp on the given GPU (attempts to reach the given
- * target power)
- * @param error pointer to a memory location where the error code will be stored
- * @param err_description stores the error description if any
- * @return true if target power is achieved within the ramp_interval, 
- * false otherwise
- */
-bool IETWorker::do_iet_ramp(int *error, string *err_description) {
-    std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time,
-                                                        sampling_start_time;
-    string msg;
-
-    *error = 0;
-    *err_description = "";
-
-    if (!do_gpu_init_training(err_description)) {
-        *error = 1;
-        return false;
-    }
-
-    return true;
-}
-
-
-/**
-    setup_blas();
- * @brief performs the rvsBlas setup
- */
-void IETWorker::setup_blas(void) {
-}
 
 void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, bool start )
 {
@@ -236,10 +197,6 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, bo
 
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size));
-
-    // generate random matrix & copy it to the GPU
-    //gpu_blas->generate_random_matrix_data();
-//    gpu_blas->copy_data_to_gpu(blasinfo.iet_ops_type);
 
     //Hit the GPU with load to increase temperature
     for(int i = 0; i < IET_BLAS_ITERATIONS ; i++) {
@@ -287,9 +244,8 @@ bool IETWorker::do_iet_power_stress(void) {
         if (rvs::lp::Stopping())
             break;
 
-
        // get GPU's current average power
-       rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(pwr_device_id, 0,
+       rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(gpu_device_index, 0,
                                     &last_avg_power);
 
        if (rmsi_stat == RSMI_STATUS_SUCCESS) {
@@ -343,8 +299,6 @@ bool IETWorker::do_iet_power_stress(void) {
        msg = "[" + action_name + "] " + MODULE_NAME + " " +
                    std::to_string(gpu_id) + " " + " End of worker thread " ;
        rvs::lp::Log(msg, rvs::loginfo);
-
-       blasinfo.start = false;
 
        return result;
 }
