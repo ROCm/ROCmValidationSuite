@@ -60,6 +60,20 @@ using std::vector;
 
 
 /**
+ * @brief computes the difference (in milliseconds) between 2 points in time
+ * @param t_end second point in time
+ * @param t_start first point in time
+ * @return time difference in milliseconds
+ */
+uint64_t pebb_action::time_diff(
+                std::chrono::time_point<std::chrono::system_clock> t_end,
+                std::chrono::time_point<std::chrono::system_clock> t_start) {
+    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            t_end - t_start);
+    return milliseconds.count();
+}
+
+/**
  * @brief Main action execution entry point. Implements test logic.
  *
  * @return 0 - if successfull, non-zero otherwise
@@ -68,6 +82,8 @@ using std::vector;
 int pebb_action::run() {
   int sts;
   string msg;
+  std::chrono::time_point<std::chrono::system_clock> pebb_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pebb_end_time;
 
   RVSTRACE_
   if (property.find("cli.-j") != property.end()) {
@@ -100,10 +116,12 @@ int pebb_action::run() {
 
   unsigned int iter = property_count > 0 ? property_count : 1;
   unsigned int step = 1;
+  int count = 0;
 
   do {
     // let the test run in this iteration
     brun = true;
+    count = 0;
 
     // start timers
     if (property_duration) {
@@ -116,20 +134,34 @@ int pebb_action::run() {
       timer_running.start(property_log_interval);        // ticks continuously
     }
 
-    do {
-      RVSTRACE_
+    pebb_start_time = std::chrono::system_clock::now();
 
-      if (property_parallel) {
+    if (property_parallel) 
         sts = run_parallel();
-      } else {
-        sts = run_single();
-      }
-    } while (brun);
+    else {
+
+        while(brun) {
+             RVSTRACE_
+             sts = run_single();
+
+             pebb_end_time = std::chrono::system_clock::now();
+             uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
+             if(test_time >= property_duration) {
+                 pebb_action::do_final_average();
+                 break;
+             }
+             std::cout << "." << std::flush;
+      
+          } 
+
+    }
+
 
     RVSTRACE_
     timer_running.stop();
     timer_final.stop();
 
+    std::cout << "\n Iteration value : " << iter;
     iter -= step;
 
     // insert wait between runs if needed
