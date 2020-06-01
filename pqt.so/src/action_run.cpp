@@ -56,6 +56,23 @@ using std::string;
 using std::vector;
 
 
+
+
+/**
+ * @brief computes the difference (in milliseconds) between 2 points in time
+ * @param t_end second point in time
+ * @param t_start first point in time
+ * @return time difference in milliseconds
+ */
+uint64_t pqt_action::time_diff(
+                std::chrono::time_point<std::chrono::system_clock> t_end,
+                std::chrono::time_point<std::chrono::system_clock> t_start) {
+    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            t_end - t_start);
+    return milliseconds.count();
+}
+
+
 /**
  * @brief Main action execution entry point. Implements test logic.
  *
@@ -65,6 +82,9 @@ using std::vector;
 int pqt_action::run() {
   int sts;
   string msg;
+  std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
+
 
   rvs::lp::Log("int pqt_action::run()", rvs::logtrace);
 
@@ -129,15 +149,25 @@ int pqt_action::run() {
       timer_running.start(property_log_interval);        // ticks continuously
     }
 
-    do {
-      RVSTRACE_
+    pqt_start_time = std::chrono::system_clock::now();
 
-      if (property_parallel) {
+    if (property_parallel)
         sts = run_parallel();
-      } else {
-        sts = run_single();
-      }
-    } while (brun);
+    else {
+
+        while(brun) {
+             RVSTRACE_
+             sts = run_single();
+
+             pqt_end_time = std::chrono::system_clock::now();
+             uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
+             if(test_time >= property_duration) {
+                 pqt_action::do_final_average();
+                 break;
+             }
+             std::cout << "." << std::flush;
+          }
+    }
 
     RVSTRACE_
     timer_running.stop();

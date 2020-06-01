@@ -200,6 +200,7 @@ void pebbworker_b2b::run() {
 
 
   while (brun) {
+    std::cout << "." << std::flush;
     // initiate forward transfer
     if (prop_h2d) {
       RVSTRACE_
