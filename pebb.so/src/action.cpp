@@ -608,6 +608,8 @@ void pebb_action::do_final_average() {
   unsigned int usec;
   rvs::lp::get_ticks(&sec, &usec);
 
+  std::cout << "\n Final avergage ";
+
   msg = "[" + action_name + "] pebb in do_final_average";
   rvs::lp::Log(msg, rvs::logtrace, sec, usec);
 
