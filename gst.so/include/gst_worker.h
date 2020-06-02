@@ -133,6 +133,35 @@ class GSTWorker : public rvs::ThreadBase {
     void set_matrix_size_c(uint64_t _matrix_size_c) {
         matrix_size_c = _matrix_size_c;
     }
+    //! sets the transpose matrix a
+    void set_matrix_transpose_a(int transa) {
+        gst_trans_a = transa;
+    }
+    //! sets the transpose matrix b
+    void set_matrix_transpose_b(int transb) {
+        gst_trans_b = transb;
+    }
+    //! sets alpha val
+    void set_alpha_val(float alpha_val) {
+        gst_alpha_val = alpha_val;
+    }
+    //! sets beta val
+    void set_beta_val(float beta_val) {
+        gst_beta_val = beta_val;
+    }
+
+    //! sets offsets
+    void set_lda_offset(int lda) {
+        gst_lda_offset = lda;
+    }
+    //! sets offsets
+    void set_ldb_offset(int ldb) {
+        gst_ldb_offset = ldb;
+    }
+    //! sets offsets
+    void set_ldc_offset(int ldc) {
+        gst_ldc_offset = ldc;
+    }
 
     //! returns the SGEMM matrix size
     uint64_t get_matrix_size_a(void) { return matrix_size_a; }
@@ -147,6 +176,7 @@ class GSTWorker : public rvs::ThreadBase {
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }
     //! returns the GFlops tolerance
     float get_tolerance(void) { return tolerance; }
+
 
     //! returns the difference (in milliseconds) between 2 points in time
     uint64_t time_diff(
@@ -179,8 +209,20 @@ class GSTWorker : public rvs::ThreadBase {
     std::string action_name;
     //! index of the GPU that will run the stress test
     int gpu_device_index;
+    //Matrix transpose A
+    int gst_trans_a;
+    //Matrix transpose B
+    int gst_trans_b;
     //! ID of the GPU that will run the stress test
     uint16_t gpu_id;
+    //GST aplha value 
+    float gst_alpha_val;
+    //GST beta value
+    float gst_beta_val;
+    //leading offsets
+    int gst_lda_offset;
+    int gst_ldb_offset;
+    int gst_ldc_offset;
     //! stress test run delay
     uint64_t run_wait_ms;
     //! stress test run duration

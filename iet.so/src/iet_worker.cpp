@@ -31,9 +31,6 @@
 #include <memory>
 
 #include "rocm_smi/rocm_smi.h"
-
-#include "include/blas_worker.h"
-#include "include/log_worker.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 
@@ -84,8 +81,6 @@ static uint64_t time_diff(
  * @brief class default constructor
  */
 IETWorker::IETWorker() {
-    gpu_worker = nullptr;
-    pwr_log_worker = nullptr;
 }
 
 IETWorker::~IETWorker() {
@@ -116,91 +111,28 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
     }
 }
 
-/**
- * @brief performs the EDPp rampup on the given GPU (attempts to reach the given
- * target power)
- * @param err_description stores the error description if any
- * @return true if gpu training succeeded, false otherwise
- */
-bool IETWorker::do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type){
-    std::unique_ptr<rvs_blas> gpu_blas;
-    rvs_blas  *free_gpublas;
-
-    // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size));
-
-    //Hit the GPU with load to increase temperature
-    for(int i = 0; i < IET_BLAS_ITERATIONS ; i++) {
-         gpu_blas->run_blass_gemm(iet_ops_type);
-    }
-
-    free_gpublas = gpu_blas.release();
-    delete free_gpublas;
-
-    return true;
-}
-
-/**
- * @brief computes SGEMMs and power related statistics after the training stage
- */
-void IETWorker::compute_gpu_stats(void) {
-    float ms_per_sgemm, sgemm_target_power;
-    float sgemm_target_power_si, total_ms_sgemm_si;
-
-    // compute SGEMM time (ms)
-    ms_per_sgemm = static_cast<float>(training_time_ms) / num_sgemms_training;
-    // compute required number of SGEMM for the given target_power
-    sgemm_target_power =
-                    (target_power * num_sgemms_training) / avg_power_training;
-    sgemm_target_power_si =
-                    (sample_interval * sgemm_target_power) / training_time_ms;
-    // compute the actual SGEMM frequency for the given target_power
-    total_ms_sgemm_si = sgemm_target_power_si * ms_per_sgemm;
-    sgemm_si_delay = sample_interval - total_ms_sgemm_si;
-    if (sgemm_si_delay < 0) {
-        sgemm_si_delay = 0;
-    } else {
-        if (sgemm_target_power_si > 0)
-            sgemm_si_delay /= sgemm_target_power_si;
-        else
-            sgemm_target_power_si = sample_interval;
-
-        sgemm_si_delay = sgemm_si_delay + sgemm_si_delay / SGEMM_DELAY_FREQ_DEV;
-    }
-}
-
-/**
- * @brief computes the new SGEMM frequency so that the GPU will achieve the
- * given target_power
- * @param avg_power the last GPU average power over the last sample_interval
- */
-void IETWorker::compute_new_sgemm_freq(float avg_power) {
-    // compute the difference between the actual power data and the target_power
-    float diff_power = avg_power - target_power;
-    // gradually & dynamically increase/decrease the SGEMM frequency
-    float sgemm_delay_dev = (abs(diff_power) * sgemm_si_delay) / target_power;
-    if (diff_power < 0) {
-        if (sgemm_si_delay - sgemm_delay_dev < 0)
-            sgemm_si_delay = 1;
-        else
-            sgemm_si_delay -= sgemm_delay_dev;
-    } else {
-        sgemm_si_delay += sgemm_delay_dev;
-    }
-}
 
 
-void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, bool start )
+void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 
+    bool start, uint64_t run_duration_ms)
 {
+    std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time;
     std::unique_ptr<rvs_blas> gpu_blas;
     rvs_blas  *free_gpublas;
+    uint64_t  duration;
+
+    duration = 0;
 
     // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size));
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, 0, 1, 1, 1, 
+          matrix_size, matrix_size, matrix_size));
 
+    iet_start_time = std::chrono::system_clock::now();
     //Hit the GPU with load to increase temperature
-    for(int i = 0; i < IET_BLAS_ITERATIONS ; i++) {
+    while(duration < run_duration_ms ) {
          gpu_blas->run_blass_gemm(iet_ops_type);
+         end_time = std::chrono::system_clock::now();
+         duration = time_diff(end_time, iet_start_time);
     }
 
     start = false;
@@ -224,16 +156,16 @@ bool IETWorker::do_iet_power_stress(void) {
     string    msg;
     float     cur_power_value;
     float     totalpower;
-    float     avg_power;
+    float     max_power;
     bool      result;
     bool      start;
    
-    avg_power = 0;
+    max_power = 0;
     totalpower = 0;
     result = true;
     start = true;
 
-    std::thread t(blasThread, gpu_device_index, matrix_size, iet_ops_type, start);
+    std::thread t(blasThread, gpu_device_index, matrix_size, iet_ops_type, start, run_duration_ms);
     t.detach();
  
     // record EDPp ramp-up start time
@@ -257,13 +189,8 @@ bool IETWorker::do_iet_power_stress(void) {
         rvs::lp::Log(msg, rvs::logtrace);
 
         //check whether we reached the target power
-        if((cur_power_value) >= target_power){
-            msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                     std::to_string(gpu_id) + " " + " Average power met the target \
-                     power quitting the test, current power is : " + " " + std::to_string(cur_power_value);
-            rvs::lp::Log(msg, rvs::loginfo);
-            result = true;
-            break;
+        if((cur_power_value) > max_power){
+            max_power = cur_power_value;
         }
 
         end_time = std::chrono::system_clock::now();
@@ -280,12 +207,6 @@ bool IETWorker::do_iet_power_stress(void) {
         rvs::lp::Log(msg, rvs::logtrace);
 
         if (total_time_ms > run_duration_ms) {
-            msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                     std::to_string(gpu_id) + " " + " Average power couldnt meet the target power  \
-                     in the given interval, increase the duration and try again, \
-                     Average power is :" + " " + std::to_string(cur_power_value);
-            rvs::lp::Log(msg, rvs::loginfo);
-            result = false;
             break;
 	     }
 
@@ -294,6 +215,20 @@ bool IETWorker::do_iet_power_stress(void) {
        // check if stop signal was received
        if (rvs::lp::Stopping())
          return true;
+       }
+
+       if(max_power >= target_power) {
+             msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                     std::to_string(gpu_id) + " " + " Average power met the target power :" + " " + std::to_string(max_power);
+            rvs::lp::Log(msg, rvs::loginfo);
+            result = true;
+       }else{
+            msg = "[" + action_name + "] " + MODULE_NAME + " " +
+                     std::to_string(gpu_id) + " " + " Average power couldnt meet the target power  \
+                     in the given interval, increase the duration and try again, \
+                     Average power is :" + " " + std::to_string(cur_power_value);
+            rvs::lp::Log(msg, rvs::loginfo);
+            result = false;
        }
 
        msg = "[" + action_name + "] " + MODULE_NAME + " " +

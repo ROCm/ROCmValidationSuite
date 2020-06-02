@@ -55,6 +55,11 @@ pebbworker_b2b::pebbworker_b2b()
 }
 pebbworker_b2b::~pebbworker_b2b() {}
 
+extern uint64_t time_diff(
+                std::chrono::time_point<std::chrono::system_clock> t_end,
+                std::chrono::time_point<std::chrono::system_clock> t_start);
+extern uint64_t test_duration;
+ 
 /**
  * @brief Init worker object and set transfer parameters
  *
@@ -145,8 +150,10 @@ void pebbworker_b2b::deinit() {
  *
  * */
 void pebbworker_b2b::run() {
-  int sts;
+  std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
   hsa_status_t status;
+  int sts;
 
   RVSTRACE_
 
@@ -199,8 +206,8 @@ void pebbworker_b2b::run() {
   }
 
 
+  pqt_start_time = std::chrono::system_clock::now();
   while (brun) {
-    std::cout << "." << std::flush;
     // initiate forward transfer
     if (prop_h2d) {
       RVSTRACE_
@@ -264,6 +271,14 @@ void pebbworker_b2b::run() {
       std::lock_guard<std::mutex> lk(cntmutex);
       running_size += b2b_block_size;
       running_duration += duration;
+    }
+
+    pqt_end_time = std::chrono::system_clock::now();
+
+    uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
+
+    if(test_time >= test_duration) {
+          break;
     }
   }  // while(brun)
 

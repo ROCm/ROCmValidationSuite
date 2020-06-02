@@ -49,7 +49,6 @@ extern "C" {
 
 #include "include/rvs_key_def.h"
 #include "include/iet_worker.h"
-#include "include/blas_worker.h"
 #include "include/gpu_util.h"
 #include "include/rvs_util.h"
 #include "include/rvs_module.h"
