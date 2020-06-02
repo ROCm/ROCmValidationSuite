@@ -1601,8 +1601,9 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     hipStream_t stream;
     hipEvent_t start, stop;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + " Test10 with pattern =" + std::to_string(p1);
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + " Test10 with pattern :" + std::to_string(p1);
     rvs::lp::Log(msg, rvs::loginfo);
+
 
     HIP_CHECK(hipStreamCreate(&stream));
     HIP_CHECK(hipEventCreate(&start));
@@ -1611,17 +1612,21 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     int n = memdata.num_iterations;
     float elapsedtime;
 
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " Total number of blocks :" + std::to_string(tot_num_blocks) 
+                  + " Number of iterations :" + std::to_string(n);
+    rvs::lp::Log(msg, rvs::logtrace);
+
     dim3 gridDim(STRESS_GRIDSIZE);
     dim3 blockDim(STRESS_BLOCKSIZE);
     HIP_CHECK(hipEventRecord(start, stream));
 
     hipLaunchKernelGGL(test10_kernel_write,
-                         dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                         gridDim, blockDim, 0/*dynamic shared*/, stream,     /* launch config*/
                           ptr, tot_num_blocks*BLOCKSIZE, p1); 
 
     for(unsigned long i =0;i < n ;i ++){
         hipLaunchKernelGGL(test10_kernel_readwrite,
-                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
+                                gridDim, blockDim, 0/*dynamic shared*/, stream,     /* launch config*/
 	                        ptr, tot_num_blocks*BLOCKSIZE, p1, p2,
 			        ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 	        p1 = ~p1;
