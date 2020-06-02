@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GST_SO_INCLUDE_ACTION_H_
-#define GST_SO_INCLUDE_ACTION_H_
+#ifndef MEM_SO_INCLUDE_ACTION_H_
+#define MEM_SO_INCLUDE_ACTION_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +35,7 @@ extern "C" {
 
 #include <vector>
 #include <string>
+#include <mutex>
 #include <map>
 
 #include "include/rvsactionbase.h"
@@ -43,68 +44,63 @@ using std::vector;
 using std::string;
 using std::map;
 
+#define MODULE_NAME                     "babel"
+#define MODULE_NAME_CAPS                "BABEL"
+
+#define RVS_CONF_ARRAY_SIZE             "array_size"
+#define RVS_CONF_NUM_ITER               "num_iter"
+#define RVS_CONF_TEST_TYPE              "test_type"
+#define RVS_CONF_MEM_MIBIBYTE           "mibibytes"
+#define RVS_CONF_OP_CSV                 "o/p_csv"
+
+#define MEM_DEFAULT_ARRAY_SIZE          33554432   // 32 MB
+#define MEM_DEFAULT_NUM_ITER            100
+#define MEM_DEFAULT_TEST_TYPE           1
+#define MEM_DEFAULT_MEM_MIBIBYTE        false
+#define MEM_DEFAULT_OP_CSV             false
+
+#define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
+#define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
+#define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
+
+
+
 /**
- * @class gst_action
- * @ingroup GST
+ * @class mem_action
+ * @ingroup MEM
  *
- * @brief GST action implementation class
+ * @brief MEM action implementation class
  *
  * Derives from rvs::actionbase and implements actual action functionality
  * in its run() method.
  *
  */
-class gst_action: public rvs::actionbase {
+class mem_action: public rvs::actionbase {
  public:
-    gst_action();
-    virtual ~gst_action();
+    mem_action();
+
+    virtual ~mem_action();
 
     virtual int run(void);
 
-    std::string gst_ops_type;
+    std::string mem_ops_type;
 
  protected:
     //! TRUE if JSON output is required
     bool bjson;
+    //! Memory in bytes
+    bool mibibytes;
+    //! output in csv 
+    bool output_csv;
+    //! test type
+    int  test_type;
+    //! number of iterations
+    uint64_t num_iterations;
+    //! number of iterations
+    uint64_t array_size;
 
-    //! stress test ramp duration
-    uint64_t gst_ramp_interval;
-    //! maximum allowed number of target_stress violations
-    int gst_max_violations;
-    //! specifies whether to copy the matrices to the GPU before each
-    //! SGEMM operation
-    bool gst_copy_matrix;
-    //! target stress (in GFlops) that the GPU will try to achieve
-    float gst_target_stress;
-    //! GFlops tolerance (how much the GFlops can fluctuare after
-    //! the ramp period for the test to succeed)
-    float gst_tolerance;
-    
-    //Alpha and beta value
-    float      gst_alpha_val;
-    float      gst_beta_val;
-    
-    //! matrix size for SGEMM
-    uint64_t gst_matrix_size_a;
-    uint64_t gst_matrix_size_b;
-    uint64_t gst_matrix_size_c;
-
-    //Parameter to heat up
-    uint64_t gst_hot_calls;
-
-    //Tranpose set to none or enabled
-    int      gst_trans_a;
-    int      gst_trans_b;
-
-    //Leading offset values
-    int      gst_lda_offset;
-    int      gst_ldb_offset;
-    int      gst_ldc_offset;
-
-    // GST specific config keys
-//     void property_get_gst_target_stress(int *error);
-//     void property_get_gst_tolerance(int *error);
-
-    bool get_all_gst_config_keys(void);
+    // configuration properties getters
+    bool get_all_mem_config_keys(void);
   /**
   * @brief reads all common configuration keys from
   * the module's properties collection
@@ -117,8 +113,9 @@ class gst_action: public rvs::actionbase {
   * @return run number of GPUs
   */
   int get_num_amd_gpu_devices(void);
-    int get_all_selected_gpus(void);
-    bool do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
+  int get_all_selected_gpus(void);
+
+  bool do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index);
 };
 
-#endif  // GST_SO_INCLUDE_ACTION_H_
+#endif  // MEM_SO_INCLUDE_ACTION_H_

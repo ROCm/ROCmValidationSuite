@@ -64,10 +64,6 @@ class pebb_action : public rvs::actionbase {
   }bandwidth;
 
   vector<bandwidth>   resultBandwidth;
-  uint64_t time_diff(
-                std::chrono::time_point<std::chrono::system_clock> t_end,
-                std::chrono::time_point<std::chrono::system_clock> t_start);
-
  protected:
   bool get_all_pebb_config_keys(void);
   bool get_all_common_config_keys(void);

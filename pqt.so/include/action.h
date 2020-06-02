@@ -64,7 +64,6 @@ class pqt_action : public rvs::actionbase {
   virtual ~pqt_action();
 
   virtual int run(void);
-  uint64_t time_diff( std::chrono::time_point<std::chrono::system_clock> t_end, std::chrono::time_point<std::chrono::system_clock> t_start);
 
  protected:
   bool get_all_pqt_config_keys(void);

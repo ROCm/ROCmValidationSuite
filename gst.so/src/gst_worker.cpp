@@ -76,7 +76,10 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
     *error = 0;
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(
-        new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b, matrix_size_c));
+        new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
+                        matrix_size_c, gst_trans_a, gst_trans_b,
+                        gst_alpha_val, gst_beta_val, 
+                        gst_lda_offset, gst_ldb_offset, gst_ldc_offset));
 
     if (!gpu_blas) {
         *error = 1;
@@ -139,7 +142,7 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
         }
 
         // run GEMM & wait for completion
-        if (!gpu_blas->run_blass_gemm(gst_ops_type))
+        if (!gpu_blas->run_blass_gemm(gst_ops_type) )
             continue;  // failed to run the current SGEMM
 
         while (!gpu_blas->is_gemm_op_complete()) {}
@@ -191,6 +194,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     // NMAX_MS_GPU_RUN_PEAK_PERFORMANCE (e.g.: 1000)
     if (run_duration_ms < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
         run_duration_ms += NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
+
     if (ramp_interval < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
         ramp_interval += NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
 
@@ -318,20 +322,17 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
  */
 void GSTWorker::check_target_stress(double gflops_interval) {
     string msg;
+    bool result;
 
     if(gflops_interval >= target_stress){
-         msg = "[" + action_name + "] " + MODULE_NAME + " " +
-               std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(gflops_interval) + " " +
-                      "Met target stress :" + " " + std::to_string(target_stress) 
-                      + " " + "PASS";
-
+           result = true;
     }else{
-         msg = "[" + action_name + "] " + MODULE_NAME + " " +
-               std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(gflops_interval) + " " +
-                      "Couldnt meet target stress :" + " " + std::to_string(target_stress) 
-                      + " " + "FAIL";
+           result = false;
     }
 
+    msg = "[" + action_name + "] " + MODULE_NAME + " " +
+              std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(gflops_interval) + " " +
+              "Target stress :" + " " + std::to_string(target_stress) + " met :" + (result ? "TRUE" : "FALSE");
     rvs::lp::Log(msg, rvs::logresults);
 
     log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
@@ -492,7 +493,7 @@ void GSTWorker::run() {
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + GST_START_MSG + " " +
             " Starting the GST stress test "; 
-    rvs::lp::Log(msg, rvs::loginfo);
+    rvs::lp::Log(msg, rvs::logtrace);
 
     log_to_json(GST_START_MSG, std::to_string(target_stress), rvs::loginfo);
     log_to_json(GST_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),

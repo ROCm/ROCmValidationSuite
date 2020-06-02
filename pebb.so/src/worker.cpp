@@ -52,6 +52,11 @@ using std::string;
 using std::vector;
 using std::map;
 
+extern uint64_t time_diff(
+                std::chrono::time_point<std::chrono::system_clock> t_end,
+                std::chrono::time_point<std::chrono::system_clock> t_start);
+extern uint64_t test_duration;
+ 
 pebbworker::pebbworker() {
   // set to 'true' so that do_transfer() will also work
   // when parallel: false
@@ -67,6 +72,8 @@ pebbworker::~pebbworker() {}
  *
  * */
 void pebbworker::run() {
+  std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
   std::string msg;
 
   msg = "[" + action_name + "] pebb thread " + std::to_string(src_node) + " "
@@ -75,15 +82,18 @@ void pebbworker::run() {
 
   brun = true;
 
-  while (brun) {
+  pqt_start_time = std::chrono::system_clock::now();
+  do{
     do_transfer();
-    std::this_thread::yield();
 
-    if (rvs::lp::Stopping()) {
-      brun = false;
-      RVSTRACE_
+    pqt_end_time = std::chrono::system_clock::now();
+
+    uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
+
+    if(test_time >= test_duration) {
+        break;
     }
-  }
+  } while (brun);
 
   msg = "[" + action_name + "] pebb thread " + std::to_string(src_node) + " "
   + std::to_string(dst_node) + " has finished";
