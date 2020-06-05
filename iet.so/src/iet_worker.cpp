@@ -116,29 +116,6 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
     }
 }
 
-/**
- * @brief performs the EDPp rampup on the given GPU (attempts to reach the given
- * target power)
- * @param err_description stores the error description if any
- * @return true if gpu training succeeded, false otherwise
- */
-bool IETWorker::do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type){
-    std::unique_ptr<rvs_blas> gpu_blas;
-    rvs_blas  *free_gpublas;
-
-    // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, 0, 1));
-
-    //Hit the GPU with load to increase temperature
-    for(int i = 0; i < IET_BLAS_ITERATIONS ; i++) {
-         gpu_blas->run_blass_gemm(iet_ops_type);
-    }
-
-    free_gpublas = gpu_blas.release();
-    delete free_gpublas;
-
-    return true;
-}
 
 /**
  * @brief computes SGEMMs and power related statistics after the training stage
@@ -201,7 +178,8 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     duration = 0;
 
     // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, 0, 1));
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, 0, 1, 1, 1, 
+          matrix_size, matrix_size, matrix_size));
 
     iet_start_time = std::chrono::system_clock::now();
     //Hit the GPU with load to increase temperature

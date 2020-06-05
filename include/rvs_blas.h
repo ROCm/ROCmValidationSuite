@@ -41,7 +41,9 @@
  */
 class rvs_blas {
  public:
-    rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transa, int transb);
+    rvs_blas(int _gpu_device_index, int _m, int _n, int _k, 
+        int transa, int transb, float aplha, float beta, 
+        int lda, int ldb, int ldc);
     ~rvs_blas();
 
     //! returns the GPU index
@@ -119,6 +121,16 @@ class rvs_blas {
     //! pointer to host memory
     double *hdblc;
 
+    //!GST Aplha Val 
+    float blas_alpha_val;
+    //! GST Beta Val
+    float blas_beta_val;
+
+    //Blas offsets
+    int blas_lda_offset;
+    int blas_ldb_offset;
+    int blas_ldc_offset;
+
     //HGEMM Declaration
     //! pointer to device (GPU) memory
     rocblas_half *dhlfa;
@@ -136,9 +148,6 @@ class rvs_blas {
     rocblas_half  hostarrayA;
     rocblas_half  hostarrayB;
     rocblas_half  hostarrayC;
-
-
-
 
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;
