@@ -74,9 +74,6 @@ GSTWorker::~GSTWorker() {}
  */
 void GSTWorker::setup_blas(int *error, string *err_description) {
     *error = 0;
-    std::cout << "\n Trans a : " << gst_trans_a;
-    std::cout << "\n Trans b : " << gst_trans_b;
-
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(
         new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
