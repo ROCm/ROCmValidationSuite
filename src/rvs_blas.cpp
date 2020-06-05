@@ -30,8 +30,6 @@
 #define RANDOM_CT               320000
 #define RANDOM_DIV_CT           0.1234
 
-rocblas_operation transa = rocblas_operation_none;
-rocblas_operation transb = rocblas_operation_transpose;
 
 /**
  * @brief class constructor
@@ -40,11 +38,9 @@ rocblas_operation transb = rocblas_operation_transpose;
  * @param _n matrix size
  * @param _k matrix size
  */
-rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k) :
+rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, int transB) :
                              gpu_device_index(_gpu_device_index),
-                             m(_m),
-                             n(_n),
-                             k(_k) {
+                             m(_m), n(_n), k(_k){
     is_handle_init = false;
     is_error = false;
     da = db = dc = NULL;
@@ -59,6 +55,18 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k) :
             is_error = true;
     } else {
         is_error = true;
+    }
+
+    if(transA == 0) {
+         transa = rocblas_operation_none;
+    }else{
+         transa = rocblas_operation_transpose;
+    }
+
+    if(transB == 0) {
+         transb = rocblas_operation_none;
+    }else{
+         transb = rocblas_operation_transpose;
     }
 }
 
@@ -328,12 +336,13 @@ bool rvs_blas::is_gemm_op_complete(void) {
  * @return true if GPU was able to enqueue the GEMM operation, otherwise false
  */
 bool rvs_blas::run_blass_gemm(std::string ops_type) {
+
     if (!is_error) {
       
         if(ops_type == "sgemm") {
 
                  float alpha = 1.1, beta = 0.9;
-
+                 
                  if (rocblas_sgemm(blas_handle, transa, transb,
                          rvs_blas::m, rvs_blas::n, rvs_blas::k,
                          &alpha, da, rvs_blas::m,

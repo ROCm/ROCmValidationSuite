@@ -127,7 +127,7 @@ bool IETWorker::do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::str
     rvs_blas  *free_gpublas;
 
     // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size));
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, 0, 1));
 
     //Hit the GPU with load to increase temperature
     for(int i = 0; i < IET_BLAS_ITERATIONS ; i++) {
@@ -201,7 +201,7 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     duration = 0;
 
     // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size));
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, 0, 1));
 
     iet_start_time = std::chrono::system_clock::now();
     //Hit the GPU with load to increase temperature

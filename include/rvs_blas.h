@@ -41,7 +41,7 @@
  */
 class rvs_blas {
  public:
-    rvs_blas(int _gpu_device_index, int _m, int _n, int _k);
+    rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transa, int transb);
     ~rvs_blas();
 
     //! returns the GPU index
@@ -86,6 +86,10 @@ class rvs_blas {
     rocblas_int size_b;
     //! amount of memory to allocate for the matrix
     rocblas_int size_c;
+    //! Transpose matrix A
+    rocblas_operation transa;
+    //! Transpose matrix B
+    rocblas_operation transb;
 
     //SGEMM DECLARAION
     //! pointer to device (GPU) memory

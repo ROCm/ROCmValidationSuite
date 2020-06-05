@@ -59,6 +59,8 @@ using std::regex;
 #define RVS_CONF_MATRIX_SIZE_KEYB       "matrix_size_b"
 #define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_b"
 #define RVS_CONF_GST_OPS_TYPE           "ops_type"
+#define RVS_CONF_TRANS_A                "transa"
+#define RVS_CONF_TRANS_B                "transb"
 
 #define MODULE_NAME                     "gst"
 #define MODULE_NAME_CAPS                "GST"
@@ -70,6 +72,8 @@ using std::regex;
 #define GST_DEFAULT_COPY_MATRIX         true
 #define GST_DEFAULT_MATRIX_SIZE         5760
 #define GST_DEFAULT_HOT_CALLS           0
+#define GST_DEFAULT_TRANS_A             0
+#define GST_DEFAULT_TRANS_B             1
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0
@@ -133,6 +137,8 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             workers[i].set_matrix_size_b(gst_matrix_size_b);
             workers[i].set_matrix_size_c(gst_matrix_size_c);
             workers[i].set_gst_ops_type(gst_ops_type);
+            workers[i].set_matrix_transpose_a(gst_trans_a);
+            workers[i].set_matrix_transpose_b(gst_trans_b);
             i++;
         }
 
@@ -275,7 +281,22 @@ bool gst_action::get_all_gst_config_keys(void) {
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
- 
+
+    error = property_get_int<int>(RVS_CONF_TRANS_A, &gst_trans_a, GST_DEFAULT_TRANS_A);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_TRANS_A) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    error = property_get_int<int>(RVS_CONF_TRANS_B, &gst_trans_b, GST_DEFAULT_TRANS_B);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_TRANS_B) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
 
     return bsts;
 }
