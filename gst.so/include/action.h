@@ -78,16 +78,27 @@ class gst_action: public rvs::actionbase {
     //! GFlops tolerance (how much the GFlops can fluctuare after
     //! the ramp period for the test to succeed)
     float gst_tolerance;
+    
+    //Alpha and beta value
+    float      gst_alpha_val;
+    float      gst_beta_val;
+    
     //! matrix size for SGEMM
     uint64_t gst_matrix_size_a;
     uint64_t gst_matrix_size_b;
     uint64_t gst_matrix_size_c;
+
+    //Parameter to heat up
     uint64_t gst_hot_calls;
+
+    //Tranpose set to none or enabled
     int      gst_trans_a;
     int      gst_trans_b;
 
-    // configuration properties getters
-
+    //Leading offset values
+    int      gst_lda_offset;
+    int      gst_ldb_offset;
+    int      gst_ldc_offset;
 
     // GST specific config keys
 //     void property_get_gst_target_stress(int *error);

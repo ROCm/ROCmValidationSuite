@@ -38,8 +38,8 @@
  * @param _n matrix size
  * @param _k matrix size
  */
-rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, int transB) :
-                             gpu_device_index(_gpu_device_index),
+rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, int transB, 
+                    float alpha , float beta, int lda, int ldb, int ldc) : gpu_device_index(_gpu_device_index),
                              m(_m), n(_n), k(_k){
     is_handle_init = false;
     is_error = false;
@@ -68,6 +68,16 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, in
     }else{
          transb = rocblas_operation_transpose;
     }
+
+    //setting alpha and beta val
+    blas_alpha_val = alpha;
+    blas_beta_val = beta;
+
+    //Leading data offsets
+    blas_lda_offset = lda;
+    blas_ldb_offset = ldb;
+    blas_ldc_offset = ldc;
+
 }
 
 /**
@@ -341,13 +351,13 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
       
         if(ops_type == "sgemm") {
 
-                 float alpha = 1.1, beta = 0.9;
+                 float alpha = blas_alpha_val, beta = blas_beta_val;
                  
                  if (rocblas_sgemm(blas_handle, transa, transb,
                          rvs_blas::m, rvs_blas::n, rvs_blas::k,
-                         &alpha, da, rvs_blas::m,
-                         db, rvs_blas::n, &beta,
-                         dc, rvs_blas::m) != rocblas_status_success) {
+                         &alpha, da, blas_lda_offset,
+                         db, blas_ldb_offset, &beta,
+                         dc, blas_ldc_offset) != rocblas_status_success) {
                  is_error = true;  // GPU cannot enqueue the gemm
                  return false;
                  } else {
@@ -356,13 +366,14 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
         }
 
        if(ops_type == "dgemm") {
-                  double alpha = 1.1, beta = 0.9;
+
+                  double alpha = blas_alpha_val, beta = blas_beta_val;
 
                   if (rocblas_dgemm(blas_handle, transa, transb,
                           rvs_blas::m, rvs_blas::n, rvs_blas::k,
-                          &alpha, ddbla, rvs_blas::m,
-                          ddblb, rvs_blas::n, &beta,
-                          ddblc, rvs_blas::m) != rocblas_status_success) {
+                          &alpha, ddbla, blas_lda_offset,
+                          ddblb, blas_ldb_offset, &beta,
+                          ddblc, blas_ldc_offset) != rocblas_status_success) {
                   is_error = true;  // GPU cannot enqueue the gemm
                   return false;
                   } else {
@@ -374,14 +385,14 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
                   rocblas_half alpha;
                   rocblas_half beta;
 
-                  alpha.data = 11;
-                  beta.data = 2;
+                  alpha.data = blas_alpha_val;
+                  beta.data = blas_beta_val;
 
                   if (rocblas_hgemm(blas_handle, transa, transb,
                           rvs_blas::m, rvs_blas::n, rvs_blas::k,
-                          &alpha, dhlfa, rvs_blas::m,
-                          dhlfb, rvs_blas::n, &beta,
-                          dhlfc, rvs_blas::m) != rocblas_status_success) {
+                          &alpha, dhlfa, blas_lda_offset,
+                          dhlfb, blas_ldb_offset, &beta,
+                          dhlfc, blas_ldc_offset) != rocblas_status_success) {
                   is_error = true;  // GPU cannot enqueue the gemm
                   return false;
                   } else {

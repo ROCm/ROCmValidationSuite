@@ -72,7 +72,8 @@ void blas_worker::setup_blas(void) {
     blas_error = 0;
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(
-        new rvs_blas(gpu_device_index, matrix_size, matrix_size, matrix_size, 0, 1));
+        new rvs_blas(gpu_device_index, matrix_size, matrix_size, matrix_size, 0, 1, 1, 1, 
+          matrix_size, matrix_size, matrix_size));
 
     // no lock guard for blas_error atm because there are no sync issues
     if (gpu_blas == nullptr) {
