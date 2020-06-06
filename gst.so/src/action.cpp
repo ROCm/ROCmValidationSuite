@@ -81,9 +81,9 @@ using std::regex;
 #define GST_DEFAULT_TRANS_B             1
 #define GST_DEFAULT_ALPHA_VAL           1
 #define GST_DEFAULT_BETA_VAL            1
-#define GST_DEFAULT_LDA_OFFSET          4096
-#define GST_DEFAULT_LDB_OFFSET          4096
-#define GST_DEFAULT_LDC_OFFSET          4096
+#define GST_DEFAULT_LDA_OFFSET          0
+#define GST_DEFAULT_LDB_OFFSET          0
+#define GST_DEFAULT_LDC_OFFSET          0
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0

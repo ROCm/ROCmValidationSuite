@@ -28,8 +28,7 @@
 #include <string>
 #include <memory>
 #include "include/rvsthreadbase.h"
-#include "include/blas_worker.h"
-#include "include/log_worker.h"
+#include "include/rvs_blas.h"
 
 /**
  * @class IETWorker
@@ -188,9 +187,6 @@ class IETWorker : public rvs::ThreadBase {
     static bool bjson;
     bool sgemm_success;
     //! blas_worker pointer
-    std::unique_ptr<blas_worker> gpu_worker;
-    //! log_worker pointer
-    std::unique_ptr<log_worker> pwr_log_worker;
     std::string  iet_ops_type;
 
     //! actual training time
