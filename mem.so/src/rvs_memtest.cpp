@@ -1466,7 +1466,7 @@ void test9(char* ptr, unsigned int tot_num_blocks)
         hipLaunchKernelGGL(kernel_move_inv_write,
                                dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                                ptr + i*BLOCKSIZE, end_ptr, p1); 
-        show_progress("test9[bit fade test, write]", i, tot_num_blocks);
+        show_progress("test9[bit fade test, write]: ", i, tot_num_blocks);
     }
 
     //sleep(60*90);
@@ -1479,8 +1479,8 @@ void test9(char* ptr, unsigned int tot_num_blocks)
              hipLaunchKernelGGL(kernel_move_inv_readwrite,
                                dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                                ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
-	    err += error_checking("test9[bit fade test, readwrite]",  i);
-            show_progress("test9[bit fade test, readwrite]", i, tot_num_blocks);
+	    err += error_checking("test9[bit fade test, readwrite] :",  i);
+            show_progress("test9[bit fade test, readwrite] : ", i, tot_num_blocks);
     }
 
     //sleep(60*90);
@@ -1493,12 +1493,12 @@ void test9(char* ptr, unsigned int tot_num_blocks)
             hipLaunchKernelGGL(kernel_move_inv_read,
                                  dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                          ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
-	    err += error_checking("test9[bit fade test, read]",  i);
-            show_progress("test9[bit fade test, read]", i, tot_num_blocks);
+	    err += error_checking("test9[bit fade test, read] : ",  i);
+            show_progress("test9[bit fade test, read] : ", i, tot_num_blocks);
     }
 
     if(!err) {
-       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test9 passed, no errors detected"; 
+       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test9 passed, no errors detected "; 
        rvs::lp::Log(msg, rvs::logresults);
     }
 
@@ -1648,7 +1648,7 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     hipStreamDestroy(stream);
 
     if(!err) {
-       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test10 passed, no errors detected";
+       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test10 passed, no errors detected ";
        rvs::lp::Log(msg, rvs::logresults);
     }
 }

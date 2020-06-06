@@ -31,9 +31,6 @@
 #include <memory>
 
 #include "rocm_smi/rocm_smi.h"
-
-#include "include/blas_worker.h"
-#include "include/log_worker.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 
@@ -84,8 +81,6 @@ static uint64_t time_diff(
  * @brief class default constructor
  */
 IETWorker::IETWorker() {
-    gpu_worker = nullptr;
-    pwr_log_worker = nullptr;
 }
 
 IETWorker::~IETWorker() {
@@ -116,55 +111,6 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
     }
 }
 
-
-/**
- * @brief computes SGEMMs and power related statistics after the training stage
- */
-void IETWorker::compute_gpu_stats(void) {
-    float ms_per_sgemm, sgemm_target_power;
-    float sgemm_target_power_si, total_ms_sgemm_si;
-
-    // compute SGEMM time (ms)
-    ms_per_sgemm = static_cast<float>(training_time_ms) / num_sgemms_training;
-    // compute required number of SGEMM for the given target_power
-    sgemm_target_power =
-                    (target_power * num_sgemms_training) / avg_power_training;
-    sgemm_target_power_si =
-                    (sample_interval * sgemm_target_power) / training_time_ms;
-    // compute the actual SGEMM frequency for the given target_power
-    total_ms_sgemm_si = sgemm_target_power_si * ms_per_sgemm;
-    sgemm_si_delay = sample_interval - total_ms_sgemm_si;
-    if (sgemm_si_delay < 0) {
-        sgemm_si_delay = 0;
-    } else {
-        if (sgemm_target_power_si > 0)
-            sgemm_si_delay /= sgemm_target_power_si;
-        else
-            sgemm_target_power_si = sample_interval;
-
-        sgemm_si_delay = sgemm_si_delay + sgemm_si_delay / SGEMM_DELAY_FREQ_DEV;
-    }
-}
-
-/**
- * @brief computes the new SGEMM frequency so that the GPU will achieve the
- * given target_power
- * @param avg_power the last GPU average power over the last sample_interval
- */
-void IETWorker::compute_new_sgemm_freq(float avg_power) {
-    // compute the difference between the actual power data and the target_power
-    float diff_power = avg_power - target_power;
-    // gradually & dynamically increase/decrease the SGEMM frequency
-    float sgemm_delay_dev = (abs(diff_power) * sgemm_si_delay) / target_power;
-    if (diff_power < 0) {
-        if (sgemm_si_delay - sgemm_delay_dev < 0)
-            sgemm_si_delay = 1;
-        else
-            sgemm_si_delay -= sgemm_delay_dev;
-    } else {
-        sgemm_si_delay += sgemm_delay_dev;
-    }
-}
 
 
 void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 

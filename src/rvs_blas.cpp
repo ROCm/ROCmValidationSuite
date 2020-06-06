@@ -73,11 +73,17 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, in
     blas_alpha_val = alpha;
     blas_beta_val = beta;
 
+    //setting lda offsets 
     //Leading data offsets
-    blas_lda_offset = lda;
-    blas_ldb_offset = ldb;
-    blas_ldc_offset = ldc;
-
+    if(blas_lda_offset == 0 || blas_lda_offset == 0 || blas_ldc_offset == 0) {
+       blas_lda_offset = m;
+       blas_ldb_offset = n;
+       blas_ldc_offset = k;
+    }else{
+       blas_lda_offset = lda;
+       blas_ldb_offset = ldb;
+       blas_ldc_offset = ldc;
+    }
 }
 
 /**
