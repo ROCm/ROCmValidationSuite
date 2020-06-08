@@ -55,6 +55,11 @@ pqtworker::pqtworker() {
 }
 pqtworker::~pqtworker() {}
 
+extern uint64_t time_diff(
+                std::chrono::time_point<std::chrono::system_clock> t_end,
+                std::chrono::time_point<std::chrono::system_clock> t_start);
+extern uint64_t test_duration;
+ 
 /**
  * @brief Thread function
  *
@@ -63,6 +68,8 @@ pqtworker::~pqtworker() {}
  * */
 void pqtworker::run() {
   std::string msg;
+  std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
 
   msg = "[" + action_name + "] pqt thread " + std::to_string(src_node) + " "
   + std::to_string(dst_node) + " has started";
@@ -70,15 +77,18 @@ void pqtworker::run() {
 
   brun = true;
 
-  while (brun) {
-    do_transfer();
-    std::this_thread::yield();
+  pqt_start_time = std::chrono::system_clock::now();
+  do {
+      do_transfer();
 
-    if (rvs::lp::Stopping()) {
-      brun = false;
-      RVSTRACE_
-    }
-  }
+      pqt_end_time = std::chrono::system_clock::now();
+
+      uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
+
+      if(test_time >= test_duration) {
+          break;
+      }
+   } while (brun);
 
   msg = "[" + action_name + "] pqt thread " + std::to_string(src_node) + " "
   + std::to_string(dst_node) + " has finished";

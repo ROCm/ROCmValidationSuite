@@ -55,8 +55,7 @@ extern "C" {
 using std::string;
 using std::vector;
 
-
-
+uint64_t test_duration;
 
 /**
  * @brief computes the difference (in milliseconds) between 2 points in time
@@ -64,7 +63,7 @@ using std::vector;
  * @param t_start first point in time
  * @return time difference in milliseconds
  */
-uint64_t pqt_action::time_diff(
+uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
                 std::chrono::time_point<std::chrono::system_clock> t_start) {
     auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -84,7 +83,6 @@ int pqt_action::run() {
   string msg;
   std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
   std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
-
 
   rvs::lp::Log("int pqt_action::run()", rvs::logtrace);
 
@@ -112,6 +110,8 @@ int pqt_action::run() {
     }
   }
 
+  test_duration = property_duration;
+ 
   sts = create_threads();
   if (sts) {
     RVSTRACE_
@@ -151,23 +151,20 @@ int pqt_action::run() {
 
     pqt_start_time = std::chrono::system_clock::now();
 
-    if (property_parallel)
+    RVSTRACE_
+    do {
+      if (property_parallel) {
         sts = run_parallel();
-    else {
-
-        while(brun) {
-             RVSTRACE_
-             sts = run_single();
-
-             pqt_end_time = std::chrono::system_clock::now();
-             uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
-             if(test_time >= property_duration) {
-                 pqt_action::do_final_average();
-                 break;
-             }
-             std::cout << "." << std::flush;
-          }
-    }
+      } else {
+        sts = run_single();
+      }
+      pqt_end_time = std::chrono::system_clock::now();
+      uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
+      if(test_time >= property_duration) {
+          pqt_action::do_final_average();
+          break;
+      }
+    } while (brun);
 
     RVSTRACE_
     timer_running.stop();
