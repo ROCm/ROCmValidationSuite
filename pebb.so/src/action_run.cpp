@@ -58,6 +58,7 @@ extern "C" {
 using std::string;
 using std::vector;
 
+uint64_t test_duration;
 
 /**
  * @brief computes the difference (in milliseconds) between 2 points in time
@@ -65,7 +66,7 @@ using std::vector;
  * @param t_start first point in time
  * @return time difference in milliseconds
  */
-uint64_t pebb_action::time_diff(
+uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
                 std::chrono::time_point<std::chrono::system_clock> t_start) {
     auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -105,6 +106,8 @@ int pebb_action::run() {
     }
   }
 
+  test_duration = property_duration;
+
   sts = create_threads();
 
   if (sts != 0) {
@@ -135,28 +138,23 @@ int pebb_action::run() {
       timer_running.start(property_log_interval);        // ticks continuously
     }
 
+    RVSTRACE_
     pebb_start_time = std::chrono::system_clock::now();
 
-    if (property_parallel) 
+    do {
+      if (property_parallel) {
         sts = run_parallel();
-    else {
+      } else {
+        sts = run_single();
+      }
 
-        while(brun) {
-             RVSTRACE_
-             sts = run_single();
-
-             pebb_end_time = std::chrono::system_clock::now();
-             uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
-             if(test_time >= property_duration) {
-                 pebb_action::do_final_average();
-                 break;
-             }
-             std::cout << "." << std::flush;
-      
-          } 
-
-    }
-
+       pebb_end_time = std::chrono::system_clock::now();
+       uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
+       if(test_time >= property_duration) {
+            pebb_action::do_final_average();
+            break;
+        }
+    } while(brun);
 
     RVSTRACE_
     timer_running.stop();
