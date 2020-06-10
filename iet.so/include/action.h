@@ -91,6 +91,29 @@ class iet_action: public rvs::actionbase {
     uint64_t iet_sample_interval;
     //! matrix size for SGEMM
     uint64_t iet_matrix_size;
+    //! matrix size for SGEMM
+    bool iet_tp_flag;
+
+    //Alpha and beta value
+    float      iet_alpha_val;
+    float      iet_beta_val;
+    
+    //! matrix size for SGEMM
+    uint64_t iet_matrix_size_a;
+    uint64_t iet_matrix_size_b;
+    uint64_t iet_matrix_size_c;
+
+    //Parameter to heat up
+    uint64_t iet_hot_calls;
+
+    //Tranpose set to none or enabled
+    int      iet_trans_a;
+    int      iet_trans_b;
+
+    //Leading offset values
+    int      iet_lda_offset;
+    int      iet_ldb_offset;
+    int      iet_ldc_offset;
 
     //! list of GPUs (along with some identification data) which are
     //! selected for EDPp test
@@ -118,7 +141,7 @@ class iet_action: public rvs::actionbase {
  */    
     int get_all_selected_gpus(void);
 
-    bool do_edp_test(std::map<int, uint16_t> gst_gpus_device_index);
+    bool do_edp_test(std::map<int, uint16_t> iet_gpus_device_index);
 };
 
 #endif  // IET_SO_INCLUDE_ACTION_H_

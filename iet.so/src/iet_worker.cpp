@@ -22,17 +22,19 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "include/iet_worker.h"
 
 #include <unistd.h>
 #include <string>
 #include <iostream>
 #include <chrono>
 #include <memory>
+#include <mutex>
 
 #include "rocm_smi/rocm_smi.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
+
+#include "include/iet_worker.h"
 
 #define MODULE_NAME                             "iet"
 #define POWER_PROCESS_DELAY                     5
@@ -62,6 +64,7 @@
 using std::string;
 
 bool IETWorker::bjson = false;
+
 
 /**
  * @brief computes the difference (in milliseconds) between 2 points in time
@@ -112,9 +115,8 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
 }
 
 
-
 void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 
-    bool start, uint64_t run_duration_ms)
+    bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta)
 {
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time;
     std::unique_ptr<rvs_blas> gpu_blas;
@@ -122,20 +124,17 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     uint64_t  duration;
 
     duration = 0;
-
-    // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, 0, 1, 1, 1, 
+   // setup rvsBlas
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, transa, transb, alpha, beta, 
           matrix_size, matrix_size, matrix_size));
 
     iet_start_time = std::chrono::system_clock::now();
     //Hit the GPU with load to increase temperature
-    while(duration < run_duration_ms ) {
+    while(duration < run_duration_ms){
          gpu_blas->run_blass_gemm(iet_ops_type);
          end_time = std::chrono::system_clock::now();
          duration = time_diff(end_time, iet_start_time);
     }
-
-    start = false;
 
     free_gpublas = gpu_blas.release();
     delete free_gpublas;
@@ -165,7 +164,8 @@ bool IETWorker::do_iet_power_stress(void) {
     result = true;
     start = true;
 
-    std::thread t(blasThread, gpu_device_index, matrix_size, iet_ops_type, start, run_duration_ms);
+    std::thread t(blasThread, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms, 
+		    iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val);
     t.detach();
  
     // record EDPp ramp-up start time
@@ -189,7 +189,7 @@ bool IETWorker::do_iet_power_stress(void) {
         rvs::lp::Log(msg, rvs::logtrace);
 
         //check whether we reached the target power
-        if((cur_power_value) > max_power){
+        if(cur_power_value > target_power){
             max_power = cur_power_value;
         }
 
@@ -208,7 +208,7 @@ bool IETWorker::do_iet_power_stress(void) {
 
         if (total_time_ms > run_duration_ms) {
             break;
-	     }
+	}
 
        sleep(1000);
 
