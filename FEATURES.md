@@ -8,7 +8,7 @@ The GPU Properties module queries the configuration of a target device and retur
 The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information at regular intervals. The module can be configured to halt another RVS modules execution if one of the quantities exceeds a specified boundary value.
 
 ## Memory Test – MEM module
-The memory module runs memory test on some or all of the GPU(s) installed and will report any detected erros. Following memory tests will run
+This module runs memory test on some or all of the GPU(s) installed and will report any detected erros. Following memory tests will run
 1. [Walking 1 bit]
 2. [Own address test]
 3. [Moving inversions, ones&zeros]
@@ -22,7 +22,7 @@ The memory module runs memory test on some or all of the GPU(s) installed and wi
 11. [HBM Memory stress test]
 
 ## HBM, Babel Memory Test (STRESS Test) – BABEL module
-The babel module runs babel test on some or all of the GPU(s) installed and will report any detected erros. Following  tests will run
+This module runs babel test on some or all of the GPU(s) installed and will report any detected errors. Following  tests will run
 1. Float ( COPY, MUL, ADD, TRIAD, DOT)
 2. Double ( COPY, MUL, ADD, TRIAD, DOT)
 3. TRIAD Float
