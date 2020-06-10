@@ -8,8 +8,8 @@ RVS supports the following tests on AMD GPU platform:
     - List GPU configuration 
     - GPU stress and bandwidth tests
     - Tests to reach peak power 
-    - Memory stress test
-    - Babel memory stress test
+    - Memory stress test (HBM stress)
+    - Babel memory stress test (HBM stress)
     - PCIe bandwidth tests
     - GPU <-> GPU bandwidth tests
     - and state monitoring tests
