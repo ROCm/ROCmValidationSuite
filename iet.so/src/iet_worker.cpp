@@ -116,7 +116,8 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
 
 
 void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 
-    bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta)
+    bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
+    int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset)
 {
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time;
     std::unique_ptr<rvs_blas> gpu_blas;
@@ -126,7 +127,7 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     duration = 0;
    // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, transa, transb, alpha, beta, 
-          matrix_size, matrix_size, matrix_size));
+          iet_lda_offset, iet_ldb_offset, iet_ldc_offset));
 
     iet_start_time = std::chrono::system_clock::now();
     //Hit the GPU with load to increase temperature
@@ -165,7 +166,7 @@ bool IETWorker::do_iet_power_stress(void) {
     start = true;
 
     std::thread t(blasThread, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms, 
-		    iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val);
+		    iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset);
     t.detach();
  
     // record EDPp ramp-up start time
