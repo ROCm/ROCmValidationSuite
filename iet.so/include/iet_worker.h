@@ -27,6 +27,7 @@
 
 #include <string>
 #include <memory>
+#include <mutex>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
 
@@ -126,9 +127,14 @@ class IETWorker : public rvs::ThreadBase {
     uint64_t get_matrix_size(void) { return matrix_size; }
 
     //! sets the EDPp power tolerance
-    void set_ops_type(std::string ops_type) { iet_ops_type = ops_type; }
+    void set_iet_ops_type(std::string ops_type) { iet_ops_type = ops_type; }
     //! returns the EDPp power tolerance
     std::string get_ops_type(void) { return iet_ops_type; }
+
+    //! sets the EDPp power tolerance
+    void set_tp_flag(bool _tp_flag) { iet_tp_flag = _tp_flag; }
+    //! returns the EDPp power tolerance
+    bool get_tp_flag(void) { return iet_tp_flag; }
 
     //! sets the EDPp power tolerance
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }
@@ -137,8 +143,61 @@ class IETWorker : public rvs::ThreadBase {
 
     //! sets the JSON flag
     static void set_use_json(bool _bjson) { bjson = _bjson; }
+
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
+    //! returns the SGEMM matrix size
+    uint64_t get_matrix_size_a(void) { return matrix_size_a; }
+
+    //! returns the SGEMM matrix size
+    uint64_t get_matrix_size_b(void) { return matrix_size_b; }
+
+    //! returns the SGEMM matrix size
+    uint64_t get_matrix_size_c(void) { return matrix_size_b; }
+
+
+
+    //! sets the transpose matrix a
+    void set_matrix_transpose_a(int transa) {
+        iet_trans_a = transa;
+    }
+    //! sets the transpose matrix b
+    void set_matrix_transpose_b(int transb) {
+        iet_trans_b = transb;
+    }
+    //! sets alpha val
+    void set_alpha_val(float alpha_val) {
+        iet_alpha_val = alpha_val;
+    }
+    //! sets beta val
+    void set_beta_val(float beta_val) {
+        iet_beta_val = beta_val;
+    }
+
+    //! sets offsets
+    void set_lda_offset(int lda) {
+        iet_lda_offset = lda;
+    }
+    //! sets offsets
+    void set_ldb_offset(int ldb) {
+        iet_ldb_offset = ldb;
+    }
+    //! sets offsets
+    void set_ldc_offset(int ldc) {
+        iet_ldc_offset = ldc;
+    }
+   //! sets the SGEMM matrix size
+    void set_matrix_size_a(uint64_t _matrix_size_a) {
+        matrix_size_a = _matrix_size_a;
+    }
+   //! sets the SGEMM matrix size
+    void set_matrix_size_b(uint64_t _matrix_size_b) {
+        matrix_size_b = _matrix_size_b;
+    }
+   //! sets the SGEMM matrix size
+    void set_matrix_size_c(uint64_t _matrix_size_c) {
+        matrix_size_c = _matrix_size_c;
+    }
 
  protected:
     virtual void run(void);
@@ -199,6 +258,26 @@ class IETWorker : public rvs::ThreadBase {
     float avg_power_training;
     //! the SGEMM delay which gives the actual GPU SGEMM frequency
     float sgemm_si_delay;
+   //! SGEMM matrix size
+    uint64_t matrix_size_a;
+    uint64_t matrix_size_b;
+    uint64_t matrix_size_c;
+    //leading offsets
+    int iet_lda_offset;
+    int iet_ldb_offset;
+    int iet_ldc_offset;
+    //Matrix transpose A
+    int iet_trans_a;
+    //Matrix transpose B
+    int iet_trans_b;
+    //IET aplha value
+    float iet_alpha_val;
+    //IET beta value
+    float iet_beta_val;
+    //IET TP flag
+    bool iet_tp_flag;
+    //mtex
+    std::mutex mtx_blas_done;
 };
 
 
