@@ -7,6 +7,27 @@ The GPU Properties module queries the configuration of a target device and retur
 ## GPU Monitor – GM module
 The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information at regular intervals. The module can be configured to halt another RVS modules execution if one of the quantities exceeds a specified boundary value.
 
+## Memory Test – MEM module
+The memory module runs memory test on some or all of the GPU(s) installed and will report any detected erros. Following memory tests will run
+1. [Walking 1 bit]
+2. [Own address test]
+3. [Moving inversions, ones&zeros]
+4. [Moving inversions, 8 bit pat]
+5. [Moving inversions, random pattern]
+6. [Block move, 64 moves]
+7. [Moving inversions, 32 bit pat]
+8. [Random number sequence]
+9. [Modulo 20, random pattern]
+10. [Bit fade test]
+11. [Memory stress test]
+
+## Babel Memory Test – BABEL module
+The babel module runs babel test on some or all of the GPU(s) installed and will report any detected erros. Following  tests will run
+1. Float ( COPY, MUL, ADD, TRIAD, DOT)
+2. Double ( COPY, MUL, ADD, TRIAD, DOT)
+3. TRIAD Float
+4. TRIAD Double
+
 ## PCI Express State Monitor  – PESM module
 The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU. The module will register a “listener” on a target GPU’s PCIe interconnect, and log a message whenever it detects a state change. The PESM will be able to detect the following state changes:
 
