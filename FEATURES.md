@@ -19,9 +19,9 @@ The memory module runs memory test on some or all of the GPU(s) installed and wi
 8. [Random number sequence]
 9. [Modulo 20, random pattern]
 10. [Bit fade test]
-11. [Memory stress test]
+11. [HBM Memory stress test]
 
-## Babel Memory Test – BABEL module
+## HBM, Babel Memory Test (STRESS Test) – BABEL module
 The babel module runs babel test on some or all of the GPU(s) installed and will report any detected erros. Following  tests will run
 1. Float ( COPY, MUL, ADD, TRIAD, DOT)
 2. Double ( COPY, MUL, ADD, TRIAD, DOT)
