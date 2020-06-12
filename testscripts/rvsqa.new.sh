@@ -14,7 +14,7 @@ echo "==========================pesm========================="
 sudo  ./pesm.new.sh  2>&1 | tee pesm.txt
 echo "===========================pqt========================="
 sudo ./pqt.new.sh  2>&1 | tee pqt.txt
-echo "===========================rand========================="
-sudo ./rand.new.sh  2>&1 | tee rand.txt
+echo "===========================memory========================="
+sudo ./rvs-mem.sh  2>&1 | tee memory.txt
 
 echo "=========================RVS Suite completed, check txt for output============"
