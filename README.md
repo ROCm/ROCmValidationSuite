@@ -131,20 +131,20 @@ sudo /opt/rocm/rvs/rvs -d 3
 Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
 
 ### Running Long duration stress test
-
+```
 cd build/bin
 
 ./rvs-stress-long.sh (defaults to 1 hour stress test)
 
 ./rvs-stress-long.sh 3 (user specified no of hours for stress test)
-
+```
 
 ### Running HBM Memory test
-
+```
 cd build/bin
 
 ./rvs-mem.sh
-
+```
 ## Regression
 
 Simple regression has been implemented. You may find more about it
