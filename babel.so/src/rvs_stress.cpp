@@ -30,42 +30,40 @@ template <typename T>
 void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>& b, std::vector<T>& c, T& sum, uint64_t);
 
 template <typename T>
-void run_stress(int deviceId, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes);
+void run_stress(int deviceId, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
 
 template <typename T>
-void run_triad(int deviceId, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes);
+void run_triad(int deviceId, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
 
 void parseArguments(int argc, char *argv[]);
 
-void run_babel(int deviceId, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type) {
+void run_babel(int deviceId, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest) {
 
     switch(test_type) {
       case FLOAT_TEST:
-        run_stress<float>(deviceId, num_times, array_size, output_csv, mibibytes);
+        run_stress<float>(deviceId, num_times, array_size, output_csv, mibibytes, subtest);
         break;
 
       case DOUBLE_TEST:
-        run_stress<double>(deviceId, num_times, array_size, output_csv, mibibytes);;
+        run_stress<double>(deviceId, num_times, array_size, output_csv, mibibytes, subtest);
         break;
 
       case TRAID_FLOAT:
-        run_triad<float>(deviceId, num_times, array_size, output_csv, mibibytes);
+        run_triad<float>(deviceId, num_times, array_size, output_csv, mibibytes, subtest);
         break;
 
       case TRIAD_DOUBLE:
-        run_triad<double>(deviceId, num_times, array_size, output_csv, mibibytes);
+        run_triad<double>(deviceId, num_times, array_size, output_csv, mibibytes, subtest);
         break;
 
       default:
         std::cout << "\n specify a valid testnumber";
         break;
   }
-
-
 }
 
 template <typename T>
-void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes)
+void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
 {
   std::string   msg;
   std::streamsize ss = std::cout.precision();
@@ -196,7 +194,7 @@ void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_c
     2 * sizeof(T) * ARRAY_SIZE
   };
 
-  for (int i = 0; i < 5; i++)
+  for (int i = 0; i < subtest; i++)
   {
     // Get min/max; ignore the first result
     auto minmax = std::minmax_element(timings[i].begin()+1, timings[i].end());
@@ -236,7 +234,7 @@ void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_c
 }
 
 template <typename T>
-void run_triad(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes)
+void run_triad(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
 {
   std::string msg;
 

@@ -47,7 +47,6 @@ using std::vector;
 using std::map;
 using std::regex;
 
-
 /**
  * @brief default class constructor
  */
@@ -101,6 +100,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
             workers[i].set_mibibytes(mibibytes);
             workers[i].set_output_csv(output_csv);
             workers[i].set_num_iterations(num_iterations);
+            workers[i].set_subtest_type(subtest);
 
             i++;
         }
@@ -165,6 +165,14 @@ bool mem_action::get_all_mem_config_keys(void) {
                      &test_type, MEM_DEFAULT_TEST_TYPE)) {
         msg = "invalid '" +
         std::string(RVS_CONF_TEST_TYPE) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get_int<int>(RVS_CONF_SUBTEST,
+                     &subtest, MEM_DEFAULT_SUBTEST)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_SUBTEST) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
