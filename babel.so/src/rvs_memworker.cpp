@@ -38,7 +38,8 @@
 
 using std::string;
 bool MemWorker::bjson = false;
-extern void run_babel(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int test_type);
+extern void run_babel(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_csv, 
+    bool mibibytes, int test_type, int subtest);
 
 #define FLOAT_TEST     1 
 #define DOUBLE_TEST    2 
@@ -76,6 +77,6 @@ void MemWorker::run() {
 
     HIP_CHECK(hipSetDevice(deviceId));
 
-    run_babel(deviceId, num_iterations, array_size, output_csv, mibibytes, test_type);
+    run_babel(deviceId, num_iterations, array_size, output_csv, mibibytes, test_type, subtest);
 }
 

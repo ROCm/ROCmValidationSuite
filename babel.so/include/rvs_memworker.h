@@ -176,6 +176,13 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the test type
     int get_test_type(void) { return test_type; }
 
+    //! sets the sub test type
+    void set_subtest_type(int _test_type) {
+        subtest = _test_type;
+    }
+    //! returns the sub test type
+    int get_subtest_type(void) { return subtest; }
+
     //! sets the mibi bytes
     void set_mibibytes(bool _mibibytes) {
         mibibytes = _mibibytes;
@@ -225,6 +232,8 @@ class MemWorker : public rvs::ThreadBase {
     uint64_t array_size;
     //! Test type
     int test_type;
+    //! Sub Test type
+    int subtest;
 
     //! TRUE if JSON output is required
     static bool bjson;
