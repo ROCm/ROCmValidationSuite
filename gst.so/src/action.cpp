@@ -314,7 +314,7 @@ bool gst_action::get_all_gst_config_keys(void) {
         bsts = false;
     }
 
-    error = property_get_int<float>(RVS_CONF_ALPHA_VAL, &gst_alpha_val, GST_DEFAULT_ALPHA_VAL);
+    error = property_get<float>(RVS_CONF_ALPHA_VAL, &gst_alpha_val, GST_DEFAULT_ALPHA_VAL);
     if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_ALPHA_VAL) + "' key value";
@@ -322,7 +322,7 @@ bool gst_action::get_all_gst_config_keys(void) {
         bsts = false;
     }
 
-    error = property_get_int<float>(RVS_CONF_BETA_VAL, &gst_beta_val, GST_DEFAULT_BETA_VAL);
+    error = property_get<float>(RVS_CONF_BETA_VAL, &gst_beta_val, GST_DEFAULT_BETA_VAL);
     if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_BETA_VAL) + "' key value";

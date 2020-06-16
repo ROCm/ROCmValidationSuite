@@ -247,7 +247,7 @@ bool iet_action::get_all_iet_config_keys(void) {
         bsts = false;
     }
 
-    error = property_get_int<float>(RVS_CONF_ALPHA_VAL, &iet_alpha_val, IET_DEFAULT_ALPHA_VAL);
+    error = property_get<float>(RVS_CONF_ALPHA_VAL, &iet_alpha_val, IET_DEFAULT_ALPHA_VAL);
     if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_ALPHA_VAL) + "' key value";
@@ -255,7 +255,7 @@ bool iet_action::get_all_iet_config_keys(void) {
         bsts = false;
     }
 
-    error = property_get_int<float>(RVS_CONF_BETA_VAL, &iet_beta_val, IET_DEFAULT_BETA_VAL);
+    error = property_get<float>(RVS_CONF_BETA_VAL, &iet_beta_val, IET_DEFAULT_BETA_VAL);
     if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_BETA_VAL) + "' key value";
