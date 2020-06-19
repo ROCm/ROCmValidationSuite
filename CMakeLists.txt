@@ -30,6 +30,7 @@ endif ()
 
 set(ROCM_PATH "/opt/rocm" CACHE STRING "ROCM install path")
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE STRING "CMAKE installation directory")
+execute_process(COMMAND ln -s /usr/bin/python3 /usr/bin/python)
 
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
