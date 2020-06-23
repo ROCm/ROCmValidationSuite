@@ -129,6 +129,12 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, transa, transb, alpha, beta, 
           iet_lda_offset, iet_ldb_offset, iet_ldc_offset));
 
+    //Genreate random matrix data
+    gpu_blas->generate_random_matrix_data();
+
+    //Copy data to GPU
+    gpu_blas->copy_data_to_gpu(iet_ops_type);
+
     iet_start_time = std::chrono::system_clock::now();
     //Hit the GPU with load to increase temperature
     while(duration < run_duration_ms){
