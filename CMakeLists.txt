@@ -398,6 +398,8 @@ add_subdirectory(rcqt.so)
 add_subdirectory(smqt.so)
 add_subdirectory(mem.so)
 add_subdirectory(babel.so)
+add_subdirectory(edp.so)
+
 if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
 endif()
