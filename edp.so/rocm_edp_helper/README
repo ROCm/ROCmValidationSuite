@@ -1,0 +1,75 @@
+AMD EDP Irritator tool for the ROCm Software Stack
+
+See the file "LICENSE" for licensing information about this tool.
+
+This tool will attempt to irritate worse-case multi-GPU EDP scenarios. This
+tool must be run in conjunction with workloads that cause single-GPU EDP
+tests -- this tool does not cause anything new to run on the GPU.
+
+Instead, this application will find all AMD GPUs on the system and pause
+all work on those GPUs. It will then wait for a configurable period of time
+before attempting to start up all work on those GPUs at the same time. The goal
+is that if each GPU is running its own single-GPU EDP test, this will cause all
+EDP events to happena the same time. This will show the worst-case EDP for a
+multi-GPU scenario.
+
+===============================================================================
+Requirements for Building and Running
+===============================================================================
+This tool requires the following libraries to be installed:
+  * libpciaccess
+
+On RedHat-based Linux distributions, these can be installed by running:
+    sudo yum install libpciaccess libpciaccess-devel
+
+On Ubuntu-based Linux distributions, these can be installed by running:
+    sudo apt install libpciaccess-dev libpciaccess0
+
+This tool requires root access, as it uses /dev/mem to access the GPU.
+
+===============================================================================
+Building Tool
+===============================================================================
+Execute:
+    make
+
+===============================================================================
+Running Tool
+===============================================================================
+To run this tool:
+    Start by turning on a higher-power single-GPU EDP test application on all
+    target GPUs. Then, while those applications are running, execute:
+    ./rocm_edp_helper
+
+There are a few options available for this application
+   -d #, --delay #:
+        Number of nanoseconds to delay between waking up each wave-slot on the
+        GPUs' SIMDs. This can help smear out the EDP effect on a single GPU to
+        prevent any di/dt voltage droop problems.
+        When this is set to 0, we still iteratively walk through the waves, but
+        the time between each wakeup is limited only by MMIO latency.
+        Default: 0
+   -b, --broadcast:
+        Instead of iteratively waking up each wave slot, broadcast a single
+        wakeup command to all waves ont he entire GPU. When this is set, the
+        'delay' argument will be ignored.
+        This can cause much faster power ramp on the device, since all
+        high-powered waves can start up within 40-50 clock cycles.
+        However, this can cause di/dt voltage droop on each device, so use this
+        with caution. This may cause individual GPU EDP events that are higher
+        than we would see in real execution.
+   -p, --pthread:
+        Use pthread barriers instead of atomic spin-loops to try to synchronize
+        the CPU threads which will wake up each GPU. atomic spin-looops will
+        have lower latency and more consistency, but may cause more CPU work.
+        Setting this flag will reduce the CPU work at the expense of low
+        latency.
+   -s #, --sleep #:
+        Number of microseconds to delay between stopping all waves on each
+        device and trying to begin restarting the waves.
+        Default: 20000
+   -w #, --wake #:
+        Number of microseconds to delay between starting all the waves and
+        exiting this application. This should allow time for all of the waves
+        on the device to turn on.
+        Default: 5000
