@@ -23,15 +23,15 @@ Please do this before compilation/installing compiled package.
 
 Ubuntu : 
       
-        sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libpciaccess0 libpciaccess-dev
+        sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libpciaccess-dev
 
  CentOS7.x: 
         
-        sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ libpciaccess libpciaccess-devel
+        sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ libpciaccess-devel
  
  RHEL7.x : 
         
-       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ libpciaccess libpciaccess-devel
+       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ libpciaccess-devel
         
        wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
         
@@ -43,7 +43,7 @@ Ubuntu :
        
        sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
        
-       sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ libpciaccess0 libpciaccess-devel
+       sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ libpciaccess-devel
 
 ## Install ROCm stack, rocblas and rocm-smi-lib64
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
