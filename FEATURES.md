@@ -19,9 +19,9 @@ This module runs memory test on some or all of the GPU(s) installed and will rep
 8. [Random number sequence]
 9. [Modulo 20, random pattern]
 10. [Bit fade test]
-11. [HBM Memory stress test]
+11. [HBIM Memory stress test]
 
-## HBM, Babel Memory Test (STRESS Test) – BABEL module
+## HBIM, Babel Memory Test (STRESS Test) – BABEL module
 This module runs babel test on some or all of the GPU(s) installed and will report any detected errors. Following  tests will run
 1. Float ( COPY, MUL, ADD, TRIAD, DOT)
 2. Double ( COPY, MUL, ADD, TRIAD, DOT)
@@ -69,5 +69,9 @@ The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM (Single/Double-pr
 
 The test should be capable driving the power level equivalent to the rated TDP of the card, or levels below that. The tool must be capable of driving cards at TDP-50% to TDP-100%, in 10% incremental jumps. This should be controllable by the user.
 
-## Input EDPp Test  - IET module
-The Input EDPp Test generates EDP peak power on all input rails. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the board.  Peak Current at defined period  =  1 minute moving average power.
+## Input - IET module
+The Input IET Test generates peak power on all input rails. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the board.  Peak Current at defined period  =  1 minute moving average power.
+
+## Input - EDP module
+The Input EDP Test is simillar to the IET test, the IET power test has limitations on the maximum power that can be read from the user space, the power spikes are so instant that need to be captured/monitored periodcially at very small interval which is not possible from the user space, the EDP module is developed to monitor peak power with ease  but this peak power measurement can only be captured with oscilloscope. ( this test is not for the regular users)
+
