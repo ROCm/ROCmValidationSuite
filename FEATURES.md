@@ -70,8 +70,8 @@ The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM (Single/Double-pr
 The test should be capable driving the power level equivalent to the rated TDP of the card, or levels below that. The tool must be capable of driving cards at TDP-50% to TDP-100%, in 10% incremental jumps. This should be controllable by the user.
 
 ## Input - IET module
-The Input IET Test generates peak power on all input rails. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the board.  Peak Current at defined period  =  1 minute moving average power.
+The Input IET Test generates peak power on all input rails. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the board.  Peak Current at defined period  =  1 minute moving average power. IET module stresses the system to reach the traget power mentioned in the conf file.
 
 ## Input - EDP module
-The Input EDP Test is simillar to the IET test, the IET power test has limitations on the maximum power that can be read from the user space, the power spikes are so instant that need to be captured/monitored periodcially at very small interval which is not possible from the user space, the EDP module is developed to monitor peak power with ease  but this peak power measurement can only be captured with oscilloscope. ( this test is not for the regular users)
+The EDP Test is used to verify whether the system PSU can handle worst case power spikes on multiple GPUs simultaneously. 
 
