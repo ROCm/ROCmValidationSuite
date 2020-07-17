@@ -113,218 +113,6 @@ void EDPWorker::setup_blas(int *error, string *err_description) {
 }
 
 /**
- * @brief attempts to hit the maximum Gflops value
- * @param error pointer to a memory location where the error code will be stored
- * @param err_description stores the error description if any
- */
-void EDPWorker::hit_max_gflops(int *error, string *err_description) {
-    std::chrono::time_point<std::chrono::system_clock> edp_start_time,
-                                                    edp_end_time,
-                                                    edp_log_interval_time;
-    double seconds_elapsed = 0, curr_gflops;
-    uint16_t num_sgemm_ops_log_interval = 0;
-    uint64_t millis_sgemm_ops;
-    string msg;
-
-    *error = 0;
-    edp_start_time = std::chrono::system_clock::now();
-    edp_log_interval_time = std::chrono::system_clock::now();
-
-    for (;;) {
-        // check if stop signal was received
-        if (rvs::lp::Stopping())
-            break;
-
-        edp_end_time = std::chrono::system_clock::now();
-        if (time_diff(edp_end_time, edp_start_time) >=
-                            NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
-            break;
-
-        if (copy_matrix) {
-            // copy matrix before each GEMM
-            if (!gpu_blas->copy_data_to_gpu(edp_ops_type)) {
-                *error = 1;
-                *err_description = EDP_BLAS_MEMCPY_ERROR;
-                return;
-            }
-        }
-
-        // run GEMM & wait for completion
-        if (!gpu_blas->run_blass_gemm(edp_ops_type) )
-            continue;  // failed to run the current SGEMM
-
-        while (!gpu_blas->is_gemm_op_complete()) {}
-
-        num_sgemm_ops_log_interval++;
-
-        edp_end_time = std::chrono::system_clock::now();
-        millis_sgemm_ops = time_diff(edp_end_time, edp_log_interval_time);
-
-        if (millis_sgemm_ops >= log_interval) {
-            // compute the GFLOPS
-            seconds_elapsed = static_cast<double> (millis_sgemm_ops) / 1000;
-            if (seconds_elapsed != 0) {
-                curr_gflops = static_cast<double>(gpu_blas->gemm_gflop_count() *
-                                num_sgemm_ops_log_interval) / seconds_elapsed;
-                log_interval_gflops(curr_gflops);
-            }
-
-            num_sgemm_ops_log_interval = 0;
-            edp_log_interval_time = std::chrono::system_clock::now();
-        }
-    }
-}
-
-/**
- * @brief performs the ramp-up on the given GPU (attempts to reach the given 
- * target stress Gflops)
- * @param error pointer to a memory location where the error code will be stored
- * @param err_description stores the error description if any
- * @return true if target stress is achieved within the ramp_interval,
- * false otherwise
- */
-bool EDPWorker::do_edp_ramp(int *error, string *err_description) {
-    std::chrono::time_point<std::chrono::system_clock> edp_start_time,
-                                                    edp_end_time,
-                                                    edp_log_interval_time,
-                                                    edp_start_gflops_time,
-                                                    edp_last_sgemm_start_time,
-                                                    edp_last_sgemm_end_time;
-    double seconds_elapsed, curr_gflops, dyn_delay_target_stress;
-    uint16_t num_sgemm_ops = 0, num_sgemm_ops_log_interval = 0;
-    uint64_t millis_sgemm_ops, millis_last_sgemm;
-    uint16_t proc_delay = 0;
-    uint64_t start_time, end_time;
-    double timetakenforoneiteration, gflops_interval;
-    string msg;
-
-    // make sure that the ramp_interval & duration are not less than
-    // NMAX_MS_GPU_RUN_PEAK_PERFORMANCE (e.g.: 1000)
-    if (run_duration_ms < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
-        run_duration_ms += NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
-
-    if (ramp_interval < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
-        ramp_interval += NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
-
-    // stage 1. setup rvs blas
-    setup_blas(error, err_description);
-    if (*error)
-        return false;
-
-    // check if stop signal was received
-    if (rvs::lp::Stopping())
-        return false;
-
-    // stage 3. reduce the SGEMM frequency and try to achieve the desired Gflops
-    // the delay which gives the SGEMM frequency will be dynamically computed
-    delay_target_stress = 0;
-
-    edp_start_time = std::chrono::system_clock::now();
-    edp_log_interval_time = std::chrono::system_clock::now();
-    edp_start_gflops_time = std::chrono::system_clock::now();
-
-    for (;;) {
-        // check if stop signal was received
-        if (rvs::lp::Stopping())
-            return false;
-
-        edp_end_time = std::chrono::system_clock::now();
-        if (time_diff(edp_end_time,  edp_start_time) >
-                            ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
-            return false;
-
-        edp_last_sgemm_start_time = std::chrono::system_clock::now();
-
-        if (copy_matrix) {
-            // Genrate random matrix data
-            gpu_blas->generate_random_matrix_data();
-            // copy matrix before each GEMM
-            if (!gpu_blas->copy_data_to_gpu(edp_ops_type)) {
-                *error = 1;
-                *err_description = EDP_BLAS_MEMCPY_ERROR;
-                return false;
-            }
-        }
-
-        //Start the timer
-        start_time = gpu_blas->get_time_us();
-
-        // run GEMM & wait for completion
-        gpu_blas->run_blass_gemm(edp_ops_type);
-
-        //End the timer
-        end_time = gpu_blas->get_time_us();
-
-        //Converting microseconds to seconds
-        timetakenforoneiteration = (end_time - start_time)/1e6;
-
-        gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
-
- 
-        edp_last_sgemm_end_time = std::chrono::system_clock::now();
-        millis_last_sgemm =
-                time_diff(edp_last_sgemm_end_time, edp_last_sgemm_start_time);
-        if (static_cast<double>(
-                (1000 * gpu_blas->gemm_gflop_count()) /
-                    target_stress) <
-                        millis_last_sgemm) {
-            // last SGEMM timed-out (it took more than it should)
-            dyn_delay_target_stress = 1;
-        }
-
-
-        num_sgemm_ops++;
-        num_sgemm_ops_log_interval++;
-
-        edp_end_time = std::chrono::system_clock::now();
-        millis_sgemm_ops =
-                    time_diff(edp_end_time, edp_start_gflops_time);
-        if (millis_sgemm_ops >= NMAX_MS_SGEMM_OPS_RAMP_SUB_INTERVAL) {
-            // compute the GFLOPS
-            seconds_elapsed = static_cast<double>
-                                (millis_sgemm_ops) / 1000;
-            if (seconds_elapsed > 0) {
-                curr_gflops = static_cast<double>(
-                                    gpu_blas->gemm_gflop_count() *
-                                    num_sgemm_ops) / seconds_elapsed;
-                if (curr_gflops >= target_stress && curr_gflops <
-                        target_stress + target_stress * tolerance/2) {
-                    ramp_actual_time =
-                                time_diff(edp_end_time,  edp_start_time) +
-                                NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
-                    delay_target_stress /= num_sgemm_ops;
-                    return true;
-                }
-            }
-            proc_delay +=
-                (delay_target_stress * PROC_DEC_INC_SGEMM_FREQ_DELAY) / 100;
-            num_sgemm_ops = 0;
-            delay_target_stress = 0;
-            edp_start_gflops_time = std::chrono::system_clock::now();
-        }
-
-        millis_sgemm_ops =
-                    time_diff(edp_end_time, edp_log_interval_time);
-        if (millis_sgemm_ops >= log_interval) {
-            // compute the GFLOPS
-            seconds_elapsed = static_cast<double>
-                                (millis_sgemm_ops) / 1000;
-            if (seconds_elapsed > 0) {
-                curr_gflops = static_cast<double>(
-                                gpu_blas->gemm_gflop_count() *
-                                num_sgemm_ops_log_interval) / seconds_elapsed;
-                log_interval_gflops(gflops_interval);
-            }
-
-            num_sgemm_ops_log_interval = 0;
-            edp_log_interval_time = std::chrono::system_clock::now();
-        }
-    }
-
-    return false;
-}
-
-/**
  * @brief logs the Gflops computed over the last log_interval period 
  * @param gflops_interval the Gflops that the GPU achieved
  */
@@ -358,36 +146,13 @@ void EDPWorker::log_interval_gflops(double gflops_interval) {
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + EDP_LOG_GFLOPS_INTERVAL_KEY + " " +
             std::to_string(gflops_interval);
-    rvs::lp::Log(msg, rvs::logresults);
+    rvs::lp::Log(msg, rvs::loginfo);
 
     log_to_json(EDP_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);
 }
 
-/**
- * @brief checks for Gflops violation 
- * @param gflops_interval the Gflops that the GPU achieved over the last
- * log_interval period
- * @return true if this gflops violates the bounds, false otherwise
- */
-bool EDPWorker::check_gflops_violation(double gflops_interval) {
-    string msg;
 
-    if (!(gflops_interval > target_stress - target_stress * tolerance &&
-            gflops_interval < target_stress + target_stress * tolerance)) {
-        msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                std::to_string(gpu_id) + " " + EDP_STRESS_VIOLATION_MSG + " " +
-                std::to_string(gflops_interval);
-//        rvs::lp::Log(msg, rvs::loginfo);
-
-        //log_to_json(EDP_STRESS_VIOLATION_MSG, std::to_string(gflops_interval),
-         //           rvs::loginfo);
-        return true;
-    }
-
-
-    return false;
-}
 
 
 /**
@@ -416,11 +181,28 @@ bool EDPWorker::do_edp_stress_test(int *error, std::string *err_description) {
     edp_start_time = std::chrono::system_clock::now();
     edp_log_interval_time = std::chrono::system_clock::now();
 
+    // setup rvs blas
+    setup_blas(error, err_description);
+    if (*error)
+        return false;
+
     for (;;) {
+
+        //Start the timer
+        start_time = gpu_blas->get_time_us();
 
         // run GEMM & wait for completion
         gpu_blas->run_blass_gemm(edp_ops_type);
 
+        //End the timer
+        end_time = gpu_blas->get_time_us();
+
+        //Converting microseconds to seconds
+        timetakenforoneiteration = (end_time - start_time)/1e6;
+
+        gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
+
+        log_interval_gflops(gflops_interval);
 
         if(edp_hot_calls == 0) { 
            break;
@@ -432,23 +214,6 @@ bool EDPWorker::do_edp_stress_test(int *error, std::string *err_description) {
 
     return true;
 }
-
-#if 0
-void *enable_disable_waves(void *data)
-{
-  int interval = *(int *)data;
-  for (;;) {
-     std::cout << "\n In timer ";
-     if(flag) {
-       flag = false;
-     }else{
-       flag = true;
-     }
-
-    usleep(interval);
-  }
-}
-#endif
 
 
 /**
@@ -479,27 +244,6 @@ void EDPWorker::run() {
     log_to_json(EDP_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),
                 rvs::loginfo);
 
-    // let the GPU ramp-up and check the result
-    bool ramp_up_success = do_edp_ramp(&error, &err_description);
-
-    // GPU was not able to do the processing (HIP/rocBlas error(s) occurred)
-    if (error) {
-        string msg = "[" + action_name + "] " + MODULE_NAME + " "
-                        + std::to_string(gpu_id) + " " + err_description;
-        rvs::lp::Log(msg, rvs::logerror);
-        log_to_json("err", err_description, rvs::logerror);
-
-        return;
-    }
-
-    // the GPU succeeded to achieve the target_stress GFLOPS
-    // continue with the same workload for the rest of the test duration
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                std::to_string(gpu_id) + " " + " EDP ramp completed for interval :" + " " +
-                std::to_string(ramp_interval);
-    rvs::lp::Log(msg, rvs::loginfo);
-    log_to_json(EDP_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
-                    rvs::loginfo);
     if (run_duration_ms > 0) {
             edp_test_passed = do_edp_stress_test(&error, &err_description);
             // check if stop signal was received
