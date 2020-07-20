@@ -27,9 +27,9 @@
 
 ## generate conf files
 #MESSAGE("RVS PATH: ${CMAKE_CURRENT_SOURCE_DIR}")
-set(MAKE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../regression/make_pqt_conf.py")
+#set(MAKE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../regression/make_pqt_conf.py")
 #MESSAGE("COMMAND: ${MAKE_CMD}")
-execute_process(COMMAND ${MAKE_CMD})
+#execute_process(COMMAND ${MAKE_CMD})
 
 # include resulting .cmake file with random tests declarations
 include(${CMAKE_CURRENT_SOURCE_DIR}/rand_tests.cmake)
