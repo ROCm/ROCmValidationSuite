@@ -3,20 +3,13 @@ The ROCm Validation Suite (RVS) is a system administrator’s and cluster manage
 
 The RVS is a collection of tests, benchmarks and qualification tools each targeting a specific sub-system of the ROCm platform. All of the tools are implemented in software and share a common command line interface. Each set of tests are implemented in a “module” which is a library encapsulating the functionality specific to the tool. The CLI can specify the directory containing modules to use when searching for libraries to load. Each module may have a set of options that it defines and a configuration file that supports its execution.
 
-RVS supports the following tests on AMD GPU platform:
+List of tests that can be run by a customer/user [link](./CUSTOMER.md).
 
-    - List GPU configuration 
-    - GPU stress and bandwidth tests
-    - Tests to reach peak power 
-    - Memory stress test (HBM stress)
-    - Babel memory stress test (HBM stress)
-    - PCIe bandwidth tests
-    - GPU <-> GPU bandwidth tests
-    - and state monitoring tests
-    
 The function of each module see this [link](./FEATURES.md).
 
 Examples and about config files [link](./doc/ugsrc/ug1main.md).
+
+## Build and Installation
 
 ## Prerequisites 
 Please do this before compilation/installing compiled package.
@@ -120,32 +113,16 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
 
 ## Running RVS
 
-### Running version built from source code:
-
     cd ./build/bin
     sudo ./rvsqa.new.sh ; It will run complete rvs test suite
 
 ### Running version pre-complied and packaged with ROCm release
    
     sudo /opt/rocm/rvs/rvs -d 3
+    sudo /opt/rocm/rvs/rvsqa.new.sh 
    
 Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
 
-### Running Long duration stress test
-   
-    cd build/bin
-
-    ./rvs-stress-long.sh (defaults to 1 hour stress test)
-
-    ./rvs-stress-long.sh 3 (user specified no of hours for stress test)
-   
-
-### Running HBM Memory test
-   
-    cd build/bin
-
-    ./rvs-mem.sh
-   
 ## Regression
 
 Simple regression has been implemented. You may find more about it
