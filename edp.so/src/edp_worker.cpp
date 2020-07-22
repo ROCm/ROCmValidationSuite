@@ -261,7 +261,6 @@ void EDPWorker::run() {
     }
 
     log_interval_gflops(max_gflops);
-    check_target_stress(max_gflops);
 }
 
 /**
