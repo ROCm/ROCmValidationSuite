@@ -115,16 +115,31 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
 }
 
 
+
+/**
+ * @brief logs the Gflops computed over the last log_interval period
+ * @param gflops_interval the Gflops that the GPU achieved
+ */
+void log_interval_gflops(double gflops_interval) {
+    string msg;
+    msg = " GPU flops :" + std::to_string(gflops_interval);
+    rvs::lp::Log(msg, rvs::logtrace);
+}
+
 void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 
     bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
     int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset)
 {
-    std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time;
+    std::chrono::time_point<std::chrono::system_clock> iet_start_time, iet_end_time;
+    double timetakenforoneiteration;
+    double gflops_interval;
+    double duration;
+    uint64_t gem_ops;
     std::unique_ptr<rvs_blas> gpu_blas;
     rvs_blas  *free_gpublas;
-    uint64_t  duration;
 
     duration = 0;
+    gem_ops = 0;
    // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, transa, transb, alpha, beta, 
           iet_lda_offset, iet_ldb_offset, iet_ldc_offset));
@@ -138,9 +153,28 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     iet_start_time = std::chrono::system_clock::now();
     //Hit the GPU with load to increase temperature
     while(duration < run_duration_ms){
+         //call the gemm blas
          gpu_blas->run_blass_gemm(iet_ops_type);
-         end_time = std::chrono::system_clock::now();
-         duration = time_diff(end_time, iet_start_time);
+         //get the end time
+         iet_end_time = std::chrono::system_clock::now();
+         //Duration in the call
+         duration = time_diff(iet_end_time, iet_start_time);
+         gem_ops++;
+
+         //Converting microseconds to seconds
+         timetakenforoneiteration = duration/1e6;
+         //calculating Gemm count
+         gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
+         //Print the gflops interval
+         log_interval_gflops(gflops_interval);
+
+         //if gemm ops greater than 10000, lets yield
+         //if this is not happening we are ending up in
+         //out of memmory state
+         if(gem_ops > 10000) {
+             sleep(2);
+             gem_ops = 0;
+         }
     }
 
     free_gpublas = gpu_blas.release();
