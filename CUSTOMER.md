@@ -6,6 +6,7 @@ RVS supports different tests, some of the test that can be run by the customer a
 - rvs/conf/           This directory contains stress and perforance tests and other tests like state monitoring tests
 - rvs/conf/archive    This directory contains example tests that can be referred to create new tests
 
+<pre>
 
 ## Listing out the customer directory tests (rvs/conf/customer/)
 1.	GPU properties                               : gpup.conf
@@ -20,7 +21,24 @@ RVS supports different tests, some of the test that can be run by the customer a
 10.	Memory stress test                           : memory_stress.conf
 11.	PCIe unidirectional bandwidth tests          : PCIE_unidir_BW_test.conf 
 12.	PCIe bidirectional bandwidth tests           : PCIE_bidir_BW_test.conf
+13.	GPU power virus test                         : power_virus_test.conf
 
+</pre>
+
+### Running Tests:
+
+<pre>
+Two ways:
+
+ - If RVS is installed with sudo apt-get install or sudo yum install (check the install section in README page) 
+   cd /opt/rocm/rvs
+   ./rvs -c conf/customer/gpup.conf
+   
+ - If RVS is built from the source 
+    cd build/bin
+    ./rvs -c conf/customer/gpup.conf
+ </pre>
+    
 ### Running Long duration stress test
     cd build/bin
     ./rvs-stress-long.sh (defaults to 1 hour stress test)
