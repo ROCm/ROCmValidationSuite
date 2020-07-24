@@ -350,7 +350,7 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " +
             std::to_string(gflops_interval);
-    rvs::lp::Log(msg, rvs::logresults);
+    rvs::lp::Log(msg, rvs::loginfo);
 
     log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);
@@ -429,34 +429,17 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         //End the timer
         end_time = gpu_blas->get_time_us();
 
-        num_sgemm_ops++;
+        total_milliseconds = (end_time - start_time);
 
-        gst_end_time = std::chrono::system_clock::now();
-        total_milliseconds = time_diff(gst_end_time, gst_start_time);
-        log_interval_milliseconds = time_diff(gst_end_time,
-                                              gst_log_interval_time);
+	//convert to seconds
+	timetakenforoneiteration = total_milliseconds/1e6;
 
-        if (log_interval_milliseconds >= log_interval && num_sgemm_ops > 0) {
-            seconds_elapsed = static_cast<double> (log_interval_milliseconds) /
-                                1000;
-            if (seconds_elapsed != 0) {
+	gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
 
-                //Converting microseconds to seconds
-                timetakenforoneiteration = (end_time - start_time)/1e6;
+        if (gflops_interval > max_gflops)
+              max_gflops = gflops_interval;
 
-                gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
-
-                if (gflops_interval > max_gflops)
-                    max_gflops = gflops_interval;
-
-                log_interval_gflops(max_gflops);
-
-                // reset time & gflops related data
-                num_sgemm_ops = 0;
-                gst_log_interval_time = std::chrono::system_clock::now();
-            }
-        }
-
+        log_interval_gflops(max_gflops);
 
         if(!gst_hot_calls) {
                msg = "[" + action_name + "] " + MODULE_NAME + " " +
