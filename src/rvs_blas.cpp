@@ -364,8 +364,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
                          &alpha, da, blas_lda_offset,
                          db, blas_ldb_offset, &beta,
                          dc, blas_ldc_offset) != rocblas_status_success) {
-                 is_error = true;  // GPU cannot enqueue the gemm
-                 return false;
+                    is_error = true;  // GPU cannot enqueue the gemm
+                    return false;
                  } else {
                       return true;
                  }
@@ -380,32 +380,41 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
                           &alpha, ddbla, blas_lda_offset,
                           ddblb, blas_ldb_offset, &beta,
                           ddblc, blas_ldc_offset) != rocblas_status_success) {
-                  is_error = true;  // GPU cannot enqueue the gemm
-                  return false;
+                       is_error = true;  // GPU cannot enqueue the gemm
+                       return false;
                   } else {
                        return true;
                   }
        }
 
       if(ops_type == "hgemm") {
-                  rocblas_half alpha;
-                  rocblas_half beta;
+                  rocblas_float alpha;
+                  rocblas_float beta;
+                  rocblas_datatype a_type = rocblas_datatype_f16_r;
+                  rocblas_datatype b_type = rocblas_datatype_f16_r;
+                  rocblas_datatype c_type = rocblas_datatype_f16_r;
+                  rocblas_datatype d_type = rocblas_datatype_f16_r;
+                  rocblas_datatype compute_type = rocblas_datatype_f32_r;
+                  rocblas_gemm_algo algo = static_cast<rocblas_gemm_algo>(0);
+                  int sol_index = 0;
+                  int flags = 10;
 
-                  alpha.data = blas_alpha_val;
-                  beta.data = blas_beta_val;
+                  alpha = blas_alpha_val;
+                  beta  = blas_beta_val;
 
-                  if (rocblas_hgemm(blas_handle, transa, transb,
+                  if (rocblas_gemm_ex(blas_handle, transa, transb,
                           rvs_blas::m, rvs_blas::n, rvs_blas::k,
-                          &alpha, dhlfa, blas_lda_offset,
-                          dhlfb, blas_ldb_offset, &beta,
-                          dhlfc, blas_ldc_offset) != rocblas_status_success) {
-                  is_error = true;  // GPU cannot enqueue the gemm
-                  return false;
+                          &alpha, dhlfa, a_type, blas_lda_offset,
+                          dhlfb, b_type, blas_ldb_offset, &beta,
+                          dhlfc, c_type, blas_ldc_offset,
+                          dhlfc, d_type, blas_ldc_offset,
+                          compute_type, algo, sol_index, flags) != rocblas_status_success) {
+                       is_error = true;  // GPU cannot enqueue the gemm
+                       return false;
                   } else {
                        return true;
                   }
        }
-
 
     } else {
         return false;
