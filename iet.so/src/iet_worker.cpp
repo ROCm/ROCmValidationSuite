@@ -172,7 +172,7 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
          //if this is not happening we are ending up in
          //out of memmory state
          if(gem_ops > 10000) {
-             sleep(2);
+             sleep(1);
              gem_ops = 0;
          }
     }
@@ -306,4 +306,6 @@ void IETWorker::run() {
                std::to_string(gpu_id) + " " + IET_PASS_KEY + ": " +
                (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
     rvs::lp::Log(msg, rvs::logresults);
+
+    sleep(5);
 }
