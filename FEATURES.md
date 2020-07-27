@@ -10,7 +10,6 @@ The GPU monitor tool is capable of running on one, some or all of the GPU(s) ins
 ## Memory Test – MEM module
 This module runs memory test on some or all of the GPU(s) installed and will report any detected erros. Following memory tests will run
 1. [Walking 1 bit]
-2. [Own address test]
 3. [Moving inversions, ones&zeros]
 4. [Moving inversions, 8 bit pat]
 5. [Moving inversions, random pattern]
@@ -34,28 +33,6 @@ The PCIe State Monitor tool is used to actively monitor the PCIe interconnect be
 1.	PCIe link speed changes
 2.	GPU power state changes
 
-## ROCm Configuration Qualification Tool  - RCQT module
-The ROCm Configuration Qualification Tool ensures the platform is capable of running ROCm applications and is configured correctly. It checks the installed versions of the ROCm components and the platform configuration of the system. This includes checking that dependencies, corresponding to the associated operating system and runtime environment, are installed correctly. Other qualification steps include checking:
-
-1.	The existence of the /dev/kfd device
-2.	The /dev/kfd device’s permissions
-3.	The existence of all required users and groups that support ROCm
-4.	That the user mode components are compatible with the drivers, both the KFD and the amdgpu driver.
-5.	The configuration of the runtime linker/loader qualifying that all ROCm libraries are in the correct search path.
-
-## PCI Express Qualification Tool – PEQT module
-The PCIe Qualification Tool consists is used to qualify the PCIe bus on which the GPU is connected. The qualification test will be capable of determining the following characteristics of the PCIe bus interconnect to a GPU:
-
-1.	Support for Gen 3 atomic completers
-2.	DMA transfer statistics
-3.	PCIe link speed
-4.	PCIe link width
-
-## SBIOS Mapping Qualification Tool – SMQT module
-The GPU SBIOS mapping qualification tool is designed to verify that a platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct products for ROCm support.
-
-Refer to the “ROCm Use of Advanced PCIe Features and Overview of How BAR Memory is Used In ROCm Enabled System” web page for more information about how BAR memory is initialized by VDI and Radeon products.
-
 ## P2P Benchmark and Qualification Tool – PBQT module
 The P2P Benchmark and Qualification Tool  is designed to provide the list of all GPUs that support P2P and characterize the P2P links between peers. In addition to testing for P2P compatibility, this test will perform a peer-to-peer throughput test between all P2P pairs for performance evaluation. The P2P Benchmark and Qualification Tool will allow users to pick a collection of two or more GPUs on which to run. The user will also be able to select whether or not they want to run the throughput test on each of the pairs.
 
@@ -74,4 +51,27 @@ The Input IET Test generates peak power on all input rails. This test is used to
 
 ## Input - EDP module
 The EDP Test is used to verify whether the system PSU can handle worst case power spikes on multiple GPUs simultaneously. 
+
+## Below modules are depreciated 
+## ROCm Configuration Qualification Tool  - RCQT module (Depreciated)
+The ROCm Configuration Qualification Tool ensures the platform is capable of running ROCm applications and is configured correctly. It checks the installed versions of the ROCm components and the platform configuration of the system. This includes checking that dependencies, corresponding to the associated operating system and runtime environment, are installed correctly. Other qualification steps include checking:
+
+1.	The existence of the /dev/kfd device
+2.	The /dev/kfd device’s permissions
+3.	The existence of all required users and groups that support ROCm
+4.	That the user mode components are compatible with the drivers, both the KFD and the amdgpu driver.
+5.	The configuration of the runtime linker/loader qualifying that all ROCm libraries are in the correct search path.
+
+## PCI Express Qualification Tool – PEQT module (Depreciated)
+The PCIe Qualification Tool consists is used to qualify the PCIe bus on which the GPU is connected. The qualification test will be capable of determining the following characteristics of the PCIe bus interconnect to a GPU:
+
+1.	Support for Gen 3 atomic completers
+2.	DMA transfer statistics
+3.	PCIe link speed
+4.	PCIe link width
+
+## SBIOS Mapping Qualification Tool – SMQT module (Depreciated)
+The GPU SBIOS mapping qualification tool is designed to verify that a platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct products for ROCm support.
+
+Refer to the “ROCm Use of Advanced PCIe Features and Overview of How BAR Memory is Used In ROCm Enabled System” web page for more information about how BAR memory is initialized by VDI and Radeon products.
 
