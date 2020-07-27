@@ -27,11 +27,6 @@ This module runs babel test on some or all of the GPU(s) installed and will repo
 3. TRIAD Float
 4. TRIAD Double
 
-## PCI Express State Monitor  – PESM module
-The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU. The module will register a “listener” on a target GPU’s PCIe interconnect, and log a message whenever it detects a state change. The PESM will be able to detect the following state changes:
-
-1.	PCIe link speed changes
-2.	GPU power state changes
 
 ## P2P Benchmark and Qualification Tool – PBQT module
 The P2P Benchmark and Qualification Tool  is designed to provide the list of all GPUs that support P2P and characterize the P2P links between peers. In addition to testing for P2P compatibility, this test will perform a peer-to-peer throughput test between all P2P pairs for performance evaluation. The P2P Benchmark and Qualification Tool will allow users to pick a collection of two or more GPUs on which to run. The user will also be able to select whether or not they want to run the throughput test on each of the pairs.
@@ -74,4 +69,10 @@ The PCIe Qualification Tool consists is used to qualify the PCIe bus on which th
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct products for ROCm support.
 
 Refer to the “ROCm Use of Advanced PCIe Features and Overview of How BAR Memory is Used In ROCm Enabled System” web page for more information about how BAR memory is initialized by VDI and Radeon products.
+
+## PCI Express State Monitor  – PESM module (Depreciated)
+The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU. The module will register a “listener” on a target GPU’s PCIe interconnect, and log a message whenever it detects a state change. The PESM will be able to detect the following state changes:
+
+1.	PCIe link speed changes
+2.	GPU power state changes
 
