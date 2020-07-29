@@ -39,16 +39,46 @@
  * @param _k matrix size
  */
 rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, int transB, 
-                    float alpha , float beta, int lda, int ldb, int ldc) : gpu_device_index(_gpu_device_index),
+                    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc) : gpu_device_index(_gpu_device_index),
                              m(_m), n(_n), k(_k){
     is_handle_init = false;
     is_error = false;
     da = db = dc = NULL;
     ha = hb = hc = nullptr;
 
-    size_a = k * m;
-    size_b = k * n;
-    size_c = n * m;
+    if(transA == 0) {
+	 //std::cout << "\n Trans A is none";
+         transa = rocblas_operation_none;
+    }else{
+	 //std::cout << "\n Trans A is transpoe";
+         transa = rocblas_operation_transpose;
+    }
+
+    if(transB == 0) {
+	 //std::cout << "\n Trans B is none";
+         transb = rocblas_operation_none;
+    }else{
+	 //std::cout << "\n Trans B is transpoe";
+         transb = rocblas_operation_transpose;
+    }
+
+
+    auto    A_row = transA == rocblas_operation_none ? m : k;
+    auto    A_col = transA == rocblas_operation_none ? k : m;
+    auto    B_row = transB == rocblas_operation_none ? k : n;
+    auto    B_col = transB == rocblas_operation_none ? n : k;
+
+    size_a = size_t(lda) * size_t(A_col);
+    size_b = size_t(ldb) * size_t(B_col);
+    size_c = size_t(ldc) * size_t(n);
+    size_d = size_t(ldc) * size_t(n);
+
+#if 0
+    std::cout << "\n Size a : " << size_a;
+    std::cout << "\n Size b : " << size_b;
+    std::cout << "\n Size c : " << size_c;
+    std::cout << "\n Size d : " << size_d;
+#endif
 
     if (alocate_host_matrix_mem()) {
         if (!init_gpu_device())
@@ -57,25 +87,13 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, in
         is_error = true;
     }
 
-    if(transA == 0) {
-         transa = rocblas_operation_none;
-    }else{
-         transa = rocblas_operation_transpose;
-    }
-
-    if(transB == 0) {
-         transb = rocblas_operation_none;
-    }else{
-         transb = rocblas_operation_transpose;
-    }
-
     //setting alpha and beta val
     blas_alpha_val = alpha;
     blas_beta_val = beta;
 
     //setting lda offsets 
     //Leading data offsets
-    if(blas_lda_offset == 0 || blas_lda_offset == 0 || blas_ldc_offset == 0) {
+    if(lda == 0 || ldb == 0 || ldc == 0) {
        blas_lda_offset = m;
        blas_ldb_offset = n;
        blas_ldc_offset = k;
@@ -239,6 +257,8 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
         return false;
     if (hipMalloc(&dhlfc, size_c * sizeof(rocblas_half)) != hipSuccess)
         return false;
+    if (hipMalloc(&dhlfd, size_d * sizeof(rocblas_half)) != hipSuccess)
+        return false;
 
     return true;
 }
@@ -279,6 +299,8 @@ void rvs_blas::release_gpu_matrix_mem(void) {
         hipFree(dhlfb);
     if (dhlfc)
         hipFree(dhlfc);
+    if (dhlfd)
+        hipFree(dhlfd);
 
     if (is_handle_init)
         rocblas_destroy_handle(blas_handle);
@@ -402,14 +424,26 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
                   alpha = blas_alpha_val;
                   beta  = blas_beta_val;
 
+#if 0
+		  std::cout << "\n M size : " << rvs_blas::m;
+		  std::cout << "\n N size : " << rvs_blas::n;
+		  std::cout << "\n K size : " << rvs_blas::k;
+		  std::cout << "\n Alpha : " << alpha;
+		  std::cout << "\n Beta : " << beta;
+		  std::cout << "\n LDA : " << blas_lda_offset;
+		  std::cout << "\n LDB : " << blas_ldb_offset;
+		  std::cout << "\n LDC : " << blas_ldc_offset;
+#endif
+
                   if (rocblas_gemm_ex(blas_handle, transa, transb,
                           rvs_blas::m, rvs_blas::n, rvs_blas::k,
                           &alpha, dhlfa, a_type, blas_lda_offset,
                           dhlfb, b_type, blas_ldb_offset, &beta,
                           dhlfc, c_type, blas_ldc_offset,
-                          dhlfc, d_type, blas_ldc_offset,
+                          dhlfc, c_type, blas_ldc_offset,
                           compute_type, algo, sol_index, flags) != rocblas_status_success) {
                        is_error = true;  // GPU cannot enqueue the gemm
+                       std::cout << "\n Error in Hgemm " << "\n";
                        return false;
                   } else {
                        return true;
