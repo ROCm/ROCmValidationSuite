@@ -142,7 +142,7 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     gem_ops = 0;
    // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, transa, transb, alpha, beta, 
-          iet_lda_offset, iet_ldb_offset, iet_ldc_offset));
+          iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ops_type));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();

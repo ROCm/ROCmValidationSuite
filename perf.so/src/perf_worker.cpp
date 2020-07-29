@@ -79,7 +79,7 @@ void PERFWorker::setup_blas(int *error, string *err_description) {
         new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
                         matrix_size_c, perf_trans_a, perf_trans_b,
                         perf_alpha_val, perf_beta_val, 
-                        perf_lda_offset, perf_ldb_offset, perf_ldc_offset));
+                        perf_lda_offset, perf_ldb_offset, perf_ldc_offset, perf_ops_type));
 
     if (!gpu_blas) {
         *error = 1;
