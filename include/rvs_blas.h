@@ -43,7 +43,7 @@ class rvs_blas {
  public:
     rvs_blas(int _gpu_device_index, int _m, int _n, int _k, 
         int transa, int transb, float aplha, float beta, 
-        int lda, int ldb, int ldc);
+        int lda, int ldb, int ldc, std::string ops_type);
     ~rvs_blas();
 
     //! returns the GPU index

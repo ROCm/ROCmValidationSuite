@@ -39,7 +39,7 @@
  * @param _k matrix size
  */
 rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, int transB, 
-                    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc) : gpu_device_index(_gpu_device_index),
+                    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string ops_type) : gpu_device_index(_gpu_device_index),
                              m(_m), n(_n), k(_k){
     is_handle_init = false;
     is_error = false;
@@ -47,38 +47,32 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, in
     ha = hb = hc = nullptr;
 
     if(transA == 0) {
-	 //std::cout << "\n Trans A is none";
          transa = rocblas_operation_none;
     }else{
-	 //std::cout << "\n Trans A is transpoe";
          transa = rocblas_operation_transpose;
     }
 
     if(transB == 0) {
-	 //std::cout << "\n Trans B is none";
          transb = rocblas_operation_none;
     }else{
-	 //std::cout << "\n Trans B is transpoe";
          transb = rocblas_operation_transpose;
     }
 
+    if(ops_type == "hgemm") {
+        auto    A_row = transA == rocblas_operation_none ? m : k;
+        auto    A_col = transA == rocblas_operation_none ? k : m;
+        auto    B_row = transB == rocblas_operation_none ? k : n;
+        auto    B_col = transB == rocblas_operation_none ? n : k;
 
-    auto    A_row = transA == rocblas_operation_none ? m : k;
-    auto    A_col = transA == rocblas_operation_none ? k : m;
-    auto    B_row = transB == rocblas_operation_none ? k : n;
-    auto    B_col = transB == rocblas_operation_none ? n : k;
-
-    size_a = size_t(lda) * size_t(A_col);
-    size_b = size_t(ldb) * size_t(B_col);
-    size_c = size_t(ldc) * size_t(n);
-    size_d = size_t(ldc) * size_t(n);
-
-#if 0
-    std::cout << "\n Size a : " << size_a;
-    std::cout << "\n Size b : " << size_b;
-    std::cout << "\n Size c : " << size_c;
-    std::cout << "\n Size d : " << size_d;
-#endif
+        size_a = size_t(lda) * size_t(A_col);
+        size_b = size_t(ldb) * size_t(B_col);
+        size_c = size_t(ldc) * size_t(n);
+        size_d = size_t(ldc) * size_t(n);
+    }else{
+      size_a = k * m;
+      size_b = k * n;
+      size_c = n * m;
+    }
 
     if (alocate_host_matrix_mem()) {
         if (!init_gpu_device())

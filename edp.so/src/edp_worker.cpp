@@ -87,7 +87,7 @@ void EDPWorker::setup_blas(int *error, string *err_description) {
         new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
                         matrix_size_c, edp_trans_a, edp_trans_b,
                         edp_alpha_val, edp_beta_val, 
-                        edp_lda_offset, edp_ldb_offset, edp_ldc_offset));
+                        edp_lda_offset, edp_ldb_offset, edp_ldc_offset, edp_ops_type));
 
     if (!gpu_blas) {
         *error = 1;

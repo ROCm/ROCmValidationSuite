@@ -79,7 +79,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
         new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
                         matrix_size_c, gst_trans_a, gst_trans_b,
                         gst_alpha_val, gst_beta_val, 
-                        gst_lda_offset, gst_ldb_offset, gst_ldc_offset));
+                        gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ops_type));
 
     if (!gpu_blas) {
         *error = 1;
@@ -250,7 +250,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
         //Converting microseconds to seconds
         timetakenforoneiteration = (end_time - start_time)/1e6;
 
-        gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
+        gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
 
  
         gst_last_sgemm_end_time = std::chrono::system_clock::now();
@@ -444,7 +444,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
                 //Converting microseconds to seconds
                 timetakenforoneiteration = (end_time - start_time)/1e6;
 
-                gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
+                gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
 
                 if (gflops_interval > max_gflops)
                     max_gflops = gflops_interval;
