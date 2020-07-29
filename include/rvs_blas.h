@@ -60,9 +60,9 @@ class rvs_blas {
     uint64_t get_bytes_copied_per_op(void) {
         return sizeof(float) * (size_a + size_b + size_c);
     }
-    //! computes the gflop for a SGEMM operation
+
     double gemm_gflop_count(void) {
-        return static_cast<double>(2.0 * m * n * k);
+        return (2.0 * m * n * k) / 1e9;
     }
 
     double get_time_us(void);
@@ -88,6 +88,7 @@ class rvs_blas {
     rocblas_int size_b;
     //! amount of memory to allocate for the matrix
     rocblas_int size_c;
+    rocblas_int size_d;
     //! Transpose matrix A
     rocblas_operation transa;
     //! Transpose matrix B
@@ -138,6 +139,7 @@ class rvs_blas {
     rocblas_half *dhlfb;
     //! pointer to device (GPU) memory
     rocblas_half *dhlfc;
+    rocblas_half *dhlfd;
     //! pointer to host memory
     rocblas_half *hhlfa;
     //! pointer to host memory
