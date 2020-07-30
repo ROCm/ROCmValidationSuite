@@ -9,19 +9,22 @@ RVS supports different tests, some of the test that can be run by the customer a
 <pre>
 
 ## Listing out the customer directory tests (rvs/conf/customer/)
-1.	GPU properties                               : gpup.conf
-2.	GST SGEMM stress/performance test            : gst_sgemm.conf 
-3.	GST DGEMM stress/performance test            : gst_dgemm.conf 
-4.	GST HGEMM stress/performance test            : gst_hgemm.conf 
-5.	GPU2GPU uni-directional bandwidth            : gpu2gpu_unidir_bw.conf
-6.	GPU2GPU bi-directional bandwidth             : gpu2gpu_bidir_bw.conf
-7.	Power 200W test                              : iet_200W.conf
-8.	Power 220W test                              : iet_220W.conf
-9.	Memory Test                                  : mem.conf
+1.	GPU properties                                : gpup.conf
+2.	GST SGEMM stres                               : gst_sgemm.conf 
+3.	GST DGEMM stress                              : gst_dgemm.conf 
+4.	GST HGEMM stress                              : gst_hgemm.conf 
+5.	GPU2GPU uni-directional bandwidth             : gpu2gpu_unidir_bw.conf
+6.	GPU2GPU bi-directional bandwidth              : gpu2gpu_bidir_bw.conf
+7.	Power 200W test                               : iet_200W.conf
+8.	Power 220W test                               : iet_220W.conf
+9.	Memory Test                                   : mem.conf
 10.	Memory stress test                           : memory_stress.conf
 11.	PCIe unidirectional bandwidth tests          : PCIE_unidir_BW_test.conf 
 12.	PCIe bidirectional bandwidth tests           : PCIE_bidir_BW_test.conf
 13.	GPU power virus test                         : power_virus_test.conf
+14. Performance number for SGEMM                 : perf_sgemm.conf
+15. Performance number for DGEMM                 : perf_dgemm.conf
+16. Peformance number for HGEMM                  : perf_hgemm.conf
 
 </pre>
 
