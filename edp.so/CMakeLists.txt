@@ -75,7 +75,7 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 set(ROCBLAS_LIB "rocblas")
-set(HIP_HCC_LIB "hip_hcc")
+set(HIP_HCC_LIB "amdhip64")
 
 # Determine HSA_PATH
 if(NOT DEFINED HIPCC_PATH)
