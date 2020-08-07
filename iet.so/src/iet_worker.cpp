@@ -178,7 +178,6 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     }
 
     free_gpublas = gpu_blas.release();
-    delete free_gpublas;
 }
 
 
