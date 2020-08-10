@@ -64,6 +64,7 @@
 using std::string;
 
 bool IETWorker::bjson = false;
+bool endtest = false;
 
 
 /**
@@ -152,7 +153,7 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
 
     iet_start_time = std::chrono::system_clock::now();
     //Hit the GPU with load to increase temperature
-    while(duration < run_duration_ms){
+    while ( (duration < run_duration_ms) && (endtest == false) ){
          //call the gemm blas
          gpu_blas->run_blass_gemm(iet_ops_type);
          //get the end time
@@ -178,6 +179,7 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     }
 
     free_gpublas = gpu_blas.release();
+    delete free_gpublas;
 }
 
 
@@ -250,6 +252,7 @@ bool IETWorker::do_iet_power_stress(void) {
             break;
 	}
 
+       //It doesnt make sense to read power continously so slowing down
        sleep(1000);
 
        // check if stop signal was received
@@ -274,6 +277,8 @@ bool IETWorker::do_iet_power_stress(void) {
        msg = "[" + action_name + "] " + MODULE_NAME + " " +
                    std::to_string(gpu_id) + " " + " End of worker thread " ;
        rvs::lp::Log(msg, rvs::loginfo);
+
+       endtest = true;
 
        return result;
 }
