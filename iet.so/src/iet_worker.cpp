@@ -165,7 +165,7 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
          //Converting microseconds to seconds
          timetakenforoneiteration = duration/1e6;
          //calculating Gemm count
-         gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
+         gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
          //Print the gflops interval
          log_interval_gflops(gflops_interval);
 
