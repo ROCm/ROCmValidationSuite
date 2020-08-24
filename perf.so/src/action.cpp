@@ -567,5 +567,7 @@ int perf_action::run(void) {
         return -1;
     }
 
-    return get_all_selected_gpus();
+    get_all_selected_gpus();
+
+    return true;
 }
