@@ -200,7 +200,7 @@ bool EDPWorker::do_edp_stress_test(int *error, std::string *err_description) {
         //Converting microseconds to seconds
         timetakenforoneiteration = (end_time - start_time)/1e6;
 
-        gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration/1e9;
+        gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
 
         log_interval_gflops(gflops_interval);
 
