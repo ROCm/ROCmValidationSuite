@@ -117,6 +117,9 @@ bool rvs_blas::init_gpu_device(void) {
         // cannot select the given GPU device
         return false;
     } else {
+       //ROCBLAS Initialize
+        rocblas_initialize();
+
         if (!allocate_gpu_matrix_mem())
             return false;
         if (rocblas_create_handle(&blas_handle) == rocblas_status_success) {
