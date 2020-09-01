@@ -374,7 +374,7 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
     unsigned int  memErrors = 0;
     std::string msg;
    
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 0: Change one bit memory addresss  ";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 1: Change one bit memory addresss  ";
     rvs::lp::Log(msg, rvs::logresults);
 
     //test global address
@@ -386,7 +386,7 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
                         dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                         ptr, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
-    msg = " test0 on global address";
+    msg = " Test 1 on global address";
     error_checking(msg,  0);
 
     for(unsigned int ite = 0; ite < memdata.num_passes; ite++){
@@ -397,7 +397,7 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
                 hipLaunchKernelGGL(kernel_test0_write,   /* compute kernel*/
                              dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                              ptr + i * BLOCKSIZE, end_ptr); 
-		show_progress(" test0 on writing :", i, tot_num_blocks);
+		show_progress(" test 1 on writing :", i, tot_num_blocks);
 	    }
 
 	    for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -410,13 +410,13 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
                                 ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
 		error_checking(__FUNCTION__,  i);
-		show_progress(" test0 on reading :", i, tot_num_blocks);
+		show_progress(" Test 1 on reading :", i, tot_num_blocks);
 	    }
 
     }
 
     if(!err) {
-      msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test0 passed , no errors detected";
+      msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 1 : PASS";
       rvs::lp::Log(msg, rvs::logresults);
     }
 
@@ -477,7 +477,7 @@ void test1(char* ptr, unsigned int tot_num_blocks)
     char*        end_ptr = ptr + tot_num_blocks * BLOCKSIZE;
     std::string  msg;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 1: Each Memory location is filled with its own address";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 2: Each Memory location is filled with its own address";
     rvs::lp::Log(msg, rvs::logresults);
 
     for (i = 0; i < tot_num_blocks; i += GRIDSIZE){
@@ -500,12 +500,12 @@ void test1(char* ptr, unsigned int tot_num_blocks)
 	                          ptr + (i * BLOCKSIZE), end_ptr, ptCntOfError, 
                             ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead);
 
-            err += error_checking("Test1 checking :: ",  i);
-	    show_progress("\nTest1 on reading", i, tot_num_blocks);
+            err += error_checking("Test2 checking :: ",  i);
+	    show_progress("\nTest2 on reading", i, tot_num_blocks);
     }
 
     if(!err) {
-      msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test1 passed, no errors detected";
+      msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 2 : PASS";
       rvs::lp::Log(msg, rvs::logresults);
     }
     return;
@@ -644,29 +644,29 @@ void test2(char* ptr, unsigned int tot_num_blocks)
     unsigned int err = 0;
     std::string  msg;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 2 [Moving inversions, ones&zeros] " +
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 3 [Moving inversions, ones&zeros] " +
                          std::to_string(p1) + " and " + std::to_string(p2) + "\n";
     rvs::lp::Log(msg, rvs::logresults);
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test2: Moving inversions test, with pattern " 
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 3: Moving inversions test, with pattern " 
       + std::to_string(p1) + " and " + std::to_string(p2) + "\n";
     rvs::lp::Log(msg, rvs::loginfo);
 
     err = move_inv_test(ptr, tot_num_blocks, p1, p2);
 
     if(!err) {
-       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test2 Moving inversions test p1 p2 passed, no errors detected \n";
+       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 3 Moving inversions test p1 p2 passed, no errors detected \n";
        rvs::lp::Log(msg, rvs::loginfo);
     }
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test2: Moving inversions test, with pattern " + 
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 3: Moving inversions test, with pattern " + 
                   std::to_string(p2) + " and " + std::to_string(p1) + "\n";
     rvs::lp::Log(msg, rvs::loginfo);
 
     err = move_inv_test(ptr, tot_num_blocks, p2, p1);
 
     if(!err) {
-        msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 2 [Moving inversions, ones&zeros] passed ";
+        msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 3 : PASS ";
         rvs::lp::Log(msg, rvs::logresults);
     }
 }
@@ -690,24 +690,24 @@ void test3(char* ptr, unsigned int tot_num_blocks)
     unsigned int err = 0;
     std::string  msg;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 3 [Moving inversions, 8 bit pat]"
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 4 [Moving inversions, 8 bit pat]"
                    + std::to_string(p1) + " and " + std::to_string(p2) + "\n";
     rvs::lp::Log(msg, rvs::logresults);
 
     err = move_inv_test(ptr, tot_num_blocks, p1, p2);
 
     if(!err) {
-         msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test3 Moving inversions test p2 p1 passed, no errors detected \n";
+         msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 4 : PASS";
          rvs::lp::Log(msg, rvs::loginfo);
     }
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 3 [Moving inversions, 8 bit pat]"
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 4 [Moving inversions, 8 bit pat]"
                    + std::to_string(p2) + " and " + std::to_string(p1) + "\n";
     rvs::lp::Log(msg, rvs::loginfo);
     err = move_inv_test(ptr, tot_num_blocks, p2, p1);
 
     if(!err) {
-         msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test3 Moving inversions test p2 p1 passed, no errors detected \n";
+         msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 4 : PASS";
          rvs::lp::Log(msg, rvs::logresults);
     }
 }
@@ -728,7 +728,7 @@ void test4(char* ptr, unsigned int tot_num_blocks)
     unsigned int p1;
     std::string  msg;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 4 [Moving inversions, random pattern] \n";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 5 [Moving inversions, random pattern] \n";
     rvs::lp::Log(msg, rvs::logresults);
 
     if (memdata.global_pattern == 0){
@@ -749,7 +749,7 @@ void test4(char* ptr, unsigned int tot_num_blocks)
 
           if (err == 0 && iteration == 0){
 
-            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test4 passed, no errors detected , iterations are zero here";
+            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 5 PASS, no errors detected , iterations are zero here";
             rvs::lp::Log(msg, rvs::loginfo);
 	          return;
           }
@@ -764,7 +764,7 @@ void test4(char* ptr, unsigned int tot_num_blocks)
           }
 
     if(!err) {
-        msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test4 passed, no errors detected \n";
+        msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 5 : PASS";
         rvs::lp::Log(msg, rvs::logresults);
     }
 }
@@ -899,18 +899,18 @@ void test5(char* ptr, unsigned int tot_num_blocks)
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
     string msg;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 5 [Block move, 64 moves]";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 6 [Block move, 64 moves]";
     rvs::lp::Log(msg, rvs::logresults);
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
         dim3 grid;
 
-	error_checking("Intitalizing test 5 ",  i);
+	error_checking("Intializing Test 6 ",  i);
         grid.x= GRIDSIZE;
         hipLaunchKernelGGL(kernel_test5_init,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                           ptr + i*BLOCKSIZE, end_ptr);
-        show_progress("test5[init]", i, tot_num_blocks);
+        show_progress("Test 6[init]", i, tot_num_blocks);
     }
 
 
@@ -921,7 +921,7 @@ void test5(char* ptr, unsigned int tot_num_blocks)
         hipLaunchKernelGGL(kernel_test5_move,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                           ptr + i*BLOCKSIZE, end_ptr);
-        show_progress("test5[move]", i, tot_num_blocks);
+        show_progress("Test 6[move]", i, tot_num_blocks);
     }
 
 
@@ -932,12 +932,12 @@ void test5(char* ptr, unsigned int tot_num_blocks)
         hipLaunchKernelGGL(kernel_test5_check,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                             ptr + i*BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead);
-        err = error_checking("Test5 checking complete :: ",  i);
-	      show_progress("test5[check]", i, tot_num_blocks);
+        err = error_checking("Test 6 checking complete :: ",  i);
+	      show_progress("Test 6 [check]", i, tot_num_blocks);
     }
 
     if(!err) {
-      msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test5 passed, no errors detected";
+      msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 6 : PASS";
       rvs::lp::Log(msg, rvs::logresults);
     }
 
@@ -1084,7 +1084,7 @@ int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
         hipLaunchKernelGGL(kernel_movinv32_write,
                                    dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                           ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset); 
-        show_progress("\nTest6[moving inversion 32 write]", i, tot_num_blocks);
+        show_progress("\nTest 7[moving inversion 32 write]", i, tot_num_blocks);
     }
 
     for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -1095,8 +1095,8 @@ int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                             ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
-      err += error_checking("Test6 [movinv32], checking for errors :: ",  i);
-      show_progress("\nTest6[moving inversion 32 readwrite]", i, tot_num_blocks);
+      err += error_checking("Test 7[movinv32], checking for errors :: ",  i);
+      show_progress("\nTest7[moving inversion 32 readwrite]", i, tot_num_blocks);
     }
 
    for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -1106,8 +1106,8 @@ int movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
        hipLaunchKernelGGL(kernel_movinv32_read,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                              ptr + i*BLOCKSIZE, end_ptr, pattern, lb,sval, offset, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
-       err += error_checking("Test6 [movinv32]",  i);
-       show_progress("\nTest6[moving inversion 32 read]", i, tot_num_blocks);
+       err += error_checking("Test 7 [movinv32]",  i);
+       show_progress("\nTest 7[moving inversion 32 read]", i, tot_num_blocks);
    }
 
    return err;
@@ -1121,7 +1121,7 @@ void test6(char* ptr, unsigned int tot_num_blocks)
     unsigned int pattern;
     std::string  msg;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 6 [Moving inversions, 32 bit pat]";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 7 [Moving inversions, 32 bit pat]";
     rvs::lp::Log(msg, rvs::logresults);
 
     for (i= 0, pattern = 1;i < 32; pattern = pattern << 1, i++){
@@ -1131,7 +1131,7 @@ void test6(char* ptr, unsigned int tot_num_blocks)
 	 err += movinv32(ptr, tot_num_blocks, ~pattern, 0xfffffffe, 1, i);
     }
     if(!err) {
-       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test6 passed, pattern test, no errors detected";
+       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 7 : PASS";
        rvs::lp::Log(msg, rvs::logresults);
     }
 }
@@ -1230,7 +1230,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
     unsigned int iteration = 0;
     std::string   msg;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 7 [Random number sequence]";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 8 [Random number sequence]";
     rvs::lp::Log(msg, rvs::logresults);
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int);i++){
@@ -1250,7 +1250,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
           hipLaunchKernelGGL(kernel_test7_write,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                                        ptr + i* BLOCKSIZE, end_ptr, ptr, ptCntOfError); 
-          show_progress("test7_write", i, tot_num_blocks);
+          show_progress("test8_write", i, tot_num_blocks);
         }
 
 
@@ -1261,8 +1261,8 @@ void test7(char* ptr, unsigned int tot_num_blocks)
           hipLaunchKernelGGL(kernel_test7_readwrite,
                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                            ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead);
-	        err += error_checking("test7_readwrite",  i);
-          show_progress("test7_readwrite", i, tot_num_blocks);
+	        err += error_checking("test8_readwrite",  i);
+          show_progress("test8_readwrite", i, tot_num_blocks);
         }
 
 
@@ -1273,19 +1273,19 @@ void test7(char* ptr, unsigned int tot_num_blocks)
             hipLaunchKernelGGL(kernel_test7_read,
                                  dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                               ptr + i*BLOCKSIZE, end_ptr, ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
-	          err += error_checking("test7_read",  i);
-            show_progress("test7_read", i, tot_num_blocks); 
+	          err += error_checking("test8_read",  i);
+            show_progress("test8_read", i, tot_num_blocks); 
         }
 
 
         if (err == 0 && iteration == 0){
-            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test7 passed, no errors detected, iterations are zero here";
+            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "TEST 8 : PASS \n no errors detected, iterations are zero here";
             rvs::lp::Log(msg, rvs::logresults);
 	          return;
         }
 
         if (iteration <  memdata.num_iterations){
-            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "repeating test7 because there are" + std::to_string(err) + " errors found in last run";
+            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "repeating Test 8 because there are" + std::to_string(err) + " errors found in last run";
             rvs::lp::Log(msg, rvs::loginfo);
 	          iteration++;
 	          err = 0;
@@ -1293,7 +1293,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
         }
 
         if(!err) {
-            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test7 passed, no errors detected";
+            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 8 : PASS";
             rvs::lp::Log(msg, rvs::logresults);
         }
 }
@@ -1369,7 +1369,7 @@ unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset
           hipLaunchKernelGGL(kernel_modtest_write,
                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                          ptr + i*BLOCKSIZE, end_ptr, offset, p1, p2); 
-          show_progress("test8[mod test, write]", i, tot_num_blocks);
+          show_progress("test9[mod test, write]", i, tot_num_blocks);
     }
 
     for (i= 0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -1379,8 +1379,8 @@ unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset
          hipLaunchKernelGGL(kernel_modtest_read,
                          dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                          ptr + i*BLOCKSIZE, end_ptr, offset, p1, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
-         err += error_checking("test8[mod test, read", i);
-         show_progress("test8[mod test, read]", i, tot_num_blocks);
+         err += error_checking("test9[mod test, read", i);
+         show_progress("test9[mod test, read]", i, tot_num_blocks);
     }
 
     return err;
@@ -1395,7 +1395,7 @@ void test8(char* ptr, unsigned int tot_num_blocks)
     unsigned int p1;
     std::string msg;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + " Test 8 [Modulo 20, random pattern]";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + " Test 9 [Modulo 20, random pattern]";
     rvs::lp::Log(msg, rvs::logresults);
 
     if (memdata.global_pattern){
@@ -1421,7 +1421,7 @@ void test8(char* ptr, unsigned int tot_num_blocks)
     if (iteration < memdata.num_iterations){
 
         msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + std::to_string(iteration) + 
-          "th repeating test8 because there are " + std::to_string(err) + "errors found in last run, p1= " 
+          "th repeating Test 9 because there are " + std::to_string(err) + "errors found in last run, p1= " 
           + std::to_string(p1) + " p2= " + std::to_string(p2) + "\n";
         rvs::lp::Log(msg, rvs::loginfo);
 
@@ -1430,7 +1430,7 @@ void test8(char* ptr, unsigned int tot_num_blocks)
 	      goto repeat;
     }
     if(!err) {
-       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test8 passed, no errors detected";
+       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 9 : PASS";
        rvs::lp::Log(msg, rvs::logresults);
     }
 }
@@ -1456,7 +1456,7 @@ void test9(char* ptr, unsigned int tot_num_blocks)
     unsigned int i;
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 9 [Bit fade test, 90 min, 2 patterns]";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 10 [Bit fade test, 90 min, 2 patterns]";
     rvs::lp::Log(msg, rvs::logresults);
 
     for (i= 0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -1466,7 +1466,7 @@ void test9(char* ptr, unsigned int tot_num_blocks)
         hipLaunchKernelGGL(kernel_move_inv_write,
                                dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                                ptr + i*BLOCKSIZE, end_ptr, p1); 
-        show_progress("test9[bit fade test, write]: ", i, tot_num_blocks);
+        show_progress("test 10[bit fade test, write]: ", i, tot_num_blocks);
     }
 
     //sleep(60*90);
@@ -1479,8 +1479,8 @@ void test9(char* ptr, unsigned int tot_num_blocks)
              hipLaunchKernelGGL(kernel_move_inv_readwrite,
                                dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                                ptr + i*BLOCKSIZE, end_ptr, p1, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
-	    err += error_checking("test9[bit fade test, readwrite] :",  i);
-            show_progress("test9[bit fade test, readwrite] : ", i, tot_num_blocks);
+	    err += error_checking("test 10[bit fade test, readwrite] :",  i);
+            show_progress("test 10[bit fade test, readwrite] : ", i, tot_num_blocks);
     }
 
     //sleep(60*90);
@@ -1493,12 +1493,12 @@ void test9(char* ptr, unsigned int tot_num_blocks)
             hipLaunchKernelGGL(kernel_move_inv_read,
                                  dim3(memdata.blocks), dim3(memdata.threadsPerBlock), 0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
 	                          ptr + i*BLOCKSIZE, end_ptr, p2, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
-	    err += error_checking("test9[bit fade test, read] : ",  i);
-            show_progress("test9[bit fade test, read] : ", i, tot_num_blocks);
+	    err += error_checking("test 10[bit fade test, read] : ",  i);
+            show_progress("test 10[bit fade test, read] : ", i, tot_num_blocks);
     }
 
     if(!err) {
-       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test9 passed, no errors detected "; 
+       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 10 : PASS"; 
        rvs::lp::Log(msg, rvs::logresults);
     }
 
@@ -1587,7 +1587,7 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     TYPE    p1;
     std::string msg;;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test10 [memory stress test] \n";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 11 [memory stress test] \n";
     rvs::lp::Log(msg, rvs::logresults);
 
     if (memdata.global_pattern_long){
@@ -1601,7 +1601,7 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     hipStream_t stream;
     hipEvent_t start, stop;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + " Test10 with pattern :" + std::to_string(p1);
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + " Test 11 with pattern :" + std::to_string(p1);
     rvs::lp::Log(msg, rvs::loginfo);
 
 
@@ -1636,9 +1636,9 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     hipEventRecord(stop, stream);
     hipEventSynchronize(stop);
 
-    err += error_checking("test10[Memory stress test]",  0);
+    err += error_checking("test11[Memory stress test]",  0);
     hipEventElapsedTime(&elapsedtime, start, stop);
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test10: elapsedtime = " 
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 11: elapsedtime = " 
       + std::to_string(elapsedtime) + " bandwidth = " + std::to_string((2*n+1)*tot_num_blocks/elapsedtime) + "GB/s \n";
     rvs::lp::Log(msg, rvs::logresults);
 
@@ -1648,7 +1648,7 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     hipStreamDestroy(stream);
 
     if(!err) {
-       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Memory test10 passed, no errors detected ";
+       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 11 : PASS ";
        rvs::lp::Log(msg, rvs::logresults);
     }
 }
