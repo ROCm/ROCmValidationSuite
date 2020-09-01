@@ -48,17 +48,17 @@ using std::map;
 using std::regex;
 
 std::string rvs_mem[]={
-    "Test0 [Walking 1 bit]",
-    "Test1 [Own address test",
-    "Test2 [Moving inversions, ones&zeros]",
-    "Test3 [Moving inversions, 8 bit pat]",
-    "Test4 [Moving inversions, random pattern]",
-    "Test5 [Block move, 64 moves]",
-    "Test6 [Moving inversions, 32 bit pat]",
-    "Test7 [Random number sequence]",
-    "Test8 [Modulo 20, random pattern]",
-    "Test9 [Bit fade test]",
-    "Test10 [Memory stress test]",
+    "Test1  [Walking 1 bit]",
+    "Test2  [Own address test",
+    "Test3  [Moving inversions, ones&zeros]",
+    "Test4  [Moving inversions, 8 bit pat]",
+    "Test5  [Moving inversions, random pattern]",
+    "Test6  [Block move, 64 moves]",
+    "Test7  [Moving inversions, 32 bit pat]",
+    "Test8  [Random number sequence]",
+    "Test9  [Modulo 20, random pattern]",
+    "Test10 [Bit fade test]",
+    "Test11 [Memory stress test]",
 };
 
 
