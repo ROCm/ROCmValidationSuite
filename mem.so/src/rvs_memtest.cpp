@@ -83,7 +83,7 @@ void show_progress(std::string msg, unsigned int i, unsigned int tot_num_blocks)
     hipDeviceSynchronize();						
     num_checked_blocks =  i + GRIDSIZE <= tot_num_blocks? i + GRIDSIZE: tot_num_blocks; 
     // log MEM stress test - start message
-    msg += ": " + std::to_string(num_checked_blocks) + " out of " + std::to_string(tot_num_blocks) + " blocks finished\n"; 
+    msg += ": " + std::to_string(num_checked_blocks) + " out of " + std::to_string(tot_num_blocks) + " blocks finished"; 
     buff = "[" + memdata.action_name + "] " + MODULE_NAME + " " + std::to_string(memdata.gpu_idx) + msg;
     rvs::lp::Log(buff, rvs::loginfo);
 }
@@ -397,7 +397,7 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
                 hipLaunchKernelGGL(kernel_test0_write,   /* compute kernel*/
                              dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                              ptr + i * BLOCKSIZE, end_ptr); 
-		show_progress(" test 1 on writing :", i, tot_num_blocks);
+		show_progress(" Test 1 on writing :", i, tot_num_blocks);
 	    }
 
 	    for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
@@ -409,7 +409,8 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
                                 dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                                 ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
-		error_checking(__FUNCTION__,  i);
+		error_checking("Test 1",  i);
+		//error_checking(__FUNCTION__,  i);
 		show_progress(" Test 1 on reading :", i, tot_num_blocks);
 	    }
 
@@ -1408,16 +1409,16 @@ void test8(char* ptr, unsigned int tot_num_blocks)
 
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + " Pattern  p1 " + std::to_string(p1) + "pattern  p2 " + std::to_string(p2);
     rvs::lp::Log(msg, rvs::loginfo);
-
  repeat:
     for (i = 0;i < MOD_SZ; i++){
 	    err += modtest(ptr, tot_num_blocks,i, p1, p2);
     }
-
     if (err == 0 && iteration == 0){
+	    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 9 : PASS \n" +
+		    "no errors detected, iterations are zero here";
+       rvs::lp::Log(msg, rvs::logresults);
 	      return;
     }
-
     if (iteration < memdata.num_iterations){
 
         msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + std::to_string(iteration) + 
@@ -1587,7 +1588,7 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     TYPE    p1;
     std::string msg;;
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 11 [memory stress test] \n";
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 11 [memory stress test]";
     rvs::lp::Log(msg, rvs::logresults);
 
     if (memdata.global_pattern_long){
@@ -1639,7 +1640,7 @@ void test10(char* ptr, unsigned int tot_num_blocks)
     err += error_checking("test11[Memory stress test]",  0);
     hipEventElapsedTime(&elapsedtime, start, stop);
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 11: elapsedtime = " 
-      + std::to_string(elapsedtime) + " bandwidth = " + std::to_string((2*n+1)*tot_num_blocks/elapsedtime) + "GB/s \n";
+      + std::to_string(elapsedtime) + " bandwidth = " + std::to_string((2*n+1)*tot_num_blocks/elapsedtime) + "GB/s ";
     rvs::lp::Log(msg, rvs::logresults);
 
     hipEventDestroy(start);
