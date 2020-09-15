@@ -48,17 +48,17 @@ using std::map;
 using std::regex;
 
 std::string rvs_mem[]={
-    "Test0 [Walking 1 bit]",
-    "Test1 [Own address test",
-    "Test2 [Moving inversions, ones&zeros]",
-    "Test3 [Moving inversions, 8 bit pat]",
-    "Test4 [Moving inversions, random pattern]",
-    "Test5 [Block move, 64 moves]",
-    "Test6 [Moving inversions, 32 bit pat]",
-    "Test7 [Random number sequence]",
-    "Test8 [Modulo 20, random pattern]",
-    "Test9 [Bit fade test]",
-    "Test10 [Memory stress test]",
+    "Test 1  [Walking 1 bit]",
+    "Test 2  [Own address test]",
+    "Test 3  [Moving inversions, ones&zeros]",
+    "Test 4  [Moving inversions, 8 bit pat]",
+    "Test 5  [Moving inversions, random pattern]",
+    "Test 6  [Block move, 64 moves]",
+    "Test 7  [Moving inversions, 32 bit pat]",
+    "Test 8  [Random number sequence]",
+    "Test 9  [Modulo 20, random pattern]",
+    "Test 10 [Bit fade test]",
+    "Test 11 [Memory stress test]",
 };
 
 
@@ -102,7 +102,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
         rvs::lp::Log(msg, rvs::logresults);
 
         for (int i = 0; i < 11; i++) {
-            msg = "=============== " + rvs_mem[i] + "\n\n"; 
+            msg = "=============== " + rvs_mem[i] + "\n"; 
             rvs::lp::Log(msg, rvs::logresults);
         }
 
