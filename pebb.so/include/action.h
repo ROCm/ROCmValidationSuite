@@ -61,6 +61,7 @@ class pebb_action : public rvs::actionbase {
   typedef struct bandwidth{
      string         finalBandwith;
      uint16_t       GPUId;
+     uint16_t       CPUId;
   }bandwidth;
 
   vector<bandwidth>   resultBandwidth;

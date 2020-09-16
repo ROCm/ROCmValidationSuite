@@ -177,7 +177,7 @@ int pebb_action::run() {
 
   std::cout << " \n =========================================================================================================================";
   for(auto it = resultBandwidth.begin(); it != resultBandwidth.end(); it++) {
-     std::cout << " \n\n PCIE Bandwidth from , CPU::" << cnt << " to GPU Id::" << it[cnt].GPUId << " is " << it[cnt].finalBandwith << "\n\n";
+     std::cout << " \n\n PCIE Bandwidth from , CPU::" << it->CPUId<< " to GPU Id::" << it->GPUId << " is " << it->finalBandwith << "\n\n";
   }
   std::cout << " ========================================================================================================================= \n";
 
