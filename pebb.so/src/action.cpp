@@ -565,6 +565,7 @@ int pebb_action::print_final_average() {
 
     bw.finalBandwith = buff;
     bw.GPUId = dst_id;
+    bw.CPUId = src_node;
 
     resultBandwidth.push_back(bw);
 
