@@ -1,3 +1,4 @@
+#!/bin/sh
 echo 'mix_gmgst1';sudo ./rvs -c conf/mix_gmgst1.conf -d 3;  date
 echo 'mix_gmgst2';sudo ./rvs -c conf/mix_gmgst2.conf -d 3; date
 echo 'mix_gmgst3';sudo ./rvs -c conf/mix_gmgst3.conf -d 3; date

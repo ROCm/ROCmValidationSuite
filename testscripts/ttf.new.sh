@@ -1,3 +1,4 @@
+#!/bin/sh
 date
 echo 'ttf_gm_11';sudo ./rvs -c conf/ttf_gm_11.conf -d 3;date
 echo 'ttf_gm_12';sudo ./rvs -c conf/ttf_gm_12.conf -d 3;date
