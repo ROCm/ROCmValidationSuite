@@ -1,3 +1,4 @@
+#!/bin/sh
 if [ "$1" == "-h" ] ; then
         echo
         echo "Usage: ./`basename $0` 3 (for 3 hours) or ./`basename $0` 6 (for 6 hours), default duration is 1 hour"

@@ -1,3 +1,4 @@
+#!/bin/sh
 #date
 #echo 'rcqt_2';sudo ./rvs -c conf/rcqt_2.conf -d 3; date
 #echo 'rcqt_3';sudo ./rvs -c conf/rcqt_3.conf -d 3; date

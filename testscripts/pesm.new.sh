@@ -1,3 +1,4 @@
+#!/bin/sh
 date
 echo 'pesm_1';sudo ./rvs -c conf/pesm_1.conf -d 3; date
 echo 'pesm_2';sudo ./rvs -c conf/pesm_2.conf -d 3; date
