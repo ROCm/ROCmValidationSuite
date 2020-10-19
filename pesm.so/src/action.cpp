@@ -255,7 +255,7 @@ int pesm_action::do_gpu_list() {
   pci_init(pacc);
   // get the list of devices
   pci_scan_bus(pacc);
-
+  
   int  ix = 0;
   // iterate over devices
   for (dev = pacc->devices; dev; dev = dev->next) {
@@ -265,25 +265,22 @@ int pesm_action::do_gpu_list() {
 
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id =
-      ((((uint16_t)(dev->bus)) << 8) | (dev->dev));
-
+      ((((uint16_t)(dev->bus)) << 8) | dev->dev);
+    uint16_t dev_domain = dev->domain_16;
     // if not AMD GPU just continue
     uint16_t node_id;
-    if (rvs::gpulist::location2node(dev_location_id, &node_id)) {
+    if (rvs::gpulist::domlocation2node(dev_domain, dev_location_id, &node_id)) {
       continue;
     }
-
     uint16_t gpu_id;
-    if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id)) {
+    if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
       continue;
     }
-
-    snprintf(buff, sizeof(buff), "%02X:%02X.%d", dev->bus, dev->dev, dev->func);
+    snprintf(buff, sizeof(buff), "%04d:%02X:%02X.%d",dev->domain_16, dev->bus, dev->dev, dev->func);
 
     string name;
     name = pci_lookup_name(pacc, devname, sizeof(devname), PCI_LOOKUP_DEVICE,
                            dev->vendor_id, dev->device_id);
-
     struct device_info info;
     info.bus       = buff;
     info.name      = name;

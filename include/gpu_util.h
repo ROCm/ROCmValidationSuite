@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include <map>
 
 #define KFD_SYS_PATH_NODES              "/sys/class/kfd/kfd/topology/nodes"
 #define KFD_PATH_MAX_LENGTH             256
@@ -37,7 +38,8 @@ extern void gpu_get_all_location_id(std::vector<uint16_t>* pgpus_location_id);
 extern void gpu_get_all_gpu_id(std::vector<uint16_t>* pgpus_id);
 extern void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id);
 extern void gpu_get_all_node_id(std::vector<uint16_t>* pgpus_node_id);
-
+extern void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
+                std::map<std::pair<uint16_t, uint16_t> , uint16_t>& pgpus_dom_loc_map); 
 
 namespace rvs {
 
@@ -62,7 +64,11 @@ class gpulist {
   static int gpu2device(const uint16_t GpuID, uint16_t* pDeviceID);
   static int location2node(const uint16_t LocationID, uint16_t* pNodeID);
   static int gpu2node(const uint16_t GpuID, uint16_t* pNodeID);
-
+  static int gpu2domain(const uint16_t GpuID, uint16_t* pDomain);
+  static int domlocation2node(const uint16_t domainID, const uint16_t LocationID,
+                                    uint16_t* pNodeID);
+  static int domlocation2gpu(const uint16_t domainID, const uint16_t LocationID,
+                                    uint16_t* pGPUID);
  protected:
   //! Array of GPU location IDs
   static std::vector<uint16_t> location_id;
@@ -72,6 +78,9 @@ class gpulist {
   static std::vector<uint16_t> device_id;
   //! Array of node IDs
   static std::vector<uint16_t> node_id;
+  //! Array of domain IDs
+  static std::vector<uint16_t> domain_id;
+  static std::map<std::pair<uint16_t, uint16_t>	, uint16_t> domain_loc_map;
 };
 
 
