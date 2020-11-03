@@ -503,6 +503,7 @@ install(FILES ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
 )
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
   DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/testscripts
+  USE_SOURCE_PERMISSIONS
   COMPONENT rvsmodule
 )
 
