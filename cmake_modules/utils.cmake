@@ -98,11 +98,12 @@ function ( get_version DEFAULT_VERSION_STRING )
                           OUTPUT_VARIABLE GIT_TAG_STRING
                           OUTPUT_STRIP_TRAILING_WHITESPACE
                           RESULT_VARIABLE RESULT )
+		  # we should not mimic version of ROCM to RVS. RVS is independent entity
+		  # tagging is usually done with respect to ROCM release, so removing it.
+		  #if ( ${RESULT} EQUAL 0 )
+		  #parse_version ( ${GIT_TAG_STRING} )
 
-        if ( ${RESULT} EQUAL 0 )
-            parse_version ( ${GIT_TAG_STRING} )
-
-        endif ()
+		  #endif ()
 
     endif ()
 
