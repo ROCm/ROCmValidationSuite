@@ -228,6 +228,7 @@ int pebb_action::create_threads() {
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&gpu_device_id);
 
+
   RVSTRACE_
   for (size_t i = 0; i < gpu_id.size(); i++) {
     RVSTRACE_
@@ -287,7 +288,9 @@ int pebb_action::create_threads() {
           // there is a path if transfer is initiated by
           // destination agent:
           b_reverse = true;
-        }
+        }else{// if no connection either way, no point in adding to list
+          continue;
+	}
       }
 
       // if link type is specified, check that it matches
