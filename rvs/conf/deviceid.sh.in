@@ -7,9 +7,10 @@
 # To change any single file use as below example
 # ./conf/deviceid.sh conf/gpup_1.conf
 
+# setting ROCM_PATH using cmake inputs
 # setting RVS_EXE_PATH to default if not set by user
 if [[ -z "${RVS_EXE_PATH}" ]]; then
-    export RVS_EXE_PATH=/opt/rocm/rvs/rvs
+    export RVS_EXE_PATH=@ROCM_PATH@/rvs/rvs
 fi
 
 function get_string_with_space {
