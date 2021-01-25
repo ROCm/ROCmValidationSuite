@@ -527,6 +527,10 @@ else()
   message("Doxygen is not found. Will not generate documentation.")
 endif(DOXYGEN_FOUND)
 
+# make changes to deviceid.sh.in and rename it to deviceid.sh
+configure_file(${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh.in 
+  ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
+  @ONLY)
 install(FILES ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
   DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/conf
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
