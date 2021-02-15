@@ -514,7 +514,7 @@ add_custom_target(rvs_userguide ALL
 add_dependencies(rvs_userguide rvs_doc)
 
 install(FILES "${CMAKE_BINARY_DIR}/doc/man/man1/rvs.1"
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/man
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/man/man1
   COMPONENT applications
 )
 
