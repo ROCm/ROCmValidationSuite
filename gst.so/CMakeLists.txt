@@ -99,7 +99,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 # Add remaining flags
-set(HCC_CXX_FLAGS  "-Xlinker --enable-new-dtags -fno-gpu-rdc --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908 ")
+set(HCC_CXX_FLAGS  "-Xlinker --enable-new-dtags -fno-gpu-rdc --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908 -fsanitize=address -shared-libasan ")
 set(HIP_HCC_BUILD_FLAGS)
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include")
 
@@ -112,6 +112,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
 
 
 # Determine Roc Runtime header files are accessible
+message("MANOJ ::::: "${HIP_INC_DIR})
 if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
