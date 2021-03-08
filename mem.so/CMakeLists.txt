@@ -67,8 +67,6 @@ endif()
 # Add HIP_VERSION to CMAKE_<LANG>_FLAGS
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
-# Add remaining flags
-set(HCC_CXX_FLAGS  "-Xlinker --enable-new-dtags -fno-gpu-rdc --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908 -fsanitize=address -shared-libasan")
 set(HIP_HCC_BUILD_FLAGS)
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include")
 
