@@ -112,11 +112,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
 ## define include directories
 include_directories(./ ../ ${YAML_INC_DIR})
 ## define lib directories
-link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR}
-        ${ROCM_PATH}/llvm/lib/clang/12.0.0/lib/linux)
+link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR})
 ## additional libraries
-set (PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so
-        libclang_rt.asan-x86_64.so )
+set (PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
 
 ## define source files
 set(SOURCES
