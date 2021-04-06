@@ -419,7 +419,7 @@ set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
 set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
 
-set(HCC_CXX_FLAGS  "-Xlinker --enable-new-dtags -fno-gpu-rdc --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908 ")
+set(HCC_CXX_FLAGS  "-Xlinker --enable-new-dtags -fno-gpu-rdc  --amdgpu-target=gfx90a --amdgpu-target=gfx1030 --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908")
 
 add_subdirectory(rvs)
 add_subdirectory(rvslib)
