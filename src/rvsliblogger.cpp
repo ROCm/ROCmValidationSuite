@@ -55,7 +55,8 @@ bool  rvs::logger::bStop(false);
 uint16_t rvs::logger::stop_flags(0u);
 bool rvs::logger::b_quiet(false);
 char rvs::logger::log_file[1024];
-
+std::string rvs::logger::json_log_file;
+std::mutex  rvs::logger::json_log_mutex;
 const char*  rvs::logger::loglevelname[] = {
   "NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
 
@@ -268,7 +269,13 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
                                    const unsigned int uSec) {
   uint32_t   sec;
   uint32_t   usec;
-
+  if ( json_log_file.empty()){
+	json_log_file.assign(Module);
+	std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+            std::chrono::system_clock::now().time_since_epoch());
+	json_log_file = json_log_file + std::to_string(ms.count()) + ".json";
+	// append time
+  }
   if ((Sec|uSec)) {
     sec = Sec;
     usec = uSec;
@@ -317,7 +324,6 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
     delete r;
     return -1;
   }
-
   // if too high, ignore record
   if (level > loglevel_m) {
     DTRACE_
@@ -342,8 +348,12 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   row += r->ToJson("  ");
 
   // send it to file
-  ToFile(row);
-
+  // lock json mutex
+  // lock log_mutex for the duration of this block
+  {
+    std::lock_guard<std::mutex> lk(json_log_mutex);
+    ToFile(row, true);
+  }
   // dealloc memory
   delete r;
 
@@ -365,13 +375,17 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::logger::ToFile(const std::string& Row) {
+int rvs::logger::ToFile(const std::string& Row, bool json_rec) {
   if (bStop) {
     if (stop_flags)
       return 0;
   }
 
-  std::string logfile(log_file);
+  std::string logfile;
+  if (json_rec)
+	logfile.assign(json_log_file);
+  else
+	logfile.assign(log_file);
   if (logfile == "")
     return -1;
 
@@ -397,7 +411,7 @@ int rvs::logger::ToFile(const std::string& Row) {
  *
  */
 int rvs::logger::JsonPatchAppend(int* pSts) {
-  std::string logfile(log_file);
+  std::string logfile(json_log_file);
 
   FILE * pFile;
   pFile = fopen(logfile.c_str() , "r+");

@@ -79,7 +79,7 @@ class logger {
                    const char *Module = nullptr, const char *Action = nullptr);
 
  protected:
-  static  int    ToFile(const std::string& Row);
+  static  int    ToFile(const std::string& Row ,  bool json = false);
 
   //! Current logging level (0..5)
   static  int    loglevel_m;
@@ -95,12 +95,15 @@ class logger {
   static std::mutex cout_mutex;
   //! Mutex to synchronize log file output
   static std::mutex log_mutex;
+  //! Mutex to synchronize json log file output
+  static std::mutex json_log_mutex;
   //! flag indicating stop loging was requested
   static bool bStop;
   //! stop flags
   static uint16_t stop_flags;
   //! logging file
   static char log_file[1024];
+  static std::string json_log_file;
   //! quiet mode
   static bool b_quiet;
 };
