@@ -262,10 +262,10 @@ int pesm_action::do_gpu_list() {
     // fil in the info
     pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
     | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
-
+    
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id =
-      ((((uint16_t)(dev->bus)) << 8) | dev->dev);
+      ((((uint16_t)(dev->bus)) << 8) | (((((uint16_t)(dev->dev)) << 3) | dev->func)));
     uint16_t dev_domain = dev->domain_16;
     // if not AMD GPU just continue
     uint16_t node_id;
