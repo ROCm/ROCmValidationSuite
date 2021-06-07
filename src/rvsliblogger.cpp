@@ -273,7 +273,7 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
 	json_log_file.assign(Module);
 	std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
             std::chrono::system_clock::now().time_since_epoch());
-	json_log_file = json_log_file + std::to_string(ms.count()) + ".json";
+	json_log_file = json_log_file + "_" + std::to_string(ms.count()) + ".json";
 	// append time
   }
   if ((Sec|uSec)) {

@@ -44,7 +44,7 @@
 #define GST_BYTES_COPIED_PER_OP_OUTPUT_KEY      "bytes_copied_per_op"
 #define GST_TRY_OPS_PER_SEC_OUTPUT_KEY          "try_ops_per_sec"
 
-#define GST_LOG_GFLOPS_INTERVAL_KEY             "Gflops"
+#define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
 #define GST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 
 #define PROC_DEC_INC_SGEMM_FREQ_DELAY           10
