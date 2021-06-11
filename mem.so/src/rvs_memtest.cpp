@@ -293,12 +293,16 @@ __global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned in
         }
 
 	if (ptr >= end_ptr){
-	   if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
-               ptFailedAdress[*ptErrCount] = (unsigned long)ptr;  
-               ptExpectedValue[*ptErrCount] = (unsigned long)pattern;  
-               ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
-	   }
+		// when we reach end of allotted space
+		// we cant read which might risk is seg or page fault
+		break;
 	}
+	// if ptr valid, we can verify the state of data written
+	 if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+               ptFailedAdress[*ptErrCount] = (unsigned long)ptr;
+               ptExpectedValue[*ptErrCount] = (unsigned long)pattern;
+               ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;
+           }
 
 	pattern = pattern << 1;
 	mask = mask << 1;
