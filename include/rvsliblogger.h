@@ -62,11 +62,13 @@ class logger {
 
   static  int    log(const std::string& Message, const int level = 1);
   static  int    Log(const char* Message, const int level);
+  static  int    JsonStartNodeCreate(const char* Module, const char* Action);
+  static  int    JsonEndNodeCreate();
   static  int    LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec);
   static  void*  LogRecordCreate(const char* Module, const char* Action,
                                   const int LogLevel, const unsigned int Sec,
-                                  const unsigned int uSec);
+                                  const unsigned int uSec, bool minimal = false);
   static  int    LogRecordFlush(void* pLogRecord);
   static  void*  CreateNode(void* Parent, const char* Name);
   static  void   AddString(void* Parent, const char* Key, const char* Val);

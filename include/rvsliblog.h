@@ -37,7 +37,9 @@ typedef int   (*t_cbLogExt)(const char*, const int, const unsigned int Sec,
 typedef void* (*t_cbLogRecordCreate)( const char* Module, const char* Action,
                                       const int LogLevel,
                                       const unsigned int Sec,
-                                      const unsigned int uSec);
+                                      const unsigned int uSec, bool minimal);
+typedef int   (*t_cbJsonStartNodeCreate)( const char* Module, const char* Action);
+typedef int   (*t_cbJsonEndNodeCreate)();
 typedef int   (*t_cbLogRecordFlush)( void* pLogRecord);
 typedef void* (*t_cbCreateNode)(void* Parent, const char* Name);
 typedef void  (*t_cbAddString)(void* Parent, const char* Key, const char* Val);
@@ -58,6 +60,10 @@ typedef struct tag_module_init {
   t_cbLogExt           cbLogExt;
   //! pointer to rvs::logger::LogRecordCreate() function
   t_cbLogRecordCreate  cbLogRecordCreate;
+  //! pointer to rvs::logger::JsonStartNodeCreate() function
+  t_cbJsonStartNodeCreate  cbJsonStartNodeCreate;
+  //! pointer to rvs::logger::JsonEndNodeCreate() function
+  t_cbJsonEndNodeCreate  cbJsonEndNodeCreate;
   //! pointer to rvs::logger::LogRecordFlush() function
   t_cbLogRecordFlush   cbLogRecordFlush;
   //! pointer to rvs::logger::CreateNode() function

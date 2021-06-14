@@ -41,6 +41,7 @@
 #include "include/rvslognodestring.h"
 #include "include/rvslognodeint.h"
 #include "include/rvslognoderec.h"
+#include "include/rvsminnode.h"
 
 using std::cerr;
 using std::cout;
@@ -60,6 +61,13 @@ std::mutex  rvs::logger::json_log_mutex;
 const char*  rvs::logger::loglevelname[] = {
   "NONE  ", "RESULT", "ERROR ", "INFO  ", "DEBUG ", "TRACE " };
 
+// Json specific consts
+const std::string node_start{"{"};
+const std::string node_end{"}"};
+const std::string kv_delimit{":"};
+const std::string list_start{"["};
+const std::string list_end{"]"};
+const std::string newline{"\n"};
 /**
  * @brief Set 'append' flag
  *
@@ -266,7 +274,7 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
  */
 void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
                                    const int LogLevel, const unsigned int Sec,
-                                   const unsigned int uSec) {
+                                   const unsigned int uSec, bool minimal) {
   uint32_t   sec;
   uint32_t   usec;
   if ( json_log_file.empty()){
@@ -275,6 +283,10 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
             std::chrono::system_clock::now().time_since_epoch());
 	json_log_file = json_log_file + "_" + std::to_string(ms.count()) + ".json";
 	// append time
+  }
+  if( minimal){
+	rvs::MinNode* minrec = new rvs::MinNode(Action);
+	return static_cast<void*>(minrec);
   }
   if ((Sec|uSec)) {
     sec = Sec;
@@ -295,22 +307,15 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
 /**
  * @brief Create json log record
  *
- * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
+ * Note: this API is used to construct JSON file start node with Action and Module and flush it. 
  *
  * @param Module Module from which record is originating
  * @param Action Action from which record is originating
- * @param LogLevel Logging level
- * @param Sec secconds from system start
- * @param uSec microseconds in current second
  * @return 0 - success, non-zero otherwise
  *
  */
-#if 0
-void* rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action,
-                                   const int LogLevel, const unsigned int Sec,
-                                   const unsigned int uSec) {
-  uint32_t   sec;
-  uint32_t   usec;
+#if 1
+int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
   if ( json_log_file.empty()){
         json_log_file.assign(Module);
         std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
@@ -318,40 +323,31 @@ void* rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action,
         json_log_file = json_log_file + "_" + std::to_string(ms.count()) + ".json";
         // append time
   }
-  std::string Module{"gst"}, Action{"some_action"};
-  const std::string node_start{"{"};
-  const std::string node_end{"}"};
-  const std::string kv_delimit{":"};
-  const std::string list_init{"["};
-  const std::string newline{"\n"};
-  std::string val{node_start};
-  val += "\"" + Module + "\"" + kv_delimit + node_start + newline;
-  val += RVSINDENT;
-  val += "\"" + Action + "\"" + kv_delimit + list_init + newline;
-    {
-    std::lock_guard<std::mutex> lk(json_log_mutex);
-    ToFile(row, true);
-  }
-
+  std::string row{node_start};
+  row += std::string("\"") + Module + std::string("\"") + kv_delimit + node_start + newline;
+  row += RVSINDENT;
+  row += std::string("\"") + Action + std::string("\"") + kv_delimit + list_start + newline;
+  std::lock_guard<std::mutex> lk(json_log_mutex);
+  return ToFile(row, true);
 }
 
-void* rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action,
-                                   const int LogLevel, const unsigned int Sec,
-                                   const unsigned int uSec) {
-  const std::string node_start{"{"};
-  const std::string node_end{"}"};
-  const std::string kv_delimit{":"};
-  const std::string list_end{"]"};
-  const std::string newline{"\n"};
-  std::string val{RVSINDENT};
-  val += list_end + newline;
-  val += RVSINDENT + node_end + newline;
-  val += node_end;
-    {
-    std::lock_guard<std::mutex> lk(json_log_mutex);
-    ToFile(row, true);
-  }
+/**
+ * @brief Create a json file end record and flush it
+ *
+ * Note: this API is used to construct JSON output.
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
 
+int rvs::logger::JsonEndNodeCreate() {
+  std::string row{RVSINDENT};
+  int res;
+  row += list_end + newline;
+  row += RVSINDENT + node_end + newline;
+  row += node_end;
+  std::lock_guard<std::mutex> lk(json_log_mutex);
+  return ToFile(row, true); 
 }
 
 #endif
@@ -366,7 +362,7 @@ void* rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action,
  */
 int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   // lock log_mutex for the duration of this block
-  std::lock_guard<std::mutex> lk(log_mutex);
+  std::lock_guard<std::mutex> lk(json_log_mutex);
   std::string val;
   DTRACE_
 
@@ -411,12 +407,9 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord) {
   row += r->ToJson("  ");
 
   // send it to file
-  // lock json mutex
-  // lock log_mutex for the duration of this block
-  {
-    std::lock_guard<std::mutex> lk(json_log_mutex);
-    ToFile(row, true);
-  }
+  
+  ToFile(row, true);
+  
   // dealloc memory
   delete r;
 

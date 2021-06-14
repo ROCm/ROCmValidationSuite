@@ -112,8 +112,8 @@ int rvs::lp::Log(const std::string& Msg, const int LogLevel,
  */
 void* rvs::lp::LogRecordCreate(const char* Module, const char* Action,
                                const int LogLevel, const unsigned int Sec,
-                               const unsigned int uSec) {
-  return rvs::logger::LogRecordCreate(Module,  Action,  LogLevel, Sec, uSec);
+                               const unsigned int uSec, bool minimal) {
+  return rvs::logger::LogRecordCreate(Module,  Action,  LogLevel, Sec, uSec, minimal);
 }
 
 /**

@@ -496,8 +496,8 @@ void GSTWorker::run() {
     rvs::lp::Log(msg, rvs::logtrace);
 
     log_to_json(GST_START_MSG, std::to_string(target_stress), rvs::loginfo);
-    log_to_json(GST_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),
-                rvs::loginfo);
+    //log_to_json(GST_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),
+    //            rvs::loginfo);
 
     // let the GPU ramp-up and check the result
     bool ramp_up_success = do_gst_ramp(&error, &err_description);
@@ -604,7 +604,7 @@ void GSTWorker::log_to_json(const std::string &key, const std::string &value,
 
         rvs::lp::get_ticks(&sec, &usec);
         void *json_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), log_level, sec, usec);
+                            action_name.c_str(), log_level, sec, usec, true);
         if (json_node) {
             rvs::lp::AddString(json_node, GST_JSON_LOG_GPU_ID_KEY,
                             std::to_string(gpu_id));
