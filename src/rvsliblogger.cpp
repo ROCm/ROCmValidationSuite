@@ -293,6 +293,69 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
 }
 
 /**
+ * @brief Create json log record
+ *
+ * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
+ *
+ * @param Module Module from which record is originating
+ * @param Action Action from which record is originating
+ * @param LogLevel Logging level
+ * @param Sec secconds from system start
+ * @param uSec microseconds in current second
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+#if 0
+void* rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action,
+                                   const int LogLevel, const unsigned int Sec,
+                                   const unsigned int uSec) {
+  uint32_t   sec;
+  uint32_t   usec;
+  if ( json_log_file.empty()){
+        json_log_file.assign(Module);
+        std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+            std::chrono::system_clock::now().time_since_epoch());
+        json_log_file = json_log_file + "_" + std::to_string(ms.count()) + ".json";
+        // append time
+  }
+  std::string Module{"gst"}, Action{"some_action"};
+  const std::string node_start{"{"};
+  const std::string node_end{"}"};
+  const std::string kv_delimit{":"};
+  const std::string list_init{"["};
+  const std::string newline{"\n"};
+  std::string val{node_start};
+  val += "\"" + Module + "\"" + kv_delimit + node_start + newline;
+  val += RVSINDENT;
+  val += "\"" + Action + "\"" + kv_delimit + list_init + newline;
+    {
+    std::lock_guard<std::mutex> lk(json_log_mutex);
+    ToFile(row, true);
+  }
+
+}
+
+void* rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action,
+                                   const int LogLevel, const unsigned int Sec,
+                                   const unsigned int uSec) {
+  const std::string node_start{"{"};
+  const std::string node_end{"}"};
+  const std::string kv_delimit{":"};
+  const std::string list_end{"]"};
+  const std::string newline{"\n"};
+  std::string val{RVSINDENT};
+  val += list_end + newline;
+  val += RVSINDENT + node_end + newline;
+  val += node_end;
+    {
+    std::lock_guard<std::mutex> lk(json_log_mutex);
+    ToFile(row, true);
+  }
+
+}
+
+#endif
+/**
  * @brief Output log record
  *
  * Sends out record previously created using LogRecordCreate()
