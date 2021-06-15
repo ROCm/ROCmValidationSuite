@@ -47,10 +47,7 @@ class LogNodeRec : public LogNode {
   virtual ~LogNodeRec();
 
   virtual std::string ToJson(const std::string& Lead = "");
-
- public:
-  int LogLevel();
-
+  virtual int LogLevel();
  protected:
   //! Logging Level
   int Level;

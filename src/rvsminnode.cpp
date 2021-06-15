@@ -23,6 +23,7 @@
  *
  *******************************************************************************/
 #include <string>
+#include <iostream>
 
 #include "include/rvsminnode.h"
 #include "include/rvstrace.h"
@@ -36,10 +37,11 @@ using std::string;
  * @param Parent Pointer to parent node
  *
  */
-rvs::MinNode::MinNode(const char* Name, const rvs::LogNodeBase* Parent)
+rvs::MinNode::MinNode(const char* Name, int LogLevel, const rvs::LogNodeBase* Parent)
 :
-LogNodeBase(Name, Parent) {
-  Type = eLN::List;
+LogNode(Name, Parent),
+Level(LogLevel){
+  Type = eLN::Record;
 }
 
 //! Destructor
@@ -47,6 +49,16 @@ rvs::MinNode::~MinNode() {
   for (auto it = Child.begin(); it != Child.end(); ++it) {
     delete (*it);
   }
+}
+
+/**
+ * @brief Get logging level
+ *
+ * @return Current logging level
+ *
+ */
+int rvs::MinNode::LogLevel() {
+  return Level;
 }
 
 /**

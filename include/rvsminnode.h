@@ -29,7 +29,7 @@
 #include <memory>
 #include <string>
 
-#include "include/rvslognodebase.h"
+#include "include/rvslognode.h"
 
 namespace rvs {
 
@@ -42,19 +42,22 @@ namespace rvs {
  * Used to construct structure log record for JSON output
  *
  */
-class MinNode : public LogNodeBase {
+class MinNode : public LogNode {
  public:
-  explicit MinNode(const char* Name, const LogNodeBase* Parent = nullptr);
+  explicit MinNode(const char* Name, int LogLevel, const LogNodeBase* Parent = nullptr);
   virtual ~MinNode();
 
   virtual std::string ToJson(const std::string& Lead = "");
 
  public:
   void Add(LogNodeBase* spChild);
-
+  virtual int LogLevel();
  public:
   //! list of child nodes
   std::vector<LogNodeBase*> Child;
+
+ protected:
+  int Level;
 };
 
 }  // namespace rvs

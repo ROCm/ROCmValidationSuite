@@ -453,7 +453,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
             }
 
             rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
-            rvs::lp::LogRecordFlush(json_root_node);
+            rvs::lp::LogRecordFlush(json_root_node, rvs::loginfo);
         }
         return 0;
     }
@@ -567,10 +567,11 @@ int gst_action::run(void) {
         return -1;
     }
     if(bjson){
-	rvs::lp::JsonStartNodeCreate(MODULE_NAME, action_name);
+	rvs::lp::JsonStartNodeCreate(MODULE_NAME, action_name.c_str());
     }
-    return get_all_selected_gpus();
+    auto res =  get_all_selected_gpus();
     if(bjson){
 	rvs::lp::JsonEndNodeCreate();
     }
+    return res;
 }

@@ -125,8 +125,8 @@ void* rvs::lp::LogRecordCreate(const char* Module, const char* Action,
  * @return 0 - success, non-zero otherwise
  *
  */
-int   rvs::lp::LogRecordFlush(void* pLogRecord) {
-  return rvs::logger::LogRecordFlush(pLogRecord);
+int   rvs::lp::LogRecordFlush(void* pLogRecord, bool minimal) {
+  return rvs::logger::LogRecordFlush(pLogRecord, minimal);
 }
 
 /**

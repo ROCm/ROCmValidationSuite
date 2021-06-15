@@ -60,6 +60,14 @@ void rvs::LogNode::Add(LogNodeBase* pChild) {
 }
 
 /**
+ * @brief Return log level in Children.
+ * Does nothing in parent
+ */
+
+int rvs::LogNode:: LogLevel(){
+	return 0;
+}
+/**
  * @brief Provides JSON representation of Node
  *
  * Traverses list of child nodes and converts them into proper string representation.

@@ -285,7 +285,7 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
 	// append time
   }
   if( minimal){
-	rvs::MinNode* minrec = new rvs::MinNode(Action);
+	rvs::MinNode* minrec = new rvs::MinNode(Action, LogLevel);
 	return static_cast<void*>(minrec);
   }
   if ((Sec|uSec)) {
@@ -360,13 +360,17 @@ int rvs::logger::JsonEndNodeCreate() {
  * @return 0 - success, non-zero otherwise
  *
  */
-int   rvs::logger::LogRecordFlush(void* pLogRecord) {
+int   rvs::logger::LogRecordFlush(void* pLogRecord, bool minimal) {
   // lock log_mutex for the duration of this block
   std::lock_guard<std::mutex> lk(json_log_mutex);
   std::string val;
+  LogNode *r = nullptr;
   DTRACE_
-
-  LogNodeRec* r = static_cast<LogNodeRec*>(pLogRecord);
+  if(minimal){
+    r = static_cast<MinNode*>(pLogRecord);	
+  }else{
+    r = static_cast<LogNodeRec*>(pLogRecord);
+  }
   // no JSON loggin requested
   if (!to_json()) {
     DTRACE_

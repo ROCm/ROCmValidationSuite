@@ -40,7 +40,7 @@ typedef void* (*t_cbLogRecordCreate)( const char* Module, const char* Action,
                                       const unsigned int uSec, bool minimal);
 typedef int   (*t_cbJsonStartNodeCreate)( const char* Module, const char* Action);
 typedef int   (*t_cbJsonEndNodeCreate)();
-typedef int   (*t_cbLogRecordFlush)( void* pLogRecord);
+typedef int   (*t_cbLogRecordFlush)( void* pLogRecord, bool minimal);
 typedef void* (*t_cbCreateNode)(void* Parent, const char* Name);
 typedef void  (*t_cbAddString)(void* Parent, const char* Key, const char* Val);
 typedef void  (*t_cbAddInt)(void* Parent, const char* Key, const int Val);

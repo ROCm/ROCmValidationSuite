@@ -351,7 +351,6 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
             std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " +
             std::to_string(gflops_interval);
     rvs::lp::Log(msg, rvs::logresults);
-
     log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);
 }
@@ -609,10 +608,11 @@ void GSTWorker::log_to_json(const std::string &key, const std::string &value,
             rvs::lp::AddString(json_node, GST_JSON_LOG_GPU_ID_KEY,
                             std::to_string(gpu_id));
             rvs::lp::AddString(json_node, key, value);
-            rvs::lp::LogRecordFlush(json_node);
+            rvs::lp::LogRecordFlush(json_node, log_level);
         }
     }
 }
+
 
 /**
  * @brief extends the usleep for more than 1000000us

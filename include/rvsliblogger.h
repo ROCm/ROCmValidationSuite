@@ -69,7 +69,7 @@ class logger {
   static  void*  LogRecordCreate(const char* Module, const char* Action,
                                   const int LogLevel, const unsigned int Sec,
                                   const unsigned int uSec, bool minimal = false);
-  static  int    LogRecordFlush(void* pLogRecord);
+  static  int    LogRecordFlush(void* pLogRecord, bool minimal = false);
   static  void*  CreateNode(void* Parent, const char* Name);
   static  void   AddString(void* Parent, const char* Key, const char* Val);
   static  void   AddInt(void* Parent, const char* Key, const int Val);

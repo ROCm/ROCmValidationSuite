@@ -50,7 +50,10 @@ class LogNode : public LogNodeBase {
   virtual std::string ToJson(const std::string& Lead = "");
 
  public:
-  void Add(LogNodeBase* spChild);
+  virtual void Add(LogNodeBase* spChild);
+
+ public:
+  virtual int LogLevel();
 
  public:
   //! list of child nodes

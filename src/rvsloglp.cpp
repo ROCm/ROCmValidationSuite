@@ -154,8 +154,8 @@ int rvs::lp::JsonEndNodeCreate() {
  * @return 0 - success, non-zero otherwise
  *
  */
-int   rvs::lp::LogRecordFlush(void* pLogRecord) {
-  return (*mi.cbLogRecordFlush)(pLogRecord);
+int   rvs::lp::LogRecordFlush(void* pLogRecord, bool minimal) {
+  return (*mi.cbLogRecordFlush)(pLogRecord, minimal);
 }
 
 /**
