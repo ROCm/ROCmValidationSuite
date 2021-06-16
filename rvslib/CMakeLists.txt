@@ -130,7 +130,7 @@ set(SOURCES
   ../src/rvslognode.cpp
   ../src/rvslognodestring.cpp
   ../src/rvslognodeint.cpp
-
+  ../src/rvsminnode.cpp
   ../src/rvs_blas.cpp
   ../src/rvshsa.cpp
   )

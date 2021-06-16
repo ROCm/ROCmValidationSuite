@@ -444,7 +444,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
             unsigned int usec;
             rvs::lp::get_ticks(&sec, &usec);
             void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::loginfo, sec, usec);
+                            action_name.c_str(), rvs::loginfo, sec, usec, true);
             if (!json_root_node) {
                 // log the error
                 string msg = std::string(JSON_CREATE_NODE_ERROR);
@@ -453,7 +453,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
             }
 
             rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
-            rvs::lp::LogRecordFlush(json_root_node);
+            rvs::lp::LogRecordFlush(json_root_node, rvs::loginfo);
         }
         return 0;
     }
@@ -566,6 +566,12 @@ int gst_action::run(void) {
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
     }
-
-    return get_all_selected_gpus();
+    if(bjson){
+	rvs::lp::JsonStartNodeCreate(MODULE_NAME, action_name.c_str());
+    }
+    auto res =  get_all_selected_gpus();
+    if(bjson){
+	rvs::lp::JsonEndNodeCreate();
+    }
+    return res;
 }

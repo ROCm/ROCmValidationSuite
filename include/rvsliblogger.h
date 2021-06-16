@@ -62,12 +62,14 @@ class logger {
 
   static  int    log(const std::string& Message, const int level = 1);
   static  int    Log(const char* Message, const int level);
+  static  int    JsonStartNodeCreate(const char* Module, const char* Action);
+  static  int    JsonEndNodeCreate();
   static  int    LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec);
   static  void*  LogRecordCreate(const char* Module, const char* Action,
                                   const int LogLevel, const unsigned int Sec,
-                                  const unsigned int uSec);
-  static  int    LogRecordFlush(void* pLogRecord);
+                                  const unsigned int uSec, bool minimal = false);
+  static  int    LogRecordFlush(void* pLogRecord, bool minimal = false);
   static  void*  CreateNode(void* Parent, const char* Name);
   static  void   AddString(void* Parent, const char* Key, const char* Val);
   static  void   AddInt(void* Parent, const char* Key, const int Val);
@@ -79,7 +81,7 @@ class logger {
                    const char *Module = nullptr, const char *Action = nullptr);
 
  protected:
-  static  int    ToFile(const std::string& Row);
+  static  int    ToFile(const std::string& Row ,  bool json = false);
 
   //! Current logging level (0..5)
   static  int    loglevel_m;
@@ -95,12 +97,15 @@ class logger {
   static std::mutex cout_mutex;
   //! Mutex to synchronize log file output
   static std::mutex log_mutex;
+  //! Mutex to synchronize json log file output
+  static std::mutex json_log_mutex;
   //! flag indicating stop loging was requested
   static bool bStop;
   //! stop flags
   static uint16_t stop_flags;
   //! logging file
   static char log_file[1024];
+  static std::string json_log_file;
   //! quiet mode
   static bool b_quiet;
 };

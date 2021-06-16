@@ -23,8 +23,9 @@
  *
  *******************************************************************************/
 #include <string>
+#include <iostream>
 
-#include "include/rvslognode.h"
+#include "include/rvsminnode.h"
 #include "include/rvstrace.h"
 
 using std::string;
@@ -36,17 +37,28 @@ using std::string;
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogNode::LogNode(const char* Name, const LogNodeBase* Parent)
+rvs::MinNode::MinNode(const char* Name, int LogLevel, const rvs::LogNodeBase* Parent)
 :
-LogNodeBase(Name, Parent) {
-  Type = eLN::List;
+LogNode(Name, Parent),
+Level(LogLevel){
+  Type = eLN::Record;
 }
 
 //! Destructor
-rvs::LogNode::~LogNode() {
+rvs::MinNode::~MinNode() {
   for (auto it = Child.begin(); it != Child.end(); ++it) {
     delete (*it);
   }
+}
+
+/**
+ * @brief Get logging level
+ *
+ * @return Current logging level
+ *
+ */
+int rvs::MinNode::LogLevel() {
+  return Level;
 }
 
 /**
@@ -55,18 +67,10 @@ rvs::LogNode::~LogNode() {
  * @param pChild Pointer to child node
  *
  */
-void rvs::LogNode::Add(LogNodeBase* pChild) {
+void rvs::MinNode::Add(rvs::LogNodeBase* pChild) {
   Child.push_back(pChild);
 }
 
-/**
- * @brief Return log level in Children.
- * Does nothing in parent
- */
-
-int rvs::LogNode:: LogLevel(){
-	return 0;
-}
 /**
  * @brief Provides JSON representation of Node
  *
@@ -77,10 +81,10 @@ int rvs::LogNode:: LogLevel(){
  * @return Node as JSON string
  *
  */
-std::string rvs::LogNode::ToJson(const std::string& Lead) {
+std::string rvs::MinNode::ToJson(const std::string& Lead) {
   DTRACE_
   string result(RVSENDL);
-  result += Lead + "\"" + Name + "\"" + " : {";
+  result += "{";
 
   int  size = Child.size();
   for (int i = 0; i < size; i++) {

@@ -44,7 +44,7 @@
 #define GST_BYTES_COPIED_PER_OP_OUTPUT_KEY      "bytes_copied_per_op"
 #define GST_TRY_OPS_PER_SEC_OUTPUT_KEY          "try_ops_per_sec"
 
-#define GST_LOG_GFLOPS_INTERVAL_KEY             "Gflops"
+#define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
 #define GST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 
 #define PROC_DEC_INC_SGEMM_FREQ_DELAY           10
@@ -351,7 +351,6 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
             std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " +
             std::to_string(gflops_interval);
     rvs::lp::Log(msg, rvs::logresults);
-
     log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);
 }
@@ -496,8 +495,8 @@ void GSTWorker::run() {
     rvs::lp::Log(msg, rvs::logtrace);
 
     log_to_json(GST_START_MSG, std::to_string(target_stress), rvs::loginfo);
-    log_to_json(GST_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),
-                rvs::loginfo);
+    //log_to_json(GST_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),
+    //            rvs::loginfo);
 
     // let the GPU ramp-up and check the result
     bool ramp_up_success = do_gst_ramp(&error, &err_description);
@@ -604,15 +603,16 @@ void GSTWorker::log_to_json(const std::string &key, const std::string &value,
 
         rvs::lp::get_ticks(&sec, &usec);
         void *json_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), log_level, sec, usec);
+                            action_name.c_str(), log_level, sec, usec, true);
         if (json_node) {
             rvs::lp::AddString(json_node, GST_JSON_LOG_GPU_ID_KEY,
                             std::to_string(gpu_id));
             rvs::lp::AddString(json_node, key, value);
-            rvs::lp::LogRecordFlush(json_node);
+            rvs::lp::LogRecordFlush(json_node, log_level);
         }
     }
 }
+
 
 /**
  * @brief extends the usleep for more than 1000000us

@@ -69,8 +69,10 @@ class lp {
   static int   Initialize(const T_MODULE_INIT* pMi);
   static void* LogRecordCreate(const char* Module, const char* Action,
                                const int LogLevel, const unsigned int Sec,
-                               const unsigned int uSec);
-  static int   LogRecordFlush(void* pLogRecord);
+                               const unsigned int uSec, bool minimal = false);
+  static int   JsonStartNodeCreate(const char* Module, const char* Action);
+  static int   JsonEndNodeCreate();
+  static int   LogRecordFlush(void* pLogRecord, bool minimal = false);
   static void* CreateNode(void* Parent, const char* Name);
   static void  AddString(void* Parent, const std::string& Key,
                          const std::string& Val);
