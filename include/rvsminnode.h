@@ -42,7 +42,7 @@ namespace rvs {
  * Used to construct structure log record for JSON output
  *
  */
-class MinNode : public LogNode {
+class MinNode : virtual public LogNode {
  public:
   explicit MinNode(const char* Name, int LogLevel, const LogNodeBase* Parent = nullptr);
   virtual ~MinNode();

@@ -116,7 +116,7 @@ TEST_F(LogNodeRecTest, log_node_base) {
   EXPECT_EQ(node->get_Level(), static_cast<int>(-1));
   EXPECT_EQ(node->get_sec(), static_cast<int>(-1));
   EXPECT_EQ(node->get_usec(), static_cast<int>(-1));
-  tmp_node = static_cast<ext_lognode*>(node->get_Parent());
+  tmp_node = dynamic_cast<ext_lognode*>(node->get_Parent());
   EXPECT_EQ(tmp_node, nullptr);
   json_string = node->ToJson("T ");
   EXPECT_STREQ(json_string.c_str(),
@@ -158,13 +158,12 @@ TEST_F(LogNodeRecTest, log_node_base) {
     EXPECT_EQ(node->get_sec(), static_cast<int>(4));
     EXPECT_EQ(node->get_usec(), static_cast<int>(i));
   }
-
   // ----------------------------------------
   // check parent nodes
   // ----------------------------------------
   // 1 parent
   node = static_cast<ext_lognode*>(level_1);
-  tmp_node = static_cast<ext_lognode*>(node->get_Parent());
+  tmp_node = dynamic_cast<ext_lognode*>(node->get_Parent());
   EXPECT_EQ(tmp_node, nullptr);
   // 2 parents
   for (uint i = 0; i < 3; i++) {
@@ -177,7 +176,7 @@ TEST_F(LogNodeRecTest, log_node_base) {
   // 3_0, 3_1 parents
   for (uint i = 0; i < 2; i++) {
     node = static_cast<ext_lognode*>(level_3[i]);
-    tmp_node = static_cast<ext_lognode*>(node->get_Parent());
+    tmp_node = dynamic_cast<ext_lognode*>(node->get_Parent());
     exp_string = "level_2_0";
     EXPECT_STREQ(tmp_node->get_Name().c_str(), exp_string.c_str());
     EXPECT_EQ(tmp_node->get_Type(), rvs::eLN::Record);
@@ -185,7 +184,7 @@ TEST_F(LogNodeRecTest, log_node_base) {
   // 3_2 parents
   for (uint i = 2; i < 3; i++) {
     node = static_cast<ext_lognode*>(level_3[i]);
-    tmp_node = static_cast<ext_lognode*>(node->get_Parent());
+    tmp_node = dynamic_cast<ext_lognode*>(node->get_Parent());
     exp_string = "level_2_1";
     EXPECT_STREQ(tmp_node->get_Name().c_str(), exp_string.c_str());
     EXPECT_EQ(tmp_node->get_Type(), rvs::eLN::Record);
@@ -193,7 +192,7 @@ TEST_F(LogNodeRecTest, log_node_base) {
   // 3_3, 3_4 parents
   for (uint i = 3; i < 5; i++) {
     node = static_cast<ext_lognode*>(level_3[i]);
-    tmp_node = static_cast<ext_lognode*>(node->get_Parent());
+    tmp_node = dynamic_cast<ext_lognode*>(node->get_Parent());
     exp_string = "level_2_2";
     EXPECT_STREQ(tmp_node->get_Name().c_str(), exp_string.c_str());
     EXPECT_EQ(tmp_node->get_Type(), rvs::eLN::Record);
@@ -238,5 +237,5 @@ TEST_F(LogNodeRecTest, log_node_base) {
   json_string = level_4[1]->ToJson();
   EXPECT_STREQ(json_string.c_str(),
                "\n{\n  \"loglevel\" : 41,\n  \"time\" : \"     4.1     \",\n}");
-}
 
+}
