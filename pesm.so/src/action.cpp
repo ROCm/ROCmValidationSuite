@@ -265,7 +265,7 @@ int pesm_action::do_gpu_list() {
 
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id =
-      ((((uint16_t)(dev->bus)) << 8) | dev->dev);
+      ((((uint16_t)(dev->bus)) << 8) | ((uint16_t)(dev->dev)) << 3 | dev->func);
     uint16_t dev_domain = dev->domain_16;
     // if not AMD GPU just continue
     uint16_t node_id;
