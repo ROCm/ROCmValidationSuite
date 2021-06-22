@@ -535,7 +535,7 @@ int iet_action::get_all_selected_gpus(void) {
         // compute device location_id (needed in order to identify this device
         // in the gpus_id/gpus_device_id list
         unsigned int dev_location_id =
-            ((((unsigned int) (props.pciBusID)) << 8) | (props.pciDeviceID));
+            ((((unsigned int) (props.pciBusID)) << 8) | (((unsigned int) (props.pciDeviceID)) << 3));
 
         uint16_t devId;
         if (rvs::gpulist::location2device(dev_location_id, &devId)) {
