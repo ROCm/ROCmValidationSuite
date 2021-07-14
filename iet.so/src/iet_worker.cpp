@@ -31,6 +31,8 @@
 #include <mutex>
 
 #include "rocm_smi/rocm_smi.h"
+//#include "rocm_smi/rocm_smi_main.h"
+//#include "rocm_smi/rocm_smi_device.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 
@@ -182,6 +184,22 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
     delete free_gpublas;
 }
 
+/**
+ *
+ */
+
+void IETWorker::enumerate_devs(){
+	rsmi_status_t err;
+	uint16_t id;
+	uint32_t num_devices;
+	uint64_t val_ui64;
+	err = rsmi_num_monitor_devices(&num_devices);
+	for (uint32_t i = 0; i < num_devices ; ++i) {
+      std::cout << "\t**Device index: " << i << std::endl;
+      err = rsmi_dev_pci_id_get(i, &val_ui64);
+	  std::cout << "\t**Device ID: "  << val_ui64 << std::endl;
+	}	  
+}
 
 /**
  * @brief performs the EDPp stress test on the given GPU (attempts to sustain
@@ -205,7 +223,8 @@ bool IETWorker::do_iet_power_stress(void) {
     totalpower = 0;
     result = true;
     start = true;
-
+    std::cout << "MANOJ: dev index is " << gpu_device_index << std::endl;
+    enumerate_devs();
     std::thread t(blasThread, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms, 
 		    iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset);
     t.detach();
@@ -217,7 +236,6 @@ bool IETWorker::do_iet_power_stress(void) {
         // check if stop signal was received
         if (rvs::lp::Stopping())
             break;
-
        // get GPU's current average power
        rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(gpu_device_index, 0,
                                     &last_avg_power);

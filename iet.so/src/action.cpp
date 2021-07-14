@@ -369,6 +369,46 @@ bool iet_action::get_all_common_config_keys(void) {
 }
 
 /**
+ * @brief maps hip index to smi index
+ * 
+ */
+
+void iet_action::hip_to_smi_indices(){
+    int hip_num_gpu_devices;
+    hipGetDeviceCount(&hip_num_gpu_devices);
+    // map this to smi as only these are visible
+    uint32_t smi_num_devices;
+    uint64_t val_ui64;
+    std::map<uint64_t, int> smi_map;
+    std::map<int, int> hip_to_smi_id;
+    rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
+    if( err == RSMI_STATUS_SUCCESS){
+	for(auto i = 0; i < smi_num_devices; ++i){
+	    err = rsmi_dev_pci_id_get(i, &val_ui64);
+	    smi_map.insert({val_ui64, i});
+	}
+    }
+    for (int i = 0; i < hip_num_gpu_devices; i++) {
+        // get GPU device properties
+        hipDeviceProp_t props;
+        hipGetDeviceProperties(&props, i);
+
+        // compute device location_id (needed to match this device
+        // with one of those found while querying the pci bus
+        uint16_t hip_dev_location_id =
+                ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3) );
+	if(smi_map.find(hip_dev_location_id) != smi_map.end()){
+		hip_to_smi_id.insert({i, smi_map[hip_dev_location_id]});
+	}
+    }
+    std::cout << "MAPPIGS : " << std::endl;
+    for(auto itr = hip_to_smi_id.begin(); itr != hip_to_smi_id.end(); ++itr){
+	std::cout << itr->first << " AND " << itr->second << std::endl;
+    }
+}
+
+
+/**
  * @brief runs the edp test
  * @return true if no error occured, false otherwise
  */
@@ -377,6 +417,9 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     uint32_t     dev_idx = 0;
     size_t       k = 0;
     int          gpuId;
+    bool gpu_masking = false;    // if HIP_VISIBLE_DEVICES is set, this will be true
+    int hip_num_gpu_devices;
+    hipGetDeviceCount(&hip_num_gpu_devices);
 
     vector<IETWorker> workers(iet_gpus_device_index.size());
     for (;;) {
@@ -389,9 +432,15 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             sleep(property_wait);
 
         rsmi_init(0);
-
+	uint32_t smi_num_devices;
+        rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
+	if(smi_num_devices != hip_num_gpu_devices)
+		gpu_masking = true;
+	if(gpu_masking)
+		hip_to_smi_indices();
+	int smi_idx;
         for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
-
+            //smi_idx = get_smi_index(it->first);
             gpuId = it->second;
             // set worker thread params
             workers[i].set_name(action_name);
@@ -497,7 +546,7 @@ bool iet_action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
         // compute device location_id (needed to match this device
         // with one of those found while querying the pci bus
         uint16_t hip_dev_location_id =
-                ((((uint16_t) (props.pciBusID)) << 8) | (props.pciDeviceID));
+                ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3) );
         if (hip_dev_location_id == dev_location_id) {
             gpu_hwmon_info cgpu_info;
             cgpu_info.hip_gpu_deviceid = i;

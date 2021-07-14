@@ -119,7 +119,7 @@ class iet_action: public rvs::actionbase {
     //! selected for EDPp test
     std::vector<gpu_hwmon_info> edpp_gpus;
 
-
+    void hip_to_smi_indices();
     bool get_all_iet_config_keys(void);
     /**
     * @brief reads all common configuration keys from
