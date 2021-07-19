@@ -380,7 +380,6 @@ void iet_action::hip_to_smi_indices(){
     uint32_t smi_num_devices;
     uint64_t val_ui64;
     std::map<uint64_t, int> smi_map;
-    std::map<int, int> hip_to_smi_id;
     rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
     if( err == RSMI_STATUS_SUCCESS){
 	for(auto i = 0; i < smi_num_devices; ++i){
@@ -398,12 +397,8 @@ void iet_action::hip_to_smi_indices(){
         uint16_t hip_dev_location_id =
                 ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3) );
 	if(smi_map.find(hip_dev_location_id) != smi_map.end()){
-		hip_to_smi_id.insert({i, smi_map[hip_dev_location_id]});
+		hip_to_smi_idxs.insert({i, smi_map[hip_dev_location_id]});
 	}
-    }
-    std::cout << "MAPPIGS : " << std::endl;
-    for(auto itr = hip_to_smi_id.begin(); itr != hip_to_smi_id.end(); ++itr){
-	std::cout << itr->first << " AND " << itr->second << std::endl;
     }
 }
 
@@ -436,11 +431,16 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
         rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
 	if(smi_num_devices != hip_num_gpu_devices)
 		gpu_masking = true;
-	if(gpu_masking)
+	if(gpu_masking){  // this is the case when using HIP_VISIBLE_DEVICES variable to modify GPU visibility
+		// smi output wont be affected by the flag and hence indices should be appropriately used.
 		hip_to_smi_indices();
-	int smi_idx;
+	}
         for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
-            //smi_idx = get_smi_index(it->first);
+	    if(hip_to_smi_idxs.find(it->first) != hip_to_smi_idxs.end()){
+		workers[i].set_smi_device_index(hip_to_smi_idxs[it->first]);
+	    } else{
+		workers[i].set_smi_device_index(it->first);
+	    }
             gpuId = it->second;
             // set worker thread params
             workers[i].set_name(action_name);

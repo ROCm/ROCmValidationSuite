@@ -212,7 +212,6 @@ class IETWorker : public rvs::ThreadBase {
     bool do_iet_power_stress(void);
     void log_to_json(const std::string &key, const std::string &value,
                         int log_level);
-    void enumerate_devs();
 
  protected:
     std::unique_ptr<rvs_blas> gpu_blas;
