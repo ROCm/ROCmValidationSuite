@@ -62,7 +62,12 @@ class IETWorker : public rvs::ThreadBase {
     }
     //! returns the GPU index
     int get_gpu_device_index(void) { return gpu_device_index; }
-
+    //! sets the GPU smi index
+    void set_smi_device_index(int _smi_device_index) {
+        smi_device_index = _smi_device_index;
+    }
+    //! returns the GPU smi index
+    int get_smi_device_index(void) { return smi_device_index; }
     //! sets the GPU power-index
     void set_pwr_device_id(int _pwr_device_id) {
         pwr_device_id = _pwr_device_id;
@@ -208,7 +213,6 @@ class IETWorker : public rvs::ThreadBase {
     void log_to_json(const std::string &key, const std::string &value,
                         int log_level);
 
-
  protected:
     std::unique_ptr<rvs_blas> gpu_blas;
 
@@ -216,6 +220,8 @@ class IETWorker : public rvs::ThreadBase {
     std::string action_name;
     //! index of the GPU (as reported by HIP API) that will run the EDPp test
     int gpu_device_index;
+    //! index of GPU (in view of smi lib) which is sometimes different to above index
+    int smi_device_index;
     //! ID of the GPU that will run the EDPp test
     uint16_t gpu_id;
 

@@ -31,6 +31,8 @@
 #include <mutex>
 
 #include "rocm_smi/rocm_smi.h"
+//#include "rocm_smi/rocm_smi_main.h"
+//#include "rocm_smi/rocm_smi_device.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 
@@ -205,7 +207,6 @@ bool IETWorker::do_iet_power_stress(void) {
     totalpower = 0;
     result = true;
     start = true;
-
     std::thread t(blasThread, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms, 
 		    iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset);
     t.detach();
@@ -217,9 +218,8 @@ bool IETWorker::do_iet_power_stress(void) {
         // check if stop signal was received
         if (rvs::lp::Stopping())
             break;
-
        // get GPU's current average power
-       rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(gpu_device_index, 0,
+       rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(smi_device_index , 0,
                                     &last_avg_power);
 
        if (rmsi_stat == RSMI_STATUS_SUCCESS) {
