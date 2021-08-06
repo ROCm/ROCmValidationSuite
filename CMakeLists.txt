@@ -28,6 +28,17 @@ if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
 
+project ("rocm-validation-suite")
+enable_testing()
+
+# Prerequisite - Check if rocblas was already installed
+find_package (rocblas)
+if(rocblas_FOUND)
+  message(STATUS "rocblas found")
+else()
+  message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
+endif(rocblas_FOUND)
+
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
@@ -36,7 +47,7 @@ set(HIP_INC_DIR "${ROCM_PATH}/hip" )
 set(HIP_INC_DIR "${ROCM_PATH}/hip" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
-execute_process(COMMAND ln -s /usr/bin/python3 /usr/bin/python)
+#execute_process(COMMAND ln -s /usr/bin/python3 /usr/bin/python)
 
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
@@ -53,8 +64,6 @@ options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
 RelWithDebInfo MinSizeRel.")
 endif()
 
-project ("rocm-validation-suite")
-enable_testing()
 #include ( CTest )
 
 if (NOT CMAKE_CONFIGURATION_TYPES)
@@ -76,11 +85,11 @@ endif()
 message(STATUS "RVS_OS_TYPE: ${RVS_OS_TYPE}")
 if (${RVS_OS_TYPE} STREQUAL "ubuntu")
   set(RVS_OS_TYPE_NUM 1)
-  execute_process(COMMAND sudo apt-get install rocblas --assume-yes)
+  #  execute_process(COMMAND sudo apt-get install rocblas --assume-yes)
 elseif ((${RVS_OS_TYPE} STREQUAL "centos") OR (${RVS_OS_TYPE} STREQUAL "rhel")
   OR (${RVS_OS_TYPE} STREQUAL "sles"))
   set(RVS_OS_TYPE_NUM 2)
-  execute_process(COMMAND sudo yum -y install rocblas )
+  #  execute_process(COMMAND sudo yum -y install rocblas )
 else()
   set(RVS_OS_TYPE_NUM 0)
 endif()
