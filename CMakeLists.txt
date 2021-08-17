@@ -108,7 +108,7 @@ get_version ( ${RVS_VERSION} )
 # set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm")
 set(CPACK_PACKAGE_NAME "rocm-validation-suite")
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The ROCm Validation Suite validates the AMD platform using ROCM Runtime.
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ROCm Validation Suite validates the AMD platform using ROCm Runtime.
  The ROCm Validation Suite is a system administrator and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPUs running in high performance computing environments, enabled using the ROCm software stack on a compatible platform.")
 set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
