@@ -29,12 +29,11 @@
 #include <memory>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
+#include "include/rvs_util.h"
 
 #define GST_RESULT_PASS_MESSAGE         "true"
 #define GST_RESULT_FAIL_MESSAGE         "false"
 
-void *json_node_create(std::string module_name, std::string action_name,
-                     int log_level);
 
 /**
  * @class GSTWorker

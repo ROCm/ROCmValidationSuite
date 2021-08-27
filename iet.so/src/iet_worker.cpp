@@ -71,18 +71,6 @@ using std::string;
 bool IETWorker::bjson = false;
 bool endtest = false;
 
-// common util
-void *json_node_create(std::string module_name, std::string action_name,
-                     int log_level){
-        unsigned int sec;
-        unsigned int usec;
-
-        rvs::lp::get_ticks(&sec, &usec);
-        void *json_node = rvs::lp::LogRecordCreate(module_name.c_str(),
-                            action_name.c_str(), log_level, sec, usec, true);
-        return json_node;
-}
-
 
 /**
  * @brief computes the difference (in milliseconds) between 2 points in time

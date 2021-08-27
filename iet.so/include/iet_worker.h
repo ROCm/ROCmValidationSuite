@@ -30,9 +30,8 @@
 #include <mutex>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
+#include "include/rvs_util.h"
 
-void *json_node_create(std::string module_name, std::string action_name,
-                     int log_level);
 /**
  * @class IETWorker
  * @ingroup IET
