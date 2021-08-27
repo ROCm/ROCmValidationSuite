@@ -105,6 +105,7 @@ class gst_action: public rvs::actionbase {
 //     void property_get_gst_tolerance(int *error);
 
     bool get_all_gst_config_keys(void);
+    void json_add_primary_fields();
   /**
   * @brief reads all common configuration keys from
   * the module's properties collection

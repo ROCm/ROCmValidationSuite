@@ -32,6 +32,7 @@
 #include "include/rvs_blas.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
+#include "include/rvs_util.h"
 
 #define MODULE_NAME                             "gst"
 
@@ -63,6 +64,19 @@
 using std::string;
 
 bool GSTWorker::bjson = false;
+
+// common util
+void *json_node_create(std::string module_name, std::string action_name,
+                     int log_level){
+        unsigned int sec;
+        unsigned int usec;
+
+        rvs::lp::get_ticks(&sec, &usec);
+        void *json_node = rvs::lp::LogRecordCreate(module_name.c_str(),
+                            action_name.c_str(), log_level, sec, usec, true);
+        return json_node;
+}
+
 
 GSTWorker::GSTWorker() {}
 GSTWorker::~GSTWorker() {}
@@ -494,10 +508,6 @@ void GSTWorker::run() {
             " Starting the GST stress test "; 
     rvs::lp::Log(msg, rvs::logtrace);
 
-    log_to_json(GST_START_MSG, std::to_string(target_stress), rvs::loginfo);
-    //log_to_json(GST_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),
-    //            rvs::loginfo);
-
     // let the GPU ramp-up and check the result
     bool ramp_up_success = do_gst_ramp(&error, &err_description);
 
@@ -517,8 +527,8 @@ void GSTWorker::run() {
                 std::to_string(gpu_id) + " " + " GST ramp completed for interval :" + " " +
                 std::to_string(ramp_interval);
     rvs::lp::Log(msg, rvs::loginfo);
-    log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
-                    rvs::loginfo);
+    //log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
+    //                rvs::loginfo);
     if (run_duration_ms > 0) {
             gst_test_passed = do_gst_stress_test(&error, &err_description);
             // check if stop signal was received
@@ -589,6 +599,7 @@ uint64_t GSTWorker::time_diff(
     return milliseconds.count();
 }
 
+
 /**
  * @brief logs a message to JSON
  * @param key info type
@@ -598,12 +609,8 @@ uint64_t GSTWorker::time_diff(
 void GSTWorker::log_to_json(const std::string &key, const std::string &value,
                      int log_level) {
     if (GSTWorker::bjson) {
-        unsigned int sec;
-        unsigned int usec;
-
-        rvs::lp::get_ticks(&sec, &usec);
-        void *json_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), log_level, sec, usec, true);
+        void *json_node = json_node_create(std::string(MODULE_NAME),
+                            action_name.c_str(), log_level);
         if (json_node) {
             rvs::lp::AddString(json_node, GST_JSON_LOG_GPU_ID_KEY,
                             std::to_string(gpu_id));
