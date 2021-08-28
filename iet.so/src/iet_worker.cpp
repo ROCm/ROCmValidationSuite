@@ -69,7 +69,7 @@
 using std::string;
 
 bool IETWorker::bjson = false;
-bool endtest = false;
+//bool endtest = false;
 
 
 /**
@@ -110,7 +110,7 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
 /**
  * @brief class default constructor
  */
-IETWorker::IETWorker() {
+IETWorker::IETWorker():endtest(false) {
 }
 
 IETWorker::~IETWorker() {
@@ -171,7 +171,9 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
          gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
          //Print the gflops interval
          log_interval_gflops(gflops_interval);
-
+         // check end test to avoid unecessary sleep
+	 if (endtest)
+		 break;
          //if gemm ops greater than 10000, lets yield
          //if this is not happening we are ending up in
          //out of memmory state

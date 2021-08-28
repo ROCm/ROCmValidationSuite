@@ -288,6 +288,7 @@ class IETWorker : public rvs::ThreadBase {
     bool iet_tp_flag;
     //mtex
     std::mutex mtx_blas_done;
+    bool endtest = false;
 };
 
 
