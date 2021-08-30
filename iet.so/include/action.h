@@ -75,7 +75,7 @@ class iet_action: public rvs::actionbase {
 
  protected:
     //! TRUE if JSON output is required
-    bool bjson;
+    bool bjson = false;
 
     std::string  iet_ops_type;
     //! target power level for the test
