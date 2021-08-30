@@ -42,6 +42,7 @@ add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
+
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
   set(CMAKE_EXE_LINKER_FLAGS "--coverage")
@@ -100,7 +101,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include ${ASAN_CXX_FLAGS}")
 
 
 # Set compiler and compiler flags
@@ -108,11 +109,19 @@ set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
 set(CMAKE_C_COMPILER   "${HIPCC_PATH}/bin/hipcc")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ASAN_LD_FLAGS}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${ASAN_LD_FLAGS}")
+
+if(BUILD_ADDRESS_SANITIZER)
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} --print-file-name=libclang_rt.asan-x86_64.so
+            OUTPUT_VARIABLE ASAN_LIB_FULL_PATH)
+  get_filename_component(ASAN_LIB_PATH ${ASAN_LIB_FULL_PATH} DIRECTORY)
+endif()
 
 ## define include directories
 include_directories(./ ../ ${YAML_INC_DIR})
 ## define lib directories
-link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR})
+link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ASAN_LIB_PATH})
 ## additional libraries
 set (PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
 

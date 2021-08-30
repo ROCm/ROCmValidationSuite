@@ -424,6 +424,12 @@ set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
 set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
 
+# Check if Address Sanitizer enabled.
+if(BUILD_ADDRESS_SANITIZER)
+  set(ASAN_CXX_FLAGS "-fsanitize=address  -shared-libasan")
+  set(ASAN_LD_FLAGS "-fuse-ld=lld")
+endif()
+
 set(HCC_CXX_FLAGS  "-Xlinker --enable-new-dtags -fno-gpu-rdc  --amdgpu-target=gfx90a --amdgpu-target=gfx1030 --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908")
 
 add_subdirectory(rvs)
