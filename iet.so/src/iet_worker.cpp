@@ -69,7 +69,6 @@
 using std::string;
 
 bool IETWorker::bjson = false;
-//bool endtest = false;
 
 
 /**
@@ -171,7 +170,7 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
          gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
          //Print the gflops interval
          log_interval_gflops(gflops_interval);
-         // check end test to avoid unecessary sleep
+         // check end test to avoid unnecessary sleep
 	 if (endtest)
 		 break;
          //if gemm ops greater than 10000, lets yield
