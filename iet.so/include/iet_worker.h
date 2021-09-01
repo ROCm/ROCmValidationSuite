@@ -30,6 +30,7 @@
 #include <mutex>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
+#include "include/rvs_util.h"
 
 /**
  * @class IETWorker
@@ -210,9 +211,12 @@ class IETWorker : public rvs::ThreadBase {
     void compute_gpu_stats(void);
     void compute_new_sgemm_freq(float avg_power);
     bool do_iet_power_stress(void);
+    void log_interval_gflops(double gflops_interval);
     void log_to_json(const std::string &key, const std::string &value,
-                        int log_level);
-
+        int log_level);
+    void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
+        bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
+        int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset);
  protected:
     std::unique_ptr<rvs_blas> gpu_blas;
 
@@ -284,6 +288,7 @@ class IETWorker : public rvs::ThreadBase {
     bool iet_tp_flag;
     //mtex
     std::mutex mtx_blas_done;
+    bool endtest = false;
 };
 
 
