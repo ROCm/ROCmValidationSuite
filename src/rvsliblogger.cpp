@@ -68,6 +68,7 @@ const std::string kv_delimit{":"};
 const std::string list_start{"["};
 const std::string list_end{"]"};
 const std::string newline{"\n"};
+const std::string json_folder{"/var/tmp/"};
 /**
  * @brief Set 'append' flag
  *
@@ -269,7 +270,7 @@ std::string json_filename(const char* moduleName){
         std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
             std::chrono::system_clock::now().time_since_epoch());
         json_file = json_file + "_" + std::to_string(ms.count()) + ".json";
-        json_file = std::string("/var/tmp/") + json_file;
+        json_file = json_folder + json_file;
         return json_file;
 }  
 
