@@ -124,3 +124,88 @@ Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present 
 
 Simple regression has been implemented. You may find more about it
 on this [link](./REGRESSION.md).
+
+## Reporting
+
+Test based reporting is enabled since beginning. 
+Added json based reporting to gst and iet modules. To enable json logging use "-j" command line option.
+./rvs -c conf/gst_sinle.conf -d 3 -j
+the json location will be in /var/log folder and the name of the file will be printed in the stdout.
+output structure is as shown below:
+```
+
+{
+{"module-name":{
+  "action-name":[
+
+{
+    "target" : "<flops/power>"
+  },
+{
+    "dtype" : "optype"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11433.352136"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11436.291718"
+  },
+....]
+} 
+}
+....
+}
+
+```
+example for gst is:
+```
+
+{"gst":{
+  "gpustress-9000-sgemm-false":[
+
+{
+    "target" : "9000.000000"
+  },
+{
+    "dtype" : "sgemm"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11433.352136"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11436.291718"
+  }]
+  }
+  }
+  {"gst":{
+  "gpustress-8000-sgemm-true":[
+,
+{
+    "target" : "8000.000000"
+  },
+{
+    "dtype" : "sgemm"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11657.886019"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11675.718793"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11687.461158"
+  } ]
+  }
+ }
+}
+
+```
+
+
