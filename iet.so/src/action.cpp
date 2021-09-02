@@ -83,6 +83,8 @@ using std::fstream;
 #define RVS_CONF_LDB_OFFSET             "ldb"
 #define RVS_CONF_LDC_OFFSET             "ldc"
 #define RVS_CONF_TP_FLAG                "targetpower_met"
+#define RVS_TP_MESSAGE                  "target_power"
+#define RVS_DTYPE_MESSAGE               "dtype"
 
 
 #define MODULE_NAME                     "iet"
@@ -435,6 +437,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
 		// smi output wont be affected by the flag and hence indices should be appropriately used.
 		hip_to_smi_indices();
 	}
+	IETWorker::set_use_json(bjson);
         for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
 	    if(hip_to_smi_idxs.find(it->first) != hip_to_smi_idxs.end()){
 		workers[i].set_smi_device_index(hip_to_smi_idxs[it->first]);
@@ -561,6 +564,33 @@ bool iet_action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
     return false;
 }
 
+
+/**
+ * @brief flushes target power and dtype fields to json file
+ * @return
+ */
+
+void iet_action::json_add_primary_fields(){
+        if (rvs::lp::JsonStartNodeCreate(MODULE_NAME, action_name.c_str())){
+            rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+            return;
+        }
+    void *json_node = json_node_create(std::string(MODULE_NAME),
+                        action_name.c_str(), rvs::loginfo);
+    if(json_node){
+            rvs::lp::AddString(json_node,RVS_TP_MESSAGE, std::to_string(iet_target_power));
+            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+            json_node = nullptr;
+    }
+    json_node = json_node_create(std::string(MODULE_NAME),
+                        action_name.c_str(), rvs::loginfo);
+    if(json_node){
+            rvs::lp::AddString(json_node,RVS_DTYPE_MESSAGE, iet_ops_type);
+            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+    }
+
+}
+
 /**
  * @brief gets all selected GPUs and starts the worker threads
  * @return run result
@@ -622,19 +652,25 @@ int iet_action::get_all_selected_gpus(void) {
             amd_gpus_found = true;
         }
     }
-
+    if(bjson){
+        // add prelims for each action, dtype and target stress
+        json_add_primary_fields();
+    }
+    int iet_res = 0;
     if (amd_gpus_found) {
         if(do_edp_test(iet_gpus_device_index))
-            return 0;
-
-        return -1;
+            iet_res = 0;
+        else 
+            iet_res = -1;
     } else {
-      msg = "No devices match criteria from the test configuation.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+          msg = "No devices match criteria from the test configuation.";
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+          iet_res = 1;
     }
-
-    return 0;
+    if(bjson){
+        rvs::lp::JsonEndNodeCreate();
+    }
+    return iet_res;
 }
 
 
@@ -653,7 +689,7 @@ int iet_action::run(void) {
 
     // check for -j flag (json logging)
     if (property.find("cli.-j") != property.end())
-        bjson = true;
+	bjson = true;
 
     if (!get_all_common_config_keys())
         return -1;

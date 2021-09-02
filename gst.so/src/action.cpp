@@ -69,7 +69,8 @@ using std::regex;
 
 #define MODULE_NAME                     "gst"
 #define MODULE_NAME_CAPS                "GST"
-
+#define TARGET_KEY                      "target"
+#define DTYPE_KEY                       "dtype"
 #define GST_DEFAULT_RAMP_INTERVAL       5000
 #define GST_DEFAULT_LOG_INTERVAL        1000
 #define GST_DEFAULT_MAX_VIOLATIONS      0
@@ -536,6 +537,32 @@ int gst_action::get_all_selected_gpus(void) {
 
     return 0;
 }
+/**
+ * @brief flushes target and dtype fields to json file
+ * @return 
+ */
+
+void gst_action::json_add_primary_fields(){
+        if (rvs::lp::JsonStartNodeCreate(MODULE_NAME, action_name.c_str())){
+            rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+	    return;
+        }
+    void *json_node = json_node_create(std::string(MODULE_NAME),
+                        action_name.c_str(), rvs::loginfo);
+    if(json_node){
+            rvs::lp::AddString(json_node,TARGET_KEY, std::to_string(gst_target_stress));
+            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+            json_node = nullptr;
+    }
+    json_node = json_node_create(std::string(MODULE_NAME),
+                        action_name.c_str(), rvs::loginfo);
+    if(json_node){
+            rvs::lp::AddString(json_node,DTYPE_KEY, gst_ops_type);
+            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+            json_node = nullptr;
+    }
+
+}
 
 /**
  * @brief runs the whole GST logic
@@ -567,7 +594,8 @@ int gst_action::run(void) {
         return -1;
     }
     if(bjson){
-	rvs::lp::JsonStartNodeCreate(MODULE_NAME, action_name.c_str());
+	// add prelims for each action, dtype and target stress
+        json_add_primary_fields();
     }
     auto res =  get_all_selected_gpus();
     if(bjson){

@@ -1,6 +1,6 @@
-# cuda_memtest
+# rocm_memtest
 
-This software tests GPU memory for hardware errors and soft errors using CUDA (or OpenCL).
+This software tests GPU memory for hardware errors and soft errors using hip (or OpenCL).
 
 ## Note for this Fork
 
@@ -69,21 +69,13 @@ cmake ..
 make
 ```
 
-Note: In CMake, `..` is the path to the source directory.
-
-We also provide the package `cuda-memtest` in the [Spack package manager](https://spack.io) .
 
 ### Run
 
 ```
-cuda_memtest
+memtest
 ```
-The default behavior is running the test on all the GPUs available infinitely.
-There are options to change the default behavior. 
 
-```
-cuda_memtest --disable_all --enable_test 10
-cuda_memtest --stress
 ```
 This runs test 10 (the stress test). `--stress` is equivalent to `--disable_all --enable_test 10 --exit_on_error`
 
@@ -92,40 +84,8 @@ cuda_memtest --stress --num_iterations 100 --num_passes 1
 ```
 This one does a quick sanity check for GPUs with a short run of test 10. More on this later.
 
-See help message by 
 
-```
-cuda_memtest --help
-```
 
-### Sanity Check
-
-There is a simple script `sanity_check.sh` in the directory. 
-This script does a quick check if one GPU or all GPUs are in bad health.
-
-Example usage: 
-```bash
-# copy the cuda_memtest binary first into the same location as this script, e.g.
-cd ..
-mv build/cuda_memtest .
-```
-```
-./sanity_check.sh 0   //check GPU 0
-./sanity_check.sh 1   //check GPU 1 
-./sanity_check.sh     //check All GPUs in the system
-```
-
-Fork note: We just run the `cuda_memtest` binary directly.
-Consider this script as a source for inspiration, or so.
-
-### Known Issues
-
-* If your machine is cuda 2.2, killing the program while it is running test 10 (the memory stress test) could result 
-  in your GPUs in bad state. This is a bug from the nvidia driver. A detailed description can be found in 
-  http://forums.nvidia.com/index.php?showtopic=97379. We have filed a bug report to nvidia.
-  Rebooting or reloading the nvidia driver will put the GPUs back to clean state.
-
-Note: You are not using CUDA 2.2 anymore, are you? ;-)
 
 * We are not maintaining the OpenCL version of this code base.
   Pull requests restoring and updating the OpenCL capabilities are welcome.
@@ -134,10 +94,6 @@ Note: You are not using CUDA 2.2 anymore, are you? ;-)
 
 ### List of all Tests
 
-Running 
-```
-cuda_memtest --list_tests
-```
 will print out all tests and their short descriptions, as of 6/18/2009, we implemented 11 tests
 
 ```

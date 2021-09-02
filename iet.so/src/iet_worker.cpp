@@ -52,6 +52,8 @@
                                                 " power!"
 #define IET_SGEMM_FAILURE                       "GPU failed to run the SGEMMs!"
 
+#define IET_TARGET_MESSAGE                      "target"
+#define IET_DTYPE_MESSAGE                       "dtype"
 #define IET_PWR_VIOLATION_MSG                   "power violation"
 #define IET_PWR_TARGET_ACHIEVED_MSG             "target achieved"
 #define IET_PWR_RAMP_EXCEEDED_MSG               "ramp time exceeded"
@@ -62,11 +64,11 @@
 #define IET_BLAS_ERROR                          2
 #define IET_BLAS_MEMCPY_ERROR                   3
 #define IET_BLAS_ITERATIONS                     25
-
+#define IET_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
+#define IET_AVERAGE_POWER_KEY                   "average power"
 using std::string;
 
 bool IETWorker::bjson = false;
-bool endtest = false;
 
 
 /**
@@ -84,16 +86,6 @@ static uint64_t time_diff(
 }
 
 /**
- * @brief class default constructor
- */
-IETWorker::IETWorker() {
-}
-
-IETWorker::~IETWorker() {
-}
-
-
-/**
  * @brief logs a message to JSON
  * @param key info type
  * @param value message to log
@@ -101,20 +93,26 @@ IETWorker::~IETWorker() {
  */
 void IETWorker::log_to_json(const std::string &key, const std::string &value,
                      int log_level) {
-    if (IETWorker::bjson) {
-        unsigned int sec;
-        unsigned int usec;
-
-        rvs::lp::get_ticks(&sec, &usec);
-        void *json_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), log_level, sec, usec);
+	if(!IETWorker::bjson)
+		return;
+        void *json_node = json_node_create(std::string(MODULE_NAME),
+                            action_name.c_str(), log_level);
         if (json_node) {
             rvs::lp::AddString(json_node, IET_JSON_LOG_GPU_ID_KEY,
                             std::to_string(gpu_id));
             rvs::lp::AddString(json_node, key, value);
             rvs::lp::LogRecordFlush(json_node);
         }
-    }
+}
+
+
+/**
+ * @brief class default constructor
+ */
+IETWorker::IETWorker():endtest(false) {
+}
+
+IETWorker::~IETWorker() {
 }
 
 
@@ -123,16 +121,18 @@ void IETWorker::log_to_json(const std::string &key, const std::string &value,
  * @brief logs the Gflops computed over the last log_interval period
  * @param gflops_interval the Gflops that the GPU achieved
  */
-void log_interval_gflops(double gflops_interval) {
+void IETWorker::log_interval_gflops(double gflops_interval) {
     string msg;
     msg = " GPU flops :" + std::to_string(gflops_interval);
     rvs::lp::Log(msg, rvs::logtrace);
+    log_to_json(IET_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
+                rvs::loginfo);
+
 }
 
-void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 
+void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 
     bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
-    int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset)
-{
+    int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset){
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, iet_end_time;
     double timetakenforoneiteration;
     double gflops_interval;
@@ -170,7 +170,9 @@ void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
          gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
          //Print the gflops interval
          log_interval_gflops(gflops_interval);
-
+         // check end test to avoid unnecessary sleep
+	 if (endtest)
+		 break;
          //if gemm ops greater than 10000, lets yield
          //if this is not happening we are ending up in
          //out of memmory state
@@ -207,8 +209,9 @@ bool IETWorker::do_iet_power_stress(void) {
     totalpower = 0;
     result = true;
     start = true;
-    std::thread t(blasThread, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms, 
-		    iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset);
+    std::thread t(&IETWorker::blasThread,this, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms, 
+		    iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, 
+		    iet_ldc_offset);
     t.detach();
  
     // record EDPp ramp-up start time
@@ -259,7 +262,9 @@ bool IETWorker::do_iet_power_stress(void) {
        if (rvs::lp::Stopping())
          return true;
        }
-
+       // json log the avg power
+       log_to_json(IET_AVERAGE_POWER_KEY, std::to_string(max_power),
+                rvs::loginfo);
        if(max_power >= target_power) {
              msg = "[" + action_name + "] " + MODULE_NAME + " " +
                      std::to_string(gpu_id) + " " + " Average power met the target power :" + " " + std::to_string(max_power);
@@ -295,7 +300,6 @@ void IETWorker::run() {
             std::to_string(gpu_id) + " start " + std::to_string(target_power);
 
     rvs::lp::Log(msg, rvs::loginfo);
-    log_to_json("start", std::to_string(target_power), rvs::loginfo);
 
     if (run_duration_ms < MAX_MS_TRAIN_GPU)
         run_duration_ms += MAX_MS_TRAIN_GPU;

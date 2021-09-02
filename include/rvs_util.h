@@ -117,4 +117,7 @@ int rvs_util_parse(const std::string& buff,
   return error;
 }
 
+void *json_node_create(std::string module_name, std::string action_name,
+                     int log_level);
+
 #endif  // INCLUDE_RVS_UTIL_H_
