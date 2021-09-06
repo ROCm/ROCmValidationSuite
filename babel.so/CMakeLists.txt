@@ -116,7 +116,6 @@ if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)
   RETURN()
 endif()
 
-#set(HIP_INC_DIR /opt/rocm/hip)
 if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime_api.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()

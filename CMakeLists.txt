@@ -39,8 +39,13 @@ else()
   message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
 endif(rocblas_FOUND)
 
+# Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CMAKE_PACKAGING_INSTALL_PREFIX as CACHE
+# variables since we will pass them as cmake params appropriately, and 
+# all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
+set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
+list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
 set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Runtime" FORCE)
 set(HIP_INC_DIR "${ROCM_PATH}/hip" )
@@ -105,7 +110,6 @@ get_version ( ${RVS_VERSION} )
 
 # Package Generator  #######################################################
 # set(CPACK_GENERATOR "DEB")
-# set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm")
 set(CPACK_PACKAGE_NAME "rocm-validation-suite")
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ROCm Validation Suite validates the AMD platform using ROCm Runtime - The ROCm Validation Suite is a system administrator and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPUs running in high performance computing environments, enabled using the ROCm software stack on a compatible platform.")
@@ -203,9 +207,6 @@ if (NOT DEFINED CPACK_GENERATOR )
 endif()
 message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
-if ( NOT DEFINED CMAKE_PACKAGING_INSTALL_PREFIX )
-    set (CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
-endif ()
 
 ################################################################################
 # Download and unpack yaml-cpp at configure time
