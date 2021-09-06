@@ -34,35 +34,36 @@ Ubuntu :
        
        sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
 
-## Install ROCm stack, rocblas and rocm-smi-lib64
+## Install ROCm stack, rocblas and rocm-smi-lib
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
 
 _**Note:**_
 
-rocm_smi64 package name changed to rocm-smi-lib64 from ROCm3.0 onwards. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
+rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
+rocm-smi-lib64 package has been renamed to rocm-smi-lib from >= ROCm4.1.
  
-Install rocBLAS and rocm-smi-lib64 : 
+Install rocBLAS and rocm-smi-lib : 
 
    Ubuntu : 
    
-           sudo apt-get install rocblas rocm-smi-lib64
+           sudo apt-get install rocblas rocm-smi-lib
    
    CentOS & RHEL : 
             
-           sudo yum install --nogpgcheck rocblas rocm-smi-lib64
+           sudo yum install --nogpgcheck rocblas rocm-smi-lib
    
    SUSE : 
          
-           sudo zypper install rocblas rocm-smi-lib64
+           sudo zypper install rocblas rocm-smi-lib
 
 _**Note:**_
-If  rocm-smi-lib64 is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
+If  rocm-smi-lib is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
 
-Ubuntu : sudo dpkg -r rocm-smi-lib64 && sudo apt install rocm-smi-lib64
+Ubuntu : sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
 
-CentOS & RHEL : sudo rpm -e  rocm-smi-lib64 && sudo yum install  rocm-smi-lib64
+CentOS & RHEL : sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
 
-SUSE : sudo rpm -e  rocm-smi-lib64 && sudo zypper install  rocm-smi-lib64
+SUSE : sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
 
 ## Building from Source
 This section explains how to get and compile current development stream of RVS.
