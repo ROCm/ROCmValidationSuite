@@ -28,6 +28,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <map>
+using std::map;
 
 extern bool is_positive_integer(const std::string& str_val);
 
@@ -119,5 +121,7 @@ int rvs_util_parse(const std::string& buff,
 
 void *json_node_create(std::string module_name, std::string action_name,
                      int log_level);
-
+bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_index,
+                const std::vector<uint16_t>& property_device,
+                const int& property_device_id, bool property_device_all, bool mcm_check = false);
 #endif  // INCLUDE_RVS_UTIL_H_

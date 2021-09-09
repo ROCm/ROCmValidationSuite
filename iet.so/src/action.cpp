@@ -33,8 +33,6 @@
 #include <algorithm>
 #include <memory>
 #include <map>
-#include <iomanip>
-#include <sstream>
 
 #ifdef __cplusplus
 extern "C" {
@@ -609,75 +607,13 @@ int iet_action::get_all_selected_gpus(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
-
-    // iterate over all available & compatible AMD GPUs
-    for (int i = 0; i < hip_num_gpu_devices; i++) {
-        // get GPU device properties
-        hipDeviceProp_t props;
-        hipGetDeviceProperties(&props, i);
-
-        // compute device location_id (needed in order to identify this device
-        // in the gpus_id/gpus_device_id list
-        unsigned int dev_location_id =
-            ((((unsigned int) (props.pciBusID)) << 8) | (((unsigned int) (props.pciDeviceID)) << 3));
-
-        uint16_t devId;
-        if (rvs::gpulist::location2device(dev_location_id, &devId)) {
-          continue;
-        }
-
-        // filter by device id if needed
-        if (property_device_id > 0 && property_device_id != devId)
-          continue;
-
-        // check if this GPU is part of the GPU stress test
-        // (device = "all" or the gpu_id is in the device: <gpu id> list)
-        bool cur_gpu_selected = false;
-        uint16_t gpu_id;
-        // if not and AMD GPU just continue
-        if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
-          continue;
-
-        if (property_device_all) {
-            cur_gpu_selected = true;
-        } else {
-            // search for this gpu in the list
-            // provided under the <device> property
-            auto it_gpu_id = find(property_device.begin(),
-                                  property_device.end(),
-                                  gpu_id);
-
-            if (it_gpu_id != property_device.end())
-                cur_gpu_selected = true;
-        }
-
-        if (cur_gpu_selected) {
-            iet_gpus_device_index.insert
-                (std::pair<int, uint16_t>(i, gpu_id));
-            amd_gpus_found = true;
-        }
-
-        /* Check if GPU is die in MCM GPU */
-        mcm_die =  gpu_check_if_mcm_die(devId);
-	if (true == mcm_die) {
-
-		msg_stream.str("");
-                msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
-			" - " << "GPU is a die/chiplet in Multi-Chip Module (MCM) GPU";
-		rvs::lp::Log(msg_stream.str(), rvs::logresults);
-
-		amd_mcm_gpu_found = true;
-	}
-    }
-
-    /* AMD MCM GPU/s was found in the system */
-    if (true == amd_mcm_gpu_found) {
-
-	    msg_stream.str("");
-	    msg_stream << "Note: The system has Multi-Chip Module (MCM) GPU/s." << "\n" 
-		    << "In MCM GPU, primary GPU die shows total socket (primary + secondary) power information." << "\n"
-		    << "Secondary GPU die does not have any power information associated with it independently."<< "\n";
-	    rvs::lp::Log(msg_stream.str(), rvs::logresults);
+    // find compatible GPUs to run edp tests
+    amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
+                    property_device, property_device_id, property_device_all);
+    if(!amd_gpus_found){
+        msg = "No devices match criteria from the test configuation.";
+	rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+	return 1;
     }
 
     if(bjson){
@@ -685,16 +621,11 @@ int iet_action::get_all_selected_gpus(void) {
         json_add_primary_fields();
     }
     int iet_res = 0;
-    if (amd_gpus_found) {
-        if(do_edp_test(iet_gpus_device_index))
-            iet_res = 0;
-        else 
-            iet_res = -1;
-    } else {
-          msg = "No devices match criteria from the test configuation.";
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          iet_res = 1;
-    }
+    if(do_edp_test(iet_gpus_device_index))
+        iet_res = 0;
+    else 
+        iet_res = -1;
+    // append end node to json
     if(bjson){
         rvs::lp::JsonEndNodeCreate();
     }

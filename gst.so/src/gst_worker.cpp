@@ -28,7 +28,6 @@
 #include <string>
 #include <memory>
 #include <iostream>
-
 #include "include/rvs_blas.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
@@ -64,7 +63,6 @@
 using std::string;
 
 bool GSTWorker::bjson = false;
-
 
 GSTWorker::GSTWorker() {}
 GSTWorker::~GSTWorker() {}
@@ -245,7 +243,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 
         // run GEMM & wait for completion
         gpu_blas->run_blass_gemm(gst_ops_type);
-
+        while (!gpu_blas->is_gemm_op_complete()) {}
         //End the timer
         end_time = gpu_blas->get_time_us();
 
@@ -303,6 +301,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
             // compute the GFLOPS
             seconds_elapsed = static_cast<double>
                                 (millis_sgemm_ops) / 1000;
+
             if (seconds_elapsed > 0) {
                 curr_gflops = static_cast<double>(
                                 gpu_blas->gemm_gflop_count() *
@@ -449,6 +448,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
                 if (gflops_interval > max_gflops)
                     max_gflops = gflops_interval;
+                
 
                 log_interval_gflops(max_gflops);
 
