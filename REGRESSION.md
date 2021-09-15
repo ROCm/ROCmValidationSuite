@@ -20,7 +20,7 @@ Results are written into $RVS_BUILD/regression/
 
 Before running the run_regression.py you first need to set the following
 environment variables for location of RVS source tree and build folders
-(ajdust for your particular clone):
+(adjust for your particular clone):
 
     export WB=/work/yourworkfolder
     export RVS=$WB/ROCmValidationSuite

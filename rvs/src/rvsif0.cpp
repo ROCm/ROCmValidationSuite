@@ -86,7 +86,7 @@ const char* rvs::if0::get_description(void) {
 }
 
 /**
- * @brief Returns short info on what configuaration properties (keys) are suppored
+ * @brief Returns short info on what configuration properties (keys) are supported
  *
  * @return pointer to C string holding configuration info
  *

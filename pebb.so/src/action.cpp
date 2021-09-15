@@ -207,7 +207,7 @@ bool pebb_action::get_all_common_config_keys(void) {
 }
 
 /**
- * @brief Create thread objects based on action description in configuation
+ * @brief Create thread objects based on action description in configuration
  * file.
  *
  * Threads are created but are not started. Execution, one by one of parallel,
@@ -347,7 +347,7 @@ int pebb_action::create_threads() {
     if (bmatch_found) {
       diag = "No peers found";
     } else {
-      diag = "No devices match criteria from the test configuation";
+      diag = "No devices match criteria from the test configuration";
     }
     msg = "[" + action_name + "] pcie-bandwidth  " + diag;
     rvs::lp::Log(msg, rvs::logerror);
