@@ -229,7 +229,7 @@ int pesm_action::run(void) {
  * @return 0 - success. non-zero otherwise
  *
  * */
-int pesm_action::do_gpu_list() {
+int ddddo_gpu_list() {
   rvs::lp::Log("pesm in do_gpu_list()", rvs::logtrace);
 
   std::map<std::string, std::string>::iterator it;
@@ -310,4 +310,8 @@ int pesm_action::do_gpu_list() {
   pci_cleanup(pacc);
 
   return 0;
+}
+
+int pesm_action::do_gpu_list() {
+  return display_gpu_info();
 }
