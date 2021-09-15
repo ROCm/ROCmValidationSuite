@@ -182,7 +182,7 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 }
 
 
-int display_gpu_info(){
+int display_gpu_info(void){
   struct device_info {
     std::string bus;
     std::string name;
