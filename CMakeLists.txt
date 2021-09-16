@@ -427,7 +427,7 @@ set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
 
 # Check if Address Sanitizer enabled.
 if(BUILD_ADDRESS_SANITIZER)
-  set(ASAN_CXX_FLAGS "-fsanitize=address  -shared-libasan")
+  set(ASAN_CXX_FLAGS "-fsanitize=address  -shared-libasan -O0")
   set(ASAN_LD_FLAGS "-fuse-ld=lld")
 endif()
 
