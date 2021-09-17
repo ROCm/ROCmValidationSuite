@@ -29,6 +29,7 @@
 #include <string>
 #include <regex>
 #include <iomanip>
+#include <algorithm>
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
 
@@ -180,3 +181,68 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
     return amd_gpus_found;
 }
 
+
+int display_gpu_info(void){
+  struct device_info {
+    std::string bus;
+    std::string name;
+    int32_t node_id;
+    int32_t gpu_id;
+    int32_t device_id;
+  };
+  char buff[1024];
+  int hip_num_gpu_devices;
+  bool amd_gpus_found = false;
+  std::string errmsg = " No supported GPUs available.";
+  hipGetDeviceCount(&hip_num_gpu_devices);
+  if( hip_num_gpu_devices == 0){
+    std::cout << std::endl << errmsg << std::endl;
+    return 0;
+  }
+  std::vector<device_info> gpu_info_list;
+  for (int i = 0; i < hip_num_gpu_devices; i++) {
+    hipDeviceProp_t props;
+    hipGetDeviceProperties(&props, i);
+    
+    // compute device location_id (needed in order to identify this device
+    // in the gpus_id/gpus_device_id list
+    unsigned int dev_location_id =
+        ((((unsigned int) (props.pciBusID)) << 8) | ((unsigned int)(props.pciDeviceID)) << 3);
+    uint16_t dev_domain = props.pciDomainID;  
+    uint16_t node_id;
+    if (rvs::gpulist::domlocation2node(dev_domain, dev_location_id, &node_id)) {
+      continue;
+    }
+    uint16_t gpu_id;
+    if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
+      continue;
+    }
+    uint16_t dev_id;
+    if (rvs::gpulist::gpu2device(gpu_id, &dev_id)){
+      continue;
+    }
+    snprintf(buff, sizeof(buff), "%04d:%02X:%02X.%d",props.pciDomainID, props.pciBusID, props.pciDeviceID, 0);
+    device_info info;
+    info.bus       = buff;
+    info.name      = props.name;
+    info.node_id   = node_id;
+    info.gpu_id    = gpu_id;
+    info.device_id = dev_id;
+    gpu_info_list.push_back(info);
+
+  }
+  std::sort(gpu_info_list.begin(), gpu_info_list.end(),
+           [](const struct device_info& a, const struct device_info& b) {
+             return a.node_id < b.node_id; });
+  if (!gpu_info_list.empty()) {
+    std::cout << "Supported GPUs available:\n";
+    for (const auto& info : gpu_info_list) {
+      std::cout << info.bus  << " - GPU[" << std::setw(2) << info.node_id
+      << " - " << std::setw(5) << info.gpu_id << "] " << info.name
+      << " (Device " << info.device_id << ")\n";
+    }
+  } else {
+      std::cout << std::endl << errmsg << std::endl;
+  }
+  return 0;
+}
