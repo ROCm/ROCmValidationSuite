@@ -351,8 +351,9 @@ int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
  *
  */
 
-int rvs::logger::JsonEndNodeCreate(void) {
+int rvs::logger::JsonEndNodeCreate() {
   std::string row{RVSINDENT};
+  int res;
   row += list_end + newline;
   row += RVSINDENT + node_end + newline;
   row += node_end;

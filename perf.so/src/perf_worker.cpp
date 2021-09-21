@@ -155,9 +155,14 @@ void PERFWorker::log_interval_gflops(double gflops_interval) {
  */
 bool PERFWorker::do_perf_stress_test(int *error, std::string *err_description) {
     uint16_t num_gemm_ops = 0;
+    double total_milliseconds;
     double start_time, end_time;
+    double seconds_elapsed;
+    double gflops_interval = 0;
     double timetaken;
     string msg;
+    std::chrono::time_point<std::chrono::system_clock> perf_start_time,
+                                            perf_end_time, perf_log_interval_time;
 
     *error = 0;
     max_gflops = 0;

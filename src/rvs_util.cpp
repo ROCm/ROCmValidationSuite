@@ -182,8 +182,7 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 }
 
 
-int display_gpu_info (void) {
-
+int display_gpu_info(void){
   struct device_info {
     std::string bus;
     std::string name;
@@ -191,17 +190,16 @@ int display_gpu_info (void) {
     int32_t gpu_id;
     int32_t device_id;
   };
-
   char buff[1024];
   int hip_num_gpu_devices;
+  bool amd_gpus_found = false;
   std::string errmsg = " No supported GPUs available.";
-  std::vector<device_info> gpu_info_list;
-
   hipGetDeviceCount(&hip_num_gpu_devices);
   if( hip_num_gpu_devices == 0){
     std::cout << std::endl << errmsg << std::endl;
     return 0;
   }
+  std::vector<device_info> gpu_info_list;
   for (int i = 0; i < hip_num_gpu_devices; i++) {
     hipDeviceProp_t props;
     hipGetDeviceProperties(&props, i);
