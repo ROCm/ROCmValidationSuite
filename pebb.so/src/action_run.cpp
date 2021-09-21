@@ -82,7 +82,6 @@ uint64_t time_diff(
  * */
 int pebb_action::run() {
   int sts;
-  int cnt = 0;
   string msg;
   std::chrono::time_point<std::chrono::system_clock> pebb_start_time;
   std::chrono::time_point<std::chrono::system_clock> pebb_end_time;
