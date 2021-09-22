@@ -44,6 +44,8 @@ using std::vector;
 using std::map;
 using std::regex;
 
+#define MODULE_NAME                     "hiptest"
+#define MODULE_NAME_CAPS                "HIPTEST"
 #define RVS_CONF_HIPTEST_PATH_KEY       "test-path"
 #define HIPTEST_DEFAULT_PATH            "tmp"
 #define HIPTEST_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
@@ -95,11 +97,11 @@ bool hiptest_action::get_all_hiptest_config_keys(void) {
     if (property_get<std::string>(RVS_CONF_HIPTEST_PATH_KEY, &m_test_file_path,
             HIPTEST_DEFAULT_PATH)) {
          msg = "invalid '" +
-         std::string(RVS_CONF_GST_OPS_TYPE) + "' key value";
+         std::string(RVS_CONF_HIPTEST_PATH_KEY) + "' key value";
          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
          bsts = false;
     }
-    is(m_test_file_path == GST_DEFAULT_OPS_TYPE){
+    if(m_test_file_path == HIPTEST_DEFAULT_PATH){
 	msg = " hip test pat not specified";
 	rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 	bsts = false;
@@ -206,7 +208,7 @@ int hiptest_action::run(void) {
 
     if (!get_all_common_config_keys())
         return -1;
-    if (!get_all_gst_config_keys())
+    if (!get_all_hiptest_config_keys())
         return -1;
 
     return run_hip_tests(); 

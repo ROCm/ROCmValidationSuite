@@ -63,7 +63,7 @@ void hipTestWorker::run() {
     rvs::lp::Log(msg, rvs::logtrace);
 
     // let the GPU ramp-up and check the result
-    bool hipsuccess = start_hip_tests(&error, &err_description);
+    bool hipsuccess = start_hip_tests(error, err_description);
 
     // GPU was not able to do the processing (HIP/rocBlas error(s) occurred)
     if (error) {
@@ -80,15 +80,16 @@ void hipTestWorker::run() {
  * @param gst_test_passed true if test succeeded, false otherwise
  */
 
-bool hipTestWorker::start_hip_tests(){
-    int pid;
+bool hipTestWorker::start_hip_tests(int &error, string &errdesc){
+    int pid, status;
     auto found = m_test_path.find_last_of('/');
     auto fname = m_test_path.substr(found+1);
     if((pid = fork()) == 0){ // child
-	execl(m_test_path._str(), fname.c_str(), 0);
+	execl(m_test_path.c_str(), fname.c_str(), 0);
     }else{
 	waitpid(pid, &status, 0);
-	if (WEXITSTATUS(status)){
+	if (WIFEXITED(status)){
+	    error = 0;
 	    return true;
 	}
 	return false;

@@ -59,7 +59,9 @@ class hipTestWorker : public rvs::ThreadBase {
     void set_path(std::string pathname) { m_test_path = pathname; }
 
     const std::string& get_path(void) { return m_test_path; }
-    bool start_hip_tests();
+    bool start_hip_tests(int &error, std::string &errdesc);
+ protected:
+    virtual void run(void);
  protected:
     //! name of the action
     std::string action_name;
