@@ -54,7 +54,6 @@ hipTestWorker::~hipTestWorker() {}
 void hipTestWorker::run() {
     string msg, err_description;
     int error = 0;
-    bool gst_test_passed = true;
 
 
     // log GST stress test - start message
@@ -77,7 +76,7 @@ void hipTestWorker::run() {
 
 /**
  * @brief forks and execs test result
- * @param gst_test_passed true if test succeeded, false otherwise
+ * @param return true if test succeeded, false otherwise
  */
 
 bool hipTestWorker::start_hip_tests(int &error, string &errdesc){

@@ -79,7 +79,6 @@ rvs::module::~module() {
 int rvs::module::initialize(const char* pConfig) {
   // Check if pConfig file exists
   std::ifstream file(pConfig);
-
   if (!file.good()) {
     char buff[1024];
     snprintf(buff, sizeof(buff), "file does not exist: %s", pConfig);
@@ -145,7 +144,6 @@ rvs::module* rvs::module::find_create_module(const char* name) {
   // not found...
   if (it == modulemap.end()) {
     // ... try opening .so
-
     // first find proper .so filename
     auto it = filemap.find(std::string(name));
 
@@ -159,6 +157,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       return NULL;
     }
 
+ 
     // open .so
     string libpath;
     if (rvs::options::has_option("-m", &libpath)) {

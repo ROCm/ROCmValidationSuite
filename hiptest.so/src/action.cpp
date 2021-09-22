@@ -166,16 +166,11 @@ int hiptest_action::get_num_amd_gpu_devices(void) {
  */
 int hiptest_action::run_hip_tests(void) {
     int hip_num_gpu_devices;
-    bool amd_gpus_found = false;
-    map<int, uint16_t> gst_gpus_device_index;
     std::string msg;
 
     hip_num_gpu_devices = get_num_amd_gpu_devices();
-    if (hip_num_gpu_devices < 1)
-        return hip_num_gpu_devices;
-    // iterate over all available & compatible AMD GPUs
      
-    if (amd_gpus_found) {
+    if (hip_num_gpu_devices >= 1) {
         if (start_hiptest_runners())
             return 0;
 
