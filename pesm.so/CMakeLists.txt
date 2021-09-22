@@ -41,7 +41,6 @@ message(STATUS "MODULE: ${RVS}")
 ## Set default module path if not already set
 add_compile_options(-std=c++11)
 add_compile_options(-pthread)
-add_compile_options(-Wl,-no-as-needed)
 add_compile_options(-Wall)
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
