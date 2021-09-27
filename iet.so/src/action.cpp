@@ -418,21 +418,20 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     int          gpuId;
     bool gpu_masking = false;    // if HIP_VISIBLE_DEVICES is set, this will be true
     int hip_num_gpu_devices;
-    unsigned int i = 0;
-    map<int, uint16_t>::iterator it;
-    uint32_t smi_num_devices;
 
     hipGetDeviceCount(&hip_num_gpu_devices);
 
     vector<IETWorker> workers(iet_gpus_device_index.size());
     for (;;) {
+        unsigned int i = 0;
+        map<int, uint16_t>::iterator it;
 
         if (property_wait != 0)  // delay iet execution
             sleep(property_wait);
 
         rsmi_init(0);
 
-        /* Junaid: Check again ? */
+        uint32_t smi_num_devices;
         rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
         if(smi_num_devices != hip_num_gpu_devices)
             gpu_masking = true;

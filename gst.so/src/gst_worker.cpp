@@ -498,7 +498,6 @@ void GSTWorker::run() {
 
     // let the GPU ramp-up and check the result
     bool ramp_up_success = do_gst_ramp(&error, &err_description);
-    /* Junaid : Why no check ? */
 
     // GPU was not able to do the processing (HIP/rocBlas error(s) occurred)
     if (error) {
