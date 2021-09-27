@@ -195,7 +195,6 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
 bool IETWorker::do_iet_power_stress(void) {
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time,
                                                         sampling_start_time;
-    uint64_t  power_sampling_iters = 0;
     uint64_t  total_time_ms;
     uint64_t  last_avg_power;
     string    msg;
@@ -294,7 +293,6 @@ bool IETWorker::do_iet_power_stress(void) {
  */
 void IETWorker::run() {
     string msg, err_description;
-    int error;
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " start " + std::to_string(target_power);
