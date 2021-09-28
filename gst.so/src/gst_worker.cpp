@@ -388,7 +388,7 @@ bool GSTWorker::check_gflops_violation(double gflops_interval) {
  * @return true if stress violations is less than max_violations, false otherwise
  */
 bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
-    uint16_t num_sgemm_ops = 0, num_gflops_violations = 0;
+    uint16_t num_sgemm_ops = 0;
     uint64_t total_milliseconds, log_interval_milliseconds;
     uint64_t start_time, end_time;
     double seconds_elapsed, gflops_interval;
