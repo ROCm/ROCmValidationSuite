@@ -258,8 +258,10 @@ bool IETWorker::do_iet_power_stress(void) {
         sleep(1000);
 
         // check if stop signal was received
-        if (rvs::lp::Stopping())
-            return true;
+        if (rvs::lp::Stopping()) {
+            result = true;
+            goto end;
+        }
     }
 
     // json log the avg power
@@ -282,6 +284,8 @@ bool IETWorker::do_iet_power_stress(void) {
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
         std::to_string(gpu_id) + " " + " End of worker thread " ;
     rvs::lp::Log(msg, rvs::loginfo);
+
+end:
 
     endtest = true;
 
