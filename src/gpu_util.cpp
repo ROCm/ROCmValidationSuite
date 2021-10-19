@@ -272,7 +272,7 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
 }
 
 /**
- * @brief Check if the GPU is die (chiplet) in Multi-Core Module (MCM) GPU.
+ * @brief Check if the GPU is die (chiplet) in Multi-Chip Module (MCM) GPU.
  * @param device_id GPU Device ID
  * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
  **/

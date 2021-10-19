@@ -322,7 +322,7 @@ int smqt_action::run(void) {
   }
   if (!devid_found) {
     global_pass = false;
-    msg = "No devices match criteria from the test configuation.";
+    msg = "No devices match criteria from the test configuration.";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
     return -1;
   }

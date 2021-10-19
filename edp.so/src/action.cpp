@@ -588,7 +588,7 @@ int edp_action::get_all_selected_gpus(void) {
 
         return -1;
     } else {
-      msg = "No devices match criteria from the test configuation.";
+      msg = "No devices match criteria from the test configuration.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }

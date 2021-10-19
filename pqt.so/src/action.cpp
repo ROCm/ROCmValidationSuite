@@ -319,7 +319,7 @@ bool pqt_action::get_all_common_config_keys(void) {
 }
 
 /**
- * @brief Create thread objects based on action description in configuation
+ * @brief Create thread objects based on action description in configuration
  * file.
  *
  * Threads are created but are not started. Execution, one by one of parallel,
@@ -589,7 +589,7 @@ int pqt_action::create_threads() {
       diag = "No peers found";
     } else {
       RVSTRACE_
-      diag = "No devices match criteria from the test configuation";
+      diag = "No devices match criteria from the test configuration";
     }
     RVSTRACE_
     msg = "[" + action_name + "] p2p-bandwidth " + diag;

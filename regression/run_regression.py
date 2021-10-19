@@ -84,7 +84,7 @@ while True:
                 num_tries = num_tries + 1
             else:
                 restart = 0
-                if s.find('No GPU/peer combination matches criteria from test configuation') != -1:
+                if s.find('No GPU/peer combination matches criteria from the test configuration') != -1:
                     res.write("WARN: Testname " + confname + " : No GPU/peer - maybe a infrastucture issue\n")
                 else:
                     res.write("FAIL: Testname " + confname + " does not have RESULT field" + "\n")
