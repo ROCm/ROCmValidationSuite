@@ -119,12 +119,15 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
         // in the gpus_id/gpus_device_id list
         unsigned int dev_location_id =
             ((((unsigned int) (props.pciBusID)) << 8) | ((unsigned int)(props.pciDeviceID)) << 3);
-
+        uint16_t dev_domain = props.pciDomainID;
         uint16_t devId;
-        if (rvs::gpulist::location2device(dev_location_id, &devId)) {
-          continue;
+        uint16_t gpu_id;
+        if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
+            continue;
         }
-
+        if (rvs::gpulist::gpu2device(gpu_id, &devId)){
+            continue;
+        }
         // filter by device id if needed
         if (property_device_id > 0 && property_device_id != devId)
           continue;
@@ -132,11 +135,6 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
         // check if this GPU is part of the select ones as per config
         // (device = "all" or the gpu_id is in the device: <gpu id> list)
         bool cur_gpu_selected = false;
-        uint16_t gpu_id;
-        // if not and AMD GPU just continue
-        if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
-          continue;
-
 
         if (property_device_all) {
             cur_gpu_selected = true;
