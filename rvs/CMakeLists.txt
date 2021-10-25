@@ -110,7 +110,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
 
 ## define include directories
-include_directories(./ ../ ${YAML_INC_DIR})
+include_directories(./ ../ ${YAML_INC_DIR} ${YAML_LIB_DIR}/include)
 ## define lib directories
 link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR})
 ## additional libraries
