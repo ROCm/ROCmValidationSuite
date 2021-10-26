@@ -113,6 +113,8 @@ if(BUILD_ADDRESS_SANITIZER)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} --print-file-name=libclang_rt.asan-x86_64.so
             OUTPUT_VARIABLE ASAN_LIB_FULL_PATH)
   get_filename_component(ASAN_LIB_PATH ${ASAN_LIB_FULL_PATH} DIRECTORY)
+else()
+  set(ASAN_LIB_PATH "$ENV{LD_LIBRARY_PATH}")
 endif()
 
 ## define include directories
