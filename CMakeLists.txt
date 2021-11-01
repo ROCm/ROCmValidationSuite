@@ -32,7 +32,7 @@ set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
 set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Runtime" FORCE)
-set(HIP_INC_DIR "${ROCM_PATH}" )
+set(HIP_INC_DIR "${ROCM_PATH}")
 set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
@@ -404,7 +404,7 @@ if (RVS_ROCBLAS EQUAL 1)
   set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install")
   set(ROCBLAS_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/lib/")
 else()
-  set(ROCBLAS_INC_DIR "${ROCM_PATH}/include")
+  set(ROCBLAS_INC_DIR "${ROCM_PATH}/include/rocblas")
   set(ROCBLAS_LIB_DIR "${ROCM_PATH}/lib")
 endif()
 
@@ -412,8 +412,8 @@ if (RVS_ROCMSMI EQUAL 1)
   set(ROCM_SMI_INC_DIR "${CMAKE_BINARY_DIR}/rvs_smi-src/include")
   set(ROCM_SMI_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_smi-build")
 else()
-  set(ROCM_SMI_INC_DIR "${ROCM_PATH}/rocm_smi/include")
-  set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/rocm_smi/lib")
+  set(ROCM_SMI_INC_DIR "${ROCM_PATH}/include/rocm_smi")
+  set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/lib")
 endif()
 set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
@@ -516,12 +516,12 @@ add_custom_target(rvs_userguide ALL
 add_dependencies(rvs_userguide rvs_doc)
 
 install(FILES "${CMAKE_BINARY_DIR}/doc/man/man1/rvs.1"
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/man/man1
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/rvs/man/man1
   COMPONENT applications
 )
 
 install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/userguide
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/rvs/userguide
   COMPONENT applications
 )
 
@@ -534,13 +534,13 @@ configure_file(${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh.in
   ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
   @ONLY)
 install(FILES ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/conf
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/rvs/conf
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                     GROUP_EXECUTE GROUP_READ
   COMPONENT rvsmodule
 )
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/testscripts
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/rvs/testscripts
   USE_SOURCE_PERMISSIONS
   COMPONENT rvsmodule
 )
