@@ -547,7 +547,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
 
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
-          DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib
+          DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib
           COMPONENT rvsmodule)
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf"
           DESTINATION /etc/ld.so.conf.d
