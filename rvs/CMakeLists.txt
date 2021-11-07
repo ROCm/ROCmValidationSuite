@@ -82,7 +82,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 # Determine HSA_PATH
 if(NOT DEFINED HIPCC_PATH)
   if(NOT DEFINED ENV{HIPCC_PATH})
-    set(HIPCC_PATH "${ROCM_PATH}/hip" CACHE PATH "Path to which hipcc runtime has been installed")
+    set(HIPCC_PATH "${ROCM_PATH}" CACHE PATH "Path to which hipcc runtime has been installed")
      else()
        set(HIPCC_PATH $ENV{HIPCC_PATH} CACHE PATH "Path to which hipcc runtime has been installed")
      endif()
@@ -91,7 +91,7 @@ endif()
 # Determine HSA_PATH
 if(NOT DEFINED HSA_PATH)
      if(NOT DEFINED ENV{HSA_PATH})
-          set(HSA_PATH "${ROCM_PATH}/hsa" CACHE PATH "Path to which HSA runtime has been installed")
+          set(HSA_PATH "${ROCM_PATH}" CACHE PATH "Path to which HSA runtime has been installed")
      else()
           set(HSA_PATH $ENV{HSA_PATH} CACHE PATH "Path to which HSA runtime has been installed")
      endif()
@@ -151,18 +151,18 @@ add_dependencies(${RVS_TARGET} rvshelper)
 
 install(TARGETS ${RVS_TARGET}
   RUNTIME
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/bin
   COMPONENT applications
 )
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/conf
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/rvs
   COMPONENT applications
   FILES_MATCHING PATTERN "*.conf"
 )
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/rvs
   COMPONENT applications
 )
 
