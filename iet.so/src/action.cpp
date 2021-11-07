@@ -83,6 +83,8 @@ using std::fstream;
 #define RVS_CONF_LDB_OFFSET             "ldb"
 #define RVS_CONF_LDC_OFFSET             "ldc"
 #define RVS_CONF_TP_FLAG                "targetpower_met"
+#define RVS_TP_MESSAGE                  "target_power"
+#define RVS_DTYPE_MESSAGE               "dtype"
 
 
 #define MODULE_NAME                     "iet"
@@ -369,6 +371,43 @@ bool iet_action::get_all_common_config_keys(void) {
 }
 
 /**
+ * @brief maps hip index to smi index
+ * 
+ */
+
+void iet_action::hip_to_smi_indices(void) {
+    int hip_num_gpu_devices;
+    hipGetDeviceCount(&hip_num_gpu_devices);
+    // map this to smi as only these are visible
+    uint32_t smi_num_devices;
+    uint64_t val_ui64;
+    std::map<uint64_t, int> smi_map;
+
+    rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
+    if( err == RSMI_STATUS_SUCCESS){
+        for(auto i = 0; i < smi_num_devices; ++i){
+            err = rsmi_dev_pci_id_get(i, &val_ui64);
+            smi_map.insert({val_ui64, i});
+        }
+    }
+
+    for (int i = 0; i < hip_num_gpu_devices; i++) {
+        // get GPU device properties
+        hipDeviceProp_t props;
+        hipGetDeviceProperties(&props, i);
+
+        // compute device location_id (needed to match this device
+        // with one of those found while querying the pci bus
+        uint16_t hip_dev_location_id =
+            ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3) );
+        if(smi_map.find(hip_dev_location_id) != smi_map.end()){
+            hip_to_smi_idxs.insert({i, smi_map[hip_dev_location_id]});
+        }
+    }
+}
+
+
+/**
  * @brief runs the edp test
  * @return true if no error occured, false otherwise
  */
@@ -377,21 +416,37 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     uint32_t     dev_idx = 0;
     size_t       k = 0;
     int          gpuId;
+    bool gpu_masking = false;    // if HIP_VISIBLE_DEVICES is set, this will be true
+    int hip_num_gpu_devices;
+
+    hipGetDeviceCount(&hip_num_gpu_devices);
 
     vector<IETWorker> workers(iet_gpus_device_index.size());
     for (;;) {
         unsigned int i = 0;
-
         map<int, uint16_t>::iterator it;
-
 
         if (property_wait != 0)  // delay iet execution
             sleep(property_wait);
 
         rsmi_init(0);
 
-        for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
+        uint32_t smi_num_devices;
+        rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
+        if(smi_num_devices != hip_num_gpu_devices)
+            gpu_masking = true;
+        if(gpu_masking){  // this is the case when using HIP_VISIBLE_DEVICES variable to modify GPU visibility
+            // smi output wont be affected by the flag and hence indices should be appropriately used.
+            hip_to_smi_indices();
+        }
 
+        IETWorker::set_use_json(bjson);
+        for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
+            if(hip_to_smi_idxs.find(it->first) != hip_to_smi_idxs.end()){
+                workers[i].set_smi_device_index(hip_to_smi_idxs[it->first]);
+            } else{
+                workers[i].set_smi_device_index(it->first);
+            }
             gpuId = it->second;
             // set worker thread params
             workers[i].set_name(action_name);
@@ -418,7 +473,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_ldb_offset(iet_ldb_offset);
             workers[i].set_ldc_offset(iet_ldc_offset);
             workers[i].set_tp_flag(iet_tp_flag);
- 
+
             i++;
         }
 
@@ -497,7 +552,7 @@ bool iet_action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
         // compute device location_id (needed to match this device
         // with one of those found while querying the pci bus
         uint16_t hip_dev_location_id =
-                ((((uint16_t) (props.pciBusID)) << 8) | (props.pciDeviceID));
+                ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3) );
         if (hip_dev_location_id == dev_location_id) {
             gpu_hwmon_info cgpu_info;
             cgpu_info.hip_gpu_deviceid = i;
@@ -513,6 +568,32 @@ bool iet_action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
 }
 
 /**
+ * @brief flushes target power and dtype fields to json file
+ * @return
+ */
+
+void iet_action::json_add_primary_fields(){
+        if (rvs::lp::JsonStartNodeCreate(MODULE_NAME, action_name.c_str())){
+            rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+            return;
+        }
+    void *json_node = json_node_create(std::string(MODULE_NAME),
+                        action_name.c_str(), rvs::loginfo);
+    if(json_node){
+            rvs::lp::AddString(json_node,RVS_TP_MESSAGE, std::to_string(iet_target_power));
+            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+            json_node = nullptr;
+    }
+    json_node = json_node_create(std::string(MODULE_NAME),
+                        action_name.c_str(), rvs::loginfo);
+    if(json_node){
+            rvs::lp::AddString(json_node,RVS_DTYPE_MESSAGE, iet_ops_type);
+            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+    }
+
+}
+
+/**
  * @brief gets all selected GPUs and starts the worker threads
  * @return run result
  */
@@ -521,71 +602,34 @@ int iet_action::get_all_selected_gpus(void) {
     bool amd_gpus_found = false;
     map<int, uint16_t> iet_gpus_device_index;
     std::string msg;
+    std::stringstream msg_stream;
 
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
-
-    // iterate over all available & compatible AMD GPUs
-    for (int i = 0; i < hip_num_gpu_devices; i++) {
-        // get GPU device properties
-        hipDeviceProp_t props;
-        hipGetDeviceProperties(&props, i);
-
-        // compute device location_id (needed in order to identify this device
-        // in the gpus_id/gpus_device_id list
-        unsigned int dev_location_id =
-            ((((unsigned int) (props.pciBusID)) << 8) | (((unsigned int) (props.pciDeviceID)) << 3));
-
-        uint16_t devId;
-        if (rvs::gpulist::location2device(dev_location_id, &devId)) {
-          continue;
-        }
-
-        // filter by device id if needed
-        if (property_device_id > 0 && property_device_id != devId)
-          continue;
-
-        // check if this GPU is part of the GPU stress test
-        // (device = "all" or the gpu_id is in the device: <gpu id> list)
-        bool cur_gpu_selected = false;
-        uint16_t gpu_id;
-        // if not and AMD GPU just continue
-        if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
-          continue;
-
-        if (property_device_all) {
-            cur_gpu_selected = true;
-        } else {
-            // search for this gpu in the list
-            // provided under the <device> property
-            auto it_gpu_id = find(property_device.begin(),
-                                  property_device.end(),
-                                  gpu_id);
-
-            if (it_gpu_id != property_device.end())
-                cur_gpu_selected = true;
-        }
-
-        if (cur_gpu_selected) {
-            iet_gpus_device_index.insert
-                (std::pair<int, uint16_t>(i, gpu_id));
-            amd_gpus_found = true;
-        }
+    // find compatible GPUs to run edp tests
+    amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
+                    property_device, property_device_id, property_device_all, true); // MCM checks
+    if(!amd_gpus_found){
+        msg = "No devices match criteria from the test configuation.";
+	rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+	return 1;
     }
 
-    if (amd_gpus_found) {
-        if(do_edp_test(iet_gpus_device_index))
-            return 0;
-
-        return -1;
-    } else {
-      msg = "No devices match criteria from the test configuation.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+    if(bjson){
+        // add prelims for each action, dtype and target stress
+        json_add_primary_fields();
     }
-
-    return 0;
+    int iet_res = 0;
+    if(do_edp_test(iet_gpus_device_index))
+        iet_res = 0;
+    else 
+        iet_res = -1;
+    // append end node to json
+    if(bjson){
+        rvs::lp::JsonEndNodeCreate();
+    }
+    return iet_res;
 }
 
 
@@ -604,7 +648,7 @@ int iet_action::run(void) {
 
     // check for -j flag (json logging)
     if (property.find("cli.-j") != property.end())
-        bjson = true;
+	bjson = true;
 
     if (!get_all_common_config_keys())
         return -1;

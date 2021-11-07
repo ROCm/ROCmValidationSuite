@@ -28,10 +28,10 @@
 #include <string>
 #include <memory>
 #include <iostream>
-
 #include "include/rvs_blas.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
+#include "include/rvs_util.h"
 
 #define MODULE_NAME                             "gst"
 
@@ -243,7 +243,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 
         // run GEMM & wait for completion
         gpu_blas->run_blass_gemm(gst_ops_type);
-
+        while (!gpu_blas->is_gemm_op_complete()) {}
         //End the timer
         end_time = gpu_blas->get_time_us();
 
@@ -301,6 +301,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
             // compute the GFLOPS
             seconds_elapsed = static_cast<double>
                                 (millis_sgemm_ops) / 1000;
+
             if (seconds_elapsed > 0) {
                 curr_gflops = static_cast<double>(
                                 gpu_blas->gemm_gflop_count() *
@@ -387,7 +388,7 @@ bool GSTWorker::check_gflops_violation(double gflops_interval) {
  * @return true if stress violations is less than max_violations, false otherwise
  */
 bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
-    uint16_t num_sgemm_ops = 0, num_gflops_violations = 0;
+    uint16_t num_sgemm_ops = 0;
     uint64_t total_milliseconds, log_interval_milliseconds;
     uint64_t start_time, end_time;
     double seconds_elapsed, gflops_interval;
@@ -447,6 +448,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
                 if (gflops_interval > max_gflops)
                     max_gflops = gflops_interval;
+                
 
                 log_interval_gflops(max_gflops);
 
@@ -494,10 +496,6 @@ void GSTWorker::run() {
             " Starting the GST stress test "; 
     rvs::lp::Log(msg, rvs::logtrace);
 
-    log_to_json(GST_START_MSG, std::to_string(target_stress), rvs::loginfo);
-    //log_to_json(GST_COPY_MATRIX_MSG, (copy_matrix ? "true":"false"),
-    //            rvs::loginfo);
-
     // let the GPU ramp-up and check the result
     bool ramp_up_success = do_gst_ramp(&error, &err_description);
 
@@ -517,8 +515,8 @@ void GSTWorker::run() {
                 std::to_string(gpu_id) + " " + " GST ramp completed for interval :" + " " +
                 std::to_string(ramp_interval);
     rvs::lp::Log(msg, rvs::loginfo);
-    log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
-                    rvs::loginfo);
+    //log_to_json(GST_TARGET_ACHIEVED_MSG, std::to_string(target_stress),
+    //                rvs::loginfo);
     if (run_duration_ms > 0) {
             gst_test_passed = do_gst_stress_test(&error, &err_description);
             // check if stop signal was received
@@ -589,6 +587,7 @@ uint64_t GSTWorker::time_diff(
     return milliseconds.count();
 }
 
+
 /**
  * @brief logs a message to JSON
  * @param key info type
@@ -598,12 +597,8 @@ uint64_t GSTWorker::time_diff(
 void GSTWorker::log_to_json(const std::string &key, const std::string &value,
                      int log_level) {
     if (GSTWorker::bjson) {
-        unsigned int sec;
-        unsigned int usec;
-
-        rvs::lp::get_ticks(&sec, &usec);
-        void *json_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), log_level, sec, usec, true);
+        void *json_node = json_node_create(std::string(MODULE_NAME),
+                            action_name.c_str(), log_level);
         if (json_node) {
             rvs::lp::AddString(json_node, GST_JSON_LOG_GPU_ID_KEY,
                             std::to_string(gpu_id));

@@ -82,7 +82,6 @@ uint64_t time_diff(
  * */
 int pebb_action::run() {
   int sts;
-  int cnt = 0;
   string msg;
   std::chrono::time_point<std::chrono::system_clock> pebb_start_time;
   std::chrono::time_point<std::chrono::system_clock> pebb_end_time;
@@ -121,7 +120,7 @@ int pebb_action::run() {
   unsigned int iter = property_count > 0 ? property_count : 1;
   unsigned int step = 1;
   int count = 0;
-
+  
   do {
     // let the test run in this iteration
     brun = true;

@@ -68,6 +68,7 @@ const std::string kv_delimit{":"};
 const std::string list_start{"["};
 const std::string list_end{"]"};
 const std::string newline{"\n"};
+const std::string json_folder{"/var/tmp/"};
 /**
  * @brief Set 'append' flag
  *
@@ -260,6 +261,20 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
 }
 
 /**
+ * @brief helper to create json file name
+ * @return json file name
+ */
+std::string json_filename(const char* moduleName){
+	std::string json_file;
+        json_file.assign(moduleName);
+        std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+            std::chrono::system_clock::now().time_since_epoch());
+        json_file = json_file + "_" + std::to_string(ms.count()) + ".json";
+        json_file = json_folder + json_file;
+        return json_file;
+}  
+
+/**
  * @brief Create log record
  *
  * Note: this API is used to construct JSON output. Use LogExt() to perform unstructured output.
@@ -277,12 +292,10 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
                                    const unsigned int uSec, bool minimal) {
   uint32_t   sec;
   uint32_t   usec;
-  if ( json_log_file.empty()){
-	json_log_file.assign(Module);
-	std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
-            std::chrono::system_clock::now().time_since_epoch());
-	json_log_file = json_log_file + "_" + std::to_string(ms.count()) + ".json";
-	// append time
+  if( json_log_file.empty()){
+       json_log_file = json_filename(Module);
+       std::lock_guard<std::mutex> lk(cout_mutex);
+       std::cout << "json log file is " << json_log_file<< std::endl;
   }
   if( minimal){
 	rvs::MinNode* minrec = new rvs::MinNode(Action, LogLevel);
@@ -316,12 +329,10 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
  */
 #if 1
 int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
-  if ( json_log_file.empty()){
-        json_log_file.assign(Module);
-        std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
-            std::chrono::system_clock::now().time_since_epoch());
-        json_log_file = json_log_file + "_" + std::to_string(ms.count()) + ".json";
-        // append time
+    if ( json_log_file.empty()){
+        json_log_file = json_filename(Module);
+        std::lock_guard<std::mutex> lk(cout_mutex);
+        std::cout << "json log file is " << json_log_file<< std::endl;
   }
   std::string row{node_start};
   row += std::string("\"") + Module + std::string("\"") + kv_delimit + node_start + newline;
@@ -340,9 +351,8 @@ int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
  *
  */
 
-int rvs::logger::JsonEndNodeCreate() {
+int rvs::logger::JsonEndNodeCreate(void) {
   std::string row{RVSINDENT};
-  int res;
   row += list_end + newline;
   row += RVSINDENT + node_end + newline;
   row += node_end;

@@ -24,19 +24,34 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
+project ("rocm-validation-suite")
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
 
+enable_testing()
+
+# Prerequisite - Check if rocblas was already installed
+find_package (rocblas)
+if(rocblas_FOUND)
+  message(STATUS "rocblas found")
+else()
+  message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
+endif(rocblas_FOUND)
+
+# Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CMAKE_PACKAGING_INSTALL_PREFIX as CACHE
+# variables since we will pass them as cmake params appropriately, and 
+# all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
+set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
+list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
 set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Runtime" FORCE)
 set(HIP_INC_DIR "${ROCM_PATH}")
 set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
-execute_process(COMMAND ln -s /usr/bin/python3 /usr/bin/python)
 
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
@@ -45,20 +60,17 @@ execute_process(COMMAND ln -s /usr/bin/python3 /usr/bin/python)
 #
 if(DEFINED CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "Choose the type of
-build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug
-Release RelWithDebInfo MinSizeRel.")
+     build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug
+     Release RelWithDebInfo MinSizeRel.")
 else()
    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build,
-options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
-RelWithDebInfo MinSizeRel.")
+     options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
+     RelWithDebInfo MinSizeRel.")
 endif()
 
-project ("rocm-validation-suite")
-enable_testing()
 #include ( CTest )
 
-if (NOT CMAKE_CONFIGURATION_TYPES)
-#  message( "CMAKE_CONFIGURATION_TYPES not set")
+if(NOT CMAKE_CONFIGURATION_TYPES)
   # Set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
@@ -70,17 +82,15 @@ execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rvs_os_helper.sh
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-if(result)
+if (result)
    message(FATAL_ERROR "Could not obtain OS type: ${result}")
 endif()
 message(STATUS "RVS_OS_TYPE: ${RVS_OS_TYPE}")
 if (${RVS_OS_TYPE} STREQUAL "ubuntu")
   set(RVS_OS_TYPE_NUM 1)
-  execute_process(COMMAND sudo apt-get install rocblas --assume-yes)
 elseif ((${RVS_OS_TYPE} STREQUAL "centos") OR (${RVS_OS_TYPE} STREQUAL "rhel")
   OR (${RVS_OS_TYPE} STREQUAL "sles"))
   set(RVS_OS_TYPE_NUM 2)
-  execute_process(COMMAND sudo yum -y install rocblas )
 else()
   set(RVS_OS_TYPE_NUM 0)
 endif()
@@ -89,7 +99,7 @@ message(STATUS "RVS_OS_TYPE_NUM: ${RVS_OS_TYPE_NUM}")
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/" )
-endif ()
+endif()
 
 ## Include common cmake modules
 include ( utils )
@@ -100,10 +110,9 @@ get_version ( ${RVS_VERSION} )
 
 # Package Generator  #######################################################
 # set(CPACK_GENERATOR "DEB")
-# set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm")
 set(CPACK_PACKAGE_NAME "rocm-validation-suite")
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The ROCm Validation Suite – The ROCm Validation Suite is a system administrator and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPUs running in high performance computing environments, enabled using the ROCm software stack on a compatible platform.")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ROCm Validation Suite validates the AMD platform using ROCm Runtime - The ROCm Validation Suite is a system administrator and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPUs running in high performance computing environments, enabled using the ROCm software stack on a compatible platform.")
 set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
@@ -198,9 +207,6 @@ if (NOT DEFINED CPACK_GENERATOR )
 endif()
 message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
-if ( NOT DEFINED CMAKE_PACKAGING_INSTALL_PREFIX )
-    set (CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
-endif ()
 
 ################################################################################
 # Download and unpack yaml-cpp at configure time
@@ -419,7 +425,13 @@ set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
 set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
 
-set(HCC_CXX_FLAGS  "-Xlinker --enable-new-dtags -fno-gpu-rdc  --amdgpu-target=gfx90a --amdgpu-target=gfx1030 --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908")
+# Check if Address Sanitizer enabled.
+if(BUILD_ADDRESS_SANITIZER)
+  set(ASAN_CXX_FLAGS "-fsanitize=address  -shared-libasan -O0")
+  set(ASAN_LD_FLAGS "-fuse-ld=lld")
+endif()
+
+set(HCC_CXX_FLAGS  "-fno-gpu-rdc  --amdgpu-target=gfx90a --amdgpu-target=gfx1030 --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908")
 
 add_subdirectory(rvs)
 add_subdirectory(rvslib)

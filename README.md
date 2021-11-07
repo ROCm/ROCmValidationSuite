@@ -34,35 +34,36 @@ Ubuntu :
        
        sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
 
-## Install ROCm stack, rocblas and rocm-smi-lib64
+## Install ROCm stack, rocblas and rocm-smi-lib
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
 
 _**Note:**_
 
-rocm_smi64 package name changed to rocm-smi-lib64 from ROCm3.0 onwards. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
+rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
+rocm-smi-lib64 package has been renamed to rocm-smi-lib from >= ROCm4.1.
  
-Install rocBLAS and rocm-smi-lib64 : 
+Install rocBLAS and rocm-smi-lib : 
 
    Ubuntu : 
    
-           sudo apt-get install rocblas rocm-smi-lib64
+           sudo apt-get install rocblas rocm-smi-lib
    
    CentOS & RHEL : 
             
-           sudo yum install --nogpgcheck rocblas rocm-smi-lib64
+           sudo yum install --nogpgcheck rocblas rocm-smi-lib
    
    SUSE : 
          
-           sudo zypper install rocblas rocm-smi-lib64
+           sudo zypper install rocblas rocm-smi-lib
 
 _**Note:**_
-If  rocm-smi-lib64 is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
+If  rocm-smi-lib is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
 
-Ubuntu : sudo dpkg -r rocm-smi-lib64 && sudo apt install rocm-smi-lib64
+Ubuntu : sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
 
-CentOS & RHEL : sudo rpm -e  rocm-smi-lib64 && sudo yum install  rocm-smi-lib64
+CentOS & RHEL : sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
 
-SUSE : sudo rpm -e  rocm-smi-lib64 && sudo zypper install  rocm-smi-lib64
+SUSE : sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
 
 ## Building from Source
 This section explains how to get and compile current development stream of RVS.
@@ -124,3 +125,88 @@ Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present 
 
 Simple regression has been implemented. You may find more about it
 on this [link](./REGRESSION.md).
+
+## Reporting
+
+Test based reporting is enabled since beginning. 
+Added json based reporting to gst and iet modules. To enable json logging use "-j" command line option.
+./rvs -c conf/gst_sinle.conf -d 3 -j
+the json location will be in /var/log folder and the name of the file will be printed in the stdout.
+output structure is as shown below:
+```
+
+{
+{"module-name":{
+  "action-name":[
+
+{
+    "target" : "<flops/power>"
+  },
+{
+    "dtype" : "optype"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11433.352136"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11436.291718"
+  },
+....]
+} 
+}
+....
+}
+
+```
+example for gst is:
+```
+
+{"gst":{
+  "gpustress-9000-sgemm-false":[
+
+{
+    "target" : "9000.000000"
+  },
+{
+    "dtype" : "sgemm"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11433.352136"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11436.291718"
+  }]
+  }
+  }
+  {"gst":{
+  "gpustress-8000-sgemm-true":[
+,
+{
+    "target" : "8000.000000"
+  },
+{
+    "dtype" : "sgemm"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11657.886019"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11675.718793"
+  },
+{
+    "gpu_id" : "63217",
+    "GFLOPS" : "11687.461158"
+  } ]
+  }
+ }
+}
+
+```
+
+

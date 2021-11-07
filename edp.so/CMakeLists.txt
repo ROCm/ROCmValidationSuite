@@ -45,7 +45,6 @@ if (RVS_COVERAGE)
   set(CMAKE_SHARED_LINKER_FLAGS "--coverage")
 endif()
 
-
 ## Set default module path if not already set
 if ( NOT DEFINED CMAKE_MODULE_PATH )
     set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/" )
@@ -107,7 +106,6 @@ set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
 set(CMAKE_C_COMPILER   "${HIPCC_PATH}/bin/hipcc")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
-
 
 # Determine Roc Runtime header files are accessible
 if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)

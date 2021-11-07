@@ -75,7 +75,7 @@ class iet_action: public rvs::actionbase {
 
  protected:
     //! TRUE if JSON output is required
-    bool bjson;
+    bool bjson = false;
 
     std::string  iet_ops_type;
     //! target power level for the test
@@ -118,9 +118,11 @@ class iet_action: public rvs::actionbase {
     //! list of GPUs (along with some identification data) which are
     //! selected for EDPp test
     std::vector<gpu_hwmon_info> edpp_gpus;
-
-
+    std::map<int, int> hip_to_smi_idxs;
+    void hip_to_smi_indices();
     bool get_all_iet_config_keys(void);
+    void json_add_primary_fields();
+
     /**
     * @brief reads all common configuration keys from
     * the module's properties collection
