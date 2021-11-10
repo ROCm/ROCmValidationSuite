@@ -298,8 +298,8 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
        std::cout << "json log file is " << json_log_file<< std::endl;
   }
   if( minimal){
-	rvs::MinNode* minrec = new rvs::MinNode(Action, LogLevel);
-	return static_cast<void*>(minrec);
+		rvs::MinNode* minrec = new rvs::MinNode(Action, LogLevel);
+		return static_cast<void*>(minrec);
   }
   if ((Sec|uSec)) {
     sec = Sec;
@@ -336,8 +336,26 @@ int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
   }
   std::string row{node_start};
   row += std::string("\"") + Module + std::string("\"") + kv_delimit + node_start + newline;
-  row += RVSINDENT;
-  row += std::string("\"") + Action + std::string("\"") + kv_delimit + list_start + newline;
+  //row += RVSINDENT;
+  //row += std::string("\"") + Action + std::string("\"") + kv_delimit + list_start + newline;
+  std::lock_guard<std::mutex> lk(json_log_mutex);
+  return ToFile(row, true);
+}
+
+// call strictly after JsonStartNodeCreate
+int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Action) {
+	if(json_log_file.empty()){
+		JsonStartNodeCreate(Module, Action);
+	}
+	std::string row{RVSINDENT};
+  row += std::string("\"") + Module + std::string("\"") + kv_delimit + list_start + newline;
+  std::lock_guard<std::mutex> lk(json_log_mutex);
+  return ToFile(row, true);
+}
+
+int rvs::logger::JsonActionEndNodeCreate() {
+	std::string row{RVSINDENT};
+  row += list_end + std::string(",");
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
 }
@@ -352,8 +370,9 @@ int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
  */
 
 int rvs::logger::JsonEndNodeCreate(void) {
+	if(json_log_file.empty())
+		return -1;
   std::string row{RVSINDENT};
-  row += list_end + newline;
   row += RVSINDENT + node_end + newline;
   row += node_end;
   std::lock_guard<std::mutex> lk(json_log_mutex);

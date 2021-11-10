@@ -127,9 +127,7 @@ int pebb_action::run() {
   test_duration = property_duration;
 	if(bjson){
     json_add_primary_fields();
-    rvs::lp::JsonEndNodeCreate();
   }
-	return sts;
   sts = create_threads();
 
   if (sts != 0) {

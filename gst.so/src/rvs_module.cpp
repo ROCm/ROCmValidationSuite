@@ -72,6 +72,7 @@ extern "C" int rvs_module_init(void* pMi) {
 }
 
 extern "C" int rvs_module_terminate(void) {
+		gst_action::cleanup_logs();
     return 0;
 }
 
