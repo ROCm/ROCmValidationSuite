@@ -125,15 +125,16 @@ int pebb_action::run() {
   }
 
   test_duration = property_duration;
-
+	if(bjson){
+    json_add_primary_fields();
+    rvs::lp::JsonEndNodeCreate();
+  }
+	return sts;
   sts = create_threads();
 
   if (sts != 0) {
     return sts;
   }
-	if(bjson){
-		json_add_primary_fields();
-	}
   // define timers
   rvs::timer<pebb_action> timer_running(&pebb_action::do_running_average, this);
   rvs::timer<pebb_action> timer_final(&pebb_action::do_final_average, this);
@@ -202,6 +203,7 @@ int pebb_action::run() {
   std::cout << " ========================================================================================================================= \n";
 
   destroy_threads();
+	bjson = true;
 	if(bjson){
   	rvs::lp::JsonEndNodeCreate();
   }
