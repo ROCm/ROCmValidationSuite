@@ -74,6 +74,25 @@ uint64_t time_diff(
     return milliseconds.count();
 }
 
+
+/**
+ * @brief flushes target and dtype fields to json file
+ * @return
+ */
+
+void pebb_action::json_add_primary_fields(){
+	if (rvs::lp::JsonStartNodeCreate(MODULE_NAME, action_name.c_str())){
+		rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+		return;
+	}	
+	void *json_node = json_node_create(std::string(MODULE_NAME),
+                        action_name.c_str(), rvs::loginfo);
+    if(json_node){
+            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+            json_node = nullptr;
+    }
+
+}
 /**
  * @brief Main action execution entry point. Implements test logic.
  *
@@ -112,7 +131,9 @@ int pebb_action::run() {
   if (sts != 0) {
     return sts;
   }
-
+	if(bjson){
+		json_add_primary_fields();
+	}
   // define timers
   rvs::timer<pebb_action> timer_running(&pebb_action::do_running_average, this);
   rvs::timer<pebb_action> timer_final(&pebb_action::do_final_average, this);
@@ -181,7 +202,9 @@ int pebb_action::run() {
   std::cout << " ========================================================================================================================= \n";
 
   destroy_threads();
-
+	if(bjson){
+  	rvs::lp::JsonEndNodeCreate();
+  }
   return sts;
 }
 
