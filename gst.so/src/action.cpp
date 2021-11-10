@@ -31,6 +31,7 @@
 #include <utility>
 #include <algorithm>
 #include <map>
+#include <unistd.h>
 
 #define __HIP_PLATFORM_HCC__
 #include "hip/hip_runtime.h"
@@ -497,6 +498,7 @@ int gst_action::get_all_selected_gpus(void) {
  */
 
 void gst_action::json_add_primary_fields(){
+		std::cout << "MANOJ" << std::endl;
         if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
             rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
 	    return;

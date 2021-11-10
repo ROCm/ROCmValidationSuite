@@ -231,19 +231,21 @@ rvs::module* rvs::module::find_create_module(const char* name) {
 int rvs::module::initialize() {
   T_MODULE_INIT d;
 
-  d.cbLog                 = rvs::logger::Log;
-  d.cbLogExt              = rvs::logger::LogExt;
-  d.cbLogRecordCreate     = rvs::logger::LogRecordCreate;
-  d.cbJsonStartNodeCreate = rvs::logger::JsonStartNodeCreate;
-  d.cbJsonEndNodeCreate   = rvs::logger::JsonEndNodeCreate;
-  d.cbLogRecordFlush      = rvs::logger::LogRecordFlush;
-  d.cbCreateNode          = rvs::logger::CreateNode;
-  d.cbAddString           = rvs::logger::AddString;
-  d.cbAddInt              = rvs::logger::AddInt;
-  d.cbAddNode             = rvs::logger::AddNode;
-  d.cbStop                = rvs::logger::Stop;
-  d.cbStopping            = rvs::logger::Stopping;
-  d.cbErr                 = rvs::logger::Err;
+  d.cbLog                       = rvs::logger::Log;
+  d.cbLogExt                    = rvs::logger::LogExt;
+  d.cbLogRecordCreate           = rvs::logger::LogRecordCreate;
+  d.cbJsonStartNodeCreate       = rvs::logger::JsonStartNodeCreate;
+  d.cbJsonActionStartNodeCreate = rvs::logger::JsonActionStartNodeCreate;
+  d.cbJsonEndNodeCreate         = rvs::logger::JsonEndNodeCreate;
+  d.cbJsonActionEndNodeCreate   = rvs::logger::JsonEndNodeCreate;
+  d.cbLogRecordFlush            = rvs::logger::LogRecordFlush;
+  d.cbCreateNode                = rvs::logger::CreateNode;
+  d.cbAddString                 = rvs::logger::AddString;
+  d.cbAddInt                    = rvs::logger::AddInt;
+  d.cbAddNode                   = rvs::logger::AddNode;
+  d.cbStop                      = rvs::logger::Stop;
+  d.cbStopping                  = rvs::logger::Stopping;
+  d.cbErr                       = rvs::logger::Err;
 
   return (*rvs_module_init)(reinterpret_cast<void*>(&d));
 }

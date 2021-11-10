@@ -331,6 +331,7 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
 int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
     if ( json_log_file.empty()){
         json_log_file = json_filename(Module);
+				std::cout << "here?" << std::endl;
         std::lock_guard<std::mutex> lk(cout_mutex);
         std::cout << "json log file is " << json_log_file<< std::endl;
   }
@@ -342,10 +343,9 @@ int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
   return ToFile(row, true);
 }
 
-// call strictly after JsonStartNodeCreate
 int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Action) {
 	if(json_log_file.empty()){
-		JsonStartNodeCreate(Module, Action);
+		rvs::logger::JsonStartNodeCreate(Module, Action);
 	}
 	std::string row{RVSINDENT};
   row += std::string("\"") + Module + std::string("\"") + kv_delimit + list_start + newline;
