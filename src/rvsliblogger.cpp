@@ -344,11 +344,11 @@ int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
 }
 
 int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Action) {
-	if(json_log_file.empty()){
-		rvs::logger::JsonStartNodeCreate(Module, Action);
-	}
-	std::string row{RVSINDENT};
-  row += std::string("\"") + Module + std::string("\"") + kv_delimit + list_start + newline;
+  if(json_log_file.empty()){
+    rvs::logger::JsonStartNodeCreate(Module, Action);
+  }
+  std::string row{RVSINDENT};
+  row += std::string("\"") + Action + std::string("\"") + kv_delimit + list_start + newline;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
 }

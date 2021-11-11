@@ -46,6 +46,7 @@ int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
   mi.cbJsonStartNodeCreate = pMi->cbJsonStartNodeCreate;
   mi.cbJsonActionStartNodeCreate = pMi->cbJsonActionStartNodeCreate;
   mi.cbJsonEndNodeCreate   = pMi->cbJsonEndNodeCreate;
+  mi.cbJsonActionEndNodeCreate   = pMi->cbJsonEndNodeCreate;
   mi.cbLogRecordFlush      = pMi->cbLogRecordFlush;
   mi.cbCreateNode          = pMi->cbCreateNode;
   mi.cbAddString           = pMi->cbAddString;
