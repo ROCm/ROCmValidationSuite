@@ -498,12 +498,11 @@ int gst_action::get_all_selected_gpus(void) {
  */
 
 void gst_action::json_add_primary_fields(){
-		std::cout << "MANOJ" << std::endl;
-        if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-            rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-	    return;
-        }
-    void *json_node = json_node_create(std::string(MODULE_NAME),
+	if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+  	rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+		return;
+	}
+  void *json_node = json_node_create(std::string(MODULE_NAME),
                         action_name.c_str(), rvs::loginfo);
     if(json_node){
             rvs::lp::AddString(json_node,TARGET_KEY, std::to_string(gst_target_stress));
@@ -555,7 +554,7 @@ int gst_action::run(void) {
     }
     auto res =  get_all_selected_gpus();
     if(bjson){
-	rvs::lp::JsonActionEndNodeCreate();
+			rvs::lp::JsonActionEndNodeCreate();
     }
     return res;
 }

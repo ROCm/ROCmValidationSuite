@@ -331,7 +331,6 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
 int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
     if ( json_log_file.empty()){
         json_log_file = json_filename(Module);
-				std::cout << "here?" << std::endl;
         std::lock_guard<std::mutex> lk(cout_mutex);
         std::cout << "json log file is " << json_log_file<< std::endl;
   }
@@ -347,6 +346,7 @@ int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Actio
   if(json_log_file.empty()){
     rvs::logger::JsonStartNodeCreate(Module, Action);
   }
+	isfirstrecord_m = true;
   std::string row{RVSINDENT};
   row += std::string("\"") + Action + std::string("\"") + kv_delimit + list_start + newline;
   std::lock_guard<std::mutex> lk(json_log_mutex);
@@ -440,7 +440,6 @@ int   rvs::logger::LogRecordFlush(void* pLogRecord, bool minimal) {
   row += r->ToJson("  ");
 
   // send it to file
-  
   ToFile(row, true);
   
   // dealloc memory
