@@ -454,6 +454,7 @@ void pebb_action::log_json_bandwidth(std::string srcnode, std::string dstnode,
 }
 
 
+
 /**
  * @brief Collect running average for this particular transfer.
  *
@@ -713,4 +714,9 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
 	log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstNode),rvs::logresults);
 
   return 0;
+}
+
+
+void pebb_action::cleanup_logs(){
+	rvs::lp::JsonEndNodeCreate();
 }

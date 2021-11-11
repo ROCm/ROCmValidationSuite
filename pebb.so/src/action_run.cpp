@@ -81,16 +81,10 @@ uint64_t time_diff(
  */
 
 void pebb_action::json_add_primary_fields(){
-	if (rvs::lp::JsonStartNodeCreate(MODULE_NAME, action_name.c_str())){
+	if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
 		rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
 		return;
 	}	
-	void *json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
-    if(json_node){
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
-            json_node = nullptr;
-    }
 
 }
 /**
@@ -203,7 +197,7 @@ int pebb_action::run() {
   destroy_threads();
 	bjson = true;
 	if(bjson){
-  	rvs::lp::JsonEndNodeCreate();
+  	rvs::lp::JsonActionEndNodeCreate();
   }
   return sts;
 }

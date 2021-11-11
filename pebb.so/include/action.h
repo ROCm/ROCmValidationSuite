@@ -55,7 +55,7 @@ class pebb_action : public rvs::actionbase {
  public:
   pebb_action();
   virtual ~pebb_action();
-
+	static void cleanup_logs();
   virtual int run(void);
 
   typedef struct bandwidth{
