@@ -573,10 +573,10 @@ bool iet_action::add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
  */
 
 void iet_action::json_add_primary_fields(){
-        if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-            rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-            return;
-        }
+    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+        return;
+    }
     void *json_node = json_node_create(std::string(MODULE_NAME),
                         action_name.c_str(), rvs::loginfo);
     if(json_node){

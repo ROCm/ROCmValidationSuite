@@ -554,7 +554,7 @@ int gst_action::run(void) {
     }
     auto res =  get_all_selected_gpus();
     if(bjson){
-			rvs::lp::JsonActionEndNodeCreate();
+      rvs::lp::JsonActionEndNodeCreate();
     }
     return res;
 }

@@ -118,10 +118,10 @@ bool pebb_action::get_all_pebb_config_keys(void) {;
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       bsts = false;
   }
-	if( link_type == 2)
-		link_type_string = "PCIe";
-	else if(link_type == 3)
-		link_type_string = "XGMI";
+  if( link_type == 2)
+    link_type_string = "PCIe";
+  else if(link_type == 3)
+    link_type_string = "XGMI";
 
   return bsts;
 }
@@ -417,40 +417,40 @@ int pebb_action::print_running_average() {
  *     * @param log_level the level of log (e.g.: info, results, error)
  *      */
 void* pebb_action::json_base_node(int log_level) {
-	void *json_node = json_node_create(std::string(MODULE_NAME),
-                            action_name.c_str(), log_level);
-	if(!json_node){
-		// log error
-		return nullptr;
-	}	
-	return json_node;
+  void *json_node = json_node_create(std::string(MODULE_NAME),
+    action_name.c_str(), log_level);
+  if(!json_node){
+    // log error
+    return nullptr;
+  }	
+  return json_node;
 }
 
 void pebb_action::json_add_kv(void *json_node, const std::string &key, const std::string &value){
-        if (json_node) {
-            rvs::lp::AddString(json_node, key, value);
-        }
+  if (json_node) {
+    rvs::lp::AddString(json_node, key, value);
+  }
 }
 
 void pebb_action::json_to_file(void *json_node,int log_level){
-	if (json_node)
-		rvs::lp::LogRecordFlush(json_node, log_level);
+  if (json_node)
+    rvs::lp::LogRecordFlush(json_node, log_level);
 }
 
 void pebb_action::log_json_bandwidth(std::string srcnode, std::string dstnode,
 								 int log_level, std::string bandwidth){
 	
-	if(bjson){
-		void *json_node = json_base_node(log_level);
-		json_add_kv(json_node, "srcgpu", srcnode);
-		json_add_kv(json_node, "dstgpu", dstnode);
-		if(bandwidth.empty()){
-			json_add_kv(json_node, "intf", link_type_string);
-		}else{
-			json_add_kv(json_node, "throughput", bandwidth);
-		}
-		json_to_file(json_node, log_level);
-	}
+  if(bjson){
+    void *json_node = json_base_node(log_level);
+    json_add_kv(json_node, "srcgpu", srcnode);
+    json_add_kv(json_node, "dstgpu", dstnode);
+    if(bandwidth.empty()){
+      json_add_kv(json_node, "intf", link_type_string);
+    }else{
+      json_add_kv(json_node, "throughput", bandwidth);
+    }
+    json_to_file(json_node, log_level);
+  }
 }
 
 
@@ -527,7 +527,7 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
 
   rvs::lp::Log(msg, rvs::loginfo);
 
-	log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id),rvs::logresults, buff);
+  log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id),rvs::logresults, buff);
   RVSTRACE_
   return 0;
 }
@@ -711,7 +711,7 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
   }
 
   rvs::lp::Log(msg, rvs::logresults);
-	log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstNode),rvs::logresults);
+  log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstNode),rvs::logresults);
 
   return 0;
 }
