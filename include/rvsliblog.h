@@ -39,7 +39,9 @@ typedef void* (*t_cbLogRecordCreate)( const char* Module, const char* Action,
                                       const unsigned int Sec,
                                       const unsigned int uSec, bool minimal);
 typedef int   (*t_cbJsonStartNodeCreate)( const char* Module, const char* Action);
+typedef int   (*t_cbJsonActionStartNodeCreate)( const char* Module, const char* Action);
 typedef int   (*t_cbJsonEndNodeCreate)();
+typedef int   (*t_cbJsonActionEndNodeCreate)();
 typedef int   (*t_cbLogRecordFlush)( void* pLogRecord, bool minimal);
 typedef void* (*t_cbCreateNode)(void* Parent, const char* Name);
 typedef void  (*t_cbAddString)(void* Parent, const char* Key, const char* Val);
@@ -62,8 +64,12 @@ typedef struct tag_module_init {
   t_cbLogRecordCreate  cbLogRecordCreate;
   //! pointer to rvs::logger::JsonStartNodeCreate() function
   t_cbJsonStartNodeCreate  cbJsonStartNodeCreate;
+  //! pointer to rvs::logger::JsonActionStartNodeCreate() function
+  t_cbJsonActionStartNodeCreate  cbJsonActionStartNodeCreate;
   //! pointer to rvs::logger::JsonEndNodeCreate() function
   t_cbJsonEndNodeCreate  cbJsonEndNodeCreate;
+  //! pointer to rvs::logger::JsonActionEndNodeCreate() function
+  t_cbJsonActionEndNodeCreate  cbJsonActionEndNodeCreate;
   //! pointer to rvs::logger::LogRecordFlush() function
   t_cbLogRecordFlush   cbLogRecordFlush;
   //! pointer to rvs::logger::CreateNode() function

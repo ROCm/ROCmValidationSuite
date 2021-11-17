@@ -74,6 +74,18 @@ uint64_t time_diff(
     return milliseconds.count();
 }
 
+
+/**
+ * @brief flushes target and dtype fields to json file
+ * @return
+ */
+
+void pebb_action::json_add_primary_fields(){
+  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+    return;
+  }	
+}
 /**
  * @brief Main action execution entry point. Implements test logic.
  *
@@ -106,13 +118,14 @@ int pebb_action::run() {
   }
 
   test_duration = property_duration;
-
+  if(bjson){
+    json_add_primary_fields();
+  }
   sts = create_threads();
 
   if (sts != 0) {
     return sts;
   }
-
   // define timers
   rvs::timer<pebb_action> timer_running(&pebb_action::do_running_average, this);
   rvs::timer<pebb_action> timer_final(&pebb_action::do_final_average, this);
@@ -181,7 +194,10 @@ int pebb_action::run() {
   std::cout << " ========================================================================================================================= \n";
 
   destroy_threads();
-
+	//bjson = true;
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
   return sts;
 }
 

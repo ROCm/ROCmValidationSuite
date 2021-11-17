@@ -40,19 +40,21 @@ T_MODULE_INIT rvs::lp::mi;
  *
  */
 int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
-  mi.cbLog                 = pMi->cbLog;
-  mi.cbLogExt              = pMi->cbLogExt;
-  mi.cbLogRecordCreate     = pMi->cbLogRecordCreate;
-  mi.cbJsonStartNodeCreate = pMi->cbJsonStartNodeCreate;
-  mi.cbJsonEndNodeCreate   = pMi->cbJsonEndNodeCreate;
-  mi.cbLogRecordFlush      = pMi->cbLogRecordFlush;
-  mi.cbCreateNode          = pMi->cbCreateNode;
-  mi.cbAddString           = pMi->cbAddString;
-  mi.cbAddInt              = pMi->cbAddInt;
-  mi.cbAddNode             = pMi->cbAddNode;
-  mi.cbStop                = pMi->cbStop;
-  mi.cbStopping            = pMi->cbStopping;
-  mi.cbErr                 = pMi->cbErr;
+  mi.cbLog                        = pMi->cbLog;
+  mi.cbLogExt                     = pMi->cbLogExt;
+  mi.cbLogRecordCreate            = pMi->cbLogRecordCreate;
+  mi.cbJsonStartNodeCreate        = pMi->cbJsonStartNodeCreate;
+  mi.cbJsonActionStartNodeCreate  = pMi->cbJsonActionStartNodeCreate;
+  mi.cbJsonEndNodeCreate          = pMi->cbJsonEndNodeCreate;
+  mi.cbJsonActionEndNodeCreate    = pMi->cbJsonActionEndNodeCreate;
+  mi.cbLogRecordFlush             = pMi->cbLogRecordFlush;
+  mi.cbCreateNode                 = pMi->cbCreateNode;
+  mi.cbAddString                  = pMi->cbAddString;
+  mi.cbAddInt                     = pMi->cbAddInt;
+  mi.cbAddNode                    = pMi->cbAddNode;
+  mi.cbStop                       = pMi->cbStop;
+  mi.cbStopping                   = pMi->cbStopping;
+  mi.cbErr                        = pMi->cbErr;
 
   return 0;
 }
@@ -129,6 +131,34 @@ void* rvs::lp::LogRecordCreate(const char* Module, const char* Action,
  */
 int rvs::lp::JsonStartNodeCreate(const char* Module, const char* Action) {
   return (*mi.cbJsonStartNodeCreate)(Module,  Action);
+}
+/**
+ *  * @brief Create action start log record
+ *   *
+ * Note: this API is used to construct JSON output. Use LogExt() to
+ * perform unstructured output.
+ * 
+ * @param Module Module from which record is originating
+ * @param Action Action from which record is originating
+ * @return 0 - success, non-zero otherwise
+ *    
+ */
+int rvs::lp::JsonActionStartNodeCreate(const char* Module, const char* Action) {
+  return (*mi.cbJsonActionStartNodeCreate)(Module,  Action);
+}
+
+
+/**
+ *  * @brief Create action end log record
+ *   *
+ * Note: this API is used to construct JSON output. Use LogExt() to 
+ * perform unstructured output.
+ *     
+ * @return 0 - success, non-zero otherwise
+ *        
+ */
+int rvs::lp::JsonActionEndNodeCreate() {
+  return (*mi.cbJsonActionEndNodeCreate)();
 }
 
 /**
