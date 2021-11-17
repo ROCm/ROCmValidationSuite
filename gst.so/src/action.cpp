@@ -498,10 +498,10 @@ int gst_action::get_all_selected_gpus(void) {
  */
 
 void gst_action::json_add_primary_fields(){
-	if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-  	rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-		return;
-	}
+  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+    return;
+  }
   void *json_node = json_node_create(std::string(MODULE_NAME),
                         action_name.c_str(), rvs::loginfo);
     if(json_node){
@@ -560,6 +560,6 @@ int gst_action::run(void) {
 }
 
 void gst_action::cleanup_logs(){
-	rvs::lp::JsonEndNodeCreate();
+  rvs::lp::JsonEndNodeCreate();
 }
 

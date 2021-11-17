@@ -600,7 +600,7 @@ int pebb_action::print_final_average() {
     bw.CPUId = src_node;
 
     resultBandwidth.push_back(bw);
-		log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id), rvs::logresults, buff);
+    log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id), rvs::logresults, buff);
     RVSTRACE_
   }
   RVSTRACE_
@@ -718,5 +718,5 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
 
 
 void pebb_action::cleanup_logs(){
-	rvs::lp::JsonEndNodeCreate();
+  rvs::lp::JsonEndNodeCreate();
 }

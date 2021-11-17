@@ -40,21 +40,21 @@ T_MODULE_INIT rvs::lp::mi;
  *
  */
 int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
-  mi.cbLog                 = pMi->cbLog;
-  mi.cbLogExt              = pMi->cbLogExt;
-  mi.cbLogRecordCreate     = pMi->cbLogRecordCreate;
-  mi.cbJsonStartNodeCreate = pMi->cbJsonStartNodeCreate;
-  mi.cbJsonActionStartNodeCreate = pMi->cbJsonActionStartNodeCreate;
-  mi.cbJsonEndNodeCreate   = pMi->cbJsonEndNodeCreate;
-  mi.cbJsonActionEndNodeCreate   = pMi->cbJsonActionEndNodeCreate;
-  mi.cbLogRecordFlush      = pMi->cbLogRecordFlush;
-  mi.cbCreateNode          = pMi->cbCreateNode;
-  mi.cbAddString           = pMi->cbAddString;
-  mi.cbAddInt              = pMi->cbAddInt;
-  mi.cbAddNode             = pMi->cbAddNode;
-  mi.cbStop                = pMi->cbStop;
-  mi.cbStopping            = pMi->cbStopping;
-  mi.cbErr                 = pMi->cbErr;
+  mi.cbLog                        = pMi->cbLog;
+  mi.cbLogExt                     = pMi->cbLogExt;
+  mi.cbLogRecordCreate            = pMi->cbLogRecordCreate;
+  mi.cbJsonStartNodeCreate        = pMi->cbJsonStartNodeCreate;
+  mi.cbJsonActionStartNodeCreate  = pMi->cbJsonActionStartNodeCreate;
+  mi.cbJsonEndNodeCreate          = pMi->cbJsonEndNodeCreate;
+  mi.cbJsonActionEndNodeCreate    = pMi->cbJsonActionEndNodeCreate;
+  mi.cbLogRecordFlush             = pMi->cbLogRecordFlush;
+  mi.cbCreateNode                 = pMi->cbCreateNode;
+  mi.cbAddString                  = pMi->cbAddString;
+  mi.cbAddInt                     = pMi->cbAddInt;
+  mi.cbAddNode                    = pMi->cbAddNode;
+  mi.cbStop                       = pMi->cbStop;
+  mi.cbStopping                   = pMi->cbStopping;
+  mi.cbErr                        = pMi->cbErr;
 
   return 0;
 }

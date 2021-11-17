@@ -667,5 +667,5 @@ int iet_action::run(void) {
 }
 
 void iet_action::cleanup_logs(){
-	rvs::lp::JsonEndNodeCreate();
+  rvs::lp::JsonEndNodeCreate();
 }
