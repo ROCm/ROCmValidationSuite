@@ -128,7 +128,7 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-c", &val)) {
     config_file = val;
   } else {
-    config_file = "conf/rvs.conf";
+    config_file = "../share/rvs/conf/rvs.conf";
     config_file = path + config_file;
   }
 
