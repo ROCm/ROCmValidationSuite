@@ -79,6 +79,7 @@ extern "C" int   rvs_module_init(void* pMi) {
 extern "C" int   rvs_module_terminate(void) {
   rvs::lp::Log("[module_terminate] pebb rvs_module_terminate() - entered",
                rvs::logtrace);
+  pebb_action::cleanup_logs();
   return 0;
 }
 

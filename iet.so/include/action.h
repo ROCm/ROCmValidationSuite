@@ -70,7 +70,7 @@ class iet_action: public rvs::actionbase {
  public:
     iet_action();
     virtual ~iet_action();
-
+    static void cleanup_logs();
     virtual int run(void);
 
  protected:

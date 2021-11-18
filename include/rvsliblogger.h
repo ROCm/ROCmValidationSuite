@@ -63,7 +63,9 @@ class logger {
   static  int    log(const std::string& Message, const int level = 1);
   static  int    Log(const char* Message, const int level);
   static  int    JsonStartNodeCreate(const char* Module, const char* Action);
+  static  int    JsonActionStartNodeCreate(const char* Module, const char* Action);
   static  int    JsonEndNodeCreate();
+  static  int    JsonActionEndNodeCreate();
   static  int    LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec);
   static  void*  LogRecordCreate(const char* Module, const char* Action,

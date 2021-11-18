@@ -55,7 +55,7 @@ class pebb_action : public rvs::actionbase {
  public:
   pebb_action();
   virtual ~pebb_action();
-
+  static void cleanup_logs();
   virtual int run(void);
 
   typedef struct bandwidth{
@@ -93,7 +93,7 @@ class pebb_action : public rvs::actionbase {
   uint32_t b2b_block_size;
   //! link type
   int link_type;
-
+  std::string link_type_string;
  protected:
   int create_threads();
   int destroy_threads();
@@ -105,6 +105,12 @@ class pebb_action : public rvs::actionbase {
                       uint32_t Distance,
                       const std::vector<rvs::linkinfo_t>& arrLinkInfo,
                       bool bReverse);
+  void json_add_primary_fields();
+  void* json_base_node(int log_level);
+  void json_add_kv(void *json_node, const std::string &key, const std::string &value);
+  void json_to_file(void *json_node,int log_level);
+  void log_json_bandwidth(std::string srcnode, std::string dstnode,
+                 int log_level, std::string bandwidth = "");
   int print_running_average();
   int print_running_average(pebbworker* pWorker);
   int print_final_average();
