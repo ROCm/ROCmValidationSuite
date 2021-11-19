@@ -711,7 +711,7 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
   }
 
   rvs::lp::Log(msg, rvs::logresults);
-  log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstNode),rvs::logresults);
+  log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstGpuID),rvs::logresults);
 
   return 0;
 }
