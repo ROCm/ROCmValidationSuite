@@ -287,11 +287,11 @@ void pqt_action::log_json_data(std::string srcnode, std::string dstnode,
 
     switch (data_type) {
 
-      case PQT_THROUGHPUT:
+      case pqt_json_data_t::PQT_THROUGHPUT:
         json_add_kv(json_node, "throughput", data);
         break;
 
-      case PQT_LINK_TYPE: 
+      case pqt_json_data_t::PQT_LINK_TYPE:
         json_add_kv(json_node, "intf", data);
         break;
 
@@ -866,7 +866,8 @@ int pqt_action::print_running_average(pqtworker* pWorker) {
     }
 #endif
 
-    log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::loginfo, PQT_THROUGHPUT, buff);
+    log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::loginfo,
+        pqt_json_data_t::PQT_THROUGHPUT, buff);
 
     return 0;
 }
@@ -959,7 +960,8 @@ int pqt_action::print_final_average() {
     }
 #endif
 
-    log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::logresults, PQT_THROUGHPUT, buff);
+    log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::logresults,
+        pqt_json_data_t::PQT_THROUGHPUT, buff);
 
     sleep(1);
   }

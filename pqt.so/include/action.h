@@ -48,7 +48,7 @@ using namespace std::chrono;
 
 class pqtworker;
 
-typedef enum pqt_json_data {
+typedef enum class pqt_json_data {
     PQT_THROUGHPUT = 0,
     PQT_LINK_TYPE = 1
 } pqt_json_data_t;
