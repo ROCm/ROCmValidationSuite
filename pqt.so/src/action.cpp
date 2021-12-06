@@ -58,9 +58,10 @@ using std::string;
 using std::vector;
 
 //! Default constructor
-pqt_action::pqt_action() {
+pqt_action::pqt_action():link_type_string{} {
   prop_peer_deviceid = 0u;
   bjson = false;
+  link_type = -1;
 }
 
 //! Default destructor
@@ -238,7 +239,68 @@ bool pqt_action::get_all_pqt_config_keys(void) {
     res = false;
   }
 
+  if( link_type == 2) {
+      link_type_string = "PCIe";
+  }
+  else if(link_type == 3) {
+      link_type_string = "XGMI";
+  }
+
   return res;
+}
+
+/**
+ * @brief logs a message to JSON
+ * @param key info type
+ * @param value message to log
+ * @param log_level the level of log (e.g.: info, results, error)
+ **/
+void* pqt_action::json_base_node(int log_level) {
+    void *json_node = json_node_create(std::string(MODULE_NAME),
+            action_name.c_str(), log_level);
+    if(!json_node){
+        /* log error */
+            return nullptr;
+    }  
+    return json_node;
+}
+
+void pqt_action::json_add_kv(void *json_node, const std::string &key, const std::string &value){
+    if (json_node) {
+        rvs::lp::AddString(json_node, key, value);
+    }
+}
+
+void pqt_action::json_to_file(void *json_node,int log_level){
+    if (json_node)
+        rvs::lp::LogRecordFlush(json_node, log_level);
+}
+
+void pqt_action::log_json_data(std::string srcnode, std::string dstnode,
+    int log_level, pqt_json_data_t data_type, std::string data) {
+
+  if(bjson){
+
+    void *json_node = json_base_node(log_level);
+    json_add_kv(json_node, "srcgpu", srcnode);
+    json_add_kv(json_node, "dstgpu", dstnode);
+
+    switch (data_type) {
+
+      case pqt_json_data_t::PQT_THROUGHPUT:
+        json_add_kv(json_node, "throughput", data);
+        break;
+
+      case pqt_json_data_t::PQT_LINK_TYPE:
+        json_add_kv(json_node, "intf", data);
+        break;
+
+      default:
+        break;
+    }
+
+    json_to_file(json_node, log_level);
+  }
 }
 
 /**
@@ -432,45 +494,11 @@ int pqt_action::create_threads() {
         }
         rvs::lp::Log(msg, rvs::logresults);
 
-        if (bjson) {
-          RVSTRACE_
-          unsigned int sec;
-          unsigned int usec;
-          rvs::lp::get_ticks(&sec, &usec);
-          void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::logresults, sec, usec);
-          if (pjson != NULL) {
-            RVSTRACE_
-            rvs::lp::AddString(pjson, "src",
-                               std::to_string(gpu_id[i]));
-            rvs::lp::AddString(pjson, "dst",
-                               std::to_string(gpu_id[j]));
-            rvs::lp::AddString(pjson, "p2p", "true");
-            if (distance == rvs::hsa::NO_CONN) {
-                rvs::lp::AddInt(pjson, "distance", -1);
-            } else {
-                rvs::lp::AddInt(pjson, "distance", distance);
-            }
-
-            void* phops = rvs::lp::CreateNode(pjson, "hops");
-            rvs::lp::AddNode(pjson, phops);
-
-            // iterate through individual hops
-            for (uint i = 0; i < arr_linkinfo.size(); i++) {
-              char sbuff[64];
-              snprintf(sbuff, sizeof(sbuff), "hop%d", i);
-             void* phop = rvs::lp::CreateNode(phops, sbuff);
-              rvs::lp::AddString(phop, "type", arr_linkinfo[i].strtype);
-              if (arr_linkinfo[i].distance == rvs::hsa::NO_CONN) {
-                rvs::lp::AddInt(phop, "distance", -1);
-              } else {
-                rvs::lp::AddInt(phop, "distance", arr_linkinfo[i].distance);
-              }
-             rvs::lp::AddNode(phops, phop);
-            }
-
-            rvs::lp::LogRecordFlush(pjson);
-          }
+        if (0 != arr_linkinfo.size()) {
+          /* Log link type */
+          log_json_data(std::to_string(srcnode), std::to_string(gpu_id[j]), rvs::logresults, 
+              pqt_json_data_t::PQT_LINK_TYPE, arr_linkinfo[0].strtype);
+          /* Note: Assuming link type for all hops between GPUs are the same */
         }
 
         RVSTRACE_
@@ -511,12 +539,12 @@ int pqt_action::create_threads() {
           p->set_block_sizes(block_size);
           test_array.push_back(p);
         }
-
-      } else {
+      }
+      else {
         RVSTRACE_
-        msg = "[" + action_name + "] p2p "
-            + std::to_string(gpu_id[i]) + " "
-            + std::to_string(gpu_id[j]) + " peers:false ";
+          msg = "[" + action_name + "] p2p "
+          + std::to_string(gpu_id[i]) + " "
+          + std::to_string(gpu_id[j]) + " peers:false ";
 
         if (distance == rvs::hsa::NO_CONN) {
           msg += "distance:-1";
@@ -534,48 +562,6 @@ int pqt_action::create_threads() {
         }
 
         rvs::lp::Log(msg, rvs::logresults);
-
-        if (bjson) {
-          RVSTRACE_
-          unsigned int sec;
-          unsigned int usec;
-          rvs::lp::get_ticks(&sec, &usec);
-          void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::logresults, sec, usec);
-          if (pjson != NULL) {
-            RVSTRACE_
-            rvs::lp::AddString(pjson,
-                               "src", std::to_string(gpu_id[i]));
-            rvs::lp::AddString(pjson,
-                               "dst", std::to_string(gpu_id[j]));
-            rvs::lp::AddString(pjson,
-                               "p2p", "false");
-            if (distance == rvs::hsa::NO_CONN) {
-                rvs::lp::AddInt(pjson, "distance", -1);
-            } else {
-                rvs::lp::AddInt(pjson, "distance", distance);
-            }
-
-            void* phops = rvs::lp::CreateNode(pjson, "hops");
-            rvs::lp::AddNode(pjson, phops);
-
-            // iterate through individual hops
-            for (uint i = 0; i < arr_linkinfo.size(); i++) {
-              char sbuff[64];
-              snprintf(sbuff, sizeof(sbuff), "hop%d", i);
-             void* phop = rvs::lp::CreateNode(phops, sbuff);
-              rvs::lp::AddString(phop, "type", arr_linkinfo[i].strtype);
-              if (arr_linkinfo[i].distance == rvs::hsa::NO_CONN) {
-                rvs::lp::AddInt(phop, "distance", -1);
-              } else {
-                rvs::lp::AddInt(phop, "distance", arr_linkinfo[i].distance);
-              }
-             rvs::lp::AddNode(phops, phop);
-            }
-
-            rvs::lp::LogRecordFlush(pjson);
-          }
-        }
       }
     }
   }
@@ -703,95 +689,101 @@ int pqt_action::print_running_average() {
  *
  * */
 int pqt_action::print_running_average(pqtworker* pWorker) {
-  uint16_t    src_node, dst_node;
-  uint16_t    src_id, dst_id;
-  bool        bidir;
-  size_t      current_size;
-  double      duration;
-  std::string msg;
-  char        buff[64];
-  double      bandwidth;
-  uint16_t    transfer_ix;
-  uint16_t    transfer_num;
+    uint16_t    src_node, dst_node;
+    uint16_t    src_id, dst_id;
+    bool        bidir;
+    size_t      current_size;
+    double      duration;
+    std::string msg;
+    char        buff[64];
+    double      bandwidth;
+    uint16_t    transfer_ix;
+    uint16_t    transfer_num;
 
-  // get running average
-  pWorker->get_running_data(&src_node, &dst_node, &bidir,
-                            &current_size, &duration);
+    // get running average
+    pWorker->get_running_data(&src_node, &dst_node, &bidir,
+            &current_size, &duration);
 
-  if (duration > 0) {
-    bandwidth = current_size/duration/1000 / 1000 / 1000;
-    if (bidir) {
-      bandwidth *=2;
-    }
-    snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
-  } else {
-    // no running average in this iteration, try getting total so far
-    // (do not reset final totals as this is just intermediate query)
-    pWorker->get_final_data(&src_node, &dst_node, &bidir,
-                            &current_size, &duration, false);
     if (duration > 0) {
-      bandwidth = current_size/duration/1000 / 1000 / 1000;
-      if (bidir) {
-        bandwidth *=2;
-      }
-      snprintf( buff, sizeof(buff), "%.3f GBps (*)", bandwidth);
+        bandwidth = current_size/duration/1000 / 1000 / 1000;
+        if (bidir) {
+            bandwidth *=2;
+        }
+        snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
     } else {
-      // not transfers at all - print "pending"
-      snprintf( buff, sizeof(buff), "(pending)");
+        // no running average in this iteration, try getting total so far
+        // (do not reset final totals as this is just intermediate query)
+        pWorker->get_final_data(&src_node, &dst_node, &bidir,
+                &current_size, &duration, false);
+        if (duration > 0) {
+            bandwidth = current_size/duration/1000 / 1000 / 1000;
+            if (bidir) {
+                bandwidth *=2;
+            }
+            snprintf( buff, sizeof(buff), "%.3f GBps (*)", bandwidth);
+        } else {
+            // not transfers at all - print "pending"
+            snprintf( buff, sizeof(buff), "(pending)");
+        }
     }
-  }
 
-//   src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
-//   dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
+    //   src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
+    //   dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
 
-  RVSTRACE_
-  if (rvs::gpulist::node2gpu(src_node, &src_id)) {
     RVSTRACE_
-    std::string msg = "could not find GPU id for node " +
-                      std::to_string(src_node);
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
-  }
-  RVSTRACE_
-  if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+        if (rvs::gpulist::node2gpu(src_node, &src_id)) {
+            RVSTRACE_
+                std::string msg = "could not find GPU id for node " +
+                std::to_string(src_node);
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+            return -1;
+        }
     RVSTRACE_
-    std::string msg = "could not find GPU id for node " +
-                      std::to_string(dst_node);
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
-  }
+        if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+            RVSTRACE_
+                std::string msg = "could not find GPU id for node " +
+                std::to_string(dst_node);
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+            return -1;
+        }
 
-  transfer_ix = pWorker->get_transfer_ix();
-  transfer_num = pWorker->get_transfer_num();
+    transfer_ix = pWorker->get_transfer_ix();
+    transfer_num = pWorker->get_transfer_num();
 
-  msg = "[" + action_name + "] p2p-bandwidth  ["
-      + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
-      + "] " + std::to_string(src_id) + " " + std::to_string(dst_id)
-      + "  bidirectional: " + std::string(bidir ? "true" : "false")
-      + "  " + buff;
-  rvs::lp::Log(msg, rvs::loginfo);
-  if (bjson) {
-    unsigned int sec;
-    unsigned int usec;
-    rvs::lp::get_ticks(&sec, &usec);
-    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::loginfo, sec, usec);
-    if (pjson != NULL) {
-      rvs::lp::AddString(pjson,
-                          "transfer_ix", std::to_string(transfer_ix));
-      rvs::lp::AddString(pjson,
-                          "transfer_num", std::to_string(transfer_num));
-      rvs::lp::AddString(pjson, "src", std::to_string(src_id));
-      rvs::lp::AddString(pjson, "dst", std::to_string(dst_id));
-      rvs::lp::AddString(pjson, "p2p", "true");
-      rvs::lp::AddString(pjson, "bidirectional",
-                          std::string(bidir ? "true" : "false"));
-      rvs::lp::AddString(pjson, "bandwidth (GBs)", buff);
-      rvs::lp::LogRecordFlush(pjson);
+    msg = "[" + action_name + "] p2p-bandwidth  ["
+        + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
+        + "] " + std::to_string(src_id) + " " + std::to_string(dst_id)
+        + "  bidirectional: " + std::string(bidir ? "true" : "false")
+        + "  " + buff;
+    rvs::lp::Log(msg, rvs::loginfo);
+
+#if 0
+    if (bjson) {
+        unsigned int sec;
+        unsigned int usec;
+        rvs::lp::get_ticks(&sec, &usec);
+        void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
+                action_name.c_str(), rvs::loginfo, sec, usec);
+        if (pjson != NULL) {
+            rvs::lp::AddString(pjson,
+                    "transfer_ix", std::to_string(transfer_ix));
+            rvs::lp::AddString(pjson,
+                    "transfer_num", std::to_string(transfer_num));
+            rvs::lp::AddString(pjson, "src", std::to_string(src_id));
+            rvs::lp::AddString(pjson, "dst", std::to_string(dst_id));
+            rvs::lp::AddString(pjson, "p2p", "true");
+            rvs::lp::AddString(pjson, "bidirectional",
+                    std::string(bidir ? "true" : "false"));
+            rvs::lp::AddString(pjson, "bandwidth (GBs)", buff);
+            rvs::lp::LogRecordFlush(pjson);
+        }
     }
-  }
+#endif
 
-  return 0;
+    log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::loginfo,
+        pqt_json_data_t::PQT_THROUGHPUT, buff);
+
+    return 0;
 }
 
 /**
@@ -856,6 +848,8 @@ int pqt_action::print_final_average() {
         + "  " + buff + "  duration: " + std::to_string(duration) + " sec";
 
     rvs::lp::Log(msg, rvs::logresults);
+
+#if 0
     if (bjson) {
       unsigned int sec;
       unsigned int usec;
@@ -878,6 +872,11 @@ int pqt_action::print_final_average() {
         rvs::lp::LogRecordFlush(pjson);
       }
     }
+#endif
+
+    log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::logresults,
+        pqt_json_data_t::PQT_THROUGHPUT, buff);
+
     sleep(1);
   }
 
@@ -943,4 +942,8 @@ void pqt_action::do_running_average() {
     }
   }
   print_running_average();
+}
+
+void pqt_action::cleanup_logs(){
+  rvs::lp::JsonEndNodeCreate();
 }

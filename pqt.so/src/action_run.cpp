@@ -71,6 +71,17 @@ uint64_t time_diff(
     return milliseconds.count();
 }
 
+/**
+ *  * @brief flushes target and dtype fields to json file
+ *   * @return
+ *    */
+
+void pqt_action::json_add_primary_fields(){
+  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+    return;
+  } 
+}
 
 /**
  * @brief Main action execution entry point. Implements test logic.
@@ -111,7 +122,11 @@ int pqt_action::run() {
   }
 
   test_duration = property_duration;
- 
+
+  if(bjson){
+    json_add_primary_fields();
+  }
+
   sts = create_threads();
   if (sts) {
     RVSTRACE_
@@ -184,9 +199,12 @@ int pqt_action::run() {
 
   print_final_average();
 
-
   // do cleanup
   destroy_threads();
+
+ if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
 
   return sts;
 }

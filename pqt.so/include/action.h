@@ -48,6 +48,11 @@ using namespace std::chrono;
 
 class pqtworker;
 
+enum class pqt_json_data_t {
+  PQT_THROUGHPUT = 0,
+  PQT_LINK_TYPE = 1
+};
+
 /**
  * @class pqt_action
  * @ingroup PQT
@@ -64,6 +69,7 @@ class pqt_action : public rvs::actionbase {
   virtual ~pqt_action();
 
   virtual int run(void);
+  static void cleanup_logs();
 
  protected:
   bool get_all_pqt_config_keys(void);
@@ -94,6 +100,8 @@ class pqt_action : public rvs::actionbase {
   //! link type
   int link_type;
 
+  std::string link_type_string;
+
  protected:
   int is_peer(uint16_t Src, uint16_t Dst);
   int create_threads();
@@ -112,6 +120,13 @@ class pqt_action : public rvs::actionbase {
 
   //! bjson field indicates if the json flag is set
   bool bjson;
+
+  void json_add_primary_fields();
+  void* json_base_node(int log_level);
+  void json_add_kv(void *json_node, const std::string &key, const std::string &value);
+  void json_to_file(void *json_node,int log_level);
+  void log_json_data(std::string srcnode, std::string dstnode,
+          int log_level, pqt_json_data_t data_type, std::string data = "");
 
  private:
   void do_running_average(void);
