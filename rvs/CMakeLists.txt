@@ -138,6 +138,8 @@ set(SOURCES
   src/rvsexec.cpp
   src/rvsexec_do_yaml.cpp
   src/rvsoptions.cpp
+  src/yaml_utils.cpp
+  src/node_yaml.cpp
 )
 
 ## define helper lib
