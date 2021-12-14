@@ -37,7 +37,7 @@
 #include "include/rvsliblogger.h"
 #include "include/rvsoptions.h"
 #include "include/rvs_util.h"
-
+#include "include/node_yaml.h"
 #define MODULE_NAME_CAPS "CLI"
 
 /*** Example rvs.conf file structure
@@ -68,18 +68,21 @@ using std::string;
 int rvs::exec::do_yaml(const std::string& config_file) {
   int sts = 0;
 
-  YAML::Node config = YAML::LoadFile(config_file);
-
+  //YAML::Node config = YAML::LoadFile(config_file);
+  parser_state *state = new parser_state{};// TODO: use shared_ptr
+  int res = parse_config(state, config_file);
+  if (EXIT_SUCCESS != res){
+    rvs::logger::Err("yaml conf read error", MODULE_NAME_CAPS);
+    delete state;
+    return sts;
+  }  
   // find "actions" map
-  const YAML::Node& actions = config["actions"];
-
-
+  const auto& actions = state->actionlist;
   // for all actions...
-  for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
-    const YAML::Node& action = *it;
+  for (const auto& action : actions) {
 
-    rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
-
+    rvs::logger::log("Action name :" + action["name"], rvs::logresults);
+    std::cout << "Action name :" <<  action["name"] << std::endl;
     // if stop was requested
     if (rvs::logger::Stopping()) {
       return -1;
@@ -88,7 +91,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     // find module name
     std::string rvsmodule;
     try {
-      rvsmodule = action["module"].as<std::string>();
+      rvsmodule = action.at("module");
     } catch(...) {
     }
 
@@ -97,7 +100,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       // report error and go to next action
       char buff[1024];
       snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
-               action["name"].as<std::string>().c_str());
+               action["name"].c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return -1;
     }
@@ -108,7 +111,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
                "action '%s' could not crate action object in module '%s'",
-               action["name"].as<std::string>().c_str(),
+               action["name"].c_str(),
                rvsmodule.c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return -1;
@@ -119,7 +122,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
                "action '%s' could not obtain interface if1",
-               action["name"].as<std::string>().c_str());
+               action["name"]..c_str());
       module::action_destroy(pa);
       return -1;
     }
@@ -161,7 +164,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
  * @return 0 if successful, non-zero otherwise
  *
  */
-int rvs::exec::do_yaml_properties(const YAML::Node& node,
+int rvs::exec::do_yaml_properties(const Actions& node,
                                   const std::string& module_name,
                                   rvs::if1* pif1) {
   int sts = 0;

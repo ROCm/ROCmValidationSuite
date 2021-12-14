@@ -157,11 +157,11 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
     return SUCCESS;
 }
 
-int parse_config(std::string filename){
+int parse_config(parser_state *&state,std::string filename){
     int code;
     int status_;
     //struct parser_state state;
-    parser_state *state = new parser_state{};
+    //parser_state *state = new parser_state{};
     yaml_parser_t parser;
     yaml_event_t event;
 
@@ -202,7 +202,7 @@ int parse_config(std::string filename){
 done:
     //destroy_actions(state->actionlist);
     yaml_parser_delete(&parser);
-    delete state;
+    //delete state;
     return code;
 }
 
