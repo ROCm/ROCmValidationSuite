@@ -4,8 +4,9 @@
 #include <string>
 #include <cerrno>
 #include <iostream>
-#include "gstaction.h"
 #include <vector>
+#include <map>
+#include "gstaction.h"
 /* Set environment variable DEBUG=1 to enable debug output. */
 int debug = 0;
 
@@ -44,6 +45,7 @@ enum parse_state {
     STATE_ACTIONNAME,    /* action name value */
     STATE_DEVICES,        /* devices  value */
     STATE_MODULENAME,    /* module name value */
+    STATE_ACTION_VALUE,  /* all values encompassed as one*/
     STATE_PARALLEL,    /* module name value */
 
     STATE_COUNT,    
@@ -58,11 +60,18 @@ enum parse_state {
     STATE_STOP      /* end state */
 };
 
+using ActionMap = std::map<std::string, std::string>;
+
+using ActionList = std::vector<ActionMap> ;
+
+using Actions = std::map<std::string, ActionList> ;
+
 /* Our application parser state data. */
 struct parser_state {
     parse_state state;      /* The current parse state */
-    gst_action f;        /*  data elements. */
-    std::vector<gst_action> actionlist;   /* List of action objects. */
+    ActionMap f;        /*  data elements. */
+    ActionList actionlist;   /* List of action objects. */
+    std::string keyname;
 };
 
 
@@ -75,7 +84,8 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
 {
     char *value;
     std::string temp;
-    gst_action f;
+    std::string key;
+    ActionMap f;
     if (debug) {
         printf("state=%d event=%d\n", s->state, event->type);
     }
@@ -170,44 +180,16 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
     case STATE_ACTIONKEY:
         switch (event->type) {
         case YAML_SCALAR_EVENT:
-            value = (char *)event->data.scalar.value;
-            if (strcmp(value, NAME.c_str()) == 0) {
-                s->state = STATE_ACTIONNAME;
-            } else if (strcmp(value, PARALLEL.c_str()) == 0) {
-                s->state = STATE_PARALLEL;
-            } else if (strcmp(value, COUNT.c_str()) == 0) {
-                s->state = STATE_COUNT;
-            } else if (strcmp(value, TARGET.c_str())== 0) {
-                s->state = STATE_TARGET_STRESS;
-            } else if (strcmp(value, COPY_MATRIX.c_str())== 0) {
-                s->state = STATE_COPY_MATRIX;
-            } else if (strcmp(value, MATRIX_SIZE_A.c_str())== 0) {
-                s->state = STATE_SIZE_A;
-            } else if (strcmp(value, MATRIX_SIZE_B.c_str())== 0) {
-                s->state = STATE_SIZE_B;
-            } else if (strcmp(value, MATRIX_SIZE_C.c_str())== 0) {
-                s->state = STATE_SIZE_C;
-            } else if (strcmp(value, OPS_TYPE.c_str())== 0) {
-                s->state = STATE_OPS;
-            } else if (strcmp(value, DEVICES.c_str())== 0) {
-                s->state = STATE_DEVICES;
-            } else if (strcmp(value, MODULENAME.c_str())== 0) {
-                s->state = STATE_MODULENAME;
-            } else if (strcmp(value, DURATION.c_str())== 0) {
-                s->state = STATE_DURATION;
-            } else if (strcmp(value, LOG_INTERVAL.c_str())== 0) {
-                s->state = STATE_LOGINTERVAL;
-            } else {
-                fprintf(stderr, "Unexpected key: %s\n", value);
-                return FAILURE;
-            }
+            // make a key and save state as value state
+            key = (char *)event->data.scalar.value;
+	    s->keyname = key;
+            //value = (char *)event->data.scalar.value;
+            s->state = STATE_ACTION_VALUE;
             break;
 
         case YAML_MAPPING_END_EVENT:
-            add_action(s->actionlist, s->f.m_name, s->f.m_module_name,s->f.m_count, s->f.m_ops,
-				s->f.m_target_stress, s->f.m_duration, s->f.m_size_a,
-				s->f.m_size_b, s->f.m_size_c, s->f.m_log_interval, 
-				s->f.m_parallel, s->f.m_copy_matrix);
+	    s->actionlist.push_back( s->f);
+	    s->f.clear();
             s->state = STATE_ACTIONVALUES;
             break;
         default:
@@ -216,6 +198,24 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
         }
         break;
 
+    case STATE_ACTION_VALUE:
+        switch (event->type) {
+        case YAML_SCALAR_EVENT:
+            temp = (char *)event->data.scalar.value;
+	    if(s->keyname.empty()){
+                std::cout << "cant have empty key " << std::endl;
+                return FAILURE;
+            }
+            s->f.emplace(s->keyname, std::string(temp));
+	    s->keyname.clear();
+            s->state = STATE_ACTIONKEY;
+            break;
+        default:
+            fprintf(stderr, "Unexpected event %d in state %d.\n", event->type, s->state);
+            return FAILURE;
+        }
+        break;
+/*
     case STATE_ACTIONNAME:
         switch (event->type) {
         case YAML_SCALAR_EVENT:
@@ -377,7 +377,7 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
             return FAILURE;
         }
         break;
-
+*/
     case STATE_STOP:
         break;
     }
@@ -424,13 +424,12 @@ main(int argc, char *argv[])
 
     /* Output the parsed data. */
     for (auto f : state->actionlist ) {
-        printf("action: name=%s,count=%d, modname=%s\n", f.m_name.c_str(),
-						f.m_count, f.m_module_name.c_str());
+            std::cout << f["name"]<< std::endl;
     }
     code = EXIT_SUCCESS;
 
 done:
-    destroy_actions(state->actionlist);
+    //destroy_actions(state->actionlist);
     yaml_parser_delete(&parser);
     delete state;
     return code;
