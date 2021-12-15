@@ -36,7 +36,7 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
     std::string key;
     ActionMap f;
     bool collection = false;
-    if (debug) {
+    if (true) {
         printf("state=%d event=%d\n", s->state, event->type);
     }
     switch (s->state) {
@@ -183,10 +183,12 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
    case STATE_COLLECTIONLIST:
         switch (event->type) {
         case YAML_MAPPING_START_EVENT:
+	    std::cout << "new collection starts expect " << STATE_COLLECTIONKEY <<std::endl;
             s->state = STATE_COLLECTIONKEY;
             break;
 	case YAML_SEQUENCE_END_EVENT:
 	    s->state = STATE_ACTIONKEY;
+	    break;
         default:
             fprintf(stderr, "Unexpected event %d in state %d.\n", event->type, s->state);
             return FAILURE;
@@ -197,11 +199,12 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
 	switch (event->type) {
           case YAML_SCALAR_EVENT:
 	      value = (char *)event->data.scalar.value;
+	      std::cout << "col key is " << s->colkey << " and expected next STATE_COLLECTIONVALUE" << std::endl;
 	      s->colkey = s->keyname + "." + std::string(value);
-	      std::cout << " collection key is " << s->colkey << std::endl;
 	      s->state = STATE_COLLECTIONVALUE;
 	      break;
 	  case YAML_MAPPING_END_EVENT:
+	      std::cout <<"ended previous collection " << s->keyname << "expect " << STATE_COLLECTIONLIST<< std::endl;
 	      s->state = STATE_COLLECTIONLIST;
 	      break;
           default:
@@ -215,6 +218,7 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
          case YAML_SCALAR_EVENT:
              temp = (char *)event->data.scalar.value;
              s->f.emplace(s->colkey, std::string(temp));
+	     std::cout << " MANOJ:col key val is " << std::string(s->colkey) << " and " << std::string(temp) << std::endl;
 	     s->colkey.clear();
 	     s->state = STATE_COLLECTIONKEY;
 	     break;
