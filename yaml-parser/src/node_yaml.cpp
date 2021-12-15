@@ -65,6 +65,7 @@ using ActionMap = std::map<std::string, std::string>;
 using ActionList = std::vector<ActionMap> ;
 
 using Actions = std::map<std::string, ActionList> ;
+using CollectionMap = std::map<std::string, std::vector<std::string>> ;
 
 /* Our application parser state data. */
 struct parser_state {
@@ -72,8 +73,22 @@ struct parser_state {
     ActionMap f;        /*  data elements. */
     ActionList actionlist;   /* List of action objects. */
     std::string keyname;
+    std::string modulename;
 };
 
+CollectionMap collectionMap =
+{ "gpup" : std::vector<std::string>("properties", "io_links-properties"),
+  "peqt" : std::vector<std::string>("capability"),
+  "gm"   : std::vector<std::string>("metrics")
+};
+bool isCollection(const std::string& module, const std::string& property){
+  if(collectionMap.find(module) == collectionMap.end())
+    return false;
+  auto cvec = collectionMap[module];
+  if(std::find(cvec.begin(), cvec.end(), property) != cvec.end())
+    return true;
+  return false;
+}
 
 
 /*
@@ -182,7 +197,14 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
         case YAML_SCALAR_EVENT:
             // make a key and save state as value state
             key = (char *)event->data.scalar.value;
+	    // check if collection
+	    bool collection = isCollection(s->modulename, key);
+	    // based on this, append .collname to key and use it in value
 	    s->keyname = key;
+	    if(collection){
+		s->state = STATE_COLLECTION;
+		break;
+	    }
             //value = (char *)event->data.scalar.value;
             s->state = STATE_ACTION_VALUE;
             break;
@@ -207,6 +229,9 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
                 return FAILURE;
             }
             s->f.emplace(s->keyname, std::string(temp));
+	    if(s->keyname.compare("module") == 0){
+		s->modulename = std::string(temp);
+            }
 	    s->keyname.clear();
             s->state = STATE_ACTIONKEY;
             break;
@@ -215,34 +240,63 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
             return FAILURE;
         }
         break;
+
+    case STATE_COLLECTION:
+        switch (event->type) {
+        case YAML_SEQUENCE_START_EVENT:
+            s->state = STATE_COLLECTIONLIST;
+            break;
+        default:
+            fprintf(stderr, "Unexpected event %d in state %d.\n", event->type, s->state);
+            return FAILURE;
+        }
+        break;
+
+    case STATE_COLLECTIONLIST:
+        switch (event->type) {
+        case YAML_MAPPING_START_EVENT:
+            s->state = STATE_COLLECTIONKEY;
+            break;
+	case YAML_SEQUENCE_END_EVENT:
+	    s->state = STATE_ACTIONKEY;
+        default:
+            fprintf(stderr, "Unexpected event %d in state %d.\n", event->type, s->state);
+            return FAILURE;
+        }
+        break;
+
+    case STATE_COLLECTIONKEY:
+	switch (event->type) {
+          case YAML_SCALAR_EVENT:
+	      value = (char *)event->data.scalar.value;
+	      s->colkey = s->key + "." + std::string(value);
+	      std::cout << " collection key is " << s->colkey << std::endl;
+	      s->state = STATE_COLLECTIONVALUE;
+	      break;
+	  case YAML_MAPPING_END_EVENT:
+	      s->state = STATE_COLLECTIONLIST;
+	      break;
+          default:
+	      fprintf(stderr, "Unexpected event %d in state %d.\n", event->type, s->state);
+              return FAILURE;
+	}
+	break;
+
+    case STATE_COLLECTIONVALUE:
+       switch (event->type) {
+         case YAML_SCALAR_EVENT:
+             temp = (char *)event->data.scalar.value;
+             s->f.emplace(s->colkey, std::string(temp));
+	     s->colkey.clear();
+	     s->state = STATE_COLLECTIONKEY;
+	     break;
+	 default:
+	     fprintf(stderr, "Unexpected event %d in state %d.\n", event->type, s->state);
+	     return FAILURE;    
+       }
+       break;
+
 /*
-    case STATE_ACTIONNAME:
-        switch (event->type) {
-        case YAML_SCALAR_EVENT:
-            temp = (char *)event->data.scalar.value;
-            s->f.m_name = temp; 
-            s->state = STATE_ACTIONKEY;
-            break;
-        default:
-            fprintf(stderr, "Unexpected event %d in state %d.\n", event->type, s->state);
-            return FAILURE;
-        }
-        break;
-
-    case STATE_MODULENAME:
-        switch (event->type) {
-        case YAML_SCALAR_EVENT:
-            temp = (char *)event->data.scalar.value;
-            s->f.m_module_name = temp;
-            temp.clear();
-            s->state = STATE_ACTIONKEY;
-            break;
-        default:
-            fprintf(stderr, "Unexpected event %d in state %d.\n", event->type, s->state);
-            return FAILURE;
-        }
-        break;
-
     case STATE_DEVICES:
         switch (event->type) {
         case YAML_SCALAR_EVENT:
