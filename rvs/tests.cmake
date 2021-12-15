@@ -32,7 +32,7 @@
 
 ## define target for "test-to-fail"
 add_executable(${RVS_TARGET}fail src/rvs.cpp)
-target_link_libraries(${RVS_TARGET}fail librvshelper.a rvslib ${PROJECT_LINK_LIBS} )
+target_link_libraries(${RVS_TARGET}fail librvshelper.a yaml rvslib ${PROJECT_LINK_LIBS} )
 target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
 set_target_properties(${RVS_TARGET}fail PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}

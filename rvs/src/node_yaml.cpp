@@ -1,11 +1,7 @@
-#include <yaml.h>
 #include <cstdio>
 #include <cstdlib>
-#include <string>
 #include <cerrno>
 #include <iostream>
-#include <vector>
-#include <map>
 #include "include/node_yaml.h"
 /* Set environment variable DEBUG=1 to enable debug output. */
 int debug = 0;

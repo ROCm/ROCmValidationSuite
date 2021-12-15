@@ -81,8 +81,8 @@ int rvs::exec::do_yaml(const std::string& config_file) {
   // for all actions...
   for (const auto& action : actions) {
 
-    rvs::logger::log("Action name :" + action["name"], rvs::logresults);
-    std::cout << "Action name :" <<  action["name"] << std::endl;
+    rvs::logger::log("Action name :" + action.at("name"), rvs::logresults);
+    std::cout << "Action name :" <<  action.at("name") << std::endl;
     // if stop was requested
     if (rvs::logger::Stopping()) {
       return -1;
@@ -100,7 +100,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       // report error and go to next action
       char buff[1024];
       snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
-               action["name"].c_str());
+               action.at("name").c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return -1;
     }
@@ -111,7 +111,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
                "action '%s' could not crate action object in module '%s'",
-               action["name"].c_str(),
+               action.at("name").c_str(),
                rvsmodule.c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return -1;
@@ -122,7 +122,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
                "action '%s' could not obtain interface if1",
-               action["name"]..c_str());
+               action.at("name").c_str());
       module::action_destroy(pa);
       return -1;
     }
@@ -164,7 +164,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
  * @return 0 if successful, non-zero otherwise
  *
  */
-int rvs::exec::do_yaml_properties(const Actions& node,
+int rvs::exec::do_yaml_properties(const ActionMap& node,
                                   const std::string& module_name,
                                   rvs::if1* pif1) {
   int sts = 0;
@@ -177,22 +177,22 @@ int rvs::exec::do_yaml_properties(const Actions& node,
   rvs::logger::log("Module name :" + module_name, rvs::logresults);
 
   // for all child nodes
-  for (YAML::const_iterator it = node.begin(); it != node.end(); it++) {
+  for (auto it = node.begin(); it != node.end(); ++it) {
     // if property is collection of module specific properties,
     if (is_yaml_properties_collection(module_name,
-        it->first.as<std::string>())) {
+        it->first)) {
       // pass properties collection to .so action object
-      sts += do_yaml_properties_collection(it->second,
-                                           it->first.as<std::string>(),
-                                           pif1);
+     // sts += do_yaml_properties_collection(it->second,
+       //                                    it->first,
+         //                                  pif1);
     } else {
       // just set this one propertiy
-      if (indexes_provided && it->first.as<std::string>() == "device") {
+      if (indexes_provided && it->first == "device") {
         std::replace(indexes.begin(), indexes.end(), ',', ' ');
         sts += pif1->property_set("device", indexes);
       } else {
-        sts += pif1->property_set(it->first.as<std::string>(),
-                                it->second.as<std::string>());
+        sts += pif1->property_set(it->first,
+                                it->second);
       }
     }
   }
@@ -206,16 +206,16 @@ int rvs::exec::do_yaml_properties(const Actions& node,
  * @return 0 if successful, non-zero otherwise
  *
  */
-int rvs::exec::do_yaml_properties_collection(const YAML::Node& node,
+int rvs::exec::do_yaml_properties_collection(const ActionMap& node,
                                              const std::string& parent_name,
                                              if1* pif1) {
   int sts = 0;
 
   // for all child nodes
-  for (YAML::const_iterator it = node.begin(); it != node.end(); it++) {
+  for (auto it = node.begin(); it != node.end(); it++) {
     // prepend dot separated parent name and pass property to module
-    sts += pif1->property_set(parent_name + "." + it->first.as<std::string>(),
-    it->second.IsNull() ? std::string("") : it->second.as<std::string>());
+    sts += pif1->property_set(parent_name + "." + it->first,
+    it->second.empty() ? std::string("") : it->second);
   }
 
   return sts;
@@ -232,7 +232,7 @@ int rvs::exec::do_yaml_properties_collection(const YAML::Node& node,
 bool rvs::exec::is_yaml_properties_collection(
   const std::string& module_name,
   const std::string& property_name) {
-
+  return false;
   if (module_name == "gpup") {
     if (property_name == "properties")
       return true;

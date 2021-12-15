@@ -1,5 +1,11 @@
 #ifndef NODE_YAML_H
 #define NODE_YAML_H
+#include <yaml.h>
+#include <cstdio>
+#include <string>
+#include <iostream>
+#include <vector>
+#include <map>
 enum status {
     SUCCESS = 1,
     FAILURE = 0
@@ -35,5 +41,5 @@ struct parser_state {
 };
 
 int consume_event(struct parser_state *&s, yaml_event_t *event);
-int parse_config(std::string filename);
+int parse_config(struct parser_state *&s,std::string filename);
 #endif

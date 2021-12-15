@@ -27,6 +27,7 @@
 
 #include <string>
 #include "yaml-cpp/node/node.h"
+#include "node_yaml.h"
 
 
 namespace rvs {
@@ -56,6 +57,15 @@ class exec {
   int   do_gpu_list(void);
 
   int   do_yaml(const std::string& config_file);
+  int   do_yaml_properties(const ActionMap& node,
+                           const std::string& module_name, if1* pif1);
+  bool  is_yaml_properties_collection(const std::string& module_name,
+                                      const std::string& proprty_name);
+  int   do_yaml_properties_collection(const ActionMap& node,
+                                      const std::string& parent_name,
+                                      if1* pif1);
+
+  /*
   int   do_yaml_properties(const YAML::Node& node,
                            const std::string& module_name, if1* pif1);
   bool  is_yaml_properties_collection(const std::string& module_name,
@@ -63,6 +73,7 @@ class exec {
   int   do_yaml_properties_collection(const YAML::Node& node,
                                       const std::string& parent_name,
                                       if1* pif1);
+				      */
 };
 
 }  // namespace rvs
