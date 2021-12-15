@@ -2,24 +2,74 @@
 #include <cstdlib>
 #include <cerrno>
 #include <iostream>
+#include <mutex>
 #include "include/node_yaml.h"
 /* Set environment variable DEBUG=1 to enable debug output. */
 int debug = 0;
+std::mutex mtex;
 std::string rvsmodulename;
-static CollectionMap collectionMap =
+CollectionMap collectionMap =
 {
   { "gpup", {"properties", "io_links-properties"} },
-  { "peqt" , {"capability"} },
-  { "gm"   , {"metrics"} }
+  { "peqt" , {"capability",} },
+  { "gm"   , {"metrics",} }
 };
 
 /* check if said property is a collection */
-bool isCollection(const std::string& module, const std::string& property){
-  if(module.empty())
+/*
+bool isCollection(const std::string& property){
+   bool retval = false;
+   if(rvsmodulename == "gpup"){
+	   if(property == "properties" || property == "io_links-properties")
+		   retval= true;
+   }else if(rvsmodulename == "peqt"){
+	   if(property == "capability")
+		   retval = true;
+   } else if(rvsmodulename == "metrics"){
+	   if(property == "metrics")
+		   retval = true;
+   }
+   std::cout << " here retval is" << retval << std::endl;
+   return retval;
+}   
+*/
+/* with device_id.sh script, chars added to every line of conf
+* , so using this to temp cleanup
+*/
+std::string cleanModuleName(std::string modname){
+  std::string str;
+  if(rvsmodulename.find("gpup") != std::string::npos)
+    str = "gpup";
+  if(rvsmodulename.find("gst") != std::string::npos)
+    str = "gst";
+  if(rvsmodulename.find("iet") != std::string::npos)
+    str = "iet";
+  if(rvsmodulename.find("pebb") != std::string::npos)
+    str = "pebb";
+  if(rvsmodulename.find("peqt") != std::string::npos)
+    str = "peqt";
+  if(rvsmodulename.find("pesm") != std::string::npos)
+    str = "pesm";
+  if(rvsmodulename.find("pqt") != std::string::npos)
+    str = "pqt";
+  if(rvsmodulename.find("mem") != std::string::npos)
+    str = "mem";
+  return str;
+
+}
+
+bool isCollection(const std::string& property){
+  std::lock_guard<std::mutex> lm{mtex};
+  std::cout << "val12" << rvsmodulename <<"44valend" << std::endl;
+  if(rvsmodulename.empty()){
+    std::cout << "here??? " << std::endl;
     return false;
-  if(collectionMap.find(module) == collectionMap.end())
+  }
+  if(collectionMap.find(rvsmodulename) == collectionMap.end()){
+    std::cout << " orrrr herte?" << rvsmodulename<<"okay"<< std::endl;
     return false;
-  auto cvec = collectionMap[module];
+  }
+  auto cvec = collectionMap[rvsmodulename];
   if(std::find(cvec.begin(), cvec.end(), property) != cvec.end())
     return true;
   return false;
@@ -133,8 +183,9 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
             // make a key and save state as value state
             key = (char *)event->data.scalar.value;
 	    s->keyname = key;
-	    collection = isCollection(rvsmodulename, key);
+	    collection = isCollection(key);
 	    if(collection){
+		std::cout << " got collecttion key " << key << std::endl;
 		s->state = STATE_COLLECTION;
 	    }else{
                 s->state = STATE_ACTION_VALUE;
@@ -183,7 +234,6 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
    case STATE_COLLECTIONLIST:
         switch (event->type) {
         case YAML_MAPPING_START_EVENT:
-	    std::cout << "new collection starts expect " << STATE_COLLECTIONKEY <<std::endl;
             s->state = STATE_COLLECTIONKEY;
             break;
 	case YAML_SEQUENCE_END_EVENT:
@@ -199,12 +249,10 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
 	switch (event->type) {
           case YAML_SCALAR_EVENT:
 	      value = (char *)event->data.scalar.value;
-	      std::cout << "col key is " << s->colkey << " and expected next STATE_COLLECTIONVALUE" << std::endl;
 	      s->colkey = s->keyname + "." + std::string(value);
 	      s->state = STATE_COLLECTIONVALUE;
 	      break;
 	  case YAML_MAPPING_END_EVENT:
-	      std::cout <<"ended previous collection " << s->keyname << "expect " << STATE_COLLECTIONLIST<< std::endl;
 	      s->state = STATE_COLLECTIONLIST;
 	      break;
           default:
@@ -218,7 +266,6 @@ int consume_event(struct parser_state *&s, yaml_event_t *event)
          case YAML_SCALAR_EVENT:
              temp = (char *)event->data.scalar.value;
              s->f.emplace(s->colkey, std::string(temp));
-	     std::cout << " MANOJ:col key val is " << std::string(s->colkey) << " and " << std::string(temp) << std::endl;
 	     s->colkey.clear();
 	     s->state = STATE_COLLECTIONKEY;
 	     break;
@@ -251,7 +298,10 @@ int parse_config(parser_state *&state,std::string filename){
         return -1;
     }
     rvsmodulename = getModule(filename);
-    std::cout << "MANOJ: module name is " << rvsmodulename << std::endl;
+    rvsmodulename = cleanModuleName(rvsmodulename);
+    //if(rvsmodulename.find("peqt") != std::string::npos)
+    //	    rvsmodulename = "peqt";
+    std::cout << "MANOJ: module name is" << rvsmodulename<< "okay" << std::endl;
     //memset(&state, 0, sizeof(state));
     state->state = STATE_START;
     yaml_parser_initialize(&parser);
