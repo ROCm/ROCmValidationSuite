@@ -178,6 +178,7 @@ int rvs::exec::do_yaml_properties(const ActionMap& node,
 
   // for all child nodes
   for (auto it = node.begin(); it != node.end(); ++it) {
+    std::cout << "MANOJJJJ: kv is in yaml " << it->first << " and " << it->second << std::endl;
     // if property is collection of module specific properties,
     if (is_yaml_properties_collection(module_name,
         it->first)) {
@@ -185,6 +186,8 @@ int rvs::exec::do_yaml_properties(const ActionMap& node,
      // sts += do_yaml_properties_collection(it->second,
        //                                    it->first,
          //                                  pif1);
+	 sts += pif1->property_set(it->first,
+                                it->second); /// handled appending in parsing
     } else {
       // just set this one propertiy
       if (indexes_provided && it->first == "device") {
