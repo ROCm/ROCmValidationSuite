@@ -26,7 +26,6 @@
 #define RVS_INCLUDE_RVSEXEC_H_
 
 #include <string>
-#include "yaml-cpp/node/node.h"
 #include "node_yaml.h"
 
 

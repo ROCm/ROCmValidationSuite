@@ -30,7 +30,6 @@
 #include <string>
 #include <memory>
 
-#include "yaml-cpp/yaml.h"
 
 #include "include/rvsmodule_if.h"
 
@@ -63,7 +62,7 @@ typedef std::pair<std::string, module*> t_mmpair;
   static module* find_create_module(const char* pShortName);
 
   //! YAML configuration
-  static YAML::Node  config;
+  //static YAML::Node  config;
 
   //! short name -> rvsmodule* mapping
   static std::map<std::string, module*> modulemap;

@@ -29,7 +29,6 @@
 #include <memory>
 #include <string>
 #include <fstream>
-#include "yaml-cpp/yaml.h"
 
 #include "include/rvsif0.h"
 #include "include/rvsif1.h"

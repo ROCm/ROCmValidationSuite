@@ -28,7 +28,6 @@
 #include <algorithm>
 
 #include "include/rvsexec.h"
-#include "yaml-cpp/yaml.h"
 
 #include "include/rvsif0.h"
 #include "include/rvsif1.h"
@@ -82,7 +81,6 @@ int rvs::exec::do_yaml(const std::string& config_file) {
   for (const auto& action : actions) {
 
     rvs::logger::log("Action name :" + action.at("name"), rvs::logresults);
-    std::cout << "Action name :" <<  action.at("name") << std::endl;
     // if stop was requested
     if (rvs::logger::Stopping()) {
       return -1;
@@ -178,7 +176,6 @@ int rvs::exec::do_yaml_properties(const ActionMap& node,
 
   // for all child nodes
   for (auto it = node.begin(); it != node.end(); ++it) {
-    std::cout << "MANOJJJJ: kv is in yaml " << it->first << " and " << it->second << std::endl;
     // if property is collection of module specific properties,
     if (is_yaml_properties_collection(module_name,
         it->first)) {

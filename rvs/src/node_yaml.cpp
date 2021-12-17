@@ -62,7 +62,7 @@ int consume_event(std::shared_ptr<parser_state> s, yaml_event_t *event)
     std::string key;
     ActionMap f;
     bool collection = false;
-    if (true) {
+    if (debug) {
         printf("state=%d event=%d\n", s->state, event->type);
     }
     switch (s->state) {
@@ -161,7 +161,6 @@ int consume_event(std::shared_ptr<parser_state> s, yaml_event_t *event)
 	    s->keyname = key;
 	    collection = isCollection(key);
 	    if(collection){
-		std::cout << " got collecttion key " << key << std::endl;
 		s->state = STATE_COLLECTION;
 	    }else{
                 s->state = STATE_ACTION_VALUE;
@@ -182,9 +181,9 @@ int consume_event(std::shared_ptr<parser_state> s, yaml_event_t *event)
         switch (event->type) {
         case YAML_SCALAR_EVENT:
             temp = (char *)event->data.scalar.value;
-	          if(s->keyname.empty()){
-                std::cout << "cant have empty key " << std::endl;
-                return FAILURE;
+	    if(s->keyname.empty()){
+              std::cout << "cant have empty key " << std::endl;
+              return FAILURE;
             }
             s->f.emplace(s->keyname, std::string(temp));
 	          s->keyname.clear();
