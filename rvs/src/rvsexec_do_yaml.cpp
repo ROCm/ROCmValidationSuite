@@ -69,11 +69,11 @@ int rvs::exec::do_yaml(const std::string& config_file) {
   int sts = 0;
 
   //YAML::Node config = YAML::LoadFile(config_file);
-  parser_state *state = new parser_state{};// TODO: use shared_ptr
+  //parser_state *state = new parser_state{};// TODO: use shared_ptr
+  std::shared_ptr<parser_state> state{new parser_state{}};// = std::make_shared<parser_state>();
   int res = parse_config(state, config_file);
   if (EXIT_SUCCESS != res){
     rvs::logger::Err("yaml conf read error", MODULE_NAME_CAPS);
-    delete state;
     return sts;
   }  
   // find "actions" map

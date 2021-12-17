@@ -46,6 +46,6 @@ struct parser_state {
     std::string colkey;    /* to retain key name from previous state */
 };
 bool isCollection(const std::string& property);
-int consume_event(struct parser_state *&s, yaml_event_t *event);
-int parse_config(struct parser_state *&s,std::string filename);
+int consume_event(std::shared_ptr<parser_state> s, yaml_event_t *event);
+int parse_config(std::shared_ptr<parser_state> state,std::string filename);
 #endif
