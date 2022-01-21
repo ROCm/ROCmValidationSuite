@@ -57,31 +57,6 @@ class rcqt_action : public rvs::actionbase {
 
     virtual int pkgchk_run();
 
-    /**
-    *  @brief Function used in rcqt action class to check for given user and group membership
-    */
-
-    virtual int usrchk_run();
-
-    /**
-    *  @brief Function used in rcqt action class to check for os and kernel version
-    */
-    virtual int kernelchk_run();
-
-    /**
-    *  @brief Function used in rcqt action class to check for o shared library existance and architecture
-    */
-    virtual int ldcfgchk_run();
-
-    /**
-    *  @brief Function used in rcqt action class to check parameters of file
-    */
-    virtual int filechk_run();
-
-    /**
-    *  @brief Function used to turn decimal number into octal
-    */  
-    virtual int dectooct(int decnum);
 };
 
 #endif  // RCQT_SO_INCLUDE_ACTION_H_
