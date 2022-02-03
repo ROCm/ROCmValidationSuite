@@ -7,6 +7,6 @@ class handlerCreator{
 public:
 	handlerCreator() = default;
 	virtual ~handlerCreator() = default;
-	std::unique_ptr<PackageHandler> getPackageHandler(const std::string& pkg);
+	PackageHandler* getPackageHandler(const std::string& pkg);
 };
 #endif

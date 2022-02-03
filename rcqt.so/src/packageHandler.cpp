@@ -7,7 +7,7 @@
 bool PackageHandler::parseManifest(){
 	assert(!m_manifest.empty());
 	std::ifstream ifs {m_manifest};
-	std::cout << "MANOJJJ " << m_manifest << std::endl;
+	std::cout << "Manifest name is " << m_manifest << std::endl;
 	assert(ifs.good());
 	std::string line;
 	while(std::getline(ifs, line)){
@@ -22,6 +22,6 @@ bool PackageHandler::parseManifest(){
 		}
 		m_pkgversionmap.emplace(name, ver);
 	}
-	std::cout << m_pkgversionmap.size() << " packages to validate " << std::endl;
+	//std::cout << m_pkgversionmap.size() << " packages to validate " << std::endl;
 	return true;
 }

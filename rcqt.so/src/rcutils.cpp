@@ -1,21 +1,22 @@
 #include "include/rcutils.h"
 
 
-std::string searchos(std::string os_name){
+OSType searchos(std::string os_name){
 	std::string lowcasename{os_name};
 	std::transform( lowcasename.begin(), lowcasename.end(), lowcasename.begin(),
 				[](unsigned char c){ return std::tolower(c); });
-	for( const auto& name: op_systems){
-		if(lowcasename.find(name) != std::string::npos)
-			return name;		
+	for( auto itr = op_systems.begin();itr !=op_systems.end();++itr){
+		if(lowcasename.find(itr->first) != std::string::npos){
+			return itr->second;		
+		}
 	}
-  	
+	return OSType::None;	
 }
-std::string getOS(){
+OSType getOS(){
   std::ifstream rel_file(os_release_file.c_str());
   if(!rel_file.good()){
     std::cout << "No /etc/os-release file, cant fetch details " << std::endl;
-    return std::string{};
+    return OSType::None;
   }
   std::string line;
   while (std::getline(rel_file, line))
@@ -25,7 +26,7 @@ std::string getOS(){
       found = line.find('\"');
       auto endquote = line.find_last_of('\"');
       if(found == std::string::npos || endquote == std::string::npos)
-        return std::string{};
+        return OSType::None;
       std::string osame = line.substr(found+1, endquote-found-1 );
       std::cout << "OS installed is : " << osame << std::endl;
 			return searchos(osame);

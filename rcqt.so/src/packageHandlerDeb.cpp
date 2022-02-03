@@ -28,7 +28,7 @@ bool PackageHandlerDeb::pkgrOutputParser(const std::string& s_data, package_info
     } else if( line.find("Package") != std::string::npos){
       info.name = get_last_word(line);
       if(found) // preevnt further processing
-	return found;
+				return found;
     }
   }
   return found;

@@ -150,30 +150,26 @@ int rcqt_action::pkgchk_run() {
   string msg;
 
   has_property(PACKAGE, &package_name);
-	std::cout << "MANNNOJJJJ " << package_name << std::endl;
   std::stringstream ss{package_name};
 	vector<string> package_list;
 	while(ss >> package){
-		std::cout << "pck is:" <<package<<":" << std::endl; 
 		if(!package.empty())
 			package_list.push_back(remSpaces(package));
 	}
   // Checking if version field exists
   bool package_found = false;
 
-	std::cout << "MANNNOJJJJ " << package_list.size()<< std::endl;
   handlerCreator creator;
 	for( auto pkg : package_list){
 		  auto hander = creator.getPackageHandler(pkg);
 		  if(!hander){
-    			std::cout << "Failed to handler " << std::endl;
+    			std::cout << "Failed to create handler " << std::endl;
   			  return -1;
  			}
 
-		std::cout << "MANNNOJJJJ " << pkg << std::endl;
   	hander->parseManifest();
   	hander->validatePackages();
 		
 	}
-  return 1;
+  return 0;
 }

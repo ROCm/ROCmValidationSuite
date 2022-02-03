@@ -9,7 +9,7 @@ public:
     if(!pkgname.empty())
 			m_filename = pfilename(pkgname);	
 	}
-	~PackageInfo(){
+	virtual ~PackageInfo(){
 		if(!m_filename.empty()){
 			auto res = std::remove(m_filename.c_str());
 		}
