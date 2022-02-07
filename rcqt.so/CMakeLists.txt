@@ -125,7 +125,18 @@ link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH})
 set (PROJECT_LINK_LIBS rvslibrt rvslib)
 
 ## define source files
-set(SOURCES src/rvs_module.cpp src/action.cpp src/debPackageInfo.cpp src/handlerCreator.cpp src/metaPackageInfo.cpp src/packageHandler.cpp src/packageHandlerDeb.cpp src/rcutils.cpp)
+set(SOURCES 
+    src/rvs_module.cpp 
+    src/action.cpp 
+    src/debPackageInfo.cpp 
+    src/rpmPackageInfo.cpp 
+    src/handlerCreator.cpp 
+    src/metaPackageInfo.cpp 
+    src/packageHandler.cpp 
+    src/packageHandlerDeb.cpp 
+    src/packageHandlerRpm.cpp 
+    src/rcutils.cpp
+)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})

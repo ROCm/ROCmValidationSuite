@@ -2,7 +2,9 @@
 #define HANDLER_CREATOR_H
 #include <memory>
 #include "include/packageHandlerDeb.h"
+#include "include/packageHandlerRpm.h"
 #include "include/rcutils.h"
+
 class handlerCreator{
 public:
 	handlerCreator() = default;
