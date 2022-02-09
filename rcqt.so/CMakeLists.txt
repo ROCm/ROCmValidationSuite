@@ -130,11 +130,13 @@ set(SOURCES
     src/action.cpp 
     src/debPackageInfo.cpp 
     src/rpmPackageInfo.cpp 
+    src/zypPackageInfo.cpp 
     src/handlerCreator.cpp 
     src/metaPackageInfo.cpp 
     src/packageHandler.cpp 
     src/packageHandlerDeb.cpp 
     src/packageHandlerRpm.cpp 
+    src/packageHandlerZyp.cpp 
     src/rcutils.cpp
 )
 

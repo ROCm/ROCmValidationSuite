@@ -12,6 +12,7 @@ OSType searchos(std::string os_name){
 	}
 	return OSType::None;	
 }
+
 OSType getOS(){
   std::ifstream rel_file(os_release_file.c_str());
   if(!rel_file.good()){
@@ -36,12 +37,12 @@ OSType getOS(){
 }
 
 std::string get_last_word(const std::string& input){
-	std::stringstream is{input};
-	std::string temp, last;
-	while (std::getline(is, temp, ' ')) {
-        last=temp;
-    }
-	return last;
+  std::stringstream is{input};
+  std::string temp, last;
+  while (std::getline(is, temp, ' ')) {
+    last=temp;
+  }
+  return last;
 }
 
 std::string pfilename(const std::string& package){

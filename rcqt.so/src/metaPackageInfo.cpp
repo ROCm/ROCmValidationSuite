@@ -31,7 +31,7 @@ bool PackageInfo::fillPkgInfo(){
     close(read_pipe[0]);
     close(read_pipe[1]);
 		//std::cout<< "in child" << std::endl;
-    execlp(m_pkgmgrname.c_str(), m_pkgmgrname.c_str(), m_cmdname.c_str(), m_pkgname.c_str(), NULL);
+    execlp(m_pkgmgrname.c_str(), m_pkgmgrname.c_str(), m_cmd1name.c_str(),  m_cmd2name.c_str(), m_pkgname.c_str(), NULL);
   } else {
     // parent:
     int status;
