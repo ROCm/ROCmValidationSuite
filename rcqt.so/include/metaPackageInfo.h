@@ -51,9 +51,9 @@ private:
 	std::string m_pkgname;
 	std::string m_filename;
   std::string m_pkgmgrname; // dpkg or yum or zypper
-  std::string m_dependcmd1name; // option1 for package manager
-  std::string m_dependcmd2name; // option2 for package manager
-  std::string m_infocmdname; // option2 for package manager
+  std::string m_dependcmd1name; // command option1 to find dependent packages.
+  std::string m_dependcmd2name; // command option2 to find dependent packages.
+  std::string m_infocmdname; // command option to find package info.
 };
 
 #endif
