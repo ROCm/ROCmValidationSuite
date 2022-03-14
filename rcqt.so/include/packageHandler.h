@@ -37,7 +37,6 @@ private:
 	std::map<std::string, std::string> m_pkgversionmap;
 protected:
 	std::unique_ptr<PackageInfo> metaInfo;
-	std::string m_manifest;
-	
+	std::string m_manifest;	
 };
 #endif

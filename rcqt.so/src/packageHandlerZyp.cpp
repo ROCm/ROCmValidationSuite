@@ -11,7 +11,7 @@
 
 PackageHandlerZyp::PackageHandlerZyp(std::string pkgname): PackageHandler{} {
 	metaInfo.reset(new ZypPackageInfo(pkgname,
-                  std::string("zypper"), std::string("info"), std::string("--requires")));
+                  std::string("zypper"), std::string("info"), std::string("--requires"), std::string("info")));
   metaInfo->fillPkgInfo();
   m_manifest = metaInfo->getFileName();
 }
@@ -43,6 +43,7 @@ bool PackageHandlerZyp::pkgrOutputParser(const std::string& s_data, package_info
   return found;
 }
 
+#if 0
 std::string PackageHandlerZyp::getInstalledVersion(const std::string& package){
   int read_pipe[2]; // From child to parent
   int exit_status;
@@ -84,5 +85,26 @@ std::string PackageHandlerZyp::getInstalledVersion(const std::string& package){
     //std::cout << pinfo.name << " and " << pinfo.version << std::endl;
     return pinfo.version;
   }
+}
+#endif
+
+std::string PackageHandlerZyp::getInstalledVersion(const std::string& package){
+
+  package_info pinfo;
+  std::stringstream ss;
+  bool status;
+
+  status = getPackageInfo(package, metaInfo->getPackageMgrName(), metaInfo->getInfoCmdName(), "", ss);
+  if (true != status) {
+    std::cout << "getPackageInfo failed !!!" << std::endl;
+    return std::string{};
+  }
+
+  auto res = pkgrOutputParser(ss.str(), pinfo);
+  if(!res){
+    std::cout << "error in parsing" << std::endl;
+    return std::string{};
+  }
+  return pinfo.version;
 }
 

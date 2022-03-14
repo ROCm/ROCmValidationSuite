@@ -11,7 +11,7 @@
 
 PackageHandlerDeb::PackageHandlerDeb(std::string pkgname): PackageHandler{}{
 	metaInfo.reset( new DebPackageInfo(pkgname,
-                  std::string("dpkg") , std::string("--status")));
+                  std::string("dpkg") , std::string("--status"), std::string(""), std::string("--status")));
   metaInfo->fillPkgInfo();
   m_manifest = metaInfo->getFileName();
 }
@@ -27,13 +27,13 @@ bool PackageHandlerDeb::pkgrOutputParser(const std::string& s_data, package_info
       found = true;
     } else if( line.find("Package") != std::string::npos){
       info.name = get_last_word(line);
-      if(found) // preevnt further processing
+      if(found) // prevent further processing
 				return found;
     }
   }
   return found;
 }
-
+#if 0
 std::string PackageHandlerDeb::getInstalledVersion(const std::string& package){
   int read_pipe[2]; // From child to parent
   int exit_status;
@@ -76,5 +76,26 @@ std::string PackageHandlerDeb::getInstalledVersion(const std::string& package){
     return pinfo.version;
   }
 
+}
+#endif
+
+std::string PackageHandlerDeb::getInstalledVersion(const std::string& package){
+
+  package_info pinfo;
+  std::stringstream ss;
+  bool status;
+
+  status = getPackageInfo(package, metaInfo->getPackageMgrName(), metaInfo->getInfoCmdName(), "", ss);
+  if (true != status) {
+    std::cout << "getPackageInfo failed !!!" << std::endl;
+    return std::string{};
+  }
+
+  auto res = pkgrOutputParser(ss.str(), pinfo);
+  if(!res){
+    std::cout << "error in parsing" << std::endl;
+    return std::string{};
+  }
+  return pinfo.version;
 }
 

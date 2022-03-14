@@ -35,4 +35,11 @@ std::string remSpaces(std::string str);
 std::string pfilename(const std::string& package);
 /*
 */
+
+bool getPackageInfo(const std::string& package,
+    const std::string& packagemgr,
+    const std::string& command,
+    const std::string& option,
+    std::stringstream &ss);
+
 #endif
