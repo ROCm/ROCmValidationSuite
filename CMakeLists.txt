@@ -539,7 +539,7 @@ install(FILES "${CMAKE_BINARY_DIR}/doc/man/man1/rvs.1"
 )
 
 install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/userguide
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/userguide
   COMPONENT applications
 )
 
@@ -552,20 +552,20 @@ configure_file(${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh.in
   ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
   @ONLY)
 install(FILES ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/conf
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/conf/
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                     GROUP_EXECUTE GROUP_READ
   COMPONENT rvsmodule
 )
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/testscripts
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/testscripts
   USE_SOURCE_PERMISSIONS
   COMPONENT rvsmodule
 )
 
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
-          DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs/lib
+          DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib
           COMPONENT rvsmodule)
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf"
           DESTINATION /etc/ld.so.conf.d

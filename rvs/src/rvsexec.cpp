@@ -128,7 +128,7 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-c", &val)) {
     config_file = val;
   } else {
-    config_file = "conf/rvs.conf";
+    config_file = "../share/rocm-validation-suite/conf/rvs.conf";
     config_file = path + config_file;
   }
 
@@ -146,7 +146,7 @@ int rvs::exec::run() {
   }
 
   // construct modules configuration file relative path
-  val = path + ".rvsmodules.config";
+  val = path + "../share/rocm-validation-suite/conf/.rvsmodules.config";
   if (rvs::module::initialize(val.c_str())) {
     return 1;
   }
