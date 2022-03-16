@@ -89,21 +89,6 @@ void show_progress(std::string msg, unsigned int i, unsigned int tot_num_blocks)
 }
 
 
-void atomic_inc(unsigned int* value)
-{
-    std::lock_guard<std::mutex> lck(memdata.mtx_mem_test);  
-    (*value)= (*value) + 1;
-}
-
-unsigned int atomic_read(unsigned int* value)
-{
-    unsigned int ret;
-
-    std::lock_guard<std::mutex> lck(memdata.mtx_mem_test);  
-    ret = *value;
-
-    return ret;
-}
 
 unsigned int error_checking(std::string pmsg, unsigned int blockidx)
 {
@@ -114,53 +99,56 @@ unsigned int error_checking(std::string pmsg, unsigned int blockidx)
     unsigned int  numOfErrors = 0;
     unsigned int  i;
     std::string   msg;
+    unsigned int  reported_errors;
 
+    
     HIP_CHECK(hipMemcpy(&numOfErrors, (void*)ptCntOfError, sizeof(unsigned int), hipMemcpyDeviceToHost));
+    if(numOfErrors == 0){ // No point to continue 
+			return 0;
+		}
     HIP_CHECK(hipMemcpy(&host_err_addr[0], (void*)ptFailedAdress, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
     HIP_CHECK(hipMemcpy(&host_err_expect[0], (void*)ptExpectedValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
     HIP_CHECK(hipMemcpy(&host_err_current[0], (void*)ptCurrentValue, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
     HIP_CHECK(hipMemcpy(&host_err_second_read[0], (void*)ptValueOfSecondRead, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT, hipMemcpyDeviceToHost));
-
+    reported_errors = MIN(MAX_ERR_RECORD_COUNT, numOfErrors);
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + pmsg + " block id :" + std::to_string(blockidx);
     rvs::lp::Log(msg, rvs::loginfo);
 
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " Number of errors :" + std::to_string(numOfErrors);
     rvs::lp::Log(msg, rvs::loginfo);
 
-    if (numOfErrors){
-       msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last : " +  
-                      std::to_string(MIN(MAX_ERR_RECORD_COUNT, numOfErrors)) + " : error addresses are: \n";
-       rvs::lp::Log(msg, rvs::loginfo);
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last : " +  
+                    std::to_string(reported_errors) + " : error addresses are: \n";
+    rvs::lp::Log(msg, rvs::loginfo);
 
-	      for (i = 0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
+	  for (i = 0; i < reported_errors ; i++){
 
-              msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last : " +  
-                        std::to_string(host_err_addr[i]) + " \n ";
-              rvs::lp::Log(msg, rvs::loginfo);
-	      }
+            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " +  
+                      std::to_string(host_err_addr[i]) + " \n ";
+            rvs::lp::Log(msg, rvs::loginfo);
+	  }
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last :" + 
+                 std::to_string(reported_errors) + " : error details are : \n";
+    rvs::lp::Log(msg, rvs::loginfo);
+	  for (i =0; i < reported_errors; i++){
 
-	      for (i =0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
-
-              msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last : " +  
-                        " ERROR:" + std::to_string(i) + " th error, expected value=0x" +  std::to_string(host_err_expect[i]) +  
-                        "current value=0x" + std::to_string(host_err_current[i]) + "current value=0x" + std::to_string(host_err_current[i]) 
-                        + "diff=0x" +  std::to_string((host_err_expect[i] ^ host_err_current[i])) + " second_ read=0x " + 
-                       std::to_string(host_err_second_read[i]) + "expect=0x" + std::to_string(host_err_expect[i]) +  
-                       "diff with expected value=0x" +  std::to_string((host_err_expect[i] ^ host_err_second_read[i])) + "\n \n";
-              rvs::lp::Log(msg, rvs::loginfo);
-	    }
+          msg = "[" + memdata.action_name + "] " + MODULE_NAME + " "  +  
+                " ERROR:" + std::to_string(i) + " th error, expected value=0x" +  std::to_string(host_err_expect[i]) +  
+                "current value=0x" + std::to_string(host_err_current[i]) + "current value=0x" + std::to_string(host_err_current[i]) + 
+                " second_ read=0x " + std::to_string(host_err_second_read[i]) +  
+                "\n \n";
+          rvs::lp::Log(msg, rvs::loginfo);
+	  }
 
 
-	    hipMemset(ptCntOfError, 0, sizeof(unsigned int));
-	    hipMemset((void*)&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
-	    hipMemset((void*)&ptExpectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
-	    hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+	  hipMemset(ptCntOfError, 0, sizeof(unsigned int));
+	  hipMemset((void*)&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+    hipMemset((void*)&ptExpectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+	  hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 
-	    hipDeviceReset();
-	    exit(ERR_BAD_STATE);
-    }
+	  hipDeviceReset();
+	  exit(ERR_BAD_STATE);
 
-    return numOfErrors;
 }
 
 unsigned int get_random_num(void) {
@@ -182,18 +170,8 @@ unsigned int get_random_num(void) {
 
 uint64_t get_random_num_long(void)
 {
-    struct timeval t0;
-
-    if (gettimeofday(&t0, NULL) !=0){
-	    fprintf(stderr, "ERROR: gettimeofday() failed\n");
-	    exit(ERR_GENERAL);
-    }
-
-    unsigned int seed= (unsigned int)t0.tv_sec;
-    srand(seed);
-
-    unsigned int a = rand_r(&seed);
-    unsigned int b = rand_r(&seed);
+    unsigned int a = get_random_num(); 
+    unsigned int b = get_random_num();
 
     uint64_t ret =  ((uint64_t)a) << 32;
     ret |= ((uint64_t)b);
@@ -374,56 +352,49 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
     unsigned int    i;
     char *ptr = _ptr;
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
-    unsigned int err = 0;
-    unsigned int  memErrors = 0;
     std::string msg;
    
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 1: Change one bit memory addresss  ";
     rvs::lp::Log(msg, rvs::logresults);
 
     //test global address
-    hipLaunchKernelGGL(kernel_test0_global_write,   /* compute kernel*/
-                           dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-	                   ptr , end_ptr);
+    hipLaunchKernelGGL(kernel_test0_global_write,
+        dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0, 0, ptr, end_ptr);
 
-    hipLaunchKernelGGL(kernel_test0_global_read,   /* compute kernel*/
-                        dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                        ptr, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
+    hipLaunchKernelGGL(kernel_test0_global_read, 
+        dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0, 0, ptr, end_ptr, 
+        ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
     msg = " Test 1 on global address";
     error_checking(msg,  0);
 
     for(unsigned int ite = 0; ite < memdata.num_passes; ite++){
-         for (i = 0; i < tot_num_blocks; i += GRIDSIZE){
-	        dim3 grid;
+        for (i = 0; i < tot_num_blocks; i += GRIDSIZE){
+	          dim3 grid;
 
-                grid.x= GRIDSIZE;
-                hipLaunchKernelGGL(kernel_test0_write,   /* compute kernel*/
-                             dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                             ptr + i * BLOCKSIZE, end_ptr); 
-		show_progress(" Test 1 on writing :", i, tot_num_blocks);
-	    }
+            grid.x= GRIDSIZE;
+            hipLaunchKernelGGL(kernel_test0_write,  
+                dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0, 0, ptr + i * BLOCKSIZE, end_ptr); 
+		        show_progress(" Test 1 on writing :", i, tot_num_blocks);
+	      }
 
-	    for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
-	        dim3 grid;
+	      for (i=0;i < tot_num_blocks; i+= GRIDSIZE){
+	          dim3 grid;
 
-	        grid.x= GRIDSIZE;
+	          grid.x= GRIDSIZE;
 
-                hipLaunchKernelGGL(kernel_test0_read,
-                                dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
-                                ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
+            hipLaunchKernelGGL(kernel_test0_read,
+                dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0, 0, ptr + i * BLOCKSIZE, end_ptr, 
+                ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
-		error_checking("Test 1",  i);
-		//error_checking(__FUNCTION__,  i);
-		show_progress(" Test 1 on reading :", i, tot_num_blocks);
-	    }
+		        error_checking("Test 1",  i);
+		        show_progress(" Test 1 on reading :", i, tot_num_blocks);
+	        }
 
     }
 
-    if(!err) {
-      msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 1 : PASS";
-      rvs::lp::Log(msg, rvs::logresults);
-    }
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 1 : PASS";
+    rvs::lp::Log(msg, rvs::logresults);
 
     return;
 
