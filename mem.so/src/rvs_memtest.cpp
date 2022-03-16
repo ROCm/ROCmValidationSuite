@@ -118,25 +118,25 @@ unsigned int error_checking(std::string pmsg, unsigned int blockidx)
     rvs::lp::Log(msg, rvs::loginfo);
 
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last : " +  
-                    std::to_string(reported_errors) + " : error addresses are: \n";
+              std::to_string(reported_errors) + " : error addresses are: \n";
     rvs::lp::Log(msg, rvs::loginfo);
 
 	  for (i = 0; i < reported_errors ; i++){
 
             msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " +  
-                      std::to_string(host_err_addr[i]) + " \n ";
+                       std::to_string(host_err_addr[i]) + " \n ";
             rvs::lp::Log(msg, rvs::loginfo);
 	  }
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last :" + 
-                 std::to_string(reported_errors) + " : error details are : \n";
+              std::to_string(reported_errors) + " : error details are : \n";
     rvs::lp::Log(msg, rvs::loginfo);
 	  for (i =0; i < reported_errors; i++){
 
           msg = "[" + memdata.action_name + "] " + MODULE_NAME + " "  +  
-                " ERROR:" + std::to_string(i) + " th error, expected value=0x" +  std::to_string(host_err_expect[i]) +  
-                "current value=0x" + std::to_string(host_err_current[i]) + "current value=0x" + std::to_string(host_err_current[i]) + 
-                " second_ read=0x " + std::to_string(host_err_second_read[i]) +  
-                "\n \n";
+                    " ERROR:" + std::to_string(i) + " th error, expected value=0x" +  std::to_string(host_err_expect[i]) +  
+                    "current value=0x" + std::to_string(host_err_current[i]) + "current value=0x" + 
+                    std::to_string(host_err_current[i]) + 
+                    " second_ read=0x " + std::to_string(host_err_second_read[i]) +  "\n \n";
           rvs::lp::Log(msg, rvs::loginfo);
 	  }
 
@@ -255,35 +255,32 @@ __global__ void kernel_test0_global_read(char* _ptr, char* _end_ptr, unsigned in
     unsigned long mask = 4;
 
     if (*ptr != pattern){
-	if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+	    if( *ptErrCount < MAX_ERR_RECORD_COUNT) {
            ptFailedAdress[*ptErrCount] = (unsigned long)ptr;        
            ptExpectedValue[*ptErrCount] = (unsigned long)pattern;  
            ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
-	}
+	      }
     }
 
     while(ptr < end_ptr){
         ptr = (unsigned long*) ( ((unsigned long)orig_ptr) | mask);
 
         if (ptr == orig_ptr){
-	   mask = mask << 1;
-	   continue;
+	          mask = mask << 1;
+	          continue;
         }
 
-	if (ptr >= end_ptr){
-		// when we reach end of allotted space
-		// we cant read which might risk is seg or page fault
-		break;
-	}
-	// if ptr valid, we can verify the state of data written
-	 if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
-               ptFailedAdress[*ptErrCount] = (unsigned long)ptr;
-               ptExpectedValue[*ptErrCount] = (unsigned long)pattern;
-               ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;
-           }
+	      if (ptr >= end_ptr){
+		        break;
+	      }
+	      if( *ptErrCount < MAX_ERR_RECORD_COUNT ) {
+             ptFailedAdress[*ptErrCount] = (unsigned long)ptr;
+             ptExpectedValue[*ptErrCount] = (unsigned long)pattern;
+             ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;
+        }
 
-	pattern = pattern << 1;
-	mask = mask << 1;
+	      pattern = pattern << 1;
+	      mask = mask << 1;
     }
 
     return;
@@ -306,37 +303,36 @@ __global__ void kernel_test0_read(char* _ptr, char* end_ptr, unsigned int* ptErr
     unsigned long mask = 4;
 
     if (*ptr != pattern){
-	if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
-              ptFailedAdress[*ptErrCount] = (unsigned long)ptr;                
-              ptExpectedValue[*ptErrCount] = (unsigned long)pattern;   
-              ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
-	}
+	      if( *ptErrCount < MAX_ERR_RECORD_COUNT ) {
+             ptFailedAdress[*ptErrCount] = (unsigned long)ptr;                
+             ptExpectedValue[*ptErrCount] = (unsigned long)pattern;   
+             ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
+        }
     }
 
     while(ptr < block_end){
-	    ptr = (unsigned int*) ( ((unsigned long)orig_ptr) | mask);
-	    if (ptr == orig_ptr){
-	        mask = mask <<1;
-	        continue;
-	    }
+	      ptr = (unsigned int*) ( ((unsigned long)orig_ptr) | mask);
+	      if (ptr == orig_ptr){
+	          mask = mask <<1;
+	          continue;
+	      }
 
-	    if (ptr >= block_end){
-	      break;
-	    }
+	      if (ptr >= block_end){
+	          break;
+	      }
 
-	    if (*ptr != pattern){
-	       if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
-                   ptFailedAdress[*ptErrCount] = (unsigned long)ptr;          
-                   ptExpectedValue[*ptErrCount] = (unsigned long)pattern;  
-                   ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
-	       }
-	    }
+	      if (*ptr != pattern){
+	          if( *ptErrCount < MAX_ERR_RECORD_COUNT ) {
+                 ptFailedAdress[*ptErrCount] = (unsigned long)ptr;          
+                 ptExpectedValue[*ptErrCount] = (unsigned long)pattern;  
+                 ptCurrentValue[*ptErrCount++] = (unsigned long)*ptr;   
+	          }
+	      }
 
-	    pattern = pattern << 1;
-	    mask = mask << 1;
+	      pattern = pattern << 1;
+	      mask = mask << 1;
     }
 
-    return;
 }
 
 /************************************************************************
@@ -369,6 +365,7 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
     error_checking(msg,  0);
 
     for(unsigned int ite = 0; ite < memdata.num_passes; ite++){
+
         for (i = 0; i < tot_num_blocks; i += GRIDSIZE){
 	          dim3 grid;
 
