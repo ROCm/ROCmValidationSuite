@@ -157,7 +157,7 @@ int pebbworker::initialize(uint16_t Src, uint16_t Dst, bool h2d, bool d2h) {
  * */
 int pebbworker::do_transfer() {
   double duration;
-  int sts;
+  int sts = -1;
   unsigned int startsec;
   unsigned int startusec;
   unsigned int endsec;

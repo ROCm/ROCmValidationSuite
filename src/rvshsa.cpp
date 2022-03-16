@@ -918,7 +918,7 @@ int rvs::hsa::GetPeerStatusAgent(const AgentInformation&  SrcAgent,
   hsa_amd_memory_pool_access_t access_bck;
   hsa_status_t status;
   int cur_access_rights;
-  int res_access_rights;
+  int res_access_rights = -1;
   std::string msg;
 
   res_access_rights = 0;

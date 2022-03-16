@@ -58,13 +58,8 @@ void MemWorker::run() {
     char*           ptr = NULL;
     string          err_description;
     string          msg;
-    int             error;
     int             deviceId;
-    int             testnum;
    
-    //Initializations
-    testnum = 0;
-    error = 0;
 
     // log MEM stress test - start message
     msg = "[" + action_name + "] " + MODULE_NAME + " " +

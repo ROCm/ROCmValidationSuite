@@ -93,7 +93,6 @@ void pebb_action::json_add_primary_fields(){
  *
  * */
 int pebb_action::run() {
-  int sts;
   string msg;
   std::chrono::time_point<std::chrono::system_clock> pebb_start_time;
   std::chrono::time_point<std::chrono::system_clock> pebb_end_time;
@@ -121,7 +120,7 @@ int pebb_action::run() {
   if(bjson){
     json_add_primary_fields();
   }
-  sts = create_threads();
+  int sts = create_threads();
 
   if (sts != 0) {
     return sts;
