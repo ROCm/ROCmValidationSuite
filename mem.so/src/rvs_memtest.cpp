@@ -105,14 +105,14 @@ unsigned int atomic_read(unsigned int* value)
     return ret;
 }
 
-unsigned int error_checking(std::string pmsg, unsigned int blockidx)
+unsigned int error_checking(const std::string& pmsg, unsigned int blockidx)
 {
     unsigned long host_err_addr[MAX_ERR_RECORD_COUNT];
     unsigned long host_err_expect[MAX_ERR_RECORD_COUNT];
     unsigned long host_err_current[MAX_ERR_RECORD_COUNT];
     unsigned long host_err_second_read[MAX_ERR_RECORD_COUNT];
     unsigned int  numOfErrors = 0;
-    unsigned int  i;
+    //unsigned int  i;
     std::string   msg;
 
     HIP_CHECK(hipMemcpy(&numOfErrors, (void*)ptCntOfError, sizeof(unsigned int), hipMemcpyDeviceToHost));
@@ -132,14 +132,14 @@ unsigned int error_checking(std::string pmsg, unsigned int blockidx)
                       std::to_string(MIN(MAX_ERR_RECORD_COUNT, numOfErrors)) + " : error addresses are: \n";
        rvs::lp::Log(msg, rvs::loginfo);
 
-	      for (i = 0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
+	      for (int i = 0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
 
               msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last : " +  
                         std::to_string(host_err_addr[i]) + " \n ";
               rvs::lp::Log(msg, rvs::loginfo);
 	      }
 
-	      for (i =0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
+	      for (int i =0; i < MIN(MAX_ERR_RECORD_COUNT, numOfErrors); i++){
 
               msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last : " +  
                         " ERROR:" + std::to_string(i) + " th error, expected value=0x" +  std::to_string(host_err_expect[i]) +  
@@ -375,7 +375,6 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
     char *ptr = _ptr;
     char* end_ptr = ptr + tot_num_blocks* BLOCKSIZE;
     unsigned int err = 0;
-    unsigned int  memErrors = 0;
     std::string msg;
    
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 1: Change one bit memory addresss  ";
@@ -391,7 +390,7 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
                         ptr, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
     msg = " Test 1 on global address";
-    error_checking(msg,  0);
+    err = error_checking(msg,  0);
 
     for(unsigned int ite = 0; ite < memdata.num_passes; ite++){
          for (i = 0; i < tot_num_blocks; i += GRIDSIZE){
@@ -413,7 +412,7 @@ void test0(char* _ptr, unsigned int tot_num_blocks)
                                 dim3(memdata.blocks), dim3(memdata.threadsPerBlock),  0/*dynamic shared*/, 0/*stream*/,     /* launch config*/
                                 ptr + i * BLOCKSIZE, end_ptr, ptCntOfError, ptFailedAdress, ptExpectedValue, ptCurrentValue, ptValueOfSecondRead); 
 
-		error_checking("Test 1",  i);
+		err = error_checking("Test 1",  i);
 		//error_checking(__FUNCTION__,  i);
 		show_progress(" Test 1 on reading :", i, tot_num_blocks);
 	    }
@@ -477,7 +476,7 @@ kernel_test1_read(char* _ptr, char* end_ptr, unsigned int* ptErrCount, unsigned 
 
 void test1(char* ptr, unsigned int tot_num_blocks)
 {
-    unsigned int err;
+    unsigned int err = 0;
     unsigned int i;
     char*        end_ptr = ptr + tot_num_blocks * BLOCKSIZE;
     std::string  msg;

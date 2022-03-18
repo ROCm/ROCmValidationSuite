@@ -144,7 +144,7 @@ unsigned int get_random_num(void);
 uint64_t get_random_num_long(void);
 void  atomic_inc(unsigned int* value);
 unsigned int atomic_read(unsigned int* value);
-unsigned int error_checking(std::string msg, unsigned int blockidx);
+unsigned int error_checking(const std::string& msg, unsigned int blockidx);
 unsigned int  move_inv_test(char* ptr, unsigned int tot_num_blocks, unsigned int p1, unsigned p2);
 unsigned int modtest(char* ptr, unsigned int tot_num_blocks, unsigned int offset, unsigned int p1, unsigned int p2);
 void  movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,

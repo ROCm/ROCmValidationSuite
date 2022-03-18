@@ -64,7 +64,6 @@ TEST(actionbase, boolttp) {
 }
 
 TEST(actionbase, boolttf) {
-  std::string val;
   int         intretval;
   bool        bval;
 
@@ -91,7 +90,6 @@ TEST(actionbase, boolttf) {
 }
 
 TEST(actionbase, uintttf) {
-  std::string val;
   int         intretval;
   uint64_t    intval;
 
@@ -119,7 +117,6 @@ TEST(actionbase, uintttf) {
 }
 
 TEST(actionbase, devicetf) {
-  std::string val;
   int         intretval;
   bool b_all;
   std::vector<uint16_t> dev;

@@ -111,7 +111,6 @@ void MemWorker::Initialization(void)
 void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
 {
     struct timeval  t0, t1;
-    unsigned int pass = 0;
     unsigned int i;
     std::string msg;
 
@@ -144,11 +143,8 @@ void MemWorker::run() {
     string          msg;
     size_t          free;
     size_t          total;
-    int             error;
     int             deviceId;
    
-    //Initializations
-    error = 0;
 
     // log MEM stress test - start message
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
