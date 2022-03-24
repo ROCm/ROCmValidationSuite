@@ -10,7 +10,7 @@
 # setting ROCM_PATH using cmake inputs
 # setting RVS_EXE_PATH to default if not set by user
 if [[ -z "${RVS_EXE_PATH}" ]]; then
-    export RVS_EXE_PATH=@ROCM_PATH@/rvs/rvs
+    export RVS_EXE_PATH=@ROCM_PATH@/bin/rvs
 fi
 
 function get_string_with_space {

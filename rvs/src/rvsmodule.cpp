@@ -165,6 +165,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       libpath += "/";
     } else {
       rvs::options::has_option("pwd", &libpath); // has ending forward slash too
+      libpath += "../lib/rvs/";
     }
     string sofullname(libpath + it->second);
     void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
