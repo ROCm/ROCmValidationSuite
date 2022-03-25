@@ -678,11 +678,11 @@ void test3(char* ptr, unsigned int tot_num_blocks)
     err = move_inv_test(ptr, tot_num_blocks, p1, p2);
 
     if(!err) {
-         msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 4 : PASS";
+         msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Moving inversions successful";
          rvs::lp::Log(msg, rvs::loginfo);
     }
 
-    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 4 [Moving inversions, 8 bit pat]"
+    msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 4 [Moving inversions, 8 bit pat, reverse]"
                    + std::to_string(p2) + " and " + std::to_string(p1) + "\n";
     rvs::lp::Log(msg, rvs::loginfo);
     err = move_inv_test(ptr, tot_num_blocks, p2, p1);
