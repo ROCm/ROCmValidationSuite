@@ -116,8 +116,8 @@ class mem_action: public rvs::actionbase {
     //threads per block
     uint64_t threadsPerBlock;
     
-		// exclude tests list
-		vector<uint32_t> exclude_list;
+    // exclude tests list
+    vector<uint32_t> exclude_list;
     // configuration properties getters
     bool get_all_mem_config_keys(void);
   /**
