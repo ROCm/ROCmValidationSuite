@@ -186,7 +186,7 @@ class MemWorker : public rvs::ThreadBase {
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
-		static void init_tests(const std::vector<uint32_t>& exclude_list);
+    static void init_tests(const std::vector<uint32_t>& exclude_list);
 
  protected:
     void setup_blas(int *error, std::string *err_description);
@@ -202,6 +202,7 @@ class MemWorker : public rvs::ThreadBase {
     void check_target_stress(double gflops_interval);
     void usleep_ex(uint64_t microseconds);
     void Initialization(void);
+
  protected:
     //! name of the action
     std::string action_name;
