@@ -100,16 +100,18 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             " " + " The following memory tests will run";
         rvs::lp::Log(msg, rvs::logresults);
+        workers[0].init_tests(exclude_list);
 
         for (int i = 0; i < 11; i++) {
-            msg = "=============== " + rvs_mem[i] + "\n"; 
-            rvs::lp::Log(msg, rvs::logresults);
+						if(std::find(exclude_list.begin(), exclude_list.end(), i) == exclude_list.end()){
+            	msg = "=============== " + rvs_mem[i] + "\n"; 
+            	rvs::lp::Log(msg, rvs::logresults);
+						}
         }
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             " " + " Starting all workers"; 
         rvs::lp::Log(msg, rvs::logtrace);
-
         for (it = mem_gpus_device_index.begin();
                 it != mem_gpus_device_index.end(); ++it) {
 
@@ -225,7 +227,15 @@ bool mem_action::get_all_mem_config_keys(void) {
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
-
+    bool exclude_all;
+		std::string exclude_key = "exclude";
+		int error = property_get_uint_list<uint32_t>(exclude_key,
+                                  YAML_DEVICE_PROP_DELIMITER,
+                                  &exclude_list, &exclude_all);
+		for(const auto& a: exclude_list){
+				std::cout << a << "    " ;
+		}
+		std::cout << std::endl;
     return bsts;
 }
 

@@ -730,7 +730,7 @@ void test4(char* ptr, unsigned int tot_num_blocks)
 
           if (err == 0 && iteration == 0){
 
-            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 5 PASS, no errors detected , iterations are zero here";
+            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 5 : PASS no errors detected, iterations are zero here";
             rvs::lp::Log(msg, rvs::logresults);
 	          return;
           }
@@ -1162,7 +1162,7 @@ kernel_test7_readwrite(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
 	 if (ptr[i] != start_ptr[i]){
-               if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+               if( *ptErrCount < MAX_ERR_RECORD_COUNT ) {
                      ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
                      ptExpectedValue[*ptErrCount] = (unsigned long)start_ptr[i];
                      ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
@@ -1190,7 +1190,7 @@ kernel_test7_read(char* _ptr, char* end_ptr, char* _start_ptr, unsigned int* ptE
 
     for (i = 0;i < BLOCKSIZE/sizeof(unsigned int); i++){
 	      if (ptr[i] != ~(start_ptr[i])){
-                   if((*ptErrCount >= 0) && (*ptErrCount < MAX_ERR_RECORD_COUNT)) {
+                   if( *ptErrCount < MAX_ERR_RECORD_COUNT ) {
                           ptFailedAdress[*ptErrCount] = (unsigned long)&ptr[i];        
                           ptExpectedValue[*ptErrCount] = (unsigned long)~start_ptr[i];
                           ptCurrentValue[*ptErrCount++] = (unsigned long)ptr[i];   
@@ -1260,7 +1260,7 @@ void test7(char* ptr, unsigned int tot_num_blocks)
 
 
         if (err == 0 && iteration == 0){
-            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "TEST 8 : PASS \n no errors detected, iterations are zero here";
+            msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 8 : PASS no errors detected, iterations are zero here";
             rvs::lp::Log(msg, rvs::logresults);
 	          return;
         }
