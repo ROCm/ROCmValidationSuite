@@ -129,17 +129,11 @@ unsigned int error_checking(const std::string& pmsg, unsigned int blockidx)
             rvs::lp::Log(msg, rvs::loginfo);
 	  }
 
-    for (int i =0; i < reported_errors; i++){
-
-        msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " +  
-                      std::to_string(host_err_addr[i]) + " \n ";
-        rvs::lp::Log(msg, rvs::loginfo);
-    }
 
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "ERROR: the last :" + 
               std::to_string(reported_errors) + " : error details are : \n";
     rvs::lp::Log(msg, rvs::loginfo);
-	  for (int i =0; i < reported_errors; i++){
+    for (int i =0; i < reported_errors; i++){
 
           msg = "[" + memdata.action_name + "] " + MODULE_NAME + " "  +  
                     " ERROR:" + std::to_string(i) + " th error, expected value=0x" +  std::to_string(host_err_expect[i]) +  
