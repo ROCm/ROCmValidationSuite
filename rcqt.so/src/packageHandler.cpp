@@ -27,7 +27,7 @@ bool PackageHandler::parseManifest(){
 }
 
 void PackageHandler::validatePackages(){
-  std::cout << "MANOJ: file nameis " << m_manifest << std::endl;
+  std::cout << "File name is " << m_manifest << std::endl;
 	auto pkgmap = getPackageMap();
 	if(pkgmap.empty()){
 		std::cout << "no packages to validate in the file " << std::endl;
