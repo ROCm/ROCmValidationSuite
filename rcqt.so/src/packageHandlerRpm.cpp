@@ -10,8 +10,10 @@
 #include "include/rpmPackageInfo.h"
 
 PackageHandlerRpm::PackageHandlerRpm(std::string pkgname): PackageHandler{} {
-	metaInfo.reset(new RpmPackageInfo(pkgname,
-                  std::string("rpm"), std::string("-qR"), std::string(""), std::string("-qi")));
+
+  const std::vector<std::string> cmd {std::string("-qR"), std::string(""), std::string("-qi")};
+
+	metaInfo.reset(new RpmPackageInfo(pkgname, std::string("rpm"), cmd));
   metaInfo->fillPkgInfo();
   m_manifest = metaInfo->getFileName();
 }

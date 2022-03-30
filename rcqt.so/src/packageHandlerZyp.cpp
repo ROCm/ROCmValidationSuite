@@ -10,8 +10,10 @@
 #include "include/zypPackageInfo.h"
 
 PackageHandlerZyp::PackageHandlerZyp(std::string pkgname): PackageHandler{} {
-	metaInfo.reset(new ZypPackageInfo(pkgname,
-                  std::string("zypper"), std::string("info"), std::string("--requires"), std::string("info")));
+
+  const std::vector<std::string> cmd {std::string("info"), std::string("--requires"), std::string("info")};
+
+	metaInfo.reset(new ZypPackageInfo(pkgname, std::string("zypper"), cmd));
   metaInfo->fillPkgInfo();
   m_manifest = metaInfo->getFileName();
 }

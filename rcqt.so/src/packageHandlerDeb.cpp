@@ -10,8 +10,10 @@
 #include "include/debPackageInfo.h"
 
 PackageHandlerDeb::PackageHandlerDeb(std::string pkgname): PackageHandler{}{
-	metaInfo.reset( new DebPackageInfo(pkgname,
-                  std::string("dpkg") , std::string("--status"), std::string(""), std::string("--status")));
+  
+  const std::vector<std::string> cmd {std::string("--status"), std::string(""), std::string("--status")};
+
+	metaInfo.reset(new DebPackageInfo(pkgname, std::string("dpkg"), cmd));
   metaInfo->fillPkgInfo();
   m_manifest = metaInfo->getFileName();
 }
