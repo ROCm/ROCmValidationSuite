@@ -202,6 +202,9 @@ int rcqt_action::pkgchk_run() {
   #if RVS_OS_TYPE_NUM == 2
   string command_string = "rpm -qa --qf \"%{NAME}\n\" > ";
   #endif
+  #if RVS_OS_TYPE_NUM == 3
+  string command_string = "pacman -Q > ";
+  #endif
   command_string += PKG_CMD_FILE;
 
   // We execute the dpkg-querry
