@@ -33,7 +33,6 @@ OSType getOS(){
 			return searchos(osame);
     }
   }
-
 }
 
 std::string get_last_word(const std::string& input){
@@ -63,6 +62,55 @@ std::string remSpaces(std::string str){
   return str;
 }
 
+bool getPackageInfo(const std::string& package,
+    const std::string& packagemgr,
+    const std::string& command,
+    const std::string& option,
+    std::stringstream &ss){
+
+  int read_pipe[2]; // From child to parent
+  if(pipe(read_pipe) == -1){
+    perror("Pipe");
+    return false;
+  }
+
+  pid_t process_id = fork();
+  if(process_id < 0){
+    perror("Fork");
+    return false;
+  }
+  else if(process_id == 0) {
+
+    /* Child process */
+    dup2(read_pipe[1], 1);
+    close(read_pipe[0]);
+    close(read_pipe[1]);
+
+    std::cout << packagemgr.c_str() << " " << packagemgr.c_str() << " "<< command.c_str() << " " << option.c_str() << " " << package.c_str() << std::endl;
+
+    /* Apply options in command only if present */
+    if(option.empty()) {
+      execlp(packagemgr.c_str(), packagemgr.c_str(), command.c_str(), package.c_str(), NULL);
+    }
+    else {
+      execlp(packagemgr.c_str(), packagemgr.c_str(), command.c_str(), option.c_str(), package.c_str(), NULL);
+    }
+  }
+  else {
+    /* Parent process */
+    int status;
+    waitpid(process_id, &status,0);
+    close(read_pipe[1]);
+    {
+      char arr[8192];
+      int n = read(read_pipe[0], arr, sizeof(arr));
+      ss.write(arr, n);
+
+    }
+    close(read_pipe[0]);
+    return true;
+  }
+}
 
 /*
 bool parser(std::string s_data, package_info& info){

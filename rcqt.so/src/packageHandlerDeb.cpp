@@ -10,8 +10,10 @@
 #include "include/debPackageInfo.h"
 
 PackageHandlerDeb::PackageHandlerDeb(std::string pkgname): PackageHandler{}{
-	metaInfo.reset( new DebPackageInfo(pkgname,
-                  std::string("dpkg") , std::string("--status")));
+  
+  const std::vector<std::string> cmd {std::string("--status"), std::string(""), std::string("--status")};
+
+	metaInfo.reset(new DebPackageInfo(pkgname, std::string("dpkg"), cmd));
   metaInfo->fillPkgInfo();
   m_manifest = metaInfo->getFileName();
 }
@@ -27,14 +29,13 @@ bool PackageHandlerDeb::pkgrOutputParser(const std::string& s_data, package_info
       found = true;
     } else if( line.find("Package") != std::string::npos){
       info.name = get_last_word(line);
-      if(found) // preevnt further processing
+      if(found) // prevent further processing
 				return found;
     }
   }
   return found;
 }
-
-
+#if 0
 std::string PackageHandlerDeb::getInstalledVersion(const std::string& package){
   int read_pipe[2]; // From child to parent
   int exit_status;
@@ -78,43 +79,25 @@ std::string PackageHandlerDeb::getInstalledVersion(const std::string& package){
   }
 
 }
+#endif
 
-void PackageHandlerDeb::validatePackages(){
-  std::cout << "MANOJ: file nameis " << m_manifest << std::endl;
-	auto pkgmap = getPackageMap();
-	if(pkgmap.empty()){
-		std::cout << "no packages to validate in the file " << std::endl;
-		return;
-	}
-	int totalPackages = 0, missingPackages = 0, badVersions = 0,
-		installedPackages = 0;
-	for (const auto& val: pkgmap){
-		++totalPackages;
-		auto inputname    = val.first;
-		auto inputversion = val.second;
-		auto installedvers = getInstalledVersion(inputname);
-		if(installedvers.empty()){
-			++missingPackages;
-			std::cout << "Error: package " << inputname << " not installed " <<
-					std::endl;
-			continue;
-		}
+std::string PackageHandlerDeb::getInstalledVersion(const std::string& package){
 
-		if( inputversion.compare(installedvers)){
-			++badVersions;
-			std::cout << "Error: version mismatch for package " << inputname <<
-					" expected version: " << inputversion << " but installed " <<
-					installedvers << std::endl;
-		} else {
-			++installedPackages;
-			std::cout << "Package " << inputname << " installed version is " << 
-					installedvers << std::endl;
-		}
-	}
-	std::cout << "RCQT complete : " << std::endl;
-	std::cout << "\tTotal Packages to validate    : " << totalPackages     << std::endl;
-	std::cout << "\tValid Packages                : " << installedPackages << std::endl;
-	std::cout << "\tMissing Packages              : " << missingPackages   << std::endl;
-	std::cout << "\tPackages version mismatch     : " << badVersions       << std::endl;
-	return ;	
+  package_info pinfo;
+  std::stringstream ss;
+  bool status;
+
+  status = getPackageInfo(package, metaInfo->getPackageMgrName(), metaInfo->getInfoCmdName(), "", ss);
+  if (true != status) {
+    std::cout << "getPackageInfo failed !!!" << std::endl;
+    return std::string{};
+  }
+
+  auto res = pkgrOutputParser(ss.str(), pinfo);
+  if(!res){
+    std::cout << "error in parsing" << std::endl;
+    return std::string{};
+  }
+  return pinfo.version;
 }
+

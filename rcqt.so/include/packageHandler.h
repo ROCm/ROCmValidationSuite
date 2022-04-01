@@ -17,7 +17,7 @@ public:
 		return m_manifest;
 	}
 	virtual bool parseManifest(); // and load m_pkgversionmap
-	virtual void  validatePackages() = 0;
+	void  validatePackages();
 	const std::map<std::string, std::string>& getPackageMap() const{
 		return m_pkgversionmap;
 	}
@@ -37,7 +37,6 @@ private:
 	std::map<std::string, std::string> m_pkgversionmap;
 protected:
 	std::unique_ptr<PackageInfo> metaInfo;
-	std::string m_manifest;
-	
+	std::string m_manifest;	
 };
 #endif

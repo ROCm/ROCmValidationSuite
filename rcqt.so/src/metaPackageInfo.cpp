@@ -8,15 +8,18 @@
 #include <sys/wait.h>
 
 #include "include/metaPackageInfo.h"
+#include "include/rcutils.h"
 
 bool PackageInfo::fillPkgInfo(){
+
+#if 0
   if(m_filename.empty())
     return false;
-	//std::stringstream ss;
+  //std::stringstream ss;
   std::ofstream os{m_filename};
   int read_pipe[2]; // From child to parent
   int exit_status;
-        //package_info pinfo;
+  //package_info pinfo;
   if(pipe(read_pipe) == -1){
     perror("Pipe");
     return false;
@@ -30,8 +33,8 @@ bool PackageInfo::fillPkgInfo(){
     dup2(read_pipe[1], 1);
     close(read_pipe[0]);
     close(read_pipe[1]);
-		//std::cout<< "in child" << std::endl;
-    execlp(m_pkgmgrname.c_str(), m_pkgmgrname.c_str(), m_cmd1name.c_str(),  m_cmd2name.c_str(), m_pkgname.c_str(), NULL);
+    //std::cout<< "in child" << std::endl;
+    execlp(m_pkgmgrname.c_str(), m_pkgmgrname.c_str(), m_dependcmd1name.c_str(), m_dependcmd2name.c_str(), m_pkgname.c_str(), NULL);
   } else {
     // parent:
     int status;
@@ -43,12 +46,30 @@ bool PackageInfo::fillPkgInfo(){
       int n = read(read_pipe[0], arr, sizeof(arr));
       ss.write(arr, n);
     }
-    
+
     close(read_pipe[0]);
     // handle ss
     readMetaPackageInfo(ss.str());
-		//std::cout << ss.str() << std::endl;
-		return true;
+    //std::cout << ss.str() << std::endl;
+    return true;
+  }
+
+#else
+
+    std::stringstream ss;
+    bool status;
+
+    status = getPackageInfo(m_pkgname, m_pkgmgrname, m_dependcmd1name, m_dependcmd2name, ss);
+    if (true != status) {
+      std::cout << "getPackageInfo failed !!!" << std::endl;
+      return false;
     }
+
+    std::cout << "Going to parse Meta Package Info ..." << std::endl;
+    readMetaPackageInfo(ss.str());
+
+    return true;
+
+#endif
 }
 
