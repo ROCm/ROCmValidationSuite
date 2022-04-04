@@ -634,10 +634,13 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
 
       RVSHSATRACE_
       // check if src agent has access to this dst agent's pool
+      /*
+      bool hasCPU = false;
       hsa_amd_memory_pool_access_t access =
         HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
       if (agent_list[SrcAgent].agent_device_type == "CPU") {
         RVSHSATRACE_
+	hasCPU = true;
         if (HSA_STATUS_SUCCESS != (status = hsa_amd_agent_memory_pool_get_info(
         agent_list[DstAgent].agent,
         agent_list[SrcAgent].mem_pool_list[i],
@@ -646,8 +649,9 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
           print_hsa_status(__FILE__, __LINE__, __func__,
                    "hsa_amd_agent_memory_pool_get_info()",
                    status);
-      } else {
+      } else if(agent_list[DstAgent].agent_device_type == "CPU") {
         RVSHSATRACE_
+	hasCPU = true;
         if (HSA_STATUS_SUCCESS != (status = hsa_amd_agent_memory_pool_get_info(
         agent_list[SrcAgent].agent,
         agent_list[DstAgent].mem_pool_list[j],
@@ -658,10 +662,11 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
                    status);
       }
 
-      if (access == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) {
+      if (hasCPU && (access == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED) ) {
         RVSHSATRACE_
         continue;
       }
+      */
       RVSHSATRACE_
       // try allocating destination buffer
       if (HSA_STATUS_SUCCESS != (status = hsa_amd_memory_pool_allocate(
@@ -674,24 +679,24 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
 
       // destination buffer allocated,
       // give access to agents
-
       RVSHSATRACE_
 
       // determine which one is a cpu and allow access on the other agent
-      if (agent_list[SrcAgent].agent_device_type == "CPU") {
-        RVSHSATRACE_
-        status = hsa_amd_agents_allow_access(1,
-                                            &agent_list[DstAgent].agent,
-                                            NULL,
-                                            srcbuff);
-      } else {
+      if (agent_list[SrcAgent].agent_device_type == "GPU") {
         RVSHSATRACE_
         status = hsa_amd_agents_allow_access(1,
                                             &agent_list[SrcAgent].agent,
                                             NULL,
                                             dstbuff);
+      } 
+      if(agent_list[DstAgent].agent_device_type == "GPU"){
+        RVSHSATRACE_
+        status = hsa_amd_agents_allow_access(1,
+                                            &agent_list[DstAgent].agent,
+                                            NULL,
+                                            srcbuff);
       }
-      if (status != HSA_STATUS_SUCCESS) {
+      if ((status != HSA_STATUS_SUCCESS)) {
         RVSHSATRACE_
         print_hsa_status(__FILE__, __LINE__, __func__,
                 "hsa_amd_agents_allow_access()",
@@ -725,7 +730,7 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
 /**
   * sen pqt ones
 */
-
+/*
 int rvs::hsa::SendP2PTraffic(uint32_t SrcNode, uint32_t DstNode,
                               size_t Size, bool bidirectional,
                               double* Duration) {
@@ -761,7 +766,7 @@ int rvs::hsa::SendP2PTraffic(uint32_t SrcNode, uint32_t DstNode,
   }
 
 }
-
+*/
 /**
  * @brief Allocate buffers in source and destination memory pools
  *

@@ -512,6 +512,8 @@ int pqt_action::create_threads() {
           transfer_ix += 1;
           if (b2b_block_size > 0 && property_parallel) {
             RVSTRACE_
+		    std::cout << "MANOJ:Done done " << std::endl;
+	    exit(0);
             pqtworker_b2b* pb2b = new pqtworker_b2b;
             if (pb2b == nullptr) {
               RVSTRACE_
