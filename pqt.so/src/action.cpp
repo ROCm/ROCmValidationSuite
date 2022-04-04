@@ -402,7 +402,7 @@ int pqt_action::create_threads() {
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&gpu_device_id);
 
-  for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
+  for (size_t i = 0; i < gpu_id.size()-1; i++) {    // all possible sources
     // filter out by source device id
     if (property_device_id > 0) {
       if (property_device_id != gpu_device_id[i]) {
@@ -420,7 +420,7 @@ int pqt_action::create_threads() {
       }
     }
 
-    for (size_t j = 0; j < gpu_id.size(); j++) {  // all possible peers
+    for (size_t j = i+1; j < gpu_id.size(); j++) {  // all possible peers
       RVSTRACE_
       // filter out by peer id
       if (prop_peer_deviceid > 0) {
@@ -493,7 +493,9 @@ int pqt_action::create_threads() {
           }
         }
         rvs::lp::Log(msg, rvs::logresults);
-
+        if(distance == rvs::hsa::NO_CONN) {
+            continue; // no point if no connection
+        }
         if (0 != arr_linkinfo.size()) {
           /* Log link type */
           log_json_data(std::to_string(srcnode), std::to_string(gpu_id[j]), rvs::logresults, 

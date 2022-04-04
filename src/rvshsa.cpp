@@ -612,7 +612,6 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
       RVSHSATRACE_
       continue;
     }
-
     RVSHSATRACE_
     // try allocating source buffer
     if (HSA_STATUS_SUCCESS != (status = hsa_amd_memory_pool_allocate(
@@ -641,7 +640,7 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
         RVSHSATRACE_
         if (HSA_STATUS_SUCCESS != (status = hsa_amd_agent_memory_pool_get_info(
         agent_list[DstAgent].agent,
-        agent_list[SrcAgent].mem_pool_list[j],
+        agent_list[SrcAgent].mem_pool_list[i],
         HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS,
         &access)))
           print_hsa_status(__FILE__, __LINE__, __func__,
@@ -720,6 +719,47 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
 
   RVSHSATRACE_
   return -1;
+}
+
+
+/**
+  * sen pqt ones
+*/
+
+int rvs::hsa::SendP2PTraffic(uint32_t SrcNode, uint32_t DstNode,
+                              size_t Size, bool bidirectional,
+                              double* Duration) {
+  hsa_status_t status;
+  int sts;
+    int32_t src_ix_fwd;
+  int32_t dst_ix_fwd;
+  hsa_amd_memory_pool_t src_pool_fwd;
+  hsa_amd_memory_pool_t dst_pool_fwd;
+  void* src_ptr_fwd = nullptr;
+  void* dst_ptr_fwd = nullptr;
+  hsa_signal_t signal_fwd;
+
+  int32_t src_ix_rev;
+  int32_t dst_ix_rev;
+  hsa_amd_memory_pool_t src_pool_rev;
+  hsa_amd_memory_pool_t dst_pool_rev;
+  void* src_ptr_rev = nullptr;
+  void* dst_ptr_rev = nullptr;
+  hsa_signal_t signal_rev;
+
+  RVSHSATRACE_
+
+  // given NUMA nodes, find agent indexes
+  src_ix_fwd = FindAgent(SrcNode);
+  dst_ix_fwd = FindAgent(DstNode);
+  src_ix_rev = dst_ix_fwd;
+  dst_ix_rev = src_ix_fwd;
+
+    if (src_ix_fwd < 0 || dst_ix_fwd < 0) {
+    RVSHSATRACE_
+    return -1;
+  }
+
 }
 
 /**
