@@ -169,19 +169,24 @@ rvs::module* rvs::module::find_create_module(const char* name) {
     }
     string sofullname(libpath + it->second);
     void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
-
     // error?
     if (!psolib) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
+      //Search libraries in current path for backward compatibility
+      rvs::options::has_option("pwd", &libpath); // has ending forward slash too
+      string sofullname(libpath + it->second);
+      psolib = dlopen(sofullname.c_str(), RTLD_NOW);
+      // error?
+      if (!psolib) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
                "could not load .so '%s'", sofullname.c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      snprintf(buff, sizeof(buff),
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        snprintf(buff, sizeof(buff),
                "reason: '%s'", dlerror());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      return NULL;  // fail
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        return NULL;  // fail
+      }
     }
-
     // create module object
     m = new rvs::module(name, psolib);
     if (!m) {
