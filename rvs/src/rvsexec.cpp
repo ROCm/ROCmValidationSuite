@@ -129,12 +129,17 @@ int rvs::exec::run() {
     config_file = val;
   } else {
     config_file = "../share/rocm-validation-suite/conf/rvs.conf";
+    // Check if pConfig file exist if not use old path for backward compatibility
+    std::ifstream file(path + config_file);
+    if (!file.good()) {
+      config_file = "conf/rvs.conf";
+    }
+    file.close();
     config_file = path + config_file;
   }
 
   // Check if pConfig file exists
   std::ifstream file(config_file);
-
   if (!file.good()) {
     char buff[1024];
     snprintf(buff, sizeof(buff),
@@ -147,6 +152,13 @@ int rvs::exec::run() {
 
   // construct modules configuration file relative path
   val = path + "../share/rocm-validation-suite/conf/.rvsmodules.config";
+  // Check if config file exists if not check the old file location for backward compatibility
+  std::ifstream conf_file(val);
+  if (!conf_file.good()) {
+    val = path + ".rvsmodules.config";
+  }
+  conf_file.close();
+
   if (rvs::module::initialize(val.c_str())) {
     return 1;
   }
