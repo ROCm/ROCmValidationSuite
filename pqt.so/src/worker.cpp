@@ -162,7 +162,9 @@ int pqtworker::do_transfer() {
   if (block_size.size() == 0) {
     block_size = pHsa->size_list;
   }
-
+  if(bidirect){
+	  std::cout << "MANOJ: now bidir " << std::endl;
+  }
   for (size_t i = 0; brun && i < block_size.size(); i++) {
     current_size = block_size[i];
     sts = pHsa->SendTraffic(src_node, dst_node, current_size,

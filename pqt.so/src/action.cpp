@@ -512,17 +512,15 @@ int pqt_action::create_threads() {
           transfer_ix += 1;
           if (b2b_block_size > 0 && property_parallel) {
             RVSTRACE_
-		    std::cout << "MANOJ:Done done " << std::endl;
-	    exit(0);
-            pqtworker_b2b* pb2b = new pqtworker_b2b;
+            pqtworker* pb2b = new pqtworker;
             if (pb2b == nullptr) {
               RVSTRACE_
               msg = "internal error";
               rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
               return -1;
             }
-            pb2b->initialize(srcnode, dstnode, prop_bidirectional,
-                             b2b_block_size);
+            pb2b->initialize(srcnode, dstnode, prop_bidirectional);//,
+                             //b2b_block_size);
             p = pb2b;
 
           } else {
