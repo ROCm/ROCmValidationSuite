@@ -510,35 +510,25 @@ int pqt_action::create_threads() {
           pqtworker* p = nullptr;
 
           transfer_ix += 1;
-          if (b2b_block_size > 0 && property_parallel) {
-            RVSTRACE_
-            pqtworker* pb2b = new pqtworker;
-            if (pb2b == nullptr) {
-              RVSTRACE_
-              msg = "internal error";
-              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-              return -1;
-            }
-            pb2b->initialize(srcnode, dstnode, prop_bidirectional);//,
-                             //b2b_block_size);
-            p = pb2b;
 
-          } else {
+          p = new pqtworker;
+          if (p == nullptr) {
             RVSTRACE_
-            p = new pqtworker;
-            if (p == nullptr) {
-              RVSTRACE_
-              msg = "internal error";
-              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-              return -1;
-            }
-            p->initialize(srcnode, dstnode, prop_bidirectional);
+            msg = "internal error";
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+            return -1;
           }
+          p->initialize(srcnode, dstnode, prop_bidirectional);
           RVSTRACE_
           p->set_name(action_name);
           p->set_stop_name(action_name);
           p->set_transfer_ix(transfer_ix);
-          p->set_block_sizes(block_size);
+          if (b2b_block_size > 0 && property_parallel) {
+              std::vector<uint32_t> temp{b2b_block_size}; 
+              p->set_block_sizes(temp);
+          }else{
+              p->set_block_sizes(block_size);
+          }
           test_array.push_back(p);
         }
       }
