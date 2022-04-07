@@ -60,7 +60,11 @@ rvs_memtest_t rvs_memtests[]={
     {test10, (char*)"Test11  [Memory stress test]",		  1},
 };
 
-
+void MemWorker::init_tests(const std::vector<uint32_t>& exclude_list){
+	for(const auto& testidx : exclude_list){
+		rvs_memtests[testidx].enabled = 0;
+	}
+}
 #if 0
 void MemWorker::allocate_small_mem(void)
 {
