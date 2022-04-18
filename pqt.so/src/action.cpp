@@ -523,12 +523,7 @@ int pqt_action::create_threads() {
           p->set_name(action_name);
           p->set_stop_name(action_name);
           p->set_transfer_ix(transfer_ix);
-          if (b2b_block_size > 0 && property_parallel) {
-              std::vector<uint32_t> temp{b2b_block_size}; 
-              p->set_block_sizes(temp);
-          }else{
-              p->set_block_sizes(block_size);
-          }
+          p->set_block_sizes(block_size);
           test_array.push_back(p);
         }
       }
