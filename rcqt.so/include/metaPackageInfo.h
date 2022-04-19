@@ -8,10 +8,15 @@ class PackageInfo {
 
 public:
   PackageInfo(const std::string& pkgname, const std::string& pkgmgr,
-      const std::string& cmd1, const std::string& cmd2 = "", const std::string& cmd3 = "") :
+      const std::string& cmd1, const std::string& cmd2, const std::string& cmd3) :
     m_pkgname{pkgname}, m_pkgmgrname{pkgmgr}, m_dependcmd1name{cmd1}, m_dependcmd2name{cmd2}, m_infocmdname{cmd3} {
       if(!pkgname.empty())
         m_filename = pfilename(pkgname);	
+    }
+
+  PackageInfo(const std::string& pkgmgr,
+      const std::string& cmd1, const std::string& cmd2, const std::string& cmd3) :
+    m_pkgmgrname{pkgmgr}, m_dependcmd1name{cmd1}, m_dependcmd2name{cmd2}, m_infocmdname{cmd3} {
     }
 
 	virtual ~PackageInfo(){

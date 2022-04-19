@@ -18,6 +18,13 @@ PackageHandlerDeb::PackageHandlerDeb(std::string pkgname): PackageHandler{}{
   m_manifest = metaInfo->getFileName();
 }
 
+PackageHandlerDeb::PackageHandlerDeb(): PackageHandler{}{
+  
+  const std::vector<std::string> cmd {std::string("--status"), std::string(""), std::string("--status")};
+
+	metaInfo.reset(new DebPackageInfo(std::string("dpkg"), cmd));
+}
+
 bool PackageHandlerDeb::pkgrOutputParser(const std::string& s_data, package_info& info){
   std::stringstream data{s_data};
   // first line tells if we need to proceed or not.

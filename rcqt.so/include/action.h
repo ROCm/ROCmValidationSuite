@@ -54,8 +54,12 @@ class rcqt_action : public rvs::actionbase {
     /**
     *  @brief Function used in rcqt action class to check for given package
     */
-
     virtual int pkgchk_run();
+
+    /**
+    *  @brief Function used in rcqt action class to list installed packages and its version.
+    */
+    virtual int pkglist_run();
 
 };
 

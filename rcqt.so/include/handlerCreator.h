@@ -12,5 +12,6 @@ public:
 	handlerCreator() = default;
 	virtual ~handlerCreator() = default;
 	PackageHandler* getPackageHandler(const std::string& pkg);
+	PackageHandler* getPackageHandler();
 };
 #endif

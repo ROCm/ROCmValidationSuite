@@ -18,6 +18,13 @@ PackageHandlerZyp::PackageHandlerZyp(std::string pkgname): PackageHandler{} {
   m_manifest = metaInfo->getFileName();
 }
 
+PackageHandlerZyp::PackageHandlerZyp(): PackageHandler{} {
+
+  const std::vector<std::string> cmd {std::string("info"), std::string("--requires"), std::string("info")};
+
+	metaInfo.reset(new ZypPackageInfo(std::string("zypper"), cmd));
+}
+
 bool PackageHandlerZyp::pkgrOutputParser(const std::string& s_data, package_info& info){
 
   std::stringstream data{s_data};

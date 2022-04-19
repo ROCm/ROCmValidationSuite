@@ -18,6 +18,13 @@ PackageHandlerRpm::PackageHandlerRpm(std::string pkgname): PackageHandler{} {
   m_manifest = metaInfo->getFileName();
 }
 
+PackageHandlerRpm::PackageHandlerRpm(): PackageHandler{} {
+
+  const std::vector<std::string> cmd {std::string("-qR"), std::string(""), std::string("-qi")};
+
+	metaInfo.reset(new RpmPackageInfo(std::string("rpm"), cmd));
+}
+
 bool PackageHandlerRpm::pkgrOutputParser(const std::string& s_data, package_info& info){
   std::stringstream data{s_data};
   // first line tells if we need to proceed or not.

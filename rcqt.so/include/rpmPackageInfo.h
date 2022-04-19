@@ -4,6 +4,7 @@
 #include "metaPackageInfo.h"
 
 class RpmPackageInfo : public PackageInfo {
+
   public:
     RpmPackageInfo(const std::string& pkgname,
         const std::string& pkgmgr,
@@ -12,6 +13,13 @@ class RpmPackageInfo : public PackageInfo {
           cmd[0],
           cmd[1],
           cmd[2]){}
+
+    RpmPackageInfo(const std::string& pkgmgr,
+        const std::vector <std::string> cmd):PackageInfo(pkgmgr,
+          cmd[0],
+          cmd[1],
+          cmd[2]){}
+
     bool readMetaPackageInfo(std::string ss) override;
 };
 #endif

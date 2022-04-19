@@ -55,6 +55,7 @@
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 #define JSON_PKGCHK_NODE_NAME "pkgchk"
 #define PACKAGE "package"
+#define PACKAGELIST "packagelist"
 #define VERSION "version"
 #define INTERNAL_ERROR "Internal Error"
 
@@ -106,6 +107,7 @@ rcqt_action::~rcqt_action() {
 int rcqt_action::run() {
   string msg;
   bool pkgchk_bool = false;
+  bool pkglist_bool = false;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -136,6 +138,10 @@ int rcqt_action::run() {
   if (pkgchk_bool == true)
     return pkgchk_run();
 
+  pkglist_bool =  rvs::actionbase::has_property(PACKAGELIST);
+  if (pkglist_bool == true)
+    return pkglist_run();
+
   return -1;
 }
 
@@ -157,6 +163,8 @@ int rcqt_action::pkgchk_run() {
     if(!package.empty())
       package_list.push_back(remSpaces(package));
   }
+
+  /* Junaid: unwanted variable ? */
   // Checking if version field exists
   bool package_found = false;
 
@@ -171,7 +179,39 @@ int rcqt_action::pkgchk_run() {
 
     handler->parseManifest();
     handler->validatePackages();
-
   }
+
   return 0;
 }
+
+/**
+ * List all ROCm packages and its version installed in the system.
+ * @return 0 - success, non-zero otherwise
+ * */
+
+int rcqt_action::pkglist_run() {
+
+  string packagelist;
+  string package;
+  handlerCreator creator;
+
+  has_property(PACKAGELIST, &packagelist);
+  std::stringstream ss{packagelist};
+  vector<string> package_list;
+  while(ss >> package){
+    if(!package.empty())
+      package_list.push_back(remSpaces(package));
+  }
+
+  auto handler = creator.getPackageHandler();
+  if(!handler){
+    std::cout << "Failed to create handler " << std::endl;
+    return -1;
+  }
+
+  handler->setPackageList(package_list);
+  handler->listPackageVersion();
+
+  return 0;
+}
+
