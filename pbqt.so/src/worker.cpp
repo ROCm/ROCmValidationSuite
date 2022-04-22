@@ -26,10 +26,10 @@
 
 #ifdef __cplusplus
 extern "C" {
-  #endif
-  #include <pci/pci.h>
-  #include <linux/pci.h>
-  #ifdef __cplusplus
+#endif
+#include <pci/pci.h>
+#include <linux/pci.h>
+#ifdef __cplusplus
 }
 #endif
 
@@ -45,57 +45,52 @@ extern "C" {
 #include "include/gpu_util.h"
 #include "include/rvsloglp.h"
 #include "include/rvshsa.h"
+#define MODULE_NAME "PBQT"
 
-#define MODULE_NAME "PEBB"
 
-using std::string;
-using std::vector;
-using std::map;
+pbqtworker::pbqtworker() {
+  // set to 'true' so that do_transfer() will also work
+  // when parallel: false
+  brun = true;
+}
+pbqtworker::~pbqtworker() {}
 
 extern uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
                 std::chrono::time_point<std::chrono::system_clock> t_start);
 extern uint64_t test_duration;
  
-pebbworker::pebbworker() {
-  // set to 'true' so that do_transfer() will also work
-  // when parallel: false
-  brun = true;
-  loglevel = rvs::logerror;
-}
-pebbworker::~pebbworker() {}
-
 /**
  * @brief Thread function
  *
  * Loops while brun == TRUE and performs polled monitoring avery 1msec.
  *
  * */
-void pebbworker::run() {
-  std::chrono::time_point<std::chrono::system_clock> pebb_start_time;
-  std::chrono::time_point<std::chrono::system_clock> pebb_end_time;
+void pbqtworker::run() {
   std::string msg;
+  std::chrono::time_point<std::chrono::system_clock> pbqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pbqt_end_time;
 
-  msg = "[" + action_name + "] pebb thread " + std::to_string(src_node) + " "
+  msg = "[" + action_name + "] pbqt thread " + std::to_string(src_node) + " "
   + std::to_string(dst_node) + " has started";
   rvs::lp::Log(msg, rvs::logdebug);
 
   brun = true;
 
-  pebb_start_time = std::chrono::system_clock::now();
-  do{
-    do_transfer();
+  pbqt_start_time = std::chrono::system_clock::now();
+  do {
+      do_transfer();
 
-    pebb_end_time = std::chrono::system_clock::now();
+      pbqt_end_time = std::chrono::system_clock::now();
 
-    uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
+      uint64_t test_time = time_diff(pbqt_end_time, pbqt_start_time) ;
 
-    if(test_time >= test_duration) {
-        break;
-    }
-  } while (brun);
+      if(test_time >= test_duration) {
+          break;
+      }
+   } while (brun);
 
-  msg = "[" + action_name + "] pebb thread " + std::to_string(src_node) + " "
+  msg = "[" + action_name + "] pbqt thread " + std::to_string(src_node) + " "
   + std::to_string(dst_node) + " has finished";
   rvs::lp::Log(msg, rvs::logdebug);
 }
@@ -107,11 +102,11 @@ void pebbworker::run() {
  * Then it waits for std::thread to exit before returning.
  *
  * */
-void pebbworker::stop() {
+void pbqtworker::stop() {
   std::string msg;
 
-  msg = "[" + stop_action_name + "] pebb transfer " + std::to_string(src_node)
-      + " "       + std::to_string(dst_node) + " in pebbworker::stop()";
+  msg = "[" + stop_action_name + "] pbqt transfer " + std::to_string(src_node)
+      + " " + std::to_string(dst_node) + " in pbqtworker::stop()";
   rvs::lp::Log(msg, rvs::logtrace);
 
   brun = false;
@@ -122,19 +117,14 @@ void pebbworker::stop() {
  *
  * @param Src source NUMA node
  * @param Dst destination NUMA node
- * @param h2d 'true' for host to device transfer
- * @param d2h 'true' for device to host transfer
+ * @param Bidirect 'true' for bidirectional transfer
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbworker::initialize(uint16_t Src, uint16_t Dst, bool h2d, bool d2h) {
+int pbqtworker::initialize(uint16_t Src, uint16_t Dst, bool Bidirect) {
   src_node = Src;
   dst_node = Dst;
-  bidirect = d2h && h2d;
-
-  prop_d2h = d2h;
-  prop_h2d = h2d;
-
+  bidirect = Bidirect;
   pHsa = rvs::hsa::Get();
 
   running_size = 0;
@@ -155,71 +145,46 @@ int pebbworker::initialize(uint16_t Src, uint16_t Dst, bool h2d, bool d2h) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbworker::do_transfer() {
+int pbqtworker::do_transfer() {
   double duration;
-  int sts = -1;
+  int sts;
   unsigned int startsec;
   unsigned int startusec;
   unsigned int endsec;
   unsigned int endusec;
+  std::string msg;
 
-  RVSTRACE_
+  msg = "[" + action_name + "] pbqt transfer " + std::to_string(src_node) + " "
+      + std::to_string(dst_node) + " ";
 
-  brun = true;
-  if (loglevel >= rvs::logdebug)
-    rvs::lp::get_ticks(&startsec, &startusec);
+  rvs::lp::get_ticks(&startsec, &startusec);
 
   if (block_size.size() == 0) {
-    RVSTRACE_
     block_size = pHsa->size_list;
   }
-
   for (size_t i = 0; brun && i < block_size.size(); i++) {
-    RVSTRACE_
     current_size = block_size[i];
+    sts = pHsa->SendTraffic(src_node, dst_node, current_size,
+                            bidirect, &duration);
 
-    if (rvs::lp::Stopping()) {
-      RVSTRACE_
-      return -1;
-    }
-    // if needed, swap source and destination
-    if (!prop_h2d && prop_d2h) {
-      RVSTRACE_
-      sts = pHsa->SendTraffic(dst_node, src_node, current_size,
-                              bidirect, &duration);
-    } else {
-      RVSTRACE_
-      sts = pHsa->SendTraffic(src_node, dst_node, current_size,
-                              bidirect, &duration);
-    }
     if (sts) {
-      std::string msg = "internal error, src: " + std::to_string(src_node)
-      + "   dst: " +std::to_string(dst_node)
-      + "   current size: " + std::to_string(current_size)
-      + " status "+ std::to_string(sts);
+      msg = "internal error, src: " + std::to_string(src_node)
+                + "   dst: " + std::to_string(dst_node)
+                + "   current size: " + std::to_string(current_size);
       rvs::lp::Err(msg, MODULE_NAME, action_name);
       return sts;
     }
 
     {
-      RVSTRACE_
       std::lock_guard<std::mutex> lk(cntmutex);
       running_size += current_size;
       running_duration += duration;
     }
   }
 
-  RVSTRACE_
-  if (loglevel >= rvs::logdebug) {
-    RVSTRACE_
-    std::string msg;
-    msg = "[" + action_name + "] pebb transfer " + std::to_string(src_node)
-        + " " + std::to_string(dst_node) + " ";
-
-    rvs::lp::get_ticks(&endsec, &endusec);
-    rvs::lp::Log(msg + "start", rvs::logdebug, startsec, startusec);
-    rvs::lp::Log(msg + "finish", rvs::logdebug, endsec, endusec);
-  }
+  rvs::lp::get_ticks(&endsec, &endusec);
+  rvs::lp::Log(msg + "start", rvs::logdebug, startsec, startusec);
+  rvs::lp::Log(msg + "finish", rvs::logdebug, endsec, endusec);
 
   return 0;
 }
@@ -236,8 +201,8 @@ int pebbworker::do_transfer() {
  * interval (in seconds)
  *
  * */
-void pebbworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
-                                 size_t* Size, double* Duration) {
+void pbqtworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
+                             size_t* Size, double* Duration) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
 
@@ -269,8 +234,8 @@ void pebbworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
  * @param bReset [in] if 'true' set final totals to zero
  *
  * */
-void pebbworker::get_final_data(uint16_t* Src, uint16_t* Dst, bool* Bidirect,
-                               size_t* Size, double* Duration, bool bReset) {
+void pbqtworker::get_final_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
+                           size_t* Size, double* Duration, bool bReset) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
 

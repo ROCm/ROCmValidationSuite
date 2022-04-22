@@ -50,10 +50,10 @@ using std::string;
 using std::vector;
 using std::map;
 
-pebbworker_b2b::pebbworker_b2b()
-: pebbworker() {
+pbqtworker_b2b::pbqtworker_b2b()
+: pbqtworker() {
 }
-pebbworker_b2b::~pebbworker_b2b() {}
+pbqtworker_b2b::~pbqtworker_b2b() {}
 
 extern uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
@@ -65,15 +65,13 @@ extern uint64_t test_duration;
  *
  * @param Src source NUMA node
  * @param Dst destination NUMA node
- * @param h2d 'true' for host to device transfer
- * @param d2h 'true' for device to host transfer
+ * @param Bidirect 'true' for bidirectional transfer
  * @param Size size of block used for transfer
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pebbworker_b2b::initialize(uint16_t Src, uint16_t Dst,
-                               bool h2d, bool d2h, size_t Size) {
-  pebbworker::initialize(Src, Dst, h2d, d2h);
+int pbqtworker_b2b::initialize(int Src, int Dst, bool Bidirect, size_t Size) {
+  pbqtworker::initialize(Src, Dst, Bidirect);
 
   b2b_block_size = Size;
 
@@ -103,7 +101,7 @@ int pebbworker_b2b::initialize(uint16_t Src, uint16_t Dst,
 /**
  * @brief release all resources used in transfers
  */
-void pebbworker_b2b::deinit() {
+void pbqtworker_b2b::deinit() {
   RVSTRACE_
   // release fwd buffers if any
   if (ctx_fwd.pSrcBuff) {
@@ -149,9 +147,9 @@ void pebbworker_b2b::deinit() {
  * Loops while brun == TRUE and performs polled monitoring avery 1msec.
  *
  * */
-void pebbworker_b2b::run() {
-  std::chrono::time_point<std::chrono::system_clock> pebb_start_time;
-  std::chrono::time_point<std::chrono::system_clock> pebb_end_time;
+void pbqtworker_b2b::run() {
+  std::chrono::time_point<std::chrono::system_clock> pbqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pbqt_end_time;
   hsa_status_t status;
   int sts;
 
@@ -161,29 +159,27 @@ void pebbworker_b2b::run() {
   brun = true;
 
   // allocate buffers and grant permissions for forward transfer
-  if (prop_h2d) {
-    sts = pHsa->Allocate(ctx_fwd.SrcAgentIx, ctx_fwd.DstAgentIx, b2b_block_size,
-            &ctx_fwd.SrcPool, &ctx_fwd.pSrcBuff,
-            &ctx_fwd.DstPool, &ctx_fwd.pDstBuff);
-    if (sts) {
-      RVSTRACE_
-      deinit();
-      return;
-    }
+  sts = pHsa->Allocate(ctx_fwd.SrcAgentIx, ctx_fwd.DstAgentIx, b2b_block_size,
+          &ctx_fwd.SrcPool, &ctx_fwd.pSrcBuff,
+          &ctx_fwd.DstPool, &ctx_fwd.pDstBuff);
+  if (sts) {
+    RVSTRACE_
+    deinit();
+    return;
+  }
 
-    // Create a signal to wait on forward copy operation
-    if (HSA_STATUS_SUCCESS !=
-      (status = hsa_signal_create(1, 0, NULL, &ctx_fwd.Sig))) {
-      rvs::hsa::print_hsa_status(__FILE__, __LINE__, __func__,
-                "hsa_signal_create()", status);
-      RVSTRACE_
-      deinit();
-      return;
-    }
+  // Create a signal to wait on forward copy operation
+  if (HSA_STATUS_SUCCESS !=
+    (status = hsa_signal_create(1, 0, NULL, &ctx_fwd.Sig))) {
+    rvs::hsa::print_hsa_status(__FILE__, __LINE__, __func__,
+              "hsa_signal_create()", status);
+    RVSTRACE_
+    deinit();
+    return;
   }
 
   // allocate buffers and grant permissions for reverse transfer
-  if (prop_d2h) {
+  if (bidirect) {
     sts = pHsa->Allocate(ctx_rev.SrcAgentIx, ctx_rev.DstAgentIx, b2b_block_size,
             &ctx_rev.SrcPool, &ctx_rev.pSrcBuff,
             &ctx_rev.DstPool, &ctx_rev.pDstBuff);
@@ -206,26 +202,26 @@ void pebbworker_b2b::run() {
   }
 
 
-  pebb_start_time = std::chrono::system_clock::now();
+  pbqt_start_time = std::chrono::system_clock::now();
+
   while (brun) {
     // initiate forward transfer
-    if (prop_h2d) {
-      RVSTRACE_
-      hsa_signal_store_relaxed(ctx_fwd.Sig, 1);
-      if (HSA_STATUS_SUCCESS !=
-        (status = hsa_amd_memory_async_copy(
-                    ctx_fwd.pDstBuff, ctx_fwd.DstAgent,
-                    ctx_fwd.pSrcBuff, ctx_fwd.SrcAgent,
-                    b2b_block_size,
-                    0, NULL, ctx_fwd.Sig))) {
-        rvs::hsa::print_hsa_status(__FILE__, __LINE__, __func__,
-                  "hsa_amd_memory_async_copy()",
-                  status);
-        break;
-      }
+
+    RVSTRACE_
+    hsa_signal_store_relaxed(ctx_fwd.Sig, 1);
+    if (HSA_STATUS_SUCCESS !=
+      (status = hsa_amd_memory_async_copy(
+                  ctx_fwd.pDstBuff, ctx_fwd.DstAgent,
+                  ctx_fwd.pSrcBuff, ctx_fwd.SrcAgent,
+                  b2b_block_size,
+                  0, NULL, ctx_fwd.Sig))) {
+      rvs::hsa::print_hsa_status(__FILE__, __LINE__, __func__,
+                "hsa_amd_memory_async_copy()",
+                status);
+      break;
     }
 
-    if (prop_d2h) {
+    if (bidirect) {
       RVSTRACE_
       // initiate reverse transfer
       hsa_signal_store_relaxed(ctx_rev.Sig, 1);
@@ -242,14 +238,12 @@ void pebbworker_b2b::run() {
     }
 
     // wait for transfer to complete
-    if (prop_h2d) {
-      RVSTRACE_
-      while (hsa_signal_wait_acquire(ctx_fwd.Sig, HSA_SIGNAL_CONDITION_LT,
-      1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)) {}
-    }
+    RVSTRACE_
+    while (hsa_signal_wait_acquire(ctx_fwd.Sig, HSA_SIGNAL_CONDITION_LT,
+    1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)) {}
 
     // if bidirectional, also wait for reverse transfer to complete
-    if (prop_d2h) {
+    if (bidirect) {
       RVSTRACE_
       while (hsa_signal_wait_acquire(ctx_rev.Sig, HSA_SIGNAL_CONDITION_LT,
       1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)) {}
@@ -257,29 +251,22 @@ void pebbworker_b2b::run() {
 
     RVSTRACE_
     // get transfer duration
-    double duration = 0.0;
-    if (!prop_h2d && prop_d2h) {
-      duration = pHsa->GetCopyTime(bidirect,
-                                  ctx_rev.Sig, ctx_fwd.Sig)/1000000000;
-    } else {
-      duration = pHsa->GetCopyTime(bidirect,
+    double duration = pHsa->GetCopyTime(bidirect,
                                   ctx_fwd.Sig, ctx_rev.Sig)/1000000000;
-    }
-
     {
       RVSTRACE_
       std::lock_guard<std::mutex> lk(cntmutex);
       running_size += b2b_block_size;
       running_duration += duration;
     }
+    pbqt_end_time = std::chrono::system_clock::now();
 
-    pebb_end_time = std::chrono::system_clock::now();
-
-    uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
+    uint64_t test_time = time_diff(pbqt_end_time, pbqt_start_time) ;
 
     if(test_time >= test_duration) {
           break;
     }
+
   }  // while(brun)
 
   RVSTRACE_
