@@ -56,7 +56,7 @@ for test_bandwidth_f in test_bandwidth:
                             f.write("actions:" + "\n")
                             f.write("- name: action_1 " + "\n")
                             f.write("  device: all" + "\n")
-                            f.write("  module: pqt" + "\n")
+                            f.write("  module: pbqt" + "\n")
                             f.write("  log_interval: " + str(log_interval_f) + "\n")
                             f.write("  duration: " + str(duration_f) + "\n")
 

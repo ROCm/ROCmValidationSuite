@@ -13,8 +13,8 @@ echo "===========================peqt========================="
 sudo ./peqt.new.sh  2>&1 | tee peqt.txt
 echo "==========================pesm========================="
 sudo  ./pesm.new.sh  2>&1 | tee pesm.txt
-echo "===========================pqt========================="
-sudo ./pqt.new.sh  2>&1 | tee pqt.txt
+echo "===========================pbqt========================="
+sudo ./pbqt.new.sh  2>&1 | tee pbqt.txt
 echo "===========================memory========================="
 sudo ./rvs-mem.sh  2>&1 | tee memory.txt
 
