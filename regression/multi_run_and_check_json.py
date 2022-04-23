@@ -36,7 +36,7 @@ if not debug_level in ['0', '1', '2', '3', '4', '5']:
    print "debug_level (argument 5) should be inside true /false"
    sys.exit(1)
 
-# ./multi_run_and_check_json.py /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite  /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pbqt0.conf 5 3
+# ./multi_run_and_check_json.py /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite  /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pqt0.conf 5 3
 
 # get current location
 curr_location = subprocess.check_output(["pwd", ""])

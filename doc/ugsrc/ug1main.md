@@ -1793,7 +1793,7 @@ Results for three GPUs are:
 In this example, BAR sizes reported by GPUs match those listed in configuration
 key except for the BAR5, hence the test fails.
 
-@section usg10 10 PBQT Module
+@section usg10 10 PQT Module
 The P2P Qualification Tool is designed to provide the list of all GPUs that
 support P2P and characterize the P2P links between peers. In addition to testing
 for P2P compatibility, this test will perform a peer-to-peer throughput test
@@ -1892,18 +1892,18 @@ You may obtain indication of how long single transfer between two NUMA nodes
 take by running test with "-d 4" switch and observing DEBUG messages for
 transfer start/finish. An output may look like this:
 
-    [DEBUG ] [183940.634118] [action_1] pbqt transfer 6 5 start
-    [DEBUG ] [183941.311671] [action_1] pbqt transfer 6 5 finish
-    [DEBUG ] [183941.312746] [action_1] pbqt transfer 4 5 start
-    [DEBUG ] [183941.990174] [action_1] pbqt transfer 4 5 finish
-    [DEBUG ] [183941.991244] [action_1] pbqt transfer 4 6 start
-    [DEBUG ] [183942.668687] [action_1] pbqt transfer 4 6 finish
-    [DEBUG ] [183942.669756] [action_1] pbqt transfer 5 4 start
-    [DEBUG ] [183943.340957] [action_1] pbqt transfer 5 4 finish
-    [DEBUG ] [183943.342037] [action_1] pbqt transfer 5 6 start
-    [DEBUG ] [183944.17957 ] [action_1] pbqt transfer 5 6 finish
-    [DEBUG ] [183944.19032 ] [action_1] pbqt transfer 6 4 start
-    [DEBUG ] [183944.700868] [action_1] pbqt transfer 6 4 finish
+    [DEBUG ] [183940.634118] [action_1] pqt transfer 6 5 start
+    [DEBUG ] [183941.311671] [action_1] pqt transfer 6 5 finish
+    [DEBUG ] [183941.312746] [action_1] pqt transfer 4 5 start
+    [DEBUG ] [183941.990174] [action_1] pqt transfer 4 5 finish
+    [DEBUG ] [183941.991244] [action_1] pqt transfer 4 6 start
+    [DEBUG ] [183942.668687] [action_1] pqt transfer 4 6 finish
+    [DEBUG ] [183942.669756] [action_1] pqt transfer 5 4 start
+    [DEBUG ] [183943.340957] [action_1] pqt transfer 5 4 finish
+    [DEBUG ] [183943.342037] [action_1] pqt transfer 5 6 start
+    [DEBUG ] [183944.17957 ] [action_1] pqt transfer 5 6 finish
+    [DEBUG ] [183944.19032 ] [action_1] pqt transfer 6 4 start
+    [DEBUG ] [183944.700868] [action_1] pqt transfer 6 4 finish
 
 From this printout, it can be concluded that single transfer takes on average
 800ms. Values for **log\_interval** and **duration** should be set accordingly.
@@ -1985,7 +1985,7 @@ tested for p2p capability with no bandwidth testing (test_bandwidth: false).
     actions:
     - name: action_1
       device: all
-      module: pbqt
+      module: pqt
       peers: all
       test_bandwidth: false
 
@@ -2015,7 +2015,7 @@ for each completed transfer (log_interval: 0)
     actions:
     - name: action_1
       device: all
-      module: pbqt
+      module: pqt
       log_interval: 0
       duration: 0
       peers: all
@@ -2072,7 +2072,7 @@ false).
     actions:
     - name: action_1
       device: 50599
-      module: pbqt
+      module: pqt
       log_interval: 1000
       duration: 5000
       count: 0
@@ -2107,7 +2107,7 @@ of tests:
     actions:
     - name: action_1
       device: all
-      module: pbqt
+      module: pqt
       log_interval: 1200
       duration: 4000
       peers: all
