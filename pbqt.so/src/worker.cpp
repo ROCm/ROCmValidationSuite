@@ -45,15 +45,15 @@ extern "C" {
 #include "include/gpu_util.h"
 #include "include/rvsloglp.h"
 #include "include/rvshsa.h"
-#define MODULE_NAME "PQT"
+#define MODULE_NAME "PBQT"
 
 
-pqtworker::pqtworker() {
+pbqtworker::pbqtworker() {
   // set to 'true' so that do_transfer() will also work
   // when parallel: false
   brun = true;
 }
-pqtworker::~pqtworker() {}
+pbqtworker::~pbqtworker() {}
 
 extern uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
@@ -66,31 +66,31 @@ extern uint64_t test_duration;
  * Loops while brun == TRUE and performs polled monitoring avery 1msec.
  *
  * */
-void pqtworker::run() {
+void pbqtworker::run() {
   std::string msg;
-  std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
-  std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
+  std::chrono::time_point<std::chrono::system_clock> pbqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pbqt_end_time;
 
-  msg = "[" + action_name + "] pqt thread " + std::to_string(src_node) + " "
+  msg = "[" + action_name + "] pbqt thread " + std::to_string(src_node) + " "
   + std::to_string(dst_node) + " has started";
   rvs::lp::Log(msg, rvs::logdebug);
 
   brun = true;
 
-  pqt_start_time = std::chrono::system_clock::now();
+  pbqt_start_time = std::chrono::system_clock::now();
   do {
       do_transfer();
 
-      pqt_end_time = std::chrono::system_clock::now();
+      pbqt_end_time = std::chrono::system_clock::now();
 
-      uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
+      uint64_t test_time = time_diff(pbqt_end_time, pbqt_start_time) ;
 
       if(test_time >= test_duration) {
           break;
       }
    } while (brun);
 
-  msg = "[" + action_name + "] pqt thread " + std::to_string(src_node) + " "
+  msg = "[" + action_name + "] pbqt thread " + std::to_string(src_node) + " "
   + std::to_string(dst_node) + " has finished";
   rvs::lp::Log(msg, rvs::logdebug);
 }
@@ -102,11 +102,11 @@ void pqtworker::run() {
  * Then it waits for std::thread to exit before returning.
  *
  * */
-void pqtworker::stop() {
+void pbqtworker::stop() {
   std::string msg;
 
-  msg = "[" + stop_action_name + "] pqt transfer " + std::to_string(src_node)
-      + " " + std::to_string(dst_node) + " in pqtworker::stop()";
+  msg = "[" + stop_action_name + "] pbqt transfer " + std::to_string(src_node)
+      + " " + std::to_string(dst_node) + " in pbqtworker::stop()";
   rvs::lp::Log(msg, rvs::logtrace);
 
   brun = false;
@@ -121,7 +121,7 @@ void pqtworker::stop() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtworker::initialize(uint16_t Src, uint16_t Dst, bool Bidirect) {
+int pbqtworker::initialize(uint16_t Src, uint16_t Dst, bool Bidirect) {
   src_node = Src;
   dst_node = Dst;
   bidirect = Bidirect;
@@ -145,7 +145,7 @@ int pqtworker::initialize(uint16_t Src, uint16_t Dst, bool Bidirect) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtworker::do_transfer() {
+int pbqtworker::do_transfer() {
   double duration;
   int sts;
   unsigned int startsec;
@@ -154,7 +154,7 @@ int pqtworker::do_transfer() {
   unsigned int endusec;
   std::string msg;
 
-  msg = "[" + action_name + "] pqt transfer " + std::to_string(src_node) + " "
+  msg = "[" + action_name + "] pbqt transfer " + std::to_string(src_node) + " "
       + std::to_string(dst_node) + " ";
 
   rvs::lp::get_ticks(&startsec, &startusec);
@@ -201,7 +201,7 @@ int pqtworker::do_transfer() {
  * interval (in seconds)
  *
  * */
-void pqtworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
+void pbqtworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
                              size_t* Size, double* Duration) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
@@ -234,7 +234,7 @@ void pqtworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
  * @param bReset [in] if 'true' set final totals to zero
  *
  * */
-void pqtworker::get_final_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
+void pbqtworker::get_final_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
                            size_t* Size, double* Duration, bool bReset) {
   // lock data until totalling has finished
   std::lock_guard<std::mutex> lk(cntmutex);
