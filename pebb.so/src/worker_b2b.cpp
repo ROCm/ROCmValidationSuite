@@ -150,8 +150,8 @@ void pebbworker_b2b::deinit() {
  *
  * */
 void pebbworker_b2b::run() {
-  std::chrono::time_point<std::chrono::system_clock> pebb_start_time;
-  std::chrono::time_point<std::chrono::system_clock> pebb_end_time;
+  std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
   hsa_status_t status;
   int sts;
 
@@ -206,7 +206,7 @@ void pebbworker_b2b::run() {
   }
 
 
-  pebb_start_time = std::chrono::system_clock::now();
+  pqt_start_time = std::chrono::system_clock::now();
   while (brun) {
     // initiate forward transfer
     if (prop_h2d) {
@@ -273,9 +273,9 @@ void pebbworker_b2b::run() {
       running_duration += duration;
     }
 
-    pebb_end_time = std::chrono::system_clock::now();
+    pqt_end_time = std::chrono::system_clock::now();
 
-    uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
+    uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
 
     if(test_time >= test_duration) {
           break;

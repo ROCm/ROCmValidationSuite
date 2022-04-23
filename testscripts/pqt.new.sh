@@ -1,4 +1,4 @@
 #!/bin/sh
 date
-../conf/deviceid.sh ../conf/pbqt_single.conf
-echo 'pbqt';sudo ../../../bin/rvs -c ../conf/pbqt_single.conf -d 3; date
+../conf/deviceid.sh ../conf/pqt_single.conf
+echo 'pqt';sudo ../../../bin/rvs -c ../conf/pqt_single.conf -d 3; date

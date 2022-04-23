@@ -69,7 +69,7 @@ pebb_action::~pebb_action() {
 }
 
 /**
- * @brief reads all PEBB related configuration keys from
+ * @brief reads all PQT related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */

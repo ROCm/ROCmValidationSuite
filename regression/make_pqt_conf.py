@@ -10,7 +10,7 @@ import sys
 from random import sample
 
 # global variables
-module_name = "pbqt"
+module_name = "pqt"
 cmake_file_name = "rand_tests.cmake"
 
 # collect gpu IDs of registered devices
@@ -80,7 +80,7 @@ cmake_file.write(cmake_file_header)
 cmake_file.write("find_package(PythonInterp)\n\n")
 #cmake_file.write("add_test(NAME proba2 COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/proba.py WORKING_DIRECTORY ${RVS_BINTEST_FOLDER})\n")
 
-#add_test(NAME pbqt_test COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf/rand_pbqt0.conf true true WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+#add_test(NAME pqt_test COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/rvs/conf/rand_pqt0.conf true true WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 counter = 0
 total_iterations = (len(gpu_ids) + 1) * len(log_interval) * len(duration) * len(test_bandwidth) * len(bidirectional) * len(parralel) * len(device_id)
@@ -124,7 +124,7 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parallel_f, d
         f.write('actions:\n')
         f.write('- name: action_1 \n')
         f.write('  device: all\n')
-        f.write('  module: pbqt\n')
+        f.write('  module: pqt\n')
         f.write('  log_interval: {}\n'.format(log_interval_f))
         f.write('  duration: {}\n'.format(duration_f))
 
@@ -149,17 +149,17 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parallel_f, d
         # new conf file is created so add the test to the regression (console, log, json)
         # ---------------------------------------------------------------------------------------
         # console and json
-        cmake_file.write("add_test(NAME rand.pbqt.json." + str(counter) + " COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/rand_pbqt" + str(counter) + ".conf true true true ttp 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)\n\n\n")
+        cmake_file.write("add_test(NAME rand.pqt.json." + str(counter) + " COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/rand_pqt" + str(counter) + ".conf true true true ttp 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)\n\n\n")
         # console and output file
-        cmake_file.write("add_test(NAME rand.pbqt.log." + str(counter) + " COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/rand_pbqt" + str(counter) + ".conf true true false ttp 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)\n\n\n")
+        cmake_file.write("add_test(NAME rand.pqt.log." + str(counter) + " COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/rand_pqt" + str(counter) + ".conf true true false ttp 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)\n\n\n")
         # console
-        cmake_file.write("add_test(NAME rand.pbqt.con." + str(counter) + " COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/rand_pbqt" + str(counter) + ".conf true false false ttp 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)\n\n\n")
+        cmake_file.write("add_test(NAME rand.pqt.con." + str(counter) + " COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/run_and_check_test.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/rand_pqt" + str(counter) + ".conf true false false ttp 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)\n\n\n")
 
         sample_size += 1
         if sample_size == gpu_ids_size + 1:
             break
 
 # add a single rand test with muliple runs and append
-cmake_file.write("add_test(NAME append.pbqt.json COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/multi_run_and_check_json.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/rand_pbqt1.conf 5 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)\n\n\n")
+cmake_file.write("add_test(NAME append.pqt.json COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../regression/multi_run_and_check_json.py ${CMAKE_BINARY_DIR}/bin ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../rvs/conf/rand_pqt1.conf 5 3 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin)\n\n\n")
 
 cmake_file.close() 

@@ -782,7 +782,7 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = rvs src include gpup.so gm.so pesm.so rcqt.so peqt.so smqt.so \
-                         pbqt.so pebb.so gst.so iet.so
+                         pqt.so pebb.so gst.so iet.so
 
 
 # This tag can be used to specify the character encoding of the source files
