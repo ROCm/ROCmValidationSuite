@@ -16,7 +16,7 @@ print('curr_location',curr_location)
 build_location = os.environ['RVS_BUILD']
 rocm_location = os.environ['RVS']
 # single conf files
-single_conf = ['gst_single.conf', 'pqt_single.conf', 'pebb_single.conf',
+single_conf = ['gst_single.conf', 'pbqt_single.conf', 'pebb_single.conf',
                'iet_single.conf', 'peqt_single.conf', 'rand_single.conf']
 # set output folder and configuration file format
 conf_files = []

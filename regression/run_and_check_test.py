@@ -55,10 +55,10 @@ if not debug_level in ['0', '1', '2', '3', '4', '5']:
    print "debug_level (argument 8) should be inside true /false"
    sys.exit(1)
 
-# ./run_and_check_test.py /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite  /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pqt0.conf true true true ttp 3
+# ./run_and_check_test.py /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite  /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pbqt0.conf true true true ttp 3
 
-# ./run_single_test /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pqt0.conf 3 [tmp_output_file.txt|no_log] [true|false] tmp_console_file.txt
-# ./run_single_test /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pqt0.conf 3 tmp_output_file.txt true tmp_console_file.txt
+# ./run_single_test /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pbqt0.conf 3 [tmp_output_file.txt|no_log] [true|false] tmp_console_file.txt
+# ./run_single_test /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pbqt0.conf 3 tmp_output_file.txt true tmp_console_file.txt
 
 # get current location
 curr_location = subprocess.check_output(["pwd", ""])
