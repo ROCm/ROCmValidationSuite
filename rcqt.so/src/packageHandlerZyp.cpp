@@ -13,7 +13,7 @@ PackageHandlerZyp::PackageHandlerZyp(std::string pkgname): PackageHandler{} {
 
   const std::vector<std::string> cmd {std::string("info"), std::string("--requires"), std::string("info")};
 
-	metaInfo.reset(new ZypPackageInfo(pkgname, std::string("zypper"), cmd));
+	metaInfo.reset(new ZypPackageInfo(pkgname, cmd));
   metaInfo->fillPkgInfo();
   m_manifest = metaInfo->getFileName();
 }
@@ -22,7 +22,7 @@ PackageHandlerZyp::PackageHandlerZyp(): PackageHandler{} {
 
   const std::vector<std::string> cmd {std::string("info"), std::string("--requires"), std::string("info")};
 
-	metaInfo.reset(new ZypPackageInfo(std::string("zypper"), cmd));
+	metaInfo.reset(new ZypPackageInfo(cmd));
 }
 
 bool PackageHandlerZyp::pkgrOutputParser(const std::string& s_data, package_info& info){

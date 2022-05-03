@@ -13,7 +13,7 @@ PackageHandlerRpm::PackageHandlerRpm(std::string pkgname): PackageHandler{} {
 
   const std::vector<std::string> cmd {std::string("-qR"), std::string(""), std::string("-qi")};
 
-	metaInfo.reset(new RpmPackageInfo(pkgname, std::string("rpm"), cmd));
+	metaInfo.reset(new RpmPackageInfo(pkgname, cmd));
   metaInfo->fillPkgInfo();
   m_manifest = metaInfo->getFileName();
 }
@@ -22,7 +22,7 @@ PackageHandlerRpm::PackageHandlerRpm(): PackageHandler{} {
 
   const std::vector<std::string> cmd {std::string("-qR"), std::string(""), std::string("-qi")};
 
-	metaInfo.reset(new RpmPackageInfo(std::string("rpm"), cmd));
+	metaInfo.reset(new RpmPackageInfo(cmd));
 }
 
 bool PackageHandlerRpm::pkgrOutputParser(const std::string& s_data, package_info& info){

@@ -106,8 +106,7 @@ rcqt_action::~rcqt_action() {
 
 int rcqt_action::run() {
   string msg;
-  bool pkgchk_bool = false;
-  bool pkglist_bool = false;
+  bool propchk = false;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -134,12 +133,12 @@ int rcqt_action::run() {
   }
 
   // check if package check action is going to trigger
-  pkgchk_bool =  rvs::actionbase::has_property(PACKAGE);
-  if (pkgchk_bool == true)
+  propchk =  rvs::actionbase::has_property(PACKAGE);
+  if (propchk == true)
     return pkgchk_run();
 
-  pkglist_bool =  rvs::actionbase::has_property(PACKAGELIST);
-  if (pkglist_bool == true)
+  propchk =  rvs::actionbase::has_property(PACKAGELIST);
+  if (propchk == true)
     return pkglist_run();
 
   return -1;

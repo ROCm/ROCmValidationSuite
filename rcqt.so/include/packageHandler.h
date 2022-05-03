@@ -39,7 +39,7 @@ public:
 		return m_pkglist;
 	}
   void listPackageVersion();
-	virtual ~PackageHandler(){}
+  virtual ~PackageHandler(){}
 	
 private:
 	std::map<std::string, std::string> m_pkgversionmap;

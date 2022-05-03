@@ -77,18 +77,16 @@ void PackageHandler::listPackageVersion(){
 
 	for (const auto& pkgname: pkglist){
 
-		++totalPackages;
+    ++totalPackages;
 
-		auto installedversion = getInstalledVersion(pkgname);
+    auto installedversion = getInstalledVersion(pkgname);
     if(!installedversion.empty()){
 			++installedPackages;
-			std::cout << "Package " << pkgname << " installed version is " << 
-					installedversion << std::endl;
+			std::cout << "Package " << pkgname << " installed version is " << installedversion << std::endl;
     }
     else {
       ++missingPackages;
-      std::cout << "Package " << pkgname << " not installed " <<
-        std::endl;
+      std::cout << "Package " << pkgname << " not installed " << std::endl;
       continue;
     }
 	}
