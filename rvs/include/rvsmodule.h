@@ -54,6 +54,7 @@ typedef std::pair<std::string, module*> t_mmpair;
   // collection related members
  public:
   static int     initialize(const char* pConfigName);
+  static int     init_module(const std::string& name);
   static action* action_create(const char* pModuleShortName);
   static int     action_destroy(action*);
   static int     terminate();

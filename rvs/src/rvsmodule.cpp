@@ -128,8 +128,16 @@ int rvs::module::initialize(const char* pConfig) {
   return 0;
 }
 
+/**
+ * @brief Given module name, add it to filemap list
+ *
+ *
+ * @param name Name of of module
+ * @return 0 if success
+ *
+ */
 
-int init_module(const std::string& name){
+int rvs::module::init_module(const std::string& name){
   if(mods.find(name) != mods.end(){
     auto soname = "lib"+name+".so";
     filemap.insert(std::pair<string, string>(name,soname);

@@ -54,7 +54,7 @@ rvs::exec::~exec() {
 }
 
 
-int rvs::exec::setloglevel(int loglevel){
+int rvs::exec::set_log_level(int loglevel){
     if (loglevel < 0 || loglevel > 5) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
@@ -65,9 +65,18 @@ int rvs::exec::setloglevel(int loglevel){
     logger::log_level(loglevel);
 }
 
-int rvs::exec::initrvs(const std::string& config_file){
+int rvs::exec::init_rvs(const std::string& module){
   int sts = 0;
   logger::log_level(rvs::logerror);
+
+  if (rvs::module::init_module(module.c_str())) {
+    return 1;
+  }
+  return 0;
+
+}
+
+int rvs::exec::rvs_module_run(const std::string& config_file){
   std::ifstream file(config_file);
     if (!file.good()) {
       char buff[1024];
@@ -77,21 +86,38 @@ int rvs::exec::initrvs(const std::string& config_file){
       return -1;
     }
   file.close();
-
-  // construct modules configuration file relative path
-  auto val = ".rvsmodules.config";
-  // Check if config file exists if not check the old file location for backward compatibility
-  std::ifstream conf_file(val);
-  if (!conf_file.good()) {
-    val = path + ".rvsmodules.config";
+  try {
+    sts = do_yaml(config_file);
+  } catch(std::exception& e) {
+    sts = -999;
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+             "error processing configuration file: %s", config_file.c_str());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
+    snprintf(buff, sizeof(buff),
+             "exception: %s", e.what());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
   }
-  conf_file.close();
+  return sts;
+}
 
-  if (rvs::module::initialize(val.c_str())) {
-    return 1;
+int rvs::exec::rvs_module_destroy(){
+  rvs::module::terminate();
+  logger::terminate();
+
+  if (sts) {
+    DTRACE_
+    return sts;
   }
 
+  // if stop was requested
+  if (rvs::logger::Stopping()) {
+    DTRACE_
+    return -1;
+  }
 
+  DTRACE_
+  return 0;
 
 }
 

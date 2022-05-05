@@ -49,7 +49,10 @@ class exec {
   ~exec();
 
   int run();
-
+  int set_log_level(int loglevel);
+  int init_rvs(const std::string& module);
+  int rvs_module_run(const std::string& config_file);
+  int rvs_module_destroy();
  protected:
   void  do_help(void);
   void  do_version(void);
