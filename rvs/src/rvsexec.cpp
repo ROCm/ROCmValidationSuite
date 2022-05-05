@@ -58,11 +58,12 @@ int rvs::exec::set_log_level(int loglevel){
     if (loglevel < 0 || loglevel > 5) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
-                "logging level not in range [0..5]: %s", val.c_str());
+                "logging level not in range [0..5]: %d", loglevel);
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return -1;
     }
     logger::log_level(loglevel);
+    return 0;
 }
 
 int rvs::exec::init_rvs(const std::string& module){
@@ -77,13 +78,14 @@ int rvs::exec::init_rvs(const std::string& module){
 }
 
 int rvs::exec::rvs_module_run(const std::string& config_file){
+  int sts = -1;
   std::ifstream file(config_file);
     if (!file.good()) {
       char buff[1024];
       snprintf(buff, sizeof(buff), "invalid file path ");
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
       file.close();
-      return -1;
+      return sts;
     }
   file.close();
   try {
@@ -104,11 +106,6 @@ int rvs::exec::rvs_module_run(const std::string& config_file){
 int rvs::exec::rvs_module_destroy(){
   rvs::module::terminate();
   logger::terminate();
-
-  if (sts) {
-    DTRACE_
-    return sts;
-  }
 
   // if stop was requested
   if (rvs::logger::Stopping()) {

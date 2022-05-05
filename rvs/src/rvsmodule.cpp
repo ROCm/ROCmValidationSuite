@@ -138,9 +138,9 @@ int rvs::module::initialize(const char* pConfig) {
  */
 
 int rvs::module::init_module(const std::string& name){
-  if(mods.find(name) != mods.end(){
+  if(mods.find(name) != mods.end()){
     auto soname = "lib"+name+".so";
-    filemap.insert(std::pair<string, string>(name,soname);
+    filemap.insert(std::pair<string, string>(name,soname));
     return 0;
   } 
   return -1;
