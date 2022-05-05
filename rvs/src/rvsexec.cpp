@@ -54,6 +54,47 @@ rvs::exec::~exec() {
 }
 
 
+int rvs::exec::setloglevel(int loglevel){
+    if (loglevel < 0 || loglevel > 5) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+                "logging level not in range [0..5]: %s", val.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+    logger::log_level(loglevel);
+}
+
+int rvs::exec::initrvs(const std::string& config_file){
+  int sts = 0;
+  logger::log_level(rvs::logerror);
+  std::ifstream file(config_file);
+    if (!file.good()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff), "invalid file path ");
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      file.close();
+      return -1;
+    }
+  file.close();
+
+  // construct modules configuration file relative path
+  auto val = ".rvsmodules.config";
+  // Check if config file exists if not check the old file location for backward compatibility
+  std::ifstream conf_file(val);
+  if (!conf_file.good()) {
+    val = path + ".rvsmodules.config";
+  }
+  conf_file.close();
+
+  if (rvs::module::initialize(val.c_str())) {
+    return 1;
+  }
+
+
+
+}
+
 /**
  * @brief Main executor method.
  *

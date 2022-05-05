@@ -30,6 +30,7 @@
 #include <utility>
 #include <string>
 #include <map>
+#include <unordered_set>
 #include <memory>
 #include <iostream>
 #include <fstream>
@@ -46,7 +47,7 @@
 std::map<std::string, rvs::module*> rvs::module::modulemap;
 std::map<std::string, std::string>  rvs::module::filemap;
 YAML::Node rvs::module::config;
-
+static std::unordered_set<std::string> mods{"gst", "gm","mem", "iet"};
 using std::string;
 
 /**
@@ -127,6 +128,15 @@ int rvs::module::initialize(const char* pConfig) {
   return 0;
 }
 
+
+int init_module(const std::string& name){
+  if(mods.find(name) != mods.end(){
+    auto soname = "lib"+name+".so";
+    filemap.insert(std::pair<string, string>(name,soname);
+    return 0;
+  } 
+  return -1;
+}
 /**
  * @brief Given module name, return pointer to module instance
  *
@@ -158,7 +168,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
       return NULL;
     }
-
+     
     // open .so
     string libpath;
     if (rvs::options::has_option("-m", &libpath)) {
