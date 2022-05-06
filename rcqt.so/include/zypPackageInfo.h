@@ -4,14 +4,18 @@
 #include "metaPackageInfo.h"
 
 class ZypPackageInfo : public PackageInfo {
+
   public:
+
     ZypPackageInfo(const std::string& pkgname,
-        const std::string& pkgmgr,
         const std::vector <std::string> cmd):PackageInfo(pkgname,
-          pkgmgr,
-          cmd[0],
-          cmd[1],
-          cmd[2]){}
+          std::string("zypper"),
+          cmd){}
+
+    ZypPackageInfo(const std::vector <std::string> cmd):PackageInfo(
+          std::string("zypper"),
+          cmd){}
+
     bool readMetaPackageInfo(std::string ss) override;
 };
 #endif

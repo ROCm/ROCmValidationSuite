@@ -66,3 +66,33 @@ void PackageHandler::validatePackages(){
 	return ;	
 }
 
+void PackageHandler::listPackageVersion(){
+
+	auto pkglist = getPackageList();
+	if(pkglist.empty()){
+		std::cout << "no packages in the list" << std::endl;
+		return;
+	}
+	int totalPackages = 0, missingPackages = 0, installedPackages = 0;
+
+	for (const auto& pkgname: pkglist){
+
+    ++totalPackages;
+
+    auto installedversion = getInstalledVersion(pkgname);
+    if(!installedversion.empty()){
+			++installedPackages;
+			std::cout << "Package " << pkgname << " installed version is " << installedversion << std::endl;
+    }
+    else {
+      ++missingPackages;
+      std::cout << "Package " << pkgname << " not installed " << std::endl;
+      continue;
+    }
+	}
+
+	std::cout << "RCQT complete : " << std::endl;
+	std::cout << "\t Total Packages installed : " << installedPackages << std::endl;
+	return;
+}
+

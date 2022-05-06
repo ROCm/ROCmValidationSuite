@@ -5,7 +5,8 @@
 
 class PackageHandlerRpm: virtual public PackageHandler{
 public:
-	PackageHandlerRpm(std::string pkgname = "");
+	PackageHandlerRpm(std::string pkgname);
+	PackageHandlerRpm();
 	bool pkgrOutputParser(const std::string& s_data, 
 																	package_info& info)	override;
 	std::string getInstalledVersion(const std::string& package) override;	

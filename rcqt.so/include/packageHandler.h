@@ -30,11 +30,20 @@ public:
       metaInfo->fillPkgInfo();
 		  m_manifest = metaInfo->getFileName();
   */
-	}	
-	virtual ~PackageHandler(){}
+	}
+  
+  void setPackageList(const std::vector<std::string>& pkglist) {
+    m_pkglist = pkglist;
+	}
+	const std::vector<std::string>& getPackageList() const {
+		return m_pkglist;
+	}
+  void listPackageVersion();
+  virtual ~PackageHandler(){}
 	
 private:
 	std::map<std::string, std::string> m_pkgversionmap;
+  std::vector<std:: string> m_pkglist;
 protected:
 	std::unique_ptr<PackageInfo> metaInfo;
 	std::string m_manifest;	
