@@ -25,6 +25,8 @@
 
 cmake_minimum_required ( VERSION 3.5.0 )
 project ("rocm-validation-suite")
+#including GNUInstall Dir definitions.
+include( GNUInstallDirs )
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
@@ -158,7 +160,7 @@ set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 
 # Set and Install license file
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-install(FILES ${CPACK_RESOURCE_FILE_LICENSE} DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/doc/${CPACK_PACKAGE_NAME})
+install(FILES ${CPACK_RESOURCE_FILE_LICENSE} DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/doc/${CPACK_PACKAGE_NAME})
 
 set(RVS_COVERAGE FALSE CACHE BOOL "TRUE if code coverage is to be provided")
 set(RVS_BUILD_TESTS TRUE CACHE BOOL "TRUE if tests are to be built")
@@ -534,12 +536,12 @@ add_custom_target(rvs_userguide ALL
 add_dependencies(rvs_userguide rvs_doc)
 
 install(FILES "${CMAKE_BINARY_DIR}/doc/man/man1/rvs.1"
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/man/man1
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/man/man1
   COMPONENT applications
 )
 
 install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/userguide
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/userguide
   COMPONENT applications
 )
 
@@ -552,23 +554,23 @@ configure_file(${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh.in
   ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
   @ONLY)
 install(FILES ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/conf/
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/conf/
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                     GROUP_EXECUTE GROUP_READ
   COMPONENT rvsmodule
 )
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/testscripts
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/testscripts
   USE_SOURCE_PERMISSIONS
   COMPONENT rvsmodule
 )
 
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
-          DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib
+          DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}
           COMPONENT rvsmodule)
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf"
-          DESTINATION /etc/ld.so.conf.d
+	  DESTINATION /${CMAKE_INSTALL_SYSCONFDIR}/ld.so.conf.d
           COMPONENT rvsmodule)
 endif()  # if(RVS_ROCMSMI EQUAL 1)
 
