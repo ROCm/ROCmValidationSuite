@@ -48,7 +48,7 @@ The Input IET Test generates peak power on all input rails. This test is used to
 The EDP Test is used to verify whether the system PSU can handle worst case power spikes on multiple GPUs simultaneously. 
 
 ## Below modules are depreciated 
-## ROCm Configuration Qualification Tool  - RCQT module (Depreciated)
+## ROCm Configuration Qualification Tool  - RCQT module (Deprecated)
 The ROCm Configuration Qualification Tool ensures the platform is capable of running ROCm applications and is configured correctly. It checks the installed versions of the ROCm components and the platform configuration of the system. This includes checking that dependencies, corresponding to the associated operating system and runtime environment, are installed correctly. Other qualification steps include checking:
 
 1.	The existence of the /dev/kfd device
@@ -57,7 +57,7 @@ The ROCm Configuration Qualification Tool ensures the platform is capable of run
 4.	That the user mode components are compatible with the drivers, both the KFD and the amdgpu driver.
 5.	The configuration of the runtime linker/loader qualifying that all ROCm libraries are in the correct search path.
 
-## PCI Express Qualification Tool – PEQT module (Depreciated)
+## PCI Express Qualification Tool – PEQT module (Deprecated)
 The PCIe Qualification Tool consists is used to qualify the PCIe bus on which the GPU is connected. The qualification test will be capable of determining the following characteristics of the PCIe bus interconnect to a GPU:
 
 1.	Support for Gen 3 atomic completers
@@ -65,12 +65,12 @@ The PCIe Qualification Tool consists is used to qualify the PCIe bus on which th
 3.	PCIe link speed
 4.	PCIe link width
 
-## SBIOS Mapping Qualification Tool – SMQT module (Depreciated)
+## SBIOS Mapping Qualification Tool – SMQT module (Deprecated)
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct products for ROCm support.
 
 Refer to the “ROCm Use of Advanced PCIe Features and Overview of How BAR Memory is Used In ROCm Enabled System” web page for more information about how BAR memory is initialized by VDI and Radeon products.
 
-## PCI Express State Monitor  – PESM module (Depreciated)
+## PCI Express State Monitor  – PESM module (Deprecated)
 The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU. The module will register a “listener” on a target GPU’s PCIe interconnect, and log a message whenever it detects a state change. The PESM will be able to detect the following state changes:
 
 1.	PCIe link speed changes
