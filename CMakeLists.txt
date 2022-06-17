@@ -37,9 +37,22 @@ enable_testing()
 find_package (rocblas)
 if(rocblas_FOUND)
   message(STATUS "rocblas found")
+  message(STATUS "rocblas Version: ${rocblas_VERSION}")
+  set(RVS_ROCBLAS_VERSION ${rocblas_VERSION} )
+  set(RVS_ROCBLAS_VERSION_MAJ ${rocblas_VERSION_MAJOR} )
+  set(RVS_ROCBLAS_VERSION_MIN ${rocblas_VERSION_MINOR} )
+  set(RVS_ROCBLAS_VERSION_PAT ${rocblas_VERSION_PATCH} )
+
+  if( (RVS_ROCBLAS_VERSION_MAJ GREATER 999) OR (RVS_ROCBLAS_VERSION_MIN GREATER 999) OR (RVS_ROCBLAS_VERSION_PAT GREATER 999) )
+    message(FATAL_ERROR "RVS rocblas: Too big ROCBLAS version number(s)" )
+  else()
+    math(EXPR RVS_ROCBLAS_VERSION_FLAT  "(${RVS_ROCBLAS_VERSION_MAJ}*1000000+${RVS_ROCBLAS_VERSION_MIN}*1000+${RVS_ROCBLAS_VERSION_PAT})" )
+    message( STATUS "rocblas: Version string ${RVS_ROCBLAS_VERSION_FLAT} For Version Check" )
+  endif()
 else()
   message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
 endif(rocblas_FOUND)
+
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CMAKE_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
@@ -426,8 +439,18 @@ if (RVS_ROCMSMI EQUAL 1)
   set(ROCM_SMI_INC_DIR "${CMAKE_BINARY_DIR}/rvs_smi-src/include")
   set(ROCM_SMI_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_smi-build")
 else()
-  set(ROCM_SMI_INC_DIR "${ROCM_PATH}/rocm_smi/include")
-  set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/rocm_smi/lib")
+  #NOTE:Include folders need to be uppated to REORG Folders
+  #For backward compatibility we are currently using version details to determine the include path
+  #Current Work Around to check ROCMSMI Version is using ROCBLAS REORG VERSION
+  if( RVS_ROCBLAS_VERSION_FLAT LESS 2044000 )
+    set(ROCM_SMI_INC_DIR "${ROCM_PATH}/rocm_smi/include")
+    set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/rocm_smi/lib")
+    message( STATUS "ROCMSMI OLD Version: ${RVS_ROCBLAS_VERSION_FLAT} TO CHECK" )
+  else()
+    message( STATUS "ROCMSMI REORG Version: ${RVS_ROCBLAS_VERSION_FLAT}" )
+    set(ROCM_SMI_INC_DIR "${ROCM_PATH}/include")
+    set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/lib")
+  endif()
 endif()
 set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
