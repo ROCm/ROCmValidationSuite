@@ -165,26 +165,35 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       libpath += "/";
     } else {
       rvs::options::has_option("pwd", &libpath); // has ending forward slash too
-      libpath += "../lib/rvs/";
+      libpath += "../lib64/rvs/";
     }
     string sofullname(libpath + it->second);
     void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
-    // error?
     if (!psolib) {
-      //Search libraries in current path for backward compatibility
+      /* Backward compatibility support */
+
+      /* Search libraries in lib/rvs folder (pre-reorg path) */ 
       rvs::options::has_option("pwd", &libpath); // has ending forward slash too
+      libpath += "../lib/rvs/";
       string sofullname(libpath + it->second);
       psolib = dlopen(sofullname.c_str(), RTLD_NOW);
-      // error?
+
       if (!psolib) {
-        char buff[1024];
-        snprintf(buff, sizeof(buff),
-               "could not load .so '%s'", sofullname.c_str());
-        rvs::logger::Err(buff, MODULE_NAME_CAPS);
-        snprintf(buff, sizeof(buff),
-               "reason: '%s'", dlerror());
-        rvs::logger::Err(buff, MODULE_NAME_CAPS);
-        return NULL;  // fail
+        /* Search libraries in current path */ 
+        rvs::options::has_option("pwd", &libpath); // has ending forward slash too
+        string sofullname(libpath + it->second);
+        psolib = dlopen(sofullname.c_str(), RTLD_NOW);
+        // error?
+        if (!psolib) {
+          char buff[1024];
+          snprintf(buff, sizeof(buff),
+              "could not load .so '%s'", sofullname.c_str());
+          rvs::logger::Err(buff, MODULE_NAME_CAPS);
+          snprintf(buff, sizeof(buff),
+              "reason: '%s'", dlerror());
+          rvs::logger::Err(buff, MODULE_NAME_CAPS);
+          return NULL;  // fail
+        }
       }
     }
     // create module object
