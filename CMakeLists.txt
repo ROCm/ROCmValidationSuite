@@ -25,8 +25,13 @@
 
 cmake_minimum_required ( VERSION 3.5.0 )
 project ("rocm-validation-suite")
+
+# Default libdir to "lib", this skips GNUInstallDirs from trying to take a guess if it's unset:
+set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
+
 #including GNUInstall Dir definitions.
 include( GNUInstallDirs )
+
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
