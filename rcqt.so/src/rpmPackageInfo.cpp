@@ -12,7 +12,6 @@ bool RpmPackageInfo::readMetaPackageInfo(std::string ss){
   std::ofstream os;
 
   os.open(getFileName() , std::ofstream::out | std::ofstream::app);
-	std::cout << "DEBUG: file is " << getFileName() << std::endl;
 
   while(std::getline(inss, line)){
 

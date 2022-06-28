@@ -20,7 +20,6 @@ void DebPackageInfo::readDepLine(const std::string& depLine){
   std::stringstream ss{std::string{depLine}};
   std::ofstream os;
 	os.open(getFileName() , std::ofstream::out | std::ofstream::app);
-	std::cout << "DEBUG: file is " << getFileName() << std::endl;
   std::string word;
   while(std::getline(ss, word, ',')){
     std::pair<std::string, std::string> wp = getNameVers(word);
