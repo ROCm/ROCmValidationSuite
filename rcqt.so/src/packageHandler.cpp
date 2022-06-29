@@ -1,15 +1,18 @@
 #include <fstream>
-#include <assert.h>
 #include <sstream>
 #include <iostream>
 #include "include/packageHandler.h"
 
 bool PackageHandler::parseManifest(){
-	assert(!m_manifest.empty());
+
+  if(m_manifest.empty()) {
+    std::cout  << "Error: Manifest is not filled !!!" << std::endl;
+    return false;
+  }
+
 	std::ifstream ifs {m_manifest};
-	std::cout << "Manifest name is " << m_manifest << std::endl;
-	assert(ifs.good());
 	std::string line;
+
 	while(std::getline(ifs, line)){
 		if(line.empty())
 			continue;
@@ -22,12 +25,11 @@ bool PackageHandler::parseManifest(){
 		}
 		m_pkgversionmap.emplace(name, ver);
 	}
-	//std::cout << m_pkgversionmap.size() << " packages to validate " << std::endl;
 	return true;
 }
 
 void PackageHandler::validatePackages(){
-  std::cout << "File name is " << m_manifest << std::endl;
+
 	auto pkgmap = getPackageMap();
 	if(pkgmap.empty()){
 		std::cout << "no packages to validate in the file " << std::endl;

@@ -43,47 +43,6 @@ bool PackageHandlerRpm::pkgrOutputParser(const std::string& s_data, package_info
   return found;
 }
 
-#if 0
-void getPackageInfo(const std::string& package, std::stringstream &ss){
-
-  int read_pipe[2]; // From child to parent
-  int exit_status;
-	package_info pinfo;
-  if(pipe(read_pipe) == -1){
-    perror("Pipe");
-//    return pinfo.version;
-  }
-
-  std::cout << "Rpm getInstalled" << std::endl;
-
-  pid_t process_id = fork();
-  if(process_id < 0){
-    perror("Fork");
-//    return pinfo.version;
-
-  }else if(process_id == 0) {
-    dup2(read_pipe[1], 1);
-    close(read_pipe[0]);
-    close(read_pipe[1]);
-    execlp("rpm", "rpm", "-qi", package.c_str(), NULL);
-  } else {
-    // parent:
-    int status;
-    waitpid(process_id, &status,0);
-    close(read_pipe[1]);
-    {
-      char arr[4096];
-      int n = read(read_pipe[0], arr, sizeof(arr));
-      ss.write(arr, n);
-
-    }
-    //std::cout << ss.str() << std::endl;
-    close(read_pipe[0]);
-  }
-}
-
-#endif
-
 std::string PackageHandlerRpm::getInstalledVersion(const std::string& package){
 
   package_info pinfo;

@@ -12,64 +12,18 @@
 
 bool PackageInfo::fillPkgInfo(){
 
-#if 0
-  if(m_filename.empty())
-    return false;
-  //std::stringstream ss;
-  std::ofstream os{m_filename};
-  int read_pipe[2]; // From child to parent
-  int exit_status;
-  //package_info pinfo;
-  if(pipe(read_pipe) == -1){
-    perror("Pipe");
+  std::stringstream ss;
+  bool status;
+
+  status = getPackageInfo(m_pkgname, m_pkgmgrname, m_dependcmd1name, m_dependcmd2name, ss);
+  if (true != status) {
+    std::cout << "getPackageInfo failed !!!" << std::endl;
     return false;
   }
-  pid_t process_id = fork();
-  if(process_id < 0){
-    perror("Fork");
-    return false;
 
-  }else if(process_id == 0) {
-    dup2(read_pipe[1], 1);
-    close(read_pipe[0]);
-    close(read_pipe[1]);
-    //std::cout<< "in child" << std::endl;
-    execlp(m_pkgmgrname.c_str(), m_pkgmgrname.c_str(), m_dependcmd1name.c_str(), m_dependcmd2name.c_str(), m_pkgname.c_str(), NULL);
-  } else {
-    // parent:
-    int status;
-    waitpid(process_id, &status,0);
-    std::stringstream ss;
-    close(read_pipe[1]);
-    { 
-      char arr[8192];
-      int n = read(read_pipe[0], arr, sizeof(arr));
-      ss.write(arr, n);
-    }
+  readMetaPackageInfo(ss.str());
 
-    close(read_pipe[0]);
-    // handle ss
-    readMetaPackageInfo(ss.str());
-    //std::cout << ss.str() << std::endl;
-    return true;
-  }
+  return true;
 
-#else
-
-    std::stringstream ss;
-    bool status;
-
-    status = getPackageInfo(m_pkgname, m_pkgmgrname, m_dependcmd1name, m_dependcmd2name, ss);
-    if (true != status) {
-      std::cout << "getPackageInfo failed !!!" << std::endl;
-      return false;
-    }
-
-    std::cout << "Going to parse Meta Package Info ..." << std::endl;
-    readMetaPackageInfo(ss.str());
-
-    return true;
-
-#endif
 }
 

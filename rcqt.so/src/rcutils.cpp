@@ -1,6 +1,5 @@
 #include "include/rcutils.h"
 
-
 OSType searchos(std::string os_name){
 	std::string lowcasename{os_name};
 	std::transform( lowcasename.begin(), lowcasename.end(), lowcasename.begin(),
@@ -29,7 +28,6 @@ OSType getOS(){
       if(found == std::string::npos || endquote == std::string::npos)
         return OSType::None;
       std::string osame = line.substr(found+1, endquote-found-1 );
-      std::cout << "OS installed is : " << osame << std::endl;
 			return searchos(osame);
     }
   }
@@ -86,8 +84,6 @@ bool getPackageInfo(const std::string& package,
     close(read_pipe[0]);
     close(read_pipe[1]);
 
-    std::cout << packagemgr.c_str() << " " << packagemgr.c_str() << " "<< command.c_str() << " " << option.c_str() << " " << package.c_str() << std::endl;
-
     /* Apply options in command only if present */
     if(option.empty()) {
       execlp(packagemgr.c_str(), packagemgr.c_str(), command.c_str(), package.c_str(), NULL);
@@ -112,67 +108,3 @@ bool getPackageInfo(const std::string& package,
   }
 }
 
-/*
-bool parser(std::string s_data, package_info& info){
-	std::stringstream data{s_data};
-	// first line tells if we need to proceed or not.
-	std::string line;
-	bool found = false;
-	while(std::getline(data, line)){
-		if(line.find("Version") != std::string::npos){
-			info.version = get_last_word(line);
-			found = true;
-		} else if( line.find("Package") != std::string::npos){
-			info.name = get_last_word(line);
-		}		
-	}
-	return found;
-}
-
-
-void find_version(std::string package){
-	int read_pipe[2]; // From child to parent
-	int exit_status;
-	if(pipe(read_pipe) == -1){
-		perror("Pipe");
-		return;
-	}
-	pid_t process_id = fork();
-	if(process_id < 0){
-		perror("Fork");
-		return;
-	}else if(process_id == 0) {
-		dup2(read_pipe[1], 1);
-		close(read_pipe[0]);
-		close(read_pipe[1]);
-		execlp("dpkg", "dpkg", "--status", package.c_str(), NULL);
-	} else {
-		// parent:
-		int status;
-		waitpid(process_id, &status,0);
-		std::stringstream ss;
-		close(read_pipe[1]);
-		//dup(read_pipe[0], 0);
-		{
-			char arr[4096];
-			int n = read(read_pipe[0], arr, sizeof(arr));
-			ss.write(arr, n);
-
-		}
-		std::cout << ss.str() << std::endl;
-		close(read_pipe[0]);
-		std::string ver_string{};
-		package_info pinfo; 
-		auto res = parser(ss.str(), pinfo);
-		std::cout << pinfo.name << " and " << pinfo.version << std::endl;
-		return;
-	}
-}
-
-int main(){
-  //std::cout << getOS() << std::endl;
-	print_version({"rocminfo"});
-  return 0;
-
-}
-*/

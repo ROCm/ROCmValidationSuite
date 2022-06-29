@@ -163,10 +163,6 @@ int rcqt_action::pkgchk_run() {
       package_list.push_back(remSpaces(package));
   }
 
-  /* Junaid: unwanted variable ? */
-  // Checking if version field exists
-  bool package_found = false;
-
   handlerCreator creator;
   for( auto pkg : package_list){
 
