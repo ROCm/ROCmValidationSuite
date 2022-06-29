@@ -422,7 +422,6 @@ endif()
 set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
 set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
-#set(BUILD_ADDRESS_SANITIZER TRUE)
 # Check if Address Sanitizer enabled.
 if(BUILD_ADDRESS_SANITIZER)
   set(ASAN_CXX_FLAGS "-fsanitize=address  -shared-libasan -O0")
