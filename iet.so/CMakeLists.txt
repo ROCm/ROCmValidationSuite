@@ -24,8 +24,6 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
-#including GNUInstall Dir definitions.
-include( GNUInstallDirs )
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()

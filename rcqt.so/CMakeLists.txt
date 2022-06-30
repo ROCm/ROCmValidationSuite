@@ -24,13 +24,10 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
-#including GNUInstall Dir definitions.
-include( GNUInstallDirs )
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-
 set ( RVS "rcqt" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
@@ -127,7 +124,20 @@ link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH})
 set (PROJECT_LINK_LIBS rvslibrt rvslib)
 
 ## define source files
-set(SOURCES src/rvs_module.cpp src/action.cpp)
+set(SOURCES 
+    src/rvs_module.cpp 
+    src/action.cpp 
+    src/debPackageInfo.cpp 
+    src/rpmPackageInfo.cpp 
+    src/zypPackageInfo.cpp 
+    src/handlerCreator.cpp 
+    src/metaPackageInfo.cpp 
+    src/packageHandler.cpp 
+    src/packageHandlerDeb.cpp 
+    src/packageHandlerRpm.cpp 
+    src/packageHandlerZyp.cpp 
+    src/rcutils.cpp
+)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
