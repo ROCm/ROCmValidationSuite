@@ -49,11 +49,18 @@ if(rocblas_FOUND)
 
   if( (RVS_ROCBLAS_VERSION_MAJ GREATER 999) OR (RVS_ROCBLAS_VERSION_MIN GREATER 999) OR (RVS_ROCBLAS_VERSION_PAT GREATER 999) )
     message(FATAL_ERROR "RVS rocblas: Too big ROCBLAS version number(s)" )
-  else()
+  else() #if Valid ROCBLAS Version flags
     math(EXPR RVS_ROCBLAS_VERSION_FLAT  "(${RVS_ROCBLAS_VERSION_MAJ}*1000000+${RVS_ROCBLAS_VERSION_MIN}*1000+${RVS_ROCBLAS_VERSION_PAT})" )
     message( STATUS "rocblas: Version string ${RVS_ROCBLAS_VERSION_FLAT} For Version Check" )
-  endif()
-else()
+    if(RVS_ROCBLAS_VERSION_FLAT LESS 2044000)
+	set(ROCBLAS_MODULE_NM_PREFIX "")
+	message( STATUS "ROCBLAS PRE-REORG VERSION: ${RVS_ROCBLAS_VERSION_FLAT}" )
+    else() #If Reorg Version
+	set(ROCBLAS_MODULE_NM_PREFIX "rocblas/")
+	message( STATUS "ROCBLAS REORG VERSION: ${RVS_ROCBLAS_VERSION_FLAT}" )
+    endif() #ROCBLAS Version check reorg or not
+  endif() #ROCBLAS Valid Version flag check
+else() #If ROCBLAS not found
   message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
 endif(rocblas_FOUND)
 
