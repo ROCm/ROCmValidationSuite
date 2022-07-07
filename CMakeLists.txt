@@ -450,7 +450,7 @@ if (RVS_ROCMSMI EQUAL 1)
   set(ROCM_SMI_INC_DIR "${CMAKE_BINARY_DIR}/rvs_smi-src/include")
   set(ROCM_SMI_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_smi-build")
 else()
-  #NOTE:Include folders need to be uppated to REORG Folders
+  #NOTE:Include folders need to be updated to latest include dir as per REORG Folder structure.
   #For backward compatibility we are currently using version details to determine the include path
   #Current Work Around to check ROCMSMI Version is using ROCBLAS REORG VERSION
   if( RVS_ROCBLAS_VERSION_FLAT LESS 2044000 )
