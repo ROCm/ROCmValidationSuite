@@ -76,6 +76,9 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "amdhip64")
 
+#ROCBLAS VERSION CHECK FLAGS TO CHECK REORG VERSION 2.44.0
+add_compile_options(-DRVS_ROCBLAS_VERSION_FLAT=${RVS_ROCBLAS_VERSION_FLAT})
+
 # Determine HSA_PATH
 if(NOT DEFINED HIPCC_PATH)
   if(NOT DEFINED ENV{HIPCC_PATH})
@@ -130,7 +133,7 @@ endif()
 # Determine Roc Runtime header files are accessible
 if(DEFINED RVS_ROCMSMI)
   if(NOT RVS_ROCMSMI EQUAL 1)
-    if(NOT EXISTS ${ROCBLAS_INC_DIR}/rocblas.h)
+    if(NOT EXISTS ${ROCBLAS_INC_DIR}/${ROCBLAS_MODULE_NM_PREFIX}rocblas.h)
     message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
     RETURN()
     endif()
