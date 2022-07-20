@@ -61,6 +61,7 @@ class hiptest_action: public rvs::actionbase {
     virtual int run(void);
 
     std::string m_test_file_path;
+    std::string m_test_file_args;
 
  protected:
     //! TRUE if JSON output is required

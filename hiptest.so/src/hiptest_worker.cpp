@@ -84,7 +84,7 @@ bool hipTestWorker::start_hip_tests(int &error, string &errdesc){
     auto found = m_test_path.find_last_of('/');
     auto fname = m_test_path.substr(found+1);
     if((pid = fork()) == 0){ // child
-	execl(m_test_path.c_str(), fname.c_str(), 0);
+	execl(m_test_path.c_str(), fname.c_str(), m_test_args.c_str(), 0);
     }else{
 	waitpid(pid, &status, 0);
 	if (WIFEXITED(status)){

@@ -57,6 +57,7 @@ class hipTestWorker : public rvs::ThreadBase {
 
     //! sets test path
     void set_path(std::string pathname) { m_test_path = pathname; }
+    void set_args(std::string args) { m_test_args = args; }
 
     const std::string& get_path(void) { return m_test_path; }
     bool start_hip_tests(int &error, std::string &errdesc);
@@ -67,6 +68,7 @@ class hipTestWorker : public rvs::ThreadBase {
     std::string action_name;
     //! path to execute test
     std::string m_test_path;
+    std::string m_test_args;
 };
 
 #endif  // HIPTEST_SO_INCLUDE_HIPTEST_WORKER_H_

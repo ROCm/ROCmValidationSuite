@@ -47,7 +47,9 @@ using std::regex;
 #define MODULE_NAME                     "hiptest"
 #define MODULE_NAME_CAPS                "HIPTEST"
 #define RVS_CONF_HIPTEST_PATH_KEY       "test-path"
+#define RVS_CONF_HIPTEST_ARGS_KEY       "test-args"
 #define HIPTEST_DEFAULT_PATH            "tmp"
+#define HIPTEST_DEFAULT_ARGS            ""
 #define HIPTEST_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
@@ -78,6 +80,7 @@ bool hiptest_action::start_hiptest_runners() {
     hipTestWorker worker;
     worker.set_name(action_name);
     worker.set_path(m_test_file_path);
+    worker.set_args(m_test_file_args);
     worker.start();
     worker.join();
 
@@ -101,6 +104,14 @@ bool hiptest_action::get_all_hiptest_config_keys(void) {
          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
          bsts = false;
     }
+    if (property_get<std::string>(RVS_CONF_HIPTEST_ARGS_KEY, &m_test_file_args,
+            HIPTEST_DEFAULT_ARGS)) {
+         msg = "invalid '" +
+         std::string(RVS_CONF_HIPTEST_PATH_KEY) + "' key value";
+         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+         bsts = false;
+    }
+
     if(m_test_file_path == HIPTEST_DEFAULT_PATH){
 	msg = " hip test pat not specified";
 	rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
