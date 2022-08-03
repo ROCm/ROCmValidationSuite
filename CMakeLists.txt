@@ -75,7 +75,6 @@ set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files export
 set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Runtime" FORCE)
 set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC Runtime")
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
-message(STATUS "HIP Include PATH Set as: ${HIP_INC_DIR}" )
 
 
 #
