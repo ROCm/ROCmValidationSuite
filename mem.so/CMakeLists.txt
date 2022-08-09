@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018 ROCm Developer Tools
+## Copyright (c) 2018-2022 ROCm Developer Tools
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -49,7 +49,7 @@ endif()
 # Determine HSA_PATH
 if(NOT DEFINED HIPCC_PATH)
   if(NOT DEFINED ENV{HIPCC_PATH})
-    set(HIPCC_PATH "${ROCM_PATH}/hip" CACHE PATH "Path to which hipcc runtime has been installed")
+    set(HIPCC_PATH "${ROCM_PATH}" CACHE PATH "Path to which hipcc runtime has been installed")
      else()
        set(HIPCC_PATH $ENV{HIPCC_PATH} CACHE PATH "Path to which hipcc runtime has been installed")
      endif()
@@ -113,6 +113,9 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "amdhip64")
 
+#ROCBLAS VERSION CHECK FLAGS TO CHECK REORG VERSION 2.44.0
+add_compile_options(-DRVS_ROCBLAS_VERSION_FLAT=${RVS_ROCBLAS_VERSION_FLAT})
+
 # Determine Roc Runtime header files are accessible
 if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
@@ -127,7 +130,7 @@ endif()
 # Determine Roc Runtime header files are accessible
 if(DEFINED RVS_ROCMSMI)
   if(NOT RVS_ROCMSMI EQUAL 1)
-    if(NOT EXISTS ${ROCBLAS_INC_DIR}/rocblas.h)
+    if(NOT EXISTS ${ROCBLAS_INC_DIR}/${ROCBLAS_MODULE_NM_PREFIX}rocblas.h)
     message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
     RETURN()
     endif()
@@ -169,9 +172,11 @@ COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR
 COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
 
-install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib/rvs COMPONENT rvsmodule)
+install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" 
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" 
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
 
 # TEST SECTION
 if (RVS_BUILD_TESTS)

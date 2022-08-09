@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,19 +25,45 @@
 
 cmake_minimum_required ( VERSION 3.5.0 )
 project ("rocm-validation-suite")
+
+# Default libdir to "lib", this skips GNUInstallDirs from trying to take a guess if it's unset:
+set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
+
+#including GNUInstall Dir definitions.
+include( GNUInstallDirs )
+
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
-
 enable_testing()
 
 # Prerequisite - Check if rocblas was already installed
 find_package (rocblas)
 if(rocblas_FOUND)
   message(STATUS "rocblas found")
-else()
+  message(STATUS "rocblas Version: ${rocblas_VERSION}")
+  set(RVS_ROCBLAS_VERSION ${rocblas_VERSION} )
+  set(RVS_ROCBLAS_VERSION_MAJ ${rocblas_VERSION_MAJOR} )
+  set(RVS_ROCBLAS_VERSION_MIN ${rocblas_VERSION_MINOR} )
+  set(RVS_ROCBLAS_VERSION_PAT ${rocblas_VERSION_PATCH} )
+
+  if( (RVS_ROCBLAS_VERSION_MAJ GREATER 999) OR (RVS_ROCBLAS_VERSION_MIN GREATER 999) OR (RVS_ROCBLAS_VERSION_PAT GREATER 999) )
+    message(FATAL_ERROR "RVS rocblas: Too big ROCBLAS version number(s)" )
+  else() #if Valid ROCBLAS Version flags
+    math(EXPR RVS_ROCBLAS_VERSION_FLAT  "(${RVS_ROCBLAS_VERSION_MAJ}*1000000+${RVS_ROCBLAS_VERSION_MIN}*1000+${RVS_ROCBLAS_VERSION_PAT})" )
+    message( STATUS "rocblas: Version string ${RVS_ROCBLAS_VERSION_FLAT} For Version Check" )
+    if(RVS_ROCBLAS_VERSION_FLAT LESS 2044000)
+	set(ROCBLAS_MODULE_NM_PREFIX "")
+	message( STATUS "ROCBLAS PRE-REORG VERSION: ${RVS_ROCBLAS_VERSION_FLAT}" )
+    else() #If Reorg Version
+	set(ROCBLAS_MODULE_NM_PREFIX "rocblas/")
+	message( STATUS "ROCBLAS REORG VERSION: ${RVS_ROCBLAS_VERSION_FLAT}" )
+    endif() #ROCBLAS Version check reorg or not
+  endif() #ROCBLAS Valid Version flag check
+else() #If ROCBLAS not found
   message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
 endif(rocblas_FOUND)
+
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CMAKE_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
@@ -47,8 +73,7 @@ set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built 
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
 set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Runtime" FORCE)
-set(HIP_INC_DIR "${ROCM_PATH}/hip" )
-set(HIP_INC_DIR "${ROCM_PATH}/hip" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
+set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC Runtime")
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
 
@@ -158,7 +183,7 @@ set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 
 # Set and Install license file
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-install(FILES ${CPACK_RESOURCE_FILE_LICENSE} DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/doc/${CPACK_PACKAGE_NAME})
+install(FILES ${CPACK_RESOURCE_FILE_LICENSE} DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/doc/${CPACK_PACKAGE_NAME})
 
 set(RVS_COVERAGE FALSE CACHE BOOL "TRUE if code coverage is to be provided")
 set(RVS_BUILD_TESTS TRUE CACHE BOOL "TRUE if tests are to be built")
@@ -424,13 +449,21 @@ if (RVS_ROCMSMI EQUAL 1)
   set(ROCM_SMI_INC_DIR "${CMAKE_BINARY_DIR}/rvs_smi-src/include")
   set(ROCM_SMI_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_smi-build")
 else()
-  set(ROCM_SMI_INC_DIR "${ROCM_PATH}/rocm_smi/include")
-  set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/rocm_smi/lib")
+  #NOTE:Include folders need to be updated to latest include dir as per REORG Folder structure.
+  #For backward compatibility we are currently using version details to determine the include path
+  #Current Work Around to check ROCMSMI Version is using ROCBLAS REORG VERSION
+  if( RVS_ROCBLAS_VERSION_FLAT LESS 2044000 )
+    set(ROCM_SMI_INC_DIR "${ROCM_PATH}/rocm_smi/include")
+    set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/rocm_smi/lib")
+  else()
+    message( STATUS "ROCBLAS REORG Enabled Version: ${RVS_ROCBLAS_VERSION_FLAT}" )
+    set(ROCM_SMI_INC_DIR "${ROCM_PATH}/include")
+    set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/lib")
+  endif()
 endif()
 set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
 set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
-
 # Check if Address Sanitizer enabled.
 if(BUILD_ADDRESS_SANITIZER)
   set(ASAN_CXX_FLAGS "-fsanitize=address  -shared-libasan -O0")
@@ -534,12 +567,12 @@ add_custom_target(rvs_userguide ALL
 add_dependencies(rvs_userguide rvs_doc)
 
 install(FILES "${CMAKE_BINARY_DIR}/doc/man/man1/rvs.1"
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/man/man1
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/man/man1
   COMPONENT applications
 )
 
 install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/userguide
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/userguide
   COMPONENT applications
 )
 
@@ -552,23 +585,23 @@ configure_file(${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh.in
   ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
   @ONLY)
 install(FILES ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/conf/
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/conf/
   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                     GROUP_EXECUTE GROUP_READ
   COMPONENT rvsmodule
 )
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/testscripts
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/testscripts
   USE_SOURCE_PERMISSIONS
   COMPONENT rvsmodule
 )
 
 if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
-          DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib
+          DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}
           COMPONENT rvsmodule)
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf"
-          DESTINATION /etc/ld.so.conf.d
+	  DESTINATION /${CMAKE_INSTALL_SYSCONFDIR}/ld.so.conf.d
           COMPONENT rvsmodule)
 endif()  # if(RVS_ROCMSMI EQUAL 1)
 

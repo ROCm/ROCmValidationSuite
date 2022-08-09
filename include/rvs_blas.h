@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -27,7 +27,13 @@
 
 #define __HIP_PLATFORM_HCC__
 
-#include "rocblas.h"
+/*Based on Version of ROCBLAS use correct include header*/
+#if(defined(RVS_ROCBLAS_VERSION_FLAT) && ((RVS_ROCBLAS_VERSION_FLAT) >= 2044000))
+  #include <rocblas/rocblas.h>
+#else
+  #include <rocblas.h>
+#endif
+
 #include "include/hip/hip_runtime.h"
 #include "include/hip/hip_runtime_api.h"
 #include <sys/time.h>
