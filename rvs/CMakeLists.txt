@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018 2018 ROCm Developer Tools
+## Copyright (c) 2018-2022 2018 ROCm Developer Tools
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -24,6 +24,7 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
+
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
@@ -82,7 +83,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 # Determine HSA_PATH
 if(NOT DEFINED HIPCC_PATH)
   if(NOT DEFINED ENV{HIPCC_PATH})
-    set(HIPCC_PATH "${ROCM_PATH}/hip" CACHE PATH "Path to which hipcc runtime has been installed")
+    set(HIPCC_PATH "${ROCM_PATH}" CACHE PATH "Path to which hipcc runtime has been installed")
      else()
        set(HIPCC_PATH $ENV{HIPCC_PATH} CACHE PATH "Path to which hipcc runtime has been installed")
      endif()
@@ -151,18 +152,18 @@ add_dependencies(${RVS_TARGET} rvshelper)
 
 install(TARGETS ${RVS_TARGET}
   RUNTIME
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/bin
+  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}
   COMPONENT applications
 )
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/conf
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/
   COMPONENT applications
   FILES_MATCHING PATTERN "*.conf"
 )
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
-  DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/share/${CPACK_PACKAGE_NAME}/conf
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/conf
   COMPONENT applications
 )
 
@@ -173,7 +174,7 @@ if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
     set(EXE_FILE rvs)
     set(BIN_LINK_DIR \${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs)
     file(MAKE_DIRECTORY \${BIN_LINK_DIR})
-    execute_process(COMMAND ln -sf ../bin/\${EXE_FILE} rvs/\${EXE_FILE})
+    execute_process(COMMAND ln -sf ../${CMAKE_INSTALL_BINDIR}/\${EXE_FILE} rvs/\${EXE_FILE})
   ")
   #Install the soft link to package
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/rvs"

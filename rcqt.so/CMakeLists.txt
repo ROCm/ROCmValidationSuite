@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018 ROCm Developer Tools
+## Copyright (c) 2018-2022 ROCm Developer Tools
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -28,7 +28,6 @@ if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-
 set ( RVS "rcqt" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
@@ -79,7 +78,7 @@ add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 # Determine HSA_PATH
 if(NOT DEFINED HIPCC_PATH)
   if(NOT DEFINED ENV{HIPCC_PATH})
-    set(HIPCC_PATH "${ROCM_PATH}/hip" CACHE PATH "Path to which hipcc runtime has been installed")
+    set(HIPCC_PATH "${ROCM_PATH}" CACHE PATH "Path to which hipcc runtime has been installed")
      else()
        set(HIPCC_PATH $ENV{HIPCC_PATH} CACHE PATH "Path to which hipcc runtime has been installed")
      endif()
@@ -125,7 +124,20 @@ link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH})
 set (PROJECT_LINK_LIBS rvslibrt rvslib)
 
 ## define source files
-set(SOURCES src/rvs_module.cpp src/action.cpp)
+set(SOURCES 
+    src/rvs_module.cpp 
+    src/action.cpp 
+    src/debPackageInfo.cpp 
+    src/rpmPackageInfo.cpp 
+    src/zypPackageInfo.cpp 
+    src/handlerCreator.cpp 
+    src/metaPackageInfo.cpp 
+    src/packageHandler.cpp 
+    src/packageHandlerDeb.cpp 
+    src/packageHandlerRpm.cpp 
+    src/packageHandlerZyp.cpp 
+    src/rcutils.cpp
+)
 
 ## define target
 add_library( ${RVS_TARGET} SHARED ${SOURCES})
@@ -140,9 +152,11 @@ COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR
 COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
 
-install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/lib/rvs COMPONENT rvsmodule)
+install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" 
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" 
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
 
 # TEST SECTION
 if (RVS_BUILD_TESTS)
