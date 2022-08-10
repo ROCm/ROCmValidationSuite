@@ -22,9 +22,9 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PQT_SO_INCLUDE_RVS_MODULE_H_
-#define PQT_SO_INCLUDE_RVS_MODULE_H_
+#ifndef PBQT_SO_INCLUDE_RVS_MODULE_H_
+#define PBQT_SO_INCLUDE_RVS_MODULE_H_
 
 #include "include/rvsliblog.h"
 
-#endif  // PQT_SO_INCLUDE_RVS_MODULE_H_
+#endif  // PBQT_SO_INCLUDE_RVS_MODULE_H_
