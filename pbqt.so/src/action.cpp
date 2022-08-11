@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -50,22 +50,22 @@ extern "C" {
 #include "include/worker_b2b.h"
 
 
-#define MODULE_NAME "pqt"
-#define MODULE_NAME_CAPS "PQT"
+#define MODULE_NAME "pbqt"
+#define MODULE_NAME_CAPS "PBQT"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 
 using std::string;
 using std::vector;
 
 //! Default constructor
-pqt_action::pqt_action():link_type_string{} {
+pbqt_action::pbqt_action():link_type_string{} {
   prop_peer_deviceid = 0u;
   bjson = false;
   link_type = -1;
 }
 
 //! Default destructor
-pqt_action::~pqt_action() {
+pbqt_action::~pbqt_action() {
   property.clear();
 }
 
@@ -74,7 +74,7 @@ pqt_action::~pqt_action() {
  * @param error pointer to a memory location where the error code will be stored
  * @return true if "all" is selected, false otherwise
  */
-bool pqt_action::property_get_peers(int *error) {
+bool pbqt_action::property_get_peers(int *error) {
     *error = 0;  // init with 'no error'
     auto it = property.find("peers");
     if (it != property.end()) {
@@ -111,7 +111,7 @@ bool pqt_action::property_get_peers(int *error) {
  * @param error pointer to a memory location where the error code will be stored
  * @return deviceid value if valid, -1 otherwise
  */
-/*int pqt_action::property_get_peer_deviceid(int *error) {
+/*int pbqt_action::property_get_peer_deviceid(int *error) {
     auto it = property.find("peer_deviceid");
     int deviceid = -1;
     *error = 0;  // init with 'no error'
@@ -134,7 +134,7 @@ bool pqt_action::property_get_peers(int *error) {
  * @brief reads the module's properties collection to see whether bandwidth
  * tests should be run after peer check
  */
-void pqt_action::property_get_test_bandwidth(int *error) {
+void pbqt_action::property_get_test_bandwidth(int *error) {
   prop_test_bandwidth = false;
   auto it = property.find("test_bandwidth");
   if (it != property.end()) {
@@ -155,7 +155,7 @@ void pqt_action::property_get_test_bandwidth(int *error) {
  * @brief reads the module's properties collection to see whether bandwidth
  * tests should be run in both directions
  */
-void pqt_action::property_get_bidirectional(int *error) {
+void pbqt_action::property_get_bidirectional(int *error) {
   prop_bidirectional = false;
   auto it = property.find("bidirectional");
   if (it != property.end()) {
@@ -173,11 +173,11 @@ void pqt_action::property_get_bidirectional(int *error) {
 }
 
 /**
- * @brief reads all PQT related configuration keys from
+ * @brief reads all PBQT related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool pqt_action::get_all_pqt_config_keys(void) {
+bool pbqt_action::get_all_pbqt_config_keys(void) {
   int    error;
   string msg;
   bool   res;
@@ -255,7 +255,7 @@ bool pqt_action::get_all_pqt_config_keys(void) {
  * @param value message to log
  * @param log_level the level of log (e.g.: info, results, error)
  **/
-void* pqt_action::json_base_node(int log_level) {
+void* pbqt_action::json_base_node(int log_level) {
     void *json_node = json_node_create(std::string(MODULE_NAME),
             action_name.c_str(), log_level);
     if(!json_node){
@@ -265,19 +265,19 @@ void* pqt_action::json_base_node(int log_level) {
     return json_node;
 }
 
-void pqt_action::json_add_kv(void *json_node, const std::string &key, const std::string &value){
+void pbqt_action::json_add_kv(void *json_node, const std::string &key, const std::string &value){
     if (json_node) {
         rvs::lp::AddString(json_node, key, value);
     }
 }
 
-void pqt_action::json_to_file(void *json_node,int log_level){
+void pbqt_action::json_to_file(void *json_node,int log_level){
     if (json_node)
         rvs::lp::LogRecordFlush(json_node, log_level);
 }
 
-void pqt_action::log_json_data(std::string srcnode, std::string dstnode,
-    int log_level, pqt_json_data_t data_type, std::string data) {
+void pbqt_action::log_json_data(std::string srcnode, std::string dstnode,
+    int log_level, pbqt_json_data_t data_type, std::string data) {
 
   if(bjson){
 
@@ -287,11 +287,11 @@ void pqt_action::log_json_data(std::string srcnode, std::string dstnode,
 
     switch (data_type) {
 
-      case pqt_json_data_t::PQT_THROUGHPUT:
+      case pbqt_json_data_t::PBQT_THROUGHPUT:
         json_add_kv(json_node, "throughput", data);
         break;
 
-      case pqt_json_data_t::PQT_LINK_TYPE:
+      case pbqt_json_data_t::PBQT_LINK_TYPE:
         json_add_kv(json_node, "intf", data);
         break;
 
@@ -308,7 +308,7 @@ void pqt_action::log_json_data(std::string srcnode, std::string dstnode,
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool pqt_action::get_all_common_config_keys(void) {
+bool pbqt_action::get_all_common_config_keys(void) {
   string msg, sdevid, sdev;
   int    error;
   bool   res;
@@ -391,7 +391,7 @@ bool pqt_action::get_all_common_config_keys(void) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqt_action::create_threads() {
+int pbqt_action::create_threads() {
   std::string msg;
 
   std::vector<uint16_t> gpu_id;
@@ -499,7 +499,7 @@ int pqt_action::create_threads() {
         if (0 != arr_linkinfo.size()) {
           /* Log link type */
           log_json_data(std::to_string(srcnode), std::to_string(gpu_id[j]), rvs::logresults, 
-              pqt_json_data_t::PQT_LINK_TYPE, arr_linkinfo[0].strtype);
+              pbqt_json_data_t::PBQT_LINK_TYPE, arr_linkinfo[0].strtype);
           /* Note: Assuming link type for all hops between GPUs are the same */
         }
 
@@ -507,11 +507,11 @@ int pqt_action::create_threads() {
         // GPUs are peers, create transaction for them
         if (prop_test_bandwidth) {
           RVSTRACE_
-          pqtworker* p = nullptr;
+          pbqtworker* p = nullptr;
 
           transfer_ix += 1;
 
-          p = new pqtworker;
+          p = new pbqtworker;
           if (p == nullptr) {
             RVSTRACE_
             msg = "internal error";
@@ -602,7 +602,7 @@ int pqt_action::create_threads() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqt_action::destroy_threads() {
+int pbqt_action::destroy_threads() {
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->set_stop_name(action_name);
     (*it)->stop();
@@ -622,7 +622,7 @@ int pqt_action::destroy_threads() {
  * @return 0 - no access, 1 - Src can acces Dst, 2 - both have access
  *
  * */
-int pqt_action::is_peer(uint16_t Src, uint16_t Dst) {
+int pbqt_action::is_peer(uint16_t Src, uint16_t Dst) {
   //! ptr to RVS HSA singleton wrapper
   rvs::hsa* pHsa;
   string msg;
@@ -659,7 +659,7 @@ int pqt_action::is_peer(uint16_t Src, uint16_t Dst) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqt_action::print_running_average() {
+int pbqt_action::print_running_average() {
   for (auto it = test_array.begin(); brun && it != test_array.end(); ++it) {
     print_running_average(*it);
   }
@@ -670,12 +670,12 @@ int pqt_action::print_running_average() {
 /**
  * @brief Collect running average for this particular transfer.
  *
- * @param pWorker ptr to a pqtworker class
+ * @param pWorker ptr to a pbqtworker class
  *
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqt_action::print_running_average(pqtworker* pWorker) {
+int pbqt_action::print_running_average(pbqtworker* pWorker) {
     uint16_t    src_node, dst_node;
     uint16_t    src_id, dst_id;
     bool        bidir;
@@ -768,7 +768,7 @@ int pqt_action::print_running_average(pqtworker* pWorker) {
 #endif
 
     log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::loginfo,
-        pqt_json_data_t::PQT_THROUGHPUT, buff);
+        pbqt_json_data_t::PBQT_THROUGHPUT, buff);
 
     return 0;
 }
@@ -780,7 +780,7 @@ int pqt_action::print_running_average(pqtworker* pWorker) {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqt_action::print_final_average() {
+int pbqt_action::print_final_average() {
   uint16_t    src_node, dst_node;
   uint16_t    src_id, dst_id;
   bool        bidir;
@@ -862,7 +862,7 @@ int pqt_action::print_final_average() {
 #endif
 
     log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::logresults,
-        pqt_json_data_t::PQT_THROUGHPUT, buff);
+        pbqt_json_data_t::PBQT_THROUGHPUT, buff);
 
     sleep(1);
   }
@@ -877,20 +877,20 @@ int pqt_action::print_final_average() {
  * calculation of final average
  *
  * */
-void pqt_action::do_final_average() {
+void pbqt_action::do_final_average() {
   std::string msg;
   unsigned int sec;
   unsigned int usec;
   rvs::lp::get_ticks(&sec, &usec);
 
-  msg = "[" + action_name + "] pqt in do_final_average";
+  msg = "[" + action_name + "] pbqt in do_final_average";
   rvs::lp::Log(msg, rvs::logtrace, sec, usec);
 
   if (bjson) {
     void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), rvs::logtrace, sec, usec);
     if (pjson != NULL) {
-      rvs::lp::AddString(pjson, "message", "pqt in do_final_average");
+      rvs::lp::AddString(pjson, "message", "pbqt in do_final_average");
       rvs::lp::LogRecordFlush(pjson);
     }
   }
@@ -910,13 +910,13 @@ void pqt_action::do_final_average() {
  * calculation of moving average
  *
  * */
-void pqt_action::do_running_average() {
+void pbqt_action::do_running_average() {
   unsigned int sec;
   unsigned int usec;
   std::string msg;
 
   rvs::lp::get_ticks(&sec, &usec);
-  msg = "[" + action_name + "] pqt in do_running_average";
+  msg = "[" + action_name + "] pbqt in do_running_average";
   rvs::lp::Log(msg, rvs::logtrace, sec, usec);
   if (bjson) {
     void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
@@ -931,6 +931,6 @@ void pqt_action::do_running_average() {
   print_running_average();
 }
 
-void pqt_action::cleanup_logs(){
+void pbqt_action::cleanup_logs(){
   rvs::lp::JsonEndNodeCreate();
 }

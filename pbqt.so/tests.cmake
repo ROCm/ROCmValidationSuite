@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018 ROCm Developer Tools
+## Copyright (c) 2018-2022 ROCm Developer Tools
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -27,7 +27,7 @@
 
 ## generate conf files
 #MESSAGE("RVS PATH: ${CMAKE_CURRENT_SOURCE_DIR}")
-set(MAKE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../regression/make_pqt_conf.py")
+set(MAKE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../regression/make_pbqt_conf.py")
 #MESSAGE("COMMAND: ${MAKE_CMD}")
 execute_process(COMMAND ${MAKE_CMD})
 

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PQT_SO_INCLUDE_WORKER_H_
-#define PQT_SO_INCLUDE_WORKER_H_
+#ifndef PBQT_SO_INCLUDE_WORKER_H_
+#define PBQT_SO_INCLUDE_WORKER_H_
 
 #include <string>
 #include <vector>
@@ -33,8 +33,8 @@
 
 
 /**
- * @class pqtworker
- * @ingroup PQT
+ * @class pbqtworker
+ * @ingroup PBQT
  *
  * @brief Bandwidth test implementation class
  *
@@ -47,12 +47,12 @@ namespace rvs {
 class hsa;
 }
 
-class pqtworker : public rvs::ThreadBase {
+class pbqtworker : public rvs::ThreadBase {
  public:
   //! default constructor
-  pqtworker();
+  pbqtworker();
   //! default destructor
-  virtual ~pqtworker();
+  virtual ~pbqtworker();
 
   //! stop thread loop and exit thread
   void stop();
@@ -129,4 +129,4 @@ class pqtworker : public rvs::ThreadBase {
   std::mutex cntmutex;
 };
 
-#endif  // PQT_SO_INCLUDE_WORKER_H_
+#endif  // PBQT_SO_INCLUDE_WORKER_H_

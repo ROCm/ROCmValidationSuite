@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -73,8 +73,7 @@ set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built 
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
 set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Runtime" FORCE)
-set(HIP_INC_DIR "${ROCM_PATH}/hip" )
-set(HIP_INC_DIR "${ROCM_PATH}/hip" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
+set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC Runtime")
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
 
@@ -482,7 +481,7 @@ add_subdirectory(iet.so)
 add_subdirectory(pebb.so)
 add_subdirectory(peqt.so)
 add_subdirectory(pesm.so)
-add_subdirectory(pqt.so)
+add_subdirectory(pbqt.so)
 add_subdirectory(rcqt.so)
 add_subdirectory(smqt.so)
 add_subdirectory(mem.so)

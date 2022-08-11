@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -72,8 +72,8 @@ pebbworker::~pebbworker() {}
  *
  * */
 void pebbworker::run() {
-  std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
-  std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
+  std::chrono::time_point<std::chrono::system_clock> pebb_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pebb_end_time;
   std::string msg;
 
   msg = "[" + action_name + "] pebb thread " + std::to_string(src_node) + " "
@@ -82,13 +82,13 @@ void pebbworker::run() {
 
   brun = true;
 
-  pqt_start_time = std::chrono::system_clock::now();
+  pebb_start_time = std::chrono::system_clock::now();
   do{
     do_transfer();
 
-    pqt_end_time = std::chrono::system_clock::now();
+    pebb_end_time = std::chrono::system_clock::now();
 
-    uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
+    uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
 
     if(test_time >= test_duration) {
         break;

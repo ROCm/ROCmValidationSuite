@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PQT_SO_INCLUDE_WORKER_B2B_H_
-#define PQT_SO_INCLUDE_WORKER_B2B_H_
+#ifndef PBQT_SO_INCLUDE_WORKER_B2B_H_
+#define PBQT_SO_INCLUDE_WORKER_B2B_H_
 
 #include <string>
 #include <vector>
@@ -36,12 +36,12 @@
 
 
 /**
- * @class pqtworker_b2b
- * @ingroup PQT
+ * @class pbqtworker_b2b
+ * @ingroup PBQT
  *
  * @brief Bandwidth test back-to-back transfer implementation class
  *
- * Derives from pqtworker and implements actual test functionality
+ * Derives from pbqtworker and implements actual test functionality
  * in its run() method.
  *
  */
@@ -50,11 +50,11 @@ namespace rvs {
 class hsa;
 }
 // hsa_signal_exchange_scacq_screl
-class pqtworker_b2b : public pqtworker {
+class pbqtworker_b2b : public pbqtworker {
  public:
 /**
  * @class transfer_context_t
- * @ingroup PQT
+ * @ingroup PBQT
  *
  * @brief Utility class used to store transfer context for back-to-back
  * transfers
@@ -83,9 +83,9 @@ class pqtworker_b2b : public pqtworker {
 
  public:
   //! default constructor
-  pqtworker_b2b();
+  pbqtworker_b2b();
   //! default destructor
-  virtual ~pqtworker_b2b();
+  virtual ~pbqtworker_b2b();
 
   int initialize(int iSrc, int iDst, bool Bidirect, size_t Size);
   //! Set back-to-back block size
@@ -104,4 +104,4 @@ class pqtworker_b2b : public pqtworker {
   transfer_context_t ctx_rev;
 };
 
-#endif  // PQT_SO_INCLUDE_WORKER_B2B_H_
+#endif  // PBQT_SO_INCLUDE_WORKER_B2B_H_

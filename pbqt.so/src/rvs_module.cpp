@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -33,7 +33,7 @@
 #include "include/action.h"
 
 /**
- * @defgroup PQT PQT Module
+ * @defgroup PBQT PBQT Module
  *
  * @brief P2P Qualification Test Module
  *
@@ -51,7 +51,7 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return "ROCm Validation Suite PQT module";
+  return "ROCm Validation Suite PBQT module";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
@@ -75,12 +75,12 @@ extern "C" int   rvs_module_init(void* pMi) {
 
 extern "C" int   rvs_module_terminate(void) {
     rvs::hsa::Terminate();
-    pqt_action::cleanup_logs();
+    pbqt_action::cleanup_logs();
     return 0;
 }
 
 extern "C" void* rvs_module_action_create(void) {
-  return static_cast<void*>(new pqt_action);
+  return static_cast<void*>(new pbqt_action);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {

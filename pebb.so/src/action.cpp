@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -69,7 +69,7 @@ pebb_action::~pebb_action() {
 }
 
 /**
- * @brief reads all PQT related configuration keys from
+ * @brief reads all PEBB related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,9 +22,9 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PQT_SO_INCLUDE_RVS_MODULE_H_
-#define PQT_SO_INCLUDE_RVS_MODULE_H_
+#ifndef PBQT_SO_INCLUDE_RVS_MODULE_H_
+#define PBQT_SO_INCLUDE_RVS_MODULE_H_
 
 #include "include/rvsliblog.h"
 
-#endif  // PQT_SO_INCLUDE_RVS_MODULE_H_
+#endif  // PBQT_SO_INCLUDE_RVS_MODULE_H_

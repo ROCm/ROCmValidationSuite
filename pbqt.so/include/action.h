@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef PQT_SO_INCLUDE_ACTION_H_
-#define PQT_SO_INCLUDE_ACTION_H_
+#ifndef PBQT_SO_INCLUDE_ACTION_H_
+#define PBQT_SO_INCLUDE_ACTION_H_
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -46,36 +46,36 @@
 using namespace std::chrono;
 
 
-class pqtworker;
+class pbqtworker;
 
-enum class pqt_json_data_t {
-  PQT_THROUGHPUT = 0,
-  PQT_LINK_TYPE = 1
+enum class pbqt_json_data_t {
+  PBQT_THROUGHPUT = 0,
+  PBQT_LINK_TYPE = 1
 };
 
 /**
- * @class pqt_action
- * @ingroup PQT
+ * @class pbqt_action
+ * @ingroup PBQT
  *
- * @brief PQT action implementation class
+ * @brief PBQT action implementation class
  *
  * Derives from rvs::actionbase and implements actual action functionality
  * in its run() method.
  *
  */
-class pqt_action : public rvs::actionbase {
+class pbqt_action : public rvs::actionbase {
  public:
-  pqt_action();
-  virtual ~pqt_action();
+  pbqt_action();
+  virtual ~pbqt_action();
 
   virtual int run(void);
   static void cleanup_logs();
 
  protected:
-  bool get_all_pqt_config_keys(void);
+  bool get_all_pbqt_config_keys(void);
   bool get_all_common_config_keys(void);
 
-  // PQT specific config keys
+  // PBQT specific config keys
   bool property_get_peers(int *error);
   void property_get_test_bandwidth(int *error);
 //  void property_get_log_interval(int *error);
@@ -111,7 +111,7 @@ class pqt_action : public rvs::actionbase {
   int run_parallel();
 
   int print_running_average();
-  int print_running_average(pqtworker* pWorker);
+  int print_running_average(pbqtworker* pWorker);
 
   int print_final_average();
 
@@ -126,13 +126,13 @@ class pqt_action : public rvs::actionbase {
   void json_add_kv(void *json_node, const std::string &key, const std::string &value);
   void json_to_file(void *json_node,int log_level);
   void log_json_data(std::string srcnode, std::string dstnode,
-          int log_level, pqt_json_data_t data_type, std::string data = "");
+          int log_level, pbqt_json_data_t data_type, std::string data = "");
 
  private:
   void do_running_average(void);
   void do_final_average(void);
 
-  std::vector<pqtworker*> test_array;
+  std::vector<pbqtworker*> test_array;
 };
 
-#endif  // PQT_SO_INCLUDE_ACTION_H_
+#endif  // PBQT_SO_INCLUDE_ACTION_H_

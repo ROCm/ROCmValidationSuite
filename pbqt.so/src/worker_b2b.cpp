@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -50,10 +50,10 @@ using std::string;
 using std::vector;
 using std::map;
 
-pqtworker_b2b::pqtworker_b2b()
-: pqtworker() {
+pbqtworker_b2b::pbqtworker_b2b()
+: pbqtworker() {
 }
-pqtworker_b2b::~pqtworker_b2b() {}
+pbqtworker_b2b::~pbqtworker_b2b() {}
 
 extern uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
@@ -70,8 +70,8 @@ extern uint64_t test_duration;
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqtworker_b2b::initialize(int Src, int Dst, bool Bidirect, size_t Size) {
-  pqtworker::initialize(Src, Dst, Bidirect);
+int pbqtworker_b2b::initialize(int Src, int Dst, bool Bidirect, size_t Size) {
+  pbqtworker::initialize(Src, Dst, Bidirect);
 
   b2b_block_size = Size;
 
@@ -101,7 +101,7 @@ int pqtworker_b2b::initialize(int Src, int Dst, bool Bidirect, size_t Size) {
 /**
  * @brief release all resources used in transfers
  */
-void pqtworker_b2b::deinit() {
+void pbqtworker_b2b::deinit() {
   RVSTRACE_
   // release fwd buffers if any
   if (ctx_fwd.pSrcBuff) {
@@ -147,9 +147,9 @@ void pqtworker_b2b::deinit() {
  * Loops while brun == TRUE and performs polled monitoring avery 1msec.
  *
  * */
-void pqtworker_b2b::run() {
-  std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
-  std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
+void pbqtworker_b2b::run() {
+  std::chrono::time_point<std::chrono::system_clock> pbqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pbqt_end_time;
   hsa_status_t status;
   int sts;
 
@@ -202,7 +202,7 @@ void pqtworker_b2b::run() {
   }
 
 
-  pqt_start_time = std::chrono::system_clock::now();
+  pbqt_start_time = std::chrono::system_clock::now();
 
   while (brun) {
     // initiate forward transfer
@@ -259,9 +259,9 @@ void pqtworker_b2b::run() {
       running_size += b2b_block_size;
       running_duration += duration;
     }
-    pqt_end_time = std::chrono::system_clock::now();
+    pbqt_end_time = std::chrono::system_clock::now();
 
-    uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
+    uint64_t test_time = time_diff(pbqt_end_time, pbqt_start_time) ;
 
     if(test_time >= test_duration) {
           break;

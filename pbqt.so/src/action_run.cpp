@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2018-2022 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -49,8 +49,8 @@ extern "C" {
 #include "include/worker.h"
 
 
-#define MODULE_NAME "pqt"
-#define MODULE_NAME_CAPS "PQT"
+#define MODULE_NAME "pbqt"
+#define MODULE_NAME_CAPS "PBQT"
 
 using std::string;
 using std::vector;
@@ -76,7 +76,7 @@ uint64_t time_diff(
  *   * @return
  *    */
 
-void pqt_action::json_add_primary_fields(){
+void pbqt_action::json_add_primary_fields(){
   if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
     rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
     return;
@@ -89,13 +89,13 @@ void pqt_action::json_add_primary_fields(){
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqt_action::run() {
+int pbqt_action::run() {
   int sts;
   string msg;
-  std::chrono::time_point<std::chrono::system_clock> pqt_start_time;
-  std::chrono::time_point<std::chrono::system_clock> pqt_end_time;
+  std::chrono::time_point<std::chrono::system_clock> pbqt_start_time;
+  std::chrono::time_point<std::chrono::system_clock> pbqt_end_time;
 
-  rvs::lp::Log("int pqt_action::run()", rvs::logtrace);
+  rvs::lp::Log("int pbqt_action::run()", rvs::logtrace);
 
   if (property.find("cli.-j") != property.end()) {
     bjson = true;
@@ -106,8 +106,8 @@ int pqt_action::run() {
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return -1;
   }
-  if (!get_all_pqt_config_keys()) {
-    msg = "Error in get_all_pqt_config_keys()";
+  if (!get_all_pbqt_config_keys()) {
+    msg = "Error in get_all_pbqt_config_keys()";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return -1;
   }
@@ -142,8 +142,8 @@ int pqt_action::run() {
 
   RVSTRACE_
   // define timers
-  rvs::timer<pqt_action> timer_running(&pqt_action::do_running_average, this);
-  rvs::timer<pqt_action> timer_final(&pqt_action::do_final_average, this);
+  rvs::timer<pbqt_action> timer_running(&pbqt_action::do_running_average, this);
+  rvs::timer<pbqt_action> timer_final(&pbqt_action::do_final_average, this);
 
   unsigned int iter = property_count > 0 ? property_count : 1;
   unsigned int step = 1;
@@ -164,7 +164,7 @@ int pqt_action::run() {
       timer_running.start(property_log_interval);        // ticks continuously
     }
 
-    pqt_start_time = std::chrono::system_clock::now();
+    pbqt_start_time = std::chrono::system_clock::now();
 
     RVSTRACE_
     do {
@@ -173,10 +173,10 @@ int pqt_action::run() {
       } else {
         sts = run_single();
       }
-      pqt_end_time = std::chrono::system_clock::now();
-      uint64_t test_time = time_diff(pqt_end_time, pqt_start_time) ;
+      pbqt_end_time = std::chrono::system_clock::now();
+      uint64_t test_time = time_diff(pbqt_end_time, pbqt_start_time) ;
       if(test_time >= property_duration) {
-          pqt_action::do_final_average();
+          pbqt_action::do_final_average();
           break;
       }
     } while (brun);
@@ -217,7 +217,7 @@ int pqt_action::run() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqt_action::run_single() {
+int pbqt_action::run_single() {
   RVSTRACE_
   int sts = 0;
 
@@ -249,7 +249,7 @@ int pqt_action::run_single() {
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
-int pqt_action::run_parallel() {
+int pbqt_action::run_parallel() {
   RVSTRACE_
 
   // start all worker threads
