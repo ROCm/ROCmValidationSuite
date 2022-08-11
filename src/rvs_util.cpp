@@ -173,7 +173,8 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
         msg_stream.str("");
         msg_stream << "Note: The system has Multi-Chip Module (MCM) GPU/s." << "\n"
                    << "In MCM GPU, primary GPU die shows total socket (primary + secondary) power information." << "\n"
-                   << "Secondary GPU die does not have any power information associated with it independently."<< "\n";
+                   << "Secondary GPU die does not have any power information associated with it independently."<< "\n"
+                   << "So, expect power reading from Secondary GPU die as 0."<< "\n";
         rvs::lp::Log(msg_stream.str(), rvs::logresults);
      }
     return amd_gpus_found;
