@@ -472,10 +472,6 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
                    std::to_string(gpu_id) + " " + GST_START_MSG + " " +
                    " Executing hot calls loop :" + std::to_string(gst_hot_calls); 
             rvs::lp::Log(msg, rvs::logtrace);
-          
-            if(0 != gst_hot_calls) {
-              gst_hot_calls--;
-            }
         }
     }
 
