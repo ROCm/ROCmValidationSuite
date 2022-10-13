@@ -10,7 +10,7 @@ if [ "$#" -eq 0 ] ; then
     msval="msval"
     sed -i "s/$msval/${duration}/g" ../conf/gst_stress.conf
     date
-    echo 'gst-1hr';sudo ../../../bin/rvs -c ../conf/gst_stress.conf -d 3; date
+    echo 'gst-1hr';../../../bin/rvs -c ../conf/gst_stress.conf -d 3; date
     sed -i "s/${duration}/$msval/g" ../conf/gst_stress.conf
 else
     duration=$((3600000 * $1))
@@ -18,6 +18,6 @@ else
     msval="msval"
     sed -i "s/$msval/${duration}/g" ../conf/gst_stress.conf
     date
-    echo 'gst-'$1hr'(s)';sudo ../../../bin/rvs -c ../conf/gst_stress.conf -d 3; date
+    echo 'gst-'$1hr'(s)';../../../bin/rvs -c ../conf/gst_stress.conf -d 3; date
     sed -i "s/${duration}/$msval/g" ../conf/gst_stress.conf
 fi
