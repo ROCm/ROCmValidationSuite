@@ -463,6 +463,15 @@ else()
 endif()
 set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
+# Determine HSA_PATH
+if(NOT DEFINED HSA_PATH)
+     if(NOT DEFINED ENV{HSA_PATH})
+          set(HSA_PATH "${ROCM_PATH}" CACHE PATH "Path to which HSA runtime has been installed")
+     else()
+          set(HSA_PATH $ENV{HSA_PATH} CACHE PATH "Path to which HSA runtime has been installed")
+     endif()
+endif()
+
 set(RVS_BINTEST_FOLDER ${CMAKE_BINARY_DIR}/bintest)
 # Check if Address Sanitizer enabled.
 if(BUILD_ADDRESS_SANITIZER)

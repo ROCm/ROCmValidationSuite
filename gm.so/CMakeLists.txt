@@ -86,15 +86,6 @@ if(NOT DEFINED HIPCC_PATH)
      endif()
 endif()
 
-# Determine HSA_PATH
-if(NOT DEFINED HSA_PATH)
-     if(NOT DEFINED ENV{HSA_PATH})
-          set(HSA_PATH "${ROCM_PATH}/hsa" CACHE PATH "Path to which HSA runtime has been installed")
-     else()
-          set(HSA_PATH $ENV{HSA_PATH} CACHE PATH "Path to which HSA runtime has been installed")
-     endif()
-endif()
-
 # Add HIP_VERSION to CMAKE_<LANG>_FLAGS
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
