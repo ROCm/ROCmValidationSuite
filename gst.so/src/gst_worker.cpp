@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 ROCm Developer Tools
+ * Copyright (c) 2018-2022 Advanced Micro Devices, Inc.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -472,8 +472,8 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
                    std::to_string(gpu_id) + " " + GST_START_MSG + " " +
                    " Executing hot calls loop :" + std::to_string(gst_hot_calls); 
             rvs::lp::Log(msg, rvs::logtrace);
-           
-            gst_hot_calls--; 
+
+            gst_hot_calls--;
         }
     }
 
