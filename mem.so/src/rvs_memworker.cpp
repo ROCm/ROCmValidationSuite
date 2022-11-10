@@ -61,44 +61,10 @@ rvs_memtest_t rvs_memtests[]={
 };
 
 void MemWorker::init_tests(const std::vector<uint32_t>& exclude_list){
-	for(const auto& testidx : exclude_list){
-		rvs_memtests[testidx].enabled = 0;
-	}
+    for(const auto& testidx : exclude_list){
+        rvs_memtests[testidx].enabled = 0;
+    }
 }
-#if 0
-void MemWorker::allocate_small_mem(void)
-{
-    //Initialize memory
-    HIP_CHECK(hipMalloc((void**)&ptCntOfError, sizeof(unsigned int) )); 
-    HIP_CHECK(hipMemset(ptCntOfError, 0, sizeof(unsigned int) )); 
-
-    HIP_CHECK(hipMalloc((void**)&ptFailedAdress, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(ptFailedAdress, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-
-    HIP_CHECK(hipMalloc((void**)&ptExpectedValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(ptExpectedValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-
-    HIP_CHECK(hipMalloc((void**)&ptCurrentValue, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(ptCurrentValue, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-
-    HIP_CHECK(hipMalloc((void**)&ptValueOfSecondRead, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-    HIP_CHECK(hipMemset(ptValueOfSecondRead, 0, sizeof(unsigned long) * MAX_ERR_RECORD_COUNT));
-}
-
-void MemWorker::free_small_mem(void)
-{
-    //Initialize memory
-    hipFree((void*)&ptCntOfError);
-
-    hipFree((void*)ptFailedAdress);
-
-    hipFree((void*)ptExpectedValue);
-
-    hipFree((void*)ptCurrentValue);
-
-    hipFree((void*)ptValueOfSecondRead);
-}
-#endif
 
 void MemWorker::Initialization(void)
 {
@@ -111,7 +77,13 @@ void MemWorker::Initialization(void)
     memdata.gpu_idx = gpu_id;
     memdata.num_iterations = num_iterations;
 }
- 
+
+
+std::string MemWorker::log_prefix(){
+    static std::string prefix =  "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpu_id) + " ";
+    return prefix;
+}
+
 void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
 {
     struct timeval  t0, t1;
@@ -124,13 +96,12 @@ void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
           gettimeofday(&t0, NULL);
           rvs_memtests[i].func(ptr, tot_num_blocks);
           gettimeofday(&t1, NULL);
-          msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                   std::to_string(gpu_id) + " To run memtest time taken: " + std::to_string(TDIFF(t1, t0)) + " seconds with " + std::to_string(i) + " passes ";
+          msg = log_prefix() + 
+		  "Test:" +vs_memtests[i].desc " ran in: " + std::to_string(TDIFF(t1, t0)) + "s" ;
           rvs::lp::Log(msg, rvs::loginfo);
-     }//for
+     }
 
-     msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                   std::to_string(gpu_id) + " " + " Memory tests : " + std::to_string(i) + " tests complete \n";
+     msg = log_prefix() +  std::to_string(i) + " tests complete \n";
      rvs::lp::Log(msg, rvs::loginfo);
 }
 
@@ -151,8 +122,7 @@ void MemWorker::run() {
    
 
     // log MEM stress test - start message
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " "  + " Starting the Memory stress test "; 
+    msg = log_prefix() + " Starting the Memory stress test "; 
     rvs::lp::Log(msg, rvs::loginfo);
 
     deviceId  = get_gpu_device_index();
@@ -161,8 +131,7 @@ void MemWorker::run() {
 
     totmem = props.totalGlobalMem;
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + "Total Global Memory" + " " +
+    msg = log_prefix() + "Total Global Memory" + " " +
             std::to_string(totmem); 
     rvs::lp::Log(msg, rvs::logtrace);
 
@@ -179,9 +148,8 @@ void MemWorker::run() {
 
     HIP_CHECK(hipMemGetInfo(&free, &total));
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + "Total Memory from hipMemGetInfo " + " " +
-            std::to_string(total) + " " + " Free Memory from hipMemGetInfo " + " " + 
+    msg = log_prefix() + "Total Allocatable Memory: " +
+            std::to_string(total) + ", " + " Free Memory: " + 
             std::to_string(free);
     rvs::lp::Log(msg, rvs::logtrace);
 
@@ -189,8 +157,7 @@ void MemWorker::run() {
 
     tot_num_blocks = MIN(tot_num_blocks, free/BLOCKSIZE - MEM_NUM_SAVE_BLOCKS);
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + "Total Num of blocks " + " " +
+    msg = log_prefix() + "Total Num of blocks " + " " +
             std::to_string(tot_num_blocks); 
 
     rvs::lp::Log(msg, rvs::logtrace);
@@ -199,8 +166,7 @@ void MemWorker::run() {
         tot_num_blocks -= MEM_NUM_SAVE_BLOCKS ; //magic number 16 MB
 
         if (tot_num_blocks <= 0){
-            msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                           std::to_string(gpu_id) + " " + " Total Number of blocks is zero, cant allocate memory" + " " +
+            msg = log_prefix() + " Total Number of blocks is zero, cant allocate memory " +
                            std::to_string(tot_num_blocks); 
 
             rvs::lp::Log(msg, rvs::logtrace);
@@ -209,8 +175,7 @@ void MemWorker::run() {
         }
 
 
-         msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                             std::to_string(gpu_id) + " " + "Use mapped memory  " + " " +
+         msg = log_prefix() + "Use mapped memory  " + 
                              std::to_string(useMappedMemory) + " Block Size: " +  std::to_string(BLOCKSIZE); 
 
          rvs::lp::Log(msg, rvs::loginfo);
@@ -233,8 +198,7 @@ void MemWorker::run() {
         else
         {
 
-             msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                             std::to_string(gpu_id) + " " + "Memory to be allocated: " + std::to_string(alloc_size); 
+             msg = log_prefix() + "Memory to be allocated: " + std::to_string(alloc_size); 
 
              rvs::lp::Log(msg, rvs::loginfo);
 
@@ -244,7 +208,7 @@ void MemWorker::run() {
     }while(hipGetLastError() != hipSuccess);
 
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpu_id) + " " + "Starting running tests " + " " + 
+    msg = log_prefix() + "Starting running tests " + " " + 
                   "Total Num of blocks " + std::to_string(tot_num_blocks);
 
     rvs::lp::Log(msg, rvs::logtrace);
