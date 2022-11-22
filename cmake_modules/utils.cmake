@@ -3,13 +3,13 @@
 ## The University of Illinois/NCSA
 ## Open Source License (NCSA)
 ##
-## Copyright (c) 2014-2017, Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2014-2017, Advanced Micro Devices, Inc. All rights reserved. 
 ##
 ## Developed by:
 ##
 ##                 AMD Research and AMD HSA Software Development
 ##
-##                 Advanced Micro Devices, Inc.
+##                 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ##                 www.amd.com
 ##
@@ -25,7 +25,7 @@
 ##  - Redistributions in binary form must reproduce the above copyright
 ##    notice, this list of conditions and the following disclaimers in
 ##    the documentation and#or other materials provided with the distribution.
-##  - Neither the names of Advanced Micro Devices, Inc,
+##  - Neither the names of Advanced Micro Devices, Inc. All rights reserved.
 ##    nor the names of its contributors may be used to endorse or promote
 ##    products derived from this Software without specific prior written
 ##    permission.
