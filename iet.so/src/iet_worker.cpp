@@ -204,7 +204,7 @@ bool IETWorker::do_iet_power_stress(void) {
     uint64_t  total_time_ms;
     uint64_t  last_avg_power;
     string    msg;
-    float     cur_power_value;
+    float     cur_power_value = 0;
     float     totalpower = 0;
     float     max_power = 0;
     bool      result = true;
@@ -234,7 +234,7 @@ bool IETWorker::do_iet_power_stress(void) {
 
         //check whether we reached the target power
         if(cur_power_value > target_power){
-            max_power = cur_power_value;
+            max_power = std::max(max_power, cur_power_value);// max of averages
         }
 
         end_time = std::chrono::system_clock::now();
@@ -276,7 +276,7 @@ bool IETWorker::do_iet_power_stress(void) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Average power couldnt meet the target power  \
             in the given interval, increase the duration and try again, \
-            Average power is :" + " " + std::to_string(cur_power_value);
+            Average power is :" + " " + std::to_string(max_power);
         rvs::lp::Log(msg, rvs::loginfo);
         result = false;
     }
