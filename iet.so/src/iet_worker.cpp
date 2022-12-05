@@ -276,7 +276,7 @@ bool IETWorker::do_iet_power_stress(void) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Average power couldnt meet the target power  \
             in the given interval, increase the duration and try again, \
-            Average power is :" + " " + std::to_string(max_power);
+            Average power is :" + " " + std::to_string(cur_power_value);
         rvs::lp::Log(msg, rvs::loginfo);
         result = false;
     }
