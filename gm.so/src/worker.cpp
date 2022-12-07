@@ -217,6 +217,16 @@ void Worker::run() {
                 GM_MEM_CLOCK  + " " + "bounds violation " +
                 std::to_string(mhz) + "Mhz";
           rvs::lp::Log(msg, rvs::loginfo);
+
+          if(nullptr != callback) {
+            rvs::action_result_t action_result;
+
+            action_result.state = rvs::actionstate::ACTION_RUNNING;
+            action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+            action_result.output = msg.c_str();
+            callback(&action_result, user_param);
+          }
+
           met_violation[ix].mem_clock_violation++;
           if (term) {
             RVSTRACE_
@@ -256,6 +266,16 @@ void Worker::run() {
               GM_CLOCK + " " + "bounds violation " +
               std::to_string(mhz) + "Mhz";
           rvs::lp::Log(msg, rvs::loginfo);
+
+          if(nullptr != callback) {
+            rvs::action_result_t action_result;
+
+            action_result.state = rvs::actionstate::ACTION_RUNNING;
+            action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+            action_result.output = msg.c_str();
+            callback(&action_result, user_param);
+          }
+
           met_violation[ix].clock_violation++;
           if (term) {
             RVSTRACE_
@@ -303,6 +323,16 @@ void Worker::run() {
                 + GM_TEMP + " " + "bounds violation " +
                 std::to_string(temper) + "C";
             rvs::lp::Log(msg, rvs::loginfo);
+
+            if(nullptr != callback) {
+              rvs::action_result_t action_result;
+
+              action_result.state = rvs::actionstate::ACTION_RUNNING;
+              action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+              action_result.output = msg.c_str();
+              callback(&action_result, user_param);
+            }
+
             met_violation[ix].temp_violation++;
             if (term) {
               RVSTRACE_
@@ -356,6 +386,16 @@ void Worker::run() {
                   + GM_FAN + " " + "bounds violation " +
                   std::to_string(speed) + "%";
             rvs::lp::Log(msg, rvs::loginfo);
+
+            if(nullptr != callback) {
+              rvs::action_result_t action_result;
+
+              action_result.state = rvs::actionstate::ACTION_RUNNING;
+              action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+              action_result.output = msg.c_str();
+              callback(&action_result, user_param);
+            }
+
             met_violation[ix].fan_violation++;
             if (term) {
               RVSTRACE_
@@ -404,6 +444,16 @@ void Worker::run() {
                   GM_POWER + " " + "bounds violation " +
                   std::to_string(static_cast<float>(power) / 1e6) + "Watts";
             rvs::lp::Log(msg, rvs::loginfo);
+
+            if(nullptr != callback) {
+              rvs::action_result_t action_result;
+
+              action_result.state = rvs::actionstate::ACTION_RUNNING;
+              action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+              action_result.output = msg.c_str();
+              callback(&action_result, user_param);
+            }
+
             met_violation[ix].power_violation++;
             if (term) {
               RVSTRACE_

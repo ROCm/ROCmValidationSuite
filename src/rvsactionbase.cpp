@@ -49,7 +49,10 @@ using std::string;
 rvs::actionbase::actionbase() {
   property_log_level = 2;
   property_device_all = true;
+  property_device_index_all = true;
   property_device_id = 0u;
+  callback = nullptr;
+  user_param = 0u;
 }
 
 /**
@@ -69,6 +72,25 @@ rvs::actionbase::~actionbase() {
  * */
 int rvs::actionbase::property_set(const char* pKey, const char* pVal) {
   property.insert(property.cend(), std::pair<string, string>(pKey, pVal));
+  return 0;
+}
+
+/**
+ * @brief Set action callback
+ *
+ * @param callback Callback function
+ * @param userparam User parameter for callback
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
+int rvs::actionbase::callback_set(void (*callback)(const action_result_t * result, void * user_param), void * user_param) {
+
+  if((nullptr == callback) || (nullptr == user_param)) {
+    return 1;
+  }
+
+  this->callback = callback;
+  this->user_param = user_param;
   return 0;
 }
 
@@ -127,6 +149,14 @@ int rvs::actionbase::property_get_device() {
     YAML_DEVICE_PROP_DELIMITER,
     &property_device,
     &property_device_all);
+}
+
+int rvs::actionbase::property_get_device_index() {
+  return property_get_uint_list<uint16_t>(
+    RVS_CONF_DEVICE_INDEX_KEY,
+    YAML_DEVICE_PROP_DELIMITER,
+    &property_device_index,
+    &property_device_index_all);
 }
 
 /**

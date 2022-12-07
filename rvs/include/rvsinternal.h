@@ -1,6 +1,6 @@
 /********************************************************************************
- *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * 
+ * Copyright (c) 2018-2022 Advanced Micro Devices, Inc.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,25 +22,36 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RVS_INCLUDE_RVSMODULE_IF1_H_
-#define RVS_INCLUDE_RVSMODULE_IF1_H_
 
+#include <include/rvs.h>
+
+#ifdef __cplusplus
 extern "C" {
+#endif
 
-extern const char* rvs_module_get_errstring(int error);
-extern int rvs_module_action_property_set(void* Action, const char* Key,
-                                          const char* Val);
-extern int rvs_module_action_run(void* Action);
+/*! \def RVS_MAX_SESSIONS
+ * Maximum session supported in RVS at once.
+ */
+#define RVS_MAX_SESSIONS 1
 
-// define function pointer types to ease late binding usage
-typedef const char* (*t_rvs_module_get_errstring)(int error);
-typedef int (*t_rvs_module_action_property_set)(void* Action, const char* Key,
-                                                const char* Val);
-typedef int (*t_rvs_module_action_run)(void* Action);
+/*! \enum rvs_state_t
+ * RVS states.
+ */
+typedef enum {
+  RVS_STATE_INITIALIZED, /*!< RVS initialized state */
+  RVS_STATE_UNINITIALIZED /*!< RVS uninitialized state */
+} rvs_state_t;
 
-typedef int (*t_rvs_module_action_callback_set)(void* pAction,
-                                                 void (*callback)(const rvs::action_result_t * result, void * user_param),
-                                                 void * user_param);
+/*! \struct rvs_session_t
+ *  \brief RVS session parameters.
+ */
+typedef struct rvs_session_ {
+  rvs_session_id_t id;/*!< Unique session id */
+  rvs_session_state_t state;/*!< Current session state */
+  rvs_session_callback callback;/*!< Session callback */
+  rvs_session_property_t property;/*!< Session property */
+} rvs_session_t;
+
+#ifdef __cplusplus
 }
-
-#endif  // RVS_INCLUDE_RVSMODULE_IF1_H_
+#endif

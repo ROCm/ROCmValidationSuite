@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "include/rvsthreadbase.h"
+#include "include/rvsactionbase.h"
 
 
 /**
@@ -64,6 +65,11 @@ class Worker : public rvs::ThreadBase {
   void json(const bool flag) { bjson = flag; }
   //! Returns initiating action name
   const std::string& get_name(void) { return action_name; }
+  //! Set action callback 
+  void set_callback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
+    callback = _callback;
+    user_param = _user_param;
+  }
 
  protected:
   virtual void run(void);
@@ -85,6 +91,10 @@ class Worker : public rvs::ThreadBase {
   std::string  action_name;
   //! Name of the action which stops monitoring
   std::string  stop_action_name;
+  //! callback
+  void (*callback)(const rvs::action_result_t * result, void * user_param);
+  //! User parameter
+  void * user_param;
 };
 
 

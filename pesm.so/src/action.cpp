@@ -209,6 +209,7 @@ int pesm_action::run(void) {
   pworker->json(bjson);
   pworker->set_gpuids(property_device);
   pworker->set_deviceid(property_device_id);
+  pworker->set_callback(callback, user_param);
 
   // start worker thread
   RVSTRACE_

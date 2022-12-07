@@ -128,6 +128,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
             workers[i].set_num_passes(num_passes);
             workers[i].set_stress(stress);
             workers[i].set_num_iterations(num_iterations);
+            workers[i].set_callback(callback, user_param);
 
             i++;
         }

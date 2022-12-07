@@ -29,7 +29,7 @@
 #include <map>
 
 #include "include/rvsthreadbase.h"
-
+#include "include/rvsactionbase.h"
 
 /**
  * @class Worker
@@ -138,6 +138,11 @@ class Worker : public rvs::ThreadBase {
   int get_power(const std::string path);
   //! prints captured metric values
   void do_metric_values(void);
+  //! Set action callback 
+  void set_callback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
+    callback = _callback;
+    user_param = _user_param;
+  }
 
  protected:
   virtual void run(void);
@@ -171,6 +176,10 @@ class Worker : public rvs::ThreadBase {
   std::map<uint32_t, Metric_value> met_value;
   //! dv_ind and current metric values
   std::map<uint32_t, Metric_avg> met_avg;
+  // callback
+  void (*callback)(const rvs::action_result_t * result, void * user_param);
+  // User parameter
+  void * user_param;
 };
 
 #endif  // GM_SO_INCLUDE_WORKER_H_

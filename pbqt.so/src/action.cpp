@@ -805,8 +805,6 @@ int pbqt_action::print_final_average() {
     } else {
       snprintf( buff, sizeof(buff), "(not measured)");
     }
-//     src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
-//     dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
 
     RVSTRACE_
     if (rvs::gpulist::node2gpu(src_node, &src_id)) {
@@ -836,30 +834,15 @@ int pbqt_action::print_final_average() {
 
     rvs::lp::Log(msg, rvs::logresults);
 
-#if 0
-    if (bjson) {
-      unsigned int sec;
-      unsigned int usec;
-      rvs::lp::get_ticks(&sec, &usec);
-      void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                              action_name.c_str(), rvs::logresults, sec, usec);
-      if (pjson != NULL) {
-        rvs::lp::AddString(pjson,
-                            "transfer_ix", std::to_string(transfer_ix));
-        rvs::lp::AddString(pjson,
-                            "transfer_num", std::to_string(transfer_num));
-        rvs::lp::AddString(pjson, "src", std::to_string(src_id));
-        rvs::lp::AddString(pjson, "dst", std::to_string(dst_id));
-        rvs::lp::AddString(pjson, "p2p", "true");
-        rvs::lp::AddString(pjson, "bidirectional",
-                           std::string(bidir ? "true" : "false"));
-        rvs::lp::AddString(pjson, "bandwidth (GBps)", buff);
-        rvs::lp::AddString(pjson, "duration (sec)",
-                           std::to_string(duration));
-        rvs::lp::LogRecordFlush(pjson);
-      }
+
+    if(nullptr != callback) {
+      rvs::action_result_t result;
+
+      result.state = rvs::actionstate::ACTION_RUNNING;
+      result.status = rvs::actionstatus::ACTION_SUCCESS;
+      result.output = msg.c_str();
+      callback(&result, user_param);
     }
-#endif
 
     log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::logresults,
         pbqt_json_data_t::PBQT_THROUGHPUT, buff);

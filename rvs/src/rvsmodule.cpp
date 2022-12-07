@@ -171,8 +171,11 @@ rvs::module* rvs::module::find_create_module(const char* name) {
     void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
     // error?
     if (!psolib) {
-      //Search libraries in current path for backward compatibility
-      rvs::options::has_option("pwd", &libpath); // has ending forward slash too
+      //Search libraries in current path set in pwd option for backward compatibility
+      if(false == rvs::options::has_option("pwd", &libpath)) {
+        //Search libraries in current path if pwd option not set
+        libpath = "./";
+      } // has ending forward slash too
       string sofullname(libpath + it->second);
       psolib = dlopen(sofullname.c_str(), RTLD_NOW);
       // error?
@@ -275,7 +278,7 @@ rvs::action* rvs::module::action_create(const char* name) {
     return nullptr;
   }
 
-  // create lib action objct
+  // create lib action object
   void* plibaction = m->action_create();
   if (!plibaction)  {
     char buff[1024];
@@ -546,6 +549,11 @@ int rvs::module::init_interface_1(void) {
                             "rvs_module_action_run"))
     sts--;
 
+  if (init_interface_method(
+    reinterpret_cast<void**>(&(pif1->rvs_module_action_callback_set)),
+                            "rvs_module_action_callback_set"))
+    sts--;
+
   if (sts) {
     delete pif1;
     return sts;
@@ -595,9 +603,4 @@ void rvs::module::do_list_modules(void) {
     rvs::module::action_destroy(pa);
   }
 }
-
-
-
-
-
 

@@ -473,6 +473,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_ldb_offset(iet_ldb_offset);
             workers[i].set_ldc_offset(iet_ldc_offset);
             workers[i].set_tp_flag(iet_tp_flag);
+            workers[i].set_callback(callback, user_param);
 
             i++;
         }
@@ -513,7 +514,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     }
 
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Done with edp test ";
+    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Done with iet test ";
     rvs::lp::Log(msg, rvs::loginfo);
 
     sleep(1000);
@@ -534,7 +535,7 @@ int iet_action::get_num_amd_gpu_devices(void) {
 }
 
 /**
- * @brief retrieves the GPU identification data  and adds it to the list of 
+ * @brief retrieves the GPU identification data and adds it to the list of 
  * those that will run the EDPp test
  * @param dev_location_id GPU device location ID
  * @param gpu_id GPU's ID as exported by KFD
@@ -609,11 +610,13 @@ int iet_action::get_all_selected_gpus(void) {
         return hip_num_gpu_devices;
     // find compatible GPUs to run edp tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
-                    property_device, property_device_id, property_device_all, true); // MCM checks
+        property_device, property_device_all,
+        property_device_id,
+        property_device_index, property_device_index_all, true); // MCM checks
     if(!amd_gpus_found){
-        msg = "No devices match criteria from the test configuation.";
-	rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-	return 1;
+      msg = "No devices match criteria from the test configuation.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return 1;
     }
 
     if(bjson){

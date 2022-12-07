@@ -31,6 +31,7 @@
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
 #include "include/rvs_util.h"
+#include "include/rvsactionbase.h"
 
 /**
  * @class IETWorker
@@ -205,6 +206,12 @@ class IETWorker : public rvs::ThreadBase {
         matrix_size_c = _matrix_size_c;
     }
 
+   //! Set action callback 
+    void set_callback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
+      callback = _callback;
+      user_param = _user_param;
+    }
+
  protected:
     virtual void run(void);
     bool do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type);
@@ -286,9 +293,13 @@ class IETWorker : public rvs::ThreadBase {
     float iet_beta_val;
     //IET TP flag
     bool iet_tp_flag;
-    //mtex
+    //mutex
     std::mutex mtx_blas_done;
     bool endtest = false;
+    // callback
+    void (*callback)(const rvs::action_result_t * result, void * user_param);
+    // User parameter
+    void * user_param;
 };
 
 

@@ -481,8 +481,8 @@ endif()
 
 set(HCC_CXX_FLAGS  "-fno-gpu-rdc  --amdgpu-target=gfx90a --amdgpu-target=gfx1030 --amdgpu-target=gfx803 --amdgpu-target=gfx900 --amdgpu-target=gfx906 --amdgpu-target=gfx908")
 
-add_subdirectory(rvs)
 add_subdirectory(rvslib)
+add_subdirectory(rvs)
 add_subdirectory(gm.so)
 add_subdirectory(gpup.so)
 add_subdirectory(gst.so)
@@ -613,6 +613,29 @@ if(RVS_ROCMSMI EQUAL 1)
 	  DESTINATION /${CMAKE_INSTALL_SYSCONFDIR}/ld.so.conf.d
           COMPONENT rvsmodule)
 endif()  # if(RVS_ROCMSMI EQUAL 1)
+
+
+# Create and install rvs-config.cmake & rvs-config-version.cmake file
+include(CMakePackageConfigHelpers)
+
+set(LIB_INSTALL_DIR  "${CMAKE_INSTALL_LIBDIR}")
+set(INCLUDE_INSTALL_DIR  "${CMAKE_INSTALL_INCLUDEDIR}")
+set(BIN_INSTALL_DIR  "${CMAKE_INSTALL_BINDIR}")
+
+configure_package_config_file(rvs-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/rvs-config.cmake
+    INSTALL_DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/rvs
+    PATH_VARS LIB_INSTALL_DIR INCLUDE_INSTALL_DIR BIN_INSTALL_DIR)
+
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/rvs-config-version.cmake
+    VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+    COMPATIBILITY SameMajorVersion)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/rvs-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/rvs-config-version.cmake
+    DESTINATION
+    ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/rvs
+    COMPONENT dev)
 
 # TEST SECTION
 

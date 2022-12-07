@@ -172,6 +172,7 @@ int rcqt_action::pkgchk_run() {
       return -1;
     }
 
+    handler->setCallback(callback, user_param);
     handler->parseManifest();
     handler->validatePackages();
   }
@@ -204,6 +205,7 @@ int rcqt_action::pkglist_run() {
     return -1;
   }
 
+  handler->setCallback(callback, user_param);
   handler->setPackageList(package_list);
   handler->listPackageVersion();
 

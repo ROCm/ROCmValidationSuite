@@ -1,0 +1,21 @@
+# Config file for rocm-validation-suite (RVS) package 
+# The following variables are defined here
+# ROCM_VALIDATION_SUITE_LIBRARY - RVS library 
+# rocm_validation_suite_LIBRARY - RVS library 
+# ROCM_VALIDATION_SUITE_INCLUDE_DIR - RVS include directory
+# rocm_validation_suite_INCLUDE_DIR - RVS include directory
+# ROCM_VALIDATION_SUITE_LIB_DIR - RVS library directory 
+# rocm_validation_suite_LIB_DIR - RVS library directory 
+
+# Compute paths
+@PACKAGE_INIT@
+
+set_and_check(rocm_validation_suite_INCLUDE_DIR "@PACKAGE_INCLUDE_INSTALL_DIR@")
+set_and_check(ROCM_VALIDATION_SUITE_INCLUDE_DIR "@PACKAGE_INCLUDE_INSTALL_DIR@")
+set_and_check(rocm_validation_suite_LIB_DIR "@PACKAGE_LIB_INSTALL_DIR@")
+set_and_check(ROCM_VALIDATION_SUITE_LIB_DIR "@PACKAGE_LIB_INSTALL_DIR@")
+
+set(ROCM_VALIDATION_SUITE_LIBRARY rvslib)
+set(rocm_validation_suite_LIBRARY rvslib)
+
+check_required_components(rocm_validation_suite)

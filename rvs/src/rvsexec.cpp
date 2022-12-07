@@ -46,7 +46,7 @@ using std::cout;
 using std::endl;
 
 //! Default constructor
-rvs::exec::exec() {
+rvs::exec::exec():app_callback(nullptr), user_param(0) {
 }
 
 //! Default destructor
@@ -192,7 +192,7 @@ int rvs::exec::run() {
 
   DTRACE_
   try {
-    sts = do_yaml(config_file);
+    sts = do_yaml(yaml_data_type_t::YAML_FILE, config_file);
   } catch(std::exception& e) {
     sts = -999;
     char buff[1024];
@@ -223,7 +223,158 @@ int rvs::exec::run() {
   return 0;
 }
 
-//! Reports version strin
+/**
+ * @brief Set application callback function
+ * @param callback Application callback function pointer
+ * @param user_param User parameter for application callback
+ * @return 0 if successful, non-zero otherwise
+ *
+ */
+int rvs::exec::set_callback(void (*callback)(const rvs_results_t * results, int user_param), int user_param) {
+
+  if (nullptr == callback) {
+    DTRACE_
+    return -1;
+  }
+
+  this->app_callback = callback;
+  this->user_param = user_param;
+  return 0;
+}
+
+/**
+ * @brief Main executor method.
+ *
+ * @return 0 if successful, non-zero otherwise
+ *
+ */
+int rvs::exec::run(std::map<std::string, std::string>& opt) {
+
+  int     sts = 0;
+  string  path;
+  string  module;
+  string config;
+  yaml_data_type_t data_type;
+
+  options::has_option("pwd", &path);
+  logger::log_level(rvs::logerror);
+
+  if (rvs::options::has_option(opt, "conf", &config)) {
+    data_type = yaml_data_type_t::YAML_FILE;
+  }
+  else if (rvs::options::has_option(opt, "module", &module)) {
+
+#define RVS_MODULE_MAX 11 
+    std::map <std::string, int> module_map = {
+      {"babel", 0},
+      {"gpup", 1},
+      {"gst", 2},
+      {"iet", 3},
+      {"mem", 4},
+      {"pebb", 5},
+      {"peqt", 6},
+      {"pesm", 7},
+      {"pbqt", 8},
+      {"rcqt", 9},
+      {"smqt", 10}};
+
+    string module_config_file[RVS_MODULE_MAX] =
+    {
+      "babel.conf",
+      "gpup_single.conf",
+      "gst_single.conf",
+      "iet_single.conf",
+      "mem.conf",
+      "pebb_single.conf",
+      "peqt_single.conf",
+      "pesm_1.conf",
+      "pbqt_single.conf",
+      "rcqt_single.conf",
+      "smqt_single.conf"
+    };
+
+    auto itr = module_map.find(module);
+    int module_index = itr->second; 
+
+    if(RVS_MODULE_MAX <= module_index) { 
+      return -1;
+    }
+
+    config = "../share/rocm-validation-suite/conf/" + module_config_file[module_index];
+    // Check if pConfig file exist if not use old path for backward compatibility
+    std::ifstream file(path + config);
+    if (!file.good()) {
+      config = "conf/" + module_config_file[module_index];
+    }
+    file.close();
+    config = path + config;
+    data_type = yaml_data_type_t::YAML_FILE;
+  }
+  else if (rvs::options::has_option(opt, "yaml", &config)) {
+    data_type = yaml_data_type_t::YAML_STRING;
+  } 
+
+  if(yaml_data_type_t::YAML_FILE == data_type) {
+    // Check if pConfig file exists
+    std::ifstream file(config);
+    if (!file.good()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "%s file is missing.", config.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    } else {
+      file.close();
+    }
+  }
+
+  // construct modules configuration file relative path
+  string val = path + "../share/rocm-validation-suite/conf/.rvsmodules.config";
+  // Check if config file exists if not check the old file location for backward compatibility
+  std::ifstream conf_file(val);
+  if (!conf_file.good()) {
+    val = path + ".rvsmodules.config";
+  }
+  conf_file.close();
+
+  if (rvs::module::initialize(val.c_str())) {
+    return 1;
+  }
+
+  DTRACE_
+    try {
+      sts = do_yaml(data_type, config);
+    } catch(std::exception& e) {
+      sts = -999;
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "error processing configuration file: %s", config.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      snprintf(buff, sizeof(buff),
+          "exception: %s", e.what());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+    }
+
+  rvs::module::terminate();
+  logger::terminate();
+
+  DTRACE_
+    if (sts) {
+      DTRACE_
+        return sts;
+    }
+
+  // if stop was requested
+  if (rvs::logger::Stopping()) {
+    DTRACE_
+      return -1;
+  }
+
+  DTRACE_
+    return 0;
+}
+
+//! Reports version string
 void rvs::exec::do_version() {
   cout << LIB_VERSION_STRING << '\n';
 }
@@ -319,3 +470,36 @@ int rvs::exec::do_gpu_list() {
 
   return sts;
 }
+
+void rvs::exec::action_callback(const action_result_t * result, void * user_param) {
+
+  if((nullptr == result)||(nullptr == user_param)) {
+    return;
+  }
+
+  static_cast<rvs::exec *>(user_param)->callback(result);
+
+}
+
+void rvs::exec::callback(const action_result_t * result) {
+
+  rvs_results_t rvs_result;
+
+  rvs_result.status = RVS_STATUS_FAILED;
+
+  switch (result->status) {
+    case rvs::actionstatus::ACTION_SUCCESS:
+      {
+        rvs_result.status = RVS_STATUS_SUCCESS;
+      }
+      break;
+
+    default:
+      return;
+  }
+
+  rvs_result.output_log = result->output;
+
+  (*app_callback)(&rvs_result, user_param);
+}
+

@@ -352,6 +352,7 @@ int gm_action::run(void) {
   pworker->set_sample_int(sample_interval);
   pworker->set_log_int(property_log_interval);
   pworker->set_terminate(prop_terminate);
+  pworker->set_callback(callback, user_param);
   if (prop_force)
     pworker->set_force(true);
 

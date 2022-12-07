@@ -29,6 +29,7 @@
 #include <memory>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
+#include "include/rvsactionbase.h"
 
 #define PERF_RESULT_PASS_MESSAGE         "true"
 #define PERF_RESULT_FAIL_MESSAGE         "false"
@@ -190,6 +191,12 @@ class PERFWorker : public rvs::ThreadBase {
 
     void set_perf_ops_type(std::string _ops_type) { perf_ops_type = _ops_type; }
 
+    //! Set action callback 
+    void set_callback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
+      callback = _callback;
+      user_param = _user_param;
+    }
+
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -258,6 +265,10 @@ class PERFWorker : public rvs::ThreadBase {
     static bool bjson;
     //Type of operation
     std::string perf_ops_type;
+    // callback
+    void (*callback)(const rvs::action_result_t * result, void * user_param);
+    // User parameter
+    void * user_param;
 };
 
 #endif  // PERF_SO_INCLUDE_PERF_WORKER_H_

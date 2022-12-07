@@ -601,6 +601,16 @@ int pebb_action::print_final_average() {
 
     resultBandwidth.push_back(bw);
     log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id), rvs::logresults, buff);
+
+    if(nullptr != callback) {
+      rvs::action_result_t result;
+
+      result.state = rvs::actionstate::ACTION_RUNNING;
+      result.status = rvs::actionstatus::ACTION_SUCCESS;
+      result.output = msg.c_str();
+      callback(&result, user_param);
+    }
+
     RVSTRACE_
   }
   RVSTRACE_
@@ -712,6 +722,15 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
 
   rvs::lp::Log(msg, rvs::logresults);
   log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstGpuID),rvs::logresults);
+
+  if(nullptr != callback) {
+    rvs::action_result_t result;
+
+    result.state = rvs::actionstate::ACTION_RUNNING;
+    result.status = rvs::actionstatus::ACTION_SUCCESS;
+    result.output = msg.c_str();
+    callback(&result, user_param);
+  }
 
   return 0;
 }

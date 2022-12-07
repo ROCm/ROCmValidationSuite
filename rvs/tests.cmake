@@ -30,9 +30,19 @@
 # )
 # add_dependencies(rvstest rvshelper)
 
+set(ROCBLAS_LIB "rocblas")
+set(ROC_THUNK_NAME "hsakmt")
+set(CORE_RUNTIME_NAME "hsa-runtime")
+set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
+
+## define lib directories
+link_directories(${RVS_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ROCT_LIB_DIR})
+
 ## define target for "test-to-fail"
 add_executable(${RVS_TARGET}fail src/rvs.cpp)
-target_link_libraries(${RVS_TARGET}fail librvshelper.a rvslib ${PROJECT_LINK_LIBS} )
+target_link_libraries(${RVS_TARGET}fail rvshelper rvslib rvslibut ${PROJECT_LINK_LIBS}
+  ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET})
+
 target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
 set_target_properties(${RVS_TARGET}fail PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
@@ -179,7 +189,7 @@ add_test(NAME unit.ttf.rvs.config.noconfig
 ## define include directories
 include_directories(${UT_INC})
 ## define lib directories
-link_directories(${UT_LIB})
+link_directories(${UT_LIB} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ROCT_LIB_DIR})
 ## additional libraries for unit tests
 set (PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
 
@@ -194,18 +204,21 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
   string(REPLACE ".cpp" "" TEST_NAME ${TMP_TEST_NAME})
   MESSAGE("unit test: ${TEST_NAME}")
 
-  add_executable(${TEST_NAME} ${SINGLE_TEST}
-    )
+  add_executable(${TEST_NAME} ${SINGLE_TEST})
+
   target_link_libraries(${TEST_NAME}
     ${PROJECT_LINK_LIBS}
     ${PROJECT_TEST_LINK_LIBS}
     rvshelper rvslib rvslibut gtest_main gtest pthread
+    ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET}
   )
+
   target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
   add_compile_options(-Wall -Wextra -save-temps)
   set_target_properties(${TEST_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
   )
+
   add_test(NAME ${TEST_NAME}
     WORKING_DIRECTORY ${RVS_BINTEST_FOLDER}
     COMMAND ${TEST_NAME}

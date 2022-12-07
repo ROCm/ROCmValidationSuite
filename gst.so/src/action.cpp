@@ -156,6 +156,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             workers[i].set_lda_offset(gst_lda_offset);
             workers[i].set_ldb_offset(gst_ldb_offset);
             workers[i].set_ldc_offset(gst_ldc_offset);
+            workers[i].set_callback(callback, user_param);
             
             i++;
         }
@@ -391,6 +392,20 @@ bool gst_action::get_all_common_config_keys(void) {
       bsts = false;
     }
 
+    // get <device_index> property value (a list of device indexes)
+    if (int sts = property_get_device_index()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device_index' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device_index' key.";
+        break;
+      }
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
     // get the other action/GST related properties
     if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
       msg = "invalid '" +
@@ -476,7 +491,9 @@ int gst_action::get_all_selected_gpus(void) {
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, gst_gpus_device_index, 
-		    property_device, property_device_id, property_device_all);
+        property_device, property_device_all,
+        property_device_id,
+        property_device_index, property_device_index_all, true);
     // iterate over all available & compatible AMD GPUs
      
     if (amd_gpus_found) {

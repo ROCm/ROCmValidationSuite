@@ -306,6 +306,16 @@ int smqt_action::run(void) {
     rvs::lp::Log(msga4, rvs::loginfo, sec, usec);
     rvs::lp::Log(msgs5, rvs::loginfo, sec, usec);
     rvs::lp::Log(pmsg, rvs::logresults);
+
+    if(nullptr != callback) {
+      rvs::action_result_t result;
+
+      result.state = rvs::actionstate::ACTION_RUNNING;
+      result.status = rvs::actionstatus::ACTION_SUCCESS;
+      result.output = msg.c_str();
+      callback(&result, user_param);
+    }
+
     rvs::lp::AddInt(r, "gpu", gpu_id);
     rvs::lp::AddString(r, "bar1_size", std::to_string(bar1_size));
     rvs::lp::AddString(r, "bar1_base_addr", std::to_string(bar1_base_addr));

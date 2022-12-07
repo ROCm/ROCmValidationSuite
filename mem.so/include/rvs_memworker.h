@@ -27,7 +27,7 @@
 
 #include <vector>
 #include "include/rvsthreadbase.h"
-
+#include "include/rvsactionbase.h"
 
 #define TDIFF(tb, ta) (tb.tv_sec - ta.tv_sec + 0.000001*(tb.tv_usec - ta.tv_usec))
 #define MEM_RESULT_PASS_MESSAGE         "true"
@@ -188,6 +188,12 @@ class MemWorker : public rvs::ThreadBase {
     static bool get_use_json(void) { return bjson; }
     static void init_tests(const std::vector<uint32_t>& exclude_list);
 
+    //! Set action callback 
+    void set_callback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
+      callback = _callback;
+      user_param = _user_param;
+    }
+
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -236,6 +242,10 @@ class MemWorker : public rvs::ThreadBase {
     uint64_t  threadsPerBlock;
     //Mapped memory pointer
     void*   mappedHostPtr;
+    // callback
+    void (*callback)(const rvs::action_result_t * result, void * user_param);
+    // User parameter
+    void * user_param;
 };
 
 #endif  // MEM_SO_INCLUDE_MEM_WORKER_H_

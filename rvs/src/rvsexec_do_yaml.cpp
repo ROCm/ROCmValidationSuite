@@ -102,12 +102,12 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       return -1;
     }
 
-    // create action excutor in .so
+    // create action executor in .so
     rvs::action* pa = module::action_create(rvsmodule.c_str());
     if (!pa) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
-               "action '%s' could not crate action object in module '%s'",
+               "action '%s' could not create action object in module '%s'",
                action["name"].as<std::string>().c_str(),
                rvsmodule.c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
@@ -137,6 +137,124 @@ int rvs::exec::do_yaml(const std::string& config_file) {
       std::string p(clit->first);
       p = "cli." + p;
       pif1->property_set(p, clit->second);
+    }
+
+    // Set Callback
+    if(nullptr != app_callback) {
+      pif1->callback_set(&rvs::exec::action_callback, (void *)this);
+    }
+
+    // execute action
+    sts = pif1->run();
+
+    // processing finished, release action object
+    module::action_destroy(pa);
+
+    // errors?
+    if (sts) {
+      // cancel actions and return
+      return sts;
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * @brief Executes actions listed in .conf file.
+ *
+ * @return 0 if successful, non-zero otherwise
+ *
+ */
+int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
+
+  int sts = 0;
+  YAML::Node config;
+
+  if(yaml_data_type_t::YAML_FILE == data_type) {
+
+    config = YAML::LoadFile(data);
+  }
+  else if(yaml_data_type_t::YAML_STRING == data_type) {
+
+    config = YAML::Load(data);
+  }
+  else {
+      return -1;
+  }
+
+  // find "actions" map
+  const YAML::Node& actions = config["actions"];
+
+
+  // for all actions...
+  for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
+    const YAML::Node& action = *it;
+
+    rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
+
+    // if stop was requested
+    if (rvs::logger::Stopping()) {
+      return -1;
+    }
+
+    // find module name
+    std::string rvsmodule;
+    try {
+      rvsmodule = action["module"].as<std::string>();
+    } catch(...) {
+    }
+
+    // not found or empty
+    if (rvsmodule == "") {
+      // report error and go to next action
+      char buff[1024];
+      snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
+               action["name"].as<std::string>().c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+
+    // create action executor in .so
+    rvs::action* pa = module::action_create(rvsmodule.c_str());
+    if (!pa) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+               "action '%s' could not create action object in module '%s'",
+               action["name"].as<std::string>().c_str(),
+               rvsmodule.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+
+    if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
+    if (!pif1) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+               "action '%s' could not obtain interface if1",
+               action["name"].as<std::string>().c_str());
+      module::action_destroy(pa);
+      return -1;
+    }
+
+    // load action properties from yaml file
+    sts += do_yaml_properties(action, rvsmodule, pif1);
+    if (sts) {
+      module::action_destroy(pa);
+      return sts;
+    }
+
+    // set also command line options:
+    for (auto clit = rvs::options::get().begin();
+         clit != rvs::options::get().end(); ++clit) {
+      std::string p(clit->first);
+      p = "cli." + p;
+      pif1->property_set(p, clit->second);
+    }
+
+    // Set Callback
+    if(nullptr != app_callback) {
+      pif1->callback_set(&rvs::exec::action_callback, (void *)this);
     }
 
     // execute action
@@ -183,7 +301,7 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
                                            it->first.as<std::string>(),
                                            pif1);
     } else {
-      // just set this one propertiy
+      // just set this one property
       if (indexes_provided && it->first.as<std::string>() == "device") {
         std::replace(indexes.begin(), indexes.end(), ',', ' ');
         sts += pif1->property_set("device", indexes);
@@ -242,10 +360,10 @@ bool rvs::exec::is_yaml_properties_collection(
         return true;
       }
     } else {
-        if (module_name == "gm") {
-            if (property_name == "metrics")
-            return true;
-    }
+      if (module_name == "gm") {
+        if (property_name == "metrics")
+          return true;
+      }
     }
   }
 

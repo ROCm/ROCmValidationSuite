@@ -33,7 +33,8 @@ using std::string;
 rvs::if1::if1()
 :
 rvs_module_action_property_set(nullptr),
-rvs_module_action_run(nullptr) {
+rvs_module_action_run(nullptr),
+rvs_module_action_callback_set(nullptr) {
 }
 
 //! Default descrutor
@@ -64,6 +65,7 @@ rvs::if1& rvs::if1::operator=(const rvs::if1& rhs) {
     ifbase::operator=(rhs);
     rvs_module_action_property_set = rhs.rvs_module_action_property_set;
     rvs_module_action_run = rhs.rvs_module_action_run;
+    rvs_module_action_callback_set = rhs.rvs_module_action_callback_set;
   }
 
   return *this;
@@ -91,6 +93,18 @@ int rvs::if1::property_set(const char* pKey, const char* pVal ) {
   rvs::logger::log("property: [" + string(pKey) + "]   val:[" +
                   string(pVal)+"]", rvs::logdebug);
   return (*rvs_module_action_property_set)(plibaction, pKey, pVal);
+}
+
+/**
+ * @brief Sets action callback
+ *
+ * @param callback Callback function
+ * @param user_param User parameter for callback
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+int rvs::if1::callback_set(void (*callback)(const action_result_t * result, void * user_param), void * user_param) {
+  return (*rvs_module_action_callback_set)(plibaction, callback, user_param);
 }
 
 /**

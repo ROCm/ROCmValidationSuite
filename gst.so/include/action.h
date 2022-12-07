@@ -117,7 +117,7 @@ class gst_action: public rvs::actionbase {
   * @brief gets the number of ROCm compatible AMD GPUs
   * @return run number of GPUs
   */
-  int get_num_amd_gpu_devices(void);
+    int get_num_amd_gpu_devices(void);
     int get_all_selected_gpus(void);
     bool do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
 };

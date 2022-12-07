@@ -30,6 +30,7 @@
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
 #include "include/rvs_util.h"
+#include "include/rvsactionbase.h"
 
 #define GST_RESULT_PASS_MESSAGE         "true"
 #define GST_RESULT_FAIL_MESSAGE         "false"
@@ -192,6 +193,12 @@ class GSTWorker : public rvs::ThreadBase {
 
     void set_gst_ops_type(std::string _ops_type) { gst_ops_type = _ops_type; }
 
+    //! Set action callback 
+    void set_callback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
+      callback = _callback;
+      user_param = _user_param;
+    }
+
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -260,6 +267,10 @@ class GSTWorker : public rvs::ThreadBase {
     static bool bjson;
     //Type of operation
     std::string gst_ops_type;
+    // callback
+    void (*callback)(const rvs::action_result_t * result, void * user_param);
+    // User parameter
+    void * user_param;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

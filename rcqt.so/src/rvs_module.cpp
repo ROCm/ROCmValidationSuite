@@ -81,10 +81,15 @@ extern "C" int   rvs_module_action_destroy(void* pAction) {
   return 0;
 }
 
-
 extern "C" int rvs_module_action_property_set\
 (void* pAction, const char* Key, const char* Val) {
   return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
+}
+
+extern "C" int rvs_module_action_callback_set(void* pAction,
+                                               void (*callback)(const rvs::action_result_t * result, void * user_param),
+                                               void * user_param) {
+  return static_cast<rvs::actionbase*>(pAction)->callback_set(callback, user_param);
 }
 
 extern "C" int rvs_module_action_run(void* pAction) {

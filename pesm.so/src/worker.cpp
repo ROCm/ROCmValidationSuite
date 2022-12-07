@@ -159,6 +159,15 @@ void Worker::run() {
           + std::to_string(gpu_id) + " link speed change " + new_val);
         rvs::lp::Log(msg, rvs::loginfo, sec, usec);
 
+        if(nullptr != callback) {
+          rvs::action_result_t action_result;
+
+          action_result.state = rvs::actionstate::ACTION_RUNNING;
+          action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+          action_result.output = msg.c_str();
+          callback(&action_result, user_param);
+        }
+
         r = rvs::lp::LogRecordCreate("pesm ", action_name.c_str(), rvs::loginfo,
                                     sec, usec);
         rvs::lp::AddString(r, "msg", "link speed change");
@@ -175,6 +184,15 @@ void Worker::run() {
           + std::to_string(gpu_id) +
           " power state change " + new_pwr_val);
         rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+
+        if(nullptr != callback) {
+          rvs::action_result_t action_result;
+
+          action_result.state = rvs::actionstate::ACTION_RUNNING;
+          action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+          action_result.output = msg.c_str();
+          callback(&action_result, user_param);
+        }
 
         r = rvs::lp::LogRecordCreate("pesm", action_name.c_str(), rvs::loginfo,
                                     sec, usec);
@@ -195,6 +213,15 @@ void Worker::run() {
   // add string output
   msg = "[" + stop_action_name + "] pesm all stopped";
   rvs::lp::Log(msg, rvs::logresults, sec, usec);
+
+  if(nullptr != callback) {
+    rvs::action_result_t action_result;
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = msg.c_str();
+    callback(&action_result, user_param);
+  }
 
   // add JSON output
   r = rvs::lp::LogRecordCreate("PESM",

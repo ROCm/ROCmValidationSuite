@@ -124,11 +124,18 @@ void PERFWorker::check_target_stress(double gflops_interval) {
               "Target stress :" + " " + std::to_string(target_stress) + " met :" + (result ? "TRUE" : "FALSE");
     rvs::lp::Log(msg, rvs::logresults);
 
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_RUNNING;
+      action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg.c_str();
+      callback(&action_result, user_param);
+    }
+
     log_to_json(PERF_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);
 }
-
-
 
 /**
  * @brief logs the Gflops computed over the last log_interval period 
@@ -141,6 +148,15 @@ void PERFWorker::log_interval_gflops(double gflops_interval) {
             std::to_string(gpu_id) + " " + PERF_LOG_GFLOPS_INTERVAL_KEY + " " +
             std::to_string(gflops_interval);
     rvs::lp::Log(msg, rvs::logresults);
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_RUNNING;
+      action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+      action_result.output = msg.c_str();
+      callback(&action_result, user_param);
+    }
 
     log_to_json(PERF_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);

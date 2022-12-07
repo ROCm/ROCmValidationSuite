@@ -32,13 +32,30 @@
 #include "include/rvs_util.h"
 
 namespace rvs {
+
+enum class actionstate {
+  ACTION_RUNNING,
+  ACTION_COMPLETED
+};
+
+enum class actionstatus {
+  ACTION_SUCCESS,
+  ACTION_FAILED,
+  ACTION_ERROR
+};
+
+typedef struct {
+  actionstate state;
+  actionstatus status;
+  const char * output;
+} action_result_t;
+
 /**
  * @class actionbase
  * @ingroup RVS
  * @brief Base class for all module level actions
  *
  */
-
 class actionbase {
  public:
   virtual ~actionbase();
@@ -48,17 +65,21 @@ class actionbase {
   void sleep(const unsigned int ms);
 
  public:
-  virtual int     property_set(const char*, const char*);
+  virtual int property_set(const char*, const char*);
+
+  //! Set action callback
+  int callback_set(void (*callback)(const action_result_t * result, void * user_param), void * user_param);
 
   //! Virtual action function. To be implemented in every derived class.
-  virtual int     run(void) = 0;
+  virtual int run(void) = 0;
   bool has_property(const std::string& key, std::string* pval);
   bool has_property(const std::string& key);
   int property_get_device();
+  int property_get_device_index();
 
   /**
   * @brief Gets uint16_t list from the module's properties collection
-  * @param key jey name
+  * @param key key name
   * @param delimiter delimiter in YAML file
   * @param pval ptr to reulting list
   * @param pball ptr to flag to be set to 'true' when "all" is detected
@@ -172,6 +193,10 @@ class actionbase {
   std::string action_name;
   //! device_id - non-zero if filtering of device id is required
   uint16_t property_device_id;
+  //! device_index - if filtering of device index is required
+  std::vector<uint16_t> property_device_index;
+  //! 'true' when all devices are selected ('device_index: all')
+  bool property_device_index_all;
   //! array of GPU IDs listed in config 'device' key
   std::vector<uint16_t> property_device;
   //! 'true' when all devices are selected ('device: all')
@@ -195,6 +220,12 @@ class actionbase {
 
   //! logging level
   int property_log_level;
+
+  //! callback
+  void (*callback)(const action_result_t * result, void * user_param);
+
+  //! User parameter
+  void * user_param;
 };
 
 }  // namespace rvs

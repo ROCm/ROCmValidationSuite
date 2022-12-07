@@ -208,6 +208,15 @@ int gpup_action::property_get_value(uint16_t gpu_id) {
     rvs::lp::Log(msg, rvs::logresults);
     if (bjson && json_gpuprop_node != NULL) {
       rvs::lp::AddString(json_gpuprop_node, prop_name, prop_val);
+
+    }
+    if(nullptr != callback) {
+      rvs::action_result_t result;
+
+      result.state = rvs::actionstate::ACTION_RUNNING;
+      result.status = rvs::actionstatus::ACTION_SUCCESS;
+      result.output = msg.c_str();
+      callback(&result, user_param);
     }
   }
   RVSTRACE_
@@ -309,6 +318,14 @@ int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
       rvs::lp::Log(msg, rvs::logresults);
       if (bjson && json_link_ptr_ != NULL) {
         rvs::lp::AddString(json_link_ptr_, prop_name, prop_val);
+      }
+      if(nullptr != callback) {
+        rvs::action_result_t result;
+
+        result.state = rvs::actionstate::ACTION_RUNNING;
+        result.status = rvs::actionstatus::ACTION_SUCCESS;
+        result.output = msg.c_str();
+        callback(&result, user_param);
       }
     }
     RVSTRACE_
