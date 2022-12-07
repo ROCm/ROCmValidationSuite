@@ -1,6 +1,6 @@
 # ################################################################################
 # #
-# # Copyright (c) 2018-2022 Advanced Micro Devices, Inc.
+# # Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
 # #
 # # MIT LICENSE:
 # # Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -35,7 +35,7 @@
 # setting ROCM_PATH using cmake inputs
 # setting RVS_EXE_PATH to default if not set by user
 if [[ -z "${RVS_EXE_PATH}" ]]; then
-    export RVS_EXE_PATH=@ROCM_PATH@/bin/rvs
+    export RVS_EXE_PATH=@ROCM_PATH@/rvs/rvs
 fi
 
 function get_string_with_space {

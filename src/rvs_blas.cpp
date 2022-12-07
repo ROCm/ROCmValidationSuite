@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc.
+ * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -39,12 +39,13 @@
  * @param _k matrix size
  */
 rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, int transB, 
-                    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string ops_type) : gpu_device_index(_gpu_device_index),
-                             m(_m), n(_n), k(_k){
+                    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string _ops_type) : gpu_device_index(_gpu_device_index),
+                             m(_m), n(_n), k(_k), ops_type(_ops_type){
     is_handle_init = false;
     is_error = false;
     da = db = dc = NULL;
     ha = hb = hc = nullptr;
+    size_a = size_b = size_c = size_d = 0;
 
     if(transA == 0) {
          transa = rocblas_operation_none;
@@ -254,9 +255,10 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
         return false;
     if (hipMalloc(&dhlfc, size_c * sizeof(rocblas_half)) != hipSuccess)
         return false;
-    if (hipMalloc(&dhlfd, size_d * sizeof(rocblas_half)) != hipSuccess)
-        return false;
-
+    if(ops_type == "hgemm") {
+      if (hipMalloc(&dhlfd, size_d * sizeof(rocblas_half)) != hipSuccess)
+          return false;
+    }
     return true;
 }
 

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc.
+ * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -317,7 +317,6 @@ void get_kernel_driver(struct pci_dev *dev, char *buff) {
     //not supported any longer
     //the more simpler way is sudo dkms status
     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-    return;
 
     if (dev->access->method != PCI_ACCESS_SYS_BUS_PCI) {
         return;

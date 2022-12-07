@@ -1,6 +1,6 @@
 # ################################################################################
 # #
-# # Copyright (c) 2018-2022 Advanced Micro Devices, Inc.
+# # Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
 # #
 # # MIT LICENSE:
 # # Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,5 +25,4 @@
 
 #!/bin/sh
 date
-../conf/deviceid.sh ../conf/iet_single.conf
-echo 'iet';sudo ../../../bin/rvs -c ../conf/iet_single.conf -d 3 && date
+echo 'iet';../../../bin/rvs -c ../conf/iet_single.conf -d 3 && date
