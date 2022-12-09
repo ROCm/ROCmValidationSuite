@@ -76,6 +76,11 @@ set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported 
 set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC Runtime")
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
+# Changes for SWDEV-310152:
+# Since all public interface libraries are present in same folder
+# RPATH/RUNPATH is not required
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE CACHE BOOL "Disable Use Link Path" )
+set(CMAKE_SKIP_INSTALL_RPATH TRUE CACHE BOOL "Enable Skip install rpath" )
 
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
