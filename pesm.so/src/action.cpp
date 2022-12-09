@@ -107,6 +107,21 @@ bool pesm_action::get_all_common_config_keys(void) {
       sts = false;
     }
 
+    // get <device_index> property value (a list of device indexes)
+    if (int sts = property_get_device_index()) {
+      switch (sts) {
+        case 1:
+          msg = "Invalid 'device_index' key value.";
+          break;
+        case 2:
+          msg = "Missing 'device_index' key.";
+          break;
+      }
+      // default set as true
+      property_device_index_all = true;
+      rvs::lp::Log(msg, rvs::loginfo);
+    }
+
     return sts;
 }
 

@@ -342,6 +342,21 @@ bool pbqt_action::get_all_common_config_keys(void) {
     res = false;
   }
 
+  // get <device_index> property value (a list of device indexes)
+  if (int sts = property_get_device_index()) {
+    switch (sts) {
+      case 1:
+        msg = "Invalid 'device_index' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device_index' key.";
+        break;
+    }
+    // default set as true
+    property_device_index_all = true;
+    rvs::lp::Log(msg, rvs::loginfo);
+  }
+
   // get the other action/GST related properties
   if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
       msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +

@@ -402,8 +402,9 @@ bool gst_action::get_all_common_config_keys(void) {
         msg = "Missing 'device_index' key.";
         break;
       }
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
+      // default set as true
+      property_device_index_all = true;
+      rvs::lp::Log(msg, rvs::loginfo);
     }
 
     // get the other action/GST related properties
