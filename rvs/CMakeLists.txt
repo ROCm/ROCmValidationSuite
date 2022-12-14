@@ -130,11 +130,13 @@ set(SOURCES
   src/rvsexec.cpp
   src/rvsexec_do_yaml.cpp
   src/rvsoptions.cpp
+  src/yaml_utils.cpp
+  src/node_yaml.cpp
 )
 
 ## define helper lib
 add_library(rvshelper ${SOURCES})
-
+target_link_libraries(rvshelper yaml)
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
 target_link_libraries(${RVS_TARGET} rvshelper rvslib ${PROJECT_LINK_LIBS} )

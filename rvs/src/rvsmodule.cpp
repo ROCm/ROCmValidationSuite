@@ -33,19 +33,19 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
-
+#include <sstream>
 #include "include/rvsliblogger.h"
 #include "include/rvsif0.h"
 #include "include/rvsif1.h"
 #include "include/rvsaction.h"
 #include "include/rvsliblog.h"
 #include "include/rvsoptions.h"
-
+#include "include/node_yaml.h"
 #define MODULE_NAME_CAPS "CLI"
 
 std::map<std::string, rvs::module*> rvs::module::modulemap;
 std::map<std::string, std::string>  rvs::module::filemap;
-YAML::Node rvs::module::config;
+//YAML::Node rvs::module::config;
 
 using std::string;
 
@@ -79,51 +79,37 @@ rvs::module::~module() {
 int rvs::module::initialize(const char* pConfig) {
   // Check if pConfig file exists
   std::ifstream file(pConfig);
-
+  int sts = -1;
   if (!file.good()) {
     char buff[1024];
     snprintf(buff, sizeof(buff), "file does not exist: %s", pConfig);
     rvs::logger::Err(buff, MODULE_NAME_CAPS);
     return -1;
   } else {
-    file.close();
+    //file.close();
   }
-
-  // load list of supported modules from config file
-  YAML::Node config = YAML::LoadFile(pConfig);
-
-  // verify that that the file format is supported
-  YAML::const_iterator it = config.begin();
-  if (it == config.end()) {
-    rvs::logger::Err("unsupported file format. Version string not found.",
-                     MODULE_NAME_CAPS);
-    return -1;
+  string line;
+  while (std::getline(file, line))
+  {
+    std::istringstream iss(line);
+    string key,val;
+    std::getline(iss, key,':');
+    key.erase(remove(key.begin(), key.end(), ' '), key.end());
+    std::getline(iss, val,':');
+    val.erase(remove(val.begin(), val.end(), ' '), val.end());
+  
+    if(key != "version"){
+	filemap.insert(std::pair<string, string>(key, val));
+    } else{
+       if (val != "1") {
+    	  char buff[1024];
+	  snprintf(buff, sizeof(buff), "file version is %s, expected 1",
+             val.c_str());
+	  rvs::logger::Err(buff, MODULE_NAME_CAPS);
+          return -1;
+       }
+    }
   }
-
-    std::string key = it->first.as<std::string>();
-    std::string value = it->second.as<std::string>();
-
-  if (key != "version") {
-    rvs::logger::Err("unsupported file format. Version string not found.",
-                     MODULE_NAME_CAPS);
-    return -1;
-  }
-
-  if (value != "1") {
-    char buff[1024];
-    snprintf(buff, sizeof(buff), "file version is %s, expected 1",
-             value.c_str());
-    rvs::logger::Err(buff, MODULE_NAME_CAPS);
-    return -1;
-  }
-
-  // load nam-file pairs:
-  for (it++; it != config.end(); ++it) {
-    key = it->first.as<std::string>();
-    value = it->second.as<std::string>();
-    filemap.insert(std::pair<string, string>(key, value));
-  }
-
   return 0;
 }
 
