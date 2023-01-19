@@ -33,6 +33,7 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include "rocm_smi/rocm_smi.h"
 
 std::vector<uint16_t> rvs::gpulist::location_id;
 std::vector<uint16_t> rvs::gpulist::gpu_id;
@@ -276,7 +277,7 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
  * @param device_id GPU Device ID
  * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
  **/
-bool gpu_check_if_mcm_die (uint16_t device_id) {
+bool gpu_check_if_mcm_die (uint16_t device_id, int idx) {
 
   uint16_t i = 0;
   bool mcm_die = false;
@@ -287,7 +288,19 @@ bool gpu_check_if_mcm_die (uint16_t device_id) {
       break;
     }
   }
-  return mcm_die;
+  uint64_t power_cap;
+  rsmi_status_t ret;
+  ret = rsmi_dev_power_cap_get(idx, 0, &power_cap);
+  if (!(ret == RSMI_STATUS_SUCCESS) || !(power_cap == 0))
+	  return false;
+  ret = rsmi_dev_power_cap_default_get(idx, &power_cap);
+  if (!(ret == RSMI_STATUS_SUCCESS) || !(power_cap == 0))
+          return false;
+  ret = rsmi_dev_power_ave_get(idx, 0, &power_cap);
+  if (!(ret == RSMI_STATUS_SUCCESS) || !(power_cap == 0))
+          return false;
+  
+  return true;
 }
 
 /**

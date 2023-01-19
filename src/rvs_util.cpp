@@ -32,6 +32,7 @@
 #include <algorithm>
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
+#include "rocm_smi/rocm_smi.h"
 
 
 /**
@@ -110,6 +111,9 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
     bool amd_gpus_found = false;
     bool mcm_die = false;
     bool amd_mcm_gpu_found = false;
+    if (mcm_check){
+	rsmi_init(0); // for MCM checks	
+    }
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
         hipDeviceProp_t props;
@@ -157,7 +161,7 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 	// if mcm check enabled, print message if device is MCM
         if (mcm_check){
 	    std::stringstream msg_stream;
-            mcm_die =  gpu_check_if_mcm_die(devId);
+            mcm_die =  gpu_check_if_mcm_die(devId, i);
 	    if (mcm_die) {
                 msg_stream.str("");
                 msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
@@ -177,6 +181,10 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
                    << "So, expect power reading from Secondary GPU die as 0."<< "\n";
         rvs::lp::Log(msg_stream.str(), rvs::logresults);
      }
+    if (mcm_check){
+       	rsmi_shut_down(); // for MCM checks
+    }
+
     return amd_gpus_found;
 }
 
