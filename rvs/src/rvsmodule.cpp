@@ -180,14 +180,21 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       psolib = dlopen(sofullname.c_str(), RTLD_NOW);
       // error?
       if (!psolib) {
-        char buff[1024];
-        snprintf(buff, sizeof(buff),
-               "could not load .so '%s'", sofullname.c_str());
-        rvs::logger::Err(buff, MODULE_NAME_CAPS);
-        snprintf(buff, sizeof(buff),
-               "reason: '%s'", dlerror());
-        rvs::logger::Err(buff, MODULE_NAME_CAPS);
-        return NULL;  // fail
+        //Search libraries in RVS install path
+        libpath = RVS_LIB_PATH;
+        libpath += "/";
+        string sofullname(libpath + it->second);
+        psolib = dlopen(sofullname.c_str(), RTLD_NOW);
+        if (!psolib) {
+          char buff[1024];
+          snprintf(buff, sizeof(buff),
+              "could not load .so '%s'", sofullname.c_str());
+          rvs::logger::Err(buff, MODULE_NAME_CAPS);
+          snprintf(buff, sizeof(buff),
+              "reason: '%s'", dlerror());
+          rvs::logger::Err(buff, MODULE_NAME_CAPS);
+          return NULL;  // fail
+        }
       }
     }
     // create module object

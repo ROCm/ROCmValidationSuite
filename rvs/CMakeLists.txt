@@ -179,6 +179,11 @@ install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/librvshelper.so.${VERSION_MAJOR
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/librvshelper.so"
 	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
 
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/rvs.h"
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/rvs
+  COMPONENT rvsmodule
+)
+
 option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" ON)
 if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
   #Create the softlink rvs/rvs->../bin/rvs in install path for backward compatibility

@@ -69,6 +69,8 @@ endif(rocblas_FOUND)
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
@@ -76,6 +78,8 @@ set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported 
 set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC Runtime")
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
+add_definitions(-DROCM_PATH="${ROCM_PATH}")
+add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
 
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their

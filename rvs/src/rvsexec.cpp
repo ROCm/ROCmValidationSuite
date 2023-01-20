@@ -305,14 +305,23 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
     std::ifstream file(path + config);
     if (!file.good()) {
       config = "conf/" + module_config_file[module_index];
+      std::ifstream file(path + config);
+      if (!file.good()) {
+        // configuration file exist in ROCM path ?
+        path = ROCM_PATH;
+        config = "/share/rocm-validation-suite/conf/" + module_config_file[module_index];
+      }
+      file.close();
     }
-    file.close();
+    else {
+      file.close();
+    }
     config = path + config;
     data_type = yaml_data_type_t::YAML_FILE;
   }
   else if (rvs::options::has_option(opt, "yaml", &config)) {
     data_type = yaml_data_type_t::YAML_STRING;
-  } 
+  }
 
   if(yaml_data_type_t::YAML_FILE == data_type) {
     // Check if pConfig file exists
@@ -334,6 +343,12 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   std::ifstream conf_file(val);
   if (!conf_file.good()) {
     val = path + ".rvsmodules.config";
+    std::ifstream conf_file(val);
+    if (!conf_file.good()) {
+      // Modules config. file exist in ROCM path ?
+      path = ROCM_PATH;
+      val = path + "/share/rocm-validation-suite/conf/.rvsmodules.config";
+    }
   }
   conf_file.close();
 
