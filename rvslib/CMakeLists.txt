@@ -115,8 +115,9 @@ else()
 endif()
 
 ## define include directories
-include_directories(./ ../
+include_directories(./ ../ ../rvs
   ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR}
+  ${YAML_INC_DIR} ${YAML_LIB_DIR}/include
 )
 link_directories(${ASAN_LIB_PATH})
 
@@ -138,13 +139,55 @@ set(SOURCES
   ../src/rvsminnode.cpp
   ../src/rvs_blas.cpp
   ../src/rvshsa.cpp
-  )
 
-## define run-time specific source files
-set(SOURCES_RT
+## YAML Sourec files
+
+  ../build/yaml-src/src/binary.cpp
+  ../build/yaml-src/src/convert.cpp
+  ../build/yaml-src/src/depthguard.cpp
+  ../build/yaml-src/src/directives.cpp
+  ../build/yaml-src/src/emit.cpp
+  ../build/yaml-src/src/emitfromevents.cpp
+  ../build/yaml-src/src/emitter.cpp
+  ../build/yaml-src/src/emitterstate.cpp
+  ../build/yaml-src/src/emitterutils.cpp
+  ../build/yaml-src/src/exceptions.cpp
+  ../build/yaml-src/src/exp.cpp
+  ../build/yaml-src/src/memory.cpp
+  ../build/yaml-src/src/nodebuilder.cpp
+  ../build/yaml-src/src/node.cpp
+  ../build/yaml-src/src/node_data.cpp
+  ../build/yaml-src/src/nodeevents.cpp
+  ../build/yaml-src/src/null.cpp
+  ../build/yaml-src/src/ostream_wrapper.cpp
+  ../build/yaml-src/src/parse.cpp
+  ../build/yaml-src/src/regex_yaml.cpp
+  ../build/yaml-src/src/scanner.cpp
+  ../build/yaml-src/src/scanscalar.cpp
+  ../build/yaml-src/src/scantag.cpp
+  ../build/yaml-src/src/scantoken.cpp
+  ../build/yaml-src/src/simplekey.cpp
+  ../build/yaml-src/src/singledocparser.cpp
+  ../build/yaml-src/src/stream.cpp
+  ../build/yaml-src/src/tag.cpp
+  ../build/yaml-src/src/parser.cpp
+
+## Run-time specific source files
   ../src/rvsloglp.cpp
   ../src/pci_caps.cpp
-  )
+
+## rvshelper source files
+  ../rvs/src/rvsmodule.cpp
+  ../rvs/src/rvsif_base.cpp
+  ../rvs/src/rvsif0.cpp
+  ../rvs/src/rvsif1.cpp
+  ../rvs/src/rvsaction.cpp
+  ../rvs/src/rvscli.cpp
+  ../rvs/src/rvsexec.cpp
+  ../rvs/src/rvsexec_do_yaml.cpp
+  ../rvs/src/rvsoptions.cpp
+  ../rvs/src/rvs_interface.cpp
+)
 
 ## define unit testing specific source files (mocking)
 set(SOURCES_UT
@@ -153,33 +196,12 @@ set(SOURCES_UT
   ../src/rvs_unit_testing_defs.cpp
    )
 
-## define rvslibrt (run-time) library
-add_library(${RVS_TARGET}rt SHARED ${SOURCES_RT})
-
-set_target_properties(${RVS_TARGET}rt
- PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}
- LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
 ## define rvslib library
 add_library(${RVS_TARGET} SHARED ${SOURCES})
 
 set_target_properties(${RVS_TARGET}
  PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}
  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
-add_dependencies(${RVS_TARGET} ${RVS_TARGET}rt)
-
-## Install shared library librvslibrt.so
-add_custom_command(TARGET ${RVS_TARGET}rt POST_BUILD
-COMMAND ln -fs ./lib${RVS}rt.so.${LIB_VERSION_STRING} lib${RVS}rt.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./lib${RVS}rt.so.${VERSION_MAJOR} lib${RVS}rt.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
-
-install(TARGETS ${RVS_TARGET}rt LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}rt.so.${VERSION_MAJOR}"
-	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}rt.so"
-	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
 
 ## Install shared library librvslib.so
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
@@ -197,5 +219,5 @@ if (RVS_BUILD_TESTS)
   ## define rvslibut (unit test) library
   add_library(${RVS_TARGET}ut SHARED ${SOURCES_UT})
   target_compile_definitions(${RVS_TARGET}ut PRIVATE RVS_UNIT_TEST)
-  add_dependencies(${RVS_TARGET}ut ${RVS_TARGET}rt)
+  add_dependencies(${RVS_TARGET}ut ${RVS_TARGET})
 endif()

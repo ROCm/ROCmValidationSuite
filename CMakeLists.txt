@@ -252,28 +252,13 @@ execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
 if(result)
   message(FATAL_ERROR "CMake step for yaml-download failed: ${result}")
 endif()
+
 execute_process(COMMAND ${CMAKE_COMMAND} --build .
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
 if(result)
   message(FATAL_ERROR "Build step for yaml-download failed: ${result}")
 endif()
-execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/yaml-src -B${CMAKE_BINARY_DIR}/yaml-build
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-src )
-if(result)
-  message(FATAL_ERROR "Config step for yaml-src failed: ${result}")
-endif()
-
-add_custom_target(rvs_yaml_target
-  DEPENDS ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
-)
-
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
-  COMMAND make -C ${CMAKE_BINARY_DIR}/yaml-build
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-src
-  COMMENT "Generating yaml-cpp targets"
-  VERBATIM)
 
 ################################################################################
 ## GOOGLE TEST
@@ -506,10 +491,7 @@ if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
 endif()
 
-add_dependencies(rvshelper rvs_bin_folder rvs_doc rvs_yaml_target)
-
-
-add_dependencies(pesm rvslib rvslibrt)
+add_dependencies(pesm rvslib)
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_rsmi_target)
   add_dependencies(iet rvs_rsmi_target)
@@ -541,7 +523,6 @@ if (RVS_BUILD_TESTS)
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   COMMENT "Create the bintest directory"
   VERBATIM)
-  add_dependencies(rvshelper rvs_bintest_folder rvs_gtest_target)
 endif()
 
 add_custom_target(rvs_doc ALL

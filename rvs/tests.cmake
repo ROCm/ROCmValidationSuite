@@ -40,14 +40,14 @@ link_directories(${RVS_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ROCT_LI
 
 ## define target for "test-to-fail"
 add_executable(${RVS_TARGET}fail src/rvs.cpp)
-target_link_libraries(${RVS_TARGET}fail rvshelper rvslib rvslibut ${PROJECT_LINK_LIBS}
+target_link_libraries(${RVS_TARGET}fail rvslib rvslibut ${PROJECT_LINK_LIBS}
   ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET})
 
 target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
 set_target_properties(${RVS_TARGET}fail PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY   ${RVS_BINTEST_FOLDER}
 )
-add_dependencies(${RVS_TARGET}fail rvshelper)
+add_dependencies(${RVS_TARGET}fail rvslib)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/novernum.config ${RVS_BINTEST_FOLDER}/novernum.config)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/wrongvernum.config ${RVS_BINTEST_FOLDER}/wrongvernum.config)
@@ -209,9 +209,10 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
   target_link_libraries(${TEST_NAME}
     ${PROJECT_LINK_LIBS}
     ${PROJECT_TEST_LINK_LIBS}
-    rvshelper rvslib rvslibut gtest_main gtest pthread
+    rvslib rvslibut gtest_main gtest pthread
     ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET}
   )
+  add_dependencies(${TEST_NAME} rvs_gtest_target)
 
   target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
   add_compile_options(-Wall -Wextra -save-temps)

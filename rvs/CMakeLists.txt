@@ -122,33 +122,13 @@ set(ROCBLAS_LIB "rocblas")
 set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
-set(PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so libpci.so)
-
-## define source files
-set(SOURCES
-  src/rvsmodule.cpp
-  src/rvsif_base.cpp
-  src/rvsif0.cpp
-  src/rvsif1.cpp
-  src/rvsaction.cpp
-  src/rvscli.cpp
-  src/rvsexec.cpp
-  src/rvsexec_do_yaml.cpp
-  src/rvsoptions.cpp
-  src/rvs_interface.cpp
-)
-
-## define helper lib
-add_library(rvshelper SHARED ${SOURCES})
-set_target_properties(rvshelper PROPERTIES
-        SUFFIX .so.${LIB_VERSION_STRING}
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so)
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
-target_link_libraries(${RVS_TARGET} rvshelper rvslib rvslibrt
+target_link_libraries(${RVS_TARGET} rvslib
   ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${PROJECT_LINK_LIBS})
-add_dependencies(${RVS_TARGET} rvshelper)
+add_dependencies(${RVS_TARGET} rvslib)
 
 install(TARGETS ${RVS_TARGET}
   RUNTIME
@@ -166,18 +146,6 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
 	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/conf
   COMPONENT applications
 )
-
-# Install shared library librvshelper.so
-add_custom_command(TARGET rvshelper POST_BUILD
-COMMAND ln -fs ./librvshelper.so.${LIB_VERSION_STRING} librvshelper.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./librvshelper.so.${VERSION_MAJOR} librvshelper.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
-
-install(TARGETS rvshelper LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/librvshelper.so.${VERSION_MAJOR}"
-	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/librvshelper.so"
-	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/rvs.h"
 	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/rvs

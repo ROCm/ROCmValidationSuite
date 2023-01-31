@@ -124,8 +124,8 @@ add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if_methods.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} rvslib rvslibrt ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvslibrt rvslib)
+target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
+add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
@@ -145,8 +145,8 @@ add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if0.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} rvslib rvslibrt ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvslibrt rvslib)
+target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
+add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
@@ -166,8 +166,8 @@ add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if0_methods.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} rvslib rvslibrt ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvslibrt rvslib)
+target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
+add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
@@ -187,8 +187,8 @@ add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if1.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} rvslib rvslibrt ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvslibrt rvslib)
+target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
+add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
@@ -208,8 +208,8 @@ add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if1_methods.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} rvslib rvslibrt ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvslibrt rvslib)
+target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
+add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
@@ -229,8 +229,8 @@ add_library( ${RVS_TARGET} SHARED src/rvs_module_fail_init.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} rvslib rvslibrt ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvslibrt rvslib)
+target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
+add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
@@ -250,8 +250,8 @@ add_library( ${RVS_TARGET} SHARED src/rvs_module_fail_create_action.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} rvslib rvslibrt ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvslibrt rvslib)
+target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
+add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

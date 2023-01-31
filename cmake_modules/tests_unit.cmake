@@ -44,7 +44,7 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
     ${SINGLE_TEST} ${UT_SOURCES}
   )
   target_link_libraries(${TEST_NAME}
-    ${UT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread
+    ${UT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread pci
   )
   target_compile_definitions(${TEST_NAME} PUBLIC RVS_UNIT_TEST)
   if(DEFINED tcd.${TEST_NAME})

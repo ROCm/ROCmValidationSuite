@@ -28,7 +28,7 @@ set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 
-set(UT_LINK_LIBS  libpthread.so libpci.so libm.so "lib${ROCM_SMI_LIB}.so"
+set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so "lib${ROCM_SMI_LIB}.so"
   ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET}
 )
 

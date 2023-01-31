@@ -113,7 +113,7 @@ include_directories(./ ../ include ../include)
 # Add directories to look for library files to link
 link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH})
 ## additional libraries
-set (PROJECT_LINK_LIBS rvslibrt rvslib libpci.so libm.so)
+set (PROJECT_LINK_LIBS rvslib libpci.so libm.so)
 
 ## define source files
 set(SOURCES src/rvs_module.cpp src/action.cpp)
@@ -125,7 +125,7 @@ set_target_properties(${RVS_TARGET} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvslibrt rvslib)
+add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

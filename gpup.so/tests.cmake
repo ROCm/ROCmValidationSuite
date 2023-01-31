@@ -28,7 +28,7 @@ set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 
-set(UT_LINK_LIBS libpthread.so libm.so ${ROCM_SMI_LIB}
+set(UT_LINK_LIBS libpthread.so libm.so libdl.so ${ROCM_SMI_LIB}
   ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET})
 
 # Add directories to look for library files to link
