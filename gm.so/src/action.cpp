@@ -290,6 +290,14 @@ int gm_action::run(void) {
   if (property["monitor"] != "true") {
     RVSTRACE_
     // already done, just return
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = "GM Module action " + action_name + " completed";
+        callback(&action_result, user_param);
+      }
     return 0;
   }
 
@@ -297,11 +305,29 @@ int gm_action::run(void) {
   // start new monitoring
   if (!get_all_common_config_keys()) {
     RVSTRACE_
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "Error in common configuration keys.";
+      callback(&action_result, user_param);
+    }
     return -1;
   }
 
   if (!get_all_gm_config_keys()) {
     RVSTRACE_
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "Error in GM configuration keys.";
+      callback(&action_result, user_param);
+    }
     return -1;
   }
 
@@ -338,8 +364,17 @@ int gm_action::run(void) {
 
   // verify that the resulting array is not empty
   if (property_device.size() < 1) {
-    rvs::lp::Err("No devices match filtering criteria.",
-                 MODULE_NAME_CAPS, action_name);
+    msg = "No devices match filtering criteria.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      callback(&action_result, user_param);
+    }
     return -1;
   }
 
@@ -352,6 +387,15 @@ int gm_action::run(void) {
       msg = "Could not obtain BDF for GPU ID: ";
       msg += std::to_string(*it);
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        callback(&action_result, user_param);
+      }
       return -1;
     }
     uint32_t ix;
@@ -390,5 +434,15 @@ int gm_action::run(void) {
 
   RVSTRACE_
 
+  if(nullptr != callback) {
+    rvs::action_result_t action_result;
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = "GM Module action " + action_name + " completed";
+    callback(&action_result, user_param);
+  }
+
   return 0;
 }
+

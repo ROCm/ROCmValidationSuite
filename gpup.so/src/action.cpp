@@ -344,7 +344,17 @@ int gpup_action::run(void) {
 
     // get the action name
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+      msg = "Action name missing";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS);
+
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        callback(&action_result, user_param);
+      }
       return -1;
     }
 
@@ -359,6 +369,15 @@ int gpup_action::run(void) {
         break;
       }
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        callback(&action_result, user_param);
+      }
       return -1;
     }
 
@@ -367,6 +386,15 @@ int gpup_action::run(void) {
                                   &property_device_id, 0u)) {
       msg = "Invalid 'deviceid' key value.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        callback(&action_result, user_param);
+      }
       return -1;
     }
 
@@ -398,6 +426,15 @@ int gpup_action::run(void) {
         } else {
           msg = "Device ID not found for GPU " + std::to_string(*it);
           rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+          if(nullptr != callback) {
+            rvs::action_result_t action_result;
+
+            action_result.state = rvs::actionstate::ACTION_COMPLETED;
+            action_result.status = rvs::actionstatus::ACTION_FAILED;
+            action_result.output = msg;
+            callback(&action_result, user_param);
+          }
           return -1;
         }
       }
@@ -456,7 +493,27 @@ int gpup_action::run(void) {
     if (!b_gpu_found) {
       msg = "No device matches criteria from configuration. ";
       rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        callback(&action_result, user_param);
+      }
       return -1;
     }
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "GPUP Module action " + action_name + " completed";
+      callback(&action_result, user_param);
+    }
+
     return sts;
 }
+

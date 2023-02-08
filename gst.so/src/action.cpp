@@ -574,6 +574,15 @@ int gst_action::run(void) {
     if(bjson){
       rvs::lp::JsonActionEndNodeCreate();
     }
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "GST Module action " + action_name + " completed";
+      callback(&action_result, user_param);
+    }
     return res;
 }
 

@@ -184,12 +184,28 @@ int smqt_action::run(void) {
   if (!get_all_common_config_keys()) {
     msg = "Couldn't fetch common config keys from the configuration file!";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      callback(&action_result, user_param);
+    }
     return -1;
   }
 
   if (!get_all_smqt_config_keys()) {
-    msg = "Couldn't fetch bar config keys from the configuration file!";
+    msg = "Couldn't fetch smqt config keys from the configuration file!";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      callback(&action_result, user_param);
+    }
     return -1;
   }
 
@@ -348,7 +364,27 @@ int smqt_action::run(void) {
     global_pass = false;
     msg = "No devices match criteria from the test configuration.";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      callback(&action_result, user_param);
+    }
     return -1;
   }
+
+  if(nullptr != callback) {
+    rvs::action_result_t action_result;
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = (global_pass) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "SMQT Module action " + action_name + " completed";
+    callback(&action_result, user_param);
+  }
+
   return global_pass ? 0 : -1;
 }
+

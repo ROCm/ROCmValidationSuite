@@ -349,8 +349,6 @@ void GSTWorker::check_target_stress(double gflops_interval) {
                 rvs::loginfo);
 }
 
-
-
 /**
  * @brief logs the Gflops computed over the last log_interval period 
  * @param gflops_interval the Gflops that the GPU achieved
@@ -525,6 +523,15 @@ void GSTWorker::run() {
         rvs::lp::Log(msg, rvs::logerror);
         log_to_json("err", err_description, rvs::logerror);
 
+        if(nullptr != callback) {
+          rvs::action_result_t action_result;
+
+          action_result.state = rvs::actionstate::ACTION_COMPLETED;
+          action_result.status = rvs::actionstatus::ACTION_FAILED;
+          action_result.output = msg.c_str();
+          callback(&action_result, user_param);
+        }
+
         return;
     }
 
@@ -548,6 +555,15 @@ void GSTWorker::run() {
                                 std::to_string(gpu_id) + " " + err_description;
                 rvs::lp::Log(msg, rvs::logerror);
                 log_to_json("err", err_description, rvs::logerror);
+
+                if(nullptr != callback) {
+                  rvs::action_result_t action_result;
+
+                  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+                  action_result.status = rvs::actionstatus::ACTION_FAILED;
+                  action_result.output = msg.c_str();
+                  callback(&action_result, user_param);
+                }
                 return;
             }
     }

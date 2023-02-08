@@ -102,16 +102,44 @@ int pebb_action::run() {
     bjson = true;
   }
 
-  if (!get_all_common_config_keys())
+  if (!get_all_common_config_keys()) {
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "Error in common configuration keys.";
+      callback(&action_result, user_param);
+    }
     return -1;
-  if (!get_all_pebb_config_keys())
+  }
+
+  if (!get_all_pebb_config_keys()) {
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "Error in PEBB configuration keys.";
+      callback(&action_result, user_param);
+    }
     return -1;
+  }
 
   // log_interval must be less than duration
   if (property_log_interval > 0 && property_duration > 0) {
     if (property_log_interval > property_duration) {
       msg = "log_interval must be less than duration";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        callback(&action_result, user_param);
+      }
       return -1;
     }
   }
@@ -197,6 +225,16 @@ int pebb_action::run() {
   if(bjson){
     rvs::lp::JsonActionEndNodeCreate();
   }
+
+  if(nullptr != callback) {
+    rvs::action_result_t action_result;
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "PEBB Module action " + action_name + " completed";
+    callback(&action_result, user_param);
+  }
+
   return sts;
 }
 

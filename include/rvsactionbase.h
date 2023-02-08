@@ -47,7 +47,7 @@ enum class actionstatus {
 typedef struct {
   actionstate state;
   actionstatus status;
-  const char * output;
+  std::string output;
 } action_result_t;
 
 /**

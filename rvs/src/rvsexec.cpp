@@ -508,12 +508,16 @@ void rvs::exec::callback(const action_result_t * result) {
         rvs_result.status = RVS_STATUS_SUCCESS;
       }
       break;
-
+    case rvs::actionstatus::ACTION_FAILED:
+      {
+        rvs_result.status = RVS_STATUS_FAILED;
+      }
+      break;
     default:
       return;
   }
 
-  rvs_result.output_log = result->output;
+  rvs_result.output_log = result->output.c_str();
 
   (*app_callback)(&rvs_result, user_param);
 }

@@ -351,6 +351,15 @@ int peqt_action::run(void) {
     if (!get_all_common_config_keys()) {
       msg = "Error in get_all_common_config_keys()";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = "Error in common configuration keys.";
+        callback(&action_result, user_param);
+      }
       return -1;
     }
 
@@ -358,10 +367,18 @@ int peqt_action::run(void) {
     pacc = pci_alloc();
 
     if (pacc == NULL) {
-        // log the error
-        msg = PCI_ALLOC_ERROR;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-        return 1;  // PCIe qualification check cannot continue
+      // log the error
+      msg = PCI_ALLOC_ERROR;
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        callback(&action_result, user_param);
+      }
+      return 1;  // PCIe qualification check cannot continue
     }
 
     // compose Power Budgeting dynamic regex
@@ -404,12 +421,21 @@ int peqt_action::run(void) {
     for (dev = pacc->devices; dev; dev = dev->next) {
       RVSTRACE_
 
-      if(dev == NULL) {
+        if(dev == NULL) {
           msg = "[" + action_name + "] " + MODULE_NAME + " "
             + "Device is null ";
           rvs::lp::Log(msg, rvs::logresults);
+
+          if(nullptr != callback) {
+            rvs::action_result_t action_result;
+
+            action_result.state = rvs::actionstate::ACTION_COMPLETED;
+            action_result.status = rvs::actionstatus::ACTION_FAILED;
+            action_result.output = msg;
+            callback(&action_result, user_param);
+          }
           return false;
-      }
+        }
 
       // fill in the info
       pci_fill_info(dev,
@@ -458,6 +484,15 @@ int peqt_action::run(void) {
     if (!amd_gpus_found) {
       msg = "No matching GPUs found";
       rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        callback(&action_result, user_param);
+      }
       return -1;
     }
 
@@ -473,10 +508,19 @@ int peqt_action::run(void) {
       json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
               action_name.c_str(), rvs::logresults, sec, usec);
       if (json_root_node == NULL) {
-          // log the error
-          msg = JSON_CREATE_NODE_ERROR;
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
-          return -1;
+        // log the error
+        msg = JSON_CREATE_NODE_ERROR;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+        if(nullptr != callback) {
+          rvs::action_result_t action_result;
+
+          action_result.state = rvs::actionstate::ACTION_COMPLETED;
+          action_result.status = rvs::actionstatus::ACTION_FAILED;
+          action_result.output = msg;
+          callback(&action_result, user_param);
+        }
+        return -1;
       }
 
       if (pci_infra_qual_result) {
@@ -493,9 +537,9 @@ int peqt_action::run(void) {
     if(nullptr != callback) {
       rvs::action_result_t result;
 
-      result.state = rvs::actionstate::ACTION_RUNNING;
-      result.status = (true == pci_infra_qual_result) ? rvs::actionstatus::ACTION_SUCCESS:rvs::actionstatus::ACTION_FAILED;
-      result.output = msg.c_str();
+      result.state = rvs::actionstate::ACTION_COMPLETED;
+      result.status = rvs::actionstatus::ACTION_SUCCESS;
+      result.output = "PEQT Module action " + action_name + " completed";
       callback(&result, user_param);
     }
 

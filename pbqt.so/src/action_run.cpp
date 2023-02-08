@@ -104,11 +104,30 @@ int pbqt_action::run() {
   if (!get_all_common_config_keys()) {
     msg = "Error in get_all_common_config_keys()";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      callback(&action_result, user_param);
+    }
     return -1;
   }
+
   if (!get_all_pbqt_config_keys()) {
     msg = "Error in get_all_pbqt_config_keys()";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      callback(&action_result, user_param);
+    }
     return -1;
   }
 
@@ -117,6 +136,14 @@ int pbqt_action::run() {
     if (static_cast<uint64_t>(property_log_interval) > property_duration) {
       msg = "log_interval must be less than duration";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      if(nullptr != callback) {
+        rvs::action_result_t action_result;
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        callback(&action_result, user_param);
+      }
       return -1;
     }
   }
@@ -135,8 +162,18 @@ int pbqt_action::run() {
 
   if (!prop_test_bandwidth || test_array.size() < 1) {
     RVSTRACE_
-    // do cleanup
-    destroy_threads();
+      // do cleanup
+      destroy_threads();
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "Parameters not valid. Nothing to execute !!!";
+      callback(&action_result, user_param);
+    }
+
     return 0;
   }
 
@@ -205,6 +242,15 @@ int pbqt_action::run() {
  if(bjson){
     rvs::lp::JsonActionEndNodeCreate();
   }
+
+ if(nullptr != callback) {
+   rvs::action_result_t action_result;
+
+   action_result.state = rvs::actionstate::ACTION_COMPLETED;
+   action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+   action_result.output = "PBQT Module action " + action_name + " completed";
+   callback(&action_result, user_param);
+ }
 
   return sts;
 }

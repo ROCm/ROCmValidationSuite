@@ -439,30 +439,58 @@ int mem_action::get_all_selected_gpus(void) {
  * @return run result
  */
 int mem_action::run(void) {
-    string msg;
+  string msg;
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            " " + "Getting properties of memory test"; 
-    rvs::lp::Log(msg, rvs::logtrace);
+  msg = "[" + action_name + "] " + MODULE_NAME + " " +
+    " " + "Getting properties of memory test"; 
+  rvs::lp::Log(msg, rvs::logtrace);
 
-    // get the action name
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      return -1;
+  // get the action name
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+    return -1;
+  }
+
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end())
+    bjson = true;
+
+  if (!get_all_common_config_keys()) {
+
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "Error in common configuration keys.";
+      callback(&action_result, user_param);
     }
+    return -1;
+  }
 
-    // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end())
-        bjson = true;
+  if (!get_all_mem_config_keys()) {
+    if(nullptr != callback) {
+      rvs::action_result_t action_result;
 
-    if (!get_all_common_config_keys())
-        return -1;
-    if (!get_all_mem_config_keys())
-        return -1;
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "Error in MEM configuration keys.";
+      callback(&action_result, user_param);
+    }
+    return -1;
+  }
 
+  auto res =  get_all_selected_gpus();
 
-    return get_all_selected_gpus();
+  if(nullptr != callback) {
+    rvs::action_result_t action_result;
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "MEM Module action " + action_name + " completed";
+    callback(&action_result, user_param);
+  }
+
+  return res;
 }
-
-
 

@@ -656,32 +656,43 @@ int iet_action::get_all_selected_gpus(void) {
  * @return run result
  */
 int iet_action::run(void) {
-    string msg;
+  string msg;
 
-    // get the action name
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      return -1;
-    }
+  // get the action name
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+    return -1;
+  }
 
-    // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end())
-	bjson = true;
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end())
+    bjson = true;
 
-    if (!get_all_common_config_keys())
-        return -1;
+  if (!get_all_common_config_keys())
+    return -1;
 
-    if (!get_all_iet_config_keys())
-        return -1;
+  if (!get_all_iet_config_keys())
+    return -1;
 
-    if (property_duration > 0 && (property_duration < iet_ramp_interval)) {
-        msg = std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
-        RVS_CONF_RAMP_INTERVAL_KEY + "'";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
-    }
+  if (property_duration > 0 && (property_duration < iet_ramp_interval)) {
+    msg = std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
+      RVS_CONF_RAMP_INTERVAL_KEY + "'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
 
-    return get_all_selected_gpus();
+  auto res =  get_all_selected_gpus();
+
+  if(nullptr != callback) {
+    rvs::action_result_t action_result;
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "IET Module action " + action_name + " completed";
+    callback(&action_result, user_param);
+  }
+
+  return res;
 }
 
 void iet_action::cleanup_logs(){
