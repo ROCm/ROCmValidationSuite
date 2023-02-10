@@ -197,7 +197,17 @@ rvs_status_t rvs_session_execute(rvs_session_id_t session_id) {
       break;
 
     case RVS_SESSION_TYPE_CUSTOM_CONF:
-      {}
+      {
+        std::map<std::string, std::string> opt;
+        std::string path(rvs_session[session_idx].property.custom_conf.path);
+
+        opt.insert({"conf", path});
+
+        rvs::exec executor;
+
+        executor.set_callback(rvs_callback, (int)session_id);
+        executor.run(opt);
+      }
       break;
 
     case RVS_SESSION_TYPE_CUSTOM_ACTION:
