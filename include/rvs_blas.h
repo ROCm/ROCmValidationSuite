@@ -49,7 +49,13 @@ class rvs_blas {
  public:
     rvs_blas(int _gpu_device_index, int _m, int _n, int _k, 
         int transa, int transb, float aplha, float beta, 
-        int lda, int ldb, int ldc, std::string _ops_type);
+        rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string _ops_type);
+    rvs_blas() = delete;
+    rvs_blas(const rvs_blas&) = delete;
+    rvs_blas& operator=(const rvs_blas&) = delete;
+    rvs_blas(rvs_blas&&) = delete;
+    rvs_blas& operator=(rvs_blas&&) = delete;
+
     ~rvs_blas();
 
     //! returns the GPU index
@@ -67,6 +73,7 @@ class rvs_blas {
         return sizeof(float) * (size_a + size_b + size_c);
     }
 
+    //! returns theoretical GFLOPs for gemm  
     double gemm_gflop_count(void) {
         return (2.0 * m * n * k) / 1e9;
     }
@@ -91,12 +98,13 @@ class rvs_blas {
     //! matrix size k
     rocblas_int k;
     //! amount of memory to allocate for the matrix
-    rocblas_int size_a;
+    size_t size_a;
     //! amount of memory to allocate for the matrix
-    rocblas_int size_b;
+    size_t size_b;
     //! amount of memory to allocate for the matrix
-    rocblas_int size_c;
-    rocblas_int size_d;
+    size_t size_c;
+    //! amount of memory to allocate for the matrix
+    size_t size_d;
     //! Transpose matrix A
     rocblas_operation transa;
     //! Transpose matrix B
@@ -135,10 +143,12 @@ class rvs_blas {
     //! GST Beta Val
     float blas_beta_val;
 
-    //Blas offsets
-    int blas_lda_offset;
-    int blas_ldb_offset;
-    int blas_ldc_offset;
+    //!Blas offsets
+    rocblas_int blas_lda_offset;
+    //!Blas offsets
+    rocblas_int blas_ldb_offset;
+    //!Blas offsets
+    rocblas_int blas_ldc_offset;
 
     //HGEMM Declaration
     //! pointer to device (GPU) memory
@@ -147,7 +157,9 @@ class rvs_blas {
     rocblas_half *dhlfb;
     //! pointer to device (GPU) memory
     rocblas_half *dhlfc;
+    //! pointer to device (GPU) memory
     rocblas_half *dhlfd;
+
     //! pointer to host memory
     rocblas_half *hhlfa;
     //! pointer to host memory
@@ -155,9 +167,9 @@ class rvs_blas {
     //! pointer to host memory
     rocblas_half *hhlfc;
 
-    rocblas_half  hostarrayA;
-    rocblas_half  hostarrayB;
-    rocblas_half  hostarrayC;
+    // rocblas_half  hostarrayA;
+    // rocblas_half  hostarrayB;
+    // rocblas_half  hostarrayC;
 
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;
@@ -174,7 +186,7 @@ class rvs_blas {
 
     bool alocate_host_matrix_mem(void);
     void release_host_matrix_mem(void);
-    float fast_pseudo_rand(u_long *nextr);
+    float fast_pseudo_rand(uint64_t *nextr);
 };
 
 #endif  // INCLUDE_RVS_BLAS_H_

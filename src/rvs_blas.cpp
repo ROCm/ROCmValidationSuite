@@ -34,18 +34,35 @@
 /**
  * @brief class constructor
  * @param _gpu_device_index the gpu that will run the GEMM
- * @param _m matrix size
- * @param _n matrix size
- * @param _k matrix size
+ * @param _m matrix A rows
+ * @param _n matrix B cols
+ * @param _k matrix A/B cols/rows respectively
+ * @param transA matrix A transpose operation type
+ * @param transB matrix B transpose operation type
+ * @param alpha scalar for matrix A*B
+ * @param beta scalar for matrix C
+ * @param lda leading dimension for matrix A
+ * @param ldb leading dimension for matrix B
+ * @param ldc leading dimension for matrix C
+ * @param _ops_type type of BLAS operation to test with
  */
 rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, int transB, 
-                    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string _ops_type) : gpu_device_index(_gpu_device_index),
-                             m(_m), n(_n), k(_k), ops_type(_ops_type){
-    is_handle_init = false;
-    is_error = false;
-    da = db = dc = NULL;
-    ha = hb = hc = nullptr;
-    size_a = size_b = size_c = size_d = 0;
+                    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string _ops_type)
+                    : gpu_device_index(_gpu_device_index)
+                    , ops_type(_ops_type)
+                    , m(_m), n(_n), k(_k)
+                    , size_a(0), size_b(0), size_c(0), size_d(0)
+                    , da(nullptr), db(nullptr), dc(nullptr)
+                    , ha(nullptr), hb(nullptr), hc(nullptr)
+                    , ddbla(nullptr), ddblb(nullptr), ddblc(nullptr)
+                    , hdbla(nullptr), hdblb(nullptr), hdblc(nullptr)
+                    , dhlfa(nullptr), dhlfb(nullptr), dhlfc(nullptr), dhlfd(nullptr)
+                    , hhlfa(nullptr), hhlfb(nullptr), hhlfc(nullptr)
+                    , hip_stream(nullptr)
+                    , blas_handle(nullptr)
+                    , is_handle_init(false)
+                    , is_error(false)
+                    {
 
     if(transA == 0) {
          transa = rocblas_operation_none;
@@ -60,26 +77,19 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, in
     }
 
     if(ops_type == "hgemm") {
-        auto    A_row = transA == rocblas_operation_none ? m : k;
+        //auto    A_row = transA == rocblas_operation_none ? m : k;
         auto    A_col = transA == rocblas_operation_none ? k : m;
-        auto    B_row = transB == rocblas_operation_none ? k : n;
+        //auto    B_row = transB == rocblas_operation_none ? k : n;
         auto    B_col = transB == rocblas_operation_none ? n : k;
 
-        size_a = size_t(lda) * size_t(A_col);
-        size_b = size_t(ldb) * size_t(B_col);
-        size_c = size_t(ldc) * size_t(n);
-        size_d = size_t(ldc) * size_t(n);
+        size_a = size_t(lda) * A_col;
+        size_b = size_t(ldb) * B_col;
+        size_c = size_t(ldc) * n;
+        size_d = size_t(ldc) * n;
     }else{
-      size_a = k * m;
-      size_b = k * n;
-      size_c = n * m;
-    }
-
-    if (alocate_host_matrix_mem()) {
-        if (!init_gpu_device())
-            is_error = true;
-    } else {
-        is_error = true;
+      size_a = size_t(k) * m;
+      size_b = size_t(k) * n;
+      size_c = size_t(n) * m;
     }
 
     //setting alpha and beta val
@@ -96,6 +106,13 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, in
        blas_lda_offset = lda;
        blas_ldb_offset = ldb;
        blas_ldc_offset = ldc;
+    }
+
+    if (alocate_host_matrix_mem()) {
+        if (!init_gpu_device())
+            is_error = true;
+    } else {
+        is_error = true;
     }
 }
 
@@ -414,7 +431,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
                   rocblas_datatype a_type = rocblas_datatype_f16_r;
                   rocblas_datatype b_type = rocblas_datatype_f16_r;
                   rocblas_datatype c_type = rocblas_datatype_f16_r;
-                  rocblas_datatype d_type = rocblas_datatype_f16_r;
+                  //rocblas_datatype d_type = rocblas_datatype_f16_r;
                   rocblas_datatype compute_type = rocblas_datatype_f32_r;
                   rocblas_gemm_algo algo = static_cast<rocblas_gemm_algo>(0);
                   int sol_index = 0;
@@ -461,9 +478,9 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
  * it should be called before rocBlas GEMM
  */
 void rvs_blas::generate_random_matrix_data(void) {
-    int i;
+    size_t i;
     if (!is_error) {
-        uint64_t nextr = time(NULL);
+        uint64_t nextr = (uint64_t) time(NULL);
 
         //SGEMM stuff
         for (i = 0; i < size_a; ++i)
@@ -502,7 +519,7 @@ void rvs_blas::generate_random_matrix_data(void) {
  * @brief fast pseudo random generator 
  * @return floating point random number
  */
-float rvs_blas::fast_pseudo_rand(u_long *nextr) {
+float rvs_blas::fast_pseudo_rand(uint64_t *nextr) {
     *nextr = *nextr * 1103515245 + 12345;
     return static_cast<float>(static_cast<uint32_t>
                     ((*nextr / 65536) % RANDOM_CT)) / RANDOM_DIV_CT;
