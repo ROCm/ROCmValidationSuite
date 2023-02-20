@@ -117,7 +117,7 @@ endif()
 include_directories(./ ../
   ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR}
 )
-link_directories(${ASAN_LIB_PATH})
+link_directories(${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
 
 ## define common source files
 set(SOURCES
@@ -158,7 +158,7 @@ add_library(${RVS_TARGET}rt  ${SOURCES_RT})
 ## define rvslib library
 add_library(${RVS_TARGET}  ${SOURCES})
 add_dependencies(${RVS_TARGET} ${RVS_TARGET}rt)
-
+target_link_libraries(${RVS_TARGET} ${ROCM_SMI_LIB})
 if (RVS_BUILD_TESTS)
   ## define rvslibut (unit test) library
   add_library(${RVS_TARGET}ut  ${SOURCES_UT})

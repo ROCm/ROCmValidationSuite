@@ -22,8 +22,6 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "include/gpu_util.h"
-
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
@@ -34,6 +32,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "rocm_smi/rocm_smi.h"
+#include "include/gpu_util.h"
 std::vector<uint16_t> rvs::gpulist::location_id;
 std::vector<uint16_t> rvs::gpulist::gpu_id;
 std::vector<uint16_t> rvs::gpulist::device_id;
@@ -275,7 +275,6 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
  * @brief Check if the GPU is die (chiplet) in Multi-Chip Module (MCM) GPU.
  * @param device_id GPU Device ID
  * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
- **/
 bool gpu_check_if_mcm_die (uint16_t device_id) {
 
   uint16_t i = 0;
@@ -288,6 +287,29 @@ bool gpu_check_if_mcm_die (uint16_t device_id) {
     }
   }
   return mcm_die;
+}
+
+ **/
+
+/**
+ * @brief Check if the GPU is die (chiplet) in Multi-Chip Module (MCM) GPU.
+ * @param device_id GPU Device ID
+ * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
+ **/
+bool gpu_check_if_mcm_die (uint16_t device_id, int idx) {
+  bool ret = false;
+  uint64_t val ;
+  ret = rsmi_dev_power_cap_get(idx, 0, &val);
+  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+	  return false;
+  ret = rsmi_dev_power_cap_default_get(idx, &val);
+  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+          return false;
+  ret = rsmi_dev_power_ave_get(idx, 0, &val);
+  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+          return false;
+
+  return true;
 }
 
 /**

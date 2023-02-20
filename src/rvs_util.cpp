@@ -157,7 +157,7 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 	// if mcm check enabled, print message if device is MCM
         if (mcm_check){
 	    std::stringstream msg_stream;
-            mcm_die =  gpu_check_if_mcm_die(devId);
+            mcm_die =  gpu_check_if_mcm_die(devId, i);
 	    if (mcm_die) {
                 msg_stream.str("");
                 msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
