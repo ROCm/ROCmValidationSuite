@@ -271,25 +271,7 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
   }
 }
 
-/**
- * @brief Check if the GPU is die (chiplet) in Multi-Chip Module (MCM) GPU.
- * @param device_id GPU Device ID
- * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
-bool gpu_check_if_mcm_die (uint16_t device_id) {
 
-  uint16_t i = 0;
-  bool mcm_die = false;
-  
-  for (i  = 0; i < MAX_NUM_MCM_GPU; i++) {
-    if(mcm_gpu_device_id[i] == device_id) {
-      mcm_die = true;
-      break;
-    }
-  }
-  return mcm_die;
-}
-
- **/
 
 /**
  * @brief Check if the GPU is die (chiplet) in Multi-Chip Module (MCM) GPU.
