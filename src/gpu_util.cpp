@@ -296,7 +296,7 @@ bool gpu_check_if_mcm_die (uint16_t device_id) {
  * @param device_id GPU Device ID
  * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
  **/
-bool gpu_check_if_mcm_die (uint16_t device_id, int idx) {
+bool gpu_check_if_mcm_die (int idx) {
   bool ret = false;
   uint64_t val ;
   ret = rsmi_dev_power_cap_get(idx, 0, &val);
