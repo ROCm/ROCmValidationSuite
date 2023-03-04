@@ -242,7 +242,7 @@ bool IETWorker::do_iet_power_stress(void) {
         total_time_ms = time_diff(end_time, iet_start_time);
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + " Average power 1" + " " + std::to_string(cur_power_value);
+            std::to_string(gpu_id) + " " + " Average power " + " " + std::to_string(cur_power_value);
         rvs::lp::Log(msg, rvs::loginfo);
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
