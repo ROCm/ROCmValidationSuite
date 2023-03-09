@@ -151,7 +151,6 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
 
         gst_end_time = std::chrono::system_clock::now();
         millis_sgemm_ops = time_diff(gst_end_time, gst_log_interval_time);
-
         if (millis_sgemm_ops >= log_interval) {
             // compute the GFLOPS
             seconds_elapsed = static_cast<double> (millis_sgemm_ops) / 1000;
@@ -423,7 +422,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         //Start the timer
         start_time = gpu_blas->get_time_us();
 
-        // run GEMM & wait for completion
+	// run GEMM & wait for completion
         gpu_blas->run_blass_gemm(gst_ops_type);
         while (!gpu_blas->is_gemm_op_complete()) {} // wait till gemm tasks complete
         //End the timer
@@ -433,9 +432,9 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
         gst_end_time = std::chrono::system_clock::now();
         total_milliseconds = time_diff(gst_end_time, gst_start_time);
+
         log_interval_milliseconds = time_diff(gst_end_time,
                                               gst_log_interval_time);
-
         if (log_interval_milliseconds >= log_interval && num_sgemm_ops > 0) {
             seconds_elapsed = static_cast<double> (log_interval_milliseconds) /
                                 1000;
