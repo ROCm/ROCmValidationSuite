@@ -232,7 +232,7 @@ bool IETWorker::do_iet_power_stress(void) {
             std::to_string(gpu_id) + " " + " Target power is : " + " " + std::to_string(target_power);
         rvs::lp::Log(msg, rvs::logtrace);
 
-        //check whether we reached the target power
+        //update power to max if it is valid
         if(cur_power_value > 0){
             max_power = std::max(max_power, cur_power_value);// max of averages
         }
@@ -267,6 +267,7 @@ bool IETWorker::do_iet_power_stress(void) {
     // json log the avg power
     log_to_json(IET_AVERAGE_POWER_KEY, std::to_string(max_power),
             rvs::loginfo);
+    //check whether we reached the target power
     if(max_power >= target_power) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Average power met the target power :" + " " + std::to_string(max_power);
