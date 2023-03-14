@@ -242,7 +242,6 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
 
       }
 
-
     is_error = false;
     return true;
 }
@@ -426,8 +425,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
        }
 
       if(ops_type == "hgemm") {
-                  rocblas_float alpha;
-                  rocblas_float beta;
+                  //rocblas_half alpha;
+                  //rocblas_half beta;
                   rocblas_datatype a_type = rocblas_datatype_f16_r;
                   rocblas_datatype b_type = rocblas_datatype_f16_r;
                   rocblas_datatype c_type = rocblas_datatype_f16_r;
@@ -437,9 +436,10 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
                   int sol_index = 0;
                   int flags = 10;
 
-                  alpha = blas_alpha_val;
-                  beta  = blas_beta_val;
-
+                  //alpha.data = blas_alpha_val;
+                  //beta.data  = blas_beta_val;
+                  _Float16 alpha = (float)blas_alpha_val;
+                  _Float16 beta = (float)blas_beta_val;
 #if 0
 		  std::cout << "\n M size : " << rvs_blas::m;
 		  std::cout << "\n N size : " << rvs_blas::n;
@@ -450,7 +450,19 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
 		  std::cout << "\n LDB : " << blas_ldb_offset;
 		  std::cout << "\n LDC : " << blas_ldc_offset;
 #endif
+		  if (rocblas_hgemm(blas_handle, transa, transb,
+                          rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                          &alpha, dhlfa , blas_lda_offset,
+                          dhlfb, blas_ldb_offset, &beta,
+                          dhlfc, blas_ldc_offset) != rocblas_status_success) {
+                       is_error = true;  // GPU cannot enqueue the gemm
+                       std::cout << "\n Error in Hgemm " << "\n";
+                       return false;
+                  } else {
+                       return true;
+                  }
 
+/*
                   if (rocblas_gemm_ex(blas_handle, transa, transb,
                           rvs_blas::m, rvs_blas::n, rvs_blas::k,
                           &alpha, dhlfa, a_type, blas_lda_offset,
@@ -464,6 +476,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
                   } else {
                        return true;
                   }
+		  */
        }
 
     } else {
@@ -503,13 +516,13 @@ void rvs_blas::generate_random_matrix_data(void) {
             hdblc[i] = (double)fast_pseudo_rand(&nextr);
 
         for (i = 0; i < size_a; ++i)
-            hhlfa[i].data = (uint16_t)fast_pseudo_rand(&nextr);
+            hhlfa[i] = fast_pseudo_rand(&nextr);
 
         for (i = 0; i < size_b; ++i)
-            hhlfb[i].data = (uint16_t)fast_pseudo_rand(&nextr);
+            hhlfb[i] = fast_pseudo_rand(&nextr);
 
         for (int i = 0; i < size_c; ++i)
-            hhlfc[i].data = (uint16_t)fast_pseudo_rand(&nextr);
+            hhlfc[i] = fast_pseudo_rand(&nextr);
     }
 }
 

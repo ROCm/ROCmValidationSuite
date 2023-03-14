@@ -157,6 +157,8 @@ add_library(${RVS_TARGET}rt  ${SOURCES_RT})
 
 ## define rvslib library
 add_library(${RVS_TARGET}  ${SOURCES})
+target_compile_options(${RVS_TARGET} PRIVATE -mf16c)
+target_compile_definitions(${RVS_TARGET} PRIVATE ROCM_USE_FLOAT16)
 add_dependencies(${RVS_TARGET} ${RVS_TARGET}rt)
 
 if (RVS_BUILD_TESTS)
