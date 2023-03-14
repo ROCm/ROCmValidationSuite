@@ -279,17 +279,27 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
  * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
  **/
 bool gpu_check_if_mcm_die (int idx) {
-  bool ret = false;
-  uint64_t val ;
+  //bool ret = false;
+  rsmi_status_t ret;
+  uint64_t val =0 ;
   ret = rsmi_dev_power_cap_get(idx, 0, &val);
-  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0)){
+	  //std::cout << idx << " rsmi_dev_power_cap_get " << ret << " and " << val  << std::endl;
 	  return false;
+  }
+  
+  
   ret = rsmi_dev_power_cap_default_get(idx, &val);
-  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0)){
+	  //std::cout << " rsmi_dev_power_cap_default_get " << ret<< std::endl;
           return false;
+  }
+  
   ret = rsmi_dev_power_ave_get(idx, 0, &val);
-  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0)){
+	  //std::cout << " rsmi_dev_power_ave_get " <<ret << std::endl;
           return false;
+  }
 
   return true;
 }

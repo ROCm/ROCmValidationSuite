@@ -148,12 +148,6 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
             if (it_gpu_id != property_device.end())
                 cur_gpu_selected = true;
         }
-
-        if (cur_gpu_selected) {
-            gpus_device_index.insert
-                (std::pair<int, uint16_t>(i, gpu_id));
-            amd_gpus_found = true;
-        }
 	// if mcm check enabled, print message if device is MCM
         if (mcm_check){
 	    std::stringstream msg_stream;
@@ -167,6 +161,14 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
                 amd_mcm_gpu_found = true;
             }
 	}
+	if (cur_gpu_selected) {
+		if(!mcm_check || !mcm_die ){
+                    gpus_device_index.insert
+                        (std::pair<int, uint16_t>(i, gpu_id));
+                    amd_gpus_found = true;
+        	}
+	}
+	mcm_die = false;
     }
     if (amd_mcm_gpu_found && mcm_check) {
         std::stringstream msg_stream;
