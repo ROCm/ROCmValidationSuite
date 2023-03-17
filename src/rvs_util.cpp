@@ -161,12 +161,11 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
                 amd_mcm_gpu_found = true;
             }
 	}
-	if (cur_gpu_selected) {
-		if(!mcm_check || !mcm_die ){
+	// excluding secondary die from test list, drops power reading substantially
+	if (cur_gpu_selected) { // need not exclude secondary die, just log it out.
                     gpus_device_index.insert
                         (std::pair<int, uint16_t>(i, gpu_id));
                     amd_gpus_found = true;
-        	}
 	}
 	mcm_die = false;
     }
