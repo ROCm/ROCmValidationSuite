@@ -148,16 +148,10 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
             if (it_gpu_id != property_device.end())
                 cur_gpu_selected = true;
         }
-
-        if (cur_gpu_selected) {
-            gpus_device_index.insert
-                (std::pair<int, uint16_t>(i, gpu_id));
-            amd_gpus_found = true;
-        }
 	// if mcm check enabled, print message if device is MCM
         if (mcm_check){
 	    std::stringstream msg_stream;
-            mcm_die =  gpu_check_if_mcm_die(devId);
+            mcm_die =  gpu_check_if_mcm_die(i);
 	    if (mcm_die) {
                 msg_stream.str("");
                 msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
@@ -167,6 +161,13 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
                 amd_mcm_gpu_found = true;
             }
 	}
+	// excluding secondary die from test list, drops power reading substantially
+	if (cur_gpu_selected) { // need not exclude secondary die, just log it out.
+                    gpus_device_index.insert
+                        (std::pair<int, uint16_t>(i, gpu_id));
+                    amd_gpus_found = true;
+	}
+	mcm_die = false;
     }
     if (amd_mcm_gpu_found && mcm_check) {
         std::stringstream msg_stream;
