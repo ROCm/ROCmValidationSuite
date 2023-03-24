@@ -34,8 +34,8 @@
   #include <rocblas.h>
 #endif
 
-#include "include/hip/hip_runtime.h"
-#include "include/hip/hip_runtime_api.h"
+#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #include <sys/time.h>
 
 /**
