@@ -46,7 +46,7 @@ class if1 : public ifbase {
   virtual int property_set(const char*, const char*);
   virtual int property_set(const std::string&, const std::string&);
   virtual int run(void);
-  virtual int callback_set(void (*callback)(const action_result_t * result, void * user_param), void * user_param);
+  virtual int callback_set(callback_t callback, void * user_param);
 
  protected:
   if1();

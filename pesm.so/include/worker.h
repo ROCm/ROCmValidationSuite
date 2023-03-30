@@ -30,6 +30,7 @@
 
 #include "include/rvsthreadbase.h"
 #include "include/rvsactionbase.h"
+#include "include/action.h"
 
 
 /**
@@ -52,6 +53,8 @@ class Worker : public rvs::ThreadBase {
   void stop(void);
   //! Sets initiating action name
   void set_name(const std::string& name) { action_name = name; }
+  //! sets action
+  void set_action(const pesm_action& _action) { action = _action; }
   //! sets stopping action name
   void set_stop_name(const std::string& name) { stop_action_name = name; }
   //! Sets device id for filtering
@@ -65,11 +68,6 @@ class Worker : public rvs::ThreadBase {
   void json(const bool flag) { bjson = flag; }
   //! Returns initiating action name
   const std::string& get_name(void) { return action_name; }
-  //! Set action callback 
-  void set_callback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
-    callback = _callback;
-    user_param = _user_param;
-  }
 
  protected:
   virtual void run(void);
@@ -89,14 +87,10 @@ class Worker : public rvs::ThreadBase {
   std::string strgpuids;
   //! Name of the action which initiated monitoring
   std::string  action_name;
+  //! action instance
+  pesm_action action;
   //! Name of the action which stops monitoring
   std::string  stop_action_name;
-  //! callback
-  void (*callback)(const rvs::action_result_t * result, void * user_param);
-  //! User parameter
-  void * user_param;
 };
-
-
 
 #endif  // PESM_SO_INCLUDE_WORKER_H_

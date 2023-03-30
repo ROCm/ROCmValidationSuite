@@ -134,6 +134,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
                 it != gst_gpus_device_index.end(); ++it) {
             // set worker thread stress test params
             workers[i].set_name(action_name);
+            workers[i].set_action(*this);
             workers[i].set_gpu_id(it->second);
             workers[i].set_gpu_device_index(it->first);
             workers[i].set_run_wait_ms(property_wait);
@@ -156,8 +157,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             workers[i].set_lda_offset(gst_lda_offset);
             workers[i].set_ldb_offset(gst_ldb_offset);
             workers[i].set_ldc_offset(gst_ldc_offset);
-            workers[i].set_callback(callback, user_param);
-            
+
             i++;
         }
 
@@ -543,6 +543,7 @@ void gst_action::json_add_primary_fields(){
  */
 int gst_action::run(void) {
     string msg;
+    rvs::action_result_t action_result;
 
     // get the action name
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -575,14 +576,11 @@ int gst_action::run(void) {
       rvs::lp::JsonActionEndNodeCreate();
     }
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "GST Module action " + action_name + " completed";
+    action_callback(&action_result);
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-      action_result.output = "GST Module action " + action_name + " completed";
-      callback(&action_result, user_param);
-    }
     return res;
 }
 

@@ -24,6 +24,7 @@
  *******************************************************************************/
 #include "gtest/gtest.h"
 #include "include/action.h"
+#include "include/worker.h"
 #include "include/gpu_util.h"
 
 Worker* pworker;

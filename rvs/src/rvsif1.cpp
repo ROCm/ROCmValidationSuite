@@ -103,7 +103,7 @@ int rvs::if1::property_set(const char* pKey, const char* pVal ) {
  * @return 0 - success, non-zero otherwise
  *
  */
-int rvs::if1::callback_set(void (*callback)(const action_result_t * result, void * user_param), void * user_param) {
+int rvs::if1::callback_set(callback_t callback, void * user_param) {
   return (*rvs_module_action_callback_set)(plibaction, callback, user_param);
 }
 

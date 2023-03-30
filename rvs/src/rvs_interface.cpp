@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc.
+ * Copyright (c) 2018-2023 Advanced Micro Devices, Inc.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -50,7 +50,7 @@ rvs_status_t rvs_validate_session(rvs_session_id_t session_id, unsigned int *ses
 void rvs_callback(const rvs_results_t * results, int user_param);
 
 /**
- * Initialize RVS(ROCMm Validation Suite) component. 
+ * Initialize RVS(ROCm Validation Suite) component. 
  * @param None 
  * @return RVS_STATUS_SUCCESS - Successfully initialized
  * @return RVS_STATUS_FAILED - Failed to initialize

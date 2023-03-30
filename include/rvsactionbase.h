@@ -28,6 +28,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 #include "include/rvs_util.h"
 
@@ -50,6 +51,8 @@ typedef struct {
   std::string output;
 } action_result_t;
 
+using callback_t = std::add_pointer <void (const action_result_t *, void *)>::type;
+
 /**
  * @class actionbase
  * @ingroup RVS
@@ -68,7 +71,7 @@ class actionbase {
   virtual int property_set(const char*, const char*);
 
   //! Set action callback
-  int callback_set(void (*callback)(const action_result_t * result, void * user_param), void * user_param);
+  int callback_set(callback_t callback, void * user_param);
 
   //! Virtual action function. To be implemented in every derived class.
   virtual int run(void) = 0;
@@ -215,14 +218,17 @@ class actionbase {
   //! data from config file
   std::map<std::string, std::string> property;
 
-//   //! List of all gpu_id in the action's "device" property in .config file
-//   std::vector<std::string> device_prop_gpu_id_list;
+  //   //! List of all gpu_id in the action's "device" property in .config file
+  //   std::vector<std::string> device_prop_gpu_id_list;
 
   //! logging level
   int property_log_level;
 
-  //! callback
-  void (*callback)(const action_result_t * result, void * user_param);
+  //! Call registered callback
+  int action_callback(rvs::action_result_t *action_result);
+
+  //! Registered callback
+  callback_t callback;
 
   //! User parameter
   void * user_param;

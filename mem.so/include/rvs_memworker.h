@@ -28,6 +28,7 @@
 #include <vector>
 #include "include/rvsthreadbase.h"
 #include "include/rvsactionbase.h"
+#include "include/action.h"
 
 #define TDIFF(tb, ta) (tb.tv_sec - ta.tv_sec + 0.000001*(tb.tv_usec - ta.tv_usec))
 #define MEM_RESULT_PASS_MESSAGE         "true"
@@ -95,6 +96,8 @@ class MemWorker : public rvs::ThreadBase {
 
     //! sets action name
     void set_name(const std::string& name) { action_name = name; }
+    //! sets action
+    void set_action(const mem_action& _action) { action = _action; }
     //! returns action name
     const std::string& get_name(void) { return action_name; }
 
@@ -188,12 +191,6 @@ class MemWorker : public rvs::ThreadBase {
     static bool get_use_json(void) { return bjson; }
     static void init_tests(const std::vector<uint32_t>& exclude_list);
 
-    //! Set action callback 
-    void set_callback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
-      callback = _callback;
-      user_param = _user_param;
-    }
-
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -212,6 +209,8 @@ class MemWorker : public rvs::ThreadBase {
  protected:
     //! name of the action
     std::string action_name;
+    //! action instance
+    mem_action action;
     //! index of the GPU that will run the stress test
     int gpu_device_index;
     //! ID of the GPU that will run the stress test
@@ -242,10 +241,6 @@ class MemWorker : public rvs::ThreadBase {
     uint64_t  threadsPerBlock;
     //Mapped memory pointer
     void*   mappedHostPtr;
-    // callback
-    void (*callback)(const rvs::action_result_t * result, void * user_param);
-    // User parameter
-    void * user_param;
 };
 
 #endif  // MEM_SO_INCLUDE_MEM_WORKER_H_

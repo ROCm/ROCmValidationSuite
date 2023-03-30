@@ -83,7 +83,7 @@ int rvs::actionbase::property_set(const char* pKey, const char* pVal) {
  * @return 0 - success. non-zero otherwise
  *
  * */
-int rvs::actionbase::callback_set(void (*callback)(const action_result_t * result, void * user_param), void * user_param) {
+int rvs::actionbase::callback_set(rvs::callback_t callback, void * user_param) {
 
   if((nullptr == callback) || (nullptr == user_param)) {
     return 1;
@@ -91,6 +91,23 @@ int rvs::actionbase::callback_set(void (*callback)(const action_result_t * resul
 
   this->callback = callback;
   this->user_param = user_param;
+  return 0;
+}
+
+/**
+ * @brief Call registered callback
+ *
+ * @param action_result Action execution result
+ * @return 0 - success. non-zero otherwise
+ *
+ * */
+int rvs::actionbase::action_callback(rvs::action_result_t *action_result) {
+
+  if((nullptr == this->callback) || (nullptr == action_result)) {
+    return 1;
+  }
+
+  this->callback(action_result, this->user_param);
   return 0;
 }
 

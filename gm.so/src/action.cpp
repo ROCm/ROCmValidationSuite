@@ -59,15 +59,15 @@ gm_action::gm_action() {
   bjson = false;
   json_root_node = nullptr;
 
-  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+  property_bounds.insert(std::pair<string, Metric_bound>
     (GM_TEMP, {false, false, 0, 0}));
-  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+  property_bounds.insert(std::pair<string, Metric_bound>
     (GM_CLOCK, {false, false, 0, 0}));
-  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+  property_bounds.insert(std::pair<string, Metric_bound>
     (GM_MEM_CLOCK, {false, false, 0, 0}));
-  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+  property_bounds.insert(std::pair<string, Metric_bound>
     (GM_FAN, {false, false, 0, 0}));
-  property_bounds.insert(std::pair<string, Worker::Metric_bound>
+  property_bounds.insert(std::pair<string, Metric_bound>
     (GM_POWER, {false, false, 0, 0}));
 }
 
@@ -194,7 +194,7 @@ int gm_action::get_bounds(const char* pMetric) {
     return 2;
   }
 
-  Worker::Metric_bound bound_;
+  Metric_bound bound_;
   int error;
   std::vector<string> values = str_split(sval, YAML_DEVICE_PROP_DELIMITER);
   if (values.size() == 3) {
@@ -273,6 +273,7 @@ bool gm_action::get_all_gm_config_keys(void) {
 int gm_action::run(void) {
   string msg;
   rsmi_status_t status;
+  rvs::action_result_t action_result;
 
   // if monitoring is already running, stop it
   // (it will be restarted if needed)
@@ -290,14 +291,10 @@ int gm_action::run(void) {
   if (property["monitor"] != "true") {
     RVSTRACE_
     // already done, just return
-      if(nullptr != callback) {
-        rvs::action_result_t action_result;
-
-        action_result.state = rvs::actionstate::ACTION_COMPLETED;
-        action_result.status = rvs::actionstatus::ACTION_FAILED;
-        action_result.output = "GM Module action " + action_name + " completed";
-        callback(&action_result, user_param);
-      }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "GM Module action " + action_name + " completed";
+    action_callback(&action_result);
     return 0;
   }
 
@@ -305,29 +302,20 @@ int gm_action::run(void) {
   // start new monitoring
   if (!get_all_common_config_keys()) {
     RVSTRACE_
-
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
-
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = "Error in common configuration keys.";
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in common configuration keys.";
+    action_callback(&action_result);
     return -1;
   }
 
   if (!get_all_gm_config_keys()) {
     RVSTRACE_
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
-
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = "Error in GM configuration keys.";
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in GM configuration keys.";
+    action_callback(&action_result);
     return -1;
   }
 
@@ -367,14 +355,10 @@ int gm_action::run(void) {
     msg = "No devices match filtering criteria.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
-
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
     return -1;
   }
 
@@ -388,14 +372,10 @@ int gm_action::run(void) {
       msg += std::to_string(*it);
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 
-      if(nullptr != callback) {
-        rvs::action_result_t action_result;
-
-        action_result.state = rvs::actionstate::ACTION_COMPLETED;
-        action_result.status = rvs::actionstatus::ACTION_FAILED;
-        action_result.output = msg;
-        callback(&action_result, user_param);
-      }
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
       return -1;
     }
     uint32_t ix;
@@ -407,11 +387,11 @@ int gm_action::run(void) {
 
   pworker = new Worker();
   pworker->set_name(action_name);
+  pworker->set_action(*this);
   pworker->json(bjson);
   pworker->set_sample_int(sample_interval);
   pworker->set_log_int(property_log_interval);
   pworker->set_terminate(prop_terminate);
-  pworker->set_callback(callback, user_param);
   if (prop_force)
     pworker->set_force(true);
 
@@ -434,14 +414,10 @@ int gm_action::run(void) {
 
   RVSTRACE_
 
-  if(nullptr != callback) {
-    rvs::action_result_t action_result;
-
-    action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
-    action_result.output = "GM Module action " + action_name + " completed";
-    callback(&action_result, user_param);
-  }
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+  action_result.output = "GM Module action " + action_name + " completed";
+  action_callback(&action_result);
 
   return 0;
 }

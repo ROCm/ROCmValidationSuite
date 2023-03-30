@@ -68,7 +68,7 @@ public:
   virtual ~PackageHandler(){}
 	
   //! Set action callback 
-  void setCallback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
+  void setCallback(rvs::callback_t _callback, void * _user_param) {
     callback = _callback;
     user_param = _user_param;
   }
@@ -80,7 +80,7 @@ protected:
 	std::unique_ptr<PackageInfo> metaInfo;
 	std::string m_manifest;	
   // callback
-  void (*callback)(const rvs::action_result_t * result, void * user_param);
+  rvs::callback_t callback;
   // User parameter
   void * user_param;
 };

@@ -115,6 +115,8 @@ class mem_action: public rvs::actionbase {
     uint64_t numofMemblocks;
     //threads per block
     uint64_t threadsPerBlock;
+
+    friend class MemWorker;
     
     // exclude tests list
     vector<uint32_t> exclude_list;

@@ -100,6 +100,8 @@ class gst_action: public rvs::actionbase {
     int      gst_ldb_offset;
     int      gst_ldc_offset;
 
+    friend class GSTWorker;
+
     // GST specific config keys
 //     void property_get_gst_target_stress(int *error);
 //     void property_get_gst_tolerance(int *error);

@@ -108,20 +108,18 @@ int rcqt_action::run() {
   string msg;
   bool propchk = false;
   int ret = 0;
+  rvs::action_result_t action_result;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     msg = "Action name missing";
     rvs::lp::Err(msg, MODULE_NAME_CAPS);
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      callback(&action_result, user_param);
-    }
     return 1;
   }
 
@@ -140,14 +138,11 @@ int rcqt_action::run() {
       + JSON_CREATE_NODE_ERROR;
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 
-      if(nullptr != callback) {
-        rvs::action_result_t action_result;
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
 
-        action_result.state = rvs::actionstate::ACTION_COMPLETED;
-        action_result.status = rvs::actionstatus::ACTION_FAILED;
-        action_result.output = msg;
-        callback(&action_result, user_param);
-      }
       return 1;
     }
   }
@@ -161,14 +156,10 @@ int rcqt_action::run() {
   if (propchk == true)
     ret = pkglist_run();
 
-  if(nullptr != callback) {
-    rvs::action_result_t action_result;
-
-    action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = (!ret) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-    action_result.output = "RCQT Module action " + action_name + " completed";
-    callback(&action_result, user_param);
-  }
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!ret) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "RCQT Module action " + action_name + " completed";
+  action_callback(&action_result);
 
   return ret;
 }

@@ -31,6 +31,7 @@
 #include "include/rvs_blas.h"
 #include "include/rvs_util.h"
 #include "include/rvsactionbase.h"
+#include "include/action.h"
 
 #define GST_RESULT_PASS_MESSAGE         "true"
 #define GST_RESULT_FAIL_MESSAGE         "false"
@@ -53,6 +54,8 @@ class GSTWorker : public rvs::ThreadBase {
 
     //! sets action name
     void set_name(const std::string& name) { action_name = name; }
+    //! sets action
+    void set_action(const gst_action& _action) { action = _action; }
     //! returns action name
     const std::string& get_name(void) { return action_name; }
 
@@ -193,12 +196,6 @@ class GSTWorker : public rvs::ThreadBase {
 
     void set_gst_ops_type(std::string _ops_type) { gst_ops_type = _ops_type; }
 
-    //! Set action callback 
-    void set_callback(void (*_callback)(const rvs::action_result_t * result, void * user_param), void * _user_param) {
-      callback = _callback;
-      user_param = _user_param;
-    }
-
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -216,6 +213,8 @@ class GSTWorker : public rvs::ThreadBase {
  protected:
     //! name of the action
     std::string action_name;
+    //! action instance
+    gst_action action;
     //! index of the GPU that will run the stress test
     int gpu_device_index;
     //Matrix transpose A
@@ -267,10 +266,6 @@ class GSTWorker : public rvs::ThreadBase {
     static bool bjson;
     //Type of operation
     std::string gst_ops_type;
-    // callback
-    void (*callback)(const rvs::action_result_t * result, void * user_param);
-    // User parameter
-    void * user_param;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

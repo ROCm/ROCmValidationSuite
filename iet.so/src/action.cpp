@@ -465,6 +465,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             gpuId = it->second;
             // set worker thread params
             workers[i].set_name(action_name);
+            workers[i].set_action(*this);
             workers[i].set_gpu_id(it->second);
             workers[i].set_gpu_device_index(it->first);
             workers[i].set_pwr_device_id(dev_idx++);
@@ -488,7 +489,6 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_ldb_offset(iet_ldb_offset);
             workers[i].set_ldc_offset(iet_ldc_offset);
             workers[i].set_tp_flag(iet_tp_flag);
-            workers[i].set_callback(callback, user_param);
 
             i++;
         }
@@ -657,6 +657,7 @@ int iet_action::get_all_selected_gpus(void) {
  */
 int iet_action::run(void) {
   string msg;
+  rvs::action_result_t action_result;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -683,14 +684,10 @@ int iet_action::run(void) {
 
   auto res =  get_all_selected_gpus();
 
-  if(nullptr != callback) {
-    rvs::action_result_t action_result;
-
-    action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-    action_result.output = "IET Module action " + action_name + " completed";
-    callback(&action_result, user_param);
-  }
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "IET Module action " + action_name + " completed";
+  action_callback(&action_result);
 
   return res;
 }

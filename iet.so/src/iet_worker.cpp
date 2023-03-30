@@ -28,7 +28,6 @@
 #include <iostream>
 #include <chrono>
 #include <memory>
-#include <mutex>
 #include <exception>
 
 #include "rocm_smi/rocm_smi.h"
@@ -193,9 +192,9 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
 
 
 /**
- * @brief performs the IET stress test on the given GPU (attempts to sustain
+ * @brief performs the Input EDPp stress (IET) test on the given GPU (attempts to sustain
  * the target power)
- * @return true if IET test succeeded, false otherwise
+ * @return true if EDPp test succeeded, false otherwise
  */
 bool IETWorker::do_iet_power_stress(void) {
 
@@ -209,11 +208,12 @@ bool IETWorker::do_iet_power_stress(void) {
     float     max_power = 0;
     bool      result = true;
     bool      start = true;
+    rvs::action_result_t action_result;
 
     std::thread t(&IETWorker::blasThread,this, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms, 
             iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset);
 
-    // record IET ramp-up start time
+    // record EDPp ramp-up start time
     iet_start_time = std::chrono::system_clock::now();
 
     for (;;) {
@@ -281,14 +281,10 @@ bool IETWorker::do_iet_power_stress(void) {
         result = false;
     }
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
-
-      action_result.state = rvs::actionstate::ACTION_RUNNING;
-      action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg.c_str();
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_RUNNING;
+    action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg.c_str();
+    action.action_callback(&action_result);
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
         std::to_string(gpu_id) + " " + " End of worker thread " ;
@@ -312,7 +308,7 @@ end:
 
 
 /**
- * @brief performs the Input IET test on the given GPU
+ * @brief performs the Input EDPp (IET) test on the given GPU
  */
 void IETWorker::run() {
     string msg, err_description;

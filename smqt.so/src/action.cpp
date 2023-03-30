@@ -180,32 +180,29 @@ int smqt_action::run(void) {
   string msg;
   struct pci_access *pacc;
   bool devid_found = false;
+  rvs::action_result_t action_result;
 
   if (!get_all_common_config_keys()) {
     msg = "Couldn't fetch common config keys from the configuration file!";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+
     return -1;
   }
 
   if (!get_all_smqt_config_keys()) {
     msg = "Couldn't fetch smqt config keys from the configuration file!";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+
     return -1;
   }
 
@@ -337,14 +334,11 @@ int smqt_action::run(void) {
     rvs::lp::Log(msgs5, rvs::loginfo, sec, usec);
     rvs::lp::Log(pmsg, rvs::logresults);
 
-    if(nullptr != callback) {
-      rvs::action_result_t result;
 
-      result.state = rvs::actionstate::ACTION_RUNNING;
-      result.status = rvs::actionstatus::ACTION_SUCCESS;
-      result.output = msg.c_str();
-      callback(&result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_RUNNING;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = msg.c_str();
+    action_callback(&action_result);
 
     rvs::lp::AddInt(r, "gpu", gpu_id);
     rvs::lp::AddString(r, "bar1_size", std::to_string(bar1_size));
@@ -365,25 +359,19 @@ int smqt_action::run(void) {
     msg = "No devices match criteria from the test configuration.";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      callback(&action_result, user_param);
-    }
     return -1;
   }
 
-  if(nullptr != callback) {
-    rvs::action_result_t action_result;
 
-    action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = (global_pass) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-    action_result.output = "SMQT Module action " + action_name + " completed";
-    callback(&action_result, user_param);
-  }
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (global_pass) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "SMQT Module action " + action_name + " completed";
+  action_callback(&action_result);
 
   return global_pass ? 0 : -1;
 }

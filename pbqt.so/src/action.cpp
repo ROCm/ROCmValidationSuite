@@ -806,6 +806,7 @@ int pbqt_action::print_final_average() {
   char        buff[128];
   uint16_t    transfer_ix;
   uint16_t    transfer_num;
+  rvs::action_result_t result;
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->get_final_data(&src_node, &dst_node, &bidir,
@@ -849,15 +850,10 @@ int pbqt_action::print_final_average() {
 
     rvs::lp::Log(msg, rvs::logresults);
 
-
-    if(nullptr != callback) {
-      rvs::action_result_t result;
-
-      result.state = rvs::actionstate::ACTION_RUNNING;
-      result.status = rvs::actionstatus::ACTION_SUCCESS;
-      result.output = msg.c_str();
-      callback(&result, user_param);
-    }
+    result.state = rvs::actionstate::ACTION_RUNNING;
+    result.status = rvs::actionstatus::ACTION_SUCCESS;
+    result.output = msg.c_str();
+    action_callback(&result);
 
     log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::logresults,
         pbqt_json_data_t::PBQT_THROUGHPUT, buff);
