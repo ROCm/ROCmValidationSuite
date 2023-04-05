@@ -239,40 +239,6 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 ################################################################################
 # Download and unpack yaml-cpp at configure time
-#[[
-configure_file(CMakeYamlDownload.cmake yaml-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
-if(result)
-  message(FATAL_ERROR "CMake step for yaml-download failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
-if(result)
-  message(FATAL_ERROR "Build step for yaml-download failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/yaml-src -B${CMAKE_BINARY_DIR}/yaml-build
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-src )
-if(result)
-  message(FATAL_ERROR "Config step for yaml-src failed: ${result}")
-endif()
-
-
-
-add_custom_target(rvs_yaml_target
-  DEPENDS ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
-)
-
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
-  COMMAND make -C ${CMAKE_BINARY_DIR}/yaml-build
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-src
-  COMMENT "Generating yaml-cpp targets"
-  VERBATIM)
-
-]]
 find_package(yaml-cpp)
 
 ################################################################################
