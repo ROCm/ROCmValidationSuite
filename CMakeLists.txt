@@ -193,8 +193,6 @@ set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
 set(RVS_ROCMSMI "0" CACHE STRING "1 = use local rocm_smi_lib")
 
 set(RVS_LIB_DIR "${CMAKE_BINARY_DIR}/rvslib" CACHE PATH "Contains RVS library")
-set(YAML_INC_DIR "${CMAKE_BINARY_DIR}/yaml-src/include" CACHE PATH "Contains header files exported by yaml-cpp")
-set(YAML_LIB_DIR "${CMAKE_BINARY_DIR}/yaml-build" CACHE PATH "Contains library files exported by yaml-cpp")
 
 if (${RVS_OS_TYPE} STREQUAL "centos")
   set(ROCT_LIB_DIR "${ROCM_PATH}/lib64" CACHE PATH "Contains library files exported by ROC Trunk")
@@ -241,6 +239,7 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 ################################################################################
 # Download and unpack yaml-cpp at configure time
+#[[
 configure_file(CMakeYamlDownload.cmake yaml-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
   RESULT_VARIABLE result
@@ -261,6 +260,8 @@ if(result)
   message(FATAL_ERROR "Config step for yaml-src failed: ${result}")
 endif()
 
+
+
 add_custom_target(rvs_yaml_target
   DEPENDS ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
 )
@@ -270,6 +271,9 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/yaml-build/libyaml-cpp.a
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-src
   COMMENT "Generating yaml-cpp targets"
   VERBATIM)
+
+]]
+find_package(yaml-cpp)
 
 ################################################################################
 ## GOOGLE TEST
@@ -502,7 +506,7 @@ if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
 endif()
 
-add_dependencies(rvshelper rvs_bin_folder rvs_doc rvs_yaml_target)
+add_dependencies(rvshelper rvs_bin_folder rvs_doc)
 
 
 add_dependencies(pesm rvslib rvslibrt)
