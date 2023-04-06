@@ -241,6 +241,12 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 # Download and unpack yaml-cpp at configure time
 find_package(yaml-cpp)
 
+if (yaml-cpp_FOUND)
+  message("yaml-cpp found")
+else() 
+  message(FATAL_ERROR "yaml-cpp not found !!! Install  to proceed ...")
+endif(yaml-cpp_FOUND)
+
 ################################################################################
 ## GOOGLE TEST
 if(RVS_BUILD_TESTS)
