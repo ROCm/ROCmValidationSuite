@@ -988,6 +988,6 @@ TEST_F(PcieCapsTest, pcie_caps) {
     }
   }
 
-  delete buff;
+  delete[] buff;
 }
 
