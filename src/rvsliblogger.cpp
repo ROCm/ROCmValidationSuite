@@ -202,8 +202,8 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
     return 0;
   }
 
-  uint32_t   secs;
-  uint32_t   usecs;
+  uint32_t   secs = 0;
+  uint32_t   usecs = 0;
 
   if (Sec|uSec) {
     DTRACE_
