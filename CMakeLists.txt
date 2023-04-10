@@ -238,7 +238,7 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 
 ################################################################################
-# Download and unpack yaml-cpp at configure time
+# check if yaml-cpp available at configure time
 find_package(yaml-cpp)
 
 if (yaml-cpp_FOUND)
@@ -250,7 +250,7 @@ endif(yaml-cpp_FOUND)
 ################################################################################
 ## GOOGLE TEST
 if(RVS_BUILD_TESTS)
-  # Download and unpack googletest at configure time
+  # fetch googletest at configure time
   include(FetchContent)
 
 FetchContent_Declare(
