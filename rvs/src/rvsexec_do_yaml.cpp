@@ -170,6 +170,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
   int sts = 0;
   YAML::Node config;
+  rvs_results_t result = {RVS_STATUS_FAILED, RVS_SESSION_STATE_COMPLETED, (const char *)NULL};
 
   if(yaml_data_type_t::YAML_FILE == data_type) {
 
@@ -195,6 +196,12 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
     // if stop was requested
     if (rvs::logger::Stopping()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+               "action '%s' was requested to stop",
+               action["name"].as<std::string>().c_str());
+      result.output_log = buff;
+      callback(&result);
       return -1;
     }
 
@@ -212,6 +219,9 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
       snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
                action["name"].as<std::string>().c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
+
+      result.output_log = buff;
+      callback(&result);
       return -1;
     }
 
@@ -224,6 +234,8 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
                action["name"].as<std::string>().c_str(),
                rvsmodule.c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      result.output_log = buff;
+      callback(&result);
       return -1;
     }
 
@@ -234,6 +246,8 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
                "action '%s' could not obtain interface if1",
                action["name"].as<std::string>().c_str());
       module::action_destroy(pa);
+      result.output_log = buff;
+      callback(&result);
       return -1;
     }
 
@@ -265,10 +279,22 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
     // errors?
     if (sts) {
+
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "action '%s' failed with error !",
+          action["name"].as<std::string>().c_str());
+      result.output_log = buff;
+      callback(&result);
       // cancel actions and return
       return sts;
     }
+
   }
+
+  result.status = RVS_STATUS_SUCCESS;
+  result.output_log = "RVS session successfully completed.";
+  callback(&result);
 
   return 0;
 }

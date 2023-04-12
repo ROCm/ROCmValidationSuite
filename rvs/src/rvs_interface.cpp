@@ -103,9 +103,9 @@ rvs_status_t rvs_session_create(rvs_session_id_t *session_id, rvs_session_callba
 
 /**
  * Set property for a session in RVS.
- * @param[in] session_id - Session identifier 
+ * @param[in] session_id - Session identifier
  * @param[in] session_property - Session property of test routine
- * @return RVS_STATUS_SUCCESS - Successfully set property 
+ * @return RVS_STATUS_SUCCESS - Successfully set property
  * @return RVS_STATUS_FAILED - Failed to set property
  */
 rvs_status_t rvs_session_set_property(rvs_session_id_t session_id, rvs_session_property_t *session_property) {
@@ -130,17 +130,20 @@ rvs_status_t rvs_session_set_property(rvs_session_id_t session_id, rvs_session_p
     case RVS_SESSION_TYPE_CUSTOM_CONF:
     case RVS_SESSION_TYPE_CUSTOM_ACTION:
 
-      if(RVS_SESSION_STATE_CREATED != rvs_session[session_idx].state) {
+      if((RVS_SESSION_STATE_CREATED != rvs_session[session_idx].state) &&
+          (RVS_SESSION_STATE_COMPLETED != rvs_session[session_idx].state)) {
         return RVS_STATUS_INVALID_SESSION_STATE;
       }
+
       rvs_session[session_idx].state = RVS_SESSION_STATE_READY;
 
+      memset(&(rvs_session[session_idx].property), 0, sizeof(rvs_session_property_t));
       memcpy(&(rvs_session[session_idx].property), session_property, sizeof(rvs_session_property_t));
 
       break;
 
     default:
-      return RVS_STATUS_INVALID_SESSION;
+      return RVS_STATUS_INVALID_ARGUMENT;
   }
 
   return RVS_STATUS_SUCCESS;
@@ -155,6 +158,8 @@ rvs_status_t rvs_session_set_property(rvs_session_id_t session_id, rvs_session_p
 rvs_status_t rvs_session_execute(rvs_session_id_t session_id) {
 
   unsigned int session_idx;
+  std::map<std::string, std::string> opt;
+  rvs::exec executor;
 
   if (RVS_STATE_INITIALIZED != rvs_state) {
     return RVS_STATUS_INVALID_STATE;
@@ -172,7 +177,6 @@ rvs_status_t rvs_session_execute(rvs_session_id_t session_id) {
 
     case RVS_SESSION_TYPE_DEFAULT_CONF:
       {
-        std::map<std::string, std::string> opt;
 
         std::string module[RVS_MODULE_MAX] = {
           "babel",
@@ -189,38 +193,24 @@ rvs_status_t rvs_session_execute(rvs_session_id_t session_id) {
 
         opt.insert({"module", module[rvs_session[session_idx].property.default_conf.module]});
 
-        rvs::exec executor;
-
-        executor.set_callback(rvs_callback, (int)session_id);
-        executor.run(opt);
       }
       break;
 
     case RVS_SESSION_TYPE_CUSTOM_CONF:
       {
-        std::map<std::string, std::string> opt;
         std::string path(rvs_session[session_idx].property.custom_conf.path);
 
         opt.insert({"conf", path});
 
-        rvs::exec executor;
-
-        executor.set_callback(rvs_callback, (int)session_id);
-        executor.run(opt);
       }
       break;
 
     case RVS_SESSION_TYPE_CUSTOM_ACTION:
       {
-        std::map<std::string, std::string> opt;
         std::string action(rvs_session[session_idx].property.custom_action.config);
 
         opt.insert({"yaml", action});
 
-        rvs::exec executor;
-
-        executor.set_callback(rvs_callback, (int)session_id);
-        executor.run(opt);
       }
       break;
 
@@ -228,6 +218,13 @@ rvs_status_t rvs_session_execute(rvs_session_id_t session_id) {
       {
         return RVS_STATUS_INVALID_SESSION;
       }
+  }
+
+  rvs_session[session_idx].state = RVS_SESSION_STATE_INITIATED;
+
+  executor.set_callback(rvs_callback, (int)session_id);
+  if(executor.run(opt)) {
+    return RVS_STATUS_FAILED;
   }
 
   return RVS_STATUS_SUCCESS;
@@ -314,8 +311,10 @@ void rvs_callback(const rvs_results_t * results, int user_param) {
   unsigned int session_idx = 0;
 
   if (RVS_STATUS_SUCCESS != rvs_validate_session((rvs_session_id_t)user_param, &session_idx)) {
+    return;
   }
 
+  rvs_session[session_idx].state = results->state;
   rvs_session[session_idx].callback((rvs_session_id_t)user_param, results);
 }
 

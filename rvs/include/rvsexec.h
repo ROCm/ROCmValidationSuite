@@ -65,6 +65,7 @@ class exec {
   static void action_callback(const action_result_t * result, void * user_param);
 
   void callback(const action_result_t * result);
+  void callback(const rvs_results_t * result);
 
  protected:
   void  do_help(void);

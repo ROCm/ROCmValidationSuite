@@ -53,7 +53,7 @@ typedef enum {
   RVS_SESSION_STATE_IDLE = 0, /*!< Session idle (free session) */
   RVS_SESSION_STATE_CREATED, /*!< Session created */
   RVS_SESSION_STATE_READY, /*!< Session ready for execution */
-  RVS_SESSION_STATE_STARTED, /*!< Session launched */
+  RVS_SESSION_STATE_INITIATED, /*!< Session execution initiated */
   RVS_SESSION_STATE_INPROGRESS, /*!< Session is in progress */
   RVS_SESSION_STATE_COMPLETED /*!< Session completed execution */
 } rvs_session_state_t;

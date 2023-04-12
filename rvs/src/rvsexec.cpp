@@ -517,8 +517,14 @@ void rvs::exec::callback(const action_result_t * result) {
       return;
   }
 
+  rvs_result.state = RVS_SESSION_STATE_INPROGRESS;
   rvs_result.output_log = result->output.c_str();
 
   (*app_callback)(&rvs_result, user_param);
+}
+
+void rvs::exec::callback(const rvs_results_t * result) {
+
+  (*app_callback)(result, user_param);
 }
 

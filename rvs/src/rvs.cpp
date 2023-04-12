@@ -35,14 +35,12 @@
 
 #include <iostream>
 
-
 #include "include/rvscli.h"
 #include "include/rvsexec.h"
 #include "include/rvsliblogger.h"
 #include "include/rvstrace.h"
 
 #define MODULE_NAME_CAPS "CLI"
-
 
 /**
  *
