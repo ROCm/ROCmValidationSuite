@@ -1,11 +1,24 @@
 # ROCmValidationSuite
+
 The ROCm Validation Suite (RVS) is a system administrator’s and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPU(s) running in a high-performance computing environment, enabled using the ROCm software stack on a compatible platform.
 
 The RVS is a collection of tests, benchmarks and qualification tools each targeting a specific sub-system of the ROCm platform. All of the tools are implemented in software and share a common command line interface. Each set of tests are implemented in a “module” which is a library encapsulating the functionality specific to the tool. The CLI can specify the directory containing modules to use when searching for libraries to load. Each module may have a set of options that it defines and a configuration file that supports its execution.
 
-The function of each module see this [link](./FEATURES.md).
+The function of each module see this [link](./features.md).
 
-Examples and about config files [link](./docs/ug1main.md).
+Examples and about config files [link](./ug1main.md).
+
+## Documentation
+
+Run the steps below to build documentation locally.
+
+```
+cd docs
+
+pip3 install -r .sphinx/requirements.txt
+
+python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
+```
 
 ## Prerequisites 
 Please do this before compilation/installing compiled package.
@@ -76,13 +89,14 @@ This section explains how to get and compile current development stream of RVS.
     cd ROCmValidationSuite
  If OS is Ubuntu and SLES, use cmake
     
-     cmake ./ -B./build
+     cmake  -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path> ./ -B./build
+     eg/- cmake -DROCM_PATH=/opt/rocm-4.0.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-4.0.0 -DCMAKE_PACKAGING_INSTALL_PREFIX=/opt/rocm-4.0.0 ./ -B./build
      
      make -C ./build
      
 If OS is CentOS and RHEL, use cmake3
 
-    cmake3 ./ -B./build
+    cmake3  -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path> ./ -B./build
  
     make -C ./build
 
@@ -208,5 +222,3 @@ example for gst is:
 }
 
 ```
-
-
