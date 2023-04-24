@@ -12,15 +12,15 @@ Please do this before compilation/installing compiled package.
 
 Ubuntu : 
       
-        sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git
+        sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
 
  CentOS : 
         
-        sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ 
+        sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
  
  RHEL : 
         
-       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ 
+       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
         
        wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
         
@@ -32,7 +32,7 @@ Ubuntu :
        
        sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
        
-       sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
+       sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
 ## Install ROCm stack, rocblas and rocm-smi-lib
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
