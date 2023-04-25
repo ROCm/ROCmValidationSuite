@@ -197,8 +197,6 @@ set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
 set(RVS_ROCMSMI "0" CACHE STRING "1 = use local rocm_smi_lib")
 
 set(RVS_LIB_DIR "${CMAKE_BINARY_DIR}/rvslib" CACHE PATH "Contains RVS library")
-set(YAML_INC_DIR "${CMAKE_BINARY_DIR}/yaml-src/include" CACHE PATH "Contains header files exported by yaml-cpp")
-set(YAML_LIB_DIR "${CMAKE_BINARY_DIR}/yaml-build" CACHE PATH "Contains library files exported by yaml-cpp")
 
 if (${RVS_OS_TYPE} STREQUAL "centos")
   set(ROCT_LIB_DIR "${ROCM_PATH}/lib64" CACHE PATH "Contains library files exported by ROC Trunk")
@@ -244,68 +242,30 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 
 ################################################################################
-# Download and unpack yaml-cpp at configure time
-configure_file(CMakeYamlDownload.cmake yaml-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
-if(result)
-  message(FATAL_ERROR "CMake step for yaml-download failed: ${result}")
-endif()
+# check if yaml-cpp available at configure time
+find_package(yaml-cpp)
 
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/yaml-download )
-if(result)
-  message(FATAL_ERROR "Build step for yaml-download failed: ${result}")
-endif()
+if (yaml-cpp_FOUND)
+  message("yaml-cpp found")
+else() 
+  message(FATAL_ERROR "yaml-cpp not found !!! Install  to proceed ...")
+endif(yaml-cpp_FOUND)
 
 ################################################################################
 ## GOOGLE TEST
 if(RVS_BUILD_TESTS)
-  # Download and unpack googletest at configure time
-  configure_file(CMakeGtestDownload.cmake googletest-download/CMakeLists.txt)
-  execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-  if(result)
-    message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-  endif()
-  execute_process(COMMAND ${CMAKE_COMMAND} --build .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-  if(result)
-    message(FATAL_ERROR "Build step for googletest failed: ${result}")
-  endif()
-  execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/googletest-src -B${CMAKE_BINARY_DIR}/googletest-build
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src )
-  if(result)
-    message(FATAL_ERROR "Config step for googletest-src failed: ${result}")
-  endif()
+  # fetch googletest at configure time
+  include(FetchContent)
 
-  add_custom_target(rvs_gtest_target
-    DEPENDS ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        release-1.11.0
   )
-
-  add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
-    COMMAND make -C ${CMAKE_BINARY_DIR}/googletest-build
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src
-    COMMENT "Generating googletest targets"
-    VERBATIM)
-
-  ## Set default unit test framework include path
-  if (NOT DEFINED UT_INC)
-      set (UT_INC "${CMAKE_BINARY_DIR}/googletest-src/googletest/include")
-      message ("UT_INC ${UT_INC}")
-  endif ()
-
-  ## Set default unit test framework include path
-  if (NOT DEFINED UT_LIB)
-      set (UT_LIB "${CMAKE_BINARY_DIR}/googletest-build/lib")
-      message ("UT_LIB ${UT_LIB}")
-  endif()
-
+  FetchContent_MakeAvailable(googletest)
+  add_library(GTest::GTest INTERFACE IMPORTED)
+  target_link_libraries(GTest::GTest INTERFACE gtest)
+  target_link_libraries(GTest::GTest INTERFACE gtest_main)
 endif()
 ################################################################################
 ## rocBLAS
@@ -560,9 +520,9 @@ add_custom_target(rvs_userguide ALL
     VERBATIM)
 add_dependencies(rvs_userguide rvs_doc)
 
-install(FILES "${CMAKE_BINARY_DIR}/doc/man/man1/rvs.1"
+install(DIRECTORY "${CMAKE_BINARY_DIR}/doc/man/man1/"
 	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/man/man1
-  COMPONENT applications
+  COMPONENT applications 
 )
 
 install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html

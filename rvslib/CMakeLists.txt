@@ -119,7 +119,7 @@ include_directories(./ ../ ../rvs
   ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR}
   ${YAML_INC_DIR} ${YAML_LIB_DIR}/include
 )
-link_directories(${ASAN_LIB_PATH})
+link_directories(${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
 
 ## define common source files
 set(SOURCES
@@ -199,6 +199,8 @@ set(SOURCES_UT
 ## define rvslib library
 add_library(${RVS_TARGET} SHARED ${SOURCES})
 
+target_compile_options(${RVS_TARGET} PRIVATE -mf16c)
+target_compile_definitions(${RVS_TARGET} PRIVATE ROCM_USE_FLOAT16)
 set_target_properties(${RVS_TARGET}
  PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}
  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

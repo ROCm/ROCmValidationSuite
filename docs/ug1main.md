@@ -1,5 +1,6 @@
+# User Guide
 
-@section ugs1 1 Introduction
+## Introduction
 The ROCm Validation Suite (RVS) is a system administrator’s and cluster
 manager's tool for detecting and troubleshooting common problems affecting AMD
 GPU(s) running in a high-performance computing environment, enabled using the
@@ -13,12 +14,12 @@ functionality specific to the tool. The CLI can specify the directory containing
 modules to use when searching for libraries to load. Each module may have a set
 of options that it defines and a configuration file that supports its execution.
 
-@section usg2 2 Installing RVS
+## Installing RVS
 
 RVS can be obtained by building it from source code base or by installing from
 pre-built package.
 
-@subsection ugs21 2.1 Building from Source Code
+### Building from Source Code
 
 RVS has been developed as open source solution. Its source code and belonging
 documentation can be found at AMD's GitHub page.\n
@@ -27,7 +28,7 @@ In order to build RVS from source code please visit
 site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite)
 and follow instructions in README file.
 
-@subsection usg22 2.2 Installing from Package
+### Installing from Package
 Please download `rocm-validation-suite-$(RVSVER).deb` or `.rpt` file from AMD
 site. Install package using your favorite package manager.
 
@@ -40,9 +41,9 @@ RVS components is installed in `/opt/rocm/rvs`. Package contains:
 If needed, you may remove RVS package using you favorite package manager.
 
 
-@section usg3 3 Basic Concepts
+## Basic Concepts
 
-@subsection usg31 3.1 RVS Architecture
+### RVS Architecture
 
 RVS is implemented as a set of modules each implementing particular test
 functionality. Modules are invoked from one central place (aka Launcher) which
@@ -52,20 +53,20 @@ architecture is built around concept of Linux shared objects, thus
 allowing for easy addition of new modules in the future.
 
 
-@subsection usg31a 3.2 Available Modules
+### Available Modules
 
-@subsubsection usg31a01 3.2.1 GPU Properties – GPUP
+#### GPU Properties – GPUP
 The GPU Properties module queries the configuration of a target device and
 returns the device’s static characteristics.\n
 These static values can be used to debug issues such as device support,
 performance and firmware problems.
 
-@subsubsection usg31a02 3.2.2 GPU Monitor – GM module
+#### GPU Monitor – GM module
 The GPU monitor tool is capable of running on one, some or all of the GPU(s)
 installed and will report various information at regular intervals. The module
 can be configured to halt another RVS modules execution if one of the quantities
 exceeds a specified boundary value.
-@subsubsection usg31a03 3.2.3 PCI Express State Monitor  – PESM module
+#### PCI Express State Monitor  – PESM module
 The PCIe State Monitor tool is used to actively monitor the PCIe interconnect
 between the host platform and the GPU. The module will register a “listener” on
 a target GPU’s PCIe interconnect, and log a message whenever it detects a state
@@ -74,7 +75,7 @@ change. The PESM is able to detect the following state changes:
 1.  PCIe link speed changes
 2.  GPU power state changes
 
-@subsubsection usg31a04 3.2.4 ROCm Configuration Qualification Tool - RCQT
+#### ROCm Configuration Qualification Tool - RCQT
 module
 The ROCm Configuration Qualification Tool ensures the platform is capable of
 running ROCm applications and is configured correctly. It checks the installed
@@ -91,7 +92,7 @@ and the amdgpu driver.
 5.  The configuration of the run time linker/loader qualifying that all ROCm
 libraries are in the correct search path.
 
-@subsubsection usg31a05 3.2.5 PCI Express Qualification Tool – PEQT module
+#### PCI Express Qualification Tool – PEQT module
 The PCIe Qualification Tool consists is used to qualify the PCIe bus on which
 the GPU is connected. The qualification test is capable of determining the
 following characteristics of the PCIe bus interconnect to a GPU:
@@ -101,7 +102,7 @@ following characteristics of the PCIe bus interconnect to a GPU:
 3.  PCIe link speed
 4.  PCIe link width
 
-@subsubsection usg31a06 3.2.6 SBIOS Mapping Qualification Tool – SMQT module
+#### SBIOS Mapping Qualification Tool – SMQT module
 The GPU SBIOS mapping qualification tool is designed to verify that a
 platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon
 Instinct products for ROCm support.
@@ -110,7 +111,7 @@ Refer to the “ROCm Use of Advanced PCIe Features and Overview of How BAR Memor
 is Used In ROCm Enabled System” web page for more information about how BAR
 memory is initialized by VDI and Radeon products.
 
-@subsubsection usg31a07 3.2.7 P2P Benchmark and Qualification Tool – PBQT module
+#### P2P Benchmark and Qualification Tool – PBQT module
 The P2P Benchmark and Qualification Tool  is designed to provide the list of all
 GPUs that support P2P and characterize the P2P links between peers. In addition
 to testing for P2P compatibility, this test will perform a peer-to-peer
@@ -122,14 +123,14 @@ they want to run the throughput test on each of the pairs.
 Please see the web page “ROCm, a New Era in Open GPU Computing” to find out more
 about the P2P solutions available in a ROCm environment.
 
-@subsubsection usg31a08 3.2.8 PCI Express Bandwidth Benchmark – PEBB module
+#### PCI Express Bandwidth Benchmark – PEBB module
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
 transfers between system memory and a target GPU card’s memory. The maximum
 bandwidth obtained is reported to help debug low bandwidth issues. The
 benchmark should be capable of  targeting one, some or all of the GPUs
 installed in a platform, reporting individual benchmark statistics for each.
 
-@subsubsection usg31a09 3.2.9 GPU Stress Test  - GST module
+#### GPU Stress Test  - GST module
 The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM
 (Single/Double-precision General Matrix Multiplication) workload on one, some or
 all GPUs. The GPUs can be of the same or different types. The duration of the
@@ -141,14 +142,14 @@ of the card, or levels below that. The tool must be capable of driving cards at
 TDP-50% to TDP-100%, in 10% incremental jumps. This should be controllable by
 the user.
 
-@subsubsection usg31a10 3.2.10 Input EDPp Test  - IET module
+####  Input EDPp Test  - IET module
 The Input EDPp Test generates EDP peak power on all input rails. This test is
 used to verify if the system PSU is capable of handling the worst case power
 spikes of the board.  Peak Current at defined period  =  1 minute moving
 average power.
 
 
-@subsection usg32 3.2 Configuration Files
+### Configuration Files
 
 The RVS tool will allow the user to indicate a configuration file, adhering to
 the YAML 1.2 specification, which details the validation tests to run and the
@@ -191,7 +192,7 @@ An example of RVS configuration file is given here:
     ...
 
 
-@subsection usg33 3.3 Common Configuration Keys
+### Common Configuration Keys
 
 Common configuration keys applicable to most module are summarized in the
 table below:\n
@@ -237,7 +238,7 @@ or sub-actions that can be configured based on its specific
 parameters.</td></tr>
 </table>
 
-@subsection usg34 3.4 Command Line Options
+### Command Line Options
 
 Command line options are summarized in the table below:
 
@@ -297,7 +298,7 @@ equivalent to specifying the -d 5 option.</td></tr>
 
 </table>
 
-@section usg4 4 GPUP Module
+## GPUP Module
 The GPU properties module provides an interface to easily dump the static
 characteristics of a GPU. This information is stored in the sysfs file system
 for the kfd, with the following path:
@@ -308,7 +309,7 @@ Each of the GPU nodes in the directory is identified with a number,
 indicating the device index of the GPU. This module will ignore count, duration
 or wait key values.
 
-@subsection usg41 4.1 Module Specific Keys
+### Module Specific Keys
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>properties</td><td>Collection of Strings</td>
@@ -362,7 +363,8 @@ recommended_transfer_size\n
 flags\n
 </td></tr>
 </table>
-@subsection usg42 4.2 Output
+
+### Output
 
 Module specific output keys are described in the table below:
 <table>
@@ -385,7 +387,7 @@ format will be returned:
 
     [RESULT][<timestamp>][<action name>] gpup <gpu id> <io_link id> <property> <property value>
 
-@subsection usg43 4.3 Examples
+### Examples
 
 **Example 1:**
 
@@ -528,7 +530,7 @@ Output for such configuration is:
 
 
 
-@section usg5 5 GM Module
+## GM Module
 The GPU monitor module can be used monitor and characterize the response of a
 GPU to different levels of use. This module is intended to run concurrently with
 other actions, and provides a ‘start’ and ‘stop’ configuration key to start the
@@ -537,7 +539,7 @@ configured with bounding box values for interested GPU parameters. If any of the
 GPU’s parameters exceed the bounding values on a specific GPU an INFO warning
 message will be printed to stdout while the bounding value is still exceeded.
 
-@subsection usg51 5.1 Module Specific Keys
+### Module Specific Keys
 
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
@@ -573,7 +575,7 @@ the RVS process will terminate immediately. **Note:** this may cose resource lea
 within GPUs.</td></tr>
 </table>
 
-@subsection usg52 5.2 Output
+### Output
 
 Module specific output keys are described in the table below:
 <table>
@@ -621,7 +623,7 @@ reported:
     [RESULT][<timestamp>][<action name>] gm <gpu id> <metric> violations <metric_violations>
     [RESULT][<timestamp>][<action name>] gm <gpu id> <metric> average <metric_average>
 
-@subsection usg53 5.3 Examples
+### Examples
 
 **Example 1:**
 
@@ -741,7 +743,7 @@ Output for such configuration is:
     RVS-GM: action: action_1 Log interval has the lower value than the sample interval
 
 
-@section usg6 6 PESM Module
+## PESM Module
 The PCIe State Monitor (PESM) tool is used to actively monitor the PCIe
 interconnect between the host platform and the GPU. The module registers
 “listener” on a target GPUs PCIe interconnect, and log a message whenever it
@@ -760,7 +762,7 @@ consult the 7.8.8. Link Status Register (Offset 12h), Gen 3 spec, page 635.
 Monitoring is performed by polling respective PCIe registers roughly every 1ms
 (one millisecond).
 
-@subsection usg61 6.1 Module Specific Keys
+### Module Specific Keys
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>monitor</td><td>Bool</td><td>This this key is set to true, the PESM
@@ -768,7 +770,7 @@ module will start monitoring on specified devices. If this key is set to false,
 all other keys are ignored and monitoring will be stopped for all devices.</td>
 </tr> </table>
 
-@subsection usg62 6.2 Output
+### Output
 
 Module specific output keys are described in the table below:
 <table>
@@ -793,7 +795,7 @@ power state will generate the following informational messages:
     [INFO ][<timestamp>][<action name>] pesm <gpu id> power state change <state>
     [INFO ][<timestamp>][<action name>] pesm <gpu id> link speed change <state>
 
-@subsection usg63 6.3 Examples
+### Examples
 
 **Example 1**
 
@@ -875,7 +877,7 @@ If execute, an error will be reported:
     RVS-PESM: action: act1  invalide 'deviceid' key value: xxx
 
 
-@section usg7 7 RCQT Module
+## RCQT Module
 
 This ‘module’ is actually a set of feature checks that target and qualify the
 configuration of the platform. Many of the checks can be done manually using the
@@ -899,13 +901,13 @@ performed
 
 All other keys not pertinent to the detected action are ignored.
 
-@subsection usg71 7.1 Packaging Check
+### Packaging Check
 
 This feature is used to check installed packages on the system. It provides
 checks for installed packages and the currently available package versions, if
 applicable.
 
-@subsubsection usg711 7.1.1 Packaging Check Specific Keys
+#### Packaging Check Specific Keys
 
 Input keys are described in the table below:
 
@@ -920,7 +922,7 @@ provided any version matching the package name will result in success.
 </td></tr>
 </table>
 
-@subsubsection usg712 7.1.2 Output
+#### Output
 
 Output keys are described in the table below:
 
@@ -939,7 +941,7 @@ The package name will include the version of the package if the version key is
 specified. The installed output value will either be true or false depending on
 if the package is installed or not.
 
-@subsubsection usg713 7.1.3 Examples
+#### Examples
 
 **Example 1:**
 
@@ -996,11 +998,11 @@ The output for such configuration is:
     [RESULT] [500595.859025] [action_1] rcqt packagecheck zip TRUE
 
 
-@subsection usg72 7.2 User Check
+### User Check
 
 This feature checks for the existence of a user and the user’s group membership.
 
-@subsubsection usg721 7.2.1 User Check Specific Keys
+#### User Check Specific Keys
 
 Input keys are described in the table below:
 
@@ -1014,7 +1016,7 @@ belong to. The user’s membership in each group will be checked.
 </td></tr>
 </table>
 
-@subsubsection usg722 7.2.2 Output
+#### Output
 
 Output keys are described in the table below:
 
@@ -1040,7 +1042,7 @@ generated:
 
 If the user doesn’t exist no group checks will take place.
 
-@subsubsection usg723 7.2.3 Examples
+#### Examples
 
 **Example 1:**
 
@@ -1095,7 +1097,7 @@ The output for such configuration is:
     [RESULT] [497361.361209] [action_1] rcqt usercheck jovanbhdl video true
 
 
-@subsection usg73 7.3 File/device Check
+### File/device Check
 
 This feature checks for the existence of a file, its owner, group, permissions
 and type. The primary purpose of this module is to check that the device
@@ -1103,7 +1105,7 @@ interfaces for the driver and the kfd are available, but it can also be used to
 check for the existence of important configuration files, libraries and
 executables.
 
-@subsubsection usg731 7.3.1 File/device Check Specific Keys
+#### File/device Check Specific Keys
 
 Input keys are described in the table below:
 
@@ -1134,7 +1136,7 @@ default value for this key is true.
 </td></tr>
 </table>
 
-@subsubsection usg732 7.3.2 Output
+#### Output
 
 Output keys are described in the table below:
 
@@ -1167,7 +1169,7 @@ If the ‘exists’ key is false the format of the message will be:
 
     [RESULT][<timestamp>][<action name>] rcqt filecheck <file> DNE <exists>
 
-@subsubsection usg733 7.3.3 Examples
+#### Examples
 
 **Example 1:**
 
@@ -1258,13 +1260,13 @@ The output for such configuration is:
     [ERROR ] [240277.355553] [action_1] rcqt File is not found
 
 
-@subsection usg74 7.4 Kernel compatibility Check
+### Kernel compatibility Check
 
 The rcqt-kernelcheck module determines the version of the operating system and
 the kernel installed on the platform and compares the values against the list of
 supported values.
 
-@subsubsection usg741 7.4.1 Kernel compatibility Check Specific Keys
+#### Kernel compatibility Check Specific Keys
 
 Input keys are described in the table below:
 
@@ -1280,7 +1282,7 @@ Input keys are described in the table below:
 </td></tr>
 </table>
 
-@subsubsection usg742 7.4.2 Output
+#### Output
 
 Output keys are described in the table below:
 
@@ -1306,7 +1308,7 @@ version regardless of where the check passed or failed.
     [RESULT][<timestamp>][<action name>] rcqt kernelcheck <os version> <kernel version> <pass>
 
 
-@subsubsection usg743 7.4.3 Examples
+#### Examples
 
 **Example 1:**
 
@@ -1339,7 +1341,7 @@ The output for such configuration is:
     [RESULT] [515924.695932] [action_1] rcqt kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 pass
 
 
-@subsection usg75 7.5 Linker/Loader Check
+### Linker/Loader Check
 
 This feature checks that a search by the linker/loader for a library finds the
 correct version in the correct location. The check should include a SONAME
@@ -1347,7 +1349,7 @@ version of the library, the expected location and the architecture of the
 library.
 
 
-@subsubsection usg751 7.5.1 Linker/Loader Check Specific Keys
+#### Linker/Loader Check Specific Keys
 
 Input keys are described in the table below:
 
@@ -1366,7 +1368,7 @@ located.
 </td></tr>
 </table>
 
-@subsubsection usg752 7.5.2 Output
+#### Output
 
 Output keys are described in the table below:
 
@@ -1391,7 +1393,7 @@ will fail. The output message has the following format:
 
     [RESULT][<timestamp>][<action name>] rcqt ldconfigcheck <soname> <arch> <path> <pass>
 
-@subsubsection usg753 7.5.3 Examples
+#### Examples
 
 **Example 1:**
 
@@ -1426,7 +1428,7 @@ The test will pass and will output the message:
     [RESULT] [587047.395787] [action_1] rcqt ldconfigcheck librcqt.so.0.0.16 i386:x86-64 /work/jovanbhdl/build/bin true
 
 
-@section usg8 8 PEQT Module
+## PEQT Module
 
 PCI Express Qualification Tool module targets and qualifies the configuration of
 the platforms PCIe connections to the GPUs. The purpose of the PEQT module is to
@@ -1438,7 +1440,7 @@ control, status and capabilities registers. These registers are specified in the
 PCI Express Base Specification, Revision 3. Iteration keys, i.e. count, wait and
 duration will be ignored for actions using the PEQT module.
 
-@subsection usg81 8.1 Module Specific Keys
+### Module Specific Keys
 Module specific output keys are described in the table below:
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
@@ -1474,7 +1476,7 @@ actual value of the capability.
 </td></tr>
 </table>
 
-@subsection usg82 8.2 Output
+### Output
 Module specific output keys are described in the table below:
 <table>
 <tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
@@ -1498,7 +1500,7 @@ generated:
 For details regarding each of the capabilities and current values consult the
 chapters in the PCI Express Base Specification, Revision 3.
 
-@subsection usg83 8.3 Examples
+### Examples
 
 **Example 1:**
 
@@ -1642,7 +1644,7 @@ match their corresponding regular expressions.
         atomic_op_128_CAS_completer: ^((TRUE|FALSE){1})$
       device: 3254 33367
 
-@section usg9 9 SMQT Module
+## SMQT Module
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s
 SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct
 products for ROCm support. These are the current BAR requirements:\n\n
@@ -1672,7 +1674,7 @@ is Used In ROCm Enabled System web page for more information about how BAR
 memory is initialized by VDI and Radeon products. Iteration keys, i.e. count,
 wait and duration will be ignored.
 
-@subsection usg91 9.1 Module Specific Keys
+### Module Specific Keys
 
 Module specific output keys are described in the table below:
 <table>
@@ -1709,7 +1711,8 @@ be.</td></tr>
 region.</td></tr>
 </table>
 
-@subsection usg92 9.2 Output
+### Output
+
 Module specific output keys are described in the table below:
 <table>
 <tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
@@ -1742,7 +1745,7 @@ is finished, the following informational messages will be generated:
     [RESULT][<timestamp>][<action name>] smqt <pass>
 
 
-@subsection usg93 9.3 Examples
+### Examples
 
 **Example 1:**
 
@@ -1793,7 +1796,8 @@ Results for three GPUs are:
 In this example, BAR sizes reported by GPUs match those listed in configuration
 key except for the BAR5, hence the test fails.
 
-@section usg10 10 PBQT Module
+## PBQT Module
+
 The P2P Qualification Tool is designed to provide the list of all GPUs that
 support P2P and characterize the P2P links between peers. In addition to testing
 for P2P compatibility, this test will perform a peer-to-peer throughput test
@@ -1801,7 +1805,8 @@ between all unique P2P pairs for performance evaluation. These are known as
 device-to-device transfers, and can be either uni-directional or bi-directional.
 The average bandwidth obtained is reported to help debug low bandwidth issues.
 
-@subsection usg101 10.1 Module Specific Keys
+### Module Specific Keys
+
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>peers</td><td>Collection of Strings</td>
@@ -1908,7 +1913,7 @@ transfer start/finish. An output may look like this:
 From this printout, it can be concluded that single transfer takes on average
 800ms. Values for **log\_interval** and **duration** should be set accordingly.
 
-@subsection usg102 10.2 Output
+### Output
 
 Module specific output keys are described in the table below:
 <table>
@@ -1974,7 +1979,7 @@ entire test duration, and will be logged as a result:
     [RESULT][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <bandwidth> <duration>
 
 
-@subsection usg103 10.3 Examples
+### Examples
 
 
 **Example 1:**
@@ -2155,13 +2160,13 @@ It can be seen that transfers [2/6] and [5/6] did not take place in the second
 log interval so average from the previous cycle is displayed instead and
 marked with "(*)"
 
-@section usg11 11 PEBB Module
+## PEBB Module
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
 transfers between system memory and a target GPU card’s memory. These are known
 as host-to-device or device- to-host transfers, and can be either unidirectional
 or bidirectional transfers. The maximum bandwidth obtained is reported.
 
-@subsection usg111 11.1 Module Specific Keys
+### Module Specific Keys
 
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
@@ -2260,7 +2265,7 @@ From this printout, it can be concluded that single transfer takes on average
 5500ms. Values for **log\_interval** and **duration** should be set accordingly.
 
 
-@subsection usg112 11.2 Output
+### Output
 
 Module specific output keys are described in the table below:
 <table>
@@ -2318,7 +2323,8 @@ entire test duration, and will be logged as a result:
 
 
 
-@subsection usg113 11.3 Examples
+### Examples
+
 **Example 1:**
 
 Consider action:
@@ -2435,7 +2441,7 @@ Please note that in link information results, some records could be marked with
 (R). This means, that communication is possible if initiated by the destination
 NUMA node HSA agent.
 
-@section usg12 12 GST Module
+## GST Module
 The GPU Stress Test modules purpose is to bring the CUs of the specified GPU(s)
 to a target performance level in gigaflops by doing large matrix multiplications
 using SGEMM/DGEMM (Single/Double-precision General Matrix Multiplication)
@@ -2454,7 +2460,7 @@ of the generated stats can also show variations in the required power, clocks or
 temperatures to reach these targets, and thus highlight GPUs or nodes that are
 operating less efficiently.
 
-@subsection usg121 12.1 Module Specific Keys
+### Module Specific Keys
 
 Module specific keys are described in the table below:
 
@@ -2489,7 +2495,7 @@ logged.</td></tr>
 5760.</td></tr>
 </table>
 
-@subsection usg122 12.2 Output
+### Output
 
 Module specific output keys are described in the table below:
 
@@ -2554,7 +2560,7 @@ The test will pass if the target_stress is reached before the end of the
 ramp_interval and the stress_violations value is less than the given
 max_violations value. Otherwise, the test will fail.
 
-@subsection usg123 12.3 Examples
+### Examples
 
 When running the __GST__ module, users should provide at least an action name,
 the module name (gst), a list of GPU IDs, the test duration and a target stress
@@ -2719,7 +2725,7 @@ according to the actual GPUs and HW platform capabilities. For example, a matrix
 size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20
 GPUs.
 
-@section usg13 13 IET Module
+## IET Module
 
 The Input EDPp Test can be used to characterize the peak power capabilities of a
 GPU to different levels of use. This tool can leverage the functionality of the
@@ -2739,7 +2745,7 @@ of the generated stats can also show variations in the required power, clocks or
 temperatures to reach these targets, and thus highlight GPUs or nodes that are
 operating less efficiently.
 
-@subsection usg131 13.1 Module Specific Keys
+### Module Specific Keys
 
 Module specific keys are described in the table below:
 
@@ -2771,7 +2777,7 @@ logged.</td></tr>
 </table>
 
 
-@subsection usg132 13.2 Output
+### Output
 
 Module specific output keys are described in the table below:
 
@@ -2788,7 +2794,7 @@ the ramp interval.
 interval.</td></tr>
 </table>
 
-@subsection usg133 13.3 Examples
+### Examples
 
 **Example 1:**
 
@@ -2941,6 +2947,3 @@ The output for such a configuration file may look like this:
 **) please increase the ramp_interval and/or the tolerance value(s) and try again (in case of a 'ramp time exceeded' message)
 
 **) please increase the tolerance value (in case too many 'power violation message' are logged out)
-
-
-

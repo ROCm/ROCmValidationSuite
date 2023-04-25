@@ -1,26 +1,39 @@
 # ROCmValidationSuite
+
 The ROCm Validation Suite (RVS) is a system administrator’s and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPU(s) running in a high-performance computing environment, enabled using the ROCm software stack on a compatible platform.
 
 The RVS is a collection of tests, benchmarks and qualification tools each targeting a specific sub-system of the ROCm platform. All of the tools are implemented in software and share a common command line interface. Each set of tests are implemented in a “module” which is a library encapsulating the functionality specific to the tool. The CLI can specify the directory containing modules to use when searching for libraries to load. Each module may have a set of options that it defines and a configuration file that supports its execution.
 
-The function of each module see this [link](./FEATURES.md).
+The function of each module see this [link](./features.md).
 
-Examples and about config files [link](./doc/ugsrc/ug1main.md).
+Examples and about config files [link](./ug1main.md).
+
+## Documentation
+
+Run the steps below to build documentation locally.
+
+```
+cd docs
+
+pip3 install -r .sphinx/requirements.txt
+
+python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
+```
 
 ## Prerequisites 
 Please do this before compilation/installing compiled package.
 
 Ubuntu : 
       
-        sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
+        sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git
 
  CentOS : 
         
-        sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
+        sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ 
  
  RHEL : 
         
-       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
+       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ 
         
        wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
         
@@ -32,7 +45,7 @@ Ubuntu :
        
        sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
        
-       sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
+       sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
 
 ## Install ROCm stack, rocblas and rocm-smi-lib
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
@@ -209,5 +222,3 @@ example for gst is:
 }
 
 ```
-
-

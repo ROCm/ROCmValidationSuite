@@ -187,7 +187,7 @@ add_test(NAME unit.ttf.rvs.config.noconfig
 )
 
 ## define include directories
-include_directories(${UT_INC})
+#include_directories(${UT_INC})
 ## define lib directories
 link_directories(${UT_LIB} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ROCT_LIB_DIR})
 ## additional libraries for unit tests
@@ -209,7 +209,7 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
   target_link_libraries(${TEST_NAME}
     ${PROJECT_LINK_LIBS}
     ${PROJECT_TEST_LINK_LIBS}
-    rvslib rvslibut gtest_main gtest pthread
+    rvslib rvslibut GTest::GTest pthread
     ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET}
   )
   add_dependencies(${TEST_NAME} rvs_gtest_target)
