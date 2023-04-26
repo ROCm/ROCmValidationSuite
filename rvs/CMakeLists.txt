@@ -113,11 +113,11 @@ else()
 endif()
 
 ## define include directories
-include_directories(./ ../ ${YAML_CPP_INCLUDE_DIRS})
+include_directories(./ ../ ${YAML_INC_DIR} ${YAML_LIB_DIR}/include)
 ## define lib directories
 link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ASAN_LIB_PATH})
 ## additional libraries
-set (PROJECT_LINK_LIBS libdl.so ${YAML_CPP_LIBRARIES} libpthread.so)
+set (PROJECT_LINK_LIBS libdl.so "${YAML_LIB_DIR}/libyaml-cpp.a" libpthread.so)
 
 ## define source files
 set(SOURCES

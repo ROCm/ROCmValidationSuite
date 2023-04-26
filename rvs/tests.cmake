@@ -177,9 +177,9 @@ add_test(NAME unit.ttf.rvs.config.noconfig
 )
 
 ## define include directories
-#include_directories(${UT_INC})
+include_directories(${UT_INC})
 ## define lib directories
-#link_directories(${UT_LIB})
+link_directories(${UT_LIB})
 ## additional libraries for unit tests
 set (PROJECT_TEST_LINK_LIBS ${PROJECT_LINK_LIBS} libpci.so)
 
@@ -199,7 +199,7 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
   target_link_libraries(${TEST_NAME}
     ${PROJECT_LINK_LIBS}
     ${PROJECT_TEST_LINK_LIBS}
-    rvshelper rvslib rvslibut GTest::GTest pthread
+    rvshelper rvslib rvslibut gtest_main gtest pthread
   )
   target_compile_definitions(${TEST_NAME} PRIVATE RVS_UNIT_TEST)
   add_compile_options(-Wall -Wextra -save-temps)
