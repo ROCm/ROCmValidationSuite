@@ -76,14 +76,14 @@ This section explains how to get and compile current development stream of RVS.
     cd ROCmValidationSuite
  If OS is Ubuntu and SLES, use cmake
     
-     cmake  -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path> ./ -B./build
-     eg/- cmake -DROCM_PATH=/opt/rocm-4.0.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-4.0.0 -DCMAKE_PACKAGING_INSTALL_PREFIX=/opt/rocm-4.0.0 ./ -B./build
+     cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
+     e.g. cmake -B ./build -DROCM_PATH=/opt/rocm-5.5.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-5.5.0 -DCMAKE_PACKAGING_INSTALL_PREFIX=/opt/rocm-5.5.0
      
      make -C ./build
      
 If OS is CentOS and RHEL, use cmake3
 
-    cmake3  -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path> ./ -B./build
+    cmake3 -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
  
     make -C ./build
 
