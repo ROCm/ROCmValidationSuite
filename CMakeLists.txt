@@ -242,30 +242,60 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 
 ################################################################################
-# check if yaml-cpp available at configure time
+# check yaml-cpp available at configure time
 find_package(yaml-cpp)
-
 if (yaml-cpp_FOUND)
   message("yaml-cpp found")
-else() 
+else()
   message(FATAL_ERROR "yaml-cpp not found !!! Install  to proceed ...")
 endif(yaml-cpp_FOUND)
 
 ################################################################################
 ## GOOGLE TEST
 if(RVS_BUILD_TESTS)
-  # fetch googletest at configure time
-  include(FetchContent)
+  # Download and unpack googletest at configure time
+  configure_file(CMakeGtestDownload.cmake googletest-download/CMakeLists.txt)
+  execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+  if(result)
+    message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} --build .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+  if(result)
+    message(FATAL_ERROR "Build step for googletest failed: ${result}")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/googletest-src -B${CMAKE_BINARY_DIR}/googletest-build
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src )
+  if(result)
+    message(FATAL_ERROR "Config step for googletest-src failed: ${result}")
+  endif()
 
-FetchContent_Declare(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        release-1.11.0
+  add_custom_target(rvs_gtest_target
+    DEPENDS ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
   )
-  FetchContent_MakeAvailable(googletest)
-  add_library(GTest::GTest INTERFACE IMPORTED)
-  target_link_libraries(GTest::GTest INTERFACE gtest)
-  target_link_libraries(GTest::GTest INTERFACE gtest_main)
+
+  add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/googletest-build/lib/libgtest_main.a
+    COMMAND make -C ${CMAKE_BINARY_DIR}/googletest-build
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-src
+    COMMENT "Generating googletest targets"
+    VERBATIM)
+
+  ## Set default unit test framework include path
+  if (NOT DEFINED UT_INC)
+      set (UT_INC "${CMAKE_BINARY_DIR}/googletest-src/googletest/include")
+      message ("UT_INC ${UT_INC}")
+  endif ()
+
+  ## Set default unit test framework include path
+  if (NOT DEFINED UT_LIB)
+      set (UT_LIB "${CMAKE_BINARY_DIR}/googletest-build/lib")
+      message ("UT_LIB ${UT_LIB}")
+  endif()
+
 endif()
 ################################################################################
 ## rocBLAS
@@ -483,6 +513,7 @@ if (RVS_BUILD_TESTS)
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   COMMENT "Create the bintest directory"
   VERBATIM)
+  add_dependencies(rvs_bintest_folder rvs_gtest_target)
 endif()
 
 add_custom_target(rvs_doc ALL
