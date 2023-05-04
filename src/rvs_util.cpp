@@ -169,77 +169,16 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 	}
 	mcm_die = false;
     }
-    if (rvs::gpulist::gpu2device(gpu_id, &devId)){
-      continue;
-    }
-
-    // filter by device id if needed
-    if (property_device_id > 0 && property_device_id != devId)
-      continue;
-
-    // filter by device index if configured
-    if(false == property_device_index_all) {
-
-      // search for this index in the list
-      // provided under the <device_index> property
-      auto it_device_index = find(property_device_index.begin(),
-          property_device_index.end(),
-          i);
-
-      //device index not found in configured device index list
-      if (it_device_index == property_device_index.end())
-        continue;
-    }
-
-    // check if this GPU is part of the select ones as per config
-    // (device = "all" or the gpu_id is in the device: <gpu id> list)
-    bool cur_gpu_selected = false;
-
-    if (property_device_all) {
-      cur_gpu_selected = true;
-    } else {
-      // search for this gpu in the list
-      // provided under the <device> property
-      auto it_gpu_id = find(property_device.begin(),
-          property_device.end(),
-          gpu_id);
-
-      if (it_gpu_id != property_device.end())
-        cur_gpu_selected = true;
-    }
-
-    if (cur_gpu_selected) {
-      gpus_device_index.insert
-        (std::pair<int, uint16_t>(i, gpu_id));
-      amd_gpus_found = true;
-    }
-
-    // if mcm check enabled, print message if device is MCM
-    if (mcm_check){
-      std::stringstream msg_stream;
-      mcm_die =  gpu_check_if_mcm_die(devId);
-      if (mcm_die) {
+    if (amd_mcm_gpu_found && mcm_check) {
+        std::stringstream msg_stream;
         msg_stream.str("");
-        msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
-          " - " << "GPU is a die/chiplet in Multi-Chip Module (MCM) GPU";
+        msg_stream << "Note: The system has Multi-Chip Module (MCM) GPU/s." << "\n"
+                   << "In MCM GPU, primary GPU die shows total socket (primary + secondary) power information." << "\n"
+                   << "Secondary GPU die does not have any power information associated with it independently."<< "\n"
+                   << "So, expect power reading from Secondary GPU die as 0."<< "\n";
         rvs::lp::Log(msg_stream.str(), rvs::logresults);
-
-        amd_mcm_gpu_found = true;
-      }
-    }
-  }
-
-  if (amd_mcm_gpu_found && mcm_check) {
-    std::stringstream msg_stream;
-    msg_stream.str("");
-    msg_stream << "Note: The system has Multi-Chip Module (MCM) GPU/s." << "\n"
-      << "In MCM GPU, primary GPU die shows total socket (primary + secondary) power information." << "\n"
-      << "Secondary GPU die does not have any power information associated with it independently."<< "\n"
-      << "So, expect power reading from Secondary GPU die as 0."<< "\n";
-    rvs::lp::Log(msg_stream.str(), rvs::logresults);
-  }
-
-  return amd_gpus_found;
+     }
+    return amd_gpus_found;
 }
 
 

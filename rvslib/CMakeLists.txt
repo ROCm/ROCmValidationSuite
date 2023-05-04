@@ -116,9 +116,8 @@ endif()
 
 ## define include directories
 include_directories(./ ../ ../rvs
-  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR}
-  ${YAML_INC_DIR} ${YAML_LIB_DIR}/include
-)
+  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
+
 link_directories(${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
 
 ## define common source files
@@ -139,38 +138,6 @@ set(SOURCES
   ../src/rvsminnode.cpp
   ../src/rvs_blas.cpp
   ../src/rvshsa.cpp
-
-## YAML Source files
-
-  ../build/yaml-src/src/binary.cpp
-  ../build/yaml-src/src/convert.cpp
-  ../build/yaml-src/src/depthguard.cpp
-  ../build/yaml-src/src/directives.cpp
-  ../build/yaml-src/src/emit.cpp
-  ../build/yaml-src/src/emitfromevents.cpp
-  ../build/yaml-src/src/emitter.cpp
-  ../build/yaml-src/src/emitterstate.cpp
-  ../build/yaml-src/src/emitterutils.cpp
-  ../build/yaml-src/src/exceptions.cpp
-  ../build/yaml-src/src/exp.cpp
-  ../build/yaml-src/src/memory.cpp
-  ../build/yaml-src/src/nodebuilder.cpp
-  ../build/yaml-src/src/node.cpp
-  ../build/yaml-src/src/node_data.cpp
-  ../build/yaml-src/src/nodeevents.cpp
-  ../build/yaml-src/src/null.cpp
-  ../build/yaml-src/src/ostream_wrapper.cpp
-  ../build/yaml-src/src/parse.cpp
-  ../build/yaml-src/src/regex_yaml.cpp
-  ../build/yaml-src/src/scanner.cpp
-  ../build/yaml-src/src/scanscalar.cpp
-  ../build/yaml-src/src/scantag.cpp
-  ../build/yaml-src/src/scantoken.cpp
-  ../build/yaml-src/src/simplekey.cpp
-  ../build/yaml-src/src/singledocparser.cpp
-  ../build/yaml-src/src/stream.cpp
-  ../build/yaml-src/src/tag.cpp
-  ../build/yaml-src/src/parser.cpp
 
 ## Run-time specific source files
   ../src/rvsloglp.cpp

@@ -122,7 +122,7 @@ set(ROCBLAS_LIB "rocblas")
 set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
-set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so)
+set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)

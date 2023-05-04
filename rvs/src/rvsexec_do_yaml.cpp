@@ -181,7 +181,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
     config = YAML::Load(data);
   }
   else {
-      return -1;
+    return -1;
   }
 
   // find "actions" map
@@ -198,8 +198,8 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
     if (rvs::logger::Stopping()) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
-               "action '%s' was requested to stop",
-               action["name"].as<std::string>().c_str());
+          "action '%s' was requested to stop",
+          action["name"].as<std::string>().c_str());
       result.output_log = buff;
       callback(&result);
       return -1;
@@ -217,7 +217,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
       // report error and go to next action
       char buff[1024];
       snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
-               action["name"].as<std::string>().c_str());
+          action["name"].as<std::string>().c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
 
       result.output_log = buff;
@@ -230,9 +230,9 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
     if (!pa) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
-               "action '%s' could not create action object in module '%s'",
-               action["name"].as<std::string>().c_str(),
-               rvsmodule.c_str());
+          "action '%s' could not create action object in module '%s'",
+          action["name"].as<std::string>().c_str(),
+          rvsmodule.c_str());
       rvs::logger::Err(buff, MODULE_NAME_CAPS);
       result.output_log = buff;
       callback(&result);
@@ -243,8 +243,8 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
     if (!pif1) {
       char buff[1024];
       snprintf(buff, sizeof(buff),
-               "action '%s' could not obtain interface if1",
-               action["name"].as<std::string>().c_str());
+          "action '%s' could not obtain interface if1",
+          action["name"].as<std::string>().c_str());
       module::action_destroy(pa);
       result.output_log = buff;
       callback(&result);
@@ -260,7 +260,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
     // set also command line options:
     for (auto clit = rvs::options::get().begin();
-         clit != rvs::options::get().end(); ++clit) {
+        clit != rvs::options::get().end(); ++clit) {
       std::string p(clit->first);
       p = "cli." + p;
       pif1->property_set(p, clit->second);
@@ -295,7 +295,6 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
   result.status = RVS_STATUS_SUCCESS;
   result.output_log = "RVS session successfully completed.";
   callback(&result);
-
   return 0;
 }
 
