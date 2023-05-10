@@ -408,20 +408,17 @@ int mem_action::get_all_selected_gpus(void) {
  */
 int mem_action::run(void) {
   string msg;
+  rvs::action_result_t action_result;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     msg = "Action name missing";
     rvs::lp::Err(msg, MODULE_NAME_CAPS);
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
-
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
     return -1;
   }
 
@@ -434,39 +431,29 @@ int mem_action::run(void) {
   rvs::lp::Log(msg, rvs::logtrace);
 
   if (!get_all_common_config_keys()) {
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = "Error in common configuration keys.";
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in common configuration keys.";
+    action_callback(&action_result);
     return -1;
   }
 
   if (!get_all_mem_config_keys()) {
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = "Error in MEM configuration keys.";
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in MEM configuration keys.";
+    action_callback(&action_result);
     return -1;
   }
 
   auto ret = get_all_selected_gpus();
 
-  if(nullptr != callback) {
-    rvs::action_result_t action_result;
-
-    action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = (!ret) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-    action_result.output = "BABEL Module action " + action_name + " completed";
-    callback(&action_result, user_param);
-  }
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!ret) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "BABEL Module action " + action_name + " completed";
+  action_callback(&action_result);
 
   return ret;
 }

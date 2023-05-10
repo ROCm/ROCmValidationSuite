@@ -94,6 +94,7 @@ int pbqt_action::run() {
   string msg;
   std::chrono::time_point<std::chrono::system_clock> pbqt_start_time;
   std::chrono::time_point<std::chrono::system_clock> pbqt_end_time;
+  rvs::action_result_t action_result;
 
   rvs::lp::Log("int pbqt_action::run()", rvs::logtrace);
 
@@ -105,14 +106,10 @@ int pbqt_action::run() {
     msg = "Error in get_all_common_config_keys()";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
-
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
     return -1;
   }
 
@@ -120,14 +117,10 @@ int pbqt_action::run() {
     msg = "Error in get_all_pbqt_config_keys()";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
-
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
     return -1;
   }
 
@@ -136,14 +129,11 @@ int pbqt_action::run() {
     if (static_cast<uint64_t>(property_log_interval) > property_duration) {
       msg = "log_interval must be less than duration";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      if(nullptr != callback) {
-        rvs::action_result_t action_result;
 
-        action_result.state = rvs::actionstate::ACTION_COMPLETED;
-        action_result.status = rvs::actionstatus::ACTION_FAILED;
-        action_result.output = msg;
-        callback(&action_result, user_param);
-      }
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
       return -1;
     }
   }
@@ -157,7 +147,7 @@ int pbqt_action::run() {
   sts = create_threads();
   if (sts) {
     RVSTRACE_
-    return sts;
+      return sts;
   }
 
   if (!prop_test_bandwidth || test_array.size() < 1) {
@@ -165,21 +155,17 @@ int pbqt_action::run() {
       // do cleanup
       destroy_threads();
 
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
-
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = "Parameters not valid. Nothing to execute !!!";
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Parameters not valid. Nothing to execute !!!";
+    action_callback(&action_result);
 
     return 0;
   }
 
   RVSTRACE_
-  // define timers
-  rvs::timer<pbqt_action> timer_running(&pbqt_action::do_running_average, this);
+    // define timers
+    rvs::timer<pbqt_action> timer_running(&pbqt_action::do_running_average, this);
   rvs::timer<pbqt_action> timer_final(&pbqt_action::do_final_average, this);
 
   unsigned int iter = property_count > 0 ? property_count : 1;
@@ -187,39 +173,39 @@ int pbqt_action::run() {
 
   do {
     RVSTRACE_
-    // let the test run in this iteration
-    brun = true;
+      // let the test run in this iteration
+      brun = true;
 
     // start timers
     if (property_duration) {
       RVSTRACE_
-      timer_final.start(property_duration, true);  // ticks only once
+        timer_final.start(property_duration, true);  // ticks only once
     }
 
     if (property_log_interval) {
       RVSTRACE_
-      timer_running.start(property_log_interval);        // ticks continuously
+        timer_running.start(property_log_interval);        // ticks continuously
     }
 
     pbqt_start_time = std::chrono::system_clock::now();
 
     RVSTRACE_
-    do {
-      if (property_parallel) {
-        sts = run_parallel();
-      } else {
-        sts = run_single();
-      }
-      pbqt_end_time = std::chrono::system_clock::now();
-      uint64_t test_time = time_diff(pbqt_end_time, pbqt_start_time) ;
-      if(test_time >= property_duration) {
+      do {
+        if (property_parallel) {
+          sts = run_parallel();
+        } else {
+          sts = run_single();
+        }
+        pbqt_end_time = std::chrono::system_clock::now();
+        uint64_t test_time = time_diff(pbqt_end_time, pbqt_start_time) ;
+        if(test_time >= property_duration) {
           pbqt_action::do_final_average();
           break;
-      }
-    } while (brun);
+        }
+      } while (brun);
 
     RVSTRACE_
-    timer_running.stop();
+      timer_running.stop();
     timer_final.stop();
 
     iter -= step;
@@ -227,30 +213,26 @@ int pbqt_action::run() {
     // insert wait between runs if needed
     if (iter > 0 && property_wait > 0) {
       RVSTRACE_
-      sleep(property_wait);
+        sleep(property_wait);
     }
   } while (iter && !rvs::lp::Stopping());
 
   RVSTRACE_
-  sts = rvs::lp::Stopping() ? -1 : 0;
+    sts = rvs::lp::Stopping() ? -1 : 0;
 
   print_final_average();
 
   // do cleanup
   destroy_threads();
 
- if(bjson){
+  if(bjson){
     rvs::lp::JsonActionEndNodeCreate();
   }
 
- if(nullptr != callback) {
-   rvs::action_result_t action_result;
-
-   action_result.state = rvs::actionstate::ACTION_COMPLETED;
-   action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-   action_result.output = "PBQT Module action " + action_name + " completed";
-   callback(&action_result, user_param);
- }
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "PBQT Module action " + action_name + " completed";
+  action_callback(&action_result);
 
   return sts;
 }

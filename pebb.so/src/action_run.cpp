@@ -96,33 +96,28 @@ int pebb_action::run() {
   string msg;
   std::chrono::time_point<std::chrono::system_clock> pebb_start_time;
   std::chrono::time_point<std::chrono::system_clock> pebb_end_time;
+  rvs::action_result_t action_result;
 
   RVSTRACE_
-  if (property.find("cli.-j") != property.end()) {
-    bjson = true;
-  }
+    if (property.find("cli.-j") != property.end()) {
+      bjson = true;
+    }
 
   if (!get_all_common_config_keys()) {
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = "Error in common configuration keys.";
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in common configuration keys.";
+    action_callback(&action_result);
     return -1;
   }
 
   if (!get_all_pebb_config_keys()) {
-    if(nullptr != callback) {
-      rvs::action_result_t action_result;
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = "Error in PEBB configuration keys.";
-      callback(&action_result, user_param);
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in PEBB configuration keys.";
+    action_callback(&action_result);
     return -1;
   }
 
@@ -132,14 +127,11 @@ int pebb_action::run() {
       msg = "log_interval must be less than duration";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 
-      if(nullptr != callback) {
-        rvs::action_result_t action_result;
 
-        action_result.state = rvs::actionstate::ACTION_COMPLETED;
-        action_result.status = rvs::actionstatus::ACTION_FAILED;
-        action_result.output = msg;
-        callback(&action_result, user_param);
-      }
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
       return -1;
     }
   }
@@ -160,7 +152,7 @@ int pebb_action::run() {
   unsigned int iter = property_count > 0 ? property_count : 1;
   unsigned int step = 1;
   int count = 0;
-  
+
   do {
     // let the test run in this iteration
     brun = true;
@@ -169,16 +161,16 @@ int pebb_action::run() {
     // start timers
     if (property_duration) {
       RVSTRACE_
-      timer_final.start(property_duration, true);  // ticks only once
+        timer_final.start(property_duration, true);  // ticks only once
     }
 
     if (property_log_interval) {
       RVSTRACE_
-      timer_running.start(property_log_interval);        // ticks continuously
+        timer_running.start(property_log_interval);        // ticks continuously
     }
 
     RVSTRACE_
-    pebb_start_time = std::chrono::system_clock::now();
+      pebb_start_time = std::chrono::system_clock::now();
 
     do {
       if (property_parallel) {
@@ -187,16 +179,16 @@ int pebb_action::run() {
         sts = run_single();
       }
 
-       pebb_end_time = std::chrono::system_clock::now();
-       uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
-       if(test_time >= property_duration) {
-            pebb_action::do_final_average();
-            break;
-        }
+      pebb_end_time = std::chrono::system_clock::now();
+      uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
+      if(test_time >= property_duration) {
+        pebb_action::do_final_average();
+        break;
+      }
     } while(brun);
 
     RVSTRACE_
-    timer_running.stop();
+      timer_running.stop();
     timer_final.stop();
 
     std::cout << "\n Iteration value : " << iter;
@@ -205,35 +197,31 @@ int pebb_action::run() {
     // insert wait between runs if needed
     if (iter > 0 && property_wait > 0) {
       RVSTRACE_
-      sleep(property_wait);
+        sleep(property_wait);
     }
   } while (iter && !rvs::lp::Stopping());
 
   RVSTRACE_
-  sts = rvs::lp::Stopping() ? -1 : 0;
+    sts = rvs::lp::Stopping() ? -1 : 0;
 
   print_final_average();
 
   std::cout << " \n =========================================================================================================================";
   for(auto it = resultBandwidth.begin(); it != resultBandwidth.end(); it++) {
-     std::cout << " \n\n PCIE Bandwidth from , CPU::" << it->CPUId<< " to GPU Id::" << it->GPUId << " is " << it->finalBandwith << "\n\n";
+    std::cout << " \n\n PCIE Bandwidth from , CPU::" << it->CPUId<< " to GPU Id::" << it->GPUId << " is " << it->finalBandwith << "\n\n";
   }
   std::cout << " ========================================================================================================================= \n";
 
   destroy_threads();
-	//bjson = true;
+  //bjson = true;
   if(bjson){
     rvs::lp::JsonActionEndNodeCreate();
   }
 
-  if(nullptr != callback) {
-    rvs::action_result_t action_result;
-
-    action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-    action_result.output = "PEBB Module action " + action_name + " completed";
-    callback(&action_result, user_param);
-  }
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "PEBB Module action " + action_name + " completed";
+  action_callback(&action_result);
 
   return sts;
 }
