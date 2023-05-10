@@ -168,6 +168,12 @@ int rvs::actionbase::property_get_device() {
     &property_device_all);
 }
 
+/**
+ * gets the device index list from the module's properties collection
+ * @return 0 - OK
+ * @return 1 - syntax error in 'device index' configuration key
+ * @return 2 - missing 'device index' key
+ */
 int rvs::actionbase::property_get_device_index() {
   return property_get_uint_list<uint16_t>(
     RVS_CONF_DEVICE_INDEX_KEY,
