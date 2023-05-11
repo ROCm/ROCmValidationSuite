@@ -132,6 +132,7 @@ bool perf_action::do_gpu_stress_test(map<int, uint16_t> perf_gpus_device_index) 
                 it != perf_gpus_device_index.end(); ++it) {
             // set worker thread stress test params
             workers[i].set_name(action_name);
+            workers[i].set_action(*this);
             workers[i].set_gpu_id(it->second);
             workers[i].set_gpu_device_index(it->first);
             workers[i].set_run_wait_ms(property_wait);
@@ -389,6 +390,21 @@ bool perf_action::get_all_common_config_keys(void) {
       bsts = false;
     }
 
+    // get <device_index> property value (a list of device indexes)
+    if (int sts = property_get_device_index()) {
+      switch (sts) {
+        case 1:
+          msg = "Invalid 'device_index' key value.";
+          break;
+        case 2:
+          msg = "Missing 'device_index' key.";
+          break;
+      }
+      // default set as true
+      property_device_index_all = true;
+      rvs::lp::Log(msg, rvs::loginfo);
+    }
+
     // get the other action/PERF related properties
     if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
       msg = "invalid '" +
@@ -542,32 +558,64 @@ int perf_action::get_all_selected_gpus(void) {
  * @return run result
  */
 int perf_action::run(void) {
-    string msg;
+  string msg;
+  rvs::action_result_t action_result;
 
-    // get the action name
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      return -1;
-    }
+  // get the action name
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    msg = "Action name missing";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS);
 
-    // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end())
-        bjson = true;
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
 
-    if (!get_all_common_config_keys())
-        return -1;
-    if (!get_all_perf_config_keys())
-        return -1;
+    return -1;
+  }
 
-    if (property_duration > 0 && (property_duration < perf_ramp_interval)) {
-        msg = "'" +
-            std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
-            std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "'";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
-    }
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end())
+    bjson = true;
 
-    get_all_selected_gpus();
+  if (!get_all_common_config_keys()) {
 
-    return true;
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in common configuration keys.";
+    action_callback(&action_result);
+    return -1;
+  }
+
+  if (!get_all_perf_config_keys()) {
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in PERF configuration keys.";
+    action_callback(&action_result);
+    return -1;
+  }
+
+  if (property_duration > 0 && (property_duration < perf_ramp_interval)) {
+    msg = "'" +
+      std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
+      std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in common configuration keys.";
+    action_callback(&action_result);
+    return -1;
+  }
+
+  auto res = get_all_selected_gpus();
+
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "PERF Module action " + action_name + " completed";
+  action_callback(&action_result);
+
+  return true;
 }
+

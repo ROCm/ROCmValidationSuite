@@ -39,11 +39,11 @@
  *
  * @brief GPU Monitor module
  *
- * The GPU monitor tool is capable of running on one, some or all of the GPU(s) 
- *installed and will
- * report various information at regular intervals. The module can be configured 
+ * The GPU monitor tool is capable of running on one, some or all of the GPU(s)
+ * installed and will
+ * report various information at regular intervals. The module can be configured
  * to halt another
- * RVS modules execution if one of the quantities exceeds a specified boundary 
+ * RVS modules execution if one of the quantities exceeds a specified boundary
  * value.
  */
 
@@ -108,8 +108,13 @@ extern "C" int rvs_module_action_property_set(void* pAction, const char* Key,
   return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 
+extern "C" int rvs_module_action_callback_set(void* pAction,
+                                               rvs::callback_t callback,
+                                               void * user_param) {
+  return static_cast<rvs::actionbase*>(pAction)->callback_set(callback, user_param);
+}
+
 extern "C" int rvs_module_action_run(void* pAction) {
   return static_cast<rvs::actionbase*>(pAction)->run();
 }
-
 

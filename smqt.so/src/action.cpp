@@ -123,6 +123,20 @@ bool smqt_action::get_all_common_config_keys() {
     keysts = false;
   }
 
+  // get <device_index> property value (a list of device indexes)
+  if (int sts = property_get_device_index()) {
+    switch (sts) {
+    case 1:
+      msg = "Invalid 'device_index' key value.";
+      break;
+    case 2:
+      msg = "Missing 'device_index' key.";
+      break;
+    }
+    // default set as true
+    property_device_index_all = true;
+    rvs::lp::Log(msg, rvs::loginfo);
+  }
 
   return keysts;
 }
@@ -166,16 +180,29 @@ int smqt_action::run(void) {
   string msg;
   struct pci_access *pacc;
   bool devid_found = false;
+  rvs::action_result_t action_result;
 
   if (!get_all_common_config_keys()) {
     msg = "Couldn't fetch common config keys from the configuration file!";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+
     return -1;
   }
 
   if (!get_all_smqt_config_keys()) {
-    msg = "Couldn't fetch bar config keys from the configuration file!";
+    msg = "Couldn't fetch smqt config keys from the configuration file!";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+
     return -1;
   }
 
@@ -306,6 +333,13 @@ int smqt_action::run(void) {
     rvs::lp::Log(msga4, rvs::loginfo, sec, usec);
     rvs::lp::Log(msgs5, rvs::loginfo, sec, usec);
     rvs::lp::Log(pmsg, rvs::logresults);
+
+
+    action_result.state = rvs::actionstate::ACTION_RUNNING;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = msg.c_str();
+    action_callback(&action_result);
+
     rvs::lp::AddInt(r, "gpu", gpu_id);
     rvs::lp::AddString(r, "bar1_size", std::to_string(bar1_size));
     rvs::lp::AddString(r, "bar1_base_addr", std::to_string(bar1_base_addr));
@@ -324,7 +358,21 @@ int smqt_action::run(void) {
     global_pass = false;
     msg = "No devices match criteria from the test configuration.";
     rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+
     return -1;
   }
+
+
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (global_pass) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "SMQT Module action " + action_name + " completed";
+  action_callback(&action_result);
+
   return global_pass ? 0 : -1;
 }
+

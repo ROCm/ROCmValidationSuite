@@ -323,6 +323,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 void GSTWorker::check_target_stress(double gflops_interval) {
     string msg;
     bool result;
+    rvs::action_result_t action_result;
 
     if(gflops_interval >= target_stress){
            result = true;
@@ -335,11 +336,14 @@ void GSTWorker::check_target_stress(double gflops_interval) {
               "Target stress :" + " " + std::to_string(target_stress) + " met :" + (result ? "TRUE" : "FALSE");
     rvs::lp::Log(msg, rvs::logresults);
 
+    action_result.state = rvs::actionstate::ACTION_RUNNING;
+    action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg.c_str();
+    action.action_callback(&action_result);
+
     log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);
 }
-
-
 
 /**
  * @brief logs the Gflops computed over the last log_interval period 
@@ -347,10 +351,18 @@ void GSTWorker::check_target_stress(double gflops_interval) {
  */
 void GSTWorker::log_interval_gflops(double gflops_interval) {
     string msg;
+    rvs::action_result_t action_result;
+
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " +
             std::to_string(gflops_interval);
     rvs::lp::Log(msg, rvs::logresults);
+
+    action_result.state = rvs::actionstate::ACTION_RUNNING;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = msg.c_str();
+    action.action_callback(&action_result);
+
     log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
                 rvs::loginfo);
 }
@@ -486,6 +498,7 @@ void GSTWorker::run() {
     string msg, err_description;
     int error = 0;
     bool gst_test_passed = true;
+    rvs::action_result_t action_result;
 
     max_gflops = 0;
 
@@ -504,6 +517,11 @@ void GSTWorker::run() {
                         + std::to_string(gpu_id) + " " + err_description;
         rvs::lp::Log(msg, rvs::logerror);
         log_to_json("err", err_description, rvs::logerror);
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg.c_str();
+        action.action_callback(&action_result);
 
         return;
     }
@@ -528,6 +546,12 @@ void GSTWorker::run() {
                                 std::to_string(gpu_id) + " " + err_description;
                 rvs::lp::Log(msg, rvs::logerror);
                 log_to_json("err", err_description, rvs::logerror);
+
+                action_result.state = rvs::actionstate::ACTION_COMPLETED;
+                action_result.status = rvs::actionstatus::ACTION_FAILED;
+                action_result.output = msg.c_str();
+                action.action_callback(&action_result);
+
                 return;
             }
     }

@@ -27,10 +27,11 @@
 
 #include <string>
 #include <memory>
-#include <mutex>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
 #include "include/rvs_util.h"
+#include "include/rvsactionbase.h"
+#include "include/action.h"
 
 /**
  * @class IETWorker
@@ -49,6 +50,8 @@ class IETWorker : public rvs::ThreadBase {
 
     //! sets action name
     void set_name(const std::string& name) { action_name = name; }
+    //! sets action
+    void set_action(const iet_action& _action) { action = _action; }
     //! returns action name
     const std::string& get_name(void) { return action_name; }
 
@@ -161,8 +164,6 @@ class IETWorker : public rvs::ThreadBase {
     //! returns the SGEMM matrix size
     uint64_t get_matrix_size_c(void) { return matrix_size_b; }
 
-
-
     //! sets the transpose matrix a
     void set_matrix_transpose_a(int transa) {
         iet_trans_a = transa;
@@ -222,6 +223,8 @@ class IETWorker : public rvs::ThreadBase {
 
     //! name of the action
     std::string action_name;
+    //! action instance
+    iet_action action;
     //! index of the GPU (as reported by HIP API) that will run the EDPp test
     int gpu_device_index;
     //! index of GPU (in view of smi lib) which is sometimes different to above index
@@ -286,8 +289,6 @@ class IETWorker : public rvs::ThreadBase {
     float iet_beta_val;
     //IET TP flag
     bool iet_tp_flag;
-    //mtex
-    std::mutex mtx_blas_done;
     bool endtest = false;
 };
 

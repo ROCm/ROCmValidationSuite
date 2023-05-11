@@ -240,6 +240,21 @@ bool mem_action::get_all_common_config_keys(void) {
       bsts = false;
     }
 
+    // get <device_index> property value (a list of device indexes)
+    if (int sts = property_get_device_index()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device_index' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device_index' key.";
+        break;
+      }
+      // default set as true
+      property_device_index_all = true;
+      rvs::lp::Log(msg, rvs::loginfo);
+    }
+
     // get the other action/MEM related properties
     if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
       msg = "invalid '" +
@@ -392,30 +407,54 @@ int mem_action::get_all_selected_gpus(void) {
  * @return run result
  */
 int mem_action::run(void) {
-    string msg;
+  string msg;
+  rvs::action_result_t action_result;
 
-    // get the action name
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      return -1;
-    }
+  // get the action name
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    msg = "Action name missing";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS);
 
-    // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end())
-        bjson = true;
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+    return -1;
+  }
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            " " + "Getting properties of memory test"; 
-    rvs::lp::Log(msg, rvs::logtrace);
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end())
+    bjson = true;
 
-    if (!get_all_common_config_keys())
-        return -1;
-    if (!get_all_mem_config_keys())
-        return -1;
+  msg = "[" + action_name + "] " + MODULE_NAME + " " +
+    " " + "Getting properties of memory test"; 
+  rvs::lp::Log(msg, rvs::logtrace);
 
+  if (!get_all_common_config_keys()) {
 
-    return get_all_selected_gpus();
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in common configuration keys.";
+    action_callback(&action_result);
+    return -1;
+  }
+
+  if (!get_all_mem_config_keys()) {
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "Error in MEM configuration keys.";
+    action_callback(&action_result);
+    return -1;
+  }
+
+  auto ret = get_all_selected_gpus();
+
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!ret) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "BABEL Module action " + action_name + " completed";
+  action_callback(&action_result);
+
+  return ret;
 }
-
-
 

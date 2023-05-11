@@ -27,7 +27,8 @@
 
 #include <vector>
 #include "include/rvsthreadbase.h"
-
+#include "include/rvsactionbase.h"
+#include "include/action.h"
 
 #define TDIFF(tb, ta) (tb.tv_sec - ta.tv_sec + 0.000001*(tb.tv_usec - ta.tv_usec))
 #define MEM_RESULT_PASS_MESSAGE         "true"
@@ -95,6 +96,8 @@ class MemWorker : public rvs::ThreadBase {
 
     //! sets action name
     void set_name(const std::string& name) { action_name = name; }
+    //! sets action
+    void set_action(const mem_action& _action) { action = _action; }
     //! returns action name
     const std::string& get_name(void) { return action_name; }
 
@@ -206,6 +209,8 @@ class MemWorker : public rvs::ThreadBase {
  protected:
     //! name of the action
     std::string action_name;
+    //! action instance
+    mem_action action;
     //! index of the GPU that will run the stress test
     int gpu_device_index;
     //! ID of the GPU that will run the stress test

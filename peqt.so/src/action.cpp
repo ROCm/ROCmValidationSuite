@@ -159,6 +159,21 @@ bool peqt_action::get_all_common_config_keys(void) {
     res = false;
   }
 
+  // get <device_index> property value (a list of device indexes)
+  if (int sts = property_get_device_index()) {
+    switch (sts) {
+    case 1:
+      msg = "Invalid 'device_index' key value.";
+      break;
+    case 2:
+      msg = "Missing 'device_index' key.";
+      break;
+    }
+    // default set as true
+    property_device_index_all = true;
+    rvs::lp::Log(msg, rvs::loginfo);
+  }
+
   return res;
 }
 
@@ -324,6 +339,7 @@ int peqt_action::run(void) {
 
     struct pci_access *pacc;
     struct pci_dev *dev;
+    rvs::action_result_t action_result;
 
     RVSTRACE_
     bjson = false;  // already initialized in the default constructor
@@ -336,6 +352,12 @@ int peqt_action::run(void) {
     if (!get_all_common_config_keys()) {
       msg = "Error in get_all_common_config_keys()";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = "Error in common configuration keys.";
+      action_callback(&action_result);
+
       return -1;
     }
 
@@ -343,10 +365,16 @@ int peqt_action::run(void) {
     pacc = pci_alloc();
 
     if (pacc == NULL) {
-        // log the error
-        msg = PCI_ALLOC_ERROR;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-        return 1;  // PCIe qualification check cannot continue
+      // log the error
+      msg = PCI_ALLOC_ERROR;
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
+
+      return 1;  // PCIe qualification check cannot continue
     }
 
     // compose Power Budgeting dynamic regex
@@ -389,12 +417,18 @@ int peqt_action::run(void) {
     for (dev = pacc->devices; dev; dev = dev->next) {
       RVSTRACE_
 
-      if(dev == NULL) {
+        if(dev == NULL) {
           msg = "[" + action_name + "] " + MODULE_NAME + " "
             + "Device is null ";
           rvs::lp::Log(msg, rvs::logresults);
+
+          action_result.state = rvs::actionstate::ACTION_COMPLETED;
+          action_result.status = rvs::actionstatus::ACTION_FAILED;
+          action_result.output = msg;
+          action_callback(&action_result);
+
           return false;
-      }
+        }
 
       // fill in the info
       pci_fill_info(dev,
@@ -443,6 +477,12 @@ int peqt_action::run(void) {
     if (!amd_gpus_found) {
       msg = "No matching GPUs found";
       rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
+
       return -1;
     }
 
@@ -458,10 +498,16 @@ int peqt_action::run(void) {
       json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
               action_name.c_str(), rvs::logresults, sec, usec);
       if (json_root_node == NULL) {
-          // log the error
-          msg = JSON_CREATE_NODE_ERROR;
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
-          return -1;
+        // log the error
+        msg = JSON_CREATE_NODE_ERROR;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        action_callback(&action_result);
+
+        return -1;
       }
 
       if (pci_infra_qual_result) {
@@ -474,6 +520,12 @@ int peqt_action::run(void) {
 
       rvs::lp::LogRecordFlush(json_root_node);
     }
+
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = "PEQT Module action " + action_name + " completed";
+    action_callback(&action_result);
 
     RVSTRACE_
     return 0;

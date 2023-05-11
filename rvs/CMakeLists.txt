@@ -115,31 +115,20 @@ endif()
 ## define include directories
 include_directories(./ ../ ${YAML_CPP_INCLUDE_DIRS})
 ## define lib directories
-link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ASAN_LIB_PATH})
+link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH})
+
 ## additional libraries
-set (PROJECT_LINK_LIBS libdl.so ${YAML_CPP_LIBRARIES} libpthread.so)
-
-## define source files
-set(SOURCES
-  src/rvsmodule.cpp
-  src/rvsif_base.cpp
-  src/rvsif0.cpp
-  src/rvsif1.cpp
-  src/rvsaction.cpp
-  src/rvscli.cpp
-  src/rvsexec.cpp
-  src/rvsexec_do_yaml.cpp
-  src/rvsoptions.cpp
-)
-
-## define helper lib
-add_library(rvshelper ${SOURCES})
+set(ROCBLAS_LIB "rocblas")
+set(ROC_THUNK_NAME "hsakmt")
+set(CORE_RUNTIME_NAME "hsa-runtime")
+set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
+set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
-target_link_libraries(${RVS_TARGET} rvshelper rvslib ${PROJECT_LINK_LIBS} )
-add_dependencies(${RVS_TARGET} rvshelper)
-
+target_link_libraries(${RVS_TARGET} rvslib
+  ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${PROJECT_LINK_LIBS})
+add_dependencies(${RVS_TARGET} rvslib)
 
 install(TARGETS ${RVS_TARGET}
   RUNTIME
@@ -156,6 +145,11 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/conf
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
 	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/conf
   COMPONENT applications
+)
+
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/rvs.h"
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/rvs
+  COMPONENT rvsmodule
 )
 
 option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" ON)

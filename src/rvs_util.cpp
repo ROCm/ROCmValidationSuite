@@ -99,7 +99,7 @@ void *json_node_create(std::string module_name, std::string action_name,
 }
 
 /**
- * summary: fethes gpu id to index map for valid set of GPUs as per config.
+ * summary: Fetches gpu id to index map for valid set of GPUs as per config.
  * Note: mcm_check is needed to output MCM specific messages while we iterate
  * through list, because iet power readings vary on this.
  * @out: map of gpu id to index in gpus_device_index and returns true if found 

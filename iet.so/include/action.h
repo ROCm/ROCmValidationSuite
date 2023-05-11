@@ -115,6 +115,8 @@ class iet_action: public rvs::actionbase {
     int      iet_ldb_offset;
     int      iet_ldc_offset;
 
+    friend class IETWorker;
+
     //! list of GPUs (along with some identification data) which are
     //! selected for EDPp test
     std::vector<gpu_hwmon_info> edpp_gpus;

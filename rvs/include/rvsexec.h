@@ -26,12 +26,20 @@
 #define RVS_INCLUDE_RVSEXEC_H_
 
 #include <string>
+#include <map>
+#include "include/rvs.h"
+#include "include/rvsactionbase.h"
 #include "yaml-cpp/node/node.h"
 
 
 namespace rvs {
 
 class if1;
+
+enum class yaml_data_type_t {
+  YAML_FILE = 0,
+  YAML_STRING = 1
+};
 
 /**
  * @class exec
@@ -49,6 +57,15 @@ class exec {
   ~exec();
 
   int run();
+  int run(std::map<std::string, std::string>& opt);
+
+  /* Set Application callback */
+  int set_callback(void (*callback)(const rvs_results_t * results, int user_param), int user_param);
+
+  static void action_callback(const action_result_t * result, void * user_param);
+
+  void callback(const action_result_t * result);
+  void callback(const rvs_results_t * result);
 
  protected:
   void  do_help(void);
@@ -56,6 +73,7 @@ class exec {
   int   do_gpu_list(void);
 
   int   do_yaml(const std::string& config_file);
+  int   do_yaml(yaml_data_type_t data_type, const std::string& data);
   int   do_yaml_properties(const YAML::Node& node,
                            const std::string& module_name, if1* pif1);
   bool  is_yaml_properties_collection(const std::string& module_name,
@@ -63,6 +81,10 @@ class exec {
   int   do_yaml_properties_collection(const YAML::Node& node,
                                       const std::string& parent_name,
                                       if1* pif1);
+
+  /* Application Callback */
+  void (*app_callback)(const rvs_results_t * results, int user_param);
+  int user_param;
 };
 
 }  // namespace rvs

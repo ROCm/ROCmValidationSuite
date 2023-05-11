@@ -53,6 +53,8 @@ class pesm_action : public rvs::actionbase {
   bool get_all_pesm_config_keys(void);
 
  protected:
+
+  friend class Worker;
   //! json logging flag
   bool bjson;
   //! debug wait helper

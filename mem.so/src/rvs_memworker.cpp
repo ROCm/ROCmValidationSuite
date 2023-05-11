@@ -117,6 +117,7 @@ void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
     struct timeval  t0, t1;
     unsigned int i;
     std::string msg;
+    rvs::action_result_t action_result;
 
     Initialization();
 
@@ -132,6 +133,12 @@ void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
      msg = "[" + action_name + "] " + MODULE_NAME + " " +
                    std::to_string(gpu_id) + " " + " Memory tests : " + std::to_string(i) + " tests complete \n";
      rvs::lp::Log(msg, rvs::loginfo);
+     
+
+      action_result.state = rvs::actionstate::ACTION_RUNNING;
+      action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+      action_result.output = msg.c_str();
+      action.action_callback(&action_result);
 }
 
 

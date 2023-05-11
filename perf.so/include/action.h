@@ -54,7 +54,7 @@ using std::map;
  *
  */
 class perf_action: public rvs::actionbase {
- public:
+  public:
     perf_action();
     virtual ~perf_action();
 
@@ -62,7 +62,7 @@ class perf_action: public rvs::actionbase {
 
     std::string perf_ops_type;
 
- protected:
+  protected:
     //! TRUE if JSON output is required
     bool bjson;
 
@@ -78,45 +78,49 @@ class perf_action: public rvs::actionbase {
     //! GFlops tolerance (how much the GFlops can fluctuare after
     //! the ramp period for the test to succeed)
     float perf_tolerance;
-    
+
     //Alpha and beta value
     float      perf_alpha_val;
     float      perf_beta_val;
-    
+
     //! matrix size for SGEMM
     uint64_t perf_matrix_size_a;
     uint64_t perf_matrix_size_b;
     uint64_t perf_matrix_size_c;
 
-    //Parameter to heat up
+    //! Parameter to heat up
     uint64_t perf_hot_calls;
 
-    //Tranpose set to none or enabled
+    //! Tranpose set to none or enabled
     int      perf_trans_a;
     int      perf_trans_b;
 
-    //Leading offset values
+    //! Leading offset values
     int      perf_lda_offset;
     int      perf_ldb_offset;
     int      perf_ldc_offset;
 
-    // PERF specific config keys
-//     void property_get_perf_target_stress(int *error);
-//     void property_get_perf_tolerance(int *error);
+    friend class PERFWorker;
 
+    /**
+     * @brief reads all perf configuration keys from
+     * the module's properties collection
+     * @return true if no fatal error occured, false otherwise
+     */
     bool get_all_perf_config_keys(void);
-  /**
-  * @brief reads all common configuration keys from
-  * the module's properties collection
-  * @return true if no fatal error occured, false otherwise
-  */
+
+    /**
+     * @brief reads all common configuration keys from
+     * the module's properties collection
+     * @return true if no fatal error occured, false otherwise
+     */
     bool get_all_common_config_keys(void);
 
-  /**
-  * @brief gets the number of ROCm compatible AMD GPUs
-  * @return run number of GPUs
-  */
-  int get_num_amd_gpu_devices(void);
+    /**
+     * @brief gets the number of ROCm compatible AMD GPUs
+     * @return run number of GPUs
+     */
+    int get_num_amd_gpu_devices(void);
     int get_all_selected_gpus(void);
     bool do_gpu_stress_test(map<int, uint16_t> perf_gpus_device_index);
 };

@@ -29,7 +29,9 @@
 #include <map>
 
 #include "include/rvsthreadbase.h"
-
+#include "include/rvsactionbase.h"
+#include "include/metrics.h"
+#include "include/action.h"
 
 /**
  * @class Worker
@@ -44,63 +46,6 @@
 
 class Worker : public rvs::ThreadBase {
  public:
-  //! monitored metric and its bound values
-  struct Metric_bound {
-    //! true if metric observed
-    bool mon_metric;
-    //! true if bounds checked
-    bool check_bounds;
-    //! bound max_val
-    uint32_t max_val;
-    //! bound min_val
-    uint32_t min_val;
-  };
-  //! number of violations for metrics
-  struct Metric_violation {
-    //! gpu_id
-    int32_t gpu_id;
-    //! number of temperature violation
-    int temp_violation;
-    //! number of clock violation
-    int clock_violation;
-    //! number of mem_clock violation
-    int mem_clock_violation;
-    //! number of fan violation
-    int fan_violation;
-    //! number of power violation
-    int power_violation;
-  };
-  //! current metric values
-  struct Metric_value {
-    //! gpu_id
-    int32_t gpu_id;
-    //! current temperature value
-    uint32_t temp;
-    //! current clock value
-    uint32_t clock;
-    //! current mem_clock value
-    uint32_t mem_clock;
-    //! current fan value
-    uint32_t fan;
-    //! current power value
-    uint32_t power;
-  };
-  //! average metric values
-  struct Metric_avg {
-    //! gpu_id
-    int32_t gpu_id;
-    //! average temperature
-    uint32_t av_temp;
-    //! average clock
-    uint32_t av_clock;
-    //! average mem_clock
-    uint32_t av_mem_clock;
-    //! average fan
-    uint32_t av_fan;
-    //! average power
-    float av_power;
-  };
-
  public:
   Worker();
   virtual ~Worker();
@@ -108,6 +53,8 @@ class Worker : public rvs::ThreadBase {
   void stop(void);
   //! Sets initiating action name
   void set_name(const std::string& name) { action_name = name; }
+  //! sets action
+  void set_action(const gm_action& _action) { action = _action; }
   //! sets stopping action name
   void set_stop_name(const std::string& name) { stop_action_name = name; }
   //! Sets device indices for filtering
@@ -145,6 +92,8 @@ class Worker : public rvs::ThreadBase {
  protected:
   //! Name of the action which initiated monitoring
   std::string  action_name;
+  //! action instance
+  gm_action action;
   //! Name of the action which stops monitoring
   std::string  stop_action_name;
   //! sample interval

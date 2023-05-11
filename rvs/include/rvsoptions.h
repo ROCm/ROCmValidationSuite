@@ -44,7 +44,9 @@ namespace rvs {
 class options {
  public:
   static bool has_option(const std::string& Option);
+  static bool has_option(std::map<std::string, std::string>& opt, const std::string& Option);
   static bool has_option(const std::string& Option, std::string* pval);
+  static bool has_option(std::map<std::string, std::string>& opt, const std::string& Option, std::string* pval);
   static const std::map<std::string, std::string>& get(void);
 
  protected:

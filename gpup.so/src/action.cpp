@@ -154,6 +154,7 @@ int gpup_action::property_get_value(uint16_t gpu_id) {
   void *json_gpuprop_node = NULL;
   string prop_name, prop_val, msg;
   std::ifstream f_prop;
+  rvs::action_result_t action_result;
 
   RVSTRACE_
   if (rvs::gpulist::gpu2node(gpu_id, &node_id)) {
@@ -208,7 +209,15 @@ int gpup_action::property_get_value(uint16_t gpu_id) {
     rvs::lp::Log(msg, rvs::logresults);
     if (bjson && json_gpuprop_node != NULL) {
       rvs::lp::AddString(json_gpuprop_node, prop_name, prop_val);
+
     }
+
+    // Action callback
+    action_result.state = rvs::actionstate::ACTION_RUNNING;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = msg.c_str();
+    action_callback(&action_result);
+
   }
   RVSTRACE_
   f_prop.close();
@@ -238,6 +247,7 @@ int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
   string prop_name, prop_val, msg;
   std::ifstream f_prop;
   uint16_t node_id;
+  rvs::action_result_t result;
 
   RVSTRACE_
   if (rvs::gpulist::gpu2node(gpu_id, &node_id)) {
@@ -310,6 +320,12 @@ int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
       if (bjson && json_link_ptr_ != NULL) {
         rvs::lp::AddString(json_link_ptr_, prop_name, prop_val);
       }
+
+      // Action callback
+      result.state = rvs::actionstate::ACTION_RUNNING;
+      result.status = rvs::actionstatus::ACTION_SUCCESS;
+      result.output = msg.c_str();
+      action_callback(&result);
     }
     RVSTRACE_
     f_prop.close();
@@ -324,10 +340,19 @@ int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
 int gpup_action::run(void) {
     std::string msg;
     int sts = 0;
+    rvs::action_result_t action_result;
 
     // get the action name
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+      msg = "Action name missing";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS);
+
+      // Action callback
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
+
       return -1;
     }
 
@@ -342,6 +367,13 @@ int gpup_action::run(void) {
         break;
       }
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+      // Action callback
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
+
       return -1;
     }
 
@@ -350,6 +382,13 @@ int gpup_action::run(void) {
                                   &property_device_id, 0u)) {
       msg = "Invalid 'deviceid' key value.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+      // Action callback
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
+
       return -1;
     }
 
@@ -381,6 +420,13 @@ int gpup_action::run(void) {
         } else {
           msg = "Device ID not found for GPU " + std::to_string(*it);
           rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+          // Action callback
+          action_result.state = rvs::actionstate::ACTION_COMPLETED;
+          action_result.status = rvs::actionstatus::ACTION_FAILED;
+          action_result.output = msg;
+          action_callback(&action_result);
+
           return -1;
         }
       }
@@ -439,7 +485,22 @@ int gpup_action::run(void) {
     if (!b_gpu_found) {
       msg = "No device matches criteria from configuration. ";
       rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+      // Action callback
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
+
       return -1;
     }
+
+    // Action callback
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "GPUP Module action " + action_name + " completed";
+    action_callback(&action_result);
+
     return sts;
 }
+

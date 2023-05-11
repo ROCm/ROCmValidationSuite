@@ -107,10 +107,19 @@ rcqt_action::~rcqt_action() {
 int rcqt_action::run() {
   string msg;
   bool propchk = false;
+  int ret = 0;
+  rvs::action_result_t action_result;
 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+    msg = "Action name missing";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS);
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+
     return 1;
   }
 
@@ -128,6 +137,12 @@ int rcqt_action::run() {
       action_name + " " + MODULE_NAME + " "
       + JSON_CREATE_NODE_ERROR;
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
+
       return 1;
     }
   }
@@ -135,13 +150,18 @@ int rcqt_action::run() {
   // check if package check action is going to trigger
   propchk =  rvs::actionbase::has_property(PACKAGE);
   if (propchk == true)
-    return pkgchk_run();
+    ret = pkgchk_run();
 
   propchk =  rvs::actionbase::has_property(PACKAGELIST);
   if (propchk == true)
-    return pkglist_run();
+    ret = pkglist_run();
 
-  return -1;
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!ret) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "RCQT Module action " + action_name + " completed";
+  action_callback(&action_result);
+
+  return ret;
 }
 
 /**
@@ -172,6 +192,7 @@ int rcqt_action::pkgchk_run() {
       return -1;
     }
 
+    handler->setCallback(callback, user_param);
     handler->parseManifest();
     handler->validatePackages();
   }
@@ -204,6 +225,7 @@ int rcqt_action::pkglist_run() {
     return -1;
   }
 
+  handler->setCallback(callback, user_param);
   handler->setPackageList(package_list);
   handler->listPackageVersion();
 

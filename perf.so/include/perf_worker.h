@@ -29,6 +29,8 @@
 #include <memory>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
+#include "include/rvsactionbase.h"
+#include "include/action.h"
 
 #define PERF_RESULT_PASS_MESSAGE         "true"
 #define PERF_RESULT_FAIL_MESSAGE         "false"
@@ -50,9 +52,10 @@ class PERFWorker : public rvs::ThreadBase {
 
     //! sets action name
     void set_name(const std::string& name) { action_name = name; }
+    //! sets action
+    void set_action(const perf_action& _action) { action = _action; }
     //! returns action name
     const std::string& get_name(void) { return action_name; }
-
     //! sets GPU ID
     void set_gpu_id(uint16_t _gpu_id) { gpu_id = _gpu_id; }
     //! returns GPU ID
@@ -207,6 +210,8 @@ class PERFWorker : public rvs::ThreadBase {
  protected:
     //! name of the action
     std::string action_name;
+    //! action instance
+    perf_action action;
     //! index of the GPU that will run the stress test
     int gpu_device_index;
     //Matrix transpose A

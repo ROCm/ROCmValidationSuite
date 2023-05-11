@@ -332,6 +332,21 @@ bool iet_action::get_all_common_config_keys(void) {
       bsts = false;
     }
 
+    // get <device_index> property value (a list of device indexes)
+    if (int sts = property_get_device_index()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device_index' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device_index' key.";
+        break;
+      }
+      // default set as true
+      property_device_index_all = true;
+      rvs::lp::Log(msg, rvs::loginfo);
+    }
+
     // get the other action/IET related properties
     if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
       msg = "invalid '" +
@@ -448,6 +463,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             gpuId = it->second;
             // set worker thread params
             workers[i].set_name(action_name);
+            workers[i].set_action(*this);
             workers[i].set_gpu_id(it->second);
             workers[i].set_gpu_device_index(it->first);
             workers[i].set_pwr_device_id(dev_idx++);
@@ -509,7 +525,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     }
 
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Done with edp test ";
+    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Done with iet test ";
     rvs::lp::Log(msg, rvs::loginfo);
 
     sleep(1000);
@@ -530,7 +546,7 @@ int iet_action::get_num_amd_gpu_devices(void) {
 }
 
 /**
- * @brief retrieves the GPU identification data  and adds it to the list of 
+ * @brief retrieves the GPU identification data and adds it to the list of 
  * those that will run the EDPp test
  * @param dev_location_id GPU device location ID
  * @param gpu_id GPU's ID as exported by KFD
@@ -608,10 +624,11 @@ int iet_action::get_all_selected_gpus(void) {
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
                     property_device, property_device_id, property_device_all, true); // MCM checks
     if(!amd_gpus_found){
+
         msg = "No devices match criteria from the test configuation.";
-	rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-	rsmi_shut_down();
-	return 1;
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        rsmi_shut_down();
+        return 1;
     }
 
     if(bjson){
@@ -637,32 +654,40 @@ int iet_action::get_all_selected_gpus(void) {
  * @return run result
  */
 int iet_action::run(void) {
-    string msg;
+  string msg;
+  rvs::action_result_t action_result;
 
-    // get the action name
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      return -1;
-    }
+  // get the action name
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+    return -1;
+  }
 
-    // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end())
-	bjson = true;
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end())
+    bjson = true;
 
-    if (!get_all_common_config_keys())
-        return -1;
+  if (!get_all_common_config_keys())
+    return -1;
 
-    if (!get_all_iet_config_keys())
-        return -1;
+  if (!get_all_iet_config_keys())
+    return -1;
 
-    if (property_duration > 0 && (property_duration < iet_ramp_interval)) {
-        msg = std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
-        RVS_CONF_RAMP_INTERVAL_KEY + "'";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
-    }
+  if (property_duration > 0 && (property_duration < iet_ramp_interval)) {
+    msg = std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
+      RVS_CONF_RAMP_INTERVAL_KEY + "'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
 
-    return get_all_selected_gpus();
+  auto res =  get_all_selected_gpus();
+
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "IET Module action " + action_name + " completed";
+  action_callback(&action_result);
+
+  return res;
 }
 
 void iet_action::cleanup_logs(){

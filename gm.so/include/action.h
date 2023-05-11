@@ -21,7 +21,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- * 
+ *
  *******************************************************************************/
 
 #ifndef GM_SO_INCLUDE_ACTION_H_
@@ -30,8 +30,8 @@
 #include <string>
 #include <map>
 
-#include "include/worker.h"
 #include "include/rvsactionbase.h"
+#include "include/metrics.h"
 
 using std::string;
 
@@ -73,9 +73,11 @@ class gm_action : public rvs::actionbase {
   //! configuration 'sample_interval'' key
   uint64_t sample_interval;
 
+  friend class Worker;
+
  protected:
   //! device_irq and metric bounds
-  std::map<std::string, Worker::Metric_bound> property_bounds;
+  std::map<std::string, Metric_bound> property_bounds;
 
  private:
   //! JSON roor node helper var

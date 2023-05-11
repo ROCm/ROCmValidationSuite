@@ -1,6 +1,6 @@
 /********************************************************************************
- *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * 
+ * Copyright (c) 2018-2023 Advanced Micro Devices, Inc.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,29 +22,36 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "gtest/gtest.h"
-#include "include/action.h"
-#include "include/worker.h"
-#include "include/gpu_util.h"
 
-Worker* pworker;
+#include <include/rvs.h>
 
-TEST(gm, coverage_rsmi_failure) {
-  rvs::gpulist::Initialize();
-  pworker = nullptr;
-  gm_action* pa = new gm_action;
-  ASSERT_NE(pa, nullptr);
-  pa->property_set("monitor", "true");
-  pa->property_set("name", "unit_test");
-  pa->property_set("device", "all");
-  pa->property_set("terminate", "true");
-  pa->property_set("metrics.temp", "true 30 0");
-  pa->property_set("metrics.fan", "true 100 0");
-  pa->property_set("metrics.clock", "true 1500 0");
-  pa->property_set("metrics.mem_clock", "true 1500 0");
-  pa->property_set("duration", "1000");
-  pa->run();
-  delete pa;
-  pworker->stop();
-  delete pworker;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*! \def RVS_MAX_SESSIONS
+ * Maximum session supported in RVS at once.
+ */
+#define RVS_MAX_SESSIONS 1
+
+/*! \enum rvs_state_t
+ * RVS states.
+ */
+typedef enum {
+  RVS_STATE_INITIALIZED, /*!< RVS initialized state */
+  RVS_STATE_UNINITIALIZED /*!< RVS uninitialized state */
+} rvs_state_t;
+
+/*! \struct rvs_session_t
+ *  \brief RVS session parameters.
+ */
+typedef struct rvs_session_ {
+  rvs_session_id_t id;/*!< Unique session id */
+  rvs_session_state_t state;/*!< Current session state */
+  rvs_session_callback callback;/*!< Session callback */
+  rvs_session_property_t property;/*!< Session property */
+} rvs_session_t;
+
+#ifdef __cplusplus
 }
+#endif

@@ -31,6 +31,7 @@
 #include <memory>
 #include "include/rcutils.h"
 #include "metaPackageInfo.h"
+#include "include/rvsactionbase.h"
 
 class PackageHandler{
 public:
@@ -66,11 +67,21 @@ public:
   void listPackageVersion();
   virtual ~PackageHandler(){}
 	
+  //! Set action callback 
+  void setCallback(rvs::callback_t _callback, void * _user_param) {
+    callback = _callback;
+    user_param = _user_param;
+  }
+
 private:
 	std::map<std::string, std::string> m_pkgversionmap;
   std::vector<std:: string> m_pkglist;
 protected:
 	std::unique_ptr<PackageInfo> metaInfo;
 	std::string m_manifest;	
+  // callback
+  rvs::callback_t callback;
+  // User parameter
+  void * user_param;
 };
 #endif

@@ -100,6 +100,8 @@ class gst_action: public rvs::actionbase {
     int      gst_ldb_offset;
     int      gst_ldc_offset;
 
+    friend class GSTWorker;
+
     // GST specific config keys
 //     void property_get_gst_target_stress(int *error);
 //     void property_get_gst_tolerance(int *error);
@@ -117,7 +119,7 @@ class gst_action: public rvs::actionbase {
   * @brief gets the number of ROCm compatible AMD GPUs
   * @return run number of GPUs
   */
-  int get_num_amd_gpu_devices(void);
+    int get_num_amd_gpu_devices(void);
     int get_all_selected_gpus(void);
     bool do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
 };

@@ -69,6 +69,8 @@ endif(rocblas_FOUND)
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
@@ -76,6 +78,8 @@ set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported 
 set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC Runtime")
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
+add_definitions(-DROCM_PATH="${ROCM_PATH}")
+add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
 
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
@@ -456,8 +460,8 @@ endif()
 
 set(HCC_CXX_FLAGS  "-fno-gpu-rdc  --offload-arch=gfx90a --offload-arch=gfx1030 --offload-arch=gfx803 --offload-arch=gfx900 --offload-arch=gfx906 --offload-arch=gfx908 --offload-arch=gfx1101 --offload-arch=gfx940")
 
-add_subdirectory(rvs)
 add_subdirectory(rvslib)
+add_subdirectory(rvs)
 add_subdirectory(gm.so)
 add_subdirectory(gpup.so)
 add_subdirectory(gst.so)
@@ -477,10 +481,7 @@ if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
 endif()
 
-add_dependencies(rvshelper rvs_bin_folder rvs_doc)
-
-
-add_dependencies(pesm rvslib rvslibrt)
+add_dependencies(pesm rvslib)
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_rsmi_target)
   add_dependencies(iet rvs_rsmi_target)
@@ -512,7 +513,7 @@ if (RVS_BUILD_TESTS)
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   COMMENT "Create the bintest directory"
   VERBATIM)
-  add_dependencies(rvshelper rvs_bintest_folder rvs_gtest_target)
+  add_dependencies(rvs_bintest_folder rvs_gtest_target)
 endif()
 
 add_custom_target(rvs_doc ALL
@@ -588,6 +589,29 @@ if(RVS_ROCMSMI EQUAL 1)
 	  DESTINATION /${CMAKE_INSTALL_SYSCONFDIR}/ld.so.conf.d
           COMPONENT rvsmodule)
 endif()  # if(RVS_ROCMSMI EQUAL 1)
+
+
+# Create and install rvs-config.cmake & rvs-config-version.cmake file
+include(CMakePackageConfigHelpers)
+
+set(LIB_INSTALL_DIR  "${CMAKE_INSTALL_LIBDIR}")
+set(INCLUDE_INSTALL_DIR  "${CMAKE_INSTALL_INCLUDEDIR}")
+set(BIN_INSTALL_DIR  "${CMAKE_INSTALL_BINDIR}")
+
+configure_package_config_file(rvs-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/rvs-config.cmake
+    INSTALL_DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/rvs
+    PATH_VARS LIB_INSTALL_DIR INCLUDE_INSTALL_DIR BIN_INSTALL_DIR)
+
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/rvs-config-version.cmake
+    VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+    COMPATIBILITY SameMajorVersion)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/rvs-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/rvs-config-version.cmake
+    DESTINATION
+    ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/rvs
+    COMPONENT dev)
 
 # TEST SECTION
 

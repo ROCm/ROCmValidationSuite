@@ -55,11 +55,14 @@ bool PackageHandler::parseManifest(){
 
 void PackageHandler::validatePackages(){
 
+  std::string msg;
+
 	auto pkgmap = getPackageMap();
 	if(pkgmap.empty()){
 		std::cout << "no packages to validate in the file " << std::endl;
 		return;
 	}
+
 	int totalPackages = 0, missingPackages = 0, badVersions = 0,
 		installedPackages = 0;
 	for (const auto& val: pkgmap){
@@ -85,15 +88,30 @@ void PackageHandler::validatePackages(){
 					installedvers << std::endl;
 		}
 	}
-	std::cout << "RCQT complete : " << std::endl;
-	std::cout << "\tTotal Packages to validate    : " << totalPackages     << std::endl;
-	std::cout << "\tValid Packages                : " << installedPackages << std::endl;
-	std::cout << "\tMissing Packages              : " << missingPackages   << std::endl;
-	std::cout << "\tPackages version mismatch     : " << badVersions       << std::endl;
-	return ;	
+
+  msg = "RCQT complete : \n";
+  msg += "\tTotal Packages to validate    : " + std::to_string(totalPackages) + "\n" + \
+         "\tValid Packages                : " + std::to_string(installedPackages) + "\n" + \
+         "\tMissing Packages              : " + std::to_string(missingPackages) + "\n" + \
+         "\tPackages version mismatch     : " + std::to_string(badVersions) + "\n";
+
+  std::cout << msg;
+
+  if(nullptr != callback) {
+    rvs::action_result_t action_result;
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = msg.c_str();
+    callback(&action_result, user_param);
+  }
+
+	return ;
 }
 
 void PackageHandler::listPackageVersion(){
+
+  std::string msg;
 
 	auto pkglist = getPackageList();
 	if(pkglist.empty()){
@@ -118,8 +136,20 @@ void PackageHandler::listPackageVersion(){
     }
 	}
 
-	std::cout << "RCQT complete : " << std::endl;
-	std::cout << "\t Total Packages installed : " << installedPackages << std::endl;
+	msg = "RCQT complete : \n";
+	msg += "\t Total Packages installed : " + std::to_string(installedPackages) + "\n";
+
+  std::cout << msg;
+
+  if(nullptr != callback) {
+    rvs::action_result_t action_result;
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = msg.c_str();
+    callback(&action_result, user_param);
+  }
+
 	return;
 }
 

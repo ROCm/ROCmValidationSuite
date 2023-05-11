@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 2018 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -27,6 +27,7 @@ cmake_minimum_required ( VERSION 3.5.0 )
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 set ( RVS "rvslib" )
 set ( RVS_PACKAGE "rvs-roct" )
@@ -114,9 +115,9 @@ else()
 endif()
 
 ## define include directories
-include_directories(./ ../
-  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR}
-)
+include_directories(./ ../ ../rvs
+  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
+
 link_directories(${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
 
 ## define common source files
@@ -137,13 +138,23 @@ set(SOURCES
   ../src/rvsminnode.cpp
   ../src/rvs_blas.cpp
   ../src/rvshsa.cpp
-  )
 
-## define run-time specific source files
-set(SOURCES_RT
+## Run-time specific source files
   ../src/rvsloglp.cpp
   ../src/pci_caps.cpp
-  )
+
+## rvshelper source files
+  ../rvs/src/rvsmodule.cpp
+  ../rvs/src/rvsif_base.cpp
+  ../rvs/src/rvsif0.cpp
+  ../rvs/src/rvsif1.cpp
+  ../rvs/src/rvsaction.cpp
+  ../rvs/src/rvscli.cpp
+  ../rvs/src/rvsexec.cpp
+  ../rvs/src/rvsexec_do_yaml.cpp
+  ../rvs/src/rvsoptions.cpp
+  ../rvs/src/rvs_interface.cpp
+)
 
 ## define unit testing specific source files (mocking)
 set(SOURCES_UT
@@ -152,18 +163,30 @@ set(SOURCES_UT
   ../src/rvs_unit_testing_defs.cpp
    )
 
-## define rvslibrt (run-time) library
-add_library(${RVS_TARGET}rt  ${SOURCES_RT})
-
 ## define rvslib library
-add_library(${RVS_TARGET}  ${SOURCES})
+add_library(${RVS_TARGET} SHARED ${SOURCES})
+
 target_compile_options(${RVS_TARGET} PRIVATE -mf16c)
 target_compile_definitions(${RVS_TARGET} PRIVATE ROCM_USE_FLOAT16)
-add_dependencies(${RVS_TARGET} ${RVS_TARGET}rt)
-target_link_libraries(${RVS_TARGET} ${ROCM_SMI_LIB})
+set_target_properties(${RVS_TARGET}
+ PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}
+ LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+## Install shared library librvslib.so
+add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
+COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+)
+
+install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR} COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}"
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR} COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so"
+	DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR} COMPONENT rvsmodule)
+
 if (RVS_BUILD_TESTS)
   ## define rvslibut (unit test) library
-  add_library(${RVS_TARGET}ut  ${SOURCES_UT})
+  add_library(${RVS_TARGET}ut SHARED ${SOURCES_UT})
   target_compile_definitions(${RVS_TARGET}ut PRIVATE RVS_UNIT_TEST)
-  add_dependencies(${RVS_TARGET}ut ${RVS_TARGET}rt)
+  add_dependencies(${RVS_TARGET}ut ${RVS_TARGET})
 endif()

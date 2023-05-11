@@ -134,6 +134,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
                 it != gst_gpus_device_index.end(); ++it) {
             // set worker thread stress test params
             workers[i].set_name(action_name);
+            workers[i].set_action(*this);
             workers[i].set_gpu_id(it->second);
             workers[i].set_gpu_device_index(it->first);
             workers[i].set_run_wait_ms(property_wait);
@@ -156,7 +157,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             workers[i].set_lda_offset(gst_lda_offset);
             workers[i].set_ldb_offset(gst_ldb_offset);
             workers[i].set_ldc_offset(gst_ldc_offset);
-            
+
             i++;
         }
 
@@ -391,6 +392,21 @@ bool gst_action::get_all_common_config_keys(void) {
       bsts = false;
     }
 
+    // get <device_index> property value (a list of device indexes)
+    if (int sts = property_get_device_index()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device_index' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device_index' key.";
+        break;
+      }
+      // default set as true
+      property_device_index_all = true;
+      rvs::lp::Log(msg, rvs::loginfo);
+    }
+
     // get the other action/GST related properties
     if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
       msg = "invalid '" +
@@ -525,6 +541,7 @@ void gst_action::json_add_primary_fields(){
  */
 int gst_action::run(void) {
     string msg;
+    rvs::action_result_t action_result;
 
     // get the action name
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -556,6 +573,12 @@ int gst_action::run(void) {
     if(bjson){
       rvs::lp::JsonActionEndNodeCreate();
     }
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+    action_result.output = "GST Module action " + action_name + " completed";
+    action_callback(&action_result);
+
     return res;
 }
 

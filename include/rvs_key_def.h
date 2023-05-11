@@ -33,6 +33,7 @@
 #define RVS_CONF_WAIT_KEY               "wait"
 #define RVS_CONF_DURATION_KEY           "duration"
 #define RVS_CONF_DEVICEID_KEY           "deviceid"
+#define RVS_CONF_DEVICE_INDEX_KEY       "device_index"
 #define RVS_CONF_SAMPLE_INTERVAL_KEY    "sample_interval"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
 #define RVS_CONF_TERMINATE_KEY          "terminate"

@@ -166,6 +166,21 @@ bool pebb_action::get_all_common_config_keys(void) {
     bsts = false;
   }
 
+  // get <device_index> property value (a list of device indexes)
+  if (int sts = property_get_device_index()) {
+    switch (sts) {
+    case 1:
+      msg = "Invalid 'device_index' key value.";
+      break;
+    case 2:
+      msg = "Missing 'device_index' key.";
+      break;
+    }
+    // default set as true
+    property_device_index_all = true;
+    rvs::lp::Log(msg, rvs::loginfo);
+  }
+
   // get the other action related properties
   if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
     msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
@@ -552,6 +567,7 @@ int pebb_action::print_final_average() {
   char        buff[128];
   uint16_t    transfer_ix;
   uint16_t    transfer_num;
+  rvs::action_result_t result;
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     RVSTRACE_
@@ -601,6 +617,12 @@ int pebb_action::print_final_average() {
 
     resultBandwidth.push_back(bw);
     log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id), rvs::logresults, buff);
+
+    result.state = rvs::actionstate::ACTION_RUNNING;
+    result.status = rvs::actionstatus::ACTION_SUCCESS;
+    result.output = msg.c_str();
+    action_callback(&result);
+
     RVSTRACE_
   }
   RVSTRACE_
@@ -687,6 +709,7 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
                       bool bReverse) {
   RVSTRACE_
   std::string msg;
+  rvs::action_result_t result;
 
   msg = "[" + action_name + "] pcie-bandwidth "
       + std::to_string(SrcNode)
@@ -712,6 +735,11 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
 
   rvs::lp::Log(msg, rvs::logresults);
   log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstGpuID),rvs::logresults);
+
+  result.state = rvs::actionstate::ACTION_RUNNING;
+  result.status = rvs::actionstatus::ACTION_SUCCESS;
+  result.output = msg.c_str();
+  action_callback(&result);
 
   return 0;
 }
