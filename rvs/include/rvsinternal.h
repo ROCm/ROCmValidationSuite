@@ -24,6 +24,7 @@
  *******************************************************************************/
 
 #include <include/rvs.h>
+#include <include/rvsexec.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,6 +51,7 @@ typedef struct rvs_session_ {
   rvs_session_state_t state;/*!< Current session state */
   rvs_session_callback callback;/*!< Session callback */
   rvs_session_property_t property;/*!< Session property */
+  rvs::exec *executor;/*!< Session executor instance */
 } rvs_session_t;
 
 #ifdef __cplusplus

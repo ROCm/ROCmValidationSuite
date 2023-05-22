@@ -28,20 +28,24 @@
 #include <include/rvsinternal.h>
 #include <include/rvsexec.h>
 #include <map>
+#include <mutex>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/*! \var std::mutex rvs_mutex
+    \brief RVS mutex
+*/
+std::mutex rvs_mutex;
+
 /*! \var rvs_state_t rvs_state
     \brief RVS current state
-    \warning Not thread safe!
 */
 rvs_state_t rvs_state = RVS_STATE_UNINITIALIZED;
 
 /*! \var rvs_session_t rvs_session
     \brief RVS sessions details
-    \warning Not thread safe!
 */
 rvs_session_t rvs_session[RVS_MAX_SESSIONS];
 
@@ -56,6 +60,8 @@ void rvs_callback(const rvs_results_t * results, int user_param);
  * @return RVS_STATUS_FAILED - Failed to initialize
  */
 rvs_status_t rvs_initialize(void) {
+
+  std::lock_guard<std::mutex> rvs_lg(rvs_mutex);
 
   if (RVS_STATE_INITIALIZED == rvs_state) {
     return RVS_STATUS_INVALID_STATE;
@@ -78,19 +84,19 @@ rvs_status_t rvs_session_create(rvs_session_id_t *session_id, rvs_session_callba
 
   unsigned int session_idx;
 
-  if (RVS_STATE_INITIALIZED != rvs_state) {
-    return RVS_STATUS_INVALID_STATE;
-  }
-
   if ((NULL == session_id) || (NULL == session_cb)) {
     return RVS_STATUS_INVALID_ARGUMENT;
+  }
+
+  std::lock_guard<std::mutex> rvs_lg(rvs_mutex);
+
+  if (RVS_STATE_INITIALIZED != rvs_state) {
+    return RVS_STATUS_INVALID_STATE;
   }
 
   if (RVS_STATUS_SUCCESS != rvs_get_session_instance(&session_idx)) {
     return RVS_STATUS_FAILED;
   }
-
-  printf("session_idx -> %d \n",session_idx);
 
   rvs_session[session_idx].id = session_idx + 1;
   rvs_session[session_idx].state = RVS_SESSION_STATE_CREATED;
@@ -112,12 +118,14 @@ rvs_status_t rvs_session_set_property(rvs_session_id_t session_id, rvs_session_p
 
   unsigned int session_idx;
 
-  if (RVS_STATE_INITIALIZED != rvs_state) {
-    return RVS_STATUS_INVALID_STATE;
-  }
-
   if (NULL == session_property) {
     return RVS_STATUS_INVALID_ARGUMENT;
+  }
+
+  std::lock_guard<std::mutex> rvs_lg(rvs_mutex);
+
+  if (RVS_STATE_INITIALIZED != rvs_state) {
+    return RVS_STATUS_INVALID_STATE;
   }
 
   if (RVS_STATUS_SUCCESS != rvs_validate_session(session_id, &session_idx)) {
@@ -159,7 +167,8 @@ rvs_status_t rvs_session_execute(rvs_session_id_t session_id) {
 
   unsigned int session_idx;
   std::map<std::string, std::string> opt;
-  rvs::exec executor;
+
+  std::lock_guard<std::mutex> rvs_lg(rvs_mutex);
 
   if (RVS_STATE_INITIALIZED != rvs_state) {
     return RVS_STATUS_INVALID_STATE;
@@ -222,8 +231,12 @@ rvs_status_t rvs_session_execute(rvs_session_id_t session_id) {
 
   rvs_session[session_idx].state = RVS_SESSION_STATE_INITIATED;
 
-  executor.set_callback(rvs_callback, (int)session_id);
-  if(executor.run(opt)) {
+  if(nullptr == rvs_session[session_idx].executor) {
+    rvs_session[session_idx].executor = new rvs::exec();
+  }
+
+  rvs_session[session_idx].executor->set_callback(rvs_callback, (int)session_id);
+  if(rvs_session[session_idx].executor->run(opt)) {
     return RVS_STATUS_FAILED;
   }
 
@@ -240,6 +253,8 @@ rvs_status_t rvs_session_destroy(rvs_session_id_t session_id){
 
   unsigned int session_idx;
 
+  std::lock_guard<std::mutex> rvs_lg(rvs_mutex);
+
   if (RVS_STATE_INITIALIZED != rvs_state) {
     return RVS_STATUS_INVALID_STATE;
   }
@@ -254,19 +269,23 @@ rvs_status_t rvs_session_destroy(rvs_session_id_t session_id){
 
   rvs_session[session_idx].id = 0;
   rvs_session[session_idx].state = RVS_SESSION_STATE_IDLE;
-  rvs_session[session_idx].callback = NULL;
+  rvs_session[session_idx].callback = nullptr;
+  delete rvs_session[session_idx].executor;
+  rvs_session[session_idx].executor = nullptr;
   memset(&(rvs_session[session_idx].property), 0, sizeof(rvs_session_property_t));
 
   return RVS_STATUS_SUCCESS;
 }
 
 /**
- * Terminate/Deinitialize RVS(ROCMm Validation Suite) component. 
+ * Terminate/Deinitialize RVS(ROCm Validation Suite) component.
  * @param None 
  * @return RVS_STATUS_SUCCESS - Successfully deinitialized
  * @return RVS_STATUS_FAILED - Failed to deinitialize
  */
 rvs_status_t rvs_terminate(void) {
+
+  std::lock_guard<std::mutex> rvs_lg(rvs_mutex);
 
   if (RVS_STATE_INITIALIZED != rvs_state) {
     return RVS_STATUS_INVALID_STATE;
