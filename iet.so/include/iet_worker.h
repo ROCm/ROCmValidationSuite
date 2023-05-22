@@ -27,6 +27,8 @@
 
 #include <string>
 #include <memory>
+#include <mutex>
+#include <condition_variable>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
 #include "include/rvs_util.h"
@@ -206,6 +208,9 @@ class IETWorker : public rvs::ThreadBase {
         matrix_size_c = _matrix_size_c;
     }
 
+    //! BLAS callback
+    static void blas_callback (bool status, void *user_data);
+
  protected:
     virtual void run(void);
     bool do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type);
@@ -290,7 +295,12 @@ class IETWorker : public rvs::ThreadBase {
     //IET TP flag
     bool iet_tp_flag;
     bool endtest = false;
+    //! GEMM operations synchronization mutex
+    std::mutex mutex;
+    //! GEMM operations synchronization condition variable
+    std::condition_variable cv;
+    //! blas gemm operations status
+    bool blas_status;
 };
-
 
 #endif  // IET_SO_INCLUDE_IET_WORKER_H_
