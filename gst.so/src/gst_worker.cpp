@@ -690,10 +690,9 @@ void GSTWorker::usleep_ex(uint64_t microseconds) {
  */
 void GSTWorker::blas_callback (bool status, void *user_data) {
 
-  if(nullptr == user_data) {
+  if(!user_data) {
     return;
   }
-
   GSTWorker *worker = (GSTWorker *)user_data;
 
   /* Notify gst worker thread gemm operation completion */

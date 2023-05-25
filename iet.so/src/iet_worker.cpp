@@ -351,10 +351,9 @@ void IETWorker::run() {
  */
 void IETWorker::blas_callback (bool status, void *user_data) {
 
-  if(nullptr == user_data) {
+  if(!user_data) {
     return;
   }
-
   IETWorker* worker = (IETWorker*)user_data;
 
   /* Notify gst worker thread gemm operation completion */
