@@ -38,6 +38,8 @@
 #include "hip/hip_runtime_api.h"
 #include <sys/time.h>
 
+typedef void (*rvsBlasCallback_t) (bool status, void *userData);
+
 /**
  * @class rvs_blas
  * @ingroup GST
@@ -86,6 +88,13 @@ class rvs_blas {
     bool run_blass_gemm(std::string);
     bool is_gemm_op_complete(void);
 
+    bool set_callback(rvsBlasCallback_t callback, void *user_data);
+
+    static void hip_stream_callback (hipStream_t stream, hipError_t status, void *user_data);
+
+    rvsBlasCallback_t callback;
+    void * user_data;
+
  protected:
     //! GPU device index
     int gpu_device_index;
@@ -110,7 +119,7 @@ class rvs_blas {
     //! Transpose matrix B
     rocblas_operation transb;
 
-    //SGEMM DECLARAION
+    //SGEMM DECLARATION
     //! pointer to device (GPU) memory
     float *da;
     //! pointer to device (GPU) memory

@@ -27,6 +27,8 @@
 
 #include <string>
 #include <memory>
+#include <mutex>
+#include <condition_variable>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
 #include "include/rvs_util.h"
@@ -196,6 +198,9 @@ class GSTWorker : public rvs::ThreadBase {
 
     void set_gst_ops_type(std::string _ops_type) { gst_ops_type = _ops_type; }
 
+    //! BLAS callback
+    static void blas_callback (bool status, void *user_data);
+
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -264,8 +269,14 @@ class GSTWorker : public rvs::ThreadBase {
     double delay_target_stress;
     //! TRUE if JSON output is required
     static bool bjson;
-    //Type of operation
+    //! Type of operation
     std::string gst_ops_type;
+    //! GEMM operations synchronization mutex
+    std::mutex mutex;
+    //! GEMM operations synchronization condition variable
+    std::condition_variable cv;
+    //! blas gemm operations status
+    bool blas_status;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

@@ -31,8 +31,6 @@
 #include <exception>
 
 #include "rocm_smi/rocm_smi.h"
-//#include "rocm_smi/rocm_smi_main.h"
-//#include "rocm_smi/rocm_smi_device.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 
@@ -140,7 +138,8 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
     double duration;
     uint64_t gem_ops;
     std::unique_ptr<rvs_blas> gpu_blas;
-    rvs_blas  *free_gpublas;
+    rvs_blas *free_gpublas;
+    string msg;
 
     duration = 0;
     gem_ops = 0;
@@ -161,8 +160,17 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
         //call the gemm blas
         gpu_blas->run_blass_gemm(iet_ops_type);
 
-        /* Wait for the previous gemm operations to complete */
-        while (!gpu_blas->is_gemm_op_complete()) {}
+        /* Set callback to be called upon completion of blas gemm operations */
+        gpu_blas->set_callback(blas_callback, (void *)this);
+
+        std::unique_lock<std::mutex> lk(mutex);
+        cv.wait(lk);
+
+        if(!blas_status) {
+          msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
+          rvs::lp::Log(msg, rvs::logtrace);
+        }
 
         //get the end time
         iet_end_time = std::chrono::system_clock::now();
@@ -335,3 +343,22 @@ void IETWorker::run() {
 
     sleep(5);
 }
+
+/**
+ * @brief blas callback function upon gemm operation completion
+ * @param status gemm operation status
+ * @param user_data user data set
+ */
+void IETWorker::blas_callback (bool status, void *user_data) {
+
+  if(!user_data) {
+    return;
+  }
+  IETWorker* worker = (IETWorker*)user_data;
+
+  /* Notify gst worker thread gemm operation completion */
+  std::lock_guard<std::mutex> lk(worker->mutex);
+  worker->blas_status = status;
+  worker->cv.notify_one();
+}
+

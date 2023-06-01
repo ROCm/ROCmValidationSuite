@@ -142,10 +142,20 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
         }
 
         // run GEMM & wait for completion
-        if (!gpu_blas->run_blass_gemm(gst_ops_type) )
+        if (!gpu_blas->run_blass_gemm(gst_ops_type))
             continue;  // failed to run the current SGEMM
 
-        while (!gpu_blas->is_gemm_op_complete()) {}
+        /* Set callback to be called upon completion of blas gemm operations */
+        gpu_blas->set_callback(blas_callback, (void *)this);
+
+        std::unique_lock<std::mutex> lk(mutex);
+        cv.wait(lk);
+
+        if(!blas_status) {
+          msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
+          rvs::lp::Log(msg, rvs::logtrace);
+        }
 
         num_sgemm_ops_log_interval++;
 
@@ -227,7 +237,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
         gst_last_sgemm_start_time = std::chrono::system_clock::now();
 
         if (copy_matrix) {
-            // Genrate random matrix data
+            // Generate random matrix data
             gpu_blas->generate_random_matrix_data();
             // copy matrix before each GEMM
             if (!gpu_blas->copy_data_to_gpu(gst_ops_type)) {
@@ -242,7 +252,19 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 
         // run GEMM & wait for completion
         gpu_blas->run_blass_gemm(gst_ops_type);
-        while (!gpu_blas->is_gemm_op_complete()) {}
+
+        /* Set callback to be called upon completion of blas gemm operations */
+        gpu_blas->set_callback(blas_callback, (void *)this);
+
+        std::unique_lock<std::mutex> lk(mutex);
+        cv.wait(lk);
+
+        if(!blas_status) {
+          msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
+          rvs::lp::Log(msg, rvs::logtrace);
+        }
+
         //End the timer
         end_time = gpu_blas->get_time_us();
 
@@ -434,9 +456,21 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         //Start the timer
         start_time = gpu_blas->get_time_us();
 
-	// run GEMM & wait for completion
+        // run GEMM & wait for completion
         gpu_blas->run_blass_gemm(gst_ops_type);
-        while (!gpu_blas->is_gemm_op_complete()) {} // wait till gemm tasks complete
+
+        /* Set callback to be called upon completion of blas gemm operations */
+        gpu_blas->set_callback(blas_callback, (void *)this);
+
+        std::unique_lock<std::mutex> lk(mutex);
+        cv.wait(lk);
+
+        if(!blas_status) {
+          msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
+          rvs::lp::Log(msg, rvs::logtrace);
+        }
+
         //End the timer
         end_time = gpu_blas->get_time_us();
 
@@ -648,3 +682,22 @@ void GSTWorker::usleep_ex(uint64_t microseconds) {
         }
     }
 }
+
+/**
+ * @brief blas callback function upon gemm operation completion
+ * @param status gemm operation status
+ * @param user_data user data set
+ */
+void GSTWorker::blas_callback (bool status, void *user_data) {
+
+  if(!user_data) {
+    return;
+  }
+  GSTWorker *worker = (GSTWorker *)user_data;
+
+  /* Notify gst worker thread gemm operation completion */
+  std::lock_guard<std::mutex> lk(worker->mutex);
+  worker->blas_status = status;
+  worker->cv.notify_one();
+}
+
