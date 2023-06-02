@@ -1,5 +1,4 @@
 # ROCmValidationSuite
-
 The ROCm Validation Suite (RVS) is a system administrator’s and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPU(s) running in a high-performance computing environment, enabled using the ROCm software stack on a compatible platform.
 
 The RVS is a collection of tests, benchmarks and qualification tools each targeting a specific sub-system of the ROCm platform. All of the tools are implemented in software and share a common command line interface. Each set of tests are implemented in a “module” which is a library encapsulating the functionality specific to the tool. The CLI can specify the directory containing modules to use when searching for libraries to load. Each module may have a set of options that it defines and a configuration file that supports its execution.
@@ -25,15 +24,15 @@ Please do this before compilation/installing compiled package.
 
 Ubuntu : 
       
-        sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git
+        sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
 
  CentOS : 
         
-        sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ 
+        sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
  
  RHEL : 
         
-       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ 
+       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
         
        wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
         
@@ -45,7 +44,7 @@ Ubuntu :
        
        sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
        
-       sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ 
+       sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
 ## Install ROCm stack, rocblas and rocm-smi-lib
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
@@ -89,14 +88,14 @@ This section explains how to get and compile current development stream of RVS.
     cd ROCmValidationSuite
  If OS is Ubuntu and SLES, use cmake
     
-     cmake  -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path> ./ -B./build
-     eg/- cmake -DROCM_PATH=/opt/rocm-4.0.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-4.0.0 -DCMAKE_PACKAGING_INSTALL_PREFIX=/opt/rocm-4.0.0 ./ -B./build
+     cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
+     e.g. cmake -B ./build -DROCM_PATH=/opt/rocm-5.5.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-5.5.0 -DCMAKE_PACKAGING_INSTALL_PREFIX=/opt/rocm-5.5.0
      
      make -C ./build
      
 If OS is CentOS and RHEL, use cmake3
 
-    cmake3  -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path> ./ -B./build
+    cmake3 -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCMAKE_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
  
     make -C ./build
 
@@ -127,11 +126,13 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
 ### Running version built from source code:
 
     cd ./build/bin
-    sudo ./rvs -d 3
-    sudo ./rvsqa.new.sh ; It will run complete rvs test suite
+    ./rvs --help ; Lists all options to run RVS test suite
+    ./rvs -g ; Lists supported GPUs available in the machine
+    ./rvs -d 3 ; Executes the complete RVS test suite
+    ./rvs -c conf/gst_single.conf ; Executes GST test only
 
 ### Running version pre-complied and packaged with ROCm release
-sudo /opt/rocm/rvs/rvs -d 3
+/opt/rocm/rvs/rvs -d 3
 
 Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
 

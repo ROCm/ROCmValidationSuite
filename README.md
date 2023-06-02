@@ -211,5 +211,3 @@ example for gst is:
 }
 
 ```
-
-
