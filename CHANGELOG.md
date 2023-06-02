@@ -12,5 +12,8 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 - Moved all static internal libraries to a single public shared library (rvslib).
 - Use HIP stream callback mechanism for gemm operations completion (instead of polling).
 
+### Optimizations
+- In GST and IET modules, use of callback mechanism instead of polling for HIP stream reduced the CPU utilization %.
+
 ### Removed
 - yaml-cpp source download and build removed from RVS cmake build.
