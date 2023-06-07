@@ -22,14 +22,15 @@ pre-built package.
 ### Building from Source Code
 
 RVS has been developed as open source solution. Its source code and belonging
-documentation can be found at AMD's GitHub page.\n
-In order to build RVS from source code please visit
+documentation can be found at AMD's GitHub page.  
+In order to build RVS from source code, refer
 [ROCm Validation Suite GitHub
 site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite)
 and follow instructions in README file.
 
 ### Installing from Package
-Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.
+Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.  
+For more details, refer [ROCm Validation Suite GitHub site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
 
 RVS package components are installed in `/opt/rocm`. Package contains:
 - executable binary (located in _install-base_/rvs)
