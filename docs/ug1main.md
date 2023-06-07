@@ -29,17 +29,14 @@ site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite)
 and follow instructions in README file.
 
 ### Installing from Package
-Please download `rocm-validation-suite-$(RVSVER).deb` or `.rpm` file from AMD
-site. Install package using your favorite package manager.
+Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.
 
-RVS components is installed in `/opt/rocm/rvs`. Package contains:
-- executable modules
-- user guide (located in in _install-base_/userguide/html)
-- man page (located in _install-base_/man)
-- configuration examples (located in _install-base_/conf)
-
-If needed, you may remove RVS package using you favorite package manager.
-
+RVS package components are installed in `/opt/rocm`. Package contains:
+- executable binary (located in _install-base_/rvs)
+- modules specific shared libraries (located in _install-base_/lib/rvs)
+- user guide (located in _install-base_/share/rocm-validation-suite/userguide)
+- man page (located in _install-base_/share/man)
+- configuration examples (located in _install-base_/share/rocm-validation-suite/conf)
 
 ## Basic Concepts
 
