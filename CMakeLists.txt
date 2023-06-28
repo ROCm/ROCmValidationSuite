@@ -38,7 +38,7 @@ endif ()
 enable_testing()
 
 # Prerequisite - Check if rocblas was already installed
-find_package (rocblas)
+find_package(rocblas REQUIRED)
 if(rocblas_FOUND)
   message(STATUS "rocblas found")
   message(STATUS "rocblas Version: ${rocblas_VERSION}")
@@ -60,8 +60,6 @@ if(rocblas_FOUND)
 	message( STATUS "ROCBLAS REORG VERSION: ${RVS_ROCBLAS_VERSION_FLAT}" )
     endif() #ROCBLAS Version check reorg or not
   endif() #ROCBLAS Valid Version flag check
-else() #If ROCBLAS not found
-  message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
 endif(rocblas_FOUND)
 
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
@@ -86,15 +84,10 @@ add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/
 # definition and dump it in the cache along with proper documentation,
 # otherwise set CMAKE_BUILD_TYPE to Debug prior to calling PROJECT()
 #
-if(DEFINED CMAKE_BUILD_TYPE)
-   set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "Choose the type of
-     build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug
-     Release RelWithDebInfo MinSizeRel.")
-else()
-   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build,
-     options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
-     RelWithDebInfo MinSizeRel.")
-endif()
+# Cached variable does not overwrite the command line argument
+set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build,
+ options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
+ RelWithDebInfo MinSizeRel.")
 
 option(CMAKE_VERBOSE_MAKEFILE "Enable verbose output" OFF)
 option(CMAKE_EXPORT_COMPILE_COMMANDS "Export compile commands for linters and autocompleters" ON)
@@ -150,8 +143,8 @@ set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.support@amd.com>")
 #set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "rocblas")
-set(CPACK_RPM_PACKAGE_REQUIRES "rocblas")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "rocblas, libyaml-cpp-dev")
+set(CPACK_RPM_PACKAGE_REQUIRES "rocblas, yaml-cpp-devel")
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
@@ -246,11 +239,9 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 ################################################################################
 # check yaml-cpp available at configure time
-find_package(yaml-cpp)
+find_package(yaml-cpp REQUIRED)
 if (yaml-cpp_FOUND)
   message("yaml-cpp found")
-else()
-  message(FATAL_ERROR "yaml-cpp not found !!! Install  to proceed ...")
 endif(yaml-cpp_FOUND)
 
 ################################################################################
@@ -532,38 +523,37 @@ add_custom_target(copy-files ALL
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
-message(STATUS "Doxygen: ${DOXYGEN_EXECUTABLE}")
-add_custom_target(rvs_progguide ALL
-    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Generating RVS Programmer's Reference Guide"
-    VERBATIM)
-add_dependencies(rvs_progguide rvs_doc)
+  message(STATUS "Doxygen: ${DOXYGEN_EXECUTABLE}")
+  add_custom_target(rvs_progguide ALL
+      COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMENT "Generating RVS Programmer's Reference Guide"
+      VERBATIM)
+  add_dependencies(rvs_progguide rvs_doc)
 
-add_custom_target(rvs_man1 ALL
-    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE} DoxyMan1
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Generating RVS man.1 files"
-    VERBATIM)
-add_dependencies(rvs_man1 rvs_doc)
+  add_custom_target(rvs_man1 ALL
+      COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE} DoxyMan1
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMENT "Generating RVS man.1 files"
+      VERBATIM)
+  add_dependencies(rvs_man1 rvs_doc)
 
-add_custom_target(rvs_userguide ALL
-    COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE} DoxyGuide
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Generating RVS User Guide"
-    VERBATIM)
-add_dependencies(rvs_userguide rvs_doc)
+  add_custom_target(rvs_userguide ALL
+      COMMAND RVSVER=${VERSION_STRING} RVSBUILD=${CMAKE_BINARY_DIR} ${DOXYGEN_EXECUTABLE} DoxyGuide
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMENT "Generating RVS User Guide"
+      VERBATIM)
+  add_dependencies(rvs_userguide rvs_doc)
 
-install(DIRECTORY "${CMAKE_BINARY_DIR}/doc/man/man1/"
-	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/man/man1
-  COMPONENT applications 
-)
+  install(DIRECTORY "${CMAKE_BINARY_DIR}/doc/man/man1/"
+      DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/man/man1
+    COMPONENT applications 
+  )
 
-install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html
-	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/userguide
-  COMPONENT applications
-)
-
+  install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html
+      DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/userguide
+    COMPONENT applications
+  )
 else()
   message("Doxygen is not found. Will not generate documentation.")
 endif(DOXYGEN_FOUND)
