@@ -65,13 +65,13 @@ else() #If ROCBLAS not found
 endif(rocblas_FOUND)
 
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
-# variables since we will pass them as cmake params appropriately, and 
-# all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
+# variables since we will pass them as cmake params appropriately, and
+# all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
-set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
+set(CMAKE_INSTALL_PREFIX "${ROCM_PATH}" CACHE PATH "CMAKE installation directory")
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
+set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
 set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Runtime" FORCE)
@@ -95,6 +95,9 @@ else()
      options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
      RelWithDebInfo MinSizeRel.")
 endif()
+
+option(CMAKE_VERBOSE_MAKEFILE "Enable verbose output" OFF)
+option(CMAKE_EXPORT_COMPILE_COMMANDS "Export compile commands for linters and autocompleters" ON)
 
 #include ( CTest )
 
