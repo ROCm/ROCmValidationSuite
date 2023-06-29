@@ -1,0 +1,37 @@
+.TH "md_docs__build_html__sources_regression" 1 "Mon Apr 10 2023" "Version 1.0.0" "RVS" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_docs__build_html__sources_regression \- Regression 
+Regression is currently implemented for GST, PET, PEBB, PEQT, IET and RAND module only\&. It comes in the form of a Python script \fCrun_regression\&.py\fP\&.
+.PP
+The script will first create valid configuration files on \fC$RVS_BUILD/regression\fP folder\&. It is done by invoking \fCprq_create_conf\&.py\fP script to generate valid configuration files\&.
+.PP
+Then, it will iterate through generated files and invoke RVS to specifying also log output and \fC-d 3\fP logging level\&.
+.PP
+Finally, it will iterate over generated log output files and search for \fCERROR\fP string\&. Results are written into \fC$RVS_BUILD/regression/regression_res\fP file\&.
+.PP
+Results are written into $RVS_BUILD/regression/
+.SH "Environment variables"
+.PP
+Before running the run_regression\&.py you first need to set the following environment variables for location of RVS source tree and build folders (adjust for your particular clone): 
+.PP
+.nf
+export WB=/work/yourworkfolder
+export RVS=$WB/ROCmValidationSuite
+export RVS_BUILD=$RVS/../build
+
+.fi
+.PP
+ 
+.SH "Running the script"
+.PP
+Just do: 
+.PP
+.nf
+cd $RVS/regression
+./run_regression.py
+
+.fi
+.PP
+ 

@@ -1,0 +1,67 @@
+.TH "md_docs__build_html__sources_prerequisites" 1 "Mon Apr 10 2023" "Version 1.0.0" "RVS" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_docs__build_html__sources_prerequisites \- Prerequisites 
+In order to build RVS from source, you need to have several packages on your system:
+.PP
+.IP "\(bu" 2
+GCC 5\&.4\&.0
+.IP "\(bu" 2
+ROCm 1\&.8
+.IP "\(bu" 2
+CMake 3\&.5\&.0
+.IP "\(bu" 2
+libpci-dev
+.IP "\(bu" 2
+Doxygen 1\&.8\&.11
+.PP
+.SH "GCC"
+.PP
+GCC 5\&.4\&.0 or later should already be installed on your system\&. If not, refere to GCC installation instructions\&.
+.SH "ROCm 1\&.8"
+.PP
+Please install following ROCm installation instructions\&.
+.SH "CMake"
+.PP
+If CMake is not installed on your system you may install it like this: 
+.PP
+.nf
+sudo apt-get install software-properties-common
+sudo add-apt-repository ppa:george-edison55/cmake-3.x
+sudo apt-get update
+
+sudo apt-get install cmake
+
+.fi
+.PP
+ 
+.SH "libpci-dev"
+.PP
+First install \fClibpci3\&.s0\fP: 
+.PP
+.nf
+sudo apt-get update
+sudo apt-get install libpci3
+
+.fi
+.PP
+ Then install header files: 
+.PP
+.nf
+sudo apt-get install libpci-dev
+
+.fi
+.PP
+ 
+.SH "Doxygen"
+.PP
+For Ubuntu: 
+.PP
+.nf
+sudo apt-get update
+sudo apt-get install doxygen
+
+.fi
+.PP
+ 

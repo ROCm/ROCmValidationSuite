@@ -1,0 +1,70 @@
+.TH "md_docs__build_html__sources_features" 1 "Mon Apr 10 2023" "Version 1.0.0" "RVS" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_docs__build_html__sources_features \- ROCmValidationSuite Modules 
+
+.SH "GPU Properties – GPUP"
+.PP
+The GPU Properties module queries the configuration of a target device and returns the device’s static characteristics\&. These static values can be used to debug issues such as device support, performance and firmware problems\&.
+.SH "GPU Monitor – GM module"
+.PP
+The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information at regular intervals\&. The module can be configured to halt another RVS modules execution if one of the quantities exceeds a specified boundary value\&.
+.SH "PCI Express State Monitor  – PESM module"
+.PP
+The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU\&. The module will register a “listener” on a target GPU’s PCIe interconnect, and log a message whenever it detects a state change\&. The PESM will be able to detect the following state changes:
+.PP
+.IP "1." 4
+PCIe link speed changes
+.IP "2." 4
+GPU power state changes
+.PP
+.SH "ROCm Configuration Qualification Tool  - RCQT module"
+.PP
+The ROCm Configuration Qualification Tool ensures the platform is capable of running ROCm applications and is configured correctly\&. It checks the installed versions of the ROCm components and the platform configuration of the system\&. This includes checking that dependencies, corresponding to the associated operating system and runtime environment, are installed correctly\&. Other qualification steps include checking:
+.PP
+.IP "1." 4
+The existence of the /dev/kfd device
+.IP "2." 4
+The /dev/kfd device’s permissions
+.IP "3." 4
+The existence of all required users and groups that support ROCm
+.IP "4." 4
+That the user mode components are compatible with the drivers, both the KFD and the amdgpu driver\&.
+.IP "5." 4
+The configuration of the runtime linker/loader qualifying that all ROCm libraries are in the correct search path\&.
+.PP
+.SH "PCI Express Qualification Tool – PEQT module"
+.PP
+The PCIe Qualification Tool consists is used to qualify the PCIe bus on which the GPU is connected\&. The qualification test will be capable of determining the following characteristics of the PCIe bus interconnect to a GPU:
+.PP
+.IP "1." 4
+Support for Gen 3 atomic completers
+.IP "2." 4
+DMA transfer statistics
+.IP "3." 4
+PCIe link speed
+.IP "4." 4
+PCIe link width
+.PP
+.SH "SBIOS Mapping Qualification Tool – SMQT module"
+.PP
+The GPU SBIOS mapping qualification tool is designed to verify that a platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct products for ROCm support\&.
+.PP
+Refer to the “ROCm Use of Advanced PCIe Features and Overview of How BAR Memory is Used In ROCm Enabled System” web page for more information about how BAR memory is initialized by VDI and Radeon products\&.
+.SH "P2P Benchmark and Qualification Tool – PBQT module"
+.PP
+The P2P Benchmark and Qualification Tool is designed to provide the list of all GPUs that support P2P and characterize the P2P links between peers\&. In addition to testing for P2P compatibility, this test will perform a peer-to-peer throughput test between all P2P pairs for performance evaluation\&. The P2P Benchmark and Qualification Tool will allow users to pick a collection of two or more GPUs on which to run\&. The user will also be able to select whether or not they want to run the throughput test on each of the pairs\&.
+.PP
+Please see the web page “ROCm, a New Era in Open GPU Computing” to find out more about the P2P solutions available in a ROCm environment\&.
+.SH "PCI Express Bandwidth Benchmark – PEBB module"
+.PP
+The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory\&. The maximum bandwidth obtained is reported to help debug low bandwidth issues\&. The benchmark should be capable of targeting one, some or all of the GPUs installed in a platform, reporting individual benchmark statistics for each\&.
+.SH "GPU Stress Test  - GST module"
+.PP
+The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM (Single/Double-precision General Matrix Multiplication) workload on one, some or all GPUs\&. The GPUs can be of the same or different types\&. The duration of the benchmark should be configurable, both in terms of time (how long to run) and iterations (how many times to run)\&.
+.PP
+The test should be capable driving the power level equivalent to the rated TDP of the card, or levels below that\&. The tool must be capable of driving cards at TDP-50% to TDP-100%, in 10% incremental jumps\&. This should be controllable by the user\&.
+.SH "Input EDPp Test  - IET module"
+.PP
+The Input EDPp Test generates EDP peak power on all input rails\&. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the board\&. Peak Current at defined period = 1 minute moving average power\&. 

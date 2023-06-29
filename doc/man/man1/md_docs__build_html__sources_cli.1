@@ -1,0 +1,59 @@
+.TH "md_docs__build_html__sources_cli" 1 "Mon Apr 10 2023" "Version 1.0.0" "RVS" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_docs__build_html__sources_cli \- CLI 
+
+.SH "Synopsis"
+.PP
+\fBrvs\fP [\fB-h\fP|\fB-g\fP|\fB-t\fP|\fB--version\fP|\fB--help\fP|\fB--listTests\fP|\fB--listGpus\fP] \fBrvs\fP [[[\fB-d\fP|\fB--debugLevel\fP] 0|\fB--quiet\fP] | [[\fB-d\fP|\fB--debugLevel\fP] 1|2|3|4] | [[\fB-d\fP|\fB--debugLevel\fP] 5|\fB--verbose\fP|\fB-v\fP]] [\fB-c\fP \fIpath/config_file\fP] [\fB-l\fP \fIpath/log_file\fP [\fB-a\fP] [\fB-j\fP]] [\fB-m\fP \fImodule_path\fP]
+.SH "Options"
+.PP
+.PP
+.nf
+-a --appendLog     When generating a debug logfile, do not overwrite the contents
+                   of a current log\&. Used in conjuction with the -d and -l options
+-c --config        Specify the configuration file to be used\&.
+                   The default is <install base>/conf/RVS\&.conf
+   --configless    Run RVS in a configless mode\&. Executes a "long" test on all
+                   supported GPUs\&.
+-d --debugLevel    Specify the debug level for the output log\&. The range is
+                   0 to 5 with 5 being the most verbose\&.
+                   Used in conjunction with the -l flag\&.
+-g --listGpus      List the GPUs available and exit\&. This will only list GPUs
+                   that are supported by RVS\&.
+-i --indexes       Comma separated list of indexes devices to run RVS on\&. This will
+                   override the device values specified in the configuration file for
+                   every action in the configuration file, including the ‘all’ value\&.
+-j --json          Output should use the JSON format\&.
+-l --debugLogFile  Specify the logfile for debug information\&. This will produce a log
+                   file intended for post-run analysis after an error\&.
+   --quiet         No console output given\&. See logs and return code for errors\&.
+-m --modulepath    Specify a custom path for the RVS modules\&.
+   --specifiedtest Run a specific test in a configless mode\&. Multiple word tests
+                   should be in quotes\&. This action will default to all devices,
+                   unless the indexes option is specifie\&.
+-t --listTests     List the modules available to be executed through RVS and exit\&.
+                   This will list only the readily loadable modules
+                   given the current path and library conditions\&.
+-v --verbose       Enable verbose reporting\&. This is equivalent to
+                   specifying the -d 5 option\&.
+   --version       Displays the version information and exits\&.
+-h --help          Display usage information and exit\&.
+.fi
+.PP
+.SH "Exit Status"
+.PP
+.PP
+.nf
+0        - if OK
+non-zero - otherwise
+.fi
+.PP
+.SH "Examples"
+.PP
+\fBrvs\fP Runs rvs with the default test configuration file \fI[install_base]/conf/rvs\&.conf\fP
+.PP
+\fBrvs -c conf/gpup1\&.conf -d 3 -j -l mylog\&.txt\fP Runs rvs with configuration file \fIconf/gpup1\&.conf\fP and writes output into log file \fImylog\&.txt\fP using logging level 3 (INFO) in JSON format
+.PP
+For more details consult the User Guide located in: \fI[install_base]/userguide/html/index\&.html\fP 

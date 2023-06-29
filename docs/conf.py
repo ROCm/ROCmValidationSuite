@@ -6,6 +6,9 @@
 
 from rocm_docs import ROCmDocs
 
+
+external_projects_current_project = "rocm-validation-suite"
+
 docs_core = ROCmDocs("RVS Documentation")
 docs_core.setup()
 
