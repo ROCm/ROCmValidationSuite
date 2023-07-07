@@ -96,32 +96,32 @@ class TSTWorker : public rvs::ThreadBase {
     //! returns the TST test ramp duration
     uint64_t get_ramp_interval(void) { return ramp_interval; }
 
-    //! sets the time interval at which the module reports the GPU's power
+    //! sets the time interval at which the module reports the GPU's temperature 
     void set_log_interval(uint64_t _log_interval) {
         log_interval = _log_interval;
     }
-    //! returns the time interval at which the module reports the GPU's power
+    //! returns the time interval at which the module reports the GPU's temperature
     uint64_t get_log_interval(void) { return log_interval; }
 
-    //! sets the sampling rate for the target_power
+    //! sets the sampling rate for the target_temperature
     void set_sample_interval(uint64_t _sample_interval) {
         sample_interval = _sample_interval;
     }
-    //! returns the sampling rate for the target_power
+    //! returns the sampling rate for the target_temperature
     uint64_t get_sample_interval(void) { return sample_interval; }
 
-    //! sets the maximum allowed number of target_power violations
+    //! sets the maximum allowed number of target_temperature violations
     void set_max_violations(uint64_t _max_violations) {
         max_violations = _max_violations;
     }
-    //! returns the maximum allowed number of target_power violations
+    //! returns the maximum allowed number of target_temperature violations
     uint64_t get_max_violations(void) { return max_violations; }
 
-    //! sets the target power level for the TST test
+    //! sets the target temperature level for the TST test
     void set_throttle_temp(float _throttle_temp) {
         throttle_temp = _throttle_temp;
     }
-    //! returns the target power level for the test
+    //! returns the target temperature level for the test
     float get_throttle_temp(void) { return throttle_temp; }
 
     //! sets the SGEMM matrix size
@@ -131,9 +131,9 @@ class TSTWorker : public rvs::ThreadBase {
     //! returns the SGEMM matrix size
     uint64_t get_matrix_size(void) { return matrix_size; }
 
-    //! sets the TST power tolerance
+    //! sets the GEMM operation type
     void set_tst_ops_type(std::string ops_type) { tst_ops_type = ops_type; }
-    //! returns the TST power tolerance
+    //! returns GEMM operation type
     std::string get_ops_type(void) { return tst_ops_type; }
 
     //! sets the target temperature flag
@@ -141,9 +141,9 @@ class TSTWorker : public rvs::ThreadBase {
     //! returns the target temperature flag
     bool get_tt_flag(void) { return tst_tt_flag; }
 
-    //! sets the TST power tolerance
+    //! sets the TST temperature tolerance
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }
-    //! returns the TST power tolerance
+    //! returns the TST temperature tolerance
     float get_tolerance(void) { return tolerance; }
 
     //! sets the JSON flag
@@ -209,7 +209,6 @@ class TSTWorker : public rvs::ThreadBase {
     virtual void run(void);
     bool do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  tst_ops_type);
     void compute_gpu_stats(void);
-    void compute_new_sgemm_freq(float avg_power);
     bool do_thermal_stress(void);
     void log_interval_gflops(double gflops_interval);
     void log_to_json(const std::string &key, const std::string &value,
@@ -239,15 +238,15 @@ class TSTWorker : public rvs::ThreadBase {
     uint64_t run_duration_ms;
       //! stress test ramp duration
     uint64_t ramp_interval;
-    //! time interval at which the GPU's power is logged out
+    //! time interval at which the GPU's temperature is logged out
     uint64_t log_interval;
-    //! sampling rate for the target_power
+    //! sampling rate for the target_target
     uint64_t sample_interval;
-    //! maximum allowed number of target_power violations
+    //! maximum allowed number of target_temperature violations
     uint64_t max_violations;
-    //! target power level for the test
+    //! target temperature level for the test
     float throttle_temp;
-    //! power tolerance (how much the target_power can fluctuare after
+    //! temperature tolerance (how much the target_temperature can fluctuare after
     //! the ramp period for the test to succeed)
     float tolerance;
     //! SGEMM matrix size
@@ -255,8 +254,8 @@ class TSTWorker : public rvs::ThreadBase {
     //! TRUE if JSON output is required
     static bool bjson;
     bool sgemm_success;
-    //! blas_worker pointer
-    std::string  tst_ops_type;
+    //! GEMM operation type
+    std::string tst_ops_type;
 
     //! actual training time
     uint64_t training_time_ms;

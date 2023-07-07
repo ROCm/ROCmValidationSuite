@@ -82,12 +82,12 @@ class tst_action: public rvs::actionbase {
     float tst_throttle_temp;
     //! TST test ramp duration
     uint64_t tst_ramp_interval;
-    //! power tolerance (how much the target_power can fluctuare after
+    //! temperature tolerance (how much the target_temperature can fluctuare after
     //! the ramp period for the test to succeed)
     float tst_tolerance;
-    //! maximum allowed number of target_power violations
+    //! maximum allowed number of target_temperature violations
     int tst_max_violations;
-    //! sampling rate for the target_power
+    //! sampling rate for the target_temperature
     uint64_t tst_sample_interval;
     //! matrix size for SGEMM
     uint64_t tst_matrix_size;
