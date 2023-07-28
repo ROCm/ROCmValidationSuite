@@ -1025,9 +1025,16 @@ int rvs::hsa::GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
 
   // Agent has no pools so no need to look for numa distance
   if (agent_list[dstix].mem_pool_list.size() == 0) {
+	  std::cout << "Destination node " << DstNode << "has no memory pool available " << std::endl;
     RVSHSATRACE_
     return 0;
   }
+  if (agent_list[srcix].mem_pool_list.size() == 0) {
+          std::cout << "Source node " << SrcNode << "has no memory pool available " << std::endl;
+    RVSHSATRACE_
+    return 0;
+  }
+
 
   uint32_t hops = 0;
   hsa_amd_memory_pool_t& dstpool = agent_list[dstix].mem_pool_list[0];
