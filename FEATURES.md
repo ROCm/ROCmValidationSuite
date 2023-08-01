@@ -43,7 +43,7 @@ The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM/HGEMM (Single/Dou
 The test should be capable driving the power level equivalent to the rated TDP of the card, or levels below that. The tool must be capable of driving cards at TDP-50% to TDP-100%, in 10% incremental jumps. This should be controllable by the user.
 
 ## Input EDPp Test - IET module
-The Input EDPp Test generates EDP peak power on all input rails. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the board.  Peak Current at defined period  =  1 minute moving average power.
+The Input EDPp Test generates EDP peak power on the GPU . This test is used to verify if the system PSU is capable of handling the worst case power spikes of the device.  Peak Current at defined period  =  1 minute moving average power.
 
 ## Memory Test - MEM module
 The Memory module tests the GPU memory for hardware errors and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
