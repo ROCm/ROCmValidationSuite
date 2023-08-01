@@ -1030,7 +1030,7 @@ int rvs::hsa::GetLinkInfo(uint32_t SrcNode, uint32_t DstNode,
     return 0;
   }
   if (agent_list[srcix].mem_pool_list.size() == 0) {
-    msg = " String node " + std::to_string(SrcNode) + " has no memory pool available" ;
+    msg = " Source node " + std::to_string(SrcNode) + " has no memory pool available" ;
     rvs::lp::Log(msg, rvs::loginfo);
     return 0;
   }
