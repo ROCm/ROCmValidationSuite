@@ -56,19 +56,17 @@ class tfbWorker : public rvs::ThreadBase {
     const std::string& get_name(void) { return action_name; }
 
     //! sets test path
-    void set_path(std::string pathname) { m_test_path = pathname; }
-    void set_args(std::string args) { m_test_args = args; }
+    void set_transfer_type(std::string type) { m_tfr_type = type; }
 
-    const std::string& get_path(void) { return m_test_path; }
-    bool start_hip_tests(int &error, std::string &errdesc);
+    const std::string& get_transfer_type(void) { return m_tfr_type; }
+    bool TfbRun(int &error, std::string &errdesc);
  protected:
     virtual void run(void);
  protected:
     //! name of the action
     std::string action_name;
     //! path to execute test
-    std::string m_test_path;
-    std::string m_test_args;
+    std::string m_tfr_type;
 };
 
 #endif  // HIPTEST_SO_INCLUDE_HIPTEST_WORKER_H_

@@ -75,7 +75,7 @@ bool tfb_action::start_tfb_runners() {
     // one worker sufficient, as test runner
     hipTestWorker worker;
     worker.set_name(action_name);
-    worker.set_path(m_transfer_type);
+    worker.set_transfer_type(m_transfer_type);
     worker.start();
     worker.join();
 
