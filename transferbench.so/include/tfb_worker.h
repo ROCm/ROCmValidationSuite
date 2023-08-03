@@ -59,7 +59,7 @@ class tfbWorker : public rvs::ThreadBase {
     void set_transfer_type(std::string type) { m_tfr_type = type; }
 
     const std::string& get_transfer_type(void) { return m_tfr_type; }
-    bool TfbRun(int &error, std::string &errdesc);
+    int TfbRun(int &error, std::string &errdesc);
  protected:
     virtual void run(void);
  protected:

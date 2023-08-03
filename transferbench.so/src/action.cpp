@@ -45,6 +45,8 @@ using std::map;
 using std::regex;
 
 #define RVS_CONF_TFB_TYPE_KEY       "transfer-type"
+#define MODULE_NAME                 "transfer-bench"
+#define MODULE_NAME_CAPS            "TRANSFER-BENCH"
 #define TFB_DEFAULT_TYPE            "p2p"
 #define TFB_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 
@@ -73,7 +75,7 @@ tfb_action::~tfb_action() {
 bool tfb_action::start_tfb_runners() {
     size_t k = 0;
     // one worker sufficient, as test runner
-    hipTestWorker worker;
+    tfbWorker worker;
     worker.set_name(action_name);
     worker.set_transfer_type(m_transfer_type);
     worker.start();
@@ -95,22 +97,9 @@ bool tfb_action::get_all_tfb_config_keys(void) {
     if (property_get<std::string>(RVS_CONF_TFB_TYPE_KEY, &m_transfer_type,
             TFB_DEFAULT_TYPE)) {
          msg = "invalid '" +
-         std::string(RVS_CONF_GST_OPS_TYPE) + "' key value";
+         std::string(RVS_CONF_TFB_TYPE_KEY) + "' key value";
          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
          bsts = false;
-    }
-
-    return bsts;
-}
-
-/**
- * @brief reads all common configuration keys from
- * the module's properties collection
- * @return true if no fatal error occured, false otherwise
- */
-bool tfb_action::get_all_common_config_keys(void) {
-    string msg, sdevid, sdev;
-	bsts = false;
     }
 
     return bsts;
@@ -142,7 +131,7 @@ int tfb_action::get_num_amd_gpu_devices(void) {
 
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
-        msg = action_name + " " + MODULE_NAME + " " + HIPTEST_NO_COMPATIBLE_GPUS;
+        msg = action_name + " " + MODULE_NAME + " " + TFB_NO_COMPATIBLE_GPUS;
         rvs::lp::Log(msg, rvs::logerror);
 
         if (bjson) {
@@ -158,7 +147,7 @@ int tfb_action::get_num_amd_gpu_devices(void) {
                 return -1;
             }
 
-            rvs::lp::AddString(json_root_node, "ERROR", HIPTEST_NO_COMPATIBLE_GPUS);
+            rvs::lp::AddString(json_root_node, "ERROR", TFB_NO_COMPATIBLE_GPUS);
             rvs::lp::LogRecordFlush(json_root_node, rvs::loginfo);
         }
         return 0;

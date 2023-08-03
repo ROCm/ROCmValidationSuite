@@ -27,16 +27,17 @@ THE SOFTWARE.
 #include <random>
 #include <stack>
 #include <thread>
-#include "tfb_worker.h"
-#include "TransferBench.hpp"
-#include "GetClosestNumaNode.hpp"
+#include "include/tfb_worker.h"
+#include "include/rvsloglp.h"
+#include "include/TransferBench.hpp"
+#include "include/GetClosestNumaNode.hpp"
 
-
+static const std::string MODULE_NAME{"transfer-bench"};
 /**
  * @brief performs the stress test on the given GPU
  */
 void tfbWorker::run() {
-    string msg, err_description;
+	std::string msg, err_description;
     int error = 0;
 
 
@@ -50,7 +51,7 @@ void tfbWorker::run() {
 
     // GPU was not able to do the processing (HIP/rocBlas error(s) occurred)
     if (error) {
-        string msg = "[" + action_name + "] " + MODULE_NAME + " "
+	    std::string msg = "[" + action_name + "] " + MODULE_NAME + " "
                          + err_description;
         rvs::lp::Log(msg, rvs::logerror);
         return;
@@ -59,7 +60,7 @@ void tfbWorker::run() {
 }
 
 
-int tfbWorker::TfbRun(int &err, string &errmsg)
+int tfbWorker::TfbRun(int &err, std::string &errmsg)
 {
   // Check for NUMA library support
   if (numa_available() == -1)

@@ -80,7 +80,7 @@ class tfb_action: public rvs::actionbase {
   * @brief gets the number of ROCm compatible AMD GPUs
   * @return run number of GPUs
   */
-    int run_hip_tests();
+    int run_transferbench(void);
 };
 
 #endif  // HIPTEST_SO_INCLUDE_ACTION_H_
