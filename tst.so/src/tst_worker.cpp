@@ -66,7 +66,6 @@ using std::string;
 
 bool TSTWorker::bjson = false;
 
-
 /**
  * @brief computes the difference (in milliseconds) between 2 points in time
  * @param t_end second point in time
@@ -110,8 +109,6 @@ TSTWorker::TSTWorker():endtest(false) {
 TSTWorker::~TSTWorker() {
 }
 
-
-
 /**
  * @brief logs the Gflops computed over the last log_interval period
  * @param gflops_interval the Gflops that the GPU achieved
@@ -125,7 +122,22 @@ void TSTWorker::log_interval_gflops(double gflops_interval) {
 
 }
 
-void TSTWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  tst_ops_type, 
+/**
+ * @brief Thread function to execute blas gemm operations for GPU workload.
+ * @param gpuIdx the gpu that will run the GEMM
+ * @param matrix_size matrix size
+ * @param tst_ops_type blas operation type
+ * @param start
+ * @param run_duration_ms test run duration
+ * @param transa matrix A transpose operation type
+ * @param transb matrix B transpose operation type
+ * @param alpha scalar for matrix A*B
+ * @param beta scalar for matrix C
+ * @param tst_lda_offset leading dimension for matrix A
+ * @param tst_ldb_offset leading dimension for matrix B
+ * @param tst_ldc_offset leading dimension for matrix C
+ */
+void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops_type,
     bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
     int tst_lda_offset, int tst_ldb_offset, int tst_ldc_offset){
 
@@ -192,7 +204,6 @@ void TSTWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  tst_o
             gem_ops = 0;
         }
     }
-
 }
 
 /**
