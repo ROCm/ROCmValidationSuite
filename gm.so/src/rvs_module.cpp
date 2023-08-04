@@ -60,7 +60,7 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-    return "ROCm Validation Suite GM module";
+  return "The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information \n\tat regular intervals.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {

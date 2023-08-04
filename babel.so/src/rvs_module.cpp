@@ -30,18 +30,16 @@
 #include "include/gpu_util.h"
 #include "include/rvs_module.h"
 
-
 /**
- * @defgroup MEM MEM Module
+ * @defgroup BABEL BABEL Module
  *
- * @brief performs GPU Stress Test
+ * @brief benchmark test that measures memory transfer rates
  *
- * The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM
- * (Single/Double-precision General Matrix Multiplication) workload
- * on one, some or all GPUs. The GPUs can be of the same or different types.
- * The duration of the benchmark should be configurable, both in terms of time
- * (how long to run) and iterations (how many times to run).
- * 
+ * The Babel module executes BabelStream (synthetic GPU benchmark based on the
+ * original STREAM benchmark for CPUs) benchmark that measures memory transfer
+ * rates (bandwidth) to and from global device memory. Various benchmark tests
+ * are implemented using GPU kernels in HIP (Heterogeneous Interface for Portability)
+ * programming language.
  */
 
 extern "C" int rvs_module_has_interface(int iid) {
@@ -55,12 +53,12 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-    return "ROCm Validation Suite MEM module";
+    return "The Babel module executes BabelStream (synthetic GPU benchmark based on the original STREAM benchmark for CPUs) \n \tbenchmark that measures memory transfer rates (bandwidth) to and from global device memory.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
     return "target_stress (float), copy_matrix (bool), "\
-            "ramp_interval (int), tolerance (float), "\
+            "ramp_interval (int), tolerance (float), \n\t"\
             "max_violations (int), log_interval (int), "\
             "matrix_size (int)";
 }

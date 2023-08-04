@@ -50,12 +50,12 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return "ROCm Configuration Qualification Tool module";
+  return "The ROCm Configuration Qualification Tool ensures the platform is capable of running ROCm applications and is configured correctly.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
   return "package (string), version (string), installed (bool), user (string), "
-  "groups (collection of strings), file (string), owner (string), "
+  "groups (collection of strings), file (string),\n\towner (string), "
   "group (string), permission (int), type (int), exists (bool)";
 }
 

@@ -34,14 +34,22 @@
 /**
  * @defgroup MEM MEM Module
  *
- * @brief performs GPU Stress Test
- *
- * The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM
- * (Single/Double-precision General Matrix Multiplication) workload
- * on one, some or all GPUs. The GPUs can be of the same or different types.
- * The duration of the benchmark should be configurable, both in terms of time
- * (how long to run) and iterations (how many times to run).
+ * @brief performs Memory Test
  * 
+ * The Memory module tests the GPU memory for hardware errors and soft errors using HIP.
+ * It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20.
+ * The module executes the following memory tests [Algorithm, data pattern]
+ * 1. Walking 1 bit
+ * 2. Own address test
+ * 3. Moving inversions, ones & zeros
+ * 4. Moving inversions, 8 bit pattern
+ * 5. Moving inversions, random pattern
+ * 6. Block move, 64 moves
+ * 7. Moving inversions, 32 bit pattern
+ * 8. Random number sequence
+ * 9. Modulo 20, random pattern
+ * 10. Memory stress test
+ *
  */
 
 extern "C" int rvs_module_has_interface(int iid) {
@@ -55,50 +63,50 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-    return "ROCm Validation Suite MEM module";
+  return "The Memory module tests the GPU memory for hardware errors and soft errors using HIP.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
-    return "target_stress (float), copy_matrix (bool), "\
-            "ramp_interval (int), tolerance (float), "\
-            "max_violations (int), log_interval (int), "\
-            "matrix_size (int)";
+  return "target_stress (float), copy_matrix (bool), "\
+    "ramp_interval (int), tolerance (float), "\
+    "max_violations (int), \n\tlog_interval (int), "\
+    "matrix_size (int)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {
-    return "pass (bool)";
+  return "pass (bool)";
 }
 
 extern "C" int rvs_module_init(void* pMi) {
-    rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
-    rvs::gpulist::Initialize();
-    return 0;
+  rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+  rvs::gpulist::Initialize();
+  return 0;
 }
 
 extern "C" int rvs_module_terminate(void) {
-    return 0;
+  return 0;
 }
 
 extern "C" void* rvs_module_action_create(void) {
-    return static_cast<void*>(new mem_action);
+  return static_cast<void*>(new mem_action);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {
-    delete static_cast<rvs::actionbase*>(pAction);
-    return 0;
+  delete static_cast<rvs::actionbase*>(pAction);
+  return 0;
 }
 
 extern "C" int rvs_module_action_property_set(void* pAction, const char* Key,
-                                                            const char* Val) {
-    return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
+    const char* Val) {
+  return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 
 extern "C" int rvs_module_action_callback_set(void* pAction,
-                                               rvs::callback_t callback,
-                                               void * user_param) {
+    rvs::callback_t callback,
+    void * user_param) {
   return static_cast<rvs::actionbase*>(pAction)->callback_set(callback, user_param);
 }
 
 extern "C" int rvs_module_action_run(void* pAction) {
-    return static_cast<rvs::actionbase*>(pAction)->run();
+  return static_cast<rvs::actionbase*>(pAction)->run();
 }

@@ -399,18 +399,18 @@ void rvs::exec::do_help() {
   cout << "\nUsage: rvs [options]\n";
   cout << "\nOptions:\n\n";
   cout << "-a --appendLog     When generating a debug logfile, do not "
-                              "overwrite the contents\n";
-  cout << "                   of a current log. Used in conjuction with the"
+                              "overwrite the content\n";
+  cout << "                   of the current log. Used in conjuction with "
                                "-d and -l options.\n";
   cout << "-c --config        Specify the configuration file to be used.\n";
-  cout << "                   The default is <install base>/conf/RVS.conf\n";
+  cout << "                   The default is <install base>/conf/rvs.conf\n";
   cout << "   --configless    Run RVS in a configless mode. Executes a "
                               "\"long\" test on all\n";
   cout << "                   supported GPUs.\n";
   cout << "-d --debugLevel    Specify the debug level for the output log. "
                               "The range is\n";
-  cout << "                   0 to 5 with 5 being the most verbose.\n";
-  cout << "                   Used in conjunction with the -l flag.\n";
+  cout << "                   0 to 5 with 5 being the highest verbose level.\n";
+  cout << "                   Used in conjunction with -l option.\n";
   cout << "-g --listGpus      List the GPUs available and exit. This will "
                               "only list GPUs\n";
   cout << "                   that are supported by RVS.\n";
@@ -432,7 +432,7 @@ void rvs::exec::do_help() {
                               "Multiple word tests\n";
   cout << "                   should be in quotes. This action will default "
                               "to all devices,\n";
-  cout << "                   unless the indexes option is specifie.\n";
+  cout << "                   unless the indexes option is specific.\n";
   cout << "-t --listTests     List the modules available to be executed "
                               "through RVS and exit.\n";
   cout << "                   This will list only the readily loadable "
@@ -441,7 +441,7 @@ void rvs::exec::do_help() {
   cout << "-v --verbose       Enable verbose reporting. This is "
                               "equivalent to\n";
   cout << "                   specifying the -d 5 option.\n";
-  cout << "   --version       Displays the version information and exits.\n";
+  cout << "   --version       Display version information and exit.\n";
   cout << "-h --help          Display usage information and exit.\n";
 }
 

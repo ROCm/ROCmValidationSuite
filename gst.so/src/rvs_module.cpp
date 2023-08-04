@@ -51,51 +51,51 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-    return "ROCm Validation Suite GST module";
+  return "The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM/HGEMM (Single/Double/Half-precision General Matrix Multiplication) \n\tworkload on one, some or all GPUs.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
-    return "target_stress (float), copy_matrix (bool), "\
-            "ramp_interval (int), tolerance (float), "\
-            "max_violations (int), log_interval (int), "\
-            "matrix_size (int)";
+  return "target_stress (float), copy_matrix (bool), "\
+    "ramp_interval (int), tolerance (float), "\
+    "max_violations (int), \n\tlog_interval (int), "\
+    "matrix_size (int)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {
-    return "pass (bool)";
+  return "pass (bool)";
 }
 
 extern "C" int rvs_module_init(void* pMi) {
-    rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
-    rvs::gpulist::Initialize();
-    return 0;
+  rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
+  rvs::gpulist::Initialize();
+  return 0;
 }
 
 extern "C" int rvs_module_terminate(void) {
-    gst_action::cleanup_logs();
-    return 0;
+  gst_action::cleanup_logs();
+  return 0;
 }
 
 extern "C" void* rvs_module_action_create(void) {
-    return static_cast<void*>(new gst_action);
+  return static_cast<void*>(new gst_action);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {
-    delete static_cast<rvs::actionbase*>(pAction);
-    return 0;
+  delete static_cast<rvs::actionbase*>(pAction);
+  return 0;
 }
 
 extern "C" int rvs_module_action_property_set(void* pAction, const char* Key,
-                                                            const char* Val) {
-    return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
+    const char* Val) {
+  return static_cast<rvs::actionbase*>(pAction)->property_set(Key, Val);
 }
 
 extern "C" int rvs_module_action_callback_set(void* pAction,
-                                               rvs::callback_t callback,
-                                               void * user_param) {
+    rvs::callback_t callback,
+    void * user_param) {
   return static_cast<rvs::actionbase*>(pAction)->callback_set(callback, user_param);
 }
 
 extern "C" int rvs_module_action_run(void* pAction) {
-    return static_cast<rvs::actionbase*>(pAction)->run();
+  return static_cast<rvs::actionbase*>(pAction)->run();
 }

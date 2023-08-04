@@ -62,7 +62,7 @@ int main(int Argc, char**Argv) {
   if (sts) {
     char buff[1024];
     snprintf(buff, sizeof(buff),
-              "error parssing command line: %s", cli.get_error_string());
+              "error parsing command line: %s", cli.get_error_string());
     rvs::logger::Err(buff, MODULE_NAME_CAPS);
 #ifdef RVS_INVERT_RETURN_STATUS
     return 0;
