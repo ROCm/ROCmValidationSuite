@@ -32,12 +32,13 @@
  *
  * @brief performs GPU Stress Test
  *
- * The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM
- * (Single/Double-precision General Matrix Multiplication) workload
- * on one, some or all GPUs. The GPUs can be of the same or different types.
- * The duration of the benchmark should be configurable, both in terms of time
+ * The GPU Stress Test runs various GEMM operations as workloads
+ * to stress the GPU FLOPS performance. GEMM operations include
+ * SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix
+ * Multiplication) operations based on configured parameters.
+ * The duration of the test is configurable, both in terms of time
  * (how long to run) and iterations (how many times to run).
- * 
+ *
  */
 
 extern "C" int rvs_module_has_interface(int iid) {
@@ -51,7 +52,7 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return "The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM/HGEMM (Single/Double/Half-precision General Matrix Multiplication) \n\tworkload on one, some or all GPUs.";
+  return "The GPU Stress Test runs various GEMM operations as workloads to stress the GPU FLOPS performance."
 }
 
 extern "C" const char* rvs_module_get_config(void) {
