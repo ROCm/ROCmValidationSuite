@@ -51,18 +51,18 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return "ROCm Validation Suite PBQT module";
+  return "The P2P Benchmark and Qualification Tool is designed to provide the list of all GPUs that support P2P and characterize\n\tthe P2P links between peers.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
   return "peers (Collection of Strings), peer_deviceid (Integer), "
-"test_bandwidth (Bool), bidirectional(Bool), parallel (Bool), duration "
-"(Integer), log_interval (Integer)";
+  "test_bandwidth (Bool), bidirectional(Bool), parallel (Bool), \n\t"
+  "duration (Integer), log_interval (Integer)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {
   return "p2p_result (Collection of Bools), peers (Collection of Strings), "
-  "peer_deviceid (Integer), test_bandwidth (Bool), interval_bandwidth "
+  "peer_deviceid (Integer), test_bandwidth (Bool),\n\tinterval_bandwidth "
   "(Collection of Floats), bandwidth (Collection of Floats)";
 }
 

@@ -590,7 +590,7 @@ void rvs::module::do_list_modules(void) {
     }
 
     // output module name
-    std::cout << "\t" << it->first.c_str() << ":" << std::endl;
+    std::cout << "  " << it->first.c_str() << ":" << std::endl;
 
     // obtain IF0
     rvs::if0* pif0 = dynamic_cast<rvs::if0*>(pa->get_interface(0));
@@ -602,9 +602,9 @@ void rvs::module::do_list_modules(void) {
     }
 
     // output info
-    std::cout << "\t\tDescription: " << pif0->get_description() << std::endl;
-    std::cout << "\t\tconfig: " << pif0->get_config() << std::endl;
-    std::cout << "\t\toutput: " << pif0->get_output() << std::endl;
+    std::cout << "\tDescription: " << pif0->get_description() << std::endl;
+    std::cout << "\tInput config. parameters: " << pif0->get_config() << std::endl;
+    std::cout << "\tOutput: " << pif0->get_output() << std::endl<< std::endl;;
 
     // action no longer needed so destroy it
     rvs::module::action_destroy(pa);

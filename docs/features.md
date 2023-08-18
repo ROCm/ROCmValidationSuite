@@ -30,7 +30,7 @@ The GPU SBIOS mapping qualification tool is designed to verify that a platform�
 Refer to the “ROCm Use of Advanced PCIe Features and Overview of How BAR Memory is Used In ROCm Enabled System” web page for more information about how BAR memory is initialized by VDI and Radeon products.
 
 ## P2P Benchmark and Qualification Tool – PBQT module
-The P2P Benchmark and Qualification Tool  is designed to provide the list of all GPUs that support P2P and characterize the P2P links between peers. In addition to testing for P2P compatibility, this test will perform a peer-to-peer throughput test between all P2P pairs for performance evaluation. The P2P Benchmark and Qualification Tool will allow users to pick a collection of two or more GPUs on which to run. The user will also be able to select whether or not they want to run the throughput test on each of the pairs.
+The P2P Benchmark and Qualification Tool is designed to provide the list of all GPUs that support P2P and characterize the P2P links between peers. In addition to testing P2P compatibility, this test will perform a peer-to-peer throughput test between all P2P pairs for performance evaluation. The P2P Benchmark and Qualification Tool will allow users to pick a collection of two or more GPUs to run the test. The user will also be able to select whether or not they want to run the throughput test on each of the pairs.
 
 Please see the web page “ROCm, a New Era in Open GPU Computing” to find out more about the P2P solutions available in a ROCm environment.
 
@@ -38,15 +38,13 @@ Please see the web page “ROCm, a New Era in Open GPU Computing” to find out 
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory. The maximum bandwidth obtained is reported to help debug low bandwidth issues. The benchmark should be capable of  targeting one, some or all of the GPUs installed in a platform, reporting individual benchmark statistics for each.
 
 ## GPU Stress Test - GST module
-The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM/HGEMM (Single/Double/Half-precision General Matrix Multiplication) workload on one, some or all GPUs. The GPUs can be of the same or different types. The duration of the benchmark should be configurable, both in terms of time (how long to run) and iterations (how many times to run).
-
-The test should be capable driving the power level equivalent to the rated TDP of the card, or levels below that. The tool must be capable of driving cards at TDP-50% to TDP-100%, in 10% incremental jumps. This should be controllable by the user.
+The GPU Stress Test runs various GEMM operations as workloads to stress the GPU FLOPS performance. GEMM operations include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) operations based on configured parameters. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
 
 ## Input EDPp Test - IET module
-The Input EDPp Test generates EDP peak power on all input rails. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the board.  Peak Current at defined period  =  1 minute moving average power.
+The Input EDPp Test generates EDP peak power on the GPU. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the device.  Peak Current at defined period  =  1 minute moving average power.
 
 ## Memory Test - MEM module
-The Memory module tests the GPU memory for hardware errors and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
+The Memory module tests the GPU memory for hard and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
 
 1. Walking 1 bit
 2. Own address test
