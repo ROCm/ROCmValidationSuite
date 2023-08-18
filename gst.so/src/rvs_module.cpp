@@ -52,7 +52,7 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return "The GPU Stress Test runs various GEMM operations as workloads to stress the GPU FLOPS performance."
+  return "The GPU Stress Test runs various GEMM operations as workloads to stress the GPU FLOPS performance.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
