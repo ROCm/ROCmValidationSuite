@@ -52,7 +52,6 @@ void rvs::hsa::Init() {
   if (pDsc == nullptr) {
     pDsc = new rvs::hsa();
     pDsc->InitAgents();
-
   }
 }
 
@@ -342,7 +341,7 @@ void rvs::hsa::InitAgents() {
 
   std::sort(size_list.begin(), size_list.end());
 
-  PrintTopology();
+//  PrintTopology();
 }
 
 /**

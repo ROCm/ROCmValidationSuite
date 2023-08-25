@@ -48,13 +48,13 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return "ROCm Validation Suite GPUP module";
+  return "The GPU Properties module queries the configuration of a target device and returns the device’s static characteristics.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
-  return "module (string), version (string), installed (bool),"
-  "user (string), groups (collection of strings), file (string), "
-  "owner (string), group (string), permission (int), type (int), exists (bool)";
+  return "module (string), version (string), installed (bool), "
+  "user (string), groups (collection of strings), \n\t"
+  "file (string), owner (string), group (string), permission (int), type (int), exists (bool)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {

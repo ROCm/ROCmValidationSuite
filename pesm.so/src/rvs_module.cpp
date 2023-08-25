@@ -59,7 +59,7 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return "ROCm Validation Suite PESM module";
+  return "The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {

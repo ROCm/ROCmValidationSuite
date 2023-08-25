@@ -58,7 +58,7 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-  return "ROCm Validation Suite PEBB module";
+  return "The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory.";
 }
 
 extern "C" const char* rvs_module_get_config(void) {
