@@ -152,7 +152,7 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/rvs.h"
   COMPONENT rvsmodule
 )
 
-option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" ON)
+option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" OFF)
 if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
   #Create the softlink rvs/rvs->../bin/rvs in install path for backward compatibility
   install(CODE "
