@@ -69,8 +69,9 @@ endif(rocblas_FOUND)
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+# Use relative RPATH. $ORIGIN is set from build scripts.
+# Append $ORIGIN/.. , so that libraries installed in /opt/rocm-ver/lib/rvs can find libraries in /opt/rocm-ver/lib
+set(CMAKE_INSTALL_RPATH "$ORIGIN/..")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
