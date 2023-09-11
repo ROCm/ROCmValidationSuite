@@ -24,6 +24,8 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN:$ORIGIN/.." CACHE STRING "RUNPATH for libraries")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN/../lib" CACHE STRING "RUNPATH for executables")
 project ("rocm-validation-suite")
 
 # Default libdir to "lib", this skips GNUInstallDirs from trying to take a guess if it's unset:
@@ -69,9 +71,6 @@ endif(rocblas_FOUND)
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
 set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
-# Use relative RPATH. $ORIGIN is set from build scripts.
-# Append $ORIGIN/.. , so that libraries installed in /opt/rocm-ver/lib/rvs can find libraries in /opt/rocm-ver/lib
-set(CMAKE_INSTALL_RPATH "$ORIGIN/..")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
