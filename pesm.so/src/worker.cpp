@@ -69,16 +69,15 @@ void Worker::set_gpuids(const std::vector<uint16_t>& GpuIds) {
 /**
  * @brief Thread function
  *
- * Loops while brun == TRUE and performs polled monitoring avery 1msec.
+ * Loops while brun == TRUE and performs polled monitoring every 1msec.
  *
  * */
 void Worker::run() {
-  brun = true;
   char buff[1024];
 
   map<string, string>::iterator it;
   vector<uint16_t> gpus_location_id;
-  map<uint16_t, string> old_val;
+  map<uint16_t, string> old_speed_val;
   map<uint16_t, string> old_pwr_val;
 
   struct pci_access *pacc;
@@ -88,20 +87,26 @@ void Worker::run() {
   unsigned int usec;
   void* r;
   rvs::action_result_t action_result;
+  map<uint16_t, string> speed_change;
+  map<uint16_t, string> power_change;
+  string msg;
+
+  brun = true;
 
   // get timestamp
   rvs::lp::get_ticks(&sec, &usec);
 
   // add string output
-  string msg("[" + action_name + "] pesm " + strgpuids + " started");
+  msg = "[" + action_name + "] " + "PCIe link speed and power monitoring started ...";
   rvs::lp::Log(msg, rvs::logresults, sec, usec);
 
-  // add JSON output
-  r = rvs::lp::LogRecordCreate("pesm", action_name.c_str(), rvs::logresults,
-                               sec, usec);
-  rvs::lp::AddString(r, "msg", "started");
-  rvs::lp::AddString(r, "device", strgpuids);
-  rvs::lp::LogRecordFlush(r);
+  if (bjson) {
+    // add JSON output
+    r = rvs::lp::LogRecordCreate("pesm", action_name.c_str(), rvs::logresults,
+        sec, usec);
+    rvs::lp::AddString(r, "msg", "started");
+    rvs::lp::LogRecordFlush(r);
+  }
 
   // worker thread has started
   while (brun) {
@@ -117,9 +122,9 @@ void Worker::run() {
 
     // iterate over devices
     for (dev = pacc->devices; dev; dev = dev->next) {
-      pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
-      | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS
-      | PCI_FILL_PHYS_SLOT);  // fil in the info
+
+      int known_fields = pci_fill_info(dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS
+      | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);  // fil in the info
 
       // computes the actual dev's location_id (sysfs entry)
       uint16_t dev_location_id =
@@ -145,19 +150,26 @@ void Worker::run() {
 
       // get current speed for the link
       get_link_stat_cur_speed(dev, buff);
-      string new_val(buff);
+      string new_speed_val(buff);
+      if(old_speed_val[gpu_id].empty()) {
+        old_speed_val[gpu_id] = new_speed_val;
+      }
 
       // get current power state for GPU
       get_pwr_curr_state(dev, buff);
       string new_pwr_val(buff);
+      if(old_pwr_val[gpu_id].empty()) {
+        old_pwr_val[gpu_id] = new_pwr_val;
+        continue;
+      }
 
-      // link speed changed?
-      if (old_val[gpu_id] != new_val) {
+      // link speed changed
+      if (old_speed_val[gpu_id] != new_speed_val) {
         // new value is different, so store it;
-        old_val[gpu_id] = new_val;
+        old_speed_val[gpu_id] = new_speed_val;
 
-        string msg("[" + action_name + "] " + "pesm "
-          + std::to_string(gpu_id) + " link speed change " + new_val);
+        msg = "[" + action_name + "] " + std::to_string(gpu_id) +
+          " PCIe link speed changed " + new_speed_val;
         rvs::lp::Log(msg, rvs::loginfo, sec, usec);
 
         action_result.state = rvs::actionstate::ACTION_RUNNING;
@@ -165,11 +177,16 @@ void Worker::run() {
         action_result.output = msg.c_str();
         action.action_callback(&action_result);
 
-        r = rvs::lp::LogRecordCreate("pesm ", action_name.c_str(), rvs::loginfo,
-                                    sec, usec);
-        rvs::lp::AddString(r, "msg", "link speed change");
-        rvs::lp::AddString(r, "val", new_val);
-        rvs::lp::LogRecordFlush(r);
+        speed_change[gpu_id] = "true";
+      }
+      else {
+        msg = "[" + action_name + "] " + "pesm " +
+          std::to_string(gpu_id) + " PCIe link speed unchanged " + new_speed_val;
+        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+
+        if(speed_change[gpu_id].empty()) {
+          speed_change[gpu_id] = "false";
+        }
       }
 
       // power state changed
@@ -177,9 +194,8 @@ void Worker::run() {
         // new value is different, so store it;
         old_pwr_val[gpu_id] = new_pwr_val;
 
-        string msg("[" + action_name + "] " + "pesm "
-          + std::to_string(gpu_id) +
-          " power state change " + new_pwr_val);
+        msg = "[" + action_name + "] " + std::to_string(gpu_id)
+          + " PCIe power state changed " + new_pwr_val;
         rvs::lp::Log(msg, rvs::loginfo, sec, usec);
 
         action_result.state = rvs::actionstate::ACTION_RUNNING;
@@ -187,11 +203,16 @@ void Worker::run() {
         action_result.output = msg.c_str();
         action.action_callback(&action_result);
 
-        r = rvs::lp::LogRecordCreate("pesm", action_name.c_str(), rvs::loginfo,
-                                    sec, usec);
-        rvs::lp::AddString(r, "msg", "power state change");
-        rvs::lp::AddString(r, "val", new_pwr_val);
-        rvs::lp::LogRecordFlush(r);
+        power_change[gpu_id] = "true";
+      }
+      else {
+        msg = "[" + action_name + "] " + 
+          std::to_string(gpu_id) + " PCIe power state unchanged " + new_pwr_val;
+        rvs::lp::Log(msg, rvs::loginfo, sec, usec);
+
+        if(power_change[gpu_id].empty()) {
+          power_change[gpu_id] = "false";
+        }
       }
     }
 
@@ -203,8 +224,61 @@ void Worker::run() {
   // get timestamp
   rvs::lp::get_ticks(&sec, &usec);
 
+  if (bjson) {
+    // add JSON output
+    r = rvs::lp::LogRecordCreate("PESM",
+        stop_action_name.c_str(), rvs::logresults,
+        sec, usec);
+  }
+
+  string gpu_json;
+  string speed_json;
+  string power_json;
+
+  for(auto i : speed_change) {
+
+    msg = "[" + stop_action_name + "]" +
+      " GPU " + std::to_string(i.first) + " PCIe speed change " +  i.second;
+
+    rvs::lp::Log(msg, rvs::logresults, sec, usec);
+
+    if (bjson) {
+      gpu_json += std::to_string(i.first) + ", ";
+      speed_json += i.second + ", ";
+    }
+  }
+
+  if (bjson) {
+    gpu_json = gpu_json.substr(0, (gpu_json.size() - 2));
+    speed_json = speed_json.substr(0, (speed_json.size() - 2));
+
+    rvs::lp::AddString(r, "gpu", gpu_json);
+    rvs::lp::AddString(r, "speed_change", speed_json);
+  }
+
+  for(auto i : power_change) {
+
+    msg = "[" + stop_action_name + "]" +
+      " GPU " + std::to_string(i.first) + " PCIe power change " +  i.second;
+    rvs::lp::Log(msg, rvs::logresults, sec, usec);
+
+    if (bjson) {
+      power_json += i.second + ", ";
+    }
+  }
+
+  if (bjson) {
+    power_json = power_json.substr(0, (power_json.size() - 2));
+
+    rvs::lp::AddString(r, "power_change", power_json);
+    rvs::lp::AddString(r, "msg", "stopped");
+    rvs::lp::AddString(r, "result", "true");
+
+    rvs::lp::LogRecordFlush(r);
+  }
+
   // add string output
-  msg = "[" + stop_action_name + "] pesm all stopped";
+  msg = "[" + stop_action_name + "] PCIe monitoring ended after wait duration.";
   rvs::lp::Log(msg, rvs::logresults, sec, usec);
 
   action_result.state = rvs::actionstate::ACTION_COMPLETED;
@@ -212,15 +286,9 @@ void Worker::run() {
   action_result.output = msg.c_str();
   action.action_callback(&action_result);
 
-  // add JSON output
-  r = rvs::lp::LogRecordCreate("PESM",
-                               stop_action_name.c_str(), rvs::logresults,
-                               sec, usec);
-  rvs::lp::AddString(r, "msg", "stopped");
-  rvs::lp::LogRecordFlush(r);
 
   rvs::lp::Log("[" + stop_action_name + "] pesm worker thread has finished",
-               rvs::logdebug);
+      rvs::logdebug);
 }
 
 /**
