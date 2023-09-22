@@ -28,6 +28,8 @@
 #include "include/rvsactionbase.h"
 #include "include/rvs_module.h"
 #include "include/rvs_util.h"
+#include "include/rcutils.h"
+
 
 /**
  * @class rcqt_action
@@ -51,6 +53,9 @@ class rcqt_action : public rvs::actionbase {
     //! json_rcqt_node is json node shared through submodules
     void *json_rcqt_node;
 
+    //! Operating system variant
+    static OSType os_type;
+
     /**
      *  @brief Function used in rcqt action class to check for given package
      */
@@ -60,7 +65,6 @@ class rcqt_action : public rvs::actionbase {
      *  @brief Function used in rcqt action class to list installed packages and its version.
      */
     virtual int pkglist_run();
-
 };
 
 #endif  // RCQT_SO_INCLUDE_ACTION_H_

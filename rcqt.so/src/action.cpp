@@ -55,7 +55,7 @@
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 #define JSON_PKGCHK_NODE_NAME "pkgchk"
 #define PACKAGE "package"
-#define PACKAGELIST (getOS() == OSType::Ubuntu?"debpackagelist":"rpmpackagelist")
+#define PACKAGELIST (os_type == OSType::Ubuntu?"debpackagelist":"rpmpackagelist")
 #define VERSION "version"
 #define INTERNAL_ERROR "Internal Error"
 
@@ -83,8 +83,14 @@ using std::map;
 using std::regex;
 using std::vector;
 
+OSType rcqt_action::os_type = OSType::None;
+
 rcqt_action::rcqt_action() {
   bjson = false;
+
+  if(OSType::None == os_type) {
+    os_type = getOS();
+  }
 }
 
 rcqt_action::~rcqt_action() {
