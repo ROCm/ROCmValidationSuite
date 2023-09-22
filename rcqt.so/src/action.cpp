@@ -83,14 +83,11 @@ using std::map;
 using std::regex;
 using std::vector;
 
-OSType rcqt_action::os_type = OSType::None;
+// Set Operating System variant
+const OSType rcqt_action::os_type = getOS();
 
 rcqt_action::rcqt_action() {
   bjson = false;
-
-  if(OSType::None == os_type) {
-    os_type = getOS();
-  }
 }
 
 rcqt_action::~rcqt_action() {

@@ -54,7 +54,7 @@ class rcqt_action : public rvs::actionbase {
     void *json_rcqt_node;
 
     //! Operating system variant
-    static OSType os_type;
+    static const OSType os_type;
 
     /**
      *  @brief Function used in rcqt action class to check for given package
