@@ -135,14 +135,14 @@ bool pesm_action::get_all_pesm_config_keys(void) {
 
     bool sts = true;
 
-    // get the <deviceid> property value if provided
+    // get the <monitor> property value if provided
     if (property_get<bool>(RVS_CONF_MONITOR_KEY, &prop_monitor, true)) {
       msg = "Invalid '" RVS_CONF_MONITOR_KEY "' key value.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       sts = false;
     }
 
-    // get the <deviceid> property value if provided
+    // get the <debugwait> property value if provided
     if (property_get_int<int>(RVS_CONF_DBGWAIT_KEY, &prop_debugwait, 0)) {
       msg = "Invalid '" RVS_CONF_DBGWAIT_KEY "' key value.";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
