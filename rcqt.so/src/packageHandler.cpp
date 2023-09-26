@@ -59,7 +59,7 @@ void PackageHandler::validatePackages(){
 
 	auto pkgmap = getPackageMap();
 	if(pkgmap.empty()){
-		std::cout << "no packages to validate in the file " << std::endl;
+		std::cout << "Meta package not installed or no dependencies present !!!" << std::endl;
 		return;
 	}
 
@@ -89,11 +89,11 @@ void PackageHandler::validatePackages(){
 		}
 	}
 
-  msg = "RCQT complete : \n";
-  msg += "\tTotal Packages to validate    : " + std::to_string(totalPackages) + "\n" + \
-         "\tValid Packages                : " + std::to_string(installedPackages) + "\n" + \
-         "\tMissing Packages              : " + std::to_string(missingPackages) + "\n" + \
-         "\tPackages version mismatch     : " + std::to_string(badVersions) + "\n";
+  msg = "Meta package validation complete : \n";
+  msg += "\tTotal packages validated     : " + std::to_string(totalPackages) + "\n" + \
+         "\tInstalled packages           : " + std::to_string(installedPackages) + "\n" + \
+         "\tMissing packages             : " + std::to_string(missingPackages) + "\n" + \
+         "\tVersion mismatch packages    : " + std::to_string(badVersions) + "\n";
 
   std::cout << msg;
 
@@ -136,8 +136,9 @@ void PackageHandler::listPackageVersion(){
     }
 	}
 
-	msg = "RCQT complete : \n";
-	msg += "\t Total Packages installed : " + std::to_string(installedPackages) + "\n";
+	msg = "Packages install validation complete : \n";
+	msg += "\tMissing packages      : " + std::to_string(missingPackages) + "\n";
+	msg += "\tInstalled packages    : " + std::to_string(installedPackages) + "\n";
 
   std::cout << msg;
 

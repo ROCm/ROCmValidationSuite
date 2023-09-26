@@ -82,7 +82,7 @@ std::string PackageHandlerDeb::getInstalledVersion(const std::string& package){
 
   auto res = pkgrOutputParser(ss.str(), pinfo);
   if(!res){
-    std::cout << "error in parsing" << std::endl;
+//    std::cout << "error in parsing" << std::endl;
     return std::string{};
   }
   return pinfo.version;
