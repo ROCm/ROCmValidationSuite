@@ -26,7 +26,6 @@
 #include "include/rcutils.h"
 
 OSType searchos(std::string os_name){
-	std::cout << "os is " << os_name << std::endl;
 	std::string lowcasename{os_name};
 	std::transform( lowcasename.begin(), lowcasename.end(), lowcasename.begin(),
 				[](unsigned char c){ return std::tolower(c); });
