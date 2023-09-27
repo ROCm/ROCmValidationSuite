@@ -34,7 +34,7 @@ PackageHandler* handlerCreator::getPackageHandler(const std::string& pkg){
   if(OSType::Ubuntu == osName){
     lptr = new PackageHandlerDeb{pkg};
   }
-  else if (OSType::Centos == osName) {
+  else if (OSType::Centos == osName || OSType::RHEL == osName) {
     lptr = new PackageHandlerRpm{pkg};
   }
   else if (OSType::SLES == osName) {
@@ -51,7 +51,7 @@ PackageHandler* handlerCreator::getPackageHandler(){
   if(OSType::Ubuntu == osName){
     lptr = new PackageHandlerDeb{};
   }
-  else if (OSType::Centos == osName) {
+  else if (OSType::Centos == osName || OSType::RHEL == osName) {
     lptr = new PackageHandlerRpm{};
   }
   else if (OSType::SLES == osName) {

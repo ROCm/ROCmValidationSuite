@@ -66,9 +66,9 @@ bool PackageHandlerZyp::pkgrOutputParser(const std::string& s_data, package_info
     else if(line.find("Version") != std::string::npos){
 
       info.version = get_last_word(line);
-      pos = info.version.find("-");
-      info.version = info.version.substr(0, pos);
-
+      auto hpos = info.version.find("-");
+      if (hpos != std::string::npos)
+	info.version = info.version.substr(0, hpos);
       if(found) 
         return found;
     }
@@ -93,7 +93,7 @@ std::string PackageHandlerZyp::getInstalledVersion(const std::string& package){
   if(!res){
 //    std::cout << "error in parsing" << std::endl;
     return std::string{};
-  }
+   }
   return pinfo.version;
 }
 
