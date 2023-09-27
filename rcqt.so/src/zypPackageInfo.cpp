@@ -59,7 +59,9 @@ bool ZypPackageInfo::readMetaPackageInfo(std::string ss){
 
           midSpacePos = line.find_last_of(" ");
           auto depPackageVersion = line.substr(midSpacePos + 1);
-
+	  auto p = depPackageVersion.find("-");
+	  if (std::string::npos != p)
+          	depPackageVersion = depPackageVersion.substr(0, p);
           /* Write dependent package name and its version to file */
           os << depPackageName << " " << depPackageVersion << std::endl;
 

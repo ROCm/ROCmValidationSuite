@@ -40,13 +40,14 @@ enum class OSType{
 	Ubuntu,
 	Centos,
 	SLES,
+	RHEL,
 	None
 };
 const std::string os_release_file {"/etc/os-release"};
 const std::string name_key {"NAME"};
 //const std::vector<std::string> op_systems{ "ubuntu", "centos", "sles"};
 const std::map<std::string, OSType> op_systems{{"ubuntu",OSType::Ubuntu}, {"centos",OSType::Centos},
-					{"sles",OSType::SLES}};
+					{"sles",OSType::SLES}, {"red hat enterprise linux",OSType::RHEL}};
 struct package_info{
 	std::string name{};
 	std::string version{};
