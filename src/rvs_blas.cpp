@@ -186,7 +186,6 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
     }
   }
 
-
   if(ops_type == "dgemm") {
 
     if (ddbla) {
@@ -253,30 +252,35 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
  */
 bool rvs_blas::allocate_gpu_matrix_mem(void) {
 
-  if (hipMalloc(&da, size_a * sizeof(float)) != hipSuccess)
-    return false;
-  if (hipMalloc(&db, size_b * sizeof(float)) != hipSuccess)
-    return false;
-  if (hipMalloc(&dc, size_c * sizeof(float)) != hipSuccess)
-    return false;
+  if(ops_type == "sgemm") {
+    if (hipMalloc(&da, size_a * sizeof(float)) != hipSuccess)
+      return false;
+    if (hipMalloc(&db, size_b * sizeof(float)) != hipSuccess)
+      return false;
+    if (hipMalloc(&dc, size_c * sizeof(float)) != hipSuccess)
+      return false;
+  }
 
-  if (hipMalloc(&ddbla, size_a * sizeof(double)) != hipSuccess)
-    return false;
-  if (hipMalloc(&ddblb, size_b * sizeof(double)) != hipSuccess)
-    return false;
-  if (hipMalloc(&ddblc, size_c * sizeof(double)) != hipSuccess)
-    return false;
+  if(ops_type == "dgemm") {
+    if (hipMalloc(&ddbla, size_a * sizeof(double)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddblb, size_b * sizeof(double)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddblc, size_c * sizeof(double)) != hipSuccess)
+      return false;
+  }
 
-  if (hipMalloc(&dhlfa, size_a * sizeof(rocblas_half)) != hipSuccess)
-    return false;
-  if (hipMalloc(&dhlfb, size_b * sizeof(rocblas_half)) != hipSuccess)
-    return false;
-  if (hipMalloc(&dhlfc, size_c * sizeof(rocblas_half)) != hipSuccess)
-    return false;
   if(ops_type == "hgemm") {
+    if (hipMalloc(&dhlfa, size_a * sizeof(rocblas_half)) != hipSuccess)
+      return false;
+    if (hipMalloc(&dhlfb, size_b * sizeof(rocblas_half)) != hipSuccess)
+      return false;
+    if (hipMalloc(&dhlfc, size_c * sizeof(rocblas_half)) != hipSuccess)
+      return false;
     if (hipMalloc(&dhlfd, size_d * sizeof(rocblas_half)) != hipSuccess)
       return false;
   }
+
   return true;
 }
 
@@ -331,17 +335,27 @@ void rvs_blas::release_gpu_matrix_mem(void) {
 bool rvs_blas::alocate_host_matrix_mem(void) {
 
   try {
-    ha = new float[size_a];
-    hb = new float[size_b];
-    hc = new float[size_c];
 
-    hdbla = new double[size_a];
-    hdblb = new double[size_b];
-    hdblc = new double[size_c];
+    if(ops_type == "sgemm") {
 
-    hhlfa = new rocblas_half[size_a];
-    hhlfb = new rocblas_half[size_b];
-    hhlfc = new rocblas_half[size_c];
+      ha = new float[size_a];
+      hb = new float[size_b];
+      hc = new float[size_c];
+    }
+
+    if(ops_type == "dgemm") {
+
+      hdbla = new double[size_a];
+      hdblb = new double[size_b];
+      hdblc = new double[size_c];
+    }
+
+    if(ops_type == "hgemm") {
+
+      hhlfa = new rocblas_half[size_a];
+      hhlfb = new rocblas_half[size_b];
+      hhlfc = new rocblas_half[size_c];
+    }
 
     return true;
   } catch (std::bad_alloc&) {
@@ -501,34 +515,44 @@ void rvs_blas::generate_random_matrix_data(void) {
   if (!is_error) {
     uint64_t nextr = (uint64_t) time(NULL);
 
-    //SGEMM stuff
-    for (i = 0; i < size_a; ++i)
-      ha[i] = fast_pseudo_rand(&nextr);
+    if(ops_type == "sgemm") {
 
-    for (i = 0; i < size_b; ++i)
-      hb[i] = fast_pseudo_rand(&nextr);
+      //SGEMM stuff
+      for (i = 0; i < size_a; ++i)
+        ha[i] = fast_pseudo_rand(&nextr);
 
-    for (int i = 0; i < size_c; ++i)
-      hc[i] = fast_pseudo_rand(&nextr);
+      for (i = 0; i < size_b; ++i)
+        hb[i] = fast_pseudo_rand(&nextr);
 
-    //DGEMM stuff
-    for (i = 0; i < size_a; ++i)
-      hdbla[i] = (double)fast_pseudo_rand(&nextr);
+      for (int i = 0; i < size_c; ++i)
+        hc[i] = fast_pseudo_rand(&nextr);
+    }
 
-    for (i = 0; i < size_b; ++i)
-      hdblb[i] = (double)fast_pseudo_rand(&nextr);
+    if(ops_type == "dgemm") {
 
-    for (int i = 0; i < size_c; ++i)
-      hdblc[i] = (double)fast_pseudo_rand(&nextr);
+      //DGEMM stuff
+      for (i = 0; i < size_a; ++i)
+        hdbla[i] = (double)fast_pseudo_rand(&nextr);
 
-    for (i = 0; i < size_a; ++i)
-      hhlfa[i] = fast_pseudo_rand(&nextr);
+      for (i = 0; i < size_b; ++i)
+        hdblb[i] = (double)fast_pseudo_rand(&nextr);
 
-    for (i = 0; i < size_b; ++i)
-      hhlfb[i] = fast_pseudo_rand(&nextr);
+      for (int i = 0; i < size_c; ++i)
+        hdblc[i] = (double)fast_pseudo_rand(&nextr);
+    }
 
-    for (int i = 0; i < size_c; ++i)
-      hhlfc[i] = fast_pseudo_rand(&nextr);
+    if(ops_type == "hgemm") {
+
+      //HGEMM stuff
+      for (i = 0; i < size_a; ++i)
+        hhlfa[i] = fast_pseudo_rand(&nextr);
+
+      for (i = 0; i < size_b; ++i)
+        hhlfb[i] = fast_pseudo_rand(&nextr);
+
+      for (int i = 0; i < size_c; ++i)
+        hhlfc[i] = fast_pseudo_rand(&nextr);
+    }
   }
 }
 
