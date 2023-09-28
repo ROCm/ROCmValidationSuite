@@ -44,17 +44,6 @@ using std::vector;
 using std::string;
 using std::ifstream;
 
-/* No of GPU devices with MCM GPU */
-#define MAX_NUM_MCM_GPU 4
-
-/* Unique Device Ids of MCM GPUS */
-static const uint16_t mcm_gpu_device_id[MAX_NUM_MCM_GPU] = {
-	/* Aldebaran */
-	0x7408,
-	0x740C,
-	0x740F,
-	0x7410};
-
 int gpu_num_subdirs(const char* dirpath, const char* prefix) {
   int count = 0;
   DIR *dirp;
@@ -269,25 +258,6 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
     f_id.close();
     f_prop.close();
   }
-}
-
-/**
- * @brief Check if the GPU is die (chiplet) in Multi-Core Module (MCM) GPU.
- * @param device_id GPU Device ID
- * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
- **/
-bool gpu_check_if_mcm_die (uint16_t device_id) {
-
-  uint16_t i = 0;
-  bool mcm_die = false;
-  
-  for (i  = 0; i < MAX_NUM_MCM_GPU; i++) {
-    if(mcm_gpu_device_id[i] == device_id) {
-      mcm_die = true;
-      break;
-    }
-  }
-  return mcm_die;
 }
 
 /**

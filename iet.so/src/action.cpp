@@ -33,8 +33,6 @@
 #include <algorithm>
 #include <memory>
 #include <map>
-#include <iomanip>
-#include <sstream>
 
 #ifdef __cplusplus
 extern "C" {
@@ -602,9 +600,6 @@ int iet_action::get_all_selected_gpus(void) {
     bool amd_gpus_found = false;
     map<int, uint16_t> iet_gpus_device_index;
     std::string msg;
-    bool mcm_die = false;
-    bool amd_mcm_gpu_found = false;
-    std::stringstream msg_stream;
 
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
@@ -656,30 +651,7 @@ int iet_action::get_all_selected_gpus(void) {
                 (std::pair<int, uint16_t>(i, gpu_id));
             amd_gpus_found = true;
         }
-
-        /* Check if GPU is die in MCM GPU */
-        mcm_die =  gpu_check_if_mcm_die(devId);
-	if (true == mcm_die) {
-
-		msg_stream.str("");
-                msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
-			" - " << "GPU is a die/chiplet in Multi-Chip Module (MCM) GPU";
-		rvs::lp::Log(msg_stream.str(), rvs::logresults);
-
-		amd_mcm_gpu_found = true;
-	}
     }
-
-    /* AMD MCM GPU/s was found in the system */
-    if (true == amd_mcm_gpu_found) {
-
-	    msg_stream.str("");
-	    msg_stream << "Note: The system has Multi-Chip Module (MCM) GPU/s." << "\n" 
-		    << "In MCM GPU, primary GPU die shows total socket (primary + secondary) power information." << "\n"
-		    << "Secondary GPU die does not have any power information associated with it independently."<< "\n";
-	    rvs::lp::Log(msg_stream.str(), rvs::logresults);
-    }
-
     if(bjson){
         // add prelims for each action, dtype and target stress
         json_add_primary_fields();
