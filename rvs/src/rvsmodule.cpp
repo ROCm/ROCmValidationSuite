@@ -168,6 +168,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       libpath += "../lib/rvs/";
     }
     string sofullname(libpath + it->second);
+    std::cout << "MANOJ:::: " << sofullname << std::endl;
     void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
     // error?
     if (!psolib) {
@@ -227,7 +228,8 @@ rvs::module* rvs::module::find_create_module(const char* name) {
     }
 
     // add to map
-    modulemap.insert(t_mmpair(name, m));
+    std::cout << "module name manoj is :" <<  name;
+
   } else {
     m = it->second;
   }
