@@ -55,7 +55,7 @@ class rcqt_action : public rvs::actionbase {
 
     //! Operating system variant
     static const OSType os_type;
-
+    std::string PACKAGELIST; 
     /**
      *  @brief Function used in rcqt action class to check for given package
      */

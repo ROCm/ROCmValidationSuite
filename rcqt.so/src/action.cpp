@@ -55,7 +55,6 @@
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 #define JSON_PKGCHK_NODE_NAME "pkgchk"
 #define PACKAGE "package"
-#define PACKAGELIST (os_type == OSType::Ubuntu?"debpackagelist":"rpmpackagelist")
 #define VERSION "version"
 #define INTERNAL_ERROR "Internal Error"
 
@@ -85,8 +84,8 @@ using std::vector;
 
 // Set Operating System variant
 const OSType rcqt_action::os_type = getOS();
-
 rcqt_action::rcqt_action() {
+  PACKAGELIST = getOS() == OSType::Ubuntu?"debpackagelist":"rpmpackagelist";
   bjson = false;
 }
 
@@ -112,7 +111,6 @@ int rcqt_action::run() {
   bool propchk = false;
   int ret = 0;
   rvs::action_result_t action_result;
-
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     msg = "Action name missing";
