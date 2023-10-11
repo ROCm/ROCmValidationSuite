@@ -12,6 +12,10 @@ DebPackageInfo::getNameVers(std::string word){
     auto pvers = word.substr(it+2);
     //remove last ) as it wont help
     pvers = pvers.substr(0, pvers.size()-1);
+    auto hyp = pvers.find("-");
+    if (hyp != std::string::npos){
+      pvers = pvers.substr(0,hyp);
+    }
     return {remSpaces(pname), remSpaces(pvers)};
   }
 }
