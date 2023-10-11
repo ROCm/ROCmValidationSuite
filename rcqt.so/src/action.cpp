@@ -85,7 +85,7 @@ using std::vector;
 // Set Operating System variant
 const OSType rcqt_action::os_type = getOS();
 rcqt_action::rcqt_action() {
-  PACKAGELIST = getOS() == OSType::Ubuntu?"debpackagelist":"rpmpackagelist";
+  PACKAGELIST = (getOS() == OSType::Ubuntu) ?"debpackagelist":"rpmpackagelist";
   bjson = false;
 }
 
