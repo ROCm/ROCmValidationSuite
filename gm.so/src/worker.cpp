@@ -92,14 +92,14 @@ void Worker::do_metric_values() {
     if (bounds[GM_CLOCK].mon_metric) {
       msg = "[" + action_name + "] gm " +
           std::to_string((it->second).gpu_id) + " " + GM_CLOCK +
-          " " + std::to_string(met_value[it->first].clock) + "Mhz";
+          " " + std::to_string(met_value[it->first].clock) + "MHz";
       rvs::lp::Log(msg, rvs::loginfo, sec, usec);
       rvs::lp::AddString(r,  "info ", msg);
     }
     if (bounds[GM_MEM_CLOCK].mon_metric) {
       msg = "[" + action_name + "] gm " +
           std::to_string((it->second).gpu_id) + " " + GM_MEM_CLOCK +
-          " " + std::to_string(met_value[it->first].mem_clock) + "Mhz";
+          " " + std::to_string(met_value[it->first].mem_clock) + "MHz";
       rvs::lp::Log(msg, rvs::loginfo, sec, usec);
       rvs::lp::AddString(r,  "info ", msg);
     }
@@ -145,6 +145,7 @@ void Worker::run() {
   unsigned int usec;
   void* r;
   rvs::action_result_t action_result;
+  RSMI_POWER_TYPE type = RSMI_INVALID_POWER;
 
   rvs::timer<Worker> timer_running(&Worker::do_metric_values, this);
 
@@ -206,7 +207,7 @@ void Worker::run() {
       if (bounds[GM_MEM_CLOCK].mon_metric) {
         RVSTRACE_
         status = rsmi_dev_gpu_clk_freq_get(ix, RSMI_CLK_TYPE_MEM, &f);
-        uint32_t mhz = f.current;
+        uint64_t mhz = f.frequency[f.current]/1e6;
         met_value[ix].mem_clock = mhz;
         if (!(mhz >= bounds[GM_MEM_CLOCK].min_val && mhz <=
                         bounds[GM_MEM_CLOCK].max_val) &&
@@ -216,7 +217,7 @@ void Worker::run() {
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                 std::to_string(gpuid) + " " +
                 GM_MEM_CLOCK  + " " + "bounds violation " +
-                std::to_string(mhz) + "Mhz";
+                std::to_string(mhz) + "MHz";
           rvs::lp::Log(msg, rvs::loginfo);
 
           action_result.state = rvs::actionstate::ACTION_RUNNING;
@@ -251,7 +252,7 @@ void Worker::run() {
         RVSTRACE_
         status = rsmi_dev_gpu_clk_freq_get(ix,
                               RSMI_CLK_TYPE_SYS, &f);
-        uint32_t mhz = f.current;
+        uint32_t mhz = f.frequency[f.current]/1e6;
         met_value[ix].clock = mhz;
         if (!(mhz >= bounds[GM_CLOCK].min_val && mhz <=
                     bounds[GM_CLOCK].max_val) &&
@@ -261,7 +262,7 @@ void Worker::run() {
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
               std::to_string(met_avg[ix].gpu_id) + " " +
               GM_CLOCK + " " + "bounds violation " +
-              std::to_string(mhz) + "Mhz";
+              std::to_string(mhz) + "MHz";
           rvs::lp::Log(msg, rvs::loginfo);
 
           action_result.state = rvs::actionstate::ACTION_RUNNING;
@@ -295,15 +296,17 @@ void Worker::run() {
       RVSTRACE_
       if (bounds[GM_TEMP].mon_metric) {
         RVSTRACE_
-        status = rsmi_dev_temp_metric_get(ix, sensor_ind,
-                        RSMI_TEMP_CURRENT, &temperature);
+
+          // Get GPU's current edge temperature
+          status = rsmi_dev_temp_metric_get(ix, RSMI_TEMP_TYPE_EDGE,
+              RSMI_TEMP_CURRENT, &temperature);
 
 #ifdef UT_TCD_1
         status = RSMI_STATUS_UNKNOWN_ERROR;
 #endif  // UT_TCD_1
         if (status == RSMI_STATUS_SUCCESS) {
           RVSTRACE_
-          uint32_t temper = temperature/1000;
+          int64_t temper = temperature/1000;
           met_value[ix].temp = temper;
           met_avg[ix].av_temp += temper;
           if (!(temper >= bounds[GM_TEMP].min_val && temper <=
@@ -416,7 +419,8 @@ void Worker::run() {
       RVSTRACE_
       if (bounds[GM_POWER].mon_metric) {
         RVSTRACE_
-        status = rsmi_dev_power_ave_get(ix, sensor_ind, &power);
+
+        status = rsmi_dev_power_get(ix, &power, &type);
         met_value[ix].power = power;
         met_avg[ix].av_power += power;
         if (bounds[GM_POWER].check_bounds) {
@@ -541,7 +545,7 @@ void Worker::stop() {
         rvs::lp::AddString(r, "result", msg);
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " + GM_CLOCK + " average " +
-            std::to_string((it->second).av_clock/count) + "Mhz";
+            std::to_string((it->second).av_clock/count) + "MHz";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
       }
@@ -557,7 +561,7 @@ void Worker::stop() {
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " +
             GM_MEM_CLOCK + " average " +
-            std::to_string((it->second).av_mem_clock/count) + "Mhz";
+            std::to_string((it->second).av_mem_clock/count) + "MHz";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
       }

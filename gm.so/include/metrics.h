@@ -58,11 +58,11 @@ typedef struct {
   //! gpu_id
   int32_t gpu_id;
   //! current temperature value
-  uint32_t temp;
+  int64_t temp;
   //! current clock value
-  uint32_t clock;
+  uint64_t clock;
   //! current mem_clock value
-  uint32_t mem_clock;
+  uint64_t mem_clock;
   //! current fan value
   uint32_t fan;
   //! current power value
@@ -74,11 +74,11 @@ typedef struct {
   //! gpu_id
   int32_t gpu_id;
   //! average temperature
-  uint32_t av_temp;
+  int64_t av_temp;
   //! average clock
-  uint32_t av_clock;
+  uint64_t av_clock;
   //! average mem_clock
-  uint32_t av_mem_clock;
+  uint64_t av_mem_clock;
   //! average fan
   uint32_t av_fan;
   //! average power

@@ -209,7 +209,7 @@ bool IETWorker::do_iet_power_stress(void) {
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time,
         sampling_start_time;
     uint64_t  total_time_ms;
-    uint64_t  last_avg_power;
+    uint64_t  last_power;
     string    msg;
     float     cur_power_value = 0;
     float     totalpower = 0;
@@ -217,8 +217,9 @@ bool IETWorker::do_iet_power_stress(void) {
     bool      result = true;
     bool      start = true;
     rvs::action_result_t action_result;
+    RSMI_POWER_TYPE type = RSMI_INVALID_POWER;
 
-    std::thread t(&IETWorker::blasThread,this, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms, 
+    std::thread t(&IETWorker::blasThread, this, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms,
             iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset);
 
     // record EDPp ramp-up start time
@@ -228,12 +229,13 @@ bool IETWorker::do_iet_power_stress(void) {
         // check if stop signal was received
         if (rvs::lp::Stopping())
             break;
-        // get GPU's current average power
-        rsmi_status_t rmsi_stat = rsmi_dev_power_ave_get(smi_device_index , 0,
-                &last_avg_power);
 
+        cur_power_value = 0;
+
+        // get GPU's current average power
+        rsmi_status_t rmsi_stat = rsmi_dev_power_get(smi_device_index, &last_power, &type);
         if (rmsi_stat == RSMI_STATUS_SUCCESS) {
-            cur_power_value = static_cast<float>(last_avg_power)/1e6;
+          cur_power_value = static_cast<float>(last_power)/1e6;
         }
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
