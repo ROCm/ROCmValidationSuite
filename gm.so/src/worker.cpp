@@ -297,8 +297,8 @@ void Worker::run() {
       if (bounds[GM_TEMP].mon_metric) {
         RVSTRACE_
 
-          // Get GPU's current edge temperature
-          status = rsmi_dev_temp_metric_get(ix, RSMI_TEMP_TYPE_EDGE,
+          // Get GPU's current junction temperature
+          status = rsmi_dev_temp_metric_get(ix, RSMI_TEMP_TYPE_JUNCTION,
               RSMI_TEMP_CURRENT, &temperature);
 
 #ifdef UT_TCD_1
@@ -432,7 +432,7 @@ void Worker::run() {
             msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                   std::to_string(met_avg[ix].gpu_id) + " " +
                   GM_POWER + " " + "bounds violation " +
-                  std::to_string(static_cast<float>(power) / 1e6) + "Watts";
+                  std::to_string(static_cast<unsigned int>(power / 1e6)) + "Watts";
             rvs::lp::Log(msg, rvs::loginfo);
 
             action_result.state = rvs::actionstate::ACTION_RUNNING;
@@ -588,7 +588,7 @@ void Worker::stop() {
         rvs::lp::AddString(r, "result", msg);
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " + GM_POWER + " average " +
-            std::to_string((static_cast<float>((it->second).av_power) /
+            std::to_string(static_cast<unsigned int>(((it->second).av_power) /
                             count/1e6)) + "Watts";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
