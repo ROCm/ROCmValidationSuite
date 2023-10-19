@@ -63,7 +63,7 @@ typedef struct {
   uint64_t clock;
   //! current mem_clock value
   uint64_t mem_clock;
-  //! current fan value
+  //! current fan percentage
   uint32_t fan;
   //! current power value
   uint32_t power;
@@ -80,7 +80,7 @@ typedef struct {
   //! average mem_clock
   uint64_t av_mem_clock;
   //! average fan
-  uint32_t av_fan;
+  uint64_t av_fan;
   //! average power
   float av_power;
 } Metric_avg;

@@ -139,6 +139,8 @@ void Worker::run() {
   uint32_t sensor_ind = 0;
   int64_t  temperature;
   int64_t  speed;
+  uint64_t  max_speed;
+  uint32_t fan_percentage;
   uint64_t power;
 
   unsigned int sec;
@@ -360,16 +362,28 @@ void Worker::run() {
       RVSTRACE_
       if (bounds[GM_FAN].mon_metric) {
         RVSTRACE_
-        status = rsmi_dev_fan_speed_get(ix,
-                                        sensor_ind, &speed);
+
+        speed = 0;
+        max_speed = 0;
+        status = rsmi_dev_fan_speed_get(ix, sensor_ind, &speed);
+        if (status == RSMI_STATUS_SUCCESS) {
+          status = rsmi_dev_fan_speed_max_get(ix, sensor_ind, &max_speed);
+        }
+
+        /* Calculate fan speed percentage */
+        if ((speed != 0) && (max_speed != 0)) {
+          fan_percentage = static_cast<uint32_t>((speed * 100)/max_speed);
+        }
+
 #ifdef UT_TCD_1
         status = RSMI_STATUS_UNKNOWN_ERROR;
 #endif  // UT_TCD_1
         if (status == RSMI_STATUS_SUCCESS) {
           RVSTRACE_
-          met_value[ix].fan = speed;
-          met_avg[ix].av_fan += speed;
-          if (!(speed >= bounds[GM_FAN].min_val && speed <=
+          met_value[ix].fan = fan_percentage;
+          met_avg[ix].av_fan += static_cast<uint64_t> (fan_percentage);
+
+          if (!(fan_percentage >= bounds[GM_FAN].min_val && fan_percentage <=
                       bounds[GM_FAN].max_val) &&
                       bounds[GM_FAN].check_bounds) {
             RVSTRACE_
@@ -377,7 +391,7 @@ void Worker::run() {
             msg = "[" + action_name  + "] " + MODULE_NAME + " " +
                   std::to_string(met_avg[ix].gpu_id) + " " +
                   + GM_FAN + " " + "bounds violation " +
-                  std::to_string(speed) + "%";
+                  std::to_string(fan_percentage) + "%";
             rvs::lp::Log(msg, rvs::loginfo);
 
             action_result.state = rvs::actionstate::ACTION_RUNNING;
@@ -574,7 +588,7 @@ void Worker::stop() {
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " + GM_FAN + " average " +
-            std::to_string((it->second).av_fan/count) + "%";
+            std::to_string(static_cast<uint32_t>(((it->second).av_fan)/count)) + "%";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
       }
       RVSTRACE_
@@ -588,7 +602,7 @@ void Worker::stop() {
         rvs::lp::AddString(r, "result", msg);
         msg = "[" + action_name + "] gm " +
             std::to_string((it->second).gpu_id) + " " + GM_POWER + " average " +
-            std::to_string(static_cast<unsigned int>(((it->second).av_power) /
+            std::to_string(static_cast<uint32_t>(((it->second).av_power) /
                             count/1e6)) + "Watts";
         rvs::lp::Log(msg, rvs::logresults, sec, usec);
         rvs::lp::AddString(r, "result", msg);
