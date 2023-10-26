@@ -41,7 +41,7 @@ The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfer
 The GPU Stress Test runs various GEMM operations as workloads to stress the GPU FLOPS performance. GEMM operations include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) operations based on configured parameters. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
 
 ## Input EDPp Test - IET module
-The Input EDPp Test generates EDP peak power on the GPU. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the device.  Peak Current at defined period  =  1 minute moving average power.
+The Input EDPp Test generates EDP peak power on the GPU( which is the TGP). This test is used to verify if the chip is capable of handling the worst case power spikes.  Peak Current at defined period  =  1 minute moving average power peak.
 
 ## Memory Test - MEM module
 The Memory module tests the GPU memory for hard and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
