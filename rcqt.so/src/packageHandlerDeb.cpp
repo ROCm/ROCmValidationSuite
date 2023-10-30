@@ -58,6 +58,10 @@ bool PackageHandlerDeb::pkgrOutputParser(const std::string& s_data, package_info
   while(std::getline(data, line)){
     if(line.find("Version") != std::string::npos){
       info.version = get_last_word(line);
+      auto hyp = info.version.find("-");
+      if (hyp != std::string::npos ){
+	  info.version = info.version.substr(0,hyp);
+      }
       found = true;
     } else if( line.find("Package") != std::string::npos){
       info.name = get_last_word(line);
@@ -82,7 +86,7 @@ std::string PackageHandlerDeb::getInstalledVersion(const std::string& package){
 
   auto res = pkgrOutputParser(ss.str(), pinfo);
   if(!res){
-    std::cout << "error in parsing" << std::endl;
+//    std::cout << "error in parsing" << std::endl;
     return std::string{};
   }
   return pinfo.version;

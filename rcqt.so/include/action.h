@@ -28,6 +28,8 @@
 #include "include/rvsactionbase.h"
 #include "include/rvs_module.h"
 #include "include/rvs_util.h"
+#include "include/rcutils.h"
+
 
 /**
  * @class rcqt_action
@@ -40,27 +42,29 @@
  *
  */
 class rcqt_action : public rvs::actionbase {
- public:
+  public:
     rcqt_action();
     virtual ~rcqt_action();
     virtual int run(void);
 
- protected:
+  protected:
     //! bjson field indicates if the json flag is set
-  bool bjson;
+    bool bjson;
     //! json_rcqt_node is json node shared through submodules
-  void *json_rcqt_node;
+    void *json_rcqt_node;
 
+    //! Operating system variant
+    static const OSType os_type;
+    std::string PACKAGELIST; 
     /**
-    *  @brief Function used in rcqt action class to check for given package
-    */
+     *  @brief Function used in rcqt action class to check for given package
+     */
     virtual int pkgchk_run();
 
     /**
-    *  @brief Function used in rcqt action class to list installed packages and its version.
-    */
+     *  @brief Function used in rcqt action class to list installed packages and its version.
+     */
     virtual int pkglist_run();
-
 };
 
 #endif  // RCQT_SO_INCLUDE_ACTION_H_

@@ -35,10 +35,16 @@ bool RpmPackageInfo::readMetaPackageInfo(std::string ss){
   bool found = false;
   size_t pos = std::string::npos;
   std::ofstream os;
+  size_t relPos = std::string::npos;
 
   os.open(getFileName() , std::ofstream::out | std::ofstream::app);
 
   while(std::getline(inss, line)){
+
+    /* Exclude rpmlib* packages that are not part ROCm */
+    if(0 == line.find("rpmlib")) {
+      continue;
+    }
 
     pos = line.find("=");
 
@@ -49,6 +55,12 @@ bool RpmPackageInfo::readMetaPackageInfo(std::string ss){
 
       auto depPackageName = line.substr(0, firstSpacePos);
       auto depPackageVersion = line.substr(pos + 2);
+
+
+      /* If release version is appended in package version then remove it */
+      if(std::string::npos != (relPos = depPackageVersion.find("-"))) {
+        depPackageVersion = depPackageVersion.substr(0, relPos);
+      }
 
       /* Write depend package name and its version to file */
       os << depPackageName << " " << depPackageVersion << std::endl;

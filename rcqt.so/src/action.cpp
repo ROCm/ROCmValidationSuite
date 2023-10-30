@@ -55,7 +55,6 @@
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 #define JSON_PKGCHK_NODE_NAME "pkgchk"
 #define PACKAGE "package"
-#define PACKAGELIST "packagelist"
 #define VERSION "version"
 #define INTERNAL_ERROR "Internal Error"
 
@@ -83,7 +82,10 @@ using std::map;
 using std::regex;
 using std::vector;
 
+// Set Operating System variant
+const OSType rcqt_action::os_type = getOS();
 rcqt_action::rcqt_action() {
+  PACKAGELIST = (getOS() == OSType::Ubuntu) ?"debpackagelist":"rpmpackagelist";
   bjson = false;
 }
 
@@ -109,7 +111,6 @@ int rcqt_action::run() {
   bool propchk = false;
   int ret = 0;
   rvs::action_result_t action_result;
-
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     msg = "Action name missing";
@@ -186,6 +187,8 @@ int rcqt_action::pkgchk_run() {
   handlerCreator creator;
   for( auto pkg : package_list){
 
+    std::cout << "Meta package " << pkg << " :" << std::endl;
+
     auto handler = creator.getPackageHandler(pkg);
     if(!handler){
       std::cout << "Failed to create handler " << std::endl;
@@ -195,6 +198,8 @@ int rcqt_action::pkgchk_run() {
     handler->setCallback(callback, user_param);
     handler->parseManifest();
     handler->validatePackages();
+
+    std::cout << std::endl;
   }
 
   return 0;

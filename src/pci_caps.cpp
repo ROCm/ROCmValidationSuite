@@ -110,6 +110,10 @@ void get_link_cap_max_speed(struct pci_dev *dev, char *buff) {
         case 4:
             link_max_speed = "16 GT/s";
             break;
+        case 5:
+            link_max_speed = "32 GT/s";
+            break;
+
         default:
             link_max_speed = "Unknown speed";
         }
@@ -168,10 +172,17 @@ void get_link_stat_cur_speed(struct pci_dev *dev, char *buff) {
             link_cur_speed = "8 GT/s";
             break;
 #ifdef PCI_EXP_LNKSTA_CLS_16_0GB
-            case PCI_EXP_LNKSTA_CLS_16_0GB:
+        case PCI_EXP_LNKSTA_CLS_16_0GB:
             link_cur_speed = "16 GT/s";
             break;
 #endif
+
+#ifdef PCI_EXP_LNKSTA_CLS_32_0GB
+         case PCI_EXP_LNKSTA_CLS_32_0GB:
+             link_cur_speed = "32 GT/s";
+             break;
+#endif
+
         default:
             link_cur_speed = "Unknown speed";
         }
