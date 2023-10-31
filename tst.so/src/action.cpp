@@ -64,6 +64,7 @@ using std::fstream;
 
 
 #define RVS_CONF_THROTTLE_TEMP_KEY      "throttle_temp"
+#define RVS_CONF_TARGET_TEMP_KEY        "target_temp"
 #define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_interval"
 #define RVS_CONF_TOLERANCE_KEY          "tolerance"
 #define RVS_CONF_MAX_VIOLATIONS_KEY     "max_violations"
@@ -136,6 +137,23 @@ bool tst_action::get_all_tst_config_keys(void) {
     int error;
     string msg, ststress;
     bool bsts = true;
+
+    if ((error =
+      property_get(RVS_CONF_TARGET_TEMP_KEY, &tst_throttle_temp))) {
+      switch (error) {
+        case 1:
+          msg = "invalid '" + std::string(RVS_CONF_TARGET_TEMP_KEY) +
+              "' key value " + ststress;
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+          break;
+
+        case 2:
+          msg = "key '" + std::string(RVS_CONF_TARGET_TEMP_KEY) +
+          "' was not found";
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      }
+      bsts = false;
+    }
 
     if ((error =
       property_get(RVS_CONF_THROTTLE_TEMP_KEY, &tst_throttle_temp))) {
@@ -472,6 +490,7 @@ bool tst_action::do_thermal_test(map<int, uint16_t> tst_gpus_device_index) {
             workers[i].set_log_interval(property_log_interval);
             workers[i].set_sample_interval(tst_sample_interval);
             workers[i].set_max_violations(tst_max_violations);
+            workers[i].set_target_temp(tst_target_temp);
             workers[i].set_throttle_temp(tst_throttle_temp);
             workers[i].set_tolerance(tst_tolerance);
             workers[i].set_matrix_size_a(tst_matrix_size_a);

@@ -118,10 +118,19 @@ class TSTWorker : public rvs::ThreadBase {
     uint64_t get_max_violations(void) { return max_violations; }
 
     //! sets the target temperature level for the TST test
+    void set_target_temp(float _temp) {
+        target_temp = _temp;
+    }
+
+    //! sets the target trottle temperature level for the TST test
     void set_throttle_temp(float _throttle_temp) {
         throttle_temp = _throttle_temp;
     }
+
     //! returns the target temperature level for the test
+    float get_target_temp(void) { return target_temp; }
+
+    //! returns the target trottle temperature level for the test
     float get_throttle_temp(void) { return throttle_temp; }
 
     //! sets the SGEMM matrix size
@@ -245,6 +254,8 @@ class TSTWorker : public rvs::ThreadBase {
     //! maximum allowed number of target_temperature violations
     uint64_t max_violations;
     //! target temperature level for the test
+    float target_temp;
+    //! target trottle temperature level for the test
     float throttle_temp;
     //! temperature tolerance (how much the target_temperature can fluctuare after
     //! the ramp period for the test to succeed)
