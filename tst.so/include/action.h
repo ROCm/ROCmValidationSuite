@@ -78,6 +78,8 @@ class tst_action: public rvs::actionbase {
     bool bjson = false;
 
     std::string tst_ops_type;
+    //! target temperature
+    float tst_target_temp;
     //! throttle temperature
     float tst_throttle_temp;
     //! TST test ramp duration
