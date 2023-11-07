@@ -43,6 +43,7 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
   add_executable(${TEST_NAME}
     ${SINGLE_TEST} ${UT_SOURCES}
   )
+  add_dependencies(${TEST_NAME} rvs_gtest_target) 
   target_link_libraries(${TEST_NAME}
     ${UT_LINK_LIBS}  rvslibut rvslib gtest_main gtest pthread pci
   )
