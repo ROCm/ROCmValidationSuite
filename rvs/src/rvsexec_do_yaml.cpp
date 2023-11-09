@@ -72,7 +72,10 @@ int rvs::exec::do_yaml(const std::string& config_file) {
 
   // find "actions" map
   const YAML::Node& actions = config["actions"];
-
+  if (!actions.IsDefined()) {
+    rvs::logger::Err("Invalid configuration file !", MODULE_NAME_CAPS);
+    return -1;
+  }
 
   // for all actions...
   for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
@@ -186,7 +189,10 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
   // find "actions" map
   const YAML::Node& actions = config["actions"];
-
+  if (!actions.IsDefined()) {
+    rvs::logger::Err("Invalid configuration file !", MODULE_NAME_CAPS);
+    return -1;
+  }
 
   // for all actions...
   for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
