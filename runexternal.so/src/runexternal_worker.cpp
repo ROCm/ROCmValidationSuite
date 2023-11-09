@@ -54,11 +54,12 @@ runExtWorker::~runExtWorker() {}
 void runExtWorker::run() {
     string msg, err_description;
     int error = 0;
-
-
+    auto pos = m_test_path.find_last_of('/');
+    string tname = (pos != std::string::npos) ? m_test_path.substr(pos+1) : "" ;
+    if (pos != std::string::npos)
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            " Starting the external test " + m_test_path; 
-    rvs::lp::Log(msg, rvs::logtrace);
+            " Starting :  " + tname; 
+    rvs::lp::Log(msg, rvs::loginfo);
 
     bool status = start_ext_tests(error, err_description);
 
@@ -68,6 +69,9 @@ void runExtWorker::run() {
         rvs::lp::Log(msg, rvs::logerror);
         return;
     }
+    msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            " Completed running :  " + tname;
+    rvs::lp::Log(msg, rvs::loginfo);
 
 }
 

@@ -55,7 +55,7 @@ using std::regex;
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
-
+const std::string NOARGS{"None"};
 /**
  * @brief default class constructor
  */
@@ -117,7 +117,8 @@ bool runexternal_action::get_all_runexternal_config_keys(void) {
 	rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 	bsts = false;
     }
-
+    if (m_test_file_args.compare(NOARGS) == 0)
+	    m_test_file_args = "";
     return bsts;
 }
 
