@@ -28,7 +28,6 @@
 #include <string>
 #include <memory>
 #include "include/rvsthreadbase.h"
-#include "include/rvs_blas.h"
 #include "include/rvs_util.h"
 
 #define GST_RESULT_PASS_MESSAGE         "true"

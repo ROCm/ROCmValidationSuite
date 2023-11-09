@@ -38,7 +38,8 @@ extern "C" {
 #include <map>
 
 #include "include/rvsactionbase.h"
-
+#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 using std::vector;
 using std::string;
 using std::map;

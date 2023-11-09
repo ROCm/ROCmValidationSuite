@@ -28,7 +28,6 @@
 #include <string>
 #include <memory>
 #include <iostream>
-#include "include/rvs_blas.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 #include "include/rvs_util.h"

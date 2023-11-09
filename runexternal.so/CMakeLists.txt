@@ -128,7 +128,7 @@ endif()
 # Determine Roc Runtime header files are accessible
 if(DEFINED RVS_ROCMSMI)
   if(NOT RVS_ROCMSMI EQUAL 1)
-    if(NOT EXISTS ${ROCBLAS_INC_DIR}/rocblas.h)
+    if(NOT EXISTS ${ROCBLAS_INC_DIR}/${ROCBLAS_MODULE_NM_PREFIX}rocblas.h)
     message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
     RETURN()
     endif()
