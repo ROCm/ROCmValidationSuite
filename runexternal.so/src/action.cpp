@@ -201,7 +201,6 @@ int runexternal_action::run_external_tests(void) {
  */
 int runexternal_action::run(void) {
     string msg;
-
     // get the action name
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
       rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);

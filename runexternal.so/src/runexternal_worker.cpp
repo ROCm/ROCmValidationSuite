@@ -28,6 +28,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <fstream>
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 #include "include/rvs_util.h"
@@ -82,6 +83,14 @@ bool hipTestWorker::start_hip_tests(int &error, string &errdesc){
     int pid, status;
     auto found = m_test_path.find_last_of('/');
     auto fname = m_test_path.substr(found+1);
+    {
+      std::ifstream f(m_test_path.c_str());
+      if(! f.good()){
+	      error = -1;
+	      errdesc = "Binary file absent";
+	      return false;
+      }
+    }
     if((pid = fork()) == 0){ // child
 	execl(m_test_path.c_str(), fname.c_str(), m_test_args.c_str(), 0);
     }else{
