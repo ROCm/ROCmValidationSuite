@@ -42,29 +42,26 @@
 
 using std::string;
 
-//bool hipTestWorker::bjson = false;
+//bool runExtWorker::bjson = false;
 
-hipTestWorker::hipTestWorker() {}
-hipTestWorker::~hipTestWorker() {}
+runExtWorker::runExtWorker() {}
+runExtWorker::~runExtWorker() {}
 
 
 /**
  * @brief performs the stress test on the given GPU
  */
-void hipTestWorker::run() {
+void runExtWorker::run() {
     string msg, err_description;
     int error = 0;
 
 
-    // log GST stress test - start message
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            " Starting the Hip test "; 
+            " Starting the external test " + m_test_path; 
     rvs::lp::Log(msg, rvs::logtrace);
 
-    // let the GPU ramp-up and check the result
-    bool hipsuccess = start_hip_tests(error, err_description);
+    bool status = start_ext_tests(error, err_description);
 
-    // GPU was not able to do the processing (HIP/rocBlas error(s) occurred)
     if (error) {
         string msg = "[" + action_name + "] " + MODULE_NAME + " "
                          + err_description;
@@ -79,7 +76,7 @@ void hipTestWorker::run() {
  * @param return true if test succeeded, false otherwise
  */
 
-bool hipTestWorker::start_hip_tests(int &error, string &errdesc){
+bool runExtWorker::start_ext_tests(int &error, string &errdesc){
     int pid, status;
     auto found = m_test_path.find_last_of('/');
     auto fname = m_test_path.substr(found+1);

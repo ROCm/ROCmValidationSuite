@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2023 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef HIPTEST_SO_INCLUDE_ACTION_H_
-#define HIPTEST_SO_INCLUDE_ACTION_H_
+#ifndef RUNEXT_SO_INCLUDE_ACTION_H_
+#define RUNEXT_SO_INCLUDE_ACTION_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,9 +46,8 @@ using std::map;
 
 /**
  * @class runexternal_action
- * @ingroup GST
  *
- * @brief GST action implementation class
+ * @brief runexternal action implementation class
  *
  * Derives from rvs::actionbase and implements actual action functionality
  * in its run() method.
@@ -85,4 +84,4 @@ class runexternal_action: public rvs::actionbase {
     int run_external_tests();
 };
 
-#endif  // HIPTEST_SO_INCLUDE_ACTION_H_
+#endif  // RUNEXT_SO_INCLUDE_ACTION_H_

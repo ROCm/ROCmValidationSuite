@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2023 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -71,13 +71,13 @@ runexternal_action::~runexternal_action() {
 }
 
 /**
- * @brief runs the hip test session
+ * @brief runs the runexternal session
  * @return true if no error occured, false otherwise
  */
 bool runexternal_action::start_runexternal_runners() {
     size_t k = 0;
     // one worker sufficient, as test runner
-    hipTestWorker worker;
+    runExtWorker worker;
     worker.set_name(action_name);
     worker.set_path(m_test_file_path);
     worker.set_args(m_test_file_args);
@@ -88,7 +88,7 @@ bool runexternal_action::start_runexternal_runners() {
 }
 
 /**
- * @brief reads all GST-related configuration keys from
+ * @brief reads all runexternal-related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
@@ -196,7 +196,7 @@ int runexternal_action::run_external_tests(void) {
 }
 
 /**
- * @brief runs the whole GST logic
+ * @brief runs the whole runexternal logic
  * @return run result
  */
 int runexternal_action::run(void) {
