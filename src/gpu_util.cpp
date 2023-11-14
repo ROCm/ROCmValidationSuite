@@ -273,7 +273,6 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
 
 
 bool gpu_check_if_mcm_die (int idx) {
-
   rsmi_status_t ret;
   uint64_t val =0 , time_stamp;
   float cntr_resolution;
