@@ -30,30 +30,30 @@ template <typename T>
 void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>& b, std::vector<T>& c, T& sum, uint64_t);
 
 template <typename T>
-void run_stress(int deviceId, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
+void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
 
 template <typename T>
-void run_triad(int deviceId, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
+void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
 
 void parseArguments(int argc, char *argv[]);
 
-void run_babel(int deviceId, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest) {
+void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest) {
 
     switch(test_type) {
       case FLOAT_TEST:
-        run_stress<float>(deviceId, num_times, array_size, output_csv, mibibytes, subtest);
+        run_stress<float>(device, num_times, array_size, output_csv, mibibytes, subtest);
         break;
 
       case DOUBLE_TEST:
-        run_stress<double>(deviceId, num_times, array_size, output_csv, mibibytes, subtest);
+        run_stress<double>(device, num_times, array_size, output_csv, mibibytes, subtest);
         break;
 
       case TRAID_FLOAT:
-        run_triad<float>(deviceId, num_times, array_size, output_csv, mibibytes, subtest);
+        run_triad<float>(device, num_times, array_size, output_csv, mibibytes, subtest);
         break;
 
       case TRIAD_DOUBLE:
-        run_triad<double>(deviceId, num_times, array_size, output_csv, mibibytes, subtest);
+        run_triad<double>(device, num_times, array_size, output_csv, mibibytes, subtest);
         break;
 
       default:
@@ -63,7 +63,7 @@ void run_babel(int deviceId, int num_times, int array_size, bool output_csv, boo
 }
 
 template <typename T>
-void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
+void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
 {
   std::string   msg;
   std::streamsize ss = std::cout.precision();
@@ -111,7 +111,7 @@ void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_c
   Stream<T> *stream;
 
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, deviceIndex);
+  stream = new HIPStream<T>(ARRAY_SIZE, device.first);
 
   stream->init_arrays(startA, startB, startC);
 
@@ -163,6 +163,7 @@ void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_c
   if (output_as_csv)
   {
     std::cout
+      << "gpu_id" << csv_separator
       << "function" << csv_separator
       << "num_times" << csv_separator
       << "n_elements" << csv_separator
@@ -175,6 +176,8 @@ void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_c
   else
   {
     std::cout
+      << "------------------------------------------------------------------------" << std::endl
+      << std::left << std::setw(12) << "GPU Id"
       << std::left << std::setw(12) << "Function"
       << std::left << std::setw(12) << ((mibibytes) ? "MiBytes/sec" : "MBytes/sec")
       << std::left << std::setw(12) << "Min (sec)"
@@ -185,7 +188,7 @@ void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_c
   }
 
 
-  std::string labels[5] = {"Copy : ", "Mul : ", "Add : ", "Triad : ", "Dot : "};
+  std::string labels[5] = {"Copy", "Mul", "Add", "Triad", "Dot"};
   size_t sizes[5] = {
     2 * sizeof(T) * ARRAY_SIZE,
     2 * sizeof(T) * ARRAY_SIZE,
@@ -205,6 +208,7 @@ void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_c
     if (output_as_csv)
     {
       std::cout
+        << device.second << csv_separator
         << labels[i] << csv_separator
         << num_times << csv_separator
         << ARRAY_SIZE << csv_separator
@@ -218,6 +222,7 @@ void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_c
     else
     {
       std::cout
+        << std::left << std::setw(12) << device.second
         << std::left << std::setw(12) << labels[i]
         << std::left << std::setw(12) << std::setprecision(3) << 
           ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * sizes[i] / (*minmax.first)
@@ -228,13 +233,12 @@ void run_stress(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_c
     }
   }
 
-
   delete stream;
 
 }
 
 template <typename T>
-void run_triad(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
+void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
 {
   std::string msg;
 
@@ -278,7 +282,7 @@ void run_triad(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_cs
   Stream<T> *stream;
 
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, deviceIndex);
+  stream = new HIPStream<T>(ARRAY_SIZE, device.first);
 
   stream->init_arrays(startA, startB, startC);
 
@@ -307,6 +311,7 @@ void run_triad(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_cs
   if (output_as_csv)
   {
     std::cout
+      << "gpu_id" << csv_separator
       << "function" << csv_separator
       << "num_times" << csv_separator
       << "n_elements" << csv_separator
@@ -315,6 +320,7 @@ void run_triad(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_cs
       << "runtime"
       << std::endl;
     std::cout
+      << device.second << csv_separator
       << "Triad" << csv_separator
       << num_times << csv_separator
       << ARRAY_SIZE << csv_separator
@@ -328,6 +334,7 @@ void run_triad(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_cs
     std::cout
       << "--------------------------------"
       << std::endl << std::fixed
+      << "GPU Id: " << std::left << device.second << std::endl
       << "Runtime (seconds): " << std::left << std::setprecision(5)
       << runtime << std::endl
       << "Bandwidth (" << ((mibibytes) ? "GiB/s" : "GB/s") << "):  "
