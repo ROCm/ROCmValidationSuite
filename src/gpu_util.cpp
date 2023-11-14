@@ -272,13 +272,22 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
 }
 
 
+bool gpu_check_if_mcm_die (int idx) {
 
+  rsmi_status_t ret;
+  uint64_t val =0 , time_stamp;
+  float cntr_resolution;
+  ret = rsmi_dev_energy_count_get(idx, &val, &cntr_resolution, &time_stamp);
+  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+	  return false;
+  return true;
+}
 /**
  * @brief Check if the GPU is die (chiplet) in Multi-Chip Module (MCM) GPU.
  * @param device_id GPU Device ID
  * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
  **/
-bool gpu_check_if_mcm_die (int idx) {
+bool gpu_check_if_mcm_odie (int idx) {
   //bool ret = false;
   rsmi_status_t ret;
   uint64_t val =0 ;
