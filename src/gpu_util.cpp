@@ -275,6 +275,7 @@ bool gpu_check_if_mcm_die (int idx) {
   rsmi_status_t ret;
   uint64_t val =0 , time_stamp;
   float cntr_resolution;
+  // in case of secondary die, energy accumulator will return zero. 
   ret = rsmi_dev_energy_count_get(idx, &val, &cntr_resolution, &time_stamp);
   if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
 	  return false;
