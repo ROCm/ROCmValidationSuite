@@ -47,13 +47,6 @@ using std::ifstream;
 /* No of GPU devices with MCM GPU */
 #define MAX_NUM_MCM_GPU 4
 
-/* Unique Device Ids of MCM GPUS */
-static const uint16_t mcm_gpu_device_id[MAX_NUM_MCM_GPU] = {
-	/* Aldebaran */
-	0x7408,
-	0x740C,
-	0x740F,
-	0x7410};
 
 int gpu_num_subdirs(const char* dirpath, const char* prefix) {
   int count = 0;
@@ -271,36 +264,21 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
   }
 }
 
-
-
 /**
  * @brief Check if the GPU is die (chiplet) in Multi-Chip Module (MCM) GPU.
  * @param device_id GPU Device ID
  * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
  **/
-bool gpu_check_if_mcm_die (int idx) {
-  //bool ret = false;
-  rsmi_status_t ret;
-  uint64_t val =0 ;
-  ret = rsmi_dev_power_cap_get(idx, 0, &val);
-  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0)){
-	  //std::cout << idx << " rsmi_dev_power_cap_get " << ret << " and " << val  << std::endl;
-	  return false;
-  }
-  
-  
-  ret = rsmi_dev_power_cap_default_get(idx, &val);
-  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0)){
-	  //std::cout << " rsmi_dev_power_cap_default_get " << ret<< std::endl;
-          return false;
-  }
-  
-  ret = rsmi_dev_power_ave_get(idx, 0, &val);
-  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0)){
-	  //std::cout << " rsmi_dev_power_ave_get " <<ret << std::endl;
-          return false;
-  }
 
+
+bool gpu_check_if_mcm_die (int idx) {
+  rsmi_status_t ret;
+  uint64_t val =0 , time_stamp;
+  float cntr_resolution;
+  // in case of secondary die, energy accumulator will return zero. 
+  ret = rsmi_dev_energy_count_get(idx, &val, &cntr_resolution, &time_stamp);
+  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+	  return false;
   return true;
 }
 
