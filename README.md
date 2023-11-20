@@ -1,161 +1,209 @@
 # ROCmValidationSuite
-The ROCm Validation Suite (RVS) is a system validation and diagnostics tool for monitoring, stress testing, detecting and troubleshooting issues that affects the functionality and performance of AMD GPU(s) operating in a high-performance/AI/ML computing environment. RVS is enabled using the ROCm software stack on a compatible software and hardware platform.
 
-The RVS is a collection of tests, benchmarks and qualification tools each targeting a specific sub-system of the ROCm platform. All of the tools are implemented in software and share a common command line interface. Each set of tests are implemented in a “module” which is a library encapsulating the functionality specific to the tool. The CLI can specify the directory containing modules to use when searching for libraries to load. Each module may have a set of options that it defines and a configuration file that supports its execution.
+The ROCm Validation Suite (RVS) is a system validation and diagnostics tool for monitoring, stress
+testing, detecting, and troubleshooting issues that affect the functionality and performance of AMD
+GPUs operating in a high-performance computing environment.
 
-Different modules and its description refer [link](./FEATURES.md).
+RVS consists of tests, benchmarks, and qualification tools that each target a specific sub-system of the
+ROCm platform. All of the tools share a common command line interface (CLI) and are implemented in
+a module. Each module defines a set of options and contains a configuration file that supports
+running the module.
 
-Module configuration files description and examples refer [link](./docs/ug1main.md).
+For a list of available modules, refer to the
+[RVS modules](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/features.html)
+page.
 
-## Prerequisites 
-Please do this before compilation/installing compiled package.
+Documentation for ROCm Validation Suite (RVS) is available at
+[https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/).
 
-Ubuntu :
+## Prerequisites
 
-    sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
+1. Before compiling and installing the RVS package, you must run the following code:
 
-CentOS :
+   * Ubuntu:
 
-    sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
- 
-RHEL :
+     ```bash
+     sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
+     ```
 
-    sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
-        
-    wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
-        
-    sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
-		
-SLES :
+   * CentOS:
 
-    sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
-       
-    sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
-       
-    sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
+     ```bash
+     sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
+     ```
 
-## Install ROCm stack, rocblas and rocm-smi-lib
-Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
+   * RHEL:
 
-_**Note:**_
+     ```bash
+     sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel \
+     wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm \
+     sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
+     ```
 
-rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
-rocm-smi-lib64 package has been renamed to rocm-smi-lib from >= ROCm4.1.
- 
-Install rocBLAS and rocm-smi-lib : 
+   * SLES:
 
-Ubuntu :
+     ```bash
+     sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64 \
+     sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64 \
+     sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
+     ```
 
-    sudo apt-get install rocblas rocm-smi-lib
-   
-CentOS & RHEL :
+2. Install ROCm. Refer to the
+  [ROCm repository](https://github.com/RadeonOpenCompute/ROCm) for instructions.
 
-    sudo yum install --nogpgcheck rocblas rocm-smi-lib
-   
-SUSE :
+3. Install rocBLAS and rocm-smi-lib.
 
-    sudo zypper install rocblas rocm-smi-lib
+   * Ubuntu:
 
-_**Note:**_
-If  rocm-smi-lib is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
+     ```bash
+     sudo apt-get install rocblas rocm-smi-lib
+     ```
 
-Ubuntu :
+   * CentOS and RHEL:
 
-    sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
+     ```bash
+     sudo yum install --nogpgcheck rocblas rocm-smi-lib
+     ```
 
-CentOS & RHEL :
+   * SUSE:
 
-    sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
+     ```bash
+     sudo zypper install rocblas rocm-smi-lib
+     ```
 
-SUSE :
+    If the `rocm-smi-lib` is already installed but the `/opt/rocm/rocm_smi/` path doesn't exist, run the
+  following code:
 
-    sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
+   * Ubuntu:
 
-## Building from Source
-This section explains how to get and compile current development stream of RVS.
+      ```bash
+      sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
+      ```
 
-### Clone repository
+   * CentOS and RHEL:
 
+      ```bash
+      sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
+      ```
+
+   * SUSE:
+
+      ```bash
+      sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
+      ```
+
+## Build and install
+
+You can install RVS from source or from the ROCm install package.
+
+### Install from source
+
+To download and compile the current development stream of RVS, follow these steps:
+
+1. Clone the repository.
+
+    ```bash
     git clone https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.git
+    ```
 
-### Configure:
+2. Configure the installation for your ROCm version.
 
-    cd ROCmValidationSuite
+    ```bash
+    cd ROCmValidationSuite \
     cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
+    ```
 
-    e.g. If ROCm 5.5 was installed,
-    cmake -B ./build -DROCM_PATH=/opt/rocm-5.5.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-5.5.0 -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm-5.5.0
+3. Build the binary.
 
-### Build binary:
-
+    ```bash
     make -C ./build
+    ```
 
-### Build package:
+4. Build the package. Depending on your operating system, either a DEB or an RPM package is built.
+  You can ignore an error for the irrelevant configuration.
 
+    ```bash
     cd ./build
     make package
+    ```
 
-**Note:**_ based on your OS, only DEB or RPM package will be built. You may
-ignore an error for the unrelated configuration
+5. Install the built package.
 
-### Install built package:
+* Ubuntu:
 
-Ubuntu :
-
+    ```bash
     sudo dpkg -i rocm-validation-suite*.deb
+    ```
 
-CentOS & RHEL & SUSE :
+* CentOS, RHEL, and SUSE:
 
+    ```bash
     sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
+    ```
 
-**Note:**
-RVS is getting packaged as part of ROCm release starting from 3.0. You can install pre-compiled package as below.
-Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed
+### Using the install package
 
-### Install package packaged with ROCm release:
+* Ubuntu:
 
-Ubuntu :
-
+    ```bash
     sudo apt install rocm-validation-suite
+    ```
 
-CentOS & RHEL :
+* CentOS and RHEL:
 
+    ```bash
     sudo yum install rocm-validation-suite
+    ```
 
-SUSE :
+* SUSE:
 
+    ```bash
     sudo zypper install rocm-validation-suite
+    ```
 
 ## Running RVS
 
-### Running version built from source code:
+To run RVS, use one of the following options:
 
+* Running the version built from source code:
+
+    ```bash
     cd ./build/bin
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
     ./rvs -d 3 ; Executes the complete RVS test suite
     ./rvs -c conf/gst_single.conf ; Executes GST test only
+    ```
 
-### Running version pre-complied and packaged with ROCm release
+* Running the version pre-complied and packaged with the ROCm release:
 
+    ```bash
     /opt/rocm/rvs/rvs -d 3 ; Executes the complete RVS test suite
+    ```
 
-Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
+Similarly, you can run all tests as described in the `rvsqa.new.sh` script, which is located at
+`testscripts/rvsqa.new.sh`.
 
 ## Regression
 
-Simple regression has been implemented. You may find more about it
-on this [link](./REGRESSION.md).
+Simple regression is implemented. To learn more, refer to the
+[Regression](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/regression.html)
+page.
 
 ## Reporting
 
-Test based reporting is enabled since beginning. 
-Added json based reporting to gst and iet modules. To enable json logging use "-j" command line option.
+Test-based reporting is enabled. JSON-based reporting is added to the `gst` and `iet` modules. To
+enable JSON logging use the `-j` command line option:
+
+```bash
 ./rvs -c conf/gst_sinle.conf -d 3 -j
-the json location will be in /var/log folder and the name of the file will be printed in the stdout.
-output structure is as shown below:
 ```
 
+The JSON location is `/var/log folder` and the name of the file is printed in the `stdout`.
+
+The output structure is:
+
+```bash
 {
 {"module-name":{
   "action-name":[
@@ -175,15 +223,15 @@ output structure is as shown below:
     "GFLOPS" : "11436.291718"
   },
 ....]
-} 
+}
 }
 ....
 }
-
-```
-example for gst is:
 ```
 
+Here is a gst example:
+
+```bash
 {"gst":{
   "gpustress-9000-sgemm-false":[
 
@@ -226,6 +274,4 @@ example for gst is:
   } ]
   }
  }
-}
-
 ```

@@ -1,27 +1,34 @@
-# Change Log for ROCm Validation Suite (RVS)
+# Changelog for ROCm Validation Suite
 
-Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
+Documentation for ROCm Validation Suite (RVS) is available at
+[https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/).
 
 ## (Unreleased) RVS for ROCm 6.0
 
-### Added
-- Support for Mariner OS
-- Support for gfx941 & gfx942
-- Navi31 and Navi32 specific configurations
-- GST stress test support for MI300X
+### Additions
+
+* Support for Mariner OS
+* Support for gfx941 & gfx942
+* Navi31 and Navi32 specific configurations
+* GST stress test support for MI300X
 
 ## RVS for ROCm 5.7
 
-### Added
-- Introduced new RVS interface APIs enabling test execution from external components.
-- Added new "device_index" property for conf. file.
+### Additions
 
-### Changed
-- Moved all static internal libraries to a single public shared library (rvslib).
-- Use HIP stream callback mechanism for gemm operations completion (instead of polling).
+* Introduced new RVS interface APIs that you can use to run tests from external components
+* Added a new `device_index` property for the `conf.` file
+
+### Changes
+
+* Moved all static internal libraries to a single public shared library (`rvslib`)
+* Use HIP stream callback mechanism (instead of polling) for gemm operations completion
 
 ### Optimizations
-- In GST and IET modules, use of callback mechanism instead of polling for HIP stream reduced the CPU utilization %.
 
-### Removed
-- yaml-cpp source download and build removed from RVS cmake build.
+* In GST and IET modules, use of the callback mechanism (instead of polling) for the HIP stream
+  reduced the percentage of CPU utilization
+
+### Removals
+
+* `yaml-cpp` source download and build has been removed from the RVS CMake build
