@@ -9,3 +9,6 @@ subtrees:
     - file: prerequisites
     - file: cli
     - file: regression
+  - caption: About
+    entries:
+    - file: license
