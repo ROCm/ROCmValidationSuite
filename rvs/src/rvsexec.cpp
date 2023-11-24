@@ -38,7 +38,6 @@
 #include "include/rvsliblogger.h"
 #include "include/rvsoptions.h"
 #include "include/rvstrace.h"
-#include "rocm_smi/rocm_smi.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -185,8 +184,6 @@ int rvs::exec::run() {
   }
 
   if (rvs::options::has_option("-g")) {
-    auto ret = enumerate_platform();
-    std::cout << "post post post " << std::endl;
     int sts = do_gpu_list();
     rvs::module::terminate();
     logger::terminate();
@@ -448,39 +445,8 @@ void rvs::exec::do_help() {
   cout << "-h --help          Display usage information and exit.\n";
 }
 
-std::string getOSName(){
-  std::ifstream rel_file("/etc/os-release");
-  if(!rel_file.good()){
-    std::cout << "No /etc/os-release file, cant fetch details " << std::endl;
-    return std::string{};
-  }
-  std::string line;
-  while (std::getline(rel_file, line))
-  {
-                auto found = line.find("NAME") ;
-    if (found!=std::string::npos){
-      found = line.find('\"');
-      auto endquote = line.find_last_of('\"');
-      if(found == std::string::npos || endquote == std::string::npos)
-        return std::string{};
-      std::string osame = line.substr(found+1, endquote-found-1 );
-                        return osame;
-    }
-  }
-}
 
 
-int rvs::exec::enumerate_platform(){
-  rsmi_init(0);
-  char vbname[1024];
-  uint64_t fwver;
-  auto ret = rsmi_dev_vbios_version_get(0, vbname, 1024);
-  auto osName = getOSName();
-  ret = rsmi_dev_firmware_version_get(0, RSMI_FW_BLOCK_FIRST, &fwver); 
-  std::cout << " enumerate_platform is " << vbname << " and " <<fwver << " and os:" << osName << std::endl;
-  rsmi_shut_down();
-  return 0;
-}
 //! Reports list of AMD GPUs presnt in the system
 int rvs::exec::do_gpu_list() {
   cout << "\nROCm Validation Suite (version " << LIB_VERSION_STRING << ")\n\n";

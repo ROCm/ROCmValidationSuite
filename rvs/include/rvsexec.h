@@ -71,7 +71,6 @@ class exec {
   void  do_help(void);
   void  do_version(void);
   int   do_gpu_list(void);
-  int enumerate_platform();
   int   do_yaml(const std::string& config_file);
   int   do_yaml(yaml_data_type_t data_type, const std::string& data);
   int   do_yaml_properties(const YAML::Node& node,
