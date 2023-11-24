@@ -325,7 +325,11 @@ int display_gpu_info (void) {
     gpu_info_list.push_back(info);
 
   }
-  std::cout << "Running on " << getOSName() << std::endl;
+  std::string rcm{ROCM_PATH};
+  if (rcm.find('/') != std::string::npos){
+	  rcm = rcm.substr(rcm.find_last_of('/')+1);
+  }
+  std::cout  << rcm << " Running on " << getOSName() << std::endl;
   std::sort(gpu_info_list.begin(), gpu_info_list.end(),
            [](const struct device_info& a, const struct device_info& b) {
              return a.node_id < b.node_id; });
