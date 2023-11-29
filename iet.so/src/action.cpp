@@ -443,15 +443,8 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
         if (property_wait != 0)  // delay iet execution
             sleep(property_wait);
 
-
-        uint32_t smi_num_devices;
-        rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-        if(smi_num_devices != hip_num_gpu_devices)
-            gpu_masking = true;
-        if(gpu_masking){  // this is the case when using HIP_VISIBLE_DEVICES variable to modify GPU visibility
-            // smi output wont be affected by the flag and hence indices should be appropriately used.
-            hip_to_smi_indices();
-        }
+	// map hip indexes to smi indexes
+	hip_to_smi_indices();
 
         IETWorker::set_use_json(bjson);
         for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
