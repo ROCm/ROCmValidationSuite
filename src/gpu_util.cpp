@@ -34,6 +34,10 @@
 
 #include "rocm_smi/rocm_smi.h"
 #include "include/gpu_util.h"
+#define __HIP_PLATFORM_HCC__
+#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
+
 std::vector<uint16_t> rvs::gpulist::location_id;
 std::vector<uint16_t> rvs::gpulist::gpu_id;
 std::vector<uint16_t> rvs::gpulist::device_id;
@@ -43,10 +47,6 @@ std::map<std::pair<uint16_t, uint16_t> , uint16_t> rvs::gpulist::domain_loc_map;
 using std::vector;
 using std::string;
 using std::ifstream;
-
-/* No of GPU devices with MCM GPU */
-#define MAX_NUM_MCM_GPU 4
-
 
 int gpu_num_subdirs(const char* dirpath, const char* prefix) {
   int count = 0;
@@ -269,17 +269,66 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
  * @param device_id GPU Device ID
  * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
  **/
-
-
 bool gpu_check_if_mcm_die (int idx) {
   rsmi_status_t ret;
   uint64_t val =0 , time_stamp;
   float cntr_resolution;
+  uint32_t smi_index = 0;
+
+  if (gpu_hip_to_smi_index(idx, &smi_index)) {
+    return false;
+  }
+
   // in case of secondary die, energy accumulator will return zero. 
-  ret = rsmi_dev_energy_count_get(idx, &val, &cntr_resolution, &time_stamp);
+  ret = rsmi_dev_energy_count_get(smi_index, &val, &cntr_resolution, &time_stamp);
   if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
-	  return false;
+    return false;
   return true;
+}
+
+/**
+ * @brief Get GPU smi index from hip index.
+ * @param hip_index GPU hip index
+ * @param smi_index GPU smi index
+ * @return 0 if successful, -1 otherwise
+ **/
+int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
+
+  int hip_num_gpu_devices = 0;
+  uint32_t smi_num_devices = 0;
+  uint64_t val_ui64 = 0;
+  std::map<uint64_t, int> smi_map;
+
+  // map this to smi as only these are visible
+  hipGetDeviceCount(&hip_num_gpu_devices);
+  if(hip_index >= hip_num_gpu_devices) {
+    return -1;
+  }
+
+  rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
+  if( err == RSMI_STATUS_SUCCESS){
+    for(auto i = 0; i < smi_num_devices; ++i){
+      err = rsmi_dev_pci_id_get(i, &val_ui64);
+      smi_map.insert({val_ui64, i});
+    }
+  }
+  else {
+    return -1;
+  }
+
+  // get GPU device properties
+  hipDeviceProp_t props;
+  hipGetDeviceProperties(&props, hip_index);
+
+  // compute device location_id (needed to match this device
+  // with one of those found while querying the pci bus
+  uint16_t hip_dev_location_id =
+    ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3));
+  if(smi_map.find(hip_dev_location_id) != smi_map.end()) {
+    *smi_index = smi_map[hip_dev_location_id];
+    return 0;
+  }
+  return -1;
 }
 
 /**
