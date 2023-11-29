@@ -41,6 +41,7 @@ extern void gpu_get_all_node_id(std::vector<uint16_t>* pgpus_node_id);
 extern void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
                 std::map<std::pair<uint16_t, uint16_t> , uint16_t>& pgpus_dom_loc_map); 
 extern bool gpu_check_if_mcm_die (int idx);
+extern int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index);
 
 namespace rvs {
 
