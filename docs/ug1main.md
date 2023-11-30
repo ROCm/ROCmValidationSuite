@@ -44,22 +44,26 @@ RVS package components are installed in `/opt/rocm`. Package contains:
 
 
 ### Executing RVS
-Running version built from source code
-cd ./build/bin
-./rvs --help ; Lists all options to run RVS test suite
-Command examples
-./rvs -g ; Lists supported GPUs available in the machine
-./rvs -d 3 ; Executes the complete RVS test suite
-./rvs -c conf/gst_single.conf ; Executes GST test only
 
-Running version pre-complied and packaged with ROCm release
-/opt/rocm/bin/rvs --help ; Lists all options to run RVS test suite
-Command examples
-/opt/rocm/bin/rvs -g ; Lists supported GPUs available in the machine
-/opt/rocm/bin/rvs -c conf/gst_single.conf ; Executes GST test only
-/opt/rocm/bin/rvs -d 3 ; Executes the complete RVS test suite
+#### Running version built from source code
 
-Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
+    cd <source folder>/build/bin
+
+    Command examples
+    ./rvs --help ; Lists all options to run RVS test suite
+    ./rvs -g ; Lists supported GPUs available in the machine
+    ./rvs -d 3 ; Executes set of RVS sanity tests (rvs.conf)
+    ./rvs -c conf/gst_single.conf ; Executes GST module tests
+
+#### Running version pre-complied and packaged with ROCm release
+
+    cd /opt/rocm/bin
+
+    Command examples
+    ./rvs --help ; Lists all options to run RVS test suite
+    ./rvs -g ; Lists supported GPUs available in the machine
+    ./rvs -d 3 ; Executes set of RVS sanity tests (rvs.conf)
+    ./rvs -c conf/gst_single.conf ; Executes GST module tests
 
 ## Basic Concepts
 
