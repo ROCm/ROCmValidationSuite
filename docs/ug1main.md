@@ -34,11 +34,32 @@ Based on the OS, use the appropriate package manager to install the **rocm-valid
 For more details, refer [ROCm Validation Suite GitHub site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
 
 RVS package components are installed in `/opt/rocm`. Package contains:
-- executable binary (located in _install-base_/rvs)
-- modules specific shared libraries (located in _install-base_/lib/rvs)
+- executable binary (located in _install-base_/bin/rvs)
+- public shared libraries (located in _install-base_/lib)
+- module specific shared libraries (located in _install-base_/lib/rvs)
+- configuration files (located in _install-base_/share/rocm-validation-suite/conf)
+- testscripts (located in _install-base_/share/rocm-validation-suite/testscripts)
 - user guide (located in _install-base_/share/rocm-validation-suite/userguide)
 - man page (located in _install-base_/share/man)
-- configuration examples (located in _install-base_/share/rocm-validation-suite/conf)
+
+
+### Executing RVS
+Running version built from source code
+cd ./build/bin
+./rvs --help ; Lists all options to run RVS test suite
+Command examples
+./rvs -g ; Lists supported GPUs available in the machine
+./rvs -d 3 ; Executes the complete RVS test suite
+./rvs -c conf/gst_single.conf ; Executes GST test only
+
+Running version pre-complied and packaged with ROCm release
+/opt/rocm/bin/rvs --help ; Lists all options to run RVS test suite
+Command examples
+/opt/rocm/bin/rvs -g ; Lists supported GPUs available in the machine
+/opt/rocm/bin/rvs -c conf/gst_single.conf ; Executes GST test only
+/opt/rocm/bin/rvs -d 3 ; Executes the complete RVS test suite
+
+Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
 
 ## Basic Concepts
 
