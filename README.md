@@ -135,7 +135,7 @@ SUSE :
     Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Executes set of RVS sanity tests (rvs.conf)
+    ./rvs -d 3 ; Executes set of RVS sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c conf/gst_single.conf ; Executes GST module tests
 
 ### Execute version pre-complied and packaged with ROCm release
