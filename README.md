@@ -128,23 +128,6 @@ SUSE :
 
 ## Executing RVS
 
-### Execute version built from source code:
-
-    cd ./build/bin
-    ./rvs --help ; Lists all options to run RVS test suite
-    ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Executes set of RVS sanity tests (in rvs.conf) with verbose level 3
-    ./rvs -d 3 ; Executes the complete RVS test suite
-    ./rvs -c conf/gst_single.conf ; Executes GST test 
-
-### Running version pre-complied and packaged with ROCm release
-
-    /opt/rocm/rvs/rvs -d 3 ; Executes the complete RVS test suite
-
-Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
-
-## Executing RVS
-
 ### Execute version built from source code
 
     cd <source folder>/build/bin
