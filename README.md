@@ -5,7 +5,7 @@ RVS is a collection of tests, benchmarks and qualification tools each targeting 
 
 For different modules and their description, refer to [the documentation on features](./FEATURES.md).
 
-For module configuration files description and examples, refer to [the documentation](./docs/ug1main.md).
+For module configuration files description and examples, refer to [the user guide](./docs/ug1main.md).
 
 ## Prerequisites 
 Please do this before compilation/installing compiled package.
