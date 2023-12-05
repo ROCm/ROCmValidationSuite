@@ -168,110 +168,32 @@ To run RVS, use one of the following options:
 * Running the version built from source code:
 
     ```bash
-    cd ./build/bin
+    cd <source folder>/build/bin
+
+    Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Executes the complete RVS test suite
-    ./rvs -c conf/gst_single.conf ; Executes GST test only
+    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module tests
     ```
 
 * Running the version pre-complied and packaged with the ROCm release:
 
     ```bash
-    /opt/rocm/rvs/rvs -d 3 ; Executes the complete RVS test suite
+    cd /opt/rocm/bin
+
+    Command examples
+    ./rvs --help ; Lists all options to run RVS test suite
+    ./rvs -g ; Lists supported GPUs available in the machine
+    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module tests
     ```
 
 Similarly, you can run all tests as described in the `rvsqa.new.sh` script, which is located at
 `testscripts/rvsqa.new.sh`.
 
-## Regression
-
-Simple regression is implemented. To learn more, refer to the
-[Regression](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/regression.html)
-page.
-
 ## Reporting
 
-Test-based reporting is enabled. JSON-based reporting is added to the `gst` and `iet` modules. To
-enable JSON logging use the `-j` command line option:
-
-```bash
-./rvs -c conf/gst_sinle.conf -d 3 -j
-```
-
-The JSON location is `/var/log folder` and the name of the file is printed in the `stdout`.
-
-The output structure is:
-
-```bash
-{
-{"module-name":{
-  "action-name":[
-
-{
-    "target" : "<flops/power>"
-  },
-{
-    "dtype" : "optype"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11433.352136"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11436.291718"
-  },
-....]
-}
-}
-....
-}
-```
-
-Here is a gst example:
-
-```bash
-{"gst":{
-  "gpustress-9000-sgemm-false":[
-
-{
-    "target" : "9000.000000"
-  },
-{
-    "dtype" : "sgemm"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11433.352136"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11436.291718"
-  }]
-  }
-  }
-  {"gst":{
-  "gpustress-8000-sgemm-true":[
-,
-{
-    "target" : "8000.000000"
-  },
-{
-    "dtype" : "sgemm"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11657.886019"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11675.718793"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11687.461158"
-  } ]
-  }
- }
-```
+Test results, errors, and verbose logs are printed as terminal output. To enable JSON logging, use the
+`-j` command line option. The JSON output file is stored in the `/var/log` folder and the name of the file
+is printed.

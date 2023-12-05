@@ -93,7 +93,7 @@ This section explains how to get and compile current development stream of RVS.
 ### Configure:
 
     cd ROCmValidationSuite
-    cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
+    cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
 
     e.g. If ROCm 5.5 was installed,
     cmake -B ./build -DROCM_PATH=/opt/rocm-5.5.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-5.5.0 -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm-5.5.0
@@ -140,104 +140,30 @@ SUSE :
 
 ## Running RVS
 
-### Running version built from source code:
+### Run version built from source code
 
-    cd ./build/bin
+    cd <source folder>/build/bin
+
+    Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Executes the complete RVS test suite
-    ./rvs -c conf/gst_single.conf ; Executes GST test only
+    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module tests
 
-### Running version pre-complied and packaged with ROCm release
+### Run version pre-complied and packaged with ROCm release
 
-    /opt/rocm/rvs/rvs -d 3 ; Executes the complete RVS test suite
+    cd /opt/rocm/bin
 
-Similarly, you can run all tests as mentioned in "rvsqa.new.sh" script, present at "testscripts/rvsqa.new.sh"
+    Command examples
+    ./rvs --help ; Lists all options to run RVS test suite
+    ./rvs -g ; Lists supported GPUs available in the machine
+    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module tests
 
-## Regression
-
-Simple regression has been implemented. You may find more about it
-on this [link](./REGRESSION.md).
+Similarly, all RVS module tests can be run using scripts present in folder "/opt/rocm/share/rocm-validation-suite/testscripts/".
 
 ## Reporting
 
-Test based reporting is enabled since beginning. 
-Added json based reporting to gst and iet modules. To enable json logging use "-j" command line option.
-./rvs -c conf/gst_sinle.conf -d 3 -j
-the json location will be in /var/log folder and the name of the file will be printed in the stdout.
-output structure is as shown below:
-```
+Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option.
+The json output file is stored in /var/log folder and the name of the file will be printed.
 
-{
-{"module-name":{
-  "action-name":[
-
-{
-    "target" : "<flops/power>"
-  },
-{
-    "dtype" : "optype"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11433.352136"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11436.291718"
-  },
-....]
-} 
-}
-....
-}
-
-```
-example for gst is:
-```
-
-{"gst":{
-  "gpustress-9000-sgemm-false":[
-
-{
-    "target" : "9000.000000"
-  },
-{
-    "dtype" : "sgemm"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11433.352136"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11436.291718"
-  }]
-  }
-  }
-  {"gst":{
-  "gpustress-8000-sgemm-true":[
-,
-{
-    "target" : "8000.000000"
-  },
-{
-    "dtype" : "sgemm"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11657.886019"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11675.718793"
-  },
-{
-    "gpu_id" : "63217",
-    "GFLOPS" : "11687.461158"
-  } ]
-  }
- }
-}
-
-```
