@@ -34,11 +34,37 @@ Based on the OS, use the appropriate package manager to install the **rocm-valid
 For more details, refer [ROCm Validation Suite GitHub site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
 
 RVS package components are installed in `/opt/rocm`. Package contains:
-- executable binary (located in _install-base_/rvs)
-- modules specific shared libraries (located in _install-base_/lib/rvs)
+- executable binary (located in _install-base_/bin/rvs)
+- public shared libraries (located in _install-base_/lib)
+- module specific shared libraries (located in _install-base_/lib/rvs)
+- configuration files (located in _install-base_/share/rocm-validation-suite/conf)
+- testscripts (located in _install-base_/share/rocm-validation-suite/testscripts)
 - user guide (located in _install-base_/share/rocm-validation-suite/userguide)
 - man page (located in _install-base_/share/man)
-- configuration examples (located in _install-base_/share/rocm-validation-suite/conf)
+
+### Running RVS
+
+#### Run version built from source code
+
+    cd <source folder>/build/bin
+
+    Command examples
+    ./rvs --help ; Lists all options to run RVS test suite
+    ./rvs -g ; Lists supported GPUs available in the machine
+    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module tests
+
+#### Run version pre-complied and packaged with ROCm release
+
+    cd /opt/rocm/bin
+
+    Command examples
+    ./rvs --help ; Lists all options to run RVS test suite
+    ./rvs -g ; Lists supported GPUs available in the machine
+    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module tests
+
+Similarly, all RVS module tests can be run using scripts present in folder "/opt/rocm/share/rocm-validation-suite/testscripts/".
 
 ## Basic Concepts
 
