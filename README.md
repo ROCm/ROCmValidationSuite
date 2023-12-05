@@ -13,7 +13,7 @@ For a list of available modules, refer to the
 [RVS modules](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/features.html)
 page.
 
-Documentation for ROCm Validation Suite (RVS) is available at
+Documentation for RVS is available at
 [https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/).
 
 ## Prerequisites
