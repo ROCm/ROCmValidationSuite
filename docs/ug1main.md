@@ -7,8 +7,8 @@ affects the functionality and performance of AMD GPU(s) operating in a
 high-performance/AI/ML computing environment. RVS is enabled using the ROCm 
 software stack on a compatible software and hardware platform.
 
-The RVS is a collection of tests, benchmarks and qualification tools each
-targeting a specific sub-system of the ROCm platform. All of the tools are
+RVS is a collection of tests, benchmarks, and qualification tools each
+targeting a specific sub-system of the ROCm platform. The tools are
 implemented in software and share a common command line interface. Each set of
 tests are implemented in a “module” which is a library encapsulating the
 functionality specific to the tool. The CLI can specify the directory containing
