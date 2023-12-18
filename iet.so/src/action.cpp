@@ -413,8 +413,9 @@ void iet_action::hip_to_smi_indices(void) {
 
         // compute device location_id (needed to match this device
         // with one of those found while querying the pci bus
-        uint16_t hip_dev_location_id =
-            ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3) );
+        uint64_t hip_dev_location_id = ( ( ((uint64_t)props.pciDomainID & 0xffff ) << 32) |
+            (((uint64_t) props.pciBusID & 0xff ) << 8) | (((uint64_t)props.pciDeviceID & 0x1f ) << 3) );
+
         if(smi_map.find(hip_dev_location_id) != smi_map.end()){
             hip_to_smi_idxs.insert({i, smi_map[hip_dev_location_id]});
         }
