@@ -137,18 +137,24 @@ set ( RVS_VERSION "1.0.0" )
 get_version ( ${RVS_VERSION} )
 
 # Package Generator  #######################################################
-# set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_NAME "rocm-validation-suite")
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ROCm Validation Suite validates the AMD platform using ROCm Runtime - The ROCm Validation Suite is a system administrator and cluster manager's tool for detecting and troubleshooting common problems affecting AMD GPUs running in high performance computing environments, enabled using the ROCm software stack on a compatible platform.")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The ROCm Validation Suite (RVS) is a system validation and diagnostics tool for monitoring, stress testing, detecting and troubleshooting issues that affects the functionality and performance of AMD GPU(s) operating in a high-performance/AI/ML computing environment.")
 set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.support@amd.com>")
-#set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "rocblas")
-set(CPACK_RPM_PACKAGE_REQUIRES "rocblas")
+
+# Package dependencies
+if (${RVS_OS_TYPE} STREQUAL "ubuntu")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, libpci3, libyaml-cpp-dev")
+elseif (${RVS_OS_TYPE} STREQUAL "sles")
+set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, libpci3, libyaml-cpp0_6")
+else ()
+# other supported rpm distros - RHEL, CentOS
+set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, pciutils-libs, yaml-cpp")
+endif()
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
