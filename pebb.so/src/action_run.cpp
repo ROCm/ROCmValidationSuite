@@ -188,10 +188,9 @@ int pebb_action::run() {
     } while(brun);
 
     RVSTRACE_
-      timer_running.stop();
+    timer_running.stop();
     timer_final.stop();
 
-    std::cout << "\n Iteration value : " << iter;
     iter -= step;
 
     // insert wait between runs if needed
@@ -205,12 +204,6 @@ int pebb_action::run() {
     sts = rvs::lp::Stopping() ? -1 : 0;
 
   print_final_average();
-
-  std::cout << " \n =========================================================================================================================";
-  for(auto it = resultBandwidth.begin(); it != resultBandwidth.end(); it++) {
-    std::cout << " \n\n PCIE Bandwidth from , CPU::" << it->CPUId<< " to GPU Id::" << it->GPUId << " is " << it->finalBandwith << "\n\n";
-  }
-  std::cout << " ========================================================================================================================= \n";
 
   destroy_threads();
   //bjson = true;

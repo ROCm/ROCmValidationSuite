@@ -34,8 +34,6 @@
 
 #include "include/worker.h"
 
-
-
 /**
  * @class pebbworker_b2b
  * @ingroup PEBB
@@ -50,7 +48,7 @@
 namespace rvs {
 class hsa;
 }
-// hsa_signal_exchange_scacq_screl
+
 class pebbworker_b2b : public pebbworker {
  public:
 /**
@@ -62,11 +60,11 @@ class pebbworker_b2b : public pebbworker {
  *
  */
   typedef struct {
-    //! source agent indes in @p rvs::hsa::agentagent_list
+    //! source agent index in @p rvs::hsa::agentagent_list
     int SrcAgentIx;
     //! source HSA agent
     hsa_agent_t SrcAgent;
-    //! destination agent indes in @p rvs::hsa::agentagent_list
+    //! destination agent index in @p rvs::hsa::agentagent_list
     int DstAgentIx;
     //! destination HSA agent
     hsa_agent_t DstAgent;

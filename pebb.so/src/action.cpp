@@ -246,7 +246,6 @@ int pebb_action::create_threads() {
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&gpu_device_id);
 
-
   RVSTRACE_
   for (size_t i = 0; i < gpu_id.size(); i++) {
     RVSTRACE_
@@ -299,16 +298,16 @@ int pebb_action::create_threads() {
                                          &distance, &arr_linkinfo);
       if (distance == rvs::hsa::NO_CONN) {
         RVSTRACE_
-        rvs::hsa::Get()->GetLinkInfo(dstnode, srcnode,
-                                    &distance, &arr_linkinfo);
+          rvs::hsa::Get()->GetLinkInfo(dstnode, srcnode,
+              &distance, &arr_linkinfo);
         if (distance != rvs::hsa::NO_CONN) {
           RVSTRACE_
-          // there is a path if transfer is initiated by
-          // destination agent:
-          b_reverse = true;
+            // there is a path if transfer is initiated by
+            // destination agent:
+            b_reverse = true;
         }else{// if no connection either way, no point in adding to list
           continue;
-	}
+        }
       }
 
       // if link type is specified, check that it matches
@@ -529,15 +528,26 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
     return -1;
   }
   RVSTRACE_
+
+  std::string pci_bdf;
+  if (rvs::gpulist::node2bdf(dst_node, pci_bdf)) {
+    RVSTRACE_
+    std::string msg = "could not find PCI BDF for node " +
+                      std::to_string(dst_node);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+  RVSTRACE_
+
   transfer_ix = pWorker->get_transfer_ix();
   transfer_num = pWorker->get_transfer_num();
 
-  msg = "[" + action_name + "] pcie-bandwidth  ["
-      + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
-      + "] "
-      + std::to_string(src_node) + " " + std::to_string(dst_id)
-      + "  h2d: " + (prop_h2d ? "true" : "false")
-      + "  d2h: " + (prop_d2h ? "true" : "false") + "  "
+  msg = "[" + action_name + "] pcie-bandwidth ["
+      + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num) + "] "
+      + " CPU::"  + std::to_string(src_node)
+      + " GPU::" + std::to_string(dst_id) + " - " + pci_bdf
+      + " h2d: " + (prop_h2d ? "true" : "false")
+      + " d2h: " + (prop_d2h ? "true" : "false") + " "
       + buff;
 
   rvs::lp::Log(msg, rvs::loginfo);
@@ -599,15 +609,25 @@ int pebb_action::print_final_average() {
     transfer_ix = (*it)->get_transfer_ix();
     transfer_num = (*it)->get_transfer_num();
 
-    msg = "[" + action_name + "] pcie-bandwidth  ["
-        + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
-        + "] "
-        + " CPU ::" + std::to_string(src_node) 
-        + " GPU ::" + std::to_string(dst_id)
-        + "  h2d::" + (prop_h2d ? "true" : "false")
-        + "  d2h::" + (prop_d2h ? "true" : "false")
-        + "  " + buff
-        + "  duration: " + std::to_string(duration) + " sec";
+    RVSTRACE_
+    std::string pci_bdf;
+    if (rvs::gpulist::node2bdf(dst_node, pci_bdf)) {
+      RVSTRACE_
+      std::string msg = "could not find PCI BDF for node " +
+                        std::to_string(dst_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+    RVSTRACE_
+
+    msg = "[" + action_name + "] pcie-bandwidth ["
+        + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num) + "]"
+        + " [CPU:: " + std::to_string(src_node) + "]"
+        + " [GPU:: " + std::to_string(dst_node) + " - " + std::to_string(dst_id) + " - " + pci_bdf + "]"
+        + " h2d::" + (prop_h2d ? "true" : "false")
+        + " d2h::" + (prop_d2h ? "true" : "false")
+        + " " + buff
+        + " duration: " + std::to_string(duration) + " secs";
 
     rvs::lp::Log(msg, rvs::logresults);
 
@@ -641,8 +661,6 @@ void pebb_action::do_final_average() {
   unsigned int sec;
   unsigned int usec;
   rvs::lp::get_ticks(&sec, &usec);
-
-  std::cout << "\n Final average ";
 
   msg = "[" + action_name + "] pebb in do_final_average";
   rvs::lp::Log(msg, rvs::logtrace, sec, usec);
@@ -710,15 +728,25 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
   RVSTRACE_
   std::string msg;
   rvs::action_result_t result;
+  std::string pci_bdf;
+
+  if (rvs::gpulist::node2bdf(DstNode, pci_bdf)) {
+    RVSTRACE_
+    std::string msg = "could not find PCI BDF for node " +
+                      std::to_string(DstNode);
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
 
   msg = "[" + action_name + "] pcie-bandwidth "
-      + std::to_string(SrcNode)
-      + " " + std::to_string(DstNode)
-      + " " + std::to_string(DstGpuID);
+      + "[CPU:: " +  std::to_string(SrcNode) + "] "
+      + "[GPU:: " + std::to_string(DstNode)
+      + " - " + std::to_string(DstGpuID) + " - " + pci_bdf + "]";
+
   if (Distance == rvs::hsa::NO_CONN) {
-    msg += "  distance:-1";
+    msg += " distance:-1";
   } else {
-    msg += "  distance:" + std::to_string(Distance);
+    msg += " distance:" + std::to_string(Distance);
   }
   // iterate through individual hops
   for (auto it = arrLinkInfo.begin(); it != arrLinkInfo.end(); it++) {

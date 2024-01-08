@@ -44,6 +44,8 @@ std::vector<uint16_t> rvs::gpulist::device_id;
 std::vector<uint16_t> rvs::gpulist::node_id;
 std::vector<uint16_t> rvs::gpulist::domain_id;
 std::map<std::pair<uint16_t, uint16_t> , uint16_t> rvs::gpulist::domain_loc_map;
+std::vector<std::string> rvs::gpulist::pci_bdf;
+
 using std::vector;
 using std::string;
 using std::ifstream;
@@ -219,11 +221,11 @@ void gpu_get_all_node_id(std::vector<uint16_t>* pgpus_node_id) {
  * @param pgpus_domain_id ptr to vector that will store all the GPU domain_id
  * @return
  */
-void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id, 
-		std::map<std::pair<uint16_t, uint16_t> , uint16_t>& pgpus_dom_loc_map) {
+void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
+    std::map<std::pair<uint16_t, uint16_t> , uint16_t>& pgpus_dom_loc_map) {
+
   ifstream f_id, f_prop;
   char path[KFD_PATH_MAX_LENGTH];
-
   std::string prop_name;
   int gpu_id;
   uint32_t domain_val;
@@ -236,10 +238,10 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
   // get all GPUs device id
   for (int node_id = 0; node_id < num_nodes; node_id++) {
     snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES,
-             node_id);
+        node_id);
     f_id.open(path);
     snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties",
-             KFD_SYS_PATH_NODES, node_id);
+        KFD_SYS_PATH_NODES, node_id);
     f_prop.open(path);
 
     f_id >> gpu_id;
@@ -251,12 +253,90 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
           (*pgpus_domain_id).push_back(domain_val);
           continue;
         }
-	else if(prop_name == "location_id"){
-            f_prop >> loc_val;
-            continue;
-	}
+        else if(prop_name == "location_id"){
+          f_prop >> loc_val;
+          continue;
+        }
       }
       pgpus_dom_loc_map[std::make_pair(domain_val, loc_val)] = gpu_id;
+    }
+
+    f_id.close();
+    f_prop.close();
+  }
+}
+
+/**
+ * Get PCI BDF (Bus, Device, Function) for all GPUs.
+ * @param pgpus_domain_id ptr to vector that will store PCI BDF
+ * @return void
+ */
+void gpu_get_all_pci_bdf(std::vector<std::string>* ppci_bdf) {
+
+  ifstream f_id, f_prop;
+  char path[KFD_PATH_MAX_LENGTH];
+  std::string prop_name;
+  int gpu_id;
+  uint32_t domain_val;
+  uint32_t location_val;
+  std::string domain;
+  std::string bus;
+  std::string device;
+
+  // Discover the number of nodes: Inside nodes folder there are only folders
+  // that represent the node number
+  int num_nodes = gpu_num_subdirs(KFD_SYS_PATH_NODES, "");
+
+  // get all GPUs device id
+  for (int node_id = 0; node_id < num_nodes; node_id++) {
+
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES,
+        node_id);
+    f_id.open(path);
+
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties",
+        KFD_SYS_PATH_NODES, node_id);
+    f_prop.open(path);
+
+    f_id >> gpu_id;
+
+    if (gpu_id != 0) {
+
+      while (f_prop >> prop_name) {
+
+        if (prop_name == "domain") {
+
+          // Get domain string
+          f_prop >> domain_val;
+
+          std::stringstream ss;
+          ss << std::hex << domain_val;
+          domain =  ss.str();
+
+          domain = std::string(4 - std::min(4, (int)domain.length()), '0') + domain;
+
+          continue;
+        }
+        else if(prop_name == "location_id") {
+
+          // Get bus and device string
+          f_prop >> location_val;
+
+          std::stringstream ss;
+          ss << std::hex << location_val;
+          std::string location (ss.str());
+
+          location = std::string(4 - std::min(4, (int)location.length()), '0') + location;
+
+          bus = location.substr(0,2);
+          device = location.substr(2,2);
+
+          continue;
+        }
+      }
+
+      /* Form PCI BDF */
+      (*ppci_bdf).push_back(domain + ":" + bus + ":" + device + ".0" );
     }
 
     f_id.close();
@@ -336,11 +416,13 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
  * @return 0 if successful, -1 otherwise
  **/
 int rvs::gpulist::Initialize() {
+
   gpu_get_all_location_id(&location_id);
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&device_id);
   gpu_get_all_node_id(&node_id);
   gpu_get_all_domain_id(&domain_id, domain_loc_map);
+  gpu_get_all_pci_bdf(&pci_bdf);
 
   return 0;
 }
@@ -400,6 +482,24 @@ int rvs::gpulist::node2gpu(const uint16_t NodeID, uint16_t* pGpuID) {
   return 0;
 }
 
+/**
+ * @brief Given Node ID return PCI BDF
+ * @param NodeID GPU Node ID
+ * @param pPciBDF GPU PCI BDF
+ * @return 0 if found, -1 otherwise
+ **/
+int rvs::gpulist::node2bdf(const uint16_t NodeID, std::string& pPciBDF) {
+
+  const auto it = std::find(node_id.cbegin(),
+                            node_id.cend(), NodeID);
+  if (it == node_id.cend()) {
+    return -1;
+  }
+
+  size_t pos = std::distance(node_id.cbegin(), it);
+  pPciBDF = pci_bdf[pos];
+  return 0;
+}
 
 /**
  * @brief Given Location ID return GPU device ID
@@ -509,7 +609,6 @@ int rvs::gpulist::domlocation2gpu(const uint16_t domainID, const uint16_t Locati
   return 0;
 }
 
-
 /**
  * @brief Given Gpu ID return GPU domain ID
  * @param GpuID Gpu ID of a GPU
@@ -528,9 +627,3 @@ int rvs::gpulist::gpu2domain(const uint16_t GpuID, uint16_t* pDomain) {
   return 0;
 }
 
-std::string rvs::bdf2string(uint32_t BDF) {
-  char buff[32];
-  snprintf(buff, sizeof(buff), "%02X:%02X.%d",
-           BDF>>8, (BDF & 0xFF), 0);
-  return buff;
-}
