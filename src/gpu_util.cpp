@@ -271,7 +271,7 @@ void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
  * @param pgpus_domain_id ptr to vector that will store PCI BDF
  * @return void
  */
-void gpu_get_all_pci_bdf(std::vector<std::string>* ppci_bdf) {
+void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf) {
 
   ifstream f_id, f_prop;
   char path[KFD_PATH_MAX_LENGTH];
@@ -336,7 +336,7 @@ void gpu_get_all_pci_bdf(std::vector<std::string>* ppci_bdf) {
       }
 
       /* Form PCI BDF */
-      (*ppci_bdf).push_back(domain + ":" + bus + ":" + device + ".0" );
+      ppci_bdf.push_back(domain + ":" + bus + ":" + device + ".0" );
     }
 
     f_id.close();
@@ -422,7 +422,7 @@ int rvs::gpulist::Initialize() {
   gpu_get_all_device_id(&device_id);
   gpu_get_all_node_id(&node_id);
   gpu_get_all_domain_id(&domain_id, domain_loc_map);
-  gpu_get_all_pci_bdf(&pci_bdf);
+  gpu_get_all_pci_bdf(pci_bdf);
 
   return 0;
 }
