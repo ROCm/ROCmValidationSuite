@@ -480,18 +480,36 @@ int pbqt_action::create_threads() {
         return -1;
       }
 
+      std::string srcpcibdf;
+      if (rvs::gpulist::node2bdf(srcnode, srcpcibdf)) {
+        RVSTRACE_
+          std::string msg = "could not find PCI BDF for node " +
+          std::to_string(srcnode);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
+
+      std::string dstpcibdf;
+      if (rvs::gpulist::node2bdf(dstnode, dstpcibdf)) {
+        RVSTRACE_
+          std::string msg = "could not find PCI BDF for node " +
+          std::to_string(dstnode);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
+
       RVSTRACE_
       uint32_t distance = 0;
       std::vector<rvs::linkinfo_t> arr_linkinfo;
       rvs::hsa::Get()->GetLinkInfo(srcnode, dstnode,
                                          &distance, &arr_linkinfo);
-
       // perform peer check
       if (is_peer(gpu_id[i], gpu_id[j])) {
         RVSTRACE_
-        msg = "[" + action_name + "] p2p "
-            + std::to_string(gpu_id[i]) + " "
-            + std::to_string(gpu_id[j]) + " peers:true ";
+        msg = "[" + action_name + "] p2p"
+        + " [GPU:: " + std::to_string(srcnode) + " - " + std::to_string(gpu_id[i]) + " - " + srcpcibdf  + "]"
+        + " [GPU:: " + std::to_string(dstnode) + " - " + std::to_string(gpu_id[j]) + " - " + dstpcibdf  + "]"
+        + " peers:true ";
 
         if (distance == rvs::hsa::NO_CONN) {
           msg += "distance:-1";
@@ -544,9 +562,10 @@ int pbqt_action::create_threads() {
       }
       else {
         RVSTRACE_
-          msg = "[" + action_name + "] p2p "
-          + std::to_string(gpu_id[i]) + " "
-          + std::to_string(gpu_id[j]) + " peers:false ";
+          msg = "[" + action_name + "] p2p"
+          + " [GPU:: " + std::to_string(srcnode) + " - " + std::to_string(gpu_id[i]) + " - " + srcpcibdf  + "]"
+          + " [GPU:: " + std::to_string(dstnode) + " - " + std::to_string(gpu_id[j]) + " - " + dstpcibdf  + "]"
+          + " peers:false ";
 
         if (distance == rvs::hsa::NO_CONN) {
           msg += "distance:-1";
@@ -756,7 +775,7 @@ int pbqt_action::print_running_average(pbqtworker* pWorker) {
         + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
         + "] " + std::to_string(src_id) + " " + std::to_string(dst_id)
         + "  bidirectional: " + std::string(bidir ? "true" : "false")
-        + "  " + buff;
+        + " " + buff;
     rvs::lp::Log(msg, rvs::loginfo);
 
 #if 0
@@ -839,14 +858,33 @@ int pbqt_action::print_final_average() {
       return -1;
     }
 
+      std::string src_pci_bdf;
+      if (rvs::gpulist::node2bdf(src_node, src_pci_bdf)) {
+        RVSTRACE_
+          std::string msg = "could not find PCI BDF for node " +
+          std::to_string(src_node);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
+
+      std::string dst_pci_bdf;
+      if (rvs::gpulist::node2bdf(dst_node, dst_pci_bdf)) {
+        RVSTRACE_
+          std::string msg = "could not find PCI BDF for node " +
+          std::to_string(dst_node);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
+
     transfer_ix = (*it)->get_transfer_ix();
     transfer_num = (*it)->get_transfer_num();
 
-    msg = "[" + action_name + "] p2p-bandwidth  ["
-        + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
-        + "] " + std::to_string(src_id) + " " + std::to_string(dst_id)
-        + "  bidirectional: " + std::string(bidir ? "true" : "false")
-        + "  " + buff + "  duration: " + std::to_string(duration) + " sec";
+    msg = "[" + action_name + "] p2p-bandwidth["
+        + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num) + "]"
+        + " [GPU:: " + std::to_string(src_node) + " - " + std::to_string(src_id) + " - " + src_pci_bdf  + "]"
+        + " [GPU:: " + std::to_string(dst_node) + " - " + std::to_string(dst_id) + " - " + dst_pci_bdf  + "]"
+        + " bidirectional: " + std::string(bidir ? "true" : "false")
+        + " " + buff + " duration: " + std::to_string(duration) + " secs";
 
     rvs::lp::Log(msg, rvs::logresults);
 
