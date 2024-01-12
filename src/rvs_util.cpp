@@ -49,7 +49,7 @@ std::string getOSName(){
   std::string line;
   while (std::getline(rel_file, line))
   {
-                auto found = line.find("NAME") ;
+    auto found = line.find("NAME") ;
     if (found!=std::string::npos){
       found = line.find('\"');
       auto endquote = line.find_last_of('\"');
@@ -327,7 +327,7 @@ int display_gpu_info (void) {
   }
   std::string rcm{ROCM_PATH};
   if (rcm.find('/') != std::string::npos){
-	  rcm = rcm.substr(rcm.find_last_of('/')+1);
+    rcm = rcm.substr(rcm.find_last_of('/')+1);
   }
   std::cout  << rcm << " Running on " << getOSName() << std::endl;
   std::sort(gpu_info_list.begin(), gpu_info_list.end(),
