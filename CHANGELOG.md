@@ -2,7 +2,12 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
 
-## (Unreleased) RVS for ROCm 6.0
+## (Unreleased) RVS for ROCm 6.1
+
+### Changed
+- Updated pebb & pbqt logs to include PCI BDF.
+
+## RVS for ROCm 6.0
 
 ### Added
 - Support for Mariner OS
