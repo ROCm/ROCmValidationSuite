@@ -321,7 +321,7 @@ int display_gpu_info (void) {
     info.device_id = dev_id;
     auto ret = rsmi_dev_vbios_version_get(i, info.vbios_ver, 1024);// check returns TODO
     if (ret != RSMI_STATUS_SUCCESS){
-      info.vbios_ver = 0;
+      memset(info.vbios_ver, 0, 1024);
       rvs::lp::Log("vbios check failure ", rvs::logresults);      
     }
     info.fmver = {};
