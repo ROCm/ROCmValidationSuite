@@ -36,8 +36,7 @@ extern "C" {
 #include <cstring>
 #include <string>
 #include <vector>
-#include <unordered_set>
-#include <utility>
+
 #include "include/rvs_key_def.h"
 #include "include/pci_caps.h"
 #include "include/gpu_util.h"
@@ -59,14 +58,6 @@ using std::string;
 using std::vector;
 
 
-struct hashFn
-{
-  size_t operator()(const std::pair<int ,
-                    int> &x) const
-  {
-    return x.first ^ x.second;
-  }
-}; 
 //! Default constructor
 pbqt_action::pbqt_action():link_type_string{} {
   prop_peer_deviceid = 0u;
@@ -423,7 +414,6 @@ int pbqt_action::create_threads() {
   std::vector<uint16_t> gpu_device_id;
   uint16_t transfer_ix = 0;
   bool bmatch_found = false;
-  std::unordered_set< std::pair<int, int>, hashFn > unique_peers;
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&gpu_device_id);
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
@@ -446,7 +436,7 @@ int pbqt_action::create_threads() {
     // if property_device_all selected, iteration starts at 0 and all pairs covered.
     for (size_t j = 0; j < gpu_id.size(); j++) {  // all possible peers
       RVSTRACE_
-      if (i == j)
+      if (i == j) 
 	  continue;
       // filter out by peer id
       if (prop_peer_deviceid > 0) {
@@ -474,12 +464,6 @@ int pbqt_action::create_threads() {
       // signal that at lease one matching src-dst combination
       // has been found:
       bmatch_found = true;
-      auto cur_pair = std::make_pair(i, j);
-      if( unique_peers.find(cur_pair) != unique_peers.end()){
-	      continue;
-      } else {
-	      unique_peers.insert(cur_pair);
-      }
 
 
       // get NUMA nodes
