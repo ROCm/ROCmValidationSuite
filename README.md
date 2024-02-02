@@ -7,7 +7,7 @@ For different modules and their description, refer to [the documentation on feat
 
 For module configuration files description and examples, refer to [the user guide](./docs/ug1main.md).
 
-## Prerequisites 
+## Prerequisites
 Please do this before compilation/installing compiled package.
 
 Ubuntu :
@@ -17,41 +17,42 @@ Ubuntu :
 CentOS :
 
     sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
- 
+
 RHEL :
 
     sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
-        
+
     wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
-        
+
     sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
-		
+
 SLES :
 
     sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
-       
+
     sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
-       
+
     sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
 ## Install ROCm stack, rocblas and rocm-smi-lib
-Install ROCm stack for Ubuntu/CentOS/SLES/RHEL, Refer https://github.com/RadeonOpenCompute/ROCm
+Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
+ [ROCm installation guide](https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details.
 
 _**Note:**_
 
 rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
 rocm-smi-lib64 package has been renamed to rocm-smi-lib from >= ROCm4.1.
- 
-Install rocBLAS and rocm-smi-lib : 
+
+Install rocBLAS and rocm-smi-lib :
 
 Ubuntu :
 
     sudo apt-get install rocblas rocm-smi-lib
-   
+
 CentOS & RHEL :
 
     sudo yum install --nogpgcheck rocblas rocm-smi-lib
-   
+
 SUSE :
 
     sudo zypper install rocblas rocm-smi-lib
