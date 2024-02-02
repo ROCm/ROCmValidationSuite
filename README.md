@@ -76,7 +76,7 @@ This section explains how to get and compile current development stream of RVS.
 
 ### Clone repository
 
-    git clone https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.git
+    git clone https://github.com/ROCm/ROCmValidationSuite.git
 
 ### Configure:
 

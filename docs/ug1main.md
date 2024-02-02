@@ -1,10 +1,10 @@
 # User Guide
 
 ## Introduction
-The ROCm Validation Suite (RVS) is a system validation and diagnostics tool 
-for monitoring, stress testing, detecting and troubleshooting issues that 
-affects the functionality and performance of AMD GPU(s) operating in a 
-high-performance/AI/ML computing environment. RVS is enabled using the ROCm 
+The ROCm Validation Suite (RVS) is a system validation and diagnostics tool
+for monitoring, stress testing, detecting and troubleshooting issues that
+affects the functionality and performance of AMD GPU(s) operating in a
+high-performance/AI/ML computing environment. RVS is enabled using the ROCm
 software stack on a compatible software and hardware platform.
 
 RVS is a collection of tests, benchmarks, and qualification tools each
@@ -23,15 +23,15 @@ pre-built package.
 ### Building from Source Code
 
 RVS has been developed as open source solution. Its source code and belonging
-documentation can be found at AMD's GitHub page.  
+documentation can be found at AMD's GitHub page.
 In order to build RVS from source code, refer
 [ROCm Validation Suite GitHub
-site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite)
+site](https://github.com/ROCm/ROCmValidationSuite)
 and follow instructions in README file.
 
 ### Installing from Package
-Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.  
-For more details, refer [ROCm Validation Suite GitHub site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
+Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.
+For more details, refer [ROCm Validation Suite GitHub site](https://github.com/ROCm/ROCmValidationSuite).
 
 RVS package components are installed in `/opt/rocm`. Package contains:
 - executable binary (located in _install-base_/bin/rvs)
