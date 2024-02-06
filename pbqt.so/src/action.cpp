@@ -243,7 +243,7 @@ bool pbqt_action::get_all_pbqt_config_keys(void) {
   if( link_type == 2) {
       link_type_string = "PCIe";
   }
-  else if(link_type == 3) {
+  else if(link_type == 4) {
       link_type_string = "XGMI";
   }
 
