@@ -120,7 +120,7 @@ bool pebb_action::get_all_pebb_config_keys(void) {;
   }
   if( link_type == 2)
     link_type_string = "PCIe";
-  else if(link_type == 3)
+  else if(link_type == 4)
     link_type_string = "XGMI";
 
   return bsts;
