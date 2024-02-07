@@ -265,7 +265,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   if(retVal == PathSuccess){
     rocmPath = installPath;
   }else {
-    std::cout << "Failed to get ROCm Install Path: " << retVal << std::endl;
+    std::cout << "Failed to get ROCm Install Path: " << retVal <<"\nSet ROCM_PATH in env" << std::endl;
   }
   // free allocated memory
   if(installPath != nullptr) {

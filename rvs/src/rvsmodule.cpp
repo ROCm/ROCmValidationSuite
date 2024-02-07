@@ -191,7 +191,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
         if(retVal == PathSuccess){
           rocmPath = installPath;
         }else {
-          std::cout << "Failed to get ROCm Install Path: " << retVal << std::endl;
+          std::cout << "Failed to get ROCm Install Path: " << retVal <<"\nSet ROCM_PATH in env" << std::endl;
         }
         // free allocated memory
         if(installPath != nullptr) {
