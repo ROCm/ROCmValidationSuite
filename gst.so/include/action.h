@@ -61,6 +61,7 @@ class gst_action: public rvs::actionbase {
     virtual int run(void);
     static void cleanup_logs();
     std::string gst_ops_type;
+    std::string gst_data_type;
 
  protected:
     //! TRUE if JSON output is required

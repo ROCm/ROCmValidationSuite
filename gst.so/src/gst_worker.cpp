@@ -79,7 +79,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
         new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
                         matrix_size_c, gst_trans_a, gst_trans_b,
                         gst_alpha_val, gst_beta_val, 
-                        gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ops_type));
+                        gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ops_type, gst_data_type));
 
     if (!gpu_blas) {
         *error = 1;
@@ -141,21 +141,12 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
             }
         }
 
-        // run GEMM & wait for completion
+        // run GEMM operation
         if (!gpu_blas->run_blass_gemm(gst_ops_type))
-            continue;  // failed to run the current SGEMM
+            continue;  // failed to run the GEMM operation
 
-        /* Set callback to be called upon completion of blas gemm operations */
-        gpu_blas->set_callback(blas_callback, (void *)this);
-
-        std::unique_lock<std::mutex> lk(mutex);
-        cv.wait(lk);
-
-        if(!blas_status) {
-          msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
-          rvs::lp::Log(msg, rvs::logtrace);
-        }
+        // Waits for GEMM operation to complete
+        gpu_blas->is_gemm_op_complete();
 
         num_sgemm_ops_log_interval++;
 
@@ -250,20 +241,11 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
         //Start the timer
         start_time = gpu_blas->get_time_us();
 
-        // run GEMM & wait for completion
+        // run GEMM operation
         gpu_blas->run_blass_gemm(gst_ops_type);
 
-        /* Set callback to be called upon completion of blas gemm operations */
-        gpu_blas->set_callback(blas_callback, (void *)this);
-
-        std::unique_lock<std::mutex> lk(mutex);
-        cv.wait(lk);
-
-        if(!blas_status) {
-          msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
-          rvs::lp::Log(msg, rvs::logtrace);
-        }
+        // Wait for GEMM operation to complete
+        gpu_blas->is_gemm_op_complete();
 
         //End the timer
         end_time = gpu_blas->get_time_us();
@@ -421,18 +403,20 @@ bool GSTWorker::check_gflops_violation(double gflops_interval) {
  * @return true if stress violations is less than max_violations, false otherwise
  */
 bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
-    uint16_t num_sgemm_ops = 0;
+
+    uint32_t num_gemm_ops = 0;
     uint64_t total_milliseconds, log_interval_milliseconds;
-    uint64_t start_time, end_time;
+    double start_time, end_time;
     double seconds_elapsed, gflops_interval;
     double timetakenforoneiteration;
+    double timetakenforniterations;
     string msg;
     std::chrono::time_point<std::chrono::system_clock> gst_start_time,
                                             gst_end_time, gst_log_interval_time;
 
     *error = 0;
     max_gflops = 0;
-    num_sgemm_ops = 0;
+    num_gemm_ops = 0;
     start_time = 0;
     end_time = 0;
 
@@ -456,49 +440,66 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         //Start the timer
         start_time = gpu_blas->get_time_us();
 
-        // run GEMM & wait for completion
+        // run GEMM operation
         gpu_blas->run_blass_gemm(gst_ops_type);
 
-        /* Set callback to be called upon completion of blas gemm operations */
-        gpu_blas->set_callback(blas_callback, (void *)this);
+        // sgemm, dgemm and hgemm operations
+        if(!gst_ops_type.empty()) {
 
-        std::unique_lock<std::mutex> lk(mutex);
-        cv.wait(lk);
+          /* Set callback to be called upon completion of blas gemm operations */
+          gpu_blas->set_callback(blas_callback, (void *)this);
 
-        if(!blas_status) {
-          msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
-          rvs::lp::Log(msg, rvs::logtrace);
+          std::unique_lock<std::mutex> lk(mutex);
+          cv.wait(lk);
+
+          //End the timer
+          end_time = gpu_blas->get_time_us();
+
+          if(!blas_status) {
+            msg = "[" + action_name + "] " + MODULE_NAME + " " +
+              std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
+            rvs::lp::Log(msg, rvs::logtrace);
+          }
+        }
+        else {
+          // data type (fp8 & bp16) based gemm operations
+
+          // Wait for GEMM operation to complete
+          gpu_blas->is_gemm_op_complete();
+
+          //End the timer
+          end_time = gpu_blas->get_time_us();
         }
 
-        //End the timer
-        end_time = gpu_blas->get_time_us();
+        timetakenforniterations += (end_time - start_time);
 
-        num_sgemm_ops++;
+        num_gemm_ops++;
 
         gst_end_time = std::chrono::system_clock::now();
         total_milliseconds = time_diff(gst_end_time, gst_start_time);
 
         log_interval_milliseconds = time_diff(gst_end_time,
                                               gst_log_interval_time);
-        if (log_interval_milliseconds >= log_interval && num_sgemm_ops > 0) {
-            seconds_elapsed = static_cast<double> (log_interval_milliseconds) /
-                                1000;
+
+        if (log_interval_milliseconds >= log_interval && num_gemm_ops > 0) {
+
+            seconds_elapsed = static_cast<double> (log_interval_milliseconds) / 1000;
+
             if (seconds_elapsed != 0) {
 
-                //Converting microseconds to seconds
-                timetakenforoneiteration = (end_time - start_time)/1e6;
+                timetakenforoneiteration = timetakenforniterations / num_gemm_ops;
 
-                gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
+                gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration * 1e6;
 
                 if (gflops_interval > max_gflops)
                     max_gflops = gflops_interval;
                 
-
-                log_interval_gflops(max_gflops);
+                log_interval_gflops(gflops_interval);
 
                 // reset time & gflops related data
-                num_sgemm_ops = 0;
+                num_gemm_ops = 0;
+                timetakenforniterations = 0;
+
                 gst_log_interval_time = std::chrono::system_clock::now();
             }
         }
@@ -542,8 +543,18 @@ void GSTWorker::run() {
             " Starting the GST stress test "; 
     rvs::lp::Log(msg, rvs::logtrace);
 
+    // log GST ramp up - start message
+    msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) + " Start of GPU ramp up";
+    rvs::lp::Log(msg, rvs::logresults);
+
     // let the GPU ramp-up and check the result
     bool ramp_up_success = do_gst_ramp(&error, &err_description);
+
+    // log GST ramp up - end message
+    msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) + " End of GPU ramp up";
+    rvs::lp::Log(msg, rvs::logresults);
 
     // GPU was not able to do the processing (HIP/rocBlas error(s) occurred)
     if (error) {

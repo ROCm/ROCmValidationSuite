@@ -47,9 +47,10 @@
  * @param _ops_type type of BLAS operation to test with
  */
 rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, int transB, 
-                    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string _ops_type)
+                    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string _ops_type, std::string _data_type)
                     : gpu_device_index(_gpu_device_index)
                     , ops_type(_ops_type)
+                    , data_type(_data_type)
                     , m(_m), n(_n), k(_k)
                     , size_a(0), size_b(0), size_c(0), size_d(0)
                     , da(nullptr), db(nullptr), dc(nullptr)
@@ -58,6 +59,8 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, in
                     , hdbla(nullptr), hdblb(nullptr), hdblc(nullptr)
                     , dhlfa(nullptr), dhlfb(nullptr), dhlfc(nullptr), dhlfd(nullptr)
                     , hhlfa(nullptr), hhlfb(nullptr), hhlfc(nullptr)
+                    , dda(nullptr), ddb(nullptr), ddc(nullptr), ddd(nullptr)
+                    , hda(nullptr), hdb(nullptr), hdc(nullptr)
                     , hip_stream(nullptr)
                     , blas_handle(nullptr)
                     , is_handle_init(false)
@@ -86,10 +89,16 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, in
     size_b = size_t(ldb) * B_col;
     size_c = size_t(ldc) * n;
     size_d = size_t(ldc) * n;
-  }else{
+  } else {
+
     size_a = size_t(k) * m;
     size_b = size_t(k) * n;
     size_c = size_t(n) * m;
+
+    // gemm based on data type, size of output matrix d.
+    if (!data_type.empty()) {
+      size_d = size_t(n) * m;
+    }
   }
 
   //setting alpha and beta val
@@ -102,7 +111,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, int transA, in
     blas_lda_offset = m;
     blas_ldb_offset = n;
     blas_ldc_offset = k;
-  }else{
+  } else {
     blas_lda_offset = lda;
     blas_ldb_offset = ldb;
     blas_ldc_offset = ldc;
@@ -135,21 +144,32 @@ bool rvs_blas::init_gpu_device(void) {
   if (hipSetDevice(gpu_device_index) != hipSuccess) {
     // cannot select the given GPU device
     return false;
-  } else {
-    //ROCBLAS Initialize
-    rocblas_initialize();
-
-    if (!allocate_gpu_matrix_mem())
-      return false;
-    if (rocblas_create_handle(&blas_handle) == rocblas_status_success) {
-      is_handle_init = true;
-      if (rocblas_get_stream(blas_handle, &hip_stream)
-          != rocblas_status_success)
-        return false;
-    } else {
-      return false;
-    }
   }
+
+  // rocblas initialize
+  rocblas_initialize();
+
+  if (!allocate_gpu_matrix_mem()) {
+    std::cout << "\n allocate_gpu_matrix_mem() failed !!!" << "\n";
+    return false;
+  }
+
+  if (hipStreamCreate(&hip_stream) != hipSuccess) {
+    std::cout << "\n hipStreamCreate() failed !!!" << "\n";
+    return false;
+  }
+
+  if (rocblas_create_handle(&blas_handle) != rocblas_status_success) {
+    std::cout << "\n rocblas_create_handle() failed !!!" << "\n";
+    return false;
+  }
+
+  if (rocblas_set_stream(blas_handle, hip_stream) != rocblas_status_success) {
+    std::cout << "\n rocblas_set_stream() failed !!!" << "\n";
+    return false;
+  }
+
+  is_handle_init = true;
   return true;
 }
 
@@ -239,7 +259,60 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
         return false;
       }
     }
+  }
 
+  if(data_type == "fp8_r") {
+
+    if (dda) {
+      if (hipMemcpy(dda, hda, sizeof(struct rocblas_f8) * size_a, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddb) {
+      if (hipMemcpy(ddb, hdb, sizeof(struct rocblas_f8) * size_b, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddc) {
+      if (hipMemcpy(ddc, hdc, sizeof(struct rocblas_f8) * size_c, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+  }
+
+  if(data_type == "bf16_r") {
+
+    if (dda) {
+      if (hipMemcpy(dda, hda, sizeof(struct rocblas_bfloat16) * size_a, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddb) {
+      if (hipMemcpy(ddb, hdb, sizeof(struct rocblas_bfloat16) * size_b, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddc) {
+      if (hipMemcpy(ddc, hdc, sizeof(struct rocblas_bfloat16) * size_c, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
   }
 
   is_error = false;
@@ -281,20 +354,45 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
       return false;
   }
 
+  if(data_type == "fp8_r") {
+    if (hipMalloc(&dda, size_a * sizeof(struct rocblas_f8)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddb, size_b * sizeof(struct rocblas_f8)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddc, size_c * sizeof(struct rocblas_f8)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddd, size_d * sizeof(struct rocblas_f8)) != hipSuccess)
+      return false;
+  }
+
+  if(data_type == "bf16_r") {
+    if (hipMalloc(&dda, size_a * sizeof(struct rocblas_bfloat16)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddb, size_b * sizeof(struct rocblas_bfloat16)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddc, size_c * sizeof(struct rocblas_bfloat16)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddd, size_d * sizeof(struct rocblas_bfloat16)) != hipSuccess)
+      return false;
+  }
+
   return true;
 }
 
 /**
- * @brief gets time
+ * @brief gets steady clock time since epoch in microseconds
  */
-double rvs_blas::get_time_us(void)
-{
-    hipDeviceSynchronize();
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (tv.tv_sec * 1000 * 1000) + tv.tv_usec;
-};
- 
+double rvs_blas::get_time_us(void) {
+
+  // Get steady clock now
+  auto now = std::chrono::steady_clock::now();
+
+  // Get duration since epoch in microseconds
+  auto duration
+    = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+
+  return (static_cast<double>(duration));
+}
 
 /**
  * @brief releases GPU mem & destroys the rocBlas handle
@@ -324,8 +422,19 @@ void rvs_blas::release_gpu_matrix_mem(void) {
   if (dhlfd)
     hipFree(dhlfd);
 
-  if (is_handle_init)
+  if (dda)
+    hipFree(dda);
+  if (ddb)
+    hipFree(ddb);
+  if (ddc)
+    hipFree(ddc);
+  if (ddd)
+    hipFree(ddd);
+
+  if (is_handle_init) {
     rocblas_destroy_handle(blas_handle);
+    hipStreamDestroy(hip_stream);
+  }
 }
 
 /**
@@ -355,6 +464,20 @@ bool rvs_blas::alocate_host_matrix_mem(void) {
       hhlfa = new rocblas_half[size_a];
       hhlfb = new rocblas_half[size_b];
       hhlfc = new rocblas_half[size_c];
+    }
+
+    if(data_type == "fp8_r") {
+
+      hda = new struct rocblas_f8[size_a];
+      hdb = new struct rocblas_f8[size_b];
+      hdc = new struct rocblas_f8[size_c];
+    }
+
+    if(data_type == "bf16_r") {
+
+      hda = new struct rocblas_bfloat16[size_a];
+      hdb = new struct rocblas_bfloat16[size_b];
+      hdc = new struct rocblas_bfloat16[size_c];
     }
 
     return true;
@@ -388,6 +511,14 @@ void rvs_blas::release_host_matrix_mem(void) {
     delete []hhlfb;
   if (hhlfc)
     delete []hhlfc;
+
+  if (hda)
+    delete []hda;
+  if (hdb)
+    delete []hdb;
+  if (hdc)
+    delete []hdc;
+
 }
 
 /**
@@ -398,13 +529,17 @@ bool rvs_blas::is_gemm_op_complete(void) {
 
   if (is_error)
     return true;  // avoid blocking the calling thread
-  if (hipStreamQuery(hip_stream) != hipSuccess)
+
+  if(hipStreamSynchronize(hip_stream) != hipSuccess) {
+    std::cout << "hipStreamSynchronize() failed !!! for stream " << hip_stream << std::endl;
     return false;
+  }
+
   return true;
 }
 
 /**
- * @brief performs the SGEMM matrix multiplication
+ * @brief performs the GEMM matrix multiplication operations
  * @return true if GPU was able to enqueue the GEMM operation, otherwise false
  */
 bool rvs_blas::run_blass_gemm(std::string ops_type) {
@@ -444,19 +579,14 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
     }
 
     if(ops_type == "hgemm") {
-      //rocblas_half alpha;
-      //rocblas_half beta;
       rocblas_datatype a_type = rocblas_datatype_f16_r;
       rocblas_datatype b_type = rocblas_datatype_f16_r;
       rocblas_datatype c_type = rocblas_datatype_f16_r;
-      //rocblas_datatype d_type = rocblas_datatype_f16_r;
       rocblas_datatype compute_type = rocblas_datatype_f32_r;
       rocblas_gemm_algo algo = static_cast<rocblas_gemm_algo>(0);
       int sol_index = 0;
       int flags = 10;
 
-      //alpha.data = blas_alpha_val;
-      //beta.data  = blas_beta_val;
       _Float16 alpha = (float)blas_alpha_val;
       _Float16 beta = (float)blas_beta_val;
 #if 0
@@ -480,22 +610,70 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
       } else {
         return true;
       }
+    }
 
-      /*
-         if (rocblas_gemm_ex(blas_handle, transa, transb,
-         rvs_blas::m, rvs_blas::n, rvs_blas::k,
-         &alpha, dhlfa, a_type, blas_lda_offset,
-         dhlfb, b_type, blas_ldb_offset, &beta,
-         dhlfc, c_type, blas_ldc_offset,
-         dhlfc, c_type, blas_ldc_offset,
-         compute_type, algo, sol_index, flags) != rocblas_status_success) {
-         is_error = true;  // GPU cannot enqueue the gemm
-         std::cout << "\n Error in Hgemm " << "\n";
-         return false;
-         } else {
-         return true;
-         }
-         */
+    if(data_type == "fp8_r") {
+
+      rocblas_datatype a_type = rocblas_datatype_f8_r;
+      rocblas_datatype b_type = rocblas_datatype_f8_r;
+      rocblas_datatype c_type = rocblas_datatype_f8_r;
+      rocblas_datatype d_type = rocblas_datatype_f8_r;
+
+      rocblas_computetype compute_type = rocblas_compute_type_f32;
+      rocblas_gemm_algo algo = rocblas_gemm_algo_standard;
+      int32_t sol_index = 0;
+      uint32_t flags = 0;
+
+      _Float32 alpha = (_Float32)blas_alpha_val;
+      _Float32 beta = (_Float32)blas_beta_val;
+
+      if (rocblas_gemm_ex3(blas_handle, transa, transb,
+            rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
+            dda, a_type, blas_lda_offset,
+            ddb, b_type, blas_ldb_offset, &beta,
+            ddc, c_type, blas_ldc_offset,
+            ddd, d_type, blas_ldc_offset,
+            compute_type, algo, sol_index, flags) != rocblas_status_success) {
+
+        is_error = true;  // GPU cannot enqueue the gemm
+        std::cout << "\n Error in rocblas_gemm_ex3() !!! " << "\n";
+        return false;
+
+      } else {
+        return true;
+      }
+    }
+
+    if(data_type == "bf16_r") {
+
+      rocblas_datatype a_type = rocblas_datatype_bf16_r;
+      rocblas_datatype b_type = rocblas_datatype_bf16_r;
+      rocblas_datatype c_type = rocblas_datatype_bf16_r;
+      rocblas_datatype d_type = rocblas_datatype_bf16_r;
+
+      rocblas_datatype compute_type = rocblas_datatype_f32_r;
+      rocblas_gemm_algo algo = rocblas_gemm_algo_standard;
+      int32_t sol_index = 0;
+      uint32_t flags = 0;
+
+      _Float32 alpha = (_Float32)blas_alpha_val;
+      _Float32 beta = (_Float32)blas_beta_val;
+
+      if (rocblas_gemm_ex(blas_handle, transa, transb,
+            rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
+            dda, a_type, blas_lda_offset,
+            ddb, b_type, blas_ldb_offset, &beta,
+            ddc, c_type, blas_ldc_offset,
+            ddd, d_type, blas_ldc_offset,
+            compute_type, algo, sol_index, flags) != rocblas_status_success) {
+
+        is_error = true;  // GPU cannot enqueue the gemm
+        std::cout << "\n Error in rocblas_gemm_ex() !!!" << "\n";
+        return false;
+
+      } else {
+        return true;
+      }
     }
 
   } else {
@@ -552,6 +730,36 @@ void rvs_blas::generate_random_matrix_data(void) {
 
       for (int i = 0; i < size_c; ++i)
         hhlfc[i] = fast_pseudo_rand(&nextr);
+    }
+
+    if(data_type == "fp8_r") {
+
+      for (i = 0; i < size_a; ++i)
+        ((struct rocblas_f8 *)hda)[i].data = rocblas_hip_f8_impl::cast_to_f8<2, 5, float, true, false>(fast_pseudo_rand(&nextr), false, 0);
+
+      for (i = 0; i < size_b; ++i)
+        ((struct rocblas_f8 *)hdb)[i].data = rocblas_hip_f8_impl::cast_to_f8<2, 5, float, true, false>(fast_pseudo_rand(&nextr), false, 0);
+
+      for (i = 0; i < size_c; ++i)
+        ((struct rocblas_f8 *)hdc)[i].data = rocblas_hip_f8_impl::cast_to_f8<2, 5, float, true, false>(fast_pseudo_rand(&nextr), false, 0);
+    }
+
+    if(data_type == "bp16_r") {
+
+      for (i = 0; i < size_a; ++i) {
+        struct rocblas_bfloat16 bf16 = rocblas_bfloat16(fast_pseudo_rand(&nextr));
+        ((struct rocblas_bfloat16* )hda)[i] = bf16;
+      }
+
+      for (i = 0; i < size_b; ++i) {
+        struct rocblas_bfloat16 bf16 = rocblas_bfloat16(fast_pseudo_rand(&nextr));
+        ((struct rocblas_bfloat16* )hdb)[i] = bf16;
+      }
+
+      for (i = 0; i < size_c; ++i) {
+        struct rocblas_bfloat16 bf16 = rocblas_bfloat16(fast_pseudo_rand(&nextr));
+        ((struct rocblas_bfloat16* )hdc)[i] = bf16;
+      }
     }
   }
 }
