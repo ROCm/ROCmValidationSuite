@@ -38,6 +38,7 @@
 #include "include/rvsliblogger.h"
 #include "include/rvsoptions.h"
 #include "include/rvstrace.h"
+#include "rocm-core/rocm_getpath.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -255,7 +256,21 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   string  module;
   string config;
   yaml_data_type_t data_type;
-
+  char *installPath = nullptr;
+  unsigned int installPathLen = 0;
+  string rocmPath;
+  PathErrors_t retVal = PathSuccess;
+  // Get ROCM install path
+  retVal = getROCmInstallPath( &installPath, &installPathLen );
+  if(retVal == PathSuccess){
+    rocmPath = installPath;
+  }else {
+    std::cout << "Failed to get ROCm Install Path: " << retVal <<"\nSet ROCM_PATH in env" << std::endl;
+  }
+  // free allocated memory
+  if(installPath != nullptr) {
+    free(installPath);
+  }
   options::has_option("pwd", &path);
   logger::log_level(rvs::logerror);
 
@@ -264,7 +279,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   }
   else if (rvs::options::has_option(opt, "module", &module)) {
 
-#define RVS_MODULE_MAX 11 
+#define RVS_MODULE_MAX 11
     std::map <std::string, int> module_map = {
       {"babel", 0},
       {"gpup", 1},
@@ -294,9 +309,9 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
     };
 
     auto itr = module_map.find(module);
-    int module_index = itr->second; 
+    int module_index = itr->second;
 
-    if(RVS_MODULE_MAX <= module_index) { 
+    if(RVS_MODULE_MAX <= module_index) {
       return -1;
     }
 
@@ -308,7 +323,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
       std::ifstream file(path + config);
       if (!file.good()) {
         // configuration file exist in ROCM path ?
-        path = ROCM_PATH;
+        path = rocmPath;
         config = "/share/rocm-validation-suite/conf/" + module_config_file[module_index];
       }
       file.close();
@@ -346,7 +361,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
     std::ifstream conf_file(val);
     if (!conf_file.good()) {
       // Modules config. file exist in ROCM path ?
-      path = ROCM_PATH;
+      path = rocmPath;
       val = path + "/share/rocm-validation-suite/conf/.rvsmodules.config";
     }
   }

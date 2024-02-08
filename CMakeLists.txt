@@ -79,7 +79,8 @@ set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
 add_definitions(-DROCM_PATH="${ROCM_PATH}")
-add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
+# The absolute library path will be ${ROCM_PATH}/${RVS_LIB_PATH}
+add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_LIBDIR}/rvs")
 
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
@@ -148,12 +149,12 @@ set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.
 
 # Package dependencies
 if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, libpci3, libyaml-cpp-dev")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, rocm-core, libpci3, libyaml-cpp-dev")
 elseif (${RVS_OS_TYPE} STREQUAL "sles")
-set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, libpci3, libyaml-cpp0_6")
+set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, rocm-core, libpci3, libyaml-cpp0_6")
 else ()
 # other supported rpm distros - RHEL, CentOS
-set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, pciutils-libs, yaml-cpp")
+set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, rocm-core, pciutils-libs, yaml-cpp")
 endif()
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
@@ -465,6 +466,10 @@ if(BUILD_ADDRESS_SANITIZER)
 endif()
 
 set(HCC_CXX_FLAGS "-fno-gpu-rdc --offload-arch=gfx90a --offload-arch=gfx1030 --offload-arch=gfx803 --offload-arch=gfx900 --offload-arch=gfx906 --offload-arch=gfx908 --offload-arch=gfx1101 --offload-arch=gfx940 --offload-arch=gfx941 --offload-arch=gfx942")
+
+# rocm-core library will provide the ROCM_PATH during runtime
+# Link the library as required
+set(ROCM_CORE "rocm-core")
 
 add_subdirectory(rvslib)
 add_subdirectory(rvs)
