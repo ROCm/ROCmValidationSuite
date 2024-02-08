@@ -40,7 +40,6 @@
 #include "include/rvsaction.h"
 #include "include/rvsliblog.h"
 #include "include/rvsoptions.h"
-#include "rocm-core/rocm_getpath.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -182,23 +181,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       // error?
       if (!psolib) {
         //Search libraries in RVS install path
-        char *installPath = nullptr;
-        unsigned int installPathLen = 0;
-        string rocmPath;
-        PathErrors_t retVal = PathSuccess;
-        // Get the ROCm install path
-        retVal = getROCmInstallPath( &installPath, &installPathLen );
-        if(retVal == PathSuccess){
-          rocmPath = installPath;
-        }else {
-          std::cout << "Failed to get ROCm Install Path: " << retVal <<"\nSet ROCM_PATH in env" << std::endl;
-        }
-        // free allocated memory
-        if(installPath != nullptr) {
-          free(installPath);
-        }
-        libpath = rocmPath;
-        libpath += RVS_LIB_PATH;
+        libpath = RVS_LIB_PATH;
         libpath += "/";
         string sofullname(libpath + it->second);
         psolib = dlopen(sofullname.c_str(), RTLD_NOW);
