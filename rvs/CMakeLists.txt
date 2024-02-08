@@ -127,7 +127,7 @@ set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
 target_link_libraries(${RVS_TARGET} rvslib
-  ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS})
+  ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${PROJECT_LINK_LIBS})
 add_dependencies(${RVS_TARGET} rvslib)
 
 install(TARGETS ${RVS_TARGET}
