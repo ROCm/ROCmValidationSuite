@@ -732,35 +732,32 @@ void rvs_blas::generate_random_matrix_data(void) {
         hhlfc[i] = fast_pseudo_rand(&nextr);
     }
 
+    // 8-bit floating point real (fp8_r) format
     if(data_type == "fp8_r") {
 
       for (i = 0; i < size_a; ++i)
-        ((struct rocblas_f8 *)hda)[i].data = rocblas_hip_f8_impl::cast_to_f8<2, 5, float, true, false>(fast_pseudo_rand(&nextr), false, 0);
+        ((struct rocblas_f8* )hda)[i] = rocblas_f8(fast_pseudo_rand(&nextr));
 
       for (i = 0; i < size_b; ++i)
-        ((struct rocblas_f8 *)hdb)[i].data = rocblas_hip_f8_impl::cast_to_f8<2, 5, float, true, false>(fast_pseudo_rand(&nextr), false, 0);
+        ((struct rocblas_f8* )hdb)[i] = rocblas_f8(fast_pseudo_rand(&nextr));
 
       for (i = 0; i < size_c; ++i)
-        ((struct rocblas_f8 *)hdc)[i].data = rocblas_hip_f8_impl::cast_to_f8<2, 5, float, true, false>(fast_pseudo_rand(&nextr), false, 0);
+        ((struct rocblas_f8* )hdc)[i] = rocblas_f8(fast_pseudo_rand(&nextr));
     }
 
+    // 16-bit brain floating point real (bp16_r) format
     if(data_type == "bp16_r") {
 
-      for (i = 0; i < size_a; ++i) {
-        struct rocblas_bfloat16 bf16 = rocblas_bfloat16(fast_pseudo_rand(&nextr));
-        ((struct rocblas_bfloat16* )hda)[i] = bf16;
-      }
+      for (i = 0; i < size_a; ++i)
+        ((struct rocblas_bfloat16* )hda)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr));
 
-      for (i = 0; i < size_b; ++i) {
-        struct rocblas_bfloat16 bf16 = rocblas_bfloat16(fast_pseudo_rand(&nextr));
-        ((struct rocblas_bfloat16* )hdb)[i] = bf16;
-      }
+      for (i = 0; i < size_b; ++i)
+        ((struct rocblas_bfloat16* )hdb)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr));
 
-      for (i = 0; i < size_c; ++i) {
-        struct rocblas_bfloat16 bf16 = rocblas_bfloat16(fast_pseudo_rand(&nextr));
-        ((struct rocblas_bfloat16* )hdc)[i] = bf16;
-      }
+      for (i = 0; i < size_c; ++i)
+        ((struct rocblas_bfloat16* )hdc)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr));
     }
+
   }
 }
 
