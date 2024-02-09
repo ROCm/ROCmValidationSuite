@@ -57,6 +57,7 @@ extern "C" {
 using std::string;
 using std::vector;
 
+
 //! Default constructor
 pbqt_action::pbqt_action():link_type_string{} {
   prop_peer_deviceid = 0u;
@@ -242,7 +243,7 @@ bool pbqt_action::get_all_pbqt_config_keys(void) {
   if( link_type == 2) {
       link_type_string = "PCIe";
   }
-  else if(link_type == 3) {
+  else if(link_type == 4) {
       link_type_string = "XGMI";
   }
 
@@ -413,11 +414,9 @@ int pbqt_action::create_threads() {
   std::vector<uint16_t> gpu_device_id;
   uint16_t transfer_ix = 0;
   bool bmatch_found = false;
-
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&gpu_device_id);
-
-  for (size_t i = 0; i < gpu_id.size()-1; i++) {    // all possible sources
+  for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
     // filter out by source device id
     if (property_device_id > 0) {
       if (property_device_id != gpu_device_id[i]) {
@@ -434,9 +433,11 @@ int pbqt_action::create_threads() {
             continue;
       }
     }
-
-    for (size_t j = i+1; j < gpu_id.size(); j++) {  // all possible peers
+    // if property_device_all selected, iteration starts at 0 and all pairs covered.
+    for (size_t j = 0; j < gpu_id.size(); j++) {  // all possible peers
       RVSTRACE_
+      if (i == j) 
+	  continue;
       // filter out by peer id
       if (prop_peer_deviceid > 0) {
         RVSTRACE_
@@ -463,6 +464,7 @@ int pbqt_action::create_threads() {
       // signal that at lease one matching src-dst combination
       // has been found:
       bmatch_found = true;
+
 
       // get NUMA nodes
       uint16_t srcnode;

@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved. 
+## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -63,7 +63,7 @@ set(CTEST_MEMORYCHECK_SUPPRESSIONS_FILE ${CTEST_SOURCE_DIRECTORY}/tests/valgrind
 if(NOT EXISTS "${CTEST_SOURCE_DIRECTORY}")
     message(STATUS "Source directory does not exist.")
 #    return()
-  set(CTEST_CHECKOUT_COMMAND "${CTEST_GIT_COMMAND} clone  -b ${RVS_BRANCH} https://github.com/ROCm-Developer-Tools/ROCmValidationSuite.git ${CTEST_SOURCE_DIRECTORY}")
+  set(CTEST_CHECKOUT_COMMAND "${CTEST_GIT_COMMAND} clone  -b ${RVS_BRANCH} https://github.com/ROCm/ROCmValidationSuite.git ${CTEST_SOURCE_DIRECTORY}")
 endif()
 
 # if(NOT EXISTS "${CTEST_BINARY_DIRECTORY}")
