@@ -210,7 +210,7 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
     ${PROJECT_LINK_LIBS}
     ${PROJECT_TEST_LINK_LIBS}
     rvslib rvslibut gtest_main gtest pthread
-    ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET}
+    ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE}
   )
   add_dependencies(${TEST_NAME} rvs_gtest_target)
 
