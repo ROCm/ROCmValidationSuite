@@ -38,6 +38,11 @@ if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
 enable_testing()
+# In future use the api provided by rocm-core library to get ROCm Install path
+# For backward compatibility use ROCM_PATH provided by build arguments.
+# Using the api option is turned OFF by default
+option(FETCH_ROCMPATH_FROM_ROCMCORE
+        "Use the api provided by rocm-core library to get ROCM_PATH" OFF)
 
 # Prerequisite - Check if rocblas was already installed
 find_package (rocblas)
@@ -79,8 +84,19 @@ set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC
 set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
 add_definitions(-DROCM_PATH="${ROCM_PATH}")
-add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
-
+if(FETCH_ROCMPATH_FROM_ROCMCORE)
+  add_compile_options(-DFETCH_ROCMPATH_FROM_ROCMCORE=${FETCH_ROCMPATH_FROM_ROCMCORE})
+  # rocm-core library will provide the ROCM_PATH during runtime
+  # Link the library as required
+  set(ROCM_CORE "rocm-core")
+  # The absolute library path will be ${ROCM_PATH}/${RVS_LIB_PATH}
+  # Usage is ROCM_PATH will be fetched from rocm-core and append ${RVS_LIB_PATH}
+  add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_LIBDIR}/rvs")
+else()
+  add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
+  # Set ROCM_CORE to empty, so no linking to rocm-core library/package
+  set(ROCM_CORE "")
+endif()
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
 # definition and dump it in the cache along with proper documentation,
@@ -148,12 +164,12 @@ set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.
 
 # Package dependencies
 if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, libpci3, libyaml-cpp-dev")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, ${ROCM_CORE}, libpci3, libyaml-cpp-dev")
 elseif (${RVS_OS_TYPE} STREQUAL "sles")
-set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, libpci3, libyaml-cpp0_6")
+set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, ${ROCM_CORE}, libpci3, libyaml-cpp0_6")
 else ()
 # other supported rpm distros - RHEL, CentOS
-set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, pciutils-libs, yaml-cpp")
+set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, ${ROCM_CORE}, pciutils-libs, yaml-cpp")
 endif()
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
