@@ -38,7 +38,9 @@
 #include "include/rvsliblogger.h"
 #include "include/rvsoptions.h"
 #include "include/rvstrace.h"
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
 #include "rocm-core/rocm_getpath.h"
+#endif
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -256,6 +258,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   string  module;
   string config;
   yaml_data_type_t data_type;
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
   char *installPath = nullptr;
   unsigned int installPathLen = 0;
   string rocmPath;
@@ -264,13 +267,15 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   retVal = getROCmInstallPath( &installPath, &installPathLen );
   if(retVal == PathSuccess){
     rocmPath = installPath;
-  }else {
+  }
+  else {
     std::cout << "Failed to get ROCm Install Path: " << retVal <<"\nSet ROCM_PATH in env" << std::endl;
   }
   // free allocated memory
   if(installPath != nullptr) {
     free(installPath);
   }
+#endif
   options::has_option("pwd", &path);
   logger::log_level(rvs::logerror);
 
@@ -323,7 +328,11 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
       std::ifstream file(path + config);
       if (!file.good()) {
         // configuration file exist in ROCM path ?
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
         path = rocmPath;
+#else
+        path = ROCM_PATH;
+#endif
         config = "/share/rocm-validation-suite/conf/" + module_config_file[module_index];
       }
       file.close();
@@ -361,7 +370,11 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
     std::ifstream conf_file(val);
     if (!conf_file.good()) {
       // Modules config. file exist in ROCM path ?
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
       path = rocmPath;
+#else
+      path = ROCM_PATH;
+#endif
       val = path + "/share/rocm-validation-suite/conf/.rvsmodules.config";
     }
   }
