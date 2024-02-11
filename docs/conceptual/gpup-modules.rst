@@ -172,3 +172,132 @@ flags:raw-latex:`\n`
 .. raw:: html
 
    </table>
+
+Output
+---------
+
+Module-specific output keys are described in the table below:
+
+.. raw:: html
+
+   <table>
+
+.. raw:: html
+
+   <tr>
+
+.. raw:: html
+
+   <th>
+
+Output Key
+
+.. raw:: html
+
+   </th>
+
+.. raw:: html
+
+   <th>
+
+Type
+
+.. raw:: html
+
+   </th>
+
+.. raw:: html
+
+   <th>
+
+Description
+
+.. raw:: html
+
+   </th>
+
+.. raw:: html
+
+   </tr>
+
+.. raw:: html
+
+   <tr>
+
+.. raw:: html
+
+   <td>
+
+properties-values
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+Collection of Integers
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+The collection will contain a positive integer value for each of the
+valid properties specified in the properties config key.
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   </tr>
+
+.. raw:: html
+
+   <tr>
+
+.. raw:: html
+
+   <td>
+
+io_links-propertiesvalues
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+Collection of Integers
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+The collection will contain a positive integer value for each of the
+valid properties specified in the io_links-properties config key.
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   </tr>
+
+.. raw:: html
+
+   </table>
