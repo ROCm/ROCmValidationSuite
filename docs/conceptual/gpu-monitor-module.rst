@@ -8,10 +8,7 @@
 GM Module
 ************
 
-The GPU monitor module can be used monitor and characterize the response of a GPU to different levels of use. This module is intended to run concurrently with
-other actions, and provides a ‘start’ and ‘stop’ configuration key to start the monitoring and then stop it after testing has completed. The module can also be
-configured with bounding box values for interested GPU parameters. If any of the GPU’s parameters exceed the bounding values on a specific GPU an INFO warning
-message will be printed to stdout while the bounding value is still exceeded.
+The GPU monitor module can be used to monitor and characterize the response of a GPU to different levels of use. This module is intended to run concurrently with other actions and provides a ‘start’ and ‘stop’ configuration key to start the monitoring and then stop it after testing has been completed. The module can also be configured with bounding box values for interested GPU parameters. If any of the GPU’s parameters exceed the bounding values on a specific GPU an INFO warning message will be printed to stdout while the bounding value is still exceeded.
 
 Module Specific Keys
 -----------
@@ -541,6 +538,7 @@ value is reported:
 
 
 Examples
+--------
 
 **Example 1:**
 
