@@ -7,7 +7,7 @@
 
 Installing from Package
 ****************************
-Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package. For more details, refer to the `ROCm Validation Suite GitHub site <https://github.com/ROCm/ROCmValidationSuite>`_
+Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package. For more details, refer to the `ROCm Validation Suite GitHub site <https://github.com/ROCm/ROCmValidationSuite>`_.
 
 RVS package components are installed in `/opt/rocm`. The package contains:
 
