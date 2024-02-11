@@ -1,5 +1,9 @@
 
+.. meta::
+  :description: rocm validation suite documentation 
+  :keywords: rocm validation suite, ROCm, documentation
 
+.. _architecture:
 
 
 ROCm Validation Suite Architecture
