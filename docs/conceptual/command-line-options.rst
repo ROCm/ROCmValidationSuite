@@ -1,10 +1,10 @@
 
 
 
-Common Configuration Keys
+Command Line Options
 --------------------------
 
-Common configuration keys applicable to most module are summarized in the table below:
+Command line options are summarized in the table below:
 
 
 .. raw:: html
