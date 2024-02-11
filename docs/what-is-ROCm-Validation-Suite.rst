@@ -1,5 +1,5 @@
 .. meta::
-   :description: ROCm validation Suite The ROCm Validation Suite (RVS) is a system validation and diagnostics tool
+:description: ROCm validation Suite The ROCm Validation Suite (RVS) is a system validation and diagnostics tool
 for monitoring, stress testing, detecting, and troubleshooting issues.
 :keywords: rocm validation suite, ROCm, SPARSE, library, API, HIP
 
