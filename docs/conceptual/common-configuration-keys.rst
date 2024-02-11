@@ -6,7 +6,7 @@ Common Configuration Keys
 
 Common configuration keys applicable to most module are summarized in the table below:
 
-.. list-table:: Title
+.. list-table:: Common configuration keys
    :widths: 25 25 50
    :header-rows: 1
 
