@@ -5,7 +5,7 @@
 .. _what-is-ROCm-Validation-Suite:
 
 *******************************
-What is ROCm Validation Suite
+What is ROCm Validation Suite?
 *******************************
 The ROCm Validation Suite (RVS) is a system validation and diagnostics tool for monitoring, stress testing, detecting, and troubleshooting issues that
 affect the functionality and performance of AMD GPU(s) operating in a high-performance/AI/ML computing environment. RVS is enabled using the ROCm
