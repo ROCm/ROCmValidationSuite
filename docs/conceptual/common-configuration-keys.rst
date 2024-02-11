@@ -7,7 +7,7 @@
 Common configuration keys
 --------------------------
 
-Common configuration keys applicable to most module are summarized in the table below:\n
+Common configuration keys applicable to most module are summarized in the table below:
 
 .. raw:: html
 
