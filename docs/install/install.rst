@@ -12,6 +12,7 @@ RVS can be obtained by building from a source code base or installing from the p
 
 - Build from the source code
 or
+
 - Install from the package
 
 - Run RVS
