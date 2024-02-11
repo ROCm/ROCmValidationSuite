@@ -642,10 +642,9 @@ The output for such a configuration file may look like this:
    adjusted/fine-tuned according to the actual GPUs and HW platform
    capabilities.
 
-For example, a matrix size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20 GPUs
+   For example, a matrix size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20 GPUs
 
-For small target_power values (e.g.: 30-40W), the sample_interval should be increased, otherwise the IET may fail either to achieve the given target_power or to sustain it (e.g.: ramp_interval = 1500 for target_power = 40)
+   For small target_power values (e.g.: 30-40W), the sample_interval should be increased, otherwise the IET may fail either to      achieve the given target_power or to sustain it (e.g.: ramp_interval = 1500 for target_power = 40)
 
-In case there are problems reaching/sustaining the given target_power, increase the ramp_interval and/or the tolerance value(s)
-and try again (in case of a ‘ramp time exceeded’ message), and increase the tolerance value (in case too many ‘power
-violation message’ are logged out).
+   In case there are problems reaching/sustaining the given target_power, increase the ramp_interval and/or the tolerance           value(s) and try again (in case of a ‘ramp time exceeded’ message), and increase the tolerance value (in case too many ‘power
+   violation message’ is logged out).
