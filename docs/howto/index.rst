@@ -1,6 +1,6 @@
 .. meta::
-  :description:  documentation and API reference library
-  :keywords: rocSOLVER, ROCm, API, documentation
+  :description:  documentation 
+  :keywords: rocm validation suite, ROCm, installation, documentation
 
 .. _install:
 
