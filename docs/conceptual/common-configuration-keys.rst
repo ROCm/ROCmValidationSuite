@@ -339,5 +339,5 @@ can be configured based on its specific parameters.
 .. raw:: html
 
    </table>
-pandoc version 3.1.11.1
+
 
