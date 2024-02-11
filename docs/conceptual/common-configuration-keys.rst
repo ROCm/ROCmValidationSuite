@@ -10,9 +10,10 @@ Common configuration keys applicable to most module are summarized in the table 
    :widths: 25 25 50
    :header-rows: 1
 
-   * - Heading row 1, column 1
-     - Heading row 1, column 2
-     - Heading row 1, column 3
+   * - article, column 1
+     - , column 2
+     - description, column 3
+
    * - Row 1, column 1
      -
      - Row 1, column 3
