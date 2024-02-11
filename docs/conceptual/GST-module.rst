@@ -775,3 +775,169 @@ ID, the **target_stress** and the value of the **copy_matrix**:
 -  log a **ramp time exceeded** message if the GPU was not able to reach
    the **target_stress** in the **ramp_interval** time frame (e.g.:
    5000). In such a case, the test will also terminate:
+
+  [INFO ] [164013.788870] action_gst_1 gst 3254 ramp time exceeded 5000
+
+-  log the test result when the stress test is complete. The message
+   contains the test’s overall result and some other statistics
+   according to **5.2 Output keys**:
+
+  [INFO ] [164013.788870] action_gst_1 gst 3254 ramp time exceeded 5000
+
+-  log the test result when the stress test is complete. The message
+   contains the test’s overall result and some other statistics
+   according to **5.2 Output keys**:
+
+  [RESULT] [164355.647523] action_gst_1 gst 33367 Gflop: 4066.020766
+  flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200
+  try_ops_per_sec: 9.157367 pass: TRUE
+
+-  log a **stress violation** message when the current gigaflops (for
+   the last **log_interval**, e.g.; 1000ms) violates the bounds set by
+   the **tolerance** configuration key (e.g.: 0.1). Please note that
+   this message is not logged during the **ramp_interval** time frame:
+
+  [INFO ] [164013.788870] action_gst_1 gst 3254 stress violation 2500
+
+If a mandatory configuration key is missing, the **RVS** tool will log
+an error message and terminate the execution of the current module. For
+example, the following configuration file will cause the **RVS** to
+terminate with the following error message:
+
+**RVS-GST: action: action_gst_1 key ‘target_stress’ was not found**
+
+::
+
+   actions:
+   - name: action_gst_1
+     module: gst
+     device: all
+     duration: 8000
+
+A more complex configuration file looks like this:
+
+::
+
+   actions:
+   - name: action_1
+     device: 50599 33367
+     module: gst
+     parallel: false
+     count: 12
+     wait: 100
+     duration: 7000
+     ramp_interval: 3000
+     log_interval: 1000
+     max_violations: 2
+     copy_matrix: false
+     target_stress: 5000
+     tolerance: 0.07
+     matrix_size: 5760
+
+For this configuration file, the RVS tool: - will run the stress test
+only for the GPUs having the ID 50599 or 33367. To get all the available
+GPU IDs, run **RVS** tool with **-g** option - will run the test on the
+selected GPUs, one after the other - will run each test, 12 times - will
+only copy the matrices to the GPUs at the beginning of the test - will
+wait 100ms before each test execution - will try to reach 5000 gflops in
+maximum 3000ms - if **target_stress** (5000) is achieved in the
+**ramp_interval** (3000 ms) it will attempt to run the test for the rest
+of the duration, sustaining the stress load during that time - will
+allow a 7% **target_stress** **tolerance** (each **target_stress**
+violation will generate a **stress violation** message as shown in the
+first example) - will allow only 2 **target_stress** violations.
+Exceeding the **max_violations** will not terminate the test, but the
+**RVS** will mark the test result as “fail”.
+
+The output for such a configuration key may look like this:
+
+**[INFO ] [172061.758830] action_1 gst 50599 start 5000.000000 copy
+matrix:false**
+
+**[INFO ] [172065.609224] action_1 gst 50599 Gflops 5189.993529**
+
+**[INFO ] [172066.634360] action_1 gst 50599 Gflops 5220.373979**
+
+**[INFO ] [172067.659262] action_1 gst 50599 Gflops 5225.472000**
+
+**[INFO ] [172068.694305] action_1 gst 50599 Gflops 5169.935583**
+
+**[RESULT] [172069.573967] action_1 gst 50599 Gflop: 6471.614725
+flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200
+try_ops_per_sec: 13.081952 pass: TRUE**
+
+**[INFO ] [172069.574369] action_1 gst 33367 start 5000.000000 copy
+matrix:false**
+
+**[INFO ] [172071.409483] action_1 gst 33367 Gflops 6558.348080**
+
+**[INFO ] [172072.438104] action_1 gst 33367 target achieved
+5000.000000**
+
+**[INFO ] [172073.465033] action_1 gst 33367 Gflops 5215.285895**
+
+**[INFO ] [172074.501571] action_1 gst 33367 Gflops 5164.945297**
+
+**[INFO ] [172075.529468] action_1 gst 33367 Gflops 5210.207720**
+
+**[INFO ] [172076.558102] action_1 gst 33367 Gflops 5205.139424**
+
+**[RESULT] [172077.448182] action_1 gst 33367 Gflop: 6558.348080
+flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200
+try_ops_per_sec: 13.081952 pass: TRUE**
+
+
+
+**[INFO ] [172063.547668] action_1 gst 50599 Gflops 6471.614725**
+
+**[INFO ] [172064.577715] action_1 gst 50599 target achieved
+5000.000000**
+
+When setting the **parallel** to false, the **RVS** will run the stress
+tests on all selected GPUs in parallel and the output may look like
+this:
+
+**[INFO ] [173381.407428] action_1 gst 50599 start 5000.000000 copy
+matrix:false**
+
+**[INFO ] [173381.407744] action_1 gst 33367 start 5000.000000 copy
+matrix:false**
+
+**[INFO ] [173383.245771] action_1 gst 33367 Gflops 6558.348080**
+
+**[INFO ] [173383.256935] action_1 gst 50599 Gflops 6484.532120**
+
+**[INFO ] [173384.274202] action_1 gst 33367 target achieved
+5000.000000**
+
+**[INFO ] [173384.286014] action_1 gst 50599 target achieved
+5000.000000**
+
+**[INFO ] [173385.301038] action_1 gst 33367 Gflops 5215.285895**
+
+**[INFO ] [173385.315794] action_1 gst 50599 Gflops 5200.080980**
+
+**[INFO ] [173386.337638] action_1 gst 33367 Gflops 5164.945297**
+
+**[INFO ] [173386.353274] action_1 gst 50599 Gflops 5159.964636**
+
+**[INFO ] [173387.365494] action_1 gst 33367 Gflops 5210.207720**
+
+**[INFO ] [173387.383437] action_1 gst 50599 Gflops 5195.032357**
+
+**[INFO ] [173388.401250] action_1 gst 33367 Gflops 5169.935583**
+
+**[INFO ] [173388.421599] action_1 gst 50599 Gflops 5154.993572**
+
+**[RESULT] [173389.282710] action_1 gst 33367 Gflop: 6558.348080
+flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200
+try_ops_per_sec: 13.081952 pass: TRUE**
+
+**[RESULT] [173389.305479] action_1 gst 50599 Gflop: 6484.532120
+flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200
+try_ops_per_sec: 13.081952 pass: TRUE**
+
+It is important that all the configuration keys will be
+adjusted/fine-tuned according to the actual GPUs and HW platform
+capabilities. For example, a matrix size of 5760 should fit the VEGA 10
+GPUs, while 8640 should work with the VEGA20 GPUs.
