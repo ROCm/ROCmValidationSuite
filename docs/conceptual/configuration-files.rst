@@ -24,7 +24,7 @@ Action item (or action for short) uses keys to define nature of validation test 
 
 An example of RVS configuration file is given here:
 
-..code-block::
+
 
     actions:
     - name: action_1
