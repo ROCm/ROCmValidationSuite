@@ -2,9 +2,10 @@
 
 
 Common Configuration Keys
+--------------------------
 
-Common configuration keys applicable to most module are summarized in the
-table below:\n
+Common configuration keys applicable to most module are summarized in the table below:
+\n
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>name</td><td>String</td><td>The name of the defined action.</td></tr>
