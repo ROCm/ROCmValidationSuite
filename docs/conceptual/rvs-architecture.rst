@@ -6,8 +6,8 @@
 .. _architecture:
 
 
-ROCm Validation Suite Architecture
-***********************************
+ROCm Validation Suite (RVS) Architecture
+****************************************
 
 RVS is implemented as a set of modules, each implementing a particular test functionality. Modules are invoked from one central place (aka Launcher), responsible for reading input (command line and test configuration file), loading and running appropriate modules, and providing test output. 
 
