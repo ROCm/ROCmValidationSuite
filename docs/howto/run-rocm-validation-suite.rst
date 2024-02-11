@@ -6,8 +6,11 @@ Running ROCm Validation Suite (RVS)
 
 Run version built from the source code
 ---------------------------------------
+
 .. code-block::
+
         cd <source folder>/build/bin
+
 
 Command examples
 
