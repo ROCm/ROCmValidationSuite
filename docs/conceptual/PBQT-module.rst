@@ -483,12 +483,12 @@ depend on your system.
    all transfer tests to finish at lest once or “(pending)” and “(\*)”
    will be displayed (see below). Number of transfers depends on number
    of peer NUMA nodes in your system. In parallel mode, it should be
-   roughly 1.5 times the duration of single longest individual test.
--  **duration**, regardless of mode should be at least, 4 \*
+   roughly 1.5 times the duration of a single longest individual test.
+-  **duration**, regardless of mode, should be at least 4 \*
    log_interval.
 
-You may obtain indication of how long single transfer between two NUMA
-nodes take by running test with “-d 4” switch and observing DEBUG
+You may obtain an indication of how long a single transfer between two NUMA
+nodes takes by running a test with “-d 4” switch and observing DEBUG
 messages for transfer start/finish. An output may look like this:
 
 ::
@@ -506,6 +506,244 @@ messages for transfer start/finish. An output may look like this:
    [DEBUG ] [183944.19032 ] [action_1] pbqt transfer 6 4 start
    [DEBUG ] [183944.700868] [action_1] pbqt transfer 6 4 finish
 
-From this printout, it can be concluded that single transfer takes on
-average 800ms. Values for **log_interval** and **duration** should be
-set accordingly.
+From this printout, it can be concluded that a single transfer takes an average of 800ms. Values for **log_interval** and **duration** should be set accordingly.
+
+Output
+~~~~~~
+
+Module specific output keys are described in the table below:
+
+.. raw:: html
+
+   <table>
+
+.. raw:: html
+
+   <tr>
+
+.. raw:: html
+
+   <th>
+
+Output Key
+
+.. raw:: html
+
+   </th>
+
+.. raw:: html
+
+   <th>
+
+Type
+
+.. raw:: html
+
+   </th>
+
+.. raw:: html
+
+   <th>
+
+Description
+
+.. raw:: html
+
+   </th>
+
+.. raw:: html
+
+   </tr>
+
+.. raw:: html
+
+   <tr>
+
+.. raw:: html
+
+   <td>
+
+p2p_result
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+Bool
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+Indicates if the gpu and the specified peer have P2P capabilities. If
+this quantity is true, the GPU pair tested has p2p capabilities. If
+false, they are not peers.
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   </tr>
+
+.. raw:: html
+
+   <tr>
+
+.. raw:: html
+
+   <td>
+
+distance
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+Integer
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+NUMA distance for these two peers
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   </tr>
+
+.. raw:: html
+
+   <tr>
+
+.. raw:: html
+
+   <td>
+
+hop_type
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+String
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+Link type for each link hop (e.g., PCIe, HyperTransport, QPI, …)
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   </tr>
+
+.. raw:: html
+
+   <tr>
+
+.. raw:: html
+
+   <td>
+
+hop_distance
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+Integer
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+NUMA distance for this particular hop
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   </tr>
+
+.. raw:: html
+
+   <tr>
+
+.. raw:: html
+
+   <td>
+
+transfer_id
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+String
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   <td>
+
+String with format "<transfer_index>/<transfer_number>" where - transfer_index - is number, starting from
+1, for each device-peer combination - transfer_number - is the total number of device-peer combinations
+
+.. raw:: html
+
+   </td>
+
+.. raw:: html
+
+   </tr>
