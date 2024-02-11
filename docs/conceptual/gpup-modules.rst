@@ -301,3 +301,16 @@ valid properties specified in the io_links-properties config key.
 .. raw:: html
 
    </table>
+
+Each of the settings specified has a positive integer value. For each setting requested in the properties key, a message with the following format will
+be returned:
+
+.. code-block::
+
+    [RESULT][<timestamp>][<action name>] gpup <gpu id> <property> <property value>
+
+For each setting in the io_links-properties key, a message with the following format will be returned:
+
+.. code-block::
+
+    [RESULT][<timestamp>][<action name>] gpup <gpu id> <io_link id> <property> <property value>
