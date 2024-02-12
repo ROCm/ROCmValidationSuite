@@ -35,7 +35,7 @@ bool ZypPackageInfo::readMetaPackageInfo(std::string ss){
   bool found = false;
   size_t pos = std::string::npos;
   std::ofstream os;
-
+  std::string greaterVers{};
   os.open(getFileName() , std::ofstream::out | std::ofstream::app);
 
   while(std::getline(inss, line)){
@@ -49,7 +49,9 @@ bool ZypPackageInfo::readMetaPackageInfo(std::string ss){
         pos = line.find("=");
 
         if(std::string::npos != pos){
-
+        size_t gpos = line.find(">=");
+	if(std::string::npos != gpos && gpos == pos-1)
+		greaterVers = "+"; 
           /* Get dependent package and its version */
 
           size_t firstCharPos = line.find_first_not_of(" ");
@@ -63,6 +65,8 @@ bool ZypPackageInfo::readMetaPackageInfo(std::string ss){
 	  if (std::string::npos != p)
           	depPackageVersion = depPackageVersion.substr(0, p);
           /* Write dependent package name and its version to file */
+	  depPackageVersion+=greaterVers;
+	  greaterVers.erase();
           os << depPackageName << " " << depPackageVersion << std::endl;
 
           pos = std::string::npos;
