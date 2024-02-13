@@ -146,7 +146,8 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
             continue;  // failed to run the GEMM operation
 
         // Waits for GEMM operation to complete
-        gpu_blas->is_gemm_op_complete();
+        if(!gpu_blas->is_gemm_op_complete())
+          continue;
 
         num_sgemm_ops_log_interval++;
 
@@ -242,10 +243,12 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
         start_time = gpu_blas->get_time_us();
 
         // run GEMM operation
-        gpu_blas->run_blass_gemm(gst_ops_type);
+        if(!gpu_blas->run_blass_gemm(gst_ops_type))
+          continue;
 
         // Wait for GEMM operation to complete
-        gpu_blas->is_gemm_op_complete();
+        if(!gpu_blas->is_gemm_op_complete())
+          continue;
 
         //End the timer
         end_time = gpu_blas->get_time_us();
@@ -255,7 +258,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 
         gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
 
- 
         gst_last_sgemm_end_time = std::chrono::system_clock::now();
         millis_last_sgemm =
                 time_diff(gst_last_sgemm_end_time, gst_last_sgemm_start_time);
@@ -441,7 +443,8 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         start_time = gpu_blas->get_time_us();
 
         // run GEMM operation
-        gpu_blas->run_blass_gemm(gst_ops_type);
+        if(!gpu_blas->run_blass_gemm(gst_ops_type))
+          continue;
 
         // sgemm, dgemm and hgemm operations
         if(!gst_ops_type.empty()) {
@@ -459,13 +462,15 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
             msg = "[" + action_name + "] " + MODULE_NAME + " " +
               std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
             rvs::lp::Log(msg, rvs::logtrace);
+            continue;
           }
         }
         else {
           // data type (fp8 & bp16) based gemm operations
 
           // Wait for GEMM operation to complete
-          gpu_blas->is_gemm_op_complete();
+          if(!gpu_blas->is_gemm_op_complete())
+            continue;
 
           //End the timer
           end_time = gpu_blas->get_time_us();
