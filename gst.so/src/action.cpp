@@ -60,6 +60,7 @@ using std::regex;
 #define RVS_CONF_MATRIX_SIZE_KEYB       "matrix_size_b"
 #define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_b"
 #define RVS_CONF_GST_OPS_TYPE           "ops_type"
+#define RVS_CONF_GST_DATA_TYPE          "data_type"
 #define RVS_CONF_TRANS_A                "transa"
 #define RVS_CONF_TRANS_B                "transb"
 #define RVS_CONF_ALPHA_VAL              "alpha"
@@ -95,7 +96,8 @@ using std::regex;
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
-#define GST_DEFAULT_OPS_TYPE            "sgemm"
+#define GST_DEFAULT_OPS_TYPE            ""
+#define GST_DEFAULT_DATA_TYPE           ""
 
 /**
  * @brief default class constructor
@@ -150,6 +152,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
             workers[i].set_matrix_size_b(gst_matrix_size_b);
             workers[i].set_matrix_size_c(gst_matrix_size_c);
             workers[i].set_gst_ops_type(gst_ops_type);
+            workers[i].set_gst_data_type(gst_data_type);
             workers[i].set_matrix_transpose_a(gst_trans_a);
             workers[i].set_matrix_transpose_b(gst_trans_b);
             workers[i].set_alpha_val(gst_alpha_val);
@@ -268,6 +271,14 @@ bool gst_action::get_all_gst_config_keys(void) {
          bsts = false;
     }
 
+    if (property_get<std::string>(RVS_CONF_GST_DATA_TYPE, &gst_data_type,
+            GST_DEFAULT_DATA_TYPE)) {
+         msg = "invalid '" +
+         std::string(RVS_CONF_GST_DATA_TYPE) + "' key value";
+         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+         bsts = false;
+    }
+
     error = property_get_int<uint64_t>(RVS_CONF_HOT_CALLS, &gst_hot_calls, GST_DEFAULT_HOT_CALLS);
     if (error == 1) {
         msg = "invalid '" +
@@ -275,7 +286,6 @@ bool gst_action::get_all_gst_config_keys(void) {
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
-
 
     error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYA, &gst_matrix_size_a, GST_DEFAULT_MATRIX_SIZE);
     if (error == 1) {
@@ -355,6 +365,11 @@ bool gst_action::get_all_gst_config_keys(void) {
         std::string(RVS_CONF_LDC_OFFSET) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
+    }
+
+    /* If operation and data type both not set, default to sgemm */
+    if ((gst_ops_type == GST_DEFAULT_OPS_TYPE) && (gst_data_type == GST_DEFAULT_OPS_TYPE)) {
+      gst_ops_type = "sgemm";
     }
 
     return bsts;
@@ -540,46 +555,46 @@ void gst_action::json_add_primary_fields(){
  * @return run result
  */
 int gst_action::run(void) {
-    string msg;
-    rvs::action_result_t action_result;
+  string msg;
+  rvs::action_result_t action_result;
 
-    // get the action name
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      return -1;
-    }
+  // get the action name
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
+    return -1;
+  }
 
-    // check for -j flag (json logging)
-    if (property.find("cli.-j") != property.end())
-        bjson = true;
+  // check for -j flag (json logging)
+  if (property.find("cli.-j") != property.end())
+    bjson = true;
 
-    if (!get_all_common_config_keys())
-        return -1;
-    if (!get_all_gst_config_keys())
-        return -1;
+  if (!get_all_common_config_keys())
+    return -1;
+  if (!get_all_gst_config_keys())
+    return -1;
 
-    if (property_duration > 0 && (property_duration < gst_ramp_interval)) {
-        msg = "'" +
-            std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
-            std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "'";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
-    }
-    if(bjson){
-	// add prelims for each action, dtype and target stress
-        json_add_primary_fields();
-    }
-    auto res =  get_all_selected_gpus();
-    if(bjson){
-      rvs::lp::JsonActionEndNodeCreate();
-    }
+  if (property_duration > 0 && (property_duration < gst_ramp_interval)) {
+    msg = "'" +
+      std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
+      std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+  if(bjson){
+    // add prelims for each action, dtype and target stress
+    json_add_primary_fields();
+  }
+  auto res =  get_all_selected_gpus();
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
 
-    action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-    action_result.output = "GST Module action " + action_name + " completed";
-    action_callback(&action_result);
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "GST Module action " + action_name + " completed";
+  action_callback(&action_result);
 
-    return res;
+  return res;
 }
 
 void gst_action::cleanup_logs(){
