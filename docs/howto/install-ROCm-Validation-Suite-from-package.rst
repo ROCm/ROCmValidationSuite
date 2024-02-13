@@ -5,7 +5,7 @@
 .. _install:
 
 
-Installing from Package
+Installing from package
 ****************************
 Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package. For more details, refer to the `ROCm Validation Suite GitHub site <https://github.com/ROCm/ROCmValidationSuite>`_.
 
