@@ -624,8 +624,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
       int32_t sol_index = 0;
       uint32_t flags = 0;
 
-      _Float32 alpha = (_Float32)blas_alpha_val;
-      _Float32 beta = (_Float32)blas_beta_val;
+      rocblas_float alpha = (rocblas_float) blas_alpha_val;
+      rocblas_float beta = (rocblas_float) blas_beta_val;
 
       if (rocblas_gemm_ex3(blas_handle, transa, transb,
             rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
@@ -656,8 +656,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
       int32_t sol_index = 0;
       uint32_t flags = 0;
 
-      _Float32 alpha = (_Float32)blas_alpha_val;
-      _Float32 beta = (_Float32)blas_beta_val;
+      rocblas_float alpha = (rocblas_float) blas_alpha_val;
+      rocblas_float beta = (rocblas_float) blas_beta_val;
 
       if (rocblas_gemm_ex(blas_handle, transa, transb,
             rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
