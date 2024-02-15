@@ -163,13 +163,18 @@ set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.support@amd.com>")
 
 # Package dependencies
+if(FETCH_ROCMPATH_FROM_ROCMCORE)
+  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, ${ROCM_CORE}")
+else()
+  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib")
+endif()
 if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, ${ROCM_CORE}, libpci3, libyaml-cpp-dev")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
 elseif (${RVS_OS_TYPE} STREQUAL "sles")
-set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, ${ROCM_CORE}, libpci3, libyaml-cpp0_6")
+set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp0_6")
 else ()
 # other supported rpm distros - RHEL, CentOS
-set(CPACK_RPM_PACKAGE_REQUIRES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, ${ROCM_CORE}, pciutils-libs, yaml-cpp")
+set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, pciutils-libs, yaml-cpp")
 endif()
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
