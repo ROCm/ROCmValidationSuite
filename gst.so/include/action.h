@@ -54,15 +54,14 @@ using std::map;
  *
  */
 class gst_action: public rvs::actionbase {
- public:
+  public:
     gst_action();
     virtual ~gst_action();
 
     virtual int run(void);
     static void cleanup_logs();
-    std::string gst_ops_type;
 
- protected:
+  protected:
     //! TRUE if JSON output is required
     bool bjson;
 
@@ -78,11 +77,11 @@ class gst_action: public rvs::actionbase {
     //! GFlops tolerance (how much the GFlops can fluctuare after
     //! the ramp period for the test to succeed)
     float gst_tolerance;
-    
+
     //Alpha and beta value
     float      gst_alpha_val;
     float      gst_beta_val;
-    
+
     //! matrix size for SGEMM
     uint64_t gst_matrix_size_a;
     uint64_t gst_matrix_size_b;
@@ -100,25 +99,27 @@ class gst_action: public rvs::actionbase {
     int      gst_ldb_offset;
     int      gst_ldc_offset;
 
-    friend class GSTWorker;
+    // type of gemm operation
+    std::string gst_ops_type;
 
-    // GST specific config keys
-//     void property_get_gst_target_stress(int *error);
-//     void property_get_gst_tolerance(int *error);
+    // gemm data type
+    std::string gst_data_type;
+
+    friend class GSTWorker;
 
     bool get_all_gst_config_keys(void);
     void json_add_primary_fields();
-  /**
-  * @brief reads all common configuration keys from
-  * the module's properties collection
-  * @return true if no fatal error occured, false otherwise
-  */
+    /**
+     * @brief reads all common configuration keys from
+     * the module's properties collection
+     * @return true if no fatal error occured, false otherwise
+     */
     bool get_all_common_config_keys(void);
 
-  /**
-  * @brief gets the number of ROCm compatible AMD GPUs
-  * @return run number of GPUs
-  */
+    /**
+     * @brief gets the number of ROCm compatible AMD GPUs
+     * @return run number of GPUs
+     */
     int get_num_amd_gpu_devices(void);
     int get_all_selected_gpus(void);
     bool do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index);
