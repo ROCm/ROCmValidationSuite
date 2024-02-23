@@ -408,14 +408,18 @@ bool pbqt_action::get_all_common_config_keys(void) {
  *
  * */
 int pbqt_action::create_threads() {
-  std::string msg;
 
+  std::string msg;
   std::vector<uint16_t> gpu_id;
   std::vector<uint16_t> gpu_device_id;
   uint16_t transfer_ix = 0;
   bool bmatch_found = false;
+  char srcgpuid_buff[12];
+  char dstgpuid_buff[12];
+
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_device_id(&gpu_device_id);
+
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
     // filter out by source device id
     if (property_device_id > 0) {
@@ -508,9 +512,13 @@ int pbqt_action::create_threads() {
       // perform peer check
       if (is_peer(gpu_id[i], gpu_id[j])) {
         RVSTRACE_
+
+        snprintf(srcgpuid_buff, sizeof(srcgpuid_buff), "%5d", gpu_id[i]);
+        snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", gpu_id[j]);
+
         msg = "[" + action_name + "] p2p"
-        + " [GPU:: " + std::to_string(srcnode) + " - " + std::to_string(gpu_id[i]) + " - " + srcpcibdf  + "]"
-        + " [GPU:: " + std::to_string(dstnode) + " - " + std::to_string(gpu_id[j]) + " - " + dstpcibdf  + "]"
+        + " [GPU:: " + std::to_string(srcnode) + " - " + srcgpuid_buff + " - " + srcpcibdf  + "]"
+        + " [GPU:: " + std::to_string(dstnode) + " - " + dstgpuid_buff + " - " + dstpcibdf  + "]"
         + " peers:true ";
 
         if (distance == rvs::hsa::NO_CONN) {
@@ -712,6 +720,7 @@ int pbqt_action::print_running_average() {
  *
  * */
 int pbqt_action::print_running_average(pbqtworker* pWorker) {
+
     uint16_t    src_node, dst_node;
     uint16_t    src_id, dst_id;
     bool        bidir;
@@ -722,11 +731,17 @@ int pbqt_action::print_running_average(pbqtworker* pWorker) {
     double      bandwidth;
     uint16_t    transfer_ix;
     uint16_t    transfer_num;
+    char        transfer_buff[8];
+    char        srcgpuid_buff[12];
+    char        dstgpuid_buff[12];
+
 
     // get running average
     pWorker->get_running_data(&src_node, &dst_node, &bidir,
             &current_size, &duration);
 
+  std::cout << "print_running_average" << " " << src_node << " " << dst_node << std::endl;
+ 
     if (duration > 0) {
         bandwidth = current_size/duration/1000 / 1000 / 1000;
         if (bidir) {
@@ -750,9 +765,6 @@ int pbqt_action::print_running_average(pbqtworker* pWorker) {
         }
     }
 
-    //   src_id = rvs::gpulist::GetGpuIdFromNodeId(src_node);
-    //   dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
-
     RVSTRACE_
         if (rvs::gpulist::node2gpu(src_node, &src_id)) {
             RVSTRACE_
@@ -770,38 +782,39 @@ int pbqt_action::print_running_average(pbqtworker* pWorker) {
             return -1;
         }
 
+      std::string src_pci_bdf;
+      if (rvs::gpulist::node2bdf(src_node, src_pci_bdf)) {
+        RVSTRACE_
+          std::string msg = "could not find PCI BDF for node " +
+          std::to_string(src_node);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
+
+      std::string dst_pci_bdf;
+      if (rvs::gpulist::node2bdf(dst_node, dst_pci_bdf)) {
+        RVSTRACE_
+          std::string msg = "could not find PCI BDF for node " +
+          std::to_string(dst_node);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
+
     transfer_ix = pWorker->get_transfer_ix();
     transfer_num = pWorker->get_transfer_num();
 
-    msg = "[" + action_name + "] p2p-bandwidth  ["
-        + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num)
-        + "] " + std::to_string(src_id) + " " + std::to_string(dst_id)
-        + "  bidirectional: " + std::string(bidir ? "true" : "false")
-        + " " + buff;
-    rvs::lp::Log(msg, rvs::loginfo);
+    snprintf(transfer_buff, sizeof(transfer_buff), "%2d", transfer_ix);
+    snprintf(srcgpuid_buff, sizeof(srcgpuid_buff), "%5d", src_id);
+    snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", dst_id);
 
-#if 0
-    if (bjson) {
-        unsigned int sec;
-        unsigned int usec;
-        rvs::lp::get_ticks(&sec, &usec);
-        void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                action_name.c_str(), rvs::loginfo, sec, usec);
-        if (pjson != NULL) {
-            rvs::lp::AddString(pjson,
-                    "transfer_ix", std::to_string(transfer_ix));
-            rvs::lp::AddString(pjson,
-                    "transfer_num", std::to_string(transfer_num));
-            rvs::lp::AddString(pjson, "src", std::to_string(src_id));
-            rvs::lp::AddString(pjson, "dst", std::to_string(dst_id));
-            rvs::lp::AddString(pjson, "p2p", "true");
-            rvs::lp::AddString(pjson, "bidirectional",
-                    std::string(bidir ? "true" : "false"));
-            rvs::lp::AddString(pjson, "bandwidth (GBs)", buff);
-            rvs::lp::LogRecordFlush(pjson);
-        }
-    }
-#endif
+    msg = "[" + action_name + "] p2p-bandwidth["
+        + transfer_buff + "/" + std::to_string(transfer_num) + "]"
+        + " [GPU:: " + std::to_string(src_node) + " - " + srcgpuid_buff + " - " + src_pci_bdf  + "]"
+        + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + dst_pci_bdf  + "]"
+        + " bidirectional: " + std::string(bidir ? "true" : "false")
+        + " " + buff;
+
+    rvs::lp::Log(msg, rvs::loginfo);
 
     log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::loginfo,
         pbqt_json_data_t::PBQT_THROUGHPUT, buff);
@@ -825,6 +838,9 @@ int pbqt_action::print_final_average() {
   std::string msg;
   double      bandwidth;
   char        buff[128];
+  char        transfer_buff[8];
+  char        srcgpuid_buff[12];
+  char        dstgpuid_buff[12];
   uint16_t    transfer_ix;
   uint16_t    transfer_num;
   rvs::action_result_t result;
@@ -881,10 +897,14 @@ int pbqt_action::print_final_average() {
     transfer_ix = (*it)->get_transfer_ix();
     transfer_num = (*it)->get_transfer_num();
 
+    snprintf(transfer_buff, sizeof(transfer_buff), "%2d", transfer_ix);
+    snprintf(srcgpuid_buff, sizeof(srcgpuid_buff), "%5d", src_id);
+    snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", dst_id);
+
     msg = "[" + action_name + "] p2p-bandwidth["
-        + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num) + "]"
-        + " [GPU:: " + std::to_string(src_node) + " - " + std::to_string(src_id) + " - " + src_pci_bdf  + "]"
-        + " [GPU:: " + std::to_string(dst_node) + " - " + std::to_string(dst_id) + " - " + dst_pci_bdf  + "]"
+        + transfer_buff + "/" + std::to_string(transfer_num) + "]"
+        + " [GPU:: " + std::to_string(src_node) + " - " + srcgpuid_buff + " - " + src_pci_bdf  + "]"
+        + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + dst_pci_bdf  + "]"
         + " bidirectional: " + std::string(bidir ? "true" : "false")
         + " " + buff + " duration: " + std::to_string(duration) + " secs";
 
