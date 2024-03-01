@@ -3,7 +3,7 @@ The ROCm Validation Suite (RVS) is a system validation and diagnostics tool for 
 
 RVS is a collection of tests, benchmarks and qualification tools each targeting a specific sub-system of the ROCm platform. All of the tools are implemented in software and share a common command line interface. Each set of tests are implemented in a “module” which is a library encapsulating the functionality specific to the tool. The CLI can specify the directory containing modules to use when searching for libraries to load. Each module may have a set of options that it defines and a configuration file that supports its execution.
 
-For different modules and their description, refer to [the documentation on features](./FEATURES.md).
+For different RVS modules and their description, refer to [the documentation on features](./FEATURES.md).
 
 For module configuration files description and examples, refer to [the user guide](./docs/ug1main.md).
 
@@ -58,7 +58,7 @@ SUSE :
     sudo zypper install rocblas rocm-smi-lib
 
 _**Note:**_
-If  rocm-smi-lib is already installed but "/opt/rocm/rocm_smi/ path doesn't exist. Do below:
+If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't exist. Do below:
 
 Ubuntu :
 
@@ -154,5 +154,5 @@ Similarly, all RVS module tests can be run using scripts present in folder "/opt
 ## Reporting
 
 Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option.
-The json output file is stored in /var/log folder and the name of the file will be printed.
+The json output file is stored in /var/tmp folder and the name of the file will be printed.
 
