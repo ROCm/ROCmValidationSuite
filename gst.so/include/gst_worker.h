@@ -199,9 +199,6 @@ class GSTWorker : public rvs::ThreadBase {
     void set_gst_ops_type(std::string _ops_type) { gst_ops_type = _ops_type; }
     void set_gst_data_type(std::string _data_type) { gst_data_type = _data_type; }
 
-    //! BLAS callback
-    static void blas_callback (bool status, void *user_data);
-
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
