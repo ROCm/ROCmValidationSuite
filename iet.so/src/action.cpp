@@ -469,6 +469,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_max_violations(iet_max_violations);
             workers[i].set_target_power(iet_target_power);
             workers[i].set_tolerance(iet_tolerance);
+            workers[i].set_matrix_size(iet_matrix_size);
             workers[i].set_matrix_size_a(iet_matrix_size_a);
             workers[i].set_matrix_size_b(iet_matrix_size_b);
             workers[i].set_matrix_size_c(iet_matrix_size_c);

@@ -130,7 +130,7 @@ void IETWorker::log_interval_gflops(double gflops_interval) {
 
 void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 
     bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
-    int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset){
+    int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset) {
 
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, iet_end_time;
     double timetakenforoneiteration;
@@ -143,7 +143,7 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
 
     duration = 0;
     gem_ops = 0;
-   // setup rvsBlas
+    // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, transa, transb, alpha, beta, 
           iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ops_type, ""));
 
@@ -156,7 +156,8 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
     iet_start_time = std::chrono::system_clock::now();
 
     //Hit the GPU with load to increase temperature
-    while ( (duration < run_duration_ms) && (endtest == false) ){
+    while ((duration < run_duration_ms) && (endtest == false)) {
+
         //call the gemm blas
         gpu_blas->run_blass_gemm(iet_ops_type);
 
@@ -176,7 +177,6 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
         iet_end_time = std::chrono::system_clock::now();
         //Duration in the call
         duration = time_diff(iet_end_time, iet_start_time);
-        gem_ops++;
 
         //Converting microseconds to seconds
         timetakenforoneiteration = duration/1e6;
@@ -184,18 +184,11 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
         gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
         //Print the gflops interval
         log_interval_gflops(gflops_interval);
+
         // check end test to avoid unnecessary sleep
         if (endtest)
             break;
-        //if gemm ops greater than 10000, lets yield
-        //if this is not happening we are ending up in
-        //out of memmory state
-        if(gem_ops > 10000) {
-            sleep(1);
-            gem_ops = 0;
-        }
     }
-
 }
 
 
@@ -219,7 +212,7 @@ bool IETWorker::do_iet_power_stress(void) {
     rvs::action_result_t action_result;
     RSMI_POWER_TYPE type = RSMI_INVALID_POWER;
 
-    std::thread t(&IETWorker::blasThread, this, gpu_device_index, matrix_size_a, iet_ops_type, start, run_duration_ms,
+    std::thread t(&IETWorker::blasThread, this, gpu_device_index, matrix_size, iet_ops_type, start, run_duration_ms,
             iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset);
 
     // record EDPp ramp-up start time
