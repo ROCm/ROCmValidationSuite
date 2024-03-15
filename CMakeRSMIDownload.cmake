@@ -29,7 +29,7 @@ project(rvs_smi-download NONE)
 
 include(ExternalProject)
 ExternalProject_Add(rvs_smi
-  GIT_REPOSITORY    https://github.com/RadeonOpenCompute/rocm_smi_lib.git
+  GIT_REPOSITORY    https://github.com/ROCm/rocm_smi_lib.git
   GIT_TAG           master
   SOURCE_DIR        "${CMAKE_BINARY_DIR}/rvs_smi-src"
   BINARY_DIR        "${CMAKE_BINARY_DIR}/rvs_smi-build"

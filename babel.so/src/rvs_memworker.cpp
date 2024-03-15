@@ -38,7 +38,7 @@
 
 using std::string;
 bool MemWorker::bjson = false;
-extern void run_babel(int deviceIndex, int num_times, int ARRAY_SIZE, bool output_as_csv, 
+extern void run_babel(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, 
     bool mibibytes, int test_type, int subtest);
 
 #define FLOAT_TEST     1 
@@ -59,19 +59,26 @@ void MemWorker::run() {
     string          err_description;
     string          msg;
     int             deviceId;
-   
+    uint16_t        gpuId;
+    std::pair<int, uint16_t> device;
 
     // log MEM stress test - start message
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " "  + " Starting the Memory stress test "; 
-    rvs::lp::Log(msg, rvs::logtrace);
+            std::to_string(gpu_id) + " "  + " Starting the Memory stress test ";
+    rvs::lp::Log(msg, rvs::logresults);
 
+    /* Device Index */
     deviceId  = get_gpu_device_index();
+    device.first = deviceId;
+
+    /* GPU ID */
+    gpuId = get_gpu_id();
+    device.second = gpuId;
 
     HIP_CHECK(hipGetDeviceProperties(&props, deviceId));
 
     HIP_CHECK(hipSetDevice(deviceId));
 
-    run_babel(deviceId, num_iterations, array_size, output_csv, mibibytes, test_type, subtest);
+    run_babel(device, num_iterations, array_size, output_csv, mibibytes, test_type, subtest);
 }
 

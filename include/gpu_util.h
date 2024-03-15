@@ -41,10 +41,10 @@ extern void gpu_get_all_node_id(std::vector<uint16_t>* pgpus_node_id);
 extern void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
                 std::map<std::pair<uint16_t, uint16_t> , uint16_t>& pgpus_dom_loc_map); 
 extern bool gpu_check_if_mcm_die (int idx);
+extern int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index);
+extern void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf);
 
 namespace rvs {
-
-  ::std::string bdf2string(uint32_t BDF);
 
 /**
  * @class gpulist
@@ -70,6 +70,8 @@ class gpulist {
                                     uint16_t* pNodeID);
   static int domlocation2gpu(const uint16_t domainID, const uint16_t LocationID,
                                     uint16_t* pGPUID);
+  static int node2bdf(const uint16_t NodeID, std::string& pPciBDF);
+
  protected:
   //! Array of GPU location IDs
   static std::vector<uint16_t> location_id;
@@ -81,9 +83,10 @@ class gpulist {
   static std::vector<uint16_t> node_id;
   //! Array of domain IDs
   static std::vector<uint16_t> domain_id;
+  //! Array of PCI BDFs
+  static std::vector<std::string> pci_bdf;
   static std::map<std::pair<uint16_t, uint16_t>	, uint16_t> domain_loc_map;
 };
-
 
 }  // namespace rvs
 

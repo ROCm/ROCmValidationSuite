@@ -1,13 +1,14 @@
 # User Guide
 
 ## Introduction
-The ROCm Validation Suite (RVS) is a system administrator’s and cluster
-manager's tool for detecting and troubleshooting common problems affecting AMD
-GPU(s) running in a high-performance computing environment, enabled using the
-ROCm software stack on a compatible platform.
+The ROCm Validation Suite (RVS) is a system validation and diagnostics tool
+for monitoring, stress testing, detecting and troubleshooting issues that
+affects the functionality and performance of AMD GPU(s) operating in a
+high-performance/AI/ML computing environment. RVS is enabled using the ROCm
+software stack on a compatible software and hardware platform.
 
-The RVS is a collection of tests, benchmarks and qualification tools each
-targeting a specific sub-system of the ROCm platform. All of the tools are
+RVS is a collection of tests, benchmarks, and qualification tools each
+targeting a specific sub-system of the ROCm platform. The tools are
 implemented in software and share a common command line interface. Each set of
 tests are implemented in a “module” which is a library encapsulating the
 functionality specific to the tool. The CLI can specify the directory containing
@@ -22,22 +23,48 @@ pre-built package.
 ### Building from Source Code
 
 RVS has been developed as open source solution. Its source code and belonging
-documentation can be found at AMD's GitHub page.  
+documentation can be found at AMD's GitHub page.
 In order to build RVS from source code, refer
 [ROCm Validation Suite GitHub
-site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite)
+site](https://github.com/ROCm/ROCmValidationSuite)
 and follow instructions in README file.
 
 ### Installing from Package
-Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.  
-For more details, refer [ROCm Validation Suite GitHub site](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
+Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.
+For more details, refer [ROCm Validation Suite GitHub site](https://github.com/ROCm/ROCmValidationSuite).
 
 RVS package components are installed in `/opt/rocm`. Package contains:
-- executable binary (located in _install-base_/rvs)
-- modules specific shared libraries (located in _install-base_/lib/rvs)
+- executable binary (located in _install-base_/bin/rvs)
+- public shared libraries (located in _install-base_/lib)
+- module specific shared libraries (located in _install-base_/lib/rvs)
+- configuration files (located in _install-base_/share/rocm-validation-suite/conf)
+- testscripts (located in _install-base_/share/rocm-validation-suite/testscripts)
 - user guide (located in _install-base_/share/rocm-validation-suite/userguide)
 - man page (located in _install-base_/share/man)
-- configuration examples (located in _install-base_/share/rocm-validation-suite/conf)
+
+### Running RVS
+
+#### Run version built from source code
+
+    cd <source folder>/build/bin
+
+    Command examples
+    ./rvs --help ; Lists all options to run RVS test suite
+    ./rvs -g ; Lists supported GPUs available in the machine
+    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module tests
+
+#### Run version pre-complied and packaged with ROCm release
+
+    cd /opt/rocm/bin
+
+    Command examples
+    ./rvs --help ; Lists all options to run RVS test suite
+    ./rvs -g ; Lists supported GPUs available in the machine
+    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module tests
+
+Similarly, all RVS module tests can be run using scripts present in folder "/opt/rocm/share/rocm-validation-suite/testscripts/".
 
 ## Basic Concepts
 

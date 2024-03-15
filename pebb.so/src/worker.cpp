@@ -194,7 +194,7 @@ int pebbworker::do_transfer() {
     }
     if (sts) {
       std::string msg = "internal error, src: " + std::to_string(src_node)
-      + "   dst: " +std::to_string(dst_node)
+      + "   dst: " + std::to_string(dst_node)
       + "   current size: " + std::to_string(current_size)
       + " status "+ std::to_string(sts);
       rvs::lp::Err(msg, MODULE_NAME, action_name);
