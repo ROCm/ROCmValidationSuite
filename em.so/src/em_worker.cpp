@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2024 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "include/runexternal_worker.h"
+#include "include/em_worker.h"
 
 #include <unistd.h>
 #include <string>
@@ -42,16 +42,16 @@
 
 using std::string;
 
-//bool runExtWorker::bjson = false;
+//bool emWorker::bjson = false;
 
-runExtWorker::runExtWorker() {}
-runExtWorker::~runExtWorker() {}
+emWorker::runExtWorker() {}
+emWorker::~runExtWorker() {}
 
 
 /**
  * @brief performs the stress test on the given GPU
  */
-void runExtWorker::run() {
+void emWorker::run() {
     string msg, err_description;
     int error = 0;
     auto pos = m_test_path.find_last_of('/');
@@ -80,7 +80,7 @@ void runExtWorker::run() {
  * @param return true if test succeeded, false otherwise
  */
 
-bool runExtWorker::start_ext_tests(int &error, string &errdesc){
+bool emWorker::start_ext_tests(int &error, string &errdesc){
     int pid, status;
     auto found = m_test_path.find_last_of('/');
     auto fname = m_test_path.substr(found+1);

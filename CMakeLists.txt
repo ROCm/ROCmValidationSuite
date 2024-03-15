@@ -503,7 +503,7 @@ add_subdirectory(mem.so)
 add_subdirectory(babel.so)
 add_subdirectory(perf.so)
 add_subdirectory(tst.so)
-add_subdirectory(runexternal.so)
+add_subdirectory(em.so)
 
 if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)

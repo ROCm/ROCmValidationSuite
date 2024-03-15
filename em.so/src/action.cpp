@@ -35,7 +35,7 @@
 #define __HIP_PLATFORM_HCC__
 
 #include "include/rvs_key_def.h"
-#include "include/runexternal_worker.h"
+#include "include/em_worker.h"
 #include "include/rvsactionbase.h"
 #include "include/rvsloglp.h"
 
@@ -44,13 +44,13 @@ using std::vector;
 using std::map;
 using std::regex;
 
-#define MODULE_NAME                     "runexternal"
-#define MODULE_NAME_CAPS                "RUNEXTERNAL"
-#define RVS_CONF_RUNEXT_PATH_KEY       "test-path"
-#define RVS_CONF_RUNEXT_ARGS_KEY       "test-args"
-#define RUNEXT_DEFAULT_PATH            "tmp"
-#define RUNEXT_DEFAULT_ARGS            ""
-#define RUNEXT_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
+#define MODULE_NAME                     "em"
+#define MODULE_NAME_CAPS                "EM"
+#define RVS_CONF_EM_PATH_KEY       "test-path"
+#define RVS_CONF_EM_ARGS_KEY       "test-args"
+#define EM_DEFAULT_PATH            "tmp"
+#define EM_DEFAULT_ARGS            ""
+#define EM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 
@@ -59,25 +59,25 @@ const std::string NOARGS{"None"};
 /**
  * @brief default class constructor
  */
-runexternal_action::runexternal_action() {
+em_action::em_action() {
     bjson = false;
 }
 
 /**
  * @brief class destructor
  */
-runexternal_action::~runexternal_action() {
+em_action::~em_action() {
     property.clear();
 }
 
 /**
- * @brief runs the runexternal session
+ * @brief runs the em session
  * @return true if no error occured, false otherwise
  */
-bool runexternal_action::start_runexternal_runners() {
+bool em_action::start_em_runners() {
     size_t k = 0;
     // one worker sufficient, as test runner
-    runExtWorker worker;
+    emWorker worker;
     worker.set_name(action_name);
     worker.set_path(m_test_file_path);
     worker.set_args(m_test_file_args);
@@ -88,38 +88,39 @@ bool runexternal_action::start_runexternal_runners() {
 }
 
 /**
- * @brief reads all runexternal-related configuration keys from
+ * @brief reads all em-related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool runexternal_action::get_all_runexternal_config_keys(void) {
+bool em_action::get_all_em_config_keys(void) {
     int error;
     string msg;
     bool bsts = true;
 
-    if (property_get<std::string>(RVS_CONF_RUNEXT_PATH_KEY, &m_test_file_path,
-            RUNEXT_DEFAULT_PATH)) {
+    if (property_get<std::string>(RVS_CONF_EM_PATH_KEY, &m_test_file_path,
+            EM_DEFAULT_PATH)) {
          msg = "invalid '" +
-         std::string(RVS_CONF_RUNEXT_PATH_KEY) + "' key value";
+         std::string(RVS_CONF_EM_PATH_KEY) + "' key value";
          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
          bsts = false;
     }
-    if (property_get<std::string>(RVS_CONF_RUNEXT_ARGS_KEY, &m_test_file_args,
-            RUNEXT_DEFAULT_ARGS)) {
+    if (property_get<std::string>(RVS_CONF_EM_ARGS_KEY, &m_test_file_args,
+            EM_DEFAULT_ARGS)) {
          msg = "invalid '" +
-         std::string(RVS_CONF_RUNEXT_PATH_KEY) + "' key value";
+         std::string(RVS_CONF_EM_PATH_KEY) + "' key value";
          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
          bsts = false;
     }
 
-    if(m_test_file_path == RUNEXT_DEFAULT_PATH){
-	msg = " hip test pat not specified";
-	rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-	bsts = false;
+    if(m_test_file_path == EM_DEFAULT_PATH){
+	    msg = " hip test pat not specified";
+	    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+	    bsts = false;
     }
     if (m_test_file_args.compare(NOARGS) == 0)
 	    m_test_file_args = "";
-    return bsts;
+   
+   return bsts;
 }
 
 /**
@@ -127,7 +128,7 @@ bool runexternal_action::get_all_runexternal_config_keys(void) {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool runexternal_action::get_all_common_config_keys(void) {
+bool em_action::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
     bool bsts = true;
@@ -142,13 +143,13 @@ bool runexternal_action::get_all_common_config_keys(void) {
  * @brief gets the number of ROCm compatible AMD GPUs
  * @return run number of GPUs
  */
-int runexternal_action::get_num_amd_gpu_devices(void) {
+int em_action::get_num_amd_gpu_devices(void) {
     int hip_num_gpu_devices;
     string msg;
 
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
-        msg = action_name + " " + MODULE_NAME + " " + RUNEXT_NO_COMPATIBLE_GPUS;
+        msg = action_name + " " + MODULE_NAME + " " + EM_NO_COMPATIBLE_GPUS;
         rvs::lp::Log(msg, rvs::logerror);
 
         if (bjson) {
@@ -164,7 +165,7 @@ int runexternal_action::get_num_amd_gpu_devices(void) {
                 return -1;
             }
 
-            rvs::lp::AddString(json_root_node, "ERROR", RUNEXT_NO_COMPATIBLE_GPUS);
+            rvs::lp::AddString(json_root_node, "ERROR", EM_NO_COMPATIBLE_GPUS);
             rvs::lp::LogRecordFlush(json_root_node, rvs::loginfo);
         }
         return 0;
@@ -176,14 +177,14 @@ int runexternal_action::get_num_amd_gpu_devices(void) {
  * @brief gets all selected GPUs and starts the worker threads
  * @return run result
  */
-int runexternal_action::run_external_tests(void) {
+int em_action::run_em_tests(void) {
     int hip_num_gpu_devices;
     std::string msg;
 
     hip_num_gpu_devices = get_num_amd_gpu_devices();
      
     if (hip_num_gpu_devices >= 1) {
-        if (start_runexternal_runners())
+        if (start_em_runners())
             return 0;
 
         return -1;
@@ -197,10 +198,10 @@ int runexternal_action::run_external_tests(void) {
 }
 
 /**
- * @brief runs the whole runexternal logic
+ * @brief runs the whole em logic
  * @return run result
  */
-int runexternal_action::run(void) {
+int em_action::run(void) {
     string msg;
     // get the action name
     if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
@@ -214,8 +215,8 @@ int runexternal_action::run(void) {
 
     if (!get_all_common_config_keys())
         return -1;
-    if (!get_all_runexternal_config_keys())
+    if (!get_all_em_config_keys())
         return -1;
 
-    return run_external_tests(); 
+    return run_em_tests(); 
 }

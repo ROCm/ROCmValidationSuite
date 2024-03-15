@@ -45,18 +45,18 @@ using std::string;
 using std::map;
 
 /**
- * @class runexternal_action
+ * @class em_action
  *
- * @brief runexternal action implementation class
+ * @brief em action implementation class
  *
  * Derives from rvs::actionbase and implements actual action functionality
  * in its run() method.
  *
  */
-class runexternal_action: public rvs::actionbase {
+class em_action: public rvs::actionbase {
  public:
-    runexternal_action();
-    virtual ~runexternal_action();
+    em_action();
+    virtual ~em_action();
 
     virtual int run(void);
 
@@ -67,7 +67,7 @@ class runexternal_action: public rvs::actionbase {
     //! TRUE if JSON output is required
     bool bjson;
 
-    bool get_all_runexternal_config_keys(void);
+    bool get_all_em_config_keys(void);
   /**
   * @brief reads all common configuration keys from
   * the module's properties collection
@@ -76,12 +76,12 @@ class runexternal_action: public rvs::actionbase {
     bool get_all_common_config_keys(void);
 
     int get_num_amd_gpu_devices(void);
-    bool start_runexternal_runners();
+    bool start_em_runners();
   /**
   * @brief gets the number of ROCm compatible AMD GPUs
   * @return run number of GPUs
   */
-    int run_external_tests();
+    int run_em_tests();
 };
 
 #endif  // RUNEXT_SO_INCLUDE_ACTION_H_

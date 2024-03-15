@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018 ROCm Developer Tools
+ * Copyright (c) 2024 ROCm Developer Tools
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,50 +22,10 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef EXTTEST_SO_INCLUDE_EXTTEST_WORKER_H_
-#define EXTTEST_SO_INCLUDE_EXTTEST_WORKER_H_
+#ifndef HIPTEST_SO_INCLUDE_RVS_MODULE_H_
+#define HIPTEST_SO_INCLUDE_RVS_MODULE_H_
 
-#include <string>
-#include <memory>
-#include "include/rvsthreadbase.h"
-#include "include/rvs_util.h"
+#include "include/rvsliblog.h"
 
 
-
-/**
- * @class runExtWorker
- * @ingroup GST
- *
- * @brief runExtWorker action implementation class
- *
- * Derives from rvs::ThreadBase and implements actual action functionality
- * in its run() method.
- *
- */
-class runExtWorker : public rvs::ThreadBase {
- public:
-    runExtWorker();
-    virtual ~runExtWorker();
-
-    //! sets action name
-    void set_name(const std::string& name) { action_name = name; }
-    //! returns action name
-    const std::string& get_name(void) { return action_name; }
-
-    //! sets test path
-    void set_path(std::string pathname) { m_test_path = pathname; }
-    void set_args(std::string args) { m_test_args = args; }
-
-    const std::string& get_path(void) { return m_test_path; }
-    bool start_ext_tests(int &error, std::string &errdesc);
- protected:
-    virtual void run(void);
- protected:
-    //! name of the action
-    std::string action_name;
-    //! path to execute test
-    std::string m_test_path;
-    std::string m_test_args;
-};
-
-#endif  // EXTTEST_SO_INCLUDE_EXTTEST_WORKER_H_
+#endif  // HIPTEST_SO_INCLUDE_RVS_MODULE_H_
