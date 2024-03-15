@@ -36,22 +36,29 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <chrono>
-enum class OSType{
-	Ubuntu,
-	Centos,
-	SLES,
-	RHEL,
-	None
+
+enum class OSType {
+  Ubuntu,
+  Centos,
+  SLES,
+  RHEL,
+  Oracle,
+  None
 };
+
 const std::string os_release_file {"/etc/os-release"};
 const std::string name_key {"NAME"};
-//const std::vector<std::string> op_systems{ "ubuntu", "centos", "sles"};
-const std::map<std::string, OSType> op_systems{{"ubuntu",OSType::Ubuntu}, {"centos",OSType::Centos},
-					{"sles",OSType::SLES}, {"red hat enterprise linux",OSType::RHEL}};
+const std::map<std::string, OSType> op_systems {
+  {"ubuntu", OSType::Ubuntu},
+  {"centos", OSType::Centos},
+  {"sles", OSType::SLES},
+  {"red hat enterprise linux", OSType::RHEL},
+  {"oracle linux server", OSType::Oracle}
+};
+
 struct package_info{
 	std::string name{};
 	std::string version{};
-	
 };
 
 // common funtions
@@ -59,8 +66,6 @@ std::string get_last_word(const std::string& input);
 OSType getOS();
 std::string remSpaces(std::string str);
 std::string pfilename(const std::string& package);
-/*
-*/
 
 bool getPackageInfo(const std::string& package,
     const std::string& packagemgr,
