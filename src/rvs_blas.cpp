@@ -288,6 +288,33 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
     }
   }
 
+  if(data_type == "fp16_r") {
+
+    if (dda) {
+      if (hipMemcpy(dda, hda, sizeof(rocblas_half) * size_a, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddb) {
+      if (hipMemcpy(ddb, hdb, sizeof(rocblas_half) * size_b, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddc) {
+      if (hipMemcpy(ddc, hdc, sizeof(rocblas_half) * size_c, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+  }
+
   if(data_type == "bf16_r") {
 
     if (dda) {
@@ -362,6 +389,17 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
     if (hipMalloc(&ddc, size_c * sizeof(struct rocblas_f8)) != hipSuccess)
       return false;
     if (hipMalloc(&ddd, size_d * sizeof(struct rocblas_f8)) != hipSuccess)
+      return false;
+  }
+
+  if(data_type == "fp16_r") {
+    if (hipMalloc(&dda, size_a * sizeof(rocblas_half)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddb, size_b * sizeof(rocblas_half)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddc, size_c * sizeof(rocblas_half)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddd, size_d * sizeof(rocblas_half)) != hipSuccess)
       return false;
   }
 
@@ -473,6 +511,13 @@ bool rvs_blas::alocate_host_matrix_mem(void) {
       hdc = new struct rocblas_f8[size_c];
     }
 
+    if(data_type == "fp16_r") {
+
+      hda = new rocblas_half[size_a];
+      hdb = new rocblas_half[size_b];
+      hdc = new rocblas_half[size_c];
+    }
+
     if(data_type == "bf16_r") {
 
       hda = new struct rocblas_bfloat16[size_a];
@@ -579,26 +624,10 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
     }
 
     if(ops_type == "hgemm") {
-      rocblas_datatype a_type = rocblas_datatype_f16_r;
-      rocblas_datatype b_type = rocblas_datatype_f16_r;
-      rocblas_datatype c_type = rocblas_datatype_f16_r;
-      rocblas_datatype compute_type = rocblas_datatype_f32_r;
-      rocblas_gemm_algo algo = static_cast<rocblas_gemm_algo>(0);
-      int sol_index = 0;
-      int flags = 10;
 
       _Float16 alpha = (float)blas_alpha_val;
       _Float16 beta = (float)blas_beta_val;
-#if 0
-      std::cout << "\n M size : " << rvs_blas::m;
-      std::cout << "\n N size : " << rvs_blas::n;
-      std::cout << "\n K size : " << rvs_blas::k;
-      std::cout << "\n Alpha : " << alpha;
-      std::cout << "\n Beta : " << beta;
-      std::cout << "\n LDA : " << blas_lda_offset;
-      std::cout << "\n LDB : " << blas_ldb_offset;
-      std::cout << "\n LDC : " << blas_ldc_offset;
-#endif
+
       if (rocblas_hgemm(blas_handle, transa, transb,
             rvs_blas::m, rvs_blas::n, rvs_blas::k,
             &alpha, dhlfa , blas_lda_offset,
@@ -637,6 +666,38 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
 
         is_error = true;  // GPU cannot enqueue the gemm
         std::cout << "\n Error in rocblas_gemm_ex3() !!! " << "\n";
+        return false;
+
+      } else {
+        return true;
+      }
+    }
+
+    if(data_type == "fp16_r") {
+
+      rocblas_datatype a_type = rocblas_datatype_f16_r;
+      rocblas_datatype b_type = rocblas_datatype_f16_r;
+      rocblas_datatype c_type = rocblas_datatype_f16_r;
+      rocblas_datatype d_type = rocblas_datatype_f16_r;
+
+      rocblas_datatype compute_type = rocblas_datatype_f32_r;
+      rocblas_gemm_algo algo = rocblas_gemm_algo_standard;
+      int32_t sol_index = 0;
+      uint32_t flags = 0;
+
+      rocblas_float alpha = (rocblas_float) blas_alpha_val;
+      rocblas_float beta = (rocblas_float) blas_beta_val;
+
+      if (rocblas_gemm_ex(blas_handle, transa, transb,
+            rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
+            dda, a_type, blas_lda_offset,
+            ddb, b_type, blas_ldb_offset, &beta,
+            ddc, c_type, blas_ldc_offset,
+            ddd, d_type, blas_ldc_offset,
+            compute_type, algo, sol_index, flags) != rocblas_status_success) {
+
+        is_error = true;  // GPU cannot enqueue the gemm
+        std::cout << "\n Error in rocblas_gemm_ex() !!!" << "\n";
         return false;
 
       } else {
