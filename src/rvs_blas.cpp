@@ -806,6 +806,19 @@ void rvs_blas::generate_random_matrix_data(void) {
         ((struct rocblas_f8* )hdc)[i] = rocblas_f8(fast_pseudo_rand(&nextr));
     }
 
+    // 16-bit floating point real (fp16_r) format
+    if(data_type == "fp16_r") {
+
+      for (i = 0; i < size_a; ++i)
+        ((rocblas_half* )hda)[i] = rocblas_half(fast_pseudo_rand(&nextr));
+
+      for (i = 0; i < size_b; ++i)
+        ((rocblas_half* )hdb)[i] = rocblas_half(fast_pseudo_rand(&nextr));
+
+      for (i = 0; i < size_c; ++i)
+        ((rocblas_half* )hdc)[i] = rocblas_half(fast_pseudo_rand(&nextr));
+    }
+
     // 16-bit brain floating point real (bp16_r) format
     if(data_type == "bp16_r") {
 
