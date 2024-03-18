@@ -53,8 +53,6 @@ class rcqt_action : public rvs::actionbase {
     //! json_rcqt_node is json node shared through submodules
     void *json_rcqt_node;
 
-    //! Operating system variant
-    static const OSType os_type;
     std::string PACKAGELIST; 
     /**
      *  @brief Function used in rcqt action class to check for given package
