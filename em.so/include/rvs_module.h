@@ -22,10 +22,10 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef HIPTEST_SO_INCLUDE_RVS_MODULE_H_
-#define HIPTEST_SO_INCLUDE_RVS_MODULE_H_
+#ifndef EM_SO_INCLUDE?RVS_MODULE_H_
+#define EM_SO_INCLUDE?RVS_MODULE_H_
 
 #include "include/rvsliblog.h"
 
 
-#endif  // HIPTEST_SO_INCLUDE_RVS_MODULE_H_
+#endif  // EM_SO_INCLUDE?RVS_MODULE_H_

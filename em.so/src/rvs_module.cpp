@@ -50,7 +50,7 @@ extern "C" int rvs_module_has_interface(int iid) {
 }
 
 extern "C" const char* rvs_module_get_description(void) {
-    return "ROCm Validation Suite HipTest module";
+    return "ROCm Validation Suite External Modules module";
 }
 
 extern "C" const char* rvs_module_get_config(void) {

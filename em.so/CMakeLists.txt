@@ -125,20 +125,6 @@ if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime_api.h)
   RETURN()
 endif()
 
-# Determine Roc Runtime header files are accessible
-if(DEFINED RVS_ROCMSMI)
-  if(NOT RVS_ROCMSMI EQUAL 1)
-    if(NOT EXISTS ${ROCBLAS_INC_DIR}/${ROCBLAS_MODULE_NM_PREFIX}rocblas.h)
-    message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
-    RETURN()
-    endif()
-
-    if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
-      message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
-      RETURN()
-    endif()
-  endif()
-endif()
 
 
 if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
@@ -147,11 +133,11 @@ if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
 endif()
 
 ## define include directories
-include_directories(./ ../ ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
+include_directories(./ ../ ${ROCR_INC_DIR} ${HIP_INC_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH})
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ASAN_LIB_PATH})
 ## additional libraries
-set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
+set (PROJECT_LINK_LIBS rvslib libpthread.so libm.so)
 
 ## define source files
 set(SOURCES src/rvs_module.cpp src/action.cpp src/em_worker.cpp)
@@ -173,10 +159,3 @@ install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CMAKE_PACKAGING_INSTALL_PREF
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" DESTINATION ${CMAKE_PACKAGING_INSTALL_PREFIX}/rvs COMPONENT rvsmodule)
 
-# TEST SECTION
-#if (RVS_BUILD_TESTS)
-#  add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-#  COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-#  )
-#  include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
-#endif()
