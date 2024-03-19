@@ -34,7 +34,6 @@
 
 /**
  * @class emWorker
- * @ingroup GST
  *
  * @brief emWorker action implementation class
  *

@@ -72,7 +72,7 @@ extern "C" int rvs_module_terminate(void) {
 }
 
 extern "C" void* rvs_module_action_create(void) {
-    return static_cast<void*>(new runexternal_action);
+    return static_cast<void*>(new em_action);
 }
 
 extern "C" int   rvs_module_action_destroy(void* pAction) {

@@ -44,8 +44,8 @@ using std::string;
 
 //bool emWorker::bjson = false;
 
-emWorker::runExtWorker() {}
-emWorker::~runExtWorker() {}
+emWorker::emWorker() {}
+emWorker::~emWorker() {}
 
 
 /**
