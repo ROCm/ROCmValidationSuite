@@ -30,6 +30,30 @@
 #include <iostream>
 #include <map>
 using std::map;
+struct fm_ver{
+      uint64_t asd;
+      uint64_t ce;
+      uint64_t dmcu;
+      uint64_t mc;
+      uint64_t me;
+      uint64_t mec;
+      uint64_t mec2;
+      uint64_t pfp;
+      uint64_t rlc;
+      uint64_t rlc_srlc;
+      uint64_t rlc_srlg;
+      uint64_t rlc_srls;
+      uint64_t sdma;
+      uint64_t sdma2;
+      uint64_t smc;
+      uint64_t sos;
+      uint64_t ta_ras;
+      uint64_t ta_xgmi;
+      uint64_t uvd;
+      uint64_t vce;
+      uint64_t vcn;
+      // end fwver
+};
 
 extern bool is_positive_integer(const std::string& str_val);
 

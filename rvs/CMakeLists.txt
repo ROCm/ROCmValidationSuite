@@ -111,9 +111,18 @@ if(BUILD_ADDRESS_SANITIZER)
 else()
   set(ASAN_LIB_PATH "$ENV{LD_LIBRARY_PATH}")
 endif()
+# check if ROCM-SMI is installed
+#if(DEFINED RVS_ROCMSMI)
+#  if(NOT RVS_ROCMSMI EQUAL 1)
+#    if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
+#      message("ERROR: rocm_smi library can't be found!...")
+#      RETURN()
+#    endif()
+#  endif()
+#endif()
 
 ## define include directories
-include_directories(./ ../ ${YAML_CPP_INCLUDE_DIRS})
+include_directories(./ ../ ${YAML_CPP_INCLUDE_DIRS} ${ROCM_SMI_INC_DIR})
 ## define lib directories
 link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH})
 

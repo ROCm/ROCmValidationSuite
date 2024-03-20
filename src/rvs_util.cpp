@@ -27,12 +27,39 @@
 #include "include/gpu_util.h"
 #include <vector>
 #include <string>
+#include <limits>
 #include <regex>
 #include <iomanip>
+#include <fstream>
 #include <algorithm>
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
+#include "rocm_smi/rocm_smi.h"
 
+
+/**
+returns the current OS name
+**/
+std::string getOSName(){
+  std::ifstream rel_file("/etc/os-release");
+  if(!rel_file.good()){
+    std::cout << "No /etc/os-release file, cant fetch details " << std::endl;
+    return std::string{};
+  }
+  std::string line;
+  while (std::getline(rel_file, line))
+  {
+    auto found = line.find("NAME") ;
+    if (found!=std::string::npos){
+      found = line.find('\"');
+      auto endquote = line.find_last_of('\"');
+      if(found == std::string::npos || endquote == std::string::npos)
+        return std::string{};
+      std::string os_name = line.substr(found+1, endquote-found-1 );
+      return os_name;
+    }
+  }
+}
 
 /**
  * splits a std::string based on a given delimiter
@@ -182,6 +209,65 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
     return amd_gpus_found;
 }
 
+void firmware_version_get(int idx, rsmi_fw_block_t blk, uint64_t* val){
+  auto ret = rsmi_dev_firmware_version_get(idx, blk, val);
+  if (ret != RSMI_STATUS_SUCCESS)
+	 *val = std::numeric_limits<uint64_t>::max(); 
+}
+
+void fill_firmware_versions(int idx, fm_ver& fmver){
+    firmware_version_get(idx, RSMI_FW_BLOCK_ASD      ,&fmver.asd);
+    firmware_version_get(idx, RSMI_FW_BLOCK_CE       ,&fmver.ce);
+    firmware_version_get(idx, RSMI_FW_BLOCK_DMCU     ,&fmver.dmcu);
+    firmware_version_get(idx, RSMI_FW_BLOCK_MC       ,&fmver.mc);
+    firmware_version_get(idx, RSMI_FW_BLOCK_ME       ,&fmver.me);
+    firmware_version_get(idx, RSMI_FW_BLOCK_MEC      ,&fmver.mec);
+    firmware_version_get(idx, RSMI_FW_BLOCK_MEC2     ,&fmver.mec2);
+    firmware_version_get(idx, RSMI_FW_BLOCK_PFP      ,&fmver.pfp);
+    firmware_version_get(idx, RSMI_FW_BLOCK_RLC      ,&fmver.rlc);
+    firmware_version_get(idx, RSMI_FW_BLOCK_RLC_SRLC ,&fmver.rlc_srlc);
+    firmware_version_get(idx, RSMI_FW_BLOCK_RLC_SRLG ,&fmver.rlc_srlg);
+    firmware_version_get(idx, RSMI_FW_BLOCK_RLC_SRLS ,&fmver.rlc_srls);
+    firmware_version_get(idx, RSMI_FW_BLOCK_SDMA     ,&fmver.sdma);
+    firmware_version_get(idx, RSMI_FW_BLOCK_SDMA2    ,&fmver.sdma2);
+    firmware_version_get(idx, RSMI_FW_BLOCK_SMC      ,&fmver.smc);
+    firmware_version_get(idx, RSMI_FW_BLOCK_SOS      ,&fmver.sos);
+    firmware_version_get(idx, RSMI_FW_BLOCK_TA_RAS   ,&fmver.ta_ras);
+    firmware_version_get(idx, RSMI_FW_BLOCK_TA_XGMI  ,&fmver.ta_xgmi);
+    firmware_version_get(idx, RSMI_FW_BLOCK_UVD   ,&fmver.uvd);
+    firmware_version_get(idx, RSMI_FW_BLOCK_VCE   ,&fmver.vce);
+    firmware_version_get(idx, RSMI_FW_BLOCK_VCN   ,&fmver.vcn);
+}
+
+std::string cleanprint(uint64_t val){
+  std::string tmp{"NA"};
+  if ( val != std::numeric_limits<uint64_t>::max())
+	  tmp = std::to_string(val);
+  return tmp;
+}
+void print_fmversions(const fm_ver& fmver){
+  std::cout << "    BLOCK_ASD     :  " << cleanprint(fmver.asd) << "\n"
+	    << "    BLOCK_CE      :  " << cleanprint(fmver.ce)  << "\n"
+	    << "    BLOCK_DMCU    :  " << cleanprint(fmver.dmcu)  << "\n"
+	    << "    BLOCK_MC      :  " << cleanprint(fmver.mc)  << "\n"
+	    << "    BLOCK_ME      :  " << cleanprint(fmver.me)  << "\n"
+	    << "    BLOCK_MEC     :  " << cleanprint(fmver.mec)  << "\n"
+	    << "    BLOCK_MEC2    :  " << cleanprint(fmver.mec2)  << "\n"
+	    << "    BLOCK_PFP     :  " << cleanprint(fmver.pfp)  << "\n"
+	    << "    BLOCK_RLC     :  " << cleanprint(fmver.rlc)  << "\n"
+	    << "    BLOCK_RLC_SRLC:  " << cleanprint(fmver.rlc_srlc)  << "\n"
+	    << "    BLOCK_RLC_SRLG:  " << cleanprint(fmver.rlc_srlg)  << "\n"
+	    << "    BLOCK_RLC_SRLS:  " << cleanprint(fmver.rlc_srls)  << "\n"
+	    << "    BLOCK_SDMA    :  " << cleanprint(fmver.sdma)  << "\n"
+	    << "    BLOCK_SDMA2   :  " << cleanprint(fmver.sdma2)  << "\n"
+	    << "    BLOCK_SMC     :  " << cleanprint(fmver.smc)  << "\n"
+	    << "    BLOCK_SOS     :  " << cleanprint(fmver.sos)  << "\n"
+	    << "    BLOCK_TA_RAS  :  " << cleanprint(fmver.ta_ras)  << "\n"
+	    << "    BLOCK_TA_XGMI :  " << cleanprint(fmver.ta_xgmi)  << "\n"
+	    << "    BLOCK_UVD     :  " << cleanprint(fmver.uvd)  << "\n"
+	    << "    BLOCK_VCE     :  " << cleanprint(fmver.vce)  << "\n"
+	    << "    BLOCK_VCN     :  " << cleanprint(fmver.vcn)  << std::endl;
+}
 
 int display_gpu_info (void) {
 
@@ -191,8 +277,9 @@ int display_gpu_info (void) {
     int32_t node_id;
     int32_t gpu_id;
     int32_t device_id;
+    char vbios_ver[1024];
+    fm_ver fmver;
   };
-
   char buff[1024];
   int hip_num_gpu_devices;
   std::string errmsg = " No supported GPUs available.";
@@ -203,6 +290,7 @@ int display_gpu_info (void) {
     std::cout << std::endl << errmsg << std::endl;
     return 0;
   }
+  rsmi_init(0);
   for (int i = 0; i < hip_num_gpu_devices; i++) {
     hipDeviceProp_t props;
     hipGetDeviceProperties(&props, i);
@@ -231,9 +319,21 @@ int display_gpu_info (void) {
     info.node_id   = node_id;
     info.gpu_id    = gpu_id;
     info.device_id = dev_id;
+    auto ret = rsmi_dev_vbios_version_get(i, info.vbios_ver, 1024);// check returns TODO
+    if (ret != RSMI_STATUS_SUCCESS){
+      memset(info.vbios_ver, 0, 1024);
+      rvs::lp::Log("vbios check failure ", rvs::logresults);      
+    }
+    info.fmver = {};
+    fill_firmware_versions(i, info.fmver);
     gpu_info_list.push_back(info);
 
   }
+  std::string rcm{ROCM_PATH};
+  if (rcm.find('/') != std::string::npos){
+    rcm = rcm.substr(rcm.find_last_of('/')+1);
+  }
+  std::cout  << rcm << " Running on " << getOSName() << std::endl;
   std::sort(gpu_info_list.begin(), gpu_info_list.end(),
            [](const struct device_info& a, const struct device_info& b) {
              return a.node_id < b.node_id; });
@@ -242,10 +342,14 @@ int display_gpu_info (void) {
     for (const auto& info : gpu_info_list) {
       std::cout << info.bus  << " - GPU[" << std::setw(2) << info.node_id
       << " - " << std::setw(5) << info.gpu_id << "] " << info.name
-      << " (Device " << info.device_id << ")\n";
+      << " (Device " << info.device_id << ")" << "\n"
+      <<"  VBIOS Version:" << std::string(info.vbios_ver) << "\n"
+      << "  FirmWare Versions are: \n";
+      print_fmversions(info.fmver);
     }
   } else {
       std::cout << std::endl << errmsg << std::endl;
   }
+  rsmi_shut_down();
   return 0;
 }
