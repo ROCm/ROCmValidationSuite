@@ -198,7 +198,8 @@ rvs_status_t rvs_session_execute(rvs_session_id_t session_id) {
           "pesm",
           "pbqt",
           "rcqt",
-          "smqt"};
+          "smqt",
+          "em"};
 
         opt.insert({"module", module[rvs_session[session_idx].property.default_conf.module]});
 
