@@ -38,7 +38,7 @@ PackageHandlerDeb::PackageHandlerDeb(std::string pkgname): PackageHandler{}{
   
   const std::vector<std::string> cmd {std::string("--status"), std::string(""), std::string("--status")};
 
-	metaInfo.reset(new DebPackageInfo(pkgname, cmd));
+  metaInfo.reset(new DebPackageInfo(pkgname, cmd));
   metaInfo->fillPkgInfo();
   m_manifest = metaInfo->getFileName();
 }
