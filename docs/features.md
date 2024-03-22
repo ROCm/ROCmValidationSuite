@@ -27,21 +27,17 @@ The PCIe Qualification Tool is used to qualify the PCIe bus on which the GPU is 
 ## SBIOS Mapping Qualification Tool – SMQT module
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct products for ROCm support.
 
-Refer to the “ROCm Use of Advanced PCIe Features and Overview of How BAR Memory is Used In ROCm Enabled System” web page for more information about how BAR memory is initialized by VDI and Radeon products.
-
 ## P2P Benchmark and Qualification Tool – PBQT module
 The P2P Benchmark and Qualification Tool is designed to provide the list of all GPUs that support P2P and characterize the P2P links between peers. In addition to testing P2P compatibility, this test will perform a peer-to-peer throughput test between all P2P pairs for performance evaluation. The P2P Benchmark and Qualification Tool will allow users to pick a collection of two or more GPUs to run the test. The user will also be able to select whether or not they want to run the throughput test on each of the pairs.
 
-Please see the web page “ROCm, a New Era in Open GPU Computing” to find out more about the P2P solutions available in a ROCm environment.
-
 ## PCI Express Bandwidth Benchmark – PEBB module
-The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory. The maximum bandwidth obtained is reported to help debug low bandwidth issues. The benchmark should be capable of  targeting one, some or all of the GPUs installed in a platform, reporting individual benchmark statistics for each.
+The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory. The maximum bandwidth obtained is reported to help debug low bandwidth issues. The benchmark should be capable of targeting one, some or all of the GPUs installed in a platform, reporting individual benchmark statistics for each.
 
 ## GPU Stress Test - GST module
 The GPU Stress Test runs various GEMM operations as workloads to stress the GPU FLOPS performance. GEMM operations include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) operations based on configured parameters. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
 
 ## Input EDPp Test - IET module
-The Input EDPp Test generates EDP peak power on the GPU. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the device.  Peak Current at defined period  =  1 minute moving average power.
+The Input EDPp Test runs GEMM workloads to stress the GPU power (i.e. TGP). This test is used to verify if the GPU is capable of handling max. power stress for a sustained period of time. Also checks whether GPU power reaches a set target power.
 
 ## Memory Test - MEM module
 The Memory module tests the GPU memory for hard and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
@@ -59,3 +55,7 @@ The Memory module tests the GPU memory for hard and soft errors using HIP. It co
 
 ## BABEL benchmark Test - BABEL module
 The Babel module executes BabelStream (synthetic GPU benchmark based on the original STREAM benchmark for CPUs) benchmark that measures memory transfer rates (bandwidth) to and from global device memory. Various benchmark tests are implemented using GPU kernels in HIP (Heterogeneous Interface for Portability) programming language.
+
+## Thermal Stress Test - TST module
+The Thermal Stress Test (TST) measures/monitors the GPU edge and junction temperatures under various stressful workloads. Also checks whether GPU junction temperature reaches target and trottle temperatures.
+

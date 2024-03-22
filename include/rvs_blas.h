@@ -27,6 +27,9 @@
 
 #define __HIP_PLATFORM_HCC__
 
+/* To enable rocblas beta functions in rocblas.h */
+#define ROCBLAS_BETA_FEATURES_API 1
+
 /*Based on Version of ROCBLAS use correct include header*/
 #if(defined(RVS_ROCBLAS_VERSION_FLAT) && ((RVS_ROCBLAS_VERSION_FLAT) >= 2044000))
   #include <rocblas/rocblas.h>
@@ -51,7 +54,7 @@ class rvs_blas {
  public:
     rvs_blas(int _gpu_device_index, int _m, int _n, int _k, 
         int transa, int transb, float aplha, float beta, 
-        rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string _ops_type);
+        rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string _ops_type, std::string _data_type);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
@@ -100,6 +103,8 @@ class rvs_blas {
     int gpu_device_index;
     //! Type of operation
     std::string ops_type;
+    //! Type of data
+    std::string data_type;
     //! matrix size m
     rocblas_int m;
     //! matrix size n
@@ -147,6 +152,22 @@ class rvs_blas {
     //! pointer to host memory
     double *hdblc;
 
+    //Data type Declaration
+    //! pointer to device (GPU) memory
+    void *dda;
+    //! pointer to device (GPU) memory
+    void *ddb;
+    //! pointer to device (GPU) memory
+    void *ddc;
+    //! pointer to device (GPU) memory
+    void *ddd;
+    //! pointer to host memory
+    void *hda;
+    //! pointer to host memory
+    void *hdb;
+    //! pointer to host memory
+    void *hdc;
+
     //!GST Aplha Val 
     float blas_alpha_val;
     //! GST Beta Val
@@ -175,10 +196,6 @@ class rvs_blas {
     rocblas_half *hhlfb;
     //! pointer to host memory
     rocblas_half *hhlfc;
-
-    // rocblas_half  hostarrayA;
-    // rocblas_half  hostarrayB;
-    // rocblas_half  hostarrayC;
 
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;

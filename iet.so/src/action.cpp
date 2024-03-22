@@ -413,8 +413,9 @@ void iet_action::hip_to_smi_indices(void) {
 
         // compute device location_id (needed to match this device
         // with one of those found while querying the pci bus
-        uint16_t hip_dev_location_id =
-            ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3) );
+        uint64_t hip_dev_location_id = ( ( ((uint64_t)props.pciDomainID & 0xffff ) << 32) |
+            (((uint64_t) props.pciBusID & 0xff ) << 8) | (((uint64_t)props.pciDeviceID & 0x1f ) << 3) );
+
         if(smi_map.find(hip_dev_location_id) != smi_map.end()){
             hip_to_smi_idxs.insert({i, smi_map[hip_dev_location_id]});
         }
@@ -443,15 +444,8 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
         if (property_wait != 0)  // delay iet execution
             sleep(property_wait);
 
-
-        uint32_t smi_num_devices;
-        rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-        if(smi_num_devices != hip_num_gpu_devices)
-            gpu_masking = true;
-        if(gpu_masking){  // this is the case when using HIP_VISIBLE_DEVICES variable to modify GPU visibility
-            // smi output wont be affected by the flag and hence indices should be appropriately used.
-            hip_to_smi_indices();
-        }
+	// map hip indexes to smi indexes
+	hip_to_smi_indices();
 
         IETWorker::set_use_json(bjson);
         for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
@@ -475,6 +469,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_max_violations(iet_max_violations);
             workers[i].set_target_power(iet_target_power);
             workers[i].set_tolerance(iet_tolerance);
+            workers[i].set_matrix_size(iet_matrix_size);
             workers[i].set_matrix_size_a(iet_matrix_size_a);
             workers[i].set_matrix_size_b(iet_matrix_size_b);
             workers[i].set_matrix_size_c(iet_matrix_size_c);

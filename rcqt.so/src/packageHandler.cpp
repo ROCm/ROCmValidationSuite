@@ -28,6 +28,17 @@
 #include <iostream>
 #include "include/packageHandler.h"
 
+
+// expected versions usually either = or >=. 
+bool isVersionMismatch(std::string expected, std::string installed){
+  if(expected.find("+") == std::string::npos){
+    return expected.compare(installed) != 0;
+  }
+  expected = expected.substr(0, expected.size()-1);
+  auto exp = std::stof(expected);
+  auto ins = std::stof(installed);
+  return ins < exp;
+}
 bool PackageHandler::parseManifest(){
 
   if(m_manifest.empty()) {
@@ -77,7 +88,7 @@ void PackageHandler::validatePackages(){
 			continue;
 		}
 
-		if( inputversion.compare(installedvers)){
+		if(isVersionMismatch(inputversion, installedvers)){
 			++badVersions;
 			std::cout << "Error: version mismatch for package " << inputname <<
 					" expected version: " << inputversion << " but installed " <<

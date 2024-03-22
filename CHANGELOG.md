@@ -2,7 +2,23 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
 
-## (Unreleased) RVS for ROCm 5.7
+## (Unreleased) RVS for ROCm 6.1
+
+### Changed
+- Updated pebb & pbqt logs to include PCI BDF.
+
+### Added
+- Support data types (BF16 and FP8) based GEMM operations in GPU Stress Test (GST) module.
+
+## RVS for ROCm 6.0
+
+### Added
+- Support for Mariner OS
+- Support for gfx941 & gfx942
+- Navi31 and Navi32 specific configurations
+- GST stress test support for MI300X
+
+## RVS for ROCm 5.7
 
 ### Added
 - Introduced new RVS interface APIs enabling test execution from external components.

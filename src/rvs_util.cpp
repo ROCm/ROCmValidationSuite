@@ -149,7 +149,8 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
                 cur_gpu_selected = true;
         }
 	// if mcm check enabled, print message if device is MCM
-        if (mcm_check){
+	//  MCM is only for mi200, so check only if gfx90a
+        if (mcm_check && (std::string{props.gcnArchName}.find("gfx90a") != std::string::npos) ){ 
 	    std::stringstream msg_stream;
             mcm_die =  gpu_check_if_mcm_die(i);
 	    if (mcm_die) {

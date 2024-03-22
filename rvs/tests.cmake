@@ -41,7 +41,7 @@ link_directories(${RVS_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ROCT_LI
 ## define target for "test-to-fail"
 add_executable(${RVS_TARGET}fail src/rvs.cpp)
 target_link_libraries(${RVS_TARGET}fail rvslib rvslibut ${PROJECT_LINK_LIBS}
-  ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET})
+  ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${ROCM_CORE} ${CORE_RUNTIME_TARGET})
 
 target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
 set_target_properties(${RVS_TARGET}fail PROPERTIES
@@ -210,7 +210,7 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
     ${PROJECT_LINK_LIBS}
     ${PROJECT_TEST_LINK_LIBS}
     rvslib rvslibut gtest_main gtest pthread
-    ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET}
+    ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE}
   )
   add_dependencies(${TEST_NAME} rvs_gtest_target)
 

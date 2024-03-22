@@ -164,8 +164,9 @@ int pbqt_action::run() {
   }
 
   RVSTRACE_
-    // define timers
-    rvs::timer<pbqt_action> timer_running(&pbqt_action::do_running_average, this);
+
+  // define timers
+  rvs::timer<pbqt_action> timer_running(&pbqt_action::do_running_average, this);
   rvs::timer<pbqt_action> timer_final(&pbqt_action::do_final_average, this);
 
   unsigned int iter = property_count > 0 ? property_count : 1;
@@ -179,12 +180,12 @@ int pbqt_action::run() {
     // start timers
     if (property_duration) {
       RVSTRACE_
-        timer_final.start(property_duration, true);  // ticks only once
+      timer_final.start(property_duration, true);  // ticks only once
     }
 
     if (property_log_interval) {
       RVSTRACE_
-        timer_running.start(property_log_interval);        // ticks continuously
+      timer_running.start(property_log_interval);  // ticks continuously
     }
 
     pbqt_start_time = std::chrono::system_clock::now();

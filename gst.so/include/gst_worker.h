@@ -197,9 +197,7 @@ class GSTWorker : public rvs::ThreadBase {
     static bool get_use_json(void) { return bjson; }
 
     void set_gst_ops_type(std::string _ops_type) { gst_ops_type = _ops_type; }
-
-    //! BLAS callback
-    static void blas_callback (bool status, void *user_data);
+    void set_gst_data_type(std::string _data_type) { gst_data_type = _data_type; }
 
  protected:
     void setup_blas(int *error, std::string *err_description);
@@ -271,6 +269,8 @@ class GSTWorker : public rvs::ThreadBase {
     static bool bjson;
     //! Type of operation
     std::string gst_ops_type;
+    //! Type of data
+    std::string gst_data_type;
     //! GEMM operations synchronization mutex
     std::mutex mutex;
     //! GEMM operations synchronization condition variable

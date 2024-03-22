@@ -29,7 +29,7 @@ project(rvs_rblas-download NONE)
 
 include(ExternalProject)
 ExternalProject_Add(rvs_rblas
-  GIT_REPOSITORY    https://github.com/ROCmSoftwarePlatform/rocBLAS.git
+  GIT_REPOSITORY    https://github.com/ROCm/rocBLAS.git
   GIT_TAG           v14.3.0
   SOURCE_DIR        "${CMAKE_BINARY_DIR}/rvs_rblas-src"
   BINARY_DIR        "${CMAKE_BINARY_DIR}/rvs_rblas-build"
