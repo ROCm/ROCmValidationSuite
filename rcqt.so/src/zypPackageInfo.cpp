@@ -36,6 +36,7 @@ bool ZypPackageInfo::readMetaPackageInfo(std::string ss){
   size_t pos = std::string::npos;
   std::ofstream os;
   std::string greaterVers{};
+  std::string depPackageVersion, depPackageName;
   os.open(getFileName() , std::ofstream::out | std::ofstream::app);
 
   while(std::getline(inss, line)){
@@ -57,10 +58,10 @@ bool ZypPackageInfo::readMetaPackageInfo(std::string ss){
           size_t firstCharPos = line.find_first_not_of(" ");
           size_t midSpacePos = line.find(" ", firstCharPos);
 
-          auto depPackageName = line.substr(firstCharPos, midSpacePos - firstCharPos);
+          depPackageName = line.substr(firstCharPos, midSpacePos - firstCharPos);
 
           midSpacePos = line.find_last_of(" ");
-          auto depPackageVersion = line.substr(midSpacePos + 1);
+          depPackageVersion = line.substr(midSpacePos + 1);
 	  auto p = depPackageVersion.find("-");
 	  if (std::string::npos != p)
           	depPackageVersion = depPackageVersion.substr(0, p);
@@ -74,7 +75,16 @@ bool ZypPackageInfo::readMetaPackageInfo(std::string ss){
           if (false == found){
             found = true;
           }
-        }
+        }else{ // for those packages with no version
+		depPackageName = remSpaces(line);
+		if(depPackageName.empty()){
+                  continue;
+                }
+		depPackageVersion = "0+";
+		os << depPackageName << " " << depPackageVersion << std::endl;
+		pos = std::string::npos;
+		found = true;
+	}
       }
     }
   }
