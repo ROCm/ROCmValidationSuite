@@ -29,6 +29,8 @@ void DebPackageInfo::readDepLine(const std::string& depLine){
   std::string word;
   while(std::getline(ss, word, ',')){
     std::pair<std::string, std::string> wp = getNameVers(word);
+    if (wp.first.empty() || isSystemPackage(wp.first))
+      continue;
     os << wp.first << " " <<wp.second << std::endl;
   }
 }

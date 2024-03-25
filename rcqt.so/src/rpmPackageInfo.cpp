@@ -61,7 +61,8 @@ bool RpmPackageInfo::readMetaPackageInfo(std::string ss){
       if(std::string::npos != (relPos = depPackageVersion.find("-"))) {
         depPackageVersion = depPackageVersion.substr(0, relPos);
       }
-
+      if(depPackageName.empty() || isSystemPackage(depPackageName))
+        continue;
       /* Write depend package name and its version to file */
       os << depPackageName << " " << depPackageVersion << std::endl;
 
