@@ -26,6 +26,9 @@
 std::string csv_separator = ",";
 static bool triad_only = false;
 
+ bool event_timing = false;
+
+
 template <typename T>
 void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>& b, std::vector<T>& c, T& sum, uint64_t);
 
@@ -111,7 +114,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   Stream<T> *stream;
 
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, device.first);
+  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first);
 
   stream->init_arrays(startA, startB, startC);
 
@@ -184,6 +187,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       << std::left << std::setw(12) << "Max"
       << std::left << std::setw(12) << "Average"
       << std::endl
+      << "------------------------------------------------------------------------" << std::endl
       << std::fixed;
   }
 
@@ -232,6 +236,8 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
         << std::endl;
     }
   }
+  std::cout
+    << "------------------------------------------------------------------------" << std::endl;
 
   delete stream;
 
@@ -282,7 +288,7 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   Stream<T> *stream;
 
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, device.first);
+  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first);
 
   stream->init_arrays(startA, startB, startC);
 
