@@ -187,6 +187,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       << std::left << std::setw(12) << "Max"
       << std::left << std::setw(12) << "Average"
       << std::endl
+      << "------------------------------------------------------------------------" << std::endl
       << std::fixed;
   }
 
@@ -235,6 +236,8 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
         << std::endl;
     }
   }
+  std::cout
+    << "------------------------------------------------------------------------" << std::endl;
 
   delete stream;
 
