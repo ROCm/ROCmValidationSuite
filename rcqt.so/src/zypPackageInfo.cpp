@@ -77,7 +77,7 @@ bool ZypPackageInfo::readMetaPackageInfo(std::string ss){
           }
         }else{ // for those packages with no version
 		depPackageName = remSpaces(line);
-		if(depPackageName.empty()){
+		if(depPackageName.empty() || isSystemPackage(depPackageName)){
                   continue;
                 }
 		depPackageVersion = "0+";

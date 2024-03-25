@@ -133,3 +133,7 @@ bool getPackageInfo(const std::string& package,
   }
 }
 
+bool isSystemPackage(std::string pkgName){
+  auto pos =  pkgName.find("/");
+  return pos == 0 ; // if starts with /usr or /bin it is usually system package
+}

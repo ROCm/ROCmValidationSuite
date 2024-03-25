@@ -73,4 +73,5 @@ bool getPackageInfo(const std::string& package,
     const std::string& option,
     std::stringstream &ss);
 
+bool isSystemPackage(std::string pkgName);
 #endif
