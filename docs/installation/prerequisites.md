@@ -30,7 +30,7 @@ Follow the instructions below before compilation/installing compiled package.
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
  [ROCm installation guide](https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details.
 
-_**Note:**_
+**Note**
 
 rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
 rocm-smi-lib64 package has been renamed to rocm-smi-lib from >= ROCm4.1.
@@ -49,7 +49,7 @@ Install rocBLAS and rocm-smi-lib :
 
     sudo zypper install rocblas rocm-smi-lib
 
-_**Note:**_
+**Note:**
 
 If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't exist. Do below:
 
@@ -89,8 +89,9 @@ This section explains how to get and compile current development stream of RVS.
     cd ./build
     make package
 
-**Note:**_ based on your OS, only DEB or RPM package will be built. You may
-ignore an error for the unrelated configuration
+**Note:**
+
+Based on your OS, only DEB or RPM package will be built. You may ignore an error for the unrelated configuration.
 
 ### Install built package:
 
