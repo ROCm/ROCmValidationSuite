@@ -49,7 +49,7 @@ Install rocBLAS and rocm-smi-lib :
 
     sudo zypper install rocblas rocm-smi-lib
 
-**Note:**
+**Note**
 
 If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't exist. Do below:
 
@@ -89,7 +89,7 @@ This section explains how to get and compile current development stream of RVS.
     cd ./build
     make package
 
-**Note:**
+**Note**
 
 Based on your OS, only DEB or RPM package will be built. You may ignore an error for the unrelated configuration.
 
@@ -103,7 +103,7 @@ Based on your OS, only DEB or RPM package will be built. You may ignore an error
 
     sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
-**Note:**
+**Note**
 
 RVS is getting packaged as part of ROCm release starting from 3.0. You can install pre-compiled package as below.
 Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed
