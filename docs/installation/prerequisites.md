@@ -6,11 +6,11 @@ Follow the instructions below before compilation/installing compiled package.
 
     sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
 
-### CentOS :
+### CentOS:
 
     sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
 
-### RHEL :
+### RHEL:
 
     sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
 
@@ -18,7 +18,7 @@ Follow the instructions below before compilation/installing compiled package.
 
     sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
 
-### SLES :
+### SLES:
 
     sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
 
@@ -45,7 +45,7 @@ Install rocBLAS and rocm-smi-lib :
 
     sudo yum install --nogpgcheck rocblas rocm-smi-lib
 
-### SUSE :
+### SUSE:
 
     sudo zypper install rocblas rocm-smi-lib
 
@@ -57,11 +57,11 @@ If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't 
 
     sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
 
-### CentOS & RHEL :
+### CentOS & RHEL:
 
     sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
 
-### SUSE :
+### SUSE:
 
     sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
 
@@ -99,7 +99,7 @@ Based on your OS, only DEB or RPM package will be built. You may ignore an error
 
     sudo dpkg -i rocm-validation-suite*.deb
 
-#### CentOS & RHEL & SUSE :
+#### CentOS, RHEL, and SUSE:
 
     sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
