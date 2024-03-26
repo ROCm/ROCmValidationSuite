@@ -63,8 +63,8 @@ void MemWorker::run() {
     std::pair<int, uint16_t> device;
 
     // log MEM stress test - start message
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " "  + " Starting the Memory stress test ";
+    msg = "[" + action_name + "] " + "[GPU:: " +
+            std::to_string(gpu_id) + "] " + "Starting the Babel memory stress test";
     rvs::lp::Log(msg, rvs::logresults);
 
     /* Device Index */
