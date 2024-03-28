@@ -87,6 +87,9 @@ class gst_action: public rvs::actionbase {
     uint64_t gst_matrix_size_b;
     uint64_t gst_matrix_size_c;
 
+    //! matrix initialization
+    std::string gst_matrix_init;
+
     //Parameter to heat up
     uint64_t gst_hot_calls;
 

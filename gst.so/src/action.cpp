@@ -59,6 +59,7 @@ using std::regex;
 #define RVS_CONF_MATRIX_SIZE_KEYA       "matrix_size_a"
 #define RVS_CONF_MATRIX_SIZE_KEYB       "matrix_size_b"
 #define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_b"
+#define RVS_CONF_MATRIX_INIT            "matrix_init"
 #define RVS_CONF_GST_OPS_TYPE           "ops_type"
 #define RVS_CONF_GST_DATA_TYPE          "data_type"
 #define RVS_CONF_TRANS_A                "transa"
@@ -79,6 +80,7 @@ using std::regex;
 #define GST_DEFAULT_TOLERANCE           0.1
 #define GST_DEFAULT_COPY_MATRIX         true
 #define GST_DEFAULT_MATRIX_SIZE         5760
+#define GST_DEFAULT_MATRIX_INIT         "default"
 #define GST_DEFAULT_HOT_CALLS           0
 #define GST_DEFAULT_TRANS_A             0
 #define GST_DEFAULT_TRANS_B             1
@@ -151,6 +153,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_matrix_size_a(gst_matrix_size_a);
       workers[i].set_matrix_size_b(gst_matrix_size_b);
       workers[i].set_matrix_size_c(gst_matrix_size_c);
+      workers[i].set_matrix_init(gst_matrix_init);
       workers[i].set_gst_ops_type(gst_ops_type);
       workers[i].set_gst_data_type(gst_data_type);
       workers[i].set_matrix_transpose_a(gst_trans_a);
@@ -271,8 +274,7 @@ bool gst_action::get_all_gst_config_keys(void) {
     bsts = false;
   }
 
-  if (property_get<std::string>(RVS_CONF_GST_DATA_TYPE, &gst_data_type,
-        GST_DEFAULT_DATA_TYPE)) {
+  if (property_get<std::string>(RVS_CONF_GST_DATA_TYPE, &gst_data_type, GST_DEFAULT_DATA_TYPE)) {
     msg = "invalid '" +
       std::string(RVS_CONF_GST_DATA_TYPE) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -307,6 +309,14 @@ bool gst_action::get_all_gst_config_keys(void) {
   if (error == 1) {
     msg = "invalid '" +
       std::string(RVS_CONF_MATRIX_SIZE_KEYC) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_MATRIX_INIT, &gst_matrix_init, GST_DEFAULT_MATRIX_INIT);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MATRIX_INIT) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
