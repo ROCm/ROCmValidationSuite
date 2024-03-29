@@ -49,7 +49,7 @@ inline rvsblas_rng_t get_seed()
     : rvsblas_rng_t(std::hash<std::thread::id>{}(tid));
 }
 
-// For the main thread, we use g_rocblas_seed; for other threads, we start with a different seed but
+// For the main thread, we use g_rvsblas_seed; for other threads, we start with a different seed but
 // deterministically based on the thread id's hash function.
 thread_local rvsblas_rng_t rvsblas_t_rng = get_seed();
 
@@ -913,7 +913,7 @@ float rvs_blas::fast_pseudo_rand(uint64_t *nextr, size_t i) {
     }
   }
   else if ("trig" == matrix_init) {
-    return static_cast<float>(sin(i));
+    return sin(static_cast<float>(i));
   }
   else {
     *nextr = *nextr * 1103515245 + 12345;
