@@ -109,6 +109,7 @@ class GSTWorker : public rvs::ThreadBase {
     //! sets the copy_matrix (true = the matrix will be copied to GPU each
     //! time a new SGEMM will run, false = the matrix will be copied only once)
     void set_copy_matrix(bool _copy_matrix) { copy_matrix = _copy_matrix; }
+
     //! returns the copy_matrix value
     bool get_copy_matrix(void) { return copy_matrix; }
 
@@ -129,17 +130,21 @@ class GSTWorker : public rvs::ThreadBase {
         return gst_hot_calls;
     }
 
-    //! sets the SGEMM matrix size
+    //! sets the matrix size
     void set_matrix_size_a(uint64_t _matrix_size_a) {
         matrix_size_a = _matrix_size_a;
     }
-   //! sets the SGEMM matrix size
+    //! sets the matrix size
     void set_matrix_size_b(uint64_t _matrix_size_b) {
         matrix_size_b = _matrix_size_b;
     }
-   //! sets the SGEMM matrix size
+    //! sets the matrix size
     void set_matrix_size_c(uint64_t _matrix_size_c) {
         matrix_size_c = _matrix_size_c;
+    }
+    //! sets the matrix init
+    void set_matrix_init(std::string _matrix_init) {
+        matrix_init = _matrix_init;
     }
     //! sets the transpose matrix a
     void set_matrix_transpose_a(int transa) {
@@ -171,17 +176,18 @@ class GSTWorker : public rvs::ThreadBase {
         gst_ldc_offset = ldc;
     }
 
-    //! returns the SGEMM matrix size
+    //! returns the matrix size
     uint64_t get_matrix_size_a(void) { return matrix_size_a; }
 
-    //! returns the SGEMM matrix size
+    //! returns the matrix size
     uint64_t get_matrix_size_b(void) { return matrix_size_b; }
 
-    //! returns the SGEMM matrix size
+    //! returns the matrix size
     uint64_t get_matrix_size_c(void) { return matrix_size_b; }
 
     //! sets the GFlops tolerance
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }
+
     //! returns the GFlops tolerance
     float get_tolerance(void) { return tolerance; }
 
@@ -196,7 +202,10 @@ class GSTWorker : public rvs::ThreadBase {
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
 
+    //! set gemm operation type - sgemm, dgemm, hgemm
     void set_gst_ops_type(std::string _ops_type) { gst_ops_type = _ops_type; }
+
+    //! set data format based gemm operation  - fp8, fp16, bf16
     void set_gst_data_type(std::string _data_type) { gst_data_type = _data_type; }
 
  protected:
@@ -251,10 +260,12 @@ class GSTWorker : public rvs::ThreadBase {
     //! GFlops tolerance (how much the GFlops can fluctuare after
     //! the ramp period for the test to succeed)
     float tolerance;
-    //! SGEMM matrix size
+    //! matrix sizes
     uint64_t matrix_size_a;
     uint64_t matrix_size_b;
     uint64_t matrix_size_c;
+    //! matrix init
+    std::string matrix_init;
     //num of hot calls
     uint64_t gst_hot_calls;
     //! actual ramp time in case the GPU achieves the given target_stress Gflops
