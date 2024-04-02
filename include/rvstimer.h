@@ -59,8 +59,10 @@ class timer : public ThreadBase {
  *
  */
   timer(timerfunc_t cbFunc, T* cbArg) {
+
     cbfunc = cbFunc;
     cbarg = cbArg;
+    brun = false; // enable it when starting the thread
   }
 
   //! Default destructor
