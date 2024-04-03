@@ -104,7 +104,6 @@ void pbqtworker::run() {
  * */
 void pbqtworker::stop() {
   std::string msg;
-
   msg = "[" + stop_action_name + "] pbqt transfer " + std::to_string(src_node)
       + " " + std::to_string(dst_node) + " in pbqtworker::stop()";
   rvs::lp::Log(msg, rvs::logtrace);
@@ -153,7 +152,6 @@ int pbqtworker::do_transfer() {
   unsigned int endsec;
   unsigned int endusec;
   std::string msg;
-
   msg = "[" + action_name + "] pbqt transfer " + std::to_string(src_node) + " "
       + std::to_string(dst_node) + " ";
 
@@ -177,8 +175,10 @@ int pbqtworker::do_transfer() {
 
     {
       std::lock_guard<std::mutex> lk(cntmutex);
-      running_size += current_size;
-      running_duration += duration;
+      if(duration){ // if not,total bandwidth increases as numerator increases
+        running_size += current_size;
+        running_duration += duration;
+      }
     }
   }
 
@@ -216,7 +216,7 @@ void pbqtworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
   *Size = running_size;
   *Duration = running_duration;
 
-  // reset running totas
+  // reset running totals
   running_size = 0;
   running_duration = 0;
 }
@@ -240,8 +240,10 @@ void pbqtworker::get_final_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
   std::lock_guard<std::mutex> lk(cntmutex);
 
   // update total
-  total_size += running_size;
-  total_duration += running_duration;
+  if(running_duration){
+    total_size += running_size;
+    total_duration += running_duration;
+  }
 
   *Src = src_node;
   *Dst = dst_node;

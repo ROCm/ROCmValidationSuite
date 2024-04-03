@@ -830,10 +830,12 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
                 dst_ptr_fwd, agent_list[dst_ix_fwd].agent,
                 src_ptr_fwd, agent_list[src_ix_fwd].agent,
                 Size,
-                0, NULL, signal_fwd)))
+                0, NULL, signal_fwd))){
     print_hsa_status(__FILE__, __LINE__, __func__,
               "hsa_amd_memory_async_copy()",
               status);
+    std::cout <<"hsa fwd copy failed:MANOJJJ" << std::endl;
+    } 
   if (bidirectional) {
     RVSHSATRACE_
     // initiate reverse transfer
@@ -841,10 +843,12 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
     if (HSA_STATUS_SUCCESS != (status = hsa_amd_memory_async_copy(
         dst_ptr_rev, agent_list[dst_ix_rev].agent,
         src_ptr_rev, agent_list[src_ix_rev].agent, Size,
-        0, NULL, signal_rev)))
+        0, NULL, signal_rev))){
       print_hsa_status(__FILE__, __LINE__, __func__,
               "hsa_amd_memory_async_copy()",
               status);
+    std::cout <<"hsa rev copy failed:MANOJJJ" << std::endl;
+    }
   }
 
   // wait for transfer to complete
