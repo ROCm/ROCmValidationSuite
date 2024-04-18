@@ -740,8 +740,6 @@ int pbqt_action::print_running_average(pbqtworker* pWorker) {
     pWorker->get_running_data(&src_node, &dst_node, &bidir,
             &current_size, &duration);
 
-  std::cout << "print_running_average" << " " << src_node << " " << dst_node << std::endl;
- 
     if (duration > 0) {
         bandwidth = current_size/duration/1000 / 1000 / 1000;
         if (bidir) {
