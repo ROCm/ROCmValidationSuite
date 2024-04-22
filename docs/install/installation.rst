@@ -15,48 +15,42 @@ Prerequisites
     .. tab-item:: Ubuntu
         :sync: Ubuntu
 
-          .. code-block:: bash
-                :substitutions:
+          .. code-block:: shell
 
-                    sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
+               sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
+
+               
+    .. tab-item:: SLES
+        :sync: SLES
+
+        .. code-block:: shell
+
+                sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
+                        
+                sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
+                        
+                sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
+          
+                 
 
 
     .. tab-set::
-      .. tab-item:: CentOS
-          :sync: CentOS
+      .. tab-item:: RHEL
+          :sync: RHEL
 
             .. code-block:: shell   
                   :substitutions:
                     
-                          sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
-
-    .. tab-set::
-          .. tab-item:: RHEL
-              :sync: RHEL
-
-              .. code-block:: shell
-                     :substitutions:
-
-                          sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
+                       sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
                       
-                          wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
+                       wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
                       
-                          sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
+                      sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
 
-    .. tab-set::
-      .. tab-item:: SLES
-          :sync: SLES
-
-            .. code-block:: shell
-                   :substitutions:
+    
 
 
-                        sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
-                    
-                        sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
-                    
-                        sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
-
+                      
 
 ## Install ROCm stack, rocblas and rocm-smi-lib
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
