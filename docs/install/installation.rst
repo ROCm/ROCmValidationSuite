@@ -44,7 +44,7 @@ Prerequisites
                       
                        wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
                       
-                      sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
+                       sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
 
     
 
