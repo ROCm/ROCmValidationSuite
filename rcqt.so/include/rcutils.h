@@ -37,6 +37,7 @@
 #include <sys/wait.h>
 #include <chrono>
 
+const std::string ORDEP{"ORDEP:"};
 enum class OSType {
   Ubuntu,
   Centos,
