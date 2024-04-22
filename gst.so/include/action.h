@@ -69,8 +69,8 @@ class gst_action: public rvs::actionbase {
     uint64_t gst_ramp_interval;
     //! maximum allowed number of target_stress violations
     int gst_max_violations;
-    //! specifies whether to copy the matrices to the GPU before each
-    //! SGEMM operation
+    //! specifies whether to copy the matrices
+    //! to the GPU before each GEMM operation
     bool gst_copy_matrix;
     //! target stress (in GFlops) that the GPU will try to achieve
     float gst_target_stress;
@@ -78,14 +78,18 @@ class gst_action: public rvs::actionbase {
     //! the ramp period for the test to succeed)
     float gst_tolerance;
 
-    //Alpha and beta value
-    float      gst_alpha_val;
-    float      gst_beta_val;
+    //! Alpha and beta value
+    float gst_alpha_val;
+    float gst_beta_val;
 
-    //! matrix size for SGEMM
+    //! matrix sizes for GEMM operation
     uint64_t gst_matrix_size_a;
     uint64_t gst_matrix_size_b;
     uint64_t gst_matrix_size_c;
+
+    //! matrix initialization method :
+    //! default, random integer or trignometric float
+    std::string gst_matrix_init;
 
     //Parameter to heat up
     uint64_t gst_hot_calls;

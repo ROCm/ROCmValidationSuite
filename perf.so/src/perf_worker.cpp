@@ -73,13 +73,14 @@ PERFWorker::~PERFWorker() {}
  * @param err_description stores the error description if any
  */
 void PERFWorker::setup_blas(int *error, string *err_description) {
+
     *error = 0;
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(
-        new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
-                        matrix_size_c, perf_trans_a, perf_trans_b,
-                        perf_alpha_val, perf_beta_val, 
-                        perf_lda_offset, perf_ldb_offset, perf_ldc_offset, perf_ops_type, ""));
+        new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b, matrix_size_c,
+          "default", perf_trans_a, perf_trans_b,
+          perf_alpha_val, perf_beta_val,
+          perf_lda_offset, perf_ldb_offset, perf_ldc_offset, perf_ops_type, ""));
 
     if (!gpu_blas) {
         *error = 1;

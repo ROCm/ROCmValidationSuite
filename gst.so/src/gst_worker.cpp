@@ -77,7 +77,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
   // setup rvsBlas
   gpu_blas = std::unique_ptr<rvs_blas>(
       new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
-        matrix_size_c, gst_trans_a, gst_trans_b,
+        matrix_size_c, matrix_init, gst_trans_a, gst_trans_b,
         gst_alpha_val, gst_beta_val,
         gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ops_type, gst_data_type));
 
@@ -337,9 +337,10 @@ void GSTWorker::check_target_stress(double gflops_interval) {
     result = false;
   }
 
-  msg = "[" + action_name + "] " + MODULE_NAME + " " +
-    std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(gflops_interval) + " " +
-    "Target stress :" + " " + std::to_string(target_stress) + " met :" + (result ? "TRUE" : "FALSE");
+  msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+    GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(static_cast<uint64_t>(gflops_interval)) + " " +
+    "Target GFLOPS:" + " " + std::to_string(static_cast<uint64_t>(target_stress)) +
+    " met: " + (result ? "TRUE" : "FALSE");
   rvs::lp::Log(msg, rvs::logresults);
 
   action_result.state = rvs::actionstate::ACTION_RUNNING;
@@ -347,7 +348,7 @@ void GSTWorker::check_target_stress(double gflops_interval) {
   action_result.output = msg.c_str();
   action.action_callback(&action_result);
 
-  log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
+  log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(static_cast<uint64_t>(gflops_interval)),
       rvs::loginfo);
 }
 
@@ -359,9 +360,8 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
   string msg;
   rvs::action_result_t action_result;
 
-  msg = "[" + action_name + "] " + MODULE_NAME + " " +
-    std::to_string(gpu_id) + " " + GST_LOG_GFLOPS_INTERVAL_KEY + " " +
-    std::to_string(gflops_interval);
+  msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+    GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(static_cast<uint64_t>(gflops_interval));
   rvs::lp::Log(msg, rvs::logresults);
 
   action_result.state = rvs::actionstate::ACTION_RUNNING;
@@ -369,7 +369,7 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
   action_result.output = msg.c_str();
   action.action_callback(&action_result);
 
-  log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
+  log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(static_cast<uint64_t>(gflops_interval)),
       rvs::loginfo);
 }
 
@@ -526,16 +526,16 @@ void GSTWorker::run() {
   rvs::lp::Log(msg, rvs::logtrace);
 
   // log GST ramp up - start message
-  msg = "[" + action_name + "] " + MODULE_NAME + " " +
-    std::to_string(gpu_id) + " Start of GPU ramp up";
+  msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+    "Start of GPU ramp up";
   rvs::lp::Log(msg, rvs::logresults);
 
   // let the GPU ramp-up and check the result
   bool ramp_up_success = do_gst_ramp(&error, &err_description);
 
   // log GST ramp up - end message
-  msg = "[" + action_name + "] " + MODULE_NAME + " " +
-    std::to_string(gpu_id) + " End of GPU ramp up";
+  msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+    "End of GPU ramp up";
   rvs::lp::Log(msg, rvs::logresults);
 
   // GPU was not able to do the processing (HIP/rocBlas error(s) occurred)
