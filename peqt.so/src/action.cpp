@@ -437,7 +437,7 @@ int peqt_action::run(void) {
 
       // computes the actual dev's location_id (sysfs entry)
       uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
-              | ((uint16_t)  (dev->dev)) << 3);
+              | ((uint16_t)  (dev->dev)) << 3 | ((uint16_t)  (dev->func)) );
 
         // check if this pci_dev corresponds to one of the AMD GPUs
       uint16_t gpu_id;
