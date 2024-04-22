@@ -34,7 +34,6 @@ Prerequisites
                  
 
 
-    .. tab-set::
       .. tab-item:: RHEL
           :sync: RHEL
 
