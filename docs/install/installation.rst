@@ -21,8 +21,7 @@ Prerequisites
 
             
     .. tab-item:: SLES
-        :sync: SLES
-
+        
         .. code-block:: shell
 
                 sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
@@ -33,17 +32,15 @@ Prerequisites
 
 
       .. tab-item:: CentOS
-          :sync: CentOS
-
-            .. code-block:: shell   
+         
+          .. code-block:: shell   
 
                     sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel          
                   
 
 
 .      .. tab-item:: RHEL
-          :sync: RHEL
-
+         
             .. code-block:: shell   
                   :substitutions:
                     
