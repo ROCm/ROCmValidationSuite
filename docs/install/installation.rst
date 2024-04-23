@@ -19,7 +19,7 @@ Prerequisites
 
                sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
 
-.. tab-set::            
+            
     .. tab-item:: SLES
         :sync: SLES
 
@@ -32,20 +32,16 @@ Prerequisites
                 sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
 
-
-.. tab-set::
       .. tab-item:: CentOS
           :sync: CentOS
 
             .. code-block:: shell   
 
-                    sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
-          
+                    sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel          
                   
 
 
-.. tab-set::
-      .. tab-item:: RHEL
+.      .. tab-item:: RHEL
           :sync: RHEL
 
             .. code-block:: shell   
