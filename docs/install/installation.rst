@@ -38,7 +38,7 @@ Prerequisites
                     sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel         
                   
 
-.   .. tab-item:: RHEL
+.  .. tab-item:: RHEL
          
             .. code-block:: shell   
                   :substitutions:
