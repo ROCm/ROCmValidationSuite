@@ -6,7 +6,7 @@
 Installing ROCm Validation Suite (RVS)
 ********************************************************************
 
-Ensure you review the prerequisites carefully before compiling/installing the ROCm Validation Suite (RVS) package.
+Ensure you review the following prerequisites carefully for each operating system before compiling/installing the ROCm Validation Suite (RVS) package.
 
 Prerequisites
 ------------------
@@ -46,26 +46,21 @@ Prerequisites
          
           .. code-block:: shell   
 
-                    sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel         
-                  
+                    sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel                        
 
+                    
 
+Install ROCm stack, rocBLAS, and ROCm-SMI-lib
+-----------------------------------------------
 
-    
+1. Install the ROCm ssoftware tack for Ubuntu/CentOS/SLES/RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details>`_
 
+.. Note::
 
-                      
-
-## Install ROCm stack, rocblas and rocm-smi-lib
-Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
- [ROCm installation guide](https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details.
-
-_**Note:**_
-
-rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
+The rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
 rocm-smi-lib64 package has been renamed to rocm-smi-lib from >= ROCm4.1.
 
-Install rocBLAS and rocm-smi-lib :
+2. Install rocBLAS and rocm-smi-lib:
 
 Ubuntu :
 
@@ -79,8 +74,9 @@ SUSE :
 
     sudo zypper install rocblas rocm-smi-lib
 
-_**Note:**_
-If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't exist. Do below:
+.. Note:
+
+If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't exist, perform the following steps:
 
 Ubuntu :
 
@@ -94,34 +90,48 @@ SUSE :
 
     sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
 
-## Building from Source
+Building from source
+---------------------
+
 This section explains how to get and compile current development stream of RVS.
 
-### Clone repository
+1. Clone the repository.
+
+.. code-block::
 
     git clone https://github.com/ROCm/ROCmValidationSuite.git
 
-### Configure:
+2. Configure. 
+
+.. code-block::
 
     cd ROCmValidationSuite
     cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
 
-    e.g. If ROCm 5.5 was installed,
+For example, if ROCm 5.5 was installed, use the following instruction,
+
+.. code-block::
+
     cmake -B ./build -DROCM_PATH=/opt/rocm-5.5.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-5.5.0 -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm-5.5.0
 
-### Build binary:
+3. Build the binary.
 
-    make -C ./build
+.. code-block::
 
-### Build package:
+      make -C ./build
 
-    cd ./build
-    make package
+4. Build the package.
 
-**Note:**_ based on your OS, only DEB or RPM package will be built. You may
-ignore an error for the unrelated configuration
+.. code-block::
 
-### Install built package:
+      cd ./build
+      make package
+
+.. Note::
+
+Based on your OS, only DEB or RPM package will be built. You may ignore an error for unrelated configurations.
+
+5. Install the built package
 
 Ubuntu :
 
@@ -135,7 +145,7 @@ CentOS & RHEL & SUSE :
 RVS is getting packaged as part of ROCm release starting from 3.0. You can install pre-compiled package as below.
 Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed
 
-### Install package packaged with ROCm release:
+6. Install package packaged with ROCm release.
 
 Ubuntu :
 
@@ -149,36 +159,12 @@ SUSE :
 
     sudo zypper install rocm-validation-suite
 
-## Running RVS
 
-### Run version built from source code
-
-    cd <source folder>/build/bin
-
-    Command examples
-    ./rvs --help ; Lists all options to run RVS test suite
-    ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
-    ./rvs -c conf/gst_single.conf ; Run GST module tests
-
-### Run version pre-complied and packaged with ROCm release
-
-    cd /opt/rocm/bin
-
-    Command examples
-    ./rvs --help ; Lists all options to run RVS test suite
-    ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
-    ./rvs -c conf/gst_single.conf ; Run GST module tests
-
-Similarly, all RVS module tests can be run using scripts present in folder "/opt/rocm/share/rocm-validation-suite/testscripts/".
-
-## Reporting
+Reporting
+-----------
 
 Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option.
 The json output file is stored in /var/tmp folder and the name of the file will be printed.
-
-
 
 RVS can be obtained by building it from source code base or by installing from pre-built package.
 
