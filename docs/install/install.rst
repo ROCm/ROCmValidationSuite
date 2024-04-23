@@ -62,3 +62,17 @@ Reporting
 Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option.
 The JSON output file is stored in /var/tmp folder and the name of the file will be printed.
 
+Building documentation
+------------------------
+
+Run the steps below to build documentation locally.
+
+.. code-block::
+
+        cd docs
+        
+        pip3 install -r .sphinx/requirements.txt
+        
+        python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
+
+
