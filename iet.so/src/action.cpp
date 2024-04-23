@@ -94,7 +94,7 @@ using std::fstream;
 #define IET_DEFAULT_LOG_INTERVAL        1000
 #define IET_DEFAULT_MAX_VIOLATIONS      0
 #define IET_DEFAULT_TOLERANCE           0.1
-#define IET_DEFAULT_SAMPLE_INTERVAL     100
+#define IET_DEFAULT_SAMPLE_INTERVAL     1000
 #define IET_DEFAULT_MATRIX_SIZE         5760
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            500
@@ -295,6 +295,11 @@ bool iet_action::get_all_iet_config_keys(void) {
         std::string(RVS_CONF_TP_FLAG) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
+    }
+
+    /* Set minimum sample interval as default */
+    if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
+      iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
     }
 
     return bsts;
