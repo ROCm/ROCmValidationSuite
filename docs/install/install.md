@@ -48,3 +48,9 @@ RVS package components are installed in `/opt/rocm`. Package contains:
     ./rvs -c conf/gst_single.conf ; Run GST module tests
 
 Similarly, all RVS module tests can be run using scripts present in folder "/opt/rocm/share/rocm-validation-suite/testscripts/".
+
+## Reporting
+
+Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option.
+The json output file is stored in /var/tmp folder and the name of the file will be printed.
+
