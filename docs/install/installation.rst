@@ -31,15 +31,14 @@ Prerequisites
                 sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
 
-      .. tab-item:: CentOS
+    .. tab-item:: CentOS
          
           .. code-block:: shell   
 
-                    sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel          
+                    sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel         
                   
 
-
-.      .. tab-item:: RHEL
+.    .. tab-item:: RHEL
          
             .. code-block:: shell   
                   :substitutions:
