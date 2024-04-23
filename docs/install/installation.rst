@@ -40,8 +40,7 @@ Prerequisites
 
    .. tab-item:: RHEL
          
-            .. code-block:: shell   
-                  :substitutions:
+            .. code-block:: shell                    
                     
                        sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
                       
