@@ -13,8 +13,8 @@ RVS has been developed as open source solution. Its source code and belonging do
 To build RVS from source code, refer to
 [ROCm Validation Suite GitHubsite](https://github.com/ROCm/ROCmValidationSuite) and follow instructions in README file.
 
-Installing from package
----------------------- 
+Package manager installation
+------------------------------
                                    
 Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.
 
