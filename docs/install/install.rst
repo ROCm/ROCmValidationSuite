@@ -33,7 +33,9 @@ Running RVS
 ------------                                                               
 
 Run version built from source code
-===================================                                                               
+===================================   
+
+.. code-block:: bash
 
     cd <source folder>/build/bin
 
@@ -45,6 +47,8 @@ Run version built from source code
 
 Run version pre-complied and packaged with ROCm release
 =======================================================
+
+.. code-block:: bash
 
     cd /opt/rocm/bin
 
