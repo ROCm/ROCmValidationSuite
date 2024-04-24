@@ -16,7 +16,7 @@ GPU Monitor (GM module)
   
 The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information at regular intervals. The module can be configured to halt another RVS modules execution if one of the quantities exceeds a specified boundary value.
 
-## PCI Express State Monitor (PESM module)
+PCI Express State Monitor (PESM module)
 --------------------------------------------
   
 The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU. The module will register a “listener” on a target GPU’s PCIe interconnect, and log a message whenever it detects a state change. The PESM will be able to detect the following state changes:
