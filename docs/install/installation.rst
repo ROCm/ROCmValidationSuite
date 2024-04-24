@@ -208,6 +208,11 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
                   sudo apt install rocm-validation-suite
 
  
+   .. tab-item:: CentOS and RHEL
+
+            .. code-block:: shell  
+
+                  sudo yum install rocm-validation-suite
 
 
 Reporting
