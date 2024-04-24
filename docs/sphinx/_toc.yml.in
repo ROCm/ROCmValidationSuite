@@ -5,7 +5,7 @@ subtrees:
 - caption: Installation
   entries:
   - file: install/installation.rst
-    title: Installation 
+    title: RVS Installation 
 
 - caption: API reference
   entries:
