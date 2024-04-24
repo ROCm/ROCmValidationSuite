@@ -1,14 +1,31 @@
-# Anywhere {branch} is used, the branch name will be substituted.
-# These comments will also be removed.
+defaults:
+  numbered: False
 root: index
 subtrees:
-  - numbered: False
-    entries:
-    - file: ug1main
-    - file: features
-    - file: prerequisites
-    - file: cli
-    - file: regression
-  - caption: About
-    entries:
-    - file: license
+- entries:
+   - file: install/installation.rst
+    title: Installation 
+
+- caption: API reference
+  entries:
+  - file: doxygen/html/files
+    title: API library
+  - file: doxygen/html/globals
+    title: Functions
+  - file: doxygen/html/annotated
+    title: Data structures
+
+- caption: How to
+  entries:
+  - file: how-to/using-rocdecode.rst
+    title: Use ROCm Validation Suite
+
+- caption: Conceptual
+  entries:
+  - file: conceptual/rvs-modules.rst
+    title: ROCm Validation Suite modules
+
+
+- caption: About
+  entries:
+  - file: license.md
