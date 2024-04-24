@@ -199,7 +199,15 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
 
 6. Install package packaged with ROCm release.
 
+.. tab-set::
+    .. tab-item:: Ubuntu
+          :sync: Ubuntu
 
+            .. code-block:: 
+
+                  sudo apt install rocm-validation-suite
+
+ 
 
 
 Reporting
