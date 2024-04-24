@@ -214,6 +214,12 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
 
                   sudo yum install rocm-validation-suite
 
+    .. tab-item:: SUSE
+
+           .. code-block:: shell  
+
+                  sudo zypper install rocm-validation-suite
+
 
 Reporting
 -----------
