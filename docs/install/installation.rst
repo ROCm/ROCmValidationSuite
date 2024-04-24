@@ -196,19 +196,19 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
 6. Install package packaged with ROCm release.
 
 .. tab-set::
-    .. tab-item:: Ubuntu
+      .. tab-item:: Ubuntu
         :sync: Ubuntu
           .. code-block:: 
 
               sudo apt install rocm-validation-suite
 
-   .. tab-item:: CentOS and RHEL
+     .. tab-item:: CentOS and RHEL
 
          .. code-block:: shell  
 
               sudo yum install rocm-validation-suite
 
-   .. tab-item:: SUSE
+     .. tab-item:: SUSE
 
          .. code-block:: shell  
 
