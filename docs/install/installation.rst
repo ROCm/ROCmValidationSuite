@@ -18,11 +18,12 @@ RVS has been developed as open source solution. Its source code and belonging do
 Package manager installation
 ------------------------------
                                    
-Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.
+Based on the OS, use the appropriate package manager to install the rocm-validation-suite package.
 
-For more details, refer to [ROCm Validation Suite GitHub site](https://github.com/ROCm/ROCmValidationSuite).
+For more details, refer to `ROCm Validation Suite GitHub site <https://github.com/ROCm/ROCmValidationSuite>`_
 
-RVS package components are installed in `/opt/rocm`. Package contains:
+RVS package components are installed in `/opt/rocm`. The package contains:
+
 - executable binary (located in _install-base_/bin/rvs)
 - public shared libraries (located in _install-base_/lib)
 - module specific shared libraries (located in _install-base_/lib/rvs)
@@ -31,10 +32,11 @@ RVS package components are installed in `/opt/rocm`. Package contains:
 - user guide (located in _install-base_/share/rocm-validation-suite/userguide)
 - man page (located in _install-base_/share/man)
 
-Ensure you review the following prerequisites carefully for each operating system before compiling/installing the ROCm Validation Suite (RVS) package.
 
 Prerequisites
 ------------------
+
+Ensure you review the following prerequisites carefully for each operating system before compiling/installing the ROCm Validation Suite (RVS) package.
 
 .. tab-set::
     .. tab-item:: Ubuntu
@@ -82,38 +84,54 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
 .. Note::
 
-The rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
-rocm-smi-lib64 package has been renamed to rocm-smi-lib from >= ROCm4.1.
+  The rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64". The `rocm-smi-lib64` package has been renamed to rocm-smi-lib from >= ROCm4.1.
 
-2. Install rocBLAS and rocm-smi-lib:
+2. Install rocBLAS and rocm-smi-lib.
 
-Ubuntu :
+.. tab-set::
+    .. tab-item:: Ubuntu
+        :sync: Ubuntu
 
-    sudo apt-get install rocblas rocm-smi-lib
+          .. code-block:: shell
 
-CentOS & RHEL :
+                  sudo apt-get install rocblas rocm-smi-lib
 
-    sudo yum install --nogpgcheck rocblas rocm-smi-lib
+  .. tab-item:: CentOS and RHEL
+         
+          .. code-block:: shell  
 
-SUSE :
+              sudo yum install --nogpgcheck rocblas rocm-smi-lib
 
-    sudo zypper install rocblas rocm-smi-lib
+  .. tab-item:: SUSE
+         
+          .. code-block:: shell  
+
+              sudo zypper install rocblas rocm-smi-lib
 
 .. Note:
 
 If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't exist, perform the following steps:
 
-Ubuntu :
+.. tab-set::
+    .. tab-item:: Ubuntu
+        :sync: Ubuntu
 
-    sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
+   .. code-block:: shell  
 
-CentOS & RHEL :
+          sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
 
-    sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
 
-SUSE :
+  .. tab-item:: CentOS and RHEL
 
-    sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
+     .. code-block:: shell  
+
+              sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
+
+  .. tab-item:: SUSE
+         
+          .. code-block:: shell  
+
+              sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
 
 Building from source
 ---------------------
