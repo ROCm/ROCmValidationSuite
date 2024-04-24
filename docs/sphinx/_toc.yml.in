@@ -3,7 +3,7 @@ defaults:
 root: index
 subtrees:
 - entries:
-   - file: install/installation.rst
+  - file: install/installation.rst
     title: Installation 
 
 - caption: API reference
