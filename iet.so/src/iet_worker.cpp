@@ -225,7 +225,7 @@ bool IETWorker::do_iet_power_stress(void) {
 
         cur_power_value = 0;
 
-        // get GPU's current average power
+        // get GPU's current/average power
         rsmi_status_t rmsi_stat = rsmi_dev_power_get(smi_device_index, &last_power, &type);
         if (rmsi_stat == RSMI_STATUS_SUCCESS) {
           cur_power_value = static_cast<float>(last_power)/1e6;
@@ -236,7 +236,7 @@ bool IETWorker::do_iet_power_stress(void) {
         rvs::lp::Log(msg, rvs::logtrace);
 
         //update power to max if it is valid
-        if(cur_power_value > 0){
+        if(cur_power_value > 0) {
             max_power = std::max(max_power, cur_power_value);// max of averages
         }
 
@@ -244,9 +244,9 @@ bool IETWorker::do_iet_power_stress(void) {
 
         total_time_ms = time_diff(end_time, iet_start_time);
 
-        msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + " Average power " + " " + std::to_string(cur_power_value);
-        rvs::lp::Log(msg, rvs::loginfo);
+        msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+          "Power(W) " + std::to_string(cur_power_value);
+        rvs::lp::Log(msg, rvs::logresults);
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Total time in ms " + " " + std::to_string(total_time_ms) +
@@ -258,7 +258,7 @@ bool IETWorker::do_iet_power_stress(void) {
         }
 
         //It doesnt make sense to read power continously so slowing down
-        sleep(1000);
+        sleep(sample_interval);
 
         // check if stop signal was received
         if (rvs::lp::Stopping()) {
@@ -331,9 +331,8 @@ void IETWorker::run() {
     if (rvs::lp::Stopping())
          return;
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-               std::to_string(gpu_id) + " " + IET_PASS_KEY + ": " +
-               (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
+    msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+      IET_PASS_KEY + ": " + (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
     rvs::lp::Log(msg, rvs::logresults);
 
     sleep(5);
