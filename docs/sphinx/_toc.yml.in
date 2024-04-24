@@ -2,7 +2,8 @@ defaults:
   numbered: False
 root: index
 subtrees:
-- entries:
+- caption
+  entries:
   - file: install/installation.rst
     title: Installation 
 
