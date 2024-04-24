@@ -36,7 +36,7 @@ The documentation is structured as follows:
 
   .. grid-item-card:: Conceptual
 
-     * :doc:`RVS modules <./conceptual/rvs-modules>`
+     * :doc:`ROCm Validation Suite modules <./conceptual/rvs-modules>`
 
   .. grid-item-card:: Tutorials
 
