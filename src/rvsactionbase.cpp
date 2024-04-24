@@ -32,6 +32,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <thread>
 
 #include "include/rvsloglp.h"
 #include "include/rvs_key_def.h"
@@ -119,7 +120,7 @@ int rvs::actionbase::action_callback(rvs::action_result_t *action_result) {
  *
  * */
 void rvs::actionbase::sleep(const unsigned int ms) {
-  ::usleep(1000*ms);
+  std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
 /**
