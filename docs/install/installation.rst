@@ -174,7 +174,16 @@ Based on your OS, only DEB or RPM package will be built. You may ignore an error
 
 5. Install the built package.
 
+.. tab-set::
+    .. tab-item:: Ubuntu       
+          .. code-block:: 
 
+              sudo dpkg -i rocm-validation-suite*.deb
+
+   .. tab-item:: CentOS, RHEL, and SUSE
+         .. code-block:: shell  
+
+              sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
 **Note:**
 RVS is getting packaged as part of ROCm release starting from 3.0. You can install pre-compiled package as below.
@@ -182,24 +191,7 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
 
 6. Install package packaged with ROCm release.
 
-.. tab-set::
-      .. tab-item:: Ubuntu
-       
-          .. code-block:: 
 
-              sudo apt install rocm-validation-suite
-
-     .. tab-item:: CentOS and RHEL
-
-         .. code-block:: shell  
-
-              sudo yum install rocm-validation-suite
-
-     .. tab-item:: SUSE
-
-         .. code-block:: shell  
-
-              sudo zypper install rocm-validation-suite
 
 
 Reporting
