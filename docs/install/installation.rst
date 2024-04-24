@@ -3,11 +3,11 @@
   :keywords: install, rocm validation suite, rvs, RVS, AMD, ROCm
 
 
-*****************
-Installing RVS
-*****************
+**********************************
+Installing ROCm Validation Suite
+**********************************
     
-RVS can be obtained by building it from source code base or by installing from pre-built package.
+ROCm Validation Suite (RVS) can be obtained by building it from source code base or by installing from pre-built package.
 
 Building from source code
 ---------------------------
@@ -206,8 +206,7 @@ SUSE :
 Reporting
 -----------
 
-Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option.
-The json output file is stored in /var/tmp folder and the name of the file will be printed.
+Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option. The json output file is stored in /var/tmp folder and the name of the file will be printed.
 
 RVS can be obtained by building it from source code base or by installing from pre-built package.
 
