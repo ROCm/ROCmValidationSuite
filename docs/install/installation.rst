@@ -181,11 +181,13 @@ Based on your OS, only DEB or RPM package will be built. You may ignore an error
 .. tab-set::
     .. tab-item:: Ubuntu   
          :sync: Ubuntu
+
             .. code-block:: 
 
               sudo dpkg -i rocm-validation-suite*.deb
 
    .. tab-item:: CentOS, RHEL, and SUSE
+
          .. code-block:: shell  
 
               sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
