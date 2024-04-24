@@ -172,18 +172,9 @@ For example, if ROCm 5.5 was installed, use the following instruction,
 
 Based on your OS, only DEB or RPM package will be built. You may ignore an error for unrelated configurations.
 
-5. Install the built package
+5. Install the built package.
 
-.. tab-set::
-    .. tab-item:: Ubuntu       
-          .. code-block:: 
 
-              sudo dpkg -i rocm-validation-suite*.deb
-
-   .. tab-item:: CentOS, RHEL, and SUSE
-         .. code-block:: shell  
-
-              sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
 **Note:**
 RVS is getting packaged as part of ROCm release starting from 3.0. You can install pre-compiled package as below.
