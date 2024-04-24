@@ -18,7 +18,7 @@ subtrees:
 
 - caption: How to
   entries:
-  - file: how-to/use-rvs.rst
+  - file: how to/use-rvs.rst
     title: Use ROCm Validation Suite
 
 - caption: Conceptual
