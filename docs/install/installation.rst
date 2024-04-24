@@ -90,8 +90,7 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
 .. tab-set::
     .. tab-item:: Ubuntu
-        :sync: Ubuntu
-
+      
           .. code-block:: shell
 
               sudo apt-get install rocblas rocm-smi-lib
@@ -114,8 +113,7 @@ If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't 
 
 .. tab-set::
     .. tab-item:: Ubuntu
-        :sync: Ubuntu
-
+       
          .. code-block:: shell  
 
               sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
@@ -178,7 +176,7 @@ Based on your OS, only DEB or RPM package will be built. You may ignore an error
 
 .. tab-set::
     .. tab-item:: Ubuntu
-        :sync: Ubuntu
+       
           .. code-block:: 
 
               sudo dpkg -i rocm-validation-suite*.deb
@@ -197,7 +195,7 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
 
 .. tab-set::
       .. tab-item:: Ubuntu
-        :sync: Ubuntu
+       
           .. code-block:: 
 
               sudo apt install rocm-validation-suite
