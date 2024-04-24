@@ -21,8 +21,7 @@ The documentation is structured as follows:
 
   .. grid-item-card:: Install
 
-    * :doc:`Prerequisites <./install/prerequisites>`
-    * :doc:`RVS installation <./install/installation>`
+       * :doc:`RVS installation <./install/installation>`
 
   .. grid-item-card:: API library
 
