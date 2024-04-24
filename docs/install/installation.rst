@@ -2,9 +2,34 @@
   :description: Install ROCm Validation Suite
   :keywords: install, rocm validation suite, rvs, RVS, AMD, ROCm
 
-********************************************************************
-Installing ROCm Validation Suite (RVS)
-********************************************************************
+
+*****************
+Installing RVS
+*****************
+    
+RVS can be obtained by building it from source code base or by installing from pre-built package.
+
+Building from source code
+---------------------------
+
+RVS has been developed as open source solution. Its source code and belonging documentation can be found at AMD's GitHub page.
+
+
+Package manager installation
+------------------------------
+                                   
+Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.
+
+For more details, refer to [ROCm Validation Suite GitHub site](https://github.com/ROCm/ROCmValidationSuite).
+
+RVS package components are installed in `/opt/rocm`. Package contains:
+- executable binary (located in _install-base_/bin/rvs)
+- public shared libraries (located in _install-base_/lib)
+- module specific shared libraries (located in _install-base_/lib/rvs)
+- configuration files (located in _install-base_/share/rocm-validation-suite/conf)
+- testscripts (located in _install-base_/share/rocm-validation-suite/testscripts)
+- user guide (located in _install-base_/share/rocm-validation-suite/userguide)
+- man page (located in _install-base_/share/man)
 
 Ensure you review the following prerequisites carefully for each operating system before compiling/installing the ROCm Validation Suite (RVS) package.
 
@@ -168,25 +193,6 @@ The json output file is stored in /var/tmp folder and the name of the file will 
 
 RVS can be obtained by building it from source code base or by installing from pre-built package.
 
-Building RVS from source code
------------------------------
-
-RVS has been developed as open source solution. Its source code and belonging documentation can be found at AMD's GitHub page.
-In order to build RVS from source code, refer to `ROCm Validation Suite GitHub site <https://github.com/ROCm/ROCmValidationSuite>`_ and follow instructions in the README file.
-
-Installing from package manager
---------------------------------
-Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package. For more details, refer to `ROCm Validation Suite GitHub site <https://github.com/ROCm/ROCmValidationSuite>`_
-
-RVS package components are installed in `/opt/rocm`. The package contains:
-
-- executable binary (located in _install-base_/bin/rvs)
-- public shared libraries (located in _install-base_/lib)
-- module specific shared libraries (located in _install-base_/lib/rvs)
-- configuration files (located in _install-base_/share/rocm-validation-suite/conf)
-- testscripts (located in _install-base_/share/rocm-validation-suite/testscripts)
-- user guide (located in _install-base_/share/rocm-validation-suite/userguide)
-- man page (located in _install-base_/share/man)
 
 Running RVS
 ------------
@@ -218,6 +224,20 @@ Run version pre-complied and packaged with ROCm release
     ./rvs -c conf/gst_single.conf ; Run GST module tests
 
 Similarly, all RVS module tests can be run using scripts present in folder "/opt/rocm/share/rocm-validation-suite/testscripts/".
+
+Building documentation
+------------------------
+
+Run the steps below to build documentation locally.
+
+.. code-block::
+
+        cd docs
+        
+        pip3 install -r .sphinx/requirements.txt
+        
+        python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
+
 
 
 
