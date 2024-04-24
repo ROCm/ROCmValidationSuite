@@ -88,24 +88,6 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
 2. Install rocBLAS and rocm-smi-lib.
 
-.. tab-set::
-    .. tab-item:: Ubuntu
-      
-          .. code-block:: shell
-
-              sudo apt-get install rocblas rocm-smi-lib
-
-    .. tab-item:: CentOS and RHEL
-         
-          .. code-block:: shell  
-
-              sudo yum install --nogpgcheck rocblas rocm-smi-lib
-
-    .. tab-item:: SUSE
-         
-          .. code-block:: shell  
-
-              sudo zypper install rocblas rocm-smi-lib
 
 .. Note:
 
@@ -191,7 +173,24 @@ Please make sure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are alrea
 
 6. Install package packaged with ROCm release.
 
+.. tab-set::
+      .. tab-item:: Ubuntu
+       
+          .. code-block:: 
 
+              sudo apt install rocm-validation-suite
+
+     .. tab-item:: CentOS and RHEL
+
+         .. code-block:: shell  
+
+              sudo yum install rocm-validation-suite
+
+     .. tab-item:: SUSE
+
+         .. code-block:: shell  
+
+              sudo zypper install rocm-validation-suite
 
 
 Reporting
