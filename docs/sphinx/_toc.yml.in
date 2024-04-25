@@ -20,6 +20,8 @@ subtrees:
   entries:
   - file: how to/use-rvs.rst
     title: Use ROCm Validation Suite
+  - file: how to/configure-rvs.rst
+    title: Configure ROCm Validation Suite
 
 - caption: Conceptual
   entries:
