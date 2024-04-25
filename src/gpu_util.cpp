@@ -627,3 +627,58 @@ int rvs::gpulist::gpu2domain(const uint16_t GpuID, uint16_t* pDomain) {
   return 0;
 }
 
+/* common function*/
+bool rvs::gpulist::availableGPUs(std::map<int, uint16_t> &gpus_device_index, bool property_all,
+                uint16_t prop_devId,const std::vector<uint16_t>& prop_devices,
+                int  hip_num_gpu_devices ){
+    bool amd_gpus_found = false;
+    for (int i = 0; i < hip_num_gpu_devices; i++) {
+        // get GPU device properties
+        hipDeviceProp_t props;
+        hipGetDeviceProperties(&props, i);
+
+        // compute device location_id (needed in order to identify this device
+        // in the gpus_id/gpus_device_id list
+        unsigned int dev_location_id =
+            ((((unsigned int) (props.pciBusID)) << 8) | (((unsigned int) (props.pciDeviceID)) << 3));
+
+        uint16_t devId;
+        if (location2device(dev_location_id, &devId)) {
+          continue;
+        }
+
+        // filter by device id if needed
+        if (prop_devId > 0 && prop_devId != devId)
+          continue;
+
+        // check if this GPU is part of the GPU stress test
+        // (device = "all" or the gpu_id is in the device: <gpu id> list)
+        bool cur_gpu_selected = false;
+        uint16_t gpu_id;
+        // if not and AMD GPU just continue
+        if (location2gpu(dev_location_id, &gpu_id))
+          continue;
+
+
+        if (property_all) {
+            cur_gpu_selected = true;
+        } else {
+            // search for this gpu in the list
+            // provided under the <device> property
+            auto it_gpu_id = find(prop_devices.begin(),
+                                  prop_devices.end(),
+                                  gpu_id);
+
+            if (it_gpu_id != prop_devices.end())
+                cur_gpu_selected = true;
+        }
+
+        if (cur_gpu_selected) {
+            gpus_device_index.insert
+                (std::pair<int, uint16_t>(i, gpu_id));
+            amd_gpus_found = true;
+        }
+    }
+    return amd_gpus_found;
+}
+

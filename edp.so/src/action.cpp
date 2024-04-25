@@ -549,54 +549,8 @@ int edp_action::get_all_selected_gpus(void) {
     system(buff);
 
     // iterate over all available & compatible AMD GPUs
-    for (int i = 0; i < hip_num_gpu_devices; i++) {
-        // get GPU device properties
-        hipDeviceProp_t props;
-        hipGetDeviceProperties(&props, i);
-
-        // compute device location_id (needed in order to identify this device
-        // in the gpus_id/gpus_device_id list
-        unsigned int dev_location_id =
-            ((((unsigned int) (props.pciBusID)) << 8) | (props.pciDeviceID));
-
-        uint16_t devId;
-        if (rvs::gpulist::location2device(dev_location_id, &devId)) {
-          continue;
-        }
-
-        // filter by device id if needed
-        if (property_device_id > 0 && property_device_id != devId)
-          continue;
-
-        // check if this GPU is part of the GPU stress test
-        // (device = "all" or the gpu_id is in the device: <gpu id> list)
-        bool cur_gpu_selected = false;
-        uint16_t gpu_id;
-        // if not and AMD GPU just continue
-        if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
-          continue;
-
-
-        if (property_device_all) {
-            cur_gpu_selected = true;
-        } else {
-            // search for this gpu in the list
-            // provided under the <device> property
-            auto it_gpu_id = find(property_device.begin(),
-                                  property_device.end(),
-                                  gpu_id);
-
-            if (it_gpu_id != property_device.end())
-                cur_gpu_selected = true;
-        }
-
-        if (cur_gpu_selected) {
-            edp_gpus_device_index.insert
-                (std::pair<int, uint16_t>(i, gpu_id));
-            amd_gpus_found = true;
-        }
-    }
-
+    amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, edp_gpus_device_index,
+                    property_device, property_device_id, property_device_all);
     if (amd_gpus_found) {
         if (do_gpu_stress_test(edp_gpus_device_index))
             return 0;
