@@ -1,12 +1,5 @@
 
-.. meta::
-  :description: Using ROCm Validation Suite
-  :keywords: modules, installation, rocm validation suite, validation, AMD, ROCm
-
-
-
 # Configuration Files
-
 
 The ROCm Validation Suite (RVS) tool allows users to indicate a configuration file, adhering to the YAML 1.2 specification, which details the validation tests to run and the
 expected results of a test, benchmark or configuration check.
