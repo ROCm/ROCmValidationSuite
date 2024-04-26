@@ -5,7 +5,7 @@ subtrees:
 - caption: Installation
   entries:
   - file: install/installation.rst
-    title: RVS Installation 
+    title: ROCm Validation Suite installation 
 
 - caption: API reference
   entries:
