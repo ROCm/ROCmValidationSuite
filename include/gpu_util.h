@@ -71,7 +71,6 @@ class gpulist {
   static int domlocation2gpu(const uint16_t domainID, const uint16_t LocationID,
                                     uint16_t* pGPUID);
   static int node2bdf(const uint16_t NodeID, std::string& pPciBDF);
-
  protected:
   //! Array of GPU location IDs
   static std::vector<uint16_t> location_id;

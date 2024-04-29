@@ -224,7 +224,8 @@ int smqt_action::run(void) {
     | PCI_FILL_CLASS | PCI_FILL_EXT_CAPS | PCI_FILL_CAPS | PCI_FILL_PHYS_SLOT);
 
     // computes the actual dev's location_id (sysfs entry)
-    uint16_t dev_location_id = ((((uint16_t)(dev->bus)) << 8) | (dev->func));
+    uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
+              | ((uint16_t)  (dev->dev)) << 3 | ((uint16_t)  (dev->func)) );
 
     uint16_t gpu_id;
     // if not and AMD GPU just continue
