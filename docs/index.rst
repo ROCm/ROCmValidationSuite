@@ -23,11 +23,6 @@ The documentation is structured as follows:
 
        * :doc:`ROCm Validation Suite installation <./install/installation>`
 
-  .. grid-item-card:: API library
-
-    * :doc:`API library <../doxygen/html/files>`
-    * :doc:`Functions <../doxygen/html/globals>`
-    * :doc:`Data structures <../doxygen/html/annotated>`
 
   .. grid-item-card:: How to
 
