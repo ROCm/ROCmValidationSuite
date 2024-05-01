@@ -7,14 +7,6 @@ subtrees:
   - file: install/installation.rst
     title: ROCm Validation Suite installation 
 
-- caption: API reference
-  entries:
-  - file: doxygen/html/files
-    title: API library
-  - file: doxygen/html/globals
-    title: Functions
-  - file: doxygen/html/annotated
-    title: Data structures
 
 - caption: How to
   entries:
