@@ -21,7 +21,7 @@ The documentation is structured as follows:
 
   .. grid-item-card:: Install
 
-       * :doc:`ROCm Validation Suide installation <./install/installation>`
+       * :doc:`ROCm Validation Suite installation <./install/installation>`
 
   .. grid-item-card:: API library
 
