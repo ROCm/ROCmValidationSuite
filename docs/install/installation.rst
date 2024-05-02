@@ -7,11 +7,11 @@
 Installing ROCm Validation Suite
 **********************************
     
-You can obtain ROCm Validation Suite (RVS) by building it 
+You can obtain ROCm Validation Suite (RVS) by building it from:
 
-* from the source code base 
+* the source code base 
 
-* installing from a pre-built package
+* a pre-built package
 
 Building from source code
 ---------------------------
@@ -84,7 +84,7 @@ Ensure you review the following prerequisites carefully for each operating syste
 Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 -----------------------------------------------
 
-1. Install the ROCm ssoftware tack for Ubuntu/CentOS/SLES/RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details>`_
+1. Install the ROCm software tack for Ubuntu/CentOS/SLES/RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details>`_
 
 .. Note::
 
@@ -115,7 +115,7 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
 .. Note:
 
-If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't exist, perform the following steps:
+If rocm-smi-lib is already installed but `/opt/rocm/lib/librocm_smi64.so` doesn't exist, perform the following steps:
 
 .. tab-set::
     .. tab-item:: Ubuntu
@@ -178,7 +178,11 @@ For example, if ROCm 5.5 was installed, use the following instruction,
 
 .. Note::
 
-Based on your OS, only DEB or RPM package will be built. You may ignore an error for unrelated configurations.
+Based on your OS, only DEB or RPM package will be built. 
+
+.. Note::
+
+You may ignore an error for unrelated configurations.
 
 5. Install the built package.
 
@@ -197,9 +201,9 @@ Based on your OS, only DEB or RPM package will be built. You may ignore an error
                 sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
 
-**Note:**
-RVS is getting packaged as part of ROCm release starting from 3.0. You can install pre-compiled package as below.
-Ensure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed.
+.. Note::
+
+RVS is getting packaged as part of ROCm release starting from 3.0. You can install the pre-compiled package as indicated below. Ensure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed.
 
 6. Install package packaged with ROCm release.
 
@@ -228,9 +232,9 @@ Ensure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already install
 Reporting
 -----------
 
-Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option. The json output file is stored in /var/tmp folder and the name of the file will be printed.
+Test results, errors, and verbose logs are printed as terminal output. To enable JSON logging use "-j" command line option. The json output file is stored in /var/tmp folder and the name of the file will be printed.
 
-RVS can be obtained by building it from source code base or by installing from pre-built package.
+You can build RVS from the source code base or by installing from a pre-built package. See the preceding sections for more details. 
 
 
 Running RVS
@@ -262,7 +266,7 @@ Run version pre-complied and packaged with ROCm release
     ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c conf/gst_single.conf ; Run GST module tests
 
-Similarly, all RVS module tests can be run using scripts present in folder "/opt/rocm/share/rocm-validation-suite/testscripts/".
+Similarly, you can run all RVS module tests using scripts in the "/opt/rocm/share/rocm-validation-suite/testscripts/" folder.
 
 Building documentation
 ------------------------
