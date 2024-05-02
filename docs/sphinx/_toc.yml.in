@@ -11,7 +11,7 @@ subtrees:
 - caption: How to
   entries:
    - file: how to/configure-rvs.rst
-    title: Configure ROCm Validation Suite
+     title: Configure ROCm Validation Suite
 
 - caption: Conceptual
   entries:
