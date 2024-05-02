@@ -22,8 +22,7 @@ The documentation is structured as follows:
 
   .. grid-item-card:: How to
 
-    * :doc:`Use ROCm Validation Suite <how to/use-rvs>`
-    * :doc:`Configure ROCm Validation Suite <how to/configure-rvs>`
+       * :doc:`Configure ROCm Validation Suite <how to/configure-rvs>`
 
   .. grid-item-card:: Conceptual
 
