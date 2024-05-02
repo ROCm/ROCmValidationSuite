@@ -7,12 +7,16 @@
 Installing ROCm Validation Suite
 **********************************
     
-ROCm Validation Suite (RVS) can be obtained by building it from source code base or by installing from pre-built package.
+You can obtain ROCm Validation Suite (RVS) by building it 
+
+* from the source code base 
+
+* installing from a pre-built package
 
 Building from source code
 ---------------------------
 
-RVS has been developed as open source solution. Its source code and belonging documentation can be found at AMD's GitHub page.
+RVS has been developed as an open source solution. You can find the source code and related documentation `here <https://github.com/ROCm/ROCmValidationSuite>`. 
 
 
 Package manager installation
