@@ -467,11 +467,6 @@ int gpup_action::run(void) {
       sts = property_get_value(*it);
       sts = property_io_links_get_value(*it);
       // so far so good?
-      if (sts == 0) {
-        RVSTRACE_
-        // do io_links properties
-        //sts = property_io_links_get_value(*it);
-      }
 
       if (bjson) {  // json logging stuff
         RVSTRACE_
@@ -481,7 +476,6 @@ int gpup_action::run(void) {
 
       if (sts) {
         RVSTRACE_
-        //break;
       }
     }  // for all gpu_id
 
