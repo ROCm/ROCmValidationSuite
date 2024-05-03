@@ -15,6 +15,7 @@ std::string findPattern(std::string word){
   return std::string{};
 }
 
+
 std::pair<std::string, std::string>
 DebPackageInfo::getNameVers(std::string word){
   std::string pname{word};
@@ -41,28 +42,6 @@ DebPackageInfo::getNameVers(std::string word){
   } 
   return {remSpaces(pname), remSpaces(pvers)};
 }
-/*
-// decide on output of package manager
-std::pair<std::string, std::string>
-DebPackageInfo::getNameVers(std::string word){
-  std::string pname{word};
-  std::string pvers{"0+"};
-
-  auto it = word.find("(=");
-  if(it != std::string::npos){
-    pname = word.substr(0, it);
-    pvers = word.substr(it+2);
-    //remove last ) as it wont help
-    pvers = pvers.substr(0, pvers.size()-1);
-    auto hyp = pvers.find("-");
-    if (hyp != std::string::npos){
-      pvers = pvers.substr(0,hyp);
-    }
-    //return {remSpaces(pname), remSpaces(pvers)};
-  }else if(it = word.find("(>="))
-  return {remSpaces(pname), remSpaces(pvers)};
-}
-*/
 
 void DebPackageInfo::readDepLine(const std::string& depLine){
   std::stringstream ss{std::string{depLine}};
