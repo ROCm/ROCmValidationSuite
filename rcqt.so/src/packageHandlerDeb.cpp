@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -66,18 +66,25 @@ bool PackageHandlerDeb::pkgrOutputParser(const std::string& s_data, package_info
     } else if( line.find("Package") != std::string::npos){
       info.name = get_last_word(line);
       if(found) // prevent further processing
-				return found;
+        return found;
     }
   }
   return found;
 }
 
 std::string PackageHandlerDeb::getInstalledVersion(const std::string& package){
-
+  if (package.find(ORDEP) != std::string::npos){
+    auto first = package.substr(ORDEP.size());
+    auto comma = first.find(",");
+    auto sec = first.substr(comma+1);
+    first = first.substr(0, comma);
+    auto fver = getInstalledVersion(first);
+    if (fver.empty())
+	return getInstalledVersion(sec);
+  }
   package_info pinfo;
   std::stringstream ss;
   bool status;
-
   status = getPackageInfo(package, metaInfo->getPackageMgrName(), metaInfo->getInfoCmdName(), "", ss);
   if (true != status) {
     std::cout << "getPackageInfo failed !!!" << std::endl;
