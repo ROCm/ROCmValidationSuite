@@ -440,7 +440,9 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so
   COMMENT "Generating rocm_smi_lib targets"
   VERBATIM
 )
-
+else()
+  find_package(rocm_smi REQUIRED)
+  find_package(rocblas REQUIRED)
 endif()  # if (RVS_ROCMSMI EQUAL 1)
 
 if (RVS_ROCBLAS EQUAL 1)

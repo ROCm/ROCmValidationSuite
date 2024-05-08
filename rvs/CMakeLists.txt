@@ -118,20 +118,15 @@ include_directories(./ ../ ${YAML_CPP_INCLUDE_DIRS})
 link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH})
 
 ## additional libraries
-#set(ROCBLAS_LIB "rocblas")
-#set(ROC_THUNK_NAME "hsakmt")
-#set(CORE_RUNTIME_NAME "hsa-runtime")
-#set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
 ## find packages and dependencies
-## rocblas higher level already find_package'ed 
-find_package(rocm_smi REQUIRED)
+
 find_package(hsakmt REQUIRED)
 find_package(hsa-runtime64 REQUIRED)
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
 target_link_libraries(${RVS_TARGET} rvslib
-  rocblas rocm_smi hsakmt hsa-runtime64 ${ROCM_CORE} ${PROJECT_LINK_LIBS})
+  ${ROCBLAS_LIB} ${ROCM_SMI_LIB} hsakmt hsa-runtime64 ${ROCM_CORE} ${PROJECT_LINK_LIBS})
 add_dependencies(${RVS_TARGET} rvslib)
 
 install(TARGETS ${RVS_TARGET}

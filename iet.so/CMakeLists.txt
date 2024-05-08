@@ -76,9 +76,10 @@ add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
-set(ROCBLAS_LIB "rocblas")
+#set(ROCBLAS_LIB "rocblas")
 set(HIP_HCC_LIB "amdhip64")
-
+find_package(rocblas REQUIRED)
+#find_package(amdhip64 REQUIRED)
 #ROCBLAS VERSION CHECK FLAGS TO CHECK REORG VERSION 2.44.0
 add_compile_options(-DRVS_ROCBLAS_VERSION_FLAT=${RVS_ROCBLAS_VERSION_FLAT})
 
@@ -133,7 +134,8 @@ if(DEFINED RVS_ROCMSMI)
     RETURN()
     endif()
 
-    if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
+    #if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
+    if(NOT DEFINED ROCBLAS_LIBRARY )
       message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
       RETURN()
     endif()
@@ -157,7 +159,8 @@ endif()
 ## define include directories
 include_directories(./ ../ ${ROCM_SMI_INC_DIR} ${ROCBLAS_INC_DIR} ${ROCR_INC_DIR} ${HIP_INC_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH})
+#link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH})
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR}  ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 
