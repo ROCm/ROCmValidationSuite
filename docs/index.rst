@@ -10,7 +10,7 @@ The ROCm Validation Suite (RVS) is a system validation and diagnostics tool for 
 
 RVS is a collection of tests, benchmarks and qualification tools each targeting a specific sub-system of the ROCm platform. All of the tools are implemented in software and share a common command line interface. Each set of tests are implemented in a “module” which is a library encapsulating the functionality specific to the tool. The CLI can specify the directory containing modules to use when searching for libraries to load. Each module may have a set of options that it defines and a configuration file that supports its execution.
 
-The documentation is structured as follows:
+For more information, refer to `GitHub. <https://github.com/ROCm/ROCmValidationSuite>`_
 
 .. grid:: 2
   :gutter: 3
