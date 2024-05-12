@@ -1,9 +1,9 @@
 .. meta::
-  :description: Video decoding pipeline
-  :keywords: video decoder, video decoding, rocDecode, AMD, ROCm
+  :description: Install ROCm Validation Suite
+  :keywords: install, rocm validation suite, rvs, RVS, AMD, ROCm
 
 ***********************************
-ROCmValidationSuite Architecture
+ROCm Validation Suite modules
 ***********************************
 
 ROCm Validation Suite (RVS) is implemented as a set of modules each implementing a particular test functionality. Modules are invoked from one central place (aka Launcher), which is responsible for reading input (command line and test configuration file), loading and running appropriate modules and providing test output. RVS architecture is built around concept of Linux shared objects, thus allowing for easy addition of new modules in the future.
