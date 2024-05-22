@@ -125,6 +125,11 @@ if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime_api.h)
   RETURN()
 endif()
 
+if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_ext.h)
+  message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
+  RETURN()
+endif()
+
 # Determine Roc Runtime header files are accessible
 if(DEFINED RVS_ROCMSMI)
   if(NOT RVS_ROCMSMI EQUAL 1)

@@ -30,6 +30,7 @@
 #include <memory>
 #include <exception>
 
+#include "hip/hip_ext.h"
 #include "rocm_smi/rocm_smi.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
@@ -161,16 +162,23 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
         //call the gemm blas
         gpu_blas->run_blass_gemm(iet_ops_type);
 
-        /* Set callback to be called upon completion of blas gemm operations */
-        gpu_blas->set_callback(blas_callback, (void *)this);
+        if (iet_bw_workload) {
+          // Waits for GEMM operation to complete
+          if(!gpu_blas->is_gemm_op_complete())
+            continue;
+        }
+        else {
+          /* Set callback to be called upon completion of blas gemm operations */
+          gpu_blas->set_callback(blas_callback, (void *)this);
 
-        std::unique_lock<std::mutex> lk(mutex);
-        cv.wait(lk);
+          std::unique_lock<std::mutex> lk(mutex);
+          cv.wait(lk);
 
-        if(!blas_status) {
-          msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
-          rvs::lp::Log(msg, rvs::logtrace);
+          if(!blas_status) {
+            msg = "[" + action_name + "] " + MODULE_NAME + " " +
+              std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
+            rvs::lp::Log(msg, rvs::logtrace);
+          }
         }
 
         //get the end time
@@ -191,7 +199,6 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
     }
 }
 
-
 /**
  * @brief performs the Input EDPp stress (IET) test on the given GPU (attempts to sustain
  * the target power)
@@ -211,9 +218,20 @@ bool IETWorker::do_iet_power_stress(void) {
     bool      start = true;
     rvs::action_result_t action_result;
     RSMI_POWER_TYPE type = RSMI_INVALID_POWER;
+    char gpuid_buff[12];
+    std::thread compute_t;
+    std::thread bandwidth_t;
 
-    std::thread t(&IETWorker::blasThread, this, gpu_device_index, matrix_size, iet_ops_type, start, run_duration_ms,
+    // Start default compute thread
+    compute_t = std::thread(&IETWorker::blasThread, this, gpu_device_index, matrix_size, iet_ops_type, start, run_duration_ms,
             iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset);
+
+    // Start bandwidth thread if bandwidth workload is enabled
+    if (iet_bw_workload) {
+      bandwidth_t = std::thread(&IETWorker::bandwidthThread, this, gpu_device_index, run_duration_ms);
+    }
+
+    snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
 
     // record EDPp ramp-up start time
     iet_start_time = std::chrono::system_clock::now();
@@ -244,7 +262,7 @@ bool IETWorker::do_iet_power_stress(void) {
 
         total_time_ms = time_diff(end_time, iet_start_time);
 
-        msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+        msg = "[" + action_name + "] " + "[GPU:: " + gpuid_buff + "] " +
           "Power(W) " + std::to_string(cur_power_value);
         rvs::lp::Log(msg, rvs::logresults);
 
@@ -298,10 +316,19 @@ end:
 
     endtest = true;
 
-    if (true == t.joinable()) {
+    if (true == compute_t.joinable()) {
 
         try {
-            t.join();
+            compute_t.join();
+        }
+        catch (std::exception& e) {
+            std::cout << "Standard exception: " << e.what() << std::endl;
+        }
+    }
+    if (true == bandwidth_t.joinable()) {
+
+        try {
+            bandwidth_t.join();
         }
         catch (std::exception& e) {
             std::cout << "Standard exception: " << e.what() << std::endl;
@@ -316,6 +343,7 @@ end:
  */
 void IETWorker::run() {
     string msg, err_description;
+    char gpuid_buff[12];
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " start " + std::to_string(target_power);
@@ -331,7 +359,9 @@ void IETWorker::run() {
     if (rvs::lp::Stopping())
          return;
 
-    msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+    snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
+
+    msg = "[" + action_name + "] " + "[GPU:: " + gpuid_buff + "] " +
       IET_PASS_KEY + ": " + (pass ? IET_RESULT_PASS_MESSAGE : IET_RESULT_FAIL_MESSAGE);
     rvs::lp::Log(msg, rvs::logresults);
 
@@ -354,5 +384,242 @@ void IETWorker::blas_callback (bool status, void *user_data) {
   std::lock_guard<std::mutex> lk(worker->mutex);
   worker->blas_status = status;
   worker->cv.notify_one();
+}
+
+// Bandwidth workload configurations
+
+constexpr uint64_t mall_size = 256 * 1024 * 1024;
+
+constexpr uint64_t mem_size_per_wg = 32 * 1024 * 1024;
+const uint64_t wg_mem_pad = 4352;
+constexpr uint64_t wg_stride = mem_size_per_wg + wg_mem_pad;
+const uint32_t vmem_unroll = 2;
+const uint32_t wg_size = 1024;
+
+#define T __uint128_t
+
+const uint32_t wg_count = 80;
+const bool fill_zero = false;
+const bool nt_loads = false;
+const bool report_metric = false;
+
+template<bool NT> __device__ T _load(T* __restrict p)
+{
+  T v;
+  if (NT)
+  {
+    v = __builtin_nontemporal_load(p);
+  }
+  else
+  {
+    v = *p;
+  }
+  return v;
+}
+
+template<bool NT>
+__global__ void bw_kernel(T* __restrict p, T* __restrict r, uint32_t iters)
+{
+  T v{};
+  T* wg_p = (T*)((char*)p + blockIdx.x * wg_stride);
+  volatile __shared__ uint32_t m[16384];
+  uint32_t t = threadIdx.x * 4;
+  uint32_t d;
+
+  for (uint32_t i = 0; i < iters; i++)
+  {
+    uint32_t offs = i * vmem_unroll * wg_size + threadIdx.x;
+#pragma unroll
+    for (uint32_t j = 0; j < vmem_unroll; j++)
+    {
+      v |= _load<NT>(&wg_p[offs]);
+      offs += wg_size;
+    }
+  }
+
+  if (v == 10000000)
+  {
+    *r = v + m[100];
+  }
+}
+
+bool FillMemory(uint32_t* p, size_t size)
+{
+  const size_t fitems = 65 * 1024;
+  const size_t fsize = fitems * sizeof(uint32_t);
+
+  uint32_t* f{};
+  if(hipSuccess != hipHostMalloc(&f, fsize))
+    return false;
+
+  for (size_t i = 0; i < fitems; i++)
+  {
+    f[i] = fill_zero ? 0 : rand();
+  }
+
+  while (size > 0)
+  {
+    if(hipSuccess != hipMemcpy(p, f, std::min(fsize, size), hipMemcpyDefault))
+      return false;
+
+    p += fitems;
+    size -= std::min(fsize, size);
+  }
+
+  hipHostFree(f);
+  return true;
+}
+
+void RunKernel(hipEvent_t& start, hipEvent_t& stop, T* __restrict p, T* __restrict r,
+    uint32_t fetch_iters, hipStream_t stream)
+{
+  const dim3 grid_dim(wg_count, 1, 1);
+  const dim3 block_dim(wg_size, 1, 1);
+  uint32_t shared_mem = 0;
+
+  hipExtLaunchKernelGGL(nt_loads ? bw_kernel<true> : bw_kernel<false>,
+      grid_dim, block_dim, shared_mem, stream, start, stop, 0,
+      p, r, fetch_iters);
+}
+
+void IETWorker::bandwidthThread(int gpuIdx, uint64_t run_duration_ms)
+{
+  hipStream_t stream = 0;
+  std::vector<uint32_t*> bufs;
+
+  uint32_t* r{};
+  hipEvent_t start;
+  hipEvent_t stop;
+
+  int b = 0;
+  int test_iters = 0;
+  double min_bw = __FLT_MAX__;
+  double max_bw = 0.0f;
+  double avg_bw = 0.0f;
+
+  double duration = 0.0f;
+  std::chrono::time_point<std::chrono::system_clock> start_time, end_time;
+
+  srand(time(NULL));
+
+  // Select GPU device for bandwidth workload
+  if (hipSetDevice(gpuIdx) != hipSuccess) {
+    // cannot select the given GPU device
+    return;
+  }
+
+  // Create device specific stream for bandwidth workload
+  if (hipStreamCreate(&stream) != hipSuccess) {
+    std::cout << "\n hipStreamCreate() failed !!!" << "\n";
+    return;
+  }
+
+  // Prepare device memory for bandwidth workload
+
+  uint32_t wg_fetch_size = wg_size * sizeof(T) * vmem_unroll;
+  uint32_t fetch_iters = mem_size_per_wg / wg_fetch_size;
+
+  // ensure fetch is happening in full blocks per WG
+  if(mem_size_per_wg % wg_fetch_size != 0)
+    return;
+
+  uint64_t alloc_size = (uint64_t)wg_count * wg_stride;
+  uint64_t data_size = (uint64_t)wg_count * mem_size_per_wg;
+
+  int buf_count = std::max((int)2, (int)(mall_size * 2 / data_size + 1));
+  for (int i = 0; i < buf_count; i++)
+  {
+    uint32_t* p{};
+
+    if (hipMalloc(&p, alloc_size) != hipSuccess)
+       goto end;
+
+    if (true != FillMemory(p, alloc_size)) {
+      hipFree(p);
+      goto end;
+    }
+
+    bufs.push_back(p);
+  }
+
+  if (hipMalloc(&r, 4096) != hipSuccess)
+    goto end;
+
+  // Execute bandwidth workload
+
+  if (hipEventCreate(&start) != hipSuccess) {
+    goto end;
+  }
+  if (hipEventCreate(&stop) != hipSuccess) {
+    goto end;
+  }
+
+  for (int i = 0; i < buf_count; i++)
+  {
+    RunKernel(start, stop, (T*)bufs[i], (T*)r, fetch_iters, stream);
+  }
+
+  start_time = std::chrono::system_clock::now();
+
+  do
+  {
+    RunKernel(start, stop, (T*)bufs[b], (T*)r, fetch_iters, stream);
+    b = (b + 1) % buf_count;
+
+    if(hipSuccess != hipEventSynchronize(stop))
+      goto end;
+
+    float t_ms;
+    if(hipSuccess != hipEventElapsedTime(&t_ms, start, stop))
+      goto end;
+
+    double bw = (double)data_size / (t_ms  / 1000.0) / 1000000000;
+    if (!report_metric)
+    {
+      bw /= 1.024 * 1.024 * 1.024;
+    }
+
+    min_bw = std::min(min_bw, bw);
+    max_bw = std::max(max_bw, bw);
+    avg_bw += bw;
+
+    test_iters++;
+
+    if (endtest)
+      break;
+
+    // Get the current time
+    end_time = std::chrono::system_clock::now();
+
+    // Duration elasped since start
+    duration = time_diff(end_time, start_time);
+
+  } while ((duration < run_duration_ms) && (endtest == false));
+
+  if(hipStreamSynchronize(stream) != hipSuccess)
+    std::cout << "hipStreamSynchronize() failed !!! for stream " << stream << std::endl;
+
+  avg_bw /= test_iters;
+
+end:
+
+  // Clean up bandwith workload resources
+
+  if(hipEventDestroy(start) != hipSuccess)
+    std::cout << "hipEventDestroy() failed !!! for event " << start << std::endl;
+
+  if(hipEventDestroy(stop) != hipSuccess)
+    std::cout << "hipEventDestroy() failed !!! for event " << stop << std::endl;
+
+  if(r)
+    hipFree(r);
+
+  for (int i = 0; i < bufs.size(); i++)
+  {
+    hipFree(bufs[i]);
+  }
+
+  if(hipStreamDestroy(stream) != hipSuccess)
+    std::cout << "hipStreamDestroy() failed !!! for stream " << stream << std::endl;
 }
 
