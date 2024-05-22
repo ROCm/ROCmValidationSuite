@@ -82,10 +82,10 @@ using std::fstream;
 #define RVS_CONF_LDA_OFFSET             "lda"
 #define RVS_CONF_LDB_OFFSET             "ldb"
 #define RVS_CONF_LDC_OFFSET             "ldc"
+#define RVS_CONF_BW_WORKLOAD            "bw_workload"
 #define RVS_CONF_TP_FLAG                "targetpower_met"
 #define RVS_TP_MESSAGE                  "target_power"
 #define RVS_DTYPE_MESSAGE               "dtype"
-
 
 #define MODULE_NAME                     "iet"
 #define MODULE_NAME_CAPS                "IET"
@@ -107,6 +107,7 @@ using std::fstream;
 #define IET_DEFAULT_LDB_OFFSET          0
 #define IET_DEFAULT_LDC_OFFSET          0
 #define IET_DEFAULT_TP_FLAG             false
+#define IET_DEFAULT_BW_WORKLOAD         false
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
@@ -290,6 +291,14 @@ bool iet_action::get_all_iet_config_keys(void) {
     }
 
     error = property_get<bool>(RVS_CONF_TP_FLAG, &iet_tp_flag, IET_DEFAULT_TP_FLAG);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_TP_FLAG) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    error = property_get<bool>(RVS_CONF_BW_WORKLOAD, &iet_bw_workload, IET_DEFAULT_BW_WORKLOAD);
     if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_TP_FLAG) + "' key value";
@@ -487,6 +496,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_ldb_offset(iet_ldb_offset);
             workers[i].set_ldc_offset(iet_ldc_offset);
             workers[i].set_tp_flag(iet_tp_flag);
+            workers[i].set_bw_workload(iet_bw_workload);
 
             i++;
         }
