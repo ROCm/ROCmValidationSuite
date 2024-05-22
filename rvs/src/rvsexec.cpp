@@ -473,6 +473,8 @@ void rvs::exec::do_help() {
   cout << "-h --help          Display usage information and exit.\n";
 }
 
+
+
 //! Reports list of AMD GPUs presnt in the system
 int rvs::exec::do_gpu_list() {
   cout << "\nROCm Validation Suite (version " << LIB_VERSION_STRING << ")\n\n";
