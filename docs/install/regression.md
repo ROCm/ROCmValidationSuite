@@ -32,4 +32,3 @@ Just do:
 
     cd $RVS/regression
     ./run_regression.py
-
