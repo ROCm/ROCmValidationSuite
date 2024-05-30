@@ -95,6 +95,9 @@ void PackageHandler::validatePackages(){
 					installedvers << std::endl;
 		} else {
 			++installedPackages;
+			auto tmp = inputname.find(ORDEP);
+			if(tmp != std::string::npos)
+				inputname = inputname.substr(ORDEP.size()); // Remove ordep identifier
 			std::cout << "Package " << inputname << " installed version is " << 
 					installedvers << std::endl;
 		}

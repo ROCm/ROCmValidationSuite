@@ -208,6 +208,12 @@ class IETWorker : public rvs::ThreadBase {
         matrix_size_c = _matrix_size_c;
     }
 
+    //! sets bandwidth workload enable/disable
+    void set_bw_workload(bool _bw_workload) { iet_bw_workload = _bw_workload; }
+
+    //! returns bandwidth workload status
+    bool get_bw_workload(void) { return iet_bw_workload; }
+
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
 
@@ -223,6 +229,7 @@ class IETWorker : public rvs::ThreadBase {
     void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
         bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
         int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset);
+    void bandwidthThread(int gpuIdx, uint64_t run_duration_ms);
  protected:
     std::unique_ptr<rvs_blas> gpu_blas;
 
@@ -294,6 +301,9 @@ class IETWorker : public rvs::ThreadBase {
     float iet_beta_val;
     //IET TP flag
     bool iet_tp_flag;
+    //! Bandwidth workload enable/disable
+    bool iet_bw_workload;
+
     bool endtest = false;
     //! GEMM operations synchronization mutex
     std::mutex mutex;

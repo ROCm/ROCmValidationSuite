@@ -93,10 +93,12 @@ class iet_action: public rvs::actionbase {
     uint64_t iet_matrix_size;
     //! matrix size for SGEMM
     bool iet_tp_flag;
+    //! Bandwidth workload
+    bool iet_bw_workload;
 
     //Alpha and beta value
-    float      iet_alpha_val;
-    float      iet_beta_val;
+    float iet_alpha_val;
+    float iet_beta_val;
     
     //! matrix size for SGEMM
     uint64_t iet_matrix_size_a;

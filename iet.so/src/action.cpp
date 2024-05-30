@@ -82,10 +82,10 @@ using std::fstream;
 #define RVS_CONF_LDA_OFFSET             "lda"
 #define RVS_CONF_LDB_OFFSET             "ldb"
 #define RVS_CONF_LDC_OFFSET             "ldc"
+#define RVS_CONF_BW_WORKLOAD            "bw_workload"
 #define RVS_CONF_TP_FLAG                "targetpower_met"
 #define RVS_TP_MESSAGE                  "target_power"
 #define RVS_DTYPE_MESSAGE               "dtype"
-
 
 #define MODULE_NAME                     "iet"
 #define MODULE_NAME_CAPS                "IET"
@@ -94,7 +94,7 @@ using std::fstream;
 #define IET_DEFAULT_LOG_INTERVAL        1000
 #define IET_DEFAULT_MAX_VIOLATIONS      0
 #define IET_DEFAULT_TOLERANCE           0.1
-#define IET_DEFAULT_SAMPLE_INTERVAL     100
+#define IET_DEFAULT_SAMPLE_INTERVAL     1000
 #define IET_DEFAULT_MATRIX_SIZE         5760
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            500
@@ -107,6 +107,7 @@ using std::fstream;
 #define IET_DEFAULT_LDB_OFFSET          0
 #define IET_DEFAULT_LDC_OFFSET          0
 #define IET_DEFAULT_TP_FLAG             false
+#define IET_DEFAULT_BW_WORKLOAD         false
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
@@ -297,6 +298,19 @@ bool iet_action::get_all_iet_config_keys(void) {
         bsts = false;
     }
 
+    error = property_get<bool>(RVS_CONF_BW_WORKLOAD, &iet_bw_workload, IET_DEFAULT_BW_WORKLOAD);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_TP_FLAG) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    /* Set minimum sample interval as default */
+    if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
+      iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
+    }
+
     return bsts;
 }
 
@@ -469,6 +483,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_max_violations(iet_max_violations);
             workers[i].set_target_power(iet_target_power);
             workers[i].set_tolerance(iet_tolerance);
+            workers[i].set_matrix_size(iet_matrix_size);
             workers[i].set_matrix_size_a(iet_matrix_size_a);
             workers[i].set_matrix_size_b(iet_matrix_size_b);
             workers[i].set_matrix_size_c(iet_matrix_size_c);
@@ -481,6 +496,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_ldb_offset(iet_ldb_offset);
             workers[i].set_ldc_offset(iet_ldc_offset);
             workers[i].set_tp_flag(iet_tp_flag);
+            workers[i].set_bw_workload(iet_bw_workload);
 
             i++;
         }

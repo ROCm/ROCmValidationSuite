@@ -59,6 +59,7 @@ using std::regex;
 #define RVS_CONF_MATRIX_SIZE_KEYA       "matrix_size_a"
 #define RVS_CONF_MATRIX_SIZE_KEYB       "matrix_size_b"
 #define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_b"
+#define RVS_CONF_MATRIX_INIT            "matrix_init"
 #define RVS_CONF_GST_OPS_TYPE           "ops_type"
 #define RVS_CONF_GST_DATA_TYPE          "data_type"
 #define RVS_CONF_TRANS_A                "transa"
@@ -79,6 +80,7 @@ using std::regex;
 #define GST_DEFAULT_TOLERANCE           0.1
 #define GST_DEFAULT_COPY_MATRIX         true
 #define GST_DEFAULT_MATRIX_SIZE         5760
+#define GST_DEFAULT_MATRIX_INIT         "default"
 #define GST_DEFAULT_HOT_CALLS           0
 #define GST_DEFAULT_TRANS_A             0
 #define GST_DEFAULT_TRANS_B             1
@@ -103,14 +105,14 @@ using std::regex;
  * @brief default class constructor
  */
 gst_action::gst_action() {
-    bjson = false;
+  bjson = false;
 }
 
 /**
  * @brief class destructor
  */
 gst_action::~gst_action() {
-    property.clear();
+  property.clear();
 }
 
 /**
@@ -119,81 +121,82 @@ gst_action::~gst_action() {
  * @return true if no error occured, false otherwise
  */
 bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
-    size_t k = 0;
-    for (;;) {
-        unsigned int i = 0;
-        if (property_wait != 0)  // delay gst execution
-            sleep(property_wait);
+  size_t k = 0;
+  for (;;) {
+    unsigned int i = 0;
+    if (property_wait != 0)  // delay gst execution
+      sleep(property_wait);
 
-        vector<GSTWorker> workers(gst_gpus_device_index.size());
+    vector<GSTWorker> workers(gst_gpus_device_index.size());
 
-        map<int, uint16_t>::iterator it;
+    map<int, uint16_t>::iterator it;
 
-        // all worker instances have the same json settings
-        GSTWorker::set_use_json(bjson);
+    // all worker instances have the same json settings
+    GSTWorker::set_use_json(bjson);
 
-        for (it = gst_gpus_device_index.begin();
-                it != gst_gpus_device_index.end(); ++it) {
-            // set worker thread stress test params
-            workers[i].set_name(action_name);
-            workers[i].set_action(*this);
-            workers[i].set_gpu_id(it->second);
-            workers[i].set_gpu_device_index(it->first);
-            workers[i].set_run_wait_ms(property_wait);
-            workers[i].set_run_duration_ms(property_duration);
-            workers[i].set_ramp_interval(gst_ramp_interval);
-            workers[i].set_log_interval(property_log_interval);
-            workers[i].set_max_violations(gst_max_violations);
-            workers[i].set_copy_matrix(gst_copy_matrix);
-            workers[i].set_target_stress(gst_target_stress);
-            workers[i].set_tolerance(gst_tolerance);
-            workers[i].set_gst_hot_calls(gst_hot_calls);
-            workers[i].set_matrix_size_a(gst_matrix_size_a);
-            workers[i].set_matrix_size_b(gst_matrix_size_b);
-            workers[i].set_matrix_size_c(gst_matrix_size_c);
-            workers[i].set_gst_ops_type(gst_ops_type);
-            workers[i].set_gst_data_type(gst_data_type);
-            workers[i].set_matrix_transpose_a(gst_trans_a);
-            workers[i].set_matrix_transpose_b(gst_trans_b);
-            workers[i].set_alpha_val(gst_alpha_val);
-            workers[i].set_beta_val(gst_beta_val);
-            workers[i].set_lda_offset(gst_lda_offset);
-            workers[i].set_ldb_offset(gst_ldb_offset);
-            workers[i].set_ldc_offset(gst_ldc_offset);
+    for (it = gst_gpus_device_index.begin();
+        it != gst_gpus_device_index.end(); ++it) {
+      // set worker thread stress test params
+      workers[i].set_name(action_name);
+      workers[i].set_action(*this);
+      workers[i].set_gpu_id(it->second);
+      workers[i].set_gpu_device_index(it->first);
+      workers[i].set_run_wait_ms(property_wait);
+      workers[i].set_run_duration_ms(property_duration);
+      workers[i].set_ramp_interval(gst_ramp_interval);
+      workers[i].set_log_interval(property_log_interval);
+      workers[i].set_max_violations(gst_max_violations);
+      workers[i].set_copy_matrix(gst_copy_matrix);
+      workers[i].set_target_stress(gst_target_stress);
+      workers[i].set_tolerance(gst_tolerance);
+      workers[i].set_gst_hot_calls(gst_hot_calls);
+      workers[i].set_matrix_size_a(gst_matrix_size_a);
+      workers[i].set_matrix_size_b(gst_matrix_size_b);
+      workers[i].set_matrix_size_c(gst_matrix_size_c);
+      workers[i].set_matrix_init(gst_matrix_init);
+      workers[i].set_gst_ops_type(gst_ops_type);
+      workers[i].set_gst_data_type(gst_data_type);
+      workers[i].set_matrix_transpose_a(gst_trans_a);
+      workers[i].set_matrix_transpose_b(gst_trans_b);
+      workers[i].set_alpha_val(gst_alpha_val);
+      workers[i].set_beta_val(gst_beta_val);
+      workers[i].set_lda_offset(gst_lda_offset);
+      workers[i].set_ldb_offset(gst_ldb_offset);
+      workers[i].set_ldc_offset(gst_ldc_offset);
 
-            i++;
-        }
+      i++;
+    }
 
-        if (property_parallel) {
-            for (i = 0; i < gst_gpus_device_index.size(); i++)
-                workers[i].start();
+    if (property_parallel) {
+      for (i = 0; i < gst_gpus_device_index.size(); i++)
+        workers[i].start();
 
-            // join threads
-            for (i = 0; i < gst_gpus_device_index.size(); i++)
-                workers[i].join();
-        } else {
-            for (i = 0; i < gst_gpus_device_index.size(); i++) {
-                workers[i].start();
-                workers[i].join();
-
-                // check if stop signal was received
-                if (rvs::lp::Stopping())
-                    return false;
-            }
-        }
+      // join threads
+      for (i = 0; i < gst_gpus_device_index.size(); i++)
+        workers[i].join();
+    } else {
+      for (i = 0; i < gst_gpus_device_index.size(); i++) {
+        workers[i].start();
+        workers[i].join();
 
         // check if stop signal was received
         if (rvs::lp::Stopping())
-            return false;
-
-        if (property_count != 0) {
-            k++;
-            if (k == property_count)
-                break;
-        }
+          return false;
+      }
     }
 
-    return rvs::lp::Stopping() ? false : true;
+    // check if stop signal was received
+    if (rvs::lp::Stopping())
+      return false;
+
+    if (property_count != 0) {
+      k++;
+      if (k == property_count)
+        break;
+    }
+  }
+
+  return rvs::lp::Stopping() ? false : true;
 }
 
 /**
@@ -202,177 +205,184 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
  * @return true if no fatal error occured, false otherwise
  */
 bool gst_action::get_all_gst_config_keys(void) {
-    int error;
-    string msg, ststress;
-    bool bsts = true;
+  int error;
+  string msg, ststress;
+  bool bsts = true;
 
-    if ((error =
-      property_get(RVS_CONF_TARGET_STRESS_KEY, &gst_target_stress))) {
-      switch (error) {  // <target_stress> is mandatory => GST cannot continue
-        case 1:
-          msg = "invalid '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
-              "' key value " + ststress;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          break;
+  if ((error =
+        property_get(RVS_CONF_TARGET_STRESS_KEY, &gst_target_stress))) {
+    switch (error) {  // <target_stress> is mandatory => GST cannot continue
+      case 1:
+        msg = "invalid '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
+          "' key value " + ststress;
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        break;
 
-        case 2:
-          msg = "key '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
+      case 2:
+        msg = "key '" + std::string(RVS_CONF_TARGET_STRESS_KEY) +
           "' was not found";
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      }
-      bsts = false;
-    }
-
-    if (property_get_int<uint64_t>(RVS_CONF_RAMP_INTERVAL_KEY,
-      &gst_ramp_interval, GST_DEFAULT_RAMP_INTERVAL)) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
     }
+    bsts = false;
+  }
 
-    if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
-      &property_log_interval, GST_DEFAULT_LOG_INTERVAL)) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  if (property_get_int<uint64_t>(RVS_CONF_RAMP_INTERVAL_KEY,
+        &gst_ramp_interval, GST_DEFAULT_RAMP_INTERVAL)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get_int<int>(RVS_CONF_MAX_VIOLATIONS_KEY, &gst_max_violations,
-     GST_DEFAULT_MAX_VIOLATIONS)) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_MAX_VIOLATIONS_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+        &property_log_interval, GST_DEFAULT_LOG_INTERVAL)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get(RVS_CONF_COPY_MATRIX_KEY, &gst_copy_matrix,
-      GST_DEFAULT_COPY_MATRIX)) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_COPY_MATRIX_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  if (property_get_int<int>(RVS_CONF_MAX_VIOLATIONS_KEY, &gst_max_violations,
+        GST_DEFAULT_MAX_VIOLATIONS)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MAX_VIOLATIONS_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get<float>(RVS_CONF_TOLERANCE_KEY, &gst_tolerance,
-      GST_DEFAULT_TOLERANCE)) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_TOLERANCE_KEY) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  if (property_get(RVS_CONF_COPY_MATRIX_KEY, &gst_copy_matrix,
+        GST_DEFAULT_COPY_MATRIX)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_COPY_MATRIX_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get<std::string>(RVS_CONF_GST_OPS_TYPE, &gst_ops_type,
-            GST_DEFAULT_OPS_TYPE)) {
-         msg = "invalid '" +
-         std::string(RVS_CONF_GST_OPS_TYPE) + "' key value";
-         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-         bsts = false;
-    }
+  if (property_get<float>(RVS_CONF_TOLERANCE_KEY, &gst_tolerance,
+        GST_DEFAULT_TOLERANCE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_TOLERANCE_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get<std::string>(RVS_CONF_GST_DATA_TYPE, &gst_data_type,
-            GST_DEFAULT_DATA_TYPE)) {
-         msg = "invalid '" +
-         std::string(RVS_CONF_GST_DATA_TYPE) + "' key value";
-         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-         bsts = false;
-    }
+  if (property_get<std::string>(RVS_CONF_GST_OPS_TYPE, &gst_ops_type,
+        GST_DEFAULT_OPS_TYPE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_GST_OPS_TYPE) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_HOT_CALLS, &gst_hot_calls, GST_DEFAULT_HOT_CALLS);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_HOT_CALLS) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  if (property_get<std::string>(RVS_CONF_GST_DATA_TYPE, &gst_data_type, GST_DEFAULT_DATA_TYPE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_GST_DATA_TYPE) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYA, &gst_matrix_size_a, GST_DEFAULT_MATRIX_SIZE);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_MATRIX_SIZE_KEYA) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_HOT_CALLS, &gst_hot_calls, GST_DEFAULT_HOT_CALLS);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_HOT_CALLS) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYB, &gst_matrix_size_b, GST_DEFAULT_MATRIX_SIZE);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_MATRIX_SIZE_KEYB) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYA, &gst_matrix_size_a, GST_DEFAULT_MATRIX_SIZE);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MATRIX_SIZE_KEYA) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYC, &gst_matrix_size_c, GST_DEFAULT_MATRIX_SIZE);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_MATRIX_SIZE_KEYC) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYB, &gst_matrix_size_b, GST_DEFAULT_MATRIX_SIZE);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MATRIX_SIZE_KEYB) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_TRANS_A, &gst_trans_a, GST_DEFAULT_TRANS_A);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_TRANS_A) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYC, &gst_matrix_size_c, GST_DEFAULT_MATRIX_SIZE);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MATRIX_SIZE_KEYC) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_TRANS_B, &gst_trans_b, GST_DEFAULT_TRANS_B);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_TRANS_B) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get<std::string>(RVS_CONF_MATRIX_INIT, &gst_matrix_init, GST_DEFAULT_MATRIX_INIT);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MATRIX_INIT) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get<float>(RVS_CONF_ALPHA_VAL, &gst_alpha_val, GST_DEFAULT_ALPHA_VAL);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_ALPHA_VAL) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_TRANS_A, &gst_trans_a, GST_DEFAULT_TRANS_A);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_TRANS_A) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get<float>(RVS_CONF_BETA_VAL, &gst_beta_val, GST_DEFAULT_BETA_VAL);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_BETA_VAL) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_TRANS_B, &gst_trans_b, GST_DEFAULT_TRANS_B);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_TRANS_B) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_LDA_OFFSET, &gst_lda_offset, GST_DEFAULT_LDA_OFFSET);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_LDA_OFFSET) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get<float>(RVS_CONF_ALPHA_VAL, &gst_alpha_val, GST_DEFAULT_ALPHA_VAL);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ALPHA_VAL) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_LDB_OFFSET, &gst_ldb_offset, GST_DEFAULT_LDB_OFFSET);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_LDB_OFFSET) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get<float>(RVS_CONF_BETA_VAL, &gst_beta_val, GST_DEFAULT_BETA_VAL);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_BETA_VAL) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_LDC_OFFSET, &gst_ldc_offset, GST_DEFAULT_LDC_OFFSET);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_LDC_OFFSET) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_LDA_OFFSET, &gst_lda_offset, GST_DEFAULT_LDA_OFFSET);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LDA_OFFSET) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    /* If operation and data type both not set, default to sgemm */
-    if ((gst_ops_type == GST_DEFAULT_OPS_TYPE) && (gst_data_type == GST_DEFAULT_OPS_TYPE)) {
-      gst_ops_type = "sgemm";
-    }
+  error = property_get_int<int>(RVS_CONF_LDB_OFFSET, &gst_ldb_offset, GST_DEFAULT_LDB_OFFSET);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LDB_OFFSET) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    return bsts;
+  error = property_get_int<int>(RVS_CONF_LDC_OFFSET, &gst_ldc_offset, GST_DEFAULT_LDC_OFFSET);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LDC_OFFSET) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  /* If operation and data type both not set, default to sgemm */
+  if ((gst_ops_type == GST_DEFAULT_OPS_TYPE) && (gst_data_type == GST_DEFAULT_OPS_TYPE)) {
+    gst_ops_type = "sgemm";
+  }
+
+  return bsts;
 }
 
 /**
@@ -381,82 +391,82 @@ bool gst_action::get_all_gst_config_keys(void) {
  * @return true if no fatal error occured, false otherwise
  */
 bool gst_action::get_all_common_config_keys(void) {
-    string msg, sdevid, sdev;
-    int error;
-    bool bsts = true;
+  string msg, sdevid, sdev;
+  int error;
+  bool bsts = true;
 
-    // get <device> property value (a list of gpu id)
-    if (int sts = property_get_device()) {
-      switch (sts) {
+  // get <device> property value (a list of gpu id)
+  if (int sts = property_get_device()) {
+    switch (sts) {
       case 1:
         msg = "Invalid 'device' key value.";
         break;
       case 2:
         msg = "Missing 'device' key.";
         break;
-      }
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
     }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    // get the <deviceid> property value if provided
-    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                  &property_device_id, 0u)) {
-      msg = "Invalid 'deviceid' key value.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  // get the <deviceid> property value if provided
+  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+        &property_device_id, 0u)) {
+    msg = "Invalid 'deviceid' key value.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    // get <device_index> property value (a list of device indexes)
-    if (int sts = property_get_device_index()) {
-      switch (sts) {
+  // get <device_index> property value (a list of device indexes)
+  if (int sts = property_get_device_index()) {
+    switch (sts) {
       case 1:
         msg = "Invalid 'device_index' key value.";
         break;
       case 2:
         msg = "Missing 'device_index' key.";
         break;
-      }
-      // default set as true
-      property_device_index_all = true;
-      rvs::lp::Log(msg, rvs::loginfo);
     }
+    // default set as true
+    property_device_index_all = true;
+    rvs::lp::Log(msg, rvs::loginfo);
+  }
 
-    // get the other action/GST related properties
-    if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  // get the other action/GST related properties
+  if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>
+  error = property_get_int<uint64_t>
     (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
-    if (error != 0) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_COUNT_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  if (error != 0) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_COUNT_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>
+  error = property_get_int<uint64_t>
     (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
-    if (error != 0) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_WAIT_KEY) + "' key value";
-      bsts = false;
-    }
+  if (error != 0) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_WAIT_KEY) + "' key value";
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>
+  error = property_get_int<uint64_t>
     (RVS_CONF_DURATION_KEY, &property_duration, RVS_DEFAULT_DURATION);
-    if (error == 1) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_DURATION_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_DURATION_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    return bsts;
+  return bsts;
 }
 
 /**
@@ -464,33 +474,33 @@ bool gst_action::get_all_common_config_keys(void) {
  * @return run number of GPUs
  */
 int gst_action::get_num_amd_gpu_devices(void) {
-    int hip_num_gpu_devices;
-    string msg;
+  int hip_num_gpu_devices;
+  string msg;
 
-    hipGetDeviceCount(&hip_num_gpu_devices);
-    if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
-        msg = action_name + " " + MODULE_NAME + " " + GST_NO_COMPATIBLE_GPUS;
-        rvs::lp::Log(msg, rvs::logerror);
+  hipGetDeviceCount(&hip_num_gpu_devices);
+  if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
+    msg = action_name + " " + MODULE_NAME + " " + GST_NO_COMPATIBLE_GPUS;
+    rvs::lp::Log(msg, rvs::logerror);
 
-        if (bjson) {
-            unsigned int sec;
-            unsigned int usec;
-            rvs::lp::get_ticks(&sec, &usec);
-            void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::loginfo, sec, usec, true);
-            if (!json_root_node) {
-                // log the error
-                string msg = std::string(JSON_CREATE_NODE_ERROR);
-                rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-                return -1;
-            }
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+          action_name.c_str(), rvs::loginfo, sec, usec, true);
+      if (!json_root_node) {
+        // log the error
+        string msg = std::string(JSON_CREATE_NODE_ERROR);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
 
-            rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
-            rvs::lp::LogRecordFlush(json_root_node, rvs::loginfo);
-        }
-        return 0;
+      rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
+      rvs::lp::LogRecordFlush(json_root_node, rvs::loginfo);
     }
-    return hip_num_gpu_devices;
+    return 0;
+  }
+  return hip_num_gpu_devices;
 }
 
 /**
@@ -498,30 +508,30 @@ int gst_action::get_num_amd_gpu_devices(void) {
  * @return run result
  */
 int gst_action::get_all_selected_gpus(void) {
-    int hip_num_gpu_devices;
-    bool amd_gpus_found = false;
-    map<int, uint16_t> gst_gpus_device_index;
-    std::string msg;
+  int hip_num_gpu_devices;
+  bool amd_gpus_found = false;
+  map<int, uint16_t> gst_gpus_device_index;
+  std::string msg;
 
-    hip_num_gpu_devices = get_num_amd_gpu_devices();
-    if (hip_num_gpu_devices < 1)
-        return hip_num_gpu_devices;
-    amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, gst_gpus_device_index, 
-		    property_device, property_device_id, property_device_all);
-    // iterate over all available & compatible AMD GPUs
-     
-    if (amd_gpus_found) {
-        if (do_gpu_stress_test(gst_gpus_device_index))
-            return 0;
+  hip_num_gpu_devices = get_num_amd_gpu_devices();
+  if (hip_num_gpu_devices < 1)
+    return hip_num_gpu_devices;
+  amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, gst_gpus_device_index, 
+      property_device, property_device_id, property_device_all);
+  // iterate over all available & compatible AMD GPUs
 
-        return -1;
-    } else {
-      msg = "No devices match criteria from the test configuration.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
-    }
+  if (amd_gpus_found) {
+    if (do_gpu_stress_test(gst_gpus_device_index))
+      return 0;
 
-    return 0;
+    return -1;
+  } else {
+    msg = "No devices match criteria from the test configuration.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return -1;
+  }
+
+  return 0;
 }
 /**
  * @brief flushes target and dtype fields to json file
@@ -534,19 +544,19 @@ void gst_action::json_add_primary_fields(){
     return;
   }
   void *json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
-    if(json_node){
-            rvs::lp::AddString(json_node,TARGET_KEY, std::to_string(gst_target_stress));
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
-            json_node = nullptr;
-    }
-    json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
-    if(json_node){
-            rvs::lp::AddString(json_node,DTYPE_KEY, gst_ops_type);
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
-            json_node = nullptr;
-    }
+      action_name.c_str(), rvs::loginfo);
+  if(json_node){
+    rvs::lp::AddString(json_node,TARGET_KEY, std::to_string(gst_target_stress));
+    rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+    json_node = nullptr;
+  }
+  json_node = json_node_create(std::string(MODULE_NAME),
+      action_name.c_str(), rvs::loginfo);
+  if(json_node){
+    rvs::lp::AddString(json_node,DTYPE_KEY, gst_ops_type);
+    rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+    json_node = nullptr;
+  }
 
 }
 

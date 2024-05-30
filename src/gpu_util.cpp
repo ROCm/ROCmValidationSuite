@@ -627,3 +627,4 @@ int rvs::gpulist::gpu2domain(const uint16_t GpuID, uint16_t* pDomain) {
   return 0;
 }
 
+

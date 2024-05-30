@@ -49,6 +49,7 @@
 #define JSON_PROP_NODE_NAME             "properties"
 #define JSON_IO_LINK_PROP_NODE_NAME     "io_links-properties"
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
+#define JSON_ROOT_NODE_ERROR            "JSON NULL root node"
 
 #define CHAR_MAX_BUFF_SIZE              256
 
@@ -172,6 +173,8 @@ int gpup_action::property_get_value(uint16_t gpu_id) {
     RVSTRACE_
     if (json_root_node == NULL) {
       RVSTRACE_
+      msg = std::string(JSON_ROOT_NODE_ERROR);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
     json_gpuprop_node = rvs::lp::CreateNode(json_root_node,
@@ -462,13 +465,8 @@ int gpup_action::run(void) {
 
       // properties values
       sts = property_get_value(*it);
-
+      sts = property_io_links_get_value(*it);
       // so far so good?
-      if (sts == 0) {
-        RVSTRACE_
-        // do io_links properties
-        sts = property_io_links_get_value(*it);
-      }
 
       if (bjson) {  // json logging stuff
         RVSTRACE_
@@ -478,7 +476,6 @@ int gpup_action::run(void) {
 
       if (sts) {
         RVSTRACE_
-        break;
       }
     }  // for all gpu_id
 
