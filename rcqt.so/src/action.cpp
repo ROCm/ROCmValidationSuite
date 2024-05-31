@@ -67,13 +67,6 @@
 #define ETC_PASSWD "/etc/passwd"
 #define BUFFER_SIZE 3000
 
-#if DRVS_OS_TYPE_NUM == 1
-// debian defines
-#elseif DRVS_OS_TYPE_NUM == 2
-// fedora defines
-#endif
-
-
 using std::string;
 using std::iterator;
 using std::endl;
@@ -82,8 +75,6 @@ using std::map;
 using std::regex;
 using std::vector;
 
-// Set Operating System variant
-const OSType rcqt_action::os_type = getOS();
 rcqt_action::rcqt_action() {
   PACKAGELIST = (getOS() == OSType::Ubuntu) ?"debpackagelist":"rpmpackagelist";
   bjson = false;

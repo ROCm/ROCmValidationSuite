@@ -47,14 +47,15 @@ typedef void (*rvsBlasCallback_t) (bool status, void *userData);
  * @class rvs_blas
  * @ingroup GST
  *
- * @brief implements the SGEMM logic
+ * @brief RVS blas implementation for gemm operations
  *
  */
 class rvs_blas {
  public:
-    rvs_blas(int _gpu_device_index, int _m, int _n, int _k, 
-        int transa, int transb, float aplha, float beta, 
-        rocblas_int lda, rocblas_int ldb, rocblas_int ldc, std::string _ops_type, std::string _data_type);
+   rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _matrix_init,
+       int transa, int transb, float aplha, float beta,
+       rocblas_int lda, rocblas_int ldb, rocblas_int ldc,
+       std::string _ops_type, std::string _data_type);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
@@ -119,6 +120,8 @@ class rvs_blas {
     size_t size_c;
     //! amount of memory to allocate for the matrix
     size_t size_d;
+    //! matrix initialization
+    std::string matrix_init;
     //! Transpose matrix A
     rocblas_operation transa;
     //! Transpose matrix B
@@ -212,7 +215,8 @@ class rvs_blas {
 
     bool alocate_host_matrix_mem(void);
     void release_host_matrix_mem(void);
-    float fast_pseudo_rand(uint64_t *nextr);
+    float fast_pseudo_rand(uint64_t *nextr, size_t i);
+
 };
 
 #endif  // INCLUDE_RVS_BLAS_H_

@@ -25,7 +25,7 @@
 
 #!/bin/bash
 # to Use this script need to set RVS_EXE_PATH where your rvs executable is.
-# ex. RVS_EXE_PATH=/opt/rocm/rvs/rvs for default rvs installation path
+# ex. RVS_EXE_PATH=/opt/rocm/bin/rvs for default rvs installation path
 # Run script as below
 # Example:  deviceid.sh "conf/gpup_*.conf"<-- conf file path
 # Above command will replace device_id/device_id/deviceid : XXXX in all gpup_*.conf files
@@ -34,8 +34,9 @@
 
 # setting ROCM_PATH using cmake inputs
 # setting RVS_EXE_PATH to default if not set by user
+SCRIPTDIR="$(dirname "$(realpath "$0")")"
 if [[ -z "${RVS_EXE_PATH}" ]]; then
-    export RVS_EXE_PATH=@ROCM_PATH@/rvs/rvs
+    export RVS_EXE_PATH=$SCRIPTDIR/../../../bin/rvs
 fi
 
 function get_string_with_space {

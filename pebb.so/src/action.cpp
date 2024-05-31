@@ -488,6 +488,8 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
   double      bandwidth;
   uint16_t    transfer_ix;
   uint16_t    transfer_num;
+  char        transfer_buff[8];
+  char        dstgpuid_buff[12];
 
   RVSTRACE_
   // get running average
@@ -517,8 +519,6 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
       snprintf( buff, sizeof(buff), "%.3f GBps (*)", bandwidth);
   }
 
-//  dst_id = rvs::gpulist::GetGpuIdFromNodeId(dst_node);
-
   RVSTRACE_
   if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
     RVSTRACE_
@@ -542,13 +542,16 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
   transfer_ix = pWorker->get_transfer_ix();
   transfer_num = pWorker->get_transfer_num();
 
+  snprintf(transfer_buff, sizeof(transfer_buff), "%2d", transfer_ix);
+  snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", dst_id);
+
   msg = "[" + action_name + "] pcie-bandwidth ["
-      + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num) + "] "
-      + " CPU::"  + std::to_string(src_node)
-      + " GPU::" + std::to_string(dst_id) + " - " + pci_bdf
-      + " h2d: " + (prop_h2d ? "true" : "false")
-      + " d2h: " + (prop_d2h ? "true" : "false") + " "
-      + buff;
+    + transfer_buff + "/" + std::to_string(transfer_num) + "]"
+    + " [CPU:: " + std::to_string(src_node) + "]"
+    + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + pci_bdf + "]"
+    + " h2d::" + (prop_h2d ? "true" : "false")
+    + " d2h::" + (prop_d2h ? "true" : "false") + " "
+    + buff;
 
   rvs::lp::Log(msg, rvs::loginfo);
 
@@ -575,6 +578,8 @@ int pebb_action::print_final_average() {
   std::string msg;
   double      bandwidth;
   char        buff[128];
+  char        transfer_buff[8];
+  char        dstgpuid_buff[12];
   uint16_t    transfer_ix;
   uint16_t    transfer_num;
   rvs::action_result_t result;
@@ -620,10 +625,13 @@ int pebb_action::print_final_average() {
     }
     RVSTRACE_
 
+    snprintf(transfer_buff, sizeof(transfer_buff), "%2d", transfer_ix);
+    snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", dst_id);
+
     msg = "[" + action_name + "] pcie-bandwidth ["
-        + std::to_string(transfer_ix) + "/" + std::to_string(transfer_num) + "]"
+        + transfer_buff + "/" + std::to_string(transfer_num) + "]"
         + " [CPU:: " + std::to_string(src_node) + "]"
-        + " [GPU:: " + std::to_string(dst_node) + " - " + std::to_string(dst_id) + " - " + pci_bdf + "]"
+        + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + pci_bdf + "]"
         + " h2d::" + (prop_h2d ? "true" : "false")
         + " d2h::" + (prop_d2h ? "true" : "false")
         + " " + buff
@@ -729,6 +737,7 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
   std::string msg;
   rvs::action_result_t result;
   std::string pci_bdf;
+  char dstgpuid_buff[8];
 
   if (rvs::gpulist::node2bdf(DstNode, pci_bdf)) {
     RVSTRACE_
@@ -738,10 +747,12 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
     return -1;
   }
 
+  snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", DstGpuID);
+
   msg = "[" + action_name + "] pcie-bandwidth "
       + "[CPU:: " +  std::to_string(SrcNode) + "] "
       + "[GPU:: " + std::to_string(DstNode)
-      + " - " + std::to_string(DstGpuID) + " - " + pci_bdf + "]";
+      + " - " + dstgpuid_buff + " - " + pci_bdf + "]";
 
   if (Distance == rvs::hsa::NO_CONN) {
     msg += " distance:-1";
