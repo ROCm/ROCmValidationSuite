@@ -99,6 +99,7 @@ class perf_action: public rvs::actionbase {
     int      perf_lda_offset;
     int      perf_ldb_offset;
     int      perf_ldc_offset;
+    int      perf_ldd_offset;
 
     friend class PERFWorker;
 

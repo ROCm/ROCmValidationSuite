@@ -116,6 +116,7 @@ class tst_action: public rvs::actionbase {
     int      tst_lda_offset;
     int      tst_ldb_offset;
     int      tst_ldc_offset;
+    int      tst_ldd_offset;
 
     friend class TSTWorker;
 

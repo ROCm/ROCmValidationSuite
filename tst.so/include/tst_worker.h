@@ -198,6 +198,10 @@ class TSTWorker : public rvs::ThreadBase {
     void set_ldc_offset(int ldc) {
         tst_ldc_offset = ldc;
     }
+    //! sets offsets
+    void set_ldd_offset(int ldd) {
+        tst_ldd_offset = ldd;
+    }
    //! sets the SGEMM matrix size
     void set_matrix_size_a(uint64_t _matrix_size_a) {
         matrix_size_a = _matrix_size_a;
@@ -224,7 +228,7 @@ class TSTWorker : public rvs::ThreadBase {
         int log_level);
     void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  tst_ops_type,
         bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
-        int tst_lda_offset, int tst_ldb_offset, int tst_ldc_offset);
+        int tst_lda_offset, int tst_ldb_offset, int tst_ldc_offset, int tst_ldd_offset);
  protected:
     std::unique_ptr<rvs_blas> gpu_blas;
 
@@ -284,6 +288,7 @@ class TSTWorker : public rvs::ThreadBase {
     int tst_lda_offset;
     int tst_ldb_offset;
     int tst_ldc_offset;
+    int tst_ldd_offset;
     //! Matrix transpose A
     int tst_trans_a;
     //! Matrix transpose B

@@ -84,7 +84,7 @@ static thread_local double rvsblas_t_rand_d_array[RANDBUF];
  * @param _ops_type type of BLAS operation to test with
  */
 rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _matrix_init, int transA, int transB,
-    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc,
+    float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc, rocblas_int ldd,
     std::string _ops_type, std::string _data_type)
   : gpu_device_index(_gpu_device_index)
   , ops_type(_ops_type)
@@ -118,11 +118,21 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     transb = rocblas_operation_transpose;
   }
 
+  // minimum leading dimensions
+  rocblas_int min_lda = transA == rocblas_operation_none ? m : k;
+  rocblas_int min_ldb = transB == rocblas_operation_none ? k : n;
+  rocblas_int min_ldc = m;
+  rocblas_int min_ldd = m;
+
+  // setting actual leading dimensions
+  blas_lda_offset = (lda < min_lda) ? min_lda : lda;
+  blas_ldb_offset = (ldb < min_ldb) ? min_ldb : ldb;
+  blas_ldc_offset = (ldc < min_ldc) ? min_ldc : ldc;
+  blas_ldd_offset = (ldd < min_ldd) ? min_ldd : ldd;
+
   if(ops_type == "hgemm") {
-    //auto    A_row = transA == rocblas_operation_none ? m : k;
-    auto    A_col = transA == rocblas_operation_none ? k : m;
-    //auto    B_row = transB == rocblas_operation_none ? k : n;
-    auto    B_col = transB == rocblas_operation_none ? n : k;
+    auto A_col = transA == rocblas_operation_none ? k : m;
+    auto B_col = transB == rocblas_operation_none ? n : k;
 
     size_a = size_t(lda) * A_col;
     size_b = size_t(ldb) * B_col;
@@ -130,31 +140,20 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     size_d = size_t(ldc) * n;
   } else {
 
-    size_a = size_t(k) * m;
-    size_b = size_t(k) * n;
-    size_c = size_t(n) * m;
+    size_a = transA == rocblas_operation_none ? size_t(k) * blas_lda_offset : size_t(m) * blas_lda_offset;
+    size_b = transB == rocblas_operation_none ? size_t(n) * blas_lda_offset : size_t(k) * blas_ldb_offset;
+
+    size_c = size_t(n) * blas_ldc_offset;
 
     // gemm based on data type, size of output matrix d.
     if (!data_type.empty()) {
-      size_d = size_t(n) * m;
+      size_d = size_t(n) * blas_ldd_offset;
     }
   }
 
   //setting alpha and beta val
   blas_alpha_val = alpha;
   blas_beta_val = beta;
-
-  //setting lda offsets 
-  //Leading data offsets
-  if(lda == 0 || ldb == 0 || ldc == 0) {
-    blas_lda_offset = m;
-    blas_ldb_offset = n;
-    blas_ldc_offset = k;
-  } else {
-    blas_lda_offset = lda;
-    blas_ldb_offset = ldb;
-    blas_ldc_offset = ldc;
-  }
 
   if (alocate_host_matrix_mem()) {
     if (!init_gpu_device())
@@ -700,7 +699,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             dda, a_type, blas_lda_offset,
             ddb, b_type, blas_ldb_offset, &beta,
             ddc, c_type, blas_ldc_offset,
-            ddd, d_type, blas_ldc_offset,
+            ddd, d_type, blas_ldd_offset,
             compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
         is_error = true;  // GPU cannot enqueue the gemm
@@ -732,7 +731,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             dda, a_type, blas_lda_offset,
             ddb, b_type, blas_ldb_offset, &beta,
             ddc, c_type, blas_ldc_offset,
-            ddd, d_type, blas_ldc_offset,
+            ddd, d_type, blas_ldd_offset,
             compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
         is_error = true;  // GPU cannot enqueue the gemm
@@ -764,7 +763,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             dda, a_type, blas_lda_offset,
             ddb, b_type, blas_ldb_offset, &beta,
             ddc, c_type, blas_ldc_offset,
-            ddd, d_type, blas_ldc_offset,
+            ddd, d_type, blas_ldd_offset,
             compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
         is_error = true;  // GPU cannot enqueue the gemm
