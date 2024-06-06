@@ -136,10 +136,11 @@ void TSTWorker::log_interval_gflops(double gflops_interval) {
  * @param tst_lda_offset leading dimension for matrix A
  * @param tst_ldb_offset leading dimension for matrix B
  * @param tst_ldc_offset leading dimension for matrix C
+ * @param tst_ldd_offset leading dimension for matrix D
  */
 void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops_type,
     bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
-    int tst_lda_offset, int tst_ldb_offset, int tst_ldc_offset){
+    int tst_lda_offset, int tst_ldb_offset, int tst_ldc_offset, int tst_ldd_offset){
 
     std::chrono::time_point<std::chrono::system_clock> tst_start_time, tst_end_time;
     double timetakenforoneiteration;
@@ -155,7 +156,7 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
 
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx, matrix_size, matrix_size, matrix_size, "default",
-          transa, transb, alpha, beta, tst_lda_offset, tst_ldb_offset, tst_ldc_offset, tst_ops_type, ""));
+          transa, transb, alpha, beta, tst_lda_offset, tst_ldb_offset, tst_ldc_offset, tst_ldd_offset, tst_ops_type, ""));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();
@@ -231,7 +232,7 @@ bool TSTWorker::do_thermal_stress(void) {
  
     // Initiate blas workload thread
     std::thread t(&TSTWorker::blasThread, this, gpu_device_index, matrix_size_a, tst_ops_type, start, run_duration_ms,
-            tst_trans_a, tst_trans_b, tst_alpha_val, tst_beta_val, tst_lda_offset, tst_ldb_offset, tst_ldc_offset);
+            tst_trans_a, tst_trans_b, tst_alpha_val, tst_beta_val, tst_lda_offset, tst_ldb_offset, tst_ldc_offset, tst_ldd_offset);
 
     // Record ramp-up start time
     tst_start_time = std::chrono::system_clock::now();

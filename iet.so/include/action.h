@@ -116,6 +116,7 @@ class iet_action: public rvs::actionbase {
     int      iet_lda_offset;
     int      iet_ldb_offset;
     int      iet_ldc_offset;
+    int      iet_ldd_offset;
 
     friend class IETWorker;
 

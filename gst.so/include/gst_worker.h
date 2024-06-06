@@ -175,6 +175,10 @@ class GSTWorker : public rvs::ThreadBase {
     void set_ldc_offset(int ldc) {
         gst_ldc_offset = ldc;
     }
+    //! sets offsets
+    void set_ldd_offset(int ldd) {
+        gst_ldd_offset = ldd;
+    }
 
     //! returns the matrix size
     uint64_t get_matrix_size_a(void) { return matrix_size_a; }
@@ -243,6 +247,7 @@ class GSTWorker : public rvs::ThreadBase {
     int gst_lda_offset;
     int gst_ldb_offset;
     int gst_ldc_offset;
+    int gst_ldd_offset;
     //! stress test run delay
     uint64_t run_wait_ms;
     //! stress test run duration

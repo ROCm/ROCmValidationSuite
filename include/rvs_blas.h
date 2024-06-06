@@ -54,7 +54,7 @@ class rvs_blas {
  public:
    rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _matrix_init,
        int transa, int transb, float aplha, float beta,
-       rocblas_int lda, rocblas_int ldb, rocblas_int ldc,
+       rocblas_int lda, rocblas_int ldb, rocblas_int ldc, rocblas_int ldd,
        std::string _ops_type, std::string _data_type);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
@@ -182,6 +182,8 @@ class rvs_blas {
     rocblas_int blas_ldb_offset;
     //!Blas offsets
     rocblas_int blas_ldc_offset;
+    //!Blas offsets
+    rocblas_int blas_ldd_offset;
 
     //HGEMM Declaration
     //! pointer to device (GPU) memory
