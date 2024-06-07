@@ -162,24 +162,9 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
         //call the gemm blas
         gpu_blas->run_blass_gemm(iet_ops_type);
 
-        if (iet_bw_workload) {
-          // Waits for GEMM operation to complete
-          if(!gpu_blas->is_gemm_op_complete())
-            continue;
-        }
-        else {
-          /* Set callback to be called upon completion of blas gemm operations */
-          gpu_blas->set_callback(blas_callback, (void *)this);
-
-          std::unique_lock<std::mutex> lk(mutex);
-          cv.wait(lk);
-
-          if(!blas_status) {
-            msg = "[" + action_name + "] " + MODULE_NAME + " " +
-              std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
-            rvs::lp::Log(msg, rvs::logtrace);
-          }
-        }
+        // Waits for GEMM operation to complete
+        if(!gpu_blas->is_gemm_op_complete())
+          continue;
 
         //get the end time
         iet_end_time = std::chrono::system_clock::now();
