@@ -83,6 +83,7 @@ using std::fstream;
 #define RVS_CONF_LDA_OFFSET             "lda"
 #define RVS_CONF_LDB_OFFSET             "ldb"
 #define RVS_CONF_LDC_OFFSET             "ldc"
+#define RVS_CONF_LDD_OFFSET             "ldd"
 #define RVS_CONF_TT_FLAG                "targettemp_met"
 #define RVS_TT_MESSAGE                  "target_temp"
 #define RVS_DTYPE_MESSAGE               "dtype"
@@ -107,6 +108,7 @@ using std::fstream;
 #define TST_DEFAULT_LDA_OFFSET          0
 #define TST_DEFAULT_LDB_OFFSET          0
 #define TST_DEFAULT_LDC_OFFSET          0
+#define TST_DEFAULT_LDD_OFFSET          0
 #define TST_DEFAULT_TT_FLAG             false
 
 #define TST_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
@@ -307,6 +309,14 @@ bool tst_action::get_all_tst_config_keys(void) {
         bsts = false;
     }
 
+    error = property_get_int<int>(RVS_CONF_LDD_OFFSET, &tst_ldd_offset, TST_DEFAULT_LDD_OFFSET);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_LDD_OFFSET) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
     error = property_get<bool>(RVS_CONF_TT_FLAG, &tst_tt_flag, TST_DEFAULT_TT_FLAG);
     if (error == 1) {
         msg = "invalid '" +
@@ -498,6 +508,7 @@ bool tst_action::do_thermal_test(map<int, uint16_t> tst_gpus_device_index) {
             workers[i].set_lda_offset(tst_lda_offset);
             workers[i].set_ldb_offset(tst_ldb_offset);
             workers[i].set_ldc_offset(tst_ldc_offset);
+            workers[i].set_ldd_offset(tst_ldd_offset);
             workers[i].set_tt_flag(tst_tt_flag);
 
             i++;

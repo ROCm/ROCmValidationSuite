@@ -131,7 +131,7 @@ void IETWorker::log_interval_gflops(double gflops_interval) {
 
 void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 
     bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
-    int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset) {
+    int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset, int iet_ldd_offset) {
 
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, iet_end_time;
     double timetakenforoneiteration;
@@ -146,7 +146,7 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
     gem_ops = 0;
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, "default", transa, transb, alpha, beta,
-          iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ops_type, ""));
+          iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset, iet_ops_type, ""));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();
@@ -162,24 +162,9 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
         //call the gemm blas
         gpu_blas->run_blass_gemm(iet_ops_type);
 
-        if (iet_bw_workload) {
-          // Waits for GEMM operation to complete
-          if(!gpu_blas->is_gemm_op_complete())
-            continue;
-        }
-        else {
-          /* Set callback to be called upon completion of blas gemm operations */
-          gpu_blas->set_callback(blas_callback, (void *)this);
-
-          std::unique_lock<std::mutex> lk(mutex);
-          cv.wait(lk);
-
-          if(!blas_status) {
-            msg = "[" + action_name + "] " + MODULE_NAME + " " +
-              std::to_string(gpu_id) + " " + " BLAS gemm operations failed !!! ";
-            rvs::lp::Log(msg, rvs::logtrace);
-          }
-        }
+        // Waits for GEMM operation to complete
+        if(!gpu_blas->is_gemm_op_complete())
+          continue;
 
         //get the end time
         iet_end_time = std::chrono::system_clock::now();
@@ -224,7 +209,7 @@ bool IETWorker::do_iet_power_stress(void) {
 
     // Start default compute thread
     compute_t = std::thread(&IETWorker::blasThread, this, gpu_device_index, matrix_size, iet_ops_type, start, run_duration_ms,
-            iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset);
+            iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset);
 
     // Start bandwidth thread if bandwidth workload is enabled
     if (iet_bw_workload) {

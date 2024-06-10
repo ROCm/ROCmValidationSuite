@@ -69,6 +69,7 @@ using std::regex;
 #define RVS_CONF_LDA_OFFSET             "lda"
 #define RVS_CONF_LDB_OFFSET             "ldb"
 #define RVS_CONF_LDC_OFFSET             "ldc"
+#define RVS_CONF_LDD_OFFSET             "ldd"
 
 #define MODULE_NAME                     "gst"
 #define MODULE_NAME_CAPS                "GST"
@@ -81,7 +82,7 @@ using std::regex;
 #define GST_DEFAULT_COPY_MATRIX         true
 #define GST_DEFAULT_MATRIX_SIZE         5760
 #define GST_DEFAULT_MATRIX_INIT         "default"
-#define GST_DEFAULT_HOT_CALLS           0
+#define GST_DEFAULT_HOT_CALLS           1
 #define GST_DEFAULT_TRANS_A             0
 #define GST_DEFAULT_TRANS_B             1
 #define GST_DEFAULT_ALPHA_VAL           1
@@ -89,6 +90,7 @@ using std::regex;
 #define GST_DEFAULT_LDA_OFFSET          0
 #define GST_DEFAULT_LDB_OFFSET          0
 #define GST_DEFAULT_LDC_OFFSET          0
+#define GST_DEFAULT_LDD_OFFSET          0
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0
@@ -163,6 +165,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_lda_offset(gst_lda_offset);
       workers[i].set_ldb_offset(gst_ldb_offset);
       workers[i].set_ldc_offset(gst_ldc_offset);
+      workers[i].set_ldd_offset(gst_ldd_offset);
 
       i++;
     }
@@ -373,6 +376,14 @@ bool gst_action::get_all_gst_config_keys(void) {
   if (error == 1) {
     msg = "invalid '" +
       std::string(RVS_CONF_LDC_OFFSET) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<int>(RVS_CONF_LDD_OFFSET, &gst_ldd_offset, GST_DEFAULT_LDD_OFFSET);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LDD_OFFSET) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }

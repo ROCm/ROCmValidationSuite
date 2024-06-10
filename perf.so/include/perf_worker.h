@@ -165,6 +165,10 @@ class PERFWorker : public rvs::ThreadBase {
     void set_ldc_offset(int ldc) {
         perf_ldc_offset = ldc;
     }
+    //! sets offsets
+    void set_ldd_offset(int ldd) {
+        perf_ldd_offset = ldd;
+    }
 
     //! returns the SGEMM matrix size
     uint64_t get_matrix_size_a(void) { return matrix_size_a; }
@@ -228,6 +232,7 @@ class PERFWorker : public rvs::ThreadBase {
     int perf_lda_offset;
     int perf_ldb_offset;
     int perf_ldc_offset;
+    int perf_ldd_offset;
     //! stress test run delay
     uint64_t run_wait_ms;
     //! stress test run duration

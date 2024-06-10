@@ -102,6 +102,7 @@ class gst_action: public rvs::actionbase {
     int      gst_lda_offset;
     int      gst_ldb_offset;
     int      gst_ldc_offset;
+    int      gst_ldd_offset;
 
     // type of gemm operation
     std::string gst_ops_type;

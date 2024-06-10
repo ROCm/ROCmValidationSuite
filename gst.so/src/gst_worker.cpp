@@ -79,7 +79,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
       new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
         matrix_size_c, matrix_init, gst_trans_a, gst_trans_b,
         gst_alpha_val, gst_beta_val,
-        gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ops_type, gst_data_type));
+        gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ldd_offset, gst_ops_type, gst_data_type));
 
   if (!gpu_blas) {
     *error = 1;
@@ -443,11 +443,13 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     //Start the timer
     start_time = gpu_blas->get_time_us();
 
-    // run GEMM operation
-    if(!gpu_blas->run_blass_gemm(gst_ops_type))
-      continue;
+    for (uint64_t i = 0; i < gst_hot_calls; i++) {
+      // run GEMM operation
+      if(!gpu_blas->run_blass_gemm(gst_ops_type))
+        continue;
+    }
 
-    // Wait for GEMM operation to complete
+    // Wait for all the GEMM operations to complete
     if(!gpu_blas->is_gemm_op_complete())
       continue;
 
@@ -456,7 +458,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
     timetakenforniterations += (end_time - start_time);
 
-    num_gemm_ops++;
+    num_gemm_ops += gst_hot_calls;
 
     gst_end_time = std::chrono::system_clock::now();
     total_milliseconds = time_diff(gst_end_time, gst_start_time);
@@ -487,22 +489,14 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
       }
     }
 
-    if(!gst_hot_calls) {
-      msg = "[" + action_name + "] " + MODULE_NAME + " " +
-        std::to_string(gpu_id) + " " + GST_START_MSG + " " +
-        " Execution time in milliseconds :" + std::to_string(total_milliseconds) +
-        " run_duration_ms :" + std::to_string(run_duration_ms);
-      rvs::lp::Log(msg, rvs::logtrace);
-      if (total_milliseconds >= run_duration_ms)
-        break;
-    }else{
-      msg = "[" + action_name + "] " + MODULE_NAME + " " +
-        std::to_string(gpu_id) + " " + GST_START_MSG + " " +
-        " Executing hot calls loop :" + std::to_string(gst_hot_calls);
-      rvs::lp::Log(msg, rvs::logtrace);
+    msg = "[" + action_name + "] " + MODULE_NAME + " " +
+      std::to_string(gpu_id) + " " + GST_START_MSG + " " +
+      " Execution time in milliseconds :" + std::to_string(total_milliseconds) +
+      " run_duration_ms :" + std::to_string(run_duration_ms);
+    rvs::lp::Log(msg, rvs::logtrace);
 
-      gst_hot_calls--;
-    }
+    if (total_milliseconds >= run_duration_ms)
+      break;
   }
 
   return true;

@@ -195,6 +195,10 @@ class IETWorker : public rvs::ThreadBase {
     void set_ldc_offset(int ldc) {
         iet_ldc_offset = ldc;
     }
+    //! sets offsets
+    void set_ldd_offset(int ldd) {
+        iet_ldd_offset = ldd;
+    }
    //! sets the SGEMM matrix size
     void set_matrix_size_a(uint64_t _matrix_size_a) {
         matrix_size_a = _matrix_size_a;
@@ -228,7 +232,7 @@ class IETWorker : public rvs::ThreadBase {
         int log_level);
     void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type,
         bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
-        int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset);
+        int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset, int iet_ldd_offset);
     void bandwidthThread(int gpuIdx, uint64_t run_duration_ms);
  protected:
     std::unique_ptr<rvs_blas> gpu_blas;
@@ -291,6 +295,7 @@ class IETWorker : public rvs::ThreadBase {
     int iet_lda_offset;
     int iet_ldb_offset;
     int iet_ldc_offset;
+    int iet_ldd_offset;
     //Matrix transpose A
     int iet_trans_a;
     //Matrix transpose B

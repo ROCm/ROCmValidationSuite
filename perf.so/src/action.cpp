@@ -66,6 +66,7 @@ using std::regex;
 #define RVS_CONF_LDA_OFFSET             "lda"
 #define RVS_CONF_LDB_OFFSET             "ldb"
 #define RVS_CONF_LDC_OFFSET             "ldc"
+#define RVS_CONF_LDD_OFFSET             "ldd"
 
 #define MODULE_NAME                     "perf"
 #define MODULE_NAME_CAPS                "PERF"
@@ -84,6 +85,7 @@ using std::regex;
 #define PERF_DEFAULT_LDA_OFFSET          0
 #define PERF_DEFAULT_LDB_OFFSET          0
 #define PERF_DEFAULT_LDC_OFFSET          0
+#define PERF_DEFAULT_LDD_OFFSET          0
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0
@@ -155,6 +157,7 @@ bool perf_action::do_gpu_stress_test(map<int, uint16_t> perf_gpus_device_index) 
             workers[i].set_lda_offset(perf_lda_offset);
             workers[i].set_ldb_offset(perf_ldb_offset);
             workers[i].set_ldc_offset(perf_ldc_offset);
+            workers[i].set_ldd_offset(perf_ldd_offset);
             
             i++;
         }
@@ -351,6 +354,14 @@ bool perf_action::get_all_perf_config_keys(void) {
     if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_LDC_OFFSET) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    error = property_get_int<int>(RVS_CONF_LDD_OFFSET, &perf_ldd_offset, PERF_DEFAULT_LDD_OFFSET);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_LDD_OFFSET) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
