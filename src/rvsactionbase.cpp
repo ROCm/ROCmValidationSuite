@@ -124,6 +124,89 @@ void rvs::actionbase::sleep(const unsigned int ms) {
 }
 
 /**
+ * @brief Populates config parameters common to all actions.
+ * others can override if needed.
+ *
+ * 
+ * @return (void)
+ * 
+ * */
+bool rvs::actionbase::get_all_common_config_keys(void) {
+    string msg, sdevid, sdev;
+    int error;
+    bool bsts = true;
+
+    msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            " " + " Getting all common properties";
+    rvs::lp::Log(msg, rvs::logtrace);
+
+
+    if (int sts = property_get_device()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device' key.";
+        break;
+      }
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+
+    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                  &property_device_id, 0u)) {
+      msg = "Invalid 'deviceid' key value.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+
+    if (int sts = property_get_device_index()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device_index' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device_index' key.";
+        break;
+      }
+
+      property_device_index_all = true;
+      rvs::lp::Log(msg, rvs::loginfo);
+    }
+
+
+    if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
+      msg = "invalid '" +
+          std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+    error = property_get_int<uint64_t>
+    (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
+    if (error != 0) {
+      msg = "invalid '" +
+          std::string(RVS_CONF_COUNT_KEY) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+    error = property_get_int<uint64_t>
+    (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
+    if (error != 0) {
+      msg = "invalid '" +
+          std::string(RVS_CONF_WAIT_KEY) + "' key value";
+      bsts = false;
+}
+
+    return bsts;
+}
+ 
+}
+/**
  * @brief Checks if property is set.
  *
  * Returns value if propety is set.
