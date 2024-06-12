@@ -67,7 +67,6 @@ using std::fstream;
 #define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_interval"
 #define RVS_CONF_TOLERANCE_KEY          "tolerance"
 #define RVS_CONF_MAX_VIOLATIONS_KEY     "max_violations"
-#define RVS_CONF_SAMPLE_INTERVAL_KEY    "sample_interval"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
 #define RVS_CONF_MATRIX_SIZE_KEY        "matrix_size"
 #define RVS_CONF_IET_OPS_TYPE           "ops_type"
@@ -88,8 +87,6 @@ using std::fstream;
 #define RVS_TP_MESSAGE                  "target_power"
 #define RVS_DTYPE_MESSAGE               "dtype"
 
-#define MODULE_NAME                     "iet"
-#define MODULE_NAME_CAPS                "IET"
 
 #define IET_DEFAULT_RAMP_INTERVAL       5000
 #define IET_DEFAULT_LOG_INTERVAL        1000
@@ -116,10 +113,14 @@ using std::fstream;
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 
+static constexpr auto MODULE_NAME = "iet";
+static constexpr auto MODULE_NAME_CAPS = "IET";
+
 /**
  * @brief default class constructor
  */
 iet_action::iet_action() {
+  module_name = MODULE_NAME;
 }
 
 /**
@@ -594,15 +595,6 @@ int iet_action::run(void) {
   string msg;
   rvs::action_result_t action_result;
 
-  // get the action name
-  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-    return -1;
-  }
-
-  // check for -j flag (json logging)
-  if (property.find("cli.-j") != property.end())
-    bjson = true;
 
   if (!get_all_common_config_keys())
     return -1;

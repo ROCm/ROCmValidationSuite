@@ -135,10 +135,18 @@ bool rvs::actionbase::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
     bool bsts = true;
+    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", module_name);
+    return false;
+  }
+
     msg = "[" + action_name + "] " + module_name + " " +
             " " + " Getting all common properties";
     rvs::lp::Log(msg, rvs::logtrace);
-
+    // check if  -j flag is passed
+    if (has_property("cli.-j")) {
+      bjson = true;
+    }
 
     if (int sts = property_get_device()) {
       switch (sts) {
@@ -199,12 +207,26 @@ bool rvs::actionbase::get_all_common_config_keys(void) {
       msg = "invalid '" +
           std::string(RVS_CONF_WAIT_KEY) + "' key value";
       bsts = false;
-}
+    }
+      if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
+    &property_duration, DEFAULT_DURATION)) {
+    msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
+    "' key";
+    rvs::lp::Err(msg, module_name, action_name);
+    bsts = false;
+  }
+
+  if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+    &property_log_interval, DEFAULT_LOG_INTERVAL)) {
+    msg = "Invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) +
+    "' key";
+    rvs::lp::Err(msg, module_name, action_name);
+    bsts = false;
+  }
 
     return bsts;
 }
  
-}
 /**
  * @brief Checks if property is set.
  *

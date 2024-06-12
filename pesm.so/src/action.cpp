@@ -43,9 +43,10 @@ extern "C" {
 #include "include/gpu_util.h"
 #include "include/rvs_util.h"
 #include "include/rvsloglp.h"
-#define MODULE_NAME_CAPS "PESM"
 #define RVS_CONF_DBGWAIT_KEY "debugwait"
 
+static constexpr auto MODULE_NAME = "pesm";
+static constexpr auto MODULE_NAME_CAPS = "PESM";
 using std::string;
 using std::cout;
 using std::endl;
@@ -58,6 +59,7 @@ extern Worker* pworker;
 pesm_action::pesm_action() {
   bjson = false;
   prop_monitor = true;
+  module_name = MODULE_NAME;
 }
 
 //! Default destructor

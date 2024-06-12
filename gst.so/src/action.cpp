@@ -102,12 +102,13 @@ using std::regex;
 #define GST_DEFAULT_DATA_TYPE           ""
 
 
-static constexpr std::string MODULE_NAME{"gst"};
-static constexpr std::string MODULE_NAME_CAPS{"GST"};
+static constexpr auto MODULE_NAME = "gst";
+static constexpr auto MODULE_NAME_CAPS = "GST";
 /**
  * @brief default class constructor
  */
 gst_action::gst_action() {
+  module_name = MODULE_NAME;
   bjson = false;
 }
 
@@ -394,6 +395,14 @@ bool gst_action::get_all_gst_config_keys(void) {
     gst_ops_type = "sgemm";
   }
 
+  if (property_duration > 0 && (property_duration < gst_ramp_interval)) {
+    msg = "'" +
+      std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
+      std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
   return bsts;
 }
 
@@ -496,29 +505,12 @@ void gst_action::json_add_primary_fields(){
 int gst_action::run(void) {
   string msg;
   rvs::action_result_t action_result;
-  module_name = MODULE_NAME; 
-  // get the action name
-  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-    return -1;
-  }
-
-  // check for -j flag (json logging)
-  if (property.find("cli.-j") != property.end())
-    bjson = true;
 
   if (!get_all_common_config_keys())
     return -1;
   if (!get_all_gst_config_keys())
     return -1;
 
-  if (property_duration > 0 && (property_duration < gst_ramp_interval)) {
-    msg = "'" +
-      std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
-      std::string(RVS_CONF_RAMP_INTERVAL_KEY) + "'";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
-  }
   if(bjson){
     // add prelims for each action, dtype and target stress
     json_add_primary_fields();

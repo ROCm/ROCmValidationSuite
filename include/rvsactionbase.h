@@ -66,7 +66,7 @@ class actionbase {
  protected:
   actionbase();
   void sleep(const unsigned int ms);
-  virtual void get_all_common_config_keys();
+  virtual bool get_all_common_config_keys();
  public:
   virtual int property_set(const char*, const char*);
 
@@ -216,6 +216,8 @@ class actionbase {
   uint64_t property_duration;
   //! logging interval
   uint64_t property_log_interval;
+  //! 'true' if JSON logging is required
+  bool     bjson ;
 
   //! data from config file
   std::map<std::string, std::string> property;

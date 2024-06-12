@@ -59,13 +59,10 @@ class gm_action : public rvs::actionbase {
  * @return run number of GPUs
  */
   int get_num_amd_gpu_devices(void);
-  bool get_all_common_config_keys(void);
   bool get_all_gm_config_keys(void);
   int get_bounds(const char* pMetric);
 
  protected:
-  //! 'true' if JSON logging is required
-  bool     bjson;
   //! true if test has to be aborted on bounds violation
   bool     prop_terminate;
   //! true if forced termination is required

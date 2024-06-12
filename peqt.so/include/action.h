@@ -63,7 +63,7 @@ class peqt_action: public rvs::actionbase {
     virtual int run(void);
 
  protected:
-  bool get_all_common_config_keys(void);
+  bool get_all_common_config_keys() override;
 
  private:
     //! TRUE if JSON output is required

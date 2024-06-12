@@ -49,7 +49,7 @@ class pesm_action : public rvs::actionbase {
 
  protected:
   int do_gpu_list(void);
-  bool get_all_common_config_keys(void);
+  bool get_all_common_config_keys() override;
   bool get_all_pesm_config_keys(void);
 
  protected:

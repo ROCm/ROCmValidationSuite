@@ -73,7 +73,6 @@ class pbqt_action : public rvs::actionbase {
 
  protected:
   bool get_all_pbqt_config_keys(void);
-  bool get_all_common_config_keys(void);
 
   // PBQT specific config keys
   bool property_get_peers(int *error);
