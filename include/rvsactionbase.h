@@ -194,6 +194,8 @@ class actionbase {
 
   //! name of the action
   std::string action_name;
+  //! name of the module which action is part of 
+  std::string module_name;
   //! device_id - non-zero if filtering of device id is required
   uint16_t property_device_id;
   //! device_index - if filtering of device index is required

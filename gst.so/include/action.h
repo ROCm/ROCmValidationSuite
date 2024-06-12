@@ -114,12 +114,6 @@ class gst_action: public rvs::actionbase {
 
     bool get_all_gst_config_keys(void);
     void json_add_primary_fields();
-    /**
-     * @brief reads all common configuration keys from
-     * the module's properties collection
-     * @return true if no fatal error occured, false otherwise
-     */
-    bool get_all_common_config_keys(void);
 
     /**
      * @brief gets the number of ROCm compatible AMD GPUs

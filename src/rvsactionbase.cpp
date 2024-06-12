@@ -135,8 +135,7 @@ bool rvs::actionbase::get_all_common_config_keys(void) {
     string msg, sdevid, sdev;
     int error;
     bool bsts = true;
-
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
+    msg = "[" + action_name + "] " + module_name + " " +
             " " + " Getting all common properties";
     rvs::lp::Log(msg, rvs::logtrace);
 
@@ -150,7 +149,7 @@ bool rvs::actionbase::get_all_common_config_keys(void) {
         msg = "Missing 'device' key.";
         break;
       }
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      rvs::lp::Err(msg, module_name, action_name);
       bsts = false;
     }
 
@@ -158,7 +157,7 @@ bool rvs::actionbase::get_all_common_config_keys(void) {
     if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
                                   &property_device_id, 0u)) {
       msg = "Invalid 'deviceid' key value.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      rvs::lp::Err(msg, module_name, action_name);
       bsts = false;
     }
 
@@ -181,7 +180,7 @@ bool rvs::actionbase::get_all_common_config_keys(void) {
     if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
       msg = "invalid '" +
           std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      rvs::lp::Err(msg, module_name, action_name);
       bsts = false;
     }
 
@@ -190,7 +189,7 @@ bool rvs::actionbase::get_all_common_config_keys(void) {
     if (error != 0) {
       msg = "invalid '" +
           std::string(RVS_CONF_COUNT_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      rvs::lp::Err(msg, module_name, action_name);
       bsts = false;
     }
 

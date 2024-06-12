@@ -71,8 +71,6 @@ using std::regex;
 #define RVS_CONF_LDC_OFFSET             "ldc"
 #define RVS_CONF_LDD_OFFSET             "ldd"
 
-#define MODULE_NAME                     "gst"
-#define MODULE_NAME_CAPS                "GST"
 #define TARGET_KEY                      "target"
 #define DTYPE_KEY                       "dtype"
 #define GST_DEFAULT_RAMP_INTERVAL       5000
@@ -103,6 +101,9 @@ using std::regex;
 #define GST_DEFAULT_OPS_TYPE            ""
 #define GST_DEFAULT_DATA_TYPE           ""
 
+
+static constexpr std::string MODULE_NAME{"gst"};
+static constexpr std::string MODULE_NAME_CAPS{"GST"};
 /**
  * @brief default class constructor
  */
@@ -396,89 +397,6 @@ bool gst_action::get_all_gst_config_keys(void) {
   return bsts;
 }
 
-/**
- * @brief reads all common configuration keys from
- * the module's properties collection
- * @return true if no fatal error occured, false otherwise
- */
-bool gst_action::get_all_common_config_keys(void) {
-  string msg, sdevid, sdev;
-  int error;
-  bool bsts = true;
-
-  // get <device> property value (a list of gpu id)
-  if (int sts = property_get_device()) {
-    switch (sts) {
-      case 1:
-        msg = "Invalid 'device' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device' key.";
-        break;
-    }
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  // get the <deviceid> property value if provided
-  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-        &property_device_id, 0u)) {
-    msg = "Invalid 'deviceid' key value.";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  // get <device_index> property value (a list of device indexes)
-  if (int sts = property_get_device_index()) {
-    switch (sts) {
-      case 1:
-        msg = "Invalid 'device_index' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device_index' key.";
-        break;
-    }
-    // default set as true
-    property_device_index_all = true;
-    rvs::lp::Log(msg, rvs::loginfo);
-  }
-
-  // get the other action/GST related properties
-  if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
-    msg = "invalid '" +
-      std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  error = property_get_int<uint64_t>
-    (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
-  if (error != 0) {
-    msg = "invalid '" +
-      std::string(RVS_CONF_COUNT_KEY) + "' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  error = property_get_int<uint64_t>
-    (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
-  if (error != 0) {
-    msg = "invalid '" +
-      std::string(RVS_CONF_WAIT_KEY) + "' key value";
-    bsts = false;
-  }
-
-  error = property_get_int<uint64_t>
-    (RVS_CONF_DURATION_KEY, &property_duration, RVS_DEFAULT_DURATION);
-  if (error == 1) {
-    msg = "invalid '" +
-      std::string(RVS_CONF_DURATION_KEY) + "' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  return bsts;
-}
 
 /**
  * @brief gets the number of ROCm compatible AMD GPUs
@@ -578,7 +496,7 @@ void gst_action::json_add_primary_fields(){
 int gst_action::run(void) {
   string msg;
   rvs::action_result_t action_result;
-
+  module_name = MODULE_NAME; 
   // get the action name
   if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
