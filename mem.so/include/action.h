@@ -127,7 +127,7 @@ class mem_action: public rvs::actionbase {
   * the module's properties collection
   * @return true if no fatal error occured, false otherwise
   */
-    bool get_all_common_config_keys(void);
+    bool get_all_common_config_keys() override;
 
   /**
   * @brief gets the number of ROCm compatible AMD GPUs
