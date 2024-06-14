@@ -91,6 +91,10 @@ class rvs_blas {
     bool copy_data_to_gpu(std::string);
     bool run_blass_gemm(std::string);
     bool is_gemm_op_complete(void);
+    bool validate_gemm(std::string ops_type);
+
+    template <typename T>
+      bool check_norm_error(void * dout, uint64_t size);
 
     bool set_callback(rvsBlasCallback_t callback, void *user_data);
 
@@ -170,6 +174,11 @@ class rvs_blas {
     void *hdb;
     //! pointer to host memory
     void *hdc;
+
+    //! pointer to current gemm output (host memory)
+    void *hco;
+    //! pointer to previous gemm output (host memory)
+    void *hpo;
 
     //!GST Aplha Val 
     float blas_alpha_val;

@@ -212,6 +212,18 @@ class GSTWorker : public rvs::ThreadBase {
     //! set data format based gemm operation  - fp8, fp16, bf16
     void set_gst_data_type(std::string _data_type) { gst_data_type = _data_type; }
 
+    //! sets gemm output self check enable/disable
+    void set_self_check(bool _self_check) { self_check = _self_check; }
+
+    //! returns the self check value
+    bool get_self_check(void) { return self_check; }
+
+    //! sets gemm output error inject enable/disable
+    void set_error_inject(bool _error_inject) { error_inject = _error_inject; }
+
+    //! returns the error inject value
+    bool get_error_inject(void) { return error_inject; }
+
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -293,6 +305,10 @@ class GSTWorker : public rvs::ThreadBase {
     std::condition_variable cv;
     //! blas gemm operations status
     bool blas_status;
+    //! gemm output validation
+    bool self_check;
+    //! Inject error in gemm output
+    bool error_inject;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

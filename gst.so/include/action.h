@@ -110,6 +110,13 @@ class gst_action: public rvs::actionbase {
     // gemm data type
     std::string gst_data_type;
 
+    // gemm output validation
+    bool gst_self_check;
+
+    // Inject error in gemm output
+    // Note : This is just for testing purpose. Shouldn't be enabled otherwise.
+    bool gst_error_inject;
+
     friend class GSTWorker;
 
     bool get_all_gst_config_keys(void);

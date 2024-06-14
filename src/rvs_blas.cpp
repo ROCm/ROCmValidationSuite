@@ -29,6 +29,7 @@
 #include <cmath>
 #include <random>
 #include <thread>
+#include <iomanip>
 
 /* ============================================================================================ */
 // Random number generator
@@ -100,6 +101,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , hhlfa(nullptr), hhlfb(nullptr), hhlfc(nullptr)
   , dda(nullptr), ddb(nullptr), ddc(nullptr), ddd(nullptr)
   , hda(nullptr), hdb(nullptr), hdc(nullptr)
+  , hpo(nullptr), hco(nullptr)
   , hip_stream(nullptr)
   , blas_handle(nullptr)
   , is_handle_init(false)
@@ -964,6 +966,311 @@ bool rvs_blas::set_callback(rvsBlasCallback_t callback, void *user_data) {
   /* Add callback to be called items in stream is completed */
   if(hipSuccess != hipStreamAddCallback (hip_stream, this->hip_stream_callback , (void *)this, 0)) {
     return false;
+  }
+
+  return true;
+}
+
+/*! \brief  lapack_xlassq computes the scale and sumsq */
+template <typename T>
+void lapack_xlassq(int64_t n, T* X, int64_t incx, double& scale, double& sumsq)
+{
+    if(n > 0)
+    {
+        double abs_X = 0.0;
+        for(int64_t i = 0; i < n; i++)
+        {
+            abs_X = std::abs(X[i * incx]);
+            if(abs_X > 0 || std::isnan(abs_X))
+            {
+                if(scale < abs_X)
+                {
+                    sumsq = 1 + sumsq * std::sqrt(scale / abs_X);
+                    scale = abs_X;
+                }
+                else
+                {
+                    sumsq = sumsq + std::sqrt(abs_X / scale);
+                }
+            }
+        }
+    }
+}
+
+/* LAPACK library functionality */
+template <typename T>
+void lapack_xcombssq(T* ssq, T* colssq)
+{
+    if(ssq[0] >= colssq[0])
+    {
+        if(ssq[0] != 0)
+        {
+            ssq[1] = ssq[1] + std::sqrt(colssq[0] / ssq[0]) * colssq[1];
+        }
+        else
+        {
+            ssq[1] = ssq[1] + colssq[1];
+        }
+    }
+    else
+    {
+        ssq[1] = colssq[1] + std::sqrt(ssq[0] / colssq[0]) * ssq[1];
+        ssq[0] = colssq[0];
+    }
+    return;
+}
+
+/*! \brief calculate_norm - returns the value of the one norm, infinity norm or
+  the Frobenius norm of the matrix A. */
+template <typename T>
+double calculate_norm(char norm_type, int64_t m, int64_t n, T* A, int64_t lda, double* work)
+{
+    double value = 0.0;
+    double sum   = 0.0;
+
+    if(std::min(m, n) == 0)
+        return value;
+
+    int64_t a_offset = lda >= 0 ? 0 : lda * (1 - n); // e.g. vectors with negative inc
+    if(norm_type == 'O' || norm_type == 'o' || norm_type == '1')
+    {
+        //Find the one norm of Matrix A.
+        for(int64_t j = 0; j < n; j++)
+        {
+            sum = 0.0;
+            for(int64_t i = 0; i < m; i++)
+                sum = sum + std::abs(A[a_offset + i + j * lda]);
+
+            if(value < sum || std::isnan(sum))
+                value = sum;
+        }
+    }
+    else if(norm_type == 'I' || norm_type == 'i')
+    {
+        //Find the infinity norm of Matrix A.
+        for(int64_t j = 0; j < n; j++)
+            for(int64_t i = 0; i < m; i++)
+            {
+                work[i] = work[i] + std::abs(A[a_offset + i + j * lda]);
+            }
+        for(int64_t i = 0; i < m; i++)
+            if(value < work[i] || std::isnan(work[i]))
+                value = work[i];
+    }
+    else if(norm_type == 'F' || norm_type == 'f')
+    {
+        //Find the Frobenius norm of Matrix A.
+        //SSQ(1) is scale
+        //SSQ(2) is sum-of-squares
+        //For better accuracy, sum each column separately.
+        std::vector<double> ssq(2);
+        std::vector<double> colssq(2);
+
+        ssq[0] = 0.0;
+        ssq[1] = 1.0;
+        for(int64_t j = 0; j < n; j++)
+        {
+            colssq[0] = 0.0;
+            colssq[1] = 1.0;
+            lapack_xlassq(m, A + a_offset + j * lda, 1, colssq[0], colssq[1]);
+            lapack_xcombssq(ssq.data(), colssq.data());
+        }
+        value = ssq[0] * std::sqrt(ssq[1]);
+    }
+    return value;
+}
+
+template <typename T>
+void m_axpy_64(int64_t N, T* alpha, T* x, int64_t incx, T* y, int64_t incy)
+{
+    int64_t x_offset = incx >= 0 ? 0 : incx * (1 - N);
+    int64_t y_offset = incy >= 0 ? 0 : incy * (1 - N);
+    for(int64_t i = 0; i < N; i++)
+    {
+        y[y_offset + i * incy] = (*alpha) * x[x_offset + i * incx] + y[y_offset + i * incy];
+    }
+}
+
+template <
+    typename T,
+    std::enable_if<(std::is_same<T, float>{} || std::is_same<T, double>{}),int>::type = 0>
+double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* hCPU, T* hGPU)
+{
+    // norm type can be 'O', 'I', 'F', 'o', 'i', 'f' for one, infinity or Frobenius norm
+    // one norm is max column sum
+    // infinity norm is max row sum
+    // Frobenius is l2 norm of matrix entries
+
+    std::vector<double> work(std::max(int64_t(1), M));
+    int64_t             incx  = 1;
+    double              alpha = -1.0;
+
+    size_t size = M * size_t(N); // copying data so lda is M
+
+    std::vector<double> hCPU_double(size);
+    std::vector<double> hGPU_double(size);
+
+    for(int64_t i = 0; i < N; i++)
+    {
+        int64_t src_col = i * int64_t(lda);
+        int64_t dst_col = i * int64_t(M);
+        for(int64_t j = 0; j < M; j++)
+        {
+            hCPU_double[size_t(dst_col + j)] = double(hCPU[src_col + j]);
+            hGPU_double[size_t(dst_col + j)] = double(hGPU[src_col + j]);
+        }
+    }
+
+    double cpu_norm = calculate_norm(norm_type, M, N, hCPU_double.data(), M, work.data());
+    m_axpy_64(size, &alpha, hCPU_double.data(), incx, hGPU_double.data(), incx);
+    double error = calculate_norm(norm_type, M, N, hGPU_double.data(), M, work.data()) / cpu_norm;
+    return error;
+}
+
+// For F8 , we convert the results to float to double first
+template <
+    typename T,
+    std::enable_if<(std::is_same<T, rocblas_f8>{} || std::is_same<T, rocblas_bf8>{}), int>::type = 0>
+double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* hCPU, T* hGPU)
+{
+    // norm type can be 'O', 'I', 'F', 'o', 'i', 'f' for one, infinity or Frobenius norm
+    // one norm is max column sum
+    // infinity norm is max row sum
+    // Frobenius is l2 norm of matrix entries
+    size_t size = M * size_t(N); // copying data so lda is M
+
+    std::vector<double> hCPU_double(size);
+    std::vector<double> hGPU_double(size);
+
+    for(int64_t i = 0; i < N; i++)
+    {
+        int64_t src_col = i * int64_t(lda);
+        int64_t dst_col = i * int64_t(M);
+        for(int64_t j = 0; j < M; j++)
+        {
+            hCPU_double[size_t(dst_col + j)] = double(float(hCPU[src_col + j]));
+            hGPU_double[size_t(dst_col + j)] = double(float(hGPU[src_col + j]));
+        }
+    }
+
+    std::vector<double> work(std::max(int64_t(1), M));
+    int64_t             incx  = 1;
+    double              alpha = -1.0;
+
+    double cpu_norm = calculate_norm(norm_type, M, N, hCPU_double.data(), M, work.data());
+    m_axpy_64(size, &alpha, hCPU_double.data(), incx, hGPU_double.data(), incx);
+    double error = calculate_norm(norm_type, M, N, hGPU_double.data(), M, work.data()) / cpu_norm;
+    return error;
+}
+
+// For BF16 and half, we convert the results to double first
+template <typename T,
+         std::enable_if<(std::is_same<T, rocblas_half>{} || std::is_same<T, rocblas_bfloat16>{}), int>::type = 0>
+double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* hCPU, T* hGPU)
+{
+    size_t              size = N * (size_t)lda;
+    std::vector<double> hCPU_double(size);
+    std::vector<double> hGPU_double(size);
+
+    for(int64_t i = 0; i < N; i++)
+    {
+        for(int64_t j = 0; j < M; j++)
+        {
+            size_t idx       = j + i * (size_t)lda;
+            hCPU_double[idx] = hCPU[idx];
+            hGPU_double[idx] = hGPU[idx];
+        }
+    }
+
+    return norm_check_general<double>(norm_type, M, N, lda, hCPU_double.data(), hGPU_double.data());
+}
+
+template <typename T>
+bool rvs_blas::check_norm_error(void * dout, uint64_t size) {
+
+  // Allocate gemm output in host memory
+
+  static int i = 0;
+
+  // current result
+  if (!hco) {
+    if (hipHostMalloc(&hco, size * sizeof(T), 0) != hipSuccess)
+      return false;
+
+    if (hipMemset(hco, 0, size * sizeof(T)) != hipSuccess)
+      return false;
+  }
+
+  if (hipMemcpy(hco, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
+    return false;
+
+  if(i%5 == 0) {
+    if (hipMemset(hco, 0,  sizeof(T) * 4718592) != hipSuccess)
+      return false;
+  }
+
+  // previous result
+  if (!hpo) {
+    if (hipHostMalloc(&hpo, size * sizeof(T), 0) != hipSuccess)
+      return false;
+
+    if (hipMemset(hpo, 0, size * sizeof(T)) != hipSuccess)
+      return false;
+
+    if (hipMemcpy(hpo, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
+      return false;
+
+    // first iteration gemm outputs equal no checking required
+    return true;
+  }
+
+  // Norm checking
+
+  T * fp = (T *)hpo;
+  T * fc = (T *)hco;
+
+  int64_t M = (int64_t)m;
+  int64_t N = (int64_t)n;
+  int64_t _ldc = (int64_t) blas_ldc_offset;
+
+  double error = std::abs(norm_check_general('F', M, N, _ldc, fp, fc));
+
+  std::cout << "error ->" << std::setprecision(std::numeric_limits<double>::max_digits10) << error << std::endl;
+
+  if (hipMemcpy(hpo, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
+    return false;
+
+  i++;
+  return true;
+}
+
+bool rvs_blas::validate_gemm(std::string ops_type) {
+
+  // 1. Get the previous gemm output
+  // 2. Get the current gemm output
+  // 3. Calculate the the F-norm error
+
+  // check if it match the previous norms
+
+  // Measure the error based on tolerance
+
+
+  if(ops_type == "sgemm")
+    check_norm_error<float>(dc, size_c);
+
+  if(ops_type == "dgemm")
+    check_norm_error<double>(ddblc, size_c);
+
+  if(data_type == "fp8_r") {
+    check_norm_error<rocblas_f8>(ddd, size_d);
+  }
+
+  if(data_type == "fp16_r") {
+    check_norm_error<rocblas_half>(ddd, size_d);
+  }
+
+  if(data_type == "bf16_r") {
+    check_norm_error<rocblas_bfloat16>(ddd, size_d);
   }
 
   return true;
