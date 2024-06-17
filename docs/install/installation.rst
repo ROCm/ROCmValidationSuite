@@ -84,7 +84,7 @@ Ensure you review the following prerequisites carefully for each operating syste
 Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 -----------------------------------------------
 
-1. Install the ROCm software tack for Ubuntu/CentOS/SLES/RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details>`_
+1. Install the ROCm software tack for Ubuntu/CentOS/SLES/RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details. 
 
 .. Note::
 
