@@ -46,7 +46,7 @@
 #define DEFAULT_LOG_INTERVAL (1000u)
 #define DEFAULT_DURATION (10000u)
 #define DEFAULT_COUNT (1u)
-#define DEFAULT_WAIT (0u)
+#define DEFAULT_WAIT (500u)
 
 #define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
 #define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\
