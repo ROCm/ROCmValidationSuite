@@ -32,6 +32,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <set>
 #include <thread>
 
 #include "include/rvsloglp.h"
@@ -39,7 +40,8 @@
 #include "include/rvs_util.h"
 
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
-
+// only thse modules have a target and duration based test approach
+static const std::set<std::string> duration_mods {"gst", "iet", "tst", "pebb", "pbqt"};
 using std::cout;
 using std::endl;
 using std::string;
@@ -208,6 +210,10 @@ bool rvs::actionbase::get_all_common_config_keys(void) {
           std::string(RVS_CONF_WAIT_KEY) + "' key value";
       bsts = false;
     }
+
+    if (duration_mods.find(module_name) == duration_mods.end())
+            return bsts;
+
       if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
     &property_duration, DEFAULT_DURATION)) {
     msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
