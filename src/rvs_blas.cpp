@@ -857,8 +857,8 @@ void rvs_blas::generate_random_matrix_data(void) {
         ((rocblas_half* )hdc)[i] = rocblas_half(fast_pseudo_rand(&nextr, i));
     }
 
-    // 16-bit brain floating point real (bp16_r) format
-    if(data_type == "bp16_r") {
+    // 16-bit brain floating point real (bf16_r) format
+    if(data_type == "bf16_r") {
 
       for (i = 0; i < size_a; ++i)
         ((struct rocblas_bfloat16* )hda)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
