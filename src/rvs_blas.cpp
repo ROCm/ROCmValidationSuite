@@ -859,8 +859,8 @@ void rvs_blas::generate_random_matrix_data(void) {
         ((rocblas_half* )hdc)[i] = rocblas_half(fast_pseudo_rand(&nextr, i));
     }
 
-    // 16-bit brain floating point real (bp16_r) format
-    if(data_type == "bp16_r") {
+    // 16-bit brain floating point real (bf16_r) format
+    if(data_type == "bf16_r") {
 
       for (i = 0; i < size_a; ++i)
         ((struct rocblas_bfloat16* )hda)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
@@ -969,6 +969,36 @@ bool rvs_blas::set_callback(rvsBlasCallback_t callback, void *user_data) {
   }
 
   return true;
+}
+
+template <typename T>
+void host_matrix_mul(T alpha,
+    T        beta,
+    int      M,
+    int      N,
+    int      K,
+    const T* A,
+    int      As1,
+    int      As2,
+    const T* B,
+    int      Bs1,
+    int      Bs2,
+    T*       C,
+    int      Cs1,
+    int      Cs2)
+{
+    for(int i1 = 0; i1 < M; i1++)
+    {
+        for(int i2 = 0; i2 < N; i2++)
+        {
+            T t = 0.0;
+            for(int i3 = 0; i3 < K; i3++)
+            {
+                t += A[i1 * As1 + i3 * As2] * B[i3 * Bs1 + i2 * Bs2];
+            }
+            C[i1 * Cs1 + i2 * Cs2] = beta * C[i1 * Cs1 + i2 * Cs2] + alpha * t;
+        }
+    }
 }
 
 /*! \brief  lapack_xlassq computes the scale and sumsq */
@@ -1165,7 +1195,32 @@ double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* 
 
 // For BF16 and half, we convert the results to double first
 template <typename T,
-         std::enable_if<(std::is_same<T, rocblas_half>{} || std::is_same<T, rocblas_bfloat16>{}), int>::type = 0>
+         std::enable_if<(std::is_same<T, rocblas_bfloat16>{}), int>::type = 0>
+double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* hCPU, T* hGPU)
+{
+    size_t              size = N * (size_t)lda;
+    std::vector<double> hCPU_double(size);
+    std::vector<double> hGPU_double(size);
+
+    for(int64_t i = 0; i < N; i++)
+    {
+        for(int64_t j = 0; j < M; j++)
+        {
+            size_t idx       = j + i * (size_t)lda;
+            hCPU_double[idx] = hCPU[idx].data;
+            hGPU_double[idx] = hGPU[idx].data;
+
+//            std::cout << "hCPU_double["<< idx << "] -> " << hCPU_double[idx] << std::endl;
+//            std::cout << "hGPU_double["<< idx << "] -> " << hGPU_double[idx] << std::endl;
+        }
+    }
+
+    return norm_check_general<double>(norm_type, M, N, lda, hCPU_double.data(), hGPU_double.data());
+}
+
+// For BF16 and half, we convert the results to double first
+template <typename T,
+         std::enable_if<(std::is_same<T, rocblas_half>{}), int>::type = 0>
 double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* hCPU, T* hGPU)
 {
     size_t              size = N * (size_t)lda;
@@ -1186,7 +1241,7 @@ double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* 
 }
 
 template <typename T>
-bool rvs_blas::check_norm_error(void * dout, uint64_t size) {
+bool rvs_blas::check_result_consistency(void * dout, uint64_t size) {
 
   // Allocate gemm output in host memory
 
@@ -1244,7 +1299,106 @@ bool rvs_blas::check_norm_error(void * dout, uint64_t size) {
   return true;
 }
 
-bool rvs_blas::validate_gemm(std::string ops_type) {
+template <typename T>
+bool rvs_blas::check_result_accuracy(void * dout, uint64_t size) {
+
+  int a_stride_1 = 1,
+      a_stride_2 = blas_lda_offset,
+      b_stride_1 = 1,
+      b_stride_2 = blas_ldb_offset;
+
+  if(transa == rocblas_operation_transpose) {
+    a_stride_1 = blas_lda_offset;
+    a_stride_2 = 1;
+  }
+
+  if(transb == rocblas_operation_transpose) {
+    b_stride_1 = blas_ldb_offset;
+    b_stride_2 = 1;
+  }
+
+  printf("size -> %d \n", size);
+
+  std::vector<T> hout(size);
+  std::vector<T> hdout(size);
+
+  T * _ha;
+  T * _hb;
+  T * _hc;
+  T alpha = (T) blas_alpha_val;
+  T beta = (T) blas_beta_val;
+
+  if (std::is_same<T, float>{}) {
+    _ha = (T *)ha;
+    _hb = (T *)hb;
+    _hc = (T *)hc;
+
+    printf("type is float \n");
+
+  }
+  else {
+    _ha = (T *)hdbla;
+    _hb = (T *)hdblb;
+    _hc = (T *)hdblc;
+
+    printf("type is double \n");
+  }
+
+  hipMemcpy(hout.data(), _hc, sizeof(T) * size, hipMemcpyHostToHost);
+
+  std::cout << "m, n, k, lda, ldb, ldc = " << m << ", " << n << ", " << k << ", " << blas_lda_offset
+    << ", " << blas_ldb_offset << ", " << blas_ldc_offset << std::endl;
+
+  host_matrix_mul<T>(alpha,
+      beta,
+      m,
+      n,
+      k,
+      _ha,
+      a_stride_1,
+      a_stride_2,
+      _hb,
+      b_stride_1,
+      b_stride_2,
+      hout.data(),
+      1,
+      blas_ldc_offset);
+
+  hipMemcpy(hdout.data(), dout, sizeof(T) * size, hipMemcpyDeviceToHost);
+
+  T max_relative_error = std::numeric_limits<T>::min();
+
+  for(int i = 0; i < size; i++)
+  {
+
+    if(hout[i] != hdout[i]) {
+      printf("hout[%d] -> %f  hdout[%d] -> %f \n", i, hout[i], i, hdout[i]);
+    }
+
+    T relative_error = (hout[i] - hdout[i]) / hout[i];
+
+    relative_error = relative_error > 0 ? relative_error : -relative_error;
+
+    max_relative_error
+      = relative_error < max_relative_error ? max_relative_error : relative_error;
+  }
+
+  T eps = std::numeric_limits<T>::epsilon();
+  T tolerance = 10;
+
+  if(max_relative_error > eps * tolerance)
+  {
+    std::cout << "FAIL: max_relative_error = " << max_relative_error << std::endl;
+  }
+  else
+  {
+    std::cout << "PASS: max_relative_error = " << max_relative_error << std::endl;
+  }
+
+  return true;
+}
+
+bool rvs_blas::validate_gemm() {
 
   // 1. Get the previous gemm output
   // 2. Get the current gemm output
@@ -1254,24 +1408,49 @@ bool rvs_blas::validate_gemm(std::string ops_type) {
 
   // Measure the error based on tolerance
 
+  // Consistency check
 
-  if(ops_type == "sgemm")
-    check_norm_error<float>(dc, size_c);
+  /****************************************/
+  if(ops_type == "sgemm") {
+    check_result_consistency<float>(dc, size_c);
+  }
 
-  if(ops_type == "dgemm")
-    check_norm_error<double>(ddblc, size_c);
+  if(ops_type == "dgemm") {
+    check_result_consistency<double>(ddblc, size_c);
+  }
 
   if(data_type == "fp8_r") {
-    check_norm_error<rocblas_f8>(ddd, size_d);
+    check_result_consistency<rocblas_f8>(ddd, size_d);
   }
 
   if(data_type == "fp16_r") {
-    check_norm_error<rocblas_half>(ddd, size_d);
+    check_result_consistency<rocblas_half>(ddd, size_d);
   }
 
   if(data_type == "bf16_r") {
-    check_norm_error<rocblas_bfloat16>(ddd, size_d);
+    check_result_consistency<rocblas_bfloat16>(ddd, size_d);
   }
+
+  /****************************************/
+
+  // CPU vs GPU accuracy check
+
+  /****************************************/
+  if(ops_type == "sgemm") {
+    check_result_accuracy<float>(dc, size_c);
+  }
+
+  if(ops_type == "dgemm") {
+    check_result_accuracy<double>(ddblc, size_c);
+  }
+
+  /****************************************/
+
+  // predefined accuracy check
+  /****************************************/
+
+
+  /****************************************/
 
   return true;
 }

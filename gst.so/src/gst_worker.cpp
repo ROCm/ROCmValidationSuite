@@ -490,7 +490,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     }
 
     if (self_check) {
-      gpu_blas->validate_gemm(gst_ops_type);
+      gpu_blas->validate_gemm();
     }
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
