@@ -236,85 +236,6 @@ bool mem_action::get_all_mem_config_keys(void) {
 }
 
 /**
- * @brief reads all common configuration keys from
- * the module's properties collection
- * @return true if no fatal error occured, false otherwise
- */
-bool mem_action::get_all_common_config_keys(void) {
-    string msg, sdevid, sdev;
-    int error;
-    bool bsts = true;
-
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            " " + " Getting all common properties"; 
-    rvs::lp::Log(msg, rvs::logtrace);
-
-    // get <device> property value (a list of gpu id)
-    if (int sts = property_get_device()) {
-      switch (sts) {
-      case 1:
-        msg = "Invalid 'device' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device' key.";
-        break;
-      }
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    // get the <deviceid> property value if provided
-    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                  &property_device_id, 0u)) {
-      msg = "Invalid 'deviceid' key value.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    // get <device_index> property value (a list of device indexes)
-    if (int sts = property_get_device_index()) {
-      switch (sts) {
-      case 1:
-        msg = "Invalid 'device_index' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device_index' key.";
-        break;
-      }
-      // default set as true
-      property_device_index_all = true;
-      rvs::lp::Log(msg, rvs::loginfo);
-    }
-
-    // get the other action/MEM related properties
-    if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    error = property_get_int<uint64_t>
-    (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
-    if (error != 0) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_COUNT_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    error = property_get_int<uint64_t>
-    (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
-    if (error != 0) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_WAIT_KEY) + "' key value";
-      bsts = false;
-    }
-
-    return bsts;
-}
-
-/**
  * @brief gets the number of ROCm compatible AMD GPUs
  * @return run number of GPUs
  */
@@ -395,20 +316,6 @@ int mem_action::get_all_selected_gpus(void) {
 int mem_action::run(void) {
   string msg;
   rvs::action_result_t action_result;
-
-  msg = "[" + action_name + "] " + MODULE_NAME + " " +
-    " " + "Getting properties of memory test"; 
-  rvs::lp::Log(msg, rvs::logtrace);
-
-  // get the action name
-  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-    return -1;
-  }
-
-  // check for -j flag (json logging)
-  if (property.find("cli.-j") != property.end())
-    bjson = true;
 
   if (!get_all_common_config_keys()) {
 

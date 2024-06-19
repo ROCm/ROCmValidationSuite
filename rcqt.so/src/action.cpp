@@ -50,8 +50,6 @@
 #include "include/rvs_key_def.h"
 #include "include/rvsloglp.h"
 
-#define MODULE_NAME "rcqt"
-#define MODULE_NAME_CAPS "RCQT"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 #define JSON_PKGCHK_NODE_NAME "pkgchk"
 #define PACKAGE "package"
@@ -67,6 +65,9 @@
 #define ETC_PASSWD "/etc/passwd"
 #define BUFFER_SIZE 3000
 
+static constexpr auto MODULE_NAME = "rcqt";
+static constexpr auto MODULE_NAME_CAPS = "RCQT";
+
 using std::string;
 using std::iterator;
 using std::endl;
@@ -78,6 +79,7 @@ using std::vector;
 rcqt_action::rcqt_action() {
   PACKAGELIST = (getOS() == OSType::Ubuntu) ?"debpackagelist":"rpmpackagelist";
   bjson = false;
+  module_name = MODULE_NAME;
 }
 
 rcqt_action::~rcqt_action() {

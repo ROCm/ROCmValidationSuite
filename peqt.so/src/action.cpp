@@ -57,8 +57,6 @@ extern "C" {
 #define PEQT_RESULT_PASS_MESSAGE        "true"
 #define PEQT_RESULT_FAIL_MESSAGE        "false"
 
-#define MODULE_NAME                     "peqt"
-#define MODULE_NAME_CAPS                "PEQT"
 
 #define YAML_CAPABILITY_TAG             "capability"
 #define PB_OP_COND_DYN_DELIMITER        "_"
@@ -67,6 +65,8 @@ extern "C" {
 #define PB_NUM_OP_TYPES                 5
 #define PN_NUM_OP_POWER_RAILS           4
 
+static constexpr auto MODULE_NAME = "peqt";
+static constexpr auto MODULE_NAME_CAPS = "PEQT";
 using std::string;
 using std::regex;
 using std::vector;

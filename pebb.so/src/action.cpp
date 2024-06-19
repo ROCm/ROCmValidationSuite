@@ -50,10 +50,9 @@ extern "C" {
 #include "include/rvs_module.h"
 #include "include/worker_b2b.h"
 
-#define MODULE_NAME "pebb"
-#define MODULE_NAME_CAPS "PEBB"
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
-
+static constexpr auto MODULE_NAME = "pebb";
+static constexpr auto MODULE_NAME_CAPS = "PEBB";
 using std::string;
 using std::vector;
 //! Default constructor
@@ -61,6 +60,7 @@ pebb_action::pebb_action():link_type_string{} {
   bjson = false;
   b2b_block_size = 0;
   link_type = -1;
+  module_name = MODULE_NAME;
 }
 
 //! Default destructor
@@ -126,103 +126,6 @@ bool pebb_action::get_all_pebb_config_keys(void) {;
   return bsts;
 }
 
-/**
- * @brief reads all common configuration keys from
- * the module's properties collection
- * @return true if no fatal error occured, false otherwise
- */
-bool pebb_action::get_all_common_config_keys(void) {
-  string msg, sdevid, sdev;
-  int error;
-  int sts;
-  RVSTRACE_
-
-  bool bsts = true;
-  // get the action name
-  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-    return false;
-  }
-
-  // get <device> property value (a list of gpu id)
-  if ((sts = property_get_device())) {
-    switch (sts) {
-    case 1:
-      msg = "Invalid 'device' key value.";
-      break;
-    case 2:
-      msg = "Missing 'device' key.";
-      break;
-    }
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  // get the <deviceid> property value if provided
-  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                &property_device_id, 0u)) {
-    msg = "Invalid 'deviceid' key value.";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  // get <device_index> property value (a list of device indexes)
-  if (int sts = property_get_device_index()) {
-    switch (sts) {
-    case 1:
-      msg = "Invalid 'device_index' key value.";
-      break;
-    case 2:
-      msg = "Missing 'device_index' key.";
-      break;
-    }
-    // default set as true
-    property_device_index_all = true;
-    rvs::lp::Log(msg, rvs::loginfo);
-  }
-
-  // get the other action related properties
-  if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
-    msg = "invalid '" + std::string(RVS_CONF_PARALLEL_KEY) +
-    "' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  error = property_get_int<uint64_t>
-  (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
-  if (error == 1) {
-    msg ="invalid '" + std::string(RVS_CONF_COUNT_KEY) +"' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  error = property_get_int<uint64_t>
-  (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
-  if (error == 1) {
-    msg = "invalid '" + std::string(RVS_CONF_WAIT_KEY) + "' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
-    &property_duration, DEFAULT_DURATION)) {
-    msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
-    "' key";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
-    &property_log_interval, DEFAULT_LOG_INTERVAL)) {
-    msg = "Invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) +
-    "' key";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  return bsts;
-}
 
 /**
  * @brief Create thread objects based on action description in configuration

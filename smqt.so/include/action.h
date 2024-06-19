@@ -47,7 +47,7 @@ class smqt_action : public rvs::actionbase {
  private:
     ulong  get_property(std::string);
     std::string pretty_print(ulong, uint16_t, std::string, std::string);
-    bool get_all_common_config_keys();
+    bool get_all_common_config_keys() override;
     bool get_all_smqt_config_keys();
     std::string action_name;
 

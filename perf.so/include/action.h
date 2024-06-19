@@ -110,12 +110,6 @@ class perf_action: public rvs::actionbase {
      */
     bool get_all_perf_config_keys(void);
 
-    /**
-     * @brief reads all common configuration keys from
-     * the module's properties collection
-     * @return true if no fatal error occured, false otherwise
-     */
-    bool get_all_common_config_keys(void);
 
     /**
      * @brief gets the number of ROCm compatible AMD GPUs
