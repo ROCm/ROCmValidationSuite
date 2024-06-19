@@ -89,8 +89,6 @@ using std::fstream;
 #define RVS_DTYPE_MESSAGE               "dtype"
 
 
-#define MODULE_NAME                     "tst"
-#define MODULE_NAME_CAPS                "TST"
 
 #define TST_DEFAULT_RAMP_INTERVAL       5000
 #define TST_DEFAULT_LOG_INTERVAL        1000
@@ -116,10 +114,15 @@ using std::fstream;
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 
+static constexpr auto MODULE_NAME = "tst";
+static constexpr auto MODULE_NAME_CAPS = "TST";
+
 /**
  * @brief default class constructor
  */
 tst_action::tst_action() {
+  bjson = false;
+  module_name = MODULE_NAME;
 }
 
 /**
@@ -328,90 +331,6 @@ bool tst_action::get_all_tst_config_keys(void) {
     return bsts;
 }
 
-/**
- * @brief reads all common configuration keys from
- * the module's properties collection
- * @return true if no fatal error occured, false otherwise
- */
-bool tst_action::get_all_common_config_keys(void) {
-    string msg, sdevid, sdev;
-    int error;
-    bool bsts = true;
-
-    // get <device> property value (a list of gpu id)
-    if ((error = property_get_device())) {
-      switch (error) {
-      case 1:
-        msg = "Invalid 'device' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device' key.";
-        break;
-      }
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    // get the <deviceid> property value if provided
-    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                  &property_device_id, 0u)) {
-      msg = "Invalid 'deviceid' key value.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    // get <device_index> property value (a list of device indexes)
-    if (int sts = property_get_device_index()) {
-      switch (sts) {
-      case 1:
-        msg = "Invalid 'device_index' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device_index' key.";
-        break;
-      }
-      // default set as true
-      property_device_index_all = true;
-      rvs::lp::Log(msg, rvs::loginfo);
-    }
-
-    // get the other action/TST related properties
-    if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
-      msg = "invalid '" +
-              std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    error = property_get_int<uint64_t>
-    (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
-    if (error == 1) {
-      msg = "invalid '" +
-              std::string(RVS_CONF_COUNT_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    error = property_get_int<uint64_t>
-    (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
-    if (error == 1) {
-      msg = "invalid '" +
-              std::string(RVS_CONF_WAIT_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    error = property_get_int<uint64_t>
-    (RVS_CONF_DURATION_KEY, &property_duration);
-    if (error == 1) {
-      msg = "invalid '" +
-              std::string(RVS_CONF_DURATION_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    return bsts;
-}
 
 /**
  * @brief maps hip index to smi index
@@ -679,15 +598,7 @@ int tst_action::run(void) {
   string msg;
   rvs::action_result_t action_result;
 
-  // get the action name
-  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-    rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-    return -1;
-  }
 
-  // check for -j flag (json logging)
-  if (property.find("cli.-j") != property.end())
-    bjson = true;
 
   if (!get_all_common_config_keys())
     return -1;

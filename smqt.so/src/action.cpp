@@ -45,7 +45,9 @@ extern "C" {
 #include "include/pci_caps.h"
 #include "include/gpu_util.h"
 #include "include/rvsloglp.h"
-#define MODULE_NAME "SMQT"
+
+static constexpr auto MODULE_NAME = "smqt";
+static constexpr auto MODULE_NAME_CAPS = "SMQT";
 
 using std::string;
 using std::vector;
@@ -80,6 +82,7 @@ string smqt_action::pretty_print(ulong bytes, uint16_t gpu_id,
 }
 
 smqt_action::smqt_action() {
+  module_name = MODULE_NAME;
 }
 
 smqt_action::~smqt_action() {

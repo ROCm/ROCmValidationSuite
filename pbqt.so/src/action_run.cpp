@@ -98,9 +98,6 @@ int pbqt_action::run() {
 
   rvs::lp::Log("int pbqt_action::run()", rvs::logtrace);
 
-  if (property.find("cli.-j") != property.end()) {
-    bjson = true;
-  }
 
   if (!get_all_common_config_keys()) {
     msg = "Error in get_all_common_config_keys()";

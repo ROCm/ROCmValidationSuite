@@ -68,8 +68,6 @@ using std::regex;
 #define RVS_CONF_LDC_OFFSET             "ldc"
 #define RVS_CONF_LDD_OFFSET             "ldd"
 
-#define MODULE_NAME                     "perf"
-#define MODULE_NAME_CAPS                "PERF"
 
 #define PERF_DEFAULT_RAMP_INTERVAL       5000
 #define PERF_DEFAULT_LOG_INTERVAL        1000
@@ -97,10 +95,14 @@ using std::regex;
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 #define PERF_DEFAULT_OPS_TYPE            "sgemm"
 
+
+static constexpr auto MODULE_NAME = "perf";
+static constexpr auto MODULE_NAME_CAPS = "PERF";
 /**
  * @brief default class constructor
  */
 perf_action::perf_action() {
+     module_name = MODULE_NAME; 
     bjson = false;
 }
 
@@ -369,89 +371,6 @@ bool perf_action::get_all_perf_config_keys(void) {
     return bsts;
 }
 
-/**
- * @brief reads all common configuration keys from
- * the module's properties collection
- * @return true if no fatal error occured, false otherwise
- */
-bool perf_action::get_all_common_config_keys(void) {
-    string msg, sdevid, sdev;
-    int error;
-    bool bsts = true;
-
-    // get <device> property value (a list of gpu id)
-    if (int sts = property_get_device()) {
-      switch (sts) {
-      case 1:
-        msg = "Invalid 'device' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device' key.";
-        break;
-      }
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    // get the <deviceid> property value if provided
-    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                  &property_device_id, 0u)) {
-      msg = "Invalid 'deviceid' key value.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    // get <device_index> property value (a list of device indexes)
-    if (int sts = property_get_device_index()) {
-      switch (sts) {
-        case 1:
-          msg = "Invalid 'device_index' key value.";
-          break;
-        case 2:
-          msg = "Missing 'device_index' key.";
-          break;
-      }
-      // default set as true
-      property_device_index_all = true;
-      rvs::lp::Log(msg, rvs::loginfo);
-    }
-
-    // get the other action/PERF related properties
-    if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    error = property_get_int<uint64_t>
-    (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
-    if (error != 0) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_COUNT_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    error = property_get_int<uint64_t>
-    (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
-    if (error != 0) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_WAIT_KEY) + "' key value";
-      bsts = false;
-    }
-
-    error = property_get_int<uint64_t>
-    (RVS_CONF_DURATION_KEY, &property_duration, RVS_DEFAULT_DURATION);
-    if (error == 1) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_DURATION_KEY) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-
-    return bsts;
-}
 
 /**
  * @brief gets the number of ROCm compatible AMD GPUs
@@ -526,22 +445,7 @@ int perf_action::run(void) {
   string msg;
   rvs::action_result_t action_result;
 
-  // get the action name
-  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-    msg = "Action name missing";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS);
 
-    action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = rvs::actionstatus::ACTION_FAILED;
-    action_result.output = msg;
-    action_callback(&action_result);
-
-    return -1;
-  }
-
-  // check for -j flag (json logging)
-  if (property.find("cli.-j") != property.end())
-    bjson = true;
 
   if (!get_all_common_config_keys()) {
 

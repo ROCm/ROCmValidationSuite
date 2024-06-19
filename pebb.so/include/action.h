@@ -67,7 +67,6 @@ class pebb_action : public rvs::actionbase {
   vector<bandwidth>   resultBandwidth;
  protected:
   bool get_all_pebb_config_keys(void);
-  bool get_all_common_config_keys(void);
   //! 'true' if "all" is found under "peer" key for this action
   bool      prop_peer_device_all_selected;
 

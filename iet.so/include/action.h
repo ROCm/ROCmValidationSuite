@@ -128,12 +128,6 @@ class iet_action: public rvs::actionbase {
     bool get_all_iet_config_keys(void);
     void json_add_primary_fields();
 
-    /**
-    * @brief reads all common configuration keys from
-    * the module's properties collection
-    * @return true if no fatal error occured, false otherwise
-    */
-    bool get_all_common_config_keys(void);
     bool add_gpu_to_edpp_list(uint16_t dev_location_id, int32_t gpu_id,
                               int hip_num_gpu_devices);
 

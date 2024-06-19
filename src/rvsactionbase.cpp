@@ -32,6 +32,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <set>
 #include <thread>
 
 #include "include/rvsloglp.h"
@@ -39,7 +40,8 @@
 #include "include/rvs_util.h"
 
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
-
+// only thse modules have a target and duration based test approach
+static const std::set<std::string> duration_mods {"gst", "iet", "tst", "pebb", "pbqt", "gm"};
 using std::cout;
 using std::endl;
 using std::string;
@@ -123,6 +125,114 @@ void rvs::actionbase::sleep(const unsigned int ms) {
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
+/**
+ * @brief Populates config parameters common to all actions.
+ * others can override if needed.
+ *
+ * 
+ * @return (void)
+ * 
+ * */
+bool rvs::actionbase::get_all_common_config_keys(void) {
+    string msg, sdevid, sdev;
+    int error;
+    bool bsts = true;
+    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    rvs::lp::Err("Action name missing", module_name);
+    return false;
+  }
+
+    msg = "[" + action_name + "] " + module_name + " " +
+            " " + " Getting all common properties";
+    rvs::lp::Log(msg, rvs::logtrace);
+    // check if  -j flag is passed
+    if (has_property("cli.-j")) {
+      bjson = true;
+    }
+
+    if (int sts = property_get_device()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device' key.";
+        break;
+      }
+      rvs::lp::Err(msg, module_name, action_name);
+      bsts = false;
+    }
+
+
+    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+                                  &property_device_id, 0u)) {
+      msg = "Invalid 'deviceid' key value.";
+      rvs::lp::Err(msg, module_name, action_name);
+      bsts = false;
+    }
+
+
+    if (int sts = property_get_device_index()) {
+      switch (sts) {
+      case 1:
+        msg = "Invalid 'device_index' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device_index' key.";
+        break;
+      }
+
+      property_device_index_all = true;
+      rvs::lp::Log(msg, rvs::loginfo);
+    }
+
+
+    if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
+      msg = "invalid '" +
+          std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
+      rvs::lp::Err(msg, module_name, action_name);
+      bsts = false;
+    }
+
+    error = property_get_int<uint64_t>
+    (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
+    if (error != 0) {
+      msg = "invalid '" +
+          std::string(RVS_CONF_COUNT_KEY) + "' key value";
+      rvs::lp::Err(msg, module_name, action_name);
+      bsts = false;
+    }
+
+    error = property_get_int<uint64_t>
+    (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
+    if (error != 0) {
+      msg = "invalid '" +
+          std::string(RVS_CONF_WAIT_KEY) + "' key value";
+      bsts = false;
+    }
+
+    if (duration_mods.find(module_name) == duration_mods.end())
+            return bsts;
+
+      if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
+    &property_duration, DEFAULT_DURATION)) {
+    msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
+    "' key";
+    rvs::lp::Err(msg, module_name, action_name);
+    bsts = false;
+  }
+
+  if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+    &property_log_interval, DEFAULT_LOG_INTERVAL)) {
+    msg = "Invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY) +
+    "' key";
+    rvs::lp::Err(msg, module_name, action_name);
+    bsts = false;
+  }
+
+    return bsts;
+}
+ 
 /**
  * @brief Checks if property is set.
  *

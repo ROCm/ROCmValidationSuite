@@ -40,8 +40,6 @@
 #include "include/worker.h"
 
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
-#define MODULE_NAME                     "gm"
-#define MODULE_NAME_CAPS                "GM"
 
 #define GM_TEMP                       "temp"
 #define GM_CLOCK                      "clock"
@@ -49,6 +47,8 @@
 #define GM_FAN                        "fan"
 #define GM_POWER                      "power"
 #define GM_FORCE                      "force"
+static constexpr auto MODULE_NAME = "gm";
+static constexpr auto MODULE_NAME_CAPS = "GM";
 
 extern Worker* pworker;
 
@@ -58,7 +58,7 @@ extern Worker* pworker;
 gm_action::gm_action() {
   bjson = false;
   json_root_node = nullptr;
-
+  module_name  = MODULE_NAME;
   property_bounds.insert(std::pair<string, Metric_bound>
     (GM_TEMP, {false, false, 0, 0}));
   property_bounds.insert(std::pair<string, Metric_bound>
@@ -78,105 +78,6 @@ gm_action::~gm_action() {
     property.clear();
 }
 
-/**
- * @brief reads all common configuration keys from
- * the module's properties collection
- * @return true if no fatal error occured, false otherwise
- */
-bool gm_action::get_all_common_config_keys(void) {
-    string msg;
-    int error;
-
-    bool sts = true;
-    // check if  -j flag is passed
-    if (has_property("cli.-j")) {
-      bjson = true;
-    }
-
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      rvs::lp::Err("Action name missing", MODULE_NAME_CAPS);
-      return false;
-    }
-
-    // get <device> property value (a list of gpu id)
-    if (int ists = property_get_device()) {
-      switch (ists) {
-      case 1:
-        msg = "Invalid 'device' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device' key.";
-        break;
-      }
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      sts = false;
-    }
-
-    // get the <deviceid> property value if provided
-    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                  &property_device_id, 0u)) {
-      msg = "Invalid 'deviceid' key value.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      sts = false;
-    }
-
-    // get <device_index> property value (a list of device indexes)
-    if (int sts = property_get_device_index()) {
-      switch (sts) {
-      case 1:
-        msg = "Invalid 'device_index' key value.";
-        break;
-      case 2:
-        msg = "Missing 'device_index' key.";
-        break;
-      }
-      // default set as true
-      property_device_index_all = true;
-      rvs::lp::Log(msg, rvs::loginfo);
-    }
-
-    if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
-                                   &property_duration, 0u)) {
-      msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) + "' key.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      sts = false;
-    }
-
-    error = property_get_int<uint64_t>
-    (RVS_CONF_LOG_INTERVAL_KEY, &property_log_interval, DEFAULT_LOG_INTERVAL);
-    if (error == 1) {
-      msg = "Invalid '" +std::string(RVS_CONF_LOG_INTERVAL_KEY) + "' key.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      sts = false;
-    }
-
-    if (property_get_int<uint64_t>(RVS_CONF_SAMPLE_INTERVAL_KEY,
-                                       &sample_interval, 500u)) {
-      msg = "Invalid '" +std::string(RVS_CONF_SAMPLE_INTERVAL_KEY) + "' key.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      sts = false;
-    }
-
-    if (property_get(RVS_CONF_TERMINATE_KEY, &prop_terminate, false)) {
-      msg = "Invalid 'terminate' key.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      sts = false;
-    }
-
-    if (property_get(GM_FORCE, &prop_force, false)) {
-      msg = "Invalid '" + std::string(GM_FORCE) + "' key.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      sts = false;
-    }
-
-    if (property_log_interval < sample_interval) {
-      msg = "Log interval has the lower value than the sample interval.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      sts = false;
-    }
-
-    return sts;
-}
 
 /**
  * @brief Read configuration 'metric:' key and store it into property_bounds
@@ -258,7 +159,30 @@ bool gm_action::get_all_gm_config_keys(void) {
             std::string(GM_POWER) + "' key.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     sts = false;
+    }
+
+ if (property_get(GM_FORCE, &prop_force, false)) {
+      msg = "Invalid '" + std::string(GM_FORCE) + "' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
+    }
+  
+ if (property_get(RVS_CONF_TERMINATE_KEY, &prop_terminate, false)) {
+      msg = "Invalid 'terminate' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
   }
+  if (property_get_int<uint64_t>(RVS_CONF_SAMPLE_INTERVAL_KEY,
+                                       &sample_interval, 500u)) {
+      msg = "Invalid '" +std::string(RVS_CONF_SAMPLE_INTERVAL_KEY) + "' key.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
+    }
+  if (property_log_interval < sample_interval) {
+      msg = "Log interval has the lower value than the sample interval.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      sts = false;
+    }
 
   return sts;
 }

@@ -66,7 +66,7 @@ class actionbase {
  protected:
   actionbase();
   void sleep(const unsigned int ms);
-
+  virtual bool get_all_common_config_keys();
  public:
   virtual int property_set(const char*, const char*);
 
@@ -194,6 +194,8 @@ class actionbase {
 
   //! name of the action
   std::string action_name;
+  //! name of the module which action is part of 
+  std::string module_name;
   //! device_id - non-zero if filtering of device id is required
   uint16_t property_device_id;
   //! device_index - if filtering of device index is required
@@ -214,6 +216,8 @@ class actionbase {
   uint64_t property_duration;
   //! logging interval
   uint64_t property_log_interval;
+  //! 'true' if JSON logging is required
+  bool     bjson ;
 
   //! data from config file
   std::map<std::string, std::string> property;
