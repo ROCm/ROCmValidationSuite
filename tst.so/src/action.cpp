@@ -355,13 +355,14 @@ void tst_action::hip_to_smi_indices(void) {
 
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
-        hipDeviceProp_t props;
-        hipGetDeviceProperties(&props, i);
-
+        //hipDeviceProp_t props;
+        //hipGetDeviceProperties(&props, i);
+         unsigned int pDom, pBus, pDev, pFun;
+	 getBDF(i, pDom, pBus, pDev, pFun);
         // compute device location_id (needed to match this device
         // with one of those found while querying the pci bus
-        uint16_t hip_dev_location_id =
-            ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3) );
+	uint64_t hip_dev_location_id = ( ( ((uint64_t)pDom & 0xffff ) << 32) |
+            (((uint64_t) pBus & 0xff ) << 8) | (((uint64_t)pDev & 0x1f ) << 3)| ((uint64_t)pFun ) );
         if(smi_map.find(hip_dev_location_id) != smi_map.end()){
             hip_to_smi_idxs.insert({i, smi_map[hip_dev_location_id]});
         }
@@ -487,39 +488,6 @@ int tst_action::get_num_amd_gpu_devices(void) {
     return hip_num_gpu_devices;
 }
 
-/**
- * @brief retrieves the GPU identification data and adds it to the list of 
- * those that will run the TST test
- * @param dev_location_id GPU device location ID
- * @param gpu_id GPU's ID as exported by KFD
- * @param hip_num_gpu_devices number of GPU devices (as reported by HIP API)
- * @return true if all info could be retrieved and the gpu was successfully to
- * the TST test list, false otherwise
- */
-bool tst_action::add_gpu_to_tst_list(uint16_t dev_location_id, int32_t gpu_id,
-                                  int hip_num_gpu_devices) {
-    for (int i = 0; i < hip_num_gpu_devices; i++) {
-        // get GPU device properties
-        hipDeviceProp_t props;
-        hipGetDeviceProperties(&props, i);
-
-        // compute device location_id (needed to match this device
-        // with one of those found while querying the pci bus
-        uint16_t hip_dev_location_id =
-                ((((uint16_t) (props.pciBusID)) << 8) | (((uint16_t)(props.pciDeviceID)) << 3) );
-        if (hip_dev_location_id == dev_location_id) {
-            gpu_hwmon_info cgpu_info;
-            cgpu_info.hip_gpu_deviceid = i;
-            cgpu_info.gpu_id = gpu_id;
-            cgpu_info.bdf_id = hip_dev_location_id;
-            tst_gpus.push_back(cgpu_info);
-
-            return true;
-        }
-    }
-
-    return false;
-}
 
 /**
  * @brief flushes target temperature and dtype fields to json file

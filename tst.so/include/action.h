@@ -127,8 +127,6 @@ class tst_action: public rvs::actionbase {
     bool get_all_tst_config_keys(void);
     void json_add_primary_fields();
 
-    bool add_gpu_to_tst_list(uint16_t dev_location_id, int32_t gpu_id,
-                              int hip_num_gpu_devices);
 
 /**
  * @brief gets the number of ROCm compatible AMD GPUs
