@@ -186,15 +186,22 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function){
     char pciString[256] = {0};
-    auto hipret = hipDeviceGetPCIBusId(pciString, 256, idx);
+    auto hipRet = hipDeviceGetPCIBusId(pciString, 256, idx);
+    std::string msg;
+    if(hipRet != hipSuccess){
+      msg = "For GPU:" + std::to_string(idx) + ", failed to get PCI Bus id";
+      rvs::lp::Log(msg, rvs::logresults);
+      return;
+    }
+    if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&domain),
+       reinterpret_cast<unsigned int*>(&bus),
+       reinterpret_cast<unsigned int*>(&device),
+       reinterpret_cast<unsigned int*>(&function)) != 4) {
+         msg = std::string("parsing incomplete for BDF id: ") + pciString ;
+         rvs::lp::Log(msg, rvs::logresults);
+    }
+}
 
-	if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&domain),
-             reinterpret_cast<unsigned int*>(&bus),
-             reinterpret_cast<unsigned int*>(&device),
-             reinterpret_cast<unsigned int*>(&function)) != 4) {
-		std::cout << "parsing incomplete for BDF id: " << pciString<< std::endl;
-}
-}
 int display_gpu_info (void) {
 
   struct device_info {
@@ -237,7 +244,6 @@ int display_gpu_info (void) {
     if (rvs::gpulist::gpu2device(gpu_id, &dev_id)){
       continue;
     }
-    //snprintf(buff, sizeof(buff), "%04d:%02X:%02X.%d",props.pciDomainID, props.pciBusID, props.pciDeviceID, 0);
     hipDeviceGetPCIBusId(buf, 256, i);
     device_info info;
     info.bus       = buf;

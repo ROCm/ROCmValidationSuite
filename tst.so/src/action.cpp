@@ -355,8 +355,6 @@ void tst_action::hip_to_smi_indices(void) {
 
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
-        //hipDeviceProp_t props;
-        //hipGetDeviceProperties(&props, i);
          unsigned int pDom, pBus, pDev, pFun;
 	 getBDF(i, pDom, pBus, pDev, pFun);
         // compute device location_id (needed to match this device
