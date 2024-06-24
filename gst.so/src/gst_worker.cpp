@@ -36,7 +36,7 @@
 #define MODULE_NAME                             "gst"
 
 #define GST_MEM_ALLOC_ERROR                     "memory allocation error!"
-#define GST_BLAS_ERROR                          "memory/blas error!"
+#define GST_BLAS_ERROR                          "blas error !!!"
 #define GST_BLAS_MEMCPY_ERROR                   "HostToDevice mem copy error!"
 
 #define GST_MAX_GFLOPS_OUTPUT_KEY               "Gflop"
@@ -44,6 +44,9 @@
 #define GST_BYTES_COPIED_PER_OP_OUTPUT_KEY      "bytes_copied_per_op"
 #define GST_TRY_OPS_PER_SEC_OUTPUT_KEY          "try_ops_per_sec"
 
+#define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
+#define GST_LOG_SELF_CHECK_ERROR_KEY            "self-check error"
+#define GST_LOG_ACCU_CHECK_ERROR_KEY            "accu-check error"
 #define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
 #define GST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 
@@ -444,9 +447,14 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     for (uint64_t i = 0; i < gst_hot_calls; i++) {
+
       // run GEMM operation
-      if(!gpu_blas->run_blass_gemm(gst_ops_type))
-        continue;
+      if(!gpu_blas->run_blass_gemm(gst_ops_type)) {
+
+        *err_description = GST_BLAS_ERROR;
+        *error = 1;
+        return false;
+      }
     }
 
     // Wait for all the GEMM operations to complete
@@ -489,8 +497,26 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
       }
     }
 
-    if (self_check) {
-      gpu_blas->validate_gemm();
+    if (self_check || accu_check) {
+
+      double self_error = 0.0;
+      double accu_error = 0.0;
+
+      gpu_blas->validate_gemm(self_check, accu_check, self_error, accu_error);
+
+      if(self_error > 0) {
+
+        msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+          GST_LOG_SELF_CHECK_ERROR_KEY + " " + std::to_string(self_error);
+        rvs::lp::Log(msg, rvs::logresults);
+      }
+
+      if(accu_error > 0) {
+
+        msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+          GST_LOG_ACCU_CHECK_ERROR_KEY + " " + std::to_string(static_cast<double>(accu_error));
+        rvs::lp::Log(msg, rvs::logresults);
+      }
     }
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " +

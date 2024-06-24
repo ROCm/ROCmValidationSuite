@@ -304,6 +304,10 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
   if(data_type == "fp8_r") {
 
     if (dda) {
+
+      printf("sizeof(struct rocblas_f8) -> %d\n", sizeof(struct rocblas_f8));
+      printf("sizeof(rocblas_f8) -> %d\n", sizeof(rocblas_f8));
+
       if (hipMemcpy(dda, hda, sizeof(struct rocblas_f8) * size_a, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
@@ -358,6 +362,10 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
   if(data_type == "bf16_r") {
 
     if (dda) {
+
+      printf ("sizeof(struct rocblas_bfloat16) -> %d",sizeof(struct rocblas_bfloat16));
+      printf ("sizeof(rocblas_bfloat16) -> %d",sizeof(rocblas_bfloat16));
+
       if (hipMemcpy(dda, hda, sizeof(struct rocblas_bfloat16) * size_a, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
@@ -641,6 +649,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             db, blas_ldb_offset, &beta,
             dc, blas_ldc_offset) != rocblas_status_success) {
         is_error = true;  // GPU cannot enqueue the gemm
+        std::cout << "\nError in rocblas_sgemm() !!!" << "\n";
         return false;
       } else {
         return true;
@@ -657,6 +666,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             ddblb, blas_ldb_offset, &beta,
             ddblc, blas_ldc_offset) != rocblas_status_success) {
         is_error = true;  // GPU cannot enqueue the gemm
+        std::cout << "\nError in rocblas_dgemm() !!!" << "\n";
         return false;
       } else {
         return true;
@@ -674,7 +684,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             dhlfb, blas_ldb_offset, &beta,
             dhlfc, blas_ldc_offset) != rocblas_status_success) {
         is_error = true;  // GPU cannot enqueue the gemm
-        std::cout << "\n Error in Hgemm " << "\n";
+        std::cout << "\nError in rocblas_hgemm() !!!" << "\n";
         return false;
       } else {
         return true;
@@ -705,9 +715,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
         is_error = true;  // GPU cannot enqueue the gemm
-        std::cout << "\n Error in rocblas_gemm_ex3() !!! " << "\n";
+        std::cout << "\nError in rocblas_gemm_ex3() !!! " << "\n";
         return false;
-
       } else {
         return true;
       }
@@ -737,9 +746,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
         is_error = true;  // GPU cannot enqueue the gemm
-        std::cout << "\n Error in rocblas_gemm_ex() !!!" << "\n";
+        std::cout << "\nError in rocblas_gemm_ex() !!!" << "\n";
         return false;
-
       } else {
         return true;
       }
@@ -769,9 +777,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
         is_error = true;  // GPU cannot enqueue the gemm
-        std::cout << "\n Error in rocblas_gemm_ex() !!!" << "\n";
+        std::cout << "\nError in rocblas_gemm_ex() !!!" << "\n";
         return false;
-
       } else {
         return true;
       }
@@ -1157,7 +1164,7 @@ double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* 
     return error;
 }
 
-// For F8 , we convert the results to float to double first
+// For F8, we convert the results to float to double first
 template <
     typename T,
     std::enable_if<(std::is_same<T, rocblas_f8>{} || std::is_same<T, rocblas_bf8>{}), int>::type = 0>
@@ -1193,7 +1200,7 @@ double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* 
     return error;
 }
 
-// For BF16 and half, we convert the results to double first
+// For BF16, we convert the results to double first
 template <typename T,
          std::enable_if<(std::is_same<T, rocblas_bfloat16>{}), int>::type = 0>
 double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* hCPU, T* hGPU)
@@ -1207,18 +1214,17 @@ double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* 
         for(int64_t j = 0; j < M; j++)
         {
             size_t idx       = j + i * (size_t)lda;
-            hCPU_double[idx] = hCPU[idx].data;
-            hGPU_double[idx] = hGPU[idx].data;
 
-//            std::cout << "hCPU_double["<< idx << "] -> " << hCPU_double[idx] << std::endl;
-//            std::cout << "hGPU_double["<< idx << "] -> " << hGPU_double[idx] << std::endl;
+            // zero extend lower 16 bits of bfloat16 to convert to IEEE float/double
+            hCPU_double[idx] = double(float((uint32_t)hCPU[idx].data << 16));
+            hGPU_double[idx] = double(float((uint32_t)hGPU[idx].data << 16));
         }
     }
 
     return norm_check_general<double>(norm_type, M, N, lda, hCPU_double.data(), hGPU_double.data());
 }
 
-// For BF16 and half, we convert the results to double first
+// For half, we convert the results to double first
 template <typename T,
          std::enable_if<(std::is_same<T, rocblas_half>{}), int>::type = 0>
 double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* hCPU, T* hGPU)
@@ -1232,8 +1238,8 @@ double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* 
         for(int64_t j = 0; j < M; j++)
         {
             size_t idx       = j + i * (size_t)lda;
-            hCPU_double[idx] = hCPU[idx];
-            hGPU_double[idx] = hGPU[idx];
+            hCPU_double[idx] = double(hCPU[idx]);
+            hGPU_double[idx] = double(hGPU[idx]);
         }
     }
 
@@ -1241,11 +1247,13 @@ double norm_check_general(char norm_type, int64_t M, int64_t N, int64_t lda, T* 
 }
 
 template <typename T>
-bool rvs_blas::check_result_consistency(void * dout, uint64_t size) {
+bool rvs_blas::check_result_consistency(void * dout, uint64_t size, double &error) {
 
   // Allocate gemm output in host memory
 
-  static int i = 0;
+  static int i = 1;
+
+  printf("Start CONSI check !!!! \n\n");
 
   // current result
   if (!hco) {
@@ -1259,11 +1267,6 @@ bool rvs_blas::check_result_consistency(void * dout, uint64_t size) {
   if (hipMemcpy(hco, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
     return false;
 
-  if(i%5 == 0) {
-    if (hipMemset(hco, 0,  sizeof(T) * 4718592) != hipSuccess)
-      return false;
-  }
-
   // previous result
   if (!hpo) {
     if (hipHostMalloc(&hpo, size * sizeof(T), 0) != hipSuccess)
@@ -1275,9 +1278,19 @@ bool rvs_blas::check_result_consistency(void * dout, uint64_t size) {
     if (hipMemcpy(hpo, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
       return false;
 
+    i++;
+    printf("End CONSI check !!!! \n\n");
     // first iteration gemm outputs equal no checking required
     return true;
   }
+
+#if 1
+  if(i%2 == 0) {
+    printf("Error insertion for CONSI !!!\n");
+    if (hipMemset(hco, 0,  sizeof(T) * 1000) != hipSuccess)
+      return false;
+  }
+#endif
 
   // Norm checking
 
@@ -1288,24 +1301,163 @@ bool rvs_blas::check_result_consistency(void * dout, uint64_t size) {
   int64_t N = (int64_t)n;
   int64_t _ldc = (int64_t) blas_ldc_offset;
 
-  double error = std::abs(norm_check_general('F', M, N, _ldc, fp, fc));
+  error = std::abs(norm_check_general('F', M, N, _ldc, fp, fc));
 
-  std::cout << "error ->" << std::setprecision(std::numeric_limits<double>::max_digits10) << error << std::endl;
+  std::cout << "norm error ->" << std::setprecision(std::numeric_limits<double>::max_digits10) << error << std::endl;
 
   if (hipMemcpy(hpo, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
     return false;
 
   i++;
+  printf("End CONSI check !!!! \n\n");
   return true;
 }
 
 template <typename T>
-bool rvs_blas::check_result_accuracy(void * dout, uint64_t size) {
+bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) {
 
   int a_stride_1 = 1,
       a_stride_2 = blas_lda_offset,
       b_stride_1 = 1,
       b_stride_2 = blas_ldb_offset;
+
+  static int j  = 1;
+
+  printf("\n\nStart ACCU check !!!! \n");
+
+  if(transa == rocblas_operation_transpose) {
+    a_stride_1 = blas_lda_offset;
+    a_stride_2 = 1;
+  }
+
+  if(transb == rocblas_operation_transpose) {
+    b_stride_1 = blas_ldb_offset;
+    b_stride_2 = 1;
+  }
+
+  printf("size -> %d \n", size);
+
+  T* hout;
+  T* hdout;
+
+  if(hipHostMalloc(&hout, size * sizeof(T), 0) != hipSuccess)
+    return false;
+
+  if(hipHostMalloc(&hdout, size * sizeof(T), 0) != hipSuccess)
+    return false;
+
+  T * _ha;
+  T * _hb;
+  T * _hc;
+  T alpha = (T) blas_alpha_val;
+  T beta = (T) blas_beta_val;
+
+  if (std::is_same<T, float>{}) {
+    _ha = (T *)ha;
+    _hb = (T *)hb;
+    _hc = (T *)hc;
+
+    printf("type is float \n");
+
+  }
+  else {
+    _ha = (T *)hdbla;
+    _hb = (T *)hdblb;
+    _hc = (T *)hdblc;
+
+    printf("type is double \n");
+  }
+
+  hipMemcpy(hout, _hc, sizeof(T) * size, hipMemcpyHostToHost);
+
+  std::cout << "m, n, k, lda, ldb, ldc = " << m << ", " << n << ", " << k << ", " << blas_lda_offset
+    << ", " << blas_ldb_offset << ", " << blas_ldc_offset << std::endl;
+
+  host_matrix_mul<T>(alpha,
+      beta,
+      m,
+      n,
+      k,
+      _ha,
+      a_stride_1,
+      a_stride_2,
+      _hb,
+      b_stride_1,
+      b_stride_2,
+      hout,
+      1,
+      blas_ldc_offset);
+
+    if (hipMemcpy(hdout, dout, sizeof(T) * size, hipMemcpyDeviceToHost)!= hipSuccess) {
+      printf("hipMemcpy error for ACCU !!!\n");
+      return false;
+    }
+
+#if 1
+  if(j%2 == 0) {
+
+    hipError_t error;
+    printf("Error insertion for ACCU !!!\n");
+
+    if ((error = hipMemset(hdout, 0,  sizeof(T) * 1000)) != hipSuccess) {
+
+      printf("hipMemset error for ACCU !!! -> %d  %p %lu\n", error, hdout,  sizeof(T) * 1000);
+      return false;
+    }
+  }
+#endif
+
+  T max_relative_error = std::numeric_limits<T>::min();
+
+  for(int i = 0; i < size; i++)
+  {
+
+    if(hout[i] != hdout[i]) {
+      printf("hout[%d] -> %f  hdout[%d] -> %f \n", i, hout[i], i, hdout[i]);
+    }
+
+    T relative_error = (hout[i] - hdout[i]) / hout[i];
+
+    relative_error = relative_error > 0 ? relative_error : -relative_error;
+
+    max_relative_error
+      = relative_error < max_relative_error ? max_relative_error : relative_error;
+  }
+
+  T eps = std::numeric_limits<T>::epsilon();
+  T tolerance = 10;
+
+  if(max_relative_error > eps * tolerance)
+  {
+    std::cout << "FAIL: max_relative_error = " << max_relative_error << std::endl;
+  }
+  else
+  {
+    std::cout << "PASS: max_relative_error = " << max_relative_error << std::endl;
+  }
+
+  error = max_relative_error;
+
+  hipHostFree(hout);
+  hipHostFree(hdout);
+
+  j++;
+  printf("End ACCU check !!!! \n\n");
+  return true;
+}
+
+#if 0
+template <typename T>
+bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) {
+
+  int a_stride_1 = 1,
+      a_stride_2 = blas_lda_offset,
+      b_stride_1 = 1,
+      b_stride_2 = blas_ldb_offset;
+
+  static int j  = 1;
+
+  printf("\n\nStart ACCU check !!!! \n");
 
   if(transa == rocblas_operation_transpose) {
     a_stride_1 = blas_lda_offset;
@@ -1360,11 +1512,30 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size) {
       _hb,
       b_stride_1,
       b_stride_2,
-      hout.data(),
+      (T *)hout.data(),
       1,
       blas_ldc_offset);
 
-  hipMemcpy(hdout.data(), dout, sizeof(T) * size, hipMemcpyDeviceToHost);
+    if (hipMemcpy(hdout.data(), dout, sizeof(T) * size, hipMemcpyDeviceToHost)!= hipSuccess) {
+      printf("hipMemcpy error for ACCU !!!\n");
+      return false;
+    }
+
+#if 1
+  if(j%3 == 0) {
+
+    hipError_t error;
+    printf("Error insertion for ACCU !!!\n");
+
+
+
+    if ((error = hipMemset(hdout.data(), 0,  sizeof(T) * 1000)) != hipSuccess) {
+
+      printf("hipMemset error for ACCU !!! -> %d  %p %lu\n", error, hdout.data(),  sizeof(T) * 1000);
+      return false;
+    }
+  }
+#endif
 
   T max_relative_error = std::numeric_limits<T>::min();
 
@@ -1395,62 +1566,54 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size) {
     std::cout << "PASS: max_relative_error = " << max_relative_error << std::endl;
   }
 
+  error = max_relative_error;
+
+  j++;
+  printf("End ACCU check !!!! \n\n");
   return true;
 }
+#endif
 
-bool rvs_blas::validate_gemm() {
+bool rvs_blas::validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error) {
 
-  // 1. Get the previous gemm output
-  // 2. Get the current gemm output
-  // 3. Calculate the the F-norm error
+  /* Gemm output checked for consistency/repeatability
+     by comparing current output with previous output */
+  if(self_check) {
 
-  // check if it match the previous norms
-
-  // Measure the error based on tolerance
-
-  // Consistency check
-
-  /****************************************/
-  if(ops_type == "sgemm") {
-    check_result_consistency<float>(dc, size_c);
+    if(ops_type == "sgemm") {
+      check_result_consistency<float>(dc, size_c, self_error);
+    }
+    else if(ops_type == "dgemm") {
+      check_result_consistency<double>(ddblc, size_c, self_error);
+    }
+    else if(data_type == "fp8_r") {
+      check_result_consistency<rocblas_f8>(ddd, size_d, self_error);
+    }
+    else if(data_type == "fp16_r") {
+      check_result_consistency<rocblas_half>(ddd, size_d, self_error);
+    }
+    else if(data_type == "bf16_r") {
+      check_result_consistency<rocblas_bfloat16>(ddd, size_d, self_error);
+    }
+    else {
+      /* Do Nothing */
+    }
   }
 
-  if(ops_type == "dgemm") {
-    check_result_consistency<double>(ddblc, size_c);
+  /* Gemm output checked for accuracy/correctness by comparing
+     host(CPU) output with device(GPU) output */
+  if(accu_check) {
+
+    if(ops_type == "sgemm") {
+      check_result_accuracy<float>(dc, size_c, accu_error);
+    }
+    else if(ops_type == "dgemm") {
+      check_result_accuracy<double>(ddblc, size_c, accu_error);
+    }
+    else {
+      /* Do Nothing */
+    }
   }
-
-  if(data_type == "fp8_r") {
-    check_result_consistency<rocblas_f8>(ddd, size_d);
-  }
-
-  if(data_type == "fp16_r") {
-    check_result_consistency<rocblas_half>(ddd, size_d);
-  }
-
-  if(data_type == "bf16_r") {
-    check_result_consistency<rocblas_bfloat16>(ddd, size_d);
-  }
-
-  /****************************************/
-
-  // CPU vs GPU accuracy check
-
-  /****************************************/
-  if(ops_type == "sgemm") {
-    check_result_accuracy<float>(dc, size_c);
-  }
-
-  if(ops_type == "dgemm") {
-    check_result_accuracy<double>(ddblc, size_c);
-  }
-
-  /****************************************/
-
-  // predefined accuracy check
-  /****************************************/
-
-
-  /****************************************/
 
   return true;
 }

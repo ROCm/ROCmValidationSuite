@@ -218,6 +218,12 @@ class GSTWorker : public rvs::ThreadBase {
     //! returns the self check value
     bool get_self_check(void) { return self_check; }
 
+    //! sets gemm output accuracy check enable/disable
+    void set_accu_check(bool _accu_check) { accu_check = _accu_check; }
+
+    //! returns the accuracy check value
+    bool get_accu_check(void) { return accu_check; }
+
     //! sets gemm output error inject enable/disable
     void set_error_inject(bool _error_inject) { error_inject = _error_inject; }
 
@@ -305,8 +311,10 @@ class GSTWorker : public rvs::ThreadBase {
     std::condition_variable cv;
     //! blas gemm operations status
     bool blas_status;
-    //! gemm output validation
+    //! gemm output self-check
     bool self_check;
+    //! gemm output accuracy-check
+    bool accu_check;
     //! Inject error in gemm output
     bool error_inject;
 };

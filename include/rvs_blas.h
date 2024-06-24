@@ -91,13 +91,7 @@ class rvs_blas {
     bool copy_data_to_gpu(std::string);
     bool run_blass_gemm(std::string);
     bool is_gemm_op_complete(void);
-    bool validate_gemm(void);
-
-    template <typename T>
-      bool check_result_consistency(void * dout, uint64_t size);
-
-    template <typename T>
-      bool check_result_accuracy(void * dout, uint64_t size);
+    bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
 
     bool set_callback(rvsBlasCallback_t callback, void *user_data);
 
@@ -230,6 +224,12 @@ class rvs_blas {
     bool alocate_host_matrix_mem(void);
     void release_host_matrix_mem(void);
     float fast_pseudo_rand(uint64_t *nextr, size_t i);
+
+    template <typename T>
+      bool check_result_consistency(void * dout, uint64_t size, double &error);
+
+    template <typename T>
+      bool check_result_accuracy(void * dout, uint64_t size, double &error);
 
 };
 
