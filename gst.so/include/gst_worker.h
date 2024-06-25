@@ -230,6 +230,18 @@ class GSTWorker : public rvs::ThreadBase {
     //! returns the error inject value
     bool get_error_inject(void) { return error_inject; }
 
+    //! sets gemm error inject frequency value
+    void set_error_frequency(uint64_t _error_freq) { error_freq = _error_freq; }
+
+    //! returns gemm error inject frequency value
+    uint64_t get_error_frequency(void) { return error_freq; }
+
+    //! sets gemm error inject count value
+    void set_error_count(uint64_t _error_count) { error_count = _error_count; }
+
+    //! returns gemm error inject count value
+    uint64_t get_error_count(void) { return error_count; }
+
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -317,6 +329,10 @@ class GSTWorker : public rvs::ThreadBase {
     bool accu_check;
     //! Inject error in gemm output
     bool error_inject;
+    //! error injection frequency (number of gemm calls per error injection)
+    uint64_t error_freq;
+    //! number of errors injected in gemm output
+    uint64_t error_count;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

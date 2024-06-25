@@ -118,7 +118,11 @@ class gst_action: public rvs::actionbase {
 
     // Inject error in gemm output
     // Note : This is just for testing purpose. Shouldn't be enabled otherwise.
-    bool gst_error_inject;
+    bool     gst_error_inject;
+    // error injection frequency (number of gemm calls per error injection)
+    uint64_t gst_error_freq;
+    // number of errors injected in gemm output
+    uint64_t gst_error_count;
 
     friend class GSTWorker;
 

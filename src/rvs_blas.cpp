@@ -1284,12 +1284,27 @@ bool rvs_blas::check_result_consistency(void * dout, uint64_t size, double &erro
     return true;
   }
 
+    printf("error_freq -> %lu \n", error_freq);
+    printf("error_count -> %lu \n", error_count);
+
 #if 1
-  if(i%2 == 0) {
-    printf("Error insertion for CONSI !!!\n");
-    if (hipMemset(hco, 0,  sizeof(T) * 1000) != hipSuccess)
-      return false;
-  }
+    if(error_freq && error_count) {
+
+      if(i%error_freq == 0) {
+
+        hipError_t error;
+
+        if(error_count <= size) {
+
+          printf("Error insertion for CONSI !!!\n");
+          if ((error = hipMemset(hco, 0,  sizeof(T) * error_count)) != hipSuccess) {
+
+            printf("hipMemset error for CONSI !!! -> %d  %p %lu\n", error, hco,  sizeof(T) * error_count);
+            return false;
+          }
+        }
+      }
+    }
 #endif
 
   // Norm checking
@@ -1394,20 +1409,31 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) 
     }
 
 #if 1
-  if(j%2 == 0) {
 
-    hipError_t error;
-    printf("Error insertion for ACCU !!!\n");
+    printf("error_freq -> %lu \n", error_freq);
+    printf("error_count -> %lu \n", error_count);
 
-    if ((error = hipMemset(hdout, 0,  sizeof(T) * 1000)) != hipSuccess) {
+    if(error_freq && error_count) {
 
-      printf("hipMemset error for ACCU !!! -> %d  %p %lu\n", error, hdout,  sizeof(T) * 1000);
-      return false;
+      if(j%error_freq == 0) {
+
+        hipError_t error;
+
+        if(error_count <= size) {
+
+          printf("Error insertion for ACCU !!!\n");
+          if ((error = hipMemset(hdout, 0,  sizeof(T) * error_count)) != hipSuccess) {
+
+            printf("hipMemset error for ACCU !!! -> %d  %p %lu\n", error, hdout,  sizeof(T) * error_count);
+            return false;
+          }
+        }
+      }
     }
-  }
 #endif
 
-  T max_relative_error = std::numeric_limits<T>::min();
+//  T max_relative_error = std::numeric_limits<T>::min();
+  T max_relative_error = 0.0;
 
   for(int i = 0; i < size; i++)
   {
@@ -1433,7 +1459,7 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) 
   }
   else
   {
-    std::cout << "PASS: max_relative_error = " << max_relative_error << std::endl;
+//    std::cout << "PASS: max_relative_error = " << max_relative_error << std::endl;
   }
 
   error = max_relative_error;
@@ -1616,5 +1642,12 @@ bool rvs_blas::validate_gemm(bool self_check, bool accu_check, double &self_erro
   }
 
   return true;
+}
+
+void rvs_blas::set_gemm_error(uint64_t _error_freq, uint64_t _error_count) {
+
+  error_freq = _error_freq;
+  error_count = _error_count;
+
 }
 

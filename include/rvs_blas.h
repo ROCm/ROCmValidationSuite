@@ -92,6 +92,7 @@ class rvs_blas {
     bool run_blass_gemm(std::string);
     bool is_gemm_op_complete(void);
     bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
+    void set_gemm_error(uint64_t _error_freq, uint64_t _error_count);
 
     bool set_callback(rvsBlasCallback_t callback, void *user_data);
 
@@ -216,6 +217,11 @@ class rvs_blas {
     bool is_handle_init;
     //! rocBlas guard (prevents executing blass_gemm when there are mem errors)
     bool is_error;
+
+    // error injection frequency (number of gemm calls per error injection)
+    uint64_t error_freq;
+    // number of errors injected in gemm output
+    uint64_t error_count;
 
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);

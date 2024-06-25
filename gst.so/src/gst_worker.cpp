@@ -28,6 +28,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <iomanip>
 #include "include/rvs_blas.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
@@ -499,6 +500,13 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
     if (self_check || accu_check) {
 
+      printf("error_freq -> %lu \n", error_freq);
+      printf("error_count -> %lu \n", error_count);
+
+      if (error_inject) {
+        gpu_blas->set_gemm_error(error_freq, error_count);
+      }
+
       double self_error = 0.0;
       double accu_error = 0.0;
 
@@ -506,15 +514,21 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
       if(self_error > 0) {
 
+        std::ostringstream oss;
+        oss << std::setprecision(10) << std::noshowpoint << std::fixed << self_error;
+
         msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
-          GST_LOG_SELF_CHECK_ERROR_KEY + " " + std::to_string(self_error);
+          GST_LOG_SELF_CHECK_ERROR_KEY + " " + oss.str();
         rvs::lp::Log(msg, rvs::logresults);
       }
 
       if(accu_error > 0) {
 
+        std::ostringstream oss;
+        oss << std::setprecision(10) << std::noshowpoint << std::fixed << accu_error;
+
         msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
-          GST_LOG_ACCU_CHECK_ERROR_KEY + " " + std::to_string(static_cast<double>(accu_error));
+          GST_LOG_ACCU_CHECK_ERROR_KEY + " " + oss.str();
         rvs::lp::Log(msg, rvs::logresults);
       }
     }
