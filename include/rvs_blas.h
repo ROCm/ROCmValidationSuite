@@ -222,6 +222,8 @@ class rvs_blas {
     uint64_t error_freq;
     // number of errors injected in gemm output
     uint64_t error_count;
+    // gemm check counter
+    uint64_t check_count;
 
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
