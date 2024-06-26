@@ -500,9 +500,6 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
     if (self_check || accu_check) {
 
-      printf("error_freq -> %lu \n", error_freq);
-      printf("error_count -> %lu \n", error_count);
-
       if (error_inject) {
         gpu_blas->set_gemm_error(error_freq, error_count);
       }

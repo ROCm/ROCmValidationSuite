@@ -177,6 +177,10 @@ class rvs_blas {
     void *hco;
     //! pointer to previous gemm output (host memory)
     void *hpo;
+    //! pointer to host (CPU) gemm output (host memory)
+    void* hout;
+    //! pointer to device (GPU) gemm output (host memory)
+    void* hdout;
 
     //!GST Aplha Val 
     float blas_alpha_val;

@@ -102,6 +102,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , dda(nullptr), ddb(nullptr), ddc(nullptr), ddd(nullptr)
   , hda(nullptr), hdb(nullptr), hdc(nullptr)
   , hpo(nullptr), hco(nullptr)
+  , hout(nullptr), hdout(nullptr)
   , hip_stream(nullptr)
   , blas_handle(nullptr)
   , is_handle_init(false)
@@ -305,10 +306,6 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
   if(data_type == "fp8_r") {
 
     if (dda) {
-
-      printf("sizeof(struct rocblas_f8) -> %d\n", sizeof(struct rocblas_f8));
-      printf("sizeof(rocblas_f8) -> %d\n", sizeof(rocblas_f8));
-
       if (hipMemcpy(dda, hda, sizeof(struct rocblas_f8) * size_a, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
@@ -363,10 +360,6 @@ bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
   if(data_type == "bf16_r") {
 
     if (dda) {
-
-      printf ("sizeof(struct rocblas_bfloat16) -> %d",sizeof(struct rocblas_bfloat16));
-      printf ("sizeof(rocblas_bfloat16) -> %d",sizeof(rocblas_bfloat16));
-
       if (hipMemcpy(dda, hda, sizeof(struct rocblas_bfloat16) * size_a, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
@@ -613,6 +606,14 @@ void rvs_blas::release_host_matrix_mem(void) {
   if (hdc)
     delete []hdc;
 
+  if (hpo)
+    hipHostFree(hpo);
+  if (hco)
+    hipHostFree(hco);
+  if(hout)
+    hipHostFree(hout);
+  if(hdout)
+    hipHostFree(hdout);
 }
 
 /**
@@ -1302,8 +1303,6 @@ bool rvs_blas::check_result_consistency(void * dout, uint64_t size, double &erro
 
   // Allocate gemm output in host memory
 
-  printf("Start CONSI check !!!! \n\n");
-
   // current result
   if (!hco) {
     if (hipHostMalloc(&hco, size * sizeof(T), 0) != hipSuccess)
@@ -1327,28 +1326,18 @@ bool rvs_blas::check_result_consistency(void * dout, uint64_t size, double &erro
     if (hipMemcpy(hpo, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
       return false;
 
-    printf("End CONSI check !!!! \n\n");
-    // first iteration gemm outputs equal no checking required
+    // Skip first self-check as no previous result present
     return true;
   }
-
-  printf("error_freq -> %lu \n", error_freq);
-  printf("error_count -> %lu \n", error_count);
 
   if(error_freq && error_count && check_count) {
 
     if(check_count%error_freq == 0) {
 
-      hipError_t error;
-
       if(error_count <= size) {
 
-        printf("Error insertion for CONSI !!!\n");
-        if ((error = hipMemset(hco, 0,  sizeof(T) * error_count)) != hipSuccess) {
-
-          printf("hipMemset error for CONSI !!! -> %d  %p %lu\n", error, hco,  sizeof(T) * error_count);
+        if (hipMemset(hco, 0,  sizeof(T) * error_count) != hipSuccess)
           return false;
-        }
       }
     }
   }
@@ -1364,12 +1353,9 @@ bool rvs_blas::check_result_consistency(void * dout, uint64_t size, double &erro
 
   error = std::abs(check_norm_error('F', M, N, _ldc, fp, fc));
 
-  std::cout << "norm error ->" << std::setprecision(std::numeric_limits<double>::max_digits10) << error << std::endl;
-
   if (hipMemcpy(hpo, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
     return false;
 
-  printf("End CONSI check !!!! \n\n");
   return true;
 }
 
@@ -1387,8 +1373,6 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) 
       b_stride_1 = 1,
       b_stride_2 = blas_ldb_offset;
 
-  printf("\n\nStart ACCU check !!!! \n");
-
   if(transa == rocblas_operation_transpose) {
     a_stride_1 = blas_lda_offset;
     a_stride_2 = 1;
@@ -1399,16 +1383,21 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) 
     b_stride_2 = 1;
   }
 
-  printf("size -> %d \n", size);
+  if(!hout) {
+    if(hipHostMalloc(&hout, size * sizeof(T), 0) != hipSuccess)
+      return false;
 
-  T* hout;
-  T* hdout;
+    if (hipMemset(hout, 0, size * sizeof(T)) != hipSuccess)
+      return false;
+  }
 
-  if(hipHostMalloc(&hout, size * sizeof(T), 0) != hipSuccess)
-    return false;
+  if(!hdout) {
+    if(hipHostMalloc(&hdout, size * sizeof(T), 0) != hipSuccess)
+      return false;
 
-  if(hipHostMalloc(&hdout, size * sizeof(T), 0) != hipSuccess)
-    return false;
+    if (hipMemset(hdout, 0, size * sizeof(T)) != hipSuccess)
+      return false;
+  }
 
   T * _ha;
   T * _hb;
@@ -1420,23 +1409,17 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) 
     _ha = (T *)ha;
     _hb = (T *)hb;
     _hc = (T *)hc;
-
-    printf("type is float \n");
-
   }
   else {
     _ha = (T *)hdbla;
     _hb = (T *)hdblb;
     _hc = (T *)hdblc;
-
-    printf("type is double \n");
   }
 
-  hipMemcpy(hout, _hc, sizeof(T) * size, hipMemcpyHostToHost);
+  if(hipMemcpy(hout, _hc, sizeof(T) * size, hipMemcpyHostToHost) != hipSuccess)
+    return false;
 
-  std::cout << "m, n, k, lda, ldb, ldc = " << m << ", " << n << ", " << k << ", " << blas_lda_offset
-    << ", " << blas_ldb_offset << ", " << blas_ldc_offset << std::endl;
-
+  /* Host (CPU) based matrix multiplication */
   host_matrix_mul<T>(alpha,
       beta,
       m,
@@ -1448,32 +1431,20 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) 
       _hb,
       b_stride_1,
       b_stride_2,
-      hout,
+      (T *)hout,
       1,
       blas_ldc_offset);
 
-  if (hipMemcpy(hdout, dout, sizeof(T) * size, hipMemcpyDeviceToHost)!= hipSuccess) {
-    printf("hipMemcpy error for ACCU !!!\n");
+  if (hipMemcpy(hdout, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
     return false;
-  }
-
-  printf("error_freq -> %lu \n", error_freq);
-  printf("error_count -> %lu \n", error_count);
 
   if(error_freq && error_count && check_count) {
 
     if(check_count%error_freq == 0) {
 
-      hipError_t error;
-
       if(error_count <= size) {
-
-        printf("Error insertion for ACCU !!!\n");
-        if ((error = hipMemset(hdout, 0,  sizeof(T) * error_count)) != hipSuccess) {
-
-          printf("hipMemset error for ACCU !!! -> %d  %p %lu\n", error, hdout,  sizeof(T) * error_count);
+        if (hipMemset(hdout, 0,  sizeof(T) * error_count) != hipSuccess)
           return false;
-        }
       }
     }
   }
@@ -1482,12 +1453,7 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) 
 
   for(int i = 0; i < size; i++)
   {
-
-    if(hout[i] != hdout[i]) {
-      printf("hout[%d] -> %f  hdout[%d] -> %f \n", i, hout[i], i, hdout[i]);
-    }
-
-    T relative_error = (hout[i] - hdout[i]) / hout[i];
+    T relative_error = (((T *)hout)[i] - ((T *)hdout)[i]) / ((T *)hout)[i];
 
     relative_error = relative_error > 0 ? relative_error : -relative_error;
 
@@ -1500,19 +1466,9 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) 
 
   if(max_relative_error > eps * tolerance)
   {
-    std::cout << "FAIL: max_relative_error = " << max_relative_error << std::endl;
-  }
-  else
-  {
-    //    std::cout << "PASS: max_relative_error = " << max_relative_error << std::endl;
+    error = max_relative_error;
   }
 
-  error = max_relative_error;
-
-  hipHostFree(hout);
-  hipHostFree(hdout);
-
-  printf("End ACCU check !!!! \n\n");
   return true;
 }
 
