@@ -100,10 +100,13 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , hhlfa(nullptr), hhlfb(nullptr), hhlfc(nullptr)
   , dda(nullptr), ddb(nullptr), ddc(nullptr), ddd(nullptr)
   , hda(nullptr), hdb(nullptr), hdc(nullptr)
+  , hpo(nullptr), hco(nullptr)
+  , hout(nullptr), hdout(nullptr)
   , hip_stream(nullptr)
   , blas_handle(nullptr)
   , is_handle_init(false)
   , is_error(false)
+  , check_count(1)
 {
 
   if(transA == 0) {
@@ -602,6 +605,14 @@ void rvs_blas::release_host_matrix_mem(void) {
   if (hdc)
     delete []hdc;
 
+  if (hpo)
+    hipHostFree(hpo);
+  if (hco)
+    hipHostFree(hco);
+  if(hout)
+    hipHostFree(hout);
+  if(hdout)
+    hipHostFree(hdout);
 }
 
 /**
@@ -639,6 +650,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             db, blas_ldb_offset, &beta,
             dc, blas_ldc_offset) != rocblas_status_success) {
         is_error = true;  // GPU cannot enqueue the gemm
+        std::cout << "\nError in rocblas_sgemm() !!!" << "\n";
         return false;
       } else {
         return true;
@@ -655,6 +667,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             ddblb, blas_ldb_offset, &beta,
             ddblc, blas_ldc_offset) != rocblas_status_success) {
         is_error = true;  // GPU cannot enqueue the gemm
+        std::cout << "\nError in rocblas_dgemm() !!!" << "\n";
         return false;
       } else {
         return true;
@@ -672,7 +685,7 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             dhlfb, blas_ldb_offset, &beta,
             dhlfc, blas_ldc_offset) != rocblas_status_success) {
         is_error = true;  // GPU cannot enqueue the gemm
-        std::cout << "\n Error in Hgemm " << "\n";
+        std::cout << "\nError in rocblas_hgemm() !!!" << "\n";
         return false;
       } else {
         return true;
@@ -703,9 +716,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
         is_error = true;  // GPU cannot enqueue the gemm
-        std::cout << "\n Error in rocblas_gemm_ex3() !!! " << "\n";
+        std::cout << "\nError in rocblas_gemm_ex3() !!! " << "\n";
         return false;
-
       } else {
         return true;
       }
@@ -735,9 +747,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
         is_error = true;  // GPU cannot enqueue the gemm
-        std::cout << "\n Error in rocblas_gemm_ex() !!!" << "\n";
+        std::cout << "\nError in rocblas_gemm_ex() !!!" << "\n";
         return false;
-
       } else {
         return true;
       }
@@ -767,9 +778,8 @@ bool rvs_blas::run_blass_gemm(std::string ops_type) {
             compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
         is_error = true;  // GPU cannot enqueue the gemm
-        std::cout << "\n Error in rocblas_gemm_ex() !!!" << "\n";
+        std::cout << "\nError in rocblas_gemm_ex() !!!" << "\n";
         return false;
-
       } else {
         return true;
       }
@@ -967,5 +977,580 @@ bool rvs_blas::set_callback(rvsBlasCallback_t callback, void *user_data) {
   }
 
   return true;
+}
+
+/**
+ * Host(CPU) based Matrix multiplication -> C = alpha (A*B) + beta (C).
+ * @param[in] alpha scalar for matrix A*B
+ * @param[in] beta scalar for matrix C
+ * @param[in] M matrix A rows
+ * @param[in] N matrix B cols
+ * @param[in] K matrix A/B cols/rows respectively
+ * @param[in] A matrix A
+ * @param[in] B matrix B
+ * @param[in,out] C matrix C
+ */
+template <typename T>
+void host_matrix_mul(T alpha,
+    T        beta,
+    int      M,
+    int      N,
+    int      K,
+    const T* A,
+    int      As1,
+    int      As2,
+    const T* B,
+    int      Bs1,
+    int      Bs2,
+    T*       C,
+    int      Cs1,
+    int      Cs2)
+{
+    for(int i1 = 0; i1 < M; i1++)
+    {
+        for(int i2 = 0; i2 < N; i2++)
+        {
+            T t = 0.0;
+            for(int i3 = 0; i3 < K; i3++)
+            {
+                t += A[i1 * As1 + i3 * As2] * B[i3 * Bs1 + i2 * Bs2];
+            }
+            C[i1 * Cs1 + i2 * Cs2] = beta * C[i1 * Cs1 + i2 * Cs2] + alpha * t;
+        }
+    }
+}
+
+/*! \brief  lapack_xlassq computes the scale and sumsq */
+template <typename T>
+void lapack_xlassq(int64_t n, T* X, int64_t incx, double& scale, double& sumsq)
+{
+    if(n > 0)
+    {
+        double abs_X = 0.0;
+        for(int64_t i = 0; i < n; i++)
+        {
+            abs_X = std::abs(X[i * incx]);
+            if(abs_X > 0 || std::isnan(abs_X))
+            {
+                if(scale < abs_X)
+                {
+                    sumsq = 1 + sumsq * std::sqrt(scale / abs_X);
+                    scale = abs_X;
+                }
+                else
+                {
+                    sumsq = sumsq + std::sqrt(abs_X / scale);
+                }
+            }
+        }
+    }
+}
+
+/* LAPACK library functionality */
+template <typename T>
+void lapack_xcombssq(T* ssq, T* colssq)
+{
+    if(ssq[0] >= colssq[0])
+    {
+        if(ssq[0] != 0)
+        {
+            ssq[1] = ssq[1] + std::sqrt(colssq[0] / ssq[0]) * colssq[1];
+        }
+        else
+        {
+            ssq[1] = ssq[1] + colssq[1];
+        }
+    }
+    else
+    {
+        ssq[1] = colssq[1] + std::sqrt(ssq[0] / colssq[0]) * ssq[1];
+        ssq[0] = colssq[0];
+    }
+    return;
+}
+
+/*! \brief calculate_norm - returns the value of the one norm, infinity norm or
+  the Frobenius norm of the matrix A. */
+template <typename T>
+double calculate_norm(char norm_type, int64_t m, int64_t n, T* A, int64_t lda, double* work)
+{
+    double value = 0.0;
+    double sum   = 0.0;
+
+    if(std::min(m, n) == 0)
+        return value;
+
+    int64_t a_offset = lda >= 0 ? 0 : lda * (1 - n); // e.g. vectors with negative inc
+    if(norm_type == 'O' || norm_type == 'o' || norm_type == '1')
+    {
+        //Find the one norm of Matrix A.
+        for(int64_t j = 0; j < n; j++)
+        {
+            sum = 0.0;
+            for(int64_t i = 0; i < m; i++)
+                sum = sum + std::abs(A[a_offset + i + j * lda]);
+
+            if(value < sum || std::isnan(sum))
+                value = sum;
+        }
+    }
+    else if(norm_type == 'I' || norm_type == 'i')
+    {
+        //Find the infinity norm of Matrix A.
+        for(int64_t j = 0; j < n; j++)
+            for(int64_t i = 0; i < m; i++)
+            {
+                work[i] = work[i] + std::abs(A[a_offset + i + j * lda]);
+            }
+        for(int64_t i = 0; i < m; i++)
+            if(value < work[i] || std::isnan(work[i]))
+                value = work[i];
+    }
+    else if(norm_type == 'F' || norm_type == 'f')
+    {
+        //Find the Frobenius norm of Matrix A.
+        //SSQ(1) is scale
+        //SSQ(2) is sum-of-squares
+        //For better accuracy, sum each column separately.
+        std::vector<double> ssq(2);
+        std::vector<double> colssq(2);
+
+        ssq[0] = 0.0;
+        ssq[1] = 1.0;
+        for(int64_t j = 0; j < n; j++)
+        {
+            colssq[0] = 0.0;
+            colssq[1] = 1.0;
+            lapack_xlassq(m, A + a_offset + j * lda, 1, colssq[0], colssq[1]);
+            lapack_xcombssq(ssq.data(), colssq.data());
+        }
+        value = ssq[0] * std::sqrt(ssq[1]);
+    }
+    return value;
+}
+
+template <typename T>
+void m_axpy_64(int64_t N, T* alpha, T* x, int64_t incx, T* y, int64_t incy)
+{
+    int64_t x_offset = incx >= 0 ? 0 : incx * (1 - N);
+    int64_t y_offset = incy >= 0 ? 0 : incy * (1 - N);
+    for(int64_t i = 0; i < N; i++)
+    {
+        y[y_offset + i * incy] = (*alpha) * x[x_offset + i * incx] + y[y_offset + i * incy];
+    }
+}
+
+/**
+ * Get relative norm error for float/double data type matrices.
+ * @param[in] norm_type matrix norm type to execute.
+ * @param[in] M matrix rows
+ * @param[in] N matrix columns
+ * @param[in] Ida matrix leading dimension
+ * @param[in] hA host memory matrix A
+ * @param[in] hB host memory matrix B
+ */
+template <
+    typename T,
+    std::enable_if<(std::is_same<T, float>{} || std::is_same<T, double>{}),int>::type = 0>
+double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB)
+{
+    // norm type can be 'O', 'I', 'F', 'o', 'i', 'f' for one, infinity or Frobenius norm
+    // one norm is max column sum
+    // infinity norm is max row sum
+    // Frobenius is l2 norm of matrix entries
+
+    std::vector<double> work(std::max(int64_t(1), M));
+    int64_t             incx  = 1;
+    double              alpha = -1.0;
+
+    size_t size = M * size_t(N); // copying data so lda is M
+
+    std::vector<double> hA_double(size);
+    std::vector<double> hB_double(size);
+
+    for(int64_t i = 0; i < N; i++)
+    {
+        int64_t src_col = i * int64_t(lda);
+        int64_t dst_col = i * int64_t(M);
+        for(int64_t j = 0; j < M; j++)
+        {
+            hA_double[size_t(dst_col + j)] = double(hA[src_col + j]);
+            hB_double[size_t(dst_col + j)] = double(hB[src_col + j]);
+        }
+    }
+
+    double a_norm = calculate_norm(norm_type, M, N, hA_double.data(), M, work.data());
+    m_axpy_64(size, &alpha, hA_double.data(), incx, hB_double.data(), incx);
+    double error = calculate_norm(norm_type, M, N, hB_double.data(), M, work.data()) / a_norm;
+    return error;
+}
+
+/**
+ * Get relative norm error for fp8 data type matrices.
+ * @param[in] norm_type matrix norm type to execute.
+ * @param[in] M matrix rows
+ * @param[in] N matrix columns
+ * @param[in] Ida matrix leading dimension
+ * @param[in] hA host memory matrix A
+ * @param[in] hB host memory matrix B
+ */
+template <
+    typename T,
+    std::enable_if<std::is_same<T, rocblas_f8>{}, int>::type = 0>
+double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB)
+{
+    // norm type can be 'O', 'I', 'F', 'o', 'i', 'f' for one, infinity or Frobenius norm
+    // one norm is max column sum
+    // infinity norm is max row sum
+    // Frobenius is l2 norm of matrix entries
+    size_t size = M * size_t(N); // copying data so lda is M
+
+    std::vector<double> hA_double(size);
+    std::vector<double> hB_double(size);
+
+    for(int64_t i = 0; i < N; i++)
+    {
+        int64_t src_col = i * int64_t(lda);
+        int64_t dst_col = i * int64_t(M);
+        for(int64_t j = 0; j < M; j++)
+        {
+            hA_double[size_t(dst_col + j)] = double(float(hA[src_col + j]));
+            hB_double[size_t(dst_col + j)] = double(float(hB[src_col + j]));
+        }
+    }
+
+    std::vector<double> work(std::max(int64_t(1), M));
+    int64_t             incx  = 1;
+    double              alpha = -1.0;
+
+    double a_norm = calculate_norm(norm_type, M, N, hA_double.data(), M, work.data());
+    m_axpy_64(size, &alpha, hA_double.data(), incx, hB_double.data(), incx);
+    double error = calculate_norm(norm_type, M, N, hB_double.data(), M, work.data()) / a_norm;
+    return error;
+}
+
+/**
+ * Get relative norm error for bf16 data type matrices.
+ * @param[in] norm_type matrix norm type to execute.
+ * @param[in] M matrix rows
+ * @param[in] N matrix columns
+ * @param[in] Ida matrix leading dimension
+ * @param[in] hA host memory matrix A
+ * @param[in] hB host memory matrix B
+ */
+template <typename T,
+         std::enable_if<(std::is_same<T, rocblas_bfloat16>{}), int>::type = 0>
+double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB)
+{
+    size_t              size = N * (size_t)lda;
+    std::vector<double> hA_double(size);
+    std::vector<double> hB_double(size);
+
+    for(int64_t i = 0; i < N; i++)
+    {
+        for(int64_t j = 0; j < M; j++)
+        {
+            size_t idx       = j + i * (size_t)lda;
+
+            // zero extend lower 16 bits of bfloat16 to convert to IEEE float/double
+            hA_double[idx] = double(float((uint32_t)hA[idx].data << 16));
+            hB_double[idx] = double(float((uint32_t)hB[idx].data << 16));
+        }
+    }
+
+    return check_norm_error<double>(norm_type, M, N, lda, hA_double.data(), hB_double.data());
+}
+
+/**
+ * Get relative norm error for fp16 (half) data type matrices.
+ * @param[in] norm_type matrix norm type to execute.
+ * @param[in] M matrix rows
+ * @param[in] N matrix columns
+ * @param[in] Ida matrix leading dimension
+ * @param[in] hA host memory matrix A
+ * @param[in] hB host memory matrix B
+ */
+template <typename T,
+         std::enable_if<(std::is_same<T, rocblas_half>{}), int>::type = 0>
+double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB)
+{
+    size_t              size = N * (size_t)lda;
+    std::vector<double> hA_double(size);
+    std::vector<double> hB_double(size);
+
+    for(int64_t i = 0; i < N; i++)
+    {
+        for(int64_t j = 0; j < M; j++)
+        {
+            size_t idx       = j + i * (size_t)lda;
+            hA_double[idx] = double(hA[idx]);
+            hB_double[idx] = double(hB[idx]);
+        }
+    }
+
+    return check_norm_error<double>(norm_type, M, N, lda, hA_double.data(), hB_double.data());
+}
+
+/**
+ * Check gemm output for consistency (current output vs previous output).
+ * @param[in] dout Device (GPU) matrix output.
+ * @param[in] size No of elements in matrix output.
+ * @param[out] error Relative F-norm self error.
+ */
+template <typename T>
+bool rvs_blas::check_result_consistency(void * dout, uint64_t size, double &error) {
+
+  /* Allocate host memory for current gemm output */
+  if (!hco) {
+    if (hipHostMalloc(&hco, size * sizeof(T), 0) != hipSuccess)
+      return false;
+
+    if (hipMemset(hco, 0, size * sizeof(T)) != hipSuccess)
+      return false;
+  }
+
+  /* Copy current device gemm output to host memory */
+  if (hipMemcpy(hco, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
+    return false;
+
+  /* Allocate host memory for previous gemm output */
+  if (!hpo) {
+    if (hipHostMalloc(&hpo, size * sizeof(T), 0) != hipSuccess)
+      return false;
+
+    if (hipMemset(hpo, 0, size * sizeof(T)) != hipSuccess)
+      return false;
+
+    /* Copy current device gemm output to host memory */
+    if (hipMemcpy(hpo, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
+      return false;
+
+    /* Exit first iteration of self-check as there is no previous result yet ! */
+    return true;
+  }
+
+  /* If error injection is enabled, insert error in gemm output */
+  if(error_freq && error_count && check_count) {
+
+    /* Insert error at set error frequency */
+    if(check_count%error_freq == 0) {
+
+      if(error_count <= size) {
+
+        if (hipMemset(hco, 0,  sizeof(T) * error_count) != hipSuccess)
+          return false;
+      }
+    }
+  }
+
+  /* Norm checking */
+
+  T * fp = (T *)hpo;
+  T * fc = (T *)hco;
+
+  int64_t M = (int64_t)m;
+  int64_t N = (int64_t)n;
+  int64_t _ldc = (int64_t) blas_ldc_offset;
+
+  /* Set norm error if any by checking current vs previous gemm outputs */
+  error = std::abs(check_norm_error('F', M, N, _ldc, fp, fc));
+
+  /* Copy current device gemm output to host previous gemm output memory */
+  if (hipMemcpy(hpo, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
+    return false;
+
+  return true;
+}
+
+/**
+ * Check gemm output for accuracy (GPU output vs CPU output).
+ * @param[in] dout Device (GPU) matrix output.
+ * @param[in] size No of elements in matrix output.
+ * @param[out] error Relative accuracy error.
+ */
+template <typename T>
+bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) {
+
+  int a_stride_1 = 1,
+      a_stride_2 = blas_lda_offset,
+      b_stride_1 = 1,
+      b_stride_2 = blas_ldb_offset;
+
+  if(transa == rocblas_operation_transpose) {
+    a_stride_1 = blas_lda_offset;
+    a_stride_2 = 1;
+  }
+
+  if(transb == rocblas_operation_transpose) {
+    b_stride_1 = blas_ldb_offset;
+    b_stride_2 = 1;
+  }
+
+  /* Allocate host memory for host (CPU) gemm output */
+  if(!hout) {
+    if(hipHostMalloc(&hout, size * sizeof(T), 0) != hipSuccess)
+      return false;
+
+    if (hipMemset(hout, 0, size * sizeof(T)) != hipSuccess)
+      return false;
+  }
+
+  /* Allocate host memory for device (GPU) gemm output */
+  if(!hdout) {
+    if(hipHostMalloc(&hdout, size * sizeof(T), 0) != hipSuccess)
+      return false;
+
+    if (hipMemset(hdout, 0, size * sizeof(T)) != hipSuccess)
+      return false;
+  }
+
+  T * _ha;
+  T * _hb;
+  T * _hc;
+  T alpha = (T) blas_alpha_val;
+  T beta = (T) blas_beta_val;
+
+  if (std::is_same<T, float>{}) {
+    _ha = (T *)ha;
+    _hb = (T *)hb;
+    _hc = (T *)hc;
+  }
+  else {
+    _ha = (T *)hdbla;
+    _hb = (T *)hdblb;
+    _hc = (T *)hdblc;
+  }
+
+  /* Copy Matrix C to host gemm output memory */
+  if(hipMemcpy(hout, _hc, sizeof(T) * size, hipMemcpyHostToHost) != hipSuccess)
+    return false;
+
+  /* Host (CPU) based matrix multiplication */
+  host_matrix_mul<T>(alpha,
+      beta,
+      m,
+      n,
+      k,
+      _ha,
+      a_stride_1,
+      a_stride_2,
+      _hb,
+      b_stride_1,
+      b_stride_2,
+      (T *)hout,
+      1,
+      blas_ldc_offset);
+
+  /* Copy device gemm output to host memory */
+  if (hipMemcpy(hdout, dout, sizeof(T) * size, hipMemcpyDeviceToHost) != hipSuccess)
+    return false;
+
+  /* If error injection is enabled, insert error in gemm output */
+  if(error_freq && error_count && check_count) {
+
+    /* Insert error at set error frequency */
+    if(check_count%error_freq == 0) {
+
+      if(error_count <= size) {
+
+        if (hipMemset(hdout, 0,  sizeof(T) * error_count) != hipSuccess)
+          return false;
+      }
+    }
+  }
+
+  /* Calculate max. relative error */
+
+  T max_relative_error = 0.0;
+
+  for(int i = 0; i < size; i++)
+  {
+    T relative_error = (((T *)hout)[i] - ((T *)hdout)[i]) / ((T *)hout)[i];
+
+    relative_error = relative_error > 0 ? relative_error : -relative_error;
+
+    max_relative_error
+      = relative_error < max_relative_error ? max_relative_error : relative_error;
+  }
+
+  T eps = std::numeric_limits<T>::epsilon();
+  T tolerance = 10;
+
+  /* Set error if max. relative error greater than tolerance level */
+  if(max_relative_error > eps * tolerance)
+  {
+    error = max_relative_error;
+  }
+
+  return true;
+}
+
+/**
+ * Validate gemm output for consistency and accuracy.
+ * @param[in] self_check Enable self checking of gemm outputs (previous vs current).
+ * @param[in] accu_check Enable accuracy checking of gemm outputs (GPU vs CPU).
+ * @param[out] self_error Relative F-norm self error.
+ * @param[out] accu_error Relative accuracy error.
+ */
+bool rvs_blas::validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error) {
+
+  /* Gemm output checked for consistency/repeatability
+     by comparing current output with previous output */
+  if(self_check) {
+
+    if(ops_type == "sgemm") {
+      check_result_consistency<float>(dc, size_c, self_error);
+    }
+    else if(ops_type == "dgemm") {
+      check_result_consistency<double>(ddblc, size_c, self_error);
+    }
+    else if(data_type == "fp8_r") {
+      check_result_consistency<rocblas_f8>(ddd, size_d, self_error);
+    }
+    else if(data_type == "fp16_r") {
+      check_result_consistency<rocblas_half>(ddd, size_d, self_error);
+    }
+    else if(data_type == "bf16_r") {
+      check_result_consistency<rocblas_bfloat16>(ddd, size_d, self_error);
+    }
+    else {
+      return false;
+    }
+  }
+
+  /* Gemm output checked for accuracy/correctness by comparing
+     host(CPU) output with device(GPU) output */
+  if(accu_check) {
+
+    if(ops_type == "sgemm") {
+      check_result_accuracy<float>(dc, size_c, accu_error);
+    }
+    else if(ops_type == "dgemm") {
+      check_result_accuracy<double>(ddblc, size_c, accu_error);
+    }
+    else {
+      return false;
+    }
+  }
+
+  /* Error injection is enabled */
+  if(error_freq && error_count) {
+    /* Increment the gemm check counter */
+    check_count++;
+  }
+
+  return true;
+}
+
+/**
+ * Set gemm error stimulation parameters.
+ * Note: This function is meant only for test purpose !!!
+ * @param[in] _error_freq gemm calls per error injection.
+ * @param[in] _error_count no. of errors injected in gemm result.
+ */
+void rvs_blas::set_gemm_error(uint64_t _error_freq, uint64_t _error_count) {
+
+  error_freq = _error_freq;
+  error_count = _error_count;
 }
 

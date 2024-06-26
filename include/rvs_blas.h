@@ -91,6 +91,8 @@ class rvs_blas {
     bool copy_data_to_gpu(std::string);
     bool run_blass_gemm(std::string);
     bool is_gemm_op_complete(void);
+    bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
+    void set_gemm_error(uint64_t _error_freq, uint64_t _error_count);
 
     bool set_callback(rvsBlasCallback_t callback, void *user_data);
 
@@ -171,6 +173,15 @@ class rvs_blas {
     //! pointer to host memory
     void *hdc;
 
+    //! pointer to current gemm output (host memory)
+    void *hco;
+    //! pointer to previous gemm output (host memory)
+    void *hpo;
+    //! pointer to host (CPU) gemm output (host memory)
+    void* hout;
+    //! pointer to device (GPU) gemm output (host memory)
+    void* hdout;
+
     //!GST Aplha Val 
     float blas_alpha_val;
     //! GST Beta Val
@@ -211,6 +222,13 @@ class rvs_blas {
     //! rocBlas guard (prevents executing blass_gemm when there are mem errors)
     bool is_error;
 
+    // error injection frequency (number of gemm calls per error injection)
+    uint64_t error_freq;
+    // number of errors injected in gemm output
+    uint64_t error_count;
+    // gemm check counter
+    uint64_t check_count;
+
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
     void release_gpu_matrix_mem(void);
@@ -218,6 +236,12 @@ class rvs_blas {
     bool alocate_host_matrix_mem(void);
     void release_host_matrix_mem(void);
     float fast_pseudo_rand(uint64_t *nextr, size_t i);
+
+    template <typename T>
+      bool check_result_consistency(void * dout, uint64_t size, double &error);
+
+    template <typename T>
+      bool check_result_accuracy(void * dout, uint64_t size, double &error);
 
 };
 
