@@ -1020,7 +1020,8 @@ void host_matrix_mul(T alpha,
   }
 }
 
-/*! \brief  lapack_xlassq computes the scale and sumsq */
+/*! \brief F-norm utility function that computes the scale
+  (largest absolute element in the column) and sum sqrt of the matric column */
   template <typename T>
 void lapack_xlassq(int64_t n, T* X, int64_t incx, double& scale, double& sumsq) {
 
@@ -1047,6 +1048,8 @@ void lapack_xlassq(int64_t n, T* X, int64_t incx, double& scale, double& sumsq) 
   }
 }
 
+/*! \brief F-norm utility function that acculatively computes
+  the sum sqrt of the matrix from sum sqrt of the matric column */
 template <typename T>
 void lapack_xcombssq(T* ssq, T* colssq) {
 
@@ -1069,8 +1072,8 @@ void lapack_xcombssq(T* ssq, T* colssq) {
   return;
 }
 
-/*! \brief calculate_norm - returns the value of the one norm, infinity norm or
-  the Frobenius norm of the matrix A. */
+/*! \brief matrix norm function calculates the one norm,
+  infinity norm or the frobenius norm of the matrix A */
 template <typename T>
 double calculate_norm(char norm_type, int64_t m, int64_t n, T* A, int64_t lda, double* work) {
 
@@ -1123,14 +1126,6 @@ double calculate_norm(char norm_type, int64_t m, int64_t n, T* A, int64_t lda, d
       colssq[1] = 1.0;
       lapack_xlassq(m, A + a_offset + j * lda, 1, colssq[0], colssq[1]);
       lapack_xcombssq(ssq.data(), colssq.data());
-
-      if(!work) {
-       std::cout << "ssq[0] -> " << ssq[0] << " ssq[1] -> " << ssq[1] << std::endl;
-       std::cout << "colssq[0] -> " << colssq[0] << " colssq[1] -> " << colssq[1] << std::endl;
-      }
-    }
-    if(!work) {
-      std::cout << "ssq[0] -> " << ssq[0] << " ssq[1] -> " << ssq[1] << std::endl;
     }
     value = ssq[0] * std::sqrt(ssq[1]);
   }
@@ -1138,6 +1133,7 @@ double calculate_norm(char norm_type, int64_t m, int64_t n, T* A, int64_t lda, d
   return value;
 }
 
+/*! \brief Matrix utility function to create difference matrix from two matrices */
 template <typename T>
 void m_axpy_64(int64_t N, T* alpha, T* x, int64_t incx, T* y, int64_t incy) {
 
