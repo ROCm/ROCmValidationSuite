@@ -70,6 +70,11 @@ using std::regex;
 #define RVS_CONF_LDB_OFFSET             "ldb"
 #define RVS_CONF_LDC_OFFSET             "ldc"
 #define RVS_CONF_LDD_OFFSET             "ldd"
+#define RVS_CONF_SELF_CHECK_KEY         "self_check"
+#define RVS_CONF_ACCU_CHECK_KEY         "accuracy_check"
+#define RVS_CONF_ERROR_INJECT_KEY       "error_inject"
+#define RVS_CONF_ERROR_FREQUENCY_KEY    "error_freq"
+#define RVS_CONF_ERROR_COUNT_KEY        "error_count"
 
 #define MODULE_NAME                     "gst"
 #define MODULE_NAME_CAPS                "GST"
@@ -91,6 +96,11 @@ using std::regex;
 #define GST_DEFAULT_LDB_OFFSET          0
 #define GST_DEFAULT_LDC_OFFSET          0
 #define GST_DEFAULT_LDD_OFFSET          0
+#define GST_DEFAULT_SELF_CHECK          false
+#define GST_DEFAULT_ACCU_CHECK          false
+#define GST_DEFAULT_ERROR_INJECT        false
+#define GST_DEFAULT_ERROR_FREQUENCY     0
+#define GST_DEFAULT_ERROR_COUNT         0
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0
@@ -166,6 +176,11 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_ldb_offset(gst_ldb_offset);
       workers[i].set_ldc_offset(gst_ldc_offset);
       workers[i].set_ldd_offset(gst_ldd_offset);
+      workers[i].set_self_check(gst_self_check);
+      workers[i].set_accu_check(gst_accu_check);
+      workers[i].set_error_inject(gst_error_inject);
+      workers[i].set_error_frequency(gst_error_freq);
+      workers[i].set_error_count(gst_error_count);
 
       i++;
     }
@@ -384,6 +399,43 @@ bool gst_action::get_all_gst_config_keys(void) {
   if (error == 1) {
     msg = "invalid '" +
       std::string(RVS_CONF_LDD_OFFSET) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get(RVS_CONF_SELF_CHECK_KEY, &gst_self_check, GST_DEFAULT_SELF_CHECK)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_SELF_CHECK_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get(RVS_CONF_ACCU_CHECK_KEY, &gst_accu_check, GST_DEFAULT_ACCU_CHECK)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ACCU_CHECK_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get(RVS_CONF_ERROR_INJECT_KEY, &gst_error_inject, GST_DEFAULT_ERROR_INJECT)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ERROR_INJECT_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint64_t>(RVS_CONF_ERROR_FREQUENCY_KEY, &gst_error_freq, GST_DEFAULT_ERROR_FREQUENCY);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ERROR_FREQUENCY_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint64_t>(RVS_CONF_ERROR_COUNT_KEY, &gst_error_count, GST_DEFAULT_ERROR_COUNT);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ERROR_COUNT_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
