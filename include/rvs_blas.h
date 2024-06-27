@@ -238,10 +238,10 @@ class rvs_blas {
     float fast_pseudo_rand(uint64_t *nextr, size_t i);
 
     template <typename T>
-      bool check_result_consistency(void * dout, uint64_t size, double &error);
+      bool check_result_consistency(void * dout, size_t size, double &error);
 
     template <typename T>
-      bool check_result_accuracy(void * dout, uint64_t size, double &error);
+      bool check_result_accuracy(void * dout, size_t size, double &error);
 
 };
 

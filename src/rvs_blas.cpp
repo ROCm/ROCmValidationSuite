@@ -1006,138 +1006,147 @@ void host_matrix_mul(T alpha,
     int      Cs1,
     int      Cs2)
 {
-    for(int i1 = 0; i1 < M; i1++)
+  for(int i1 = 0; i1 < M; i1++)
+  {
+    for(int i2 = 0; i2 < N; i2++)
     {
-        for(int i2 = 0; i2 < N; i2++)
-        {
-            T t = 0.0;
-            for(int i3 = 0; i3 < K; i3++)
-            {
-                t += A[i1 * As1 + i3 * As2] * B[i3 * Bs1 + i2 * Bs2];
-            }
-            C[i1 * Cs1 + i2 * Cs2] = beta * C[i1 * Cs1 + i2 * Cs2] + alpha * t;
-        }
+      T t = 0.0;
+      for(int i3 = 0; i3 < K; i3++)
+      {
+        t += A[i1 * As1 + i3 * As2] * B[i3 * Bs1 + i2 * Bs2];
+      }
+      C[i1 * Cs1 + i2 * Cs2] = beta * C[i1 * Cs1 + i2 * Cs2] + alpha * t;
     }
+  }
 }
 
 /*! \brief  lapack_xlassq computes the scale and sumsq */
-template <typename T>
-void lapack_xlassq(int64_t n, T* X, int64_t incx, double& scale, double& sumsq)
-{
-    if(n > 0)
-    {
-        double abs_X = 0.0;
-        for(int64_t i = 0; i < n; i++)
-        {
-            abs_X = std::abs(X[i * incx]);
-            if(abs_X > 0 || std::isnan(abs_X))
-            {
-                if(scale < abs_X)
-                {
-                    sumsq = 1 + sumsq * std::sqrt(scale / abs_X);
-                    scale = abs_X;
-                }
-                else
-                {
-                    sumsq = sumsq + std::sqrt(abs_X / scale);
-                }
-            }
-        }
-    }
-}
+  template <typename T>
+void lapack_xlassq(int64_t n, T* X, int64_t incx, double& scale, double& sumsq) {
 
-/* LAPACK library functionality */
-template <typename T>
-void lapack_xcombssq(T* ssq, T* colssq)
-{
-    if(ssq[0] >= colssq[0])
+  if(n > 0)
+  {
+    double abs_X = 0.0;
+    for(int64_t i = 0; i < n; i++)
     {
-        if(ssq[0] != 0)
+      abs_X = std::abs(X[i * incx]);
+
+      if(abs_X > 0 || std::isnan(abs_X))
+      {
+        if(scale < abs_X)
         {
-            ssq[1] = ssq[1] + std::sqrt(colssq[0] / ssq[0]) * colssq[1];
+          sumsq = 1 + sumsq * std::sqrt(scale / abs_X);
+          scale = abs_X;
         }
         else
         {
-            ssq[1] = ssq[1] + colssq[1];
+          sumsq = sumsq + std::sqrt(abs_X / scale);
         }
+      }
+    }
+  }
+}
+
+template <typename T>
+void lapack_xcombssq(T* ssq, T* colssq) {
+
+  if(ssq[0] >= colssq[0])
+  {
+    if(ssq[0] != 0)
+    {
+      ssq[1] = ssq[1] + std::sqrt(colssq[0] / ssq[0]) * colssq[1];
     }
     else
     {
-        ssq[1] = colssq[1] + std::sqrt(ssq[0] / colssq[0]) * ssq[1];
-        ssq[0] = colssq[0];
+      ssq[1] = ssq[1] + colssq[1];
     }
-    return;
+  }
+  else
+  {
+    ssq[1] = colssq[1] + std::sqrt(ssq[0] / colssq[0]) * ssq[1];
+    ssq[0] = colssq[0];
+  }
+  return;
 }
 
 /*! \brief calculate_norm - returns the value of the one norm, infinity norm or
   the Frobenius norm of the matrix A. */
 template <typename T>
-double calculate_norm(char norm_type, int64_t m, int64_t n, T* A, int64_t lda, double* work)
-{
-    double value = 0.0;
-    double sum   = 0.0;
+double calculate_norm(char norm_type, int64_t m, int64_t n, T* A, int64_t lda, double* work) {
 
-    if(std::min(m, n) == 0)
-        return value;
+  double value = 0.0;
+  double sum   = 0.0;
 
-    int64_t a_offset = lda >= 0 ? 0 : lda * (1 - n); // e.g. vectors with negative inc
-    if(norm_type == 'O' || norm_type == 'o' || norm_type == '1')
-    {
-        //Find the one norm of Matrix A.
-        for(int64_t j = 0; j < n; j++)
-        {
-            sum = 0.0;
-            for(int64_t i = 0; i < m; i++)
-                sum = sum + std::abs(A[a_offset + i + j * lda]);
-
-            if(value < sum || std::isnan(sum))
-                value = sum;
-        }
-    }
-    else if(norm_type == 'I' || norm_type == 'i')
-    {
-        //Find the infinity norm of Matrix A.
-        for(int64_t j = 0; j < n; j++)
-            for(int64_t i = 0; i < m; i++)
-            {
-                work[i] = work[i] + std::abs(A[a_offset + i + j * lda]);
-            }
-        for(int64_t i = 0; i < m; i++)
-            if(value < work[i] || std::isnan(work[i]))
-                value = work[i];
-    }
-    else if(norm_type == 'F' || norm_type == 'f')
-    {
-        //Find the Frobenius norm of Matrix A.
-        //SSQ(1) is scale
-        //SSQ(2) is sum-of-squares
-        //For better accuracy, sum each column separately.
-        std::vector<double> ssq(2);
-        std::vector<double> colssq(2);
-
-        ssq[0] = 0.0;
-        ssq[1] = 1.0;
-        for(int64_t j = 0; j < n; j++)
-        {
-            colssq[0] = 0.0;
-            colssq[1] = 1.0;
-            lapack_xlassq(m, A + a_offset + j * lda, 1, colssq[0], colssq[1]);
-            lapack_xcombssq(ssq.data(), colssq.data());
-        }
-        value = ssq[0] * std::sqrt(ssq[1]);
-    }
+  if(std::min(m, n) == 0)
     return value;
+
+  int64_t a_offset = lda >= 0 ? 0 : lda * (1 - n); // e.g. vectors with negative inc
+  if(norm_type == 'O' || norm_type == 'o' || norm_type == '1')
+  {
+    //Find the one norm of Matrix A.
+    for(int64_t j = 0; j < n; j++)
+    {
+      sum = 0.0;
+      for(int64_t i = 0; i < m; i++)
+        sum = sum + std::abs(A[a_offset + i + j * lda]);
+
+      if(value < sum || std::isnan(sum))
+        value = sum;
+    }
+  }
+  else if(norm_type == 'I' || norm_type == 'i')
+  {
+    //Find the infinity norm of Matrix A.
+    for(int64_t j = 0; j < n; j++)
+      for(int64_t i = 0; i < m; i++)
+      {
+        work[i] = work[i] + std::abs(A[a_offset + i + j * lda]);
+      }
+    for(int64_t i = 0; i < m; i++)
+      if(value < work[i] || std::isnan(work[i]))
+        value = work[i];
+  }
+  else if(norm_type == 'F' || norm_type == 'f')
+  {
+    //Find the Frobenius norm of Matrix A.
+    //SSQ(1) is scale
+    //SSQ(2) is sum-of-squares
+    //For better accuracy, sum each column separately.
+    std::vector<double> ssq(2);
+    std::vector<double> colssq(2);
+
+    ssq[0] = 0.0;
+    ssq[1] = 1.0;
+    for(int64_t j = 0; j < n; j++)
+    {
+      colssq[0] = 0.0;
+      colssq[1] = 1.0;
+      lapack_xlassq(m, A + a_offset + j * lda, 1, colssq[0], colssq[1]);
+      lapack_xcombssq(ssq.data(), colssq.data());
+
+      if(!work) {
+       std::cout << "ssq[0] -> " << ssq[0] << " ssq[1] -> " << ssq[1] << std::endl;
+       std::cout << "colssq[0] -> " << colssq[0] << " colssq[1] -> " << colssq[1] << std::endl;
+      }
+    }
+    if(!work) {
+      std::cout << "ssq[0] -> " << ssq[0] << " ssq[1] -> " << ssq[1] << std::endl;
+    }
+    value = ssq[0] * std::sqrt(ssq[1]);
+  }
+
+  return value;
 }
 
 template <typename T>
-void m_axpy_64(int64_t N, T* alpha, T* x, int64_t incx, T* y, int64_t incy)
-{
-    int64_t x_offset = incx >= 0 ? 0 : incx * (1 - N);
-    int64_t y_offset = incy >= 0 ? 0 : incy * (1 - N);
-    for(int64_t i = 0; i < N; i++)
-    {
-        y[y_offset + i * incy] = (*alpha) * x[x_offset + i * incx] + y[y_offset + i * incy];
-    }
+void m_axpy_64(int64_t N, T* alpha, T* x, int64_t incx, T* y, int64_t incy) {
+
+  int64_t x_offset = incx >= 0 ? 0 : incx * (1 - N);
+  int64_t y_offset = incy >= 0 ? 0 : incy * (1 - N);
+  for(int64_t i = 0; i < N; i++)
+  {
+    y[y_offset + i * incy] = (*alpha) * x[x_offset + i * incx] + y[y_offset + i * incy];
+  }
 }
 
 /**
@@ -1152,37 +1161,38 @@ void m_axpy_64(int64_t N, T* alpha, T* x, int64_t incx, T* y, int64_t incy)
 template <
     typename T,
     std::enable_if<(std::is_same<T, float>{} || std::is_same<T, double>{}),int>::type = 0>
-double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB)
-{
-    // norm type can be 'O', 'I', 'F', 'o', 'i', 'f' for one, infinity or Frobenius norm
-    // one norm is max column sum
-    // infinity norm is max row sum
-    // Frobenius is l2 norm of matrix entries
+double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB) {
 
-    std::vector<double> work(std::max(int64_t(1), M));
-    int64_t             incx  = 1;
-    double              alpha = -1.0;
+  // norm type can be 'O', 'I', 'F', 'o', 'i', 'f' for one, infinity or Frobenius norm
+  // one norm is max column sum
+  // infinity norm is max row sum
+  // Frobenius is l2 norm of matrix entries
 
-    size_t size = M * size_t(N); // copying data so lda is M
+  std::vector<double> work(std::max(int64_t(1), M));
+  int64_t             incx  = 1;
+  double              alpha = -1.0;
 
-    std::vector<double> hA_double(size);
-    std::vector<double> hB_double(size);
+  size_t size = M * size_t(N); // copying data so lda is M
 
-    for(int64_t i = 0; i < N; i++)
+  std::vector<double> hA_double(size);
+  std::vector<double> hB_double(size);
+
+  for(int64_t i = 0; i < N; i++)
+  {
+    int64_t src_col = i * int64_t(lda);
+    int64_t dst_col = i * int64_t(M);
+    for(int64_t j = 0; j < M; j++)
     {
-        int64_t src_col = i * int64_t(lda);
-        int64_t dst_col = i * int64_t(M);
-        for(int64_t j = 0; j < M; j++)
-        {
-            hA_double[size_t(dst_col + j)] = double(hA[src_col + j]);
-            hB_double[size_t(dst_col + j)] = double(hB[src_col + j]);
-        }
+      hA_double[size_t(dst_col + j)] = double(hA[src_col + j]);
+      hB_double[size_t(dst_col + j)] = double(hB[src_col + j]);
     }
+  }
 
-    double a_norm = calculate_norm(norm_type, M, N, hA_double.data(), M, work.data());
-    m_axpy_64(size, &alpha, hA_double.data(), incx, hB_double.data(), incx);
-    double error = calculate_norm(norm_type, M, N, hB_double.data(), M, work.data()) / a_norm;
-    return error;
+  double a_norm = calculate_norm(norm_type, M, N, hA_double.data(), M, work.data());
+  m_axpy_64(size, &alpha, hA_double.data(), incx, hB_double.data(), incx);
+  double error = calculate_norm(norm_type, M, N, hB_double.data(), M, work.data()) / a_norm;
+
+  return error;
 }
 
 /**
@@ -1197,36 +1207,37 @@ double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA
 template <
     typename T,
     std::enable_if<std::is_same<T, rocblas_f8>{}, int>::type = 0>
-double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB)
-{
-    // norm type can be 'O', 'I', 'F', 'o', 'i', 'f' for one, infinity or Frobenius norm
-    // one norm is max column sum
-    // infinity norm is max row sum
-    // Frobenius is l2 norm of matrix entries
-    size_t size = M * size_t(N); // copying data so lda is M
+double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB) {
 
-    std::vector<double> hA_double(size);
-    std::vector<double> hB_double(size);
+  // norm type can be 'O', 'I', 'F', 'o', 'i', 'f' for one, infinity or Frobenius norm
+  // one norm is max column sum
+  // infinity norm is max row sum
+  // Frobenius is l2 norm of matrix entries
+  size_t size = M * size_t(N); // copying data so lda is M
 
-    for(int64_t i = 0; i < N; i++)
+  std::vector<double> hA_double(size);
+  std::vector<double> hB_double(size);
+
+  for(int64_t i = 0; i < N; i++)
+  {
+    int64_t src_col = i * int64_t(lda);
+    int64_t dst_col = i * int64_t(M);
+    for(int64_t j = 0; j < M; j++)
     {
-        int64_t src_col = i * int64_t(lda);
-        int64_t dst_col = i * int64_t(M);
-        for(int64_t j = 0; j < M; j++)
-        {
-            hA_double[size_t(dst_col + j)] = double(float(hA[src_col + j]));
-            hB_double[size_t(dst_col + j)] = double(float(hB[src_col + j]));
-        }
+      hA_double[size_t(dst_col + j)] = double(float(hA[src_col + j]));
+      hB_double[size_t(dst_col + j)] = double(float(hB[src_col + j]));
     }
+  }
 
-    std::vector<double> work(std::max(int64_t(1), M));
-    int64_t             incx  = 1;
-    double              alpha = -1.0;
+  std::vector<double> work(std::max(int64_t(1), M));
+  int64_t             incx  = 1;
+  double              alpha = -1.0;
 
-    double a_norm = calculate_norm(norm_type, M, N, hA_double.data(), M, work.data());
-    m_axpy_64(size, &alpha, hA_double.data(), incx, hB_double.data(), incx);
-    double error = calculate_norm(norm_type, M, N, hB_double.data(), M, work.data()) / a_norm;
-    return error;
+  double a_norm = calculate_norm(norm_type, M, N, hA_double.data(), M, work.data());
+  m_axpy_64(size, &alpha, hA_double.data(), incx, hB_double.data(), incx);
+  double error = calculate_norm(norm_type, M, N, hB_double.data(), M, work.data()) / a_norm;
+
+  return error;
 }
 
 /**
@@ -1240,25 +1251,25 @@ double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA
  */
 template <typename T,
          std::enable_if<(std::is_same<T, rocblas_bfloat16>{}), int>::type = 0>
-double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB)
-{
-    size_t              size = N * (size_t)lda;
-    std::vector<double> hA_double(size);
-    std::vector<double> hB_double(size);
+double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB) {
 
-    for(int64_t i = 0; i < N; i++)
+  size_t              size = N * (size_t)lda;
+  std::vector<double> hA_double(size);
+  std::vector<double> hB_double(size);
+
+  for(int64_t i = 0; i < N; i++)
+  {
+    for(int64_t j = 0; j < M; j++)
     {
-        for(int64_t j = 0; j < M; j++)
-        {
-            size_t idx       = j + i * (size_t)lda;
+      size_t idx = j + i * (size_t)lda;
 
-            // zero extend lower 16 bits of bfloat16 to convert to IEEE float/double
-            hA_double[idx] = double(float((uint32_t)hA[idx].data << 16));
-            hB_double[idx] = double(float((uint32_t)hB[idx].data << 16));
-        }
+      // zero extend lower 16 bits of bfloat16 to convert to IEEE float/double
+      hA_double[idx] = double(float((uint32_t)hA[idx].data << 16));
+      hB_double[idx] = double(float((uint32_t)hB[idx].data << 16));
     }
+  }
 
-    return check_norm_error<double>(norm_type, M, N, lda, hA_double.data(), hB_double.data());
+  return check_norm_error<double>(norm_type, M, N, lda, hA_double.data(), hB_double.data());
 }
 
 /**
@@ -1272,23 +1283,23 @@ double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA
  */
 template <typename T,
          std::enable_if<(std::is_same<T, rocblas_half>{}), int>::type = 0>
-double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB)
-{
-    size_t              size = N * (size_t)lda;
-    std::vector<double> hA_double(size);
-    std::vector<double> hB_double(size);
+double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB) {
 
-    for(int64_t i = 0; i < N; i++)
+  size_t              size = N * (size_t)lda;
+  std::vector<double> hA_double(size);
+  std::vector<double> hB_double(size);
+
+  for(int64_t i = 0; i < N; i++)
+  {
+    for(int64_t j = 0; j < M; j++)
     {
-        for(int64_t j = 0; j < M; j++)
-        {
-            size_t idx       = j + i * (size_t)lda;
-            hA_double[idx] = double(hA[idx]);
-            hB_double[idx] = double(hB[idx]);
-        }
+      size_t idx       = j + i * (size_t)lda;
+      hA_double[idx] = double(hA[idx]);
+      hB_double[idx] = double(hB[idx]);
     }
+  }
 
-    return check_norm_error<double>(norm_type, M, N, lda, hA_double.data(), hB_double.data());
+  return check_norm_error<double>(norm_type, M, N, lda, hA_double.data(), hB_double.data());
 }
 
 /**
@@ -1298,7 +1309,7 @@ double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA
  * @param[out] error Relative F-norm self error.
  */
 template <typename T>
-bool rvs_blas::check_result_consistency(void * dout, uint64_t size, double &error) {
+bool rvs_blas::check_result_consistency(void * dout, size_t size, double &error) {
 
   /* Allocate host memory for current gemm output */
   if (!hco) {
@@ -1369,7 +1380,7 @@ bool rvs_blas::check_result_consistency(void * dout, uint64_t size, double &erro
  * @param[out] error Relative accuracy error.
  */
 template <typename T>
-bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) {
+bool rvs_blas::check_result_accuracy(void * dout, size_t size, double &error) {
 
   int a_stride_1 = 1,
       a_stride_2 = blas_lda_offset,
@@ -1463,7 +1474,7 @@ bool rvs_blas::check_result_accuracy(void * dout, uint64_t size, double &error) 
 
   T max_relative_error = 0.0;
 
-  for(int i = 0; i < size; i++)
+  for(size_t i = 0; i < size; i++)
   {
     T relative_error = (((T *)hout)[i] - ((T *)hdout)[i]) / ((T *)hout)[i];
 

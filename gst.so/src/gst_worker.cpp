@@ -45,7 +45,6 @@
 #define GST_BYTES_COPIED_PER_OP_OUTPUT_KEY      "bytes_copied_per_op"
 #define GST_TRY_OPS_PER_SEC_OUTPUT_KEY          "try_ops_per_sec"
 
-#define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
 #define GST_LOG_SELF_CHECK_ERROR_KEY            "self-check error"
 #define GST_LOG_ACCU_CHECK_ERROR_KEY            "accu-check error"
 #define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
