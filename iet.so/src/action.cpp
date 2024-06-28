@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -83,6 +83,7 @@ using std::fstream;
 #define RVS_CONF_LDC_OFFSET             "ldc"
 #define RVS_CONF_LDD_OFFSET             "ldd"
 #define RVS_CONF_BW_WORKLOAD            "bw_workload"
+#define RVS_CONF_CP_WORKLOAD            "cp_workload"
 #define RVS_CONF_TP_FLAG                "targetpower_met"
 #define RVS_TP_MESSAGE                  "target_power"
 #define RVS_DTYPE_MESSAGE               "dtype"
@@ -107,6 +108,7 @@ using std::fstream;
 #define IET_DEFAULT_LDD_OFFSET          0
 #define IET_DEFAULT_TP_FLAG             false
 #define IET_DEFAULT_BW_WORKLOAD         false
+#define IET_DEFAULT_CP_WORKLOAD         true
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
@@ -312,7 +314,15 @@ bool iet_action::get_all_iet_config_keys(void) {
     error = property_get<bool>(RVS_CONF_BW_WORKLOAD, &iet_bw_workload, IET_DEFAULT_BW_WORKLOAD);
     if (error == 1) {
         msg = "invalid '" +
-        std::string(RVS_CONF_TP_FLAG) + "' key value";
+        std::string(RVS_CONF_BW_WORKLOAD) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    error = property_get<bool>(RVS_CONF_CP_WORKLOAD, &iet_cp_workload, IET_DEFAULT_CP_WORKLOAD);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_CP_WORKLOAD) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
@@ -426,6 +436,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_ldd_offset(iet_ldd_offset);
             workers[i].set_tp_flag(iet_tp_flag);
             workers[i].set_bw_workload(iet_bw_workload);
+            workers[i].set_cp_workload(iet_cp_workload);
 
             i++;
         }

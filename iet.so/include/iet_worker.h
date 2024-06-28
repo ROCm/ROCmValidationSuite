@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -218,6 +218,12 @@ class IETWorker : public rvs::ThreadBase {
     //! returns bandwidth workload status
     bool get_bw_workload(void) { return iet_bw_workload; }
 
+    //! sets compute workload enable/disable
+    void set_cp_workload(bool _cp_workload) { iet_cp_workload = _cp_workload; }
+
+    //! returns compute workload status
+    bool get_cp_workload(void) { return iet_cp_workload; }
+
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
 
@@ -308,6 +314,8 @@ class IETWorker : public rvs::ThreadBase {
     bool iet_tp_flag;
     //! Bandwidth workload enable/disable
     bool iet_bw_workload;
+    //! Bandwidth compute enable/disable
+    bool iet_cp_workload;
 
     bool endtest = false;
     //! GEMM operations synchronization mutex
