@@ -117,9 +117,11 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 
         // compute device location_id (needed in order to identify this device
         // in the gpus_id/gpus_device_id list
+	unsigned int pDom, pBus, pDev, pFun;
+	getBDF(i, pDom, pBus, pDev, pFun);
         unsigned int dev_location_id =
-            ((((unsigned int) (props.pciBusID)) << 8) | ((unsigned int)(props.pciDeviceID)) << 3);
-        uint16_t dev_domain = props.pciDomainID;
+		((((unsigned int) (pBus)) << 8) | (((unsigned int)(pDev)) << 3)  | ((unsigned int)(pFun)));
+	uint16_t dev_domain = pDom;
         uint16_t devId;
         uint16_t gpu_id;
         if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
@@ -182,6 +184,23 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
     return amd_gpus_found;
 }
 
+void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function){
+    char pciString[256] = {0};
+    auto hipRet = hipDeviceGetPCIBusId(pciString, 256, idx);
+    std::string msg;
+    if(hipRet != hipSuccess){
+      msg = "For GPU:" + std::to_string(idx) + ", failed to get PCI Bus id";
+      rvs::lp::Log(msg, rvs::logresults);
+      return;
+    }
+    if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&domain),
+       reinterpret_cast<unsigned int*>(&bus),
+       reinterpret_cast<unsigned int*>(&device),
+       reinterpret_cast<unsigned int*>(&function)) != 4) {
+         msg = std::string("parsing incomplete for BDF id: ") + pciString ;
+         rvs::lp::Log(msg, rvs::logresults);
+    }
+}
 
 int display_gpu_info (void) {
 
@@ -193,7 +212,7 @@ int display_gpu_info (void) {
     int32_t device_id;
   };
 
-  char buff[1024];
+  char buff[256];
   int hip_num_gpu_devices;
   std::string errmsg = " No supported GPUs available.";
   std::vector<device_info> gpu_info_list;
@@ -206,12 +225,13 @@ int display_gpu_info (void) {
   for (int i = 0; i < hip_num_gpu_devices; i++) {
     hipDeviceProp_t props;
     hipGetDeviceProperties(&props, i);
-    
+    unsigned int pDom, pBus, pDev, pFun;
+    getBDF(i , pDom, pBus, pDev, pFun);
     // compute device location_id (needed in order to identify this device
     // in the gpus_id/gpus_device_id list
     unsigned int dev_location_id =
-        ((((unsigned int) (props.pciBusID)) << 8) | ((unsigned int)(props.pciDeviceID)) << 3);
-    uint16_t dev_domain = props.pciDomainID;  
+	    ((((unsigned int) (pBus)) << 8) | (((unsigned int)(pDev)) << 3) | ((unsigned int)(pFun)));
+    uint16_t dev_domain = pDom;
     uint16_t node_id;
     if (rvs::gpulist::domlocation2node(dev_domain, dev_location_id, &node_id)) {
       continue;
@@ -224,7 +244,7 @@ int display_gpu_info (void) {
     if (rvs::gpulist::gpu2device(gpu_id, &dev_id)){
       continue;
     }
-    snprintf(buff, sizeof(buff), "%04d:%02X:%02X.%d",props.pciDomainID, props.pciBusID, props.pciDeviceID, 0);
+    hipDeviceGetPCIBusId(buff, 256, i);
     device_info info;
     info.bus       = buff;
     info.name      = props.name;
