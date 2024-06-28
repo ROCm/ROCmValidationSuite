@@ -71,6 +71,11 @@ else() #If ROCBLAS not found
   message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
 endif(rocblas_FOUND)
 
+find_package(hipblaslt REQUIRED)
+if(hipblaslt_FOUND)
+  message(STATUS "hipblas found")
+  message(STATUS "hipblas Version: ${hipblaslt_VERSION}")
+endif()
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
