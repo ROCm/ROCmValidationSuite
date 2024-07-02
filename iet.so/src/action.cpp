@@ -74,6 +74,7 @@ using std::fstream;
 #define RVS_CONF_MATRIX_SIZE_KEYB       "matrix_size_b"
 #define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_b"
 #define RVS_CONF_IET_OPS_TYPE           "ops_type"
+#define RVS_CONF_IET_DATA_TYPE          "data_type"
 #define RVS_CONF_TRANS_A                "transa"
 #define RVS_CONF_TRANS_B                "transb"
 #define RVS_CONF_ALPHA_VAL              "alpha"
@@ -87,6 +88,8 @@ using std::fstream;
 #define RVS_CONF_TP_FLAG                "targetpower_met"
 #define RVS_TP_MESSAGE                  "target_power"
 #define RVS_DTYPE_MESSAGE               "dtype"
+#define RVS_CONF_HOT_CALLS              "hot_calls"
+#define RVS_CONF_MATRIX_INIT            "matrix_init"
 
 
 #define IET_DEFAULT_RAMP_INTERVAL       5000
@@ -95,9 +98,13 @@ using std::fstream;
 #define IET_DEFAULT_TOLERANCE           0.1
 #define IET_DEFAULT_SAMPLE_INTERVAL     1000
 #define IET_DEFAULT_MATRIX_SIZE         5760
+#define IET_DEFAULT_MATRIX_SIZE_A       0
+#define IET_DEFAULT_MATRIX_SIZE_B       0
+#define IET_DEFAULT_MATRIX_SIZE_C       0
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            500
-#define IET_DEFAULT_OPS_TYPE            "sgemm"
+#define IET_DEFAULT_OPS_TYPE            ""
+#define IET_DEFAULT_DATA_TYPE           ""
 #define IET_DEFAULT_TRANS_A             0
 #define IET_DEFAULT_TRANS_B             1
 #define IET_DEFAULT_ALPHA_VAL           1
@@ -109,6 +116,8 @@ using std::fstream;
 #define IET_DEFAULT_TP_FLAG             false
 #define IET_DEFAULT_BW_WORKLOAD         false
 #define IET_DEFAULT_CP_WORKLOAD         true
+#define IET_DEFAULT_HOT_CALLS           1
+#define IET_DEFAULT_MATRIX_INIT         "default"
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
@@ -215,7 +224,14 @@ bool iet_action::get_all_iet_config_keys(void) {
       bsts = false;
     }
 
-    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYA, &iet_matrix_size_a, IET_DEFAULT_MATRIX_SIZE);
+    if (property_get<std::string>(RVS_CONF_IET_DATA_TYPE, &iet_data_type, IET_DEFAULT_DATA_TYPE)) {
+      msg = "invalid '" +
+        std::string(RVS_CONF_IET_DATA_TYPE) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYA, &iet_matrix_size_a, IET_DEFAULT_MATRIX_SIZE_A);
     if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_MATRIX_SIZE_KEYA) + "' key value";
@@ -223,7 +239,7 @@ bool iet_action::get_all_iet_config_keys(void) {
         bsts = false;
     }
 
-    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYB, &iet_matrix_size_b, IET_DEFAULT_MATRIX_SIZE);
+    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYB, &iet_matrix_size_b, IET_DEFAULT_MATRIX_SIZE_B);
     if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_MATRIX_SIZE_KEYB) + "' key value";
@@ -231,7 +247,7 @@ bool iet_action::get_all_iet_config_keys(void) {
         bsts = false;
     }
 
-    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYC, &iet_matrix_size_c, IET_DEFAULT_MATRIX_SIZE);
+    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYC, &iet_matrix_size_c, IET_DEFAULT_MATRIX_SIZE_C);
     if (error == 1) {
         msg = "invalid '" +
         std::string(RVS_CONF_MATRIX_SIZE_KEYC) + "' key value";
@@ -327,9 +343,29 @@ bool iet_action::get_all_iet_config_keys(void) {
         bsts = false;
     }
 
+    error = property_get_int<uint64_t>(RVS_CONF_HOT_CALLS, &iet_hot_calls, IET_DEFAULT_HOT_CALLS);
+    if (error == 1) {
+      msg = "invalid '" + std::string(RVS_CONF_HOT_CALLS) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+    error = property_get<std::string>(RVS_CONF_MATRIX_INIT, &iet_matrix_init, IET_DEFAULT_MATRIX_INIT);
+    if (error == 1) {
+      msg = "invalid '" +
+        std::string(RVS_CONF_MATRIX_INIT) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
     /* Set minimum sample interval as default */
     if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
       iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
+    }
+
+    /* If operation and data type both not set, default to sgemm */
+    if ((iet_ops_type == IET_DEFAULT_OPS_TYPE) && (iet_data_type == IET_DEFAULT_OPS_TYPE)) {
+      iet_ops_type = "sgemm";
     }
 
     return bsts;
@@ -426,6 +462,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_matrix_size_b(iet_matrix_size_b);
             workers[i].set_matrix_size_c(iet_matrix_size_c);
             workers[i].set_iet_ops_type(iet_ops_type);
+            workers[i].set_iet_data_type(iet_data_type);
             workers[i].set_matrix_transpose_a(iet_trans_a);
             workers[i].set_matrix_transpose_b(iet_trans_b);
             workers[i].set_alpha_val(iet_alpha_val);
@@ -437,6 +474,8 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_tp_flag(iet_tp_flag);
             workers[i].set_bw_workload(iet_bw_workload);
             workers[i].set_cp_workload(iet_cp_workload);
+            workers[i].set_hot_calls(iet_hot_calls);
+            workers[i].set_matrix_init(iet_matrix_init);
 
             i++;
         }

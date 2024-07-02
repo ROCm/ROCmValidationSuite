@@ -162,14 +162,14 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
     gpu_blas->generate_random_matrix_data();
 
     //Copy data to GPU
-    gpu_blas->copy_data_to_gpu(tst_ops_type);
+    gpu_blas->copy_data_to_gpu();
 
     tst_start_time = std::chrono::system_clock::now();
 
     //Hit the GPU with load to increase temperature
     while ( (duration < run_duration_ms) && (endtest == false) ){
         //call the gemm blas
-        gpu_blas->run_blass_gemm(tst_ops_type);
+        gpu_blas->run_blas_gemm();
 
         /* Set callback to be called upon completion of blas gemm operations */
         gpu_blas->set_callback(blas_callback, (void *)this);
