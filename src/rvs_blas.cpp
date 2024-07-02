@@ -802,9 +802,9 @@ void rvs_blas::generate_random_matrix_data(void) {
   if (!is_error) {
     uint64_t nextr = (uint64_t) time(NULL);
 
+    //SGEMM (float fp32_r)
     if(ops_type == "sgemm") {
 
-      //SGEMM stuff
       for (i = 0; i < size_a; ++i)
         ha[i] = fast_pseudo_rand(&nextr, i);
 
@@ -815,9 +815,9 @@ void rvs_blas::generate_random_matrix_data(void) {
         hc[i] = fast_pseudo_rand(&nextr, i);
     }
 
+    //DGEMM (double fp64_r)
     if(ops_type == "dgemm") {
 
-      //DGEMM stuff
       for (i = 0; i < size_a; ++i)
         hdbla[i] = (double)fast_pseudo_rand(&nextr, i);
 
@@ -828,9 +828,9 @@ void rvs_blas::generate_random_matrix_data(void) {
         hdblc[i] = (double)fast_pseudo_rand(&nextr, i);
     }
 
+    //HGEMM (half-float fp16_r)
     if(ops_type == "hgemm") {
 
-      //HGEMM stuff
       for (i = 0; i < size_a; ++i)
         hhlfa[i] = fast_pseudo_rand(&nextr, i);
 

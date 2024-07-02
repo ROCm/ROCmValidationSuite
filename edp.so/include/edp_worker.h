@@ -99,7 +99,7 @@ class EDPWorker : public rvs::ThreadBase {
     uint64_t get_max_violations(void) { return max_violations; }
 
     //! sets the copy_matrix (true = the matrix will be copied to GPU each
-    //! time a new SGEMM will run, false = the matrix will be copied only once)
+    //! time a new GEMM will run, false = the matrix will be copied only once)
     void set_copy_matrix(bool _copy_matrix) { copy_matrix = _copy_matrix; }
     //! returns the copy_matrix value
     bool get_copy_matrix(void) { return copy_matrix; }
@@ -121,15 +121,15 @@ class EDPWorker : public rvs::ThreadBase {
         return edp_hot_calls;
     }
 
-    //! sets the SGEMM matrix size
+    //! sets the GEMM matrix size
     void set_matrix_size_a(uint64_t _matrix_size_a) {
         matrix_size_a = _matrix_size_a;
     }
-   //! sets the SGEMM matrix size
+   //! sets the GEMM matrix size
     void set_matrix_size_b(uint64_t _matrix_size_b) {
         matrix_size_b = _matrix_size_b;
     }
-   //! sets the SGEMM matrix size
+   //! sets the GEMM matrix size
     void set_matrix_size_c(uint64_t _matrix_size_c) {
         matrix_size_c = _matrix_size_c;
     }
@@ -166,13 +166,13 @@ class EDPWorker : public rvs::ThreadBase {
     void stopWaveInsideGPU(void );
 
 
-    //! returns the SGEMM matrix size
+    //! returns the GEMM matrix size
     uint64_t get_matrix_size_a(void) { return matrix_size_a; }
 
-    //! returns the SGEMM matrix size
+    //! returns the GEMM matrix size
     uint64_t get_matrix_size_b(void) { return matrix_size_b; }
 
-    //! returns the SGEMM matrix size
+    //! returns the GEMM matrix size
     uint64_t get_matrix_size_c(void) { return matrix_size_b; }
 
     //! sets the GFlops tolerance
@@ -240,14 +240,14 @@ class EDPWorker : public rvs::ThreadBase {
     uint64_t log_interval;
     //! maximum allowed number of target_stress violations
     uint64_t max_violations;
-    //! specifies whether to copy the matrix to the GPU for each SGEMM operation
+    //! specifies whether to copy the matrix to the GPU for each GEMM operation
     bool copy_matrix;
     //! target stress (in GFlops) that the GPU will try to achieve
     float target_stress;
     //! GFlops tolerance (how much the GFlops can fluctuare after
     //! the ramp period for the test to succeed)
     float tolerance;
-    //! SGEMM matrix size
+    //! GEMM matrix size
     uint64_t matrix_size_a;
     uint64_t matrix_size_b;
     uint64_t matrix_size_c;
@@ -264,7 +264,7 @@ class EDPWorker : public rvs::ThreadBase {
     std::unique_ptr<rvs_blas> gpu_blas;
     //! max gflops achieved during the stress test
     double max_gflops;
-    //! delay used to reduce SGEMM frequency
+    //! delay used to reduce GEMM frequency
     double delay_target_stress;
     //! TRUE if JSON output is required
     static bool bjson;

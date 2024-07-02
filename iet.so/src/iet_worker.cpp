@@ -119,24 +119,24 @@ void IETWorker::computeThread(void) {
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, iet_end_time;
     double duration = 0;
     std::unique_ptr<rvs_blas> gpu_blas;
-    uint64_t _matrix_size_a;
-    uint64_t _matrix_size_b;
-    uint64_t _matrix_size_c;
+    uint64_t size_a;
+    uint64_t size_b;
+    uint64_t size_c;
 
     if(matrix_size_a && matrix_size_b && matrix_size_c) {
 
-      _matrix_size_a = matrix_size_a;
-      _matrix_size_b = matrix_size_b;
-      _matrix_size_c = matrix_size_c;
+      size_a = matrix_size_a;
+      size_b = matrix_size_b;
+      size_c = matrix_size_c;
     }
     else {
-      _matrix_size_a = matrix_size;
-      _matrix_size_b = matrix_size;
-      _matrix_size_c = matrix_size;
+      size_a = matrix_size;
+      size_b = matrix_size;
+      size_c = matrix_size;
     }
 
     // setup rvsblas instance
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpu_device_index, _matrix_size_a, _matrix_size_b, _matrix_size_c, matrix_init, 
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpu_device_index, size_a, size_b, size_c, matrix_init,
           iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset,
           iet_ops_type, iet_data_type));
 
@@ -148,7 +148,7 @@ void IETWorker::computeThread(void) {
 
     iet_start_time = std::chrono::system_clock::now();
 
-    //Hit the GPU with load to increase temperature
+    //Hit the GPU with compute gemm workload
     while ((duration < run_duration_ms) && (endtest == false)) {
 
       for (uint64_t i = 0; i < iet_hot_calls; i++) {
