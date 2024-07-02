@@ -98,7 +98,7 @@ void PERFWorker::setup_blas(int *error, string *err_description) {
     gpu_blas->generate_random_matrix_data();
     if (!copy_matrix) {
         // copy matrix only once
-        if (!gpu_blas->copy_data_to_gpu(perf_ops_type)) {
+        if (!gpu_blas->copy_data_to_gpu()) {
             *error = 1;
             *err_description = PERF_BLAS_MEMCPY_ERROR;
         }
@@ -181,7 +181,7 @@ bool PERFWorker::do_perf_stress_test(int *error, std::string *err_description) {
 
     while(num_gemm_ops++ <= perf_hot_calls) { 
         // run GEMM & wait for completion
-        gpu_blas->run_blass_gemm(perf_ops_type);
+        gpu_blas->run_blas_gemm();
     }
 
     //End the timer

@@ -100,7 +100,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
   gpu_blas->generate_random_matrix_data();
   if (!copy_matrix) {
     // copy matrix only once
-    if (!gpu_blas->copy_data_to_gpu(gst_ops_type)) {
+    if (!gpu_blas->copy_data_to_gpu()) {
       *error = 1;
       *err_description = GST_BLAS_MEMCPY_ERROR;
     }
@@ -137,7 +137,7 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
 
     if (copy_matrix) {
       // copy matrix before each GEMM
-      if (!gpu_blas->copy_data_to_gpu(gst_ops_type)) {
+      if (!gpu_blas->copy_data_to_gpu()) {
         *error = 1;
         *err_description = GST_BLAS_MEMCPY_ERROR;
         return;
@@ -145,7 +145,7 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
     }
 
     // run GEMM operation
-    if (!gpu_blas->run_blass_gemm(gst_ops_type))
+    if (!gpu_blas->run_blas_gemm())
       continue;  // failed to run the GEMM operation
 
     // Waits for GEMM operation to complete
@@ -235,7 +235,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
       // Generate random matrix data
       gpu_blas->generate_random_matrix_data();
       // copy matrix before each GEMM
-      if (!gpu_blas->copy_data_to_gpu(gst_ops_type)) {
+      if (!gpu_blas->copy_data_to_gpu()) {
         *error = 1;
         *err_description = GST_BLAS_MEMCPY_ERROR;
         return false;
@@ -246,7 +246,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // run GEMM operation
-    if(!gpu_blas->run_blass_gemm(gst_ops_type))
+    if(!gpu_blas->run_blas_gemm())
       continue;
 
     // Wait for GEMM operation to complete
@@ -436,7 +436,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
     if (copy_matrix) {
       // copy matrix before each GEMM
-      if (!gpu_blas->copy_data_to_gpu(gst_ops_type)) {
+      if (!gpu_blas->copy_data_to_gpu()) {
         *error = 1;
         *err_description = GST_BLAS_MEMCPY_ERROR;
         return false;
@@ -449,7 +449,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     for (uint64_t i = 0; i < gst_hot_calls; i++) {
 
       // run GEMM operation
-      if(!gpu_blas->run_blass_gemm(gst_ops_type)) {
+      if(!gpu_blas->run_blas_gemm()) {
 
         *err_description = GST_BLAS_ERROR;
         *error = 1;

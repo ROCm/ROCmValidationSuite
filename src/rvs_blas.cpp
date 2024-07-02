@@ -218,7 +218,7 @@ bool rvs_blas::init_gpu_device(void) {
  * @brief copy data matrix from host to gpu
  * @return true if everything went fine, otherwise false
  */
-bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
+bool rvs_blas::copy_data_to_gpu(void) {
 
   if(ops_type == "sgemm") {
 
@@ -636,7 +636,7 @@ bool rvs_blas::is_gemm_op_complete(void) {
  * @brief performs the GEMM matrix multiplication operations
  * @return true if GPU was able to enqueue the GEMM operation, otherwise false
  */
-bool rvs_blas::run_blass_gemm(std::string ops_type) {
+bool rvs_blas::run_blas_gemm(void) {
 
   if (!is_error) {
 
