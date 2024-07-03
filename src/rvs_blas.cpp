@@ -218,7 +218,7 @@ bool rvs_blas::init_gpu_device(void) {
  * @brief copy data matrix from host to gpu
  * @return true if everything went fine, otherwise false
  */
-bool rvs_blas::copy_data_to_gpu(std::string ops_type) {
+bool rvs_blas::copy_data_to_gpu(void) {
 
   if(ops_type == "sgemm") {
 
@@ -636,7 +636,7 @@ bool rvs_blas::is_gemm_op_complete(void) {
  * @brief performs the GEMM matrix multiplication operations
  * @return true if GPU was able to enqueue the GEMM operation, otherwise false
  */
-bool rvs_blas::run_blass_gemm(std::string ops_type) {
+bool rvs_blas::run_blas_gemm(void) {
 
   if (!is_error) {
 
@@ -802,9 +802,9 @@ void rvs_blas::generate_random_matrix_data(void) {
   if (!is_error) {
     uint64_t nextr = (uint64_t) time(NULL);
 
+    //SGEMM (float fp32_r)
     if(ops_type == "sgemm") {
 
-      //SGEMM stuff
       for (i = 0; i < size_a; ++i)
         ha[i] = fast_pseudo_rand(&nextr, i);
 
@@ -815,9 +815,9 @@ void rvs_blas::generate_random_matrix_data(void) {
         hc[i] = fast_pseudo_rand(&nextr, i);
     }
 
+    //DGEMM (double fp64_r)
     if(ops_type == "dgemm") {
 
-      //DGEMM stuff
       for (i = 0; i < size_a; ++i)
         hdbla[i] = (double)fast_pseudo_rand(&nextr, i);
 
@@ -828,9 +828,9 @@ void rvs_blas::generate_random_matrix_data(void) {
         hdblc[i] = (double)fast_pseudo_rand(&nextr, i);
     }
 
+    //HGEMM (half-float fp16_r)
     if(ops_type == "hgemm") {
 
-      //HGEMM stuff
       for (i = 0; i < size_a; ++i)
         hhlfa[i] = fast_pseudo_rand(&nextr, i);
 

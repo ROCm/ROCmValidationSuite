@@ -77,7 +77,8 @@ class iet_action: public rvs::actionbase {
     //! TRUE if JSON output is required
     bool bjson = false;
 
-    std::string  iet_ops_type;
+    //! gemm operation type
+    std::string iet_ops_type;
     //! target power level for the test
     float iet_target_power;
     //! IET test ramp duration
@@ -119,6 +120,13 @@ class iet_action: public rvs::actionbase {
     int      iet_ldb_offset;
     int      iet_ldc_offset;
     int      iet_ldd_offset;
+
+    //! matrix initialization method :
+    //! default, random integer or trignometric float
+    std::string iet_matrix_init;
+
+    // gemm data type
+    std::string iet_data_type;
 
     friend class IETWorker;
 

@@ -114,73 +114,66 @@ IETWorker::IETWorker():endtest(false) {
 IETWorker::~IETWorker() {
 }
 
-
-
-/**
- * @brief logs the Gflops computed over the last log_interval period
- * @param gflops_interval the Gflops that the GPU achieved
- */
-void IETWorker::log_interval_gflops(double gflops_interval) {
-    string msg;
-    msg = " GPU flops :" + std::to_string(gflops_interval);
-    rvs::lp::Log(msg, rvs::logtrace);
-    log_to_json(IET_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
-                rvs::loginfo);
-
-}
-
-void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type, 
-    bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
-    int iet_lda_offset, int iet_ldb_offset, int iet_ldc_offset, int iet_ldd_offset) {
+void IETWorker::computeThread(void) {
 
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, iet_end_time;
-    double timetakenforoneiteration;
-    double gflops_interval;
-    double duration;
-    uint64_t gem_ops;
+    double duration = 0;
     std::unique_ptr<rvs_blas> gpu_blas;
-    rvs_blas *free_gpublas;
-    string msg;
+    uint64_t size_a;
+    uint64_t size_b;
+    uint64_t size_c;
 
-    duration = 0;
-    gem_ops = 0;
-    // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, "default", transa, transb, alpha, beta,
-          iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset, iet_ops_type, ""));
+    if(matrix_size_a && matrix_size_b && matrix_size_c) {
+
+      size_a = matrix_size_a;
+      size_b = matrix_size_b;
+      size_c = matrix_size_c;
+    }
+    else {
+      size_a = matrix_size;
+      size_b = matrix_size;
+      size_c = matrix_size;
+    }
+
+    // setup rvsblas instance
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpu_device_index, size_a, size_b, size_c, matrix_init,
+          iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset,
+          iet_ops_type, iet_data_type));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();
 
     //Copy data to GPU
-    gpu_blas->copy_data_to_gpu(iet_ops_type);
+    gpu_blas->copy_data_to_gpu();
 
     iet_start_time = std::chrono::system_clock::now();
 
-    //Hit the GPU with load to increase temperature
+    //Hit the GPU with compute gemm workload
     while ((duration < run_duration_ms) && (endtest == false)) {
 
-        //call the gemm blas
-        gpu_blas->run_blass_gemm(iet_ops_type);
+      for (uint64_t i = 0; i < iet_hot_calls; i++) {
 
-        // Waits for GEMM operation to complete
-        if(!gpu_blas->is_gemm_op_complete())
-          continue;
+        // run GEMM operation
+        if(!gpu_blas->run_blas_gemm()) {
+          endtest = true;
+          break;
+        }
+      }
 
-        //get the end time
-        iet_end_time = std::chrono::system_clock::now();
-        //Duration in the call
-        duration = time_diff(iet_end_time, iet_start_time);
+      // Wait for all the GEMM operations to complete
+      if(!gpu_blas->is_gemm_op_complete()) {
+        endtest = true;
+        break;
+      }
 
-        //Converting microseconds to seconds
-        timetakenforoneiteration = duration/1e6;
-        //calculating Gemm count
-        gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
-        //Print the gflops interval
-        log_interval_gflops(gflops_interval);
+      //get the end time
+      iet_end_time = std::chrono::system_clock::now();
+      //Duration in the call
+      duration = time_diff(iet_end_time, iet_start_time);
 
-        // check end test to avoid unnecessary sleep
-        if (endtest)
-            break;
+      // check end test to avoid unnecessary sleep
+      if (endtest)
+        break;
     }
 }
 
@@ -211,15 +204,14 @@ bool IETWorker::do_iet_power_stress(void) {
     if (iet_cp_workload) {
 
       // Start compute workload thread
-      compute_t = std::thread(&IETWorker::blasThread, this, gpu_device_index, matrix_size, iet_ops_type, start, run_duration_ms,
-          iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset);
+      compute_t = std::thread(&IETWorker::computeThread, this);
     }
 
     // Start bandwidth thread if bandwidth workload is enabled
     if (iet_bw_workload) {
 
       // Start bandwidth workload thread
-      bandwidth_t = std::thread(&IETWorker::bandwidthThread, this, gpu_device_index, run_duration_ms);
+      bandwidth_t = std::thread(&IETWorker::bandwidthThread, this);
     }
 
     snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
@@ -522,7 +514,7 @@ void RunKernel(hipEvent_t& start, hipEvent_t& stop, T* __restrict p, T* __restri
       p, r, fetch_iters);
 }
 
-void IETWorker::bandwidthThread(int gpuIdx, uint64_t run_duration_ms)
+void IETWorker::bandwidthThread(void)
 {
   hipStream_t stream = 0;
   std::vector<uint32_t*> bufs;
@@ -543,7 +535,7 @@ void IETWorker::bandwidthThread(int gpuIdx, uint64_t run_duration_ms)
   srand(time(NULL));
 
   // Select GPU device for bandwidth workload
-  if (hipSetDevice(gpuIdx) != hipSuccess) {
+  if (hipSetDevice(gpu_device_index) != hipSuccess) {
     // cannot select the given GPU device
     return;
   }
