@@ -108,24 +108,46 @@ class iet_action: public rvs::actionbase {
     uint64_t iet_matrix_size_b;
     uint64_t iet_matrix_size_c;
 
-    //Parameter to heat up
+    //! Parameter to heat up
     uint64_t iet_hot_calls;
 
-    //Tranpose set to none or enabled
-    int      iet_trans_a;
-    int      iet_trans_b;
+    //! Transpose set to none or enabled
+    int iet_trans_a;
+    int iet_trans_b;
 
-    //Leading offset values
-    int      iet_lda_offset;
-    int      iet_ldb_offset;
-    int      iet_ldc_offset;
-    int      iet_ldd_offset;
+    //! Leading offset values
+    int iet_lda_offset;
+    int iet_ldb_offset;
+    int iet_ldc_offset;
+    int iet_ldd_offset;
 
     //! matrix initialization method :
     //! default, random integer or trignometric float
     std::string iet_matrix_init;
 
-    // gemm data type
+    //! gemm mode : basic (single), batched or strided batched
+    std::string iet_gemm_mode;
+
+    //! Matrix batch count
+    int iet_batch_size;
+
+    //! Stride from the start of matrix a(i)
+    //! to next matrix a(i+1) in the strided batch
+    uint64_t iet_stride_a;
+
+    //! Stride from the start of matrix b(i)
+    //! to next matrix b(i+1) in the strided batch
+    uint64_t iet_stride_b;
+
+    //! Stride from the start of matrix c(i)
+    //! to next matrix c(i+1) in the strided batch
+    uint64_t iet_stride_c;
+
+    //! Stride from the start of matrix d(i)
+    //! to next matrix d(i+1) in the strided batch
+    uint64_t iet_stride_d;
+
+    //! gemm data type
     std::string iet_data_type;
 
     friend class IETWorker;

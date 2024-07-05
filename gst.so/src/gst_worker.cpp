@@ -82,7 +82,8 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
       new rvs_blas(gpu_device_index, matrix_size_a, matrix_size_b,
         matrix_size_c, matrix_init, gst_trans_a, gst_trans_b,
         gst_alpha_val, gst_beta_val,
-        gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ldd_offset, gst_ops_type, gst_data_type));
+        gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ldd_offset, gst_ops_type, gst_data_type,
+        "", 0, 0, 0, 0, 0));
 
   if (!gpu_blas) {
     *error = 1;
@@ -150,7 +151,7 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
 
     // Waits for GEMM operation to complete
     if(!gpu_blas->is_gemm_op_complete())
-      continue;
+      continue;  // failed to run the GEMM operation
 
     num_sgemm_ops_log_interval++;
 
@@ -246,12 +247,20 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // run GEMM operation
-    if(!gpu_blas->run_blas_gemm())
-      continue;
+    if(!gpu_blas->run_blas_gemm()) {
+
+      *err_description = GST_BLAS_ERROR;
+      *error = 1;
+      return false;
+    }
 
     // Wait for GEMM operation to complete
-    if(!gpu_blas->is_gemm_op_complete())
-      continue;
+    if(!gpu_blas->is_gemm_op_complete()) {
+
+      *err_description = GST_BLAS_ERROR;
+      *error = 1;
+      return false;
+    }
 
     //End the timer
     end_time = gpu_blas->get_time_us();
@@ -448,7 +457,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
     for (uint64_t i = 0; i < gst_hot_calls; i++) {
 
-      // run GEMM operation
+      // launch GEMM operation
       if(!gpu_blas->run_blas_gemm()) {
 
         *err_description = GST_BLAS_ERROR;
@@ -458,8 +467,12 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     }
 
     // Wait for all the GEMM operations to complete
-    if(!gpu_blas->is_gemm_op_complete())
-      continue;
+    if(!gpu_blas->is_gemm_op_complete()) {
+
+      *err_description = GST_BLAS_ERROR;
+      *error = 1;
+      return false;
+    }
 
     //End the timer
     end_time = gpu_blas->get_time_us();

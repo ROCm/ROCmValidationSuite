@@ -90,7 +90,12 @@ using std::fstream;
 #define RVS_DTYPE_MESSAGE               "dtype"
 #define RVS_CONF_HOT_CALLS              "hot_calls"
 #define RVS_CONF_MATRIX_INIT            "matrix_init"
-
+#define RVS_CONF_GEMM_MODE              "gemm_mode"
+#define RVS_CONF_BATCH_SIZE             "batch_size"
+#define RVS_CONF_STRIDE_A               "stride_a"
+#define RVS_CONF_STRIDE_B               "stride_b"
+#define RVS_CONF_STRIDE_C               "stride_c"
+#define RVS_CONF_STRIDE_D               "stride_d"
 
 #define IET_DEFAULT_RAMP_INTERVAL       5000
 #define IET_DEFAULT_LOG_INTERVAL        1000
@@ -118,6 +123,12 @@ using std::fstream;
 #define IET_DEFAULT_CP_WORKLOAD         true
 #define IET_DEFAULT_HOT_CALLS           1
 #define IET_DEFAULT_MATRIX_INIT         "default"
+#define IET_DEFAULT_GEMM_MODE        ""
+#define IET_DEFAULT_BATCH_SIZE          0
+#define IET_DEFAULT_STRIDE_A            0
+#define IET_DEFAULT_STRIDE_B            0
+#define IET_DEFAULT_STRIDE_C            0
+#define IET_DEFAULT_STRIDE_D            0
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
@@ -358,6 +369,50 @@ bool iet_action::get_all_iet_config_keys(void) {
       bsts = false;
     }
 
+    error = property_get<std::string>(RVS_CONF_GEMM_MODE, &iet_gemm_mode, IET_DEFAULT_GEMM_MODE);
+    if (error == 1) {
+      msg = "invalid '" +
+        std::string(RVS_CONF_GEMM_MODE) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+    error = property_get_int<int>(RVS_CONF_BATCH_SIZE, &iet_batch_size, IET_DEFAULT_BATCH_SIZE);
+    if (error == 1) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_STRIDE_A) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    error = property_get_int<uint64_t>(RVS_CONF_STRIDE_A, &iet_stride_a, IET_DEFAULT_STRIDE_A);
+    if (error == 1) {
+      msg = "invalid '" + std::string(RVS_CONF_STRIDE_A) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+    error = property_get_int<uint64_t>(RVS_CONF_STRIDE_B, &iet_stride_b, IET_DEFAULT_STRIDE_B);
+    if (error == 1) {
+      msg = "invalid '" + std::string(RVS_CONF_STRIDE_B) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+    error = property_get_int<uint64_t>(RVS_CONF_STRIDE_C, &iet_stride_c, IET_DEFAULT_STRIDE_C);
+    if (error == 1) {
+      msg = "invalid '" + std::string(RVS_CONF_STRIDE_C) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
+    error = property_get_int<uint64_t>(RVS_CONF_STRIDE_D, &iet_stride_d, IET_DEFAULT_STRIDE_D);
+    if (error == 1) {
+      msg = "invalid '" + std::string(RVS_CONF_STRIDE_D) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
     /* Set minimum sample interval as default */
     if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
       iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
@@ -476,6 +531,12 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_cp_workload(iet_cp_workload);
             workers[i].set_hot_calls(iet_hot_calls);
             workers[i].set_matrix_init(iet_matrix_init);
+            workers[i].set_gemm_mode(iet_gemm_mode);
+            workers[i].set_batch_size(iet_batch_size);
+            workers[i].set_stride_a(iet_stride_a);
+            workers[i].set_stride_b(iet_stride_b);
+            workers[i].set_stride_c(iet_stride_c);
+            workers[i].set_stride_d(iet_stride_d);
 
             i++;
         }

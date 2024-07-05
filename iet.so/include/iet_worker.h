@@ -242,6 +242,42 @@ class IETWorker : public rvs::ThreadBase {
     //! returns matrix init
     std::string get_matrix_init(void) { return matrix_init; }
 
+    //! sets the gemm mode
+    void set_gemm_mode(std::string _gemm_mode) { gemm_mode = _gemm_mode; }
+
+    //! returns gemm mode
+    std::string get_gemm_mode(void) { return gemm_mode; }
+
+    //! sets the batch size
+    void set_batch_size(int _batch_size) { batch_size = _batch_size; }
+
+    //! returns the batch size
+    int get_batch_size(void) { return batch_size; }
+
+    //! sets the matrix a stride
+    void set_stride_a(uint64_t _stride_a) { stride_a = _stride_a; }
+
+    //! returns the matrix a stride
+    uint64_t get_stride_a(void) { return stride_a; }
+
+    //! sets the matrix b stride
+    void set_stride_b(uint64_t _stride_b) { stride_b = _stride_b; }
+
+    //! returns the matrix b stride
+    uint64_t get_stride_b(void) { return stride_b; }
+
+    //! sets the matrix c stride
+    void set_stride_c(uint64_t _stride_c) { stride_c = _stride_c; }
+
+    //! returns the matrix c stride
+    uint64_t get_stride_c(void) { return stride_c; }
+
+    //! sets the matrix d stride
+    void set_stride_d(uint64_t _stride_d) { stride_d = _stride_d; }
+
+    //! returns the matrix d stride
+    uint64_t get_stride_d(void) { return stride_d; }
+
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
 
@@ -339,6 +375,22 @@ class IETWorker : public rvs::ThreadBase {
     uint64_t iet_hot_calls;
     //! matrix init
     std::string matrix_init;
+    //! gemm mode : basic (single), batched or strided batched
+    std::string gemm_mode;
+    //! Matrix batch count
+    int batch_size;
+    //! Stride from the start of matrix a(i)
+    //! to next matrix a(i+1) in the strided batch
+    uint64_t stride_a;
+    //! Stride from the start of matrix b(i)
+    //! to next matrix b(i+1) in the strided batch
+    uint64_t stride_b;
+    //! Stride from the start of matrix c(i)
+    //! to next matrix c(i+1) in the strided batch
+    uint64_t stride_c;
+    //! Stride from the start of matrix d(i)
+    //! to next matrix d(i+1) in the strided batch
+    uint64_t stride_d;
 
     bool endtest = false;
     //! GEMM operations synchronization mutex
