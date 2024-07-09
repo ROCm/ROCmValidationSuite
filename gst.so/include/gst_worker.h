@@ -187,7 +187,7 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t get_matrix_size_b(void) { return matrix_size_b; }
 
     //! returns the matrix size
-    uint64_t get_matrix_size_c(void) { return matrix_size_b; }
+    uint64_t get_matrix_size_c(void) { return matrix_size_c; }
 
     //! sets the GFlops tolerance
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }

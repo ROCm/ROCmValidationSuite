@@ -72,7 +72,7 @@ using std::fstream;
 #define RVS_CONF_IET_OPS_TYPE           "ops_type"
 #define RVS_CONF_MATRIX_SIZE_KEYA       "matrix_size_a"
 #define RVS_CONF_MATRIX_SIZE_KEYB       "matrix_size_b"
-#define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_b"
+#define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_c"
 #define RVS_CONF_IET_OPS_TYPE           "ops_type"
 #define RVS_CONF_IET_DATA_TYPE          "data_type"
 #define RVS_CONF_TRANS_A                "transa"
