@@ -55,7 +55,8 @@ class rvs_blas {
    rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _matrix_init,
        int transa, int transb, float alpha, float beta,
        rocblas_int lda, rocblas_int ldb, rocblas_int ldc, rocblas_int ldd,
-       std::string _ops_type, std::string _data_type);
+       std::string _ops_type, std::string _data_type, std::string _gemm_mode,
+       int _batch_count, uint64_t stride_a, uint64_t stride_b, uint64_t stride_c, uint64_t stride_d);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
@@ -114,13 +115,13 @@ class rvs_blas {
     rocblas_int n;
     //! matrix size k
     rocblas_int k;
-    //! amount of memory to allocate for the matrix
+    //! amount of memory to allocate for the matrix a
     size_t size_a;
-    //! amount of memory to allocate for the matrix
+    //! amount of memory to allocate for the matrix b
     size_t size_b;
-    //! amount of memory to allocate for the matrix
+    //! amount of memory to allocate for the matrix c
     size_t size_c;
-    //! amount of memory to allocate for the matrix
+    //! amount of memory to allocate for the matrix d
     size_t size_d;
     //! matrix initialization
     std::string matrix_init;
@@ -229,11 +230,30 @@ class rvs_blas {
     // gemm check counter
     uint64_t check_count;
 
+    //! gemm mode : basic (single), batched or strided batched
+    std::string gemm_mode;
+
+    //! Matrix batch count
+    int batch_size;
+
+    //! Stride from the start of matrix a(i)
+    //! to next matrix a(i+1) in the strided batch
+    uint64_t stride_a;
+    //! Stride from the start of matrix b(i)
+    //! to next matrix b(i+1) in the strided batch
+    uint64_t stride_b;
+    //! Stride from the start of matrix c(i)
+    //! to next matrix c(i+1) in the strided batch
+    uint64_t stride_c;
+    //! Stride from the start of matrix d(i)
+    //! to next matrix d(i+1) in the strided batch
+    uint64_t stride_d;
+
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
     void release_gpu_matrix_mem(void);
 
-    bool alocate_host_matrix_mem(void);
+    bool allocate_host_matrix_mem(void);
     void release_host_matrix_mem(void);
     float fast_pseudo_rand(uint64_t *nextr, size_t i);
 
