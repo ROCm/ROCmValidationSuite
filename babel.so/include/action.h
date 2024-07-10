@@ -106,12 +106,6 @@ class mem_action: public rvs::actionbase {
 
     // configuration properties getters
     bool get_all_mem_config_keys(void);
-  /**
-  * @brief reads all common configuration keys from
-  * the module's properties collection
-  * @return true if no fatal error occured, false otherwise
-  */
-    bool get_all_common_config_keys(void) override;
 
   /**
   * @brief gets the number of ROCm compatible AMD GPUs
