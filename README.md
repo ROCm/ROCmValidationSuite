@@ -136,8 +136,8 @@ SUSE :
     Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
-    ./rvs -c conf/gst_single.conf ; Run GST module tests
+    ./rvs -d 3 ; Run set of RVS default sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
 
 ### Run version pre-complied and packaged with ROCm release
 
@@ -147,9 +147,14 @@ SUSE :
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
     ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
-    ./rvs -c conf/gst_single.conf ; Run GST module tests
+    ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
 
-Similarly, all RVS module tests can be run using scripts present in folder "/opt/rocm/share/rocm-validation-suite/testscripts/".
+To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
+
+    ./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf ; Run MI300X specific GST test configuration
+    ./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf ; Run Navi 32 specific GST test configuration
+
+Note: If present, always use GPU specific configurations instead of default test configurations.
 
 ## Reporting
 
