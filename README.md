@@ -139,7 +139,7 @@ SUSE :
     ./rvs -d 3 ; Run set of RVS default sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
 
-### Run version pre-complied and packaged with ROCm release
+### Run version pre-compiled and packaged with ROCm release
 
     cd /opt/rocm/bin
 
