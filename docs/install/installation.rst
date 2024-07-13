@@ -31,7 +31,8 @@ RVS package components are installed in `/opt/rocm`. The package contains:
 - executable binary (located in _install-base_/bin/rvs)
 - public shared libraries (located in _install-base_/lib)
 - module specific shared libraries (located in _install-base_/lib/rvs)
-- configuration files (located in _install-base_/share/rocm-validation-suite/conf)
+- default configuration files (located in _install-base_/share/rocm-validation-suite/conf)
+- GPU specific configuration files (located in _install-base_/share/rocm-validation-suite/conf/<GPU folder>)
 - testscripts (located in _install-base_/share/rocm-validation-suite/testscripts)
 - user guide (located in _install-base_/share/rocm-validation-suite/userguide)
 - man page (located in _install-base_/share/man)
@@ -250,10 +251,10 @@ Run version built from source code
     Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
-    ./rvs -c conf/gst_single.conf ; Run GST module tests
+    ./rvs -d 3 ; Run set of RVS default sanity tests (in rvs.conf) with verbose level 3
+    ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
 
-Run version pre-complied and packaged with ROCm release
+Run version pre-compiled and packaged with ROCm release
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. code-block::
@@ -264,9 +265,16 @@ Run version pre-complied and packaged with ROCm release
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
     ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
-    ./rvs -c conf/gst_single.conf ; Run GST module tests
+    ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
 
-Similarly, you can run all RVS module tests using scripts in the "/opt/rocm/share/rocm-validation-suite/testscripts/" folder.
+To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
+
+.. code-block::
+
+    ./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf ; Run MI300X specific GST test configuration
+    ./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf ; Run Navi 32 specific GST test configuration
+
+Note: If present, always use GPU specific configurations instead of default test configurations.
 
 Building documentation
 ------------------------
