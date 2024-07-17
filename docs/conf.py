@@ -5,7 +5,6 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import re
-import subprocess
 
 from rocm_docs import ROCmDocs
 
@@ -19,16 +18,13 @@ left_nav_title = f"RVS {version_number} Documentation"
 # for PDF output on Read the Docs
 project = "RVS Documentation"
 author = "Advanced Micro Devices, Inc."
-copyright = "Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved."
+copyright = "Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved."
 version = version_number
 release = version_number
 
-external_toc_path = "./sphinx/_toc.yml"
-
-docs_core = ROCmDocs(left_nav_title)
-docs_core.setup()
-
+html_title = left_nav_title
+extensions = ["rocm_docs"]
+html_theme = "rocm_docs_theme"
+html_theme_options = {"flavor": "rocm"}
 external_projects_current_project = "rocmvalidationsuite"
-
-for sphinx_var in ROCmDocs.SPHINX_VARS:
-    globals()[sphinx_var] = getattr(docs_core, sphinx_var)
+external_toc_path = "./sphinx/_toc.yml"
