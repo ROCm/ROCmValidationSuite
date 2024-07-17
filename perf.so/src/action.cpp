@@ -57,7 +57,7 @@ using std::regex;
 #define RVS_CONF_HOT_CALLS              "hot_calls"
 #define RVS_CONF_MATRIX_SIZE_KEYA       "matrix_size_a"
 #define RVS_CONF_MATRIX_SIZE_KEYB       "matrix_size_b"
-#define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_b"
+#define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_c"
 #define RVS_CONF_PERF_OPS_TYPE           "ops_type"
 #define RVS_CONF_TRANS_A                "transa"
 #define RVS_CONF_TRANS_B                "transb"

@@ -187,7 +187,7 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t get_matrix_size_b(void) { return matrix_size_b; }
 
     //! returns the matrix size
-    uint64_t get_matrix_size_c(void) { return matrix_size_b; }
+    uint64_t get_matrix_size_c(void) { return matrix_size_c; }
 
     //! sets the GFlops tolerance
     void set_tolerance(float _tolerance) { tolerance = _tolerance; }
@@ -211,6 +211,36 @@ class GSTWorker : public rvs::ThreadBase {
 
     //! set data format based gemm operation  - fp8, fp16, bf16
     void set_gst_data_type(std::string _data_type) { gst_data_type = _data_type; }
+
+    //! sets gemm output self check enable/disable
+    void set_self_check(bool _self_check) { self_check = _self_check; }
+
+    //! returns the self check value
+    bool get_self_check(void) { return self_check; }
+
+    //! sets gemm output accuracy check enable/disable
+    void set_accu_check(bool _accu_check) { accu_check = _accu_check; }
+
+    //! returns the accuracy check value
+    bool get_accu_check(void) { return accu_check; }
+
+    //! sets gemm output error inject enable/disable
+    void set_error_inject(bool _error_inject) { error_inject = _error_inject; }
+
+    //! returns the error inject value
+    bool get_error_inject(void) { return error_inject; }
+
+    //! sets gemm error inject frequency value
+    void set_error_frequency(uint64_t _error_freq) { error_freq = _error_freq; }
+
+    //! returns gemm error inject frequency value
+    uint64_t get_error_frequency(void) { return error_freq; }
+
+    //! sets gemm error inject count value
+    void set_error_count(uint64_t _error_count) { error_count = _error_count; }
+
+    //! returns gemm error inject count value
+    uint64_t get_error_count(void) { return error_count; }
 
  protected:
     void setup_blas(int *error, std::string *err_description);
@@ -293,6 +323,16 @@ class GSTWorker : public rvs::ThreadBase {
     std::condition_variable cv;
     //! blas gemm operations status
     bool blas_status;
+    //! gemm output self-check
+    bool self_check;
+    //! gemm output accuracy-check
+    bool accu_check;
+    //! Inject error in gemm output
+    bool error_inject;
+    //! error injection frequency (number of gemm calls per error injection)
+    uint64_t error_freq;
+    //! number of errors injected in gemm output
+    uint64_t error_count;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

@@ -163,8 +163,8 @@ class IETWorker : public rvs::ThreadBase {
     //! returns the SGEMM matrix size
     uint64_t get_matrix_size_b(void) { return matrix_size_b; }
 
-    //! returns the SGEMM matrix size
-    uint64_t get_matrix_size_c(void) { return matrix_size_b; }
+    //! returns the matrix size c
+    uint64_t get_matrix_size_c(void) { return matrix_size_c; }
 
     //! sets the transpose matrix a
     void set_matrix_transpose_a(int transa) {

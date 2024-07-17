@@ -28,6 +28,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <iomanip>
 #include "include/rvs_blas.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
@@ -36,7 +37,7 @@
 #define MODULE_NAME                             "gst"
 
 #define GST_MEM_ALLOC_ERROR                     "memory allocation error!"
-#define GST_BLAS_ERROR                          "memory/blas error!"
+#define GST_BLAS_ERROR                          "blas error !!!"
 #define GST_BLAS_MEMCPY_ERROR                   "HostToDevice mem copy error!"
 
 #define GST_MAX_GFLOPS_OUTPUT_KEY               "Gflop"
@@ -44,6 +45,8 @@
 #define GST_BYTES_COPIED_PER_OP_OUTPUT_KEY      "bytes_copied_per_op"
 #define GST_TRY_OPS_PER_SEC_OUTPUT_KEY          "try_ops_per_sec"
 
+#define GST_LOG_SELF_CHECK_ERROR_KEY            "self-check error"
+#define GST_LOG_ACCU_CHECK_ERROR_KEY            "accu-check error"
 #define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
 #define GST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 
@@ -444,9 +447,14 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     for (uint64_t i = 0; i < gst_hot_calls; i++) {
+
       // run GEMM operation
-      if(!gpu_blas->run_blass_gemm(gst_ops_type))
-        continue;
+      if(!gpu_blas->run_blass_gemm(gst_ops_type)) {
+
+        *err_description = GST_BLAS_ERROR;
+        *error = 1;
+        return false;
+      }
     }
 
     // Wait for all the GEMM operations to complete
@@ -486,6 +494,38 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         timetakenforniterations = 0;
 
         gst_log_interval_time = std::chrono::system_clock::now();
+      }
+    }
+
+    if (self_check || accu_check) {
+
+      if (error_inject) {
+        gpu_blas->set_gemm_error(error_freq, error_count);
+      }
+
+      double self_error = 0.0;
+      double accu_error = 0.0;
+
+      gpu_blas->validate_gemm(self_check, accu_check, self_error, accu_error);
+
+      if(self_error > 0) {
+
+        std::ostringstream oss;
+        oss << std::setprecision(10) << std::noshowpoint << std::fixed << self_error;
+
+        msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+          GST_LOG_SELF_CHECK_ERROR_KEY + " " + oss.str();
+        rvs::lp::Log(msg, rvs::logresults);
+      }
+
+      if(accu_error > 0) {
+
+        std::ostringstream oss;
+        oss << std::setprecision(10) << std::noshowpoint << std::fixed << accu_error;
+
+        msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+          GST_LOG_ACCU_CHECK_ERROR_KEY + " " + oss.str();
+        rvs::lp::Log(msg, rvs::logresults);
       }
     }
 
