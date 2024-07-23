@@ -716,8 +716,6 @@ bool rvs_blas::run_blas_gemm(void) {
 
     if(gemm_mode == "strided_batched") {
 
-      printf("rocblas_dgemm_strided_batched !!!\n");
-
       if (rocblas_dgemm_strided_batched(blas_handle, transa, transb,
             rvs_blas::m, rvs_blas::n, rvs_blas::k,
             &alpha, ddbla, blas_lda_offset, stride_a,
