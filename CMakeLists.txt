@@ -443,6 +443,9 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so
 
 endif()  # if (RVS_ROCMSMI EQUAL 1)
 
+set(HIPRAND_INC_DIR "${ROCM_PATH}/include")
+set(HIPRAND_LIB_DIR "${ROCM_PATH}/lib")
+
 if (RVS_ROCBLAS EQUAL 1)
   set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install")
   set(ROCBLAS_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/lib/")
