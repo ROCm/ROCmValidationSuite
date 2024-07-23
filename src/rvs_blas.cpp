@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -104,6 +104,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , hpo(nullptr), hco(nullptr)
   , hout(nullptr), hdout(nullptr)
   , hip_stream(nullptr)
+  , hiprand_generator(nullptr)
   , blas_handle(nullptr)
   , is_handle_init(false)
   , is_error(false)
@@ -218,6 +219,20 @@ bool rvs_blas::init_gpu_device(void) {
     return false;
   }
 
+  if("hiprand" == matrix_init) {
+
+    // Create hipRAND generator, assign stream.
+    if(hiprandCreateGenerator(&hiprand_generator, HIPRAND_RNG_PSEUDO_DEFAULT) != HIPRAND_STATUS_SUCCESS) {
+      std::cout << "\n hiprandCreateGenerator() failed !!!" << "\n";
+      return false;
+    }
+
+    if(hiprandSetStream(hiprand_generator, hip_stream) != HIPRAND_STATUS_SUCCESS) {
+      std::cout << "\n hiprandSetStream() failed !!!" << "\n";
+      return false;
+    }
+  }
+
   is_handle_init = true;
   return true;
 }
@@ -227,6 +242,12 @@ bool rvs_blas::init_gpu_device(void) {
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::copy_data_to_gpu(void) {
+
+  if("hiprand" == matrix_init) {
+
+    // hipRAND no need for allocation in host memory, so no host to device copy !
+    return true;
+  }
 
   if(ops_type == "sgemm") {
 
@@ -520,6 +541,8 @@ void rvs_blas::release_gpu_matrix_mem(void) {
 
   if (is_handle_init) {
     rocblas_destroy_handle(blas_handle);
+    if(hiprand_generator)
+      hiprandDestroyGenerator(hiprand_generator);
     hipStreamDestroy(hip_stream);
   }
 }
@@ -529,6 +552,12 @@ void rvs_blas::release_gpu_matrix_mem(void) {
  * @return true if everything went fine, otherwise false
  */
 bool rvs_blas::allocate_host_matrix_mem(void) {
+
+  if("hiprand" == matrix_init) {
+
+    // hipRAND no need for allocation in host memory
+    return true;
+  }
 
   try {
 
@@ -688,8 +717,6 @@ bool rvs_blas::run_blas_gemm(void) {
     double alpha = blas_alpha_val, beta = blas_beta_val;
 
     if(gemm_mode == "strided_batched") {
-
-      printf("rocblas_dgemm_strided_batched !!!\n");
 
       if (rocblas_dgemm_strided_batched(blas_handle, transa, transb,
             rvs_blas::m, rvs_blas::n, rvs_blas::k,
@@ -916,86 +943,119 @@ bool rvs_blas::run_blas_gemm(void) {
  */
 void rvs_blas::generate_random_matrix_data(void) {
 
-  size_t i;
   if (!is_error) {
-    uint64_t nextr = (uint64_t) time(NULL);
 
-    //SGEMM (float fp32_r)
-    if(ops_type == "sgemm") {
+    if("hiprand" == matrix_init) {
 
-      for (i = 0; i < size_a; ++i)
-        ha[i] = fast_pseudo_rand(&nextr, i);
+      if(ops_type == "dgemm") {
 
-      for (i = 0; i < size_b; ++i)
-        hb[i] = fast_pseudo_rand(&nextr, i);
+        if(hiprandGenerateUniformDouble(hiprand_generator, ddbla, size_a) != HIPRAND_STATUS_SUCCESS) {
+          std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
+          is_error = true;
+          return;
+        }
 
-      for (int i = 0; i < size_c; ++i)
-        hc[i] = fast_pseudo_rand(&nextr, i);
+        if(hiprandGenerateUniformDouble(hiprand_generator, ddblb, size_b) != HIPRAND_STATUS_SUCCESS) {
+          std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
+          is_error = true;
+          return;
+        }
+
+        if(hiprandGenerateUniformDouble(hiprand_generator, ddblc, size_c) != HIPRAND_STATUS_SUCCESS) {
+          std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
+          is_error = true;
+          return;
+        }
+
+        if(hipStreamSynchronize(hip_stream) != hipSuccess) {
+          std::cout << "hipStreamSynchronize() failed !!! for stream " << hip_stream << std::endl;
+          is_error = true;
+          return;
+        }
+      }
     }
+    else {
 
-    //DGEMM (double fp64_r)
-    if(ops_type == "dgemm") {
+      size_t i;
+      uint64_t nextr = (uint64_t) time(NULL);
 
-      for (i = 0; i < size_a; ++i)
-        hdbla[i] = (double)fast_pseudo_rand(&nextr, i);
+      //SGEMM (float fp32_r)
+      if(ops_type == "sgemm") {
 
-      for (i = 0; i < size_b; ++i)
-        hdblb[i] = (double)fast_pseudo_rand(&nextr, i);
+        for (i = 0; i < size_a; ++i)
+          ha[i] = fast_pseudo_rand(&nextr, i);
 
-      for (int i = 0; i < size_c; ++i)
-        hdblc[i] = (double)fast_pseudo_rand(&nextr, i);
-    }
+        for (i = 0; i < size_b; ++i)
+          hb[i] = fast_pseudo_rand(&nextr, i);
 
-    //HGEMM (half-float fp16_r)
-    if(ops_type == "hgemm") {
+        for (int i = 0; i < size_c; ++i)
+          hc[i] = fast_pseudo_rand(&nextr, i);
+      }
 
-      for (i = 0; i < size_a; ++i)
-        hhlfa[i] = fast_pseudo_rand(&nextr, i);
+      //DGEMM (double fp64_r)
+      if(ops_type == "dgemm") {
 
-      for (i = 0; i < size_b; ++i)
-        hhlfb[i] = fast_pseudo_rand(&nextr, i);
+        for (i = 0; i < size_a; ++i)
+          hdbla[i] = (double)fast_pseudo_rand(&nextr, i);
 
-      for (int i = 0; i < size_c; ++i)
-        hhlfc[i] = fast_pseudo_rand(&nextr, i);
-    }
+        for (i = 0; i < size_b; ++i)
+          hdblb[i] = (double)fast_pseudo_rand(&nextr, i);
 
-    // 8-bit floating point real (fp8_r) format
-    if(data_type == "fp8_r") {
+        for (int i = 0; i < size_c; ++i)
+          hdblc[i] = (double)fast_pseudo_rand(&nextr, i);
+      }
 
-      for (i = 0; i < size_a; ++i)
-        ((struct rocblas_f8* )hda)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
+      //HGEMM (half-float fp16_r)
+      if(ops_type == "hgemm") {
 
-      for (i = 0; i < size_b; ++i)
-        ((struct rocblas_f8* )hdb)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
+        for (i = 0; i < size_a; ++i)
+          hhlfa[i] = fast_pseudo_rand(&nextr, i);
 
-      for (i = 0; i < size_c; ++i)
-        ((struct rocblas_f8* )hdc)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
-    }
+        for (i = 0; i < size_b; ++i)
+          hhlfb[i] = fast_pseudo_rand(&nextr, i);
 
-    // 16-bit floating point real (fp16_r) format
-    if(data_type == "fp16_r") {
+        for (int i = 0; i < size_c; ++i)
+          hhlfc[i] = fast_pseudo_rand(&nextr, i);
+      }
 
-      for (i = 0; i < size_a; ++i)
-        ((rocblas_half* )hda)[i] = rocblas_half(fast_pseudo_rand(&nextr, i));
+      // 8-bit floating point real (fp8_r) format
+      if(data_type == "fp8_r") {
 
-      for (i = 0; i < size_b; ++i)
-        ((rocblas_half* )hdb)[i] = rocblas_half(fast_pseudo_rand(&nextr, i));
+        for (i = 0; i < size_a; ++i)
+          ((struct rocblas_f8* )hda)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
 
-      for (i = 0; i < size_c; ++i)
-        ((rocblas_half* )hdc)[i] = rocblas_half(fast_pseudo_rand(&nextr, i));
-    }
+        for (i = 0; i < size_b; ++i)
+          ((struct rocblas_f8* )hdb)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
 
-    // 16-bit brain floating point real (bf16_r) format
-    if(data_type == "bf16_r") {
+        for (i = 0; i < size_c; ++i)
+          ((struct rocblas_f8* )hdc)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
+      }
 
-      for (i = 0; i < size_a; ++i)
-        ((struct rocblas_bfloat16* )hda)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
+      // 16-bit floating point real (fp16_r) format
+      if(data_type == "fp16_r") {
 
-      for (i = 0; i < size_b; ++i)
-        ((struct rocblas_bfloat16* )hdb)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
+        for (i = 0; i < size_a; ++i)
+          ((rocblas_half* )hda)[i] = rocblas_half(fast_pseudo_rand(&nextr, i));
 
-      for (i = 0; i < size_c; ++i)
-        ((struct rocblas_bfloat16* )hdc)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
+        for (i = 0; i < size_b; ++i)
+          ((rocblas_half* )hdb)[i] = rocblas_half(fast_pseudo_rand(&nextr, i));
+
+        for (i = 0; i < size_c; ++i)
+          ((rocblas_half* )hdc)[i] = rocblas_half(fast_pseudo_rand(&nextr, i));
+      }
+
+      // 16-bit brain floating point real (bf16_r) format
+      if(data_type == "bf16_r") {
+
+        for (i = 0; i < size_a; ++i)
+          ((struct rocblas_bfloat16* )hda)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
+
+        for (i = 0; i < size_b; ++i)
+          ((struct rocblas_bfloat16* )hdb)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
+
+        for (i = 0; i < size_c; ++i)
+          ((struct rocblas_bfloat16* )hdc)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
+      }
     }
   }
 }
