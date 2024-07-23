@@ -104,6 +104,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , hpo(nullptr), hco(nullptr)
   , hout(nullptr), hdout(nullptr)
   , hip_stream(nullptr)
+  , hiprand_generator(nullptr)
   , blas_handle(nullptr)
   , is_handle_init(false)
   , is_error(false)
@@ -540,7 +541,8 @@ void rvs_blas::release_gpu_matrix_mem(void) {
 
   if (is_handle_init) {
     rocblas_destroy_handle(blas_handle);
-    hiprandDestroyGenerator(hiprand_generator);
+    if(hiprand_generator)
+      hiprandDestroyGenerator(hiprand_generator);
     hipStreamDestroy(hip_stream);
   }
 }
