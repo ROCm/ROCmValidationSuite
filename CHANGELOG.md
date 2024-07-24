@@ -2,7 +2,20 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
 
-## RVS 1.0.0 for ROCm 6.1
+## For ROCm 6.2
+
+### Changed
+
+- Updated GST performance benchmark test for better numbers.
+
+### Added
+
+- Gemm self-check and accuracy-check support for checking consistency & accuracy of gemm output.
+- Trignometric float & random integer matrix data initialization support.
+- IET (power) stress test for MI308X & MI300A.
+- IET (power transition) test for MI300X.
+
+## For ROCm 6.1
 
 ### Changed
 
@@ -11,6 +24,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Added
 
 - Support data types (BF16 and FP8) based GEMM operations in GPU Stress Test (GST) module.
+- Babel test for MI300X.
 
 ## RVS 1.0.0 for ROCm 6.0
 
