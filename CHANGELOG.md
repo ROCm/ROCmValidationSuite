@@ -2,7 +2,7 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
 
-## For ROCm 6.2
+## RVS 1.0.0 for ROCm 6.2
 
 ### Changed
 
@@ -15,7 +15,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 - IET (power) stress test for MI308X & MI300A.
 - IET (power transition) test for MI300X.
 
-## For ROCm 6.1
+## RVS 1.0.0 for ROCm 6.1
 
 ### Changed
 
