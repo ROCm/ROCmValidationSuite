@@ -1,6 +1,6 @@
 # Change Log for ROCm Validation Suite (RVS)
 
-Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm-Developer-Tools/ROCmValidationSuite).
+Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
 ## RVS 1.0.0 for ROCm 6.2
 
