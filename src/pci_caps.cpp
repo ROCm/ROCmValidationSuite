@@ -40,7 +40,7 @@ extern "C" {
 #define PCI_CAP_DATA_MAX_BUF_SIZE 1024
 #define PCI_CAP_NOT_SUPPORTED "NOT SUPPORTED"
 #define MEM_BAR_MAX_INDEX 5
-#define BYTE_MAX 255
+#define DSR_MAX_VAL 255
 
 #ifdef RVS_UNIT_TEST
   #include "include/rvs_unit_testing_defs.h"
@@ -432,7 +432,7 @@ void get_pwr_budgeting(struct pci_dev *dev, uint8_t pb_pm_state,
             }
 
             i++;
-        } while (i < BYTE_MAX); // DSR size is 1 byte, no need to run forever
+        } while (i <= DSR_MAX_VAL); // DSR size is 1 byte, no need to run forever
     }
 }
 
