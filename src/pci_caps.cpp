@@ -40,6 +40,7 @@ extern "C" {
 #define PCI_CAP_DATA_MAX_BUF_SIZE 1024
 #define PCI_CAP_NOT_SUPPORTED "NOT SUPPORTED"
 #define MEM_BAR_MAX_INDEX 5
+#define DSR_MAX_VAL 255
 
 #ifdef RVS_UNIT_TEST
   #include "include/rvs_unit_testing_defs.h"
@@ -404,7 +405,14 @@ void get_pwr_budgeting(struct pci_dev *dev, uint8_t pb_pm_state,
         i = 0;
 
         do {
-            pci_write_byte(dev, cap_offset_pwbgd + PCI_PWR_DSR, i);
+            // Data select register size is 1 byte, it will select the DWORD(4 bytes)
+	    // from budgeting data register corresponding to state.
+	    // dont proceed if write to register fails
+            int rt = pci_write_byte(dev, cap_offset_pwbgd + PCI_PWR_DSR, i);
+	    if(!rt){// 0 indicates error in writing
+		++i;
+		continue;
+	    }
             w = pci_read_word(dev, cap_offset_pwbgd + PCI_PWR_DATA);
 
             if (!w)
@@ -424,7 +432,7 @@ void get_pwr_budgeting(struct pci_dev *dev, uint8_t pb_pm_state,
             }
 
             i++;
-        } while (1);
+        } while (i <= DSR_MAX_VAL); // DSR size is 1 byte, no need to run forever
     }
 }
 
