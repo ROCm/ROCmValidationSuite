@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -85,6 +85,13 @@ class pebbworker : public rvs::ThreadBase {
   //! Set logging level
   void set_loglevel(const int level) { loglevel = level; }
 
+  //! Set hot calls
+  void set_hot_calls(uint32_t _hot_calls) { hot_calls = _hot_calls; }
+  //! Set warm calls
+  void set_warm_calls(uint32_t _warm_calls) { warm_calls = _warm_calls; }
+  //! Set b2b
+  void set_b2b(bool _b2b) { b2b = _b2b; }
+
  protected:
   virtual void run(void);
 
@@ -130,6 +137,13 @@ class pebbworker : public rvs::ThreadBase {
   uint16_t transfer_num;
   //! logging level
   int loglevel;
+
+  //! hot calls
+  uint32_t hot_calls;
+  //! warm calls
+  uint32_t warm_calls;
+  //! 'true' if back-to-back transfers enabled
+  bool b2b;
 
   //! list of test block sizes
   std::vector<uint32_t> block_size;

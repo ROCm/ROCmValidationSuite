@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -182,15 +182,17 @@ int pebbworker::do_transfer() {
       RVSTRACE_
       return -1;
     }
-    // if needed, swap source and destination
+
+    // Check if unidirectional device(GPU) to host (CPU)
+    // if so, swap source and destination node
     if (!prop_h2d && prop_d2h) {
       RVSTRACE_
       sts = pHsa->SendTraffic(dst_node, src_node, current_size,
-                              bidirect, &duration);
+                              bidirect, b2b, warm_calls, hot_calls, &duration);
     } else {
       RVSTRACE_
       sts = pHsa->SendTraffic(src_node, dst_node, current_size,
-                              bidirect, &duration);
+                              bidirect, b2b, warm_calls, hot_calls, &duration);
     }
     if (sts) {
       std::string msg = "internal error, src: " + std::to_string(src_node)
