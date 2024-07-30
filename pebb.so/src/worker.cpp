@@ -206,7 +206,7 @@ int pebbworker::do_transfer() {
     {
       RVSTRACE_
       std::lock_guard<std::mutex> lk(cntmutex);
-      running_size += current_size;
+      running_size += current_size * hot_calls;
       running_duration += duration;
     }
   }
@@ -259,7 +259,7 @@ void pebbworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
 }
 
 /**
- * @brief Get final cumulatives for data trnasferred and time ellapsed
+ * @brief Get final cumulatives for data transferred and time elapsed.
  *
  * @param Src [out] source NUMA node
  * @param Dst [out] destination NUMA node
@@ -296,3 +296,4 @@ void pebbworker::get_final_data(uint16_t* Src, uint16_t* Dst, bool* Bidirect,
     total_duration = 0;
   }
 }
+

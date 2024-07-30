@@ -502,7 +502,7 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
  *
  * */
 int pebb_action::print_final_average() {
-  bandwidth   bw; 
+  bandwidth   bw;
   uint16_t    src_node, dst_node;
   uint16_t    dst_id;
   bool        bidir;

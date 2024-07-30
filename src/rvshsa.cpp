@@ -765,7 +765,6 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
   hsa_signal_t signal_rev;
 
   double duration = 0;
-  double total_duration = 0;
 
   RVSHSATRACE_
 
@@ -876,10 +875,11 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
     if(i >= warm_calls) {
       RVSHSATRACE_
 
+      // Per transfer duration
       duration = GetCopyTime(bidirectional, signal_fwd, signal_rev)/1000000000;
 
-      // get transfer duration
-      total_duration += duration;
+      // Total cumulative duration of all the hot call transfers
+      *Duration += duration;
     }
 
     if (!b2b) {
@@ -909,8 +909,6 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
       hsa_signal_destroy(signal_rev);
     }
   }
-
-  *Duration = total_duration/hot_calls;
 
   RVSHSATRACE_
 
