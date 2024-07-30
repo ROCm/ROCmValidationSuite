@@ -154,6 +154,10 @@ int pbqtworker::do_transfer() {
   unsigned int endusec;
   std::string msg;
 
+  uint32_t warm_calls = 1;
+  uint32_t hot_calls = 1;
+  bool b2b = false;
+
   msg = "[" + action_name + "] pbqt transfer " + std::to_string(src_node) + " "
       + std::to_string(dst_node) + " ";
 
@@ -165,7 +169,7 @@ int pbqtworker::do_transfer() {
   for (size_t i = 0; brun && i < block_size.size(); i++) {
     current_size = block_size[i];
     sts = pHsa->SendTraffic(src_node, dst_node, current_size,
-                            bidirect, false, 1, 1, &duration);
+                            bidirect, b2b, warm_calls, hot_calls, &duration);
 
     if (sts) {
       msg = "internal error, src: " + std::to_string(src_node)

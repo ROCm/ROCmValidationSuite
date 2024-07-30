@@ -138,6 +138,14 @@ bool pebb_action::get_all_pebb_config_keys(void) {
     bsts = false;
   }
 
+  if(!hot_calls) {
+    hot_calls = DEFAULT_HOT_CALLS;
+  }
+
+  if(!warm_calls) {
+    warm_calls = DEFAULT_WARM_CALLS;
+  }
+
   if( link_type == 2)
     link_type_string = "PCIe";
   else if(link_type == 4)

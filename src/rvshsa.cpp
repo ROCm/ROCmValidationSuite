@@ -727,13 +727,17 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
 
 
 /**
- * @brief Allocate buffers in source and destination memory pools
+ * @brief Allocate buffers in source and destination memory pools and initiate traffic.
  *
  * @param SrcNode source NUMA node
  * @param DstNode destination NUMA node
  * @param Size size of data to transfer
  * @param bidirectional 'true' for bidirectional transfer
- * @param Duration [out] duration of transfer in seconds
+ * @param b2b 'true' for back-to-back transfers (resource allocation only once for entire transfer iterations)
+ * @param warm_calls number of warm up transfers prior to bandwidth calculation transfers (hot calls)
+ * to ignore few intial transfers for the bandwidth to settle.
+ * @param hot_calls number of transfers to consider for bandwidth calculation after warm calls.
+ * @param Duration [out] average duration of hot call transfers in seconds
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
