@@ -737,7 +737,7 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
  * @param warm_calls number of warm up transfers prior to bandwidth calculation transfers (hot calls)
  * to ignore few intial transfers for the bandwidth to settle.
  * @param hot_calls number of transfers to consider for bandwidth calculation after warm calls.
- * @param Duration [out] average duration of hot call transfers in seconds
+ * @param Duration [out] total duration of all the hot call transfers in seconds
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
@@ -778,6 +778,8 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
     RVSHSATRACE_
     return -1;
   }
+
+  *Duration = 0;
 
   // Total transfer iterations
   for (uint32_t i = 0; i < (warm_calls + hot_calls); i++) {
