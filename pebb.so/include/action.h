@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -93,6 +93,15 @@ class pebb_action : public rvs::actionbase {
   //! link type
   int link_type;
   std::string link_type_string;
+
+ //! Number of warm calls (transfer iterations) before bandwidth calculation (hot calls)
+ //! to ignore few intial transfers for the bandwidth to settle
+ uint32_t warm_calls;
+ //! Number of hot calls (transfer iterations) for bandwidth calculation after warm calls
+ uint32_t hot_calls;
+ //! set to true for back-to-back transfers (resource allocation only once for entire transfer iterations)
+ bool b2b;
+
  protected:
   int create_threads();
   int destroy_threads();

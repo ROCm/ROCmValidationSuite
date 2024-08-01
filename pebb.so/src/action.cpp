@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -73,7 +73,7 @@ pebb_action::~pebb_action() {
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
-bool pebb_action::get_all_pebb_config_keys(void) {;
+bool pebb_action::get_all_pebb_config_keys(void) {
   string msg;
   int error;
   bool bsts = true;
@@ -81,43 +81,71 @@ bool pebb_action::get_all_pebb_config_keys(void) {;
   RVSTRACE_
 
   if (property_get("host_to_device", &prop_h2d, true)) {
-      msg = "invalid 'host_to_device' key";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
+    msg = "invalid 'host_to_device' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
   }
 
   if (property_get("device_to_host", &prop_d2h, true)) {
-      msg = "invalid 'device_to_host' key";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
+    msg = "invalid 'device_to_host' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
   }
 
   error = property_get_uint_list<uint32_t>(RVS_CONF_BLOCK_SIZE_KEY,
-                                   YAML_DEVICE_PROP_DELIMITER,
-                                   &block_size, &b_block_size_all);
+      YAML_DEVICE_PROP_DELIMITER,
+      &block_size, &b_block_size_all);
   if (error == 1) {
-      msg = "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
+    msg = "invalid '" + std::string(RVS_CONF_BLOCK_SIZE_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
   } else if (error == 2) {
     b_block_size_all = true;
     block_size.clear();
   }
 
-  error = property_get_int<uint32_t>
-  (RVS_CONF_B2B_BLOCK_SIZE_KEY, &b2b_block_size);
+  error = property_get_int<uint32_t>(RVS_CONF_B2B_BLOCK_SIZE_KEY, &b2b_block_size);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_B2B_BLOCK_SIZE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
+    bsts = false;
   }
 
   error = property_get_int<int>(RVS_CONF_LINK_TYPE_KEY, &link_type);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_LINK_TYPE_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
+    bsts = false;
   }
+
+  error = property_get_int<uint32_t>(RVS_CONF_HOT_CALLS_KEY, &hot_calls, DEFAULT_HOT_CALLS);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_HOT_CALLS_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_WARM_CALLS_KEY, &warm_calls, DEFAULT_WARM_CALLS);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_WARM_CALLS_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get(RVS_CONF_B2B_KEY, &b2b, DEFAULT_B2B)) {
+    msg = "invalid '" + std::string(RVS_CONF_B2B_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if(!hot_calls) {
+    hot_calls = DEFAULT_HOT_CALLS;
+  }
+
+  if(!warm_calls) {
+    warm_calls = DEFAULT_WARM_CALLS;
+  }
+
   if( link_type == 2)
     link_type_string = "PCIe";
   else if(link_type == 4)
@@ -255,6 +283,9 @@ int pebb_action::create_threads() {
         p->set_stop_name(action_name);
         p->set_transfer_ix(transfer_ix);
         p->set_block_sizes(block_size);
+        p->set_hot_calls(hot_calls);
+        p->set_warm_calls(warm_calls);
+        p->set_b2b(b2b);
         p->set_loglevel(property_log_level);
         test_array.push_back(p);
       }
@@ -471,7 +502,7 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
  *
  * */
 int pebb_action::print_final_average() {
-  bandwidth   bw; 
+  bandwidth   bw;
   uint16_t    src_node, dst_node;
   uint16_t    dst_id;
   bool        bidir;

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -727,19 +727,24 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
 
 
 /**
- * @brief Allocate buffers in source and destination memory pools
+ * @brief Allocate buffers in source and destination memory pools and initiate traffic.
  *
  * @param SrcNode source NUMA node
  * @param DstNode destination NUMA node
  * @param Size size of data to transfer
  * @param bidirectional 'true' for bidirectional transfer
- * @param Duration [out] duration of transfer in seconds
+ * @param b2b 'true' for back-to-back transfers (resource allocation only once for entire transfer iterations)
+ * @param warm_calls number of warm up transfers prior to bandwidth calculation transfers (hot calls)
+ * to ignore few intial transfers for the bandwidth to settle.
+ * @param hot_calls number of transfers to consider for bandwidth calculation after warm calls.
+ * @param Duration [out] total duration of all the hot call transfers in seconds
  * @return 0 - if successfull, non-zero otherwise
  *
  * */
 int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
-                              size_t Size, bool bidirectional,
-                              double* Duration) {
+                          size_t Size, bool bidirectional, bool b2b,
+                          uint32_t warm_calls, uint32_t hot_calls,
+                          double* Duration) {
   hsa_status_t status;
   int sts;
 
@@ -759,6 +764,8 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
   void* dst_ptr_rev = nullptr;
   hsa_signal_t signal_rev;
 
+  double duration = 0;
+
   RVSHSATRACE_
 
   // given NUMA nodes, find agent indexes
@@ -767,110 +774,144 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
   src_ix_rev = dst_ix_fwd;
   dst_ix_rev = src_ix_fwd;
 
-    if (src_ix_fwd < 0 || dst_ix_fwd < 0) {
+  if (src_ix_fwd < 0 || dst_ix_fwd < 0) {
     RVSHSATRACE_
     return -1;
   }
 
-  // allocate buffers and grant permissions for forward transfer
-  sts = Allocate(src_ix_fwd, dst_ix_fwd, Size,
-           &src_pool_fwd, &src_ptr_fwd,
-           &dst_pool_fwd, &dst_ptr_fwd);
-  if (sts) {
-    RVSHSATRACE_
-    return -1;
-  }
+  *Duration = 0;
 
-  // Create a signal to wait on copy operation
-  if (HSA_STATUS_SUCCESS !=
-     (status = hsa_signal_create(1, 0, NULL, &signal_fwd))) {
-    print_hsa_status(__FILE__, __LINE__, __func__,
+  // Total transfer iterations
+  for (uint32_t i = 0; i < (warm_calls + hot_calls); i++) {
+
+    // For back to back transfers, only allocate resources once */
+    // For non back to back transfers, allocate resources every transfer */
+    if((b2b && !src_ptr_fwd) || (!b2b)) {
+
+      // allocate buffers and grant permissions for forward transfer
+      sts = Allocate(src_ix_fwd, dst_ix_fwd, Size,
+          &src_pool_fwd, &src_ptr_fwd,
+          &dst_pool_fwd, &dst_ptr_fwd);
+      if (sts) {
+        RVSHSATRACE_
+          return -1;
+      }
+
+      // Create a signal to wait on copy operation
+      if (HSA_STATUS_SUCCESS !=
+          (status = hsa_signal_create(1, 0, NULL, &signal_fwd))) {
+        print_hsa_status(__FILE__, __LINE__, __func__,
+            "hsa_signal_create()",
+            status);
+        hsa_amd_memory_pool_free(src_ptr_fwd);
+        hsa_amd_memory_pool_free(dst_ptr_fwd);
+        RVSHSATRACE_
+          return -1;
+      }
+
+      if (bidirectional) {
+        RVSHSATRACE_
+
+          // allocate buffers and grant permissions for reverse transfer
+          sts = Allocate(src_ix_rev, dst_ix_rev, Size,
+              &src_pool_rev, &src_ptr_rev,
+              &dst_pool_rev, &dst_ptr_rev);
+
+        if (sts) {
+          RVSHSATRACE_
+            hsa_amd_memory_pool_free(src_ptr_fwd);
+          hsa_amd_memory_pool_free(dst_ptr_fwd);
+          return -1;
+        }
+
+        // Create a signal to wait on for reverse copy operation
+        if (HSA_STATUS_SUCCESS !=
+            (status = hsa_signal_create(1, 0, NULL, &signal_rev))) {
+          print_hsa_status(__FILE__, __LINE__, __func__,
               "hsa_signal_create()",
               status);
-      hsa_amd_memory_pool_free(src_ptr_fwd);
-      hsa_amd_memory_pool_free(dst_ptr_fwd);
-      RVSHSATRACE_
-      return -1;
-  }
-
-  if (bidirectional) {
-    RVSHSATRACE_
-
-    // allocate buffers and grant permissions for reverse transfer
-    sts = Allocate(src_ix_rev, dst_ix_rev, Size,
-            &src_pool_rev, &src_ptr_rev,
-            &dst_pool_rev, &dst_ptr_rev);
-
-    if (sts) {
-      RVSHSATRACE_
-      hsa_amd_memory_pool_free(src_ptr_fwd);
-      hsa_amd_memory_pool_free(dst_ptr_fwd);
-      return -1;
+          hsa_amd_memory_pool_free(src_ptr_fwd);
+          hsa_amd_memory_pool_free(dst_ptr_fwd);
+          hsa_amd_memory_pool_free(src_ptr_rev);
+          hsa_amd_memory_pool_free(dst_ptr_rev);
+          hsa_signal_destroy(signal_fwd);
+          return -1;
+        }
+      }
     }
 
-    // Create a signal to wait on for reverse copy operation
+    // initiate forward transfer
+    hsa_signal_store_relaxed(signal_fwd, 1);
     if (HSA_STATUS_SUCCESS !=
-       (status = hsa_signal_create(1, 0, NULL, &signal_rev))) {
+        (status = hsa_amd_memory_async_copy(
+                                            dst_ptr_fwd, agent_list[dst_ix_fwd].agent,
+                                            src_ptr_fwd, agent_list[src_ix_fwd].agent,
+                                            Size,
+                                            0, NULL, signal_fwd)))
       print_hsa_status(__FILE__, __LINE__, __func__,
-              "hsa_signal_create()",
-              status);
+          "hsa_amd_memory_async_copy()",
+          status);
+    if (bidirectional) {
+      RVSHSATRACE_
+        // initiate reverse transfer
+        hsa_signal_store_relaxed(signal_rev, 1);
+      if (HSA_STATUS_SUCCESS != (status = hsa_amd_memory_async_copy(
+              dst_ptr_rev, agent_list[dst_ix_rev].agent,
+              src_ptr_rev, agent_list[src_ix_rev].agent, Size,
+              0, NULL, signal_rev)))
+        print_hsa_status(__FILE__, __LINE__, __func__,
+            "hsa_amd_memory_async_copy()",
+            status);
+    }
+
+    // wait for transfer to complete
+    RVSHSATRACE_
+      hsa_signal_wait_acquire(signal_fwd, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE);
+
+    // if bidirectional, also wait for reverse transfer to complete
+    if (bidirectional == true) {
+      RVSHSATRACE_
+        hsa_signal_wait_acquire(signal_rev, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE);
+    }
+
+    if(i >= warm_calls) {
+      RVSHSATRACE_
+
+      // Per transfer duration
+      duration = GetCopyTime(bidirectional, signal_fwd, signal_rev)/1000000000;
+
+      // Total cumulative duration of all the hot call transfers
+      *Duration += duration;
+    }
+
+    if (!b2b) {
       hsa_amd_memory_pool_free(src_ptr_fwd);
       hsa_amd_memory_pool_free(dst_ptr_fwd);
+      hsa_signal_destroy(signal_fwd);
+
+      src_ptr_fwd = nullptr;
+      if (bidirectional) {
+        RVSHSATRACE_
+        hsa_amd_memory_pool_free(src_ptr_rev);
+        hsa_amd_memory_pool_free(dst_ptr_rev);
+        hsa_signal_destroy(signal_rev);
+      }
+    }
+  }
+
+  if(src_ptr_fwd) {
+    hsa_amd_memory_pool_free(src_ptr_fwd);
+    hsa_amd_memory_pool_free(dst_ptr_fwd);
+    hsa_signal_destroy(signal_fwd);
+
+    if (bidirectional) {
+      RVSHSATRACE_
       hsa_amd_memory_pool_free(src_ptr_rev);
       hsa_amd_memory_pool_free(dst_ptr_rev);
-      hsa_signal_destroy(signal_fwd);
-      return -1;
+      hsa_signal_destroy(signal_rev);
     }
   }
 
-  // initiate forward transfer
-  hsa_signal_store_relaxed(signal_fwd, 1);
-  if (HSA_STATUS_SUCCESS !=
-     (status = hsa_amd_memory_async_copy(
-                dst_ptr_fwd, agent_list[dst_ix_fwd].agent,
-                src_ptr_fwd, agent_list[src_ix_fwd].agent,
-                Size,
-                0, NULL, signal_fwd)))
-    print_hsa_status(__FILE__, __LINE__, __func__,
-              "hsa_amd_memory_async_copy()",
-              status);
-  if (bidirectional) {
-    RVSHSATRACE_
-    // initiate reverse transfer
-    hsa_signal_store_relaxed(signal_rev, 1);
-    if (HSA_STATUS_SUCCESS != (status = hsa_amd_memory_async_copy(
-        dst_ptr_rev, agent_list[dst_ix_rev].agent,
-        src_ptr_rev, agent_list[src_ix_rev].agent, Size,
-        0, NULL, signal_rev)))
-      print_hsa_status(__FILE__, __LINE__, __func__,
-              "hsa_amd_memory_async_copy()",
-              status);
-  }
-
-  // wait for transfer to complete
-  RVSHSATRACE_
-  hsa_signal_wait_acquire(signal_fwd, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE);
-
-  // if bidirectional, also wait for reverse transfer to complete
-  if (bidirectional == true) {
-    RVSHSATRACE_
-    hsa_signal_wait_acquire(signal_rev, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE);
-  }
-
-  RVSHSATRACE_
-  // get transfer duration
-  *Duration = GetCopyTime(bidirectional, signal_fwd, signal_rev)/1000000000;
-
-  hsa_amd_memory_pool_free(src_ptr_fwd);
-  hsa_amd_memory_pool_free(dst_ptr_fwd);
-  hsa_signal_destroy(signal_fwd);
-
-  if (bidirectional) {
-    RVSHSATRACE_
-    hsa_amd_memory_pool_free(src_ptr_rev);
-    hsa_amd_memory_pool_free(dst_ptr_rev);
-    hsa_signal_destroy(signal_rev);
-  }
   RVSHSATRACE_
 
   return 0;

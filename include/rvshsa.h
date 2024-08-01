@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -155,8 +155,9 @@ class hsa {
                      hsa_amd_memory_pool_t* pDstPool, void** DstBuff);
 
   int SendTraffic(uint32_t SrcNode, uint32_t DstNode,
-                  size_t   Size,    bool     bidirectional,
-                  double*  Duration);
+      size_t Size, bool bidirectional, bool b2b,
+      uint32_t warm_calls, uint32_t hot_calls,
+      double* Duration);
 
   int GetPeerStatus(uint32_t SrcNode, uint32_t DstNode);
   int GetPeerStatusAgent(const AgentInformation& SrcAgent,

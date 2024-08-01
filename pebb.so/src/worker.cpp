@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -182,15 +182,17 @@ int pebbworker::do_transfer() {
       RVSTRACE_
       return -1;
     }
-    // if needed, swap source and destination
+
+    // Check if unidirectional device(GPU) to host (CPU)
+    // if so, swap source and destination node
     if (!prop_h2d && prop_d2h) {
       RVSTRACE_
       sts = pHsa->SendTraffic(dst_node, src_node, current_size,
-                              bidirect, &duration);
+                              bidirect, b2b, warm_calls, hot_calls, &duration);
     } else {
       RVSTRACE_
       sts = pHsa->SendTraffic(src_node, dst_node, current_size,
-                              bidirect, &duration);
+                              bidirect, b2b, warm_calls, hot_calls, &duration);
     }
     if (sts) {
       std::string msg = "internal error, src: " + std::to_string(src_node)
@@ -204,7 +206,7 @@ int pebbworker::do_transfer() {
     {
       RVSTRACE_
       std::lock_guard<std::mutex> lk(cntmutex);
-      running_size += current_size;
+      running_size += current_size * hot_calls;
       running_duration += duration;
     }
   }
@@ -257,7 +259,7 @@ void pebbworker::get_running_data(uint16_t* Src,  uint16_t* Dst, bool* Bidirect,
 }
 
 /**
- * @brief Get final cumulatives for data trnasferred and time ellapsed
+ * @brief Get final cumulatives for data transferred and time elapsed.
  *
  * @param Src [out] source NUMA node
  * @param Dst [out] destination NUMA node
@@ -294,3 +296,4 @@ void pebbworker::get_final_data(uint16_t* Src, uint16_t* Dst, bool* Bidirect,
     total_duration = 0;
   }
 }
+

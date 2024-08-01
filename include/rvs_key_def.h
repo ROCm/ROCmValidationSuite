@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -42,11 +42,17 @@
 #define RVS_CONF_B2B_BLOCK_SIZE_KEY     "b2b_block_size"
 #define RVS_CONF_LINK_TYPE_KEY          "link_type"
 #define RVS_CONF_MONITOR_KEY            "monitor"
+#define RVS_CONF_HOT_CALLS_KEY          "hot_calls"
+#define RVS_CONF_WARM_CALLS_KEY         "warm_calls"
+#define RVS_CONF_B2B_KEY                "b2b"
 
 #define DEFAULT_LOG_INTERVAL (1000u)
-#define DEFAULT_DURATION (10000u)
-#define DEFAULT_COUNT (1u)
-#define DEFAULT_WAIT (500u)
+#define DEFAULT_DURATION     (10000u)
+#define DEFAULT_COUNT        (1u)
+#define DEFAULT_WAIT         (500u)
+#define DEFAULT_HOT_CALLS    (1u)
+#define DEFAULT_WARM_CALLS   (1u)
+#define DEFAULT_B2B          false
 
 #define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
 #define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\
