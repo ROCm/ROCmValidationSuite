@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -75,6 +75,12 @@ using std::regex;
 #define RVS_CONF_ERROR_INJECT_KEY       "error_inject"
 #define RVS_CONF_ERROR_FREQUENCY_KEY    "error_freq"
 #define RVS_CONF_ERROR_COUNT_KEY        "error_count"
+#define RVS_CONF_GEMM_MODE              "gemm_mode"
+#define RVS_CONF_BATCH_SIZE             "batch_size"
+#define RVS_CONF_STRIDE_A               "stride_a"
+#define RVS_CONF_STRIDE_B               "stride_b"
+#define RVS_CONF_STRIDE_C               "stride_c"
+#define RVS_CONF_STRIDE_D               "stride_d"
 
 #define TARGET_KEY                      "target"
 #define DTYPE_KEY                       "dtype"
@@ -99,6 +105,12 @@ using std::regex;
 #define GST_DEFAULT_ERROR_INJECT        false
 #define GST_DEFAULT_ERROR_FREQUENCY     0
 #define GST_DEFAULT_ERROR_COUNT         0
+#define GST_DEFAULT_GEMM_MODE           ""
+#define GST_DEFAULT_BATCH_SIZE          0
+#define GST_DEFAULT_STRIDE_A            0
+#define GST_DEFAULT_STRIDE_B            0
+#define GST_DEFAULT_STRIDE_C            0
+#define GST_DEFAULT_STRIDE_D            0
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0
@@ -183,6 +195,12 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_error_inject(gst_error_inject);
       workers[i].set_error_frequency(gst_error_freq);
       workers[i].set_error_count(gst_error_count);
+      workers[i].set_gemm_mode(gst_gemm_mode);
+      workers[i].set_batch_size(gst_batch_size);
+      workers[i].set_stride_a(gst_stride_a);
+      workers[i].set_stride_b(gst_stride_b);
+      workers[i].set_stride_c(gst_stride_c);
+      workers[i].set_stride_d(gst_stride_d);
 
       i++;
     }
@@ -438,6 +456,50 @@ bool gst_action::get_all_gst_config_keys(void) {
   if (error == 1) {
     msg = "invalid '" +
       std::string(RVS_CONF_ERROR_COUNT_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_GEMM_MODE, &gst_gemm_mode, GST_DEFAULT_GEMM_MODE);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_GEMM_MODE) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<int>(RVS_CONF_BATCH_SIZE, &gst_batch_size, GST_DEFAULT_BATCH_SIZE);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_STRIDE_A) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint64_t>(RVS_CONF_STRIDE_A, &gst_stride_a, GST_DEFAULT_STRIDE_A);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_STRIDE_A) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint64_t>(RVS_CONF_STRIDE_B, &gst_stride_b, GST_DEFAULT_STRIDE_B);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_STRIDE_B) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint64_t>(RVS_CONF_STRIDE_C, &gst_stride_c, GST_DEFAULT_STRIDE_C);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_STRIDE_C) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint64_t>(RVS_CONF_STRIDE_D, &gst_stride_d, GST_DEFAULT_STRIDE_D);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_STRIDE_D) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }

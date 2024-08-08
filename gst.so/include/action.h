@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -123,6 +123,28 @@ class gst_action: public rvs::actionbase {
     uint64_t gst_error_freq;
     // number of errors injected in gemm output
     uint64_t gst_error_count;
+
+    // gemm mode : basic (single), batched or strided batched
+    std::string gst_gemm_mode;
+
+    // Matrix batch count
+    int gst_batch_size;
+
+    // Stride from the start of matrix a(i)
+    // to next matrix a(i+1) in the strided batch
+    uint64_t gst_stride_a;
+
+    // Stride from the start of matrix b(i)
+    // to next matrix b(i+1) in the strided batch
+    uint64_t gst_stride_b;
+
+    // Stride from the start of matrix c(i)
+    // to next matrix c(i+1) in the strided batch
+    uint64_t gst_stride_c;
+
+    // Stride from the start of matrix d(i)
+    // to next matrix d(i+1) in the strided batch
+    uint64_t gst_stride_d;
 
     friend class GSTWorker;
 
