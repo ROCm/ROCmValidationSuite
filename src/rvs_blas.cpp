@@ -132,7 +132,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
 
   // Setting matrix a, b & c sizes
   size_a = (transa == rocblas_operation_none) ? size_t(k) * blas_lda_offset : size_t(m) * blas_lda_offset;
-  size_b = (transb == rocblas_operation_none) ? size_t(n) * blas_lda_offset : size_t(k) * blas_ldb_offset;
+  size_b = (transb == rocblas_operation_none) ? size_t(n) * blas_ldb_offset : size_t(k) * blas_ldb_offset;
   size_c = size_t(n) * blas_ldc_offset;
 
   // gemm based on data type, size of output matrix d.
