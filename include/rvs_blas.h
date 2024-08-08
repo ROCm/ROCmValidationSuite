@@ -83,7 +83,13 @@ class rvs_blas {
 
     //! returns theoretical GFLOPs for gemm  
     double gemm_gflop_count(void) {
+
+      if(gemm_mode == "strided_batched") {
+        return (2.0 * m * n * k * batch_size) / 1e9;
+      }
+      else {
         return (2.0 * m * n * k) / 1e9;
+      }
     }
 
     double get_time_us(void);
