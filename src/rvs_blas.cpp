@@ -86,7 +86,7 @@ static thread_local double rvsblas_t_rand_d_array[RANDBUF];
 rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _matrix_init, int transA, int transB,
     float alpha , float beta, rocblas_int lda, rocblas_int ldb, rocblas_int ldc, rocblas_int ldd,
     std::string _ops_type, std::string _data_type, std::string _gemm_mode, int _batch_size,
-    uint64_t _stride_a, uint64_t _stride_b, uint64_t _stride_c, uint64_t _stride_d)
+    uint64_t _stride_a, uint64_t _stride_b, uint64_t _stride_c, uint64_t _stride_d, std::string _blas_source)
   : gpu_device_index(_gpu_device_index)
   , ops_type(_ops_type)
   , data_type(_data_type)
@@ -112,6 +112,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , gemm_mode(_gemm_mode)
   , batch_size(_batch_size)
   , stride_a(_stride_a), stride_b(_stride_b), stride_c(_stride_c), stride_d(_stride_d)
+  , blas_source(_blas_source)
 {
 
   // Matrix a & b transpose

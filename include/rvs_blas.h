@@ -57,7 +57,8 @@ class rvs_blas {
        int transa, int transb, float alpha, float beta,
        rocblas_int lda, rocblas_int ldb, rocblas_int ldc, rocblas_int ldd,
        std::string _ops_type, std::string _data_type, std::string _gemm_mode,
-       int _batch_count, uint64_t stride_a, uint64_t stride_b, uint64_t stride_c, uint64_t stride_d);
+       int _batch_count, uint64_t stride_a, uint64_t stride_b, uint64_t stride_c, uint64_t stride_d,
+       std::string _blas_source);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
@@ -258,6 +259,8 @@ class rvs_blas {
     //! Stride from the start of matrix d(i)
     //! to next matrix d(i+1) in the strided batch
     uint64_t stride_d;
+    //! blas backend source library - rocblas,hipblaslt
+    std::string blas_source;
 
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);

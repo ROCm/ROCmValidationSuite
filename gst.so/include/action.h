@@ -146,6 +146,9 @@ class gst_action: public rvs::actionbase {
     // to next matrix d(i+1) in the strided batch
     uint64_t gst_stride_d;
 
+    // blas backend source library - rocblas,hipblaslt
+    std::string gst_blas_source;
+
     friend class GSTWorker;
 
     bool get_all_gst_config_keys(void);

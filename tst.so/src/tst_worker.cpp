@@ -150,6 +150,7 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
     std::unique_ptr<rvs_blas> gpu_blas;
     rvs_blas *free_gpublas;
     string msg;
+    std::string blas_source = "rocblas";
 
     duration = 0;
     gem_ops = 0;
@@ -157,7 +158,7 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx, matrix_size, matrix_size, matrix_size, "default",
           transa, transb, alpha, beta, tst_lda_offset, tst_ldb_offset, tst_ldc_offset, tst_ldd_offset, tst_ops_type,
-          "", "", 0, 0, 0, 0, 0));
+          "", "", 0, 0, 0, 0, 0, blas_source));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();
