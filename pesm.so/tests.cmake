@@ -24,13 +24,14 @@
 ################################################################################
 
 set(ROCBLAS_LIB "rocblas")
+set(HIPBLASLT_LIB "hipblaslt")
 set(HIPRAND_LIB "hiprand")
 set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 
 set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so "lib${ROCM_SMI_LIB}.so"
-  ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_LIBRARIES} ${HIPRAND_LIB}
+  ${ROCBLAS_LIB} ${HIPBLASLT_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_LIBRARIES} ${HIPRAND_LIB}
 )
 
 # Add directories to look for library files to link

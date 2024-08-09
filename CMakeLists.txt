@@ -71,6 +71,33 @@ else() #If ROCBLAS not found
   message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
 endif(rocblas_FOUND)
 
+find_package (hipblaslt)
+if(hipblaslt_FOUND)
+  message(STATUS "hipblaslt found")
+  message(STATUS "hipblaslt Version: ${hipblaslt_VERSION}")
+  set(RVS_HIPBLASLT_VERSION ${hipblaslt_VERSION} )
+  set(RVS_HIPBLASLT_VERSION_MAJ ${hipblaslt_VERSION_MAJOR} )
+  set(RVS_HIPBLASLT_VERSION_MIN ${hipblaslt_VERSION_MINOR} )
+  set(RVS_HIPBLASLT_VERSION_PAT ${hipblaslt_VERSION_PATCH} )
+
+  if( (RVS_HIPBLASLT_VERSION_MAJ GREATER 999) OR (RVS_HIPBLASLT_VERSION_MIN GREATER 999) OR (RVS_HIPBLASLT_VERSION_PAT GREATER 999) )
+	  message(FATAL_ERROR "RVS hipblaslt: Too big HIPBLAS version number(s)" )
+  else() #if Valid ROCBLAS Version flags
+	  math(EXPR RVS_HIPBLASLT_VERSION_FLAT  "(${RVS_HIPBLASLT_VERSION_MAJ}*1000000+${RVS_HIPBLASLT_VERSION_MIN}*1000+${RVS_HIPBLASLT_VERSION_PAT})" )
+	  message( STATUS "hipblaslt: Version string ${RVS_HIPBLASLT_VERSION_FLAT} For Version Check" )
+    if(RVS_HIPBLASLT_VERSION_FLAT LESS 2044000)
+	set(HIPBLASLT_MODULE_NM_PREFIX "")
+	message( STATUS "HIPBLASLT PRE-REORG VERSION: ${RVS_HIPBLASLT_VERSION_FLAT}" )
+    else() #If Reorg Version
+	set(HIPBLASLT_MODULE_NM_PREFIX "hipblaslt/")
+	message( STATUS "HIPBLASLT REORG VERSION: ${RVS_HIPBLASLT_VERSION_FLAT}" )
+    endif() #ROCBLAS Version check reorg or not
+  endif() #ROCBLAS Valid Version flag check
+else() #If ROCBLAS not found
+  message(FATAL_ERROR "hipblaslt not found !!! Install hipblas to proceed ...")
+endif(hipblaslt_FOUND)
+
+
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
@@ -164,9 +191,9 @@ set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.
 
 # Package dependencies
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
-  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, ${ROCM_CORE}")
+  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, hipblaslt, rocm-smi-lib, ${ROCM_CORE}")
 else()
-  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib")
+  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, hipblaslt, rocm-smi-lib")
 endif()
 if (${RVS_OS_TYPE} STREQUAL "ubuntu")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
@@ -453,6 +480,10 @@ else()
   set(ROCBLAS_INC_DIR "${ROCM_PATH}/include")
   set(ROCBLAS_LIB_DIR "${ROCM_PATH}/lib")
 endif()
+
+# hipblaslt folders
+set(HIPBLASLT_INC_DIR "${ROCM_PATH}/include")
+set(HIPBLASLT_LIB_DIR "${ROCM_PATH}/lib")
 
 if (RVS_ROCMSMI EQUAL 1)
   set(ROCM_SMI_INC_DIR "${CMAKE_BINARY_DIR}/rvs_smi-src/include")

@@ -115,10 +115,11 @@ endif()
 ## define include directories
 include_directories(./ ../ ${YAML_CPP_INCLUDE_DIRS})
 ## define lib directories
-link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_PATH})
+link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${HIPBLASLT_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_PATH})
 
 ## additional libraries
 set(ROCBLAS_LIB "rocblas")
+set(HIPBLASLT_LIB "hipblaslt")
 set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(HIPRAND_LIB "hiprand")
@@ -127,7 +128,7 @@ set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
-target_link_libraries(${RVS_TARGET} rvslib
+target_link_libraries(${RVS_TARGET} rvslib ${HIPBLASLT_LIB}
   ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS} ${HIPRAND_LIB})
 add_dependencies(${RVS_TARGET} rvslib)
 

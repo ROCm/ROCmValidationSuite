@@ -36,14 +36,29 @@
 #else
   #include <rocblas.h>
 #endif
-
+#include <hipblaslt/hipblaslt.h>
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
 #include <sys/time.h>
 #include <hiprand/hiprand.h>
 
 typedef void (*rvsBlasCallback_t) (bool status, void *userData);
-
+    void simpleGemm(hipblasLtHandle_t  handle,
+                hipblasOperation_t trans_a,
+                hipblasOperation_t trans_b,
+                int64_t            m,
+                int64_t            n,
+                int64_t            k,
+                int64_t            batch_count,
+                float&             alpha,
+                float&             beta,
+                void*              d_a,
+                void*              d_b,
+                void*              d_c,
+                void*              d_d,
+                void*              d_workspace,
+                int64_t            max_workspace_size,
+                hipStream_t        stream);
 /**
  * @class rvs_blas
  * @ingroup GST
@@ -99,7 +114,6 @@ class rvs_blas {
     bool set_callback(rvsBlasCallback_t callback, void *user_data);
 
     static void hip_stream_callback (hipStream_t stream, hipError_t status, void *user_data);
-
     rvsBlasCallback_t callback;
     void * user_data;
 

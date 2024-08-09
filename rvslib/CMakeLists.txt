@@ -116,7 +116,7 @@ endif()
 
 ## define include directories
 include_directories(./ ../ ../rvs
-  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
+	${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIPBLASLT_INC_DIR} ${HIP_INC_DIR})
 
 link_directories(${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
 
