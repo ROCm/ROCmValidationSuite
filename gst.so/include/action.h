@@ -149,6 +149,9 @@ class gst_action: public rvs::actionbase {
     // blas backend source library - rocblas,hipblaslt
     std::string gst_blas_source;
 
+    // gemm compute type
+    std::string gst_compute_type;
+
     friend class GSTWorker;
 
     bool get_all_gst_config_keys(void);

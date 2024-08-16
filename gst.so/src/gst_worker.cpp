@@ -83,7 +83,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
         matrix_size_c, matrix_init, gst_trans_a, gst_trans_b,
         gst_alpha_val, gst_beta_val,
         gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ldd_offset, gst_ops_type, gst_data_type,
-        gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d, blas_source));
+        gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d, blas_source, compute_type));
 
   if (!gpu_blas) {
     *error = 1;

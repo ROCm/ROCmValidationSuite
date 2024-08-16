@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -42,6 +42,11 @@
 #include <sys/time.h>
 #include <hiprand/hiprand.h>
 
+#include <hipblaslt/hipblaslt.h>
+
+#define RVS_BLAS_HIP_DATATYPE_INVALID static_cast<hipDataType>(0XFFFF)
+#define RVS_BLAS_HIPBLAS_COMPUTETYPE_INVALID static_cast<hipblasComputeType_t>(0XFFFF)
+
 typedef void (*rvsBlasCallback_t) (bool status, void *userData);
 
 /**
@@ -55,10 +60,10 @@ class rvs_blas {
  public:
    rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _matrix_init,
        int transa, int transb, float alpha, float beta,
-       rocblas_int lda, rocblas_int ldb, rocblas_int ldc, rocblas_int ldd,
+       int lda, int ldb, int ldc, int ldd,
        std::string _ops_type, std::string _data_type, std::string _gemm_mode,
        int _batch_count, uint64_t stride_a, uint64_t stride_b, uint64_t stride_c, uint64_t stride_d,
-       std::string _blas_source);
+       std::string _blas_source, std::string _compute_type);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
@@ -247,20 +252,62 @@ class rvs_blas {
     //! Matrix batch count
     int batch_size;
 
-    //! Stride from the start of matrix a(i)
-    //! to next matrix a(i+1) in the strided batch
+    //! Stride from the start of matrix A(i)
+    //! to next matrix A(i+1) in the strided batch
     uint64_t stride_a;
-    //! Stride from the start of matrix b(i)
-    //! to next matrix b(i+1) in the strided batch
+    //! Stride from the start of matrix B(i)
+    //! to next matrix B(i+1) in the strided batch
     uint64_t stride_b;
-    //! Stride from the start of matrix c(i)
-    //! to next matrix c(i+1) in the strided batch
+    //! Stride from the start of matrix C(i)
+    //! to next matrix C(i+1) in the strided batch
     uint64_t stride_c;
-    //! Stride from the start of matrix d(i)
-    //! to next matrix d(i+1) in the strided batch
+    //! Stride from the start of matrix D(i)
+    //! to next matrix D(i+1) in the strided batch
     uint64_t stride_d;
+
     //! blas backend source library - rocblas,hipblaslt
     std::string blas_source;
+
+    //! gemm compute type
+    std::string compute_type;
+
+    //! hipblaslt related handle
+    hipblasLtHandle_t hbl_handle;
+
+    //! Matrix Layouts for matrix A
+    hipblasLtMatrixLayout_t hbl_layout_a;
+    //! Matrix Layouts for matrix B
+    hipblasLtMatrixLayout_t hbl_layout_b;
+    //! Matrix Layouts for matrix C
+    hipblasLtMatrixLayout_t hbl_layout_c;
+    //! Matrix Layouts for matrix D
+    hipblasLtMatrixLayout_t hbl_layout_d;
+
+    //! hipblaslt matrix data-type
+    hipDataType hbl_datatype;
+
+    //! hipblaslt compute-type
+    hipblasComputeType_t hbl_computetype;
+
+    //! Create hipblaslt matrix multiply descriptor
+    hipblasLtMatmulDesc_t hbl_matmul;
+
+    //! Transpose matrix A
+    hipblasOperation_t hbl_trans_a;
+    //! Transpose matrix B
+    hipblasOperation_t hbl_trans_b;
+
+    //! Workspace buffer for matrix multiplication
+    void* hbl_workspace;
+
+    //! hipblaslt matrix a leading dimension
+    int64_t hbl_lda_offset;
+    //! hipblaslt matrix b leading dimension
+    int64_t hbl_ldb_offset;
+    //! hipblaslt matrix c leading dimension
+    int64_t hbl_ldc_offset;
+    //! hipblaslt matrix d leading dimension
+    int64_t hbl_ldd_offset;
 
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
@@ -275,6 +322,29 @@ class rvs_blas {
 
     template <typename T>
       bool check_result_accuracy(void * dout, size_t size, double &error);
+
+    hipDataType datatype_to_hip_datatype(const std::string& datatype)
+    {
+      return
+        (datatype == "i8_r")   ? HIP_R_8I  :
+        (datatype == "fp8_r")  ? HIP_R_8F_E4M3_FNUZ  :
+        (datatype == "bf16_r") ? HIP_R_16BF :
+        (datatype == "fp16_r") ? HIP_R_16F  :
+        (datatype == "fp32_r") ? HIP_R_32F  :
+        (datatype == "fp64_r") ? HIP_R_64F  :
+        RVS_BLAS_HIP_DATATYPE_INVALID;
+    }
+
+
+    hipblasComputeType_t computetype_to_hipblas_computetype(const std::string& computetype)
+    {
+      return
+        computetype == "fp32_r" ? HIPBLAS_COMPUTE_32F  :
+        computetype == "xf32_r" ? HIPBLAS_COMPUTE_32F_FAST_TF32 :
+        computetype == "fp64_r" ? HIPBLAS_COMPUTE_64F :
+        computetype == "i32_r"  ? HIPBLAS_COMPUTE_32I :
+        RVS_BLAS_HIPBLAS_COMPUTETYPE_INVALID;
+    }
 
 };
 
