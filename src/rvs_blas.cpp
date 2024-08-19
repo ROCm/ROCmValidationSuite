@@ -115,7 +115,16 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , stride_a(_stride_a), stride_b(_stride_b), stride_c(_stride_c), stride_d(_stride_d)
   , blas_source(_blas_source)
   , compute_type(_compute_type)
+//  , hbl_heuristic_result{0}
+  , hbl_workspace_size(0)
 {
+
+  std::cout << "blas_source -> " << _blas_source << std::endl;
+  std::cout << "compute_type -> " << _compute_type << std::endl;
+  std::cout << "data_type -> " << _data_type << std::endl;
+  std::cout << "m -> " << _m << std::endl;
+  std::cout << "n -> " << _n << std::endl;
+  std::cout << "k -> " << _k << std::endl;
 
   if (blas_source == "rocblas") {
 
@@ -286,19 +295,112 @@ bool rvs_blas::init_gpu_device(void) {
     }
 
     // Create Matrix Layouts
-    hipblasLtMatrixLayoutCreate(&hbl_layout_a, hbl_datatype, m, k, hbl_lda_offset);
-    hipblasLtMatrixLayoutCreate(&hbl_layout_b, hbl_datatype, k, n, hbl_ldb_offset);
-    hipblasLtMatrixLayoutCreate(&hbl_layout_c, hbl_datatype, m, n, hbl_ldc_offset);
-    hipblasLtMatrixLayoutCreate(&hbl_layout_d, hbl_datatype, m, n, hbl_ldd_offset);
+    if(hipblasLtMatrixLayoutCreate(&hbl_layout_a, hbl_datatype, m, k, hbl_lda_offset) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nLayout_A hipblasLtMatrixLayoutCreate() failed !!!" << "\n";
+      return false;
+    }
+
+    if(hipblasLtMatrixLayoutCreate(&hbl_layout_b, hbl_datatype, k, n, hbl_ldb_offset) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nLayout_B hipblasLtMatrixLayoutCreate() failed !!!" << "\n";
+      return false;
+    }
+
+    if(hipblasLtMatrixLayoutCreate(&hbl_layout_c, hbl_datatype, m, n, hbl_ldc_offset) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nLayout_C hipblasLtMatrixLayoutCreate() failed !!!" << "\n";
+      return false;
+    }
+
+    if(hipblasLtMatrixLayoutCreate(&hbl_layout_d, hbl_datatype, m, n, hbl_ldd_offset) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nLayout_D hipblasLtMatrixLayoutCreate() failed !!!" << "\n";
+      return false;
+    }
 
     // Create Matrix Multiplication descriptor & set attributes
-    hipblasLtMatmulDescCreate(&hbl_matmul, hbl_computetype, HIP_R_32F);
+    if(hipblasLtMatmulDescCreate(&hbl_matmul, hbl_computetype, HIP_R_32F) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nhipblasLtMatmulDescCreate() failed !!!" << "\n";
+      return false;
+    }
 
-    hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_TRANSA, &hbl_trans_a, sizeof(int32_t));
-    hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_TRANSB, &hbl_trans_b, sizeof(int32_t));
+   if(hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_COMPUTE_INPUT_TYPE_A_EXT, &hbl_datatype, sizeof(void*)) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nhipblasLtMatmulDescSetAttribute() failed !!!" << "\n";
+      return false;
+    }
+
+    if(hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_COMPUTE_INPUT_TYPE_B_EXT, &hbl_datatype, sizeof(void*)) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nhipblasLtMatmulDescSetAttribute() failed !!!" << "\n";
+      return false;
+    }
+
+    if(hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_TRANSA, &hbl_trans_a, sizeof(int32_t)) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nhipblasLtMatmulDescSetAttribute() failed !!!" << "\n";
+      return false;
+    }
+
+    if(hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_TRANSB, &hbl_trans_b, sizeof(int32_t)) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nhipblasLtMatmulDescSetAttribute() failed !!!" << "\n";
+      return false;
+    }
+
+    int requestAlgoCount = 1;
+    int returnedAlgoCount = 0;
+
+    // set preference
+    size_t max_workspace_size = 32 * 1024 * 1024;
+
+    hipblasLtMatmulPreference_t pref;
+
+    std::vector<hipblasLtMatmulHeuristicResult_t> tmpAlgo(1);
+
+    if(hipblasLtMatmulPreferenceCreate(&pref) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nhipblasLtMatmulPreferenceCreate() failed !!!" << "\n";
+      return false;
+    }
+
+    if(hipblasLtMatmulPreferenceSetAttribute(pref, HIPBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+        &max_workspace_size, sizeof(max_workspace_size)) != HIPBLAS_STATUS_SUCCESS) {
+      std::cout << "\nhipblasLtMatmulPreferenceSetAttribute() failed !!!" << "\n";
+      return false;
+    }
+
+    printf("calling hipblasLtMatmulAlgoGetHeuristic() \n");
+
+    if(hipblasLtMatmulAlgoGetHeuristic(hbl_handle,
+          hbl_matmul,
+          hbl_layout_a,
+          hbl_layout_b,
+          hbl_layout_c,
+          hbl_layout_d,
+          pref,
+          requestAlgoCount,
+          tmpAlgo.data(),
+          &returnedAlgoCount) != HIPBLAS_STATUS_SUCCESS) {
+
+      is_error = true;  // GPU cannot enqueue the gemm
+      std::cout << "\nError in hipblasLtMatmulAlgoGetHeuristic() !!!" << "\n";
+      return false;
+    }
+    printf("called hipblasLtMatmulAlgoGetHeuristic() \n");
+
+    std::cout << "returnedAlgoCount -> " << returnedAlgoCount << std::endl;
+
+    hbl_heuristic_result.clear();
+
+    for(int i = 0; i < returnedAlgoCount; i++)
+    {
+      hbl_heuristic_result.push_back(tmpAlgo[i]);
+    }
+
+    std::cout << "hbl_heuristic_result[0].workspaceSize -> " << hbl_heuristic_result[0].workspaceSize << std::endl;
+    std::cout << "hbl_heuristic_result[0].state  -> " << hbl_heuristic_result[0].state << std::endl;
+
+    printf("workspace size -> %d\n",  hbl_heuristic_result[0].workspaceSize);
+
+    hbl_workspace_size = std::max(hbl_workspace_size, hbl_heuristic_result[0].workspaceSize);
+
+    std::cout << "workspace_size -> " << hbl_workspace_size << std::endl;
 
     // Allocate workspace for matrix multiplication
-    hipMalloc(&hbl_workspace, 32 * 1024 * 1024);
+    hipMalloc(&hbl_workspace, hbl_workspace_size);
 
   }
   else {
@@ -491,6 +593,33 @@ bool rvs_blas::copy_data_to_gpu(void) {
 
     if (ddc) {
       if (hipMemcpy(ddc, hdc, sizeof(struct rocblas_bfloat16) * size_c, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+  }
+
+  if(data_type == "i8_r") {
+
+    if (dda) {
+      if (hipMemcpy(dda, hda, sizeof(int8_t) * size_a, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddb) {
+      if (hipMemcpy(ddb, hdb, sizeof(int8_t) * size_b, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddc) {
+      if (hipMemcpy(ddc, hdc, sizeof(int8_t) * size_c, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -1042,24 +1171,45 @@ bool rvs_blas::run_blas_gemm(void) {
   }
   else if(blas_source == "hipblaslt") {
 
-    if((data_type == "i8_r") || (data_type == "tf32_r")) {
+//    if((data_type == "i8_r") || (data_type == "tf32_r")) {
+
+#if 1
+      std::cout << "hbl_handle -> " << hbl_handle << std::endl;
+      std::cout << "hbl_matmul -> " << hbl_matmul<< std::endl;
+      std::cout << "dda -> " << dda << std::endl;
+      std::cout << "ddb -> " << ddb << std::endl;
+      std::cout << "ddc -> " << ddc << std::endl;
+      std::cout << "ddd -> " << ddd << std::endl;
+      std::cout << "dda -> " << dda << std::endl;
+      std::cout << "hbl_layout_a -> " << hbl_layout_a << std::endl;
+      std::cout << "hbl_layout_b -> " << hbl_layout_b << std::endl;
+      std::cout << "hbl_layout_c -> " << hbl_layout_c << std::endl;
+      std::cout << "hbl_layout_d -> " << hbl_layout_d << std::endl;
+      std::cout << "blas_alpha_val -> " << blas_alpha_val << std::endl;
+      std::cout << "blas_beta_val -> " << blas_beta_val << std::endl;
+      std::cout << "hbl_workspace -> " << hbl_workspace << std::endl;
+      std::cout << "hip_stream -> " << hip_stream << std::endl;
+#endif
 
       if (hipblasLtMatmul(hbl_handle, hbl_matmul,
             &blas_alpha_val, dda, hbl_layout_a,
             ddb, hbl_layout_b, &blas_beta_val,
             ddc, hbl_layout_c,
             ddd, hbl_layout_d,
-            NULL, hbl_workspace, 32 * 1024 *1024,
+            &hbl_heuristic_result[0].algo , hbl_workspace, hbl_workspace_size,
             hip_stream) != HIPBLAS_STATUS_SUCCESS) {
 
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in hipblasLtMatmul() !!!" << "\n";
-          return false;
+        is_error = true;  // GPU cannot enqueue the gemm
+        std::cout << "\nError in hipblasLtMatmul() !!!" << "\n";
+        return false;
       }
+#if 0
     }
     else {
       return false;
     }
+#endif
+
   }
   else {
     return false;
@@ -1187,6 +1337,19 @@ void rvs_blas::generate_random_matrix_data(void) {
         for (i = 0; i < size_c; ++i)
           ((struct rocblas_bfloat16* )hdc)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
       }
+
+      // 8-bit integer real (i8_r) format
+      if(data_type == "i8_r") {
+
+        for (i = 0; i < size_a; ++i)
+          ((int8_t* )hda)[i] = int8_t(fast_pseudo_rand(&nextr, i));
+
+        for (i = 0; i < size_b; ++i)
+          ((int8_t* )hdb)[i] = int8_t(fast_pseudo_rand(&nextr, i));
+
+        for (i = 0; i < size_c; ++i)
+          ((int8_t* )hdc)[i] = int8_t(fast_pseudo_rand(&nextr, i));
+      }
     }
   }
 }
@@ -1225,6 +1388,10 @@ float rvs_blas::fast_pseudo_rand(uint64_t *nextr, size_t i) {
     else if("bf16_r" == data_type)
     {
       return (float)std::uniform_int_distribution<int>(-2, 2)(rvsblas_t_rng);
+    }
+    else if("i8_r" == data_type)
+    {
+      return (float)std::uniform_int_distribution<unsigned short>(1, 3)(rvsblas_t_rng);
     }
     else { /* sgemm, dgemm */
       return rvsblas_uniform_int_1_10();

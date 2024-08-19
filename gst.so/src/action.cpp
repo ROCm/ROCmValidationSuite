@@ -81,7 +81,7 @@ using std::regex;
 #define RVS_CONF_STRIDE_B               "stride_b"
 #define RVS_CONF_STRIDE_C               "stride_c"
 #define RVS_CONF_STRIDE_D               "stride_d"
-#define RVS_CONF_BLAS_SOURCE_KEY        "blas"
+#define RVS_CONF_BLAS_SOURCE_KEY        "blas_source"
 #define RVS_CONF_COMPUTE_TYPE_KEY       "compute_type"
 
 #define TARGET_KEY                      "target"

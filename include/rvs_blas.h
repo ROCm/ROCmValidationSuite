@@ -309,6 +309,12 @@ class rvs_blas {
     //! hipblaslt matrix d leading dimension
     int64_t hbl_ldd_offset;
 
+    //! hipblaslt heuristic algorithm result
+    std::vector<hipblasLtMatmulHeuristicResult_t> hbl_heuristic_result;
+
+    //! hipblaslt heuristic algorithm workspace size
+    size_t hbl_workspace_size;
+
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
     void release_gpu_matrix_mem(void);
