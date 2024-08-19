@@ -274,6 +274,15 @@ class rvs_blas {
     //! hipblaslt related handle
     hipblasLtHandle_t hbl_handle;
 
+    //! Matrix A rows
+    uint64_t hbl_row_a;
+    //! Matrix A columns
+    uint64_t hbl_col_a;
+    //! Matrix B row
+    uint64_t hbl_row_b;
+    //! Matrix B columns
+    uint64_t hbl_col_b;
+
     //! Matrix Layouts for matrix A
     hipblasLtMatrixLayout_t hbl_layout_a;
     //! Matrix Layouts for matrix B

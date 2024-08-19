@@ -115,16 +115,18 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , stride_a(_stride_a), stride_b(_stride_b), stride_c(_stride_c), stride_d(_stride_d)
   , blas_source(_blas_source)
   , compute_type(_compute_type)
-//  , hbl_heuristic_result{0}
   , hbl_workspace_size(0)
+  , hbl_workspace(nullptr)
 {
 
+#if 0
   std::cout << "blas_source -> " << _blas_source << std::endl;
   std::cout << "compute_type -> " << _compute_type << std::endl;
   std::cout << "data_type -> " << _data_type << std::endl;
   std::cout << "m -> " << _m << std::endl;
   std::cout << "n -> " << _n << std::endl;
   std::cout << "k -> " << _k << std::endl;
+#endif
 
   if (blas_source == "rocblas") {
 
@@ -189,6 +191,12 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     int64_t min_ldc = m;
     int64_t min_ldd = m;
 
+    hbl_row_a = (hbl_trans_a == HIPBLAS_OP_N) ? m : k;
+    hbl_col_a = (hbl_trans_a == HIPBLAS_OP_N) ? k : m;
+
+    hbl_row_b = (hbl_trans_b == HIPBLAS_OP_N) ? k : n;
+    hbl_col_b = (hbl_trans_b == HIPBLAS_OP_N) ? n : k;
+
     // setting actual leading dimensions
     hbl_lda_offset = ((int64_t)lda < min_lda) ? min_lda : (int64_t)lda;
     hbl_ldb_offset = ((int64_t)ldb < min_ldb) ? min_ldb : (int64_t)ldb;
@@ -220,6 +228,21 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
       std::cout << "\n Invalid compute-type !!!" << "\n";
       return;
     }
+
+#if 0
+    std::cout << "size_a -> " << size_a << std::endl;
+    std::cout << "size_b -> " << size_b << std::endl;
+    std::cout << "size_c -> " << size_c << std::endl;
+    std::cout << "size_d -> " << size_d << std::endl;
+
+    std::cout << "hbl_lda_offset -> " << hbl_lda_offset << std::endl;
+    std::cout << "hbl_ldb_offset -> " << hbl_ldb_offset << std::endl;
+    std::cout << "hbl_ldc_offset -> " << hbl_ldc_offset << std::endl;
+    std::cout << "hbl_ldd_offset -> " << hbl_ldd_offset << std::endl;
+
+    std::cout << "hbl_datatype -> " << hbl_datatype << std::endl;
+    std::cout << "hbl_computetype -> " << hbl_computetype << std::endl;
+#endif
 
   }
   else {
@@ -294,13 +317,20 @@ bool rvs_blas::init_gpu_device(void) {
       return false;
     }
 
+#if 0
+    std::cout << "hbl_row_a -> " << hbl_row_a << std::endl;
+    std::cout << "hbl_col_a -> " << hbl_col_a << std::endl;
+    std::cout << "hbl_row_b -> " << hbl_row_b << std::endl;
+    std::cout << "hbl_col_b -> " << hbl_col_b << std::endl;
+#endif
+
     // Create Matrix Layouts
-    if(hipblasLtMatrixLayoutCreate(&hbl_layout_a, hbl_datatype, m, k, hbl_lda_offset) != HIPBLAS_STATUS_SUCCESS) {
+    if(hipblasLtMatrixLayoutCreate(&hbl_layout_a, hbl_datatype, hbl_row_a, hbl_col_a, hbl_lda_offset) != HIPBLAS_STATUS_SUCCESS) {
       std::cout << "\nLayout_A hipblasLtMatrixLayoutCreate() failed !!!" << "\n";
       return false;
     }
 
-    if(hipblasLtMatrixLayoutCreate(&hbl_layout_b, hbl_datatype, k, n, hbl_ldb_offset) != HIPBLAS_STATUS_SUCCESS) {
+    if(hipblasLtMatrixLayoutCreate(&hbl_layout_b, hbl_datatype, hbl_row_b, hbl_col_b, hbl_ldb_offset) != HIPBLAS_STATUS_SUCCESS) {
       std::cout << "\nLayout_B hipblasLtMatrixLayoutCreate() failed !!!" << "\n";
       return false;
     }
@@ -362,7 +392,7 @@ bool rvs_blas::init_gpu_device(void) {
       return false;
     }
 
-    printf("calling hipblasLtMatmulAlgoGetHeuristic() \n");
+ //   printf("calling hipblasLtMatmulAlgoGetHeuristic() \n");
 
     if(hipblasLtMatmulAlgoGetHeuristic(hbl_handle,
           hbl_matmul,
@@ -379,9 +409,9 @@ bool rvs_blas::init_gpu_device(void) {
       std::cout << "\nError in hipblasLtMatmulAlgoGetHeuristic() !!!" << "\n";
       return false;
     }
-    printf("called hipblasLtMatmulAlgoGetHeuristic() \n");
+//    printf("called hipblasLtMatmulAlgoGetHeuristic() \n");
 
-    std::cout << "returnedAlgoCount -> " << returnedAlgoCount << std::endl;
+//    std::cout << "returnedAlgoCount -> " << returnedAlgoCount << std::endl;
 
     hbl_heuristic_result.clear();
 
@@ -390,17 +420,22 @@ bool rvs_blas::init_gpu_device(void) {
       hbl_heuristic_result.push_back(tmpAlgo[i]);
     }
 
+#if 0
+    std::cout << "tmpAlgo[0].workspaceSize -> " << tmpAlgo[0].workspaceSize << std::endl;
     std::cout << "hbl_heuristic_result[0].workspaceSize -> " << hbl_heuristic_result[0].workspaceSize << std::endl;
     std::cout << "hbl_heuristic_result[0].state  -> " << hbl_heuristic_result[0].state << std::endl;
 
     printf("workspace size -> %d\n",  hbl_heuristic_result[0].workspaceSize);
+#endif
 
     hbl_workspace_size = std::max(hbl_workspace_size, hbl_heuristic_result[0].workspaceSize);
 
-    std::cout << "workspace_size -> " << hbl_workspace_size << std::endl;
+//    std::cout << "workspace_size -> " << hbl_workspace_size << std::endl;
 
-    // Allocate workspace for matrix multiplication
-    hipMalloc(&hbl_workspace, hbl_workspace_size);
+    if(hbl_workspace_size) {
+      // Allocate workspace for matrix multiplication
+      hipMalloc(&hbl_workspace, hbl_workspace_size);
+    }
 
   }
   else {
@@ -627,6 +662,33 @@ bool rvs_blas::copy_data_to_gpu(void) {
     }
   }
 
+  if(data_type == "fp32_r") {
+
+    if (dda) {
+      if (hipMemcpy(dda, hda, sizeof(float) * size_a, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddb) {
+      if (hipMemcpy(ddb, hdb, sizeof(float) * size_b, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+
+    if (ddc) {
+      if (hipMemcpy(ddc, hdc, sizeof(float) * size_c, hipMemcpyHostToDevice)
+          != hipSuccess) {
+        is_error = true;
+        return false;
+      }
+    }
+  }
+
   is_error = false;
   return true;
 }
@@ -707,6 +769,17 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
     if (hipMalloc(&ddc, size_c * sizeof(int8_t)) != hipSuccess)
       return false;
     if (hipMalloc(&ddd, size_d * sizeof(int8_t)) != hipSuccess)
+      return false;
+  }
+
+  if(data_type == "fp32_r") {
+    if (hipMalloc(&dda, size_a * sizeof(float)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddb, size_b * sizeof(float)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddc, size_c * sizeof(float)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddd, size_d * sizeof(float)) != hipSuccess)
       return false;
   }
 
@@ -834,6 +907,13 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
       hda = new int8_t[size_a];
       hdb = new int8_t[size_b];
       hdc = new int8_t[size_c];
+    }
+
+    if(data_type == "fp32_r") {
+
+      hda = new float[size_a];
+      hdb = new float[size_b];
+      hdc = new float[size_c];
     }
 
     return true;
@@ -1173,7 +1253,7 @@ bool rvs_blas::run_blas_gemm(void) {
 
 //    if((data_type == "i8_r") || (data_type == "tf32_r")) {
 
-#if 1
+#if 0
       std::cout << "hbl_handle -> " << hbl_handle << std::endl;
       std::cout << "hbl_matmul -> " << hbl_matmul<< std::endl;
       std::cout << "dda -> " << dda << std::endl;
