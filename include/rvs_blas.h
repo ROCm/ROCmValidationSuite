@@ -309,20 +309,17 @@ class rvs_blas {
     //! Workspace buffer for matrix multiplication
     void* hbl_workspace;
 
-    //! hipblaslt matrix a leading dimension
+    //! hipblaslt matrix A leading dimension
     int64_t hbl_lda_offset;
-    //! hipblaslt matrix b leading dimension
+    //! hipblaslt matrix B leading dimension
     int64_t hbl_ldb_offset;
-    //! hipblaslt matrix c leading dimension
+    //! hipblaslt matrix C leading dimension
     int64_t hbl_ldc_offset;
-    //! hipblaslt matrix d leading dimension
+    //! hipblaslt matrix D leading dimension
     int64_t hbl_ldd_offset;
 
     //! hipblaslt heuristic algorithm result
-    std::vector<hipblasLtMatmulHeuristicResult_t> hbl_heuristic_result;
-
-    //! hipblaslt heuristic algorithm workspace size
-    size_t hbl_workspace_size;
+    hipblasLtMatmulHeuristicResult_t hbl_heuristic_result;
 
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
