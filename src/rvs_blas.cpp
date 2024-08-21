@@ -121,15 +121,6 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , hbl_matmul(nullptr)
 {
 
-#if 0
-  std::cout << "blas_source -> " << _blas_source << std::endl;
-  std::cout << "compute_type -> " << _compute_type << std::endl;
-  std::cout << "data_type -> " << _data_type << std::endl;
-  std::cout << "m -> " << _m << std::endl;
-  std::cout << "n -> " << _n << std::endl;
-  std::cout << "k -> " << _k << std::endl;
-#endif
-
   if (blas_source == "rocblas") {
 
     // Matrix a & b transpose
@@ -231,21 +222,6 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
       return;
     }
 
-#if 0
-    std::cout << "size_a -> " << size_a << std::endl;
-    std::cout << "size_b -> " << size_b << std::endl;
-    std::cout << "size_c -> " << size_c << std::endl;
-    std::cout << "size_d -> " << size_d << std::endl;
-
-    std::cout << "hbl_lda_offset -> " << hbl_lda_offset << std::endl;
-    std::cout << "hbl_ldb_offset -> " << hbl_ldb_offset << std::endl;
-    std::cout << "hbl_ldc_offset -> " << hbl_ldc_offset << std::endl;
-    std::cout << "hbl_ldd_offset -> " << hbl_ldd_offset << std::endl;
-
-    std::cout << "hbl_datatype -> " << hbl_datatype << std::endl;
-    std::cout << "hbl_computetype -> " << hbl_computetype << std::endl;
-#endif
-
   }
   else {
     is_error = true;
@@ -319,13 +295,6 @@ bool rvs_blas::init_gpu_device(void) {
       return false;
     }
 
-#if 0
-    std::cout << "hbl_row_a -> " << hbl_row_a << std::endl;
-    std::cout << "hbl_col_a -> " << hbl_col_a << std::endl;
-    std::cout << "hbl_row_b -> " << hbl_row_b << std::endl;
-    std::cout << "hbl_col_b -> " << hbl_col_b << std::endl;
-#endif
-
     // Create Matrix Layouts
     if(hipblasLtMatrixLayoutCreate(&hbl_layout_a, hbl_datatype, hbl_row_a, hbl_col_a, hbl_lda_offset) != HIPBLAS_STATUS_SUCCESS) {
       std::cout << "\nLayout_A hipblasLtMatrixLayoutCreate() failed !!!" << "\n";
@@ -353,7 +322,7 @@ bool rvs_blas::init_gpu_device(void) {
       return false;
     }
 
-   if(hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_COMPUTE_INPUT_TYPE_A_EXT, &hbl_datatype, sizeof(void*)) != HIPBLAS_STATUS_SUCCESS) {
+    if(hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_COMPUTE_INPUT_TYPE_A_EXT, &hbl_datatype, sizeof(void*)) != HIPBLAS_STATUS_SUCCESS) {
       std::cout << "\nhipblasLtMatmulDescSetAttribute() failed !!!" << "\n";
       return false;
     }
@@ -388,12 +357,10 @@ bool rvs_blas::init_gpu_device(void) {
     }
 
     if(hipblasLtMatmulPreferenceSetAttribute(pref, HIPBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
-        &max_workspace_size, sizeof(max_workspace_size)) != HIPBLAS_STATUS_SUCCESS) {
+          &max_workspace_size, sizeof(max_workspace_size)) != HIPBLAS_STATUS_SUCCESS) {
       std::cout << "\nhipblasLtMatmulPreferenceSetAttribute() failed !!!" << "\n";
       return false;
     }
-
- //   printf("calling hipblasLtMatmulAlgoGetHeuristic() \n");
 
     if(hipblasLtMatmulAlgoGetHeuristic(hbl_handle,
           hbl_matmul,
@@ -413,29 +380,15 @@ bool rvs_blas::init_gpu_device(void) {
 
     hipblasLtMatmulPreferenceDestroy(pref);
 
-//    printf("called hipblasLtMatmulAlgoGetHeuristic() \n");
-//    std::cout << "returnedAlgoCount -> " << returnedAlgoCount << std::endl;
-
     if(returned_algo_count != request_algo_count) {
       std::cout << "\nIncorrect Heuristic algo. count !!!" << "\n";
       return false;
     }
 
-#if 0
-    std::cout << "tmpAlgo[0].workspaceSize -> " << tmpAlgo[0].workspaceSize << std::endl;
-    std::cout << "hbl_heuristic_result[0].workspaceSize -> " << hbl_heuristic_result[0].workspaceSize << std::endl;
-    std::cout << "hbl_heuristic_result[0].state  -> " << hbl_heuristic_result[0].state << std::endl;
-
-    printf("workspace size -> %d\n",  hbl_heuristic_result[0].workspaceSize);
-#endif
-
-//    std::cout << "workspace_size -> " << hbl_workspace_size << std::endl;
-
     if(hbl_heuristic_result.workspaceSize) {
       // Allocate workspace for matrix multiplication
       hipMalloc(&hbl_workspace, hbl_heuristic_result.workspaceSize);
     }
-
   }
   else {
     std::cout << "\n Invalid blas source type !!!" << "\n";
@@ -1273,36 +1226,18 @@ bool rvs_blas::run_blas_gemm(void) {
   }
   else if(blas_source == "hipblaslt") {
 
-#if 0
-      std::cout << "hbl_handle -> " << hbl_handle << std::endl;
-      std::cout << "hbl_matmul -> " << hbl_matmul<< std::endl;
-      std::cout << "dda -> " << dda << std::endl;
-      std::cout << "ddb -> " << ddb << std::endl;
-      std::cout << "ddc -> " << ddc << std::endl;
-      std::cout << "ddd -> " << ddd << std::endl;
-      std::cout << "dda -> " << dda << std::endl;
-      std::cout << "hbl_layout_a -> " << hbl_layout_a << std::endl;
-      std::cout << "hbl_layout_b -> " << hbl_layout_b << std::endl;
-      std::cout << "hbl_layout_c -> " << hbl_layout_c << std::endl;
-      std::cout << "hbl_layout_d -> " << hbl_layout_d << std::endl;
-      std::cout << "blas_alpha_val -> " << blas_alpha_val << std::endl;
-      std::cout << "blas_beta_val -> " << blas_beta_val << std::endl;
-      std::cout << "hbl_workspace -> " << hbl_workspace << std::endl;
-      std::cout << "hip_stream -> " << hip_stream << std::endl;
-#endif
+    if (hipblasLtMatmul(hbl_handle, hbl_matmul,
+          &blas_alpha_val, dda, hbl_layout_a,
+          ddb, hbl_layout_b, &blas_beta_val,
+          ddc, hbl_layout_c,
+          ddd, hbl_layout_d,
+          &hbl_heuristic_result.algo, hbl_workspace, hbl_heuristic_result.workspaceSize,
+          hip_stream) != HIPBLAS_STATUS_SUCCESS) {
 
-      if (hipblasLtMatmul(hbl_handle, hbl_matmul,
-            &blas_alpha_val, dda, hbl_layout_a,
-            ddb, hbl_layout_b, &blas_beta_val,
-            ddc, hbl_layout_c,
-            ddd, hbl_layout_d,
-            &hbl_heuristic_result.algo , hbl_workspace, hbl_heuristic_result.workspaceSize,
-            hip_stream) != HIPBLAS_STATUS_SUCCESS) {
-
-        is_error = true;  // GPU cannot enqueue the gemm
-        std::cout << "\nError in hipblasLtMatmul() !!!" << "\n";
-        return false;
-      }
+      is_error = true;  // GPU cannot enqueue the gemm
+      std::cout << "\nError in hipblasLtMatmul() !!!" << "\n";
+      return false;
+    }
   }
   else {
     return false;
