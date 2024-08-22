@@ -83,7 +83,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
         matrix_size_c, matrix_init, gst_trans_a, gst_trans_b,
         gst_alpha_val, gst_beta_val,
         gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ldd_offset, gst_ops_type, gst_data_type,
-        gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d));
+        gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d, blas_source, compute_type));
 
   if (!gpu_blas) {
     *error = 1;
@@ -342,6 +342,9 @@ void GSTWorker::check_target_stress(double gflops_interval) {
   string msg;
   bool result;
   rvs::action_result_t action_result;
+  char gpuid_buff[12];
+
+  snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
 
   if(gflops_interval >= target_stress){
     result = true;
@@ -349,7 +352,7 @@ void GSTWorker::check_target_stress(double gflops_interval) {
     result = false;
   }
 
-  msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+  msg = "[" + action_name + "] " + "[GPU:: " + gpuid_buff + "] " +
     GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(static_cast<uint64_t>(gflops_interval)) + " " +
     "Target GFLOPS:" + " " + std::to_string(static_cast<uint64_t>(target_stress)) +
     " met: " + (result ? "TRUE" : "FALSE");
@@ -371,8 +374,11 @@ void GSTWorker::check_target_stress(double gflops_interval) {
 void GSTWorker::log_interval_gflops(double gflops_interval) {
   string msg;
   rvs::action_result_t action_result;
+  char gpuid_buff[12];
 
-  msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+  snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
+
+  msg = "[" + action_name + "] " + "[GPU:: " + gpuid_buff + "] " +
     GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(static_cast<uint64_t>(gflops_interval));
   rvs::lp::Log(msg, rvs::logresults);
 
@@ -563,17 +569,20 @@ void GSTWorker::run() {
   int error = 0;
   bool gst_test_passed = true;
   rvs::action_result_t action_result;
+  char gpuid_buff[12];
 
   max_gflops = 0;
 
+  snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
+
   // log GST stress test - start message
   msg = "[" + action_name + "] " + MODULE_NAME + " " +
-    std::to_string(gpu_id) + " " + GST_START_MSG + " " +
+    "[GPU:: " + gpuid_buff + "] "  + " " + GST_START_MSG + " " +
     " Starting the GST stress test ";
   rvs::lp::Log(msg, rvs::logtrace);
 
   // log GST ramp up - start message
-  msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+  msg = "[" + action_name + "] " + "[GPU:: " + gpuid_buff + "] " +
     "Start of GPU ramp up";
   rvs::lp::Log(msg, rvs::logresults);
 
@@ -581,7 +590,7 @@ void GSTWorker::run() {
   bool ramp_up_success = do_gst_ramp(&error, &err_description);
 
   // log GST ramp up - end message
-  msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+  msg = "[" + action_name + "] " + "[GPU:: " + gpuid_buff + "] " +
     "End of GPU ramp up";
   rvs::lp::Log(msg, rvs::logresults);
 

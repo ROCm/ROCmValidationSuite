@@ -74,6 +74,9 @@ PERFWorker::~PERFWorker() {}
  */
 void PERFWorker::setup_blas(int *error, string *err_description) {
 
+  std::string blas_source = "rocblas";
+  std::string compute_type = "fp32_r";
+
     *error = 0;
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(
@@ -81,7 +84,7 @@ void PERFWorker::setup_blas(int *error, string *err_description) {
           "default", perf_trans_a, perf_trans_b,
           perf_alpha_val, perf_beta_val,
           perf_lda_offset, perf_ldb_offset, perf_ldc_offset, perf_ldd_offset, perf_ops_type,
-          "", "", 0, 0, 0, 0, 0));
+          "", "", 0, 0, 0, 0, 0, blas_source, compute_type));
 
     if (!gpu_blas) {
         *error = 1;

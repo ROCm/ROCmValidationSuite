@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 2018 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -115,20 +115,21 @@ endif()
 ## define include directories
 include_directories(./ ../ ${YAML_CPP_INCLUDE_DIRS})
 ## define lib directories
-link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_PATH})
+link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_DIR})
 
 ## additional libraries
 set(ROCBLAS_LIB "rocblas")
 set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(HIPRAND_LIB "hiprand")
+set(HIPBLASLT_LIB "hipblaslt")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
 target_link_libraries(${RVS_TARGET} rvslib
-  ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS} ${HIPRAND_LIB})
+  ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS} ${HIPRAND_LIB} ${HIPBLASLT_LIB})
 add_dependencies(${RVS_TARGET} rvslib)
 
 install(TARGETS ${RVS_TARGET}

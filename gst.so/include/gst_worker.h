@@ -278,6 +278,12 @@ class GSTWorker : public rvs::ThreadBase {
     //! returns the matrix d stride
     uint64_t get_stride_d(void) { return stride_d; }
 
+    //! set blas backend source library  - rocblas, hipblaslt
+    void set_blas_source(std::string _blas_source) { blas_source = _blas_source; }
+
+    //! set gemm compute type
+    void set_compute_type(std::string _compute_type) { compute_type = _compute_type; }
+
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -385,6 +391,10 @@ class GSTWorker : public rvs::ThreadBase {
     //! Stride from the start of matrix d(i)
     //! to next matrix d(i+1) in the strided batch
     uint64_t stride_d;
+    //! blas backend source library - rocblas,hipblaslt
+    std::string blas_source;
+    //! gemm compute type
+    std::string compute_type;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

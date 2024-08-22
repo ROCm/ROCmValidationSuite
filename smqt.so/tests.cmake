@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,12 +25,13 @@
 
 set(ROCBLAS_LIB "rocblas")
 set(HIPRAND_LIB "hiprand")
+set(HIPBLASLT_LIB "hipblaslt")
 set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 
 set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so "lib${ROCM_SMI_LIB}.so"
-  ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_LIBRARIES} ${HIPRAND_LIB}
+  ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_LIBRARIES} ${HIPRAND_LIB} ${HIPBLASLT_LIB}
 )
 
 # Add directories to look for library files to link

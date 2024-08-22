@@ -122,6 +122,8 @@ void IETWorker::computeThread(void) {
     uint64_t size_a;
     uint64_t size_b;
     uint64_t size_c;
+    std::string blas_source = "rocblas";
+    std::string compute_type = "fp32_r";
 
     if(matrix_size_a && matrix_size_b && matrix_size_c) {
 
@@ -138,7 +140,7 @@ void IETWorker::computeThread(void) {
     // setup rvsblas instance
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpu_device_index, size_a, size_b, size_c, matrix_init,
           iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset,
-          iet_ops_type, iet_data_type, gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d));
+          iet_ops_type, iet_data_type, gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d, blas_source, compute_type));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();

@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -116,7 +116,7 @@ endif()
 
 ## define include directories
 include_directories(./ ../ ../rvs
-  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
+  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${HIPBLASLT_INC_DIR})
 
 link_directories(${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
 

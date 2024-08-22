@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -445,6 +445,8 @@ endif()  # if (RVS_ROCMSMI EQUAL 1)
 
 set(HIPRAND_INC_DIR "${ROCM_PATH}/include")
 set(HIPRAND_LIB_DIR "${ROCM_PATH}/lib")
+set(HIPBLASLT_INC_DIR "${ROCM_PATH}/include")
+set(HIPBLASLT_LIB_DIR "${ROCM_PATH}/lib")
 
 if (RVS_ROCBLAS EQUAL 1)
   set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install")

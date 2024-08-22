@@ -81,6 +81,8 @@ using std::regex;
 #define RVS_CONF_STRIDE_B               "stride_b"
 #define RVS_CONF_STRIDE_C               "stride_c"
 #define RVS_CONF_STRIDE_D               "stride_d"
+#define RVS_CONF_BLAS_SOURCE_KEY        "blas_source"
+#define RVS_CONF_COMPUTE_TYPE_KEY       "compute_type"
 
 #define TARGET_KEY                      "target"
 #define DTYPE_KEY                       "dtype"
@@ -111,6 +113,8 @@ using std::regex;
 #define GST_DEFAULT_STRIDE_B            0
 #define GST_DEFAULT_STRIDE_C            0
 #define GST_DEFAULT_STRIDE_D            0
+#define GST_DEFAULT_BLAS_SOURCE         "rocblas"
+#define GST_DEFAULT_COMPUTE_TYPE        "fp32_r"
 
 #define RVS_DEFAULT_PARALLEL            false
 #define RVS_DEFAULT_DURATION            0
@@ -201,6 +205,8 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_stride_b(gst_stride_b);
       workers[i].set_stride_c(gst_stride_c);
       workers[i].set_stride_d(gst_stride_d);
+      workers[i].set_blas_source(gst_blas_source);
+      workers[i].set_compute_type(gst_compute_type);
 
       i++;
     }
@@ -500,6 +506,20 @@ bool gst_action::get_all_gst_config_keys(void) {
   error = property_get_int<uint64_t>(RVS_CONF_STRIDE_D, &gst_stride_d, GST_DEFAULT_STRIDE_D);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_STRIDE_D) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_BLAS_SOURCE_KEY, &gst_blas_source, GST_DEFAULT_BLAS_SOURCE);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_BLAS_SOURCE_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_COMPUTE_TYPE_KEY, &gst_compute_type, GST_DEFAULT_COMPUTE_TYPE);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_COMPUTE_TYPE_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
