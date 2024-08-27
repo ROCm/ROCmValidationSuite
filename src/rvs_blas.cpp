@@ -103,6 +103,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , hpo(nullptr), hco(nullptr)
   , hout(nullptr), hdout(nullptr)
   , hip_stream(nullptr)
+  , hiprand_generator(nullptr)
   , blas_handle(nullptr)
   , is_handle_init(false)
   , is_error(false)
@@ -532,6 +533,8 @@ void rvs_blas::release_gpu_matrix_mem(void) {
 
   if (is_handle_init) {
     rocblas_destroy_handle(blas_handle);
+    if(hiprand_generator)
+      hiprandDestroyGenerator(hiprand_generator);
     hipStreamDestroy(hip_stream);
   }
 }
@@ -832,21 +835,25 @@ void rvs_blas::generate_random_matrix_data(void) {
 
         if(hiprandGenerateUniformDouble(hiprand_generator, ddbla, size_a) != HIPRAND_STATUS_SUCCESS) {
           std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
+          is_error = true;
           return;
         }
 
         if(hiprandGenerateUniformDouble(hiprand_generator, ddblb, size_b) != HIPRAND_STATUS_SUCCESS) {
           std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
+          is_error = true;
           return;
         }
 
         if(hiprandGenerateUniformDouble(hiprand_generator, ddblc, size_c) != HIPRAND_STATUS_SUCCESS) {
           std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
+          is_error = true;
           return;
         }
 
         if(hipStreamSynchronize(hip_stream) != hipSuccess) {
           std::cout << "hipStreamSynchronize() failed !!! for stream " << hip_stream << std::endl;
+          is_error = true;
           return;
         }
       }
