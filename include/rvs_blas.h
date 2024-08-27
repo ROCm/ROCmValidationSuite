@@ -40,6 +40,7 @@
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
 #include <sys/time.h>
+#include <hiprand/hiprand.h>
 
 typedef void (*rvsBlasCallback_t) (bool status, void *userData);
 
@@ -215,6 +216,9 @@ class rvs_blas {
 
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;
+    //! random number generator
+    hiprandGenerator_t hiprand_generator;
+
     //! rocBlas related handle
     rocblas_handle blas_handle;
     //! TRUE is rocBlas handle was successfully initialized
