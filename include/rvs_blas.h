@@ -54,7 +54,7 @@ typedef void (*rvsBlasCallback_t) (bool status, void *userData);
 class rvs_blas {
  public:
    rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _matrix_init,
-       int transa, int transb, float aplha, float beta,
+       int transa, int transb, float alpha, float beta,
        rocblas_int lda, rocblas_int ldb, rocblas_int ldc, rocblas_int ldd,
        std::string _ops_type, std::string _data_type);
     rvs_blas() = delete;
@@ -89,8 +89,8 @@ class rvs_blas {
     //! returns TRUE if an error occured
     bool error(void) { return is_error; }
     void generate_random_matrix_data(void);
-    bool copy_data_to_gpu(std::string);
-    bool run_blass_gemm(std::string);
+    bool copy_data_to_gpu(void);
+    bool run_blas_gemm(void);
     bool is_gemm_op_complete(void);
     bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
     void set_gemm_error(uint64_t _error_freq, uint64_t _error_count);
