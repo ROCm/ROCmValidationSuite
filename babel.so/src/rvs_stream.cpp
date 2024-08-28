@@ -112,7 +112,6 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
     throw std::runtime_error(ss.str());
   }
   msg += ", block count "  + std::to_string(block_cnt);
-  //rvs::lp::Log(msg, rvs::loginfo);
 
 
   // Set device
@@ -123,7 +122,6 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
   check_error(hipSetDevice(device_index));
   msg += "\nUsing HIP device " + getDeviceName(device_index) + ", " +
 	  "Driver: "  + getDeviceDriver(device_index) ;
-  //rvs::lp::Log(msg, rvs::loginfo);
   
   // Allocate the host array for partial sums for dot kernels
   check_error(hipHostMalloc(&sums, sizeof(T) * block_cnt, hipHostMallocNonCoherent));
