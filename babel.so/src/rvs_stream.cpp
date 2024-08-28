@@ -7,6 +7,7 @@
 
 #include "include/HIPStream.h"
 #include "hip/hip_runtime.h"
+#include "include/rvsloglp.h"
 
 #include <cfloat>
 
@@ -96,8 +97,10 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
   : array_size{ARRAY_SIZE}, evt_timing(event_timing),
     block_cnt(array_size / (TBSIZE * elements_per_lane * chunks_per_block))
 {
-  std::cerr << "elements per lane " << elements_per_lane << std::endl;
-  std::cerr << "chunks per block " << chunks_per_block << std::endl;
+
+  std::string msg;
+  msg = std::string("\nelements per lane ") + std::to_string(elements_per_lane) + "," +
+	 std::string("chunks per block ") + std::to_string(chunks_per_block);
 
   // The array size must be divisible by total number of elements
   // moved per block for kernel launches
@@ -108,7 +111,7 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
           TBSIZE * elements_per_lane * chunks_per_block << ").";
     throw std::runtime_error(ss.str());
   }
-  std::cerr << "block count " << block_cnt << std::endl;
+  msg += ", block count "  + std::to_string(block_cnt);
 
 
   // Set device
@@ -117,11 +120,9 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
   if (device_index >= count)
     throw std::runtime_error("Invalid device index");
   check_error(hipSetDevice(device_index));
-
-  // Print out device information
-  std::cout << "Using HIP device " << getDeviceName(device_index) << std::endl;
-  std::cout << "Driver: " << getDeviceDriver(device_index) << std::endl;
-
+  msg += "\nUsing HIP device " + getDeviceName(device_index) + ", " +
+	  "Driver: "  + getDeviceDriver(device_index) ;
+  
   // Allocate the host array for partial sums for dot kernels
   check_error(hipHostMalloc(&sums, sizeof(T) * block_cnt, hipHostMallocNonCoherent));
 
@@ -130,8 +131,8 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
   check_error(hipGetDeviceProperties(&props, 0));
   if (props.totalGlobalMem < 3*ARRAY_SIZE*sizeof(T))
     throw std::runtime_error("Device does not have enough memory for all 3 buffers");
-
-  std::cout << "pciBusID: " << props.pciBusID << std::endl;
+  msg += ", pciBusID: " + std::to_string(props.pciBusID);
+  rvs::lp::Log(msg, rvs::loginfo);
   // Create device buffers
   check_error(hipMalloc(&d_a, ARRAY_SIZE * sizeof(T)));
   check_error(hipMalloc(&d_b, ARRAY_SIZE * sizeof(T)));
@@ -535,21 +536,21 @@ void listDevices(void)
   // Get number of devices
   int count;
   check_error(hipGetDeviceCount(&count));
-
+  std::string msg;
   // Print device names
   if (count == 0)
   {
-    std::cerr << "No devices found." << std::endl;
+    rvs::lp::Log("No devices found", rvs::logerror);
   }
   else
   {
-    std::cout << std::endl;
-    std::cout << "Devices:" << std::endl;
+    // std::cout << std::endl;
+    msg = "Devices:\n" ;
     for (int i = 0; i < count; i++)
     {
-      std::cout << i << ": " << getDeviceName(i) << std::endl;
+      msg += std::to_string(i) + ": " + getDeviceName(i) + "\n";
     }
-    std::cout << std::endl;
+    rvs::lp::Log(msg, rvs::logresults);
   }
 }
 
