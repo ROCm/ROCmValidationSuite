@@ -48,8 +48,6 @@ class rcqt_action : public rvs::actionbase {
     virtual int run(void);
 
   protected:
-    //! bjson field indicates if the json flag is set
-    bool bjson;
     //! json_rcqt_node is json node shared through submodules
     void *json_rcqt_node;
 

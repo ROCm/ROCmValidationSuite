@@ -63,8 +63,6 @@ class perf_action: public rvs::actionbase {
     std::string perf_ops_type;
 
   protected:
-    //! TRUE if JSON output is required
-    bool bjson;
 
     //! stress test ramp duration
     uint64_t perf_ramp_interval;

@@ -95,8 +95,6 @@ class mem_action: public rvs::actionbase {
     std::string mem_ops_type;
 
  protected:
-    //! TRUE if JSON output is required
-    bool bjson;
     //! Memorry mapped
     bool mem_mapped;
     //! maximum number of blocks

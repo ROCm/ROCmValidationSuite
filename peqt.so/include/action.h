@@ -66,8 +66,6 @@ class peqt_action: public rvs::actionbase {
   bool get_all_common_config_keys() override;
 
  private:
-    //! TRUE if JSON output is required
-    bool bjson;
     //! JSON root node
     void* json_root_node;
 

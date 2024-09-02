@@ -117,8 +117,6 @@ class pbqt_action : public rvs::actionbase {
   //! 'true' for the duration of test
   bool brun;
 
-  //! bjson field indicates if the json flag is set
-  bool bjson;
 
   void json_add_primary_fields();
   void* json_base_node(int log_level);

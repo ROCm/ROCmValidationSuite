@@ -88,8 +88,6 @@ class mem_action: public rvs::actionbase {
     std::string mem_ops_type;
 
  protected:
-    //! TRUE if JSON output is required
-    bool bjson;
     //! Memory in bytes
     bool mibibytes;
     //! output in csv 

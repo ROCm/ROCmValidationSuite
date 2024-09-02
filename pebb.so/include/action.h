@@ -125,8 +125,6 @@ class pebb_action : public rvs::actionbase {
 
   //! 'true' for the duration of test
   bool brun;
-  //! bjson field indicates if the json flag is set
-  bool bjson;
 
  private:
   void do_running_average(void);

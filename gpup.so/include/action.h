@@ -61,8 +61,6 @@ class gpup_action : public rvs::actionbase {
     //! property names to validate
     vector<string> property_name_validate;
 
-    //! 'true' for JSON logging
-    bool bjson;
     //! ptr to JSON root node
     void* json_root_node;
 
