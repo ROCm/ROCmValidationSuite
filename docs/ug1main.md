@@ -2439,18 +2439,16 @@ Please note that in link information results, some records could be marked with
 NUMA node HSA agent.
 
 ## GST Module
-The GPU Stress Test modules purpose is to bring the CUs of the specified GPU(s)
-to a target performance level in gigaflops by doing large matrix multiplications
-using GEMM operation types based computation like SGEMM/DGEMM/HGEMM
-(Single/Double-precision/Half-precision General Matrix Multiplication) or GEMM data
-types based computations like fp8, i8, fp16, bf16, fp32 or tf32 (xf32) via blas libraries
-like rocBlas or hipBLASLT. The GPU stress module may be configured so it does not copy
-the source arrays to the GPU before every matrix multiplication. This allows the GPU
-performance to not be capped by device to host bandwidth transfers. The module calculates
-the floating-point operations per second for gemm computation executed for the configured
-GEMM computation parameters and checks if it meets configured performance target. The test
-passes if it achieves the target performance GFLOPS number during the duration of the test
-else reported as fail.
+The GPU Stress Test drives and measures the specified GPU(s) performance (GFLOPS) -
+by means of large matrix multiplications using GEMM operation types based computations like
+SGEMM/DGEMM/HGEMM (Single/Double-precision/Half-precision General Matrix Multiplication)
+or GEMM data types based computations like fp8, i8, fp16, bf16, fp32 or tf32 (xf32) via blas
+libraries like rocBLAS or hipBLASLt. The GPU stress module may be configured so it does not
+copy the host source matrix array to the GPU before every matrix multiplication. This allows
+the GPU performance to not be capped by device to host bandwidth transfers. The module calculates
+the GFLOPS performance for configured GEMM computation and checks if it meets configured
+performance target. The test passes if it achieves the target performance GFLOPS number
+during the duration of the test else reported as fail.
 
 This module should be used in conjunction with the GPU Monitor, to watch for
 thermal, power and related anomalies while the target GPU(s) are under realistic
