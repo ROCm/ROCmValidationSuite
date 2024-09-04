@@ -352,7 +352,6 @@ int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Actio
   if (isfirstaction_m){
     isfirstaction_m = false;
   } else{
-     std::cout << "not first ction"<<std::endl;
      row +=std::string(",");       
   }
   row += std::string(RVSINDENT);
@@ -363,7 +362,7 @@ int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Actio
 
 int rvs::logger::JsonActionEndNodeCreate() {
   std::string row{RVSINDENT};
-  row += list_end;// + std::string(",");
+  row += list_end;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
 }
