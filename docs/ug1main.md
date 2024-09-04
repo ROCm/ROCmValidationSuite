@@ -123,10 +123,10 @@ Please see the web page “ROCm, a New Era in Open GPU Computing” to find out 
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory. The maximum bandwidth obtained is reported to help debug low bandwidth issues. The benchmark should be capable of  targeting one, some or all of the GPUs installed in a platform, reporting individual benchmark statistics for each.
 
 #### GPU Stress Test - GST module
-The GPU Stress Test runs various GEMM computations as workloads to stress the GPU FLOPS performance and check whether it meets the configured target GFLOPS. GEMM workloads shall be configured as either operation type or data type. GEMM based on operation types include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) - configured using operation parameter. GEMM based on data types include fp8, i8, fp16, bf16, fp32 and  tf32 (xf32) - configured using data type parameter. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
+The GPU Stress Test runs various GEMM computations as workloads to stress the GPU FLOPS performance and check whether it meets the configured target GFLOPS. GEMM workloads shall be configured as either operation type or data type. GEMM based on operation types include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) - configured using operation parameter. GEMM based on data types include `fp8`, `i8`, `fp16`, `bf16`, `fp32` and  `tf32` (`xf32`) - configured using data type parameter. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
 
 #### Input EDPp Test - IET module
-The Input EDPp Test runs GEMM workloads to stress the GPU power (i.e. TGP). This test is used to verify if the GPU is capable of handling max. power stress for a sustained period of time. Also checks whether GPU power reaches a set target power.
+The Input EDPp Test runs GEMM workloads to stress the GPU power (that is, TGP). This test is used to verify if the GPU is capable of handling max. power stress for a sustained period of time. Also checks whether GPU power reaches a set target power.
 
 #### Memory Test - MEM module
 The Memory module tests the GPU memory for hardware errors and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
@@ -2442,7 +2442,7 @@ NUMA node HSA agent.
 The GPU Stress Test drives and measures the specified GPU(s) performance (GFLOPS) -
 by means of large matrix multiplications using GEMM operation types based computations like
 SGEMM/DGEMM/HGEMM (Single/Double-precision/Half-precision General Matrix Multiplication)
-or GEMM data types based computations like fp8, i8, fp16, bf16, fp32 or tf32 (xf32) via blas
+or GEMM data types based computations like `fp8`, `i8`, `fp16`, `bf16`, `fp32` or `tf32` (`xf32`) via BLAS
 libraries like rocBLAS or hipBLASLt. The GPU stress module may be configured so it does not
 copy the host source matrix array to the GPU before every matrix multiplication. This allows
 the GPU performance to not be capped by device to host bandwidth transfers. The module calculates
@@ -2726,11 +2726,11 @@ GPUs.
 ## IET Module
 
 The Input EDPp Test can be used to characterize the peak power capabilities of a
-GPU (i.e. TGP) for a sustained duration of time. This tool leverage GEMM workload
+GPU (that is, TGP) for a sustained duration of time. This tool leverage GEMM workload
 to drive the compute load on the GPU and check whether the power consumed meets configured
 target power in watts. The GEMM compute workloads are also pre-configured. This verifies
 that the GPUs can sustain a power level for a reasonable amount of time without problems
-like thermal violations arising. The test passes if GPU power meets/crosses the
+like thermal violations arising. The test passes if GPU power meets or crosses the
 target power during the duration of the test else reported as fail.
 
 This module should be used in conjunction with the GPU Monitor, to watch for
