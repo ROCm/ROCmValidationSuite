@@ -62,8 +62,6 @@ class gst_action: public rvs::actionbase {
     static void cleanup_logs();
 
   protected:
-    //! TRUE if JSON output is required
-    bool bjson;
 
     //! stress test ramp duration
     uint64_t gst_ramp_interval;

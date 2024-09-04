@@ -50,6 +50,7 @@ int   rvs::logger::loglevel_m(2);
 bool  rvs::logger::tojson_m(false);
 bool  rvs::logger::append_m(false);
 bool  rvs::logger::isfirstrecord_m(true);
+bool  rvs::logger::isfirstaction_m(true);
 std::mutex  rvs::logger::cout_mutex;
 std::mutex  rvs::logger::log_mutex;
 bool  rvs::logger::bStop(false);
@@ -347,7 +348,13 @@ int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Actio
     rvs::logger::JsonStartNodeCreate(Module, Action);
   }
   isfirstrecord_m = true;
-  std::string row{RVSINDENT};
+  std::string row{newline};
+  if (isfirstaction_m){
+    isfirstaction_m = false;
+  } else{
+     row +=std::string(",");       
+  }
+  row += std::string(RVSINDENT);
   row += std::string("\"") + Action + std::string("\"") + kv_delimit + list_start + newline;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
@@ -355,7 +362,7 @@ int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Actio
 
 int rvs::logger::JsonActionEndNodeCreate() {
   std::string row{RVSINDENT};
-  row += list_end + std::string(",");
+  row += list_end;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
 }

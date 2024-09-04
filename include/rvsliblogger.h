@@ -93,6 +93,8 @@ class logger {
   static  bool   append_m;
   //! 'true' if the incoming record is the first record in this rvs invocation
   static  bool   isfirstrecord_m;
+  //! 'true' if the creating record is the first action in rvs invocation
+  static  bool   isfirstaction_m;
   //! Array of C std::strings representing logging level names
   static  const char*   loglevelname[6];
   //! Mutex to synchronize cout output

@@ -63,8 +63,6 @@ class edp_action: public rvs::actionbase {
     std::string edp_ops_type;
 
  protected:
-    //! TRUE if JSON output is required
-    bool bjson;
 
     //! stress test ramp duration
     uint64_t edp_ramp_interval;

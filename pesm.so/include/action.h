@@ -55,8 +55,6 @@ class pesm_action : public rvs::actionbase {
  protected:
 
   friend class Worker;
-  //! json logging flag
-  bool bjson;
   //! debug wait helper
   int prop_debugwait;
   //! 'true' if monitoring is to be initiated

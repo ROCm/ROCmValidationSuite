@@ -74,8 +74,6 @@ class iet_action: public rvs::actionbase {
     virtual int run(void);
 
  protected:
-    //! TRUE if JSON output is required
-    bool bjson = false;
 
     //! gemm operation type
     std::string iet_ops_type;
