@@ -49,7 +49,50 @@ std::vector<std::string> rvs::gpulist::pci_bdf;
 using std::vector;
 using std::string;
 using std::ifstream;
+bool calculateBDF(std::string in_name, uint64_t* bdfid){
+	uint32_t tmp;
+	char name[13] = {'\0'};
+	tmp = in_name.copy(name, 12);
+	assert(tmp == 12);
+	char *p = nullptr;
+ 	char *name_start;
+	  *bdfid = 0;
+  name_start = name;
+  p = name_start;
 
+  // Match this: XXXX:xx:xx.x
+  tmp = std::strtoul(p, &p, 16);
+  if (*p != ':' || p - name_start != 4) {
+    return false;
+  }
+  *bdfid |= tmp << 13;
+
+  // Match this: xxxx:XX:xx.x
+  p++;  // Skip past ':'
+  tmp = std::strtoul(p, &p, 16);
+  if (*p != ':' || p - name_start != 7) {
+    return false;
+  }
+  *bdfid |= tmp << 8;
+
+  // Match this: xxxx:xx:XX.x
+  p++;  // Skip past ':'
+  tmp = std::strtoul(p, &p, 16);
+  if (*p != '.' || p - name_start != 10) {
+    return false;
+  }
+  *bdfid |= tmp << 3;
+
+  // Match this: xxxx:xx:xx.X
+  p++;  // Skip past '.'
+  tmp = std::strtoul(p, &p, 16);
+  if (*p != '\0' || p - name_start != 12) {
+    return false;
+  }
+  *bdfid |= tmp;
+  return true;
+	
+}
 int gpu_num_subdirs(const char* dirpath, const char* prefix) {
   int count = 0;
   DIR *dirp;
@@ -395,7 +438,7 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
   else {
     return -1;
   }
-
+  
   // compute device location_id (needed to match this device
   // with one of those found while querying the pci bus
   unsigned int pDom=0, pBus=0, pDev=0, pFun =0;
@@ -404,11 +447,14 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
   if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&pDom),
              reinterpret_cast<unsigned int*>(&pBus),
              reinterpret_cast<unsigned int*>(&pDev),
-             reinterpret_cast<unsigned int*>(&pDev)) != 4) {
+             reinterpret_cast<unsigned int*>(&pFun)) != 4) {
     std::cout << "parsing error in BDF:" << pciString << std::endl;
   }
-  uint16_t hip_dev_location_id =
-    ((((uint16_t) (pBus)) << 8) | (((uint16_t)(pDev)) << 3) | ((uint16_t)(pFun)));
+
+  uint64_t hip_dev_location_id = ( (((uint16_t)(pDom) & 0xffff) << 13) |
+    (((uint16_t) (pBus)) << 8) | (((uint16_t)(pDev)) << 3) | ((uint16_t)(pFun)));
+  uint64_t hiptemp_bdf;
+  calculateBDF(pciString, &hiptemp_bdf);
   if(smi_map.find(hip_dev_location_id) != smi_map.end()) {
     *smi_index = smi_map[hip_dev_location_id];
     return 0;
