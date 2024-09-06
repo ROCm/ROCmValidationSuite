@@ -395,7 +395,7 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
   else {
     return -1;
   }
-
+  
   // compute device location_id (needed to match this device
   // with one of those found while querying the pci bus
   unsigned int pDom=0, pBus=0, pDev=0, pFun =0;
@@ -404,11 +404,12 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
   if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&pDom),
              reinterpret_cast<unsigned int*>(&pBus),
              reinterpret_cast<unsigned int*>(&pDev),
-             reinterpret_cast<unsigned int*>(&pDev)) != 4) {
+             reinterpret_cast<unsigned int*>(&pFun)) != 4) {
     std::cout << "parsing error in BDF:" << pciString << std::endl;
   }
-  uint16_t hip_dev_location_id =
-    ((((uint16_t) (pBus)) << 8) | (((uint16_t)(pDev)) << 3) | ((uint16_t)(pFun)));
+
+  uint64_t hip_dev_location_id = ( (((uint16_t)(pDom) & 0xffff) << 13) |
+    (((uint16_t) (pBus)) << 8) | (((uint16_t)(pDev)) << 3) | ((uint16_t)(pFun)));
   if(smi_map.find(hip_dev_location_id) != smi_map.end()) {
     *smi_index = smi_map[hip_dev_location_id];
     return 0;
