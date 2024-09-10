@@ -122,8 +122,6 @@ void IETWorker::computeThread(void) {
     uint64_t size_a;
     uint64_t size_b;
     uint64_t size_c;
-    std::string blas_source = "rocblas";
-    std::string compute_type = "fp32_r";
 
     if(matrix_size_a && matrix_size_b && matrix_size_c) {
 

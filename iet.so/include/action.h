@@ -147,7 +147,11 @@ class iet_action: public rvs::actionbase {
 
     //! gemm data type
     std::string iet_data_type;
+    // blas backend source library - rocblas,hipblaslt
+    std::string iet_blas_source;
 
+    // gemm compute type
+    std::string iet_compute_type;
     friend class IETWorker;
 
     //! list of GPUs (along with some identification data) which are
