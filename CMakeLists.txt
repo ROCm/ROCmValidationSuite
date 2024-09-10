@@ -26,7 +26,9 @@
 cmake_minimum_required ( VERSION 3.5.0 )
 set(CMAKE_SHARED_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN:$ORIGIN/.." CACHE STRING "RUNPATH for libraries")
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN/../lib" CACHE STRING "RUNPATH for executables")
-project ("rocm-validation-suite")
+
+project ("rocm-validation-suite"
+          VERSION 1.0.0)
 
 # Default libdir to "lib", this skips GNUInstallDirs from trying to take a guess if it's unset:
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
@@ -148,17 +150,17 @@ endif()
 ## Include common cmake modules
 include ( utils )
 
-## Setup the package version default .
-set ( RVS_VERSION "1.0.0" )
+## Update RVS version
+set ( RVS_VERSION "${PROJECT_VERSION}" )
 get_version ( ${RVS_VERSION} )
 
 # Package Generator  #######################################################
 set(CPACK_PACKAGE_NAME "rocm-validation-suite")
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The ROCm Validation Suite (RVS) is a system validation and diagnostics tool for monitoring, stress testing, detecting and troubleshooting issues that affects the functionality and performance of AMD GPU(s) operating in a high-performance/AI/ML computing environment.")
-set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
-set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
-set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
+set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.support@amd.com>")
 
@@ -180,13 +182,6 @@ endif()
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
 
-# Package naming change
-set(ROCM_VERSION_FOR_PACKAGE "99999")
-# update version accordingly
-if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
-  set(ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_LIBPATCH_VERSION})
-endif()
-
 # debian related changes
 if (DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
    set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
@@ -207,7 +202,14 @@ if(CPACK_RPM_PACKAGE_RELEASE)
   set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
 endif()
 
-set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}.${ROCM_VERSION_FOR_PACKAGE}")
+# update RVS package version accordingly
+if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
+  set(ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_LIBPATCH_VERSION})
+  set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}.${ROCM_VERSION_FOR_PACKAGE}")
+else()
+  set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+endif()
+
 
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
