@@ -97,6 +97,11 @@ using std::fstream;
 #define RVS_CONF_STRIDE_C               "stride_c"
 #define RVS_CONF_STRIDE_D               "stride_d"
 
+#define RVS_CONF_BLAS_SOURCE_KEY        "blas_source"
+#define RVS_CONF_COMPUTE_TYPE_KEY       "compute_type"
+
+#define IET_DEFAULT_BLAS_SOURCE         "rocblas"
+#define IET_DEFAULT_COMPUTE_TYPE        "fp32_r"
 #define IET_DEFAULT_RAMP_INTERVAL       5000
 #define IET_DEFAULT_LOG_INTERVAL        1000
 #define IET_DEFAULT_MAX_VIOLATIONS      0
@@ -412,7 +417,24 @@ bool iet_action::get_all_iet_config_keys(void) {
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       bsts = false;
     }
+    error = property_get<std::string>(RVS_CONF_BLAS_SOURCE_KEY, &iet_blas_source, IET_DEFAULT_BLAS_SOURCE);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_BLAS_SOURCE_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
+  error = property_get<std::string>(RVS_CONF_COMPUTE_TYPE_KEY, &iet_compute_type, IET_DEFAULT_COMPUTE_TYPE);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_COMPUTE_TYPE_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  /* If operation and data type both not set, default to sgemm */
+  if ((iet_ops_type == IET_DEFAULT_OPS_TYPE) && (iet_data_type == IET_DEFAULT_OPS_TYPE)) {
+    iet_ops_type = "sgemm";
+  }
     /* Set minimum sample interval as default */
     if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
       iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
@@ -537,7 +559,8 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_stride_b(iet_stride_b);
             workers[i].set_stride_c(iet_stride_c);
             workers[i].set_stride_d(iet_stride_d);
-
+            workers[i].set_blas_source(iet_blas_source);
+            workers[i].set_compute_type(iet_compute_type);
             i++;
         }
 
