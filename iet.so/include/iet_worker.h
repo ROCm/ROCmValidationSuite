@@ -130,16 +130,16 @@ class IETWorker : public rvs::ThreadBase {
     //! returns the target power level for the test
     float get_target_power(void) { return target_power; }
 
-    //! sets the SGEMM matrix size
+    //! sets the matrix size
     void set_matrix_size(uint64_t _matrix_size) {
         matrix_size = _matrix_size;
     }
-    //! returns the SGEMM matrix size
+    //! returns the matrix size
     uint64_t get_matrix_size(void) { return matrix_size; }
 
-    //! sets the EDPp power tolerance
+    //! sets gemm operation type
     void set_iet_ops_type(std::string ops_type) { iet_ops_type = ops_type; }
-    //! returns the EDPp power tolerance
+    //! get gemm operation type
     std::string get_ops_type(void) { return iet_ops_type; }
 
     //! sets the EDPp power tolerance
@@ -157,10 +157,11 @@ class IETWorker : public rvs::ThreadBase {
 
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
-    //! returns the SGEMM matrix size
+
+    //! returns the matrix size a
     uint64_t get_matrix_size_a(void) { return matrix_size_a; }
 
-    //! returns the SGEMM matrix size
+    //! returns the matrix size b
     uint64_t get_matrix_size_b(void) { return matrix_size_b; }
 
     //! returns the matrix size c
@@ -199,15 +200,15 @@ class IETWorker : public rvs::ThreadBase {
     void set_ldd_offset(int ldd) {
         iet_ldd_offset = ldd;
     }
-   //! sets the SGEMM matrix size
+   //! sets the matrix size a
     void set_matrix_size_a(uint64_t _matrix_size_a) {
         matrix_size_a = _matrix_size_a;
     }
-   //! sets the SGEMM matrix size
+   //! sets the matrix size b
     void set_matrix_size_b(uint64_t _matrix_size_b) {
         matrix_size_b = _matrix_size_b;
     }
-   //! sets the SGEMM matrix size
+   //! sets the matrix size c
     void set_matrix_size_c(uint64_t _matrix_size_c) {
         matrix_size_c = _matrix_size_c;
     }
@@ -217,6 +218,12 @@ class IETWorker : public rvs::ThreadBase {
 
     //! returns bandwidth workload status
     bool get_bw_workload(void) { return iet_bw_workload; }
+
+    //! sets the matrix init
+    void set_matrix_init(std::string _matrix_init) { matrix_init = _matrix_init; }
+
+    //! returns matrix init
+    std::string get_matrix_init(void) { return matrix_init; }
 
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
@@ -269,13 +276,13 @@ class IETWorker : public rvs::ThreadBase {
     //! power tolerance (how much the target_power can fluctuare after
     //! the ramp period for the test to succeed)
     float tolerance;
-    //! SGEMM matrix size
+    //! matrix size
     uint64_t matrix_size;
     //! TRUE if JSON output is required
     static bool bjson;
     bool sgemm_success;
-    //! blas_worker pointer
-    std::string  iet_ops_type;
+    //! gemm operation type
+    std::string iet_ops_type;
 
     //! actual training time
     uint64_t training_time_ms;
@@ -287,27 +294,29 @@ class IETWorker : public rvs::ThreadBase {
     float avg_power_training;
     //! the SGEMM delay which gives the actual GPU SGEMM frequency
     float sgemm_si_delay;
-   //! SGEMM matrix size
+   //! matrix sizes
     uint64_t matrix_size_a;
     uint64_t matrix_size_b;
     uint64_t matrix_size_c;
-    //leading offsets
+    //! leading offsets
     int iet_lda_offset;
     int iet_ldb_offset;
     int iet_ldc_offset;
     int iet_ldd_offset;
-    //Matrix transpose A
+    //! Matrix transpose A
     int iet_trans_a;
-    //Matrix transpose B
+    //! Matrix transpose B
     int iet_trans_b;
-    //IET aplha value
+    //! IET aplha value
     float iet_alpha_val;
-    //IET beta value
+    //! IET beta value
     float iet_beta_val;
-    //IET TP flag
+    //! IET TP flag
     bool iet_tp_flag;
     //! Bandwidth workload enable/disable
     bool iet_bw_workload;
+    //! matrix init
+    std::string matrix_init;
 
     bool endtest = false;
     //! GEMM operations synchronization mutex

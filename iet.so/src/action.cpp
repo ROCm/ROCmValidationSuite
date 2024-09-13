@@ -87,6 +87,7 @@ using std::fstream;
 #define RVS_CONF_TP_FLAG                "targetpower_met"
 #define RVS_TP_MESSAGE                  "target_power"
 #define RVS_DTYPE_MESSAGE               "dtype"
+#define RVS_CONF_MATRIX_INIT            "matrix_init"
 
 #define MODULE_NAME                     "iet"
 #define MODULE_NAME_CAPS                "IET"
@@ -110,6 +111,7 @@ using std::fstream;
 #define IET_DEFAULT_LDD_OFFSET          0
 #define IET_DEFAULT_TP_FLAG             false
 #define IET_DEFAULT_BW_WORKLOAD         false
+#define IET_DEFAULT_MATRIX_INIT         "default"
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
@@ -316,6 +318,14 @@ bool iet_action::get_all_iet_config_keys(void) {
         bsts = false;
     }
 
+    error = property_get<std::string>(RVS_CONF_MATRIX_INIT, &iet_matrix_init, IET_DEFAULT_MATRIX_INIT);
+    if (error == 1) {
+      msg = "invalid '" +
+        std::string(RVS_CONF_MATRIX_INIT) + "' key value";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+
     /* Set minimum sample interval as default */
     if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
       iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
@@ -507,6 +517,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_ldd_offset(iet_ldd_offset);
             workers[i].set_tp_flag(iet_tp_flag);
             workers[i].set_bw_workload(iet_bw_workload);
+            workers[i].set_matrix_init(iet_matrix_init);
 
             i++;
         }

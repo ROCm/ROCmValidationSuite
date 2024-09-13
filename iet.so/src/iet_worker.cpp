@@ -145,14 +145,14 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
     duration = 0;
     gem_ops = 0;
     // setup rvsBlas
-    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, "default", transa, transb, alpha, beta,
+    gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx,  matrix_size,  matrix_size,  matrix_size, matrix_init, transa, transb, alpha, beta,
           iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset, iet_ops_type, ""));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();
 
     //Copy data to GPU
-    gpu_blas->copy_data_to_gpu(iet_ops_type);
+    gpu_blas->copy_data_to_gpu();
 
     iet_start_time = std::chrono::system_clock::now();
 
@@ -160,7 +160,7 @@ void IETWorker::blasThread(int gpuIdx,  uint64_t matrix_size, std::string  iet_o
     while ((duration < run_duration_ms) && (endtest == false)) {
 
         //call the gemm blas
-        gpu_blas->run_blass_gemm(iet_ops_type);
+        gpu_blas->run_blas_gemm();
 
         // Waits for GEMM operation to complete
         if(!gpu_blas->is_gemm_op_complete())
