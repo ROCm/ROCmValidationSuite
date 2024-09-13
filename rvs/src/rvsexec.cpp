@@ -168,7 +168,7 @@ int rvs::exec::run() {
 
   if (rvs::options::has_option("-t", &val)) {
         cout << endl << "ROCm Validation Suite (version " <<
-        LIB_VERSION_STRING << ")" << endl << endl;
+        RVS_VERSION_STRING << ")" << endl << endl;
         cout << "Modules available:" << endl;
     rvs::module::do_list_modules();
     return 0;
@@ -419,7 +419,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
 
 //! Reports version string
 void rvs::exec::do_version() {
-  cout << LIB_VERSION_STRING << '\n';
+  cout << RVS_VERSION_STRING << '\n';
 }
 
 //! Prints help
@@ -475,7 +475,7 @@ void rvs::exec::do_help() {
 
 //! Reports list of AMD GPUs presnt in the system
 int rvs::exec::do_gpu_list() {
-  cout << "\nROCm Validation Suite (version " << LIB_VERSION_STRING << ")\n\n";
+  cout << "\nROCm Validation Suite (version " << RVS_VERSION_STRING << ")\n\n";
 
   // create action excutor in .so
   rvs::action* pa = module::action_create("pesm");
