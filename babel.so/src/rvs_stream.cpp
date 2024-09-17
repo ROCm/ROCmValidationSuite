@@ -91,14 +91,36 @@ static void hipLaunchKernelSynchronous(F kernel, const dim3& numBlocks,
 #endif
 }
 
-template <class T>
+  template <class T>
 HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
-  const int device_index)
+    const int device_index, const unsigned int _dwords_per_lane, const unsigned int _chunks_per_block)
   : array_size{ARRAY_SIZE}, evt_timing(event_timing),
-    block_cnt(array_size / (TBSIZE * elements_per_lane * chunks_per_block))
+  dwords_per_lane(_dwords_per_lane), chunks_per_block(_chunks_per_block)
 {
-
   std::string msg;
+
+  // make sure that either:
+  //    DWORDS_PER_LANE is less than sizeof(T), in which case we default to 1 element
+  //    or
+  //    DWORDS_PER_LANE is divisible by sizeof(T)
+
+  if(!((dwords_per_lane * sizeof(unsigned int) < sizeof(T) ||
+        (dwords_per_lane * sizeof(unsigned int) % sizeof(T) == 0)))) {
+
+    std::stringstream ss;
+    ss << "dwords_per_lane not divisible by sizeof(element_type)";
+    throw std::runtime_error(ss.str());
+  }
+
+  // take into account the datatype size
+  // that is, if we specify 4 DWORDS_PER_LANE, this is 2 FP64 elements
+  // and 4 FP32 elements
+  elements_per_lane =
+    (dwords_per_lane * sizeof(unsigned int)) < sizeof(T) ? 1 :
+    (dwords_per_lane * sizeof(unsigned int) / sizeof(T));
+
+  block_cnt = (array_size / (TBSIZE * elements_per_lane * chunks_per_block));
+
   msg = std::string("\nelements per lane ") + std::to_string(elements_per_lane) + "," +
 	 std::string("chunks per block ") + std::to_string(chunks_per_block);
 
@@ -112,7 +134,6 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
     throw std::runtime_error(ss.str());
   }
   msg += ", block count "  + std::to_string(block_cnt);
-
 
   // Set device
   int count;
@@ -213,10 +234,10 @@ __device__ __forceinline__ void store(const T& value, T& ref) {
 }
 #endif
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <typename T>
 __launch_bounds__(TBSIZE)
 __global__
-void read_kernel(const T * __restrict a, T * __restrict c)
+void read_kernel(const T * __restrict a, T * __restrict c, unsigned int elements_per_lane, unsigned int chunks_per_block)
 {
   const auto dx = grid_size() * elements_per_lane;
   const auto gidx = (localid()) * elements_per_lane;
@@ -243,25 +264,25 @@ float HIPStream<T>::read()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    hipLaunchKernelWithEvents(read_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelWithEvents(read_kernel<T>,
                               dim3(block_cnt), dim3(TBSIZE), nullptr, start_ev,
-                              stop_ev, d_a, d_c);
+                              stop_ev, d_a, d_c, elements_per_lane, chunks_per_block);
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
   }
   else
   {
-    hipLaunchKernelSynchronous(read_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelSynchronous(read_kernel<T>,
                                dim3(block_cnt), dim3(TBSIZE), nullptr, stop_ev,
-                               d_a, d_c);
+                               d_a, d_c, elements_per_lane, chunks_per_block);
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <typename T>
 __launch_bounds__(TBSIZE)
 __global__
-void write_kernel(T * __restrict c)
+void write_kernel(T * __restrict c, unsigned int elements_per_lane, unsigned int chunks_per_block)
 {
   const auto dx = grid_size() * elements_per_lane;
   const auto gidx = (localid()) * elements_per_lane;
@@ -281,25 +302,25 @@ float HIPStream<T>::write()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    hipLaunchKernelWithEvents(write_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelWithEvents(write_kernel<T>,
                               dim3(block_cnt), dim3(TBSIZE), nullptr, start_ev,
-                              stop_ev, d_c);
+                              stop_ev, d_c, elements_per_lane, chunks_per_block);
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
   }
   else
   {
-    hipLaunchKernelSynchronous(write_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelSynchronous(write_kernel<T>,
                                dim3(block_cnt), dim3(TBSIZE), nullptr, stop_ev,
-                               d_c);
+                               d_c, elements_per_lane, chunks_per_block);
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <typename T>
 __launch_bounds__(TBSIZE)
 __global__
-void copy_kernel(const T * __restrict a, T * __restrict c)
+void copy_kernel(const T * __restrict a, T * __restrict c, unsigned int elements_per_lane, unsigned int chunks_per_block)
 {
   const auto dx = grid_size() * elements_per_lane;
   const auto gidx = (localid()) * elements_per_lane;
@@ -319,25 +340,25 @@ float HIPStream<T>::copy()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    hipLaunchKernelWithEvents(copy_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelWithEvents(copy_kernel<T>,
                               dim3(block_cnt), dim3(TBSIZE), nullptr, start_ev,
-                              stop_ev, d_a, d_c);
+                              stop_ev, d_a, d_c, elements_per_lane, chunks_per_block);
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
   }
   else
   {
-    hipLaunchKernelSynchronous(copy_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelSynchronous(copy_kernel<T>,
                                dim3(block_cnt), dim3(TBSIZE), nullptr, stop_ev,
-                               d_a, d_c);
+                               d_a, d_c, elements_per_lane, chunks_per_block);
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <typename T>
 __launch_bounds__(TBSIZE)
 __global__
-void mul_kernel(T * __restrict b, const T * __restrict c)
+void mul_kernel(T * __restrict b, const T * __restrict c, unsigned int elements_per_lane, unsigned int chunks_per_block)
 {
   const auto dx = grid_size() * elements_per_lane;
   const auto gidx = (localid()) * elements_per_lane;
@@ -357,26 +378,26 @@ float HIPStream<T>::mul()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    hipLaunchKernelWithEvents(mul_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelWithEvents(mul_kernel<T>,
                               dim3(block_cnt), dim3(TBSIZE), nullptr, start_ev,
-                              stop_ev, d_b, d_c);
+                              stop_ev, d_b, d_c, elements_per_lane, chunks_per_block);
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
   }
   else
   {
-    hipLaunchKernelSynchronous(mul_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelSynchronous(mul_kernel<T>,
                                dim3(block_cnt), dim3(TBSIZE), nullptr, stop_ev,
-                               d_b, d_c);
+                               d_b, d_c, elements_per_lane, chunks_per_block);
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void add_kernel(const T * __restrict a, const T * __restrict b,
-                T * __restrict c)
+                T * __restrict c, unsigned int elements_per_lane, unsigned int chunks_per_block)
 {
   const auto dx = grid_size() * elements_per_lane;
   const auto gidx = (localid()) * elements_per_lane;
@@ -396,26 +417,26 @@ float HIPStream<T>::add()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    hipLaunchKernelWithEvents(add_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelWithEvents(add_kernel<T>,
                               dim3(block_cnt), dim3(TBSIZE), nullptr, start_ev,
-                              stop_ev, d_a, d_b, d_c);
+                              stop_ev, d_a, d_b, d_c, elements_per_lane, chunks_per_block);
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
   }
   else
   {
-    hipLaunchKernelSynchronous(add_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelSynchronous(add_kernel<T>,
                                dim3(block_cnt), dim3(TBSIZE), nullptr, stop_ev,
-                               d_a, d_b, d_c);
+                               d_a, d_b, d_c, elements_per_lane, chunks_per_block);
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void triad_kernel(T * __restrict a, const T * __restrict b,
-                  const T * __restrict c)
+                  const T * __restrict c, unsigned int elements_per_lane, unsigned int chunks_per_block)
 {
   const auto dx = grid_size() * elements_per_lane;
   const auto gidx = (localid()) * elements_per_lane;
@@ -436,17 +457,17 @@ float HIPStream<T>::triad()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    hipLaunchKernelWithEvents(triad_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelWithEvents(triad_kernel<T>,
                               dim3(block_cnt), dim3(TBSIZE), nullptr, start_ev,
-                              stop_ev, d_a, d_b, d_c);
+                              stop_ev, d_a, d_b, d_c, elements_per_lane, chunks_per_block);
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
   }
   else
   {
-    hipLaunchKernelSynchronous(triad_kernel<elements_per_lane, chunks_per_block, T>,
+    hipLaunchKernelSynchronous(triad_kernel<T>,
                                dim3(block_cnt), dim3(TBSIZE), nullptr, stop_ev,
-                               d_a, d_b, d_c);
+                               d_a, d_b, d_c, elements_per_lane, chunks_per_block);
   }
   return kernel_time;
 }
@@ -483,11 +504,11 @@ struct Reducer<1u> {
   {}
 };
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void dot_kernel(const T * __restrict a, const T * __restrict b,
-                T * __restrict sum)
+                T * __restrict sum, unsigned int elements_per_lane, unsigned int chunks_per_block)
 {
   const auto dx = grid_size() * elements_per_lane;
   const auto gidx = (localid()) * elements_per_lane;
@@ -518,9 +539,9 @@ void dot_kernel(const T * __restrict a, const T * __restrict b,
 template <class T>
 T HIPStream<T>::dot()
 {
-  hipLaunchKernelSynchronous(dot_kernel<elements_per_lane, chunks_per_block, T>,
+  hipLaunchKernelSynchronous(dot_kernel<T>,
                              dim3(block_cnt), dim3(TBSIZE), nullptr, coherent_ev,
-                             d_a, d_b, sums);
+                             d_a, d_b, sums, elements_per_lane, chunks_per_block);
 
   T sum{0};
   for (auto i = 0u; i != block_cnt; ++i)
