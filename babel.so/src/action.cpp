@@ -102,6 +102,8 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
             workers[i].set_output_csv(output_csv);
             workers[i].set_num_iterations(num_iterations);
             workers[i].set_subtest_type(subtest);
+            workers[i].set_dwords_per_lane(dwords_per_lane);
+            workers[i].set_chunks_per_block(chunks_per_block);
 
             i++;
         }
@@ -198,6 +200,22 @@ bool mem_action::get_all_mem_config_keys(void) {
                      &output_csv, MEM_DEFAULT_OP_CSV)) {
         msg = "invalid '" +
         std::string(RVS_CONF_OP_CSV) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get_int<uint16_t>(RVS_CONF_DWORDS_PER_LANE,
+                     &dwords_per_lane, MEM_DEFAULT_DWORDS_PER_LANE)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_DWORDS_PER_LANE) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get_int<uint16_t>(RVS_CONF_CHUNKS_PER_BLOCK,
+                     &chunks_per_block, MEM_DEFAULT_CHUNKS_PER_BLOCK)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_CHUNKS_PER_BLOCK) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }
