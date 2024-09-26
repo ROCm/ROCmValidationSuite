@@ -197,6 +197,19 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the test type
     bool get_output_csv(void) { return output_csv; }
 
+    //! sets the numbers of dwords per lane
+    void set_dwords_per_lane(uint16_t _dwords_per_lane) {
+        dwords_per_lane = _dwords_per_lane;
+    }
+    //! returns the numbers of dwords per lane
+    uint16_t get_dwords_per_lane(void) { return dwords_per_lane; }
+
+    //! sets the numbers of chunks per block
+    void set_chunks_per_block(uint16_t _chunks_per_block) {
+        chunks_per_block = _chunks_per_block;
+    }
+    //! returns the numbers of chunks per block
+    uint16_t get_chunks_per_block(void) { return chunks_per_block; }
 
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
@@ -234,6 +247,10 @@ class MemWorker : public rvs::ThreadBase {
     int test_type;
     //! Sub Test type
     int subtest;
+    //! number of dwords per lane
+    uint16_t dwords_per_lane;
+    //! number of chunks per block
+    uint16_t chunks_per_block;
 
     //! TRUE if JSON output is required
     static bool bjson;
