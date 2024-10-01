@@ -91,6 +91,7 @@ class gst_action: public rvs::actionbase {
 
     //Parameter to heat up
     uint64_t gst_hot_calls;
+    uint64_t max_gflops_seen;
 
     //Tranpose set to none or enabled
     int      gst_trans_a;

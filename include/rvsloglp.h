@@ -26,6 +26,7 @@
 #define INCLUDE_RVSLOGLP_H_
 
 #include <string>
+#include <map>
 
 #include "include/rvsliblog.h"
 
@@ -48,7 +49,7 @@ rvs::lp::Log(msg, rvs::logdebug); \
   #define RVSTRACE_
   #define RVSDEBUG(x, y)
 #endif
-
+using res_map = std::map<std::string, std::string>;
 namespace rvs {
 
 
@@ -73,7 +74,7 @@ class lp {
   static int   JsonStartNodeCreate(const char* Module, const char* Action);
   static int   JsonActionStartNodeCreate(const char* Module, const char* Action);
   static int   JsonEndNodeCreate();
-  static int   JsonActionEndNodeCreate();
+  static int   JsonActionEndNodeCreate(res_map mp=res_map{});
   static int   LogRecordFlush(void* pLogRecord, bool minimal = false);
   static void* CreateNode(void* Parent, const char* Name);
   static void  AddString(void* Parent, const std::string& Key,

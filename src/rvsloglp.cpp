@@ -157,8 +157,8 @@ int rvs::lp::JsonActionStartNodeCreate(const char* Module, const char* Action) {
  * @return 0 - success, non-zero otherwise
  *        
  */
-int rvs::lp::JsonActionEndNodeCreate() {
-  return (*mi.cbJsonActionEndNodeCreate)();
+int rvs::lp::JsonActionEndNodeCreate(res_map mp) {
+  return (*mi.cbJsonActionEndNodeCreate)(mp);
 }
 
 /**

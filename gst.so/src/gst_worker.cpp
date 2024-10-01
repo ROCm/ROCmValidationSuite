@@ -338,7 +338,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
  * @brief logs the Gflops computed over the last log_interval period 
  * @param gflops_interval the Gflops that the GPU achieved
  */
-void GSTWorker::check_target_stress(double gflops_interval) {
+bool GSTWorker::check_target_stress(double gflops_interval) {
   string msg;
   bool result;
   rvs::action_result_t action_result;
@@ -365,6 +365,7 @@ void GSTWorker::check_target_stress(double gflops_interval) {
 
   log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(static_cast<uint64_t>(gflops_interval)),
       rvs::loginfo);
+  return result;
 }
 
 /**
@@ -640,7 +641,8 @@ void GSTWorker::run() {
   }
 
   log_interval_gflops(max_gflops);
-  check_target_stress(max_gflops);
+  auto runres = check_target_stress(max_gflops);
+  log_gst_test_result(runres);
 }
 
 /**
@@ -662,7 +664,7 @@ void GSTWorker::log_gst_test_result(bool gst_test_passed) {
     " " + GST_TRY_OPS_PER_SEC_OUTPUT_KEY + ": "+
     std::to_string(target_stress / gpu_blas->gemm_gflop_count()) +
     " "  ;
-  rvs::lp::Log(msg, rvs::logresults);
+  //rvs::lp::Log(msg, rvs::logresults);
 
   log_to_json(GST_MAX_GFLOPS_OUTPUT_KEY, std::to_string(max_gflops),
       rvs::loginfo);

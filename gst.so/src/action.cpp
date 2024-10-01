@@ -650,6 +650,12 @@ int gst_action::run(void) {
   }
   auto res =  get_all_selected_gpus();
   if(bjson){
+    std::map<std::string, std::string> resmap;
+    resmap.insert({"target_stress",std::to_string(gst_target_stress)});
+    std::string test_res = (!res)? "true" : "false";
+    resmap.insert({"pass", test_res});
+    resmap.insert({"max_gflops", std::to_string(max_gflops_seen)});
+    
     rvs::lp::JsonActionEndNodeCreate();
   }
 

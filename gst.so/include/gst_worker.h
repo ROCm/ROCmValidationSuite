@@ -295,7 +295,7 @@ class GSTWorker : public rvs::ThreadBase {
                      int log_level);
     void log_interval_gflops(double gflops_interval);
     bool check_gflops_violation(double gflops_interval);
-    void check_target_stress(double gflops_interval);
+    bool check_target_stress(double gflops_interval);
     void usleep_ex(uint64_t microseconds);
 
  protected:

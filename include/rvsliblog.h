@@ -26,7 +26,9 @@
 #define INCLUDE_RVSLIBLOG_H_
 
 #include <stdint.h>
-
+#include <string>
+#include <map>
+using res_map = std::map<std::string, std::string>;
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,7 +43,7 @@ typedef void* (*t_cbLogRecordCreate)( const char* Module, const char* Action,
 typedef int   (*t_cbJsonStartNodeCreate)( const char* Module, const char* Action);
 typedef int   (*t_cbJsonActionStartNodeCreate)( const char* Module, const char* Action);
 typedef int   (*t_cbJsonEndNodeCreate)();
-typedef int   (*t_cbJsonActionEndNodeCreate)();
+typedef int   (*t_cbJsonActionEndNodeCreate)(res_map mp);
 typedef int   (*t_cbLogRecordFlush)( void* pLogRecord, bool minimal);
 typedef void* (*t_cbCreateNode)(void* Parent, const char* Name);
 typedef void  (*t_cbAddString)(void* Parent, const char* Key, const char* Val);

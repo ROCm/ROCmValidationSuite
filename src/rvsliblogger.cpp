@@ -360,8 +360,16 @@ int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Actio
   return ToFile(row, true);
 }
 
-int rvs::logger::JsonActionEndNodeCreate() {
+int rvs::logger::JsonActionEndNodeCreate(results_map mp) {
+  
   std::string row{RVSINDENT};
+  if(!mp.empty()){
+    for(auto val: mp){
+	row += std::string(",") +  std::string("\"") + val.first + std::string("\"") + kv_delimit+
+	       std::string("\"") + val.second + std::string("\"")+ newline;
+
+    }		    
+  }
   row += list_end;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);

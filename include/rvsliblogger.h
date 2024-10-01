@@ -24,11 +24,11 @@
  *******************************************************************************/
 #ifndef INCLUDE_RVSLIBLOGGER_H_
 #define INCLUDE_RVSLIBLOGGER_H_
-
+#include <map>
 #include <string>
 #include <mutex>
 #include "include/rvsliblog.h"
-
+using results_map = std::map<std::string, std::string> ;
 
 namespace rvs {
 
@@ -65,7 +65,7 @@ class logger {
   static  int    JsonStartNodeCreate(const char* Module, const char* Action);
   static  int    JsonActionStartNodeCreate(const char* Module, const char* Action);
   static  int    JsonEndNodeCreate();
-  static  int    JsonActionEndNodeCreate();
+  static  int    JsonActionEndNodeCreate(results_map mp = results_map{});
   static  int    LogExt(const char* Message, const int LogLevel,
                         const unsigned int Sec, const unsigned int uSec);
   static  void*  LogRecordCreate(const char* Module, const char* Action,
