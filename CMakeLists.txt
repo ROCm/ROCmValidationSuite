@@ -166,9 +166,9 @@ set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.
 
 # Package dependencies
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
-  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, ${ROCM_CORE}")
+  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, hiprand, hipblaslt, ${ROCM_CORE}")
 else()
-  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib")
+  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, hiprand, hipblaslt")
 endif()
 if (${RVS_OS_TYPE} STREQUAL "ubuntu")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
