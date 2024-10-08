@@ -52,7 +52,6 @@ RVS package components are installed in `/opt/rocm`. Package contains:
     Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS default sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
 
 ### Run version pre-compiled and packaged with ROCm release
@@ -62,7 +61,6 @@ RVS package components are installed in `/opt/rocm`. Package contains:
     Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
 
 To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
@@ -247,11 +245,9 @@ of a current log. Used in conjunction with the -d and -l options.
 </td></tr>
 
 <tr><td>-c</td><td>\-\-config</td><td>Specify the configuration file to be used.
-The default is \<installbase\>/RVS/conf/RVS.conf
+This is mandatory field.
 </td></tr>
 
-<tr><td></td><td>\-\-configless</td><td>Run RVS in a configless mode.
-Executes a "long" test on all supported GPUs.</td></tr>
 
 <tr><td>-d</td><td>\-\-debugLevel</td><td>Specify the debug level for the output
 log. The range is 0 to 5 with 5 being the most verbose.

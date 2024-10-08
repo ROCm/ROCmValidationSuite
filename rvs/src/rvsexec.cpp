@@ -131,14 +131,11 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-c", &val)) {
     config_file = val;
   } else {
-    config_file = "../share/rocm-validation-suite/conf/rvs.conf";
-    // Check if pConfig file exist if not use old path for backward compatibility
-    std::ifstream file(path + config_file);
-    if (!file.good()) {
-      config_file = "conf/rvs.conf";
-    }
-    file.close();
-    config_file = path + config_file;
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+                "No config file specified . Please use -c <conf file path>:");
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
+    return -1;
   }
 
   // Check if pConfig file exists
@@ -431,10 +428,7 @@ void rvs::exec::do_help() {
   cout << "                   of the current log. Used in conjuction with "
                                "-d and -l options.\n";
   cout << "-c --config        Specify the configuration file to be used.\n";
-  cout << "                   The default is <install base>/conf/rvs.conf\n";
-  cout << "   --configless    Run RVS in a configless mode. Executes a "
-                              "\"long\" test on all\n";
-  cout << "                   supported GPUs.\n";
+  cout << "                   supported GPUs.This is Mandatory field\n";
   cout << "-d --debugLevel    Specify the debug level for the output log. "
                               "The range is\n";
   cout << "                   0 to 5 with 5 being the highest verbose level.\n";
