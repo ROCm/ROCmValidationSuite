@@ -14,9 +14,7 @@
 -a --appendLog     When generating a debug logfile, do not overwrite the contents
                    of a current log. Used in conjuction with the -d and -l options
 -c --config        Specify the configuration file to be used.
-                   The default is <install base>/conf/RVS.conf
-   --configless    Run RVS in a configless mode. Executes a "long" test on all
-                   supported GPUs.
+                   This is Mandatory field.
 -d --debugLevel    Specify the debug level for the output log. The range is
                    0 to 5 with 5 being the most verbose.
                    Used in conjunction with the -l flag.
@@ -51,11 +49,9 @@ non-zero - otherwise
 
 ## Examples
 
-<b>rvs</b>
-Runs rvs with the default test configuration file <i>[install_base]/conf/rvs.conf</i>
 
 <b>rvs -c conf/gpup1.conf -d 3 -j -l mylog.txt</b>
-Runs rvs with configuration file <i>conf/gpup1.conf</i> and writes output into log file <i>mylog.txt</i> using logging level 3 (INFO) in JSON format
+Runs rvs with configuration file <i>conf/gpup1.conf</i> and writes text output into log file <i>mylog.txt</i> using logging level 3 (INFO) and writes to a file in /var/tmp/ folder in JSON format.Name of json log file will be printed to stdout/text log file
 
 For more details consult the User Guide located in:
 <i>[install_base]/userguide/html/index.html</i>
