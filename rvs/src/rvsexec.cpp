@@ -127,27 +127,22 @@ int rvs::exec::run() {
     logger::to_json(true);
   }
 
+  // check -c option
   string config_file;
   if (rvs::options::has_option("-c", &val)) {
     config_file = val;
-  } else {
-    char buff[1024];
-    snprintf(buff, sizeof(buff),
-                "No config file specified . Please use -c <conf file path>:");
-    rvs::logger::Err(buff, MODULE_NAME_CAPS);
-    return -1;
-  }
 
-  // Check if pConfig file exists
-  std::ifstream file(config_file);
-  if (!file.good()) {
-    char buff[1024];
-    snprintf(buff, sizeof(buff),
-              "%s file is missing.", config_file.c_str());
-    rvs::logger::Err(buff, MODULE_NAME_CAPS);
-    return -1;
-  } else {
-    file.close();
+    // Check if conf. file exists
+    std::ifstream file(config_file);
+    if (!file.good()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "%s file is missing.", config_file.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    } else {
+      file.close();
+    }
   }
 
   // construct modules configuration file relative path
