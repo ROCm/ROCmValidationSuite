@@ -42,7 +42,6 @@ bool MemWorker::bjson = false;
 extern rvs_memdata   memdata;
  
 
-
 MemWorker::MemWorker() {}
 MemWorker::~MemWorker() {}
 
@@ -128,6 +127,11 @@ void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
           msg = "[" + action_name + "] " + MODULE_NAME + " " +
                    std::to_string(gpu_id) + " To run memtest time taken: " + std::to_string(TDIFF(t1, t0)) + " seconds with " + std::to_string(i) + " passes ";
           rvs::lp::Log(msg, rvs::loginfo);
+	  if (bjson){
+		  std::string tname{rvs_memtests[i].desc};
+		  tname = tname.substr(tname.find('[')+1, tname.find(']') - tname.find('[')-1);
+		  log_to_json(rvs::loginfo, "Test", tname, "Time Taken", std::to_string(TDIFF(t1, t0)));
+	  }
      }//for
 
      msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -191,7 +195,17 @@ void MemWorker::run() {
             std::to_string(total) + " " + " Free Memory from hipMemGetInfo " + " " + 
             std::to_string(free);
     rvs::lp::Log(msg, rvs::logtrace);
-
+    if (bjson){
+	void *json_node = json_node_create(std::string(MODULE_NAME),
+      		action_name.c_str(), rvs::loginfo);
+	if (json_node){
+		rvs::lp::AddString(json_node, "gpu_id",
+          		std::to_string(gpu_id));
+		rvs::lp::AddString(json_node,"Total Memory", std::to_string(total));
+		rvs::lp::AddString(json_node,"Free Memory", std::to_string(free));
+		rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+	}
+    } 
     allocate_small_mem();
 
     tot_num_blocks = MIN(tot_num_blocks, free/BLOCKSIZE - MEM_NUM_SAVE_BLOCKS);
@@ -262,4 +276,21 @@ void MemWorker::run() {
 }
 
 
+template <typename... KVPairs>
+void MemWorker::log_to_json(int log_level, KVPairs...  key_values ) {
+	std::vector<std::string> kvlist{key_values...};
+    if  (kvlist.size() == 0 || kvlist.size() %2 != 0){
+	    return;
+    }
+    void *json_node = json_node_create(std::string(MODULE_NAME),
+        action_name.c_str(), log_level);
+    if (json_node) {
+      rvs::lp::AddString(json_node, "gpu_id",
+          std::to_string(gpu_id));
+      for (int i =0; i< kvlist.size()-1; i +=2){
+          rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
+      }
+      rvs::lp::LogRecordFlush(json_node, log_level);
+    }
+}
 
