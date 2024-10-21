@@ -46,7 +46,6 @@ using std::string;
 using std::vector;
 using std::map;
 using std::regex;
-
 std::string rvs_mem[]={
     "Test 1  [Walking 1 bit]",
     "Test 2  [Own address test]",
@@ -66,6 +65,7 @@ std::string rvs_mem[]={
  * @brief default class constructor
  */
 mem_action::mem_action() {
+    module_name = MODULE_NAME;
     bjson = false;
 }
 
@@ -334,8 +334,15 @@ int mem_action::run(void) {
     action_callback(&action_result);
     return -1;
   }
+    if(bjson){
+    // add prelims for each action, dtype and target stress
+    json_add_primary_fields();
+  }
 
   auto res =  get_all_selected_gpus();
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
 
   action_result.state = rvs::actionstate::ACTION_COMPLETED;
   action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
@@ -343,5 +350,22 @@ int mem_action::run(void) {
   action_callback(&action_result);
 
   return res;
+}
+
+
+/**
+ * @brief flushes target and dtype fields to json file
+ * @return
+ */
+
+void mem_action::json_add_primary_fields(){
+  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+    return;
+  }
+}
+
+void mem_action::cleanup_logs(){
+  rvs::lp::JsonEndNodeCreate();
 }
 
