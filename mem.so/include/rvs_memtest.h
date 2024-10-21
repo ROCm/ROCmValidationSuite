@@ -113,7 +113,7 @@
 
 //================== Structure ===============================
 
-typedef  void (*test_func_t)(char* , unsigned int );
+typedef  void (*test_func_t)(char* , unsigned int, unsigned int* );
 
 typedef struct rvs_memtest_s{
     test_func_t func;
@@ -149,17 +149,17 @@ void  movinv32(char* ptr, unsigned int tot_num_blocks, unsigned int pattern,
                           unsigned int lb, unsigned int sval, unsigned int offset, unsigned int p1, unsigned int p2);
 
 //================== Function prototypes ===============================
-void test0(char* ptr, unsigned int tot_num_blocks);
-void test1(char* ptr, unsigned int tot_num_blocks);
-void test2(char* ptr, unsigned int tot_num_blocks);
-void test3(char* ptr, unsigned int tot_num_blocks);
-void test4(char* ptr, unsigned int tot_num_blocks);
-void test5(char* ptr, unsigned int tot_num_blocks);
-void test6(char* ptr, unsigned int tot_num_blocks);
-void test7(char* ptr, unsigned int tot_num_blocks);
-void test8(char* ptr, unsigned int tot_num_blocks);
-void test9(char* ptr, unsigned int tot_num_blocks);
-void test10(char* ptr, unsigned int tot_num_blocks);
+void test0(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test1(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test2(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test3(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test4(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test5(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test6(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test7(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test8(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test9(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
+void test10(char* ptr, unsigned int tot_num_blocks, unsigned int* err);
 
 void rvs_memtest();
 void run_tests(char* ptr, unsigned int tot_num_blocks);

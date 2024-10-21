@@ -115,6 +115,7 @@ void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
 {
     struct timeval  t0, t1;
     unsigned int i;
+    unsigned int err;
     std::string msg;
     rvs::action_result_t action_result;
 
@@ -122,15 +123,18 @@ void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
 
     for (i = 0; i < DIM(rvs_memtests); i++){
           gettimeofday(&t0, NULL);
-          rvs_memtests[i].func(ptr, tot_num_blocks);
+	  err = 0;
+          rvs_memtests[i].func(ptr, tot_num_blocks, &err);
           gettimeofday(&t1, NULL);
+	  std::string tdiff_str = std::to_string(TDIFF(t1, t0));
           msg = "[" + action_name + "] " + MODULE_NAME + " " +
-                   std::to_string(gpu_id) + " To run memtest time taken: " + std::to_string(TDIFF(t1, t0)) + " seconds with " + std::to_string(i) + " passes ";
+                   std::to_string(gpu_id) + " To run memtest time taken: " +tdiff_str + " seconds with " + std::to_string(i) + " passes ";
           rvs::lp::Log(msg, rvs::loginfo);
 	  if (bjson){
 		  std::string tname{rvs_memtests[i].desc};
 		  tname = tname.substr(tname.find('[')+1, tname.find(']') - tname.find('[')-1);
-		  log_to_json(rvs::loginfo, "Test", tname, "Time Taken", std::to_string(TDIFF(t1, t0)));
+		  std::string passed = err == 0 ? "true" : "false";
+		  log_to_json(rvs::loginfo, "Test", tname, "Time Taken", tdiff_str, "errors",std::to_string(err), "pass", passed);
 	  }
      }//for
 

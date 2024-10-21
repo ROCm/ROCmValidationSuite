@@ -390,7 +390,7 @@ void pebb_action::log_json_bandwidth(std::string srcnode, std::string dstnode,
 	
   if(bjson){
     void *json_node = json_base_node(log_level);
-    json_add_kv(json_node, "srcgpu", srcnode);
+    json_add_kv(json_node, "srccpu", srcnode);
     json_add_kv(json_node, "dstgpu", dstnode);
     if(bandwidth.empty()){
       json_add_kv(json_node, "intf", link_type_string);
