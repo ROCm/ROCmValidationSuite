@@ -72,13 +72,30 @@ public:
     callback = _callback;
     user_param = _user_param;
   }
+  void setAction(std::string _action){
+    action_name = _action;
+  }
+
+  std::string getAction(){
+    return action_name;
+  }
+
+  void setModule(std::string _module){
+    module_name = _module;
+  }
+
+  std::string getModule(){
+    return module_name;
+  }
 
 private:
-	std::map<std::string, std::string> m_pkgversionmap;
+  std::map<std::string, std::string> m_pkgversionmap;
   std::vector<std:: string> m_pkglist;
+  std::string action_name;
+  std::string module_name;
 protected:
-	std::unique_ptr<PackageInfo> metaInfo;
-	std::string m_manifest;	
+  std::unique_ptr<PackageInfo> metaInfo;
+  std::string m_manifest;	
   // callback
   rvs::callback_t callback;
   // User parameter

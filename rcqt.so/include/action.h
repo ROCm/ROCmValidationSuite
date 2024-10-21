@@ -46,7 +46,7 @@ class rcqt_action : public rvs::actionbase {
     rcqt_action();
     virtual ~rcqt_action();
     virtual int run(void);
-
+    static void cleanup_logs();
   protected:
     //! json_rcqt_node is json node shared through submodules
     void *json_rcqt_node;
