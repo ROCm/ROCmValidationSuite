@@ -118,6 +118,10 @@ int rcqt_action::run() {
   }
 
   // check for -j flag (json logging)
+  if (has_property("cli.-j")) {
+      bjson = true;
+    }
+
   if (bjson){
       if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
         rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);

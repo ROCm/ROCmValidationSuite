@@ -27,7 +27,7 @@
 #include <sstream>
 #include <iostream>
 #include "include/packageHandler.h"
-
+#include "include/rvsloglp.h"
 
 // expected versions usually either = or >=. 
 bool isVersionMismatch(std::string expected, std::string installed){
@@ -126,35 +126,41 @@ void PackageHandler::validatePackages(){
 void PackageHandler::listPackageVersion(){
 
   std::string msg;
-
-	auto pkglist = getPackageList();
-	if(pkglist.empty()){
-		std::cout << "no packages in the list" << std::endl;
-		return;
-	}
-	int totalPackages = 0, missingPackages = 0, installedPackages = 0;
-
-	for (const auto& pkgname: pkglist){
+  std::vector<std::string> kv_pairs;
+  auto pkglist = getPackageList();
+  if(pkglist.empty()){
+    std::cout << "no packages in the list" << std::endl;
+    return;
+  }
+  int totalPackages = 0, missingPackages = 0, installedPackages = 0;
+  for (const auto& pkgname: pkglist){
 
     ++totalPackages;
 
+    kv_pairs.emplace_back(pkgname);
     auto installedversion = getInstalledVersion(pkgname);
     if(!installedversion.empty()){
-			++installedPackages;
-			std::cout << "Package " << pkgname << " installed version is " << installedversion << std::endl;
+      ++installedPackages;
+      std::cout << "Package " << pkgname << " installed version is " << installedversion << std::endl;
+      kv_pairs.emplace_back(installedversion);
     }
     else {
       ++missingPackages;
       std::cout << "Package " << pkgname << " not installed " << std::endl;
+      kv_pairs.emplace_back("N/A");
       continue;
     }
-	}
-
-	msg = "Packages install validation complete : \n";
-	msg += "\tMissing packages      : " + std::to_string(missingPackages) + "\n";
-	msg += "\tInstalled packages    : " + std::to_string(installedPackages) + "\n";
+  }
+  kv_pairs.emplace_back("Installed Packages");
+  kv_pairs.emplace_back(std::to_string(installedPackages));
+  kv_pairs.emplace_back("Missing Packages");
+  kv_pairs.emplace_back(std::to_string(missingPackages));
+  msg = "Packages install validation complete : \n";
+  msg += "\tMissing packages      : " + std::to_string(missingPackages) + "\n";
+  msg += "\tInstalled packages    : " + std::to_string(installedPackages) + "\n";
 
   std::cout << msg;
+  log_to_json(rvs::loginfo, kv_pairs);
 
   if(nullptr != callback) {
     rvs::action_result_t action_result;
@@ -165,6 +171,20 @@ void PackageHandler::listPackageVersion(){
     callback(&action_result, user_param);
   }
 
-	return;
+  return;
 }
 
+
+void PackageHandler::log_to_json(int log_level, std::vector<std::string> kvlist) {
+    if  (kvlist.size() == 0 || kvlist.size() %2 != 0){
+            return;
+    }
+    void *json_node = json_node_create(std::string(module_name),
+        action_name.c_str(), log_level);
+    if (json_node) {
+         for (int i =0; i< kvlist.size()-1; i +=2){
+           rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
+      }
+      }
+      rvs::lp::LogRecordFlush(json_node, log_level);
+}
