@@ -84,6 +84,7 @@ void rvs::LogListNode::Add(rvs::LogNodeBase* pChild) {
 std::string rvs::LogListNode::ToJson(const std::string& Lead) {
   DTRACE_
   string result(RVSENDL);
+  result += "{";
   result += Lead + "\"" + Name + "\"" + " : [";
 
   int  size = Child.size();
@@ -94,6 +95,6 @@ std::string rvs::LogListNode::ToJson(const std::string& Lead) {
     }
   }
   result += RVSENDL + Lead + "]";
-
+  result += "}";
   return result;
 }
