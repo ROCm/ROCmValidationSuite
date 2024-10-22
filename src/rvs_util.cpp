@@ -98,6 +98,15 @@ void *json_node_create(std::string module_name, std::string action_name,
         return json_node;
 }
 
+
+
+void *json_list_create(std::string lname, int log_level){
+
+        void *json_node = rvs::lp::JsonNamedListCreate(lname.c_str() ,log_level);
+        return json_node;
+}
+
+
 /**
  * summary: Fetches gpu id to index map for valid set of GPUs as per config.
  * Note: mcm_check is needed to output MCM specific messages while we iterate

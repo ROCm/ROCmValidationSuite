@@ -181,6 +181,9 @@ int rcqt_action::pkgchk_run() {
     }
 
     handler->setCallback(callback, user_param);
+    handler->setAction(action_name);
+    handler->setPkg(pkg);
+    handler->setModule(MODULE_NAME);
     handler->parseManifest();
     handler->validatePackages();
 
@@ -217,9 +220,10 @@ int rcqt_action::pkglist_run() {
 
   handler->setCallback(callback, user_param);
   handler->setPackageList(package_list);
-  handler->listPackageVersion();
   handler->setAction(action_name);
   handler->setModule(MODULE_NAME);
+
+  handler->listPackageVersion();
 
   return 0;
 }
