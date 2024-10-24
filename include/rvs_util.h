@@ -126,4 +126,5 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
                 const int& property_device_id, bool property_device_all, bool mcm_check = false);
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function);
 int display_gpu_info(void);
+void *json_list_create(std::string lname, int log_level);
 #endif  // INCLUDE_RVS_UTIL_H_

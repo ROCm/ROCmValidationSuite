@@ -87,6 +87,7 @@ class lp {
   static int   Err(const std::string &Msg, const std::string &Module);
   static int   Err(const std::string &Msg, const std::string &Module,
                    const std::string &Action);
+  static void*   JsonNamedListCreate(const char* name, const int LogLevel);
 
  protected:
   //! Module init structure passed through Initialize() method

@@ -81,6 +81,7 @@ class logger {
   static  bool   Stopping(void);
   static  int    Err(const char *Message,
                    const char *Module = nullptr, const char *Action = nullptr);
+  static  void*    JsonNamedListCreate(const char* name, const int LogLevel);
 
  protected:
   static  int    ToFile(const std::string& Row ,  bool json = false);

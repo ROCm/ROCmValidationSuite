@@ -22,45 +22,44 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef RCQT_SO_INCLUDE_ACTION_H_
-#define RCQT_SO_INCLUDE_ACTION_H_
+#ifndef INCLUDE_RVSLOGLISTNODE_H_
+#define INCLUDE_RVSLOGLISTNODE_H_
 
-#include "include/rvsactionbase.h"
-#include "include/rvs_module.h"
-#include "include/rvs_util.h"
-#include "include/rcutils.h"
+#include <vector>
+#include <memory>
+#include <string>
 
+#include "include/rvslognode.h"
+
+namespace rvs {
 
 /**
- * @class rcqt_action
- * @ingroup RCQT
+ * @class LogNode
+ * @ingroup Launcher
  *
- * @brief RCQT action implementation class
+ * @brief Logger Node class
  *
- * Derives from rvs::actionbase and implements actual action functionality
- * in its run() method.
+ * Used to construct list structure log record for JSON output
  *
  */
-class rcqt_action : public rvs::actionbase {
-  public:
-    rcqt_action();
-    virtual ~rcqt_action();
-    virtual int run(void);
-    static void cleanup_logs();
-  protected:
-    //! json_rcqt_node is json node shared through submodules
-    void *json_rcqt_node;
+class LogListNode : virtual public LogNode {
+ public:
+  explicit LogListNode(const char* Name, int LogLevel, const LogNodeBase* Parent = nullptr);
+  virtual ~LogListNode();
 
-    std::string PACKAGELIST; 
-    /**
-     *  @brief Function used in rcqt action class to check for given package
-     */
-    virtual int pkgchk_run();
+  virtual std::string ToJson(const std::string& Lead = "");
 
-    /**
-     *  @brief Function used in rcqt action class to list installed packages and its version.
-     */
-    virtual int pkglist_run();
+ public:
+  void Add(LogNodeBase* spChild);
+  virtual int LogLevel();
+ public:
+  //! list of child nodes
+  std::vector<LogNodeBase*> Child;
+
+ protected:
+  int Level;
 };
 
-#endif  // RCQT_SO_INCLUDE_ACTION_H_
+}  // namespace rvs
+
+#endif  // INCLUDE_RVSLOGLISTNODE_H_
