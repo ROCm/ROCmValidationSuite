@@ -294,7 +294,7 @@ class IETWorker : public rvs::ThreadBase {
     void compute_new_sgemm_freq(float avg_power);
     bool do_iet_power_stress(void);
     void log_interval_gflops(double gflops_interval);
-    void log_to_json(const std::string &key, const std::string &value,
+    void flog_to_json(const std::string &key, const std::string &value,
         int log_level);
 
     void computeThread(void);

@@ -278,3 +278,21 @@ int display_gpu_info (void) {
   }
   return 0;
 }
+
+template <typename... KVPairs>
+void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values ) {
+        std::vector<std::string> kvlist{key_values...};
+    if  (kvlist.size() == 0 || kvlist.size() %2 != 0){
+            return;
+    }
+    void *json_node = json_node_create(desc.module_name,
+        desc.action_name.c_str(), log_level);
+    if (json_node) {
+      rvs::lp::AddString(json_node, "gpu_id",
+          std::to_string(desc.gpu_id));
+      for (int i =0; i< kvlist.size()-1; i +=2){
+          rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
+      }
+      rvs::lp::LogRecordFlush(json_node, log_level);
+    }
+}
