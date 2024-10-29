@@ -251,8 +251,6 @@ bool IETWorker::do_iet_power_stress(void) {
     }
 
     // json log the avg power
-    //log_to_json(IET_AVERAGE_POWER_KEY, std::to_string(max_power),
-      //      rvs::loginfo);
     //check whether we reached the target power
     if(max_power >= target_power) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
