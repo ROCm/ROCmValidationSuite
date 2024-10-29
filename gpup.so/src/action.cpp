@@ -451,24 +451,6 @@ int gpup_action::run(void) {
       }
       b_gpu_found = true;
 
-      // if JSON required
-      if (0) {
-        unsigned int sec;
-        unsigned int usec;
-        rvs::lp::get_ticks(&sec, &usec);
-
-        json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-        action_name.c_str(), rvs::logresults, sec, usec);
-        if (json_root_node == nullptr) {
-          // log the error
-          msg = JSON_CREATE_NODE_ERROR;
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
-          return -1;
-        }
-
-        // Add GPU ID
-        rvs::lp::AddInt(json_root_node, RVS_JSON_LOG_GPU_ID_KEY, *it);
-      }
       if (bjson){
           json_root_node = json_node_create(std::string(module_name),
             action_name.c_str(), rvs::logresults);

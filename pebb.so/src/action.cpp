@@ -489,7 +489,7 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
 
   rvs::lp::Log(msg, rvs::loginfo);
 
-  log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id),rvs::logresults, buff);
+  log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id),rvs::loginfo, buff);
   RVSTRACE_
   return 0;
 }
