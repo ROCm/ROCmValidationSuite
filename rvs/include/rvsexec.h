@@ -85,6 +85,8 @@ class exec {
   /* Application Callback */
   void (*app_callback)(const rvs_results_t * results, int user_param);
   int user_param;
+  /* Number of times to execute the test */
+  int num_times;
 };
 
 }  // namespace rvs

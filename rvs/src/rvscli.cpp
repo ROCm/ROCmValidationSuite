@@ -170,6 +170,10 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-m", sp));
   grammar.insert(gpair("--modulepath", sp));
 
+  sp = std::make_shared<optbase>("-n", command, value);
+  grammar.insert(gpair("-n", sp));
+  grammar.insert(gpair("--numTimes", sp));
+
   //  sp = std::make_shared<optbase>("-s", command);
   //  grammar.insert(gpair("-s", sp));
   //  grammar.insert(gpair("--scriptable", sp));

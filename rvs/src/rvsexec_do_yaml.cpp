@@ -77,86 +77,90 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     return -1;
   }
 
-  // for all actions...
-  for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
-    const YAML::Node& action = *it;
+  /* Number of times to repeat the test */
+  for (int i = 0; i < num_times; i++) {
 
-    rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
+    // for all actions...
+    for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
+      const YAML::Node& action = *it;
 
-    // if stop was requested
-    if (rvs::logger::Stopping()) {
-      return -1;
-    }
+      rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
 
-    // find module name
-    std::string rvsmodule;
-    try {
-      rvsmodule = action["module"].as<std::string>();
-    } catch(...) {
-    }
+      // if stop was requested
+      if (rvs::logger::Stopping()) {
+        return -1;
+      }
 
-    // not found or empty
-    if (rvsmodule == "") {
-      // report error and go to next action
-      char buff[1024];
-      snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
-               action["name"].as<std::string>().c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      return -1;
-    }
+      // find module name
+      std::string rvsmodule;
+      try {
+        rvsmodule = action["module"].as<std::string>();
+      } catch(...) {
+      }
 
-    // create action executor in .so
-    rvs::action* pa = module::action_create(rvsmodule.c_str());
-    if (!pa) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-               "action '%s' could not create action object in module '%s'",
-               action["name"].as<std::string>().c_str(),
-               rvsmodule.c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      return -1;
-    }
+      // not found or empty
+      if (rvsmodule == "") {
+        // report error and go to next action
+        char buff[1024];
+        snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
+            action["name"].as<std::string>().c_str());
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        return -1;
+      }
 
-    if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
-    if (!pif1) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-               "action '%s' could not obtain interface if1",
-               action["name"].as<std::string>().c_str());
+      // create action executor in .so
+      rvs::action* pa = module::action_create(rvsmodule.c_str());
+      if (!pa) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "action '%s' could not create action object in module '%s'",
+            action["name"].as<std::string>().c_str(),
+            rvsmodule.c_str());
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        return -1;
+      }
+
+      if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
+      if (!pif1) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "action '%s' could not obtain interface if1",
+            action["name"].as<std::string>().c_str());
+        module::action_destroy(pa);
+        return -1;
+      }
+
+      // load action properties from yaml file
+      sts += do_yaml_properties(action, rvsmodule, pif1);
+      if (sts) {
+        module::action_destroy(pa);
+        return sts;
+      }
+
+      // set also command line options:
+      for (auto clit = rvs::options::get().begin();
+          clit != rvs::options::get().end(); ++clit) {
+        std::string p(clit->first);
+        p = "cli." + p;
+        pif1->property_set(p, clit->second);
+      }
+
+      // Set Callback
+      if(nullptr != app_callback) {
+        pif1->callback_set(&rvs::exec::action_callback, (void *)this);
+      }
+
+      // execute action
+      sts = pif1->run();
+
+      // processing finished, release action object
       module::action_destroy(pa);
-      return -1;
-    }
 
-    // load action properties from yaml file
-    sts += do_yaml_properties(action, rvsmodule, pif1);
-    if (sts) {
-      module::action_destroy(pa);
-      return sts;
-    }
-
-    // set also command line options:
-    for (auto clit = rvs::options::get().begin();
-         clit != rvs::options::get().end(); ++clit) {
-      std::string p(clit->first);
-      p = "cli." + p;
-      pif1->property_set(p, clit->second);
-    }
-
-    // Set Callback
-    if(nullptr != app_callback) {
-      pif1->callback_set(&rvs::exec::action_callback, (void *)this);
-    }
-
-    // execute action
-    sts = pif1->run();
-
-    // processing finished, release action object
-    module::action_destroy(pa);
-
-    // errors?
-    if (sts) {
-      // cancel actions and return
-      return sts;
+      // errors?
+      if (sts) {
+        // cancel actions and return
+        return sts;
+      }
     }
   }
 
@@ -194,106 +198,111 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
     return -1;
   }
 
-  // for all actions...
-  for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
-    const YAML::Node& action = *it;
+  /* Number of times to execute the test */
+  for (int i = 0; i < num_times; i++) {
 
-    rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
+    // for all actions...
+    for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
+      const YAML::Node& action = *it;
 
-    // if stop was requested
-    if (rvs::logger::Stopping()) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-          "action '%s' was requested to stop",
-          action["name"].as<std::string>().c_str());
-      result.output_log = buff;
-      callback(&result);
-      return -1;
-    }
+      rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
 
-    // find module name
-    std::string rvsmodule;
-    try {
-      rvsmodule = action["module"].as<std::string>();
-    } catch(...) {
-    }
+      // if stop was requested
+      if (rvs::logger::Stopping()) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "action '%s' was requested to stop",
+            action["name"].as<std::string>().c_str());
+        result.output_log = buff;
+        callback(&result);
+        return -1;
+      }
 
-    // not found or empty
-    if (rvsmodule == "") {
-      // report error and go to next action
-      char buff[1024];
-      snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
-          action["name"].as<std::string>().c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      // find module name
+      std::string rvsmodule;
+      try {
+        rvsmodule = action["module"].as<std::string>();
+      } catch(...) {
+      }
 
-      result.output_log = buff;
-      callback(&result);
-      return -1;
-    }
+      // not found or empty
+      if (rvsmodule == "") {
+        // report error and go to next action
+        char buff[1024];
+        snprintf(buff, sizeof(buff), "action '%s' does not specify module.",
+            action["name"].as<std::string>().c_str());
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
 
-    // create action executor in .so
-    rvs::action* pa = module::action_create(rvsmodule.c_str());
-    if (!pa) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-          "action '%s' could not create action object in module '%s'",
-          action["name"].as<std::string>().c_str(),
-          rvsmodule.c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      result.output_log = buff;
-      callback(&result);
-      return -1;
-    }
+        result.output_log = buff;
+        callback(&result);
+        return -1;
+      }
 
-    if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
-    if (!pif1) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-          "action '%s' could not obtain interface if1",
-          action["name"].as<std::string>().c_str());
+      // create action executor in .so
+      rvs::action* pa = module::action_create(rvsmodule.c_str());
+      if (!pa) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "action '%s' could not create action object in module '%s'",
+            action["name"].as<std::string>().c_str(),
+            rvsmodule.c_str());
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        result.output_log = buff;
+        callback(&result);
+        return -1;
+      }
+
+      if1* pif1 = dynamic_cast<if1*>(pa->get_interface(1));
+      if (!pif1) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "action '%s' could not obtain interface if1",
+            action["name"].as<std::string>().c_str());
+        module::action_destroy(pa);
+        result.output_log = buff;
+        callback(&result);
+        return -1;
+      }
+
+      // load action properties from yaml file
+      sts += do_yaml_properties(action, rvsmodule, pif1);
+      if (sts) {
+        module::action_destroy(pa);
+        return sts;
+      }
+
+      // set also command line options:
+      for (auto clit = rvs::options::get().begin();
+          clit != rvs::options::get().end(); ++clit) {
+        std::string p(clit->first);
+        p = "cli." + p;
+        pif1->property_set(p, clit->second);
+      }
+
+      // Set Callback
+      if(nullptr != app_callback) {
+        pif1->callback_set(&rvs::exec::action_callback, (void *)this);
+      }
+
+      // execute action
+      sts = pif1->run();
+
+      // processing finished, release action object
       module::action_destroy(pa);
-      result.output_log = buff;
-      callback(&result);
-      return -1;
-    }
 
-    // load action properties from yaml file
-    sts += do_yaml_properties(action, rvsmodule, pif1);
-    if (sts) {
-      module::action_destroy(pa);
-      return sts;
-    }
+      // errors?
+      if (sts) {
 
-    // set also command line options:
-    for (auto clit = rvs::options::get().begin();
-        clit != rvs::options::get().end(); ++clit) {
-      std::string p(clit->first);
-      p = "cli." + p;
-      pif1->property_set(p, clit->second);
-    }
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "action '%s' failed with error !",
+            action["name"].as<std::string>().c_str());
+        result.output_log = buff;
+        callback(&result);
+        // cancel actions and return
+        return sts;
+      }
 
-    // Set Callback
-    if(nullptr != app_callback) {
-      pif1->callback_set(&rvs::exec::action_callback, (void *)this);
-    }
-
-    // execute action
-    sts = pif1->run();
-
-    // processing finished, release action object
-    module::action_destroy(pa);
-
-    // errors?
-    if (sts) {
-
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-          "action '%s' failed with error !",
-          action["name"].as<std::string>().c_str());
-      result.output_log = buff;
-      callback(&result);
-      // cancel actions and return
-      return sts;
     }
 
   }

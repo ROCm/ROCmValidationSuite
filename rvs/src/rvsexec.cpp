@@ -49,7 +49,7 @@ using std::cout;
 using std::endl;
 
 //! Default constructor
-rvs::exec::exec():app_callback(nullptr), user_param(0) {
+rvs::exec::exec():app_callback(nullptr), user_param(0), num_times(1) {
 }
 
 //! Default destructor
@@ -142,6 +142,20 @@ int rvs::exec::run() {
       return -1;
     } else {
       file.close();
+    }
+  }
+
+  // check -n options
+  if (rvs::options::has_option("-n", &val)) {
+    try {
+      num_times = std::stoi(val);
+    }
+    catch(...) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "number of times test repeat value not an integer: %s", val.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
     }
   }
 
@@ -422,8 +436,8 @@ void rvs::exec::do_help() {
                               "overwrite the content\n";
   cout << "                   of the current log. Used in conjuction with "
                                "-d and -l options.\n";
-  cout << "-c --config        Specify the configuration file to be used.\n";
-  cout << "                   supported GPUs.This is Mandatory field\n";
+  cout << "-c --config        Specify the test configuration file to be used.\n";
+  cout << "                   This is mandatory field for test execution.\n";
   cout << "-d --debugLevel    Specify the debug level for the output log. "
                               "The range is\n";
   cout << "                   0 to 5 with 5 being the highest verbose level.\n";
@@ -459,6 +473,8 @@ void rvs::exec::do_help() {
                               "equivalent to\n";
   cout << "                   specifying the -d 5 option.\n";
   cout << "   --version       Display version information and exit.\n";
+  cout << "-n --numTimes      Number of times the test will be executed.\n";
+  cout << "                   Used in conjunction with -c option.\n";
   cout << "-h --help          Display usage information and exit.\n";
 }
 
