@@ -66,6 +66,7 @@ using std::map;
  * default class constructor
  */
 gpup_action::gpup_action() {
+    module_name = MODULE_NAME;
     bjson = false;
     json_root_node = NULL;
 }
@@ -441,11 +442,17 @@ int gpup_action::run(void) {
             continue;
         }
       }
+      if (bjson){
+	if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+          rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+          return 1;
+        }
 
+      }
       b_gpu_found = true;
 
       // if JSON required
-      if (bjson) {
+      if (0) {
         unsigned int sec;
         unsigned int usec;
         rvs::lp::get_ticks(&sec, &usec);
@@ -462,7 +469,12 @@ int gpup_action::run(void) {
         // Add GPU ID
         rvs::lp::AddInt(json_root_node, RVS_JSON_LOG_GPU_ID_KEY, *it);
       }
-
+      if (bjson){
+          json_root_node = json_node_create(std::string(module_name),
+            action_name.c_str(), rvs::logresults);
+	  if(json_root_node)
+		  rvs::lp::AddString(json_root_node, RVS_JSON_LOG_GPU_ID_KEY, std::to_string(*it));
+      }
       // properties values
       sts = property_get_value(*it);
       sts = property_io_links_get_value(*it);
@@ -478,7 +490,9 @@ int gpup_action::run(void) {
         RVSTRACE_
       }
     }  // for all gpu_id
-
+    if(bjson){
+      rvs::lp::JsonActionEndNodeCreate();
+    }
     if (!b_gpu_found) {
       msg = "No device matches criteria from configuration. ";
       rvs::lp::Err(msg, MODULE_NAME, action_name);
@@ -501,3 +515,16 @@ int gpup_action::run(void) {
     return sts;
 }
 
+/*
+void gpup_action::json_add_primary_fields(){
+if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+    return;
+  }
+
+}
+*/
+
+void gpup_action::cleanup_logs(){
+  rvs::lp::JsonEndNodeCreate();
+}

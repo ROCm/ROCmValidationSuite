@@ -44,7 +44,7 @@ namespace rvs {
  */
 class MinNode : virtual public LogNode {
  public:
-  explicit MinNode(const char* Name, int LogLevel, const LogNodeBase* Parent = nullptr);
+  explicit MinNode(const char* Name, int LogLevel, bool Named = false,const LogNodeBase* Parent = nullptr);
   virtual ~MinNode();
 
   virtual std::string ToJson(const std::string& Lead = "");
@@ -58,6 +58,7 @@ class MinNode : virtual public LogNode {
 
  protected:
   int Level;
+  bool IsNamed;
 };
 
 }  // namespace rvs
