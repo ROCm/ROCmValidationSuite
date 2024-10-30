@@ -136,6 +136,7 @@ set(SOURCES
   ../src/rvslognodestring.cpp
   ../src/rvslognodeint.cpp
   ../src/rvsminnode.cpp
+  ../src/rvslognodelist.cpp
   ../src/rvs_blas.cpp
   ../src/rvshsa.cpp
 

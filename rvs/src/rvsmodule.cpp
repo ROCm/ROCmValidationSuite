@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -275,6 +275,7 @@ int rvs::module::initialize() {
   d.cbLog                       = rvs::logger::Log;
   d.cbLogExt                    = rvs::logger::LogExt;
   d.cbLogRecordCreate           = rvs::logger::LogRecordCreate;
+  d.cbJsonNamedListCreate       = rvs::logger::JsonNamedListCreate;
   d.cbJsonStartNodeCreate       = rvs::logger::JsonStartNodeCreate;
   d.cbJsonActionStartNodeCreate = rvs::logger::JsonActionStartNodeCreate;
   d.cbJsonEndNodeCreate         = rvs::logger::JsonEndNodeCreate;

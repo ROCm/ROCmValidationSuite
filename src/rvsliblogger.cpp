@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -42,6 +42,7 @@
 #include "include/rvslognodeint.h"
 #include "include/rvslognoderec.h"
 #include "include/rvsminnode.h"
+#include "include/rvslognodelist.h"
 
 using std::cerr;
 using std::cout;
@@ -318,6 +319,8 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
   return static_cast<void*>(rec);
 }
 
+
+
 /**
  * @brief Create json log record
  *
@@ -360,6 +363,11 @@ int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Actio
   return ToFile(row, true);
 }
 
+void* rvs::logger::JsonNamedListCreate(const char* name,const int LogLevel){
+    rvs::LogListNode* rec = new rvs::LogListNode(name, LogLevel);
+    return static_cast<void*>(rec);
+
+}	
 int rvs::logger::JsonActionEndNodeCreate() {
   std::string row{RVSINDENT};
   row += list_end;

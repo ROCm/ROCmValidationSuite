@@ -291,8 +291,6 @@ class GSTWorker : public rvs::ThreadBase {
     bool do_gst_stress_test(int *error, std::string *err_description);
     void log_gst_test_result(bool gst_test_passed);
     virtual void run(void);
-    void log_to_json(const std::string &key, const std::string &value,
-                     int log_level);
     void log_interval_gflops(double gflops_interval);
     bool check_gflops_violation(double gflops_interval);
     void check_target_stress(double gflops_interval);

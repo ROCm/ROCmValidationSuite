@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,7 +25,7 @@
 #include <string>
 #include <iostream>
 
-#include "include/rvsminnode.h"
+#include "include/rvslognodelist.h"
 #include "include/rvstrace.h"
 
 using std::string;
@@ -37,16 +37,15 @@ using std::string;
  * @param Parent Pointer to parent node
  *
  */
-rvs::MinNode::MinNode(const char* Name, int LogLevel,bool Named, const rvs::LogNodeBase* Parent)
+rvs::LogListNode::LogListNode(const char* Name, int LogLevel, const rvs::LogNodeBase* Parent)
 :
 LogNode(Name, Parent),
-Level(LogLevel),
-IsNamed(Named){
+Level(LogLevel){
   Type = eLN::Record;
 }
 
 //! Destructor
-rvs::MinNode::~MinNode() {
+rvs::LogListNode::~LogListNode() {
   for (auto it = Child.begin(); it != Child.end(); ++it) {
     delete (*it);
   }
@@ -58,7 +57,7 @@ rvs::MinNode::~MinNode() {
  * @return Current logging level
  *
  */
-int rvs::MinNode::LogLevel() {
+int rvs::LogListNode::LogLevel() {
   return Level;
 }
 
@@ -68,7 +67,7 @@ int rvs::MinNode::LogLevel() {
  * @param pChild Pointer to child node
  *
  */
-void rvs::MinNode::Add(rvs::LogNodeBase* pChild) {
+void rvs::LogListNode::Add(rvs::LogNodeBase* pChild) {
   Child.push_back(pChild);
 }
 
@@ -82,13 +81,12 @@ void rvs::MinNode::Add(rvs::LogNodeBase* pChild) {
  * @return Node as JSON string
  *
  */
-std::string rvs::MinNode::ToJson(const std::string& Lead) {
+std::string rvs::LogListNode::ToJson(const std::string& Lead) {
   DTRACE_
   string result(RVSENDL);
   result += "{";
-  if (IsNamed){
-    result += Lead + "\"" + Name + "\"" + " : {";
-  }
+  result += Lead + "\"" + Name + "\"" + " : [";
+
   int  size = Child.size();
   for (int i = 0; i < size; i++) {
     result += Child[i]->ToJson(Lead + RVSINDENT);
@@ -96,10 +94,7 @@ std::string rvs::MinNode::ToJson(const std::string& Lead) {
       result += ",";
     }
   }
-  result += RVSENDL + Lead + "}";
-  if (IsNamed){
-    result += RVSENDL + Lead + "}";
-  }
-
+  result += RVSENDL + Lead + "]";
+  result += "}";
   return result;
 }

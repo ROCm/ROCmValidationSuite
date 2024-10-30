@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -97,6 +97,15 @@ void *json_node_create(std::string module_name, std::string action_name,
                             action_name.c_str(), log_level, sec, usec, true);
         return json_node;
 }
+
+
+
+void *json_list_create(std::string lname, int log_level){
+
+        void *json_node = rvs::lp::JsonNamedListCreate(lname.c_str() ,log_level);
+        return json_node;
+}
+
 
 /**
  * summary: Fetches gpu id to index map for valid set of GPUs as per config.
@@ -268,4 +277,22 @@ int display_gpu_info (void) {
       std::cout << std::endl << errmsg << std::endl;
   }
   return 0;
+}
+
+template <typename... KVPairs>
+void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values ) {
+        std::vector<std::string> kvlist{key_values...};
+    if  (kvlist.size() == 0 || kvlist.size() %2 != 0){
+            return;
+    }
+    void *json_node = json_node_create(desc.module_name,
+        desc.action_name.c_str(), log_level);
+    if (json_node) {
+      rvs::lp::AddString(json_node, "gpu_id",
+          std::to_string(desc.gpu_id));
+      for (int i =0; i< kvlist.size()-1; i +=2){
+          rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
+      }
+      rvs::lp::LogRecordFlush(json_node, log_level);
+    }
 }

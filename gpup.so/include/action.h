@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -50,7 +50,7 @@ class gpup_action : public rvs::actionbase {
     virtual ~gpup_action();
 
     virtual int run(void);
-
+    static void cleanup_logs();
  protected:
     //! the list of all gpu_id in the 'device' property
     vector<string> gpus_id;
@@ -63,6 +63,7 @@ class gpup_action : public rvs::actionbase {
 
     //! ptr to JSON root node
     void* json_root_node;
+
 
     // split properties and io_links properties
     bool property_split(string prop);
