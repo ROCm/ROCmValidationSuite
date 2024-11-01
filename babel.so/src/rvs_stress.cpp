@@ -34,30 +34,33 @@ template <typename T>
 void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>& b, std::vector<T>& c, T& sum, uint64_t);
 
 template <typename T>
-void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
+void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block);
 
 template <typename T>
-void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
+void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block);
 
 void parseArguments(int argc, char *argv[]);
 
-void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest) {
+void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block) {
 
     switch(test_type) {
       case FLOAT_TEST:
-        run_stress<float>(device, num_times, array_size, output_csv, mibibytes, subtest);
+        run_stress<float>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block);
         break;
 
       case DOUBLE_TEST:
-        run_stress<double>(device, num_times, array_size, output_csv, mibibytes, subtest);
+        run_stress<double>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block);
         break;
 
       case TRAID_FLOAT:
-        run_triad<float>(device, num_times, array_size, output_csv, mibibytes, subtest);
+        run_triad<float>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block);
         break;
 
       case TRIAD_DOUBLE:
-        run_triad<double>(device, num_times, array_size, output_csv, mibibytes, subtest);
+        run_triad<double>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block);
         break;
 
       default:
@@ -67,7 +70,8 @@ void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, b
 }
 
 template <typename T>
-void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
+void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block)
 {
   std::string   msg;
   std::streamsize ss = std::cout.precision();
@@ -117,7 +121,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   Stream<T> *stream;
 
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first);
+  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first, dwords_per_lane, chunks_per_block);
 
   stream->init_arrays(startA, startB, startC);
 
@@ -247,7 +251,8 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 }
 
 template <typename T>
-void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
+void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block)
 {
   std::string msg;
 
@@ -294,7 +299,7 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   Stream<T> *stream;
 
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first);
+  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first, dwords_per_lane, chunks_per_block);
 
   stream->init_arrays(startA, startB, startC);
 
