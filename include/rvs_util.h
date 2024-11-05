@@ -29,6 +29,9 @@
 #include <string>
 #include <iostream>
 #include <map>
+#include "include/rvsloglp.h"
+#include "include/gpu_util.h"
+
 using std::map;
 
 struct action_descriptor{
@@ -124,6 +127,7 @@ int rvs_util_parse(const std::string& buff,
   return error;
 }
 
+
 void *json_node_create(std::string module_name, std::string action_name,
                      int log_level);
 bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_index,
@@ -132,4 +136,23 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function);
 int display_gpu_info(void);
 void *json_list_create(std::string lname, int log_level);
+template <typename... KVPairs>
+void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values ) {
+        std::vector<std::string> kvlist{key_values...};
+    if  (kvlist.size() == 0 || kvlist.size() %2 != 0){
+            return;
+    }
+    void *json_node = json_node_create(desc.module_name,
+        desc.action_name.c_str(), log_level);
+    if (json_node) {
+      rvs::lp::AddString(json_node, "gpu_id",
+          std::to_string(desc.gpu_id));
+      for (int i =0; i< kvlist.size()-1; i +=2){
+          rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
+      }
+
+      rvs::lp::LogRecordFlush(json_node, log_level);
+    }
+}
+
 #endif  // INCLUDE_RVS_UTIL_H_
