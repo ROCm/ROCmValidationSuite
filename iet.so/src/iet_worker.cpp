@@ -251,14 +251,14 @@ bool IETWorker::do_iet_power_stress(void) {
         }
     }
 
-    // json log the avg power
-    //check whether we reached the target power
-    if(max_power >= target_power) {
+    // check whether we reached the target power or within the tolerance limit
+    if(max_power >= (target_power - (target_power * tolerance))) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Average power met the target power :" + " " + std::to_string(max_power);
         rvs::lp::Log(msg, rvs::loginfo);
         result = true;
-    }else {
+    }
+    else {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Average power could not meet the target power  \
             in the given interval, increase the duration and try again, \
@@ -266,9 +266,11 @@ bool IETWorker::do_iet_power_stress(void) {
         rvs::lp::Log(msg, rvs::loginfo);
         result = false;
     }
+
     if (IETWorker::bjson)
         iet_log_to_json(desc, rvs::logresults, IET_AVERAGE_POWER_KEY, std::to_string(max_power),
 		    "pass", result ? "true" : "false");
+
     action_result.state = rvs::actionstate::ACTION_RUNNING;
     action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
     action_result.output = msg.c_str();
