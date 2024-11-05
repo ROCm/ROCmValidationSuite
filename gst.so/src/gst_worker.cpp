@@ -363,7 +363,7 @@ void GSTWorker::check_target_stress(double gflops_interval) {
   action_result.output = msg.c_str();
   action.action_callback(&action_result);
   if (bjson)
-      log_to_json(desc ,rvs::logresults,
+      gst_log_to_json(desc ,rvs::logresults,
 		      GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(static_cast<uint64_t>(gflops_interval)),
 		      "pass", result ? "TRUE" : "FALSE");
 }
@@ -602,7 +602,7 @@ void GSTWorker::run() {
       + std::to_string(gpu_id) + " " + err_description;
     rvs::lp::Log(msg, rvs::logerror);
     if (bjson)
-        log_to_json(desc ,rvs::logerror,"err", err_description);
+        gst_log_to_json(desc ,rvs::logerror,"err", err_description);
 
     action_result.state = rvs::actionstate::ACTION_COMPLETED;
     action_result.status = rvs::actionstatus::ACTION_FAILED;
@@ -630,7 +630,7 @@ void GSTWorker::run() {
         std::to_string(gpu_id) + " " + err_description;
       rvs::lp::Log(msg, rvs::logerror);
       if (bjson)
-          log_to_json(desc, rvs::logerror,"err", err_description);
+          gst_log_to_json(desc, rvs::logerror,"err", err_description);
 
       action_result.state = rvs::actionstate::ACTION_COMPLETED;
       action_result.status = rvs::actionstatus::ACTION_FAILED;
@@ -714,5 +714,24 @@ void GSTWorker::usleep_ex(uint64_t microseconds) {
       return;
     }
   }
+}
+
+template <typename... KVPairs>
+void GSTWorker::gst_log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values ) {
+        std::vector<std::string> kvlist{key_values...};
+    if  (kvlist.size() == 0 || kvlist.size() %2 != 0){
+            return;
+    }
+    void *json_node = json_node_create(desc.module_name,
+        desc.action_name.c_str(), log_level);
+    if (json_node) {
+      rvs::lp::AddString(json_node, "gpu_id",
+          std::to_string(desc.gpu_id));
+      for (int i =0; i< kvlist.size()-1; i +=2){
+          rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
+      }
+
+      rvs::lp::LogRecordFlush(json_node, log_level);
+    }
 }
 
