@@ -286,8 +286,6 @@ class IETWorker : public rvs::ThreadBase {
 
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
-    template <typename... KVPairs>
-    void iet_log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values );
  protected:
     virtual void run(void);
     bool do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type);
