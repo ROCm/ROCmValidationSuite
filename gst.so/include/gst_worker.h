@@ -283,8 +283,6 @@ class GSTWorker : public rvs::ThreadBase {
 
     //! set gemm compute type
     void set_compute_type(std::string _compute_type) { compute_type = _compute_type; }
-    template <typename... KVPairs>
-void gst_log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values );
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);

@@ -267,7 +267,7 @@ bool IETWorker::do_iet_power_stress(void) {
         result = false;
     }
     if (IETWorker::bjson)
-        iet_log_to_json(desc, rvs::logresults, IET_AVERAGE_POWER_KEY, std::to_string(max_power),
+        log_to_json(desc, rvs::logresults, IET_AVERAGE_POWER_KEY, std::to_string(max_power),
 		    "pass", result ? "true" : "false");
     action_result.state = rvs::actionstate::ACTION_RUNNING;
     action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
@@ -638,22 +638,3 @@ end:
     std::cout << "hipStreamDestroy() failed !!! for stream " << stream << std::endl;
 }
 
-
-template <typename... KVPairs>
-void IETWorker::iet_log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values ) {
-        std::vector<std::string> kvlist{key_values...};
-    if  (kvlist.size() == 0 || kvlist.size() %2 != 0){
-            return;
-    }
-    void *json_node = json_node_create(desc.module_name,
-        desc.action_name.c_str(), log_level);
-    if (json_node) {
-      rvs::lp::AddString(json_node, "gpu_id",
-          std::to_string(desc.gpu_id));
-      for (int i =0; i< kvlist.size()-1; i +=2){
-          rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
-      }
-
-      rvs::lp::LogRecordFlush(json_node, log_level);
-    }
-}
