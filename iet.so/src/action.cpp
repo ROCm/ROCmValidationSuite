@@ -105,7 +105,7 @@ using std::fstream;
 #define IET_DEFAULT_RAMP_INTERVAL       5000
 #define IET_DEFAULT_LOG_INTERVAL        1000
 #define IET_DEFAULT_MAX_VIOLATIONS      0
-#define IET_DEFAULT_TOLERANCE           0.1
+#define IET_DEFAULT_TOLERANCE           0
 #define IET_DEFAULT_SAMPLE_INTERVAL     1000
 #define IET_DEFAULT_MATRIX_SIZE         5760
 #define IET_DEFAULT_MATRIX_SIZE_A       0
