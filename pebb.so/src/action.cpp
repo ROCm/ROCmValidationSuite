@@ -397,6 +397,7 @@ void pebb_action::log_json_bandwidth(std::string srcnode, std::string dstnode,
     }else{
       json_add_kv(json_node, "throughput", bandwidth);
     }
+      json_add_kv(json_node, "pass", "true");
     json_to_file(json_node, log_level);
   }
 }

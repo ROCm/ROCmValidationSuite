@@ -461,9 +461,10 @@ int gpup_action::run(void) {
       sts = property_get_value(*it);
       sts = property_io_links_get_value(*it);
       // so far so good?
-
+      
       if (bjson) {  // json logging stuff
         RVSTRACE_
+        rvs::lp::AddString(json_root_node,"pass" , (sts == 0) ? "true" : "false");
         rvs::lp::LogRecordFlush(json_root_node);
         json_root_node = nullptr;
       }

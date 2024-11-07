@@ -306,7 +306,7 @@ bool TSTWorker::do_thermal_stress(void) {
     }
 
     // Json log the max. edge temperature
-    log_to_json(TST_AVERAGE_EDGE_TEMP_KEY, std::to_string(max_edge_temperature), rvs::loginfo);
+    log_to_json(TST_AVERAGE_EDGE_TEMP_KEY, std::to_string(max_edge_temperature), rvs::logresults);
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " + "GPU " +
         std::to_string(gpu_id) + " " + "max. edge temperature :" + " " + std::to_string(max_edge_temperature);
@@ -331,7 +331,7 @@ bool TSTWorker::do_thermal_stress(void) {
         rvs::lp::Log(msg, rvs::loginfo);
         result = false;
     }
-
+    log_to_json("pass" , result ? "true" : "false", rvs::logresults);
     //check whether we reached the trottle temperature
     if(max_junction_temperature >= throttle_temp) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " + "GPU " +
