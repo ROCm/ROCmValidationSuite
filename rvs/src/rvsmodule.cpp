@@ -162,14 +162,11 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       return NULL;
     }
 
-    // open .so
+    // open module .so library
     string libpath;
-    if (rvs::options::has_option("-m", &libpath)) {
-      libpath += "/";
-    } else {
-      rvs::options::has_option("pwd", &libpath); // has ending forward slash too
-      libpath += "../lib/rvs/";
-    }
+    rvs::options::has_option("pwd", &libpath); // has ending forward slash too
+    libpath += "../lib/rvs/";
+
     string sofullname(libpath + it->second);
     void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
     // error?

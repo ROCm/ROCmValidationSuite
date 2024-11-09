@@ -139,9 +139,6 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-c", sp));
   grammar.insert(gpair("--config", sp));
 
-//   sp = std::make_shared<optbase>("--configless", command);
-//   grammar.insert(gpair("--configless", sp));
-
   sp = std::make_shared<optbase>("-d", command, value);
   grammar.insert(gpair("-d", sp));
   grammar.insert(gpair("--debugLevel", sp));
@@ -166,23 +163,9 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-q", sp));
   grammar.insert(gpair("--quiet", sp));
 
-  sp = std::make_shared<optbase>("-m", command, value);
-  grammar.insert(gpair("-m", sp));
-  grammar.insert(gpair("--modulepath", sp));
-
   sp = std::make_shared<optbase>("-n", command, value);
   grammar.insert(gpair("-n", sp));
   grammar.insert(gpair("--numTimes", sp));
-
-  //  sp = std::make_shared<optbase>("-s", command);
-  //  grammar.insert(gpair("-s", sp));
-  //  grammar.insert(gpair("--scriptable", sp));
-  //
-  //  sp = std::make_shared<optbase>("-st", value);
-  //  grammar.insert(gpair("--specifiedtest", sp));
-  //
-  //  sp = std::make_shared<optbase>("-sf", command);
-  //  grammar.insert(gpair("--statsonfail", sp));
 
   sp = std::make_shared<optbase>("-t", command);
   grammar.insert(gpair("-t", sp));
