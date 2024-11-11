@@ -878,7 +878,7 @@ configured correctly. It checks the installed versions of the ROCm components
 and the platform configuration of the system.
 This includes checking the dependencies corresponding 
 to the ROCm meta-packages are installed correctly.
-requirements. The purpose of the RCQT is to provide an extensible, OS
+The purpose of the RCQT is to provide an extensible, OS
 independent and scriptable interface capable for performing the configuration
 checks required for ROCm support. The checks in this module do not target a
 specific device.

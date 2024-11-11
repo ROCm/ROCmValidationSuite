@@ -460,7 +460,6 @@ int gpup_action::run(void) {
       // properties values
       sts = property_get_value(*it);
       sts = property_io_links_get_value(*it);
-      // so far so good?
       
       if (bjson) {  // json logging stuff
         RVSTRACE_
