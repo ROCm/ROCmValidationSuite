@@ -239,51 +239,50 @@ Command line options are summarized in the table below:
 
 <table>
 <tr><th>Short option</th><th>Long option</th><th> Description</th></tr>
-<tr><td>-a</td><td>\-\-appendLog</td><td>When generating a debug logfile, do not overwrite the content
+<tr><td>-a</td><td>--appendLog</td><td>When generating a debug logfile, do not overwrite the content
 of the current log. Use in conjuction with -d and -l options.
 </td></tr>
 
-<tr><td>-c</td><td>\-\-config</td><td>Specify the test configuration file to use.
+<tr><td>-c</td><td>--config</td><td>Specify the test configuration file to use.
 This is a mandatory field for test execution.
 </td></tr>
 
-
-<tr><td>-d</td><td>\-\-debugLevel</td><td>Specify the debug level for the output log.
+<tr><td>-d</td><td>--debugLevel</td><td>Specify the debug level for the output log.
 The range is 0-5 with 5 being the highest verbose level.
 </td></tr>
 
-<tr><td>-g</td><td>\-\-listGpus</td><td>List all the GPUs available in the machine,
+<tr><td>-g</td><td>--listGpus</td><td>List all the GPUs available in the machine,
 that RVS supports and has visibility.
 </td></tr>
 
-<tr><td>-i</td><td>\-\-indexes</td><td>Comma separated list of GPU ids to run test on.
+<tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids to run test on.
 This overrides the device values specified for every actions in the
 configuration file, including the ‘all’ value.
 </td></tr>
 
-<tr><td>-j</td><td>\-\-json</td><td>Generate output file in JSON format.
+<tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
 </td></tr>
 
-<tr><td>-l</td><td>\-\-debugLogFile</td><td>Generate log file with output and debug information.
+<tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
 </td></tr>
 
-<tr><td>-t</td><td>\-\-listTests</td><td>List the test modules present in RVS.
+<tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
 </td></tr>
 
-<tr><td>-v</td><td>\-\-verbose</td><td>Enable verbose reporting. This is Enable verbose reporting.
+<tr><td>-v</td><td>--verbose</td><td>Enable verbose reporting. This is Enable verbose reporting.
 </td></tr>
 
-<tr><td>-n</td><td>\-\-numTimes</td><td>Number of times the test repeatedly executes.
+<tr><td>-n</td><td>--numTimes</td><td>Number of times the test repeatedly executes.
 Use in conjunction with -c option.
 </td></tr>
 
-<tr><td></td><td>\-\-quiet</td><td>No console output given. See logs and return
+<tr><td></td><td>--quiet</td><td>No console output given. See logs and return
 code for errors.</td></tr>
 
-<tr><td></td><td>\-\-version</td><td>Displays the version information and exits.
+<tr><td></td><td>--version</td><td>Displays the version information and exits.
 </td></tr>
 
-<tr><td>-h</td><td>\-\-help</td><td>Display usage information and exit.
+<tr><td>-h</td><td>--help</td><td>Display usage information and exit.
 </td></tr>
 
 </table>
