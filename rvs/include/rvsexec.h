@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -85,6 +85,8 @@ class exec {
   /* Application Callback */
   void (*app_callback)(const rvs_results_t * results, int user_param);
   int user_param;
+  /* Number of times to execute the test */
+  int num_times;
 };
 
 }  // namespace rvs
