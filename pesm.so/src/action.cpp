@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -195,7 +195,12 @@ int pesm_action::run(void) {
   if (prop_debugwait) {
     sleep(prop_debugwait);
   }
-
+  if (bjson){
+    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+      rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+      return 1;
+    }      
+  }
   // end of monitoring requested?
   if (!prop_monitor) {
     RVSTRACE_
@@ -208,6 +213,9 @@ int pesm_action::run(void) {
       delete pworker;
       pworker = nullptr;
     }
+    if (bjson){
+      rvs::lp::JsonActionEndNodeCreate();
+     }
     RVSTRACE_
     return 0;
   }
@@ -216,6 +224,10 @@ int pesm_action::run(void) {
   if (pworker) {
     rvs::lp::Log("[" + property["name"]+ "] pesm monitoring already started",
                 rvs::logdebug);
+    if (bjson){
+      rvs::lp::JsonActionEndNodeCreate();
+     }
+
     return 0;
   }
 
@@ -232,7 +244,9 @@ int pesm_action::run(void) {
   RVSTRACE_
   pworker->start();
   sleep(2);
-
+  if (bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
   RVSTRACE_
   return 0;
 }
@@ -249,4 +263,8 @@ int pesm_action::run(void) {
  * */
 int pesm_action::do_gpu_list() {
   return display_gpu_info();
+}
+
+void pesm_action::cleanup_logs(){
+  rvs::lp::JsonEndNodeCreate();
 }

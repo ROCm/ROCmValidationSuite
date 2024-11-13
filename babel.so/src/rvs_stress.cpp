@@ -268,7 +268,8 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 		      std::to_string(pow(2.0, -20.0)) : std::to_string((1.0E-6) * sizes[i] / (*minmax.first)),
 		      "Min(s)",std::to_string( *minmax.first), 
 		      "Max(s)", std::to_string(*minmax.second),
-		      "Average(s)", std::to_string(average));
+		      "Average(s)", std::to_string(average),
+		      "pass", "true");
     } 
   }
   sstr
@@ -403,7 +404,8 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
      log_to_json(desc, rvs::logresults,
 		     "GPU Id", std::to_string(device.second),
 		     "Runtime (seconds)", std::to_string(runtime),
-		     bw_field, std::to_string(bandwidth));
+		     bw_field, std::to_string(bandwidth),
+		     "pass", "true");
    }
   delete stream;
 }

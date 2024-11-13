@@ -131,6 +131,7 @@ void PackageHandler::validatePackages(){
   rvs::lp::AddString(res_node, "Installed Packages", std::to_string(installedPackages));
   rvs::lp::AddString(res_node, "Missing Packages", std::to_string(missingPackages));
   rvs::lp::AddString(res_node, "Mismatched Packages", std::to_string(badVersions));
+  rvs::lp::AddString(res_node, "pass", totalPackages == installedPackages ? "true" : "false");
   rvs::lp::AddNode(json_node, res_node);
   rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
 
@@ -178,6 +179,8 @@ void PackageHandler::listPackageVersion(){
   kv_pairs.emplace_back(std::to_string(installedPackages));
   kv_pairs.emplace_back("Missing Packages");
   kv_pairs.emplace_back(std::to_string(missingPackages));
+  kv_pairs.emplace_back("pass");
+  kv_pairs.emplace_back(missingPackages == 0 ? "true" : "false");
   msg = "Packages install validation complete : \n";
   msg += "\tMissing packages      : " + std::to_string(missingPackages) + "\n";
   msg += "\tInstalled packages    : " + std::to_string(installedPackages) + "\n";

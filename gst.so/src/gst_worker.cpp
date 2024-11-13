@@ -364,8 +364,8 @@ void GSTWorker::check_target_stress(double gflops_interval) {
   action.action_callback(&action_result);
   if (bjson)
       log_to_json(desc ,rvs::logresults,
-		      GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(static_cast<uint64_t>(gflops_interval)),
-		      "pass", result ? "TRUE" : "FALSE");
+		      "gflops", std::to_string(static_cast<uint64_t>(gflops_interval)),
+		      "pass", result ? "true" : "false");
 }
 
 /**

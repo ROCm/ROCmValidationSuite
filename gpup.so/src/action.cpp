@@ -411,6 +411,13 @@ int gpup_action::run(void) {
     vector<uint16_t> gpu;
     gpu_get_all_gpu_id(&gpu);
     bool b_gpu_found = false;
+    if (bjson){
+      if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+          rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+          return 1;
+        }
+
+    }
 
     // iterate over AMD GPUs
     for (auto it = gpu.begin(); it !=gpu.end(); ++it) {
@@ -442,13 +449,6 @@ int gpup_action::run(void) {
             continue;
         }
       }
-      if (bjson){
-	if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-          rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-          return 1;
-        }
-
-      }
       b_gpu_found = true;
 
       if (bjson){
@@ -460,10 +460,10 @@ int gpup_action::run(void) {
       // properties values
       sts = property_get_value(*it);
       sts = property_io_links_get_value(*it);
-      // so far so good?
-
+      
       if (bjson) {  // json logging stuff
         RVSTRACE_
+        rvs::lp::AddString(json_root_node,"pass" , (sts == 0) ? "true" : "false");
         rvs::lp::LogRecordFlush(json_root_node);
         json_root_node = nullptr;
       }
