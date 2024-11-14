@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -193,28 +193,15 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
     map<string, string>::iterator it;  // module's properties map iterator
     void *json_pcaps_node = NULL;
     uint8_t i;
-
-    if (bjson) {
-      unsigned int sec;
-      unsigned int usec;
-      rvs::lp::get_ticks(&sec, &usec);
-
-      json_pcaps_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-          action_name.c_str(), rvs::loginfo, sec, usec);
-
-      if (json_pcaps_node == NULL) {
-          // log the error
-          msg = JSON_CREATE_NODE_ERROR;
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
-          return false;
-      }
-    }
-
-    if (bjson && json_pcaps_node != NULL) {
+    if (bjson){
+      json_pcaps_node = json_node_create(MODULE_NAME,
+        action_name.c_str(), rvs::logresults);
+    
+      if (json_pcaps_node != NULL) {
         rvs::lp::AddString(json_pcaps_node, RVS_JSON_LOG_GPU_ID_KEY,
                 std::to_string(gpu_id));
+      }
     }
-
     for (it = property.begin(); it != property.end(); ++it) {
         // skip the "capability."
         string prop_name = it->first.substr(it->first.find_last_of(".") + 1);
@@ -317,9 +304,11 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
             }
         }
     }
-
-    rvs::lp::LogRecordFlush(json_pcaps_node);
-
+    if(bjson){
+      rvs::lp::AddString(json_pcaps_node, "pass",
+                pci_infra_qual_result ? "true" : "false");
+      rvs::lp::LogRecordFlush(json_pcaps_node, rvs::logresults);
+    }
     return pci_infra_qual_result;
 }
 
@@ -360,7 +349,12 @@ int peqt_action::run(void) {
 
       return -1;
     }
-
+    if (bjson){
+      if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+        return 1;
+      }
+  }
     // get the pci_access structure
     pacc = pci_alloc();
 
@@ -493,34 +487,8 @@ int peqt_action::run(void) {
     rvs::lp::Log(msg, rvs::logresults);
 
     if (bjson) {
-      RVSTRACE_
-      rvs::lp::get_ticks(&sec, &usec);
-      json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-              action_name.c_str(), rvs::logresults, sec, usec);
-      if (json_root_node == NULL) {
-        // log the error
-        msg = JSON_CREATE_NODE_ERROR;
-        rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-        action_result.state = rvs::actionstate::ACTION_COMPLETED;
-        action_result.status = rvs::actionstatus::ACTION_FAILED;
-        action_result.output = msg;
-        action_callback(&action_result);
-
-        return -1;
-      }
-
-      if (pci_infra_qual_result) {
-        rvs::lp::AddInt(json_root_node, "Sts", 1);
-        rvs::lp::AddString(json_root_node, "pass", PEQT_RESULT_PASS_MESSAGE);
-      } else {
-        rvs::lp::AddInt(json_root_node, "Sts", 0);
-        rvs::lp::AddString(json_root_node, "pass", PEQT_RESULT_FAIL_MESSAGE);
-      }
-
-      rvs::lp::LogRecordFlush(json_root_node);
+	    rvs::lp::JsonActionEndNodeCreate();
     }
-
 
     action_result.state = rvs::actionstate::ACTION_COMPLETED;
     action_result.status = rvs::actionstatus::ACTION_SUCCESS;
@@ -529,4 +497,9 @@ int peqt_action::run(void) {
 
     RVSTRACE_
     return 0;
+}
+
+
+void peqt_action::cleanup_logs(){
+  rvs::lp::JsonEndNodeCreate();
 }
