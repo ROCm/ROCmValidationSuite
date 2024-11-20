@@ -4,10 +4,10 @@
 ## GPU Properties – GPUP
 The GPU Properties module queries the configuration of a target device and returns the device’s static characteristics. These static values can be used to debug issues such as device support, performance and firmware problems.
 
-## GPU Monitor – GM module
+## GPU Monitor – GM module [deprecated]
 The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information at regular intervals. The module can be configured to halt another RVS modules execution if one of the quantities exceeds a specified boundary value.
 
-## PCI Express State Monitor – PESM module
+## PCI Express State Monitor – PESM module [deprecated]
 The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU. The module will register a “listener” on a target GPU’s PCIe interconnect, and log a message whenever it detects a state change. The PESM will be able to detect the following state changes:
 
 1.	PCIe link speed changes
@@ -24,7 +24,7 @@ The PCIe Qualification Tool is used to qualify the PCIe bus on which the GPU is 
 3.	PCIe link speed
 4.	PCIe link width
 
-## SBIOS Mapping Qualification Tool – SMQT module
+## SBIOS Mapping Qualification Tool – SMQT module [deprecated]
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct products for ROCm support.
 
 ## P2P Benchmark and Qualification Tool – PBQT module
