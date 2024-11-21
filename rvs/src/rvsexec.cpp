@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -127,24 +127,32 @@ int rvs::exec::run() {
     logger::to_json(true);
   }
 
-  // check -c option
   string config_file;
   if (rvs::options::has_option("-c", &val)) {
     config_file = val;
-
-    // Check if conf. file exists
-    std::ifstream file(config_file);
+  } else {
+    config_file = "../share/rocm-validation-suite/conf/rvs.conf";
+    // Check if pConfig file exist if not use old path for backward compatibility
+    std::ifstream file(path + config_file);
     if (!file.good()) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-          "%s file is missing.", config_file.c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      return -1;
-    } else {
-      file.close();
+      config_file = "conf/rvs.conf";
     }
+    file.close();
+    config_file = path + config_file;
   }
 
+  // Check if pConfig file exists
+  std::ifstream file(config_file);
+  if (!file.good()) {
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+              "%s file is missing.", config_file.c_str());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
+    return -1;
+  } else {
+    file.close();
+  }
+  
   // construct modules configuration file relative path
   val = path + "../share/rocm-validation-suite/conf/.rvsmodules.config";
   // Check if config file exists if not check the old file location for backward compatibility
@@ -422,8 +430,7 @@ void rvs::exec::do_help() {
                               "overwrite the content\n";
   cout << "                   of the current log. Used in conjuction with "
                                "-d and -l options.\n";
-  cout << "-c --config        Specify the configuration file to be used.\n";
-  cout << "                   supported GPUs.This is Mandatory field\n";
+  cout << "-c --config        Specify the configuration file to be used.\n\n";
   cout << "-d --debugLevel    Specify the debug level for the output log. "
                               "The range is\n";
   cout << "                   0 to 5 with 5 being the highest verbose level.\n";
