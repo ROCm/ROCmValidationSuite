@@ -131,18 +131,27 @@ int rvs::exec::run() {
   string config_file;
   if (rvs::options::has_option("-c", &val)) {
     config_file = val;
-
-    // Check if conf. file exists
-    std::ifstream file(config_file);
+  } else {
+    config_file = "../share/rocm-validation-suite/conf/rvs.conf";
+    // Check if pConfig file exist if not use old path for backward compatibility
+    std::ifstream file(path + config_file);
     if (!file.good()) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-          "%s file is missing.", config_file.c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      return -1;
-    } else {
-      file.close();
+      config_file = "conf/rvs.conf";
     }
+    file.close();
+    config_file = path + config_file;
+  }
+
+  // Check if pConfig file exists
+  std::ifstream file(config_file);
+  if (!file.good()) {
+    char buff[1024];
+    snprintf(buff, sizeof(buff),
+              "%s file is missing.", config_file.c_str());
+    rvs::logger::Err(buff, MODULE_NAME_CAPS);
+    return -1;
+  } else {
+    file.close();
   }
 
   // check -n options
@@ -437,8 +446,7 @@ void rvs::exec::do_help() {
   cout << "-a --appendLog     When generating a debug logfile, do not overwrite the content\n";
   cout << "                   of the current log. Use in conjuction with -d and -l options.\n\n";
 
-  cout << "-c --config        Specify the test configuration file to use. This is a mandatory\n";
-  cout << "                   field for test execution.\n\n";
+  cout << "-c --config        Specify the test configuration file to use.\n\n";
 
   cout << "-d --debugLevel    Specify the debug level for the output log. The range is 0-5 with\n";
   cout << "                   5 being the highest verbose level.\n\n";
