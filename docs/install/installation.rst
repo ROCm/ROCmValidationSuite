@@ -66,10 +66,6 @@ Ensure you review the following prerequisites carefully for each operating syste
     .. tab-item:: SLES
         
         .. code-block:: shell
-
-                sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
-                        
-                sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
                         
                 sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
