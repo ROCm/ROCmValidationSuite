@@ -276,9 +276,10 @@ void pbqt_action::log_json_data(std::string srcnode, std::string dstnode,
       default:
         break;
     }
-
+    json_add_kv(json_node, "pass", "true");
     json_to_file(json_node, log_level);
   }
+  std::cout << "log_json_data" << std::endl;
 }
 
 
@@ -498,19 +499,9 @@ int pbqt_action::create_threads() {
     msg = "[" + action_name + "] p2p-bandwidth " + diag;
     rvs::lp::Log(msg, rvs::logerror);
     if (bjson) {
-      RVSTRACE_
-      unsigned int sec;
-      unsigned int usec;
-      rvs::lp::get_ticks(&sec, &usec);
-      void* pjson = rvs::lp::LogRecordCreate("p2p-bandwidth",
-                              action_name.c_str(), rvs::logerror, sec, usec);
-      if (pjson != NULL) {
-        RVSTRACE_
-        rvs::lp::AddString(pjson,
-          "message",
-          diag);
-        rvs::lp::LogRecordFlush(pjson);
-      }
+       void *pjson= json_base_node(rvs::logresults);
+       json_add_kv(pjson, "message", diag);
+       rvs::lp::LogRecordFlush(pjson);
     }
     RVSTRACE_
     return 0;
@@ -824,14 +815,6 @@ void pbqt_action::do_final_average() {
   msg = "[" + action_name + "] pbqt in do_final_average";
   rvs::lp::Log(msg, rvs::logtrace, sec, usec);
 
-  if (bjson) {
-    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::logtrace, sec, usec);
-    if (pjson != NULL) {
-      rvs::lp::AddString(pjson, "message", "pbqt in do_final_average");
-      rvs::lp::LogRecordFlush(pjson);
-    }
-  }
 
   brun = false;
 
@@ -856,19 +839,10 @@ void pbqt_action::do_running_average() {
   rvs::lp::get_ticks(&sec, &usec);
   msg = "[" + action_name + "] pbqt in do_running_average";
   rvs::lp::Log(msg, rvs::logtrace, sec, usec);
-  if (bjson) {
-    void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::logtrace, sec, usec);
-    if (pjson != NULL) {
-      rvs::lp::AddString(pjson,
-                         "message",
-                         "in do_running_average");
-      rvs::lp::LogRecordFlush(pjson);
-    }
-  }
   print_running_average();
 }
 
 void pbqt_action::cleanup_logs(){
+	std::cout << "cleanuos" << std::endl;
   rvs::lp::JsonEndNodeCreate();
 }

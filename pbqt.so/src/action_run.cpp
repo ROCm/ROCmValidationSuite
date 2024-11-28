@@ -156,6 +156,10 @@ int pbqt_action::run() {
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = "Parameters not valid. Nothing to execute !!!";
     action_callback(&action_result);
+    // close the json doc
+    if(bjson){
+      rvs::lp::JsonActionEndNodeCreate();
+    }
 
     return 0;
   }

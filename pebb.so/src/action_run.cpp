@@ -206,7 +206,6 @@ int pebb_action::run() {
   print_final_average();
 
   destroy_threads();
-  //bjson = true;
   if(bjson){
     rvs::lp::JsonActionEndNodeCreate();
   }
