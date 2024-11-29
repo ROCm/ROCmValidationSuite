@@ -92,7 +92,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR}")
 
 
 # Set compiler and compiler flags
@@ -102,12 +102,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
 
 # Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)
+if(NOT EXISTS ${HIP_INC_DIR}/hip/hip_runtime.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
 
-if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime_api.h)
+if(NOT EXISTS ${HIP_INC_DIR}/hip/hip_runtime_api.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
@@ -128,15 +128,15 @@ if(DEFINED RVS_ROCMSMI)
 endif()
 
 
-if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
-  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set ROCR_LIB_DIR path. Current value is : " ${ROCR_LIB_DIR})
+if(NOT EXISTS "${HIP_LIB_DIR}/lib${HIP_HCC_LIB}.so")
+  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set HIP_LIB_DIR path. Current value is : " ${HIP_LIB_DIR})
   RETURN()
 endif()
 
 ## define include directories
-include_directories(./ ../ ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
+include_directories(./ ../ ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${YAML_CPP_INCLUDE_DIRS} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR})
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpthread.so libpciaccess.so libpci.so libm.so)
 
@@ -148,7 +148,7 @@ add_library( ${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB})
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB} ${HIPRAND_LIB} ${ROCRAND_LIB})
 add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD

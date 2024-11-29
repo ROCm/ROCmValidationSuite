@@ -55,6 +55,8 @@ if(rocblas_FOUND)
   set(RVS_ROCBLAS_VERSION_MAJ ${rocblas_VERSION_MAJOR} )
   set(RVS_ROCBLAS_VERSION_MIN ${rocblas_VERSION_MINOR} )
   set(RVS_ROCBLAS_VERSION_PAT ${rocblas_VERSION_PATCH} )
+  set(ROCBLAS_INC_DIR ${rocblas_INCLUDE_DIR} )
+  get_filename_component(ROCBLAS_LIB_DIR "${ROCBLAS_INC_DIR}/../lib" ABSOLUTE)
 
   if( (RVS_ROCBLAS_VERSION_MAJ GREATER 999) OR (RVS_ROCBLAS_VERSION_MIN GREATER 999) OR (RVS_ROCBLAS_VERSION_PAT GREATER 999) )
     message(FATAL_ERROR "RVS rocblas: Too big ROCBLAS version number(s)" )
@@ -73,17 +75,82 @@ else() #If ROCBLAS not found
   message(FATAL_ERROR "rocblas not found !!! Install rocblas to proceed ...")
 endif(rocblas_FOUND)
 
+find_package (hipblaslt)
+if(hipblaslt_FOUND)
+  message(STATUS "hipblaslt found")
+  set(HIPBLASLT_INC_DIR ${hipblaslt_INCLUDE_DIR} )
+  get_filename_component(HIPBLASLT_LIB_DIR "${HIPBLASLT_INC_DIR}/../lib" ABSOLUTE)
+else() #If HIPBLASLT not found
+  message(FATAL_ERROR "hipblaslt not found !!! Install hipblaslt to proceed ...")
+endif(hipblaslt_FOUND)
+
+find_package (hsa-runtime64)
+if(hsa-runtime64_FOUND)
+  message(STATUS "hsa-runtime64 found")
+  get_target_property(HSA_INC_DIR hsa-runtime64::hsa-runtime64 INTERFACE_INCLUDE_DIRECTORIES)
+  get_filename_component(HSA_PATH "${HSA_INC_DIR}/.." ABSOLUTE)
+  get_filename_component(HSA_LIB_DIR "${HSA_PATH}/lib" ABSOLUTE)
+  set(ROCR_INC_DIR ${HSA_INC_DIR})
+  set(ROCR_LIB_DIR ${HSA_LIB_DIR})
+else() #If HSA not found
+  message(FATAL_ERROR "hsa not found !!! Install hsa to proceed ...")
+endif(hsa-runtime64_FOUND)
+
+find_package (hsakmt)
+if(hsakmt_FOUND)
+  message(STATUS "hsakmt found")
+  get_target_property(ROCT_INC_DIR hsakmt::hsakmt INTERFACE_INCLUDE_DIRECTORIES)
+  get_filename_component(ROCT_LIB_DIR "${ROCT_INC_DIR}/../lib" ABSOLUTE)
+  message(STATUS "ROCT_INC_DIR: ${ROCT_INC_DIR}")
+  message(STATUS "ROCT_LIB_DIR: ${ROCT_LIB_DIR}")
+else() #If HSA not found
+  message(FATAL_ERROR "hsa not found !!! Install hsa to proceed ...")
+endif(hsakmt_FOUND)
+
+find_package (hip)
+if(hip_FOUND)
+  set(HIP_INC_DIR ${hip_INCLUDE_DIR})
+  get_filename_component(HIP_PATH "${hip_INCLUDE_DIR}/.." ABSOLUTE)
+  get_filename_component(HIP_LIB_DIR "${hip_INCLUDE_DIR}/../lib" ABSOLUTE)
+else() #If HIP not found
+  message(FATAL_ERROR "hip not found !!! Install hip to proceed ...")
+endif(hip_FOUND)
+
+find_package (rocm_smi)
+if(rocm_smi_FOUND)
+  message(STATUS "rocm_smi found")
+  set(ROCM_SMI_INC_DIR ${rocm_smi_INCLUDE_DIR} )
+  set(ROCM_SMI_LIB_DIR ${rocm_smi_LIB_DIR} )
+else() #If ROCM_SMI not found
+  message(FATAL_ERROR "rocm-smi not found !!! Install rocm-smi to proceed ...")
+endif(rocm_smi_FOUND)
+
+find_package (hiprand)
+if(hiprand_FOUND)
+  message(STATUS "hiprand found")
+  set(HIPRAND_INC_DIR ${hiprand_INCLUDE_DIR} )
+  get_filename_component(HIPRAND_LIB_DIR "${hiprand_INCLUDE_DIR}/../lib" ABSOLUTE)
+else() #If HIPRAND not found
+  message(FATAL_ERROR "hiprand not found !!! Install hiprand to proceed ...")
+endif(hiprand_FOUND)
+
+find_package (rocrand)
+if(rocrand_FOUND)
+  message(STATUS "rocrand found")
+  set(ROCRAND_INC_DIR ${rocrand_INCLUDE_DIR} )
+  get_filename_component(ROCRAND_LIB_DIR "${rocrand_INCLUDE_DIR}/../lib" ABSOLUTE)
+else() #If ROCRAND not found
+  message(FATAL_ERROR "rocrand not found !!! Install rocrand to proceed ...")
+endif(rocrand_FOUND)
+
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
-set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
-set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
-set(ROCR_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Runtime" FORCE)
-set(ROCR_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Runtime" FORCE)
-set(HIP_INC_DIR "${ROCM_PATH}" CACHE PATH "Contains header files exported by ROC Runtime")
-set(ROCT_INC_DIR "${ROCM_PATH}/include" CACHE PATH "Contains header files exported by ROC Trunk" FORCE)
 
 add_definitions(-DROCM_PATH="${ROCM_PATH}")
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
@@ -229,16 +296,6 @@ set(RVS_ROCMSMI "0" CACHE STRING "1 = use local rocm_smi_lib")
 
 set(RVS_LIB_DIR "${CMAKE_BINARY_DIR}/rvslib" CACHE PATH "Contains RVS library")
 
-if (${RVS_OS_TYPE} STREQUAL "centos")
-  set(ROCT_LIB_DIR "${ROCM_PATH}/lib64" CACHE PATH "Contains library files exported by ROC Trunk")
-elseif (${RVS_OS_TYPE} STREQUAL "rhel")
-  set(ROCT_LIB_DIR "${ROCM_PATH}/lib64" CACHE PATH "Contains library files exported by ROC Trunk")
-elseif (${RVS_OS_TYPE} STREQUAL "sles")
-  set(ROCT_LIB_DIR "${ROCM_PATH}/lib64" CACHE PATH "Contains library files exported by ROC Trunk")
-else()
-  set(ROCT_LIB_DIR "${ROCM_PATH}/lib" CACHE PATH "Contains library files exported by ROC Trunk")
-endif()
-
 message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 message(STATUS "RVS_COVERAGE = ${RVS_COVERAGE}")
 message(STATUS "RVS_BUILD_TESTS = ${RVS_BUILD_TESTS}")
@@ -277,6 +334,8 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 find_package(yaml-cpp)
 if (yaml-cpp_FOUND)
   message("yaml-cpp found")
+  set(YAML_CPP_INCLUDE_DIRS "${YAML_CPP_INCLUDE_DIR}")
+  set(YAML_CPP_LIBRARIES "${YAML_CPP_LIBRARY_DIR}/libyaml-cpp.a")
 else()
   message(FATAL_ERROR "yaml-cpp not found !!! Install  to proceed ...")
 endif(yaml-cpp_FOUND)
@@ -447,34 +506,14 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so
 
 endif()  # if (RVS_ROCMSMI EQUAL 1)
 
-set(HIPRAND_INC_DIR "${ROCM_PATH}/include")
-set(HIPRAND_LIB_DIR "${ROCM_PATH}/lib")
-set(HIPBLASLT_INC_DIR "${ROCM_PATH}/include")
-set(HIPBLASLT_LIB_DIR "${ROCM_PATH}/lib")
-
 if (RVS_ROCBLAS EQUAL 1)
   set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install")
   set(ROCBLAS_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install/lib/")
-else()
-  set(ROCBLAS_INC_DIR "${ROCM_PATH}/include")
-  set(ROCBLAS_LIB_DIR "${ROCM_PATH}/lib")
 endif()
 
 if (RVS_ROCMSMI EQUAL 1)
   set(ROCM_SMI_INC_DIR "${CMAKE_BINARY_DIR}/rvs_smi-src/include")
   set(ROCM_SMI_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_smi-build")
-else()
-  #NOTE:Include folders need to be updated to latest include dir as per REORG Folder structure.
-  #For backward compatibility we are currently using version details to determine the include path
-  #Current Work Around to check ROCMSMI Version is using ROCBLAS REORG VERSION
-  if( RVS_ROCBLAS_VERSION_FLAT LESS 2044000 )
-    set(ROCM_SMI_INC_DIR "${ROCM_PATH}/rocm_smi/include")
-    set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/rocm_smi/lib")
-  else()
-    message( STATUS "ROCBLAS REORG Enabled Version: ${RVS_ROCBLAS_VERSION_FLAT}" )
-    set(ROCM_SMI_INC_DIR "${ROCM_PATH}/include")
-    set(ROCM_SMI_LIB_DIR "${ROCM_PATH}/lib")
-  endif()
 endif()
 set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
 
