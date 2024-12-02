@@ -114,6 +114,12 @@ bool rvs::logger::append() {
 
 void rvs::logger::set_log_file(const std::string& fname) {
     strncpy(log_file, fname.c_str(), sizeof(log_file));
+    if (isPathedFile(log_file)){
+        if (!doesFolderExist(log_file)){
+          std::cout << "Unable to create log file, check path.";
+        }
+   }
+
 }
 
 

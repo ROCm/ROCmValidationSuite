@@ -468,6 +468,8 @@ void rvs::exec::do_help() {
   cout << "-j --json          Generate output file in JSON format.\n\n";
 
   cout << "-l --debugLogFile  Generate log file with output and debug information.\n\n";
+ 
+  cout << "-x --jsonLogFile   Specify json log file location.\n\n";
 
   cout << "-t --listTests     List the test modules present in RVS.\n\n";
 

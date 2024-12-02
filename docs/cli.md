@@ -30,6 +30,8 @@
 
 -l --debugLogFile  Generate log file with output and debug information.
 
+-x --jsonLogFile   Specify json log file location.
+
 -t --listTests     List the test modules present in RVS.
 
 -v --verbose       Enable verbose reporting. Equivalent to specifying -d 5 option.

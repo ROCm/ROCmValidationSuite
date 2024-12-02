@@ -266,6 +266,9 @@ configuration file, including the ‘all’ value.
 <tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
 </td></tr>
 
+<tr><td>-x</td><td>--jsonLogFile</td><td>Specify json log file location.
+</td></tr>
+
 <tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
 </td></tr>
 
