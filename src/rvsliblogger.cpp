@@ -23,6 +23,9 @@
  *
  *******************************************************************************/
 #include "include/rvsliblogger.h"
+#include <sys/types.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #include <unistd.h>
 #include <time.h>
@@ -71,6 +74,24 @@ const std::string list_start{"["};
 const std::string list_end{"]"};
 const std::string newline{"\n"};
 const std::string json_folder{"/var/tmp/"};
+
+bool isPathedFile(const std::string &fname){
+  return fname.find('/') != std::string::npos ;
+}
+
+bool doesFolderExist(const std::string &fname){
+  auto loc = fname.find_last_of('/');
+  auto dirName = fname.substr(0,loc);
+  DIR* dir = opendir(dirName.c_str());
+  if (dir == NULL) {
+    // try creating directory, this doesnt exist
+    int ret = mkdir(dirName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
+    return ret == 0;
+  } else
+    return true;
+}
+
+
 /**
  * @brief Set 'append' flag
  *
@@ -93,6 +114,17 @@ bool rvs::logger::append() {
 
 void rvs::logger::set_log_file(const std::string& fname) {
     strncpy(log_file, fname.c_str(), sizeof(log_file));
+}
+
+
+void rvs::logger::set_json_log_file(const std::string& fname) {
+    json_log_file = fname;
+    if (isPathedFile(json_log_file)){
+        if (!doesFolderExist(json_log_file)){
+          std::cout << "Unable to create json log file, check path.";       
+        }
+   }
+
 }
 
 /**
@@ -340,8 +372,6 @@ int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
   }
   std::string row{node_start};
   row += std::string("\"") + Module + std::string("\"") + kv_delimit + node_start + newline;
-  //row += RVSINDENT;
-  //row += std::string("\"") + Action + std::string("\"") + kv_delimit + list_start + newline;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
 }
@@ -491,10 +521,12 @@ int rvs::logger::ToFile(const std::string& Row, bool json_rec) {
 	logfile.assign(log_file);
   if (logfile == "")
     return -1;
-
+  // check if folder, and if it exists/can be created.
   std::fstream fs;
-  fs.open(logfile, std::fstream::out | std::fstream::app);
 
+  fs.open(logfile, std::fstream::out | std::fstream::app);
+  if (fs.fail())
+    return -1;
   fs << Row;
 
   fs.close();

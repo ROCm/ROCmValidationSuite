@@ -127,6 +127,13 @@ int rvs::exec::run() {
     logger::to_json(true);
   }
 
+  // check -x option
+  std::string s_json_log_file;
+  if (rvs::options::has_option("-x", &s_json_log_file)) {
+    logger::set_json_log_file(s_json_log_file);
+  }
+
+
   // check -c option
   string config_file;
   if (rvs::options::has_option("-c", &val)) {
