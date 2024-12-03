@@ -54,6 +54,7 @@ int   rvs::logger::loglevel_m(2);
 bool  rvs::logger::tojson_m(false);
 bool  rvs::logger::append_m(false);
 bool  rvs::logger::isfirstrecord_m(true);
+bool  rvs::logger::initModule(true);
 bool  rvs::logger::isfirstaction_m(true);
 std::mutex  rvs::logger::cout_mutex;
 std::mutex  rvs::logger::log_mutex;
@@ -383,8 +384,9 @@ int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
 }
 
 int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Action) {
-  if(json_log_file.empty()){
+  if(initModule || json_log_file.empty()){
     rvs::logger::JsonStartNodeCreate(Module, Action);
+    initModule =  false;
   }
   isfirstrecord_m = true;
   std::string row{newline};

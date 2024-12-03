@@ -93,6 +93,8 @@ class logger {
   static  bool   tojson_m;
   //! 'true' if append to existing log file is requested
   static  bool   append_m;
+  // state of module specific logs written, only to be run once
+  static bool  initModule;
   //! 'true' if the incoming record is the first record in this rvs invocation
   static  bool   isfirstrecord_m;
   //! 'true' if the creating record is the first action in rvs invocation
