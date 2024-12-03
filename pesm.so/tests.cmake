@@ -35,7 +35,7 @@ set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so "lib${ROCM_SMI_LIB}.s
 )
 
 # Add directories to look for library files to link
-link_directories(${ROCM_SMI_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${HIPRAND_LIB_DIR} HIPBLASLT_LIB_DIR)
+link_directories(${ROCM_SMI_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${HIPRAND_LIB_DIR} ${HIPBLASLT_LIB_DIR} ${YAML_CPP_LIBRARY_DIR})
 
 set (UT_SOURCES test/unitactionbase.cpp
 )

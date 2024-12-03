@@ -34,7 +34,7 @@ set(UT_LINK_LIBS libpthread.so libm.so libdl.so ${ROCM_SMI_LIB}
   ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_LIBRARIES} ${HIPRAND_LIB} ${HIPBLASLT_LIB})
 
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${HIPBLASLT_LIB_DIR})
+link_directories(${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${HIPBLASLT_LIB_DIR} ${YAML_CPP_LIBRARY_DIR})
 
 set (UT_SOURCES src/action.cpp
 )

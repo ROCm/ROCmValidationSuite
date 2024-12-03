@@ -109,7 +109,7 @@ else()
 endif()
 
 ## define include directories
-include_directories(./ ../ include ../include ${YAML_CPP_INCLUDE_DIRS})
+include_directories(./ ../ include ../include ${YAML_CPP_INCLUDE_DIR})
 # Add directories to look for library files to link
 link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR})
 ## additional libraries
