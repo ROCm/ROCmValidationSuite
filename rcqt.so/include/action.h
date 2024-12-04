@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -46,7 +46,7 @@ class rcqt_action : public rvs::actionbase {
     rcqt_action();
     virtual ~rcqt_action();
     virtual int run(void);
-
+    static void cleanup_logs();
   protected:
     //! json_rcqt_node is json node shared through submodules
     void *json_rcqt_node;

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -23,8 +23,6 @@
  *
  *******************************************************************************/
 #include "include/rvs_util.h"
-#include "include/rvsloglp.h"
-#include "include/gpu_util.h"
 #include <vector>
 #include <string>
 #include <regex>
@@ -97,6 +95,15 @@ void *json_node_create(std::string module_name, std::string action_name,
                             action_name.c_str(), log_level, sec, usec, true);
         return json_node;
 }
+
+
+
+void *json_list_create(std::string lname, int log_level){
+
+        void *json_node = rvs::lp::JsonNamedListCreate(lname.c_str() ,log_level);
+        return json_node;
+}
+
 
 /**
  * summary: Fetches gpu id to index map for valid set of GPUs as per config.
@@ -269,3 +276,4 @@ int display_gpu_info (void) {
   }
   return 0;
 }
+

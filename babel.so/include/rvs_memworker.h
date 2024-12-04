@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -219,8 +219,6 @@ class MemWorker : public rvs::ThreadBase {
     bool do_mem_stress_test(int *error, std::string *err_description);
     void log_mem_test_result(bool mem_test_passed);
     virtual void run(void);
-    void log_to_json(const std::string &key, const std::string &value,
-                     int log_level);
     void log_interval_gflops(double gflops_interval);
     void usleep_ex(uint64_t microseconds);
 

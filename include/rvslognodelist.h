@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,8 +22,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef INCLUDE_RVSMINNODE_H_
-#define INCLUDE_RVSMINNODE_H_
+#ifndef INCLUDE_RVSLOGLISTNODE_H_
+#define INCLUDE_RVSLOGLISTNODE_H_
 
 #include <vector>
 #include <memory>
@@ -39,13 +39,13 @@ namespace rvs {
  *
  * @brief Logger Node class
  *
- * Used to construct structure log record for JSON output
+ * Used to construct list structure log record for JSON output
  *
  */
-class MinNode : virtual public LogNode {
+class LogListNode : virtual public LogNode {
  public:
-  explicit MinNode(const char* Name, int LogLevel, bool Named = false,const LogNodeBase* Parent = nullptr);
-  virtual ~MinNode();
+  explicit LogListNode(const char* Name, int LogLevel, const LogNodeBase* Parent = nullptr);
+  virtual ~LogListNode();
 
   virtual std::string ToJson(const std::string& Lead = "");
 
@@ -58,9 +58,8 @@ class MinNode : virtual public LogNode {
 
  protected:
   int Level;
-  bool IsNamed;
 };
 
 }  // namespace rvs
 
-#endif  // INCLUDE_RVSMINNODE_H_
+#endif  // INCLUDE_RVSLOGLISTNODE_H_

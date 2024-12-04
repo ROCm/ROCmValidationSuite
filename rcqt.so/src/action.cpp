@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -118,27 +118,15 @@ int rcqt_action::run() {
   }
 
   // check for -j flag (json logging)
-  if (property.find("cli.-j") != property.end()) {
-    unsigned int sec;
-    unsigned int usec;
-    rvs::lp::get_ticks(&sec, &usec);
-    bjson = true;
-    json_rcqt_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-      action_name.c_str(), rvs::logresults, sec, usec);
-    if (json_rcqt_node == NULL) {
-      // log the error
-      msg =
-      action_name + " " + MODULE_NAME + " "
-      + JSON_CREATE_NODE_ERROR;
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      action_callback(&action_result);
-
-      return 1;
+  if (has_property("cli.-j")) {
+      bjson = true;
     }
+
+  if (bjson){
+      if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+        return 1;
+      }
   }
 
   // check if package check action is going to trigger
@@ -149,6 +137,10 @@ int rcqt_action::run() {
   propchk =  rvs::actionbase::has_property(PACKAGELIST);
   if (propchk == true)
     ret = pkglist_run();
+
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
 
   action_result.state = rvs::actionstate::ACTION_COMPLETED;
   action_result.status = (!ret) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
@@ -189,6 +181,9 @@ int rcqt_action::pkgchk_run() {
     }
 
     handler->setCallback(callback, user_param);
+    handler->setAction(action_name);
+    handler->setPkg(pkg);
+    handler->setModule(MODULE_NAME);
     handler->parseManifest();
     handler->validatePackages();
 
@@ -225,8 +220,15 @@ int rcqt_action::pkglist_run() {
 
   handler->setCallback(callback, user_param);
   handler->setPackageList(package_list);
+  handler->setAction(action_name);
+  handler->setModule(MODULE_NAME);
+
   handler->listPackageVersion();
 
   return 0;
+}
+
+void rcqt_action::cleanup_logs(){
+  rvs::lp::JsonEndNodeCreate();
 }
 

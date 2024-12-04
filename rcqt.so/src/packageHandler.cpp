@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -27,7 +27,10 @@
 #include <sstream>
 #include <iostream>
 #include "include/packageHandler.h"
+#include "include/rvsloglp.h"
 
+
+const std::string metapack{"Meta Package"};
 
 // expected versions usually either = or >=. 
 bool isVersionMismatch(std::string expected, std::string installed){
@@ -67,7 +70,7 @@ bool PackageHandler::parseManifest(){
 void PackageHandler::validatePackages(){
 
   std::string msg;
-
+  void *json_node =json_list_create(std::string(m_metapkg) ,rvs::loginfo);
 	auto pkgmap = getPackageMap();
 	if(pkgmap.empty()){
 		std::cout << "Meta package not installed or no dependencies present !!!" << std::endl;
@@ -76,8 +79,14 @@ void PackageHandler::validatePackages(){
 
 	int totalPackages = 0, missingPackages = 0, badVersions = 0,
 		installedPackages = 0;
+	std::string cumulate_deps;
 	for (const auto& val: pkgmap){
 		++totalPackages;
+		void *pkg_node = json_node_create( module_name, m_metapkg, rvs::loginfo);
+                if (pkg_node){
+                    rvs::lp::AddString(pkg_node, "depname", val.first);
+                    rvs::lp::AddString(pkg_node, "expected", val.second);
+		}
 		auto inputname    = val.first;
 		auto inputversion = val.second;
 		auto installedvers = getInstalledVersion(inputname);
@@ -85,6 +94,8 @@ void PackageHandler::validatePackages(){
 			++missingPackages;
 			std::cout << "Error: package " << inputname << " not installed " <<
 					std::endl;
+			rvs::lp::AddString(pkg_node, "installed", "N/A");
+			rvs::lp::AddNode(json_node, pkg_node);
 			continue;
 		}
 
@@ -101,6 +112,9 @@ void PackageHandler::validatePackages(){
 			std::cout << "Package " << inputname << " installed version is " << 
 					installedvers << std::endl;
 		}
+                rvs::lp::AddString(pkg_node, "installed", "N/A");
+                rvs::lp::AddNode(json_node, pkg_node);
+
 	}
 
   msg = "Meta package validation complete : \n";
@@ -110,6 +124,16 @@ void PackageHandler::validatePackages(){
          "\tVersion mismatch packages    : " + std::to_string(badVersions) + "\n";
 
   std::cout << msg;
+
+  void *res_node = json_node_create(std::string(module_name),
+                        m_metapkg, rvs::loginfo);
+  rvs::lp::AddString(res_node, "Total Packages Validated", std::to_string(totalPackages));
+  rvs::lp::AddString(res_node, "Installed Packages", std::to_string(installedPackages));
+  rvs::lp::AddString(res_node, "Missing Packages", std::to_string(missingPackages));
+  rvs::lp::AddString(res_node, "Mismatched Packages", std::to_string(badVersions));
+  rvs::lp::AddString(res_node, "pass", totalPackages == installedPackages ? "true" : "false");
+  rvs::lp::AddNode(json_node, res_node);
+  rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
 
   if(nullptr != callback) {
     rvs::action_result_t action_result;
@@ -126,35 +150,43 @@ void PackageHandler::validatePackages(){
 void PackageHandler::listPackageVersion(){
 
   std::string msg;
-
-	auto pkglist = getPackageList();
-	if(pkglist.empty()){
-		std::cout << "no packages in the list" << std::endl;
-		return;
-	}
-	int totalPackages = 0, missingPackages = 0, installedPackages = 0;
-
-	for (const auto& pkgname: pkglist){
+  std::vector<std::string> kv_pairs;
+  auto pkglist = getPackageList();
+  if(pkglist.empty()){
+    std::cout << "no packages in the list" << std::endl;
+    return;
+  }
+  int totalPackages = 0, missingPackages = 0, installedPackages = 0;
+  for (const auto& pkgname: pkglist){
 
     ++totalPackages;
 
+    kv_pairs.emplace_back(pkgname);
     auto installedversion = getInstalledVersion(pkgname);
     if(!installedversion.empty()){
-			++installedPackages;
-			std::cout << "Package " << pkgname << " installed version is " << installedversion << std::endl;
+      ++installedPackages;
+      std::cout << "Package " << pkgname << " installed version is " << installedversion << std::endl;
+      kv_pairs.emplace_back(installedversion);
     }
     else {
       ++missingPackages;
       std::cout << "Package " << pkgname << " not installed " << std::endl;
+      kv_pairs.emplace_back("N/A");
       continue;
     }
-	}
-
-	msg = "Packages install validation complete : \n";
-	msg += "\tMissing packages      : " + std::to_string(missingPackages) + "\n";
-	msg += "\tInstalled packages    : " + std::to_string(installedPackages) + "\n";
+  }
+  kv_pairs.emplace_back("Installed Packages");
+  kv_pairs.emplace_back(std::to_string(installedPackages));
+  kv_pairs.emplace_back("Missing Packages");
+  kv_pairs.emplace_back(std::to_string(missingPackages));
+  kv_pairs.emplace_back("pass");
+  kv_pairs.emplace_back(missingPackages == 0 ? "true" : "false");
+  msg = "Packages install validation complete : \n";
+  msg += "\tMissing packages      : " + std::to_string(missingPackages) + "\n";
+  msg += "\tInstalled packages    : " + std::to_string(installedPackages) + "\n";
 
   std::cout << msg;
+  log_to_json(rvs::loginfo, kv_pairs);
 
   if(nullptr != callback) {
     rvs::action_result_t action_result;
@@ -165,6 +197,20 @@ void PackageHandler::listPackageVersion(){
     callback(&action_result, user_param);
   }
 
-	return;
+  return;
 }
 
+
+void PackageHandler::log_to_json(int log_level, std::vector<std::string> kvlist, void* parent) {
+    if  (kvlist.size() == 0 || kvlist.size() %2 != 0){
+            return;
+    }
+    void *json_node = json_node_create(std::string(module_name),
+        action_name.c_str(), log_level);
+    if (json_node) {
+         for (int i =0; i< kvlist.size()-1; i +=2){
+           rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
+      }
+      }
+      rvs::lp::LogRecordFlush(json_node, log_level);
+}

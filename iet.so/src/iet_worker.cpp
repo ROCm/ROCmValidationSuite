@@ -25,6 +25,7 @@
 
 #include <unistd.h>
 #include <string>
+#include <vector>
 #include <iostream>
 #include <chrono>
 #include <memory>
@@ -84,25 +85,6 @@ static uint64_t time_diff(
     return milliseconds.count();
 }
 
-/**
- * @brief logs a message to JSON
- * @param key info type
- * @param value message to log
- * @param log_level the level of log (e.g.: info, results, error)
- */
-void IETWorker::log_to_json(const std::string &key, const std::string &value,
-                     int log_level) {
-	if(!IETWorker::bjson)
-		return;
-        void *json_node = json_node_create(std::string(MODULE_NAME),
-                            action_name.c_str(), log_level);
-        if (json_node) {
-            rvs::lp::AddString(json_node, IET_JSON_LOG_GPU_ID_KEY,
-                            std::to_string(gpu_id));
-            rvs::lp::AddString(json_node, key, value);
-            rvs::lp::LogRecordFlush(json_node);
-        }
-}
 
 
 /**
@@ -200,6 +182,7 @@ bool IETWorker::do_iet_power_stress(void) {
     std::thread compute_t;
     std::thread bandwidth_t;
 
+    auto desc = action_descriptor{action_name, MODULE_NAME, gpu_id};
     // Start compute thread if compute workload is enabled (by default enabled)
     if (iet_cp_workload) {
 
@@ -268,16 +251,14 @@ bool IETWorker::do_iet_power_stress(void) {
         }
     }
 
-    // json log the avg power
-    log_to_json(IET_AVERAGE_POWER_KEY, std::to_string(max_power),
-            rvs::loginfo);
-    //check whether we reached the target power
-    if(max_power >= target_power) {
+    // check whether we reached the target power or within the tolerance limit
+    if(max_power >= (target_power - (target_power * tolerance))) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Average power met the target power :" + " " + std::to_string(max_power);
         rvs::lp::Log(msg, rvs::loginfo);
         result = true;
-    }else {
+    }
+    else {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Average power could not meet the target power  \
             in the given interval, increase the duration and try again, \
@@ -285,6 +266,10 @@ bool IETWorker::do_iet_power_stress(void) {
         rvs::lp::Log(msg, rvs::loginfo);
         result = false;
     }
+
+    if (IETWorker::bjson)
+        log_to_json(desc, rvs::logresults, IET_AVERAGE_POWER_KEY, std::to_string(max_power),
+		    "pass", result ? "true" : "false");
 
     action_result.state = rvs::actionstate::ACTION_RUNNING;
     action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;

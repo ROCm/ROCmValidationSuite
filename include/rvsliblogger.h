@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -81,6 +81,7 @@ class logger {
   static  bool   Stopping(void);
   static  int    Err(const char *Message,
                    const char *Module = nullptr, const char *Action = nullptr);
+  static  void*    JsonNamedListCreate(const char* name, const int LogLevel);
 
  protected:
   static  int    ToFile(const std::string& Row ,  bool json = false);

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -87,6 +87,7 @@ class lp {
   static int   Err(const std::string &Msg, const std::string &Module);
   static int   Err(const std::string &Msg, const std::string &Module,
                    const std::string &Action);
+  static void*   JsonNamedListCreate(const char* name, const int LogLevel);
 
  protected:
   //! Module init structure passed through Initialize() method

@@ -390,13 +390,14 @@ void pebb_action::log_json_bandwidth(std::string srcnode, std::string dstnode,
 	
   if(bjson){
     void *json_node = json_base_node(log_level);
-    json_add_kv(json_node, "srcgpu", srcnode);
+    json_add_kv(json_node, "srccpu", srcnode);
     json_add_kv(json_node, "dstgpu", dstnode);
     if(bandwidth.empty()){
       json_add_kv(json_node, "intf", link_type_string);
     }else{
       json_add_kv(json_node, "throughput", bandwidth);
     }
+    json_add_kv(json_node, "pass", "true");
     json_to_file(json_node, log_level);
   }
 }
@@ -489,7 +490,7 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
 
   rvs::lp::Log(msg, rvs::loginfo);
 
-  log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id),rvs::logresults, buff);
+  log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id),rvs::loginfo, buff);
   RVSTRACE_
   return 0;
 }
