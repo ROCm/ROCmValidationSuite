@@ -151,7 +151,7 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-i", sp));
   grammar.insert(gpair("--indexes", sp));
 
-  sp = std::make_shared<optbase>("-j", command);
+  sp = std::make_shared<optbase>("-j", command, optionalvalue);
   grammar.insert(gpair("-j", sp));
   grammar.insert(gpair("--json", sp));
 
@@ -222,6 +222,10 @@ int rvs::cli::parse(int Argc, char** Argv) {
                    current_option;
           return -1;
         }
+        break;
+
+      case econtext::optionalvalue:
+        token_done = try_optionalvalue(token);
         break;
 
       case econtext::eof:
@@ -344,3 +348,30 @@ bool rvs::cli::try_value(const std::string& token) {
   return true;
 }
 
+/**
+ * @brief Try interpreting given token as a value if present following previous command line option.
+ *
+ * If successful, stores current token in a buffer as value
+ *
+ * @param token token being processed
+ * @return true if successful, false otherwise
+ *
+ */
+bool rvs::cli::try_optionalvalue(const std::string& token) {
+
+  if (token == "")
+    return true;
+
+  //  should not be one of command line options
+  auto it = grammar.find(token);
+  if (it != grammar.end())
+    return false;
+
+  // token is value for previous command
+  current_value = token;
+
+  // emit previous option-value pair:
+  emit_option();
+
+  return true;
+}
