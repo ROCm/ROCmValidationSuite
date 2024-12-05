@@ -463,11 +463,12 @@ void rvs::exec::do_help() {
   cout << "                   the device values specified for every actions in the\n";
   cout << "                   configuration file, including the ‘all’ value.\n\n";
 
-  cout << "-j --json          Generate output file in JSON format.\n\n";
+  cout << "-j --json          Generate output file in JSON format.\n";
+  cout << "                   if a path follows this argument, that will be used as json log file\n";
+  cout << "                   else a file created in /var/tmp/ with timestamp in name.\n\n";
 
   cout << "-l --debugLogFile  Generate log file with output and debug information.\n\n";
  
-  cout << "-x --jsonLogFile   Specify json log file location.\n\n";
 
   cout << "-t --listTests     List the test modules present in RVS.\n\n";
 

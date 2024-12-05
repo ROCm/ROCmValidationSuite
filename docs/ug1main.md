@@ -261,12 +261,11 @@ configuration file, including the ‘all’ value.
 </td></tr>
 
 <tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
+if a path follows this argument, that will be used as json log file;
+else a file created in /var/tmp/ with timestamp in name.
 </td></tr>
 
 <tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
-</td></tr>
-
-<tr><td>-x</td><td>--jsonLogFile</td><td>Specify json log file location.
 </td></tr>
 
 <tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.

@@ -85,18 +85,15 @@ bool doesFolderExist(const std::string &fname){
   auto dirName = fname.substr(0,loc);
   DIR* dir = opendir(dirName.c_str());
   if (dir == NULL) {
-	  std::cout << "here in no dir"<< std::endl;
     // try creating directory, this doesnt exist. if fails return
     int ret = mkdir(dirName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
     if (ret){
-	    std::cout << "mkdir fails" << std::endl;
       return false;
     }
   } 
   std::fstream fs;
-  fs.open(fname);
-  if (fs.fail()){
-	  std::cout << "fopen fail :" << fname <<std::endl;
+  fs.open(fname,  std::ios::out | std::ios::trunc);
+  if (fs.fail()){// unable to create file in dir
       return false;
   }
   return true;
