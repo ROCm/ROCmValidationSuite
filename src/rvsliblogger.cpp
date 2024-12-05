@@ -85,13 +85,22 @@ bool doesFolderExist(const std::string &fname){
   auto dirName = fname.substr(0,loc);
   DIR* dir = opendir(dirName.c_str());
   if (dir == NULL) {
-    // try creating directory, this doesnt exist
+	  std::cout << "here in no dir"<< std::endl;
+    // try creating directory, this doesnt exist. if fails return
     int ret = mkdir(dirName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
-    return ret == 0;
-  } else
-    return true;
+    if (ret){
+	    std::cout << "mkdir fails" << std::endl;
+      return false;
+    }
+  } 
+  std::fstream fs;
+  fs.open(fname);
+  if (fs.fail()){
+	  std::cout << "fopen fail :" << fname <<std::endl;
+      return false;
+  }
+  return true;
 }
-
 
 /**
  * @brief helper to create json file name
