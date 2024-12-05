@@ -94,6 +94,21 @@ bool doesFolderExist(const std::string &fname){
 
 
 /**
+ * @brief helper to create json file name
+ * @return json file name
+ */
+std::string json_filename(){
+        std::string json_file;
+        json_file.assign("rvs");
+        std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+            std::chrono::system_clock::now().time_since_epoch());
+        json_file = json_file + "_" + std::to_string(ms.count()) + ".json";
+        json_file = json_folder + json_file;
+        return json_file;
+}
+
+
+/**
  * @brief Set 'append' flag
  *
  * @param flag new value
@@ -125,13 +140,20 @@ void rvs::logger::set_log_file(const std::string& fname) {
 
 
 void rvs::logger::set_json_log_file(const std::string& fname) {
-    json_log_file = fname;
-    if (isPathedFile(json_log_file)){
-        if (!doesFolderExist(json_log_file)){
-          std::cout << "Unable to create json log file, check path.";       
-        }
-   }
+    std::stringstream ss;
+    if (!fname.empty()){
+        json_log_file = fname;
+        if (isPathedFile(fname) && !doesFolderExist(fname)){
+		json_log_file = json_filename();
+                ss << "Unable to create Json log file specified at" << fname << std::endl;
+            }
 
+   }else{
+       json_log_file = json_filename(); 
+   }
+    ss << "Json log file created at " << json_log_file << std::endl;
+    std::lock_guard<std::mutex> lk(cout_mutex);
+    std::cout << ss.str();
 }
 
 /**
@@ -301,19 +323,6 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   return 0;
 }
 
-/**
- * @brief helper to create json file name
- * @return json file name
- */
-std::string json_filename(const char* moduleName){
-	std::string json_file;
-        json_file.assign(moduleName);
-        std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
-            std::chrono::system_clock::now().time_since_epoch());
-        json_file = json_file + "_" + std::to_string(ms.count()) + ".json";
-        json_file = json_folder + json_file;
-        return json_file;
-}  
 
 /**
  * @brief Create log record
@@ -334,7 +343,7 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
   uint32_t   sec;
   uint32_t   usec;
   if( json_log_file.empty()){
-       json_log_file = json_filename(Module);
+       json_log_file = json_filename();
        std::lock_guard<std::mutex> lk(cout_mutex);
        std::cout << "json log file is " << json_log_file<< std::endl;
   }
@@ -373,7 +382,7 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
 #if 1
 int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
     if ( json_log_file.empty()){
-        json_log_file = json_filename(Module);
+        json_log_file = json_filename();
         std::lock_guard<std::mutex> lk(cout_mutex);
         std::cout << "json log file is " << json_log_file<< std::endl;
   }

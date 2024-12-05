@@ -159,9 +159,6 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-l", sp));
   grammar.insert(gpair("--debugLogFile", sp));
 
-  sp = std::make_shared<optbase>("-x", command, value);
-  grammar.insert(gpair("-x", sp));
-  grammar.insert(gpair("--jsonLogFile", sp));
 
   sp = std::make_shared<optbase>("-q", command);
   grammar.insert(gpair("-q", sp));

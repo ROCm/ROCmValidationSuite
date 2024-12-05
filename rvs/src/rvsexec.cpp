@@ -123,16 +123,12 @@ int rvs::exec::run() {
   }
 
   // check -j option
-  if (rvs::options::has_option("-j", &val)) {
-    logger::to_json(true);
-  }
-
-  // check -x option
   std::string s_json_log_file;
-  if (rvs::options::has_option("-x", &s_json_log_file)) {
+  if (rvs::options::has_option("-j", &s_json_log_file)) {
+    logger::to_json(true);
     logger::set_json_log_file(s_json_log_file);
+    
   }
-
 
   // check -c option
   string config_file;
@@ -453,7 +449,9 @@ void rvs::exec::do_help() {
   cout << "-a --appendLog     When generating a debug logfile, do not overwrite the content\n";
   cout << "                   of the current log. Use in conjuction with -d and -l options.\n\n";
 
-  cout << "-c --config        Specify the test configuration file to use.\n\n";
+  cout << "-c --config        Specify the test configuration file to use.\n";
+  cout << "                   location of log can be specified following this option, if none \n";
+  cout << "                   specified a file is created in /var/usr and name is output to stdout\n\n";
 
   cout << "-d --debugLevel    Specify the debug level for the output log. The range is 0-5 with\n";
   cout << "                   5 being the highest verbose level.\n\n";
