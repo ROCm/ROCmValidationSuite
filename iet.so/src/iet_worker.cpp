@@ -270,14 +270,15 @@ bool IETWorker::do_iet_power_stress(void) {
 
     // json log the avg power
     log_to_json(IET_AVERAGE_POWER_KEY, std::to_string(max_power),
-            rvs::loginfo);
-    //check whether we reached the target power
-    if(max_power >= target_power) {
+        rvs::loginfo);
+    // check whether we reached the target power or within the tolerance limit
+    if(max_power >= (target_power - (target_power * tolerance))) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Average power met the target power :" + " " + std::to_string(max_power);
         rvs::lp::Log(msg, rvs::loginfo);
         result = true;
-    }else {
+    }
+    else {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " " + " Average power could not meet the target power  \
             in the given interval, increase the duration and try again, \
