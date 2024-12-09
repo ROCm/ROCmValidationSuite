@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -156,7 +156,9 @@ int pbqt_action::run() {
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = "Parameters not valid. Nothing to execute !!!";
     action_callback(&action_result);
-
+    if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
     return 0;
   }
 

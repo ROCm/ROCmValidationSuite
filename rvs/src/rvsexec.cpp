@@ -123,8 +123,11 @@ int rvs::exec::run() {
   }
 
   // check -j option
-  if (rvs::options::has_option("-j", &val)) {
+  std::string s_json_log_file;
+  if (rvs::options::has_option("-j", &s_json_log_file)) {
     logger::to_json(true);
+    logger::set_json_log_file(s_json_log_file);
+    
   }
 
   // check -c option
@@ -458,9 +461,12 @@ void rvs::exec::do_help() {
   cout << "                   the device values specified for every actions in the\n";
   cout << "                   configuration file, including the ‘all’ value.\n\n";
 
-  cout << "-j --json          Generate output file in JSON format.\n\n";
+  cout << "-j --json          Generate output file in JSON format.\n";
+  cout << "                   if a path follows this argument, that will be used as json log file\n";
+  cout << "                   else a file created in /var/tmp/ with timestamp in name.\n\n";
 
   cout << "-l --debugLogFile  Generate log file with output and debug information.\n\n";
+ 
 
   cout << "-t --listTests     List the test modules present in RVS.\n\n";
 

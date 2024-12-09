@@ -2,6 +2,17 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.1.0 for ROCm 6.3.0
+
+### Added
+
+- Support for hipBLASLT blas library and option to select blas library in conf. file.
+- Added Babel, thermal and performance benchmark test for MI308X.
+
+### Changed
+
+- Babel parameters made runtime configurable.
+
 ## RVS 1.0.0 for ROCm 6.2.0
 
 ### Added
