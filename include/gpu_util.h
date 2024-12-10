@@ -43,6 +43,7 @@ extern void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
 extern bool gpu_check_if_mcm_die (int idx);
 extern int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index);
 extern void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf);
+extern bool gpu_check_if_gpu_indexes (std::vector <uint16_t> &idx);
 
 namespace rvs {
 

@@ -385,31 +385,36 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
     return -1;
   }
 
+  rsmi_init(0);
+
   rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-  if( err == RSMI_STATUS_SUCCESS){
+  if(err == RSMI_STATUS_SUCCESS){
     for(auto i = 0; i < smi_num_devices; ++i){
       err = rsmi_dev_pci_id_get(i, &val_ui64);
       smi_map.insert({val_ui64, i});
     }
   }
   else {
+    rsmi_shut_down();
     return -1;
   }
-  
+  rsmi_shut_down();
+
+
   // compute device location_id (needed to match this device
   // with one of those found while querying the pci bus
   unsigned int pDom=0, pBus=0, pDev=0, pFun =0;
   char pciString[256] = {0};
   auto hipret = hipDeviceGetPCIBusId(pciString, 256, hip_index);
   if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&pDom),
-             reinterpret_cast<unsigned int*>(&pBus),
-             reinterpret_cast<unsigned int*>(&pDev),
-             reinterpret_cast<unsigned int*>(&pFun)) != 4) {
+        reinterpret_cast<unsigned int*>(&pBus),
+        reinterpret_cast<unsigned int*>(&pDev),
+        reinterpret_cast<unsigned int*>(&pFun)) != 4) {
     std::cout << "parsing error in BDF:" << pciString << std::endl;
   }
 
   uint64_t hip_dev_location_id = ( (((uint16_t)(pDom) & 0xffff) << 13) |
-    (((uint16_t) (pBus)) << 8) | (((uint16_t)(pDev)) << 3) | ((uint16_t)(pFun)));
+      (((uint16_t) (pBus)) << 8) | (((uint16_t)(pDev)) << 3) | ((uint16_t)(pFun)));
   if(smi_map.find(hip_dev_location_id) != smi_map.end()) {
     *smi_index = smi_map[hip_dev_location_id];
     return 0;
@@ -633,4 +638,12 @@ int rvs::gpulist::gpu2domain(const uint16_t GpuID, uint16_t* pDomain) {
   return 0;
 }
 
+/**
+ * @brief Check if the indexes list is gpu indexes
+ * @param 
+ * @return true if indexes are GPU indexes
+ **/
+bool gpu_check_if_gpu_indexes (std::vector <uint16_t> &idx) {
+
+}
 

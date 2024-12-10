@@ -217,6 +217,7 @@ int display_gpu_info (void) {
     int32_t node_id;
     int32_t gpu_id;
     int32_t device_id;
+    int32_t smi_index;
   };
 
   char buf[256];
@@ -251,6 +252,12 @@ int display_gpu_info (void) {
     if (rvs::gpulist::gpu2device(gpu_id, &dev_id)){
       continue;
     }
+
+    uint32_t smi_index;
+    if (gpu_hip_to_smi_index(i, &smi_index)){
+      continue;
+    }
+
     hipDeviceGetPCIBusId(buf, 256, i);
     device_info info;
     info.bus       = buf;
@@ -258,16 +265,18 @@ int display_gpu_info (void) {
     info.node_id   = node_id;
     info.gpu_id    = gpu_id;
     info.device_id = dev_id;
-    gpu_info_list.push_back(info);
+    info.smi_index = smi_index;
 
+    gpu_info_list.push_back(info);
   }
+
   std::sort(gpu_info_list.begin(), gpu_info_list.end(),
            [](const struct device_info& a, const struct device_info& b) {
-             return a.node_id < b.node_id; });
+             return a.smi_index < b.smi_index; });
   if (!gpu_info_list.empty()) {
     std::cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {
-      std::cout << info.bus  << " - GPU[" << std::setw(2) << info.node_id
+      std::cout << info.bus  << " - GPU[" << std::setw(2) << info.smi_index << " - " << std::setw(2) << info.node_id
       << " - " << std::setw(5) << info.gpu_id << "] " << info.name
       << " (Device " << info.device_id << ")\n";
     }

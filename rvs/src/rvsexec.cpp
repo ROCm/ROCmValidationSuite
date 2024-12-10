@@ -127,7 +127,6 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-j", &s_json_log_file)) {
     logger::to_json(true);
     logger::set_json_log_file(s_json_log_file);
-    
   }
 
   // check -c option
@@ -483,7 +482,7 @@ void rvs::exec::do_help() {
   cout << "-h --help          Display usage information and exit.\n\n";
 }
 
-//! Reports list of AMD GPUs presnt in the system
+//! Reports list of AMD GPUs present in the system
 int rvs::exec::do_gpu_list() {
   cout << "\nROCm Validation Suite (version " << RVS_VERSION_STRING << ")\n\n";
 
