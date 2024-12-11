@@ -82,9 +82,12 @@ void PackageHandler::validatePackages(){
 	std::string cumulate_deps;
 	for (const auto& val: pkgmap){
 		++totalPackages;
+                auto pkname = val.first.find(ORDEP) == std::string::npos ? val.first : val.first.substr(ORDEP.size());
 		void *pkg_node = json_node_create( module_name, m_metapkg, rvs::loginfo);
                 if (pkg_node){
-                    rvs::lp::AddString(pkg_node, "depname", val.first);
+                    if (val.first.find(ORDEP) != std::string::npos)
+                        
+                    rvs::lp::AddString(pkg_node, "depname", pkname);
                     rvs::lp::AddString(pkg_node, "expected", val.second);
 		}
 		auto inputname    = val.first;
@@ -111,8 +114,9 @@ void PackageHandler::validatePackages(){
 				inputname = inputname.substr(ORDEP.size()); // Remove ordep identifier
 			std::cout << "Package " << inputname << " installed version is " << 
 					installedvers << std::endl;
+			//rvs::lp::AddString(pkg_node, "installed",installedvers);
 		}
-                rvs::lp::AddString(pkg_node, "installed", "N/A");
+                rvs::lp::AddString(pkg_node, "installed", installedvers);
                 rvs::lp::AddNode(json_node, pkg_node);
 
 	}
@@ -133,7 +137,7 @@ void PackageHandler::validatePackages(){
   rvs::lp::AddString(res_node, "Mismatched Packages", std::to_string(badVersions));
   rvs::lp::AddString(res_node, "pass", totalPackages == installedPackages ? "true" : "false");
   rvs::lp::AddNode(json_node, res_node);
-  rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+  rvs::lp::LogRecordFlush(json_node, rvs::logresults);
 
   if(nullptr != callback) {
     rvs::action_result_t action_result;
@@ -186,7 +190,7 @@ void PackageHandler::listPackageVersion(){
   msg += "\tInstalled packages    : " + std::to_string(installedPackages) + "\n";
 
   std::cout << msg;
-  log_to_json(rvs::loginfo, kv_pairs);
+  log_to_json(rvs::logresults, kv_pairs);
 
   if(nullptr != callback) {
     rvs::action_result_t action_result;

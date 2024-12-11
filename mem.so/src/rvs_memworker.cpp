@@ -134,7 +134,7 @@ void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
 		  std::string tname{rvs_memtests[i].desc};
 		  tname = tname.substr(tname.find('[')+1, tname.find(']') - tname.find('[')-1);
 		  std::string passed = err == 0 ? "true" : "false";
-		  log_to_json(rvs::loginfo, "Test", tname, "Time Taken", tdiff_str, "errors",std::to_string(err), "pass", passed);
+		  log_to_json(rvs::logresults, "Test", tname, "Time Taken", tdiff_str, "errors",std::to_string(err), "pass", passed);
 	  }
      }//for
 
@@ -207,7 +207,7 @@ void MemWorker::run() {
           		std::to_string(gpu_id));
 		rvs::lp::AddString(json_node,"Total Memory", std::to_string(total));
 		rvs::lp::AddString(json_node,"Free Memory", std::to_string(free));
-		rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+		rvs::lp::LogRecordFlush(json_node, rvs::logresults);
 	}
     } 
     allocate_small_mem();
