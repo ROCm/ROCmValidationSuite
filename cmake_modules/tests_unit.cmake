@@ -27,7 +27,7 @@
 ## define additional unit testing include directories
 include_directories(${UT_INC})
 ## define additional unit testing lib directories
-link_directories(${UT_LIB} ${RVS_LIB_DIR})
+link_directories(${UT_LIB} ${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR})
 
 file(GLOB TESTSOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/test*.cpp )
 #message ( "TESTSOURCES: ${TESTSOURCES}" )
