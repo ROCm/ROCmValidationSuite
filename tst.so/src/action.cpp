@@ -529,7 +529,8 @@ int tst_action::get_all_selected_gpus(void) {
     rsmi_init(0);
     // find compatible GPUs to run tst tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, tst_gpus_device_index,
-                    property_device, property_device_id, property_device_all, true); // MCM checks
+        property_device, property_device_id, property_device_all,
+        property_device_index, property_device_index_all, true);  // MCM checks
     if(!amd_gpus_found){
 
         msg = "No devices match criteria from the test configuation.";

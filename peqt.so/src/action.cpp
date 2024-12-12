@@ -174,6 +174,11 @@ bool peqt_action::get_all_common_config_keys(void) {
     rvs::lp::Log(msg, rvs::loginfo);
   }
 
+  if (property_device_index.size() || property_device.size()) {
+    property_device_all = false;
+    property_device_index_all = false;
+  }
+
   return res;
 }
 
@@ -441,18 +446,34 @@ int peqt_action::run(void) {
         continue;
       }
 
+      uint16_t gpu_idx;
+      if (rvs::gpulist::gpu2gpuindex(gpu_id, &gpu_idx)) {
+        RVSTRACE_
+        continue;
+      }
+
       // check for deviceid filtering
       if (property_device_id > 0 && dev->device_id != property_device_id) {
         RVSTRACE_
         continue;
       }
 
-      if (!property_device_all) {
+      if (!property_device_all && property_device.size()) {
         RVSTRACE_
         if (find(property_device.begin(), property_device.end(), gpu_id) ==
                  property_device.end()) {
           RVSTRACE_
-            continue;
+          continue;
+        }
+      }
+      RVSTRACE_
+
+      if (!property_device_index_all && property_device_index.size()) {
+        RVSTRACE_
+        if (find(property_device_index.begin(), property_device_index.end(), gpu_idx) ==
+                 property_device_index.end()) {
+          RVSTRACE_
+          continue;
         }
       }
       RVSTRACE_

@@ -53,6 +53,7 @@ using std::map;
 
 Worker::Worker() {
   bfiltergpu = false;
+  bfiltergpuidx = false;
 }
 Worker::~Worker() {}
 
@@ -64,6 +65,17 @@ void Worker::set_gpuids(const std::vector<uint16_t>& GpuIds) {
   gpuids = GpuIds;
   if (gpuids.size()) {
     bfiltergpu = true;
+  }
+}
+
+/**
+ * @brief Sets GPU Indexes for filtering
+ * @arg GpuIdx Array of GPU indexes
+ */
+void Worker::set_gpuidx(const std::vector<uint16_t>& GpuIdx) {
+  gpuidx = GpuIdx;
+  if (gpuidx.size()) {
+    bfiltergpuidx = true;
   }
 }
 
@@ -135,6 +147,10 @@ void Worker::run() {
       if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
         continue;
 
+      uint16_t gpu_idx;
+      if (rvs::gpulist::gpu2gpuindex(gpu_id, &gpu_idx))
+        continue;
+
       // device_id filtering
       if ( device_id != 0 && dev->device_id != device_id)
         continue;
@@ -143,6 +159,13 @@ void Worker::run() {
       if (bfiltergpu) {
         auto itgpuid = find(gpuids.begin(), gpuids.end(), gpu_id);
         if (itgpuid == gpuids.end())
+          continue;
+      }
+
+      // gpu index filtering
+      if (bfiltergpuidx) {
+        auto itgpuidx = find(gpuidx.begin(), gpuidx.end(), gpu_idx);
+        if (itgpuidx == gpuidx.end())
           continue;
       }
 

@@ -422,7 +422,8 @@ int perf_action::get_all_selected_gpus(void) {
 
     // iterate over all available & compatible AMD GPUs
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, perf_gpus_device_index,
-                    property_device, property_device_id, property_device_all);
+        property_device, property_device_id, property_device_all,
+        property_device_index, property_device_index_all);
     if (amd_gpus_found) {
         if (do_gpu_stress_test(perf_gpus_device_index))
             return 0;

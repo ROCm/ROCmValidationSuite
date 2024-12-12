@@ -36,6 +36,7 @@
 extern int  gpu_num_subdirs(const char* dirpath, const char* prefix);
 extern void gpu_get_all_location_id(std::vector<uint16_t>* pgpus_location_id);
 extern void gpu_get_all_gpu_id(std::vector<uint16_t>* pgpus_id);
+extern void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_idx);
 extern void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id);
 extern void gpu_get_all_node_id(std::vector<uint16_t>* pgpus_node_id);
 extern void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
@@ -43,7 +44,7 @@ extern void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
 extern bool gpu_check_if_mcm_die (int idx);
 extern int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index);
 extern void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf);
-extern bool gpu_check_if_gpu_indexes (std::vector <uint16_t> &idx);
+extern bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &idx);
 
 namespace rvs {
 
@@ -64,6 +65,7 @@ class gpulist {
   static int node2gpu(const uint16_t NodeID, uint16_t* pGpuID);
   static int location2device(const uint16_t LocationID, uint16_t* pDeviceID);
   static int gpu2device(const uint16_t GpuID, uint16_t* pDeviceID);
+  static int gpu2gpuindex(const uint16_t GpuID, uint16_t* pGpuIdx);
   static int location2node(const uint16_t LocationID, uint16_t* pNodeID);
   static int gpu2node(const uint16_t GpuID, uint16_t* pNodeID);
   static int gpu2domain(const uint16_t GpuID, uint16_t* pDomain);
@@ -77,6 +79,8 @@ class gpulist {
   static std::vector<uint16_t> location_id;
   //! Array of GPU IDs
   static std::vector<uint16_t> gpu_id;
+  //! Array of GPU Indexes
+  static std::vector<uint16_t> gpu_idx;
   //! Array of device IDs
   static std::vector<uint16_t> device_id;
   //! Array of node IDs

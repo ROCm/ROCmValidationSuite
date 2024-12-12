@@ -343,7 +343,7 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
     } else {
 
       // just set this one property
-      if (indexes_provided) {
+      if (indexes_provided && it->first.as<std::string>() == "device") {
 
         std::replace(indexes.begin(), indexes.end(), ',', ' ');
 
@@ -357,8 +357,9 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
 
         // Check if indexes are gpu indexes or ids
         if(gpu_check_if_gpu_indexes (idx)) {
-
           sts += pif1->property_set("device_index", indexes);
+          sts += pif1->property_set(it->first.as<std::string>(),
+              it->second.as<std::string>());
         } else {
           sts += pif1->property_set("device", indexes);
         }
