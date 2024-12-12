@@ -587,8 +587,10 @@ int gst_action::get_all_selected_gpus(void) {
   hip_num_gpu_devices = get_num_amd_gpu_devices();
   if (hip_num_gpu_devices < 1)
     return hip_num_gpu_devices;
+
   amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, gst_gpus_device_index, 
-      property_device, property_device_id, property_device_all);
+      property_device, property_device_id, property_device_all,
+      property_device_index, property_device_index_all); 
   // iterate over all available & compatible AMD GPUs
 
   if (amd_gpus_found) {

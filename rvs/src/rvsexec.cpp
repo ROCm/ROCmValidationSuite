@@ -457,8 +457,8 @@ void rvs::exec::do_help() {
   cout << "-g --listGpus      List all the GPUs available in the machine, that RVS supports and\n";
   cout << "                   has visibility.\n\n";
 
-  cout << "-i --indexes       Comma separated list of GPU ids to run test on. This overrides\n";
-  cout << "                   the device values specified for every actions in the\n";
+  cout << "-i --indexes       Comma separated list of GPU ids/indexes to run test on. This overrides\n";
+  cout << "                   the device/device_index values specified for every actions in the\n";
   cout << "                   configuration file, including the ‘all’ value.\n\n";
 
   cout << "-j --json          Generate output file in JSON format.\n";
@@ -483,7 +483,7 @@ void rvs::exec::do_help() {
   cout << "-h --help          Display usage information and exit.\n\n";
 }
 
-//! Reports list of AMD GPUs presnt in the system
+//! Reports list of AMD GPUs present in the system
 int rvs::exec::do_gpu_list() {
   cout << "\nROCm Validation Suite (version " << RVS_VERSION_STRING << ")\n\n";
 

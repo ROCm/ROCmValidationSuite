@@ -40,6 +40,7 @@
 
 std::vector<uint16_t> rvs::gpulist::location_id;
 std::vector<uint16_t> rvs::gpulist::gpu_id;
+std::vector<uint16_t> rvs::gpulist::gpu_idx;
 std::vector<uint16_t> rvs::gpulist::device_id;
 std::vector<uint16_t> rvs::gpulist::node_id;
 std::vector<uint16_t> rvs::gpulist::domain_id;
@@ -179,6 +180,66 @@ void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id) {
           (*pgpus_device_id).push_back(prop_val);
           break;
         }
+      }
+    }
+
+    f_id.close();
+    f_prop.close();
+  }
+}
+
+/**
+ * gets all GPU device indexes
+ * @param pgpus_device_idx ptr to vector that will store all the GPU indexes
+ * @return
+ */
+void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
+
+  std::map<uint64_t, uint32_t> smi_map;
+  uint32_t smi_num_devices = 0;
+  uint64_t gpuid;
+
+  rsmi_init(0);
+
+  rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
+  if(err == RSMI_STATUS_SUCCESS){
+    for(auto i = 0; i < smi_num_devices; ++i){
+      err = rsmi_dev_guid_get(i, &gpuid);
+      smi_map.insert({gpuid, i});
+    }
+  }
+  else {
+    rsmi_shut_down();
+    return;
+  }
+  rsmi_shut_down();
+
+  ifstream f_id, f_prop;
+  char path[KFD_PATH_MAX_LENGTH];
+
+  std::string prop_name;
+  int gpu_id;
+  uint32_t prop_val;
+
+  // Discover the number of nodes: Inside nodes folder there are only folders
+  // that represent the node number
+  int num_nodes = gpu_num_subdirs(KFD_SYS_PATH_NODES, "");
+
+  // get all GPUs device id
+  for (int node_id = 0; node_id < num_nodes; node_id++) {
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES,
+        node_id);
+    f_id.open(path);
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties",
+        KFD_SYS_PATH_NODES, node_id);
+    f_prop.open(path);
+
+    f_id >> gpu_id;
+
+    if (gpu_id != 0) {
+
+      if(smi_map.find(gpu_id) != smi_map.end()) {
+        (*pgpus_gpu_idx).push_back(smi_map[gpu_id]);
       }
     }
 
@@ -385,26 +446,30 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
     return -1;
   }
 
+  rsmi_init(0);
+
   rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-  if( err == RSMI_STATUS_SUCCESS){
+  if(err == RSMI_STATUS_SUCCESS){
     for(auto i = 0; i < smi_num_devices; ++i){
       err = rsmi_dev_pci_id_get(i, &val_ui64);
       smi_map.insert({val_ui64, i});
     }
   }
   else {
+    rsmi_shut_down();
     return -1;
   }
-  
+  rsmi_shut_down();
+
   // compute device location_id (needed to match this device
   // with one of those found while querying the pci bus
   unsigned int pDom=0, pBus=0, pDev=0, pFun =0;
   char pciString[256] = {0};
   auto hipret = hipDeviceGetPCIBusId(pciString, 256, hip_index);
   if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&pDom),
-             reinterpret_cast<unsigned int*>(&pBus),
-             reinterpret_cast<unsigned int*>(&pDev),
-             reinterpret_cast<unsigned int*>(&pFun)) != 4) {
+        reinterpret_cast<unsigned int*>(&pBus),
+        reinterpret_cast<unsigned int*>(&pDev),
+        reinterpret_cast<unsigned int*>(&pFun)) != 4) {
     std::cout << "parsing error in BDF:" << pciString << std::endl;
   }
 
@@ -425,6 +490,7 @@ int rvs::gpulist::Initialize() {
 
   gpu_get_all_location_id(&location_id);
   gpu_get_all_gpu_id(&gpu_id);
+  gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&device_id);
   gpu_get_all_node_id(&node_id);
   gpu_get_all_domain_id(&domain_id, domain_loc_map);
@@ -544,6 +610,24 @@ int rvs::gpulist::gpu2device(const uint16_t GpuID, uint16_t* pDeviceID) {
   return 0;
 }
 
+/**
+ * @brief Given Gpu ID return GPU device index
+ * @param GpuID Gpu ID of a GPU
+ * @param pDeviceID device ID of the GPU
+ * @return 0 if found, -1 otherwise
+ **/
+int rvs::gpulist::gpu2gpuindex(const uint16_t GpuID, uint16_t* pGpuIdx) {
+  const auto it = std::find(gpu_id.cbegin(),
+                            gpu_id.cend(), GpuID);
+  if (it == gpu_id.cend()) {
+    return -1;
+  }
+
+  size_t pos = std::distance(gpu_id.cbegin(), it);
+  *pGpuIdx = gpu_idx[pos];
+  return 0;
+}
+
 
 /**
  * @brief Given Gpu ID return GPU HSA Node ID
@@ -628,9 +712,36 @@ int rvs::gpulist::gpu2domain(const uint16_t GpuID, uint16_t* pDomain) {
     return -1;
   }
   size_t pos = std::distance(gpu_id.cbegin(), it);
-  std::cout << "For GPU " << GpuID << " domain is " << domain_id[pos] << std::endl;
   *pDomain = domain_id[pos];
   return 0;
 }
 
+/**
+ * @brief Check if the indexes list is gpu indexes
+ * @param 
+ * @return true if indexes are GPU indexes
+ **/
+bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &index) {
+
+  uint32_t smi_num_devices = 0;
+
+  rsmi_init(0);
+
+  rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
+  if(err != RSMI_STATUS_SUCCESS) {
+    rsmi_shut_down();
+    return false;
+  }
+
+  for(auto i = 0; i < index.size(); i++) {
+
+    if(index[i] >= smi_num_devices) {
+      rsmi_shut_down();
+      return false;
+    }
+  }
+
+  rsmi_shut_down();
+  return true;
+}
 
