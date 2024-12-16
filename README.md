@@ -20,15 +20,11 @@ CentOS :
 
 RHEL :
 
-    sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
-
-    wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
-
-    sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
+    sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel pciutils-devel
 
 SLES :
 
-    sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
+    sudo zypper install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
 ## Install ROCm stack, rocblas and rocm-smi-lib
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
