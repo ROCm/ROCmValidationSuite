@@ -112,83 +112,104 @@ void *json_list_create(std::string lname, int log_level){
  * @out: map of gpu id to index in gpus_device_index and returns true if found 
  */
 bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_index,
-                const std::vector<uint16_t>& property_device,
-                const int& property_device_id, bool property_device_all, bool mcm_check){
-    bool amd_gpus_found = false;
-    bool mcm_die = false;
-    bool amd_mcm_gpu_found = false;
-    for (int i = 0; i < hip_num_gpu_devices; i++) {
-        // get GPU device properties
-        hipDeviceProp_t props;
-        hipGetDeviceProperties(&props, i);
+    const std::vector<uint16_t>& property_device, const int& property_device_id,
+    bool property_device_all, const std::vector<uint16_t>& property_device_index,
+    bool property_device_index_all, bool mcm_check) {
 
-        // compute device location_id (needed in order to identify this device
-        // in the gpus_id/gpus_device_id list
-	unsigned int pDom, pBus, pDev, pFun;
-	getBDF(i, pDom, pBus, pDev, pFun);
-        unsigned int dev_location_id =
-            ((((unsigned int) (pBus)) << 8) | (((unsigned int)(pDev)) << 3)  | ((unsigned int)(pFun)));
-        uint16_t dev_domain = pDom;
-        uint16_t devId;
-        uint16_t gpu_id;
-        if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
-            continue;
-        }
-        if (rvs::gpulist::gpu2device(gpu_id, &devId)){
-            continue;
-        }
-        // filter by device id if needed
-        if (property_device_id > 0 && property_device_id != devId)
-          continue;
+  bool amd_gpus_found = false;
+  bool mcm_die = false;
+  bool amd_mcm_gpu_found = false;
 
-        // check if this GPU is part of the select ones as per config
-        // (device = "all" or the gpu_id is in the device: <gpu id> list)
-        bool cur_gpu_selected = false;
+  for (int i = 0; i < hip_num_gpu_devices; i++) {
 
-        if (property_device_all) {
-            cur_gpu_selected = true;
-        } else {
-            // search for this gpu in the list
-            // provided under the <device> property
-            auto it_gpu_id = find(property_device.begin(),
-                                  property_device.end(),
-                                  gpu_id);
+    // get GPU device properties
+    hipDeviceProp_t props;
+    hipGetDeviceProperties(&props, i);
 
-            if (it_gpu_id != property_device.end())
-                cur_gpu_selected = true;
-        }
-	// if mcm check enabled, print message if device is MCM
-	//  MCM is only for mi200, so check only if gfx90a
-        if (mcm_check && (std::string{props.gcnArchName}.find("gfx90a") != std::string::npos) ){
-	    std::stringstream msg_stream;
-            mcm_die =  gpu_check_if_mcm_die(i);
-	    if (mcm_die) {
-                msg_stream.str("");
-                msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
-                        " - " << "GPU is a die/chiplet in Multi-Chip Module (MCM) GPU";
-                rvs::lp::Log(msg_stream.str(), rvs::logresults);
+    // compute device location_id (needed in order to identify this device
+    // in the gpus_id/gpus_device_id list
+    unsigned int pDom, pBus, pDev, pFun;
+    getBDF(i, pDom, pBus, pDev, pFun);
+    unsigned int dev_location_id =
+      ((((unsigned int) (pBus)) << 8) | (((unsigned int)(pDev)) << 3)  | ((unsigned int)(pFun)));
+    uint16_t dev_domain = pDom;
+    uint16_t devId;
+    uint16_t gpuIdx;
+    uint16_t gpu_id;
 
-                amd_mcm_gpu_found = true;
-            }
-	}
-	// excluding secondary die from test list, drops power reading substantially
-	if (cur_gpu_selected) { // need not exclude secondary die, just log it out.
-                    gpus_device_index.insert
-                        (std::pair<int, uint16_t>(i, gpu_id));
-                    amd_gpus_found = true;
-	}
-	mcm_die = false;
+    if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
+      continue;
     }
-    if (amd_mcm_gpu_found && mcm_check) {
-        std::stringstream msg_stream;
+    if (rvs::gpulist::gpu2device(gpu_id, &devId)){
+      continue;
+    }
+    if (rvs::gpulist::gpu2gpuindex(gpu_id, &gpuIdx)){
+      continue;
+    }
+
+    // filter by device id if needed
+    if (property_device_id > 0 && property_device_id != devId)
+      continue;
+
+    // check if this GPU is part of the select ones as per config
+    // (device = "all" or the gpu_id is in the device: <gpu id> list)
+    bool cur_gpu_selected = false;
+
+    if (property_device_all || property_device_index_all) {
+      cur_gpu_selected = true;
+    } else {
+      // search for this gpu in the list
+      // provided under the <device> property
+      auto it_gpu_id = find(property_device.begin(),
+          property_device.end(),
+          gpu_id);
+
+      if (it_gpu_id != property_device.end())
+        cur_gpu_selected = true;
+
+      // search for this gpu in the list
+      // provided under the <device_index> property
+      auto it_gpu_idx = find(property_device_index.begin(),
+          property_device_index.end(),
+          gpuIdx);
+
+      if (it_gpu_idx != property_device_index.end())
+        cur_gpu_selected = true;
+    }
+
+    // if mcm check enabled, print message if device is MCM
+    //  MCM is only for mi200, so check only if gfx90a
+    if (mcm_check && (std::string{props.gcnArchName}.find("gfx90a") != std::string::npos) ){
+      std::stringstream msg_stream;
+      mcm_die =  gpu_check_if_mcm_die(i);
+      if (mcm_die) {
         msg_stream.str("");
-        msg_stream << "Note: The system has Multi-Chip Module (MCM) GPU/s." << "\n"
-                   << "In MCM GPU, primary GPU die shows total socket (primary + secondary) power information." << "\n"
-                   << "Secondary GPU die does not have any power information associated with it independently."<< "\n"
-                   << "So, expect power reading from Secondary GPU die as 0."<< "\n";
+        msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
+          " - " << "GPU is a die/chiplet in Multi-Chip Module (MCM) GPU";
         rvs::lp::Log(msg_stream.str(), rvs::logresults);
-     }
-    return amd_gpus_found;
+
+        amd_mcm_gpu_found = true;
+      }
+    }
+    // excluding secondary die from test list, drops power reading substantially
+    if (cur_gpu_selected) { // need not exclude secondary die, just log it out.
+      gpus_device_index.insert
+        (std::pair<int, uint16_t>(i, gpu_id));
+      amd_gpus_found = true;
+    }
+    mcm_die = false;
+  }
+
+  if (amd_mcm_gpu_found && mcm_check) {
+    std::stringstream msg_stream;
+    msg_stream.str("");
+    msg_stream << "Note: The system has Multi-Chip Module (MCM) GPU/s." << "\n"
+      << "In MCM GPU, primary GPU die shows total socket (primary + secondary) power information." << "\n"
+      << "Secondary GPU die does not have any power information associated with it independently."<< "\n"
+      << "So, expect power reading from Secondary GPU die as 0."<< "\n";
+    rvs::lp::Log(msg_stream.str(), rvs::logresults);
+  }
+  return amd_gpus_found;
 }
 
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function){
@@ -217,6 +238,7 @@ int display_gpu_info (void) {
     int32_t node_id;
     int32_t gpu_id;
     int32_t device_id;
+    int32_t smi_index;
   };
 
   char buf[256];
@@ -251,6 +273,12 @@ int display_gpu_info (void) {
     if (rvs::gpulist::gpu2device(gpu_id, &dev_id)){
       continue;
     }
+
+    uint32_t smi_index;
+    if (gpu_hip_to_smi_index(i, &smi_index)){
+      continue;
+    }
+
     hipDeviceGetPCIBusId(buf, 256, i);
     device_info info;
     info.bus       = buf;
@@ -258,12 +286,14 @@ int display_gpu_info (void) {
     info.node_id   = node_id;
     info.gpu_id    = gpu_id;
     info.device_id = dev_id;
-    gpu_info_list.push_back(info);
+    info.smi_index = smi_index;
 
+    gpu_info_list.push_back(info);
   }
+
   std::sort(gpu_info_list.begin(), gpu_info_list.end(),
            [](const struct device_info& a, const struct device_info& b) {
-             return a.node_id < b.node_id; });
+             return a.smi_index < b.smi_index; });
   if (!gpu_info_list.empty()) {
     std::cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {

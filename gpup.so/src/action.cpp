@@ -342,159 +342,194 @@ int gpup_action::property_io_links_get_value(uint16_t gpu_id) {
  * @return run result
  */
 int gpup_action::run(void) {
-    std::string msg;
-    int sts = 0;
-    rvs::action_result_t action_result;
 
-    // get the action name
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
-      msg = "Action name missing";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS);
+  std::string msg;
+  int sts = 0;
+  rvs::action_result_t action_result;
 
-      // Action callback
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      action_callback(&action_result);
+  // get the action name
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+    msg = "Action name missing";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS);
 
-      return -1;
-    }
+    // Action callback
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
 
-    // get <device> property value (a list of gpu id)
-    if (int sts = property_get_device()) {
-      switch (sts) {
+    return -1;
+  }
+
+  // get <device> property value (a list of gpu id)
+  if (int sts = property_get_device()) {
+    switch (sts) {
       case 1:
         msg = "Invalid 'device' key value.";
         break;
       case 2:
         msg = "Missing 'device' key.";
         break;
-      }
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-
-      // Action callback
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      action_callback(&action_result);
-
-      return -1;
     }
-
-    // get the <deviceid> property value if provided
-    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                  &property_device_id, 0u)) {
-      msg = "Invalid 'deviceid' key value.";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-
-      // Action callback
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      action_callback(&action_result);
-
-      return -1;
-    }
-
-    // extract properties and io_links properties names
-    property_split(JSON_PROP_NODE_NAME);
-    property_split(JSON_IO_LINK_PROP_NODE_NAME);
-
-    bjson = false;  // already initialized in the default constructor
-
-    // check for -j flag (json logging)
-    if (has_property("cli.-j")) {
-        bjson = true;
-    }
-
-    // get all AMD GPUs
-    vector<uint16_t> gpu;
-    gpu_get_all_gpu_id(&gpu);
-    bool b_gpu_found = false;
-    if (bjson){
-      if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-          rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-          return 1;
-        }
-
-    }
-
-    // iterate over AMD GPUs
-    for (auto it = gpu.begin(); it !=gpu.end(); ++it) {
-      // filter by gpu_id if needed
-      if (property_device_id > 0) {
-        uint16_t dev_id;
-        if (!rvs::gpulist::gpu2device(*it, &dev_id)) {
-          if (dev_id != property_device_id) {
-            continue;
-          }
-        } else {
-          msg = "Device ID not found for GPU " + std::to_string(*it);
-          rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-          // Action callback
-          action_result.state = rvs::actionstate::ACTION_COMPLETED;
-          action_result.status = rvs::actionstatus::ACTION_FAILED;
-          action_result.output = msg;
-          action_callback(&action_result);
-
-          return -1;
-        }
-      }
-
-      // filter by device if needed
-      if (!property_device_all) {
-        if (std::find(property_device.begin(), property_device.end(), *it) ==
-          property_device.end()) {
-            continue;
-        }
-      }
-      b_gpu_found = true;
-
-      if (bjson){
-          json_root_node = json_node_create(std::string(module_name),
-            action_name.c_str(), rvs::logresults);
-	  if(json_root_node)
-		  rvs::lp::AddString(json_root_node, RVS_JSON_LOG_GPU_ID_KEY, std::to_string(*it));
-      }
-      // properties values
-      sts = property_get_value(*it);
-      sts = property_io_links_get_value(*it);
-      
-      if (bjson) {  // json logging stuff
-        RVSTRACE_
-        rvs::lp::AddString(json_root_node,"pass" , (sts == 0) ? "true" : "false");
-        rvs::lp::LogRecordFlush(json_root_node);
-        json_root_node = nullptr;
-      }
-
-      if (sts) {
-        RVSTRACE_
-      }
-    }  // for all gpu_id
-    if(bjson){
-      rvs::lp::JsonActionEndNodeCreate();
-    }
-    if (!b_gpu_found) {
-      msg = "No device matches criteria from configuration. ";
-      rvs::lp::Err(msg, MODULE_NAME, action_name);
-
-      // Action callback
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg;
-      action_callback(&action_result);
-
-      return -1;
-    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
 
     // Action callback
     action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
-    action_result.output = "GPUP Module action " + action_name + " completed";
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
     action_callback(&action_result);
 
-    return sts;
+    return -1;
+  }
+
+  if (int sts = property_get_device_index()) {
+    switch (sts) {
+      case 1:
+        msg = "Invalid 'device_index' key value.";
+        break;
+      case 2:
+        msg = "Missing 'device_index' key.";
+        break;
+    }
+
+    property_device_index_all = true;
+    rvs::lp::Log(msg, rvs::loginfo);
+  }
+
+  if (property_device_index.size() || property_device.size()) {
+    property_device_all = false;
+    property_device_index_all = false;
+  }
+
+  // get the <deviceid> property value if provided
+  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+        &property_device_id, 0u)) {
+    msg = "Invalid 'deviceid' key value.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+
+    // Action callback
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+
+    return -1;
+  }
+
+  // extract properties and io_links properties names
+  property_split(JSON_PROP_NODE_NAME);
+  property_split(JSON_IO_LINK_PROP_NODE_NAME);
+
+  bjson = false;  // already initialized in the default constructor
+
+  // check for -j flag (json logging)
+  if (has_property("cli.-j")) {
+    bjson = true;
+  }
+
+  // get all AMD GPUs
+  vector<uint16_t> gpu_id;
+  vector<uint16_t> gpu_idx;
+
+  gpu_get_all_gpu_id(&gpu_id);
+  gpu_get_all_gpu_idx(&gpu_idx);
+
+  bool b_gpu_found = false;
+
+  if (bjson){
+    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
+      rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
+      return 1;
+    }
+  }
+
+  // iterate over AMD GPUs
+  for (size_t i = 0; i < gpu_id.size(); i++) {
+
+    // filter by gpu_id if needed
+    if (property_device_id > 0) {
+      uint16_t dev_id;
+      if (!rvs::gpulist::gpu2device(gpu_id[i], &dev_id)) {
+        if (dev_id != property_device_id) {
+          continue;
+        }
+      } else {
+        msg = "Device ID not found for GPU " + std::to_string(gpu_id[i]);
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+        // Action callback
+        action_result.state = rvs::actionstate::ACTION_COMPLETED;
+        action_result.status = rvs::actionstatus::ACTION_FAILED;
+        action_result.output = msg;
+        action_callback(&action_result);
+
+        return -1;
+      }
+    }
+
+    // filter by device if needed
+    if (!property_device_all && property_device.size()) {
+      if (std::find(property_device.begin(), property_device.end(), gpu_id[i]) ==
+          property_device.end()) {
+        continue;
+      }
+    }
+
+    // filter by device if needed
+    if (!property_device_index_all && property_device_index.size()) {
+      if (std::find(property_device_index.cbegin(), property_device_index.cend(), gpu_idx[i]) ==
+          property_device_index.cend()) {
+        continue;
+      }
+    }
+
+    b_gpu_found = true;
+
+    if (bjson){
+      json_root_node = json_node_create(std::string(module_name),
+          action_name.c_str(), rvs::logresults);
+      if(json_root_node)
+        rvs::lp::AddString(json_root_node, RVS_JSON_LOG_GPU_ID_KEY, std::to_string(gpu_id[i]));
+    }
+    // properties values
+    sts = property_get_value(gpu_id[i]);
+    sts = property_io_links_get_value(gpu_id[i]);
+
+    if (bjson) {  // json logging stuff
+      RVSTRACE_
+        rvs::lp::AddString(json_root_node,"pass" , (sts == 0) ? "true" : "false");
+      rvs::lp::LogRecordFlush(json_root_node);
+      json_root_node = nullptr;
+    }
+
+    if (sts) {
+      RVSTRACE_
+    }
+  }  // for all gpu_id
+
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
+  if (!b_gpu_found) {
+    msg = "No device matches criteria from configuration. ";
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+    // Action callback
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+
+    return -1;
+  }
+
+  // Action callback
+  action_result.state = rvs::actionstate::ACTION_COMPLETED;
+  action_result.status = (!sts) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
+  action_result.output = "GPUP Module action " + action_name + " completed";
+  action_callback(&action_result);
+
+  return sts;
 }
 
 /*

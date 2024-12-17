@@ -290,7 +290,8 @@ int mem_action::get_all_selected_gpus(void) {
     
     // iterate over all available & compatible AMD GPUs
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, mem_gpus_device_index,
-                    property_device, property_device_id, property_device_all);
+        property_device, property_device_id, property_device_all,
+        property_device_index, property_device_index_all);
     if (amd_gpus_found) {
         if (do_mem_stress_test(mem_gpus_device_index))
             return 0;

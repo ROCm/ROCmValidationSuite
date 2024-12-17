@@ -323,8 +323,8 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
                                   const std::string& module_name,
                                   rvs::if1* pif1) {
   int sts = 0;
-
   string indexes;
+
   bool indexes_provided = false;
   if (rvs::options::has_option("-i", &indexes) && (!indexes.empty()))
     indexes_provided = true;
@@ -338,16 +338,35 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
         it->first.as<std::string>())) {
       // pass properties collection to .so action object
       sts += do_yaml_properties_collection(it->second,
-                                           it->first.as<std::string>(),
-                                           pif1);
+          it->first.as<std::string>(),
+          pif1);
     } else {
+
       // just set this one property
       if (indexes_provided && it->first.as<std::string>() == "device") {
+
         std::replace(indexes.begin(), indexes.end(), ',', ' ');
-        sts += pif1->property_set("device", indexes);
+
+        std::vector <uint16_t> idx;
+
+        // parse key value into std::vector<std::string>
+        auto strarray = str_split(indexes, " ");
+
+        // convert str arary into uint16_t array
+        rvs_util_strarr_to_uintarr<uint16_t>(strarray, &idx);
+
+        // Check if indexes are gpu indexes or ids
+        if(gpu_check_if_gpu_indexes (idx)) {
+          sts += pif1->property_set("device_index", indexes);
+          sts += pif1->property_set(it->first.as<std::string>(),
+              it->second.as<std::string>());
+        } else {
+          sts += pif1->property_set("device", indexes);
+        }
+
       } else {
         sts += pif1->property_set(it->first.as<std::string>(),
-                                it->second.as<std::string>());
+            it->second.as<std::string>());
       }
     }
   }

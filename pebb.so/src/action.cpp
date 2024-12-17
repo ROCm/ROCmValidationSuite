@@ -169,12 +169,14 @@ bool pebb_action::get_all_pebb_config_keys(void) {
 int pebb_action::create_threads() {
   std::string msg;
   std::vector<uint16_t> gpu_id;
+  std::vector<uint16_t> gpu_idx;
   std::vector<uint16_t> gpu_device_id;
   uint16_t transfer_ix = 0;
   bool bmatch_found = false;
 
   RVSTRACE_
   gpu_get_all_gpu_id(&gpu_id);
+  gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
 
   RVSTRACE_
@@ -190,12 +192,23 @@ int pebb_action::create_threads() {
 
     // filter out by listed sources
     RVSTRACE_
-    if (!property_device_all) {
+    if (!property_device_all && property_device.size()) {
       RVSTRACE_
       const auto it = std::find(property_device.cbegin(),
                                 property_device.cend(),
                                 gpu_id[i]);
       if (it == property_device.cend()) {
+        RVSTRACE_
+        continue;
+      }
+    }
+
+    // filter out by listed sources
+    if (!property_device_index_all && property_device_index.size()) {
+      const auto it = std::find(property_device_index.cbegin(),
+          property_device_index.cend(),
+          gpu_idx[i]);
+      if (it == property_device_index.cend()) {
         RVSTRACE_
         continue;
       }

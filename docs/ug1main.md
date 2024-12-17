@@ -255,8 +255,8 @@ The range is 0-5 with 5 being the highest verbose level.
 that RVS supports and has visibility.
 </td></tr>
 
-<tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids to run test on.
-This overrides the device values specified for every actions in the
+<tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids/indexes to run test on.
+This overrides the device/device_index values specified for every actions in the
 configuration file, including the ‘all’ value.
 </td></tr>
 

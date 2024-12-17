@@ -297,6 +297,7 @@ int pbqt_action::create_threads() {
 
   std::string msg;
   std::vector<uint16_t> gpu_id;
+  std::vector<uint16_t> gpu_idx;
   std::vector<uint16_t> gpu_device_id;
   uint16_t transfer_ix = 0;
   bool bmatch_found = false;
@@ -304,9 +305,11 @@ int pbqt_action::create_threads() {
   char dstgpuid_buff[12];
 
   gpu_get_all_gpu_id(&gpu_id);
+  gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
 
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
+
     // filter out by source device id
     if (property_device_id > 0) {
       if (property_device_id != gpu_device_id[i]) {
@@ -315,7 +318,7 @@ int pbqt_action::create_threads() {
     }
 
     // filter out by listed sources
-    if (!property_device_all) {
+    if (!property_device_all && property_device.size()) {
       const auto it = std::find(property_device.cbegin(),
                                 property_device.cend(),
                                 gpu_id[i]);
@@ -323,6 +326,17 @@ int pbqt_action::create_threads() {
             continue;
       }
     }
+
+    // filter out by listed sources
+    if (!property_device_index_all && property_device_index.size()) {
+      const auto it = std::find(property_device_index.cbegin(),
+                                property_device_index.cend(),
+                                gpu_idx[i]);
+      if (it == property_device_index.cend()) {
+            continue;
+      }
+    }
+
     // if property_device_all selected, iteration starts at 0 and all pairs covered.
     for (size_t j = 0; j < gpu_id.size(); j++) {  // all possible peers
       RVSTRACE_

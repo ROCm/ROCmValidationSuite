@@ -238,6 +238,7 @@ int pesm_action::run(void) {
   pworker->set_action(*this);
   pworker->json(bjson);
   pworker->set_gpuids(property_device);
+  pworker->set_gpuidx(property_device_index);
   pworker->set_deviceid(property_device_id);
 
   // start worker thread

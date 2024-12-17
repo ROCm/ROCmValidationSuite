@@ -22,8 +22,8 @@
 -g --listGpus      List all the GPUs available in the machine, that RVS supports and
                    has visibility.
 
--i --indexes       Comma separated list of GPU ids to run test on. This overrides
-                   the device values specified for every actions in the
+-i --indexes       Comma separated list of GPU ids/indexes to run test on. This overrides
+                   the device/device_index values specified for every actions in the
                    configuration file, including the ‘all’ value.
 
 -j --json          Generate output file in JSON format.
