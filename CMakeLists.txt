@@ -96,17 +96,6 @@ else() #If HSA not found
   message(FATAL_ERROR "hsa not found !!! Install hsa to proceed ...")
 endif(hsa-runtime64_FOUND)
 
-find_package (hsakmt)
-if(hsakmt_FOUND)
-  message(STATUS "hsakmt found")
-  get_target_property(ROCT_INC_DIR hsakmt::hsakmt INTERFACE_INCLUDE_DIRECTORIES)
-  get_filename_component(ROCT_LIB_DIR "${ROCT_INC_DIR}/../lib" ABSOLUTE)
-  message(STATUS "ROCT_INC_DIR: ${ROCT_INC_DIR}")
-  message(STATUS "ROCT_LIB_DIR: ${ROCT_LIB_DIR}")
-else() #If HSA not found
-  message(FATAL_ERROR "hsa not found !!! Install hsa to proceed ...")
-endif(hsakmt_FOUND)
-
 find_package (hip)
 if(hip_FOUND)
   set(HIP_INC_DIR ${hip_INCLUDE_DIR})
@@ -147,9 +136,8 @@ endif(rocrand_FOUND)
 # variables since we will pass them as cmake params appropriately, and 
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
+set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 
 add_definitions(-DROCM_PATH="${ROCM_PATH}")

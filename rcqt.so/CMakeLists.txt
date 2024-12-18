@@ -110,7 +110,7 @@ endif()
 ## define include directories
 include_directories(./ ../)
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH} ${ASAN_LIB_PATH} ${ROCT_LIB_DIR} ${ROCM_SMI_LIB_DIR})
+link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH} ${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib)
 
