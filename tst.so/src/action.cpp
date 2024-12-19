@@ -589,6 +589,3 @@ int tst_action::run(void) {
   return res;
 }
 
-void tst_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}

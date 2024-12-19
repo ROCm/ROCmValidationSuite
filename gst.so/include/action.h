@@ -59,7 +59,6 @@ class gst_action: public rvs::actionbase {
     virtual ~gst_action();
 
     virtual int run(void);
-    static void cleanup_logs();
 
   protected:
 

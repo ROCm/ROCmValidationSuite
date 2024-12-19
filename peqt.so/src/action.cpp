@@ -500,6 +500,3 @@ int peqt_action::run(void) {
 }
 
 
-void peqt_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}

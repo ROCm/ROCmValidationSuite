@@ -50,7 +50,6 @@ class gpup_action : public rvs::actionbase {
     virtual ~gpup_action();
 
     virtual int run(void);
-    static void cleanup_logs();
  protected:
     //! the list of all gpu_id in the 'device' property
     vector<string> gpus_id;

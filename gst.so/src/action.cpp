@@ -661,7 +661,4 @@ int gst_action::run(void) {
   return res;
 }
 
-void gst_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}
 

@@ -265,6 +265,3 @@ int pesm_action::do_gpu_list() {
   return display_gpu_info();
 }
 
-void pesm_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}

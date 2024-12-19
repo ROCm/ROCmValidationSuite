@@ -498,6 +498,3 @@ int gpup_action::run(void) {
 }
 
 
-void gpup_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}

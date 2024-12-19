@@ -869,6 +869,3 @@ void pbqt_action::do_running_average() {
   print_running_average();
 }
 
-void pbqt_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}
