@@ -93,7 +93,6 @@ class mem_action: public rvs::actionbase {
     virtual int run(void);
 
     std::string mem_ops_type;
-    static void cleanup_logs();
  protected:
     //! Memorry mapped
     bool mem_mapped;

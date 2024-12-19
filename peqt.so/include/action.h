@@ -61,7 +61,6 @@ class peqt_action: public rvs::actionbase {
     virtual ~peqt_action();
 
     virtual int run(void);
-    static void cleanup_logs();
  protected:
   bool get_all_common_config_keys() override;
 

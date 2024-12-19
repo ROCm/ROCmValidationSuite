@@ -45,6 +45,7 @@ static const std::set<std::string> duration_mods {"gst", "iet", "tst", "pebb", "
 using std::cout;
 using std::endl;
 using std::string;
+
 /**
  * @brief Default constructor.
  *

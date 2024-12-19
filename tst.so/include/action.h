@@ -70,7 +70,6 @@ class tst_action: public rvs::actionbase {
  public:
     tst_action();
     virtual ~tst_action();
-    static void cleanup_logs();
     virtual int run(void);
 
  protected:

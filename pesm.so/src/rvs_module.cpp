@@ -92,7 +92,7 @@ extern "C" int   rvs_module_terminate(void) {
       "[module_terminate] pesm rvs_module_terminate() - monitoring stopped",
                  rvs::logtrace);
   }
-  pesm_action::cleanup_logs();
+  cleanup_logs();
   return 0;
 }
 

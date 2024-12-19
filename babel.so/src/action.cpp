@@ -354,7 +354,3 @@ void mem_action::json_add_primary_fields(){
   }
 }
 
-void mem_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}
-

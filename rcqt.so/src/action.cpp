@@ -228,7 +228,3 @@ int rcqt_action::pkglist_run() {
   return 0;
 }
 
-void rcqt_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}
-

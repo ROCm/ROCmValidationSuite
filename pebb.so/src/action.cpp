@@ -732,6 +732,3 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
 }
 
 
-void pebb_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}
