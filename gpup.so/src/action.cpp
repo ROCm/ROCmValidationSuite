@@ -497,15 +497,6 @@ int gpup_action::run(void) {
     return sts;
 }
 
-/*
-void gpup_action::json_add_primary_fields(){
-if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-    return;
-  }
-
-}
-*/
 
 void gpup_action::cleanup_logs(){
   rvs::lp::JsonEndNodeCreate();

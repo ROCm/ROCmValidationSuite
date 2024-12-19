@@ -567,7 +567,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
       }
 
       rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
-      rvs::lp::LogRecordFlush(json_root_node, rvs::loginfo);
+      rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
     }
     return 0;
   }
@@ -615,17 +615,17 @@ void gst_action::json_add_primary_fields(){
     return;
   }
   void *json_node = json_node_create(std::string(MODULE_NAME),
-      action_name.c_str(), rvs::loginfo);
+      action_name.c_str(), rvs::logresults);
   if(json_node){
     rvs::lp::AddString(json_node,TARGET_KEY, std::to_string(gst_target_stress));
-    rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+    rvs::lp::LogRecordFlush(json_node, rvs::logresults);
     json_node = nullptr;
   }
   json_node = json_node_create(std::string(MODULE_NAME),
-      action_name.c_str(), rvs::loginfo);
+      action_name.c_str(), rvs::logresults);
   if(json_node){
     rvs::lp::AddString(json_node,DTYPE_KEY, gst_ops_type);
-    rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+    rvs::lp::LogRecordFlush(json_node, rvs::logresults);
     json_node = nullptr;
   }
 

@@ -498,17 +498,17 @@ void tst_action::json_add_primary_fields(){
         return;
     }
     void *json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
+                        action_name.c_str(), rvs::logresults);
     if(json_node){
             rvs::lp::AddString(json_node,RVS_TT_MESSAGE, std::to_string(tst_throttle_temp));
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+            rvs::lp::LogRecordFlush(json_node, rvs::logresults);
             json_node = nullptr;
     }
     json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
+                        action_name.c_str(), rvs::logresults);
     if(json_node){
             rvs::lp::AddString(json_node,RVS_DTYPE_MESSAGE, tst_ops_type);
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+            rvs::lp::LogRecordFlush(json_node, rvs::logresults);
     }
 }
 
