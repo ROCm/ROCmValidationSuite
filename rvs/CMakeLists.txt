@@ -93,7 +93,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include ${ASAN_CXX_FLAGS}")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
 
 # Set compiler and compiler flags
@@ -113,13 +113,12 @@ else()
 endif()
 
 ## define include directories
-include_directories(./ ../ ${YAML_CPP_INCLUDE_DIRS})
+include_directories(./ ../ ${YAML_CPP_INCLUDE_DIR})
 ## define lib directories
-link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_DIR})
+link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_DIR} ${HSA_LIB_DIR} ${HIPBLASLT_LIB_DIR} ${YAML_CPP_LIBRARY_DIR})
 
 ## additional libraries
 set(ROCBLAS_LIB "rocblas")
-set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(HIPRAND_LIB "hiprand")
 set(HIPBLASLT_LIB "hipblaslt")
@@ -129,7 +128,7 @@ set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
 target_link_libraries(${RVS_TARGET} rvslib
-  ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS} ${HIPRAND_LIB} ${HIPBLASLT_LIB})
+  ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS} ${HIPRAND_LIB} ${HIPBLASLT_LIB})
 add_dependencies(${RVS_TARGET} rvslib)
 
 install(TARGETS ${RVS_TARGET}
