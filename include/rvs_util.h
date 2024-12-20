@@ -137,6 +137,7 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function);
 int display_gpu_info(void);
 void *json_list_create(std::string lname, int log_level);
+
 template <typename... KVPairs>
 void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values ) {
         std::vector<std::string> kvlist{key_values...};
@@ -146,8 +147,13 @@ void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values )
     void *json_node = json_node_create(desc.module_name,
         desc.action_name.c_str(), log_level);
     if (json_node) {
-      rvs::lp::AddString(json_node, "gpu_id",
-          std::to_string(desc.gpu_id));
+
+      rvs::lp::AddString(json_node, "gpu_id", std::to_string(desc.gpu_id));
+
+      uint16_t gpu_index = 0;
+      rvs::gpulist::gpu2gpuindex(desc.gpu_id, &gpu_index);
+      rvs::lp::AddString(json_node, "gpu_index", std::to_string(gpu_index));
+
       for (int i =0; i< kvlist.size()-1; i +=2){
           rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
       }

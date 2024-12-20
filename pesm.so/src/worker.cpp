@@ -262,6 +262,11 @@ void Worker::run() {
       r = json_node_create("PESM",
         stop_action_name.c_str(), rvs::logresults);
       rvs::lp::AddString(r, "gpu_id", std::to_string(i.first));
+
+      uint16_t gpu_index = 0;
+      rvs::gpulist::gpu2gpuindex(i.first, &gpu_index);
+      rvs::lp::AddString(r, "gpu_index", std::to_string(gpu_index));
+
       rvs::lp::AddString(r, "pcie speed change",i.second);
       rvs::lp::LogRecordFlush(r);
       r = nullptr;
@@ -278,6 +283,11 @@ void Worker::run() {
       r = json_node_create("PESM",
         stop_action_name.c_str(), rvs::logresults);
       rvs::lp::AddString(r, "gpu_id", std::to_string(i.first));
+
+      uint16_t gpu_index = 0;
+      rvs::gpulist::gpu2gpuindex(i.first, &gpu_index);
+      rvs::lp::AddString(r, "gpu_index", std::to_string(gpu_index));
+
       rvs::lp::AddString(r, "power_change", i.second);
       rvs::lp::AddString(r, "msg", "stopped");
       rvs::lp::LogRecordFlush(r);

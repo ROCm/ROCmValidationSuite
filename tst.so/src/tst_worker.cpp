@@ -54,6 +54,7 @@
 #define TST_PASS_KEY                            "pass"
 
 #define TST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
+#define TST_JSON_LOG_GPU_IDX_KEY                "gpu_index"
 #define TST_MEM_ALLOC_ERROR                     1
 #define TST_BLAS_ERROR                          2
 #define TST_BLAS_MEMCPY_ERROR                   3
@@ -95,6 +96,8 @@ void TSTWorker::log_to_json(const std::string &key, const std::string &value,
         if (json_node) {
             rvs::lp::AddString(json_node, TST_JSON_LOG_GPU_ID_KEY,
                             std::to_string(gpu_id));
+            rvs::lp::AddString(json_node, TST_JSON_LOG_GPU_IDX_KEY,
+                            std::to_string(smi_device_index));
             rvs::lp::AddString(json_node, key, value);
             rvs::lp::LogRecordFlush(json_node);
         }
