@@ -488,9 +488,15 @@ int gpup_action::run(void) {
     if (bjson){
       json_root_node = json_node_create(std::string(module_name),
           action_name.c_str(), rvs::logresults);
-      if(json_root_node)
+      if(json_root_node) {
         rvs::lp::AddString(json_root_node, RVS_JSON_LOG_GPU_ID_KEY, std::to_string(gpu_id[i]));
+
+        uint16_t gpu_index = 0;
+        rvs::gpulist::gpu2gpuindex(gpu_id[i], &gpu_index);
+        rvs::lp::AddString(json_root_node, RVS_JSON_LOG_GPU_IDX_KEY, std::to_string(gpu_index));
+      }
     }
+
     // properties values
     sts = property_get_value(gpu_id[i]);
     sts = property_io_links_get_value(gpu_id[i]);

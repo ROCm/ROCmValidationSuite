@@ -203,8 +203,11 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
         action_name.c_str(), rvs::logresults);
     
       if (json_pcaps_node != NULL) {
-        rvs::lp::AddString(json_pcaps_node, RVS_JSON_LOG_GPU_ID_KEY,
-                std::to_string(gpu_id));
+        rvs::lp::AddString(json_pcaps_node, RVS_JSON_LOG_GPU_ID_KEY, std::to_string(gpu_id));
+
+        uint16_t gpu_index = 0;
+        rvs::gpulist::gpu2gpuindex(gpu_id, &gpu_index);
+        rvs::lp::AddString(json_pcaps_node, RVS_JSON_LOG_GPU_IDX_KEY, std::to_string(gpu_index));
       }
     }
     for (it = property.begin(); it != property.end(); ++it) {
