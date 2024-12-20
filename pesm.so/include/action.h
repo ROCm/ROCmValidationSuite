@@ -46,7 +46,6 @@ class pesm_action : public rvs::actionbase {
   virtual ~pesm_action();
 
   virtual int run(void);
-  static void cleanup_logs();
  protected:
   int do_gpu_list(void);
   bool get_all_common_config_keys() override;

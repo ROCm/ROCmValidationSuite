@@ -156,4 +156,5 @@ void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values )
     }
 }
 
+void cleanup_logs();
 #endif  // INCLUDE_RVS_UTIL_H_

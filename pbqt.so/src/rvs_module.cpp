@@ -75,7 +75,7 @@ extern "C" int   rvs_module_init(void* pMi) {
 
 extern "C" int   rvs_module_terminate(void) {
     rvs::hsa::Terminate();
-    pbqt_action::cleanup_logs();
+    cleanup_logs();
     return 0;
 }
 

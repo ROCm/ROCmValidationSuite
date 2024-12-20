@@ -630,17 +630,17 @@ void iet_action::json_add_primary_fields(){
         return;
     }
     void *json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
+                        action_name.c_str(), rvs::logresults);
     if(json_node){
             rvs::lp::AddString(json_node,RVS_TP_MESSAGE, std::to_string(iet_target_power));
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+            rvs::lp::LogRecordFlush(json_node, rvs::logresults);
             json_node = nullptr;
     }
     json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
+                        action_name.c_str(), rvs::logresults);
     if(json_node){
             rvs::lp::AddString(json_node,RVS_DTYPE_MESSAGE, iet_ops_type);
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
+            rvs::lp::LogRecordFlush(json_node, rvs::logresults);
     }
 
 }
@@ -722,6 +722,3 @@ int iet_action::run(void) {
   return res;
 }
 
-void iet_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -74,7 +74,7 @@ extern "C" int rvs_module_init(void* pMi) {
 }
 
 extern "C" int rvs_module_terminate(void) {
-  iet_action::cleanup_logs();
+  cleanup_logs();
   return 0;
 }
 

@@ -307,3 +307,7 @@ int display_gpu_info (void) {
   return 0;
 }
 
+void cleanup_logs(){
+  rvs::lp::JsonEndNodeCreate();
+}
+
