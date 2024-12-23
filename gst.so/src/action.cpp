@@ -616,20 +616,6 @@ void gst_action::json_add_primary_fields(){
     rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
     return;
   }
-  void *json_node = json_node_create(std::string(MODULE_NAME),
-      action_name.c_str(), rvs::logresults);
-  if(json_node){
-    rvs::lp::AddString(json_node,TARGET_KEY, std::to_string(gst_target_stress));
-    rvs::lp::LogRecordFlush(json_node, rvs::logresults);
-    json_node = nullptr;
-  }
-  json_node = json_node_create(std::string(MODULE_NAME),
-      action_name.c_str(), rvs::logresults);
-  if(json_node){
-    rvs::lp::AddString(json_node,DTYPE_KEY, gst_ops_type);
-    rvs::lp::LogRecordFlush(json_node, rvs::logresults);
-    json_node = nullptr;
-  }
 
 }
 
