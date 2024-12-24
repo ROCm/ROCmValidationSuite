@@ -224,8 +224,6 @@ class TSTWorker : public rvs::ThreadBase {
     void compute_gpu_stats(void);
     bool do_thermal_stress(void);
     void log_interval_gflops(double gflops_interval);
-    void log_to_json(const std::string &key, const std::string &value,
-        int log_level);
     void blasThread(int gpuIdx,  uint64_t matrix_size, std::string  tst_ops_type,
         bool start, uint64_t run_duration_ms, int transa, int transb, float alpha, float beta,
         int tst_lda_offset, int tst_ldb_offset, int tst_ldc_offset, int tst_ldd_offset);

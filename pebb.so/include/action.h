@@ -112,7 +112,6 @@ class pebb_action : public rvs::actionbase {
                       uint32_t Distance,
                       const std::vector<rvs::linkinfo_t>& arrLinkInfo,
                       bool bReverse);
-  void json_add_primary_fields();
   void* json_base_node(int log_level);
   void json_add_kv(void *json_node, const std::string &key, const std::string &value);
   void json_to_file(void *json_node,int log_level);

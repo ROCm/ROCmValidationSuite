@@ -123,10 +123,7 @@ int rcqt_action::run() {
     }
 
   if (bjson){
-      if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-        return 1;
-      }
+      json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
 
   // check if package check action is going to trigger

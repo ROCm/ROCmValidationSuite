@@ -358,11 +358,8 @@ int peqt_action::run(void) {
       return -1;
     }
     if (bjson){
-      if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-        return 1;
-      }
-  }
+	json_add_primary_fields(std::string(MODULE_NAME), action_name);
+    }
     // get the pci_access structure
     pacc = pci_alloc();
 

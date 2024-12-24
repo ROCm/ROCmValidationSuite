@@ -325,8 +325,8 @@ int mem_action::run(void) {
     return -1;
   }
   if(bjson){
-    // add prelims for each action, dtype and target stress
-    json_add_primary_fields();
+    // add prelims for each action
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
   
   auto ret = get_all_selected_gpus();
@@ -341,16 +341,4 @@ int mem_action::run(void) {
   return ret;
 }
 
-
-/**
- * @brief flushes action and module fields to json file
- * @return
- */
-
-void mem_action::json_add_primary_fields(){
-  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-    return;
-  }
-}
 

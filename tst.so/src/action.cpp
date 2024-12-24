@@ -144,7 +144,7 @@ bool tst_action::get_all_tst_config_keys(void) {
     bool bsts = true;
 
     if ((error =
-      property_get(RVS_CONF_TARGET_TEMP_KEY, &tst_throttle_temp))) {
+      property_get(RVS_CONF_TARGET_TEMP_KEY, &tst_target_temp))) {
       switch (error) {
         case 1:
           msg = "invalid '" + std::string(RVS_CONF_TARGET_TEMP_KEY) +
@@ -487,30 +487,6 @@ int tst_action::get_num_amd_gpu_devices(void) {
 }
 
 
-/**
- * @brief flushes target temperature and dtype fields to json file
- * @return
- */
-
-void tst_action::json_add_primary_fields(){
-    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-        return;
-    }
-    void *json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::logresults);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_TT_MESSAGE, std::to_string(tst_throttle_temp));
-            rvs::lp::LogRecordFlush(json_node, rvs::logresults);
-            json_node = nullptr;
-    }
-    json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::logresults);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_DTYPE_MESSAGE, tst_ops_type);
-            rvs::lp::LogRecordFlush(json_node, rvs::logresults);
-    }
-}
 
 /**
  * @brief gets all selected GPUs and starts the worker threads
@@ -540,8 +516,8 @@ int tst_action::get_all_selected_gpus(void) {
     }
 
     if(bjson){
-        // add prelims for each action, dtype and target stress
-        json_add_primary_fields();
+        // add prelims for each action,
+        json_add_primary_fields(std::string(MODULE_NAME), action_name);
     }
     int tst_res = 0;
     if(do_thermal_test(tst_gpus_device_index))

@@ -159,7 +159,6 @@ class iet_action: public rvs::actionbase {
     std::map<int, int> hip_to_smi_idxs;
     void hip_to_smi_indices();
     bool get_all_iet_config_keys(void);
-    void json_add_primary_fields();
 
 
 /**

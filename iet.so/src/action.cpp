@@ -87,7 +87,6 @@ using std::fstream;
 #define RVS_CONF_CP_WORKLOAD            "cp_workload"
 #define RVS_CONF_TP_FLAG                "targetpower_met"
 #define RVS_TP_MESSAGE                  "target_power"
-#define RVS_DTYPE_MESSAGE               "dtype"
 #define RVS_CONF_HOT_CALLS              "hot_calls"
 #define RVS_CONF_MATRIX_INIT            "matrix_init"
 #define RVS_CONF_GEMM_MODE              "gemm_mode"
@@ -619,31 +618,6 @@ int iet_action::get_num_amd_gpu_devices(void) {
 }
 
 
-/**
- * @brief flushes target power and dtype fields to json file
- * @return
- */
-
-void iet_action::json_add_primary_fields(){
-    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-        return;
-    }
-    void *json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::logresults);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_TP_MESSAGE, std::to_string(iet_target_power));
-            rvs::lp::LogRecordFlush(json_node, rvs::logresults);
-            json_node = nullptr;
-    }
-    json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::logresults);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_DTYPE_MESSAGE, iet_ops_type);
-            rvs::lp::LogRecordFlush(json_node, rvs::logresults);
-    }
-
-}
 
 /**
  * @brief gets all selected GPUs and starts the worker threads
@@ -673,8 +647,8 @@ int iet_action::get_all_selected_gpus(void) {
     }
 
     if(bjson){
-        // add prelims for each action, dtype and target stress
-        json_add_primary_fields();
+        // add prelims for each action
+        json_add_primary_fields(std::string(MODULE_NAME), action_name);
     }
     int iet_res = 0;
     if(do_edp_test(iet_gpus_device_index))
