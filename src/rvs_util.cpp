@@ -307,6 +307,14 @@ int display_gpu_info (void) {
   return 0;
 }
 
+
+void json_add_primary_fields(std::string moduleName, std::string action_name){
+  if (rvs::lp::JsonActionStartNodeCreate(moduleName.c_str(), action_name.c_str())){
+    rvs::lp::Err("json start create failed", moduleName, action_name);
+    return;
+  }
+}
+
 void cleanup_logs(){
   rvs::lp::JsonEndNodeCreate();
 }

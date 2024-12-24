@@ -606,18 +606,7 @@ int gst_action::get_all_selected_gpus(void) {
 
   return 0;
 }
-/**
- * @brief flushes target and dtype fields to json file
- * @return 
- */
 
-void gst_action::json_add_primary_fields(){
-  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-    return;
-  }
-
-}
 
 /**
  * @brief runs the whole GST logic
@@ -634,7 +623,7 @@ int gst_action::run(void) {
 
   if(bjson){
     // add prelims for each action, dtype and target stress
-    json_add_primary_fields();
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
   auto res =  get_all_selected_gpus();
   if(bjson){
