@@ -121,7 +121,7 @@ class pbqt_action : public rvs::actionbase {
   void json_add_kv(void *json_node, const std::string &key, const std::string &value);
   void json_to_file(void *json_node,int log_level);
   void log_json_data(std::string srcnode, std::string dstnode,
-          int log_level, pbqt_json_data_t data_type, std::string data = "");
+          int log_level, std::string conn, std::string throughput);
 
  private:
   void do_running_average(void);
