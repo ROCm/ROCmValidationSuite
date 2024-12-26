@@ -102,8 +102,6 @@ void TSTWorker::log_interval_gflops(double gflops_interval) {
     string msg;
     msg = " GPU flops :" + std::to_string(gflops_interval);
     rvs::lp::Log(msg, rvs::logtrace);
-    //log_to_json(TST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
-     //           rvs::loginfo);
 
 }
 
