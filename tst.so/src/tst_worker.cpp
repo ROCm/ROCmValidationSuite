@@ -47,8 +47,8 @@
 #define TST_BLAS_FAILURE                        "BLAS setup failed!"
 #define TST_SGEMM_FAILURE                       "GPU failed to run the SGEMMs!"
 
-#define RVS_TT_MESSAGE                  "target_temp"
-#define RVS_CONF_THROTTLE_TEMP_KEY      "throttle_temp"
+#define TST_JSON_TARGET_TEMP_KEY                  "target_temp"
+#define TST_JSON_THROTTLE_TEMP_KEY                 "throttle_temp"
 
 #define TST_TARGET_MESSAGE                      "target"
 #define TST_DTYPE_MESSAGE                       "dtype"
@@ -297,7 +297,6 @@ bool TSTWorker::do_thermal_stress(void) {
         std::to_string(gpu_id) + " " + "max. junction temperature :" + " " + std::to_string(max_junction_temperature);
     rvs::lp::Log(msg, rvs::loginfo);
 
-    //result = true;
 
     //check whether we reached the target temperature
     if(max_junction_temperature >= target_temp) {
@@ -325,8 +324,8 @@ bool TSTWorker::do_thermal_stress(void) {
     }
     if (bjson)
         log_to_json(desc, rvs::logresults,
-           RVS_CONF_THROTTLE_TEMP_KEY, std::to_string(throttle_temp), 
-           RVS_TT_MESSAGE, std::to_string(target_temp),
+           TST_JSON_THROTTLE_TEMP_KEY, std::to_string(throttle_temp), 
+           TST_JSON_TARGET_TEMP_KEY, std::to_string(target_temp),
            TST_DTYPE_MESSAGE, tst_ops_type,
            TST_AVERAGE_EDGE_TEMP_KEY, std::to_string(max_edge_temperature),
            TST_AVERAGE_JUNCTION_TEMP_KEY, std::to_string(max_junction_temperature),
