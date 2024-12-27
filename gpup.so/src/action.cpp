@@ -437,10 +437,7 @@ int gpup_action::run(void) {
   bool b_gpu_found = false;
 
   if (bjson){
-    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-      rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-      return 1;
-    }
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
 
   // iterate over AMD GPUs

@@ -152,7 +152,6 @@ class gst_action: public rvs::actionbase {
     friend class GSTWorker;
 
     bool get_all_gst_config_keys(void);
-    void json_add_primary_fields();
 
     /**
      * @brief gets the number of ROCm compatible AMD GPUs

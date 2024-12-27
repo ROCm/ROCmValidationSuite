@@ -62,6 +62,8 @@
 #define GST_RAMP_EXCEEDED_MSG                   "ramp time exceeded"
 #define GST_TARGET_ACHIEVED_MSG                 "target achieved"
 #define GST_STRESS_VIOLATION_MSG                "stress violation"
+const std::string TARGET_KEY{"target"};
+const std::string DTYPE_KEY{"dtype"};
 
 using std::string;
 
@@ -364,6 +366,8 @@ void GSTWorker::check_target_stress(double gflops_interval) {
   action.action_callback(&action_result);
   if (bjson)
       log_to_json(desc ,rvs::logresults,
+		      TARGET_KEY, std::to_string(static_cast<uint64_t>(target_stress)),
+		      DTYPE_KEY, gst_ops_type,
 		      "gflops", std::to_string(static_cast<uint64_t>(gflops_interval)),
 		      "pass", result ? "true" : "false");
 }

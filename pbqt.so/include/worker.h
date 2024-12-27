@@ -81,7 +81,12 @@ class pbqtworker : public rvs::ThreadBase {
   uint16_t get_transfer_num() { return transfer_num; }
   //! Set list of test sizes
   void set_block_sizes(const std::vector<uint32_t>& val) { block_size = val; }
-
+  void set_conn_type(const std::string& conn){
+      conn_type = conn;
+  }
+  const std::string& get_conn_type(){
+      return conn_type;
+  }
  protected:
   virtual void run(void);
 
@@ -124,7 +129,7 @@ class pbqtworker : public rvs::ThreadBase {
 
   //! list of test block sizes
   std::vector<uint32_t> block_size;
-
+  std::string conn_type;
   //! synchronization mutex
   std::mutex cntmutex;
 };

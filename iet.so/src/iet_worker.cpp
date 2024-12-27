@@ -58,7 +58,7 @@
 #define IET_PWR_TARGET_ACHIEVED_MSG             "target achieved"
 #define IET_PWR_RAMP_EXCEEDED_MSG               "ramp time exceeded"
 #define IET_PASS_KEY                            "pass"
-
+#define IET_JSON_TARGET_POWER_KEY               "target_power"
 #define IET_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 #define IET_MEM_ALLOC_ERROR                     1
 #define IET_BLAS_ERROR                          2
@@ -268,8 +268,11 @@ bool IETWorker::do_iet_power_stress(void) {
     }
 
     if (IETWorker::bjson)
-        log_to_json(desc, rvs::logresults, IET_AVERAGE_POWER_KEY, std::to_string(max_power),
-		    "pass", result ? "true" : "false");
+        log_to_json(desc, rvs::logresults, 
+           IET_JSON_TARGET_POWER_KEY, std::to_string(target_power),
+	   IET_DTYPE_MESSAGE, iet_ops_type,
+           IET_AVERAGE_POWER_KEY, std::to_string(max_power),
+           "pass", result ? "true" : "false");
 
     action_result.state = rvs::actionstate::ACTION_RUNNING;
     action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;

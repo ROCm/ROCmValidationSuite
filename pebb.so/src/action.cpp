@@ -405,11 +405,8 @@ void pebb_action::log_json_bandwidth(std::string srcnode, std::string dstnode,
     void *json_node = json_base_node(log_level);
     json_add_kv(json_node, "srccpu", srcnode);
     json_add_kv(json_node, "dstgpu", dstnode);
-    if(bandwidth.empty()){
-      json_add_kv(json_node, "intf", link_type_string);
-    }else{
-      json_add_kv(json_node, "throughput", bandwidth);
-    }
+    json_add_kv(json_node, "intf", link_type_string);
+    json_add_kv(json_node, "throughput", bandwidth.empty() ? "NA" : bandwidth);
     json_add_kv(json_node, "pass", "true");
     json_to_file(json_node, log_level);
   }
@@ -721,7 +718,7 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
   }
 
   rvs::lp::Log(msg, rvs::logresults);
-  log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstGpuID),rvs::logresults);
+  //log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstGpuID),rvs::logresults);
 
   result.state = rvs::actionstate::ACTION_RUNNING;
   result.status = rvs::actionstatus::ACTION_SUCCESS;

@@ -161,6 +161,6 @@ void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values )
       rvs::lp::LogRecordFlush(json_node, log_level);
     }
 }
-
+void json_add_primary_fields(std::string moduleName, std::string action_name);
 void cleanup_logs();
 #endif  // INCLUDE_RVS_UTIL_H_
