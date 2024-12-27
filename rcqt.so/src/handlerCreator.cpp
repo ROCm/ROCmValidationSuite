@@ -28,7 +28,7 @@
 
 PackageHandler* handlerCreator::getPackageHandler(const std::string& pkg){
 
-  auto osName = getOS();
+  auto osName = getOSOrId();
   PackageHandler* lptr = nullptr;
 
   if(OSType::Ubuntu == osName) {
@@ -45,7 +45,7 @@ PackageHandler* handlerCreator::getPackageHandler(const std::string& pkg){
 
 PackageHandler* handlerCreator::getPackageHandler(){
 
-  auto osName = getOS();
+  auto osName = getOSOrId();
   PackageHandler* lptr = nullptr;
 
   if(OSType::Ubuntu == osName){
