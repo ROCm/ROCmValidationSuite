@@ -87,6 +87,7 @@ typedef enum {
   RVS_MODULE_PBQT, /*!< P2P Benchmark and Qualification Tool */
   RVS_MODULE_RCQT, /*!< ROCm Configuration Qualification Tool */
   RVS_MODULE_SMQT, /*!< SBIOS Mapping Qualifications Tool */
+  RVS_MODULE_EM,   /*!< External Module Tool */
   RVS_MODULE_MAX /*!< No. of RVS modules */
 } rvs_module_t;
 
