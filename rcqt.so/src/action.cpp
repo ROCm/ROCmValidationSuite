@@ -77,7 +77,7 @@ using std::regex;
 using std::vector;
 
 rcqt_action::rcqt_action() {
-  PACKAGELIST = (getOS() == OSType::Ubuntu) ?"debpackagelist":"rpmpackagelist";
+  PACKAGELIST = (getOSOrId() == OSType::Ubuntu) ?"debpackagelist":"rpmpackagelist";
   bjson = false;
   module_name = MODULE_NAME;
 }
