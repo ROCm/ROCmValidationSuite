@@ -149,5 +149,5 @@ Note: If present, always use GPU specific configurations instead of default test
 ## Reporting
 
 Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option.
-The json output file is stored in /var/tmp folder and the name of the file will be printed.
+The json output file path can be specified after "-j" option. If not specified, a file is created in /var/tmp folder and the name of the file will be printed to stdout.
 
