@@ -99,8 +99,7 @@ endif(hsa-runtime64_FOUND)
 find_package (hip)
 if(hip_FOUND)
   set(HIP_INC_DIR ${hip_INCLUDE_DIR})
-  get_filename_component(HIP_PATH "${hip_INCLUDE_DIR}/.." ABSOLUTE)
-  get_filename_component(HIP_LIB_DIR "${hip_INCLUDE_DIR}/../lib" ABSOLUTE)
+  set(HIP_LIB_DIR ${hip_LIB_INSTALL_DIR})
 else() #If HIP not found
   message(FATAL_ERROR "hip not found !!! Install hip to proceed ...")
 endif(hip_FOUND)
@@ -131,6 +130,13 @@ if(rocrand_FOUND)
 else() #If ROCRAND not found
   message(FATAL_ERROR "rocrand not found !!! Install rocrand to proceed ...")
 endif(rocrand_FOUND)
+
+find_package(hipblas-common)
+if(hipblas-common_FOUND)
+  message(STATUS "rocrand found")
+else() #If hipblas-common not found
+  message(FATAL_ERROR "hipblas-common not found !!! Install rocrand to proceed ...")
+endif(hipblas-common_FOUND)
 
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
