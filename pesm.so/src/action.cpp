@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -195,7 +195,9 @@ int pesm_action::run(void) {
   if (prop_debugwait) {
     sleep(prop_debugwait);
   }
-
+  if (bjson){
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
+  }
   // end of monitoring requested?
   if (!prop_monitor) {
     RVSTRACE_
@@ -208,6 +210,9 @@ int pesm_action::run(void) {
       delete pworker;
       pworker = nullptr;
     }
+    if (bjson){
+      rvs::lp::JsonActionEndNodeCreate();
+     }
     RVSTRACE_
     return 0;
   }
@@ -216,6 +221,10 @@ int pesm_action::run(void) {
   if (pworker) {
     rvs::lp::Log("[" + property["name"]+ "] pesm monitoring already started",
                 rvs::logdebug);
+    if (bjson){
+      rvs::lp::JsonActionEndNodeCreate();
+     }
+
     return 0;
   }
 
@@ -226,13 +235,16 @@ int pesm_action::run(void) {
   pworker->set_action(*this);
   pworker->json(bjson);
   pworker->set_gpuids(property_device);
+  pworker->set_gpuidx(property_device_index);
   pworker->set_deviceid(property_device_id);
 
   // start worker thread
   RVSTRACE_
   pworker->start();
   sleep(2);
-
+  if (bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
   RVSTRACE_
   return 0;
 }
@@ -250,3 +262,4 @@ int pesm_action::run(void) {
 int pesm_action::do_gpu_list() {
   return display_gpu_info();
 }
+

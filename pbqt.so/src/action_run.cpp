@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -71,17 +71,6 @@ uint64_t time_diff(
     return milliseconds.count();
 }
 
-/**
- *  * @brief flushes target and dtype fields to json file
- *   * @return
- *    */
-
-void pbqt_action::json_add_primary_fields(){
-  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-    return;
-  } 
-}
 
 /**
  * @brief Main action execution entry point. Implements test logic.
@@ -138,7 +127,7 @@ int pbqt_action::run() {
   test_duration = property_duration;
 
   if(bjson){
-    json_add_primary_fields();
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
 
   sts = create_threads();
@@ -156,7 +145,9 @@ int pbqt_action::run() {
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = "Parameters not valid. Nothing to execute !!!";
     action_callback(&action_result);
-
+    if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
     return 0;
   }
 

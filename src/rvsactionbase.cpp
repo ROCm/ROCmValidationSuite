@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -45,6 +45,7 @@ static const std::set<std::string> duration_mods {"gst", "iet", "tst", "pebb", "
 using std::cout;
 using std::endl;
 using std::string;
+
 /**
  * @brief Default constructor.
  *
@@ -54,6 +55,8 @@ rvs::actionbase::actionbase() {
   property_device_all = true;
   property_device_index_all = true;
   property_device_id = 0u;
+  property_device.clear();
+  property_device_index.clear();
   callback = nullptr;
   user_param = 0u;
 }
@@ -134,90 +137,93 @@ void rvs::actionbase::sleep(const unsigned int ms) {
  * 
  * */
 bool rvs::actionbase::get_all_common_config_keys(void) {
-    string msg, sdevid, sdev;
-    int error;
-    bool bsts = true;
-    if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
+  string msg, sdevid, sdev;
+  int error;
+  bool bsts = true;
+
+  if (property_get(RVS_CONF_NAME_KEY, &action_name)) {
     rvs::lp::Err("Action name missing", module_name);
     return false;
   }
 
-    msg = "[" + action_name + "] " + module_name + " " +
-            " " + " Getting all common properties";
-    rvs::lp::Log(msg, rvs::logtrace);
-    // check if  -j flag is passed
-    if (has_property("cli.-j")) {
-      bjson = true;
-    }
+  msg = "[" + action_name + "] " + module_name + " " +
+    " " + " Getting all common properties";
+  rvs::lp::Log(msg, rvs::logtrace);
+  // check if  -j flag is passed
+  if (has_property("cli.-j")) {
+    bjson = true;
+  }
 
-    if (int sts = property_get_device()) {
-      switch (sts) {
+  if (int sts = property_get_device()) {
+    switch (sts) {
       case 1:
         msg = "Invalid 'device' key value.";
         break;
       case 2:
         msg = "Missing 'device' key.";
         break;
-      }
-      rvs::lp::Err(msg, module_name, action_name);
-      bsts = false;
     }
+    rvs::lp::Err(msg, module_name, action_name);
+    bsts = false;
+  }
 
+  if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
+        &property_device_id, 0u)) {
+    msg = "Invalid 'deviceid' key value.";
+    rvs::lp::Err(msg, module_name, action_name);
+    bsts = false;
+  }
 
-    if (property_get_int<uint16_t>(RVS_CONF_DEVICEID_KEY,
-                                  &property_device_id, 0u)) {
-      msg = "Invalid 'deviceid' key value.";
-      rvs::lp::Err(msg, module_name, action_name);
-      bsts = false;
-    }
-
-
-    if (int sts = property_get_device_index()) {
-      switch (sts) {
+  if (int sts = property_get_device_index()) {
+    switch (sts) {
       case 1:
         msg = "Invalid 'device_index' key value.";
         break;
       case 2:
         msg = "Missing 'device_index' key.";
         break;
-      }
-
-      property_device_index_all = true;
-      rvs::lp::Log(msg, rvs::loginfo);
     }
 
+    property_device_index_all = true;
+    rvs::lp::Log(msg, rvs::loginfo);
+  }
 
-    if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
-      rvs::lp::Err(msg, module_name, action_name);
-      bsts = false;
-    }
+  if (property_device_index.size() || property_device.size()) {
+    property_device_all = false;
+    property_device_index_all = false;
+  }
 
-    error = property_get_int<uint64_t>
+  if (property_get(RVS_CONF_PARALLEL_KEY, &property_parallel, false)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_PARALLEL_KEY) + "' key value";
+    rvs::lp::Err(msg, module_name, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint64_t>
     (RVS_CONF_COUNT_KEY, &property_count, DEFAULT_COUNT);
-    if (error != 0) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_COUNT_KEY) + "' key value";
-      rvs::lp::Err(msg, module_name, action_name);
-      bsts = false;
-    }
+  if (error != 0) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_COUNT_KEY) + "' key value";
+    rvs::lp::Err(msg, module_name, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>
+  error = property_get_int<uint64_t>
     (RVS_CONF_WAIT_KEY, &property_wait, DEFAULT_WAIT);
-    if (error != 0) {
-      msg = "invalid '" +
-          std::string(RVS_CONF_WAIT_KEY) + "' key value";
-      bsts = false;
-    }
+  if (error != 0) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_WAIT_KEY) + "' key value";
+    bsts = false;
+  }
 
-    if (duration_mods.find(module_name) == duration_mods.end())
-            return bsts;
+  if (duration_mods.find(module_name) == duration_mods.end())
+    return bsts;
 
-      if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
-    &property_duration, DEFAULT_DURATION)) {
+  if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY,
+        &property_duration, DEFAULT_DURATION)) {
     msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
-    "' key";
+      "' key";
     rvs::lp::Err(msg, module_name, action_name);
     bsts = false;
   }
@@ -230,7 +236,7 @@ bool rvs::actionbase::get_all_common_config_keys(void) {
     bsts = false;
   }
 
-    return bsts;
+  return bsts;
 }
  
 /**

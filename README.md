@@ -20,19 +20,11 @@ CentOS :
 
 RHEL :
 
-    sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel
-
-    wget http://mirror.centos.org/centos/7/os/x86_64/Packages/pciutils-devel-3.5.1-3.el7.x86_64.rpm
-
-    sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
+    sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel pciutils-devel
 
 SLES :
 
-    sudo SUSEConnect -p sle-module-desktop-applications/15.1/x86_64
-
-    sudo SUSEConnect --product sle-module-development-tools/15.1/x86_64
-
-    sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
+    sudo zypper install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
 ## Install ROCm stack, rocblas and rocm-smi-lib
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
@@ -136,7 +128,6 @@ SUSE :
     Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS default sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
 
 ### Run version pre-compiled and packaged with ROCm release
@@ -146,7 +137,6 @@ SUSE :
     Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
 
 To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
@@ -159,5 +149,5 @@ Note: If present, always use GPU specific configurations instead of default test
 ## Reporting
 
 Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option.
-The json output file is stored in /var/tmp folder and the name of the file will be printed.
+The json output file path can be specified after "-j" option. If not specified, a file is created in /var/tmp folder and the name of the file will be printed to stdout.
 

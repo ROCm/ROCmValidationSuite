@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -102,6 +102,8 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
             workers[i].set_output_csv(output_csv);
             workers[i].set_num_iterations(num_iterations);
             workers[i].set_subtest_type(subtest);
+            workers[i].set_dwords_per_lane(dwords_per_lane);
+            workers[i].set_chunks_per_block(chunks_per_block);
 
             i++;
         }
@@ -202,6 +204,22 @@ bool mem_action::get_all_mem_config_keys(void) {
         bsts = false;
     }
 
+    if (property_get_int<uint16_t>(RVS_CONF_DWORDS_PER_LANE,
+                     &dwords_per_lane, MEM_DEFAULT_DWORDS_PER_LANE)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_DWORDS_PER_LANE) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get_int<uint16_t>(RVS_CONF_CHUNKS_PER_BLOCK,
+                     &chunks_per_block, MEM_DEFAULT_CHUNKS_PER_BLOCK)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_CHUNKS_PER_BLOCK) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
     return bsts;
 }
 
@@ -260,7 +278,8 @@ int mem_action::get_all_selected_gpus(void) {
 
     // iterate over all available & compatible AMD GPUs
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, mem_gpus_device_index,
-                    property_device, property_device_id, property_device_all); 
+        property_device, property_device_id, property_device_all,
+        property_device_index, property_device_index_all);
     if (amd_gpus_found) {
         if (do_mem_stress_test(mem_gpus_device_index))
             return 0;
@@ -305,9 +324,15 @@ int mem_action::run(void) {
     action_callback(&action_result);
     return -1;
   }
-
+  if(bjson){
+    // add prelims for each action
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
+  }
+  
   auto ret = get_all_selected_gpus();
-
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
   action_result.state = rvs::actionstate::ACTION_COMPLETED;
   action_result.status = (!ret) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
   action_result.output = "BABEL Module action " + action_name + " completed";
@@ -315,4 +340,5 @@ int mem_action::run(void) {
 
   return ret;
 }
+
 

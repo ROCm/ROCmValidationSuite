@@ -6,6 +6,8 @@
 
 #include <iostream>
 #include <vector>
+#include <vector>
+#include <string>
 #include <numeric>
 #include <cmath>
 #include <limits>
@@ -14,9 +16,10 @@
 #include <iomanip>
 #include <cstring>
 #include <mutex>
+#include <sstream>
 
 #define VERSION_STRING "3.4"
-
+#include "include/rvs_util.h"
 #include "include/rvs_memworker.h"
 #include "include/Stream.h"
 #include "include/HIPStream.h"
@@ -27,36 +30,44 @@ std::string csv_separator = ",";
 static bool triad_only = false;
 
  bool event_timing = false;
+ std::string module_name{"babel"};
 
 
 template <typename T>
 void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>& b, std::vector<T>& c, T& sum, uint64_t);
 
 template <typename T>
-void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
+void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, bool json, std::string action);
 
 template <typename T>
-void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest);
+void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block , bool json, std::string action);
 
 void parseArguments(int argc, char *argv[]);
 
-void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest) {
+void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, bool json, std::string action) {
 
     switch(test_type) {
       case FLOAT_TEST:
-        run_stress<float>(device, num_times, array_size, output_csv, mibibytes, subtest);
+        run_stress<float>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block,
+			json, action);
         break;
 
       case DOUBLE_TEST:
-        run_stress<double>(device, num_times, array_size, output_csv, mibibytes, subtest);
+        run_stress<double>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block,
+			json, action);
         break;
 
       case TRAID_FLOAT:
-        run_triad<float>(device, num_times, array_size, output_csv, mibibytes, subtest);
+        run_triad<float>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block,
+			json, action);
         break;
 
       case TRIAD_DOUBLE:
-        run_triad<double>(device, num_times, array_size, output_csv, mibibytes, subtest);
+        run_triad<double>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block,
+			json, action);
         break;
 
       default:
@@ -66,41 +77,57 @@ void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, b
 }
 
 template <typename T>
-void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
+void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block,  bool json, std::string action)
 {
   std::string   msg;
   std::streamsize ss = std::cout.precision();
-
+  std::stringstream sstr;
+  auto desc = action_descriptor{action, module_name, device.second};
   if (!output_as_csv)
   {
-    std::cout << "Running kernels " << num_times << " times" << std::endl;
+    msg = "Running kernels " + std::to_string(num_times) + " times, " ;
 
 
     if (sizeof(T) == sizeof(float)) 
-      std::cout << "Precision: float" << std::endl;
+      msg += "Precision: float";
     else
-      std::cout << "Precision: double" << std::endl;
+      msg += "Precision: double";
 
+    rvs::lp::Log(msg, rvs::logresults);
     if (mibibytes)
     {
       // MiB = 2^20
-      std::cout << std::setprecision(1) << std::fixed
+      sstr << std::setprecision(1) << std::fixed
                 << "Array size: " << ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) << " MiB"
-                << " (=" << ARRAY_SIZE*sizeof(T)*pow(2.0, -30.0) << " GiB)" << std::endl;
-      std::cout << "Total size: " << 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) << " MiB"
+                << " (=" << ARRAY_SIZE*sizeof(T)*pow(2.0, -30.0) << " GiB), ";
+      sstr << "Total size: " << 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) << " MiB"
                 << " (=" << 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -30.0) << " GiB)" << std::endl;
     }
     else
     {
       // MB = 10^6
-      std::cout << std::setprecision(1) << std::fixed
+      sstr << std::setprecision(1) << std::fixed
                 << "Array size: " << ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB"
-                << " (=" << ARRAY_SIZE*sizeof(T)*1.0E-9 << " GB)" << std::endl;
-      std::cout << "Total size: " << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB"
+                << " (=" << ARRAY_SIZE*sizeof(T)*1.0E-9 << " GB), ";
+      sstr << "Total size: " << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB"
                 << " (=" << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-9 << " GB)" << std::endl;
     }
+    rvs::lp::Log(sstr.str(), rvs::logresults);
     std::cout.precision(ss);
 
+  }
+
+  //json
+  if (json){
+    std::string scale = mibibytes ? "MiB" : "MB";
+    auto arr_size = mibibytes ? ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
+	    ARRAY_SIZE*sizeof(T)*1.0E-6;
+    auto total_size = mibibytes ? 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
+	    3.0*ARRAY_SIZE*sizeof(T)*1.0E-6;
+    log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
+	      "Total size", std::to_string(total_size),
+	      "Iterations", std::to_string(num_times) );
   }
 
   // Create host vectors
@@ -114,7 +141,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   Stream<T> *stream;
 
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first);
+  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first, dwords_per_lane, chunks_per_block);
 
   stream->init_arrays(startA, startB, startC);
 
@@ -162,11 +189,11 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   // Check solutions
   stream->read_arrays(a, b, c);
   check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
-
+  sstr.str( std::string() );
+  sstr.clear();
   if (output_as_csv)
   {
-    std::cout
-      << "gpu_id" << csv_separator
+     sstr  << "gpu_id" << csv_separator
       << "function" << csv_separator
       << "num_times" << csv_separator
       << "n_elements" << csv_separator
@@ -178,8 +205,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   }
   else
   {
-    std::cout
-      << "------------------------------------------------------------------------" << std::endl
+      sstr << "\n------------------------------------------------------------------------" << std::endl
       << std::left << std::setw(12) << "GPU Id"
       << std::left << std::setw(12) << "Function"
       << std::left << std::setw(12) << ((mibibytes) ? "MiBytes/sec" : "MBytes/sec")
@@ -191,7 +217,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       << std::fixed;
   }
 
-
+  //rvs::lp::Log(sstr.str(), rvs::logresults); 
   std::string labels[5] = {"Copy", "Mul", "Add", "Triad", "Dot"};
   size_t sizes[5] = {
     2 * sizeof(T) * ARRAY_SIZE,
@@ -205,13 +231,14 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   {
     // Get min/max; ignore the first result
     auto minmax = std::minmax_element(timings[i].begin()+1, timings[i].end());
-
+    //sstr.str( std::string() );
+    //sstr.clear();
     // Calculate average; ignore the first result
     double average = std::accumulate(timings[i].begin()+1, timings[i].end(), 0.0) / (double)(num_times - 1);
     // Display results
     if (output_as_csv)
     {
-      std::cout
+      sstr
         << device.second << csv_separator
         << labels[i] << csv_separator
         << num_times << csv_separator
@@ -225,7 +252,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
     }
     else
     {
-      std::cout
+      sstr
         << std::left << std::setw(12) << device.second
         << std::left << std::setw(12) << labels[i]
         << std::left << std::setw(12) << std::setprecision(3) << 
@@ -235,35 +262,46 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
         << std::left << std::setw(12) << std::setprecision(5) << average
         << std::endl;
     }
+    if (json){
+      log_to_json(desc, rvs::logresults, "Function",std::string(labels[i]),
+		      "MBytes/sec", (mibibytes) ? 
+		      std::to_string(pow(2.0, -20.0)) : std::to_string((1.0E-6) * sizes[i] / (*minmax.first)),
+		      "Min(s)",std::to_string( *minmax.first), 
+		      "Max(s)", std::to_string(*minmax.second),
+		      "Average(s)", std::to_string(average),
+		      "pass", "true");
+    } 
   }
-  std::cout
+  sstr
     << "------------------------------------------------------------------------" << std::endl;
-
+  rvs::lp::Log(sstr.str(), rvs::logresults);
   delete stream;
 
 }
 
 template <typename T>
-void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest)
+void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, bool json, std::string action)
 {
   std::string msg;
-
+  auto desc = action_descriptor{action, module_name, device.second};
   triad_only = true;
-
+  std::stringstream sstr;
   if (!output_as_csv)
   {
-    std::cout << "Running triad " << num_times << " times" << std::endl;
-    std::cout << "Number of elements: " << ARRAY_SIZE << std::endl;
+    msg = "Running triad " + std::to_string (num_times) + " times,";
+    msg += "Number of elements: " + std::to_string(ARRAY_SIZE) + ", ";
 
     if (sizeof(T) == sizeof(float))
-      std::cout << "Precision: float" << std::endl;
+      msg += "Precision: float\n";
     else
-      std::cout << "Precision: double" << std::endl;
-
+      msg += "Precision: double\n" ;
+    
+    rvs::lp::Log(msg, rvs::loginfo);
     std::streamsize ss = std::cout.precision();
     if (mibibytes)
     {
-      std::cout << std::setprecision(1) << std::fixed
+      sstr << std::setprecision(1) << std::fixed
         << "Array size: " << ARRAY_SIZE*sizeof(T)*pow(2.0, -10.0) << " KiB"
         << " (=" << ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) << " MiB)" << std::endl;
       std::cout << "Total size: " << 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -10.0) << " KiB"
@@ -271,15 +309,27 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
     }
     else
     {
-      std::cout << std::setprecision(1) << std::fixed
+      sstr << std::setprecision(1) << std::fixed
         << "Array size: " << ARRAY_SIZE*sizeof(T)*1.0E-3 << " KB"
         << " (=" << ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB)" << std::endl;
       std::cout << "Total size: " << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-3 << " KB"
         << " (=" << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB)" << std::endl;
     }
+    rvs::lp::Log(sstr.str(), rvs::logresults);
+    if (json){
+      std::string scale = mibibytes ? "MiB" : "MB";
+      auto arr_size = mibibytes ? ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
+	      ARRAY_SIZE*sizeof(T)*1.0E-6;
+     auto total_size = mibibytes  ? 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
+	     3.0*ARRAY_SIZE*sizeof(T)*1.0E-6;
+     log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
+              "Total size", std::to_string(total_size),
+              "Iterations", std::to_string(num_times) );
+    }
     std::cout.precision(ss);
   }
-
+  sstr.str( std::string() );
+  sstr.clear();
   // Create host vectors
   std::vector<T> a(ARRAY_SIZE);
   std::vector<T> b(ARRAY_SIZE);
@@ -288,7 +338,7 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   Stream<T> *stream;
 
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first);
+  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first, dwords_per_lane, chunks_per_block);
 
   stream->init_arrays(startA, startB, startC);
 
@@ -316,7 +366,7 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
 
   if (output_as_csv)
   {
-    std::cout
+    sstr
       << "gpu_id" << csv_separator
       << "function" << csv_separator
       << "num_times" << csv_separator
@@ -324,8 +374,7 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
       << "sizeof" << csv_separator
       << ((mibibytes) ? "gibytes_per_sec" : "gbytes_per_sec") << csv_separator
       << "runtime"
-      << std::endl;
-    std::cout
+      << std::endl
       << device.second << csv_separator
       << "Triad" << csv_separator
       << num_times << csv_separator
@@ -337,7 +386,7 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   }
   else
   {
-    std::cout
+    sstr
       << "--------------------------------"
       << std::endl << std::fixed
       << "GPU Id: " << std::left << device.second << std::endl
@@ -347,8 +396,17 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
       << std::left << std::setprecision(3)
       << bandwidth << std::endl;
   }
-
-
+   rvs::lp::Log(sstr.str(), rvs::logresults);
+   if (json){
+     std::string bw_field{"Bandwidth ("};
+     bw_field +=(mibibytes) ? "GiB/s" : "GB/s";
+     bw_field += ")";
+     log_to_json(desc, rvs::logresults,
+		     "GPU Id", std::to_string(device.second),
+		     "Runtime (seconds)", std::to_string(runtime),
+		     bw_field, std::to_string(bandwidth),
+		     "pass", "true");
+   }
   delete stream;
 }
 
@@ -391,21 +449,19 @@ void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>
   double epsi = std::numeric_limits<T>::epsilon() * 100.0;
 
   if (errA > epsi)
-    std::cerr
-      << "Validation failed on a[]. Average error " << errA
-      << std::endl;
+      rvs::lp::Log("Validation failed on a[]. Average error " + std::to_string(errA), rvs::logerror);
   if (errB > epsi)
-    std::cerr
-      << "Validation failed on b[]. Average error " << errB
-      << std::endl;
+      rvs::lp::Log("Validation failed on b[]. Average error " + std::to_string(errB),rvs::logerror);
   if (errC > epsi)
-    std::cerr
-      << "Validation failed on c[]. Average error " << errC
-      << std::endl;
-  if (!triad_only && errSum > 1.0E-8)
-    std::cerr
-      << "Validation failed on sum. Error " << errSum
+      rvs::lp::Log("Validation failed on c[]. Average error " + std::to_string(errC),rvs::logerror);
+  if (!triad_only && errSum > 1.0E-8){
+    std::stringstream sstr;
+     sstr  << "Validation failed on sum. Error " << errSum
       << std::endl << std::setprecision(15)
       << "Sum was " << sum << " but should be " << goldSum
       << std::endl;
+     rvs::lp::Log(sstr.str() ,rvs::logerror);
+  }
+
 }
+

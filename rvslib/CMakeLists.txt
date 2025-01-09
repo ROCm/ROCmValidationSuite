@@ -78,7 +78,7 @@ add_compile_options(-DBUILD_VERSION_MINOR=${VERSION_MINOR})
 add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
-
+add_compile_options(-DRVS_VERSION_STRING="${RVS_VERSION}")
 
 #ROCBLAS VERSION CHECK FLAGS TO CHECK REORG VERSION 2.44.0
 add_compile_options(-DRVS_ROCBLAS_VERSION_FLAT=${RVS_ROCBLAS_VERSION_FLAT})
@@ -136,6 +136,7 @@ set(SOURCES
   ../src/rvslognodestring.cpp
   ../src/rvslognodeint.cpp
   ../src/rvsminnode.cpp
+  ../src/rvslognodelist.cpp
   ../src/rvs_blas.cpp
   ../src/rvshsa.cpp
 

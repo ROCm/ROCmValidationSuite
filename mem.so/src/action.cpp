@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -46,7 +46,6 @@ using std::string;
 using std::vector;
 using std::map;
 using std::regex;
-
 std::string rvs_mem[]={
     "Test 1  [Walking 1 bit]",
     "Test 2  [Own address test]",
@@ -66,6 +65,7 @@ std::string rvs_mem[]={
  * @brief default class constructor
  */
 mem_action::mem_action() {
+    module_name = MODULE_NAME;
     bjson = false;
 }
 
@@ -290,7 +290,8 @@ int mem_action::get_all_selected_gpus(void) {
     
     // iterate over all available & compatible AMD GPUs
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, mem_gpus_device_index,
-                    property_device, property_device_id, property_device_all);
+        property_device, property_device_id, property_device_all,
+        property_device_index, property_device_index_all);
     if (amd_gpus_found) {
         if (do_mem_stress_test(mem_gpus_device_index))
             return 0;
@@ -334,8 +335,15 @@ int mem_action::run(void) {
     action_callback(&action_result);
     return -1;
   }
+    if(bjson){
+    // add prelims for each action, dtype and target stress
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
+  }
 
   auto res =  get_all_selected_gpus();
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
 
   action_result.state = rvs::actionstate::ACTION_COMPLETED;
   action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
@@ -344,4 +352,8 @@ int mem_action::run(void) {
 
   return res;
 }
+
+
+
+
 

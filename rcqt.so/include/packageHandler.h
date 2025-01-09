@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -35,35 +35,35 @@
 
 class PackageHandler{
 public:
-	PackageHandler() = default;
-	void setManifest(std::string manifest){
-		m_manifest = manifest;
-	}
-	std::string getManifest() const{
-		return m_manifest;
-	}
-	virtual bool parseManifest(); // and load m_pkgversionmap
-	void  validatePackages();
-	const std::map<std::string, std::string>& getPackageMap() const{
-		return m_pkgversionmap;
-	}
-	virtual std::string getInstalledVersion(const std::string& package) = 0;
-	virtual bool pkgrOutputParser(const std::string& s_data, package_info& info) = 0;
+  PackageHandler() = default;
+  void setManifest(std::string manifest){
+    m_manifest = manifest;
+  }
+  std::string getManifest() const{
+    return m_manifest;
+  }
+  virtual bool parseManifest(); // and load m_pkgversionmap
+  void  validatePackages();
+  const std::map<std::string, std::string>& getPackageMap() const{
+    return m_pkgversionmap;
+  }
+  virtual std::string getInstalledVersion(const std::string& package) = 0;
+  virtual bool pkgrOutputParser(const std::string& s_data, package_info& info) = 0;
   void setPkg(const std::string& pkg) {
-		/*
-		if(metaInfo)
-			metaInfo->setPkg(pkg);
-      metaInfo->fillPkgInfo();
-		  m_manifest = metaInfo->getFileName();
-  */
-	}
+	  m_metapkg = pkg;
+  }
+
+  std::string getPkg() {
+    return m_metapkg;
+  }
+
   
   void setPackageList(const std::vector<std::string>& pkglist) {
     m_pkglist = pkglist;
-	}
-	const std::vector<std::string>& getPackageList() const {
-		return m_pkglist;
-	}
+  }
+  const std::vector<std::string>& getPackageList() const {
+    return m_pkglist;
+  }
   void listPackageVersion();
   virtual ~PackageHandler(){}
 	
@@ -72,13 +72,31 @@ public:
     callback = _callback;
     user_param = _user_param;
   }
+  void setAction(std::string _action){
+    action_name = _action;
+  }
 
+  std::string getAction(){
+    return action_name;
+  }
+
+  void setModule(std::string _module){
+    module_name = _module;
+  }
+
+  std::string getModule(){
+    return module_name;
+  }
+  void log_to_json(int log_level, std::vector<std::string> kvlist, void* parent = nullptr );
 private:
-	std::map<std::string, std::string> m_pkgversionmap;
+  std::map<std::string, std::string> m_pkgversionmap;
   std::vector<std:: string> m_pkglist;
+  std::string action_name;
+  std::string module_name;
+  std::string m_metapkg;
 protected:
-	std::unique_ptr<PackageInfo> metaInfo;
-	std::string m_manifest;	
+  std::unique_ptr<PackageInfo> metaInfo;
+  std::string m_manifest;	
   // callback
   rvs::callback_t callback;
   // User parameter

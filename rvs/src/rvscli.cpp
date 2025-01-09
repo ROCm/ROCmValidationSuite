@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -139,9 +139,6 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-c", sp));
   grammar.insert(gpair("--config", sp));
 
-//   sp = std::make_shared<optbase>("--configless", command);
-//   grammar.insert(gpair("--configless", sp));
-
   sp = std::make_shared<optbase>("-d", command, value);
   grammar.insert(gpair("-d", sp));
   grammar.insert(gpair("--debugLevel", sp));
@@ -154,7 +151,7 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-i", sp));
   grammar.insert(gpair("--indexes", sp));
 
-  sp = std::make_shared<optbase>("-j", command);
+  sp = std::make_shared<optbase>("-j", command, optionalvalue);
   grammar.insert(gpair("-j", sp));
   grammar.insert(gpair("--json", sp));
 
@@ -166,19 +163,9 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-q", sp));
   grammar.insert(gpair("--quiet", sp));
 
-  sp = std::make_shared<optbase>("-m", command, value);
-  grammar.insert(gpair("-m", sp));
-  grammar.insert(gpair("--modulepath", sp));
-
-  //  sp = std::make_shared<optbase>("-s", command);
-  //  grammar.insert(gpair("-s", sp));
-  //  grammar.insert(gpair("--scriptable", sp));
-  //
-  //  sp = std::make_shared<optbase>("-st", value);
-  //  grammar.insert(gpair("--specifiedtest", sp));
-  //
-  //  sp = std::make_shared<optbase>("-sf", command);
-  //  grammar.insert(gpair("--statsonfail", sp));
+  sp = std::make_shared<optbase>("-n", command, value);
+  grammar.insert(gpair("-n", sp));
+  grammar.insert(gpair("--numTimes", sp));
 
   sp = std::make_shared<optbase>("-t", command);
   grammar.insert(gpair("-t", sp));
@@ -235,6 +222,10 @@ int rvs::cli::parse(int Argc, char** Argv) {
                    current_option;
           return -1;
         }
+        break;
+
+      case econtext::optionalvalue:
+        token_done = try_optionalvalue(token);
         break;
 
       case econtext::eof:
@@ -357,3 +348,30 @@ bool rvs::cli::try_value(const std::string& token) {
   return true;
 }
 
+/**
+ * @brief Try interpreting given token as a value if present following previous command line option.
+ *
+ * If successful, stores current token in a buffer as value
+ *
+ * @param token token being processed
+ * @return true if successful, false otherwise
+ *
+ */
+bool rvs::cli::try_optionalvalue(const std::string& token) {
+
+  if (token == "")
+    return true;
+
+  //  should not be one of command line options
+  auto it = grammar.find(token);
+  if (it != grammar.end())
+    return false;
+
+  // token is value for previous command
+  current_value = token;
+
+  // emit previous option-value pair:
+  emit_option();
+
+  return true;
+}

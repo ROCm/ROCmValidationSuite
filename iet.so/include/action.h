@@ -70,12 +70,9 @@ class iet_action: public rvs::actionbase {
  public:
     iet_action();
     virtual ~iet_action();
-    static void cleanup_logs();
     virtual int run(void);
 
  protected:
-    //! TRUE if JSON output is required
-    bool bjson = false;
 
     //! gemm operation type
     std::string iet_ops_type;
@@ -149,7 +146,11 @@ class iet_action: public rvs::actionbase {
 
     //! gemm data type
     std::string iet_data_type;
+    // blas backend source library - rocblas,hipblaslt
+    std::string iet_blas_source;
 
+    // gemm compute type
+    std::string iet_compute_type;
     friend class IETWorker;
 
     //! list of GPUs (along with some identification data) which are
@@ -158,7 +159,6 @@ class iet_action: public rvs::actionbase {
     std::map<int, int> hip_to_smi_idxs;
     void hip_to_smi_indices();
     bool get_all_iet_config_keys(void);
-    void json_add_primary_fields();
 
 
 /**

@@ -63,5 +63,6 @@
 #define YAML_DEVICE_PROP_DELIMITER      " "
 
 #define RVS_JSON_LOG_GPU_ID_KEY         "gpu_id"
+#define RVS_JSON_LOG_GPU_IDX_KEY        "gpu_index"
 
 #endif  // INCLUDE_RVS_KEY_DEF_H_

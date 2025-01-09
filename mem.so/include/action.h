@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -93,10 +93,7 @@ class mem_action: public rvs::actionbase {
     virtual int run(void);
 
     std::string mem_ops_type;
-
  protected:
-    //! TRUE if JSON output is required
-    bool bjson;
     //! Memorry mapped
     bool mem_mapped;
     //! maximum number of blocks
@@ -129,7 +126,6 @@ class mem_action: public rvs::actionbase {
   int get_num_amd_gpu_devices(void);
   int get_all_selected_gpus(void);
   int set_mem_mapped(void);
-
   bool do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index);
 };
 

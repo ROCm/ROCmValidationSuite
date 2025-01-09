@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -144,7 +144,7 @@ bool tst_action::get_all_tst_config_keys(void) {
     bool bsts = true;
 
     if ((error =
-      property_get(RVS_CONF_TARGET_TEMP_KEY, &tst_throttle_temp))) {
+      property_get(RVS_CONF_TARGET_TEMP_KEY, &tst_target_temp))) {
       switch (error) {
         case 1:
           msg = "invalid '" + std::string(RVS_CONF_TARGET_TEMP_KEY) +
@@ -487,30 +487,6 @@ int tst_action::get_num_amd_gpu_devices(void) {
 }
 
 
-/**
- * @brief flushes target temperature and dtype fields to json file
- * @return
- */
-
-void tst_action::json_add_primary_fields(){
-    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-        return;
-    }
-    void *json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_TT_MESSAGE, std::to_string(tst_throttle_temp));
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
-            json_node = nullptr;
-    }
-    json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_DTYPE_MESSAGE, tst_ops_type);
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
-    }
-}
 
 /**
  * @brief gets all selected GPUs and starts the worker threads
@@ -529,7 +505,8 @@ int tst_action::get_all_selected_gpus(void) {
     rsmi_init(0);
     // find compatible GPUs to run tst tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, tst_gpus_device_index,
-                    property_device, property_device_id, property_device_all, true); // MCM checks
+        property_device, property_device_id, property_device_all,
+        property_device_index, property_device_index_all, true);  // MCM checks
     if(!amd_gpus_found){
 
         msg = "No devices match criteria from the test configuation.";
@@ -539,8 +516,8 @@ int tst_action::get_all_selected_gpus(void) {
     }
 
     if(bjson){
-        // add prelims for each action, dtype and target stress
-        json_add_primary_fields();
+        // add prelims for each action,
+        json_add_primary_fields(std::string(MODULE_NAME), action_name);
     }
     int tst_res = 0;
     if(do_thermal_test(tst_gpus_device_index))
@@ -589,6 +566,3 @@ int tst_action::run(void) {
   return res;
 }
 
-void tst_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}

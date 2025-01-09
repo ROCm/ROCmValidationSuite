@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -37,10 +37,11 @@ using std::string;
  * @param Parent Pointer to parent node
  *
  */
-rvs::MinNode::MinNode(const char* Name, int LogLevel, const rvs::LogNodeBase* Parent)
+rvs::MinNode::MinNode(const char* Name, int LogLevel,bool Named, const rvs::LogNodeBase* Parent)
 :
 LogNode(Name, Parent),
-Level(LogLevel){
+Level(LogLevel),
+IsNamed(Named){
   Type = eLN::Record;
 }
 
@@ -85,7 +86,9 @@ std::string rvs::MinNode::ToJson(const std::string& Lead) {
   DTRACE_
   string result(RVSENDL);
   result += "{";
-
+  if (IsNamed){
+    result += Lead + "\"" + Name + "\"" + " : {";
+  }
   int  size = Child.size();
   for (int i = 0; i < size; i++) {
     result += Child[i]->ToJson(Lead + RVSINDENT);
@@ -94,6 +97,9 @@ std::string rvs::MinNode::ToJson(const std::string& Lead) {
     }
   }
   result += RVSENDL + Lead + "}";
+  if (IsNamed){
+    result += RVSENDL + Lead + "}";
+  }
 
   return result;
 }

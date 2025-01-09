@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -255,7 +255,7 @@ void pbqt_action::json_to_file(void *json_node,int log_level){
 }
 
 void pbqt_action::log_json_data(std::string srcnode, std::string dstnode,
-    int log_level, pbqt_json_data_t data_type, std::string data) {
+    int log_level, std::string conn, std::string throughput) {
 
   if(bjson){
 
@@ -263,20 +263,10 @@ void pbqt_action::log_json_data(std::string srcnode, std::string dstnode,
     json_add_kv(json_node, "srcgpu", srcnode);
     json_add_kv(json_node, "dstgpu", dstnode);
 
-    switch (data_type) {
+    json_add_kv(json_node, "intf", conn);
+    json_add_kv(json_node, "throughput", throughput);
 
-      case pbqt_json_data_t::PBQT_THROUGHPUT:
-        json_add_kv(json_node, "throughput", data);
-        break;
-
-      case pbqt_json_data_t::PBQT_LINK_TYPE:
-        json_add_kv(json_node, "intf", data);
-        break;
-
-      default:
-        break;
-    }
-
+    json_add_kv(json_node, "pass", "true");
     json_to_file(json_node, log_level);
   }
 }
@@ -297,16 +287,19 @@ int pbqt_action::create_threads() {
 
   std::string msg;
   std::vector<uint16_t> gpu_id;
+  std::vector<uint16_t> gpu_idx;
   std::vector<uint16_t> gpu_device_id;
   uint16_t transfer_ix = 0;
   bool bmatch_found = false;
   char srcgpuid_buff[12];
   char dstgpuid_buff[12];
-
+  std::string pbconn;
   gpu_get_all_gpu_id(&gpu_id);
+  gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
 
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
+
     // filter out by source device id
     if (property_device_id > 0) {
       if (property_device_id != gpu_device_id[i]) {
@@ -315,7 +308,7 @@ int pbqt_action::create_threads() {
     }
 
     // filter out by listed sources
-    if (!property_device_all) {
+    if (!property_device_all && property_device.size()) {
       const auto it = std::find(property_device.cbegin(),
                                 property_device.cend(),
                                 gpu_id[i]);
@@ -323,6 +316,17 @@ int pbqt_action::create_threads() {
             continue;
       }
     }
+
+    // filter out by listed sources
+    if (!property_device_index_all && property_device_index.size()) {
+      const auto it = std::find(property_device_index.cbegin(),
+                                property_device_index.cend(),
+                                gpu_idx[i]);
+      if (it == property_device_index.cend()) {
+            continue;
+      }
+    }
+
     // if property_device_all selected, iteration starts at 0 and all pairs covered.
     for (size_t j = 0; j < gpu_id.size(); j++) {  // all possible peers
       RVSTRACE_
@@ -427,8 +431,9 @@ int pbqt_action::create_threads() {
         }
         if (0 != arr_linkinfo.size()) {
           /* Log link type */
-          log_json_data(std::to_string(srcnode), std::to_string(gpu_id[j]), rvs::logresults, 
-              pbqt_json_data_t::PBQT_LINK_TYPE, arr_linkinfo[0].strtype);
+          pbconn = arr_linkinfo[0].strtype;
+          //log_json_data(std::to_string(srcnode), std::to_string(gpu_id[j]), rvs::logresults, 
+           //   pbqt_json_data_t::PBQT_LINK_TYPE, arr_linkinfo[0].strtype);
           /* Note: Assuming link type for all hops between GPUs are the same */
         }
 
@@ -453,8 +458,14 @@ int pbqt_action::create_threads() {
           p->set_stop_name(action_name);
           p->set_transfer_ix(transfer_ix);
           p->set_block_sizes(block_size);
+	  p->set_conn_type(pbconn);
           test_array.push_back(p);
-        }
+        }else{
+           // no need to run bandwidth, just log interface info
+           log_json_data(std::to_string(gpu_id[srcnode]), std::to_string(gpu_id[j]), rvs::logresults,
+            pbconn, "NA" );
+	}
+
       }
       else {
         RVSTRACE_
@@ -700,8 +711,8 @@ int pbqt_action::print_running_average(pbqtworker* pWorker) {
 
     rvs::lp::Log(msg, rvs::loginfo);
 
-    log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::loginfo,
-        pbqt_json_data_t::PBQT_THROUGHPUT, buff);
+    log_json_data(std::to_string(src_id), std::to_string(dst_id), rvs::loginfo,
+        pWorker->get_conn_type(), buff);
 
     return 0;
 }
@@ -799,8 +810,8 @@ int pbqt_action::print_final_average() {
     result.output = msg.c_str();
     action_callback(&result);
 
-    log_json_data(std::to_string(src_node), std::to_string(dst_id), rvs::logresults,
-        pbqt_json_data_t::PBQT_THROUGHPUT, buff);
+    log_json_data(std::to_string(src_id), std::to_string(dst_id), rvs::logresults,
+        (*it)->get_conn_type(), buff);
 
     sleep(1);
   }
@@ -869,6 +880,3 @@ void pbqt_action::do_running_average() {
   print_running_average();
 }
 
-void pbqt_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}

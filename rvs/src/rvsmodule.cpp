@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -162,14 +162,11 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       return NULL;
     }
 
-    // open .so
+    // open module .so library
     string libpath;
-    if (rvs::options::has_option("-m", &libpath)) {
-      libpath += "/";
-    } else {
-      rvs::options::has_option("pwd", &libpath); // has ending forward slash too
-      libpath += "../lib/rvs/";
-    }
+    rvs::options::has_option("pwd", &libpath); // has ending forward slash too
+    libpath += "../lib/rvs/";
+
     string sofullname(libpath + it->second);
     void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
     // error?
@@ -275,6 +272,7 @@ int rvs::module::initialize() {
   d.cbLog                       = rvs::logger::Log;
   d.cbLogExt                    = rvs::logger::LogExt;
   d.cbLogRecordCreate           = rvs::logger::LogRecordCreate;
+  d.cbJsonNamedListCreate       = rvs::logger::JsonNamedListCreate;
   d.cbJsonStartNodeCreate       = rvs::logger::JsonStartNodeCreate;
   d.cbJsonActionStartNodeCreate = rvs::logger::JsonActionStartNodeCreate;
   d.cbJsonEndNodeCreate         = rvs::logger::JsonEndNodeCreate;

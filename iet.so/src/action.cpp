@@ -87,7 +87,6 @@ using std::fstream;
 #define RVS_CONF_CP_WORKLOAD            "cp_workload"
 #define RVS_CONF_TP_FLAG                "targetpower_met"
 #define RVS_TP_MESSAGE                  "target_power"
-#define RVS_DTYPE_MESSAGE               "dtype"
 #define RVS_CONF_HOT_CALLS              "hot_calls"
 #define RVS_CONF_MATRIX_INIT            "matrix_init"
 #define RVS_CONF_GEMM_MODE              "gemm_mode"
@@ -97,10 +96,15 @@ using std::fstream;
 #define RVS_CONF_STRIDE_C               "stride_c"
 #define RVS_CONF_STRIDE_D               "stride_d"
 
+#define RVS_CONF_BLAS_SOURCE_KEY        "blas_source"
+#define RVS_CONF_COMPUTE_TYPE_KEY       "compute_type"
+
+#define IET_DEFAULT_BLAS_SOURCE         "rocblas"
+#define IET_DEFAULT_COMPUTE_TYPE        "fp32_r"
 #define IET_DEFAULT_RAMP_INTERVAL       5000
 #define IET_DEFAULT_LOG_INTERVAL        1000
 #define IET_DEFAULT_MAX_VIOLATIONS      0
-#define IET_DEFAULT_TOLERANCE           0.1
+#define IET_DEFAULT_TOLERANCE           0
 #define IET_DEFAULT_SAMPLE_INTERVAL     1000
 #define IET_DEFAULT_MATRIX_SIZE         5760
 #define IET_DEFAULT_MATRIX_SIZE_A       0
@@ -412,7 +416,24 @@ bool iet_action::get_all_iet_config_keys(void) {
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       bsts = false;
     }
+    error = property_get<std::string>(RVS_CONF_BLAS_SOURCE_KEY, &iet_blas_source, IET_DEFAULT_BLAS_SOURCE);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_BLAS_SOURCE_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
+  error = property_get<std::string>(RVS_CONF_COMPUTE_TYPE_KEY, &iet_compute_type, IET_DEFAULT_COMPUTE_TYPE);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_COMPUTE_TYPE_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  /* If operation and data type both not set, default to sgemm */
+  if ((iet_ops_type == IET_DEFAULT_OPS_TYPE) && (iet_data_type == IET_DEFAULT_OPS_TYPE)) {
+    iet_ops_type = "sgemm";
+  }
     /* Set minimum sample interval as default */
     if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
       iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
@@ -537,7 +558,8 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_stride_b(iet_stride_b);
             workers[i].set_stride_c(iet_stride_c);
             workers[i].set_stride_d(iet_stride_d);
-
+            workers[i].set_blas_source(iet_blas_source);
+            workers[i].set_compute_type(iet_compute_type);
             i++;
         }
 
@@ -596,31 +618,6 @@ int iet_action::get_num_amd_gpu_devices(void) {
 }
 
 
-/**
- * @brief flushes target power and dtype fields to json file
- * @return
- */
-
-void iet_action::json_add_primary_fields(){
-    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-        return;
-    }
-    void *json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_TP_MESSAGE, std::to_string(iet_target_power));
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
-            json_node = nullptr;
-    }
-    json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_DTYPE_MESSAGE, iet_ops_type);
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
-    }
-
-}
 
 /**
  * @brief gets all selected GPUs and starts the worker threads
@@ -636,12 +633,13 @@ int iet_action::get_all_selected_gpus(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
+
     rsmi_init(0);
     // find compatible GPUs to run edp tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
-                    property_device, property_device_id, property_device_all, true); // MCM checks
+        property_device, property_device_id, property_device_all,
+        property_device_index, property_device_index_all, true);  // MCM checks
     if(!amd_gpus_found){
-
         msg = "No devices match criteria from the test configuation.";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         rsmi_shut_down();
@@ -649,8 +647,8 @@ int iet_action::get_all_selected_gpus(void) {
     }
 
     if(bjson){
-        // add prelims for each action, dtype and target stress
-        json_add_primary_fields();
+        // add prelims for each action
+        json_add_primary_fields(std::string(MODULE_NAME), action_name);
     }
     int iet_res = 0;
     if(do_edp_test(iet_gpus_device_index))
@@ -698,6 +696,3 @@ int iet_action::run(void) {
   return res;
 }
 
-void iet_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}

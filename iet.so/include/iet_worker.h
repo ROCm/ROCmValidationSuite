@@ -278,9 +278,14 @@ class IETWorker : public rvs::ThreadBase {
     //! returns the matrix d stride
     uint64_t get_stride_d(void) { return stride_d; }
 
+    //! set blas backend source library  - rocblas, hipblaslt
+    void set_blas_source(std::string _blas_source) { blas_source = _blas_source; }
+
+    //! set gemm compute type
+    void set_compute_type(std::string _compute_type) { compute_type = _compute_type; }
+
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
-
  protected:
     virtual void run(void);
     bool do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type);
@@ -288,8 +293,6 @@ class IETWorker : public rvs::ThreadBase {
     void compute_new_sgemm_freq(float avg_power);
     bool do_iet_power_stress(void);
     void log_interval_gflops(double gflops_interval);
-    void log_to_json(const std::string &key, const std::string &value,
-        int log_level);
 
     void computeThread(void);
     void bandwidthThread(void);
@@ -399,6 +402,10 @@ class IETWorker : public rvs::ThreadBase {
     std::condition_variable cv;
     //! blas gemm operations status
     bool blas_status;
+    //! blas backend source library - rocblas,hipblaslt
+    std::string blas_source;
+    //! gemm compute type
+    std::string compute_type;
 };
 
 #endif  // IET_SO_INCLUDE_IET_WORKER_H_

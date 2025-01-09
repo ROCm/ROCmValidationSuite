@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -53,6 +53,8 @@ using std::map;
 #define RVS_CONF_MEM_MIBIBYTE           "mibibytes"
 #define RVS_CONF_OP_CSV                 "o/p_csv"
 #define RVS_CONF_SUBTEST                "subtest"
+#define RVS_CONF_DWORDS_PER_LANE        "dwords_per_lane"
+#define RVS_CONF_CHUNKS_PER_BLOCK       "chunks_per_block"
 
 #define MEM_DEFAULT_ARRAY_SIZE          33554432   // 32 MB
 #define MEM_DEFAULT_NUM_ITER            100
@@ -60,12 +62,12 @@ using std::map;
 #define MEM_DEFAULT_MEM_MIBIBYTE        false
 #define MEM_DEFAULT_OP_CSV              false
 #define MEM_DEFAULT_SUBTEST             5
+#define MEM_DEFAULT_DWORDS_PER_LANE     4
+#define MEM_DEFAULT_CHUNKS_PER_BLOCK    2
 
 #define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
-
-
 
 /**
  * @class mem_action
@@ -84,12 +86,10 @@ class mem_action: public rvs::actionbase {
     virtual ~mem_action();
 
     virtual int run(void);
-
+  
     std::string mem_ops_type;
 
  protected:
-    //! TRUE if JSON output is required
-    bool bjson;
     //! Memory in bytes
     bool mibibytes;
     //! output in csv 
@@ -102,7 +102,10 @@ class mem_action: public rvs::actionbase {
     uint64_t num_iterations;
     //! number of iterations
     uint64_t array_size;
-
+    //! number of dwords per lane
+    uint16_t dwords_per_lane;
+    //! number of chunks per block
+    uint16_t chunks_per_block;
 
     // configuration properties getters
     bool get_all_mem_config_keys(void);
@@ -113,7 +116,6 @@ class mem_action: public rvs::actionbase {
   */
   int get_num_amd_gpu_devices(void);
   int get_all_selected_gpus(void);
-
   bool do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index);
 };
 

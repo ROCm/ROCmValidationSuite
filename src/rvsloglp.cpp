@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -55,6 +55,7 @@ int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
   mi.cbStop                       = pMi->cbStop;
   mi.cbStopping                   = pMi->cbStopping;
   mi.cbErr                        = pMi->cbErr;
+  mi.cbJsonNamedListCreate         = pMi->cbJsonNamedListCreate;
 
   return 0;
 }
@@ -326,3 +327,18 @@ int rvs::lp::Err(const std::string &Message
       , const std::string &Module, const std::string &Action) {
   return (*mi.cbErr)(Message.c_str(), Module.c_str(), Action.c_str());
 }
+
+
+/**
+ *  * @brief Create named list start log record
+ *   *
+ * Note: this API is used to construct JSON output. Use LogExt() to
+ * perform unstructured output.
+ *
+ * @return 0 - success, non-zero otherwise
+ *
+ */
+void* rvs::lp::JsonNamedListCreate(const char* name, const int LogLevel) {
+  return (*mi.cbJsonNamedListCreate)(name, LogLevel);
+}
+

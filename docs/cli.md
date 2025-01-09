@@ -6,39 +6,43 @@
 <b>rvs</b> [[[<b>-d</b>|<b>--debugLevel</b>] 0|<b>--quiet</b>] | [[<b>-d</b>|<b>--debugLevel</b>] 1|2|3|4] | [[<b>-d</b>|<b>--debugLevel</b>] 5|<b>--verbose</b>|<b>-v</b>]]
 [<b>-c</b> <i>path/config_file</i>]
 [<b>-l</b> <i>path/log_file</i> [<b>-a</b>] [<b>-j</b>]] 
-[<b>-m</b> <i>module_path</i>]
 
 ## Options
 
 ```
--a --appendLog     When generating a debug logfile, do not overwrite the contents
-                   of a current log. Used in conjuction with the -d and -l options
--c --config        Specify the configuration file to be used.
-                   The default is <install base>/conf/RVS.conf
-   --configless    Run RVS in a configless mode. Executes a "long" test on all
-                   supported GPUs.
--d --debugLevel    Specify the debug level for the output log. The range is
-                   0 to 5 with 5 being the most verbose.
-                   Used in conjunction with the -l flag.
--g --listGpus      List the GPUs available and exit. This will only list GPUs
-                   that are supported by RVS.
--i --indexes       Comma separated list of indexes devices to run RVS on. This will
-                   override the device values specified in the configuration file for
-                   every action in the configuration file, including the ‘all’ value.
--j --json          Output should use the JSON format.
--l --debugLogFile  Specify the logfile for debug information. This will produce a log
-                   file intended for post-run analysis after an error.
+-a --appendLog     When generating a debug logfile, do not overwrite the content
+                   of the current log. Use in conjuction with -d and -l options.
+
+-c --config        Specify the test configuration file to use. This is a mandatory
+                   field for test execution.
+
+-d --debugLevel    Specify the debug level for the output log. The range is 0-5 with
+                   5 being the highest verbose level.
+
+-g --listGpus      List all the GPUs available in the machine, that RVS supports and
+                   has visibility.
+
+-i --indexes       Comma separated list of GPU ids/indexes to run test on. This overrides
+                   the device/device_index values specified for every actions in the
+                   configuration file, including the ‘all’ value.
+
+-j --json          Generate output file in JSON format.
+                   if a path follows this argument, that will be used as json log file;
+                   else a file created in /var/tmp/ with timestamp in name.
+-l --debugLogFile  Generate log file with output and debug information.
+
+
+-t --listTests     List the test modules present in RVS.
+
+-v --verbose       Enable verbose reporting. Equivalent to specifying -d 5 option.
+
+-n --numTimes      Number of times the test repeatedly executes. Use in conjunction
+                   with -c option.
+
    --quiet         No console output given. See logs and return code for errors.
--m --modulepath    Specify a custom path for the RVS modules.
-   --specifiedtest Run a specific test in a configless mode. Multiple word tests
-                   should be in quotes. This action will default to all devices,
-                   unless the indexes option is specifie.
--t --listTests     List the modules available to be executed through RVS and exit.
-                   This will list only the readily loadable modules
-                   given the current path and library conditions.
--v --verbose       Enable verbose reporting. This is equivalent to
-                   specifying the -d 5 option.
-   --version       Displays the version information and exits.
+
+   --version       Display version information and exit.
+
 -h --help          Display usage information and exit.
 ```
 
@@ -51,11 +55,9 @@ non-zero - otherwise
 
 ## Examples
 
-<b>rvs</b>
-Runs rvs with the default test configuration file <i>[install_base]/conf/rvs.conf</i>
 
 <b>rvs -c conf/gpup1.conf -d 3 -j -l mylog.txt</b>
-Runs rvs with configuration file <i>conf/gpup1.conf</i> and writes output into log file <i>mylog.txt</i> using logging level 3 (INFO) in JSON format
+Runs rvs with configuration file <i>conf/gpup1.conf</i> and writes text output into log file <i>mylog.txt</i> using logging level 3 (INFO) and writes to a file in /var/tmp/ folder in JSON format.Name of json log file will be printed to stdout/text log file
 
 For more details consult the User Guide located in:
 <i>[install_base]/userguide/html/index.html</i>

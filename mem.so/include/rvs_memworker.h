@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -69,7 +69,6 @@
 #define MEM_START_MSG                           "start"
 #define MEM_PASS_KEY                            "pass"
 #endif
-
 
 /**
  * @class MEMWorker
@@ -184,6 +183,8 @@ class MemWorker : public rvs::ThreadBase {
     bool get_stress() {
         return stress;
     }
+    template <typename... KVPairs>
+    void log_to_json(int log_level, KVPairs...  key_values );
 
     //! sets the JSON flag
     static void set_use_json(bool _bjson) { bjson = _bjson; }
@@ -198,8 +199,7 @@ class MemWorker : public rvs::ThreadBase {
     bool do_mem_stress_test(int *error, std::string *err_description);
     void log_mem_test_result(bool mem_test_passed);
     virtual void run(void);
-    void log_to_json(const std::string &key, const std::string &value,
-                     int log_level);
+
     void log_interval_gflops(double gflops_interval);
     bool check_gflops_violation(double gflops_interval);
     void check_target_stress(double gflops_interval);

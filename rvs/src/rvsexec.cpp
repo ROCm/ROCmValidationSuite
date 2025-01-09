@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -49,7 +49,7 @@ using std::cout;
 using std::endl;
 
 //! Default constructor
-rvs::exec::exec():app_callback(nullptr), user_param(0) {
+rvs::exec::exec():app_callback(nullptr), user_param(0), num_times(1) {
 }
 
 //! Default destructor
@@ -123,10 +123,14 @@ int rvs::exec::run() {
   }
 
   // check -j option
-  if (rvs::options::has_option("-j", &val)) {
+  std::string s_json_log_file;
+  if (rvs::options::has_option("-j", &s_json_log_file)) {
     logger::to_json(true);
+    logger::set_json_log_file(s_json_log_file);
+    
   }
 
+  // check -c option
   string config_file;
   if (rvs::options::has_option("-c", &val)) {
     config_file = val;
@@ -153,6 +157,20 @@ int rvs::exec::run() {
     file.close();
   }
 
+  // check -n options
+  if (rvs::options::has_option("-n", &val)) {
+    try {
+      num_times = std::stoi(val);
+    }
+    catch(...) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "number of times test repeat value not an integer: %s", val.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+  }
+
   // construct modules configuration file relative path
   val = path + "../share/rocm-validation-suite/conf/.rvsmodules.config";
   // Check if config file exists if not check the old file location for backward compatibility
@@ -168,7 +186,7 @@ int rvs::exec::run() {
 
   if (rvs::options::has_option("-t", &val)) {
         cout << endl << "ROCm Validation Suite (version " <<
-        LIB_VERSION_STRING << ")" << endl << endl;
+        RVS_VERSION_STRING << ")" << endl << endl;
         cout << "Modules available:" << endl;
     rvs::module::do_list_modules();
     return 0;
@@ -419,63 +437,55 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
 
 //! Reports version string
 void rvs::exec::do_version() {
-  cout << LIB_VERSION_STRING << '\n';
+  cout << RVS_VERSION_STRING << '\n';
 }
 
 //! Prints help
 void rvs::exec::do_help() {
-  cout << "\nUsage: rvs [options]\n";
+
+  cout << "\nUsage: rvs [option]... [file]...\n";
   cout << "\nOptions:\n\n";
-  cout << "-a --appendLog     When generating a debug logfile, do not "
-                              "overwrite the content\n";
-  cout << "                   of the current log. Used in conjuction with "
-                               "-d and -l options.\n";
-  cout << "-c --config        Specify the configuration file to be used.\n";
-  cout << "                   The default is <install base>/conf/rvs.conf\n";
-  cout << "   --configless    Run RVS in a configless mode. Executes a "
-                              "\"long\" test on all\n";
-  cout << "                   supported GPUs.\n";
-  cout << "-d --debugLevel    Specify the debug level for the output log. "
-                              "The range is\n";
-  cout << "                   0 to 5 with 5 being the highest verbose level.\n";
-  cout << "                   Used in conjunction with -l option.\n";
-  cout << "-g --listGpus      List the GPUs available and exit. This will "
-                              "only list GPUs\n";
-  cout << "                   that are supported by RVS.\n";
-  cout << "-i --indexes       Comma separated list of indexes devices to run "
-                              "RVS on. This will\n";
-  cout << "                   override the device values specified in the "
-                              "configuration file for\n";
-  cout << "                   every action in the configuration file, "
-                              "including the ‘all’ value.\n";
-  cout << "-j --json          Output should use the JSON format.\n";
-  cout << "-l --debugLogFile  Specify the logfile for debug information. "
-                              "This will produce a log\n";
-  cout << "                   file intended for post-run analysis after "
-                              "an error.\n";
-  cout << "   --quiet         No console output given. See logs and return "
-                              "code for errors.\n";
-  cout << "-m --modulepath    Specify a custom path for the RVS modules.\n";
-  cout << "   --specifiedtest Run a specific test in a configless mode. "
-                              "Multiple word tests\n";
-  cout << "                   should be in quotes. This action will default "
-                              "to all devices,\n";
-  cout << "                   unless the indexes option is specific.\n";
-  cout << "-t --listTests     List the modules available to be executed "
-                              "through RVS and exit.\n";
-  cout << "                   This will list only the readily loadable "
-                              "modules\n";
-  cout << "                   given the current path and library conditions.\n";
-  cout << "-v --verbose       Enable verbose reporting. This is "
-                              "equivalent to\n";
-  cout << "                   specifying the -d 5 option.\n";
-  cout << "   --version       Display version information and exit.\n";
-  cout << "-h --help          Display usage information and exit.\n";
+
+  cout << "-a --appendLog     When generating a debug logfile, do not overwrite the content\n";
+  cout << "                   of the current log. Use in conjuction with -d and -l options.\n\n";
+
+  cout << "-c --config        Specify the test configuration file to use.\n\n";
+
+  cout << "-d --debugLevel    Specify the debug level for the output log. The range is 0-5 with\n";
+  cout << "                   5 being the highest verbose level.\n\n";
+
+  cout << "-g --listGpus      List all the GPUs available in the machine, that RVS supports and\n";
+  cout << "                   has visibility.\n\n";
+
+  cout << "-i --indexes       Comma separated list of GPU ids/indexes to run test on. This overrides\n";
+  cout << "                   the device/device_index values specified for every actions in the\n";
+  cout << "                   configuration file, including the ‘all’ value.\n\n";
+
+  cout << "-j --json          Generate output file in JSON format.\n";
+  cout << "                   if a path follows this argument, that will be used as json log file\n";
+  cout << "                   else a file created in /var/tmp/ with timestamp in name.\n\n";
+
+  cout << "-l --debugLogFile  Generate log file with output and debug information.\n\n";
+ 
+
+  cout << "-t --listTests     List the test modules present in RVS.\n\n";
+
+  cout << "-v --verbose       Enable verbose reporting. Equivalent to specifying -d 5 option.\n\n";
+
+
+  cout << "-n --numTimes      Number of times the test repeatedly executes. Use in conjunction\n";
+  cout << "                   with -c option.\n\n";
+
+  cout << "   --quiet         No console output given. See logs and return code for errors.\n\n";
+
+  cout << "   --version       Display version information and exit.\n\n";
+
+  cout << "-h --help          Display usage information and exit.\n\n";
 }
 
-//! Reports list of AMD GPUs presnt in the system
+//! Reports list of AMD GPUs present in the system
 int rvs::exec::do_gpu_list() {
-  cout << "\nROCm Validation Suite (version " << LIB_VERSION_STRING << ")\n\n";
+  cout << "\nROCm Validation Suite (version " << RVS_VERSION_STRING << ")\n\n";
 
   // create action excutor in .so
   rvs::action* pa = module::action_create("pesm");

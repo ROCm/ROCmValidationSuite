@@ -55,7 +55,6 @@ class pebb_action : public rvs::actionbase {
  public:
   pebb_action();
   virtual ~pebb_action();
-  static void cleanup_logs();
   virtual int run(void);
 
   typedef struct bandwidth{
@@ -113,7 +112,6 @@ class pebb_action : public rvs::actionbase {
                       uint32_t Distance,
                       const std::vector<rvs::linkinfo_t>& arrLinkInfo,
                       bool bReverse);
-  void json_add_primary_fields();
   void* json_base_node(int log_level);
   void json_add_kv(void *json_node, const std::string &key, const std::string &value);
   void json_to_file(void *json_node,int log_level);
@@ -125,8 +123,6 @@ class pebb_action : public rvs::actionbase {
 
   //! 'true' for the duration of test
   bool brun;
-  //! bjson field indicates if the json flag is set
-  bool bjson;
 
  private:
   void do_running_average(void);

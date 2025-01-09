@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -28,7 +28,8 @@
 #include <string>
 #include <mutex>
 #include "include/rvsliblog.h"
-
+bool isPathedFile(const std::string &fname);
+bool doesFolderExist(const std::string &fname);
 
 namespace rvs {
 
@@ -54,7 +55,7 @@ class logger {
   static  void  quiet() { b_quiet = true; }
   //! set logging file
   static  void  set_log_file(const std::string& fname);
-
+  static  void  set_json_log_file(const std::string& fname); 
   static  bool   get_ticks(uint32_t* psecs, uint32_t* pusecs);
 
   static  int    init_log_file();
@@ -81,6 +82,7 @@ class logger {
   static  bool   Stopping(void);
   static  int    Err(const char *Message,
                    const char *Module = nullptr, const char *Action = nullptr);
+  static  void*    JsonNamedListCreate(const char* name, const int LogLevel);
 
  protected:
   static  int    ToFile(const std::string& Row ,  bool json = false);
@@ -91,8 +93,12 @@ class logger {
   static  bool   tojson_m;
   //! 'true' if append to existing log file is requested
   static  bool   append_m;
+  // state of module specific logs written, only to be run once
+  static bool  initModule;
   //! 'true' if the incoming record is the first record in this rvs invocation
   static  bool   isfirstrecord_m;
+  //! 'true' if the creating record is the first action in rvs invocation
+  static  bool   isfirstaction_m;
   //! Array of C std::strings representing logging level names
   static  const char*   loglevelname[6];
   //! Mutex to synchronize cout output

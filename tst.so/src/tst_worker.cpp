@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -47,6 +47,9 @@
 #define TST_BLAS_FAILURE                        "BLAS setup failed!"
 #define TST_SGEMM_FAILURE                       "GPU failed to run the SGEMMs!"
 
+#define TST_JSON_TARGET_TEMP_KEY                  "target_temp"
+#define TST_JSON_THROTTLE_TEMP_KEY                 "throttle_temp"
+
 #define TST_TARGET_MESSAGE                      "target"
 #define TST_DTYPE_MESSAGE                       "dtype"
 #define TST_PWR_TARGET_ACHIEVED_MSG             "target achieved"
@@ -54,6 +57,7 @@
 #define TST_PASS_KEY                            "pass"
 
 #define TST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
+#define TST_JSON_LOG_GPU_IDX_KEY                "gpu_index"
 #define TST_MEM_ALLOC_ERROR                     1
 #define TST_BLAS_ERROR                          2
 #define TST_BLAS_MEMCPY_ERROR                   3
@@ -80,25 +84,6 @@ static uint64_t time_diff(
     return milliseconds.count();
 }
 
-/**
- * @brief logs a message to JSON
- * @param key info type
- * @param value message to log
- * @param log_level the level of log (e.g.: info, results, error)
- */
-void TSTWorker::log_to_json(const std::string &key, const std::string &value,
-                     int log_level) {
-	if(!TSTWorker::bjson)
-		return;
-        void *json_node = json_node_create(std::string(MODULE_NAME),
-                            action_name.c_str(), log_level);
-        if (json_node) {
-            rvs::lp::AddString(json_node, TST_JSON_LOG_GPU_ID_KEY,
-                            std::to_string(gpu_id));
-            rvs::lp::AddString(json_node, key, value);
-            rvs::lp::LogRecordFlush(json_node);
-        }
-}
 
 /**
  * @brief class default constructor
@@ -117,8 +102,6 @@ void TSTWorker::log_interval_gflops(double gflops_interval) {
     string msg;
     msg = " GPU flops :" + std::to_string(gflops_interval);
     rvs::lp::Log(msg, rvs::logtrace);
-    log_to_json(TST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(gflops_interval),
-                rvs::loginfo);
 
 }
 
@@ -232,7 +215,7 @@ bool TSTWorker::do_thermal_stress(void) {
     bool      start = true;
     rvs::action_result_t action_result;
     rsmi_status_t rsmi_stat;
- 
+    auto desc = action_descriptor{action_name, MODULE_NAME, gpu_id}; 
     // Initiate blas workload thread
     std::thread t(&TSTWorker::blasThread, this, gpu_device_index, matrix_size_a, tst_ops_type, start, run_duration_ms,
             tst_trans_a, tst_trans_b, tst_alpha_val, tst_beta_val, tst_lda_offset, tst_ldb_offset, tst_ldc_offset, tst_ldd_offset);
@@ -305,8 +288,6 @@ bool TSTWorker::do_thermal_stress(void) {
         }
     }
 
-    // Json log the max. edge temperature
-    log_to_json(TST_AVERAGE_EDGE_TEMP_KEY, std::to_string(max_edge_temperature), rvs::loginfo);
 
     msg = "[" + action_name + "] " + MODULE_NAME + " " + "GPU " +
         std::to_string(gpu_id) + " " + "max. edge temperature :" + " " + std::to_string(max_edge_temperature);
@@ -316,7 +297,6 @@ bool TSTWorker::do_thermal_stress(void) {
         std::to_string(gpu_id) + " " + "max. junction temperature :" + " " + std::to_string(max_junction_temperature);
     rvs::lp::Log(msg, rvs::loginfo);
 
-    result = true;
 
     //check whether we reached the target temperature
     if(max_junction_temperature >= target_temp) {
@@ -331,7 +311,6 @@ bool TSTWorker::do_thermal_stress(void) {
         rvs::lp::Log(msg, rvs::loginfo);
         result = false;
     }
-
     //check whether we reached the trottle temperature
     if(max_junction_temperature >= throttle_temp) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " + "GPU " +
@@ -343,7 +322,14 @@ bool TSTWorker::do_thermal_stress(void) {
             std::to_string(gpu_id) + " " + " Thermal throttling condition could not be met :" + " " + std::to_string(max_junction_temperature);
         rvs::lp::Log(msg, rvs::loginfo);
     }
-
+    if (bjson)
+        log_to_json(desc, rvs::logresults,
+           TST_JSON_THROTTLE_TEMP_KEY, std::to_string(throttle_temp), 
+           TST_JSON_TARGET_TEMP_KEY, std::to_string(target_temp),
+           TST_DTYPE_MESSAGE, tst_ops_type,
+           TST_AVERAGE_EDGE_TEMP_KEY, std::to_string(max_edge_temperature),
+           TST_AVERAGE_JUNCTION_TEMP_KEY, std::to_string(max_junction_temperature),
+           "pass", result ? "true" : "false");
     action_result.state = rvs::actionstate::ACTION_RUNNING;
     action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
     action_result.output = msg.c_str();

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -69,7 +69,6 @@ class pbqt_action : public rvs::actionbase {
   virtual ~pbqt_action();
 
   virtual int run(void);
-  static void cleanup_logs();
 
  protected:
   bool get_all_pbqt_config_keys(void);
@@ -117,15 +116,12 @@ class pbqt_action : public rvs::actionbase {
   //! 'true' for the duration of test
   bool brun;
 
-  //! bjson field indicates if the json flag is set
-  bool bjson;
 
-  void json_add_primary_fields();
   void* json_base_node(int log_level);
   void json_add_kv(void *json_node, const std::string &key, const std::string &value);
   void json_to_file(void *json_node,int log_level);
   void log_json_data(std::string srcnode, std::string dstnode,
-          int log_level, pbqt_json_data_t data_type, std::string data = "");
+          int log_level, std::string conn, std::string throughput);
 
  private:
   void do_running_average(void);

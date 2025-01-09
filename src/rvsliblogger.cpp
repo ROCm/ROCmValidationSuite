@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -23,6 +23,9 @@
  *
  *******************************************************************************/
 #include "include/rvsliblogger.h"
+#include <sys/types.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #include <unistd.h>
 #include <time.h>
@@ -42,6 +45,7 @@
 #include "include/rvslognodeint.h"
 #include "include/rvslognoderec.h"
 #include "include/rvsminnode.h"
+#include "include/rvslognodelist.h"
 
 using std::cerr;
 using std::cout;
@@ -50,6 +54,8 @@ int   rvs::logger::loglevel_m(2);
 bool  rvs::logger::tojson_m(false);
 bool  rvs::logger::append_m(false);
 bool  rvs::logger::isfirstrecord_m(true);
+bool  rvs::logger::initModule(true);
+bool  rvs::logger::isfirstaction_m(true);
 std::mutex  rvs::logger::cout_mutex;
 std::mutex  rvs::logger::log_mutex;
 bool  rvs::logger::bStop(false);
@@ -69,6 +75,45 @@ const std::string list_start{"["};
 const std::string list_end{"]"};
 const std::string newline{"\n"};
 const std::string json_folder{"/var/tmp/"};
+
+bool isPathedFile(const std::string &fname){
+  return fname.find('/') != std::string::npos ;
+}
+
+bool doesFolderExist(const std::string &fname){
+  auto loc = fname.find_last_of('/');
+  auto dirName = fname.substr(0,loc);
+  DIR* dir = opendir(dirName.c_str());
+  if (dir == NULL) {
+    // try creating directory, this doesnt exist. if fails return
+    int ret = mkdir(dirName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
+    if (ret){
+      return false;
+    }
+  } 
+  std::fstream fs;
+  fs.open(fname,  std::ios::out | std::ios::trunc);
+  if (fs.fail()){// unable to create file in dir
+      return false;
+  }
+  return true;
+}
+
+/**
+ * @brief helper to create json file name
+ * @return json file name
+ */
+std::string json_filename(){
+        std::string json_file;
+        json_file.assign("rvs");
+        std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+            std::chrono::system_clock::now().time_since_epoch());
+        json_file = json_file + "_" + std::to_string(ms.count()) + ".json";
+        json_file = json_folder + json_file;
+        return json_file;
+}
+
+
 /**
  * @brief Set 'append' flag
  *
@@ -91,6 +136,30 @@ bool rvs::logger::append() {
 
 void rvs::logger::set_log_file(const std::string& fname) {
     strncpy(log_file, fname.c_str(), sizeof(log_file));
+    if (isPathedFile(log_file)){
+        if (!doesFolderExist(log_file)){
+          std::cout << "Unable to create log file, check path.";
+        }
+   }
+
+}
+
+
+void rvs::logger::set_json_log_file(const std::string& fname) {
+    std::stringstream ss;
+    if (!fname.empty()){
+        json_log_file = fname;
+        if (isPathedFile(fname) && !doesFolderExist(fname)){
+		json_log_file = json_filename();
+                ss << "Unable to create Json log file specified at" << fname << std::endl;
+            }
+
+   }else{
+       json_log_file = json_filename(); 
+   }
+    ss << "Json log file created at " << json_log_file << std::endl;
+    std::lock_guard<std::mutex> lk(cout_mutex);
+    std::cout << ss.str();
 }
 
 /**
@@ -260,19 +329,6 @@ int rvs::logger::LogExt(const char* Message, const int LogLevel,
   return 0;
 }
 
-/**
- * @brief helper to create json file name
- * @return json file name
- */
-std::string json_filename(const char* moduleName){
-	std::string json_file;
-        json_file.assign(moduleName);
-        std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
-            std::chrono::system_clock::now().time_since_epoch());
-        json_file = json_file + "_" + std::to_string(ms.count()) + ".json";
-        json_file = json_folder + json_file;
-        return json_file;
-}  
 
 /**
  * @brief Create log record
@@ -293,7 +349,7 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
   uint32_t   sec;
   uint32_t   usec;
   if( json_log_file.empty()){
-       json_log_file = json_filename(Module);
+       json_log_file = json_filename();
        std::lock_guard<std::mutex> lk(cout_mutex);
        std::cout << "json log file is " << json_log_file<< std::endl;
   }
@@ -317,6 +373,8 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
   return static_cast<void*>(rec);
 }
 
+
+
 /**
  * @brief Create json log record
  *
@@ -330,32 +388,42 @@ void* rvs::logger::LogRecordCreate(const char* Module, const char* Action,
 #if 1
 int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
     if ( json_log_file.empty()){
-        json_log_file = json_filename(Module);
+        json_log_file = json_filename();
         std::lock_guard<std::mutex> lk(cout_mutex);
         std::cout << "json log file is " << json_log_file<< std::endl;
   }
   std::string row{node_start};
   row += std::string("\"") + Module + std::string("\"") + kv_delimit + node_start + newline;
-  //row += RVSINDENT;
-  //row += std::string("\"") + Action + std::string("\"") + kv_delimit + list_start + newline;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
 }
 
 int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Action) {
-  if(json_log_file.empty()){
+  if(initModule || json_log_file.empty()){
     rvs::logger::JsonStartNodeCreate(Module, Action);
+    initModule =  false;
   }
   isfirstrecord_m = true;
-  std::string row{RVSINDENT};
+  std::string row{newline};
+  if (isfirstaction_m){
+    isfirstaction_m = false;
+  } else{
+     row +=std::string(",");       
+  }
+  row += std::string(RVSINDENT);
   row += std::string("\"") + Action + std::string("\"") + kv_delimit + list_start + newline;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
 }
 
+void* rvs::logger::JsonNamedListCreate(const char* name,const int LogLevel){
+    rvs::LogListNode* rec = new rvs::LogListNode(name, LogLevel);
+    return static_cast<void*>(rec);
+
+}	
 int rvs::logger::JsonActionEndNodeCreate() {
   std::string row{RVSINDENT};
-  row += list_end + std::string(",");
+  row += list_end;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
 }
@@ -476,10 +544,12 @@ int rvs::logger::ToFile(const std::string& Row, bool json_rec) {
 	logfile.assign(log_file);
   if (logfile == "")
     return -1;
-
+  // check if folder, and if it exists/can be created.
   std::fstream fs;
-  fs.open(logfile, std::fstream::out | std::fstream::app);
 
+  fs.open(logfile, std::fstream::out | std::fstream::app);
+  if (fs.fail())
+    return -1;
   fs << Row;
 
   fs.close();

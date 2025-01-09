@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -277,8 +277,12 @@ void PERFWorker::log_to_json(const std::string &key, const std::string &value,
         void *json_node = rvs::lp::LogRecordCreate(MODULE_NAME,
                             action_name.c_str(), log_level, sec, usec);
         if (json_node) {
-            rvs::lp::AddString(json_node, PERF_JSON_LOG_GPU_ID_KEY,
-                            std::to_string(gpu_id));
+            rvs::lp::AddString(json_node, PERF_JSON_LOG_GPU_ID_KEY, std::to_string(gpu_id));
+
+            uint16_t gpu_index = 0;
+            rvs::gpulist::gpu2gpuindex(gpu_id, &gpu_index);
+            rvs::lp::AddString(json_node, "gpu_index", std::to_string(gpu_index));
+
             rvs::lp::AddString(json_node, key, value);
             rvs::lp::LogRecordFlush(json_node);
         }

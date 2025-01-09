@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -75,17 +75,7 @@ uint64_t time_diff(
 }
 
 
-/**
- * @brief flushes target and dtype fields to json file
- * @return
- */
 
-void pebb_action::json_add_primary_fields(){
-  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-    return;
-  }	
-}
 /**
  * @brief Main action execution entry point. Implements test logic.
  *
@@ -138,7 +128,7 @@ int pebb_action::run() {
 
   test_duration = property_duration;
   if(bjson){
-    json_add_primary_fields();
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
   int sts = create_threads();
 

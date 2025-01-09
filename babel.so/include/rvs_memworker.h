@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -197,6 +197,19 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the test type
     bool get_output_csv(void) { return output_csv; }
 
+    //! sets the numbers of dwords per lane
+    void set_dwords_per_lane(uint16_t _dwords_per_lane) {
+        dwords_per_lane = _dwords_per_lane;
+    }
+    //! returns the numbers of dwords per lane
+    uint16_t get_dwords_per_lane(void) { return dwords_per_lane; }
+
+    //! sets the numbers of chunks per block
+    void set_chunks_per_block(uint16_t _chunks_per_block) {
+        chunks_per_block = _chunks_per_block;
+    }
+    //! returns the numbers of chunks per block
+    uint16_t get_chunks_per_block(void) { return chunks_per_block; }
 
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
@@ -206,8 +219,6 @@ class MemWorker : public rvs::ThreadBase {
     bool do_mem_stress_test(int *error, std::string *err_description);
     void log_mem_test_result(bool mem_test_passed);
     virtual void run(void);
-    void log_to_json(const std::string &key, const std::string &value,
-                     int log_level);
     void log_interval_gflops(double gflops_interval);
     void usleep_ex(uint64_t microseconds);
 
@@ -234,6 +245,10 @@ class MemWorker : public rvs::ThreadBase {
     int test_type;
     //! Sub Test type
     int subtest;
+    //! number of dwords per lane
+    uint16_t dwords_per_lane;
+    //! number of chunks per block
+    uint16_t chunks_per_block;
 
     //! TRUE if JSON output is required
     static bool bjson;

@@ -52,7 +52,6 @@ RVS package components are installed in `/opt/rocm`. Package contains:
     Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS default sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
 
 ### Run version pre-compiled and packaged with ROCm release
@@ -62,7 +61,6 @@ RVS package components are installed in `/opt/rocm`. Package contains:
     Command examples
     ./rvs --help ; Lists all options to run RVS test suite
     ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
 
 To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
@@ -123,12 +121,10 @@ Please see the web page “ROCm, a New Era in Open GPU Computing” to find out 
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory. The maximum bandwidth obtained is reported to help debug low bandwidth issues. The benchmark should be capable of  targeting one, some or all of the GPUs installed in a platform, reporting individual benchmark statistics for each.
 
 #### GPU Stress Test - GST module
-The GPU Stress Test runs a Graphics Stress test or SGEMM/DGEMM/HGEMM (Single/Double/Half-precision General Matrix Multiplication) workload on one, some or all GPUs. The GPUs can be of the same or different types. The duration of the benchmark should be configurable, both in terms of time (how long to run) and iterations (how many times to run).
-
-The test should be capable driving the power level equivalent to the rated TDP of the card, or levels below that. The tool must be capable of driving cards at TDP-50% to TDP-100%, in 10% incremental jumps. This should be controllable by the user.
+The GPU Stress Test runs various GEMM computations as workloads to stress the GPU FLOPS performance and check whether it meets the configured target GFLOPS. GEMM workloads shall be configured as either operation type or data type. GEMM based on operation types include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) - configured using operation parameter. GEMM based on data types include `fp8`, `i8`, `fp16`, `bf16`, `fp32` and  `tf32` (`xf32`) - configured using data type parameter. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
 
 #### Input EDPp Test - IET module
-The Input EDPp Test generates EDP peak power on all input rails. This test is used to verify if the system PSU is capable of handling the worst case power spikes of the board.  Peak Current at defined period  =  1 minute moving average power.
+The Input EDPp Test runs GEMM workloads to stress the GPU power (that is, TGP). This test is used to verify if the GPU is capable of handling max. power stress for a sustained period of time. Also checks whether GPU power reaches a set target power.
 
 #### Memory Test - MEM module
 The Memory module tests the GPU memory for hardware errors and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
@@ -243,56 +239,52 @@ Command line options are summarized in the table below:
 
 <table>
 <tr><th>Short option</th><th>Long option</th><th> Description</th></tr>
-<tr><td>-a</td><td>\-\-appendLog</td><td>When generating a debug logfile,
-do not overwrite the contents
-of a current log. Used in conjunction with the -d and -l options.
+<tr><td>-a</td><td>--appendLog</td><td>When generating a debug logfile, do not overwrite the content
+of the current log. Use in conjuction with -d and -l options.
 </td></tr>
 
-<tr><td>-c</td><td>\-\-config</td><td>Specify the configuration file to be used.
-The default is \<installbase\>/RVS/conf/RVS.conf
+<tr><td>-c</td><td>--config</td><td>Specify the test configuration file to use.
+This is a mandatory field for test execution.
 </td></tr>
 
-<tr><td></td><td>\-\-configless</td><td>Run RVS in a configless mode.
-Executes a "long" test on all supported GPUs.</td></tr>
+<tr><td>-d</td><td>--debugLevel</td><td>Specify the debug level for the output log.
+The range is 0-5 with 5 being the highest verbose level.
+</td></tr>
 
-<tr><td>-d</td><td>\-\-debugLevel</td><td>Specify the debug level for the output
-log. The range is 0 to 5 with 5 being the most verbose.
-Used in conjunction with the -l flag.</td></tr>
+<tr><td>-g</td><td>--listGpus</td><td>List all the GPUs available in the machine,
+that RVS supports and has visibility.
+</td></tr>
 
-<tr><td>-g</td><td>\-\-listGpus</td><td>List the GPUs available and exit.
-This will only list GPUs that are supported by RVS.</td></tr>
+<tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids/indexes to run test on.
+This overrides the device/device_index values specified for every actions in the
+configuration file, including the ‘all’ value.
+</td></tr>
 
-<tr><td>-i</td><td>\-\-indexes</td><td>Comma separated list of  devices to run
-RVS on. This will override the device values specified in the configuration file
-for every action in the configuration file, including the "all" value.</td></tr>
+<tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
+if a path follows this argument, that will be used as json log file;
+else a file created in /var/tmp/ with timestamp in name.
+</td></tr>
 
-<tr><td>-j</td><td>\-\-json</td><td>Output should use the JSON format.</td></tr>
+<tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
+</td></tr>
 
-<tr><td>-l</td><td>\-\-debugLogFile</td><td>Specify the logfile for debug
-information. This will produce a log file intended for post-run analysis after
-an error.</td></tr>
+<tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
+</td></tr>
 
-<tr><td></td><td>\-\-quiet</td><td>No console output given. See logs and return
+<tr><td>-v</td><td>--verbose</td><td>Enable verbose reporting. This is Enable verbose reporting.
+</td></tr>
+
+<tr><td>-n</td><td>--numTimes</td><td>Number of times the test repeatedly executes.
+Use in conjunction with -c option.
+</td></tr>
+
+<tr><td></td><td>--quiet</td><td>No console output given. See logs and return
 code for errors.</td></tr>
 
-<tr><td>-m</td><td>\-\-modulepath</td><td>Specify a custom path for the RVS
-modules.</td></tr>
-
-<tr><td></td><td>\-\-specifiedtest</td><td>Run a specific test in a configless
-mode. Multiple word tests should be in quotes. This action will default to all
-devices, unless the \-\-indexes option is specifie.</td></tr>
-
-<tr><td>-t</td><td>\-\-listTests</td><td>List the modules available to be
-executed through RVS and exit. This will list only the readily loadable modules
-given the current path and library conditions.</td></tr>
-
-<tr><td>-v</td><td>\-\-verbose</td><td>Enable verbose reporting. This is
-equivalent to specifying the -d 5 option.</td></tr>
-
-<tr><td></td><td>\-\-version</td><td>Displays the version information and exits.
+<tr><td></td><td>--version</td><td>Displays the version information and exits.
 </td></tr>
 
-<tr><td>-h</td><td>\-\-help</td><td>Display usage information and exit.
+<tr><td>-h</td><td>--help</td><td>Display usage information and exit.
 </td></tr>
 
 </table>
@@ -878,140 +870,118 @@ If execute, an error will be reported:
 
 ## RCQT Module
 
-This ‘module’ is actually a set of feature checks that target and qualify the
-configuration of the platform. Many of the checks can be done manually using the
-operating systems command line tools and general knowledge about ROCm’s
-requirements. The purpose of the RCQT modules is to provide an extensible, OS
+
+RCQT ensures the platform is capable of running ROCm applications and is 
+configured correctly. It checks the installed versions of the ROCm components
+and the platform configuration of the system.
+This includes checking the dependencies corresponding 
+to the ROCm meta-packages are installed correctly.
+The purpose of the RCQT is to provide an extensible, OS
 independent and scriptable interface capable for performing the configuration
 checks required for ROCm support. The checks in this module do not target a
-specific device (instead the underlying platform is targeted), and any device or
-device id keys specified will be ignored. Iteration keys, i.e. count, wait and
-duration, are also ignored.
+specific device.
 \n\n
-One RCQT action can perform only one check at the time. Checks are decoded in
-this order:\n
+Two types of actions are performed by RCQT.
+1)Metapackage Check
+metapackage-validation: This will check the installation of the mentioned 
+metapackages and their dependencies and their respective versions as required
+by metapackage. List of metapackages are provided with key **package**
 
-- If 'package' key is detected, packaging check will be performed
-- If 'user' key is detected, user check will be performed
-- If 'os_versions' and 'kernel_versions' keys are detected, OS check will be performed
-- If 'soname', 'arch' and 'ldpath' keys are detected, linker/loader check will be
-performed
-- If 'file' key is detected, file check will be performed
-
-All other keys not pertinent to the detected action are ignored.
-
-### Packaging Check
+2)Packages installation check
+packagelist-install-validation: This action checks if the package is installed.
+  Packages are provided against key **rpmpackagelist** and **debpackagelist**
 
 This feature is used to check installed packages on the system. It provides
 checks for installed packages and the currently available package versions, if
 applicable.
 
-#### Packaging Check Specific Keys
+#### Metapackage Check Specific Keys
 
 Input keys are described in the table below:
 
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>package</td><td>String</td>
-<td>Specifies the package to check. This key is required.</td></tr>
-<tr><td>version</td><td>String</td>
-<td>This is an optional key specifying a package version. If it is provided, the
-tool will check if the version is installed, failing otherwise. If it is not
-provided any version matching the package name will result in success.
-</td></tr>
+<tr><td>package</td><td>Collection of Strings</td>
+<td>Specifies the list of metapackages to check. This key is required.</td></tr>
 </table>
 
 #### Output
 
-Output keys are described in the table below:
+Output keys are described in the table below for each metapackage 
+along with versions of each sub package:
 
 <table>
 <tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>installed</td><td>Bool</td>
-<td>If the test has passed, the output will be true. Otherwise it will be false.
+<tr><td>Total packages validated</td><td>Integer</td>
+<td>total dependency packages under the said metapackage 
+</td></tr>
+<tr><td>Installed packages</td><td>Integer</td>
+<td>installed dependency packages under the said metapackage
+</td></tr>
+<tr><td>Missing packages </td><td>Integer</td>
+<td>missing packages under the said metapackage
+</td></tr>
+<tr><td>Version mismatch packages</td><td>Integer</td>
+<td>installed dependency packages but with wrong versions
 </td></tr>
 </table>
 
 The check will emit a result message with the following format:
-
-    [RESULT][<timestamp>][<action name>] rcqt packagecheck <package> <installed>
-
-The package name will include the version of the package if the version key is
-specified. The installed output value will either be true or false depending on
-if the package is installed or not.
+    Meta package >metapakcage-name> :
+    Package <dep-package1> installed version is <version>
+    Package <dep-package2> installed version is <version>
+    Package <dep-package3> installed version is <version>
+    Meta package validation complete :
+        Total packages validated     : <3>
+        Installed packages           : <3>
+        Missing packages             : <0>
+        Version mismatch packages    : <0>
 
 #### Examples
 
 **Example 1:**
 
-In this example, given package does not exist.
+In this example, given package has all dependencies installed.
 
     actions:
-    - name: action_1
+    - name: metapackage-validation
       module: rcqt
-      package: zip12345
+      package: rocm-ml-sdk
 
 The output for such configuration is:
+    [RESULT] [3648664.1164  ] Action name :metapackage-validation
+    [RESULT] [3648664.1363  ] Module name :rcqt
 
-    [RESULT] [500022.877512] [action_1] rcqt packagecheck zip12345 FALSE
-
-**Example 2:**
-
-In this example, version of the given package is incorrect.
-
-    actions:
-    - name: action_1
-      module: rcqt
-      package: zip
-      version: 3.0-11****
-
-The output for such configuration is:
-
-    [RESULT] [500123.480561] [action_1] rcqt packagecheck zip FALSE
-
-**Example 3:**
-
-In this example, given package exists.
-
-    actions:
-    - name: action_1
-      module: rcqt
-      package: zip
-
-The output for such configuration is:
-
-    [RESULT] [500329.824495] [action_1] rcqt packagecheck zip TRUE
-
-**Example 4:**
-
-In this example, given package exists and its version is correct.
-
-    actions:
-    - name: action_1
-      module: rcqt
-      package: zip
-      version: 3.0-11
-
-The output for such configuration is:
-
-    [RESULT] [500595.859025] [action_1] rcqt packagecheck zip TRUE
+    Meta package rocm-ml-sdk :
+    Package miopen-hip-dev installed version is 3.3.0.60300
+    Package rocm-core installed version is 6.3.0.60300
+    Package rocm-hip-sdk installed version is 6.3.0.60300
+    Package rocm-ml-libraries installed version is 6.3.0.60300
+    Meta package validation complete :
+        Total packages validated     : 4
+        Installed packages           : 4
+        Missing packages             : 0
+        Version mismatch packages    : 0
 
 
-### User Check
+For other cases, we will see mismatched/missing packages printed
+with respective count
 
-This feature checks for the existence of a user and the user’s group membership.
+### Packages installation check
 
-#### User Check Specific Keys
+This action checks if the package is installed.
+  Packages are provided against key **rpmpackagelist** and **debpackagelist**
+
+#### Packages installation Specific Keys
 
 Input keys are described in the table below:
 
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>user</td><td>String</td>
-<td>Specifies the user name to check. This key is required.</td></tr>
-<tr><td>groups</td><td>Collection of Strings</td>
-<td>This is an optional key specifying a collection of groups the user should
-belong to. The user’s membership in each group will be checked.
+<tr><td>rpmpackagelist</td><td>Collection of Strings</td>
+<td>Specifies the packages checked if installed on system for rhel/centos family.</td></tr>
+<tr><td>debpackagelist</td><td>Collection of Strings</td>
+<td>Specifies the packages checked if installed on system for ubuntu family.
 </td></tr>
 </table>
 
@@ -1021,25 +991,19 @@ Output keys are described in the table below:
 
 <table>
 <tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>exists</td><td>Bool</td>
-<td>This value is true if the user exists.
+<tr><td>Package</td><td>String</td>
+<td>Name of checked package
 </td></tr>
-<tr><td>members</td><td>Collection of Bools</td>
-<td>This value is true if the user is a member of the specified group.
+<tr><td>version</td><td>Floating Number</td>
+<td>Installed version of the package
+</td></tr>
+<tr><td>Missing packages</td><td>Integer</td>
+<td>Number of packages not installed.
+</td></tr>
+<tr><td>Installed packages</td><td>Integer</td>
+<td>Number of packages installed.
 </td></tr>
 </table>
-
-The status of the user’s existence is provided in a message with the following
-format:
-
-    [RESULT][<timestamp>][<action name>] rcqt usercheck <user> <exists>
-
-For each group in the list, a result message with the following format will be
-generated:
-
-    [RESULT][<timestamp>][<action name>] rcqt usercheck <user> <group> <member>
-
-If the user doesn’t exist no group checks will take place.
 
 #### Examples
 
@@ -1048,383 +1012,21 @@ If the user doesn’t exist no group checks will take place.
 In this example, given user does not exist.
 
     actions:
-    - name: action_1
+    - name: packagelist-install-validation
       device: all
       module: rcqt
-      user: jdoe
-      group: sudo,video
+      rpmpackagelist: rocm-hip-libraries rocm-core
 
 The output for such configuration is:
 
-    [RESULT] [496559.219160] [action_1] rcqt usercheck jdoe false
-
-Group check is not performed.
-
-**Example 2:**
-
-In this example, group **rvs** does not exist.
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      user: jovanbhdl
-      group: rvs,video
-
-The output for such configuration is:
-
-    [RESULT] [496984.993394] [action_1] rcqt usercheck jovanbhdl true
-    [ERROR ] [496984.993535] [action_1] rcqt usercheck group rvs doesn't exist
-    [RESULT] [496984.993578] [action_1] rcqt usercheck jovanbhdl video true
-
-
-**Example 3:**
-
-In this example, given user exists and belongs to given groups.
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      user: jovanbhdl
-      group: sudo,video
-
-The output for such configuration is:
-
-    [RESULT] [497361.361045] [action_1] rcqt usercheck jovanbhdl true
-    [RESULT] [497361.361168] [action_1] rcqt usercheck jovanbhdl sudo true
-    [RESULT] [497361.361209] [action_1] rcqt usercheck jovanbhdl video true
-
-
-### File/device Check
-
-This feature checks for the existence of a file, its owner, group, permissions
-and type. The primary purpose of this module is to check that the device
-interfaces for the driver and the kfd are available, but it can also be used to
-check for the existence of important configuration files, libraries and
-executables.
-
-#### File/device Check Specific Keys
-
-Input keys are described in the table below:
-
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>file</td><td>String</td>
-<td>The value of this key should satisfy the file name limitations of the target
-OS and specifies the file to check. This key is required.
-</td></tr>
-<tr><td>owner</td><td>String</td>
-<td>The expected owner of the file. If this key is specified ownership is
-tested.
-</td></tr>
-<tr><td>group</td><td>String</td>
-<td>If this key is specified, group ownership is tested.
-</td></tr>
-<tr><td>permission</td><td>Integer</td>
-<td>If this key is specified, the permissions on the file are tested. The
-permissions are expected to match the permission value given.
-</td></tr>
-<tr><td>type</td><td>Integer</td>
-<td>If this key is specified the file type is checked.
-</td></tr>
-<tr><td>exists</td><td>Bool</td>
-<td>If this key is specified and set to false all optional parameters will be
-ignored and a check will be made to make sure the file does not exist. The
-default value for this key is true.
-</td></tr>
-</table>
-
-#### Output
-
-Output keys are described in the table below:
-
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>owner</td><td>Bool</td>
-<td>True if the correct user owns the file.
-</td></tr>
-<tr><td>group</td><td>Bool</td>
-<td>True if the correct group owns the file.
-</td></tr>
-<tr><td>permission</td><td>Bool</td>
-<td>True if the file has the correct permissions.
-</td></tr>
-<tr><td>type</td><td>Bool</td>
-<td>True if the file is of the right type.
-</td></tr>
-<tr><td>exists</td><td>Bool</td>
-<td>True if the file exists and the ‘exists’ config key is true. True if the
-file does not exist and the ‘exists’ key if false.
-</td></tr>
-</table>
-
-If the ‘exists’ key is true a set of messages, one for each stat check, will be
-generated with the following format:
-
-    [RESULT][<timestamp>][<action name>] rcqt filecheck <config key> <matching output key>
-
-If the ‘exists’ key is false the format of the message will be:
-
-    [RESULT][<timestamp>][<action name>] rcqt filecheck <file> DNE <exists>
-
-#### Examples
-
-**Example 1:**
-
-In this example, config key exists is set to **true** by default and file really
-exists so parameters are tested. Permission number 644 equals to rw-r--r-- and
-type number 40 indicates that it is a folder.
-
-rcqt_fc4.conf :
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      file: /work/mvisekrunahdl/ROCmValidationSuite/rcqt.so/src
-      owner: mvisekrunahdl
-      group: mvisekrunahdl
-      permission: 664
-      type: 40
-
-Output from running this action:
-
-    [RESULT] [240384.678074] [action_1] rcqt filecheck mvisekrunahdl owner:true
-    [RESULT] [240384.678214] [action_1] rcqt filecheck mvisekrunahdl group:true
-    [RESULT] [240384.678250] [action_1] rcqt filecheck 664 permission:true
-    [RESULT] [240384.678275] [action_1] rcqt filecheck 100 type:true
-
-
-**Example 2:**
-
-In this example, config key exists is set to false, but file actually exists so
-parameters are not tested.
-
-rcqt_fc1.conf:
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      file: /work/mvisekrunahdl/ROCmValidationSuite/src
-      owner: root
-      permission: 644
-      type: 40
-      exists: false
-
-The output for such configuration is:
-
-    [RESULT] [240188.150386] [action_1] rcqt filecheck /work/mvisekrunahdl/ROCmValidationSuite/src DNE false
-
-**Example 3:**
-
-In this example, config key **exists** is true by default and file really
-exists. Config key **group, permission** and **type** are not specified so only
-ownership is tested.
-
-rcqt_fc2.conf:
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      file: /work/mvisekrunahdl/build/test.txt
-      owner: root
-
-The output for such configuration is:
-
-    [RESULT] [240253.957738] [action_1] rcqt filecheck root owner:true
-
-
-**Example 4:**
-
-In this example, config key **exists** is true by default, but given file does
-not exist.
-
-rcqt_fc3.conf:
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      file: /work/mvisekrunahdl/ROCmValidationSuite/rcqt.so/src/tst
-      owner: mvisekrunahdl
-      group: mvisekrunahdl
-      permission: 664
-      type: 100
-
-The output for such configuration is:
-
-    [ERROR ] [240277.355553] [action_1] rcqt File is not found
-
-
-### Kernel compatibility Check
-
-The rcqt-kernelcheck module determines the version of the operating system and
-the kernel installed on the platform and compares the values against the list of
-supported values.
-
-#### Kernel compatibility Check Specific Keys
-
-Input keys are described in the table below:
-
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>os_versions</td><td>Collection of Strings</td>
-<td>A collection of strings corresponding to operating systems names, i.e.
-{“Ubuntu 16.04.3 LTS”, “Centos 7.4”, etc.}
-</td></tr>
-<tr><td>kernel_versions</td><td>Collection of Strings</td>
-<td>A collection of strings corresponding to kernel version names, i.e.
-{“4.4.0-116-generic”, “4.13.0-36-generic”, etc.}
-</td></tr>
-</table>
-
-#### Output
-
-Output keys are described in the table below:
-
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>os</td><td>String</td>
-<td>The actual OS installed on the system.
-</td></tr>
-<tr><td>kernel</td><td>String</td>
-<td>The actual kernel version installed on the system.
-</td></tr>
-<tr><td>pass</td><td>Bool</td>
-<td>True if the actual os version and kernel version match any value provided in
-the collection.
-</td></tr>
-</table>
-
-If the detected versions of the operating system and the kernel version match
-any of the supported values the pass output key will be true. Otherwise it will
-be false. The result message will contain the actual os version and the kernel
-version regardless of where the check passed or failed.
-
-    [RESULT][<timestamp>][<action name>] rcqt kernelcheck <os version> <kernel version> <pass>
-
-
-#### Examples
-
-**Example 1:**
-
-In this example, given kernel version is incorrect.
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      os_version: Ubuntu 16.04.5 LTS
-      kernel_version: 4.4.0-116-generic-wrong
-
-The output for such configuration is:
-
-    [RESULT] [498398.774182] [action_1] rcqt kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 fail
-
-**Example 2**
-
-In this example, given os version and kernel verison are the correct ones.
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      os_version: Ubuntu 16.04.5 LTS
-      kernel_version: 4.18.0-rc1-kfd-compute-roc-master-8874
-
-The output for such configuration is:
-
-    [RESULT] [515924.695932] [action_1] rcqt kernelcheck Ubuntu 16.04.5 LTS 4.18.0-rc1-kfd-compute-roc-master-8874 pass
-
-
-### Linker/Loader Check
-
-This feature checks that a search by the linker/loader for a library finds the
-correct version in the correct location. The check should include a SONAME
-version of the library, the expected location and the architecture of the
-library.
-
-
-#### Linker/Loader Check Specific Keys
-
-Input keys are described in the table below:
-
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>soname</td><td>String</td>
-<td>This is the SONAME of the library for the check. An SONAME library contains
-the major version of the library in question.
-</td></tr>
-<tr><td>arch</td><td>String</td>
-<td>This value qualifies the architecture expected for the library.
-</td></tr>
-<tr><td>ldpath</td><td>String</td>
-<td>This is the fully qualified path where the library is expected to be
-located.
-</td></tr>
-</table>
-
-#### Output
-
-Output keys are described in the table below:
-
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>arch</td><td>String</td>
-<td>The actual architecture found for the file, or NA if it wasn’t found.
-</td></tr>
-<tr><td>path</td><td>String</td>
-<td>The actual path the linker is looking for the file at, or “not found” if the
-file isn’t found.
-</td></tr>
-<tr><td>pass</td><td>Bool</td>
-<td>True if the linker/loader is looking for the file in the correct place with
-the correctly specified architecture.
-</td></tr>
-</table>
-
-If the linker/loader search path looks for the soname version of the library,
-qualified by arch, at the directory specified the test will pass. Otherwise it
-will fail. The output message has the following format:
-
-    [RESULT][<timestamp>][<action name>] rcqt ldconfigcheck <soname> <arch> <path> <pass>
-
-#### Examples
-
-**Example 1:**
-
-Consider this action:
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      soname: librcqt.so.0.0.3fail
-      arch: i386:x86-64
-      ldpath: /work/jovanbhdl/build/bin
-
-The test will fail because the file given is not found on the specified path:
-
-    [RESULT] [587042.789384] [action_1] rcqt ldconfigcheck librcqt.so.0.0.3fail i386:x86-64 /work/jovanbhdl/build/bin false
-
-**Example 2:**
-
-Consider this action:
-
-    actions:
-    - name: action_1
-      device: all
-      module: rcqt
-      soname: librcqt.so.0.0.16
-      arch: i386:x86-64
-      ldpath: /work/jovanbhdl/build/bin
-
-The test will pass and will output the message:
-
-    [RESULT] [587047.395787] [action_1] rcqt ldconfigcheck librcqt.so.0.0.16 i386:x86-64 /work/jovanbhdl/build/bin true
+    [RESULT] [496559.219160] Action name :packagelist-install-validation
+    [RESULT] [496559.219161]  Module name :rcqt
+
+    Package rocm-hip-libraries installed version is 6.3.0.60300
+    Package rocm-core installed version is 6.3.0.60300
+    Packages install validation complete :
+        Missing packages      : 0
+        Installed packages    : 2
 
 
 ## PEQT Module
@@ -2441,15 +2043,16 @@ Please note that in link information results, some records could be marked with
 NUMA node HSA agent.
 
 ## GST Module
-The GPU Stress Test modules purpose is to bring the CUs of the specified GPU(s)
-to a target performance level in gigaflops by doing large matrix multiplications
-using SGEMM/DGEMM (Single/Double-precision General Matrix Multiplication)
-available in a library like rocBlas. The GPU stress module may be configured so
-it does not copy the source arrays to the GPU before every matrix
-multiplication. This allows the GPU performance to not be capped by device to
-host bandwidth transfers. The module calculates how many matrix operations per
-second are necessary to achieve the configured performance target and fails if
-it cannot achieve that target. \n\n
+The GPU Stress Test drives and measures the specified GPU(s) performance (GFLOPS) -
+by means of large matrix multiplications using GEMM operation types based computations like
+SGEMM/DGEMM/HGEMM (Single/Double-precision/Half-precision General Matrix Multiplication)
+or GEMM data types based computations like `fp8`, `i8`, `fp16`, `bf16`, `fp32` or `tf32` (`xf32`) via BLAS
+libraries like rocBLAS or hipBLASLt. The GPU stress module may be configured so it does not
+copy the host source matrix array to the GPU before every matrix multiplication. This allows
+the GPU performance to not be capped by device to host bandwidth transfers. The module calculates
+the GFLOPS performance for configured GEMM computation and checks if it meets configured
+performance target. The test passes if it achieves the target performance GFLOPS number
+during the duration of the test else reported as fail.
 
 This module should be used in conjunction with the GPU Monitor, to watch for
 thermal, power and related anomalies while the target GPU(s) are under realistic
@@ -2727,14 +2330,12 @@ GPUs.
 ## IET Module
 
 The Input EDPp Test can be used to characterize the peak power capabilities of a
-GPU to different levels of use. This tool can leverage the functionality of the
-GST to drive the compute load on the GPU, but the test will use different
-configuration and output keys and should focus on driving power usage rather
-than calculating compute load. The purpose of the IET module is to bring the
-GPU(s) to a pre-configured power level in watts by gradually increasing the
-compute load on the GPUs until the desired power level is achieved. This
-verifies that the GPUs can sustain a power level for a reasonable amount of time
-without problems like thermal violations arising.\n
+GPU (that is, TGP) for a sustained duration of time. This tool leverage GEMM workload
+to drive the compute load on the GPU and check whether the power consumed meets configured
+target power in watts. The GEMM compute workloads are also pre-configured. This verifies
+that the GPUs can sustain a power level for a reasonable amount of time without problems
+like thermal violations arising. The test passes if GPU power meets or crosses the
+target power during the duration of the test else reported as fail.
 
 This module should be used in conjunction with the GPU Monitor, to watch for
 thermal, power and related anomalies while the target GPU(s) are under realistic

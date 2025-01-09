@@ -63,25 +63,19 @@ done
 ret_str=$new_str
 }
 
-#Below  configLine function I got from https://stackoverflow.com/a/54909102
-# configLine will check for device_id string in current file and replace or
+# updateConfLine will check for device_id string in current file and replace or
 # add device_id if not present
-function configLine {
-    local OLD_LINE_PATTERN=$1; shift
+function updateConfLine {
+    local OLD_LINE=$1; shift
     local NEW_LINE=$1; shift
     local FILE=$1
     local line_num=1
     while IFS= read -r line
     do
- #       printf "%s" $line > file.txt
         
-        if printf "%s" "$line" | awk -F ":" '{print $1}' | grep "\b$OLD_LINE_PATTERN\b" ; then
+        if printf "%s" "$line" | awk -F ":" '{print $1}' | grep "\b$OLD_LINE\b" ; then
             if  [[ $line !=  *"#"* ]] ; then 
-                #echo ${OLD_LINE_PATTERN} 
-                #echo "$line"
- #               echo $NEW_LINE
- #               echo "before get_string_with_space"
-                get_string_with_space "$OLD_LINE_PATTERN" "$line" "$NEW_LINE"
+                get_string_with_space "$OLD_LINE" "$line" "$NEW_LINE"
                 sed -i "${line_num}s/.*/${ret_str}/" "${FILE}"
             fi
         fi
@@ -130,10 +124,10 @@ dev_num_str=${dev_num_list[@]}
 # Below for loop is for going through all .conf files passed as argument to
 # deviceid.sh file
 for dev_id_line in $1; do
-    configLine  "device_id" "device_id: $d_i" $dev_id_line
-    configLine  "deviceid" "deviceid: $d_i" $dev_id_line
-    configLine  "peer_deviceid" "peer_deviceid: $d_i" $dev_id_line
-    configLine  "peer_device_id" "peer_device_id: $d_i" $dev_id_line
-    configLine  "device" "device: $dev_num_str" $dev_id_line
-    configLine  "peers" "peers: $dev_num_str" $dev_id_line
+    updateConfLine  "device_id" "device_id: $d_i" $dev_id_line
+    updateConfLine  "deviceid" "deviceid: $d_i" $dev_id_line
+    updateConfLine  "peer_deviceid" "peer_deviceid: $d_i" $dev_id_line
+    updateConfLine  "peer_device_id" "peer_device_id: $d_i" $dev_id_line
+    updateConfLine  "device" "device: $dev_num_str" $dev_id_line
+    updateConfLine  "peers" "peers: $dev_num_str" $dev_id_line
 done

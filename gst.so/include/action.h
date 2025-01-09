@@ -59,11 +59,8 @@ class gst_action: public rvs::actionbase {
     virtual ~gst_action();
 
     virtual int run(void);
-    static void cleanup_logs();
 
   protected:
-    //! TRUE if JSON output is required
-    bool bjson;
 
     //! stress test ramp duration
     uint64_t gst_ramp_interval;
@@ -155,7 +152,6 @@ class gst_action: public rvs::actionbase {
     friend class GSTWorker;
 
     bool get_all_gst_config_keys(void);
-    void json_add_primary_fields();
 
     /**
      * @brief gets the number of ROCm compatible AMD GPUs

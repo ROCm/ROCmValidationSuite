@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -46,7 +46,6 @@ class pesm_action : public rvs::actionbase {
   virtual ~pesm_action();
 
   virtual int run(void);
-
  protected:
   int do_gpu_list(void);
   bool get_all_common_config_keys() override;
@@ -55,8 +54,6 @@ class pesm_action : public rvs::actionbase {
  protected:
 
   friend class Worker;
-  //! json logging flag
-  bool bjson;
   //! debug wait helper
   int prop_debugwait;
   //! 'true' if monitoring is to be initiated

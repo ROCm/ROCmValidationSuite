@@ -49,6 +49,7 @@ enum class OSType {
 
 const std::string os_release_file {"/etc/os-release"};
 const std::string name_key {"NAME"};
+const std::string id_key {"ID"};
 const std::map<std::string, OSType> op_systems {
   {"ubuntu", OSType::Ubuntu},
   {"centos", OSType::Centos},
@@ -64,7 +65,8 @@ struct package_info{
 
 // common funtions
 std::string get_last_word(const std::string& input);
-OSType getOS();
+OSType getOSOrId();
+OSType getOS(std::string keyname);
 std::string remSpaces(std::string str);
 std::string pfilename(const std::string& package);
 
