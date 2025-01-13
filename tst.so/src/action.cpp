@@ -512,22 +512,31 @@ int tst_action::get_all_selected_gpus(void) {
         msg = "No devices match criteria from the test configuation.";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         rsmi_shut_down();
-        return 1;
+        if (bjson) {
+          unsigned int sec;
+          unsigned int usec;
+          rvs::lp::get_ticks(&sec, &usec);
+          void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+            action_name.c_str(), rvs::logerror, sec, usec, true);
+          if (!json_root_node) {
+            // log the error
+            string msg = std::string(JSON_CREATE_NODE_ERROR);
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+            return -1;
+         }
+
+        rvs::lp::AddString(json_root_node, "ERROR","No AMD compatible GPU found!");
+        rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
+       }
+
+        return 0;
     }
 
-    if(bjson){
-        // add prelims for each action,
-        json_add_primary_fields(std::string(MODULE_NAME), action_name);
-    }
     int tst_res = 0;
     if(do_thermal_test(tst_gpus_device_index))
         tst_res = 0;
     else 
         tst_res = -1;
-    // append end node to json
-    if(bjson){
-        rvs::lp::JsonActionEndNodeCreate();
-    }
     rsmi_shut_down();
     return tst_res;
 }
@@ -555,8 +564,16 @@ int tst_action::run(void) {
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return -1;
   }
+  if(bjson){
+        // add prelims for each action,
+      json_add_primary_fields(std::string(MODULE_NAME), action_name);
+   }
 
   auto res =  get_all_selected_gpus();
+  // append end node to json
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
 
   action_result.state = rvs::actionstate::ACTION_COMPLETED;
   action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;

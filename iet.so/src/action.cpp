@@ -633,7 +633,7 @@ int iet_action::get_all_selected_gpus(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
-
+  
     rsmi_init(0);
     // find compatible GPUs to run edp tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
@@ -641,24 +641,34 @@ int iet_action::get_all_selected_gpus(void) {
         property_device_index, property_device_index_all, true);  // MCM checks
     if(!amd_gpus_found){
         msg = "No devices match criteria from the test configuation.";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        rvs::lp::Log(msg, rvs::logerror);
         rsmi_shut_down();
-        return 1;
+	if (bjson) {
+          unsigned int sec;
+          unsigned int usec;
+          rvs::lp::get_ticks(&sec, &usec);
+          void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+            action_name.c_str(), rvs::logerror, sec, usec, true);
+          if (!json_root_node) {
+             // log the error
+             string msg = std::string(JSON_CREATE_NODE_ERROR);
+             rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+             return -1;
+          }
+
+          rvs::lp::AddString(json_root_node, "ERROR", "No AMD compatible GPU found!");
+          rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
+        }
+        
+        return 0; // no GPUs is not error
     }
 
-    if(bjson){
-        // add prelims for each action
-        json_add_primary_fields(std::string(MODULE_NAME), action_name);
-    }
     int iet_res = 0;
     if(do_edp_test(iet_gpus_device_index))
         iet_res = 0;
     else 
         iet_res = -1;
     // append end node to json
-    if(bjson){
-        rvs::lp::JsonActionEndNodeCreate();
-    }
     rsmi_shut_down();
     return iet_res;
 }
@@ -685,8 +695,15 @@ int iet_action::run(void) {
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return -1;
   }
+  if(bjson){
+    // add prelims for each action, dtype and target stress
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
+  }
 
   auto res =  get_all_selected_gpus();
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
 
   action_result.state = rvs::actionstate::ACTION_COMPLETED;
   action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
