@@ -692,6 +692,28 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
       return false;
   }
 
+  if(data_type == "fp8_e4m3_r") {
+    if (hipMalloc(&dda, size_a * sizeof(hipblaslt_f8)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddb, size_b * sizeof(hipblaslt_f8)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddc, size_c * sizeof(hipblaslt_f8)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddd, size_d * sizeof(hipblaslt_f8)) != hipSuccess)
+      return false;
+  }
+
+  if(data_type == "fp8_e5m2_r") {
+    if (hipMalloc(&dda, size_a * sizeof(hipblaslt_bf8)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddb, size_b * sizeof(hipblaslt_bf8)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddc, size_c * sizeof(hipblaslt_bf8)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddd, size_d * sizeof(hipblaslt_bf8)) != hipSuccess)
+      return false;
+  }
+
   if(data_type == "fp16_r") {
     if (hipMalloc(&dda, size_a * sizeof(rocblas_half)) != hipSuccess)
       return false;
@@ -861,6 +883,20 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
       hda = new struct rocblas_f8[size_a];
       hdb = new struct rocblas_f8[size_b];
       hdc = new struct rocblas_f8[size_c];
+    }
+
+    if(data_type == "fp8_e4m3_r") {
+
+      hda = new hipblaslt_f8[size_a];
+      hdb = new hipblaslt_f8[size_b];
+      hdc = new hipblaslt_f8[size_c];
+    }
+
+    if(data_type == "fp8_e5m2_r") {
+
+      hda = new hipblaslt_bf8[size_a];
+      hdb = new hipblaslt_bf8[size_b];
+      hdc = new hipblaslt_bf8[size_c];
     }
 
     if(data_type == "fp16_r") {
@@ -1340,6 +1376,32 @@ void rvs_blas::generate_random_matrix_data(void) {
           ((struct rocblas_f8* )hdc)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
       }
 
+      // 8-bit floating point real OCP E4M3 (fp8_e4m3_r) format
+      if(data_type == "fp8_e4m3_r") {
+
+        for (i = 0; i < size_a; ++i)
+          ((hipblaslt_f8* )hda)[i] = hipblaslt_f8(fast_pseudo_rand(&nextr, i));
+
+        for (i = 0; i < size_b; ++i)
+          ((hipblaslt_f8* )hdb)[i] = hipblaslt_f8(fast_pseudo_rand(&nextr, i));
+
+        for (i = 0; i < size_c; ++i)
+          ((hipblaslt_f8* )hdc)[i] = hipblaslt_f8(fast_pseudo_rand(&nextr, i));
+      }
+
+      // 8-bit floating point real OCP E5M2 (fp8_e5m2_r) format
+      if(data_type == "fp8_e5m2_r") {
+
+        for (i = 0; i < size_a; ++i)
+          ((hipblaslt_bf8* )hda)[i] = hipblaslt_bf8(fast_pseudo_rand(&nextr, i));
+
+        for (i = 0; i < size_b; ++i)
+          ((hipblaslt_bf8* )hdb)[i] = hipblaslt_bf8(fast_pseudo_rand(&nextr, i));
+
+        for (i = 0; i < size_c; ++i)
+          ((hipblaslt_bf8* )hdc)[i] = hipblaslt_bf8(fast_pseudo_rand(&nextr, i));
+      }
+
       // 16-bit floating point real (fp16_r) format
       if(data_type == "fp16_r") {
 
@@ -1421,7 +1483,7 @@ float rvs_blas::fast_pseudo_rand(uint64_t *nextr, size_t i) {
     {
       return (float)std::uniform_int_distribution<unsigned short>(1, 3)(rvsblas_t_rng);
     }
-    else { /* sgemm, dgemm */
+    else { /* sgemm, dgemm, fp8_e4m3_r, fp8_e5m2_r */
       return rvsblas_uniform_int_1_10();
     }
   }
