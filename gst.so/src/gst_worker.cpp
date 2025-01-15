@@ -348,7 +348,7 @@ void GSTWorker::check_target_stress(double gflops_interval) {
   auto desc = action_descriptor{action_name, MODULE_NAME,gpu_id};
   snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
 
-  if(gflops_interval >= target_stress){
+  if(gflops_interval >= (target_stress- (target_stress * tolerance))){
     result = true;
   }else{
     result = false;
