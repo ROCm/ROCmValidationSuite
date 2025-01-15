@@ -89,7 +89,7 @@ using std::regex;
 #define GST_DEFAULT_RAMP_INTERVAL       5000
 #define GST_DEFAULT_LOG_INTERVAL        1000
 #define GST_DEFAULT_MAX_VIOLATIONS      0
-#define GST_DEFAULT_TOLERANCE           0.1
+#define GST_DEFAULT_TOLERANCE           0.05
 #define GST_DEFAULT_COPY_MATRIX         true
 #define GST_DEFAULT_MATRIX_SIZE         5760
 #define GST_DEFAULT_MATRIX_INIT         "default"
