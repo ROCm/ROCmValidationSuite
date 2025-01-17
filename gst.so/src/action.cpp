@@ -558,7 +558,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
       unsigned int usec;
       rvs::lp::get_ticks(&sec, &usec);
       void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-          action_name.c_str(), rvs::loginfo, sec, usec, true);
+          action_name.c_str(), rvs::logerror, sec, usec, true);
       if (!json_root_node) {
         // log the error
         string msg = std::string(JSON_CREATE_NODE_ERROR);
