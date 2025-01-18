@@ -295,6 +295,9 @@ class rvs_blas {
     //! hipblaslt matrix data-type
     hipDataType hbl_datatype;
 
+    //! hipblaslt matrix output data-type
+    hipDataType hbl_out_datatype;
+
     //! hipblaslt compute-type
     hipblasComputeType_t hbl_computetype;
 
