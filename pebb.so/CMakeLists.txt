@@ -87,9 +87,7 @@ add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
 
 # Set project requirements
-set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
-set(ROC_THUNK_LIBRARY "lib${ROC_THUNK_NAME}")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 set(CORE_RUNTIME_LIBRARY "lib${CORE_RUNTIME_TARGET}")
 
@@ -107,7 +105,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include ${ASAN_CXX_FLAGS}")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
 # Set compiler and compiler flags
 set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
@@ -137,9 +135,9 @@ if(NOT EXISTS ${ROCR_LIB_DIR}/${CORE_RUNTIME_LIBRARY}.so)
 endif()
 
 ## define include directories
-include_directories(./ ../ pci ${ROCR_INC_DIR})
+include_directories(./ ../ pci ${ROCR_INC_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCT_LIB_DIR} ${ASAN_LIB_PATH})
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 
@@ -152,7 +150,7 @@ add_library( ${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${CORE_RUNTIME_TARGET} ${ROC_THUNK_NAME})
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${CORE_RUNTIME_TARGET})
 add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD

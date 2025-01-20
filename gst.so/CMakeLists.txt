@@ -92,7 +92,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include ${ASAN_CXX_FLAGS}")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
 # Set compiler and compiler flags
 set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
@@ -111,12 +111,12 @@ else()
 endif()
 
 # Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)
+if(NOT EXISTS ${HIP_INC_DIR}/hip/hip_runtime.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
 
-if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime_api.h)
+if(NOT EXISTS ${HIP_INC_DIR}/hip/hip_runtime_api.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
@@ -137,15 +137,15 @@ if(DEFINED RVS_ROCMSMI)
 endif()
 
 
-if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
-  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set ROCR_LIB_DIR path. Current value is : " ${ROCR_LIB_DIR})
+if(NOT EXISTS "${HIP_LIB_DIR}/lib${HIP_HCC_LIB}.so")
+  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set HIP_LIB_DIR path. Current value is : " ${HIP_LIB_DIR})
   RETURN()
 endif()
 
 ## define include directories
-include_directories(./ ../ ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR})
+include_directories(./ ../ ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${HIPBLASLT_INC_DIR} ${HIPBLAS-COMMON_INCLUDE_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH})
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${HIP_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR} ${HIPRAND_DIR} ${ROCRAND_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 

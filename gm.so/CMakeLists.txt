@@ -90,7 +90,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include ${ASAN_CXX_FLAGS}")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
 # Set compiler and compiler flags
 set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
@@ -118,9 +118,9 @@ if(DEFINED RVS_ROCMSMI)
 endif()
 
 ## define include directories
-include_directories(./ ../ ${ROCM_SMI_INC_DIR})
+include_directories(./ ../ ${ROCM_SMI_INC_DIR} ${YAML_CPP_INCLUDE_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH})
+link_directories(${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${ROCM_SMI_LIB} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${HIPBLASLT_LIB_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 
