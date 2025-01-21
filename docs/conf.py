@@ -17,7 +17,7 @@ left_nav_title = f"RVS {version_number} Documentation"
 # for PDF output on Read the Docs
 project = "RVS Documentation"
 author = "Advanced Micro Devices, Inc."
-copyright = "Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved."
+copyright = "Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved."
 version = version_number
 release = version_number
 
