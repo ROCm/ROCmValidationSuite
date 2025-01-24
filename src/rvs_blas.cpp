@@ -518,7 +518,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
   if(data_type == "fp8_r") {
 
     if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(struct rocblas_f8) * size_a, hipMemcpyHostToDevice)
+      if (hipMemcpy(dda, hda, sizeof(rocblas_f8) * size_a, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -526,7 +526,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
     }
 
     if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(struct rocblas_f8) * size_b, hipMemcpyHostToDevice)
+      if (hipMemcpy(ddb, hdb, sizeof(rocblas_f8) * size_b, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -534,7 +534,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
     }
 
     if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(struct rocblas_f8) * size_c, hipMemcpyHostToDevice)
+      if (hipMemcpy(ddc, hdc, sizeof(rocblas_f8) * size_c, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -626,7 +626,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
   if(data_type == "bf16_r") {
 
     if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(struct rocblas_bfloat16) * size_a, hipMemcpyHostToDevice)
+      if (hipMemcpy(dda, hda, sizeof(rocblas_bfloat16) * size_a, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -634,7 +634,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
     }
 
     if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(struct rocblas_bfloat16) * size_b, hipMemcpyHostToDevice)
+      if (hipMemcpy(ddb, hdb, sizeof(rocblas_bfloat16) * size_b, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -642,7 +642,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
     }
 
     if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(struct rocblas_bfloat16) * size_c, hipMemcpyHostToDevice)
+      if (hipMemcpy(ddc, hdc, sizeof(rocblas_bfloat16) * size_c, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -744,13 +744,13 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
   }
 
   if(data_type == "fp8_r") {
-    if (hipMalloc(&dda, size_a * sizeof(struct rocblas_f8)) != hipSuccess)
+    if (hipMalloc(&dda, size_a * sizeof(rocblas_f8)) != hipSuccess)
       return false;
-    if (hipMalloc(&ddb, size_b * sizeof(struct rocblas_f8)) != hipSuccess)
+    if (hipMalloc(&ddb, size_b * sizeof(rocblas_f8)) != hipSuccess)
       return false;
-    if (hipMalloc(&ddc, size_c * sizeof(struct rocblas_f8)) != hipSuccess)
+    if (hipMalloc(&ddc, size_c * sizeof(rocblas_f8)) != hipSuccess)
       return false;
-    if (hipMalloc(&ddd, size_d * sizeof(struct rocblas_f8)) != hipSuccess)
+    if (hipMalloc(&ddd, size_d * sizeof(rocblas_f8)) != hipSuccess)
       return false;
   }
 
@@ -788,13 +788,13 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
   }
 
   if(data_type == "bf16_r") {
-    if (hipMalloc(&dda, size_a * sizeof(struct rocblas_bfloat16)) != hipSuccess)
+    if (hipMalloc(&dda, size_a * sizeof(rocblas_bfloat16)) != hipSuccess)
       return false;
-    if (hipMalloc(&ddb, size_b * sizeof(struct rocblas_bfloat16)) != hipSuccess)
+    if (hipMalloc(&ddb, size_b * sizeof(rocblas_bfloat16)) != hipSuccess)
       return false;
-    if (hipMalloc(&ddc, size_c * sizeof(struct rocblas_bfloat16)) != hipSuccess)
+    if (hipMalloc(&ddc, size_c * sizeof(rocblas_bfloat16)) != hipSuccess)
       return false;
-    if (hipMalloc(&ddd, size_d * sizeof(struct rocblas_bfloat16)) != hipSuccess)
+    if (hipMalloc(&ddd, size_d * sizeof(rocblas_bfloat16)) != hipSuccess)
       return false;
   }
 
@@ -942,9 +942,9 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
 
     if(data_type == "fp8_r") {
 
-      hda = new struct rocblas_f8[size_a];
-      hdb = new struct rocblas_f8[size_b];
-      hdc = new struct rocblas_f8[size_c];
+      hda = new rocblas_f8[size_a];
+      hdb = new rocblas_f8[size_b];
+      hdc = new rocblas_f8[size_c];
     }
 
     if(data_type == "fp8_e4m3_r") {
@@ -970,9 +970,9 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
 
     if(data_type == "bf16_r") {
 
-      hda = new struct rocblas_bfloat16[size_a];
-      hdb = new struct rocblas_bfloat16[size_b];
-      hdc = new struct rocblas_bfloat16[size_c];
+      hda = new rocblas_bfloat16[size_a];
+      hdb = new rocblas_bfloat16[size_b];
+      hdc = new rocblas_bfloat16[size_c];
     }
 
     if(data_type == "i8_r") {
@@ -1429,13 +1429,13 @@ void rvs_blas::generate_random_matrix_data(void) {
       if(data_type == "fp8_r") {
 
         for (i = 0; i < size_a; ++i)
-          ((struct rocblas_f8* )hda)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
+          ((rocblas_f8* )hda)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
 
         for (i = 0; i < size_b; ++i)
-          ((struct rocblas_f8* )hdb)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
+          ((rocblas_f8* )hdb)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
 
         for (i = 0; i < size_c; ++i)
-          ((struct rocblas_f8* )hdc)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
+          ((rocblas_f8* )hdc)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
       }
 
       // 8-bit floating point real OCP E4M3 (fp8_e4m3_r) format
@@ -1481,13 +1481,13 @@ void rvs_blas::generate_random_matrix_data(void) {
       if(data_type == "bf16_r") {
 
         for (i = 0; i < size_a; ++i)
-          ((struct rocblas_bfloat16* )hda)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
+          ((rocblas_bfloat16* )hda)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
 
         for (i = 0; i < size_b; ++i)
-          ((struct rocblas_bfloat16* )hdb)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
+          ((rocblas_bfloat16* )hdb)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
 
         for (i = 0; i < size_c; ++i)
-          ((struct rocblas_bfloat16* )hdc)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
+          ((rocblas_bfloat16* )hdc)[i] = rocblas_bfloat16(fast_pseudo_rand(&nextr, i));
       }
 
       // 8-bit integer real (i8_r) format
