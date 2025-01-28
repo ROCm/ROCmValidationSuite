@@ -94,12 +94,6 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , m(_m), n(_n), k(_k)
   , matrix_init (_matrix_init)
   , size_a(0), size_b(0), size_c(0), size_d(0)
-  , da(nullptr), db(nullptr), dc(nullptr)
-  , ha(nullptr), hb(nullptr), hc(nullptr)
-  , ddbla(nullptr), ddblb(nullptr), ddblc(nullptr)
-  , hdbla(nullptr), hdblb(nullptr), hdblc(nullptr)
-  , dhlfa(nullptr), dhlfb(nullptr), dhlfc(nullptr), dhlfd(nullptr)
-  , hhlfa(nullptr), hhlfb(nullptr), hhlfc(nullptr)
   , dda(nullptr), ddb(nullptr), ddc(nullptr), ddd(nullptr)
   , hda(nullptr), hdb(nullptr), hdc(nullptr)
   , hpo(nullptr), hco(nullptr)
@@ -435,24 +429,24 @@ bool rvs_blas::copy_data_to_gpu(void) {
 
   if(ops_type == "sgemm") {
 
-    if (da) {
-      if (hipMemcpy(da, ha, sizeof(float) * size_a, hipMemcpyHostToDevice)
+    if (dda) {
+      if (hipMemcpy(dda, hda, sizeof(float) * size_a, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
       }
     }
 
-    if (db) {
-      if (hipMemcpy(db, hb, sizeof(float) * size_b, hipMemcpyHostToDevice)
+    if (ddb) {
+      if (hipMemcpy(ddb, hdb, sizeof(float) * size_b, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
       }
     }
 
-    if (dc) {
-      if (hipMemcpy(dc, hc, sizeof(float) * size_c, hipMemcpyHostToDevice)
+    if (ddc) {
+      if (hipMemcpy(ddc, hdc, sizeof(float) * size_c, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -462,52 +456,51 @@ bool rvs_blas::copy_data_to_gpu(void) {
 
   if(ops_type == "dgemm") {
 
-    if (ddbla) {
-      if (hipMemcpy(ddbla, hdbla, sizeof(double) * size_a, hipMemcpyHostToDevice)
+    if (dda) {
+      if (hipMemcpy(dda, hda, sizeof(double) * size_a, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
       }
     }
 
-    if (ddblb) {
-      if (hipMemcpy(ddblb, hdblb, sizeof(double) * size_b, hipMemcpyHostToDevice)
+    if (ddb) {
+      if (hipMemcpy(ddb, hdb, sizeof(double) * size_b, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
       }
     }
 
-    if (ddblc) {
-      if (hipMemcpy(ddblc, hdblc, sizeof(double) * size_c, hipMemcpyHostToDevice)
+    if (ddc) {
+      if (hipMemcpy(ddc, hdc, sizeof(double) * size_c, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
       }
     }
-
   }
 
   if(ops_type == "hgemm") {
 
-    if (dhlfa) {
-      if (hipMemcpy(dhlfa, hhlfa, sizeof(rocblas_half) * size_a, hipMemcpyHostToDevice)
+    if (dda) {
+      if (hipMemcpy(dda, hda, sizeof(rocblas_half) * size_a, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
       }
     }
 
-    if (dhlfb) {
-      if (hipMemcpy(dhlfb, hhlfb, sizeof(rocblas_half) * size_b, hipMemcpyHostToDevice)
+    if (ddb) {
+      if (hipMemcpy(ddb, hdb, sizeof(rocblas_half) * size_b, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
       }
     }
 
-    if (dhlfc) {
-      if (hipMemcpy(dhlfc, hhlfc, sizeof(rocblas_half) * size_c, hipMemcpyHostToDevice)
+    if (ddc) {
+      if (hipMemcpy(ddc, hdc, sizeof(rocblas_half) * size_c, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -708,6 +701,22 @@ bool rvs_blas::copy_data_to_gpu(void) {
   return true;
 }
 
+#if 0
+template <typename Ti, typename To>
+bool rvs_blas::allocate_gpu_matrix_mem(void) {
+
+    if (hipMalloc(&dda, size_a * sizeof(float)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddb, size_b * sizeof(float)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddc, size_c * sizeof(float)) != hipSuccess)
+      return false;
+    if (hipMalloc(&ddd, size_d * sizeof(float)) != hipSuccess)
+      return false;
+
+}
+#endif
+
 /**
  * @brief allocates memory (for matrix multiplication) on the selected GPU
  * @return true if everything went fine, otherwise false
@@ -715,31 +724,31 @@ bool rvs_blas::copy_data_to_gpu(void) {
 bool rvs_blas::allocate_gpu_matrix_mem(void) {
 
   if(ops_type == "sgemm") {
-    if (hipMalloc(&da, size_a * sizeof(float)) != hipSuccess)
+    if (hipMalloc(&dda, size_a * sizeof(float)) != hipSuccess)
       return false;
-    if (hipMalloc(&db, size_b * sizeof(float)) != hipSuccess)
+    if (hipMalloc(&ddb, size_b * sizeof(float)) != hipSuccess)
       return false;
-    if (hipMalloc(&dc, size_c * sizeof(float)) != hipSuccess)
+    if (hipMalloc(&ddc, size_c * sizeof(float)) != hipSuccess)
       return false;
   }
 
   if(ops_type == "dgemm") {
-    if (hipMalloc(&ddbla, size_a * sizeof(double)) != hipSuccess)
+    if (hipMalloc(&dda, size_a * sizeof(double)) != hipSuccess)
       return false;
-    if (hipMalloc(&ddblb, size_b * sizeof(double)) != hipSuccess)
+    if (hipMalloc(&ddb, size_b * sizeof(double)) != hipSuccess)
       return false;
-    if (hipMalloc(&ddblc, size_c * sizeof(double)) != hipSuccess)
+    if (hipMalloc(&ddc, size_c * sizeof(double)) != hipSuccess)
       return false;
   }
 
   if(ops_type == "hgemm") {
-    if (hipMalloc(&dhlfa, size_a * sizeof(rocblas_half)) != hipSuccess)
+    if (hipMalloc(&dda, size_a * sizeof(rocblas_half)) != hipSuccess)
       return false;
-    if (hipMalloc(&dhlfb, size_b * sizeof(rocblas_half)) != hipSuccess)
+    if (hipMalloc(&ddb, size_b * sizeof(rocblas_half)) != hipSuccess)
       return false;
-    if (hipMalloc(&dhlfc, size_c * sizeof(rocblas_half)) != hipSuccess)
+    if (hipMalloc(&ddc, size_c * sizeof(rocblas_half)) != hipSuccess)
       return false;
-    if (hipMalloc(&dhlfd, size_d * sizeof(rocblas_half)) != hipSuccess)
+    if (hipMalloc(&ddd, size_d * sizeof(rocblas_half)) != hipSuccess)
       return false;
   }
 
@@ -843,29 +852,6 @@ double rvs_blas::get_time_us(void) {
  */
 void rvs_blas::release_gpu_matrix_mem(void) {
 
-  if (da)
-    hipFree(da);
-  if (db)
-    hipFree(db);
-  if (dc)
-    hipFree(dc);
-
-  if (ddbla)
-    hipFree(ddbla);
-  if (ddblb)
-    hipFree(ddblb);
-  if (ddblc)
-    hipFree(ddblc);
-
-  if (dhlfa)
-    hipFree(dhlfa);
-  if (dhlfb)
-    hipFree(dhlfb);
-  if (dhlfc)
-    hipFree(dhlfc);
-  if (dhlfd)
-    hipFree(dhlfd);
-
   if (dda)
     hipFree(dda);
   if (ddb)
@@ -921,23 +907,23 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
 
     if(ops_type == "sgemm") {
 
-      ha = new float[size_a];
-      hb = new float[size_b];
-      hc = new float[size_c];
+      hda = new float[size_a];
+      hdb = new float[size_b];
+      hdc = new float[size_c];
     }
 
     if(ops_type == "dgemm") {
 
-      hdbla = new double[size_a];
-      hdblb = new double[size_b];
-      hdblc = new double[size_c];
+      hda = new double[size_a];
+      hdb = new double[size_b];
+      hdc = new double[size_c];
     }
 
     if(ops_type == "hgemm") {
 
-      hhlfa = new rocblas_half[size_a];
-      hhlfb = new rocblas_half[size_b];
-      hhlfc = new rocblas_half[size_c];
+      hda = new rocblas_half[size_a];
+      hdb = new rocblas_half[size_b];
+      hdc = new rocblas_half[size_c];
     }
 
     if(data_type == "fp8_r") {
@@ -1000,27 +986,6 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
  */
 void rvs_blas::release_host_matrix_mem(void) {
 
-  if (ha)
-    delete []ha;
-  if (hb)
-    delete []hb;
-  if (hc)
-    delete []hc;
-
-  if (hdbla)
-    delete []hdbla;
-  if (hdblb)
-    delete []hdblb;
-  if (hdblc)
-    delete []hdblc;
-
-  if (hhlfa)
-    delete []hhlfa;
-  if (hhlfb)
-    delete []hhlfb;
-  if (hhlfc)
-    delete []hhlfc;
-
   if (hda)
     delete []hda;
   if (hdb)
@@ -1074,9 +1039,9 @@ bool rvs_blas::run_blas_gemm(void) {
 
         if (rocblas_sgemm_strided_batched(blas_handle, transa, transb,
               rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, da, blas_lda_offset, stride_a,
-              db, blas_ldb_offset, stride_b, &beta,
-              dc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
+              &alpha, (float *)dda, blas_lda_offset, stride_a,
+              (float *)ddb, blas_ldb_offset, stride_b, &beta,
+              (float *)ddc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
           is_error = true;  // GPU cannot enqueue the gemm
           std::cout << "\nError in rocblas_sgemm_strided_batched() !!!" << "\n";
           return false;
@@ -1088,9 +1053,9 @@ bool rvs_blas::run_blas_gemm(void) {
 
         if (rocblas_sgemm(blas_handle, transa, transb,
               rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, da, blas_lda_offset,
-              db, blas_ldb_offset, &beta,
-              dc, blas_ldc_offset) != rocblas_status_success) {
+              &alpha, (float *)dda, blas_lda_offset,
+              (float *)ddb, blas_ldb_offset, &beta,
+              (float *)ddc, blas_ldc_offset) != rocblas_status_success) {
           is_error = true;  // GPU cannot enqueue the gemm
           std::cout << "\nError in rocblas_sgemm() !!!" << "\n";
           return false;
@@ -1108,9 +1073,9 @@ bool rvs_blas::run_blas_gemm(void) {
 
         if (rocblas_dgemm_strided_batched(blas_handle, transa, transb,
               rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, ddbla, blas_lda_offset, stride_a,
-              ddblb, blas_ldb_offset, stride_b, &beta,
-              ddblc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
+              &alpha, (double *)dda, blas_lda_offset, stride_a,
+              (double *)ddb, blas_ldb_offset, stride_b, &beta,
+              (double *)ddc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
           is_error = true;  // GPU cannot enqueue the gemm
           std::cout << "\nError in rocblas_dgemm_strided_batched() !!!" << "\n";
           return false;
@@ -1121,9 +1086,9 @@ bool rvs_blas::run_blas_gemm(void) {
       else {
         if (rocblas_dgemm(blas_handle, transa, transb,
               rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, ddbla, blas_lda_offset,
-              ddblb, blas_ldb_offset, &beta,
-              ddblc, blas_ldc_offset) != rocblas_status_success) {
+              &alpha, (double *)dda, blas_lda_offset,
+              (double *)ddb, blas_ldb_offset, &beta,
+              (double *)ddc, blas_ldc_offset) != rocblas_status_success) {
           is_error = true;  // GPU cannot enqueue the gemm
           std::cout << "\nError in rocblas_dgemm() !!!" << "\n";
           return false;
@@ -1142,9 +1107,9 @@ bool rvs_blas::run_blas_gemm(void) {
 
         if (rocblas_hgemm_strided_batched(blas_handle, transa, transb,
               rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, dhlfa , blas_lda_offset, stride_a,
-              dhlfb, blas_ldb_offset, stride_b, &beta,
-              dhlfc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
+              &alpha, (rocblas_half *)dda, blas_lda_offset, stride_a,
+              (rocblas_half *)ddb, blas_ldb_offset, stride_b, &beta,
+              (rocblas_half *)ddc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
           is_error = true;  // GPU cannot enqueue the gemm
           std::cout << "\nError in rocblas_hgemm_strided_batched() !!!" << "\n";
           return false;
@@ -1156,9 +1121,9 @@ bool rvs_blas::run_blas_gemm(void) {
 
         if (rocblas_hgemm(blas_handle, transa, transb,
               rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, dhlfa , blas_lda_offset,
-              dhlfb, blas_ldb_offset, &beta,
-              dhlfc, blas_ldc_offset) != rocblas_status_success) {
+              &alpha, (rocblas_half *)dda, blas_lda_offset,
+              (rocblas_half *)ddb, blas_ldb_offset, &beta,
+              (rocblas_half *)ddc, blas_ldc_offset) != rocblas_status_success) {
           is_error = true;  // GPU cannot enqueue the gemm
           std::cout << "\nError in rocblas_hgemm() !!!" << "\n";
           return false;
@@ -1356,19 +1321,19 @@ void rvs_blas::generate_random_matrix_data(void) {
 
       if(ops_type == "dgemm") {
 
-        if(hiprandGenerateUniformDouble(hiprand_generator, ddbla, size_a) != HIPRAND_STATUS_SUCCESS) {
+        if(hiprandGenerateUniformDouble(hiprand_generator, (double *)dda, size_a) != HIPRAND_STATUS_SUCCESS) {
           std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
           is_error = true;
           return;
         }
 
-        if(hiprandGenerateUniformDouble(hiprand_generator, ddblb, size_b) != HIPRAND_STATUS_SUCCESS) {
+        if(hiprandGenerateUniformDouble(hiprand_generator, (double *)ddb, size_b) != HIPRAND_STATUS_SUCCESS) {
           std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
           is_error = true;
           return;
         }
 
-        if(hiprandGenerateUniformDouble(hiprand_generator, ddblc, size_c) != HIPRAND_STATUS_SUCCESS) {
+        if(hiprandGenerateUniformDouble(hiprand_generator, (double *)ddc, size_c) != HIPRAND_STATUS_SUCCESS) {
           std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
           is_error = true;
           return;
@@ -1390,39 +1355,39 @@ void rvs_blas::generate_random_matrix_data(void) {
       if(ops_type == "sgemm") {
 
         for (i = 0; i < size_a; ++i)
-          ha[i] = fast_pseudo_rand(&nextr, i);
+         ((float *) hda)[i] = fast_pseudo_rand(&nextr, i);
 
         for (i = 0; i < size_b; ++i)
-          hb[i] = fast_pseudo_rand(&nextr, i);
+          ((float *) hdb)[i] = fast_pseudo_rand(&nextr, i);
 
         for (int i = 0; i < size_c; ++i)
-          hc[i] = fast_pseudo_rand(&nextr, i);
+          ((float *) hdc)[i] = fast_pseudo_rand(&nextr, i);
       }
 
       //DGEMM (double fp64_r)
       if(ops_type == "dgemm") {
 
         for (i = 0; i < size_a; ++i)
-          hdbla[i] = (double)fast_pseudo_rand(&nextr, i);
+          ((double *) hda)[i] = (double)fast_pseudo_rand(&nextr, i);
 
         for (i = 0; i < size_b; ++i)
-          hdblb[i] = (double)fast_pseudo_rand(&nextr, i);
+          ((double *) hdb)[i] = (double)fast_pseudo_rand(&nextr, i);
 
         for (int i = 0; i < size_c; ++i)
-          hdblc[i] = (double)fast_pseudo_rand(&nextr, i);
+          ((double *) hdc)[i] = (double)fast_pseudo_rand(&nextr, i);
       }
 
       //HGEMM (half-float fp16_r)
       if(ops_type == "hgemm") {
 
         for (i = 0; i < size_a; ++i)
-          hhlfa[i] = fast_pseudo_rand(&nextr, i);
+          ((rocblas_half* )hda)[i] = fast_pseudo_rand(&nextr, i);
 
         for (i = 0; i < size_b; ++i)
-          hhlfb[i] = fast_pseudo_rand(&nextr, i);
+          ((rocblas_half* )hdb)[i] = fast_pseudo_rand(&nextr, i);
 
         for (int i = 0; i < size_c; ++i)
-          hhlfc[i] = fast_pseudo_rand(&nextr, i);
+          ((rocblas_half* )hdc)[i] = fast_pseudo_rand(&nextr, i);
       }
 
       // 8-bit floating point real (fp8_r) format
@@ -2046,14 +2011,14 @@ bool rvs_blas::check_result_accuracy(void * dout, size_t size, double &error) {
   T beta = (T) blas_beta_val;
 
   if (std::is_same<T, float>{}) {
-    _ha = (T *)ha;
-    _hb = (T *)hb;
-    _hc = (T *)hc;
+    _ha = (T *)hda;
+    _hb = (T *)hdb;
+    _hc = (T *)hdc;
   }
   else {
-    _ha = (T *)hdbla;
-    _hb = (T *)hdblb;
-    _hc = (T *)hdblc;
+    _ha = (T *)hda;
+    _hb = (T *)hdb;
+    _hc = (T *)hdc;
   }
 
   /* Copy Matrix C to host gemm output memory */
@@ -2134,10 +2099,10 @@ bool rvs_blas::validate_gemm(bool self_check, bool accu_check, double &self_erro
   if(self_check) {
 
     if(ops_type == "sgemm") {
-      check_result_consistency<float>(dc, size_c, self_error);
+      check_result_consistency<float>(ddc, size_c, self_error);
     }
     else if(ops_type == "dgemm") {
-      check_result_consistency<double>(ddblc, size_c, self_error);
+      check_result_consistency<double>(ddc, size_c, self_error);
     }
     else if(data_type == "fp8_r") {
       check_result_consistency<rocblas_f8>(ddd, size_d, self_error);
@@ -2158,10 +2123,10 @@ bool rvs_blas::validate_gemm(bool self_check, bool accu_check, double &self_erro
   if(accu_check) {
 
     if(ops_type == "sgemm") {
-      check_result_accuracy<float>(dc, size_c, accu_error);
+      check_result_accuracy<float>(ddc, size_c, accu_error);
     }
     else if(ops_type == "dgemm") {
-      check_result_accuracy<double>(ddblc, size_c, accu_error);
+      check_result_accuracy<double>(ddc, size_c, accu_error);
     }
     else {
       return false;

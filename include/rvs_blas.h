@@ -143,34 +143,6 @@ class rvs_blas {
     //! Transpose matrix B
     rocblas_operation transb;
 
-    //SGEMM DECLARATION
-    //! pointer to device (GPU) memory
-    float *da;
-    //! pointer to device (GPU) memory
-    float *db;
-    //! pointer to device (GPU) memory
-    float *dc;
-    //! pointer to host memory
-    float *ha;
-    //! pointer to host memory
-    float *hb;
-    //! pointer to host memory
-    float *hc;
-
-    //DGEMM Declaration
-    //! pointer to device (GPU) memory
-    double *ddbla;
-    //! pointer to device (GPU) memory
-    double *ddblb;
-    //! pointer to device (GPU) memory
-    double *ddblc;
-    //! pointer to host memory
-    double *hdbla;
-    //! pointer to host memory
-    double *hdblb;
-    //! pointer to host memory
-    double *hdblc;
-
     //Data type Declaration
     //! pointer to device (GPU) memory
     void *dda;
@@ -209,23 +181,6 @@ class rvs_blas {
     rocblas_int blas_ldc_offset;
     //!Blas offsets
     rocblas_int blas_ldd_offset;
-
-    //HGEMM Declaration
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfa;
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfb;
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfc;
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfd;
-
-    //! pointer to host memory
-    rocblas_half *hhlfa;
-    //! pointer to host memory
-    rocblas_half *hhlfb;
-    //! pointer to host memory
-    rocblas_half *hhlfc;
 
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;
