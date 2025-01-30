@@ -103,6 +103,7 @@ class rvs_blas {
     bool error(void) { return is_error; }
     void generate_random_matrix_data(void);
     bool copy_data_to_gpu(void);
+    template <typename Ti, typename To> bool copy_data_to_gpu(void);
     bool run_blas_gemm(void);
     bool is_gemm_op_complete(void);
     bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
@@ -281,6 +282,7 @@ class rvs_blas {
 
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
+    template <typename Ti, typename To> bool allocate_gpu_matrix_mem(void);
     void release_gpu_matrix_mem(void);
 
     bool allocate_host_matrix_mem(void);

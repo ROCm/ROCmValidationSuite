@@ -415,6 +415,37 @@ bool rvs_blas::init_gpu_device(void) {
   return true;
 }
 
+template <typename Ti, typename To>
+bool rvs_blas::copy_data_to_gpu(void) {
+
+  if (dda) {
+    if (hipMemcpy(dda, hda, sizeof(Ti) * size_a, hipMemcpyHostToDevice)
+        != hipSuccess) {
+      is_error = true;
+      return false;
+    }
+  }
+
+  if (ddb) {
+    if (hipMemcpy(ddb, hdb, sizeof(Ti) * size_b, hipMemcpyHostToDevice)
+        != hipSuccess) {
+      is_error = true;
+      return false;
+    }
+  }
+
+  if (ddc) {
+    if (hipMemcpy(ddc, hdc, sizeof(To) * size_c, hipMemcpyHostToDevice)
+        != hipSuccess) {
+      is_error = true;
+      return false;
+    }
+  }
+
+  is_error = false;
+  return true;
+}
+
 /**
  * @brief copy data matrix from host to gpu
  * @return true if everything went fine, otherwise false
@@ -428,294 +459,65 @@ bool rvs_blas::copy_data_to_gpu(void) {
   }
 
   if(ops_type == "sgemm") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(float) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(float) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(float) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<float, float>();
   }
 
   if(ops_type == "dgemm") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(double) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(double) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(double) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<double, double>();
   }
 
   if(ops_type == "hgemm") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(rocblas_half) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(rocblas_half) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(rocblas_half) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<rocblas_half, rocblas_half>();
   }
 
   if(data_type == "fp8_r") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(rocblas_f8) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(rocblas_f8) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(rocblas_f8) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<rocblas_f8, rocblas_f8>();
   }
 
   if(data_type == "fp8_e4m3_r") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(hipblaslt_f8) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(hipblaslt_f8) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(float) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<hipblaslt_f8, float>();
   }
 
   if(data_type == "fp8_e5m2_r") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(hipblaslt_bf8) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(hipblaslt_bf8) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(float) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<hipblaslt_bf8, float>();
   }
 
   if(data_type == "fp16_r") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(rocblas_half) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(rocblas_half) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(rocblas_half) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<rocblas_half, rocblas_half>();
   }
 
   if(data_type == "bf16_r") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(rocblas_bfloat16) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(rocblas_bfloat16) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(rocblas_bfloat16) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<rocblas_bfloat16, rocblas_bfloat16>();
   }
 
   if(data_type == "i8_r") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(int8_t) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(int8_t) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(int8_t) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<int8_t, int8_t>();
   }
 
   if(data_type == "fp32_r") {
-
-    if (dda) {
-      if (hipMemcpy(dda, hda, sizeof(float) * size_a, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddb) {
-      if (hipMemcpy(ddb, hdb, sizeof(float) * size_b, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
-
-    if (ddc) {
-      if (hipMemcpy(ddc, hdc, sizeof(float) * size_c, hipMemcpyHostToDevice)
-          != hipSuccess) {
-        is_error = true;
-        return false;
-      }
-    }
+    return copy_data_to_gpu<float, float>();
   }
 
   is_error = false;
   return true;
 }
 
-#if 0
 template <typename Ti, typename To>
 bool rvs_blas::allocate_gpu_matrix_mem(void) {
 
-    if (hipMalloc(&dda, size_a * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddd, size_d * sizeof(float)) != hipSuccess)
+  if (hipMalloc(&dda, size_a * sizeof(Ti)) != hipSuccess)
+    return false;
+  if (hipMalloc(&ddb, size_b * sizeof(Ti)) != hipSuccess)
+    return false;
+  if (hipMalloc(&ddc, size_c * sizeof(To)) != hipSuccess)
+    return false;
+
+  if(size_d)
+    if (hipMalloc(&ddd, size_d * sizeof(To)) != hipSuccess)
       return false;
 
+  return true;
 }
-#endif
 
 /**
  * @brief allocates memory (for matrix multiplication) on the selected GPU
@@ -724,109 +526,43 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
 bool rvs_blas::allocate_gpu_matrix_mem(void) {
 
   if(ops_type == "sgemm") {
-    if (hipMalloc(&dda, size_a * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(float)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<float, float>();
   }
 
   if(ops_type == "dgemm") {
-    if (hipMalloc(&dda, size_a * sizeof(double)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(double)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(double)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<double, double>();
   }
 
   if(ops_type == "hgemm") {
-    if (hipMalloc(&dda, size_a * sizeof(rocblas_half)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(rocblas_half)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(rocblas_half)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddd, size_d * sizeof(rocblas_half)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<rocblas_half, rocblas_half>();
   }
 
   if(data_type == "fp8_r") {
-    if (hipMalloc(&dda, size_a * sizeof(rocblas_f8)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(rocblas_f8)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(rocblas_f8)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddd, size_d * sizeof(rocblas_f8)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<rocblas_f8, rocblas_f8>();
   }
 
   if(data_type == "fp8_e4m3_r") {
-    if (hipMalloc(&dda, size_a * sizeof(hipblaslt_f8)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(hipblaslt_f8)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddd, size_d * sizeof(float)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<hipblaslt_f8, float>();
   }
 
   if(data_type == "fp8_e5m2_r") {
-    if (hipMalloc(&dda, size_a * sizeof(hipblaslt_bf8)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(hipblaslt_bf8)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddd, size_d * sizeof(float)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<hipblaslt_bf8, float>();
   }
 
   if(data_type == "fp16_r") {
-    if (hipMalloc(&dda, size_a * sizeof(rocblas_half)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(rocblas_half)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(rocblas_half)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddd, size_d * sizeof(rocblas_half)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<rocblas_half, rocblas_half>();
   }
 
   if(data_type == "bf16_r") {
-    if (hipMalloc(&dda, size_a * sizeof(rocblas_bfloat16)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(rocblas_bfloat16)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(rocblas_bfloat16)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddd, size_d * sizeof(rocblas_bfloat16)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<rocblas_bfloat16, rocblas_bfloat16>();
   }
 
   if(data_type == "i8_r") {
-    if (hipMalloc(&dda, size_a * sizeof(int8_t)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(int8_t)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(int8_t)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddd, size_d * sizeof(int8_t)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<int8_t, int8_t>();
   }
 
   if(data_type == "fp32_r") {
-    if (hipMalloc(&dda, size_a * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddb, size_b * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddc, size_c * sizeof(float)) != hipSuccess)
-      return false;
-    if (hipMalloc(&ddd, size_d * sizeof(float)) != hipSuccess)
-      return false;
+    return allocate_gpu_matrix_mem<float, float>();
   }
 
   return true;
