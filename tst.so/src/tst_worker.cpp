@@ -375,8 +375,8 @@ void TSTWorker::run() {
     if (rvs::lp::Stopping())
          return;
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-               std::to_string(gpu_id) + " " + TST_PASS_KEY + ": " +
+    msg = "[" + action_name + "] "  +
+               "[GPU:: " + std::to_string(gpu_id) + "] " + TST_PASS_KEY + ": " +
                (pass ? TST_RESULT_PASS_MESSAGE : TST_RESULT_FAIL_MESSAGE);
     rvs::lp::Log(msg, rvs::logresults);
 
