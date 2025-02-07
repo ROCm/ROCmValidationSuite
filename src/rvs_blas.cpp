@@ -1380,6 +1380,33 @@ void rvs_blas::generate_random_matrix_data(void) {
           return;
         }
       }
+
+      if(ops_type == "sgemm") {
+
+        if(hiprandGenerateUniform(hiprand_generator, da, size_a) != HIPRAND_STATUS_SUCCESS) {
+          std::cout << "\n hiprandGenerateUniform() failed !!!" << "\n";
+          is_error = true;
+          return;
+        }
+
+        if(hiprandGenerateUniform(hiprand_generator, db, size_b) != HIPRAND_STATUS_SUCCESS) {
+          std::cout << "\n hiprandGenerateUniform() failed !!!" << "\n";
+          is_error = true;
+          return;
+        }
+
+        if(hiprandGenerateUniform(hiprand_generator, dc, size_c) != HIPRAND_STATUS_SUCCESS) {
+          std::cout << "\n hiprandGenerateUniform() failed !!!" << "\n";
+          is_error = true;
+          return;
+        }
+
+        if(hipStreamSynchronize(hip_stream) != hipSuccess) {
+          std::cout << "hipStreamSynchronize() failed !!! for stream " << hip_stream << std::endl;
+          is_error = true;
+          return;
+        }
+      }
     }
     else {
 
