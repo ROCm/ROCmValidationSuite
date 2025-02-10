@@ -80,13 +80,16 @@ bool isPathedFile(const std::string &fname){
   return fname.find('/') != std::string::npos ;
 }
 
+
 bool doesFolderExist(const std::string &fname){
   auto loc = fname.find_last_of('/');
   auto dirName = fname.substr(0,loc);
   DIR* dir = opendir(dirName.c_str());
   if (dir == NULL) {
     // try creating directory, this doesnt exist. if fails return
-    int ret = mkdir(dirName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
+     std::string command{"mkdir -p "};
+     command += dirName;     
+     int ret = system(command.c_str());
     if (ret){
       return false;
     }
