@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "babel": {
+      "type": "object",
+      "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "gpu_id": {
+                "type": "string"
+              },
+              "gpu_index": {
+                "type": "string"
+              },
+              "Array size": {
+                "type": "string"
+              },
+              "Total size": {
+                "type": "string"
+              },
+              "Iterations": {
+                "type": "string"
+              },
+              "Function": {
+                "type": "string"
+              },
+              "MBytes/sec": {
+                "type": "string"
+              },
+              "Min(s)": {
+                "type": "string"
+              },
+              "Max(s)": {
+                "type": "string"
+              },
+              "Average(s)": {
+                "type": "string"
+              },
+              "pass": {
+                "type": "string"
+              }
+            }
+          },
+         "minItems": 1
+      }
+    }
+  },
+  "required": [
+    "babel"
+  ]
+}
