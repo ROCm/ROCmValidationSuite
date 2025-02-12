@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "tst": {
+      "type": "object",
+      "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "target_temp": {
+                "type": "string"
+              },
+              "dtype": {
+                "type": "string"
+              },
+              "gpu_id": {
+                "type": "string"
+              },
+              "gpu_index": {
+                "type": "string"
+              },
+              "average edge temperature": {
+                "type": "string"
+              },
+              "pass": {
+                "type": "string"
+              }
+            }
+        },
+       "minItems": 1
+      }
+    }
+  },
+  "required": [
+    "tst"
+  ]
+}
