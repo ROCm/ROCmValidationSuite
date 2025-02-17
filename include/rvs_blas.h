@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -103,6 +103,7 @@ class rvs_blas {
     bool error(void) { return is_error; }
     void generate_random_matrix_data(void);
     bool copy_data_to_gpu(void);
+    template <typename Ti, typename To> bool copy_data_to_gpu(void);
     bool run_blas_gemm(void);
     bool is_gemm_op_complete(void);
     bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
@@ -143,49 +144,21 @@ class rvs_blas {
     //! Transpose matrix B
     rocblas_operation transb;
 
-    //SGEMM DECLARATION
-    //! pointer to device (GPU) memory
-    float *da;
-    //! pointer to device (GPU) memory
-    float *db;
-    //! pointer to device (GPU) memory
-    float *dc;
-    //! pointer to host memory
-    float *ha;
-    //! pointer to host memory
-    float *hb;
-    //! pointer to host memory
-    float *hc;
-
-    //DGEMM Declaration
-    //! pointer to device (GPU) memory
-    double *ddbla;
-    //! pointer to device (GPU) memory
-    double *ddblb;
-    //! pointer to device (GPU) memory
-    double *ddblc;
-    //! pointer to host memory
-    double *hdbla;
-    //! pointer to host memory
-    double *hdblb;
-    //! pointer to host memory
-    double *hdblc;
-
     //Data type Declaration
     //! pointer to device (GPU) memory
-    void *dda;
+    void *da;
     //! pointer to device (GPU) memory
-    void *ddb;
+    void *db;
     //! pointer to device (GPU) memory
-    void *ddc;
+    void *dc;
     //! pointer to device (GPU) memory
-    void *ddd;
+    void *dd;
     //! pointer to host memory
-    void *hda;
+    void *ha;
     //! pointer to host memory
-    void *hdb;
+    void *hb;
     //! pointer to host memory
-    void *hdc;
+    void *hc;
 
     //! pointer to current gemm output (host memory)
     void *hco;
@@ -209,23 +182,6 @@ class rvs_blas {
     rocblas_int blas_ldc_offset;
     //!Blas offsets
     rocblas_int blas_ldd_offset;
-
-    //HGEMM Declaration
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfa;
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfb;
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfc;
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfd;
-
-    //! pointer to host memory
-    rocblas_half *hhlfa;
-    //! pointer to host memory
-    rocblas_half *hhlfb;
-    //! pointer to host memory
-    rocblas_half *hhlfc;
 
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;
@@ -326,6 +282,7 @@ class rvs_blas {
 
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
+    template <typename Ti, typename To> bool allocate_gpu_matrix_mem(void);
     void release_gpu_matrix_mem(void);
 
     bool allocate_host_matrix_mem(void);
