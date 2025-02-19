@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "version" : {
+      "type": "string",
+      "const": "1.0"
+    },
+    "gst": {
+      "type": "object",
+      "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "type": "string"
+              },
+              "dtype": {
+                "type": "string"
+              },
+              "gpu_id": {
+                "type": "string"
+              },
+              "gflops": {
+                "type": "string"
+              },
+              "gpu_index": {
+                "type": "string"
+              },
+              "pass": {
+                "type": "string"
+              }
+            }
+          },
+         "minItems": 1
+        }
+      }
+    },
+  "required": [
+    "gst"
+  ]
+}

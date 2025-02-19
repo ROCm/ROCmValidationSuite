@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "version" : {
+      "type": "string",
+      "const": "1.0"
+    },
+    "peqt": {
+      "type": "object",
+      "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "gpu_id": {
+                "type": "string"
+              },
+              "gpu_index": {
+                "type": "string"
+              },
+              "D0_Maximum_Power_12V": {
+                "type": "string"
+              },
+              "D0_Maximum_Power_3_3V": {
+                "type": "string"
+              },
+              "D0_Sustained_Power_12V": {
+                "type": "string"
+              },
+              "D0_Sustained_Power_3_3V": {
+                "type": "string"
+              },
+              "atomic_op_32_completer": {
+                "type": "string"
+              },
+              "atomic_op_64_completer": {
+                "type": "string"
+              },
+              "atomic_op_routing": {
+                "type": "string"
+              },
+              "dev_serial_num": {
+                "type": "string"
+              },
+              "kernel_driver": {
+                "type": "string"
+              },
+              "link_cap_max_speed": {
+                "type": "string"
+              },
+              "link_cap_max_width": {
+                "type": "string"
+              },
+              "link_stat_cur_speed": {
+                "type": "string"
+              },
+              "link_stat_neg_width": {
+                "type": "string"
+              },
+              "slot_physical_num": {
+                "type": "string"
+              },
+              "slot_pwr_limit_value": {
+                "type": "string"
+              },
+              "vendor_id": {
+                "type": "string"
+              },
+              "pass": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "pass"
+            ]
+          }
+      }
+    }
+  },
+  "required": [
+    "peqt"
+  ]
+}

@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "version" : {
+      "type": "string",
+      "const": "1.0"
+    },
+    "gpup": {
+      "type": "object",
+      "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "gpu_id": {
+                "type": "string"
+              },"gpu_index": {
+                "type": "string"
+              },
+              "properties": {
+                "type": "object",
+                "properties": {
+                  "cpu_cores_count": {
+                    "type": "string"
+                  },
+                  "simd_count": {
+                    "type": "string"
+                  },
+                  "mem_banks_count": {
+                    "type": "string"
+                  },
+                  "caches_count": {
+                    "type": "string"
+                  },
+                  "io_links_count": {
+                    "type": "string"
+                  },
+                  "p2p_links_count": {
+                    "type": "string"
+                  },
+                  "cpu_core_id_base": {
+                    "type": "string"
+                  },
+                  "simd_id_base": {
+                    "type": "string"
+                  },
+                  "max_waves_per_simd": {
+                    "type": "string"
+                  },
+                  "lds_size_in_kb": {
+                    "type": "string"
+                  },
+                  "gds_size_in_kb": {
+                    "type": "string"
+                  },
+                  "num_gws": {
+                    "type": "string"
+                  },
+                  "wave_front_size": {
+                    "type": "string"
+                  },
+                  "array_count": {
+                    "type": "string"
+                  },
+                  "simd_arrays_per_engine": {
+                    "type": "string"
+                  },
+                  "cu_per_simd_array": {
+                    "type": "string"
+                  },
+                  "simd_per_cu": {
+                    "type": "string"
+                  },
+                  "max_slots_scratch_cu": {
+                    "type": "string"
+                  },
+                  "gfx_target_version": {
+                    "type": "string"
+                  },
+                  "vendor_id": {
+                    "type": "string"
+                  },
+                  "device_id": {
+                    "type": "string"
+                  },
+                  "location_id": {
+                    "type": "string"
+                  },
+                  "domain": {
+                    "type": "string"
+                  },
+                  "drm_render_minor": {
+                    "type": "string"
+                  },
+                  "hive_id": {
+                    "type": "string"
+                  },
+                  "num_sdma_engines": {
+                    "type": "string"
+                  },
+                  "num_sdma_xgmi_engines": {
+                    "type": "string"
+                  },
+                  "num_sdma_queues_per_engine": {
+                    "type": "string"
+                  },
+                  "num_cp_queues": {
+                    "type": "string"
+                  },
+                  "max_engine_clk_fcompute": {
+                    "type": "string"
+                  },
+                  "local_mem_size": {
+                    "type": "string"
+                  },
+                  "fw_version": {
+                    "type": "string"
+                  },
+                  "capability": {
+                    "type": "string"
+                  },
+                  "debug_prop": {
+                    "type": "string"
+                  },
+                  "sdma_fw_version": {
+                    "type": "string"
+                  },
+                  "unique_id": {
+                    "type": "string"
+                  },
+                  "num_xcc": {
+                    "type": "string"
+                  },
+                  "max_engine_clk_ccompute": {
+                    "type": "string"
+                  }
+                }
+              },
+              "io_links-properties": {
+                "type": "object",
+                "properties": {
+                  "0": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      },
+                      "version_major": {
+                        "type": "string"
+                      },
+                      "version_minor": {
+                        "type": "string"
+                      },
+                      "node_from": {
+                        "type": "string"
+                      },
+                      "node_to": {
+                        "type": "string"
+                      },
+                      "weight": {
+                        "type": "string"
+                      },
+                      "min_latency": {
+                        "type": "string"
+                      },
+                      "max_latency": {
+                        "type": "string"
+                      },
+                      "min_bandwidth": {
+                        "type": "string"
+                      },
+                      "max_bandwidth": {
+                        "type": "string"
+                      },
+                      "recommended_transfer_size": {
+                        "type": "string"
+                      },
+                      "recommended_sdma_engine_id_mask": {
+                        "type": "string"
+                      },
+                      "flags": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "version_major"
+                    ]
+                  }
+                }
+              },
+              "pass": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "gpu_id",
+              "io_links-properties",
+              "pass",
+              "properties"
+            ]
+          }
+       }
+    }
+  },
+  "required": [
+    "gpup"
+  ]
+}
