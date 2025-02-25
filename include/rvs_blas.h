@@ -299,7 +299,7 @@ class rvs_blas {
     {
       return
         (datatype == "i8_r")       ? HIP_R_8I  :
-        (datatype == "fp8_r")      ? HIP_R_8F_E4M3_FNUZ  :
+        (datatype == "fp8_r")      ? HIP_R_8F_E4M3  :
         (datatype == "fp8_e4m3_r") ? HIP_R_8F_E4M3  : // OCP fp8 E4M3
         (datatype == "fp8_e5m2_r") ? HIP_R_8F_E5M2  : // OCP fp8 E5M2
         (datatype == "bf16_r")     ? HIP_R_16BF :
