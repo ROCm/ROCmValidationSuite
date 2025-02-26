@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -437,7 +437,7 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
 
   int hip_num_gpu_devices = 0;
   uint32_t smi_num_devices = 0;
-  uint64_t val_ui64 = 0;
+  uint64_t smi_bdf_id = 0;
   std::map<uint64_t, int> smi_map;
 
   // map this to smi as only these are visible
@@ -451,8 +451,8 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
   rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
   if(err == RSMI_STATUS_SUCCESS){
     for(auto i = 0; i < smi_num_devices; ++i){
-      err = rsmi_dev_pci_id_get(i, &val_ui64);
-      smi_map.insert({val_ui64, i});
+      err = rsmi_dev_pci_id_get(i, &smi_bdf_id);
+      smi_map.insert({smi_bdf_id, i});
     }
   }
   else {
@@ -461,22 +461,27 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
   }
   rsmi_shut_down();
 
-  // compute device location_id (needed to match this device
-  // with one of those found while querying the pci bus
-  unsigned int pDom=0, pBus=0, pDev=0, pFun =0;
+  /* Fetch Domain, Bus, Device and Function numbers from HIP PCIe id */
+  uint64_t pDom = 0, pBus = 0, pDev = 0, pFun = 0;
   char pciString[256] = {0};
   auto hipret = hipDeviceGetPCIBusId(pciString, 256, hip_index);
-  if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&pDom),
-        reinterpret_cast<unsigned int*>(&pBus),
-        reinterpret_cast<unsigned int*>(&pDev),
-        reinterpret_cast<unsigned int*>(&pFun)) != 4) {
+  if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<uint64_t *>(&pDom),
+        reinterpret_cast<uint64_t *>(&pBus),
+        reinterpret_cast<uint64_t *>(&pDev),
+        reinterpret_cast<uint64_t *>(&pFun)) != 4) {
     std::cout << "parsing error in BDF:" << pciString << std::endl;
   }
 
-  uint64_t hip_dev_location_id = ( (((uint16_t)(pDom) & 0xffff) << 13) |
-    (((uint16_t) (pBus)) << 8) | (((uint16_t)(pDev)) << 3) | ((uint16_t)(pFun)));
-  if(smi_map.find(hip_dev_location_id) != smi_map.end()) {
-    *smi_index = smi_map[hip_dev_location_id];
+  /* Form bdfid as per rsmi_dev_pci_id_get() logic */
+  uint64_t hip_bdf_id =
+	  ((((pDom) & 0x00000000ffffffff) << 32) |
+	   (((pBus) & 0x00000000000000ff) << 8) |
+	   (((pDev) & 0x000000000000001f) << 3) |
+	    ((pFun) & 0x0000000000000007));
+
+  /* Check for matching bdf id in smi list */
+  if(smi_map.find(hip_bdf_id) != smi_map.end()) {
+    *smi_index = smi_map[hip_bdf_id];
     return 0;
   }
   return -1;
