@@ -513,6 +513,10 @@ bool rvs_blas::copy_data_to_gpu(void) {
     return copy_data_to_gpu<float, float>();
   }
 
+  if(data_type == "fp64_r") {
+    return copy_data_to_gpu<double, double>();
+  }
+
   is_error = false;
   return true;
 }
@@ -593,6 +597,10 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
 
   if(data_type == "fp32_r") {
     return allocate_gpu_matrix_mem<float, float>();
+  }
+
+  if(data_type == "fp64_r") {
+    return allocate_gpu_matrix_mem<double, double>();
   }
 
   return true;
@@ -760,6 +768,13 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
       ha = new float[size_a];
       hb = new float[size_b];
       hc = new float[size_c];
+    }
+
+    if(data_type == "fp64_r") {
+
+      ha = new double[size_a];
+      hb = new double[size_b];
+      hc = new double[size_c];
     }
 
     return true;
@@ -1139,7 +1154,7 @@ void rvs_blas::generate_random_matrix_data(void) {
       uint64_t nextr = (uint64_t) time(NULL);
 
       //SGEMM (float fp32_r)
-      if(ops_type == "sgemm") {
+      if((ops_type == "sgemm") || (data_type == "fp32_r")) {
 
         for (i = 0; i < size_a; ++i)
          ((float *) ha)[i] = fast_pseudo_rand(&nextr, i);
@@ -1152,7 +1167,7 @@ void rvs_blas::generate_random_matrix_data(void) {
       }
 
       //DGEMM (double fp64_r)
-      if(ops_type == "dgemm") {
+      if((ops_type == "dgemm") || (data_type == "fp64_r")) {
 
         for (i = 0; i < size_a; ++i)
           ((double *) ha)[i] = (double)fast_pseudo_rand(&nextr, i);
@@ -1335,7 +1350,7 @@ float rvs_blas::fast_pseudo_rand(uint64_t *nextr, size_t i) {
     {
       return (float)std::uniform_int_distribution<unsigned short>(1, 3)(rvsblas_t_rng);
     }
-    else { /* sgemm, dgemm, fp8_e4m3_r, fp8_e5m2_r */
+    else { /* sgemm (fp32), dgemm (fp64), fp8_e4m3_r, fp8_e5m2_r */
       return rvsblas_uniform_int_1_10();
     }
   }
