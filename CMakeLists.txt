@@ -133,9 +133,9 @@ endif(rocrand_FOUND)
 
 find_package(hipblas-common)
 if(hipblas-common_FOUND)
-  message(STATUS "rocrand found")
+  message(STATUS "hipblas-common found")
 else() #If hipblas-common not found
-  message(FATAL_ERROR "hipblas-common not found !!! Install rocrand to proceed ...")
+  message(FATAL_ERROR "hipblas-common not found !!! Install hipblas-common to proceed ...")
 endif(hipblas-common_FOUND)
 
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
