@@ -98,6 +98,7 @@ using std::fstream;
 
 #define RVS_CONF_BLAS_SOURCE_KEY        "blas_source"
 #define RVS_CONF_COMPUTE_TYPE_KEY       "compute_type"
+#define RVS_CONF_WG_COUNT               "wg_count"
 
 #define IET_DEFAULT_BLAS_SOURCE         "rocblas"
 #define IET_DEFAULT_COMPUTE_TYPE        "fp32_r"
@@ -127,12 +128,13 @@ using std::fstream;
 #define IET_DEFAULT_CP_WORKLOAD         true
 #define IET_DEFAULT_HOT_CALLS           1
 #define IET_DEFAULT_MATRIX_INIT         "default"
-#define IET_DEFAULT_GEMM_MODE        ""
+#define IET_DEFAULT_GEMM_MODE           ""
 #define IET_DEFAULT_BATCH_SIZE          0
 #define IET_DEFAULT_STRIDE_A            0
 #define IET_DEFAULT_STRIDE_B            0
 #define IET_DEFAULT_STRIDE_C            0
 #define IET_DEFAULT_STRIDE_D            0
+#define IET_DEFAULT_WG_COUNT            80
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
@@ -156,267 +158,266 @@ iet_action::~iet_action() {
     property.clear();
 }
 
-
 /**
  * @brief reads all IET's related configuration keys from
  * the module's properties collection
  * @return true if no fatal error occured, false otherwise
  */
 bool iet_action::get_all_iet_config_keys(void) {
-    int error;
-    string msg, ststress;
-    bool bsts = true;
+  int error;
+  string msg, ststress;
+  bool bsts = true;
 
-    if ((error =
-      property_get(RVS_CONF_TARGET_POWER_KEY, &iet_target_power))) {
-      switch (error) {
-        case 1:
-          msg = "invalid '" + std::string(RVS_CONF_TARGET_POWER_KEY) +
-              "' key value " + ststress;
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-          break;
+  if ((error =
+        property_get(RVS_CONF_TARGET_POWER_KEY, &iet_target_power))) {
+    switch (error) {
+      case 1:
+        msg = "invalid '" + std::string(RVS_CONF_TARGET_POWER_KEY) +
+          "' key value " + ststress;
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        break;
 
-        case 2:
-          msg = "key '" + std::string(RVS_CONF_TARGET_POWER_KEY) +
+      case 2:
+        msg = "key '" + std::string(RVS_CONF_TARGET_POWER_KEY) +
           "' was not found";
-          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      }
-      bsts = false;
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     }
+    bsts = false;
+  }
 
-    if (property_get_int<uint64_t>(RVS_CONF_RAMP_INTERVAL_KEY,
-      &iet_ramp_interval, IET_DEFAULT_RAMP_INTERVAL)) {
-      msg = "invalid '" + std::string(RVS_CONF_RAMP_INTERVAL_KEY)
+  if (property_get_int<uint64_t>(RVS_CONF_RAMP_INTERVAL_KEY,
+        &iet_ramp_interval, IET_DEFAULT_RAMP_INTERVAL)) {
+    msg = "invalid '" + std::string(RVS_CONF_RAMP_INTERVAL_KEY)
       + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
-      &property_log_interval, IET_DEFAULT_LOG_INTERVAL)) {
-      msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY)
+  if (property_get_int<uint64_t>(RVS_CONF_LOG_INTERVAL_KEY,
+        &property_log_interval, IET_DEFAULT_LOG_INTERVAL)) {
+    msg = "invalid '" + std::string(RVS_CONF_LOG_INTERVAL_KEY)
       + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get_int<uint64_t>(RVS_CONF_SAMPLE_INTERVAL_KEY,
-      &iet_sample_interval, IET_DEFAULT_SAMPLE_INTERVAL)) {
-      msg = "invalid '" + std::string(RVS_CONF_SAMPLE_INTERVAL_KEY)
+  if (property_get_int<uint64_t>(RVS_CONF_SAMPLE_INTERVAL_KEY,
+        &iet_sample_interval, IET_DEFAULT_SAMPLE_INTERVAL)) {
+    msg = "invalid '" + std::string(RVS_CONF_SAMPLE_INTERVAL_KEY)
       + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get_int<int>(RVS_CONF_MAX_VIOLATIONS_KEY,
-      &iet_max_violations, IET_DEFAULT_MAX_VIOLATIONS)) {
-      msg = "invalid '" + std::string(RVS_CONF_MAX_VIOLATIONS_KEY)
+  if (property_get_int<int>(RVS_CONF_MAX_VIOLATIONS_KEY,
+        &iet_max_violations, IET_DEFAULT_MAX_VIOLATIONS)) {
+    msg = "invalid '" + std::string(RVS_CONF_MAX_VIOLATIONS_KEY)
       + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get<float>(RVS_CONF_TOLERANCE_KEY,
-      &iet_tolerance, IET_DEFAULT_TOLERANCE)) {
-      msg = "invalid '" + std::string(RVS_CONF_TOLERANCE_KEY)
+  if (property_get<float>(RVS_CONF_TOLERANCE_KEY,
+        &iet_tolerance, IET_DEFAULT_TOLERANCE)) {
+    msg = "invalid '" + std::string(RVS_CONF_TOLERANCE_KEY)
       + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEY,
-      &iet_matrix_size, IET_DEFAULT_MATRIX_SIZE)) {
-      msg = "invalid '" + std::string(RVS_CONF_MATRIX_SIZE_KEY)
+  if (property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEY,
+        &iet_matrix_size, IET_DEFAULT_MATRIX_SIZE)) {
+    msg = "invalid '" + std::string(RVS_CONF_MATRIX_SIZE_KEY)
       + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get<std::string>(RVS_CONF_IET_OPS_TYPE, &iet_ops_type, IET_DEFAULT_OPS_TYPE)) {
-      msg = "invalid '" + std::string(RVS_CONF_IET_OPS_TYPE)
+  if (property_get<std::string>(RVS_CONF_IET_OPS_TYPE, &iet_ops_type, IET_DEFAULT_OPS_TYPE)) {
+    msg = "invalid '" + std::string(RVS_CONF_IET_OPS_TYPE)
       + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    if (property_get<std::string>(RVS_CONF_IET_DATA_TYPE, &iet_data_type, IET_DEFAULT_DATA_TYPE)) {
-      msg = "invalid '" +
-        std::string(RVS_CONF_IET_DATA_TYPE) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  if (property_get<std::string>(RVS_CONF_IET_DATA_TYPE, &iet_data_type, IET_DEFAULT_DATA_TYPE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_IET_DATA_TYPE) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYA, &iet_matrix_size_a, IET_DEFAULT_MATRIX_SIZE_A);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_MATRIX_SIZE_KEYA) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYA, &iet_matrix_size_a, IET_DEFAULT_MATRIX_SIZE_A);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MATRIX_SIZE_KEYA) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYB, &iet_matrix_size_b, IET_DEFAULT_MATRIX_SIZE_B);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_MATRIX_SIZE_KEYB) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYB, &iet_matrix_size_b, IET_DEFAULT_MATRIX_SIZE_B);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MATRIX_SIZE_KEYB) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYC, &iet_matrix_size_c, IET_DEFAULT_MATRIX_SIZE_C);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_MATRIX_SIZE_KEYC) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_KEYC, &iet_matrix_size_c, IET_DEFAULT_MATRIX_SIZE_C);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MATRIX_SIZE_KEYC) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_TRANS_A, &iet_trans_a, IET_DEFAULT_TRANS_A);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_TRANS_A) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_TRANS_A, &iet_trans_a, IET_DEFAULT_TRANS_A);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_TRANS_A) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_TRANS_B, &iet_trans_b, IET_DEFAULT_TRANS_B);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_TRANS_B) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_TRANS_B, &iet_trans_b, IET_DEFAULT_TRANS_B);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_TRANS_B) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get<float>(RVS_CONF_ALPHA_VAL, &iet_alpha_val, IET_DEFAULT_ALPHA_VAL);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_ALPHA_VAL) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get<float>(RVS_CONF_ALPHA_VAL, &iet_alpha_val, IET_DEFAULT_ALPHA_VAL);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ALPHA_VAL) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get<float>(RVS_CONF_BETA_VAL, &iet_beta_val, IET_DEFAULT_BETA_VAL);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_BETA_VAL) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get<float>(RVS_CONF_BETA_VAL, &iet_beta_val, IET_DEFAULT_BETA_VAL);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_BETA_VAL) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_LDA_OFFSET, &iet_lda_offset, IET_DEFAULT_LDA_OFFSET);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_LDA_OFFSET) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_LDA_OFFSET, &iet_lda_offset, IET_DEFAULT_LDA_OFFSET);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LDA_OFFSET) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_LDB_OFFSET, &iet_ldb_offset, IET_DEFAULT_LDB_OFFSET);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_LDB_OFFSET) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_LDB_OFFSET, &iet_ldb_offset, IET_DEFAULT_LDB_OFFSET);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LDB_OFFSET) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_LDC_OFFSET, &iet_ldc_offset, IET_DEFAULT_LDC_OFFSET);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_LDC_OFFSET) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_LDC_OFFSET, &iet_ldc_offset, IET_DEFAULT_LDC_OFFSET);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LDC_OFFSET) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_LDD_OFFSET, &iet_ldd_offset, IET_DEFAULT_LDD_OFFSET);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_LDD_OFFSET) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_LDD_OFFSET, &iet_ldd_offset, IET_DEFAULT_LDD_OFFSET);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LDD_OFFSET) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get<bool>(RVS_CONF_TP_FLAG, &iet_tp_flag, IET_DEFAULT_TP_FLAG);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_TP_FLAG) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get<bool>(RVS_CONF_TP_FLAG, &iet_tp_flag, IET_DEFAULT_TP_FLAG);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_TP_FLAG) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get<bool>(RVS_CONF_BW_WORKLOAD, &iet_bw_workload, IET_DEFAULT_BW_WORKLOAD);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_BW_WORKLOAD) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get<bool>(RVS_CONF_BW_WORKLOAD, &iet_bw_workload, IET_DEFAULT_BW_WORKLOAD);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_BW_WORKLOAD) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get<bool>(RVS_CONF_CP_WORKLOAD, &iet_cp_workload, IET_DEFAULT_CP_WORKLOAD);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_CP_WORKLOAD) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get<bool>(RVS_CONF_CP_WORKLOAD, &iet_cp_workload, IET_DEFAULT_CP_WORKLOAD);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_CP_WORKLOAD) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_HOT_CALLS, &iet_hot_calls, IET_DEFAULT_HOT_CALLS);
-    if (error == 1) {
-      msg = "invalid '" + std::string(RVS_CONF_HOT_CALLS) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_HOT_CALLS, &iet_hot_calls, IET_DEFAULT_HOT_CALLS);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_HOT_CALLS) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get<std::string>(RVS_CONF_MATRIX_INIT, &iet_matrix_init, IET_DEFAULT_MATRIX_INIT);
-    if (error == 1) {
-      msg = "invalid '" +
-        std::string(RVS_CONF_MATRIX_INIT) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  error = property_get<std::string>(RVS_CONF_MATRIX_INIT, &iet_matrix_init, IET_DEFAULT_MATRIX_INIT);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MATRIX_INIT) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get<std::string>(RVS_CONF_GEMM_MODE, &iet_gemm_mode, IET_DEFAULT_GEMM_MODE);
-    if (error == 1) {
-      msg = "invalid '" +
-        std::string(RVS_CONF_GEMM_MODE) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  error = property_get<std::string>(RVS_CONF_GEMM_MODE, &iet_gemm_mode, IET_DEFAULT_GEMM_MODE);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_GEMM_MODE) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<int>(RVS_CONF_BATCH_SIZE, &iet_batch_size, IET_DEFAULT_BATCH_SIZE);
-    if (error == 1) {
-        msg = "invalid '" +
-        std::string(RVS_CONF_STRIDE_A) + "' key value";
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        bsts = false;
-    }
+  error = property_get_int<int>(RVS_CONF_BATCH_SIZE, &iet_batch_size, IET_DEFAULT_BATCH_SIZE);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_STRIDE_A) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_STRIDE_A, &iet_stride_a, IET_DEFAULT_STRIDE_A);
-    if (error == 1) {
-      msg = "invalid '" + std::string(RVS_CONF_STRIDE_A) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_STRIDE_A, &iet_stride_a, IET_DEFAULT_STRIDE_A);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_STRIDE_A) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_STRIDE_B, &iet_stride_b, IET_DEFAULT_STRIDE_B);
-    if (error == 1) {
-      msg = "invalid '" + std::string(RVS_CONF_STRIDE_B) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_STRIDE_B, &iet_stride_b, IET_DEFAULT_STRIDE_B);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_STRIDE_B) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_STRIDE_C, &iet_stride_c, IET_DEFAULT_STRIDE_C);
-    if (error == 1) {
-      msg = "invalid '" + std::string(RVS_CONF_STRIDE_C) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
+  error = property_get_int<uint64_t>(RVS_CONF_STRIDE_C, &iet_stride_c, IET_DEFAULT_STRIDE_C);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_STRIDE_C) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
 
-    error = property_get_int<uint64_t>(RVS_CONF_STRIDE_D, &iet_stride_d, IET_DEFAULT_STRIDE_D);
-    if (error == 1) {
-      msg = "invalid '" + std::string(RVS_CONF_STRIDE_D) + "' key value";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      bsts = false;
-    }
-    error = property_get<std::string>(RVS_CONF_BLAS_SOURCE_KEY, &iet_blas_source, IET_DEFAULT_BLAS_SOURCE);
+  error = property_get_int<uint64_t>(RVS_CONF_STRIDE_D, &iet_stride_d, IET_DEFAULT_STRIDE_D);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_STRIDE_D) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+  error = property_get<std::string>(RVS_CONF_BLAS_SOURCE_KEY, &iet_blas_source, IET_DEFAULT_BLAS_SOURCE);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_BLAS_SOURCE_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
@@ -430,23 +431,24 @@ bool iet_action::get_all_iet_config_keys(void) {
     bsts = false;
   }
 
+  if (property_get_int<uint32_t>(RVS_CONF_WG_COUNT, &iet_wg_count, IET_DEFAULT_WG_COUNT)) {
+    msg = "invalid '" + std::string(RVS_CONF_WG_COUNT) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  /* Set minimum sample interval as default */
+  if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
+    iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
+  }
+
   /* If operation and data type both not set, default to sgemm */
   if ((iet_ops_type == IET_DEFAULT_OPS_TYPE) && (iet_data_type == IET_DEFAULT_OPS_TYPE)) {
     iet_ops_type = "sgemm";
   }
-    /* Set minimum sample interval as default */
-    if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
-      iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
-    }
 
-    /* If operation and data type both not set, default to sgemm */
-    if ((iet_ops_type == IET_DEFAULT_OPS_TYPE) && (iet_data_type == IET_DEFAULT_OPS_TYPE)) {
-      iet_ops_type = "sgemm";
-    }
-
-    return bsts;
+  return bsts;
 }
-
 
 /**
  * @brief maps hip index to smi index
@@ -560,6 +562,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_stride_d(iet_stride_d);
             workers[i].set_blas_source(iet_blas_source);
             workers[i].set_compute_type(iet_compute_type);
+            workers[i].set_wg_count(iet_wg_count);
             i++;
         }
 
