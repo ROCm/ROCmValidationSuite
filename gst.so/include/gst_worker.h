@@ -283,6 +283,10 @@ class GSTWorker : public rvs::ThreadBase {
 
     //! set gemm compute type
     void set_compute_type(std::string _compute_type) { compute_type = _compute_type; }
+
+    //! set output data format based gemm operation
+    void set_gst_out_data_type(std::string _out_data_type) { gst_out_data_type = _out_data_type; }
+
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -392,6 +396,8 @@ class GSTWorker : public rvs::ThreadBase {
     std::string blas_source;
     //! gemm compute type
     std::string compute_type;
+    //! Type of output data
+    std::string gst_out_data_type;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

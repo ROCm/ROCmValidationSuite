@@ -149,6 +149,9 @@ class gst_action: public rvs::actionbase {
     // gemm compute type
     std::string gst_compute_type;
 
+    // gemm output data type
+    std::string gst_out_data_type;
+
     friend class GSTWorker;
 
     bool get_all_gst_config_keys(void);

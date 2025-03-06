@@ -63,7 +63,7 @@ class rvs_blas {
        int lda, int ldb, int ldc, int ldd,
        std::string _ops_type, std::string _data_type, std::string _gemm_mode,
        int _batch_count, uint64_t stride_a, uint64_t stride_b, uint64_t stride_c, uint64_t stride_d,
-       std::string _blas_source, std::string _compute_type);
+       std::string _blas_source, std::string _compute_type, std::string _out_data_type);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
@@ -121,8 +121,10 @@ class rvs_blas {
     int gpu_device_index;
     //! Type of operation
     std::string ops_type;
-    //! Type of data
+    //! Type of input data
     std::string data_type;
+    //! Type of output data
+    std::string out_data_type;
     //! matrix size m
     rocblas_int m;
     //! matrix size n

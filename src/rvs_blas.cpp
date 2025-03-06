@@ -87,10 +87,11 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     float alpha , float beta, int lda, int ldb, int ldc, int ldd,
     std::string _ops_type, std::string _data_type, std::string _gemm_mode, int _batch_size,
     uint64_t _stride_a, uint64_t _stride_b, uint64_t _stride_c, uint64_t _stride_d,
-    std::string _blas_source, std::string _compute_type)
+    std::string _blas_source, std::string _compute_type, std::string _out_data_type)
   : gpu_device_index(_gpu_device_index)
   , ops_type(_ops_type)
   , data_type(_data_type)
+  , out_data_type(_out_data_type)
   , m(_m), n(_n), k(_k)
   , matrix_init (_matrix_init)
   , size_a(0), size_b(0), size_c(0), size_d(0)
@@ -209,11 +210,17 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     }
 
     // output hip data type
-    if((HIP_R_8F_E4M3 == hbl_datatype) || (HIP_R_8F_E5M2 == hbl_datatype)) {
-     hbl_out_datatype = HIP_R_32F;
+    if (!out_data_type.empty()) {
+
+      hbl_out_datatype = datatype_to_hip_datatype(out_data_type);
+      if(RVS_BLAS_HIP_DATATYPE_INVALID == hbl_out_datatype) {
+        is_error = true;
+        std::cout << "\n Invalid output data-type !!!" << "\n";
+        return;
+      }
     }
     else {
-     hbl_out_datatype = hbl_datatype;
+      hbl_out_datatype = hbl_datatype;
     }
 
     // Get hipblas compute type
