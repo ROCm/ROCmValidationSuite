@@ -83,6 +83,7 @@ using std::regex;
 #define RVS_CONF_STRIDE_D               "stride_d"
 #define RVS_CONF_BLAS_SOURCE_KEY        "blas_source"
 #define RVS_CONF_COMPUTE_TYPE_KEY       "compute_type"
+#define RVS_CONF_GST_OUT_DATA_TYPE      "out_data_type"
 
 #define TARGET_KEY                      "target"
 #define DTYPE_KEY                       "dtype"
@@ -126,6 +127,7 @@ using std::regex;
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 #define GST_DEFAULT_OPS_TYPE            ""
 #define GST_DEFAULT_DATA_TYPE           ""
+#define GST_DEFAULT_OUT_DATA_TYPE       ""
 
 
 static constexpr auto MODULE_NAME = "gst";
@@ -207,6 +209,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_stride_d(gst_stride_d);
       workers[i].set_blas_source(gst_blas_source);
       workers[i].set_compute_type(gst_compute_type);
+      workers[i].set_gst_out_data_type(gst_out_data_type);
 
       i++;
     }
@@ -520,6 +523,13 @@ bool gst_action::get_all_gst_config_keys(void) {
   error = property_get<std::string>(RVS_CONF_COMPUTE_TYPE_KEY, &gst_compute_type, GST_DEFAULT_COMPUTE_TYPE);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_COMPUTE_TYPE_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get<std::string>(RVS_CONF_GST_OUT_DATA_TYPE, &gst_out_data_type, GST_DEFAULT_OUT_DATA_TYPE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_GST_OUT_DATA_TYPE) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }

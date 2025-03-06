@@ -287,6 +287,9 @@ class IETWorker : public rvs::ThreadBase {
     //! set number of workgroups
     void set_wg_count(uint32_t _wg_count) { wg_count = _wg_count; }
 
+    //! sets gemm output data type
+    void set_iet_out_data_type(std::string out_data_type) { iet_out_data_type = out_data_type; }
+
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
  protected:
@@ -411,6 +414,8 @@ class IETWorker : public rvs::ThreadBase {
     std::string compute_type;
     //! number of workgroups
     uint32_t wg_count;
+    //! gemm output data type
+    std::string iet_out_data_type;
 };
 
 #endif  // IET_SO_INCLUDE_IET_WORKER_H_

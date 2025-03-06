@@ -97,6 +97,8 @@ class iet_action: public rvs::actionbase {
     bool iet_cp_workload;
     //! Number of workgroups
     uint32_t iet_wg_count;
+    //! gemm output data type
+    std::string iet_out_data_type;
 
     //Alpha and beta value
     float iet_alpha_val;

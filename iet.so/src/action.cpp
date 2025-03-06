@@ -99,6 +99,7 @@ using std::fstream;
 #define RVS_CONF_BLAS_SOURCE_KEY        "blas_source"
 #define RVS_CONF_COMPUTE_TYPE_KEY       "compute_type"
 #define RVS_CONF_WG_COUNT               "wg_count"
+#define RVS_CONF_IET_OUT_DATA_TYPE      "out_data_type"
 
 #define IET_DEFAULT_BLAS_SOURCE         "rocblas"
 #define IET_DEFAULT_COMPUTE_TYPE        "fp32_r"
@@ -135,6 +136,7 @@ using std::fstream;
 #define IET_DEFAULT_STRIDE_C            0
 #define IET_DEFAULT_STRIDE_D            0
 #define IET_DEFAULT_WG_COUNT            80
+#define IET_DEFAULT_OUT_DATA_TYPE       ""
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
@@ -437,6 +439,13 @@ bool iet_action::get_all_iet_config_keys(void) {
     bsts = false;
   }
 
+  if (property_get<std::string>(RVS_CONF_IET_OUT_DATA_TYPE, &iet_out_data_type, IET_DEFAULT_OUT_DATA_TYPE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_IET_OUT_DATA_TYPE) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
   /* Set minimum sample interval as default */
   if (iet_sample_interval < IET_DEFAULT_SAMPLE_INTERVAL) {
     iet_sample_interval = IET_DEFAULT_SAMPLE_INTERVAL;
@@ -563,6 +572,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_blas_source(iet_blas_source);
             workers[i].set_compute_type(iet_compute_type);
             workers[i].set_wg_count(iet_wg_count);
+            workers[i].set_iet_out_data_type(iet_out_data_type);
             i++;
         }
 
