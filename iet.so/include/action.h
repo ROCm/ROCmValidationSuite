@@ -95,6 +95,8 @@ class iet_action: public rvs::actionbase {
     bool iet_bw_workload;
     //! Compute workload enable/disable
     bool iet_cp_workload;
+    //! Number of workgroups
+    uint32_t iet_wg_count;
 
     //Alpha and beta value
     float iet_alpha_val;
