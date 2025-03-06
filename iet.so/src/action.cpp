@@ -98,6 +98,7 @@ using std::fstream;
 
 #define RVS_CONF_BLAS_SOURCE_KEY        "blas_source"
 #define RVS_CONF_COMPUTE_TYPE_KEY       "compute_type"
+#define RVS_CONF_WG_COUNT               "wg_count"
 
 #define IET_DEFAULT_BLAS_SOURCE         "rocblas"
 #define IET_DEFAULT_COMPUTE_TYPE        "fp32_r"
@@ -133,6 +134,7 @@ using std::fstream;
 #define IET_DEFAULT_STRIDE_B            0
 #define IET_DEFAULT_STRIDE_C            0
 #define IET_DEFAULT_STRIDE_D            0
+#define IET_DEFAULT_WG_COUNT            80
 
 #define IET_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define PCI_ALLOC_ERROR                 "pci_alloc() error"
@@ -430,6 +432,11 @@ bool iet_action::get_all_iet_config_keys(void) {
     bsts = false;
   }
 
+  if (property_get_int<uint32_t>(RVS_CONF_WG_COUNT, &iet_wg_count, IET_DEFAULT_WG_COUNT)) {
+    msg = "invalid '" + std::string(RVS_CONF_WG_COUNT) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
   /* If operation and data type both not set, default to sgemm */
   if ((iet_ops_type == IET_DEFAULT_OPS_TYPE) && (iet_data_type == IET_DEFAULT_OPS_TYPE)) {
     iet_ops_type = "sgemm";
@@ -560,6 +567,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             workers[i].set_stride_d(iet_stride_d);
             workers[i].set_blas_source(iet_blas_source);
             workers[i].set_compute_type(iet_compute_type);
+            workers[i].set_wg_count(iet_wg_count);
             i++;
         }
 
