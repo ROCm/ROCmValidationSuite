@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -211,6 +211,11 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the numbers of chunks per block
     uint16_t get_chunks_per_block(void) { return chunks_per_block; }
 
+    //! set thread block size
+    void set_tb_size(uint16_t _tb_size) {
+        tb_size = _tb_size;
+    }
+
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
@@ -249,6 +254,8 @@ class MemWorker : public rvs::ThreadBase {
     uint16_t dwords_per_lane;
     //! number of chunks per block
     uint16_t chunks_per_block;
+    //! thread block size
+    uint16_t tb_size;
 
     //! TRUE if JSON output is required
     static bool bjson;

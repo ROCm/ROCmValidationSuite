@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -40,7 +40,7 @@ using std::string;
 bool MemWorker::bjson = false;
 
 extern void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes,
-    int test_type, int subtest, uint16_t dwords_per_lane, uint16_t chunks_per_block, bool json, std::string action);
+    int test_type, int subtest, uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action);
 
 #define FLOAT_TEST     1 
 #define DOUBLE_TEST    2 
@@ -80,6 +80,8 @@ void MemWorker::run() {
 
     HIP_CHECK(hipSetDevice(deviceId));
 
-    run_babel(device, num_iterations, array_size, output_csv, mibibytes, test_type, subtest, dwords_per_lane, chunks_per_block, MemWorker::bjson,action_name);
+    run_babel(device, num_iterations, array_size, output_csv, mibibytes,
+        test_type, subtest, dwords_per_lane, chunks_per_block, tb_size,
+        MemWorker::bjson, action_name);
 }
 

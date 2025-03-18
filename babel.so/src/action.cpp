@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -104,6 +104,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
             workers[i].set_subtest_type(subtest);
             workers[i].set_dwords_per_lane(dwords_per_lane);
             workers[i].set_chunks_per_block(chunks_per_block);
+            workers[i].set_tb_size(tb_size);
 
             i++;
         }
@@ -216,6 +217,13 @@ bool mem_action::get_all_mem_config_keys(void) {
                      &chunks_per_block, MEM_DEFAULT_CHUNKS_PER_BLOCK)) {
         msg = "invalid '" +
         std::string(RVS_CONF_CHUNKS_PER_BLOCK) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get_int<uint16_t>(RVS_CONF_TB_SIZE, &tb_size, MEM_DEFAULT_TB_SIZE)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_TB_SIZE) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }

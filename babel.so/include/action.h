@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -55,6 +55,7 @@ using std::map;
 #define RVS_CONF_SUBTEST                "subtest"
 #define RVS_CONF_DWORDS_PER_LANE        "dwords_per_lane"
 #define RVS_CONF_CHUNKS_PER_BLOCK       "chunks_per_block"
+#define RVS_CONF_TB_SIZE                "tb_size"
 
 #define MEM_DEFAULT_ARRAY_SIZE          33554432   // 32 MB
 #define MEM_DEFAULT_NUM_ITER            100
@@ -64,6 +65,7 @@ using std::map;
 #define MEM_DEFAULT_SUBTEST             5
 #define MEM_DEFAULT_DWORDS_PER_LANE     4
 #define MEM_DEFAULT_CHUNKS_PER_BLOCK    2
+#define MEM_DEFAULT_TB_SIZE             1024
 
 #define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
@@ -106,6 +108,8 @@ class mem_action: public rvs::actionbase {
     uint16_t dwords_per_lane;
     //! number of chunks per block
     uint16_t chunks_per_block;
+    //! thread block size
+    uint16_t tb_size;
 
     // configuration properties getters
     bool get_all_mem_config_keys(void);
