@@ -1131,19 +1131,19 @@ void rvs_blas::generate_random_matrix_data(void) {
       if((ops_type == "dgemm") || (data_type == "fp64_r")) {
 
         if(hiprandGenerateUniformDouble(hiprand_generator, (double *)da, size_a) != HIPRAND_STATUS_SUCCESS) {
-          std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
+          std::cout << "\n hiprandGenerateUniformDouble() failed for matrix a !!!" << "\n";
           is_error = true;
           return;
         }
 
         if(hiprandGenerateUniformDouble(hiprand_generator, (double *)db, size_b) != HIPRAND_STATUS_SUCCESS) {
-          std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
+          std::cout << "\n hiprandGenerateUniformDouble() failed for matrix b !!!" << "\n";
           is_error = true;
           return;
         }
 
         if(hiprandGenerateUniformDouble(hiprand_generator, (double *)dc, size_c) != HIPRAND_STATUS_SUCCESS) {
-          std::cout << "\n hiprandGenerateUniformDouble() failed !!!" << "\n";
+          std::cout << "\n hiprandGenerateUniformDouble() failed for matrix c !!!" << "\n";
           is_error = true;
           return;
         }
@@ -1157,19 +1157,19 @@ void rvs_blas::generate_random_matrix_data(void) {
       else if((ops_type == "sgemm") || (data_type == "fp32_r")) {
 
         if(hiprandGenerateUniform(hiprand_generator, (float *)da, size_a) != HIPRAND_STATUS_SUCCESS) {
-          std::cout << "\n hiprandGenerateUniform() failed !!!" << "\n";
+          std::cout << "\n hiprandGenerateUniform() failed for matrix a !!!" << "\n";
           is_error = true;
           return;
         }
 
         if(hiprandGenerateUniform(hiprand_generator, (float *)db, size_b) != HIPRAND_STATUS_SUCCESS) {
-          std::cout << "\n hiprandGenerateUniform() failed !!!" << "\n";
+          std::cout << "\n hiprandGenerateUniform() failed for matrix b !!!" << "\n";
           is_error = true;
           return;
         }
 
         if(hiprandGenerateUniform(hiprand_generator, (float *)dc, size_c) != HIPRAND_STATUS_SUCCESS) {
-          std::cout << "\n hiprandGenerateUniform() failed !!!" << "\n";
+          std::cout << "\n hiprandGenerateUniform() failed for matrix c !!!" << "\n";
           is_error = true;
           return;
         }
