@@ -29,6 +29,7 @@ class HIPStream : public Stream<T>
     unsigned int dwords_per_lane;
     unsigned int chunks_per_block;
     unsigned int elements_per_lane;
+    unsigned int tb_size;
 
     // Size of arrays
     const unsigned int array_size;
@@ -48,7 +49,7 @@ class HIPStream : public Stream<T>
 
   public:
     HIPStream(const unsigned int, const bool, const int,
-        const unsigned int, const unsigned int);
+        const unsigned int, const unsigned int, const unsigned int);
     ~HIPStream();
 
     virtual float read() override;
