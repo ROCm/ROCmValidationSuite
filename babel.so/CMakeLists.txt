@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -61,7 +61,7 @@ set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSIO
 set(HIP_HCC_BUILD_FLAGS)
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
-set(HIP_STREAM_BUILD_FLAGS "-DNONTEMPORAL=1 -DTBSIZE=1024 -O3 -std=c++17")
+set(HIP_STREAM_BUILD_FLAGS "-DNONTEMPORAL=1 -O3 -std=c++17")
 
 # Set compiler and compiler flags
 set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
