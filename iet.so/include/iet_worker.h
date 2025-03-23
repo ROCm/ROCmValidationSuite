@@ -287,6 +287,9 @@ class IETWorker : public rvs::ThreadBase {
     //! set number of workgroups
     void set_wg_count(uint32_t _wg_count) { wg_count = _wg_count; }
 
+    //! set non-temporal load status
+    void set_nt_loads(bool _nt_loads) { nt_loads = _nt_loads; }
+
     //! sets gemm output data type
     void set_iet_out_data_type(std::string out_data_type) { iet_out_data_type = out_data_type; }
 
@@ -414,6 +417,8 @@ class IETWorker : public rvs::ThreadBase {
     std::string compute_type;
     //! number of workgroups
     uint32_t wg_count;
+    //! Non-temporal load enable/disable
+    bool nt_loads;
     //! gemm output data type
     std::string iet_out_data_type;
 };

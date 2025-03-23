@@ -374,7 +374,7 @@ const uint32_t load_waves = wg_size_load / 64;
 
 //const uint32_t wg_count = 80;
 const bool fill_zero = false;
-const bool nt_loads = false;
+//const bool nt_loads = false;
 const bool report_metric = false;
 
 template<bool NT> __device__ T _load(T* __restrict p)
@@ -492,7 +492,7 @@ bool FillMemory(uint32_t* p, size_t size)
 }
 
 void RunKernel(hipEvent_t& start, hipEvent_t& stop, T* __restrict p, T* __restrict r,
-    uint32_t fetch_iters, hipStream_t stream, uint32_t wg_count)
+    uint32_t fetch_iters, hipStream_t stream, uint32_t wg_count, bool nt_loads)
 {
   const dim3 grid_dim(wg_count, 1, 1);
   const dim3 block_dim(wg_size, 1, 1);
@@ -577,14 +577,14 @@ void IETWorker::bandwidthThread(void)
 
   for (int i = 0; i < buf_count; i++)
   {
-    RunKernel(start, stop, (T*)bufs[i], (T*)r, fetch_iters, stream, wg_count);
+    RunKernel(start, stop, (T*)bufs[i], (T*)r, fetch_iters, stream, wg_count, nt_loads);
   }
 
   start_time = std::chrono::system_clock::now();
 
   do
   {
-    RunKernel(start, stop, (T*)bufs[b], (T*)r, fetch_iters, stream, wg_count);
+    RunKernel(start, stop, (T*)bufs[b], (T*)r, fetch_iters, stream, wg_count, nt_loads);
     b = (b + 1) % buf_count;
 
     if(hipSuccess != hipEventSynchronize(stop))

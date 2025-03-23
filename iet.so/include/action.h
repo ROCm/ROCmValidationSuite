@@ -97,6 +97,8 @@ class iet_action: public rvs::actionbase {
     bool iet_cp_workload;
     //! Number of workgroups
     uint32_t iet_wg_count;
+    //! Non-temporal load enable/disable
+    bool iet_nt_loads;
     //! gemm output data type
     std::string iet_out_data_type;
 
