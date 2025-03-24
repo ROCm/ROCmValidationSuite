@@ -425,7 +425,7 @@ __global__ void bw_kernel(T* __restrict p, T* __restrict r, uint32_t iters)
     }
     else
     {
-#if defined(__gfx942__)
+#if defined(__gfx942__) || defined(__gfx950__)
         const uint64_t a[2] = { 0x3faaaaaa3faaaaaaull, 0x3f5555553f555555ull };
         const uint64_t b[2] = { 0x60aaaaaa60aaaaaaull, 0x21357BDA21357BDAull };
         const uint64_t c[2] = { 0x41247C1141247C11ull, 0x429334F6429334F6ull };
