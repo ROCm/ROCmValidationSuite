@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <cstddef>
 
-#include "rocm_smi/rocm_smi.h"
+#include "amd_smi/amdsmi.h"
 
 #include "include/action.h"
 #include "include/rvsloglp.h"
@@ -75,7 +75,7 @@ extern "C" int   rvs_module_init(void* pMi) {
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
   RVSTRACE_
   rvs::gpulist::Initialize();
-  rsmi_init(0);
+  ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   return 0;
 }
 
@@ -89,7 +89,7 @@ extern "C" int   rvs_module_terminate(void) {
     pworker = nullptr;
   }
   RVSTRACE_
-  rsmi_shut_down();
+  amdsmi_shut_down();
 
   return 0;
 }

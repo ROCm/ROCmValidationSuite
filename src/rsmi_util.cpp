@@ -28,33 +28,42 @@
 
 namespace rvs {
 
-
-rsmi_status_t  rsmi_dev_ind_get(uint64_t bdfid, uint32_t* pdv_ind) {
-  assert(pdv_ind != nullptr);
-
-  uint32_t ix = 0;
-  uint64_t _bdfid = 0;
-  uint32_t num_devices = 0;
-  rsmi_status_t sts;
-
-  //Initialize
-  *pdv_ind = 0;
-
-  if (RSMI_STATUS_SUCCESS != (sts = rsmi_num_monitor_devices(&num_devices))) {
-    return sts;
-  }
-
-  for (ix = 0; ix < num_devices; ix++) {
-    if (RSMI_STATUS_SUCCESS == rsmi_dev_pci_id_get(ix, &_bdfid)) {
-      if (_bdfid == bdfid) {
-        *pdv_ind = ix;
-        return RSMI_STATUS_SUCCESS;
+amdsmi_status_t smi_pci_hdl_mapping(){
+  amdsmi_status_t ret;
+   uint64_t _bdfid = 0;
+  uint32_t socket_count = 0;
+  ret = amdsmi_get_socket_handles(&socket_count, nullptr);
+  std::vector<amdsmi_socket_handle> sockets(socket_count);
+  ret = amdsmi_get_socket_handles(&socket_count, &sockets[0]);
+  for(auto socket : sockets){
+    uint32_t device_count = 0;// # of devices in this socket
+    ret = amdsmi_get_processor_handles(sockets[i], &device_count, nullptr);
+    std::vector<amdsmi_processor_handle> processor_handles(device_count);
+    ret = amdsmi_get_processor_handles(sockets[i],
+              &device_count, &processor_handles[0]);
+    for(auto dev: processor_handles){
+      if(AMDSMI_STATUS_SUCCESS == amdsmi_get_gpu_bdf_id(dev, &_bdfid)){
+        smipci_to_hdl_map.insert(_bdfid, dev);
       }
     }
   }
-  return RSMI_STATUS_INVALID_ARGS;
+  return AMDSMI_STATUS_SUCCESS;
+}
+
+	
+amdsmi_status_t  rsmi_dev_ind_get(uint64_t bdfid, amdsmi_processor_handle* pdv_hdl) {
+  assert(pdv_hdl != nullptr);
+  uint64_t _bdfid = 0;
+  amdsmi_status_t ret;
+  *pdv_hdl = 0;
+  smi_pci_hdl_mapping();
+  for(auto itr = smipci_to_hdl_map.begin(); itr!=smipci_to_hdl_map.end();++itr){
+    if(itr->first == bdfid)
+	*pdv_hdl = itr->second;
+        return AMDSMI_STATUS_SUCCESS;
+  }
+   return AMDSMI_STATUS_INVAL;
 }
 
 }  // namespace rvs
-
 

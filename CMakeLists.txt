@@ -529,7 +529,7 @@ set(HCC_CXX_FLAGS "-fno-gpu-rdc --offload-arch=gfx90a --offload-arch=gfx1030 --o
 
 add_subdirectory(rvslib)
 add_subdirectory(rvs)
-add_subdirectory(gm.so)
+#add_subdirectory(gm.so)
 add_subdirectory(gpup.so)
 add_subdirectory(gst.so)
 add_subdirectory(iet.so)

@@ -121,7 +121,7 @@ class tst_action: public rvs::actionbase {
     //! list of GPUs (along with some identification data) which are
     //! selected for TST test
     std::vector<gpu_hwmon_info> tst_gpus;
-    std::map<int, int> hip_to_smi_idxs;
+    std::map<int, amdsmi_processor_handle> hip_to_smi_idxs;
     void hip_to_smi_indices();
     bool get_all_tst_config_keys(void);
 

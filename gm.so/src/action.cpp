@@ -196,7 +196,7 @@ bool gm_action::get_all_gm_config_keys(void) {
  * */
 int gm_action::run(void) {
   string msg;
-  rsmi_status_t status;
+  amdsmi_status_t status;
   rvs::action_result_t action_result;
 
   // if monitoring is already running, stop it
@@ -286,7 +286,7 @@ int gm_action::run(void) {
     return -1;
   }
 
-  // convert GPU ID into rocm_smi_lib device index
+  // convert GPU ID into amd_smi_lib device index
   std::map<uint32_t, int32_t> dv_ind;
   for (auto it = property_device.begin(); it != property_device.end(); it++) {
     RVSTRACE_
