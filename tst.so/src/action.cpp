@@ -390,9 +390,9 @@ bool tst_action::do_thermal_test(map<int, uint16_t> tst_gpus_device_index) {
         TSTWorker::set_use_json(bjson);
         for (it = tst_gpus_device_index.begin(); it != tst_gpus_device_index.end(); ++it) {
             if(hip_to_smi_idxs.find(it->first) != hip_to_smi_idxs.end()){
-                workers[i].set_smi_device_index(hip_to_smi_idxs[it->first]);
+                workers[i].set_smi_device_handle(hip_to_smi_idxs[it->first]);
             } else{
-                workers[i].set_smi_device_index(nullptr);
+                workers[i].set_smi_device_handle(nullptr);
             }
             gpuId = it->second;
             // set worker thread params
@@ -505,7 +505,7 @@ int tst_action::get_all_selected_gpus(void) {
 
         msg = "No devices match criteria from the test configuation.";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        rsmi_shut_down();
+        amdsmi_shut_down();
         if (bjson) {
           unsigned int sec;
           unsigned int usec;

@@ -69,11 +69,11 @@ class TSTWorker : public rvs::ThreadBase {
     }
     //! returns the GPU index
     int get_gpu_device_index(void) { return gpu_device_index; }
-    //! sets the GPU smi index
+    //! sets the GPU smi handle
     void set_smi_device_handle(amdsmi_processor_handle _smi_device_handle) {
         smi_device_handle = _smi_device_handle;
     }
-    //! returns the GPU smi index
+    //! returns the GPU smi handle
     amdsmi_processor_handle get_smi_device_handle(void) { return smi_device_handle; }
 
     //! sets the run delay
@@ -238,7 +238,7 @@ class TSTWorker : public rvs::ThreadBase {
     //! index of the GPU (as reported by HIP API) that will run the TST test
     int gpu_device_index;
     //! handle of GPU (in view of smi lib) which is sometimes different to above index
-    amdsmi_processor_handle smi_device_index;
+    amdsmi_processor_handle smi_device_handle;
     //! ID of the GPU that will run the TST test
     uint16_t gpu_id;
 

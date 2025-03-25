@@ -68,12 +68,12 @@ class IETWorker : public rvs::ThreadBase {
     }
     //! returns the GPU index
     int get_gpu_device_index(void) { return gpu_device_index; }
-    //! sets the GPU smi index
-    void set_smi_device_index(int _smi_device_index) {
-        smi_device_index = _smi_device_index;
+    //! sets the GPU smi handle
+    void set_smi_device_index(amdsmi_processor_handle _smi_device_handle) {
+        smi_device_handle = _smi_device_handle;
     }
-    //! returns the GPU smi index
-    int get_smi_device_index(void) { return smi_device_index; }
+    //! returns the GPU smi handle
+    amdsmi_processor_handle get_smi_device_handle(void) { return smi_device_handle; }
     //! sets the GPU power-index
     void set_pwr_device_id(int _pwr_device_id) {
         pwr_device_id = _pwr_device_id;
@@ -287,6 +287,9 @@ class IETWorker : public rvs::ThreadBase {
     //! set number of workgroups
     void set_wg_count(uint32_t _wg_count) { wg_count = _wg_count; }
 
+    //! set non-temporal load status
+    void set_nt_loads(bool _nt_loads) { nt_loads = _nt_loads; }
+
     //! sets gemm output data type
     void set_iet_out_data_type(std::string out_data_type) { iet_out_data_type = out_data_type; }
 
@@ -311,8 +314,8 @@ class IETWorker : public rvs::ThreadBase {
     iet_action action;
     //! index of the GPU (as reported by HIP API) that will run the EDPp test
     int gpu_device_index;
-    //! index of GPU (in view of smi lib) which is sometimes different to above index
-    int smi_device_index;
+    //! handle of GPU (in view of smi lib) which is sometimes different to above index
+    amdsmi_processor_handle smi_device_handle;
     //! ID of the GPU that will run the EDPp test
     uint16_t gpu_id;
 
@@ -414,6 +417,8 @@ class IETWorker : public rvs::ThreadBase {
     std::string compute_type;
     //! number of workgroups
     uint32_t wg_count;
+    //! Non-temporal load enable/disable
+    bool nt_loads;
     //! gemm output data type
     std::string iet_out_data_type;
 };

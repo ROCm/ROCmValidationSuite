@@ -41,7 +41,7 @@ extern "C" {
 
 
 #include "include/rvsactionbase.h"
-#include "rocm_smi/rocm_smi.h"
+#include "amd_smi/amdsmi.h"
 
 using std::vector;
 using std::string;
