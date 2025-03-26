@@ -30,6 +30,7 @@
 #include <algorithm>
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
+#include "amd_smi/amdsmi.h"
 
 
 /**
@@ -238,7 +239,7 @@ int display_gpu_info (void) {
     int32_t node_id;
     int32_t gpu_id;
     int32_t device_id;
-    int32_t smi_index;
+    amdsmi_processor_handle smi_handle;
   };
 
   char buf[256];
@@ -274,8 +275,8 @@ int display_gpu_info (void) {
       continue;
     }
 
-    uint32_t smi_index;
-    if (gpu_hip_to_smi_index(i, &smi_index)){
+    amdsmi_processor_handle smi_hdl;
+    if (gpu_hip_to_smi_index(i, &smi_hdl)){
       continue;
     }
 
@@ -286,14 +287,14 @@ int display_gpu_info (void) {
     info.node_id   = node_id;
     info.gpu_id    = gpu_id;
     info.device_id = dev_id;
-    info.smi_index = smi_index;
+    info.smi_handle = smi_hdl;
 
     gpu_info_list.push_back(info);
   }
 
-  std::sort(gpu_info_list.begin(), gpu_info_list.end(),
-           [](const struct device_info& a, const struct device_info& b) {
-             return a.smi_index < b.smi_index; });
+  //std::sort(gpu_info_list.begin(), gpu_info_list.end(),
+    //       [](const struct device_info& a, const struct device_info& b) {
+      //       return a.smi_index < b.smi_index; });
   if (!gpu_info_list.empty()) {
     std::cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {

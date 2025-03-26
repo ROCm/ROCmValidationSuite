@@ -32,8 +32,9 @@
 #include <algorithm>
 #include <iostream>
 
-#include "rocm_smi/rocm_smi.h"
+#include "amd_smi/amdsmi.h"
 #include "include/gpu_util.h"
+#include "include/rsmi_util.h"
 #define __HIP_PLATFORM_HCC__
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
@@ -188,31 +189,47 @@ void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id) {
   }
 }
 
+vector<amdsmi_processor_handle>
+get_smi_processors(){
+  auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+  uint32_t socket_num = 0;
+  ret = amdsmi_get_socket_handles(&socket_num, nullptr);
+  std::vector<amdsmi_socket_handle> sockets(socket_num);
+  ret = amdsmi_get_socket_handles(&socket_num, &sockets[0]);
+  for(auto socket : sockets){
+    uint32_t dev_cnt = 0;
+    ret = amdsmi_get_processor_handles(sockets[i], &dev_cnt, nullptr);
+    std::vector<amdsmi_processor_handle> dev_handles(dev_cnt);
+    ret = amdsmi_get_processor_handles(sockets[i],
+              &dev_cnt, &dev_handles[0]);
+    amdsmi_shut_down();
+    if(ret == AMDSMI_STATUS_SUCCESS)
+	return dev_handles;
+    else
+	return std::vector<amdsmi_processor_handle>{};
+  }
+}
+
 /**
  * gets all GPU device indexes
  * @param pgpus_device_idx ptr to vector that will store all the GPU indexes
  * @return
  */
-void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
+void gpu_get_all_gpu_idx(std::vector<amdsmi_processor_handle>* pgpus_gpu_idx) {
 
-  std::map<uint64_t, uint32_t> smi_map;
-  uint32_t smi_num_devices = 0;
+  std::map<uint64_t, amdsmi_processor_handle> smi_map;
+  //uint32_t smi_num_devices = 0;
   uint64_t gpuid;
-
-  rsmi_init(0);
-
-  rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-  if(err == RSMI_STATUS_SUCCESS){
-    for(auto i = 0; i < smi_num_devices; ++i){
-      err = rsmi_dev_guid_get(i, &gpuid);
-      smi_map.insert({gpuid, i});
-    }
-  }
-  else {
-    rsmi_shut_down();
+  amdsmi_status_t smi_ret;
+  auto proc_handles = get_smi_processors();
+  if (proc_handles.empty())
     return;
+  amdsmi_kfd_info_t kfd_info;
+  for(auto proc_hdl : proc_handles){
+    smi_ret = amdsmi_get_gpu_kfd_info(proc_hdl,&kfd_info);
+    if(AMDSMI_STATUS_SUCCESS == smi_ret)
+      smi_map.insert({kfd_info.kfd_id, proc_hdl});
   }
-  rsmi_shut_down();
 
   ifstream f_id, f_prop;
   char path[KFD_PATH_MAX_LENGTH];
@@ -411,18 +428,18 @@ void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf) {
  * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
  **/
 bool gpu_check_if_mcm_die (int idx) {
-  rsmi_status_t ret;
+  amdsmi_status_t ret;
   uint64_t val =0 , time_stamp;
   float cntr_resolution;
-  uint32_t smi_index = 0;
+  amdsmi_processor_handle smi_hdl = 0;
 
-  if (gpu_hip_to_smi_index(idx, &smi_index)) {
+  if (gpu_hip_to_smi_hdl(idx, &smi_hdl)) {
     return false;
   }
 
   // in case of secondary die, energy accumulator will return zero. 
-  ret = rsmi_dev_energy_count_get(smi_index, &val, &cntr_resolution, &time_stamp);
-  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+  ret = amdsmi_get_energy_count(smi_hdl, &val, &cntr_resolution, &time_stamp);
+  if (!((AMDSMI_STATUS_SUCCESS == ret) && val == 0))
     return false;
   return true;
 }
@@ -433,34 +450,21 @@ bool gpu_check_if_mcm_die (int idx) {
  * @param smi_index GPU smi index
  * @return 0 if successful, -1 otherwise
  **/
-int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
+int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_hdl) {
 
   int hip_num_gpu_devices = 0;
   uint32_t smi_num_devices = 0;
   uint64_t smi_bdf_id = 0;
-  std::map<uint64_t, int> smi_map;
 
   // map this to smi as only these are visible
   hipGetDeviceCount(&hip_num_gpu_devices);
   if(hip_index >= hip_num_gpu_devices) {
     return -1;
   }
-
-  rsmi_init(0);
-
-  rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-  if(err == RSMI_STATUS_SUCCESS){
-    for(auto i = 0; i < smi_num_devices; ++i){
-      err = rsmi_dev_pci_id_get(i, &smi_bdf_id);
-      smi_map.insert({smi_bdf_id, i});
-    }
-  }
-  else {
-    rsmi_shut_down();
-    return -1;
-  }
-  rsmi_shut_down();
-
+  auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+  rvs::smi_pci_hdl_mapping();
+  auto smi_map = rvs::smipci_to_hdl_map;
+  amdsmi_shut_down();
   /* Fetch Domain, Bus, Device and Function numbers from HIP PCIe id */
   uint64_t pDom = 0, pBus = 0, pDev = 0, pFun = 0;
   char pciString[256] = {0};
@@ -481,7 +485,7 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
 
   /* Check for matching bdf id in smi list */
   if(smi_map.find(hip_bdf_id) != smi_map.end()) {
-    *smi_index = smi_map[hip_bdf_id];
+    *smi_hdl = smi_map[hip_bdf_id];
     return 0;
   }
   return -1;
@@ -729,24 +733,15 @@ int rvs::gpulist::gpu2domain(const uint16_t GpuID, uint16_t* pDomain) {
 bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &index) {
 
   uint32_t smi_num_devices = 0;
-
-  rsmi_init(0);
-
-  rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-  if(err != RSMI_STATUS_SUCCESS) {
-    rsmi_shut_down();
-    return false;
-  }
-
+  auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+  rvs::smi_pci_hdl_mapping();
+  smi_num_devices = rvs::smipci_to_hdl_map.size();
+  amdsmi_shut_down();
   for(auto i = 0; i < index.size(); i++) {
-
     if(index[i] >= smi_num_devices) {
-      rsmi_shut_down();
       return false;
     }
   }
-
-  rsmi_shut_down();
   return true;
 }
 
