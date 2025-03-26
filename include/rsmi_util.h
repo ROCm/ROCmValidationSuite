@@ -27,13 +27,14 @@
 
 #include <stdint.h>
 #include <cstddef>
+#include <map>
 
-#include "rocm_smi/rocm_smi.h"
+#include "amd_smi/amdsmi.h"
 
 namespace rvs {
-
-
-rsmi_status_t rsmi_dev_ind_get(uint64_t bdfid, uint32_t* pdv_ind);
+std::map<uint64_t, amdsmi_processor_handle> smipci_to_hdl_map;
+amdsmi_status_t smi_pci_hdl_mapping();
+amdsmi_status_t smi_dev_ind_get(uint64_t bdfid, amdsmi_processor_handle* pdv_hdl);
 
 }
 
