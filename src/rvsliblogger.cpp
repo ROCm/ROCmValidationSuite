@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -83,7 +83,7 @@ bool isPathedFile(const std::string &fname){
 }
 
 
-bool doesFolderExist(const std::string &fname){
+bool doesFolderExist(const std::string &fname, bool append){
   auto loc = fname.find_last_of('/');
   auto dirName = fname.substr(0,loc);
   DIR* dir = opendir(dirName.c_str());
@@ -97,12 +97,25 @@ bool doesFolderExist(const std::string &fname){
     }
   } 
   std::fstream fs;
-  fs.open(fname,  std::ios::out | std::ios::trunc);
+  if (!append)
+    fs.open(fname,  std::ios::out | std::ios::trunc);
+  else
+    fs.open(fname,  std::ios::out | std::ios::app);
   if (fs.fail()){// unable to create file in dir
       return false;
   }
   return true;
 }
+
+bool notEmptyFile(const std::string &filename){
+  std::fstream fs(filename.c_str(), std::ios::binary);
+  fs.seekg(0, std::ios::end);
+  if (fs.tellg() == 0) {
+    return false;// empty file
+  }
+  return true;
+}
+
 
 /**
  * @brief helper to create json file name
@@ -142,9 +155,9 @@ bool rvs::logger::append() {
 void rvs::logger::set_log_file(const std::string& fname) {
     strncpy(log_file, fname.c_str(), sizeof(log_file));
     if (isPathedFile(log_file)){
-        if (!doesFolderExist(log_file)){
-          std::cout << "Unable to create log file, check path.";
-        }
+      if (!doesFolderExist(log_file, append())){
+        std::cout << "Unable to create log file, check path.";
+      }
    }
 
 }
@@ -153,14 +166,13 @@ void rvs::logger::set_log_file(const std::string& fname) {
 void rvs::logger::set_json_log_file(const std::string& fname) {
     std::stringstream ss;
     if (!fname.empty()){
-        json_log_file = fname;
-        if (isPathedFile(fname) && !doesFolderExist(fname)){
-		json_log_file = json_filename();
-                ss << "Unable to create Json log file specified at" << fname << std::endl;
-            }
-
+      json_log_file = fname;
+      if (isPathedFile(fname) && !doesFolderExist(fname, append())){
+	json_log_file = json_filename();
+        ss << "Unable to create Json log file specified at" << fname << std::endl;
+      }
    }else{
-       json_log_file = json_filename(); 
+     json_log_file = json_filename(); 
    }
     ss << "Json log file created at " << json_log_file << std::endl;
     std::lock_guard<std::mutex> lk(cout_mutex);
@@ -558,8 +570,16 @@ int rvs::logger::ToFile(const std::string& Row, bool json_rec) {
   fs.open(logfile, std::fstream::out | std::fstream::app);
   if (fs.fail())
     return -1;
-  fs << Row;
-
+  if (json_rec){
+    // append before last item which is closing list, ]
+    fs.seekg(-1, std::ios::end);  
+    char last_char;
+    fs.get(last_char);//TODO: verify if it is ]
+    fs.seekp(-1, std::ios::end); 
+    fs << Row << last_char;  
+  }else{
+    fs << Row;
+  }
   fs.close();
 
   return 0;
@@ -579,14 +599,13 @@ int rvs::logger::ToFile(const std::string& Row, bool json_rec) {
 int rvs::logger::JsonPatchAppend(int* pSts) {
   std::string logfile(json_log_file);
 
-  FILE * pFile;
-  pFile = fopen(logfile.c_str() , "r+");
-  if (pFile == nullptr) {
-    return -1;
-  }
-  fseek(pFile , -1 , SEEK_END);
-  fputs(" " , pFile);
-  fclose(pFile);
+  std::fstream fs;
+  fs.seekg(-1, std::ios::end);
+  char last_char;
+  fs.get(last_char);//TODO: verify if it is ]
+  fs.seekp(-1, std::ios::end);
+  fs << "," << last_char;
+
   *pSts = 1;
   return 0;
 }
@@ -656,6 +675,24 @@ void  rvs::logger::AddNode(void* Parent, void* Child) {
 }
 
 
+int rvs::logger::init_json_log_file() {
+  std::string logfile(json_log_file);
+  if (append() && notEmptyFile(logfile)) {
+    int patch_status = -1;
+    int sts = JsonPatchAppend(&patch_status);
+    if (sts) {
+      return -1;
+      }
+  }else{
+    std::string row{"[ ]"}; 
+    { // reset file
+      std::fstream fs;
+      fs.open(logfile, std::fstream::out);
+    }
+    ToFile(row, true);    
+  }
+}
+
 /**
  * @brief Initializes log file when "-l" command line option is given
  *
@@ -669,24 +706,12 @@ int rvs::logger::init_log_file() {
 
   std::string row;
   std::string logfile(log_file);
-
+  if (to_json())
+    init_json_log_file();
   // if no logg to file requested, just return
   if (logfile == "")
     return 0;
-
   if (append()) {
-    // appnd to file, replace the closing "]" with "," in order to
-    // have well formed JSON after appending
-    int patch_status = -1;
-
-    if (to_json()) {
-      int sts = JsonPatchAppend(&patch_status);
-      if (sts) {
-        return -1;
-      }
-    }
-  }  else {
-    // logging but not appending - just truncate the file.
     std::fstream fs;
     fs.open(logfile, std::fstream::out);
     bool berror = fs.fail();
@@ -694,13 +719,8 @@ int rvs::logger::init_log_file() {
     if (berror) {
       return -1;
     }
-    if (to_json()) {
-      row = "[";
-    }
   }
 
-  // print to log file if requested
-  ToFile(row);
 
   return 0;
 }

@@ -29,8 +29,8 @@
 #include <mutex>
 #include "include/rvsliblog.h"
 bool isPathedFile(const std::string &fname);
-bool doesFolderExist(const std::string &fname);
-
+bool doesFolderExist(const std::string &fname, bool append);
+bool notEmptyFile(const std::string &filename);
 namespace rvs {
 
 
@@ -59,6 +59,7 @@ class logger {
   static  bool   get_ticks(uint32_t* psecs, uint32_t* pusecs);
 
   static  int    init_log_file();
+  static  int    init_json_log_file();
   static  int    terminate();
 
   static  int    log(const std::string& Message, const int level = 1);
