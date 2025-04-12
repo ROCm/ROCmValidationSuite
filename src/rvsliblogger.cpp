@@ -556,7 +556,6 @@ int rvs::logger::ToFile(const std::string& Row, bool json_rec) {
     if (stop_flags)
       return 0;
   }
-
   std::string logfile;
   if (json_rec)
 	logfile.assign(json_log_file);
@@ -567,16 +566,16 @@ int rvs::logger::ToFile(const std::string& Row, bool json_rec) {
   // check if folder, and if it exists/can be created.
   std::fstream fs;
 
-  fs.open(logfile, std::fstream::out | std::fstream::app);
+  fs.open(logfile,std::fstream::in| std::fstream::binary | std::fstream::out);
   if (fs.fail())
     return -1;
   if (json_rec){
     // append before last item which is closing list, ]
-    fs.seekg(-1, std::ios::end);  
-    char last_char;
-    fs.get(last_char);//TODO: verify if it is ]
-    fs.seekp(-1, std::ios::end); 
-    fs << Row << last_char;  
+    fs.seekp(0, std::ios::end);
+    std::streampos fileLength = fs.tellg();
+    std::streamoff length = static_cast<std::streamoff>(fileLength);
+    fs.seekp(length - 1); 
+    fs << Row << "]";  
   }else{
     fs << Row;
   }
@@ -600,11 +599,15 @@ int rvs::logger::JsonPatchAppend(int* pSts) {
   std::string logfile(json_log_file);
 
   std::fstream fs;
-  fs.seekg(-1, std::ios::end);
-  char last_char;
-  fs.get(last_char);//TODO: verify if it is ]
-  fs.seekp(-1, std::ios::end);
-  fs << "," << last_char;
+  fs.open(logfile,std::fstream::in| std::fstream::binary | std::fstream::out);
+  if (fs.fail())
+    return -1;
+    // append before last item which is closing list, ]
+  fs.seekp(0, std::ios::end);
+  std::streampos fileLength = fs.tellg();
+  std::streamoff length = static_cast<std::streamoff>(fileLength);
+  fs.seekp(length - 1);
+  fs << "," << "]";
 
   *pSts = 1;
   return 0;
@@ -677,20 +680,25 @@ void  rvs::logger::AddNode(void* Parent, void* Child) {
 
 int rvs::logger::init_json_log_file() {
   std::string logfile(json_log_file);
+  std::cout << "json file name is" << logfile<< std::endl;
+  std::string row{"[ ]"}; 
   if (append() && notEmptyFile(logfile)) {
+    std::cout << "json patcjhi" << std::endl;
     int patch_status = -1;
     int sts = JsonPatchAppend(&patch_status);
     if (sts) {
       return -1;
       }
   }else{
-    std::string row{"[ ]"}; 
-    { // reset file
-      std::fstream fs;
-      fs.open(logfile, std::fstream::out);
-    }
-    ToFile(row, true);    
+     // reset file
+    std::cout << "json new" << std::endl;
+    std::fstream fs;
+    fs.open(logfile, std::fstream::out);
+    fs << row;
+    fs.close(); 
+    //ToFile(row, true); 
   }
+  return 0;
 }
 
 /**
