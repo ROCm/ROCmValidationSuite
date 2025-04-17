@@ -231,7 +231,7 @@ bool TSTWorker::do_thermal_stress(void) {
         // Get GPU's current edge temperature
         smi_stat = amdsmi_get_temp_metric(smi_device_handle, AMDSMI_TEMPERATURE_TYPE_EDGE,
                 AMDSMI_TEMP_CURRENT, &temperature);
-        if (smi_stat == RSMI_STATUS_SUCCESS) {
+        if (smi_stat == AMDSMI_STATUS_SUCCESS) {
             cur_edge_temperature = static_cast<float>(temperature)/1e3;
         }
         
@@ -240,7 +240,7 @@ bool TSTWorker::do_thermal_stress(void) {
         // Get GPU's current junction temperature
         smi_stat = amdsmi_get_temp_metric(smi_device_handle, AMDSMI_TEMPERATURE_TYPE_JUNCTION ,
                 AMDSMI_TEMP_CURRENT, &temperature);
-        if (smi_stat == RSMI_STATUS_SUCCESS) {
+        if (smi_stat == AMDSMI_STATUS_SUCCESS) {
             cur_junction_temperature = static_cast<float>(temperature)/1e3;
         }
 

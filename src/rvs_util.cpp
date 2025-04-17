@@ -276,7 +276,7 @@ int display_gpu_info (void) {
     }
 
     amdsmi_processor_handle smi_hdl;
-    if (gpu_hip_to_smi_index(i, &smi_hdl)){
+    if (gpu_hip_to_smi_hdl(i, &smi_hdl)){
       continue;
     }
 

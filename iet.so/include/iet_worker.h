@@ -69,7 +69,7 @@ class IETWorker : public rvs::ThreadBase {
     //! returns the GPU index
     int get_gpu_device_index(void) { return gpu_device_index; }
     //! sets the GPU smi handle
-    void set_smi_device_index(amdsmi_processor_handle _smi_device_handle) {
+    void set_smi_device_handle(amdsmi_processor_handle _smi_device_handle) {
         smi_device_handle = _smi_device_handle;
     }
     //! returns the GPU smi handle

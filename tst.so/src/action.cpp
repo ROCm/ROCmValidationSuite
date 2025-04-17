@@ -346,7 +346,7 @@ void tst_action::hip_to_smi_indices(void) {
     std::map<uint64_t, amdsmi_processor_handle> smi_map;
 
     rvs::smi_pci_hdl_mapping();
-    smi_map = rvs::smipci_to_hdl_map;
+    smi_map = rvs::get_smi_pci_map();
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
          unsigned int pDom, pBus, pDev, pFun;
@@ -496,7 +496,7 @@ int tst_action::get_all_selected_gpus(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
-    ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+    amdsmi_init(AMDSMI_INIT_AMD_GPUS);
     // find compatible GPUs to run tst tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, tst_gpus_device_index,
         property_device, property_device_id, property_device_all,

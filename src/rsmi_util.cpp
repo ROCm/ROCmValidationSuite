@@ -27,7 +27,7 @@
 #include <cassert>
 
 namespace rvs {
-
+std::map<uint64_t, amdsmi_processor_handle> smipci_to_hdl_map;
 amdsmi_status_t smi_pci_hdl_mapping(){
   amdsmi_status_t ret;
    uint64_t _bdfid = 0;
@@ -37,13 +37,13 @@ amdsmi_status_t smi_pci_hdl_mapping(){
   ret = amdsmi_get_socket_handles(&socket_count, &sockets[0]);
   for(auto socket : sockets){
     uint32_t device_count = 0;// # of devices in this socket
-    ret = amdsmi_get_processor_handles(sockets[i], &device_count, nullptr);
+    ret = amdsmi_get_processor_handles(socket, &device_count, nullptr);
     std::vector<amdsmi_processor_handle> processor_handles(device_count);
-    ret = amdsmi_get_processor_handles(sockets[i],
+    ret = amdsmi_get_processor_handles(socket,
               &device_count, &processor_handles[0]);
     for(auto dev: processor_handles){
       if(AMDSMI_STATUS_SUCCESS == amdsmi_get_gpu_bdf_id(dev, &_bdfid)){
-        smipci_to_hdl_map.insert(_bdfid, dev);
+        smipci_to_hdl_map.insert({_bdfid, dev});
       }
     }
   }
@@ -63,6 +63,10 @@ amdsmi_status_t  rsmi_dev_ind_get(uint64_t bdfid, amdsmi_processor_handle* pdv_h
         return AMDSMI_STATUS_SUCCESS;
   }
    return AMDSMI_STATUS_INVAL;
+}
+
+std::map<uint64_t, amdsmi_processor_handle> get_smi_pci_map(){
+  return smipci_to_hdl_map;
 }
 
 }  // namespace rvs

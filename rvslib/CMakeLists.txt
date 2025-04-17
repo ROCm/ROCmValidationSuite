@@ -116,9 +116,9 @@ endif()
 
 ## define include directories
 include_directories(./ ../ ../rvs
-  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${HIPBLASLT_INC_DIR} ${YAML_CPP_INCLUDE_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${HIPBLAS-COMMON_INCLUDE_DIR})
+  ${AMD_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${HIPBLASLT_INC_DIR} ${YAML_CPP_INCLUDE_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${HIPBLAS-COMMON_INCLUDE_DIR})
 
-link_directories(${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
+link_directories(${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR})
 
 ## define common source files
 set(SOURCES
@@ -172,7 +172,7 @@ target_compile_definitions(${RVS_TARGET} PRIVATE ROCM_USE_FLOAT16)
 set_target_properties(${RVS_TARGET}
  PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}
  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
+target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB})
 ## Install shared library librvslib.so
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

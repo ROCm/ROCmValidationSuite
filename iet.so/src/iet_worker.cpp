@@ -177,7 +177,6 @@ bool IETWorker::do_iet_power_stress(void) {
     bool      result = true;
     bool      start = true;
     rvs::action_result_t action_result;
-    RSMI_POWER_TYPE type = RSMI_INVALID_POWER;
     char gpuid_buff[12];
     std::thread compute_t;
     std::thread bandwidth_t;
@@ -211,8 +210,8 @@ bool IETWorker::do_iet_power_stress(void) {
 
         // get GPU's current/average power
 	amdsmi_power_info_t pwr_info;
-        amdsmi_status_t smi_stat = amdsmi_get_power_info(smi_device_handle, &pwr_info);
-        if (smi_stat == RSMI_STATUS_SUCCESS) {
+        amdsmi_status_t smi_stat = amdsmi_get_power_info(smi_device_handle,0, &pwr_info);
+        if (smi_stat == AMDSMI_STATUS_SUCCESS) {
           cur_power_value = static_cast<float>(pwr_info.current_socket_power);
         }
 
