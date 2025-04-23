@@ -63,7 +63,7 @@ using std::map;
 #define MEM_DEFAULT_TEST_TYPE           1
 #define MEM_DEFAULT_MEM_MIBIBYTE        false
 #define MEM_DEFAULT_OP_CSV              false
-#define MEM_DEFAULT_RWTEST              2
+#define MEM_DEFAULT_RWTEST              0
 #define MEM_DEFAULT_SUBTEST             5
 #define MEM_DEFAULT_DWORDS_PER_LANE     4
 #define MEM_DEFAULT_CHUNKS_PER_BLOCK    2
