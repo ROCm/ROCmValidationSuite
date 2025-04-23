@@ -101,6 +101,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
             workers[i].set_mibibytes(mibibytes);
             workers[i].set_output_csv(output_csv);
             workers[i].set_num_iterations(num_iterations);
+            workers[i].set_rwtest_type(rwtest);
             workers[i].set_subtest_type(subtest);
             workers[i].set_dwords_per_lane(dwords_per_lane);
             workers[i].set_chunks_per_block(chunks_per_block);
@@ -169,6 +170,14 @@ bool mem_action::get_all_mem_config_keys(void) {
                      &test_type, MEM_DEFAULT_TEST_TYPE)) {
         msg = "invalid '" +
         std::string(RVS_CONF_TEST_TYPE) + "' key value";
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        bsts = false;
+    }
+
+    if (property_get_int<int>(RVS_CONF_RWTEST,
+                     &rwtest, MEM_DEFAULT_RWTEST)) {
+        msg = "invalid '" +
+        std::string(RVS_CONF_RWTEST) + "' key value";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         bsts = false;
     }

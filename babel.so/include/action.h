@@ -52,6 +52,7 @@ using std::map;
 #define RVS_CONF_TEST_TYPE              "test_type"
 #define RVS_CONF_MEM_MIBIBYTE           "mibibytes"
 #define RVS_CONF_OP_CSV                 "o/p_csv"
+#define RVS_CONF_RWTEST                 "rwtest"
 #define RVS_CONF_SUBTEST                "subtest"
 #define RVS_CONF_DWORDS_PER_LANE        "dwords_per_lane"
 #define RVS_CONF_CHUNKS_PER_BLOCK       "chunks_per_block"
@@ -62,6 +63,7 @@ using std::map;
 #define MEM_DEFAULT_TEST_TYPE           1
 #define MEM_DEFAULT_MEM_MIBIBYTE        false
 #define MEM_DEFAULT_OP_CSV              false
+#define MEM_DEFAULT_RWTEST              0
 #define MEM_DEFAULT_SUBTEST             5
 #define MEM_DEFAULT_DWORDS_PER_LANE     4
 #define MEM_DEFAULT_CHUNKS_PER_BLOCK    2
@@ -98,6 +100,8 @@ class mem_action: public rvs::actionbase {
     bool output_csv;
     //! test type
     int  test_type;
+    //read-write test selection
+    int  rwtest;
     //subtest selection
     int  subtest;
     //! number of iterations
