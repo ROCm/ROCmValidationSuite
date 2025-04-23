@@ -176,6 +176,13 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the test type
     int get_test_type(void) { return test_type; }
 
+    //! sets rw test type
+    void set_rwtest_type(int _test_type) {
+        rwtest = _test_type;
+    }
+    //! returns rw test type
+    int get_rwtest_type(void) { return rwtest; }
+
     //! sets the sub test type
     void set_subtest_type(int _test_type) {
         subtest = _test_type;
@@ -248,6 +255,8 @@ class MemWorker : public rvs::ThreadBase {
     uint64_t array_size;
     //! Test type
     int test_type;
+    //! Read-Write Test type
+    int rwtest;
     //! Sub Test type
     int subtest;
     //! number of dwords per lane
