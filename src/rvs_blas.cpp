@@ -30,6 +30,10 @@
 #include <random>
 #include <thread>
 
+#if(defined(RVS_ROCBLAS_VERSION_FLAT) && (RVS_ROCBLAS_VERSION_FLAT >= 3001000 && RVS_ROCBLAS_VERSION_FLAT < 5000000))
+  #define RVS_ROCBLAS_HAS_F8_DATATYPES 1
+#endif
+
 /* ============================================================================================ */
 // Random number generator
 using rvsblas_rng_t = std::mt19937;
@@ -479,7 +483,11 @@ bool rvs_blas::copy_data_to_gpu(void) {
 
   if(data_type == "fp8_r") {
     if (blas_source == "rocblas") {
+#if RVS_ROCBLAS_HAS_F8_DATATYPES
       return copy_data_to_gpu<rocblas_f8, rocblas_f8>();
+#else
+      return true;
+#endif
     }
     else if (blas_source == "hipblaslt") {
       return copy_data_to_gpu<hipblaslt_f8, float>();
@@ -565,7 +573,11 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
 
   if(data_type == "fp8_r") {
     if (blas_source == "rocblas") {
+#if RVS_ROCBLAS_HAS_F8_DATATYPES
       return allocate_gpu_matrix_mem<rocblas_f8, rocblas_f8>();
+#else 
+      return true;
+#endif
     }
     else if (blas_source == "hipblaslt") {
       return allocate_gpu_matrix_mem<hipblaslt_f8, float>();
@@ -710,9 +722,15 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
     if(data_type == "fp8_r") {
 
       if (blas_source == "rocblas") {
+#if RVS_ROCBLAS_HAS_F8_DATATYPES
         ha = new rocblas_f8[size_a];
         hb = new rocblas_f8[size_b];
         hc = new rocblas_f8[size_c];
+#else
+        ha = new unsigned char[size_a];
+        hb = new unsigned char[size_b];
+        hc = new unsigned char[size_c];
+#endif
       }
       else if (blas_source == "hipblaslt") {
         ha = new hipblaslt_f8[size_a];
@@ -944,7 +962,7 @@ bool rvs_blas::run_blas_gemm(void) {
     }
 
     if(data_type == "fp8_r") {
-
+#if RVS_ROCBLAS_HAS_F8_DATATYPES
       rocblas_datatype a_type = rocblas_datatype_f8_r;
       rocblas_datatype b_type = rocblas_datatype_f8_r;
       rocblas_datatype c_type = rocblas_datatype_f8_r;
@@ -992,6 +1010,9 @@ bool rvs_blas::run_blas_gemm(void) {
           return true;
         }
       }
+#else
+      return true;
+#endif
     }
 
     if(data_type == "fp16_r") {
@@ -1229,6 +1250,7 @@ void rvs_blas::generate_random_matrix_data(void) {
       if(data_type == "fp8_r") {
 
         if (blas_source == "rocblas") {
+#if RVS_ROCBLAS_HAS_F8_DATATYPES
           for (i = 0; i < size_a; ++i)
             ((rocblas_f8* )ha)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
 
@@ -1237,6 +1259,7 @@ void rvs_blas::generate_random_matrix_data(void) {
 
           for (i = 0; i < size_c; ++i)
             ((rocblas_f8* )hc)[i] = rocblas_f8(fast_pseudo_rand(&nextr, i));
+#endif
         }
         else if (blas_source == "hipblaslt") {
 
@@ -1668,7 +1691,7 @@ double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA
  */
 template <
     typename T,
-    std::enable_if<std::is_same<T, rocblas_f8>{}, int>::type = 0>
+    std::enable_if<std::is_same<T, hipblaslt_f8>{}, int>::type = 0>
 double check_norm_error(char norm_type, int64_t M, int64_t N, int64_t lda, T* hA, T* hB) {
 
   // norm type can be 'O', 'I', 'F', 'o', 'i', 'f' for one, infinity or Frobenius norm
@@ -1978,7 +2001,7 @@ bool rvs_blas::validate_gemm(bool self_check, bool accu_check, double &self_erro
       check_result_consistency<double>(dc, size_c, self_error);
     }
     else if(data_type == "fp8_r") {
-      check_result_consistency<rocblas_f8>(dd, size_d, self_error);
+      check_result_consistency<hipblaslt_f8>(dd, size_d, self_error);
     }
     else if(data_type == "fp16_r") {
       check_result_consistency<rocblas_half>(dd, size_d, self_error);
