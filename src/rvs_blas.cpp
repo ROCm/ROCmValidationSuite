@@ -2417,7 +2417,6 @@ std::vector<float> generateData(T                           dgen,
     }
 }
 
-#ifdef USE_ROCROLLER
 /**
  * @brief Generate random data for OCP (MX) F8/F6/F4 types
  *
@@ -2427,7 +2426,7 @@ std::vector<float> generateData(T                           dgen,
  *
  * @return float values of generated MX type data
  */
-std::vector<float> generateMXInput(hipDataType            dataType,
+std::vector<float> rvs_blas::generateMXInput(hipDataType            dataType,
                                    void*                  data,
                                    void*                  scale,
                                    int                    rowSize,
@@ -2534,5 +2533,4 @@ std::vector<float> generateMXInput(hipDataType            dataType,
         throw std::runtime_error("Unsupported data types in MX data generation!");
     }
 }
-#endif
 

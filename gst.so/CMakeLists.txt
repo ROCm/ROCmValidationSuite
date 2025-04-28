@@ -37,7 +37,6 @@ set ( RVS_TARGET "${RVS}" )
 project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
-add_compile_options(-std=c++20)
 add_compile_options(-Wall )
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)

@@ -38,7 +38,6 @@ project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
 
-add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall )
 

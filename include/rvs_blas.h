@@ -26,7 +26,6 @@
 #define INCLUDE_RVS_BLAS_H_
 
 #define __HIP_PLATFORM_HCC__
-#define USE_ROCROLLER
 
 /* To enable rocblas beta functions in rocblas.h */
 #define ROCBLAS_BETA_FEATURES_API 1
@@ -353,15 +352,7 @@ class rvs_blas {
         RVS_BLAS_HIPBLAS_COMPUTETYPE_INVALID;
     }
 
-};
 
-
-#pragma once
-
-#include <hipblaslt/hipblaslt.h>
-#include <stdint.h>
-
-#ifdef USE_ROCROLLER
 std::vector<float> generateMXInput(hipDataType            dataType,
                                    void*                  data,
                                    void*                  scale,
@@ -375,6 +366,6 @@ std::vector<float> generateMXInput(hipDataType            dataType,
                                    std::string_view const initMethod = "Bounded",
                                    float                  min_val    = -1.0f,
                                    float                  max_val    = 1.0f);
-#endif
+};
 
 #endif  // INCLUDE_RVS_BLAS_H_

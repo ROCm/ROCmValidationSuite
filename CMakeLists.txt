@@ -36,6 +36,10 @@ set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
 #including GNUInstall Dir definitions.
 include( GNUInstallDirs )
 
+# Set C++ standard as version 20
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
