@@ -26,6 +26,7 @@
 #define INCLUDE_RVS_BLAS_H_
 
 #define __HIP_PLATFORM_HCC__
+#define USE_ROCROLLER
 
 /* To enable rocblas beta functions in rocblas.h */
 #define ROCBLAS_BETA_FEATURES_API 1
@@ -63,7 +64,8 @@ class rvs_blas {
        int lda, int ldb, int ldc, int ldd,
        std::string _ops_type, std::string _data_type, std::string _gemm_mode,
        int _batch_count, uint64_t stride_a, uint64_t stride_b, uint64_t stride_c, uint64_t stride_d,
-       std::string _blas_source, std::string _compute_type, std::string _out_data_type);
+       std::string _blas_source, std::string _compute_type, std::string _out_data_type,
+       std::string _scale_a, std::string _scale_b);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
@@ -161,6 +163,15 @@ class rvs_blas {
     void *hb;
     //! pointer to host memory
     void *hc;
+
+    //! pointer to device scale A memory
+    void *dsa;
+    //! pointer to device scale B memory
+    void *dsb;
+    //! pointer to host scale A memory
+    void *hsa;
+    //! pointer to host scale B memory
+    void *hsb;
 
     //! pointer to current gemm output (host memory)
     void *hco;
@@ -267,6 +278,23 @@ class rvs_blas {
     //! Transpose matrix B
     hipblasOperation_t hbl_trans_b;
 
+    //! Scale matrix A
+    std::string hbl_scale_a;
+    //! Scale matrix B
+    std::string hbl_scale_b;
+    //! Scale matrix A size
+    size_t hbl_scale_a_size;
+    //! Scale matrix B size
+    size_t hbl_scale_b_size;
+    //! Scale matrix A block row size
+    const size_t hbl_scale_a_block_row = 32;
+    //! Scale matrix A block column size
+    const size_t hbl_scale_a_block_col = 1;
+    //! Scale matrix B block row size
+    const size_t hbl_scale_b_block_row = 1;
+    //! Scale matrix B block column size
+    const size_t hbl_scale_b_block_col = 32;
+
     //! Workspace buffer for matrix multiplication
     void* hbl_workspace;
 
@@ -300,6 +328,9 @@ class rvs_blas {
     hipDataType datatype_to_hip_datatype(const std::string& datatype)
     {
       return
+        (datatype == "fp4_r")      ? HIP_R_4F_E2M1 :
+        (datatype == "fp6_e3m2_r") ? HIP_R_6F_E3M2 :
+        (datatype == "fp6_e2m3_r") ? HIP_R_6F_E2M3 :
         (datatype == "i8_r")       ? HIP_R_8I  :
         (datatype == "fp8_r")      ? HIP_R_8F_E4M3  :
         (datatype == "fp8_e4m3_r") ? HIP_R_8F_E4M3  : // OCP fp8 E4M3
@@ -323,5 +354,27 @@ class rvs_blas {
     }
 
 };
+
+
+#pragma once
+
+#include <hipblaslt/hipblaslt.h>
+#include <stdint.h>
+
+#ifdef USE_ROCROLLER
+std::vector<float> generateMXInput(hipDataType            dataType,
+                                   void*                  data,
+                                   void*                  scale,
+                                   int                    row,
+                                   int                    col,
+                                   int                    stride,
+                                   bool                   isTranspose,
+                                   int const              scaleBlockRowSize,
+                                   int const              scaleBlockColSize,
+                                   bool                   isMatrixA,
+                                   std::string_view const initMethod = "Bounded",
+                                   float                  min_val    = -1.0f,
+                                   float                  max_val    = 1.0f);
+#endif
 
 #endif  // INCLUDE_RVS_BLAS_H_
