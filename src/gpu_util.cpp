@@ -191,10 +191,10 @@ void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id) {
 
 vector<amdsmi_processor_handle>
 get_smi_processors(){
-  auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+  //auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   std::vector<amdsmi_processor_handle> proc_handles;
   uint32_t socket_num = 0;
-  ret = amdsmi_get_socket_handles(&socket_num, nullptr);
+  auto ret = amdsmi_get_socket_handles(&socket_num, nullptr);
   std::vector<amdsmi_socket_handle> sockets(socket_num);
   ret = amdsmi_get_socket_handles(&socket_num, &sockets[0]);
   for(auto socket : sockets){
@@ -203,10 +203,18 @@ get_smi_processors(){
     std::vector<amdsmi_processor_handle> dev_handles(dev_cnt);
     ret = amdsmi_get_processor_handles(socket,
               &dev_cnt, &dev_handles[0]);
-    if (ret == AMDSMI_STATUS_SUCCESS)
-      proc_handles.insert(proc_handles.end(), dev_handles.begin(), dev_handles.end());
+    if (ret == AMDSMI_STATUS_SUCCESS){
+	    for (auto dev : dev_handles){
+              processor_type_t processor_type;
+	      amdsmi_get_processor_type(dev, &processor_type);
+	      if (processor_type == AMDSMI_PROCESSOR_TYPE_AMD_GPU) {
+		      proc_handles.push_back(dev);
+	      }
+	    }
+      //proc_handles.insert(proc_handles.end(), dev_handles.begin(), dev_handles.end());
+    }
   }
-  amdsmi_shut_down();
+ //amdsmi_shut_down();
   return proc_handles;
 }
 
@@ -220,16 +228,19 @@ void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
   std::map<uint64_t, uint16_t> smi_map;
   //uint32_t smi_num_devices = 0;
   uint64_t gpuid;
+  amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   amdsmi_status_t smi_ret;
   auto proc_handles = get_smi_processors();
-  if (proc_handles.empty())
+  if (proc_handles.empty()){
     return;
-  amdsmi_init(AMDSMI_INIT_AMD_GPUS);
-  amdsmi_kfd_info_t kfd_info;
+  }
+  //amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   for(auto i=0; i<proc_handles.size();++i ){
+    amdsmi_kfd_info_t kfd_info;
     smi_ret = amdsmi_get_gpu_kfd_info(proc_handles[i], &kfd_info);
-    if(AMDSMI_STATUS_SUCCESS == smi_ret)
+    if(AMDSMI_STATUS_SUCCESS == smi_ret){
       smi_map.insert({kfd_info.kfd_id, i});
+    }
   }
   amdsmi_shut_down();
   ifstream f_id, f_prop;
@@ -245,6 +256,7 @@ void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
 
   // get all GPUs device id
   for (int node_id = 0; node_id < num_nodes; node_id++) {
+    std::cout << "for loop  " << std::endl;
     snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES,
         node_id);
     f_id.open(path);
@@ -259,6 +271,7 @@ void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
       if(smi_map.find(gpu_id) != smi_map.end()) {
         (*pgpus_gpu_idx).push_back(smi_map[gpu_id]);
       }
+
     }
 
     f_id.close();
@@ -632,7 +645,6 @@ int rvs::gpulist::gpu2gpuindex(const uint16_t GpuID, uint16_t* pGpuIdx) {
   if (it == gpu_id.cend()) {
     return -1;
   }
-
   size_t pos = std::distance(gpu_id.cbegin(), it);
   *pGpuIdx = gpu_idx[pos];
   return 0;
