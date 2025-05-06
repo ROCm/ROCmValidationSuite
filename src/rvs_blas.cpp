@@ -91,7 +91,8 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     float alpha , float beta, int lda, int ldb, int ldc, int ldd,
     std::string _ops_type, std::string _data_type, std::string _gemm_mode, int _batch_size,
     uint64_t _stride_a, uint64_t _stride_b, uint64_t _stride_c, uint64_t _stride_d,
-    std::string _blas_source, std::string _compute_type, std::string _out_data_type)
+    std::string _blas_source, std::string _compute_type, std::string _out_data_type,
+    std::string _scale_a, std::string _scale_b)
   : gpu_device_index(_gpu_device_index)
   , ops_type(_ops_type)
   , data_type(_data_type)
@@ -100,7 +101,9 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , matrix_init (_matrix_init)
   , size_a(0), size_b(0), size_c(0), size_d(0)
   , da(nullptr), db(nullptr), dc(nullptr), dd(nullptr)
+  , dsa(nullptr), dsb(nullptr)
   , ha(nullptr), hb(nullptr), hc(nullptr)
+  , hsa(nullptr), hsb(nullptr)
   , hpo(nullptr), hco(nullptr)
   , hout(nullptr), hdout(nullptr)
   , hip_stream(nullptr)
@@ -118,6 +121,10 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , hbl_layout_a(nullptr), hbl_layout_b(nullptr)
   , hbl_layout_c(nullptr), hbl_layout_d(nullptr)
   , hbl_matmul(nullptr)
+  , hbl_scale_a(_scale_a)
+  , hbl_scale_b(_scale_b)
+  , hbl_scale_a_size(0)
+  , hbl_scale_b_size(0)
 {
 
   if (blas_source == "rocblas") {
@@ -204,6 +211,12 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     if (!data_type.empty()) {
       size_d = size_t(n) * hbl_ldd_offset;
     }
+
+    if(hbl_scale_a == "block")
+      hbl_scale_a_size = (m * k) / (hbl_scale_a_block_row * hbl_scale_a_block_col);
+
+    if(hbl_scale_b == "block")
+      hbl_scale_b_size = (k * n) / (hbl_scale_b_block_row * hbl_scale_b_block_col);
 
     // Get hip data type
     hbl_datatype = datatype_to_hip_datatype(data_type);
@@ -355,6 +368,22 @@ bool rvs_blas::init_gpu_device(void) {
       return false;
     }
 
+    if(hbl_scale_a == "block")
+    {
+      hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_A_SCALE_POINTER, &dsa, sizeof(void*));
+
+      auto mode = HIPBLASLT_MATMUL_MATRIX_SCALE_VEC32_UE8M0;
+      hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_A_SCALE_MODE, &mode, sizeof(uint32_t));
+    }
+
+    if(hbl_scale_b == "block")
+    {
+      hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_B_SCALE_POINTER, &dsb, sizeof(void*));
+
+      auto mode = HIPBLASLT_MATMUL_MATRIX_SCALE_VEC32_UE8M0;
+      hipblasLtMatmulDescSetAttribute(hbl_matmul, HIPBLASLT_MATMUL_DESC_B_SCALE_MODE, &mode, sizeof(uint32_t));
+    }
+
     // Request only 1 algorithm
     constexpr int request_algo_count = 1;
     int returned_algo_count = 0;
@@ -453,6 +482,22 @@ bool rvs_blas::copy_data_to_gpu(void) {
     }
   }
 
+  if (dsa) {
+    if (hipMemcpy(dsa, hsa, sizeof(uint8_t) * hbl_scale_a_size, hipMemcpyHostToDevice)
+        != hipSuccess) {
+      is_error = true;
+      return false;
+    }
+  }
+
+  if (dsb) {
+    if (hipMemcpy(dsb, hsb, sizeof(uint8_t) * hbl_scale_b_size, hipMemcpyHostToDevice)
+        != hipSuccess) {
+      is_error = true;
+      return false;
+    }
+  }
+
   is_error = false;
   return true;
 }
@@ -479,6 +524,12 @@ bool rvs_blas::copy_data_to_gpu(void) {
 
   if(ops_type == "hgemm") {
     return copy_data_to_gpu<rocblas_half, rocblas_half>();
+  }
+
+  if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r") {
+    if (blas_source == "hipblaslt") {
+      return copy_data_to_gpu<uint8_t, float>();
+    }
   }
 
   if(data_type == "fp8_r") {
@@ -550,6 +601,14 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
     if (hipMalloc(&dd, size_d * sizeof(To)) != hipSuccess)
       return false;
 
+  if(hbl_scale_a_size != 0)
+    if (hipMalloc(&dsa, hbl_scale_a_size * sizeof(uint8_t)) != hipSuccess)
+      return false;
+
+  if(hbl_scale_b_size != 0)
+    if (hipMalloc(&dsb, hbl_scale_b_size * sizeof(uint8_t)) != hipSuccess)
+      return false;
+
   return true;
 }
 
@@ -569,6 +628,12 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
 
   if(ops_type == "hgemm") {
     return allocate_gpu_matrix_mem<rocblas_half, rocblas_half>();
+  }
+
+  if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r") {
+    if (blas_source == "hipblaslt") {
+      return allocate_gpu_matrix_mem<uint8_t, float>();
+    }
   }
 
   if(data_type == "fp8_r") {
@@ -654,6 +719,11 @@ void rvs_blas::release_gpu_matrix_mem(void) {
   if (dd)
     hipFree(dd);
 
+  if (dsa)
+    hipFree(dsa);
+  if (dsb)
+    hipFree(dsb);
+
   if (is_handle_init) {
 
     if(blas_handle)
@@ -717,6 +787,21 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
       ha = new rocblas_half[size_a];
       hb = new rocblas_half[size_b];
       hc = new rocblas_half[size_c];
+    }
+
+    if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r") {
+
+      if (blas_source == "hipblaslt") {
+        ha = new uint8_t[size_a];
+        hb = new uint8_t[size_b];
+        hc = new float[size_c];
+
+        if(hbl_scale_a_size != 0)
+          hsa = new uint8_t[hbl_scale_a_size];
+
+        if(hbl_scale_b_size != 0)
+          hsb =  new uint8_t[hbl_scale_b_size];
+      }
     }
 
     if(data_type == "fp8_r") {
@@ -819,6 +904,11 @@ void rvs_blas::release_host_matrix_mem(void) {
     delete []hb;
   if (hc)
     delete []hc;
+
+  if (hsa)
+    delete []hsa;
+  if (hsb)
+    delete []hsb;
 
   if (hpo)
     hipHostFree(hpo);
@@ -1272,6 +1362,34 @@ void rvs_blas::generate_random_matrix_data(void) {
           for (i = 0; i < size_c; ++i)
             ((float* )hc)[i] = float(fast_pseudo_rand(&nextr, i));
         }
+      }
+
+      if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r") {
+
+        generateMXInput(hbl_datatype,
+            ha,
+            hsa,
+            hbl_row_a,
+            hbl_col_a,
+            hbl_lda_offset,
+            (hbl_trans_a == HIPBLAS_OP_T) ? true : false,
+            hbl_scale_a_block_row,
+            hbl_scale_a_block_col,
+            true,
+            matrix_init == "trig" ? "trig_float" : "hpl");
+
+        generateMXInput(hbl_datatype,
+            hb,
+            hsb,
+            hbl_row_b,
+            hbl_col_b,
+            hbl_ldb_offset,
+            (hbl_trans_b == HIPBLAS_OP_T) ? true : false,
+            hbl_scale_b_block_row,
+            hbl_scale_b_block_col,
+            false,
+            matrix_init == "trig" ? "trig_float" : "hpl");
+
       }
 
       // 8-bit floating point real OCP E4M3 (fp8_e4m3_r) format
@@ -2048,5 +2166,371 @@ void rvs_blas::set_gemm_error(uint64_t _error_freq, uint64_t _error_count) {
 
   error_freq = _error_freq;
   error_count = _error_count;
+}
+
+#include <DataGenerator.hpp>
+
+template <typename DT>
+std::vector<uint8_t> unpackData(std::vector<uint8_t> const& dataBytes)
+{
+    // Only F4 and F6 need to unpack data.
+    static_assert(
+        std::is_same_v<
+            DT,
+            DGen::
+                ocp_e2m1_mxfp4> || std::is_same_v<DT, DGen::ocp_e3m2_mxfp6> || std::is_same_v<DT, DGen::ocp_e2m3_mxfp6>);
+
+    if constexpr(std::is_same_v<DT,
+                                DGen::ocp_e3m2_mxfp6> || std::is_same_v<DT, DGen::ocp_e2m3_mxfp6>)
+    {
+        std::vector<uint8_t> unpackedDataBytes(dataBytes.size() * 8 / 6);
+#pragma omp parallel for
+        for(int i = 0; i < dataBytes.size(); i++)
+        {
+            int const f6_id = (i * 6) / 8;
+            uint8_t   value = 0;
+            switch(i % 4)
+            {
+            case 0:
+                value = (dataBytes[f6_id] & 0x3F);
+                break;
+            case 1:
+                value = ((dataBytes[f6_id] & 0xC0) >> 6) | ((dataBytes[f6_id + 1] & 0xF) << 2);
+                break;
+            case 2:
+                value = ((dataBytes[f6_id] & 0xF0) >> 4) | ((dataBytes[f6_id + 1] & 0x3) << 4);
+                break;
+            case 3:
+                value = ((dataBytes[f6_id] & 0xFC) >> 2);
+                break;
+            }
+            unpackedDataBytes[i] = value;
+        }
+        return unpackedDataBytes;
+    }
+    else
+    {
+        std::vector<uint8_t> unpackedDataBytes(dataBytes.size() * 2);
+#pragma omp parallel for
+        for(int i = 0; i < dataBytes.size(); i++)
+        {
+            unpackedDataBytes[i * 2]     = (dataBytes[i] & 0x0F);
+            unpackedDataBytes[i * 2 + 1] = (dataBytes[i] >> 4);
+        }
+        return unpackedDataBytes;
+    }
+}
+
+template <typename DT>
+void packData(std::vector<uint8_t> const& dataBytes, uint8_t* packedData)
+{
+    // Only F4 and F6 need to unpack data.
+    static_assert(
+        std::is_same_v<
+            DT,
+            DGen::
+                ocp_e2m1_mxfp4> || std::is_same_v<DT, DGen::ocp_e3m2_mxfp6> || std::is_same_v<DT, DGen::ocp_e2m3_mxfp6>);
+
+    if constexpr(std::is_same_v<DT,
+                                DGen::ocp_e3m2_mxfp6> || std::is_same_v<DT, DGen::ocp_e2m3_mxfp6>)
+    {
+        auto const total = dataBytes.size() * 6 / 8;
+#pragma omp parallel for
+        for(int i = 0; i < total; i += 3)
+        {
+            auto const f8_id = i * 8 / 6;
+
+            packedData[i] = (dataBytes[f8_id] & 0x3F);
+            packedData[i] |= ((dataBytes[f8_id + 1] & 0x03) << 6);
+
+            packedData[i + 1] = ((dataBytes[f8_id + 1] & 0xFC) >> 2);
+            packedData[i + 1] |= ((dataBytes[f8_id + 2] & 0x03) << 6);
+
+            packedData[i + 2] = ((dataBytes[f8_id + 2] & 0xFC) >> 6);
+            packedData[i + 2] |= ((dataBytes[f8_id + 3] & 0x3F) << 2);
+        }
+    }
+    else
+    {
+#pragma omp parallel for
+        for(int i = 0; i < dataBytes.size() / 2; i++)
+        {
+            packedData[i] = (dataBytes[2 * i] & 0x0F);
+            packedData[i] |= (dataBytes[2 * i + 1] << 4);
+        }
+    }
+}
+
+/**
+ * @brief Align data with scale and return reference floats
+ *
+ * mxDataGenerator returns data and scale in which every consecutive
+ * 32 data share a scale (i.e., data 0-31 use scale 0, data 32-63 use
+ * scale 1, etc.). But when doing matrix multiplication with non-transpose
+ * matrix A or transpose matrix B, the data and scale are accessed in a
+ * different order (see the example in comment below). This function
+ * re-arranges the data to let the data use the correct scale.
+ * Note, the passed-in dataBytes will be changed due to the rearrangement.
+ *
+ * @return float values of generated MX type data aligned with scale
+ */
+template <typename DT>
+std::vector<float> getAlignedFloat(std::vector<uint8_t>&       dataBytes,
+                                   std::vector<uint8_t> const& scaleBytes,
+                                   std::array<int, 2> const    sizes,
+                                   int                         elementsPerMXBlock,
+                                   bool                        isMatrixA)
+{
+    std::vector<float>   refFloat(sizes[0] * sizes[1], 0.0);
+    std::vector<uint8_t> alignedDataBytes(dataBytes.size());
+
+    if(isMatrixA) // non-transpose
+    {
+        int M = sizes[0];
+        int K = sizes[1];
+
+        // For example, assume matrix A is 128x128 and elementsPerMXBlock is 32.
+        // Before aligned,
+        //
+        //  mk     m     k       scale ID
+        //  0      0     0           0
+        //  1      1     0           1     (data at index 1 use scale 1 not 0)
+        //  2      2     0           2
+        //            ...
+        //  127   127    0          127
+        //
+        //  128    0     1           0
+        //  129    1     1           1
+        //            ...
+        //  255   127    1          127
+        //            ...
+        //
+        // To align data with scale,
+        //
+        //  mk     m     k       scale ID      data id
+        //  0      0     0           0            0
+        //  1      1     0           1           32
+        //  2      2     0           2           64
+        //            ...
+        // 127    127    0          127        4064 (127 x 32)
+        //
+        // We move data at index 32 to index 1 (because the index 1
+        // is using scale 1), data at index 64 to index 2, and so on.
+
+#pragma omp parallel for
+        for(size_t mk = 0; mk < M * K; ++mk)
+        {
+            auto m        = mk % M;
+            auto k        = mk / M;
+            auto scale_id = (k / elementsPerMXBlock) * M + m;
+
+            auto data_id         = scale_id * elementsPerMXBlock + k % elementsPerMXBlock;
+            alignedDataBytes[mk] = dataBytes[data_id];
+            refFloat[mk]
+                = DGen::toFloat<DT>(scaleBytes.data(), dataBytes.data(), scale_id, data_id);
+        }
+        std::swap(dataBytes, alignedDataBytes);
+    }
+    else // transpose matrixB
+    {
+        int N = sizes[0];
+        int K = sizes[1];
+
+#pragma omp parallel for
+        for(size_t kn = 0; kn < K * N; ++kn)
+        {
+            auto k        = kn / N;
+            auto n        = kn % N;
+            auto scale_id = (k / elementsPerMXBlock) * N + n;
+
+            auto data_id         = scale_id * elementsPerMXBlock + k % elementsPerMXBlock;
+            alignedDataBytes[kn] = dataBytes[data_id];
+            refFloat[kn]
+                = DGen::toFloat<DT>(scaleBytes.data(), dataBytes.data(), scale_id, data_id);
+        }
+        std::swap(dataBytes, alignedDataBytes);
+    }
+    return refFloat;
+}
+
+template <typename T, typename DT>
+std::vector<float> generateData(T                           dgen,
+                                void*                       data,
+                                void*                       scale,
+                                std::vector<int>            sizes,
+                                std::vector<int>            strides,
+                                uint32_t                    seed,
+                                DGen::DataGeneratorOptions& opt,
+                                int                         elementsPerMXBlock,
+                                bool                        isTranspose,
+                                bool                        isMatrixA)
+{
+    dgen.setSeed(seed);
+    dgen.generate(sizes, strides, opt);
+
+    std::vector<uint8_t> dataBytes = dgen.getDataBytes();
+    std::memcpy(data, dataBytes.data(), dataBytes.size() * sizeof(uint8_t));
+
+    std::vector<uint8_t> scaleBytes = dgen.getScaleBytes();
+    std::memcpy(scale, scaleBytes.data(), scaleBytes.size() * sizeof(uint8_t));
+
+    if((isMatrixA && isTranspose) || (!isMatrixA && !isTranspose))
+    {
+        // For (1) transposed matrixA and (2) non-transposed matrixB,
+        // return the reference float directly since they are aligned already.
+        return dgen.getReferenceFloat();
+    }
+
+    // For types smaller than 8-bit, mxDataGenerator returns packed data (i.e., two FP4 will be
+    // stored in a uint8_t), so unpacking the data is required before converting them to float
+    if constexpr(std::is_same_v<DT,
+                                DGen::ocp_e5m2_mxfp8> || std::is_same_v<DT, DGen::ocp_e4m3_mxfp8>)
+    {
+        auto ret = getAlignedFloat<DT>(
+            dataBytes, scaleBytes, {sizes[0], sizes[1]}, elementsPerMXBlock, isMatrixA);
+        std::memcpy(data, dataBytes.data(), dataBytes.size() * sizeof(uint8_t));
+        return ret;
+    }
+    else if constexpr(std::is_same_v<
+                          DT,
+                          DGen::ocp_e3m2_mxfp6> || std::is_same_v<DT, DGen::ocp_e2m3_mxfp6>)
+    {
+        auto unpackedDataBytes = unpackData<DT>(dataBytes);
+        auto ret               = getAlignedFloat<DT>(
+            unpackedDataBytes, scaleBytes, {sizes[0], sizes[1]}, elementsPerMXBlock, isMatrixA);
+        // GPU expects the data are packed
+        packData<DT>(unpackedDataBytes, static_cast<uint8_t*>(data));
+        return ret;
+    }
+    else if constexpr(std::is_same_v<DT, DGen::ocp_e2m1_mxfp4>)
+    {
+        auto unpackedDataBytes = unpackData<DT>(dataBytes);
+        auto ret               = getAlignedFloat<DT>(
+            unpackedDataBytes, scaleBytes, {sizes[0], sizes[1]}, elementsPerMXBlock, isMatrixA);
+        // GPU expects the data are packed
+        packData<DT>(unpackedDataBytes, static_cast<uint8_t*>(data));
+        return ret;
+    }
+    else
+    {
+        throw std::runtime_error("Unsupported data types in MX data generation!");
+    }
+}
+
+/**
+ * @brief Generate random data for OCP (MX) F8/F6/F4 types
+ *
+ * The generated data consist of data part and scale part,
+ * and the corresponding float values (combine data and scale)
+ * will be returned.
+ *
+ * @return float values of generated MX type data
+ */
+std::vector<float> rvs_blas::generateMXInput(hipDataType            dataType,
+                                   void*                  data,
+                                   void*                  scale,
+                                   int                    rowSize,
+                                   int                    colSize,
+                                   int                    stride,
+                                   bool                   isTranspose,
+                                   int const              scaleBlockRowSize,
+                                   int const              scaleBlockColSize,
+                                   bool                   isMatrixA,
+                                   std::string_view const initMethod,
+                                   float                  min_val,
+                                   float                  max_val)
+{
+    using namespace DGen;
+
+    DataGeneratorOptions opt;
+    opt.min          = min_val;
+    opt.max          = max_val;
+    opt.blockScaling = scaleBlockRowSize * scaleBlockColSize;
+    opt.pattern      = initMethod == "Bounded" ? Bounded : Trigonometric;
+
+    const uint32_t seed = 1713573849;
+
+    std::vector<int> sizes{rowSize, colSize};
+    std::vector<int> strides;
+
+    strides.push_back(1);
+    strides.push_back(stride);
+
+    auto const elementsPerMXBlock = scaleBlockRowSize * scaleBlockColSize;
+
+    if(dataType == HIP_R_8F_E5M2)
+    {
+        DGen::DataGenerator<DGen::ocp_e5m2_mxfp8> dgen;
+        return generateData<decltype(dgen), DGen::ocp_e5m2_mxfp8>(dgen,
+                                                                  data,
+                                                                  scale,
+                                                                  sizes,
+                                                                  strides,
+                                                                  seed,
+                                                                  opt,
+                                                                  elementsPerMXBlock,
+                                                                  isTranspose,
+                                                                  isMatrixA);
+    }
+    else if(dataType == HIP_R_8F_E4M3)
+    {
+        DGen::DataGenerator<DGen::ocp_e4m3_mxfp8> dgen;
+        return generateData<decltype(dgen), DGen::ocp_e4m3_mxfp8>(dgen,
+                                                                  data,
+                                                                  scale,
+                                                                  sizes,
+                                                                  strides,
+                                                                  seed,
+                                                                  opt,
+                                                                  elementsPerMXBlock,
+                                                                  isTranspose,
+                                                                  isMatrixA);
+    }
+    else if(static_cast<hipDataType>(dataType) == HIP_R_6F_E2M3_EXT)
+    {
+        DGen::DataGenerator<DGen::ocp_e2m3_mxfp6> dgen;
+        return generateData<decltype(dgen), DGen::ocp_e2m3_mxfp6>(dgen,
+                                                                  data,
+                                                                  scale,
+                                                                  sizes,
+                                                                  strides,
+                                                                  seed,
+                                                                  opt,
+                                                                  elementsPerMXBlock,
+                                                                  isTranspose,
+                                                                  isMatrixA);
+    }
+    else if(static_cast<hipDataType>(dataType) == HIP_R_6F_E3M2_EXT)
+    {
+        DGen::DataGenerator<DGen::ocp_e3m2_mxfp6> dgen;
+        return generateData<decltype(dgen), DGen::ocp_e3m2_mxfp6>(dgen,
+                                                                  data,
+                                                                  scale,
+                                                                  sizes,
+                                                                  strides,
+                                                                  seed,
+                                                                  opt,
+                                                                  elementsPerMXBlock,
+                                                                  isTranspose,
+                                                                  isMatrixA);
+    }
+    else if(static_cast<hipDataType>(dataType) == HIP_R_4F_E2M1_EXT)
+    {
+        DGen::DataGenerator<DGen::ocp_e2m1_mxfp4> dgen;
+        return generateData<decltype(dgen), DGen::ocp_e2m1_mxfp4>(dgen,
+                                                                  data,
+                                                                  scale,
+                                                                  sizes,
+                                                                  strides,
+                                                                  seed,
+                                                                  opt,
+                                                                  elementsPerMXBlock,
+                                                                  isTranspose,
+                                                                  isMatrixA);
+    }
+    else
+    {
+        throw std::runtime_error("Unsupported data types in MX data generation!");
+    }
 }
 

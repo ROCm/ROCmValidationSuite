@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -35,6 +35,10 @@ set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
 
 #including GNUInstall Dir definitions.
 include( GNUInstallDirs )
+
+# Set C++ standard as version 20
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
@@ -380,6 +384,35 @@ if(RVS_BUILD_TESTS)
 
 endif()
 ################################################################################
+
+################################################################################
+# mxDataGenerator Download
+configure_file(CMakeMXDataGeneratorDownload.cmake mxDataGenerator-download/CMakeLists.txt)
+  execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/mxDataGenerator-download )
+if(result)
+  message(FATAL_ERROR "CMake step for mxDataGenerator failed: ${result}")
+endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} --build .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/mxDataGenerator-download )
+if(result)
+  message(FATAL_ERROR "Build step for mxDataGenerator failed: ${result}")
+endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/mxDataGenerator-src -B${CMAKE_BINARY_DIR}/mxDataGenerator-build
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/mxDataGenerator-src )
+if(result)
+  message(FATAL_ERROR "Config step for mxDataGenerator-src failed: ${result}")
+endif()
+
+if (NOT DEFINED MXDATAGENERATOR_INC_DIR)
+  set (MXDATAGENERATOR_INC_DIR "${CMAKE_BINARY_DIR}/mxDataGenerator-src/lib/include")
+  message ("MXDATAGENERATOR_INC_DIR ${MXDATAGENERATOR_INC_DIR}")
+endif ()
+################################################################################
+
 ## rocBLAS
 
 if(RVS_ROCBLAS EQUAL 1)

@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -38,11 +38,12 @@ project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
 
-add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall )
 add_compile_options(-fPIC)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
+
+find_package(OpenMP)
 
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
@@ -116,7 +117,7 @@ endif()
 
 ## define include directories
 include_directories(./ ../ ../rvs
-  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${HIPBLASLT_INC_DIR} ${YAML_CPP_INCLUDE_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${HIPBLAS-COMMON_INCLUDE_DIR})
+  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${HIPBLASLT_INC_DIR} ${YAML_CPP_INCLUDE_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${HIPBLAS-COMMON_INCLUDE_DIR} ${MXDATAGENERATOR_INC_DIR})
 
 link_directories(${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
 

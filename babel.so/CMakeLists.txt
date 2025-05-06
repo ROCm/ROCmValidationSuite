@@ -36,7 +36,6 @@ set ( RVS_TARGET "${RVS}" )
 project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
-add_compile_options(-std=c++11)
 add_compile_options(-c -o)
 ##add_compile_options(-Wall -Wextra)
 

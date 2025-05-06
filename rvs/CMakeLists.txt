@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -39,10 +39,11 @@ project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
 
-add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
+
+find_package(OpenMP)
 
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
@@ -127,7 +128,7 @@ set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
-target_link_libraries(${RVS_TARGET} rvslib
+target_link_libraries(${RVS_TARGET} rvslib OpenMP::OpenMP_CXX
   ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS} ${HIPRAND_LIB} ${HIPBLASLT_LIB})
 add_dependencies(${RVS_TARGET} rvslib)
 
