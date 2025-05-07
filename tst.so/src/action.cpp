@@ -496,7 +496,7 @@ int tst_action::get_all_selected_gpus(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
-    amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+    //amdsmi_init(AMDSMI_INIT_AMD_GPUS);
     // find compatible GPUs to run tst tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, tst_gpus_device_index,
         property_device, property_device_id, property_device_all,
@@ -505,7 +505,7 @@ int tst_action::get_all_selected_gpus(void) {
 
         msg = "No devices match criteria from the test configuation.";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        amdsmi_shut_down();
+        //amdsmi_shut_down();
         if (bjson) {
           unsigned int sec;
           unsigned int usec;
@@ -531,7 +531,7 @@ int tst_action::get_all_selected_gpus(void) {
         tst_res = 0;
     else 
         tst_res = -1;
-     amdsmi_shut_down();
+     //amdsmi_shut_down();
     return tst_res;
 }
 

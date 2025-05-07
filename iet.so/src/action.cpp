@@ -653,7 +653,6 @@ int iet_action::get_all_selected_gpus(void) {
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
     
-    amdsmi_init(AMDSMI_INIT_AMD_GPUS);
     // find compatible GPUs to run edp tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
         property_device, property_device_id, property_device_all,
@@ -661,7 +660,6 @@ int iet_action::get_all_selected_gpus(void) {
     if(!amd_gpus_found){
         msg = "No devices match criteria from the test configuation.";
         rvs::lp::Log(msg, rvs::logerror);
-        amdsmi_shut_down();
 	if (bjson) {
           unsigned int sec;
           unsigned int usec;
@@ -688,7 +686,6 @@ int iet_action::get_all_selected_gpus(void) {
     else 
         iet_res = -1;
     // append end node to json
-    amdsmi_shut_down();
     return iet_res;
 }
 
