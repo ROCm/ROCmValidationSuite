@@ -256,7 +256,6 @@ void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
 
   // get all GPUs device id
   for (int node_id = 0; node_id < num_nodes; node_id++) {
-    std::cout << "for loop  " << std::endl;
     snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id", KFD_SYS_PATH_NODES,
         node_id);
     f_id.open(path);
@@ -476,7 +475,7 @@ int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_hdl) {
     return -1;
   }
   auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
-  rvs::smi_pci_hdl_mapping();
+  //rvs::smi_pci_hdl_mapping();
   auto smi_map = rvs::get_smi_pci_map();
   amdsmi_shut_down();
   /* Fetch Domain, Bus, Device and Function numbers from HIP PCIe id */
@@ -747,7 +746,7 @@ bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &index) {
 
   uint32_t smi_num_devices = 0;
   auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
-  rvs::smi_pci_hdl_mapping();
+  //rvs::smi_pci_hdl_mapping();
   smi_num_devices = rvs::get_smi_pci_map().size();
   amdsmi_shut_down();
   for(auto i = 0; i < index.size(); i++) {

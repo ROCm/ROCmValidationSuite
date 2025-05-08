@@ -482,7 +482,7 @@ void iet_action::hip_to_smi_indices(void) {
 
     std::map<uint64_t, amdsmi_processor_handle> smi_map;
 
-    rvs::smi_pci_hdl_mapping();
+    //rvs::smi_pci_hdl_mapping();
     smi_map = rvs::get_smi_pci_map();
 
     for (int i = 0; i < hip_num_gpu_devices; i++) {
