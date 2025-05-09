@@ -29,7 +29,7 @@ set(HIPBLASLT_LIB "hipblaslt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 
-set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so "lib${ROCM_SMI_LIB}.so"
+set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so ${AMD_SMI_LIB}
   ${ROCBLAS_LIB} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_LIBRARIES} ${HIPRAND_LIB} ${HIPBLASLT_LIB}
 )
 
@@ -46,7 +46,7 @@ set(tcd.unit.gm.1 UT_TCD_1)
 include(tests_unit)
 
 if(RVS_ROCMSMI EQUAL 1)
-  add_dependencies(unit.gm.1 rvs_rsmi_target)
+  add_dependencies(unit.gm.1 rvs_smi_target)
 endif()
 
 include(tests_conf_logging)

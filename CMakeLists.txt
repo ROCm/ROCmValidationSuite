@@ -530,7 +530,7 @@ set(HCC_CXX_FLAGS "-fno-gpu-rdc --offload-arch=gfx90a --offload-arch=gfx1030 --o
 
 add_subdirectory(rvslib)
 add_subdirectory(rvs)
-#add_subdirectory(gm.so)
+add_subdirectory(gm.so)
 add_subdirectory(gpup.so)
 add_subdirectory(gst.so)
 add_subdirectory(iet.so)
@@ -551,7 +551,7 @@ endif()
 
 add_dependencies(pesm rvslib)
 if(RVS_ROCMSMI EQUAL 1)
-  #add_dependencies(gm rvs_smi_target)
+  add_dependencies(gm rvs_smi_target)
   add_dependencies(iet rvs_smi_target)
 endif()
 

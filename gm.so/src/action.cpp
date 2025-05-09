@@ -286,8 +286,8 @@ int gm_action::run(void) {
     return -1;
   }
 
-  // convert GPU ID into amd_smi_lib device index
-  std::map<uint32_t, int32_t> dv_ind;
+  // convert GPU ID into amd_smi_lib device hdl
+  std::map<uint32_t, amdsmi_processor_handle> dv_hdl;
   for (auto it = property_device.begin(); it != property_device.end(); it++) {
     RVSTRACE_
     uint16_t location_id;
@@ -302,10 +302,10 @@ int gm_action::run(void) {
       action_callback(&action_result);
       return -1;
     }
-    uint32_t ix;
-    status = rvs::rsmi_dev_ind_get(location_id, &ix);
-    if(status == RSMI_STATUS_SUCCESS) {
-       dv_ind.insert(std::pair<uint32_t, int32_t>(ix, *it));
+    amdsmi_processor_handle ix;
+    status = rvs::smi_dev_ind_get(location_id, &ix);
+    if(status == AMDSMI_STATUS_SUCCESS) {
+       dv_hdl.insert(std::pair<uint32_t, amdsmi_processor_handle>(*it, ix));
     }
   }
 
@@ -322,7 +322,7 @@ int gm_action::run(void) {
   // set stop name before start
   pworker->set_stop_name(action_name);
   // set array of device indices to monitor
-  pworker->set_dv_ind(dv_ind);
+  pworker->set_dv_hdl(dv_hdl);
   // set bounds map
   pworker->set_bound(property_bounds);
 
