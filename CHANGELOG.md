@@ -2,12 +2,27 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.1.0 for ROCm 6.4.0
+
+### Added
+
+- Configuration files for MI210.
+- Support for OCP fp8 datatype.
+- Support for new platform MI308X-HF.
+- GPU index based cli. execution.
+
+### Changed
+
+- json logging with updated schema.
+- Updated babel conf. files for MI308X and MI308X-HF.
+
 ## RVS 1.1.0 for ROCm 6.3.0
 
 ### Added
 
 - Support for hipBLASLT blas library and option to select blas library in conf. file.
 - Added Babel, thermal and performance benchmark test for MI308X.
+- Support for new platform MI325X.
 
 ### Changed
 
