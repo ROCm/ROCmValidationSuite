@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -86,6 +86,7 @@ using std::regex;
 #define RVS_CONF_GST_OUT_DATA_TYPE      "out_data_type"
 #define RVS_CONF_SCALE_A                "scale_a"
 #define RVS_CONF_SCALE_B                "scale_b"
+#define RVS_CONF_ROTATING               "rotating"
 
 #define TARGET_KEY                      "target"
 #define DTYPE_KEY                       "dtype"
@@ -132,6 +133,7 @@ using std::regex;
 #define GST_DEFAULT_OUT_DATA_TYPE       ""
 #define GST_DEFAULT_SCALE_A             ""
 #define GST_DEFAULT_SCALE_B             ""
+#define GST_DEFAULT_ROTATING            0
 
 static constexpr auto MODULE_NAME = "gst";
 static constexpr auto MODULE_NAME_CAPS = "GST";
@@ -215,6 +217,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_gst_out_data_type(gst_out_data_type);
       workers[i].set_gst_scale_a(gst_scale_a);
       workers[i].set_gst_scale_b(gst_scale_b);
+      workers[i].set_gst_rotating(gst_rotating);
 
       i++;
     }
@@ -549,6 +552,14 @@ bool gst_action::get_all_gst_config_keys(void) {
   error = property_get<std::string>(RVS_CONF_SCALE_B, &gst_scale_b, GST_DEFAULT_SCALE_B);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_SCALE_B) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<int>(RVS_CONF_ROTATING, &gst_rotating, GST_DEFAULT_ROTATING);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ROTATING) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
