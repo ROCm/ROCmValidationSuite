@@ -257,7 +257,8 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
       + hbl_scale_a_size * get_hipdatatype_size(HIP_R_8U)
       + hbl_scale_b_size * get_hipdatatype_size(HIP_R_8U);
 
-    block_count = std::max((uint64_t)1, std::min(hot_calls, (uint64_t)std::ceil((float)rotating / total_rotating_size)));
+    block_count = std::max((uint64_t)1,
+        std::min(hot_calls, (uint64_t)std::ceil((float)(rotating * 1024 * 1024) / total_rotating_size)));
 
     printf("rotating -> %d\n", rotating);
     printf("total_rotating_size -> %d\n", total_rotating_size);
