@@ -108,7 +108,7 @@ class gst_action: public rvs::actionbase {
     std::string gst_data_type;
 
     // Rotating buffer size
-    int gst_rotating;
+    uint32_t gst_rotating;
 
     // gemm output self-check
     bool gst_self_check;

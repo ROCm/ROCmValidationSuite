@@ -292,7 +292,7 @@ class GSTWorker : public rvs::ThreadBase {
     //! set scale matrix b
     void set_gst_scale_b(std::string _scale_b) { gst_scale_b = _scale_b; }
     //! set rotating buffer size
-    void set_gst_rotating(int _rotating) { gst_rotating = _rotating; }
+    void set_gst_rotating(uint32_t _rotating) { gst_rotating = _rotating; }
 
  protected:
     void setup_blas(int *error, std::string *err_description);
@@ -410,7 +410,7 @@ class GSTWorker : public rvs::ThreadBase {
     //! Scale matrix b
     std::string gst_scale_b;
     //! Rotating buffer size
-    int gst_rotating;
+    uint32_t gst_rotating;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

@@ -556,7 +556,7 @@ bool gst_action::get_all_gst_config_keys(void) {
     bsts = false;
   }
 
-  error = property_get_int<int>(RVS_CONF_ROTATING, &gst_rotating, GST_DEFAULT_ROTATING);
+  error = property_get_int<uint32_t>(RVS_CONF_ROTATING, &gst_rotating, GST_DEFAULT_ROTATING);
   if (error == 1) {
     msg = "invalid '" +
       std::string(RVS_CONF_ROTATING) + "' key value";

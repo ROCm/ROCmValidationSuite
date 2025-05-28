@@ -93,7 +93,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     std::string _ops_type, std::string _data_type, std::string _gemm_mode, int _batch_size,
     uint64_t _stride_a, uint64_t _stride_b, uint64_t _stride_c, uint64_t _stride_d,
     std::string _blas_source, std::string _compute_type, std::string _out_data_type,
-    std::string _scale_a, std::string _scale_b, int rotating, uint64_t _hot_calls)
+    std::string _scale_a, std::string _scale_b, uint32_t rotating, uint64_t _hot_calls)
   : gpu_device_index(_gpu_device_index)
   , ops_type(_ops_type)
   , data_type(_data_type)
@@ -259,10 +259,6 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
 
     block_count = std::max((uint64_t)1,
         std::min(hot_calls, (uint64_t)std::ceil((float)(rotating * 1024 * 1024) / total_rotating_size)));
-
-    printf("rotating -> %d\n", rotating);
-    printf("total_rotating_size -> %d\n", total_rotating_size);
-    printf("block_count -> %d\n", block_count);
 
   }
   else {

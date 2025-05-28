@@ -66,7 +66,7 @@ class rvs_blas {
        std::string _ops_type, std::string _data_type, std::string _gemm_mode,
        int _batch_count, uint64_t stride_a, uint64_t stride_b, uint64_t stride_c, uint64_t stride_d,
        std::string _blas_source, std::string _compute_type, std::string _out_data_type,
-       std::string _scale_a, std::string _scale_b, int rotating, uint64_t _hot_calls);
+       std::string _scale_a, std::string _scale_b, uint32_t rotating, uint64_t _hot_calls);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
