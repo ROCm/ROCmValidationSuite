@@ -271,7 +271,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     end_time = gpu_blas->get_time_us();
 
     //Converting microseconds to seconds
-    timetakenforoneiteration = (end_time - start_time)/1e6;
+    timetakenforoneiteration = (end_time - start_time)/(1e6 * gst_hot_calls);
 
     gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
 
