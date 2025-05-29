@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -88,7 +88,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
         gst_alpha_val, gst_beta_val,
         gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ldd_offset, gst_ops_type, gst_data_type,
         gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d, blas_source, compute_type,
-        gst_out_data_type, gst_scale_a, gst_scale_b));
+        gst_out_data_type, gst_scale_a, gst_scale_b, gst_rotating, gst_hot_calls));
 
   if (!gpu_blas) {
     *error = 1;
@@ -271,7 +271,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     end_time = gpu_blas->get_time_us();
 
     //Converting microseconds to seconds
-    timetakenforoneiteration = (end_time - start_time)/1e6;
+    timetakenforoneiteration = (end_time - start_time)/(1e6 * gst_hot_calls);
 
     gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
 
@@ -470,15 +470,12 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     //Start the timer
     start_time = gpu_blas->get_time_us();
 
-    for (uint64_t i = 0; i < gst_hot_calls; i++) {
+    // launch GEMM operation
+    if(!gpu_blas->run_blas_gemm()) {
 
-      // launch GEMM operation
-      if(!gpu_blas->run_blas_gemm()) {
-
-        *err_description = GST_BLAS_ERROR;
-        *error = 1;
-        return false;
-      }
+      *err_description = GST_BLAS_ERROR;
+      *error = 1;
+      return false;
     }
 
     // Wait for all the GEMM operations to complete
