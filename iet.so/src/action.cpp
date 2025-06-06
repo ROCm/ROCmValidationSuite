@@ -62,6 +62,9 @@ using std::map;
 using std::regex;
 using std::fstream;
 
+#if(defined(RVS_ROCBLAS_VERSION_FLAT) && (RVS_ROCBLAS_VERSION_FLAT >= 3001000 && RVS_ROCBLAS_VERSION_FLAT < 5000000))
+  #define RVS_ROCBLAS_HAS_F8_DATATYPES 1
+#endif
 
 #define RVS_CONF_TARGET_POWER_KEY       "target_power"
 #define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_interval"
@@ -464,6 +467,16 @@ bool iet_action::get_all_iet_config_keys(void) {
   if ((iet_ops_type == IET_DEFAULT_OPS_TYPE) && (iet_data_type == IET_DEFAULT_OPS_TYPE)) {
     iet_ops_type = "sgemm";
   }
+
+#if !defined(RVS_ROCBLAS_HAS_F8_DATATYPES)
+  if (iet_blas_source == "rocblas") {
+    if(iet_data_type == "fp8_r") {
+      msg = "The version of rocBLAS currently in use no longer supports FP8.";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      bsts = false;
+    }
+  }
+#endif
 
   return bsts;
 }
