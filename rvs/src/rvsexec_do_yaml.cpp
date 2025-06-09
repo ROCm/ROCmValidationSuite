@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -84,6 +84,7 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
       const YAML::Node& action = *it;
 
+      sts = 0;
       rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
 
       // if stop was requested
@@ -158,8 +159,9 @@ int rvs::exec::do_yaml(const std::string& config_file) {
 
       // errors?
       if (sts) {
-        // cancel actions and return
-        return sts;
+        rvs::logger::Err("Action failed to run successfully.",
+            action["module"].as<std::string>().c_str(),
+            action["name"].as<std::string>().c_str());
       }
     }
   }
@@ -205,6 +207,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
     for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
       const YAML::Node& action = *it;
 
+      sts = 0;
       rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
 
       // if stop was requested
@@ -299,8 +302,10 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
             action["name"].as<std::string>().c_str());
         result.output_log = buff;
         callback(&result);
-        // cancel actions and return
-        return sts;
+
+        rvs::logger::Err("Action failed to run successfully.",
+            action["module"].as<std::string>().c_str(),
+            action["name"].as<std::string>().c_str());
       }
 
     }
