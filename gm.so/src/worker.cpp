@@ -438,7 +438,7 @@ void Worker::run() {
       if (bounds[GM_POWER].mon_metric) {
         RVSTRACE_
         amdsmi_power_info_t pwr_info;
-        status = amdsmi_get_power_info(ix,0, &pwr_info);
+        status = amdsmi_get_power_info(ix, &pwr_info);
         met_value[loop_idx].power = pwr_info.socket_power;
         met_avg[loop_idx].av_power += pwr_info.socket_power;
         if (bounds[GM_POWER].check_bounds) {
