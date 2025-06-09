@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -141,7 +141,7 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx, matrix_size, matrix_size, matrix_size, "default",
           transa, transb, alpha, beta, tst_lda_offset, tst_ldb_offset, tst_ldc_offset, tst_ldd_offset, tst_ops_type,
-          "", "", 0, 0, 0, 0, 0, blas_source, compute_type, ""));
+          "", "", 0, 0, 0, 0, 0, blas_source, compute_type, "", "", ""));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();

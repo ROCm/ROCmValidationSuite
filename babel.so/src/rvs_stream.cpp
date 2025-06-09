@@ -301,11 +301,11 @@ float HIPStream<T>::read()
   else
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(read_kernel<4, 2, T>,
+      hipLaunchKernelSynchronous(read_kernel<4, 1, T>,
           dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
           d_a, d_c);
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(read_kernel<2, 2, T>,
+      hipLaunchKernelSynchronous(read_kernel<2, 1, T>,
           dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
           d_a, d_c);
     else if(elements_per_lane == 4 && chunks_per_block == 2)

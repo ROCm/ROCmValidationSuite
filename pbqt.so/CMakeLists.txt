@@ -49,7 +49,6 @@ add_definitions(-DLITTLEENDIAN_CPU=1)
 add_definitions(-DHSA_LARGE_MODEL=)
 add_definitions(-DHSA_DEPRECATED=)
 
-add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall )
 if (RVS_COVERAGE)

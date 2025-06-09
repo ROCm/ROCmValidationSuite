@@ -29,7 +29,9 @@ set(HIPBLASLT_LIB "hipblaslt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 
-set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so ${AMD_SMI_LIB}
+find_package(OpenMP)
+
+set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so ${AMD_SMI_LIB} OpenMP::OpenMP_CXX
   ${ROCBLAS_LIB} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_LIBRARIES} ${HIPRAND_LIB} ${HIPBLASLT_LIB}
 )
 

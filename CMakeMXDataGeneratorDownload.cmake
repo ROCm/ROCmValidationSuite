@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -23,27 +23,18 @@
 ##
 ################################################################################
 
-set(ROCBLAS_LIB "rocblas")
-set(HIPRAND_LIB "hiprand")
-set(HIPBLASLT_LIB "hipblaslt")
-set(CORE_RUNTIME_NAME "hsa-runtime")
-set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
+cmake_minimum_required(VERSION 2.8.2)
 
-find_package(OpenMP)
+project(mxDataGenerator-download NONE)
 
-set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so ${AMD_SMI_LIB} OpenMP::OpenMP_CXX
-  ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_LIBRARIES} ${HIPRAND_LIB} ${HIPBLASLT_LIB}
+include(ExternalProject)
+ExternalProject_Add(mxDataGenerator
+  GIT_REPOSITORY    https://github.com/ROCm/mxDataGenerator.git
+  GIT_TAG           main
+  SOURCE_DIR        "${CMAKE_BINARY_DIR}/mxDataGenerator-src"
+  BINARY_DIR        "${CMAKE_BINARY_DIR}/mxDataGenerator-build"
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND     ""
+  INSTALL_COMMAND   ""
+  TEST_COMMAND      ""
 )
-
-# Add directories to look for library files to link
-link_directories(${AMD_SMI_LIB_DIR} ${ROCBLAS_LIB_DIR} ${HIPRAND_LIB_DIR} ${HIPBLASLT_LIB_DIR} ${YAML_CPP_LIBRARY_DIR})
-
-set (UT_SOURCES test/unitactionbase.cpp
-)
-
-# add unit tests
-include(tests_unit)
-
-# Add configuration tests
-include(tests_conf_logging)
-

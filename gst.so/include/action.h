@@ -152,6 +152,11 @@ class gst_action: public rvs::actionbase {
     // gemm output data type
     std::string gst_out_data_type;
 
+    // Scale matrix a
+    std::string gst_scale_a;
+    // Scale matrix b
+    std::string gst_scale_b;
+
     friend class GSTWorker;
 
     bool get_all_gst_config_keys(void);
