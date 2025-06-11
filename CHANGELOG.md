@@ -6,7 +6,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Added
 
-- NPS2/DPX & NPS4/CPX partition modes support for MI300X.
+- NPS2/DPX and NPS4/CPX partition modes support for MI300X.
 
 ## RVS 1.1.0 for ROCm 6.4.0
 
