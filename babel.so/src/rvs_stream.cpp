@@ -797,7 +797,7 @@ struct Reducer {
 #if defined(__HIP_PLATFORM_NVCC__)
     constexpr unsigned int warpSize = 32;
 #endif
-    constexpr bool is_same_warp{n <= warpSize * 2};
+    const bool is_same_warp{n <= warpSize * 2};
     if (static_cast<int>(threadIdx.x) < n / 2)
     {
       it[threadIdx.x] += it[threadIdx.x + n / 2];
