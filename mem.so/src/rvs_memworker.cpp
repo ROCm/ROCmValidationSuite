@@ -163,6 +163,7 @@ void MemWorker::run() {
     size_t          free;
     size_t          total;
     int             deviceId;
+    bool info_jsonlogs = false;  
 
     // log MEM stress test - start message
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -198,7 +199,7 @@ void MemWorker::run() {
             std::to_string(total) + " " + " Free Memory from hipMemGetInfo " + " " + 
             std::to_string(free);
     rvs::lp::Log(msg, rvs::logtrace);
-    if (bjson){
+    if (bjson && info_jsonlogs){
 	void *json_node = json_node_create(std::string(MODULE_NAME),
       		action_name.c_str(), rvs::loginfo);
 	if (json_node){
