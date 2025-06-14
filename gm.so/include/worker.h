@@ -58,8 +58,8 @@ class Worker : public rvs::ThreadBase {
   //! sets stopping action name
   void set_stop_name(const std::string& name) { stop_action_name = name; }
   //! Sets device indices for filtering
-  void set_dv_ind(const std::map<uint32_t, int32_t>& DvInd) {
-    dv_ind = DvInd;
+  void set_dv_hdl(const std::map<uint32_t, amdsmi_processor_handle>& DvHdl) {
+    dv_hdl = DvHdl;
   }
   //! Sets JSON flag
   void json(const bool flag) { bjson = flag; }
@@ -108,17 +108,17 @@ class Worker : public rvs::ThreadBase {
   bool bjson;
   //! Loops while TRUE
   bool brun;
-  //! list of rocm_smi_lib device indices to monitor
-  std::map<uint32_t, int32_t> dv_ind;
+  //! list of smi_lib device handles to monitor
+  std::map<uint32_t, amdsmi_processor_handle> dv_hdl;
   //! number of times of get metric
   int count;
-  //! dv_ind and metric bounds
+  //! dv_hdl and metric bounds
   std::map<std::string, Metric_bound> bounds;
-  //! dv_ind and metrics violation
+  //! dv_hdl and metrics violation
   std::map<uint32_t, Metric_violation> met_violation;
-  //! dv_ind and current metric values
+  //! dv_hdl and current metric values
   std::map<uint32_t, Metric_value> met_value;
-  //! dv_ind and current metric values
+  //! dv_hdl and current metric values
   std::map<uint32_t, Metric_avg> met_avg;
 };
 
