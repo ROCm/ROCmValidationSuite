@@ -74,19 +74,27 @@ This section explains how to get and compile current development stream of RVS.
 **Note:** The above command clones the master branch. If you're using a specific ROCm release, it's recommended to use the corresponding RVS version from the same release branch to ensure compatibility.
 
    e.g. If ROCm 6.4 is installed, clone the RVS repository from the 6.4 release branch.
-    git clone https://github.com/ROCm/ROCmValidationSuite.git -b release/rocm-rel-6.4
-
+```
+git clone https://github.com/ROCm/ROCmValidationSuite.git -b release/rocm-rel-6.4
+```
 ### Configure:
 
-    cd ROCmValidationSuite
-    cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
+```
+cd ROCmValidationSuite
+cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
+```
 
-    e.g. If ROCm 6.4 is installed, you can configure the build using one of the following cmake commands, depending on whether you're using the full versioned path or a symbolic link:
+e.g. If ROCm 6.4 is installed, you can configure the build using one of the following cmake commands, depending on whether you're using the full versioned path or a symbolic link:
 
 Option 1: Using the full versioned path
-    cmake -B ./build -DROCM_PATH=/opt/rocm-6.4.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-6.4.0 -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm-6.4.0
+```
+cmake -B ./build -DROCM_PATH=/opt/rocm-6.4.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-6.4.0 -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm-6.4.0
+```
+
 Option 2: Using the symbolic link
-    cmake -B ./build -DROCM_PATH=/opt/rocm -DCMAKE_INSTALL_PREFIX=/opt/rocm -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm
+```
+cmake -B ./build -DROCM_PATH=/opt/rocm -DCMAKE_INSTALL_PREFIX=/opt/rocm -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm
+```
 
 ### Build binary:
 
