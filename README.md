@@ -30,7 +30,7 @@ SLES :
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
  [ROCm installation guide](https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details.
 
-_**Note:**_
+**Note:**
 
 rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
 rocm-smi-lib64 package has been renamed to rocm-smi-lib from >= ROCm4.1.
@@ -49,7 +49,7 @@ SUSE :
 
     sudo zypper install rocblas rocm-smi-lib
 
-_**Note:**_
+**Note:**
 If rocm-smi-lib is already installed but /opt/rocm/lib/librocm_smi64.so doesn't exist. Do below:
 
 Ubuntu :
@@ -69,45 +69,45 @@ This section explains how to get and compile current development stream of RVS.
 
 ### Clone repository
 
-    git clone https://github.com/ROCm/ROCmValidationSuite.git
+git clone https://github.com/ROCm/ROCmValidationSuite.git
 
-**Note:** The above command clones the master branch. If you're using a specific ROCm release, it's recommended to use the corresponding RVS version from the same release branch to ensure compatibility.
+**Note:** 
+The above command clones the master branch. If you're using a specific ROCm release, it's recommended to use the corresponding RVS version from the same release branch to ensure compatibility.
 
-   e.g. If ROCm 6.4 is installed, clone the RVS repository from the 6.4 release branch.
-```
+If ROCm 6.4 is installed, clone the RVS repository from the 6.4 release branch by running:
+
 git clone https://github.com/ROCm/ROCmValidationSuite.git -b release/rocm-rel-6.4
-```
+
 ### Configure:
 
-```
 cd ROCmValidationSuite
 cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
-```
 
-e.g. If ROCm 6.4 is installed, you can configure the build using one of the following cmake commands, depending on whether you're using the full versioned path or a symbolic link:
+If ROCm 6.4 is installed, you can configure the build using one of the following cmake commands, depending on whether you're using the full versioned path or a symbolic link:
 
 Option 1: Using the full versioned path
-```
+
 cmake -B ./build -DROCM_PATH=/opt/rocm-6.4.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-6.4.0 -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm-6.4.0
-```
+
 
 Option 2: Using the symbolic link
-```
+
 cmake -B ./build -DROCM_PATH=/opt/rocm -DCMAKE_INSTALL_PREFIX=/opt/rocm -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm
-```
+
 
 ### Build binary:
 
-    make -C ./build
+make -C ./build
 
-**Note:** Use the -j option with the build command to enable parallel compilation, which can significantly speed up the build process.
+**Note:**
+Use the -j option with the build command to enable parallel compilation, which can significantly speed up the build process.
 
 ### Build package:
 
-    cd ./build
-    make package
+cd ./build
+make package
 
-**Note:**_ based on your OS, only DEB or RPM package will be built. You may
+**Note:** Based on your OS, only DEB or RPM package will be built. You may
 ignore an error for the unrelated configuration
 
 ### Install built package:
@@ -142,28 +142,31 @@ SUSE :
 
 ### Run version built from source code
 
-    cd <source folder>/build/bin
+cd <source folder>/build/bin
 
-    Command examples
-    ./rvs --help ; Lists all options to run RVS test suite
-    ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
+Command examples:
+
+./rvs --help ; Lists all options to run RVS test suite
+./rvs -g ; Lists supported GPUs available in the machine
+./rvs -c conf/gst_single.conf ; Run GST module default test configuration
 
 ### Run version pre-compiled and packaged with ROCm release
 
-    cd /opt/rocm/bin
+cd /opt/rocm/bin
 
-    Command examples
-    ./rvs --help ; Lists all options to run RVS test suite
-    ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
+Command examples:
+
+./rvs --help ; Lists all options to run RVS test suite
+./rvs -g ; Lists supported GPUs available in the machine
+./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
 
 To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
 
-    ./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf ; Run MI300X specific GST test configuration
-    ./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf ; Run Navi 32 specific GST test configuration
+./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf ; Run MI300X specific GST test configuration
+./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf ; Run Navi 32 specific GST test configuration
 
-Note: If present, always use GPU specific configurations instead of default test configurations.
+**Note:** 
+If present, always use GPU specific configurations instead of default test configurations.
 
 ## Reporting
 
