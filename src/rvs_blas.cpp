@@ -126,6 +126,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , hbl_scale_a_size(0)
   , hbl_scale_b_size(0)
   , hot_calls(_hot_calls)
+  , block_count(1)
 {
 
   if (blas_source == "rocblas") {
@@ -249,16 +250,16 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
       return;
     }
 
-    uint64_t sizeC = (beta == 0) ? 0 : size_c * get_hipdatatype_size(hbl_out_datatype);
+      uint64_t sizeC = (beta == 0) ? 0 : size_c * get_hipdatatype_size(hbl_out_datatype);
 
-    uint64_t total_rotating_size
-      = size_a * get_hipdatatype_size(hbl_datatype) + size_b * get_hipdatatype_size(hbl_datatype)
-      + sizeC + size_d * get_hipdatatype_size(hbl_out_datatype)
-      + hbl_scale_a_size * get_hipdatatype_size(HIP_R_8U)
-      + hbl_scale_b_size * get_hipdatatype_size(HIP_R_8U);
+      uint64_t total_rotating_size
+        = size_a * get_hipdatatype_size(hbl_datatype) + size_b * get_hipdatatype_size(hbl_datatype)
+        + sizeC + size_d * get_hipdatatype_size(hbl_out_datatype)
+        + hbl_scale_a_size * get_hipdatatype_size(HIP_R_8U)
+        + hbl_scale_b_size * get_hipdatatype_size(HIP_R_8U);
 
-    block_count = std::max((uint64_t)1,
-        std::min(hot_calls, (uint64_t)std::ceil((float)(rotating * 1024 * 1024) / total_rotating_size)));
+      block_count = std::max((uint64_t)1,
+          std::min(hot_calls, (uint64_t)std::ceil((float)(rotating * 1024 * 1024) / total_rotating_size)));
 
   }
   else {
@@ -768,9 +769,10 @@ void rvs_blas::release_gpu_matrix_mem(void) {
     if(hbl_layout_d)
       hipblasLtMatrixLayoutDestroy(hbl_layout_d);
 
-    for(int i = 0; i < block_count; i++) {
-      if(hbl_matmul[i])
+    if(!hbl_matmul.empty()) {
+      for(int i = 0; i < block_count; i++) {
         hipblasLtMatmulDescDestroy(hbl_matmul[i]);
+      }
     }
 
     if(hbl_workspace)
@@ -973,270 +975,246 @@ bool rvs_blas::run_blas_gemm(void) {
   if (is_error)
     return false;
 
-  if(blas_source == "rocblas") {
+  for(int i = 0; i < hot_calls; i++) {
 
-    if(ops_type == "sgemm") {
+    if(blas_source == "rocblas") {
 
-      float alpha = blas_alpha_val, beta = blas_beta_val;
+      if(ops_type == "sgemm") {
 
-      if(gemm_mode == "strided_batched") {
+        float alpha = blas_alpha_val, beta = blas_beta_val;
 
-        if (rocblas_sgemm_strided_batched(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, (float *)da, blas_lda_offset, stride_a,
-              (float *)db, blas_ldb_offset, stride_b, &beta,
-              (float *)dc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_sgemm_strided_batched() !!!" << "\n";
-          return false;
-        } else {
-          return true;
+        if(gemm_mode == "strided_batched") {
+
+          if (rocblas_sgemm_strided_batched(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                &alpha, (float *)da, blas_lda_offset, stride_a,
+                (float *)db, blas_ldb_offset, stride_b, &beta,
+                (float *)dc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_sgemm_strided_batched() !!!" << "\n";
+            return false;
+          }
         }
-      }
-      else {
+        else {
 
-        if (rocblas_sgemm(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, (float *)da, blas_lda_offset,
-              (float *)db, blas_ldb_offset, &beta,
-              (float *)dc, blas_ldc_offset) != rocblas_status_success) {
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_sgemm() !!!" << "\n";
-          return false;
-        } else {
-          return true;
-        }
-      }
-    }
-
-    if(ops_type == "dgemm") {
-
-      double alpha = blas_alpha_val, beta = blas_beta_val;
-
-      if(gemm_mode == "strided_batched") {
-
-        if (rocblas_dgemm_strided_batched(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, (double *)da, blas_lda_offset, stride_a,
-              (double *)db, blas_ldb_offset, stride_b, &beta,
-              (double *)dc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_dgemm_strided_batched() !!!" << "\n";
-          return false;
-        } else {
-          return true;
-        }
-      }
-      else {
-        if (rocblas_dgemm(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, (double *)da, blas_lda_offset,
-              (double *)db, blas_ldb_offset, &beta,
-              (double *)dc, blas_ldc_offset) != rocblas_status_success) {
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_dgemm() !!!" << "\n";
-          return false;
-        } else {
-          return true;
-        }
-      }
-    }
-
-    if(ops_type == "hgemm") {
-
-      _Float16 alpha = (float)blas_alpha_val;
-      _Float16 beta = (float)blas_beta_val;
-
-      if(gemm_mode == "strided_batched") {
-
-        if (rocblas_hgemm_strided_batched(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, (rocblas_half *)da, blas_lda_offset, stride_a,
-              (rocblas_half *)db, blas_ldb_offset, stride_b, &beta,
-              (rocblas_half *)dc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_hgemm_strided_batched() !!!" << "\n";
-          return false;
-        } else {
-          return true;
-        }
-      }
-      else {
-
-        if (rocblas_hgemm(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k,
-              &alpha, (rocblas_half *)da, blas_lda_offset,
-              (rocblas_half *)db, blas_ldb_offset, &beta,
-              (rocblas_half *)dc, blas_ldc_offset) != rocblas_status_success) {
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_hgemm() !!!" << "\n";
-          return false;
-        } else {
-          return true;
+          if (rocblas_sgemm(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                &alpha, (float *)da, blas_lda_offset,
+                (float *)db, blas_ldb_offset, &beta,
+                (float *)dc, blas_ldc_offset) != rocblas_status_success) {
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_sgemm() !!!" << "\n";
+            return false;
+          }
         }
       }
 
-    }
+      if(ops_type == "dgemm") {
 
-    if(data_type == "fp8_r") {
+        double alpha = blas_alpha_val, beta = blas_beta_val;
+
+        if(gemm_mode == "strided_batched") {
+
+          if (rocblas_dgemm_strided_batched(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                &alpha, (double *)da, blas_lda_offset, stride_a,
+                (double *)db, blas_ldb_offset, stride_b, &beta,
+                (double *)dc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_dgemm_strided_batched() !!!" << "\n";
+            return false;
+          }
+        }
+        else {
+          if (rocblas_dgemm(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                &alpha, (double *)da, blas_lda_offset,
+                (double *)db, blas_ldb_offset, &beta,
+                (double *)dc, blas_ldc_offset) != rocblas_status_success) {
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_dgemm() !!!" << "\n";
+            return false;
+          }
+        }
+      }
+
+      if(ops_type == "hgemm") {
+
+        _Float16 alpha = (float)blas_alpha_val;
+        _Float16 beta = (float)blas_beta_val;
+
+        if(gemm_mode == "strided_batched") {
+
+          if (rocblas_hgemm_strided_batched(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                &alpha, (rocblas_half *)da, blas_lda_offset, stride_a,
+                (rocblas_half *)db, blas_ldb_offset, stride_b, &beta,
+                (rocblas_half *)dc, blas_ldc_offset, stride_c, batch_size) != rocblas_status_success) {
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_hgemm_strided_batched() !!!" << "\n";
+            return false;
+          }
+        }
+        else {
+
+          if (rocblas_hgemm(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k,
+                &alpha, (rocblas_half *)da, blas_lda_offset,
+                (rocblas_half *)db, blas_ldb_offset, &beta,
+                (rocblas_half *)dc, blas_ldc_offset) != rocblas_status_success) {
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_hgemm() !!!" << "\n";
+            return false;
+          }
+        }
+      }
+
+      if(data_type == "fp8_r") {
 #if RVS_ROCBLAS_HAS_F8_DATATYPES
-      rocblas_datatype a_type = rocblas_datatype_f8_r;
-      rocblas_datatype b_type = rocblas_datatype_f8_r;
-      rocblas_datatype c_type = rocblas_datatype_f8_r;
-      rocblas_datatype d_type = rocblas_datatype_f8_r;
+        rocblas_datatype a_type = rocblas_datatype_f8_r;
+        rocblas_datatype b_type = rocblas_datatype_f8_r;
+        rocblas_datatype c_type = rocblas_datatype_f8_r;
+        rocblas_datatype d_type = rocblas_datatype_f8_r;
 
-      rocblas_computetype compute_type = rocblas_compute_type_f32;
-      rocblas_gemm_algo algo = rocblas_gemm_algo_standard;
-      int32_t sol_index = 0;
-      uint32_t flags = 0;
+        rocblas_computetype compute_type = rocblas_compute_type_f32;
+        rocblas_gemm_algo algo = rocblas_gemm_algo_standard;
+        int32_t sol_index = 0;
+        uint32_t flags = 0;
 
-      rocblas_float alpha = (rocblas_float) blas_alpha_val;
-      rocblas_float beta = (rocblas_float) blas_beta_val;
+        rocblas_float alpha = (rocblas_float) blas_alpha_val;
+        rocblas_float beta = (rocblas_float) blas_beta_val;
 
-      if(gemm_mode == "strided_batched") {
+        if(gemm_mode == "strided_batched") {
 
-        if (rocblas_gemm_strided_batched_ex3(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
-              da, a_type, blas_lda_offset, stride_a,
-              db, b_type, blas_ldb_offset, stride_b, &beta,
-              dc, c_type, blas_ldc_offset, stride_c,
-              dd, d_type, blas_ldd_offset, stride_d, batch_size,
-              compute_type, algo, sol_index, flags) != rocblas_status_success) {
+          if (rocblas_gemm_strided_batched_ex3(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
+                da, a_type, blas_lda_offset, stride_a,
+                db, b_type, blas_ldb_offset, stride_b, &beta,
+                dc, c_type, blas_ldc_offset, stride_c,
+                dd, d_type, blas_ldd_offset, stride_d, batch_size,
+                compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_gemm_strided_batched_ex3() !!! " << "\n";
-          return false;
-        } else {
-          return true;
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_gemm_strided_batched_ex3() !!! " << "\n";
+            return false;
+          }
         }
-      }
-      else {
+        else {
 
-        if (rocblas_gemm_ex3(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
-              da, a_type, blas_lda_offset,
-              db, b_type, blas_ldb_offset, &beta,
-              dc, c_type, blas_ldc_offset,
-              dd, d_type, blas_ldd_offset,
-              compute_type, algo, sol_index, flags) != rocblas_status_success) {
+          if (rocblas_gemm_ex3(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
+                da, a_type, blas_lda_offset,
+                db, b_type, blas_ldb_offset, &beta,
+                dc, c_type, blas_ldc_offset,
+                dd, d_type, blas_ldd_offset,
+                compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_gemm_ex3() !!! " << "\n";
-          return false;
-        } else {
-          return true;
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_gemm_ex3() !!! " << "\n";
+            return false;
+          }
         }
-      }
 #else
-      return true;
+        return true;
 #endif
-    }
+      }
 
-    if(data_type == "fp16_r") {
+      if(data_type == "fp16_r") {
 
-      rocblas_datatype a_type = rocblas_datatype_f16_r;
-      rocblas_datatype b_type = rocblas_datatype_f16_r;
-      rocblas_datatype c_type = rocblas_datatype_f16_r;
-      rocblas_datatype d_type = rocblas_datatype_f16_r;
+        rocblas_datatype a_type = rocblas_datatype_f16_r;
+        rocblas_datatype b_type = rocblas_datatype_f16_r;
+        rocblas_datatype c_type = rocblas_datatype_f16_r;
+        rocblas_datatype d_type = rocblas_datatype_f16_r;
 
-      rocblas_datatype compute_type = rocblas_datatype_f32_r;
-      rocblas_gemm_algo algo = rocblas_gemm_algo_standard;
-      int32_t sol_index = 0;
-      uint32_t flags = 0;
+        rocblas_datatype compute_type = rocblas_datatype_f32_r;
+        rocblas_gemm_algo algo = rocblas_gemm_algo_standard;
+        int32_t sol_index = 0;
+        uint32_t flags = 0;
 
-      rocblas_float alpha = (rocblas_float) blas_alpha_val;
-      rocblas_float beta = (rocblas_float) blas_beta_val;
+        rocblas_float alpha = (rocblas_float) blas_alpha_val;
+        rocblas_float beta = (rocblas_float) blas_beta_val;
 
-      if(gemm_mode == "strided_batched") {
+        if(gemm_mode == "strided_batched") {
 
-        if (rocblas_gemm_strided_batched_ex(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
-              da, a_type, blas_lda_offset, stride_a,
-              db, b_type, blas_ldb_offset, stride_b, &beta,
-              dc, c_type, blas_ldc_offset, stride_c,
-              dd, d_type, blas_ldd_offset, stride_d, batch_size,
-              compute_type, algo, sol_index, flags) != rocblas_status_success) {
+          if (rocblas_gemm_strided_batched_ex(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
+                da, a_type, blas_lda_offset, stride_a,
+                db, b_type, blas_ldb_offset, stride_b, &beta,
+                dc, c_type, blas_ldc_offset, stride_c,
+                dd, d_type, blas_ldd_offset, stride_d, batch_size,
+                compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_gemm_strided_batched_ex() !!!" << "\n";
-          return false;
-        } else {
-          return true;
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_gemm_strided_batched_ex() !!!" << "\n";
+            return false;
+          }
+        }
+        else {
+
+          if (rocblas_gemm_ex(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
+                da, a_type, blas_lda_offset,
+                db, b_type, blas_ldb_offset, &beta,
+                dc, c_type, blas_ldc_offset,
+                dd, d_type, blas_ldd_offset,
+                compute_type, algo, sol_index, flags) != rocblas_status_success) {
+
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_gemm_ex() !!!" << "\n";
+            return false;
+          }
         }
       }
-      else {
 
-        if (rocblas_gemm_ex(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
-              da, a_type, blas_lda_offset,
-              db, b_type, blas_ldb_offset, &beta,
-              dc, c_type, blas_ldc_offset,
-              dd, d_type, blas_ldd_offset,
-              compute_type, algo, sol_index, flags) != rocblas_status_success) {
+      if(data_type == "bf16_r") {
 
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_gemm_ex() !!!" << "\n";
-          return false;
-        } else {
-          return true;
+        rocblas_datatype a_type = rocblas_datatype_bf16_r;
+        rocblas_datatype b_type = rocblas_datatype_bf16_r;
+        rocblas_datatype c_type = rocblas_datatype_bf16_r;
+        rocblas_datatype d_type = rocblas_datatype_bf16_r;
+
+        rocblas_datatype compute_type = rocblas_datatype_f32_r;
+        rocblas_gemm_algo algo = rocblas_gemm_algo_standard;
+        int32_t sol_index = 0;
+        uint32_t flags = 0;
+
+        rocblas_float alpha = (rocblas_float) blas_alpha_val;
+        rocblas_float beta = (rocblas_float) blas_beta_val;
+
+        if(gemm_mode == "strided_batched") {
+
+          if (rocblas_gemm_strided_batched_ex(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
+                da, a_type, blas_lda_offset, stride_a,
+                db, b_type, blas_ldb_offset, stride_b, &beta,
+                dc, c_type, blas_ldc_offset, stride_c,
+                dd, d_type, blas_ldd_offset, stride_d, batch_size,
+                compute_type, algo, sol_index, flags) != rocblas_status_success) {
+
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_gemm_strided_batched_ex() !!!" << "\n";
+            return false;
+          }
         }
-      }
-    }
+        else {
 
-    if(data_type == "bf16_r") {
+          if (rocblas_gemm_ex(blas_handle, transa, transb,
+                rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
+                da, a_type, blas_lda_offset,
+                db, b_type, blas_ldb_offset, &beta,
+                dc, c_type, blas_ldc_offset,
+                dd, d_type, blas_ldd_offset,
+                compute_type, algo, sol_index, flags) != rocblas_status_success) {
 
-      rocblas_datatype a_type = rocblas_datatype_bf16_r;
-      rocblas_datatype b_type = rocblas_datatype_bf16_r;
-      rocblas_datatype c_type = rocblas_datatype_bf16_r;
-      rocblas_datatype d_type = rocblas_datatype_bf16_r;
-
-      rocblas_datatype compute_type = rocblas_datatype_f32_r;
-      rocblas_gemm_algo algo = rocblas_gemm_algo_standard;
-      int32_t sol_index = 0;
-      uint32_t flags = 0;
-
-      rocblas_float alpha = (rocblas_float) blas_alpha_val;
-      rocblas_float beta = (rocblas_float) blas_beta_val;
-
-      if(gemm_mode == "strided_batched") {
-
-        if (rocblas_gemm_strided_batched_ex(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
-              da, a_type, blas_lda_offset, stride_a,
-              db, b_type, blas_ldb_offset, stride_b, &beta,
-              dc, c_type, blas_ldc_offset, stride_c,
-              dd, d_type, blas_ldd_offset, stride_d, batch_size,
-              compute_type, algo, sol_index, flags) != rocblas_status_success) {
-
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_gemm_strided_batched_ex() !!!" << "\n";
-          return false;
-        } else {
-          return true;
-        }
-      }
-      else {
-
-        if (rocblas_gemm_ex(blas_handle, transa, transb,
-              rvs_blas::m, rvs_blas::n, rvs_blas::k, &alpha,
-              da, a_type, blas_lda_offset,
-              db, b_type, blas_ldb_offset, &beta,
-              dc, c_type, blas_ldc_offset,
-              dd, d_type, blas_ldd_offset,
-              compute_type, algo, sol_index, flags) != rocblas_status_success) {
-
-          is_error = true;  // GPU cannot enqueue the gemm
-          std::cout << "\nError in rocblas_gemm_ex() !!!" << "\n";
-          return false;
-        } else {
-          return true;
+            is_error = true;  // GPU cannot enqueue the gemm
+            std::cout << "\nError in rocblas_gemm_ex() !!!" << "\n";
+            return false;
+          }
         }
       }
     }
-  }
-  else if(blas_source == "hipblaslt") {
+    else if(blas_source == "hipblaslt") {
 
-    for(int i = 0; i < hot_calls; i++) {
 
       void * da_p = (uint8_t *)da + (i % block_count) * size_a * get_hipdatatype_size(hbl_datatype);
       void * db_p = (uint8_t *)db + (i % block_count) * size_b * get_hipdatatype_size(hbl_datatype);
@@ -1256,10 +1234,9 @@ bool rvs_blas::run_blas_gemm(void) {
         return false;
       }
     }
-
-  }
-  else {
-    return false;
+    else {
+      return false;
+    }
   }
 
   return true;
