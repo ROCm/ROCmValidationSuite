@@ -30,7 +30,7 @@ project(mxDataGenerator-download NONE)
 include(ExternalProject)
 ExternalProject_Add(mxDataGenerator
   GIT_REPOSITORY    https://github.com/ROCm/mxDataGenerator.git
-  GIT_TAG           main
+  GIT_TAG           12c016dc694139317feb2e23c59028fde70beaf4
   SOURCE_DIR        "${CMAKE_BINARY_DIR}/mxDataGenerator-src"
   BINARY_DIR        "${CMAKE_BINARY_DIR}/mxDataGenerator-build"
   CONFIGURE_COMMAND ""
