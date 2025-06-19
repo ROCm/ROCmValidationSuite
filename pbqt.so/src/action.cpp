@@ -297,7 +297,6 @@ int pbqt_action::create_threads() {
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
-
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
 
     // filter out by source device id

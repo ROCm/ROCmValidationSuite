@@ -433,7 +433,6 @@ int gpup_action::run(void) {
 
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
-
   bool b_gpu_found = false;
 
   if (bjson){
