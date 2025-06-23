@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -84,7 +84,7 @@ void PERFWorker::setup_blas(int *error, string *err_description) {
           "default", perf_trans_a, perf_trans_b,
           perf_alpha_val, perf_beta_val,
           perf_lda_offset, perf_ldb_offset, perf_ldc_offset, perf_ldd_offset, perf_ops_type,
-          "", "", 0, 0, 0, 0, 0, blas_source, compute_type, "", "", ""));
+          "", "", 0, 0, 0, 0, 0, blas_source, compute_type, "", "", "", 0, perf_hot_calls));
 
     if (!gpu_blas) {
         *error = 1;
@@ -169,24 +169,20 @@ void PERFWorker::log_interval_gflops(double gflops_interval) {
  * @return true if stress violations is less than max_violations, false otherwise
  */
 bool PERFWorker::do_perf_stress_test(int *error, std::string *err_description) {
-    uint16_t num_gemm_ops = 0;
     double start_time, end_time;
     double timetaken;
     string msg;
 
     *error = 0;
     max_gflops = 0;
-    num_gemm_ops = 0;
     start_time = 0;
     end_time = 0;
 
     //Start the timer
     start_time = gpu_blas->get_time_us();
 
-    while(num_gemm_ops++ <= perf_hot_calls) { 
-        // run GEMM & wait for completion
-        gpu_blas->run_blas_gemm();
-    }
+    // run GEMM & wait for completion
+    gpu_blas->run_blas_gemm();
 
     //End the timer
     end_time = gpu_blas->get_time_us();

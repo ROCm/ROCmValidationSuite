@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -291,6 +291,8 @@ class GSTWorker : public rvs::ThreadBase {
     void set_gst_scale_a(std::string _scale_a) { gst_scale_a = _scale_a; }
     //! set scale matrix b
     void set_gst_scale_b(std::string _scale_b) { gst_scale_b = _scale_b; }
+    //! set rotating buffer size
+    void set_gst_rotating(uint32_t _rotating) { gst_rotating = _rotating; }
 
  protected:
     void setup_blas(int *error, std::string *err_description);
@@ -407,6 +409,8 @@ class GSTWorker : public rvs::ThreadBase {
     std::string gst_scale_a;
     //! Scale matrix b
     std::string gst_scale_b;
+    //! Rotating buffer size
+    uint32_t gst_rotating;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_
