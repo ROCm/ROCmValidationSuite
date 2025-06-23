@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -48,6 +48,10 @@ using std::string;
 using std::vector;
 using std::map;
 using std::regex;
+
+#if(defined(RVS_ROCBLAS_VERSION_FLAT) && (RVS_ROCBLAS_VERSION_FLAT >= 3001000 && RVS_ROCBLAS_VERSION_FLAT < 5000000))
+  #define RVS_ROCBLAS_HAS_F8_DATATYPES 1
+#endif
 
 #define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_interval"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
@@ -565,6 +569,16 @@ bool gst_action::get_all_gst_config_keys(void) {
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
+
+#if !defined(RVS_ROCBLAS_HAS_F8_DATATYPES)
+  if (gst_blas_source == "rocblas") {
+    if(gst_data_type == "fp8_r") {
+      msg = "The version of rocBLAS currently in use no longer supports FP8.";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      bsts = false;
+    }
+  }
+#endif
 
   return bsts;
 }
