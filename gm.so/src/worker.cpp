@@ -147,7 +147,6 @@ void Worker::run() {
   unsigned int usec;
   void* r;
   rvs::action_result_t action_result;
-  //RSMI_POWER_TYPE type = RSMI_INVALID_POWER;
 
   rvs::timer<Worker> timer_running(&Worker::do_metric_values, this);
 
