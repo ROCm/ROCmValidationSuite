@@ -212,7 +212,7 @@ bool IETWorker::do_iet_power_stress(void) {
 	amdsmi_power_info_t pwr_info;
         amdsmi_status_t smi_stat = amdsmi_get_power_info(smi_device_handle, &pwr_info);
         if (smi_stat == AMDSMI_STATUS_SUCCESS) {
-          cur_power_value = static_cast<float>(pwr_info.average_socket_power);
+          cur_power_value = static_cast<float>(pwr_info.socket_power);
         }
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
