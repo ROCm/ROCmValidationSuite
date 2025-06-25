@@ -134,8 +134,8 @@ void Worker::run() {
 //  std::vector<std::string> val_vec;
 
   std::string msg;
-  rsmi_status_t status;
-  rsmi_frequencies f;
+  amdsmi_status_t status;
+  amdsmi_frequencies_t f;
   uint32_t sensor_ind = 0;
   int64_t  temperature;
   int64_t  speed;
@@ -147,7 +147,6 @@ void Worker::run() {
   unsigned int usec;
   void* r;
   rvs::action_result_t action_result;
-  RSMI_POWER_TYPE type = RSMI_INVALID_POWER;
 
   rvs::timer<Worker> timer_running(&Worker::do_metric_values, this);
 
@@ -159,26 +158,29 @@ void Worker::run() {
                                sec, usec);
 
   // iterate over devices
-  for (auto it = dv_ind.begin(); it != dv_ind.end(); it++) {
+  uint16_t loop_idx=0;
+  std::map<uint16_t, amdsmi_processor_handle> idx_smi_map;
+  for (auto it = dv_hdl.begin(); it != dv_hdl.end(); it++, loop_idx++) {
     RVSTRACE_
     // fill in the info
+    idx_smi_map[loop_idx] = it->second;
     met_avg.insert(std::pair<uint16_t, Metric_avg>
-          (it->first, {it->second, 0, 0, 0, 0, 0}));
+          (loop_idx, {it->first, 0, 0, 0, 0, 0}));
     met_violation.insert(std::pair<uint16_t, Metric_violation>
-          (it->first, {it->second, 0, 0, 0, 0, 0}));
+          (loop_idx, {it->first, 0, 0, 0, 0, 0}));
     met_value.insert(std::pair<uint16_t, Metric_value>
-          (it->first, {it->second, 0, 0, 0, 0, 0}));
+          (loop_idx, {it->first, 0, 0, 0, 0, 0}));
 
-    msg = "[" + action_name + "] gm " + std::to_string(it->second) +
+    msg = "[" + action_name + "] gm " + std::to_string(it->first) +
           " started";
     rvs::lp::Log(msg, rvs::logresults, sec, usec);
-    rvs::lp::AddString(r, "device", std::to_string(it->second));
+    rvs::lp::AddString(r, "device", std::to_string(loop_idx));
     for (auto itb = bounds.begin(); itb != bounds.end(); itb++) {
       RVSTRACE_
 
       if (itb->second.mon_metric) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
-            std::to_string(it->second) + " " + "monitoring " +
+            std::to_string(it->first) + " " + "monitoring " +
             itb->first;
         if (itb->second.check_bounds) {
           msg+= " bounds min: " + std::to_string(itb->second.min_val) +
@@ -201,16 +203,17 @@ void Worker::run() {
   // worker thread has started
   while (brun) {
     RVSTRACE_
-
-    for (auto it = dv_ind.begin(); it != dv_ind.end(); it++) {
-      uint32_t ix = it->first;
-      int32_t gpuid = it->second;
+    uint16_t loop_idx=0;
+    for (auto it = dv_hdl.begin(); it != dv_hdl.end(); it++, loop_idx++) {
+       
+      auto ix = it->second;
+      int32_t gpuid = it->first;
       RVSTRACE_
       if (bounds[GM_MEM_CLOCK].mon_metric) {
         RVSTRACE_
-        status = rsmi_dev_gpu_clk_freq_get(ix, RSMI_CLK_TYPE_MEM, &f);
+        status = amdsmi_get_clk_freq(ix, AMDSMI_CLK_TYPE_MEM, &f);
         uint64_t mhz = f.frequency[f.current]/1e6;
-        met_value[ix].mem_clock = mhz;
+        met_value[loop_idx].mem_clock = mhz;
         if (!(mhz >= bounds[GM_MEM_CLOCK].min_val && mhz <=
                         bounds[GM_MEM_CLOCK].max_val) &&
                         bounds[GM_MEM_CLOCK].check_bounds) {
@@ -227,7 +230,7 @@ void Worker::run() {
           action_result.output = msg.c_str();
           action.action_callback(&action_result);
 
-          met_violation[ix].mem_clock_violation++;
+          met_violation[loop_idx].mem_clock_violation++;
           if (term) {
             RVSTRACE_
             if (force) {
@@ -246,23 +249,23 @@ void Worker::run() {
           RVSTRACE_
         }
         RVSTRACE_
-        met_avg[ix].av_mem_clock += mhz;
+        met_avg[loop_idx].av_mem_clock += mhz;
       }
       RVSTRACE_
 
       if (bounds[GM_CLOCK].mon_metric) {
         RVSTRACE_
-        status = rsmi_dev_gpu_clk_freq_get(ix,
-                              RSMI_CLK_TYPE_SYS, &f);
+        status = amdsmi_get_clk_freq(ix,
+                              AMDSMI_CLK_TYPE_SYS , &f);
         uint32_t mhz = f.frequency[f.current]/1e6;
-        met_value[ix].clock = mhz;
+        met_value[loop_idx].clock = mhz;
         if (!(mhz >= bounds[GM_CLOCK].min_val && mhz <=
                     bounds[GM_CLOCK].max_val) &&
                     bounds[GM_CLOCK].check_bounds) {
           RVSTRACE_
           // write info
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
-              std::to_string(met_avg[ix].gpu_id) + " " +
+              std::to_string(met_avg[loop_idx].gpu_id) + " " +
               GM_CLOCK + " " + "bounds violation " +
               std::to_string(mhz) + "MHz";
           rvs::lp::Log(msg, rvs::loginfo);
@@ -272,7 +275,7 @@ void Worker::run() {
           action_result.output = msg.c_str();
           action.action_callback(&action_result);
 
-          met_violation[ix].clock_violation++;
+          met_violation[loop_idx].clock_violation++;
           if (term) {
             RVSTRACE_
             if (force) {
@@ -291,7 +294,7 @@ void Worker::run() {
           }
           RVSTRACE_
         }
-        met_avg[ix].av_clock += mhz;
+        met_avg[loop_idx].av_clock += mhz;
         RVSTRACE_
       }
 
@@ -300,24 +303,24 @@ void Worker::run() {
         RVSTRACE_
 
           // Get GPU's current junction temperature
-          status = rsmi_dev_temp_metric_get(ix, RSMI_TEMP_TYPE_JUNCTION,
-              RSMI_TEMP_CURRENT, &temperature);
+          status = amdsmi_get_temp_metric(ix, AMDSMI_TEMPERATURE_TYPE_JUNCTION ,
+              AMDSMI_TEMP_CURRENT , &temperature);
 
 #ifdef UT_TCD_1
-        status = RSMI_STATUS_UNKNOWN_ERROR;
+        status = AMDSMI_STATUS_UNKNOWN_ERROR;
 #endif  // UT_TCD_1
-        if (status == RSMI_STATUS_SUCCESS) {
+        if (status == AMDSMI_STATUS_SUCCESS) {
           RVSTRACE_
           int64_t temper = temperature/1000;
-          met_value[ix].temp = temper;
-          met_avg[ix].av_temp += temper;
+          met_value[loop_idx].temp = temper;
+          met_avg[loop_idx].av_temp += temper;
           if (!(temper >= bounds[GM_TEMP].min_val && temper <=
                         bounds[GM_TEMP].max_val) &&
                         bounds[GM_TEMP].check_bounds) {
             RVSTRACE_
             // write info
             msg = "[" + action_name  + "] " + MODULE_NAME + " " +
-                std::to_string(met_avg[ix].gpu_id) + " " +
+                std::to_string(met_avg[loop_idx].gpu_id) + " " +
                 + GM_TEMP + " " + "bounds violation " +
                 std::to_string(temper) + "C";
             rvs::lp::Log(msg, rvs::loginfo);
@@ -328,7 +331,7 @@ void Worker::run() {
             action_result.output = msg.c_str();
             action.action_callback(&action_result);
 
-            met_violation[ix].temp_violation++;
+            met_violation[loop_idx].temp_violation++;
             if (term) {
               RVSTRACE_
               if (force) {
@@ -352,7 +355,7 @@ void Worker::run() {
         } else {
           RVSTRACE_
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
-          std::to_string(met_avg[ix].gpu_id) + " " +
+          std::to_string(met_avg[loop_idx].gpu_id) + " " +
           GM_TEMP + " Not available";
           rvs::lp::Log(msg, rvs::loginfo);
         }
@@ -365,9 +368,9 @@ void Worker::run() {
 
         speed = 0;
         max_speed = 0;
-        status = rsmi_dev_fan_speed_get(ix, sensor_ind, &speed);
-        if (status == RSMI_STATUS_SUCCESS) {
-          status = rsmi_dev_fan_speed_max_get(ix, sensor_ind, &max_speed);
+        status = amdsmi_get_gpu_fan_speed(ix, sensor_ind, &speed);
+        if (status == AMDSMI_STATUS_SUCCESS ) {
+          status = amdsmi_get_gpu_fan_speed_max(ix, sensor_ind, &max_speed);
         }
 
         /* Calculate fan speed percentage */
@@ -376,12 +379,12 @@ void Worker::run() {
         }
 
 #ifdef UT_TCD_1
-        status = RSMI_STATUS_UNKNOWN_ERROR;
+        status = AMDSMI_STATUS_UNKNOWN_ERROR ;
 #endif  // UT_TCD_1
-        if (status == RSMI_STATUS_SUCCESS) {
+        if (status == AMDSMI_STATUS_SUCCESS) {
           RVSTRACE_
-          met_value[ix].fan = fan_percentage;
-          met_avg[ix].av_fan += static_cast<uint64_t> (fan_percentage);
+          met_value[loop_idx].fan = fan_percentage;
+          met_avg[loop_idx].av_fan += static_cast<uint64_t> (fan_percentage);
 
           if (!(fan_percentage >= bounds[GM_FAN].min_val && fan_percentage <=
                       bounds[GM_FAN].max_val) &&
@@ -389,7 +392,7 @@ void Worker::run() {
             RVSTRACE_
             // write info
             msg = "[" + action_name  + "] " + MODULE_NAME + " " +
-                  std::to_string(met_avg[ix].gpu_id) + " " +
+                  std::to_string(met_avg[loop_idx].gpu_id) + " " +
                   + GM_FAN + " " + "bounds violation " +
                   std::to_string(fan_percentage) + "%";
             rvs::lp::Log(msg, rvs::loginfo);
@@ -399,7 +402,7 @@ void Worker::run() {
             action_result.output = msg.c_str();
             action.action_callback(&action_result);
 
-            met_violation[ix].fan_violation++;
+            met_violation[loop_idx].fan_violation++;
             if (term) {
               RVSTRACE_
               if (force) {
@@ -423,7 +426,7 @@ void Worker::run() {
         } else {
           RVSTRACE_
           msg = "[" + action_name  + "] " + MODULE_NAME + " " +
-          std::to_string(met_avg[ix].gpu_id) + " " +
+          std::to_string(met_avg[loop_idx].gpu_id) + " " +
           GM_FAN + " Not available";
           rvs::lp::Log(msg, rvs::loginfo);
         }
@@ -433,10 +436,10 @@ void Worker::run() {
       RVSTRACE_
       if (bounds[GM_POWER].mon_metric) {
         RVSTRACE_
-
-        status = rsmi_dev_power_get(ix, &power, &type);
-        met_value[ix].power = power;
-        met_avg[ix].av_power += power;
+        amdsmi_power_info_t pwr_info;
+        status = amdsmi_get_power_info(ix, &pwr_info);
+        met_value[loop_idx].power = pwr_info.socket_power;
+        met_avg[loop_idx].av_power += pwr_info.socket_power;
         if (bounds[GM_POWER].check_bounds) {
           RVSTRACE_
           if (power < bounds[GM_POWER].min_val * 1000000 ||
@@ -444,7 +447,7 @@ void Worker::run() {
             RVSTRACE_
             // write info
             msg = "[" + action_name  + "] " + MODULE_NAME + " " +
-                  std::to_string(met_avg[ix].gpu_id) + " " +
+                  std::to_string(met_avg[loop_idx].gpu_id) + " " +
                   GM_POWER + " " + "bounds violation " +
                   std::to_string(static_cast<unsigned int>(power / 1e6)) + "Watts";
             rvs::lp::Log(msg, rvs::loginfo);
@@ -454,7 +457,7 @@ void Worker::run() {
             action_result.output = msg.c_str();
             action.action_callback(&action_result);
 
-            met_violation[ix].power_violation++;
+            met_violation[loop_idx].power_violation++;
             if (term) {
               RVSTRACE_
               if (force) {
