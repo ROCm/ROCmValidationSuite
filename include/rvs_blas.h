@@ -331,9 +331,9 @@ class rvs_blas {
         (datatype == "fp6_e3m2_r") ? HIP_R_6F_E3M2 :
         (datatype == "fp6_e2m3_r") ? HIP_R_6F_E2M3 :
         (datatype == "i8_r")       ? HIP_R_8I  :
-        (datatype == "fp8_r")      ? HIP_R_8F_E4M3  :
-        (datatype == "fp8_e4m3_r") ? HIP_R_8F_E4M3  : // OCP fp8 E4M3
-        (datatype == "fp8_e5m2_r") ? HIP_R_8F_E5M2  : // OCP fp8 E5M2
+        (datatype == "fp8_r")      ? HIP_R_8F_E4M3_FNUZ : // FP8-FNUZ
+        (datatype == "fp8_e4m3_r") ? HIP_R_8F_E4M3  : // FP8-OCP E4M3
+        (datatype == "fp8_e5m2_r") ? HIP_R_8F_E5M2  : // FP8-OCP E5M2
         (datatype == "bf16_r")     ? HIP_R_16BF :
         (datatype == "fp16_r")     ? HIP_R_16F  :
         (datatype == "fp32_r")     ? HIP_R_32F  :
@@ -345,6 +345,7 @@ class rvs_blas {
     hipblasComputeType_t computetype_to_hipblas_computetype(const std::string& computetype)
     {
       return
+        computetype == "fp16_r" ? HIPBLAS_COMPUTE_16F  :
         computetype == "fp32_r" ? HIPBLAS_COMPUTE_32F  :
         computetype == "xf32_r" ? HIPBLAS_COMPUTE_32F_FAST_TF32 :
         computetype == "fp64_r" ? HIPBLAS_COMPUTE_64F :
