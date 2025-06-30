@@ -240,7 +240,6 @@ int display_gpu_info (void) {
     int32_t gpu_id;
     int32_t device_id;
     uint64_t bdfId;// this is pcie location id to uniquely identify device
-    amdsmi_processor_handle smi_handle;
   };
 
   char buf[256];
@@ -276,10 +275,11 @@ int display_gpu_info (void) {
       continue;
     }
 
-    amdsmi_processor_handle smi_hdl;
-    if (gpu_hip_to_smi_hdl(i, &smi_hdl)){
-      continue;
-    }
+    uint64_t completBDFId = 0;
+    completBDFId |= (static_cast<uint64_t>(pDom) & 0xFFFF) << 24;
+    completBDFId |= (static_cast<uint64_t>(pBus) & 0xFF) << 16;
+    completBDFId |= (static_cast<uint64_t>(pDev) & 0x1F) << 3;
+    completBDFId |= (static_cast<uint64_t>(pFun) & 0x7);
 
     hipDeviceGetPCIBusId(buf, 256, i);
     device_info info;
@@ -288,9 +288,7 @@ int display_gpu_info (void) {
     info.node_id   = node_id;
     info.gpu_id    = gpu_id;
     info.device_id = dev_id;
-    info.smi_handle = smi_hdl;
-    info.bdfId = 0;
-    amdsmi_get_gpu_bdf_id(smi_hdl, &info.bdfId);
+    info.bdfId = completBDFId;
     gpu_info_list.push_back(info);
   }
 
