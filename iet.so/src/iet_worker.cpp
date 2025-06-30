@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -121,7 +121,7 @@ void IETWorker::computeThread(void) {
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpu_device_index, size_a, size_b, size_c, matrix_init,
           iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset,
           iet_ops_type, iet_data_type, gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d, blas_source, compute_type,
-          iet_out_data_type, "", ""));
+          iet_out_data_type, "", "", 0, iet_hot_calls));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();
@@ -134,13 +134,10 @@ void IETWorker::computeThread(void) {
     //Hit the GPU with compute gemm workload
     while ((duration < run_duration_ms) && (endtest == false)) {
 
-      for (uint64_t i = 0; i < iet_hot_calls; i++) {
-
-        // run GEMM operation
-        if(!gpu_blas->run_blas_gemm()) {
-          endtest = true;
-          break;
-        }
+      // run GEMM operation
+      if(!gpu_blas->run_blas_gemm()) {
+        endtest = true;
+        break;
       }
 
       // Wait for all the GEMM operations to complete
