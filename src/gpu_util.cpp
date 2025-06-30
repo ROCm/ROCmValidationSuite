@@ -191,7 +191,6 @@ void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id) {
 
 vector<amdsmi_processor_handle>
 get_smi_processors(){
-  //auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   std::vector<amdsmi_processor_handle> proc_handles;
   uint32_t socket_num = 0;
   auto ret = amdsmi_get_socket_handles(&socket_num, nullptr);
@@ -202,19 +201,17 @@ get_smi_processors(){
     ret = amdsmi_get_processor_handles(socket, &dev_cnt, nullptr);
     std::vector<amdsmi_processor_handle> dev_handles(dev_cnt);
     ret = amdsmi_get_processor_handles(socket,
-              &dev_cnt, &dev_handles[0]);
+        &dev_cnt, &dev_handles[0]);
     if (ret == AMDSMI_STATUS_SUCCESS){
-	    for (auto dev : dev_handles){
-              processor_type_t processor_type;
-	      amdsmi_get_processor_type(dev, &processor_type);
-	      if (processor_type == AMDSMI_PROCESSOR_TYPE_AMD_GPU) {
-		      proc_handles.push_back(dev);
-	      }
-	    }
-      //proc_handles.insert(proc_handles.end(), dev_handles.begin(), dev_handles.end());
+      for (auto dev : dev_handles){
+        processor_type_t processor_type;
+	amdsmi_get_processor_type(dev, &processor_type);
+	if (processor_type == AMDSMI_PROCESSOR_TYPE_AMD_GPU) {
+          proc_handles.push_back(dev);
+        }
+      }
     }
   }
- //amdsmi_shut_down();
   return proc_handles;
 }
 

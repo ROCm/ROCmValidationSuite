@@ -239,6 +239,7 @@ int display_gpu_info (void) {
     int32_t node_id;
     int32_t gpu_id;
     int32_t device_id;
+    uint64_t bdfId;// this is pcie location id to uniquely identify device
     amdsmi_processor_handle smi_handle;
   };
 
@@ -288,13 +289,14 @@ int display_gpu_info (void) {
     info.gpu_id    = gpu_id;
     info.device_id = dev_id;
     info.smi_handle = smi_hdl;
-
+    info.bdfId = 0;
+    amdsmi_get_gpu_bdf_id(smi_hdl, &info.bdfId);
     gpu_info_list.push_back(info);
   }
 
-  //std::sort(gpu_info_list.begin(), gpu_info_list.end(),
-    //       [](const struct device_info& a, const struct device_info& b) {
-      //       return a.smi_index < b.smi_index; });
+  std::sort(gpu_info_list.begin(), gpu_info_list.end(),
+           [](const struct device_info& a, const struct device_info& b) {
+             return a.bdfId < b.bdfId; });
   if (!gpu_info_list.empty()) {
     std::cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {

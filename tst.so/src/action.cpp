@@ -393,6 +393,8 @@ bool tst_action::do_thermal_test(map<int, uint16_t> tst_gpus_device_index) {
                 workers[i].set_smi_device_handle(hip_to_smi_idxs[it->first]);
             } else{
                 workers[i].set_smi_device_handle(nullptr);
+		msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(i) + " has no handle";
+                rvs::lp::Log(msg, rvs::logerror);
             }
             gpuId = it->second;
             // set worker thread params
@@ -496,7 +498,6 @@ int tst_action::get_all_selected_gpus(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
-    //amdsmi_init(AMDSMI_INIT_AMD_GPUS);
     // find compatible GPUs to run tst tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, tst_gpus_device_index,
         property_device, property_device_id, property_device_all,

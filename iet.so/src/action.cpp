@@ -527,7 +527,7 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
     bool gpu_masking = false;    // if HIP_VISIBLE_DEVICES is set, this will be true
     int hip_num_gpu_devices;
     hipGetDeviceCount(&hip_num_gpu_devices);
-
+    
     vector<IETWorker> workers(iet_gpus_device_index.size());
     for (;;) {
         unsigned int i = 0;
@@ -544,7 +544,9 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
             if(hip_to_smi_idxs.find(it->first) != hip_to_smi_idxs.end()){
                 workers[i].set_smi_device_handle(hip_to_smi_idxs[it->first]);
             } else{
-                workers[i].set_smi_device_handle(nullptr);
+                workers[i].set_smi_device_handle(nullptr);// this must not happen
+		msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(i) + " has no handle";
+		rvs::lp::Log(msg, rvs::logerror);
             }
             gpuId = it->second;
             // set worker thread params
