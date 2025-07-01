@@ -30,6 +30,7 @@
 #include <algorithm>
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
+#include "amd_smi/amdsmi.h"
 
 
 /**
@@ -238,7 +239,7 @@ int display_gpu_info (void) {
     int32_t node_id;
     int32_t gpu_id;
     int32_t device_id;
-    int32_t smi_index;
+    uint64_t bdfId;// this is pcie location id to uniquely identify device
   };
 
   char buf[256];
@@ -274,10 +275,11 @@ int display_gpu_info (void) {
       continue;
     }
 
-    uint32_t smi_index;
-    if (gpu_hip_to_smi_index(i, &smi_index)){
-      continue;
-    }
+    uint64_t completBDFId = 0;
+    completBDFId |= (static_cast<uint64_t>(pDom) & 0xFFFF) << 24;
+    completBDFId |= (static_cast<uint64_t>(pBus) & 0xFF) << 16;
+    completBDFId |= (static_cast<uint64_t>(pDev) & 0x1F) << 3;
+    completBDFId |= (static_cast<uint64_t>(pFun) & 0x7);
 
     hipDeviceGetPCIBusId(buf, 256, i);
     device_info info;
@@ -286,14 +288,13 @@ int display_gpu_info (void) {
     info.node_id   = node_id;
     info.gpu_id    = gpu_id;
     info.device_id = dev_id;
-    info.smi_index = smi_index;
-
+    info.bdfId = completBDFId;
     gpu_info_list.push_back(info);
   }
 
   std::sort(gpu_info_list.begin(), gpu_info_list.end(),
            [](const struct device_info& a, const struct device_info& b) {
-             return a.smi_index < b.smi_index; });
+             return a.bdfId < b.bdfId; });
   if (!gpu_info_list.empty()) {
     std::cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {

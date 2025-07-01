@@ -343,16 +343,10 @@ void tst_action::hip_to_smi_indices(void) {
     // map this to smi as only these are visible
     uint32_t smi_num_devices;
     uint64_t val_ui64;
-    std::map<uint64_t, int> smi_map;
+    std::map<uint64_t, amdsmi_processor_handle> smi_map;
 
-    rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-    if( err == RSMI_STATUS_SUCCESS){
-        for(auto i = 0; i < smi_num_devices; ++i){
-            err = rsmi_dev_pci_id_get(i, &val_ui64);
-            smi_map.insert({val_ui64, i});
-        }
-    }
-
+    //rvs::smi_pci_hdl_mapping();
+    smi_map = rvs::get_smi_pci_map();
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
          unsigned int pDom, pBus, pDev, pFun;
@@ -396,9 +390,11 @@ bool tst_action::do_thermal_test(map<int, uint16_t> tst_gpus_device_index) {
         TSTWorker::set_use_json(bjson);
         for (it = tst_gpus_device_index.begin(); it != tst_gpus_device_index.end(); ++it) {
             if(hip_to_smi_idxs.find(it->first) != hip_to_smi_idxs.end()){
-                workers[i].set_smi_device_index(hip_to_smi_idxs[it->first]);
+                workers[i].set_smi_device_handle(hip_to_smi_idxs[it->first]);
             } else{
-                workers[i].set_smi_device_index(it->first);
+                workers[i].set_smi_device_handle(nullptr);
+		msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(i) + " has no handle";
+                rvs::lp::Log(msg, rvs::logerror);
             }
             gpuId = it->second;
             // set worker thread params
@@ -452,7 +448,7 @@ bool tst_action::do_thermal_test(map<int, uint16_t> tst_gpus_device_index) {
         }
 
 
-        msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Shutting down rocm-smi  ";
+        msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Shutting down smi  ";
         rvs::lp::Log(msg, rvs::loginfo);
 
 
@@ -502,7 +498,6 @@ int tst_action::get_all_selected_gpus(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
-    rsmi_init(0);
     // find compatible GPUs to run tst tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, tst_gpus_device_index,
         property_device, property_device_id, property_device_all,
@@ -511,7 +506,7 @@ int tst_action::get_all_selected_gpus(void) {
 
         msg = "No devices match criteria from the test configuation.";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        rsmi_shut_down();
+        //amdsmi_shut_down();
         if (bjson) {
           unsigned int sec;
           unsigned int usec;
@@ -537,7 +532,7 @@ int tst_action::get_all_selected_gpus(void) {
         tst_res = 0;
     else 
         tst_res = -1;
-    rsmi_shut_down();
+     //amdsmi_shut_down();
     return tst_res;
 }
 

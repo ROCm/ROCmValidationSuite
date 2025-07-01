@@ -40,7 +40,7 @@ typedef struct {
 //! number of violations for metrics
 typedef struct {
   //! gpu_id
-  int32_t gpu_id;
+  uint32_t gpu_id;
   //! number of temperature violation
   int temp_violation;
   //! number of clock violation
@@ -56,7 +56,7 @@ typedef struct {
 //! current metric values
 typedef struct {
   //! gpu_id
-  int32_t gpu_id;
+  uint32_t gpu_id;
   //! current temperature value
   int64_t temp;
   //! current clock value
@@ -72,7 +72,7 @@ typedef struct {
 //! average metric values
 typedef struct {
   //! gpu_id
-  int32_t gpu_id;
+  uint32_t gpu_id;
   //! average temperature
   int64_t av_temp;
   //! average clock

@@ -29,6 +29,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include "amd_smi/amdsmi.h"
 
 #define KFD_SYS_PATH_NODES              "/sys/class/kfd/kfd/topology/nodes"
 #define KFD_PATH_MAX_LENGTH             256
@@ -42,7 +43,7 @@ extern void gpu_get_all_node_id(std::vector<uint16_t>* pgpus_node_id);
 extern void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
                 std::map<std::pair<uint16_t, uint16_t> , uint16_t>& pgpus_dom_loc_map); 
 extern bool gpu_check_if_mcm_die (int idx);
-extern int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index);
+extern int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_index);
 extern void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf);
 extern bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &idx);
 

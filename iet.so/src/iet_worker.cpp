@@ -32,7 +32,6 @@
 #include <exception>
 
 #include "hip/hip_ext.h"
-#include "rocm_smi/rocm_smi.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 
@@ -175,7 +174,6 @@ bool IETWorker::do_iet_power_stress(void) {
     bool      result = true;
     bool      start = true;
     rvs::action_result_t action_result;
-    RSMI_POWER_TYPE type = RSMI_INVALID_POWER;
     char gpuid_buff[12];
     std::thread compute_t;
     std::thread bandwidth_t;
@@ -208,9 +206,10 @@ bool IETWorker::do_iet_power_stress(void) {
         cur_power_value = 0;
 
         // get GPU's current/average power
-        rsmi_status_t rmsi_stat = rsmi_dev_power_get(smi_device_index, &last_power, &type);
-        if (rmsi_stat == RSMI_STATUS_SUCCESS) {
-          cur_power_value = static_cast<float>(last_power)/1e6;
+	amdsmi_power_info_t pwr_info;
+        amdsmi_status_t smi_stat = amdsmi_get_power_info(smi_device_handle, &pwr_info);
+        if (smi_stat == AMDSMI_STATUS_SUCCESS) {
+          cur_power_value = static_cast<float>(pwr_info.socket_power);
         }
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
