@@ -2,6 +2,20 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.2.0 for ROCm 7.0.0
+
+### Added
+
+- Support for new platforms: MI350X and MI355X.
+- Introduced rotating buffer mechanism for GEMM operations.
+- Support for read and write tests in Babel.
+- Support for new platforms: RX9070 and RX9070GRE.
+
+### Changed
+
+- Migrated SMI API usage from `rocm-smi` to `amd-smi`.
+- Updated FP8 GEMM operations to use hipBLASLt instead of rocBLAS.
+
 ## RVS 1.1.0 for ROCm 6.4.2
 
 ### Added
