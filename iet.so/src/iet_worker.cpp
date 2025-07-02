@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -32,7 +32,6 @@
 #include <exception>
 
 #include "hip/hip_ext.h"
-#include "rocm_smi/rocm_smi.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 
@@ -121,7 +120,7 @@ void IETWorker::computeThread(void) {
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpu_device_index, size_a, size_b, size_c, matrix_init,
           iet_trans_a, iet_trans_b, iet_alpha_val, iet_beta_val, iet_lda_offset, iet_ldb_offset, iet_ldc_offset, iet_ldd_offset,
           iet_ops_type, iet_data_type, gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d, blas_source, compute_type,
-          iet_out_data_type, "", ""));
+          iet_out_data_type, "", "", 0, iet_hot_calls));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();
@@ -134,13 +133,10 @@ void IETWorker::computeThread(void) {
     //Hit the GPU with compute gemm workload
     while ((duration < run_duration_ms) && (endtest == false)) {
 
-      for (uint64_t i = 0; i < iet_hot_calls; i++) {
-
-        // run GEMM operation
-        if(!gpu_blas->run_blas_gemm()) {
-          endtest = true;
-          break;
-        }
+      // run GEMM operation
+      if(!gpu_blas->run_blas_gemm()) {
+        endtest = true;
+        break;
       }
 
       // Wait for all the GEMM operations to complete
@@ -178,7 +174,6 @@ bool IETWorker::do_iet_power_stress(void) {
     bool      result = true;
     bool      start = true;
     rvs::action_result_t action_result;
-    RSMI_POWER_TYPE type = RSMI_INVALID_POWER;
     char gpuid_buff[12];
     std::thread compute_t;
     std::thread bandwidth_t;
@@ -211,9 +206,10 @@ bool IETWorker::do_iet_power_stress(void) {
         cur_power_value = 0;
 
         // get GPU's current/average power
-        rsmi_status_t rmsi_stat = rsmi_dev_power_get(smi_device_index, &last_power, &type);
-        if (rmsi_stat == RSMI_STATUS_SUCCESS) {
-          cur_power_value = static_cast<float>(last_power)/1e6;
+	amdsmi_power_info_t pwr_info;
+        amdsmi_status_t smi_stat = amdsmi_get_power_info(smi_device_handle, &pwr_info);
+        if (smi_stat == AMDSMI_STATUS_SUCCESS) {
+          cur_power_value = static_cast<float>(pwr_info.socket_power);
         }
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " +

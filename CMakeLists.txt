@@ -108,14 +108,14 @@ else() #If HIP not found
   message(FATAL_ERROR "hip not found !!! Install hip to proceed ...")
 endif(hip_FOUND)
 
-find_package (rocm_smi)
-if(rocm_smi_FOUND)
-  message(STATUS "rocm_smi found")
-  set(ROCM_SMI_INC_DIR ${rocm_smi_INCLUDE_DIR} )
-  set(ROCM_SMI_LIB_DIR ${rocm_smi_LIB_DIR} )
-else() #If ROCM_SMI not found
-  message(FATAL_ERROR "rocm-smi not found !!! Install rocm-smi to proceed ...")
-endif(rocm_smi_FOUND)
+find_package (amd_smi)
+if(amd_smi_FOUND)
+  message(STATUS "amd_smi found")
+  set(AMD_SMI_INC_DIR ${amd_smi_INCLUDE_DIR} )
+  set(AMD_SMI_LIB_DIR ${amd_smi_LIB_DIR} )
+else() #If AMD_SMI not found
+  message(FATAL_ERROR "amd-smi not found !!! Install amd-smi to proceed ...")
+endif(amd_smi_FOUND)
 
 find_package (hiprand)
 if(hiprand_FOUND)
@@ -231,9 +231,9 @@ set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.
 
 # Package dependencies
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
-  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, hiprand, hipblaslt, ${ROCM_CORE}")
+  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, amd-smi-lib, hiprand, hipblaslt, ${ROCM_CORE}")
 else()
-  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, rocm-smi-lib, hiprand, hipblaslt")
+  set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, amd-smi-lib, hiprand, hipblaslt")
 endif()
 if (${RVS_OS_TYPE} STREQUAL "ubuntu")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
@@ -290,7 +290,8 @@ set(RVS_BUILD_TESTS TRUE CACHE BOOL "TRUE if tests are to be built")
 
 set(RVS_DO_TRACE "1" CACHE STRING "Expand RVSTRACE_ macro")
 set(RVS_ROCBLAS "0" CACHE STRING "1 = use local rocBLAS")
-set(RVS_ROCMSMI "0" CACHE STRING "1 = use local rocm_smi_lib")
+#set(RVS_ROCMSMI "0" CACHE STRING "1 = use local amd_smi_lib")
+set(RVS_AMDSMI "0" CACHE STRING "1 = use local amd_smi_lib")
 
 set(RVS_LIB_DIR "${CMAKE_BINARY_DIR}/rvslib" CACHE PATH "Contains RVS library")
 
@@ -444,92 +445,92 @@ if(RVS_ROCBLAS EQUAL 1)
 endif()  # if(RVS_ROCBLAS EQUAL 1)
 
 ################################################################################
-## rocm_smi_lib
+## amd_smi_lib
 
-if (RVS_ROCMSMI EQUAL 1)
+if (RVS_AMDSMI EQUAL 1)
 
-# This is in order to avoid unneccessary rebuild of rocm_smi_lib
+# This is in order to avoid unneccessary rebuild of amd_smi_lib
 # (there is glitch in cmake when the included project also generates files in
 #  the buld process)
-if(NOT EXISTS ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so)
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/amd_smi-build/libamd_smi.so)
 
-execute_process(COMMAND rm -rf "${CMAKE_BINARY_DIR}/rvs_smi-src"
+execute_process(COMMAND rm -rf "${CMAKE_BINARY_DIR}/amd_smi-src"
   RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/amd_smi-download )
 # if(result)
-#   message(FATAL_ERROR "Error removing rocm_smi-src build folder: ${result}")
+#   message(FATAL_ERROR "Error removing amd_smi-src build folder: ${result}")
 # else()
-#   message( "rocm_smi-src folders removed: ${result}")
+#   message( "amd_smi-src folders removed: ${result}")
 # endif()
 
-execute_process(COMMAND rm -rf "${CMAKE_BINARY_DIR}/rvs_smi-download"
+execute_process(COMMAND rm -rf "${CMAKE_BINARY_DIR}/amd_smi-download"
   RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/amd_smi-download )
 # if(result)
-#   message(FATAL_ERROR "Error removing rocm_smi-download build folder: ${result}")
+#   message(FATAL_ERROR "Error removing amd_smi-download build folder: ${result}")
 # else()
-#   message( "rocm_smi-download folders removed: ${result}")
+#   message( "amd_smi-download folders removed: ${result}")
 # endif()
 
-execute_process(COMMAND rm -rf "${CMAKE_BINARY_DIR}/rvs_smi-build"
+execute_process(COMMAND rm -rf "${CMAKE_BINARY_DIR}/amd_smi-build"
   RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-build )
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/amd_smi-build )
 # if(result)
-#   message(FATAL_ERROR "Error removing rocm_smi-build build folder: ${result}")
+#   message(FATAL_ERROR "Error removing amd_smi-build build folder: ${result}")
 # else()
-#   message( "rocm_smi-build folders removed: ${result}")
+#   message( "amd_smi-build folders removed: ${result}")
 # endif()
 
 
-# Download and unpack rocm_smi_lib at configure time
-configure_file(CMakeRSMIDownload.cmake rvs_smi-download/CMakeLists.txt)
+# Download and unpack amd_smi_lib at configure time
+configure_file(CMakeRSMIDownload.cmake amd_smi-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
   RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/amd_smi-download )
 if(result)
-  message(FATAL_ERROR "CMake step for rvs_smi-download failed: ${result}")
+  message(FATAL_ERROR "CMake step for amd_smi-download failed: ${result}")
 endif()
 
 # execute download
 execute_process(COMMAND ${CMAKE_COMMAND} --build .
   RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-download )
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/amd_smi-download )
 if(result)
-  message(FATAL_ERROR "Build step for rvs_smi-download failed: ${result}")
+  message(FATAL_ERROR "Build step for amd_smi-download failed: ${result}")
 endif()
 
 
 # generate MAKE script
-execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/rvs_smi-src -B${CMAKE_BINARY_DIR}/rvs_smi-build
+execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/amd_smi-src -B${CMAKE_BINARY_DIR}/amd_smi-build
   RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-src )
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/amd_smi-src )
 if(result)
-  message(FATAL_ERROR "CMake step for rvs_smi-src failed: ${result}")
+  message(FATAL_ERROR "CMake step for amd_smi-src failed: ${result}")
 endif()
 
 # post build step to create symbolic link
 # (we want .so i /bin folder to simplify packaging when local smi lib is used)
-# add_custom_command(TARGET rvs_rsmi_target POST_BUILD
-#   COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/librocm_smi64*
-#   COMMAND ln -s ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so ${CMAKE_BINARY_DIR}/bin/librocm_smi64.so
+# add_custom_command(TARGET rvs_smi_target POST_BUILD
+#   COMMAND rm -f ${CMAKE_BINARY_DIR}/bin/libamd_smi64*
+#   COMMAND ln -s ${CMAKE_BINARY_DIR}/amd_smi-build/libamd_smi64.so ${CMAKE_BINARY_DIR}/bin/libamd_smi64.so
 # )
 
-endif()  # if(NOT EXISTS ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so)
+endif()  # if(NOT EXISTS ${CMAKE_BINARY_DIR}/amd_smi-build/libamd_smi64.so)
 
-# Add target for rocm_smi_lib
-add_custom_target(rvs_rsmi_target
-  DEPENDS ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so
+# Add target for amd_smi_lib
+add_custom_target(rvs_smi_target
+  DEPENDS ${CMAKE_BINARY_DIR}/amd_smi-build/libamd_smi.so
 )
 
-# Define build command for rocm_smi_lib
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/rvs_smi-build/librocm_smi64.so
-  COMMAND make -C ${CMAKE_BINARY_DIR}/rvs_smi-build
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/rvs_smi-src
-  COMMENT "Generating rocm_smi_lib targets"
+# Define build command for amd_smi_lib
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/amd_smi-build/libamd_smi.so
+  COMMAND make -C ${CMAKE_BINARY_DIR}/amd_smi-build
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/amd_smi-src
+  COMMENT "Generating amd_smi_lib targets"
   VERBATIM
 )
 
-endif()  # if (RVS_ROCMSMI EQUAL 1)
+endif()  # if (RVS_AMDSMI EQUAL 1)
 
 if (RVS_ROCBLAS EQUAL 1)
   set(ROCBLAS_INC_DIR "${CMAKE_BINARY_DIR}/rvs_rblas-src/build/release/rocblas-install")
@@ -537,10 +538,10 @@ if (RVS_ROCBLAS EQUAL 1)
 endif()
 
 if (RVS_ROCMSMI EQUAL 1)
-  set(ROCM_SMI_INC_DIR "${CMAKE_BINARY_DIR}/rvs_smi-src/include")
-  set(ROCM_SMI_LIB_DIR "${CMAKE_BINARY_DIR}/rvs_smi-build")
+  set(AMD_SMI_INC_DIR "${CMAKE_BINARY_DIR}/amd_smi-src/include")
+  set(AMD_SMI_LIB_DIR "${CMAKE_BINARY_DIR}/amd_smi-build")
 endif()
-set(ROCM_SMI_LIB "rocm_smi64" CACHE STRING "rocm_smi library name")
+set(AMD_SMI_LIB "amd_smi" CACHE STRING "amd_smi library name")
 
 # Determine HSA_PATH
 if(NOT DEFINED HSA_PATH)
@@ -583,8 +584,8 @@ endif()
 
 add_dependencies(pesm rvslib)
 if(RVS_ROCMSMI EQUAL 1)
-  add_dependencies(gm rvs_rsmi_target)
-  add_dependencies(iet rvs_rsmi_target)
+  add_dependencies(gm rvs_smi_target)
+  add_dependencies(iet rvs_smi_target)
 endif()
 
 if(RVS_ROCBLAS EQUAL 1)
@@ -679,7 +680,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
 )
 
 if(RVS_ROCMSMI EQUAL 1)
-  install(FILES "${ROCM_SMI_LIB_DIR}/librocm_smi64.so"
+  install(FILES "${AMD_SMI_LIB_DIR}/libamd_smi64.so"
           DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}
           COMPONENT rvsmodule)
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf"

@@ -178,7 +178,6 @@ int pebb_action::create_threads() {
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
-
   RVSTRACE_
   for (size_t i = 0; i < gpu_id.size(); i++) {
     RVSTRACE_

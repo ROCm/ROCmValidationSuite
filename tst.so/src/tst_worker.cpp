@@ -30,7 +30,6 @@
 #include <memory>
 #include <exception>
 
-#include "rocm_smi/rocm_smi.h"
 #include "include/rvs_module.h"
 #include "include/rvsloglp.h"
 
@@ -142,7 +141,7 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
     // setup rvsBlas
     gpu_blas = std::unique_ptr<rvs_blas>(new rvs_blas(gpuIdx, matrix_size, matrix_size, matrix_size, "default",
           transa, transb, alpha, beta, tst_lda_offset, tst_ldb_offset, tst_ldc_offset, tst_ldd_offset, tst_ops_type,
-          "", "", 0, 0, 0, 0, 0, blas_source, compute_type, "", "", ""));
+          "", "", 0, 0, 0, 0, 0, blas_source, compute_type, "", "", "", 0, 1));
 
     //Genreate random matrix data
     gpu_blas->generate_random_matrix_data();
@@ -214,7 +213,7 @@ bool TSTWorker::do_thermal_stress(void) {
     bool      result = true;
     bool      start = true;
     rvs::action_result_t action_result;
-    rsmi_status_t rsmi_stat;
+    amdsmi_status_t smi_stat;
     auto desc = action_descriptor{action_name, MODULE_NAME, gpu_id}; 
     // Initiate blas workload thread
     std::thread t(&TSTWorker::blasThread, this, gpu_device_index, matrix_size_a, tst_ops_type, start, run_duration_ms,
@@ -230,19 +229,19 @@ bool TSTWorker::do_thermal_stress(void) {
             break;
 
         // Get GPU's current edge temperature
-        rsmi_stat = rsmi_dev_temp_metric_get(smi_device_index, RSMI_TEMP_TYPE_EDGE,
-                RSMI_TEMP_CURRENT, &temperature);
-        if (rsmi_stat == RSMI_STATUS_SUCCESS) {
-            cur_edge_temperature = static_cast<float>(temperature)/1e3;
+        smi_stat = amdsmi_get_temp_metric(smi_device_handle, AMDSMI_TEMPERATURE_TYPE_EDGE,
+                AMDSMI_TEMP_CURRENT, &temperature);
+        if (smi_stat == AMDSMI_STATUS_SUCCESS) {
+            cur_edge_temperature = static_cast<float>(temperature);
         }
         
         temperature = 0;
    
         // Get GPU's current junction temperature
-        rsmi_stat = rsmi_dev_temp_metric_get(smi_device_index, RSMI_TEMP_TYPE_JUNCTION,
-                RSMI_TEMP_CURRENT, &temperature);
-        if (rsmi_stat == RSMI_STATUS_SUCCESS) {
-            cur_junction_temperature = static_cast<float>(temperature)/1e3;
+        smi_stat = amdsmi_get_temp_metric(smi_device_handle, AMDSMI_TEMPERATURE_TYPE_JUNCTION ,
+                AMDSMI_TEMP_CURRENT, &temperature);
+        if (smi_stat == AMDSMI_STATUS_SUCCESS) {
+            cur_junction_temperature = static_cast<float>(temperature);
         }
 
         msg = "[" + action_name + "] " + MODULE_NAME + " " + "GPU " +

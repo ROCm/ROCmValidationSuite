@@ -43,6 +43,8 @@
 #include <hiprand/hiprand.h>
 
 #include <hipblaslt/hipblaslt.h>
+#include <map>
+using std::map;
 
 #define RVS_BLAS_HIP_DATATYPE_INVALID static_cast<hipDataType>(0XFFFF)
 #define RVS_BLAS_HIPBLAS_COMPUTETYPE_INVALID static_cast<hipblasComputeType_t>(0XFFFF)
@@ -64,7 +66,7 @@ class rvs_blas {
        std::string _ops_type, std::string _data_type, std::string _gemm_mode,
        int _batch_count, uint64_t stride_a, uint64_t stride_b, uint64_t stride_c, uint64_t stride_d,
        std::string _blas_source, std::string _compute_type, std::string _out_data_type,
-       std::string _scale_a, std::string _scale_b);
+       std::string _scale_a, std::string _scale_b, uint32_t rotating, uint64_t _hot_calls);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
@@ -270,7 +272,9 @@ class rvs_blas {
     hipblasComputeType_t hbl_computetype;
 
     //! Create hipblaslt matrix multiply descriptor
-    hipblasLtMatmulDesc_t hbl_matmul;
+    std::vector <hipblasLtMatmulDesc_t> hbl_matmul;
+
+    uint64_t block_count;
 
     //! Transpose matrix A
     hipblasOperation_t hbl_trans_a;
@@ -309,6 +313,9 @@ class rvs_blas {
     //! hipblaslt heuristic algorithm result
     hipblasLtMatmulHeuristicResult_t hbl_heuristic_result;
 
+    //! number of gemm calls at once
+    uint64_t hot_calls;
+
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
     template <typename Ti, typename To> bool allocate_gpu_matrix_mem(void);
@@ -331,9 +338,9 @@ class rvs_blas {
         (datatype == "fp6_e3m2_r") ? HIP_R_6F_E3M2 :
         (datatype == "fp6_e2m3_r") ? HIP_R_6F_E2M3 :
         (datatype == "i8_r")       ? HIP_R_8I  :
-        (datatype == "fp8_r")      ? HIP_R_8F_E4M3  :
-        (datatype == "fp8_e4m3_r") ? HIP_R_8F_E4M3  : // OCP fp8 E4M3
-        (datatype == "fp8_e5m2_r") ? HIP_R_8F_E5M2  : // OCP fp8 E5M2
+        (datatype == "fp8_r")      ? HIP_R_8F_E4M3_FNUZ : // FP8-FNUZ
+        (datatype == "fp8_e4m3_r") ? HIP_R_8F_E4M3  : // FP8-OCP E4M3
+        (datatype == "fp8_e5m2_r") ? HIP_R_8F_E5M2  : // FP8-OCP E5M2
         (datatype == "bf16_r")     ? HIP_R_16BF :
         (datatype == "fp16_r")     ? HIP_R_16F  :
         (datatype == "fp32_r")     ? HIP_R_32F  :
@@ -345,6 +352,7 @@ class rvs_blas {
     hipblasComputeType_t computetype_to_hipblas_computetype(const std::string& computetype)
     {
       return
+        computetype == "fp16_r" ? HIPBLAS_COMPUTE_16F  :
         computetype == "fp32_r" ? HIPBLAS_COMPUTE_32F  :
         computetype == "xf32_r" ? HIPBLAS_COMPUTE_32F_FAST_TF32 :
         computetype == "fp64_r" ? HIPBLAS_COMPUTE_64F :
@@ -352,6 +360,34 @@ class rvs_blas {
         RVS_BLAS_HIPBLAS_COMPUTETYPE_INVALID;
     }
 
+    inline size_t get_hipdatatype_size(hipDataType hipdatatype)
+    {
+      static const std::map<hipDataType, size_t> hipdatatype_sizemap {
+        {HIP_R_32F, 4},
+        {HIP_R_64F, 8},
+        {HIP_R_16F, 2},
+        {HIP_R_8I, 1},
+        {HIP_R_8U, 1},
+        {HIP_R_32I, 4},
+        {HIP_R_32U, 4},
+        {HIP_R_16BF, 2},
+        {HIP_R_4I, 1},
+        {HIP_R_4U, 1},
+        {HIP_R_16I, 2},
+        {HIP_R_16U, 2},
+        {HIP_R_64I, 8},
+        {HIP_R_64U, 8},
+        {HIP_R_8F_E4M3_FNUZ, 1},
+        {HIP_R_8F_E5M2_FNUZ, 1},
+        {HIP_R_8F_E4M3, 1},
+        {HIP_R_8F_E5M2, 1},
+        {HIP_R_4F_E2M1, 1},
+        {HIP_R_6F_E2M3, 1},
+        {HIP_R_6F_E3M2, 1}
+      };
+
+      return hipdatatype_sizemap.at(hipdatatype);
+    }
 
 std::vector<float> generateMXInput(hipDataType            dataType,
                                    void*                  data,
