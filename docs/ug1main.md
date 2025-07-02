@@ -2104,18 +2104,25 @@ logged.</td></tr>
 <td>Size of the input square matrices.  The default value is
 5760.</td></tr>
 <tr><td>data_type</td><td>String</td>
-<td>Input datatype.  The default value is
-5760.</td></tr>
+<td>Datatype (Precision) of input matrices A and B.</td></tr>
 <tr><td>out_data_type</td><td>String</td>
-<td>Output datatype.</td></tr>
+<td>Datatype (Precision) of output matrices C and D.</td></tr>
 <tr><td>compute_type</td><td>String</td>
-<td>Compute type</td></tr>
+<td>Datatype (Precision) of computation.</td></tr>
 <tr><td>transa</td><td>String</td>
 <td>Transpose for matrix A.</td></tr>
 <tr><td>transb</td><td>String</td>
 <td>Transpose for matrix B.</td></tr>
+<tr><td>lda</td><td>Integer</td>
+<td>Leading dimension of matrix A.</td></tr>
+<tr><td>ldb</td><td>Integer</td>
+<td>Leading dimension of matrix B.</td></tr>
+<tr><td>ldc</td><td>Integer</td>
+<td>Leading dimension of matrix C.</td></tr>
+<tr><td>ldd</td><td>Integer</td>
+<td>Leading dimension of matrix D.</td></tr>
 <tr><td>alpha</td><td>Integer</td>
-<td>scalar that multiplies the matrix product A * B.</td></tr>
+<td>Scalar that multiplies the matrix product A * B.</td></tr>
 <tr><td>beta</td><td>Integer</td>
 <td>Scalar that multiplies the existing values in matrix C before adding the new result</td></tr>
 <tr><td>blas_source</td><td>String</td>
