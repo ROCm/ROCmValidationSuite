@@ -2088,8 +2088,38 @@ for the test to still pass. The default value is 0.</td></tr>
 interval over which the moving average of the bandwidth will be calculated and
 logged.</td></tr>
 <tr><td>matrix_size</td><td>Integer</td>
-<td>Size of the matrices of the SGEMM operations. The default value is
+<td>Size (row and column) of the input square matrices. The default value is
 5760.</td></tr>
+<tr><td>hot_calls</td><td>Integer</td>
+<td>Number of GEMM operations executed back-to-back within a timing loop. Duration determines the batches of hot calls executed for performance benchmark calculation.</td></tr>
+<tr><td>matrix_size_a</td><td>Integer</td>
+<td>Row size of matrix A and C. The default value is
+5760.</td></tr>
+<tr><td>matrix_size_b</td><td>Integer</td>
+<td>Column size of matrix B and C.</td></tr>
+<tr><td>matrix_size_c</td><td>Integer</td>
+<td>Column size of matrix A and row size of matrix B. The default value is
+5760.</td></tr>
+<tr><td>matrix_int</td><td>Integer</td>
+<td>Size of the input square matrices.  The default value is
+5760.</td></tr>
+<tr><td>data_type</td><td>String</td>
+<td>Input datatype.  The default value is
+5760.</td></tr>
+<tr><td>out_data_type</td><td>String</td>
+<td>Output datatype.</td></tr>
+<tr><td>compute_type</td><td>String</td>
+<td>Compute type</td></tr>
+<tr><td>transa</td><td>String</td>
+<td>Transpose for matrix A.</td></tr>
+<tr><td>transb</td><td>String</td>
+<td>Transpose for matrix B.</td></tr>
+<tr><td>alpha</td><td>Integer</td>
+<td>scalar that multiplies the matrix product A * B.</td></tr>
+<tr><td>beta</td><td>Integer</td>
+<td>Scalar that multiplies the existing values in matrix C before adding the new result</td></tr>
+<tr><td>blas_source</td><td>String</td>
+<td>BLAS backend library to use for gemm operations.</td></tr>
 </table>
 
 ### Output
