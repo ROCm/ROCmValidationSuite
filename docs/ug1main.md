@@ -2088,7 +2088,7 @@ for the test to still pass. The default value is 0.</td></tr>
 interval over which the moving average of the bandwidth will be calculated and
 logged.</td></tr>
 <tr><td>matrix_size</td><td>Integer</td>
-<td>Size (row and column) of the input square matrices. The default value is
+<td>Row and column sizes of the matrices. The default value is
 5760.</td></tr>
 <tr><td>hot_calls</td><td>Integer</td>
 <td>Number of GEMM operations executed back-to-back within a timing loop. Duration determines the batches of hot calls executed for performance benchmark calculation.</td></tr>
@@ -2096,12 +2096,10 @@ logged.</td></tr>
 <td>Row size of matrix A and C. The default value is
 5760.</td></tr>
 <tr><td>matrix_size_b</td><td>Integer</td>
-<td>Column size of matrix B and C.</td></tr>
+<td>Column size of matrix B and C. The default value is
+5760.</td></tr>
 <tr><td>matrix_size_c</td><td>Integer</td>
 <td>Column size of matrix A and row size of matrix B. The default value is
-5760.</td></tr>
-<tr><td>matrix_int</td><td>Integer</td>
-<td>Size of the input square matrices.  The default value is
 5760.</td></tr>
 <tr><td>data_type</td><td>String</td>
 <td>Datatype (Precision) of input matrices A and B.</td></tr>
