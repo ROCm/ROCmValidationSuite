@@ -110,12 +110,8 @@ The PCIe Qualification Tool is used to qualify the PCIe bus on which the GPU is 
 #### SBIOS Mapping Qualification Tool – SMQT module
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct products for ROCm support.
 
-Refer to the “ROCm Use of Advanced PCIe Features and Overview of How BAR Memory is Used In ROCm Enabled System” web page for more information about how BAR memory is initialized by VDI and Radeon products.
-
 #### P2P Benchmark and Qualification Tool – PBQT module
 The P2P Benchmark and Qualification Tool  is designed to provide the list of all GPUs that support P2P and characterize the P2P links between peers. In addition to testing for P2P compatibility, this test will perform a peer-to-peer throughput test between all P2P pairs for performance evaluation. The P2P Benchmark and Qualification Tool will allow users to pick a collection of two or more GPUs on which to run. The user will also be able to select whether or not they want to run the throughput test on each of the pairs.
-
-Please see the web page “ROCm, a New Era in Open GPU Computing” to find out more about the P2P solutions available in a ROCm environment.
 
 #### PCI Express Bandwidth Benchmark – PEBB module
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory. The maximum bandwidth obtained is reported to help debug low bandwidth issues. The benchmark should be capable of  targeting one, some or all of the GPUs installed in a platform, reporting individual benchmark statistics for each.
@@ -1269,11 +1265,6 @@ configuration registers. Since the reminder of the BAR available is only 1 DWORD
 
 BAR 5: Expansion ROM – This is required for the AMD Driver SW to access the
 GPU’s video-BIOS. This is currently fixed at 128KB.\n\n
-
-Refer to the ROCm Use of Advanced PCIe Features and Overview of How BAR Memory
-is Used In ROCm Enabled System web page for more information about how BAR
-memory is initialized by VDI and Radeon products. Iteration keys, i.e. count,
-wait and duration will be ignored.
 
 ### Module Specific Keys
 
