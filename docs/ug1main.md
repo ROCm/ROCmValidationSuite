@@ -227,6 +227,10 @@ modules will ignore this parameter.</td></tr>
 will be used in the execution of the action. Each module has a set of sub-tests
 or sub-actions that can be configured based on its specific
 parameters.</td></tr>
+
+<tr><td>duration</td><td>Integer</td><td>Specifies the total execution time of the action, in milliseconds.</td></tr>
+
+<tr><td>log_interval</td><td>Integer</td><td>Logging frequency, in milliseconds</td></tr>
 </table>
 
 ### Command Line Options
