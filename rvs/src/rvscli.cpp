@@ -167,6 +167,10 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-n", sp));
   grammar.insert(gpair("--numTimes", sp));
 
+  sp = std::make_shared<optbase>("-p", command, optionalvalue);
+  grammar.insert(gpair("-p", sp));
+  grammar.insert(gpair("--parallel", sp));
+
   sp = std::make_shared<optbase>("-t", command);
   grammar.insert(gpair("-t", sp));
   grammar.insert(gpair("--listTests", sp));
