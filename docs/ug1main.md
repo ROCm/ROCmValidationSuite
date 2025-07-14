@@ -274,6 +274,14 @@ else a file created in /var/tmp/ with timestamp in name.
 <tr><td>-v</td><td>--verbose</td><td>Enable verbose reporting. This is Enable verbose reporting.
 </td></tr>
 
+<tr><td>-p</td><td>--parallel</td><td>Enables or Disables parallel execution across multiple GPUs.
+Use this option in conjunction with -c option.
+Accepted Values:
+true – Enables parallel execution.
+false – Disables parallel execution.
+If no value is provided for the option, it defaults to true.
+</td></tr>
+
 <tr><td>-n</td><td>--numTimes</td><td>Number of times the test repeatedly executes.
 Use in conjunction with -c option.
 </td></tr>

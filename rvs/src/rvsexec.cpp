@@ -472,6 +472,12 @@ void rvs::exec::do_help() {
 
   cout << "-v --verbose       Enable verbose reporting. Equivalent to specifying -d 5 option.\n\n";
 
+  cout << "-p --parallel      Enables or Disables parallel execution across multiple GPUs.\n";
+  cout << "                   Use this option in conjunction with -c option.\n";
+  cout << "                   Accepted Values:\n";
+  cout << "                   true – Enables parallel execution.\n";
+  cout << "                   false – Disables parallel execution.\n";
+  cout << "                   If no value is provided for the option, it defaults to true.\n\n";
 
   cout << "-n --numTimes      Number of times the test repeatedly executes. Use in conjunction\n";
   cout << "                   with -c option.\n\n";
