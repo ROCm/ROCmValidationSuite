@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -34,7 +34,8 @@ PackageHandler* handlerCreator::getPackageHandler(const std::string& pkg){
   if(OSType::Ubuntu == osName) {
     lptr = new PackageHandlerDeb{pkg};
   }
-  else if (OSType::Centos == osName || OSType::RHEL == osName || OSType::Oracle == osName) {
+  else if (OSType::Centos == osName || OSType::RHEL == osName || 
+		  OSType::Oracle == osName || OSType::Azure == osName) {
     lptr = new PackageHandlerRpm{pkg};
   }
   else if (OSType::SLES == osName) {
@@ -51,7 +52,8 @@ PackageHandler* handlerCreator::getPackageHandler(){
   if(OSType::Ubuntu == osName){
     lptr = new PackageHandlerDeb{};
   }
-  else if (OSType::Centos == osName || OSType::RHEL == osName || OSType::Oracle == osName) {
+  else if (OSType::Centos == osName || OSType::RHEL == osName || 
+		  OSType::Oracle == osName || OSType::Azure == osName ) {
     lptr = new PackageHandlerRpm{};
   }
   else if (OSType::SLES == osName) {
