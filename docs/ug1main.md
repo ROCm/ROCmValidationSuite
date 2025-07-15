@@ -240,7 +240,7 @@ Command line options are summarized in the table below:
 <table>
 <tr><th>Short option</th><th>Long option</th><th> Description</th></tr>
 <tr><td>-a</td><td>--appendLog</td><td>When generating a debug logfile, do not overwrite the content
-of the current log. Use in conjuction with -d and -l options.
+of the current log. Use in conjuction with <b>-d</b> and <b>-l</b> options.
 </td></tr>
 
 <tr><td>-c</td><td>--config</td><td>Specify the test configuration file to use.
@@ -256,13 +256,13 @@ that RVS supports and has visibility.
 </td></tr>
 
 <tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids/indexes to run test on.
-This overrides the device/device_index values specified for every actions in the
-configuration file, including the ‘all’ value.
+This overrides the <b>device/device_index</b> parameter values specified for every actions in the
+configuration file, including the <b>all</b> value.
 </td></tr>
 
 <tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
 if a path follows this argument, that will be used as json log file;
-else a file created in /var/tmp/ with timestamp in name.
+else a file created in <b>/var/tmp/</b> with timestamp in name.
 </td></tr>
 
 <tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
@@ -271,19 +271,19 @@ else a file created in /var/tmp/ with timestamp in name.
 <tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
 </td></tr>
 
-<tr><td>-v</td><td>--verbose</td><td>Enable verbose reporting. This is Enable verbose reporting.
+<tr><td>-v</td><td>--verbose</td><td>Enable detailed logging. Equivalent to specifying <b>-d 5</b> option.
 </td></tr>
 
 <tr><td>-p</td><td>--parallel</td><td>Enables or Disables parallel execution across multiple GPUs.
-Use this option in conjunction with -c option.
+Use this option in conjunction with <b>-c</b> option.
 Accepted Values:
-true – Enables parallel execution.
-false – Disables parallel execution.
-If no value is provided for the option, it defaults to true.
+<b>true</b> – Enables parallel execution.
+<b>false</b> – Disables parallel execution.
+If no value is provided for the option, it defaults to <b>true</b>.
 </td></tr>
 
 <tr><td>-n</td><td>--numTimes</td><td>Number of times the test repeatedly executes.
-Use in conjunction with -c option.
+Use this option in conjunction with <b>-c</b> option.
 </td></tr>
 
 <tr><td></td><td>--quiet</td><td>No console output given. See logs and return

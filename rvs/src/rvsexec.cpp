@@ -470,7 +470,7 @@ void rvs::exec::do_help() {
 
   cout << "-t --listTests     List the test modules present in RVS.\n\n";
 
-  cout << "-v --verbose       Enable verbose reporting. Equivalent to specifying -d 5 option.\n\n";
+  cout << "-v --verbose       Enable detailed logging. Equivalent to specifying -d 5 option.\n\n";
 
   cout << "-p --parallel      Enables or Disables parallel execution across multiple GPUs.\n";
   cout << "                   Use this option in conjunction with -c option.\n";
