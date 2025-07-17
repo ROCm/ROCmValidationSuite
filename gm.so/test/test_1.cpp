@@ -26,10 +26,11 @@
 #include "include/action.h"
 #include "include/worker.h"
 #include "include/gpu_util.h"
-
+#include "amd_smi/amdsmi.h"
 Worker* pworker;
 
 TEST(gm, coverage_rsmi_failure) {
+  amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   rvs::gpulist::Initialize();
   pworker = nullptr;
   gm_action* pa = new gm_action;
@@ -47,4 +48,5 @@ TEST(gm, coverage_rsmi_failure) {
   delete pa;
   pworker->stop();
   delete pworker;
+  amdsmi_shut_down();
 }

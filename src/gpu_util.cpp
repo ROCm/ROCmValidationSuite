@@ -225,13 +225,11 @@ void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
   std::map<uint64_t, uint16_t> smi_map;
   //uint32_t smi_num_devices = 0;
   uint64_t gpuid;
-  amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   amdsmi_status_t smi_ret;
   auto proc_handles = get_smi_processors();
   if (proc_handles.empty()){
     return;
   }
-  //amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   for(auto i=0; i<proc_handles.size();++i ){
     amdsmi_kfd_info_t kfd_info;
     smi_ret = amdsmi_get_gpu_kfd_info(proc_handles[i], &kfd_info);
@@ -239,7 +237,6 @@ void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
       smi_map.insert({kfd_info.kfd_id, i});
     }
   }
-  amdsmi_shut_down();
   ifstream f_id, f_prop;
   char path[KFD_PATH_MAX_LENGTH];
 
@@ -471,10 +468,7 @@ int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_hdl) {
   if(hip_index >= hip_num_gpu_devices) {
     return -1;
   }
-  auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
-  //rvs::smi_pci_hdl_mapping();
   auto smi_map = rvs::get_smi_pci_map();
-  amdsmi_shut_down();
   /* Fetch Domain, Bus, Device and Function numbers from HIP PCIe id */
   uint64_t pDom = 0, pBus = 0, pDev = 0, pFun = 0;
   char pciString[256] = {0};
@@ -506,7 +500,7 @@ int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_hdl) {
  * @return 0 if successful, -1 otherwise
  **/
 int rvs::gpulist::Initialize() {
-
+  amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   gpu_get_all_location_id(&location_id);
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
@@ -742,10 +736,7 @@ int rvs::gpulist::gpu2domain(const uint16_t GpuID, uint16_t* pDomain) {
 bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &index) {
 
   uint32_t smi_num_devices = 0;
-  auto ret = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
-  //rvs::smi_pci_hdl_mapping();
   smi_num_devices = rvs::get_smi_pci_map().size();
-  amdsmi_shut_down();
   for(auto i = 0; i < index.size(); i++) {
     if(index[i] >= smi_num_devices) {
       return false;

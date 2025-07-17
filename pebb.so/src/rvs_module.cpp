@@ -80,6 +80,7 @@ extern "C" int   rvs_module_terminate(void) {
   rvs::lp::Log("[module_terminate] pebb rvs_module_terminate() - entered",
                rvs::logtrace);
   cleanup_logs();
+  amdsmi_shut_down();
   return 0;
 }
 
