@@ -99,7 +99,6 @@ void IETWorker::computeThread(void) {
 
     std::chrono::time_point<std::chrono::system_clock> iet_start_time, iet_end_time;
     double duration = 0;
-    std::unique_ptr<rvs_blas> gpu_blas;
     uint64_t size_a;
     uint64_t size_b;
     uint64_t size_c;
