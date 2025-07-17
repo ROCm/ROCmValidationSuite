@@ -27,8 +27,10 @@ cmake_minimum_required ( VERSION 3.5.0 )
 set(CMAKE_SHARED_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN:$ORIGIN/.." CACHE STRING "RUNPATH for libraries")
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN/../lib" CACHE STRING "RUNPATH for executables")
 
-project ("rocm-validation-suite"
-          VERSION 1.2.0)
+file(READ version.txt version)
+string(REGEX REPLACE "\n" "" version "${version}")
+
+project ("rocm-validation-suite" VERSION "${version}")
 
 # Default libdir to "lib", this skips GNUInstallDirs from trying to take a guess if it's unset:
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
