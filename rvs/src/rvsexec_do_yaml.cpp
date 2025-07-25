@@ -331,6 +331,7 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
   string indexes;
 
   bool indexes_provided = false;
+
   if (rvs::options::has_option("-i", &indexes) && (!indexes.empty()))
     indexes_provided = true;
 
@@ -368,11 +369,29 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
         } else {
           sts += pif1->property_set("device", indexes);
         }
-
-      } else {
+      }
+      else {
         sts += pif1->property_set(it->first.as<std::string>(),
             it->second.as<std::string>());
       }
+    }
+  }
+
+  string parallel;
+  if (rvs::options::has_option("-p", &parallel)) {
+
+    if (parallel == "false") {
+      sts += pif1->property_set("parallel", "false");
+    }
+    else if (parallel == "true") {
+      sts += pif1->property_set("parallel", "true");
+    }
+    else if (parallel.empty()) {
+      sts += pif1->property_set("parallel", "true");
+    }
+    else {
+      rvs::logger::Err("Invalid value provided for -p (--parallel) option. Valid values: true/false.");
+      sts += 1;
     }
   }
 
