@@ -75,7 +75,6 @@ extern "C" int   rvs_module_init(void* pMi) {
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
   RVSTRACE_
   rvs::gpulist::Initialize();
-  amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   return 0;
 }
 
