@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -49,7 +49,6 @@ extern "C" {
 #include "include/worker.h"
 #include "include/worker_b2b.h"
 
-
 #define JSON_CREATE_NODE_ERROR "JSON cannot create node"
 
 using std::string;
@@ -76,37 +75,37 @@ pbqt_action::~pbqt_action() {
  * @return true if "all" is selected, false otherwise
  */
 bool pbqt_action::property_get_peers(int *error) {
-    *error = 0;  // init with 'no error'
-    auto it = property.find("peers");
-    if (it != property.end()) {
-        if (it->second == "all") {
-            return true;
-        } else {
-            // split the list of gpu_id
-            prop_peers = str_split(it->second,
-                    YAML_DEVICE_PROP_DELIMITER);
-            if (prop_peers.empty()) {
-                *error = 1;  // list of gpu_id cannot be empty
-            } else {
-                for (vector<string>::iterator it_gpu_id =
-                        prop_peers.begin();
-                        it_gpu_id != prop_peers.end(); ++it_gpu_id)
-                    if (!is_positive_integer(*it_gpu_id)) {
-                        *error = 1;
-                        break;
-                    }
-            }
-            return false;
-        }
 
+  *error = 0;  // init with 'no error'
+  auto it = property.find("peers");
+  if (it != property.end()) {
+    if (it->second == "all") {
+      return true;
     } else {
-        *error = 1;
-        // when error is set, it doesn't really matter whether the method
-        // returns true or false
-        return false;
+      // split the list of gpu_id
+      prop_peers = str_split(it->second,
+          YAML_DEVICE_PROP_DELIMITER);
+      if (prop_peers.empty()) {
+        *error = 1;  // list of gpu_id cannot be empty
+      } else {
+        for (vector<string>::iterator it_gpu_id =
+            prop_peers.begin();
+            it_gpu_id != prop_peers.end(); ++it_gpu_id)
+          if (!is_positive_integer(*it_gpu_id)) {
+            *error = 1;
+            break;
+          }
+      }
+      return false;
     }
-}
 
+  } else {
+    *error = 1;
+    // when error is set, it doesn't really matter whether the method
+    // returns true or false
+    return false;
+  }
+}
 
 /**
  * @brief reads the module's properties collection to see whether bandwidth
@@ -234,24 +233,24 @@ bool pbqt_action::get_all_pbqt_config_keys(void) {
  * @param log_level the level of log (e.g.: info, results, error)
  **/
 void* pbqt_action::json_base_node(int log_level) {
-    void *json_node = json_node_create(std::string(MODULE_NAME),
-            action_name.c_str(), log_level);
-    if(!json_node){
-        /* log error */
-            return nullptr;
-    }  
-    return json_node;
+  void *json_node = json_node_create(std::string(MODULE_NAME),
+      action_name.c_str(), log_level);
+  if(!json_node){
+    /* log error */
+    return nullptr;
+  }
+  return json_node;
 }
 
 void pbqt_action::json_add_kv(void *json_node, const std::string &key, const std::string &value){
-    if (json_node) {
-        rvs::lp::AddString(json_node, key, value);
-    }
+  if (json_node) {
+    rvs::lp::AddString(json_node, key, value);
+  }
 }
 
 void pbqt_action::json_to_file(void *json_node,int log_level){
-    if (json_node)
-        rvs::lp::LogRecordFlush(json_node, log_level);
+  if (json_node)
+    rvs::lp::LogRecordFlush(json_node, log_level);
 }
 
 void pbqt_action::log_json_data(std::string srcnode, std::string dstnode,
@@ -309,54 +308,54 @@ int pbqt_action::create_threads() {
     // filter out by listed sources
     if (!property_device_all && property_device.size()) {
       const auto it = std::find(property_device.cbegin(),
-                                property_device.cend(),
-                                gpu_id[i]);
+          property_device.cend(),
+          gpu_id[i]);
       if (it == property_device.cend()) {
-            continue;
+        continue;
       }
     }
 
     // filter out by listed sources
     if (!property_device_index_all && property_device_index.size()) {
       const auto it = std::find(property_device_index.cbegin(),
-                                property_device_index.cend(),
-                                gpu_idx[i]);
+          property_device_index.cend(),
+          gpu_idx[i]);
       if (it == property_device_index.cend()) {
-            continue;
+        continue;
       }
     }
 
     // if property_device_all selected, iteration starts at 0 and all pairs covered.
     for (size_t j = 0; j < gpu_id.size(); j++) {  // all possible peers
       RVSTRACE_
-      if (i == j) 
-	  continue;
+        if (i == j)
+          continue;
       // filter out by peer id
       if (prop_peer_deviceid > 0) {
         RVSTRACE_
-        if (prop_peer_deviceid != gpu_device_id[j]) {
-          RVSTRACE_
-          continue;
-        }
+          if (prop_peer_deviceid != gpu_device_id[j]) {
+            RVSTRACE_
+              continue;
+          }
       }
 
       RVSTRACE_
-      // filter out by listed peers
-      if (!prop_peer_device_all_selected) {
-        RVSTRACE_
-        const auto it = std::find(prop_peers.cbegin(),
-                                  prop_peers.cend(),
-                                  std::to_string(gpu_id[j]));
-        if (it == prop_peers.cend()) {
+        // filter out by listed peers
+        if (!prop_peer_device_all_selected) {
           RVSTRACE_
-          continue;
+            const auto it = std::find(prop_peers.cbegin(),
+                prop_peers.cend(),
+                std::to_string(gpu_id[j]));
+          if (it == prop_peers.cend()) {
+            RVSTRACE_
+              continue;
+          }
         }
-      }
 
       RVSTRACE_
-      // signal that at lease one matching src-dst combination
-      // has been found:
-      bmatch_found = true;
+        // signal that at lease one matching src-dst combination
+        // has been found:
+        bmatch_found = true;
 
 
       // get NUMA nodes
@@ -370,7 +369,7 @@ int pbqt_action::create_threads() {
       uint16_t dstnode;
       if (rvs::gpulist::gpu2node(gpu_id[j], &dstnode)) {
         RVSTRACE_
-        msg = "no node found for GPU ID " + std::to_string(gpu_id[j]);
+          msg = "no node found for GPU ID " + std::to_string(gpu_id[j]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
@@ -394,21 +393,21 @@ int pbqt_action::create_threads() {
       }
 
       RVSTRACE_
-      uint32_t distance = 0;
+        uint32_t distance = 0;
       std::vector<rvs::linkinfo_t> arr_linkinfo;
       rvs::hsa::Get()->GetLinkInfo(srcnode, dstnode,
-                                         &distance, &arr_linkinfo);
+          &distance, &arr_linkinfo);
       // perform peer check
       if (is_peer(gpu_id[i], gpu_id[j])) {
         RVSTRACE_
 
-        snprintf(srcgpuid_buff, sizeof(srcgpuid_buff), "%5d", gpu_id[i]);
+          snprintf(srcgpuid_buff, sizeof(srcgpuid_buff), "%5d", gpu_id[i]);
         snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", gpu_id[j]);
 
         msg = "[" + action_name + "] p2p"
-        + " [GPU:: " + std::to_string(srcnode) + " - " + srcgpuid_buff + " - " + srcpcibdf  + "]"
-        + " [GPU:: " + std::to_string(dstnode) + " - " + dstgpuid_buff + " - " + dstpcibdf  + "]"
-        + " peers:true ";
+          + " [GPU:: " + std::to_string(srcnode) + " - " + srcgpuid_buff + " - " + srcpcibdf  + "]"
+          + " [GPU:: " + std::to_string(dstnode) + " - " + dstgpuid_buff + " - " + dstpcibdf  + "]"
+          + " peers:true ";
 
         if (distance == rvs::hsa::NO_CONN) {
           msg += "distance:-1";
@@ -426,44 +425,44 @@ int pbqt_action::create_threads() {
         }
         rvs::lp::Log(msg, rvs::logresults);
         if(distance == rvs::hsa::NO_CONN) {
-            continue; // no point if no connection
+          continue; // no point if no connection
         }
         if (0 != arr_linkinfo.size()) {
           /* Log link type */
           pbconn = arr_linkinfo[0].strtype;
           //log_json_data(std::to_string(srcnode), std::to_string(gpu_id[j]), rvs::logresults, 
-           //   pbqt_json_data_t::PBQT_LINK_TYPE, arr_linkinfo[0].strtype);
+          //   pbqt_json_data_t::PBQT_LINK_TYPE, arr_linkinfo[0].strtype);
           /* Note: Assuming link type for all hops between GPUs are the same */
         }
 
         RVSTRACE_
-        // GPUs are peers, create transaction for them
-        if (prop_test_bandwidth) {
-          RVSTRACE_
-          pbqtworker* p = nullptr;
-
-          transfer_ix += 1;
-
-          p = new pbqtworker;
-          if (p == nullptr) {
+          // GPUs are peers, create transaction for them
+          if (prop_test_bandwidth) {
             RVSTRACE_
-            msg = "internal error";
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return -1;
+              pbqtworker* p = nullptr;
+
+            transfer_ix += 1;
+
+            p = new pbqtworker;
+            if (p == nullptr) {
+              RVSTRACE_
+                msg = "internal error";
+              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+              return -1;
+            }
+            p->initialize(srcnode, dstnode, prop_bidirectional);
+            RVSTRACE_
+              p->set_name(action_name);
+            p->set_stop_name(action_name);
+            p->set_transfer_ix(transfer_ix);
+            p->set_block_sizes(block_size);
+            p->set_conn_type(pbconn);
+            test_array.push_back(p);
+          }else{
+            // no need to run bandwidth, just log interface info
+            log_json_data(std::to_string(gpu_id[srcnode]), std::to_string(gpu_id[j]), rvs::logresults,
+                pbconn, "NA" );
           }
-          p->initialize(srcnode, dstnode, prop_bidirectional);
-          RVSTRACE_
-          p->set_name(action_name);
-          p->set_stop_name(action_name);
-          p->set_transfer_ix(transfer_ix);
-          p->set_block_sizes(block_size);
-	  p->set_conn_type(pbconn);
-          test_array.push_back(p);
-        }else{
-           // no need to run bandwidth, just log interface info
-           log_json_data(std::to_string(gpu_id[srcnode]), std::to_string(gpu_id[j]), rvs::logresults,
-            pbconn, "NA" );
-	}
 
       }
       else {
@@ -494,46 +493,46 @@ int pbqt_action::create_threads() {
   }
 
   RVSTRACE_
-  if (prop_test_bandwidth && test_array.size() < 1) {
-    RVSTRACE_
-    std::string diag;
-    if (bmatch_found) {
+    if (prop_test_bandwidth && test_array.size() < 1) {
       RVSTRACE_
-      diag = "No peers found";
-    } else {
-      RVSTRACE_
-      diag = "No devices match criteria from the test configuration";
-    }
-    RVSTRACE_
-    msg = "[" + action_name + "] p2p-bandwidth " + diag;
-    rvs::lp::Log(msg, rvs::logerror);
-    if (bjson) {
-      RVSTRACE_
-      unsigned int sec;
-      unsigned int usec;
-      rvs::lp::get_ticks(&sec, &usec);
-      void* pjson = rvs::lp::LogRecordCreate("p2p-bandwidth",
-                              action_name.c_str(), rvs::logerror, sec, usec);
-      if (pjson != NULL) {
+        std::string diag;
+      if (bmatch_found) {
         RVSTRACE_
-        rvs::lp::AddString(pjson,
-          "message",
-          diag);
-        rvs::lp::LogRecordFlush(pjson);
+          diag = "No peers found";
+      } else {
+        RVSTRACE_
+          diag = "No devices match criteria from the test configuration";
       }
+      RVSTRACE_
+        msg = "[" + action_name + "] p2p-bandwidth " + diag;
+      rvs::lp::Log(msg, rvs::logerror);
+      if (bjson) {
+        RVSTRACE_
+          unsigned int sec;
+        unsigned int usec;
+        rvs::lp::get_ticks(&sec, &usec);
+        void* pjson = rvs::lp::LogRecordCreate("p2p-bandwidth",
+            action_name.c_str(), rvs::logerror, sec, usec);
+        if (pjson != NULL) {
+          RVSTRACE_
+            rvs::lp::AddString(pjson,
+                "message",
+                diag);
+          rvs::lp::LogRecordFlush(pjson);
+        }
+      }
+      RVSTRACE_
+        return 0;
     }
-    RVSTRACE_
+
+  RVSTRACE_
+    for (auto it = test_array.begin(); it != test_array.end(); ++it) {
+      RVSTRACE_
+        (*it)->set_transfer_num(test_array.size());
+    }
+
+  RVSTRACE_
     return 0;
-  }
-
-  RVSTRACE_
-  for (auto it = test_array.begin(); it != test_array.end(); ++it) {
-    RVSTRACE_
-    (*it)->set_transfer_num(test_array.size());
-  }
-
-  RVSTRACE_
-  return 0;
 }
 
 /**
@@ -741,7 +740,7 @@ int pbqt_action::print_final_average() {
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     (*it)->get_final_data(&src_node, &dst_node, &bidir,
-                            &current_size, &duration);
+        &current_size, &duration);
 
     if (duration) {
       bandwidth = current_size/duration/1000 / 1000 / 1000;
@@ -754,39 +753,39 @@ int pbqt_action::print_final_average() {
     }
 
     RVSTRACE_
-    if (rvs::gpulist::node2gpu(src_node, &src_id)) {
-      RVSTRACE_
-      std::string msg = "could not find GPU id for node " +
-                        std::to_string(src_node);
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
-    }
-    RVSTRACE_
-    if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
-      RVSTRACE_
-      std::string msg = "could not find GPU id for node " +
-                        std::to_string(dst_node);
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
-    }
-
-      std::string src_pci_bdf;
-      if (rvs::gpulist::node2bdf(src_node, src_pci_bdf)) {
+      if (rvs::gpulist::node2gpu(src_node, &src_id)) {
         RVSTRACE_
-          std::string msg = "could not find PCI BDF for node " +
+          std::string msg = "could not find GPU id for node " +
           std::to_string(src_node);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
-
-      std::string dst_pci_bdf;
-      if (rvs::gpulist::node2bdf(dst_node, dst_pci_bdf)) {
+    RVSTRACE_
+      if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
         RVSTRACE_
-          std::string msg = "could not find PCI BDF for node " +
+          std::string msg = "could not find GPU id for node " +
           std::to_string(dst_node);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
+
+    std::string src_pci_bdf;
+    if (rvs::gpulist::node2bdf(src_node, src_pci_bdf)) {
+      RVSTRACE_
+        std::string msg = "could not find PCI BDF for node " +
+        std::to_string(src_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+
+    std::string dst_pci_bdf;
+    if (rvs::gpulist::node2bdf(dst_node, dst_pci_bdf)) {
+      RVSTRACE_
+        std::string msg = "could not find PCI BDF for node " +
+        std::to_string(dst_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
 
     transfer_ix = (*it)->get_transfer_ix();
     transfer_num = (*it)->get_transfer_num();
@@ -796,11 +795,11 @@ int pbqt_action::print_final_average() {
     snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", dst_id);
 
     msg = "[" + action_name + "] p2p-bandwidth["
-        + transfer_buff + "/" + std::to_string(transfer_num) + "]"
-        + " [GPU:: " + std::to_string(src_node) + " - " + srcgpuid_buff + " - " + src_pci_bdf  + "]"
-        + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + dst_pci_bdf  + "]"
-        + " bidirectional: " + std::string(bidir ? "true" : "false")
-        + " " + buff + " duration: " + std::to_string(duration) + " secs";
+      + transfer_buff + "/" + std::to_string(transfer_num) + "]"
+      + " [GPU:: " + std::to_string(src_node) + " - " + srcgpuid_buff + " - " + src_pci_bdf  + "]"
+      + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + dst_pci_bdf  + "]"
+      + " bidirectional: " + std::string(bidir ? "true" : "false")
+      + " " + buff + " duration: " + std::to_string(duration) + " secs";
 
     rvs::lp::Log(msg, rvs::logresults);
 
