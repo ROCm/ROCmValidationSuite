@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -66,14 +66,14 @@ extern "C" const char* rvs_module_get_output(void) {
   "(Collection of Floats), bandwidth (Collection of Floats)";
 }
 
-extern "C" int   rvs_module_init(void* pMi) {
+extern "C" int rvs_module_init(void* pMi) {
   rvs::lp::Initialize(static_cast<T_MODULE_INIT*>(pMi));
   rvs::gpulist::Initialize();
   rvs::hsa::Init();
   return 0;
 }
 
-extern "C" int   rvs_module_terminate(void) {
+extern "C" int rvs_module_terminate(void) {
     rvs::hsa::Terminate();
     cleanup_logs();
     amdsmi_shut_down();
@@ -84,7 +84,7 @@ extern "C" void* rvs_module_action_create(void) {
   return static_cast<void*>(new pbqt_action);
 }
 
-extern "C" int   rvs_module_action_destroy(void* pAction) {
+extern "C" int rvs_module_action_destroy(void* pAction) {
   delete static_cast<rvs::actionbase*>(pAction);
   return 0;
 }

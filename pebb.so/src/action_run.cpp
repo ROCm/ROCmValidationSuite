@@ -67,14 +67,12 @@ uint64_t test_duration;
  * @return time difference in milliseconds
  */
 uint64_t time_diff(
-                std::chrono::time_point<std::chrono::system_clock> t_end,
-                std::chrono::time_point<std::chrono::system_clock> t_start) {
-    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            t_end - t_start);
-    return milliseconds.count();
+    std::chrono::time_point<std::chrono::system_clock> t_end,
+    std::chrono::time_point<std::chrono::system_clock> t_start) {
+  auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+      t_end - t_start);
+  return milliseconds.count();
 }
-
-
 
 /**
  * @brief Main action execution entry point. Implements test logic.
@@ -178,7 +176,7 @@ int pebb_action::run() {
     } while(brun);
 
     RVSTRACE_
-    timer_running.stop();
+      timer_running.stop();
     timer_final.stop();
 
     iter -= step;
@@ -263,3 +261,4 @@ int pebb_action::run_parallel() {
 
   return rvs::lp::Stopping() ? -1 : 0;
 }
+

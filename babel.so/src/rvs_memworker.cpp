@@ -55,33 +55,33 @@ MemWorker::~MemWorker() {}
  * @brief performs the stress test on the given GPU
  */
 void MemWorker::run() {
-    hipDeviceProp_t props;
-    char*           ptr = NULL;
-    string          err_description;
-    string          msg;
-    int             deviceId;
-    uint16_t        gpuId;
-    std::pair<int, uint16_t> device;
+  hipDeviceProp_t props;
+  char*           ptr = NULL;
+  string          err_description;
+  string          msg;
+  int             deviceId;
+  uint16_t        gpuId;
+  std::pair<int, uint16_t> device;
 
-    // log MEM stress test - start message
-    msg = "[" + action_name + "] " + "[GPU:: " +
-            std::to_string(gpu_id) + "] " + "Starting the Babel memory stress test";
-    rvs::lp::Log(msg, rvs::logresults);
+  // log MEM stress test - start message
+  msg = "[" + action_name + "] " + "[GPU:: " +
+    std::to_string(gpu_id) + "] " + "Starting the Babel memory stress test";
+  rvs::lp::Log(msg, rvs::logresults);
 
-    /* Device Index */
-    deviceId  = get_gpu_device_index();
-    device.first = deviceId;
+  /* Device Index */
+  deviceId  = get_gpu_device_index();
+  device.first = deviceId;
 
-    /* GPU ID */
-    gpuId = get_gpu_id();
-    device.second = gpuId;
+  /* GPU ID */
+  gpuId = get_gpu_id();
+  device.second = gpuId;
 
-    HIP_CHECK(hipGetDeviceProperties(&props, deviceId));
+  HIP_CHECK(hipGetDeviceProperties(&props, deviceId));
 
-    HIP_CHECK(hipSetDevice(deviceId));
+  HIP_CHECK(hipSetDevice(deviceId));
 
-    run_babel(device, num_iterations, array_size, output_csv, mibibytes,
-        test_type, subtest, dwords_per_lane, chunks_per_block, tb_size,
-        MemWorker::bjson, action_name, rwtest);
+  run_babel(device, num_iterations, array_size, output_csv, mibibytes,
+      test_type, subtest, dwords_per_lane, chunks_per_block, tb_size,
+      MemWorker::bjson, action_name, rwtest);
 }
 
