@@ -66,7 +66,5 @@ Command line options are summarized in the table below:
 | `-p`         | `--parallel`   | Enables or disables parallel execution across multiple GPUs. Use this option in conjunction with the `-c` option. Accepted Values: `true`: Enables parallel execution. `false`: Disables parallel execution. If no value is provided for the option, it defaults to `true`. |
 | `-n`         | `--numTimes`   | Number of times the test repeatedly executes. Use this option in conjunction with the `-c` option. |
 |              | `--quiet`      | No console output given. See logs and return code for errors. |
-|              | `--version`    | Display the version information and exit. |
-| `-h`         | `--help`       | Display usage information and exit. |
-
-
+|              | `--version`    | Display the version information. |
+| `-h`         | `--help`       | Display usage information. |
