@@ -56,11 +56,11 @@ Command line options are summarized in the table below:
 |--------------|----------------|-------------|
 | `-a`         | `--appendLog`  | When generating a debug logfile, do not overwrite the content of the current log. Use in conjunction with `-d` and `-l` options. |
 | `-c`         | `--config`     | Specify the test configuration file to use. This is a mandatory field for test execution. |
-| `-d`         | `--debugLevel` | Specify the debug level for the output log. The range is `0` to `5` with `5` being the highest verbose level. |
+| `-d`         | `--debugLevel` | Specify the debug level for the output log. The range is `0` to `5`, with `5` being the highest verbose level. |
 | `-g`         | `--listGpus`   | List all the GPUs available in the machine, that RVS supports and has visibility. |
-| `-i`         | `--indexes`    | Comma separated list of GPU ids or indexes to run test on. This overrides the `device/device_index` parameter values specified for every action in the configuration file, including the `all` value. |
-| `-j`         | `--json`       | Generate output file in JSON format. If a path follows this argument, it will be used as a json log file. Otherwise, a file will be created in `/var/tmp/` with timestamp in the file name. |
-| `-l`         | `--debugLogFile` | Generate log file with output and debug information. |
+| `-i`         | `--indexes`    | Comma-separated list of GPU IDs or indexes to run test on. This overrides the `device/device_index` parameter values specified for every action in the configuration file, including the `all` value. |
+| `-j`         | `--json`       | Generate output file in JSON format. If a path follows this argument, it will be used as a json log file. Otherwise, a file will be created in `/var/tmp/` with a timestamp in the file name. |
+| `-l`         | `--debugLogFile` | Generate the log file with output and debug information. |
 | `-t`         | `--listTests`  | List the test modules present in RVS. |
 | `-v`         | `--verbose`    | Enable detailed logging. Equivalent to specifying `-d 5` option. |
 | `-p`         | `--parallel`   | Enables or disables parallel execution across multiple GPUs. Use this option in conjunction with the `-c` option. Accepted Values: `true`: Enables parallel execution. `false`: Disables parallel execution. If no value is provided for the option, it defaults to `true`. |
