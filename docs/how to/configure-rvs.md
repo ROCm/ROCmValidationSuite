@@ -48,7 +48,7 @@ Common configuration keys applicable to most modules are summarized in the follo
 
 
 
-### Command Line Options
+## Command Line Options
 
 Command line options are summarized in the table below:
 
