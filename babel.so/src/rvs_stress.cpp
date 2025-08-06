@@ -46,7 +46,7 @@ void run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
 
 void parseArguments(int argc, char *argv[]);
 
-void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest,
+bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, int rwtest) {
 
   switch(test_type) {

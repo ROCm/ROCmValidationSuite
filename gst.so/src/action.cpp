@@ -162,13 +162,15 @@ gst_action::~gst_action() {
  * @return true if no error occured, false otherwise
  */
 bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
+
   size_t k = 0;
+  unsigned int i = 0;
+
+  vector<GSTWorker> workers(gst_gpus_device_index.size());
+
   for (;;) {
-    unsigned int i = 0;
     if (property_wait != 0)  // delay gst execution
       sleep(property_wait);
-
-    vector<GSTWorker> workers(gst_gpus_device_index.size());
 
     map<int, uint16_t>::iterator it;
 
@@ -255,7 +257,20 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     }
   }
 
-  return rvs::lp::Stopping() ? false : true;
+  if (rvs::lp::Stopping()) {
+    return false;
+  }
+  else {
+
+    for (i = 0; i < gst_gpus_device_index.size(); i++) {
+      if(false == workers[i].get_result()) {
+        return false;
+      }
+    }
+  }
+
+  /* Action passed */
+  return true;
 }
 
 /**

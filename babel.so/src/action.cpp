@@ -68,15 +68,15 @@ mem_action::~mem_action() {
  * @return true if no error occured, false otherwise
  */
 bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
+
   size_t k = 0;
   string    msg;
+  unsigned int i = 0;
+  vector<MemWorker> workers(mem_gpus_device_index.size());
 
   for (;;) {
-    unsigned int i = 0;
     if (property_wait != 0)  // delay mem execution
       sleep(property_wait);
-
-    vector<MemWorker> workers(mem_gpus_device_index.size());
 
     map<int, uint16_t>::iterator it;
 
@@ -139,7 +139,18 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
     }
   }
 
-  return rvs::lp::Stopping() ? false : true;
+  if (rvs::lp::Stopping()) {
+    return false;
+  }
+  else {
+    for (i = 0; i <  mem_gpus_device_index.size(); i++) {
+      if(false == workers[i].get_result()) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -290,7 +301,7 @@ int mem_action::get_all_selected_gpus(void) {
     return hip_num_gpu_devices;
 
   msg = "[" + action_name + "] " + MODULE_NAME + " " +
-    " " + "Scan for GPU IDs";
+    " " + "Scan for GPU IDs"; 
   rvs::lp::Log(msg, rvs::logtrace);
 
   // iterate over all available & compatible AMD GPUs
@@ -310,7 +321,6 @@ int mem_action::get_all_selected_gpus(void) {
 
   msg = "[" + action_name + "] " + MODULE_NAME + " " +
     " " + "Got all the GPU IDs";
-  rvs::lp::Log(msg, rvs::logtrace);
 
   return 0;
 }

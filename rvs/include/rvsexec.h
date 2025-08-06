@@ -41,6 +41,14 @@ enum class yaml_data_type_t {
   YAML_STRING = 1
 };
 
+typedef struct {
+  std::string name;
+  std::string module;
+  std::string category;
+  bool result;
+  uint64_t duration;
+} exec_action;
+
 /**
  * @class exec
  * @ingroup Launcher
@@ -87,6 +95,8 @@ class exec {
   int user_param;
   /* Number of times to execute the test */
   int num_times;
+  /* Details of all executed actions */
+  std::vector <exec_action> action_details;
 };
 
 }  // namespace rvs

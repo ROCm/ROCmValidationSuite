@@ -345,15 +345,14 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
  */
 void GSTWorker::check_target_stress(double gflops_interval) {
   string msg;
-  bool result;
   rvs::action_result_t action_result;
   char gpuid_buff[12];
   auto desc = action_descriptor{action_name, MODULE_NAME,gpu_id};
   snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
 
-  if(gflops_interval >= (target_stress- (target_stress * tolerance))){
+  if(gflops_interval >= (target_stress - (target_stress * tolerance))) {
     result = true;
-  }else{
+  } else {
     result = false;
   }
 
