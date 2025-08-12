@@ -577,6 +577,7 @@ void IETWorker::bandwidthThread(void)
 
   start_time = std::chrono::system_clock::now();
 
+
   do
   {
     RunKernel(start, stop, (T*)bufs[b], (T*)r, fetch_iters, stream, wg_count, nt_loads);
@@ -616,6 +617,9 @@ void IETWorker::bandwidthThread(void)
     std::cout << "hipStreamSynchronize() failed !!! for stream " << stream << std::endl;
 
   avg_bw /= test_iters;
+
+  printf("[GPU:: %5d] Data %.fMB BuffNo %d WGs %d Dispatches %d MinBw %.1f MaxBW %.1f AvgBW %.1f\n",
+		  gpu_id, data_size / 1024.0f / 1024.0f, buf_count, wg_count, test_iters, min_bw, max_bw, avg_bw);
 
 end:
 
