@@ -117,9 +117,9 @@ if(DEFINED RVS_ROCMSMI)
 endif()
 
 ## define include directories
-include_directories(./ ../ ${ROCM_SMI_INC_DIR} ${YAML_CPP_INCLUDE_DIR})
+include_directories(./ ../ ${ROCM_SMI_INC_DIR} ${YAML_CPP_INCLUDE_DIR} ${PCI_INCLUDE_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${ROCM_SMI_LIB} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${HIPBLASLT_LIB_DIR})
+link_directories(${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${ROCM_SMI_LIB} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${HIPBLASLT_LIB_DIR} ${PCI_LIB_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 

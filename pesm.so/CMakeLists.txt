@@ -106,9 +106,9 @@ else()
 endif()
 
 ## define include directories
-include_directories(./ ../ pci)
+include_directories(./ ../ pci ${PCI_INCLUDE_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_DIR} ${ROCRAND_DIR})
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_DIR} ${ROCRAND_DIR} ${PCI_LIB_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 

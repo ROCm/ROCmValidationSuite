@@ -106,9 +106,9 @@ else()
 endif()
 
 ## define include directories
-include_directories(./ ../ ${HSA_INC_DIR})
+include_directories(./ ../ ${HSA_INC_DIR} ${PCI_INCLUDE_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH} ${HSA_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR})
+link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH} ${HSA_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${PCI_LIB_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpci.so libm.so)
 

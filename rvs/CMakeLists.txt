@@ -114,9 +114,9 @@ else()
 endif()
 
 ## define include directories
-include_directories(./ ../ ${YAML_CPP_INCLUDE_DIR})
+include_directories(./ ../ ${YAML_CPP_INCLUDE_DIR} ${PCI_INCLUDE_DIR})
 ## define lib directories
-link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCBLAS_LIB_DIR} ${AMD_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_DIR} ${HSA_LIB_DIR} ${HIPBLASLT_LIB_DIR} ${YAML_CPP_LIBRARY_DIR})
+link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCBLAS_LIB_DIR} ${AMD_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_DIR} ${HSA_LIB_DIR} ${HIPBLASLT_LIB_DIR} ${YAML_CPP_LIBRARY_DIR} ${PCI_LIB_DIR})
 
 ## additional libraries
 set(ROCBLAS_LIB "rocblas")
