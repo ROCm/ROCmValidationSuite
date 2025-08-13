@@ -149,7 +149,7 @@ else() #If PCI_INCLUDE_DIR found
   message(STATUS "PCI_INCLUDE_DIR found")
 endif(PCI_INCLUDE_DIR)
 
-find_library(PCI_LIB libpci.so /usr/lib /usr/local/lib)
+find_library(PCI_LIB pci PATHS /usr/lib /usr/local/lib)
 if(NOT PCI_LIB)
   message(FATAL_ERROR "PCI_LIB not found !!! Install pciutils-devel to proceed ...")
 else() #If PCI_LIB found
