@@ -110,7 +110,7 @@ endif()
 ## define include directories
 include_directories(./ ../ include ../include ${YAML_CPP_INCLUDE_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${ROCR_LIB_DIR} ${PCI_LIB_DIR})
+link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${ROCR_LIB_DIR} ${PCI_PACKAGE_LIBRARY_DIRS})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpci.so libm.so)
 

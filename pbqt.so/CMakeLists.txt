@@ -133,9 +133,9 @@ if(NOT EXISTS ${ROCR_LIB_DIR}/${CORE_RUNTIME_LIBRARY}.so)
 endif()
 
 ## define include directories
-include_directories(./ ../ pci ${ROCR_INC_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${PCI_INCLUDE_DIR})
+include_directories(./ ../ pci ${ROCR_INC_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${PCI_PACKAGE_INCLUDE_DIRS})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${PCI_LIB_DIR})
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${PCI_PACKAGE_LIBRARY_DIRS})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 

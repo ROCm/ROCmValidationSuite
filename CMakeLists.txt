@@ -142,20 +142,11 @@ else() #If hipblas-common not found
   message(FATAL_ERROR "hipblas-common not found !!! Install hipblas-common to proceed ...")
 endif(hipblas-common_FOUND)
 
-find_path(PCI_INCLUDE_DIR pci/pci.h PATHS /usr/include /usr/local/include)
-if(NOT PCI_INCLUDE_DIR)
-  message(FATAL_ERROR "PCI_INCLUDE_DIR not found !!! Install pciutils-devel to proceed ...")
-else() #If PCI_INCLUDE_DIR found
-  message(STATUS "PCI_INCLUDE_DIR found")
-endif(PCI_INCLUDE_DIR)
+# Include the FindPkgConfig module
+find_package(PkgConfig REQUIRED)
 
-find_library(PCI_LIB pci PATHS /usr/lib /usr/local/lib)
-if(NOT PCI_LIB)
-  message(FATAL_ERROR "PCI_LIB not found !!! Install pciutils-devel to proceed ...")
-else() #If PCI_LIB found
-  message(STATUS "PCI_LIB found")
-  get_filename_component(PCI_LIB_DIR ${PCI_LIB} DIRECTORY)
-endif(PCI_LIB)
+# Use pkg_check_modules to find libpci
+pkg_check_modules(PCI_PACKAGE REQUIRED libpci)
 
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
