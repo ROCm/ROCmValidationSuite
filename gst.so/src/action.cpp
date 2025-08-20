@@ -163,8 +163,7 @@ gst_action::~gst_action() {
  */
 bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
 
-  size_t k = 0;
-  unsigned int i = 0;
+  uint64_t k = 0;
 
   vector<GSTWorker> workers(gst_gpus_device_index.size());
 
@@ -173,6 +172,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       sleep(property_wait);
 
     map<int, uint16_t>::iterator it;
+    size_t i = 0;
 
     // all worker instances have the same json settings
     GSTWorker::set_use_json(bjson);
@@ -262,7 +262,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
   }
   else {
 
-    for (i = 0; i < gst_gpus_device_index.size(); i++) {
+    for (size_t i = 0; i < gst_gpus_device_index.size(); i++) {
       if(false == workers[i].get_result()) {
         return false;
       }

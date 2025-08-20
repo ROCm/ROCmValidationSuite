@@ -69,15 +69,15 @@ mem_action::~mem_action() {
  */
 bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
 
-  size_t k = 0;
+  uint64_t k = 0;
   string    msg;
-  unsigned int i = 0;
   vector<MemWorker> workers(mem_gpus_device_index.size());
 
   for (;;) {
     if (property_wait != 0)  // delay mem execution
       sleep(property_wait);
 
+    size_t i = 0;
     map<int, uint16_t>::iterator it;
 
     // all worker instances have the same json settings
@@ -143,7 +143,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
     return false;
   }
   else {
-    for (i = 0; i <  mem_gpus_device_index.size(); i++) {
+    for (size_t i = 0; i <  mem_gpus_device_index.size(); i++) {
       if(false == workers[i].get_result()) {
         return false;
       }
