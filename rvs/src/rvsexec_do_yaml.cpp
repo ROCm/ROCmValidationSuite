@@ -204,6 +204,52 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
     return -1;
   }
 
+  const char boundary = '|';
+
+  // Header columns
+  std::string header = "ROCm Validation Suite (RVS) Summary";
+  std::string header1 = "Action Name";
+  std::string header2 = "Module";
+  std::string header3 = "Result";
+
+  // Define column width for consistent spacing
+  int columnWidth = 12;
+  int actionColumnWidth = 30;
+  int TotalColumnWidth = (actionColumnWidth + 2 * columnWidth + 8);
+
+  // Function to print a horizontal boundary line
+  auto printBoundary = [&]() {
+    std::cout << "+";
+    for (int i = 0; i < (actionColumnWidth + 2 * columnWidth + 8); ++i) {
+      std::cout << '-';
+    }
+    std::cout << "+" << std::endl;
+  };
+
+  int padding = ((TotalColumnWidth - 2) / 2) + (header.size() / 2);
+
+  if (rvs::options::has_option("-q")) {
+
+    // Print top boundary
+    printBoundary();
+
+    // Print header row
+    std::cout << boundary << std::setw(padding) << header << std::setw(TotalColumnWidth - padding + 1) <<  boundary << std::endl;
+
+    // Print top boundary
+    printBoundary();
+
+    // Print header row
+    std::cout << boundary << " "
+      << std::setw(actionColumnWidth) << std::left << header1
+      << " | " << std::setw(columnWidth) << std::left << header2
+      << " | " << std::setw(columnWidth) << std::left << header3
+      << " " << boundary << std::endl;
+
+    // Print inner boundary
+    printBoundary();
+  }
+
   /* Number of times to execute the test */
   for (int i = 0; i < num_times; i++) {
 
@@ -291,12 +337,6 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
         pif1->callback_set(&rvs::exec::action_callback, (void *)this);
       }
 
-      // execute action
-      sts = pif1->run();
-
-      // processing finished, release action object
-      module::action_destroy(pa);
-
       exec_action action_info;
 
       action_info.name = action["name"].as<std::string>();
@@ -305,6 +345,34 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
       std::transform(action_info.module.begin(),
           action_info.module.end(),
           action_info.module.begin(), ::toupper);
+
+      /***********************************/
+
+      if (rvs::options::has_option("-q")) {
+        std::cout << boundary << " "
+          << std::setw(actionColumnWidth) << std::left << action_info.name
+          << " | " << std::setw(columnWidth) << std::left << action_info.module
+          << " | " << std::setw(columnWidth + 2)  << std::right <<  boundary << std::flush;
+      }
+      /***********************************/
+
+      // execute action
+      sts = pif1->run();
+
+      if (rvs::options::has_option("-q")) {
+        std::string actionresult = (!sts) ? "PASS" : "FAIL";
+        std::string textcolor = (!sts) ? "\033[32m" : "\033[31m";
+
+        std::cout << "\r" << boundary << " "
+          << std::setw(actionColumnWidth) << std::left << action_info.name
+          << " | " << std::setw(columnWidth) << std::left << action_info.module
+          << " | " << textcolor << std::setw(columnWidth) << std::left << actionresult << "\033[0m"
+          << " " <<  boundary << std::endl;
+      }
+
+      // processing finished, release action object
+      module::action_destroy(pa);
+
 
       // Action pass fail status !!
       // errors?
@@ -330,72 +398,79 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
     }
   }
 
-  const char boundary = '|';
+  if (!rvs::options::has_option("-q")) {
 
-  // Header columns
-  std::string header = "ROCm Validation Suite (RVS) Summary";
-  std::string header1 = "Action Name";
-  std::string header2 = "Module";
-  std::string header3 = "Result";
+    const char boundary = '|';
 
-  // Define column width for consistent spacing
-  int columnWidth = 12;
-  int actionColumnWidth = 30;
-  int TotalColumnWidth = (actionColumnWidth + 2 * columnWidth + 8);
+    // Header columns
+    std::string header = "ROCm Validation Suite (RVS) Summary";
+    std::string header1 = "Action Name";
+    std::string header2 = "Module";
+    std::string header3 = "Result";
 
-  // Function to print a horizontal boundary line
-  auto printBoundary = [&]() {
-    std::cout << "+";
-    for (int i = 0; i < (actionColumnWidth + 2 * columnWidth + 8); ++i) {
-      std::cout << '-';
-    }
-    std::cout << "+" << std::endl;
-  };
+    // Define column width for consistent spacing
+    int columnWidth = 12;
+    int actionColumnWidth = 30;
+    int TotalColumnWidth = (actionColumnWidth + 2 * columnWidth + 8);
 
-  int padding = ((TotalColumnWidth - 2) / 2) + (header.size() / 2);
+    // Function to print a horizontal boundary line
+    auto printBoundary = [&]() {
+      std::cout << "+";
+      for (int i = 0; i < (actionColumnWidth + 2 * columnWidth + 8); ++i) {
+        std::cout << '-';
+      }
+      std::cout << "+" << std::endl;
+    };
 
-  // Print top boundary
-  printBoundary();
+    int padding = ((TotalColumnWidth - 2) / 2) + (header.size() / 2);
 
-  // Print header row
-  std::cout << boundary << std::setw(padding) << header << std::setw(TotalColumnWidth - padding + 1) <<  boundary << std::endl;
+    // print top boundary
+    printBoundary();
 
-  // Print top boundary
-  printBoundary();
+    // Print header row
+    std::cout << boundary << std::setw(padding) << header << std::setw(TotalColumnWidth - padding + 1) <<  boundary << std::endl;
 
-  // Print header row
-  std::cout << boundary << " "
-    << std::setw(actionColumnWidth) << std::left << header1
-    << " | " << std::setw(columnWidth) << std::left << header2
-    << " | " << std::setw(columnWidth) << std::left << header3
-    << " " << boundary << std::endl;
+    // Print top boundary
+    printBoundary();
 
-  // Print inner boundary
-  printBoundary();
-
-  for(size_t i = 0; i < action_details.size(); i++) {
-
-    std::string result = (action_details[i].result) ? "PASS" : "FAIL";
-
-    // Print data row
+    // Print header row
     std::cout << boundary << " "
-      << std::setw(actionColumnWidth) << std::left << action_details[i].name
-      << " | " << std::setw(columnWidth) << std::left << action_details[i].module
-      << " | " << std::setw(columnWidth) << std::left << result
+      << std::setw(actionColumnWidth) << std::left << header1
+      << " | " << std::setw(columnWidth) << std::left << header2
+      << " | " << std::setw(columnWidth) << std::left << header3
       << " " << boundary << std::endl;
-  }
 
-  // Print bottom boundary
-  printBoundary();
+    // Print inner boundary
+    printBoundary();
+
+    for(size_t i = 0; i < action_details.size(); i++) {
+
+      std::string result = (action_details[i].result) ? "PASS" : "FAIL";
+      std::string textcolor = (action_details[i].result) ? "\033[32m" : "\033[31m";
+
+      // Print data row
+      std::cout << boundary << " "
+        << std::setw(actionColumnWidth) << std::left << action_details[i].name
+        << " | " << std::setw(columnWidth) << std::left << action_details[i].module
+        << " | " << textcolor << std::setw(columnWidth) << std::left << result << "\033[0m"
+        << " " <<  boundary << std::endl;
+    }
+
+    // Print bottom boundary
+    printBoundary();
 
 #if 0
-  for(size_t i = 0; i < action_details.size(); i++) {
+    for(size_t i = 0; i < action_details.size(); i++) {
 
-    std::cout << "Action Name - " << action_details[i].name << std::endl;
-    std::cout << "Action Module - " << action_details[i].module << std::endl;
-    std::cout << "Action result - " << action_details[i].result << std::endl << std::endl;
-  }
+      std::cout << "Action Name - " << action_details[i].name << std::endl;
+      std::cout << "Action Module - " << action_details[i].module << std::endl;
+      std::cout << "Action result - " << action_details[i].result << std::endl << std::endl;
+    }
 #endif
+  }
+  else {
+    printBoundary();
+  }
 
   result.status = RVS_STATUS_SUCCESS;
   result.output_log = "RVS session successfully completed.";
