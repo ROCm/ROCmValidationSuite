@@ -97,6 +97,11 @@ class exec {
   int num_times;
   /* Details of all executed actions */
   std::vector <exec_action> action_details;
+
+  bool in_progress;
+
+  void in_progress_thread(exec_action action_info);
+
 };
 
 }  // namespace rvs

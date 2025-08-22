@@ -27,6 +27,7 @@
 #include <string>
 #include <algorithm>
 #include <iomanip>
+#include <thread>
 
 #include "include/rvsexec.h"
 #include "yaml-cpp/yaml.h"
@@ -171,6 +172,28 @@ int rvs::exec::do_yaml(const std::string& config_file) {
 
 
   return 0;
+}
+
+void rvs::exec::in_progress_thread(exec_action action_info) {
+  const char boundary = '|';
+  const int columnWidth = 12;
+  const int actionColumnWidth = 30;
+
+  const char spinner[] = {'|', '/', '-', '\\'};
+  int spinnerIndex = 0;
+
+  while (in_progress) {
+
+    std::cout << "\r" << boundary << " "
+      << std::setw(actionColumnWidth) << std::left << action_info.name
+      << " | " << std::setw(columnWidth) << std::left << action_info.module
+      << " | " << std::setw(columnWidth + 1)  << std::left <<  spinner[spinnerIndex++] << boundary << std::flush;
+
+    spinnerIndex %= 4;
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  }
+
 }
 
 /**
@@ -348,11 +371,23 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
       /***********************************/
 
+        std::thread in_progress_t;
+
       if (rvs::options::has_option("-q")) {
+
+        in_progress = true;
+
+#if 0
+
         std::cout << boundary << " "
           << std::setw(actionColumnWidth) << std::left << action_info.name
           << " | " << std::setw(columnWidth) << std::left << action_info.module
           << " | " << std::setw(columnWidth + 2)  << std::right <<  boundary << std::flush;
+#endif
+
+        // Start compute workload thread
+        in_progress_t = std::thread(&rvs::exec::in_progress_thread, this, action_info);
+
       }
       /***********************************/
 
@@ -360,6 +395,11 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
       sts = pif1->run();
 
       if (rvs::options::has_option("-q")) {
+
+        in_progress = false;
+
+        in_progress_t.join();
+
         std::string actionresult = (!sts) ? "PASS" : "FAIL";
         std::string textcolor = (!sts) ? "\033[32m" : "\033[31m";
 
@@ -385,9 +425,11 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
         result.output_log = buff;
         callback(&result);
 
-        rvs::logger::Err("Action failed to run successfully.",
-            action["module"].as<std::string>().c_str(),
-            action["name"].as<std::string>().c_str());
+        if (!rvs::options::has_option("-q")) {
+          rvs::logger::Err("Action failed to run successfully.",
+              action["module"].as<std::string>().c_str(),
+              action["name"].as<std::string>().c_str());
+        }
 
         action_info.result = false;
       }
