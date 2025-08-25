@@ -177,9 +177,10 @@ int rvs::exec::do_yaml(const std::string& config_file) {
 void rvs::exec::in_progress_thread(exec_action action_info) {
   const char boundary = '|';
   const int columnWidth = 12;
-  const int actionColumnWidth = 30;
+  const int actionColumnWidth = 34;
 
-  const char spinner[] = {'|', '/', '-', '\\'};
+//  const char spinner[] = {'|', '/', '-', '\\'};
+  const string spinner[] = {"||||", "////", "----", "\\\\\\\\"};
   int spinnerIndex = 0;
 
   while (in_progress) {
@@ -237,7 +238,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
   // Define column width for consistent spacing
   int columnWidth = 12;
-  int actionColumnWidth = 30;
+  int actionColumnWidth = 34;
   int TotalColumnWidth = (actionColumnWidth + 2 * columnWidth + 8);
 
   // Function to print a horizontal boundary line
