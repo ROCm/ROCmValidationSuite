@@ -453,7 +453,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
     // Define column width for consistent spacing
     int columnWidth = 12;
-    int actionColumnWidth = 30;
+    int actionColumnWidth = 34;
     int TotalColumnWidth = (actionColumnWidth + 2 * columnWidth + 8);
 
     // Function to print a horizontal boundary line
