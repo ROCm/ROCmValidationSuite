@@ -222,7 +222,7 @@ get_version ( ${RVS_VERSION} )
 # Package Generator  #######################################################
 set(CPACK_PACKAGE_NAME "rocm-validation-suite")
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "RVS is a system validation and diagnostics tool for monitoring, stress testing")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Tool for validating AMD GPU functionality, performance, reliability in ROCm.")
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
