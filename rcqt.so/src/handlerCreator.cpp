@@ -34,8 +34,9 @@ PackageHandler* handlerCreator::getPackageHandler(const std::string& pkg){
   if(OSType::Ubuntu == osName) {
     lptr = new PackageHandlerDeb{pkg};
   }
-  else if (OSType::Centos == osName || OSType::RHEL == osName || 
-		  OSType::Oracle == osName || OSType::Azure == osName) {
+  else if (OSType::Centos == osName || OSType::RHEL == osName ||
+    OSType::Oracle == osName || OSType::Azure == osName ||
+		OSType::Amazon == osName) {
     lptr = new PackageHandlerRpm{pkg};
   }
   else if (OSType::SLES == osName) {
@@ -52,8 +53,9 @@ PackageHandler* handlerCreator::getPackageHandler(){
   if(OSType::Ubuntu == osName){
     lptr = new PackageHandlerDeb{};
   }
-  else if (OSType::Centos == osName || OSType::RHEL == osName || 
-		  OSType::Oracle == osName || OSType::Azure == osName ) {
+  else if (OSType::Centos == osName || OSType::RHEL == osName ||
+    OSType::Oracle == osName || OSType::Azure == osName ||
+    OSType::Amazon == osName) {
     lptr = new PackageHandlerRpm{};
   }
   else if (OSType::SLES == osName) {
