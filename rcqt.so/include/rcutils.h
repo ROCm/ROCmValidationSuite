@@ -45,6 +45,7 @@ enum class OSType {
   RHEL,
   Oracle,
   Azure,
+  Amazon,
   None
 };
 
@@ -57,7 +58,8 @@ const std::map<std::string, OSType> op_systems {
   {"sles", OSType::SLES},
   {"red hat enterprise linux", OSType::RHEL},
   {"oracle linux server", OSType::Oracle},
-  {"microsoft azure linux", OSType::Azure}
+  {"microsoft azure linux", OSType::Azure},
+  {"amazon linux", OSType::Amazon}
 };
 
 struct package_info{
