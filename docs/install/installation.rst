@@ -49,7 +49,7 @@ Ensure you review the following prerequisites carefully for each operating syste
 
           .. code-block:: shell
 
-               sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
+                    sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
 
 
     .. tab-item:: RHEL
@@ -74,7 +74,7 @@ Ensure you review the following prerequisites carefully for each operating syste
          
           .. code-block:: shell   
 
-                    sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel                        
+                sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel                        
 
                     
 
@@ -83,44 +83,41 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
 1. Install the ROCm software tack for Ubuntu/CentOS/SLES/RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details. 
 
-.. Note::
+    .. Note::
 
-  The rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64". The `rocm-smi-lib64` package has been renamed to rocm-smi-lib from >= ROCm4.1.
+    The rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64". The `rocm-smi-lib64` package has been renamed to rocm-smi-lib from >= ROCm4.1.
 
 2. Install rocBLAS and rocm-smi-lib.
 
-.. tab-set::
-    .. tab-item:: Ubuntu
-          :sync: Ubuntu
-      
-              .. code-block:: shell
+    .. tab-set::
+        .. tab-item:: Ubuntu
+            :sync: Ubuntu
+        
+            .. code-block:: shell
 
-                  sudo apt-get install rocblas rocm-smi-lib
+                sudo apt-get install rocblas rocm-smi-lib
 
-    .. tab-item:: CentOS and RHEL
-         
-          .. code-block:: shell  
+        .. tab-item:: CentOS and RHEL
+            
+            .. code-block:: shell  
 
-                sudo yum install --nogpgcheck rocblas rocm-smi-lib
+                    sudo yum install --nogpgcheck rocblas rocm-smi-lib
 
-    .. tab-item:: SUSE
-         
-          .. code-block:: shell  
+        .. tab-item:: SUSE
+            
+            .. code-block:: shell  
 
-                sudo zypper install rocblas rocm-smi-lib
+                    sudo zypper install rocblas rocm-smi-lib
 
-
-.. Note:
-
-If rocm-smi-lib is already installed but `/opt/rocm/lib/librocm_smi64.so` doesn't exist, perform the following steps:
+If rocm-smi-lib is already installed, but `/opt/rocm/lib/librocm_smi64.so` doesn't exist, perform the following steps:
 
 .. tab-set::
     .. tab-item:: Ubuntu
           :sync: Ubuntu
        
-             .. code-block:: shell  
+        .. code-block:: shell  
 
-                  sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
+            sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
 
 
     .. tab-item:: CentOS and RHEL
@@ -143,87 +140,87 @@ This section explains how to get and compile current development stream of RVS.
 
 1. Clone the repository.
 
-.. code-block::
+    .. code-block::
 
-    git clone https://github.com/ROCm/ROCmValidationSuite.git
+        git clone https://github.com/ROCm/ROCmValidationSuite.git
 
 2. Use the following instruction to configure. 
 
-.. code-block::
+    .. code-block::
 
-    cd ROCmValidationSuite
-    cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
+        cd ROCmValidationSuite
+        cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
 
-For example, if ROCm 5.5 was installed, use the following instruction,
+    For example, if ROCm 5.5 was installed, use the following instruction:
 
-.. code-block::
+    .. code-block::
 
-    cmake -B ./build -DROCM_PATH=/opt/rocm-5.5.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-5.5.0 -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm-5.5.0
+        cmake -B ./build -DROCM_PATH=/opt/rocm-5.5.0 -DCMAKE_INSTALL_PREFIX=/opt/rocm-5.5.0 -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm-5.5.0
 
 3. Build the binary.
 
-.. code-block::
+    .. code-block::
 
-      make -C ./build
+        make -C ./build
 
 4. Build the package.
 
-.. code-block::
+    .. code-block::
 
-      cd ./build
-      make package
+        cd ./build
+        make package
 
-.. Note::
+    .. Note::
 
-Based on your OS, only DEB or RPM package will be built. 
+        Based on your OS, only DEB or RPM package will be built. 
 
-.. Note::
+    .. Note::
 
-You may ignore an error for unrelated configurations.
+        You may ignore an error for unrelated configurations.
 
 5. Install the built package.
 
-.. tab-set::
-    .. tab-item:: Ubuntu
-          :sync: Ubuntu
+    .. tab-set::
+        .. tab-item:: Ubuntu
+            :sync: Ubuntu
 
             .. code-block:: 
 
-                  sudo dpkg -i rocm-validation-suite*.deb
+                sudo dpkg -i rocm-validation-suite*.deb
 
-    .. tab-item:: CentOS, RHEL, and SUSE
+        .. tab-item:: CentOS, RHEL, and SUSE
 
-         .. code-block:: shell  
+            .. code-block:: shell  
 
-                sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
+                    sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
 
-.. Note::
+    .. Note::
 
-RVS is getting packaged as part of ROCm release starting from 3.0. You can install the pre-compiled package as indicated below. Ensure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed.
+        RVS is getting packaged as part of ROCm release starting from 3.0. You can install the pre-compiled package as indicated below. Ensure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed.
 
 6. Install package packaged with ROCm release.
 
-.. tab-set::
-    .. tab-item:: Ubuntu
-          :sync: Ubuntu
+    .. tab-set::
+        .. tab-item:: Ubuntu
+            :sync: Ubuntu
 
             .. code-block:: 
 
-                  sudo apt install rocm-validation-suite
+                sudo apt install rocm-validation-suite
 
- 
-    .. tab-item:: CentOS and RHEL
+    
+        .. tab-item:: CentOS and RHEL
 
-           .. code-block:: shell  
+            .. code-block:: shell  
 
-                  sudo yum install rocm-validation-suite
+                    sudo yum install rocm-validation-suite
 
-    .. tab-item:: SUSE
+        .. tab-item:: SUSE
 
-           .. code-block:: shell  
+            .. code-block:: shell  
 
-                  sudo zypper install rocm-validation-suite
+                    sudo zypper install rocm-validation-suite
 
 
 Reporting
