@@ -102,14 +102,14 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
         .. code-block:: shell  
 
-                sudo yum install --nogpgcheck rocblas rocm-smi-lib
+            sudo yum install --nogpgcheck rocblas rocm-smi-lib
 
     .. tab-item:: SUSE
         :sync: SUSE
 
         .. code-block:: shell  
 
-                sudo zypper install rocblas rocm-smi-lib
+            sudo zypper install rocblas rocm-smi-lib
 
 If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doesn't exist, perform the following steps:
 
@@ -125,16 +125,16 @@ If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doe
     .. tab-item:: CentOS and RHEL
           :sync: CentOS
 
-         .. code-block:: shell  
+          .. code-block:: shell  
 
               sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
 
     .. tab-item:: SUSE
          :sync: SUSE
 
-          .. code-block:: shell  
+         .. code-block:: shell  
 
-              sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
+             sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
 
 
 Building from source
