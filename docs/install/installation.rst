@@ -42,6 +42,10 @@ Prerequisites
 
 RVS has been tested on most of the ROCm supported Linux environments except for RHEL 9.4. See `Supported operating systems <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html#supported-operating-systems>`_ for the complete list of ROCm supported Linux environments.
 
+.. Note::
+
+    This topic provides commands for the primary Linux distribution families. These commands are also applicable to other operating systems derived from the same families.
+
 Ensure you review the following prerequisites carefully for each operating system before compiling or installing the ROCm Validation Suite (RVS) package.
 
 .. tab-set::
