@@ -37,9 +37,10 @@ RVS package components are installed in `/opt/rocm`. The package contains:
 - user guide (located in ``_install-base_/share/rocm-validation-suite/userguide``)
 - man page (located in ``_install-base_/share/man``)
 
-
 Prerequisites
 ------------------
+
+RVS has been tested on most of the ROCm supported Linux environments except for RHEL 9.4. See `Supported operating systems <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html#supported-operating-systems>`_ for the complete list of ROCm supported Linux environments.
 
 Ensure you review the following prerequisites carefully for each operating system before compiling/installing the ROCm Validation Suite (RVS) package.
 
@@ -76,8 +77,7 @@ Ensure you review the following prerequisites carefully for each operating syste
 
                 sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel                        
 
-                    
-
+                  
 Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 -----------------------------------------------
 
