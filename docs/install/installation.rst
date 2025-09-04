@@ -47,9 +47,9 @@ Ensure you review the following prerequisites carefully for each operating syste
     .. tab-item:: Ubuntu
         :sync: Ubuntu
 
-          .. code-block:: shell
+        .. code-block:: shell
 
-                    sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
+                sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
 
 
     .. tab-item:: RHEL
@@ -83,9 +83,9 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
 1. Install the ROCm software tack for Ubuntu/CentOS/SLES/RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details. 
 
-    .. Note::
+.. Note::
 
-        The rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64". The `rocm-smi-lib64` package has been renamed to rocm-smi-lib from >= ROCm4.1.
+    The rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64". The `rocm-smi-lib64` package has been renamed to rocm-smi-lib from >= ROCm4.1.
 
 2. Install rocBLAS and rocm-smi-lib.
 
@@ -98,13 +98,15 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
             sudo apt-get install rocblas rocm-smi-lib
 
     .. tab-item:: CentOS and RHEL
-        
+        :sync: CentOS
+
         .. code-block:: shell  
 
                 sudo yum install --nogpgcheck rocblas rocm-smi-lib
 
     .. tab-item:: SUSE
-        
+        :sync: SUSE
+
         .. code-block:: shell  
 
                 sudo zypper install rocblas rocm-smi-lib
@@ -121,13 +123,15 @@ If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doe
 
 
     .. tab-item:: CentOS and RHEL
+          :sync: CentOS
 
          .. code-block:: shell  
 
               sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
 
     .. tab-item:: SUSE
-         
+         :sync: SUSE
+
           .. code-block:: shell  
 
               sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
