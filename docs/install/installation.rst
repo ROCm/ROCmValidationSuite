@@ -16,7 +16,7 @@ You can obtain ROCm Validation Suite (RVS) by building it from:
 Building from source code
 ---------------------------
 
-RVS has been developed as an open source solution. You can find the source code and related documentation `here <https://github.com/ROCm/ROCmValidationSuite>`_. 
+RVS has been developed as an open source solution. You can find the source code and related documentation in the `RVS GitHub repository <https://github.com/ROCm/ROCmValidationSuite>`_. 
 
 
 Package manager installation
@@ -24,9 +24,9 @@ Package manager installation
                                    
 Based on the OS, use the appropriate package manager to install the rocm-validation-suite package.
 
-For more details, refer to `ROCm Validation Suite GitHub site. <https://github.com/ROCm/ROCmValidationSuite>`_
+For more details, refer to the `ROCm Validation Suite GitHub site. <https://github.com/ROCm/ROCmValidationSuite>`_
 
-RVS package components are installed in `/opt/rocm`. The package contains:
+RVS package components are installed in ``/opt/rocm``. The package contains:
 
 - executable binary (located in ``_install-base_/bin/rvs``)
 - public shared libraries (located in ``_install-base_/lib``)
@@ -42,7 +42,7 @@ Prerequisites
 
 RVS has been tested on most of the ROCm supported Linux environments except for RHEL 9.4. See `Supported operating systems <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html#supported-operating-systems>`_ for the complete list of ROCm supported Linux environments.
 
-Ensure you review the following prerequisites carefully for each operating system before compiling/installing the ROCm Validation Suite (RVS) package.
+Ensure you review the following prerequisites carefully for each operating system before compiling or installing the ROCm Validation Suite (RVS) package.
 
 .. tab-set::
     .. tab-item:: Ubuntu
