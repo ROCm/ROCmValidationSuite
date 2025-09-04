@@ -77,7 +77,7 @@ Ensure you review the following prerequisites carefully for each operating syste
 
                 sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel                        
 
-                  
+
 Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 -----------------------------------------------
 
@@ -85,7 +85,7 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
 .. Note::
 
-    The rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64". The `rocm-smi-lib64` package has been renamed to rocm-smi-lib from >= ROCm4.1.
+    The ``rocm_smi64`` package has been renamed to ``rocm-smi-lib64 from >= ROCm3.0``. If you are using ROCm 3.0 or earlier, install the package as ``rocm_smi64``. The ``rocm-smi-lib64`` package has been renamed to ``rocm-smi-lib from >= ROCm4.1``.
 
 2. Install rocBLAS and rocm-smi-lib.
 
@@ -155,7 +155,7 @@ This section explains how to get and compile current development stream of RVS.
     cd ROCmValidationSuite
     cmake -B ./build -DROCM_PATH=<rocm_installed_path> -DCMAKE_INSTALL_PREFIX=<rocm_installed_path> -DCPACK_PACKAGING_INSTALL_PREFIX=<rocm_installed_path>
 
-For example, if ROCm 5.5 was installed, use the following instruction:
+For example, if ROCm 5.5 was installed, run the following command:
 
 .. code-block::
 
@@ -180,7 +180,7 @@ For example, if ROCm 5.5 was installed, use the following instruction:
 
 .. Note::
 
-    You may ignore an error for unrelated configurations.
+    You can ignore an error for unrelated configurations.
 
 5. Install the built package.
 
@@ -201,7 +201,7 @@ For example, if ROCm 5.5 was installed, use the following instruction:
 
 .. Note::
 
-    RVS is getting packaged as part of ROCm release starting from 3.0. You can install the pre-compiled package as indicated below. Ensure Prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed.
+    RVS is packaged as part of ROCm release starting from 3.0. You can install the pre-compiled package as indicated below. Ensure prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed.
 
 6. Install package packaged with ROCm release.
 
@@ -230,7 +230,7 @@ For example, if ROCm 5.5 was installed, use the following instruction:
 Reporting
 -----------
 
-Test results, errors, and verbose logs are printed as terminal output. To enable JSON logging use "-j" command line option. The json output file is stored in /var/tmp folder and the name of the file will be printed.
+Test results, errors, and verbose logs are printed as terminal output. To enable JSON logging, use the ``-j`` option. The JSON output file is stored in the ``/var/tmp`` folder and the name of the file will be printed.
 
 You can build RVS from the source code base or by installing from a pre-built package. See the preceding sections for more details. 
 
@@ -264,19 +264,21 @@ Run version pre-compiled and packaged with ROCm release
     ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
 
-To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
+To run GPU specific test configuration, use configuration files from GPU folders in ``/opt/rocm/share/rocm-validation-suite/conf``.
 
 .. code-block::
 
     ./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf ; Run MI300X specific GST test configuration
     ./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf ; Run Navi 32 specific GST test configuration
 
-Note: If present, always use GPU specific configurations instead of default test configurations.
+.. Note::
+
+    If present, always use GPU specific configurations instead of default test configurations.
 
 Building documentation
 ------------------------
 
-Run the steps below to build documentation locally.
+Run the following commands to build documentation locally.
 
 .. code-block::
 
