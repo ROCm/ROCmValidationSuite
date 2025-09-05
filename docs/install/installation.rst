@@ -28,14 +28,14 @@ For more details, refer to the `ROCm Validation Suite GitHub repository. <https:
 
 RVS package components are installed in ``/opt/rocm``. The package contains:
 
-- executable binary (located in ``_install-base_/bin/rvs``)
-- public shared libraries (located in ``_install-base_/lib``)
-- module specific shared libraries (located in ``_install-base_/lib/rvs``)
-- default configuration files (located in ``_install-base_/share/rocm-validation-suite/conf``)
-- GPU specific configuration files (located in ``_install-base_/share/rocm-validation-suite/conf/<GPU folder>``)
-- testscripts (located in ``_install-base_/share/rocm-validation-suite/testscripts``)
-- user guide (located in ``_install-base_/share/rocm-validation-suite/userguide``)
-- man page (located in ``_install-base_/share/man``)
+- executable binary, located in ``_install-base_/bin/rvs``.
+- public shared libraries, located in ``_install-base_/lib``.
+- module specific shared libraries, located in ``_install-base_/lib/rvs``.
+- default configuration files, located in ``_install-base_/share/rocm-validation-suite/conf``.
+- GPU specific configuration files, located in ``_install-base_/share/rocm-validation-suite/conf/<GPU folder>``.
+- testscripts, located in ``_install-base_/share/rocm-validation-suite/testscripts``.
+- user guide, located in ``_install-base_/share/rocm-validation-suite/userguide``.
+- man page, located in ``_install-base_/share/man``.
 
 Prerequisites
 ------------------
