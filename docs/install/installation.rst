@@ -16,15 +16,15 @@ You can obtain ROCm Validation Suite (RVS) by building it from:
 Building from source code
 ---------------------------
 
-RVS has been developed as an open source solution. You can find the source code and related documentation in the `RVS GitHub repository <https://github.com/ROCm/ROCmValidationSuite>`_. 
+RVS is as an open source solution. You can find the source code and related documentation in the `RVS GitHub repository <https://github.com/ROCm/ROCmValidationSuite>`_. 
 
 
 Package manager installation
 ------------------------------
                                    
-Based on the OS, use the appropriate package manager to install the rocm-validation-suite package.
+Based on the OS, use the appropriate package manager to install the RVS package.
 
-For more details, refer to the `ROCm Validation Suite GitHub site. <https://github.com/ROCm/ROCmValidationSuite>`_
+For more details, refer to the `ROCm Validation Suite GitHub repository. <https://github.com/ROCm/ROCmValidationSuite>`_
 
 RVS package components are installed in ``/opt/rocm``. The package contains:
 
@@ -46,7 +46,7 @@ RVS has been tested on most of the ROCm supported Linux environments except for 
 
     This topic provides commands for the primary Linux distribution families. These commands are also applicable to other operating systems derived from the same families.
 
-Ensure you review the following prerequisites carefully for each operating system before compiling or installing the ROCm Validation Suite (RVS) package.
+Ensure you review the following prerequisites carefully for each operating system before compiling or installing the RVS package.
 
 .. tab-set::
     .. tab-item:: Ubuntu
@@ -85,7 +85,7 @@ Ensure you review the following prerequisites carefully for each operating syste
 Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 -----------------------------------------------
 
-1. Install the ROCm software tack for Ubuntu, CentOS, SLES or RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details. 
+1. Install the ROCm software stack for Ubuntu, CentOS, SLES or RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details. 
 
 .. Note::
 
@@ -115,7 +115,7 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
             sudo zypper install rocblas rocm-smi-lib
 
-If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doesn't exist, perform the following steps:
+If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doesn't exist, run the following command:
 
 .. tab-set::
     .. tab-item:: Ubuntu
@@ -144,7 +144,7 @@ If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doe
 Building from source
 ---------------------
 
-This section explains how to get and compile current development stream of RVS.
+This section explains how to get and compile the current development stream of RVS.
 
 1. Clone the repository.
 
@@ -152,7 +152,7 @@ This section explains how to get and compile current development stream of RVS.
 
     git clone https://github.com/ROCm/ROCmValidationSuite.git
 
-2. Use the following instruction to configure. 
+2. Configure the build system for RVS.
 
 .. code-block::
 
@@ -180,11 +180,11 @@ For example, if ROCm 5.5 was installed, run the following command:
 
 .. Note::
 
-    Based on your OS, only DEB or RPM package will be built. 
+    Depending on your OS, only DEB or RPM package will be built. 
 
 .. Note::
 
-    You can ignore an error for unrelated configurations.
+    You can ignore errors about unrelated configurations.
 
 5. Install the built package.
 
@@ -205,9 +205,9 @@ For example, if ROCm 5.5 was installed, run the following command:
 
 .. Note::
 
-    RVS is packaged as part of ROCm release starting from 3.0. You can install the pre-compiled package as indicated below. Ensure prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed.
+    RVS is packaged as part of the ROCm release starting from 3.0. You can install the pre-compiled package as indicated below. Ensure prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed.
 
-6. Install package packaged with ROCm release.
+6. Install the package included with the ROCm release.
 
 .. tab-set::
     .. tab-item:: Ubuntu
@@ -234,16 +234,15 @@ For example, if ROCm 5.5 was installed, run the following command:
 Reporting
 -----------
 
-Test results, errors, and verbose logs are printed as terminal output. To enable JSON logging, use the ``-j`` option. The JSON output file is stored in the ``/var/tmp`` folder and the name of the file will be printed.
+Test results, errors, and verbose logs are printed as terminal output. To enable JSON logging, use the ``-j`` option. The JSON output file is stored in the ``/var/tmp`` folder and the file name will be printed.
 
 You can build RVS from the source code base or by installing from a pre-built package. See the preceding sections for more details. 
-
 
 Running RVS
 ------------
 
-Run version built from source code
-+++++++++++++++++++++++++++++++++++
+Run the version built from source code
+++++++++++++++++++++++++++++++++++++++
 
 .. code-block::
 
@@ -255,8 +254,8 @@ Run version built from source code
     ./rvs -d 3 ; Run set of RVS default sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
 
-Run version pre-compiled and packaged with ROCm release
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Run the version pre-compiled and packaged with the ROCm release
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. code-block::
 
@@ -268,7 +267,7 @@ Run version pre-compiled and packaged with ROCm release
     ./rvs -d 3 ; Run set of RVS sanity tests (in rvs.conf) with verbose level 3
     ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
 
-To run GPU specific test configuration, use configuration files from GPU folders in ``/opt/rocm/share/rocm-validation-suite/conf``.
+To run GPU-specific test configurations, use the configuration files in the GPU folders under ``/opt/rocm/share/rocm-validation-suite/conf``.
 
 .. code-block::
 
@@ -277,7 +276,7 @@ To run GPU specific test configuration, use configuration files from GPU folders
 
 .. Note::
 
-    If present, always use GPU specific configurations instead of default test configurations.
+    Always use GPU-specific configurations over the default test configurations.
 
 Building documentation
 ------------------------
@@ -286,10 +285,8 @@ Run the following commands to build documentation locally.
 
 .. code-block::
 
-        cd docs
-        
-        pip3 install -r .sphinx/requirements.txt
-        
+        cd docs     
+        pip3 install -r .sphinx/requirements.txt        
         python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
 
 
