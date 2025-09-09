@@ -970,12 +970,21 @@ bool rvs_blas::is_gemm_op_complete(void) {
  * @brief performs the GEMM matrix multiplication operations
  * @return true if GPU was able to enqueue the GEMM operation, otherwise false
  */
-bool rvs_blas::run_blas_gemm(void) {
+bool rvs_blas::run_blas_gemm(bool hot_call) {
+
+  int calls = 0;
 
   if (is_error)
     return false;
 
-  for(int i = 0; i < hot_calls; i++) {
+  /* Determine GEMM call iterations */
+  if(true == hot_call)
+    calls = hot_calls;
+  else
+    calls = 1;
+
+  /* GEMM call iterations loop */
+  for(int i = 0; i < calls; i++) {
 
     if(blas_source == "rocblas") {
 

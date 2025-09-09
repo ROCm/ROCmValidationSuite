@@ -151,7 +151,7 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
     }
 
     // run GEMM operation
-    if (!gpu_blas->run_blas_gemm())
+    if (!gpu_blas->run_blas_gemm(false))
       continue;  // failed to run the GEMM operation
 
     // Waits for GEMM operation to complete
@@ -252,7 +252,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // run GEMM operation
-    if(!gpu_blas->run_blas_gemm()) {
+    if(!gpu_blas->run_blas_gemm(false)) {
 
       *err_description = GST_BLAS_ERROR;
       *error = 1;
@@ -271,7 +271,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     end_time = gpu_blas->get_time_us();
 
     //Converting microseconds to seconds
-    timetakenforoneiteration = (end_time - start_time)/(1e6 * gst_hot_calls);
+    timetakenforoneiteration = (end_time - start_time)/1e6;
 
     gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
 
@@ -471,7 +471,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // launch GEMM operation
-    if(!gpu_blas->run_blas_gemm()) {
+    if(!gpu_blas->run_blas_gemm(true)) {
 
       *err_description = GST_BLAS_ERROR;
       *error = 1;

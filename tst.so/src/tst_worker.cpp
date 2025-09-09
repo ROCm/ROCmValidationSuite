@@ -154,7 +154,7 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
     //Hit the GPU with load to increase temperature
     while ( (duration < run_duration_ms) && (endtest == false) ){
         //call the gemm blas
-        gpu_blas->run_blas_gemm();
+        gpu_blas->run_blas_gemm(true);
 
         /* Set callback to be called upon completion of blas gemm operations */
         gpu_blas->set_callback(blas_callback, (void *)this);
