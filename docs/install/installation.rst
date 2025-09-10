@@ -40,7 +40,7 @@ RVS package components are installed in ``/opt/rocm``. The package contains:
 Prerequisites
 ------------------
 
-RVS has been tested on most of the ROCm supported Linux environments except for RHEL 9.4. See `Supported operating systems <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html#supported-operating-systems>`_ for the complete list of ROCm supported Linux environments.
+RVS has been tested on all ROCm-supported Linux environments except for RHEL 9.4. See `Supported operating systems <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html#supported-operating-systems>`_ for the complete list of ROCm-supported Linux environments.
 
 .. Note::
 
