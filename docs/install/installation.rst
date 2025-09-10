@@ -16,7 +16,7 @@ You can obtain ROCm Validation Suite (RVS) by building it from:
 Building from source code
 ---------------------------
 
-RVS is as an open source solution. You can find the source code and related documentation in the `RVS GitHub repository <https://github.com/ROCm/ROCmValidationSuite>`_. 
+RVS is an open-source solution. You can find the source code and related documentation in the `RVS GitHub repository <https://github.com/ROCm/ROCmValidationSuite>`_. 
 
 
 Package manager installation
