@@ -11,12 +11,12 @@ You can obtain ROCm Validation Suite (RVS) by building it from:
 
 * the source code base 
 
-* a pre-built package
+* a prebuilt package
 
 Building from source code
 ---------------------------
 
-RVS is an open-source solution. You can find the source code and related documentation in the `RVS GitHub repository <https://github.com/ROCm/ROCmValidationSuite>`_. 
+RVS is an open-source solution. For more details, refer to the `ROCm Validation Suite GitHub repository. <https://github.com/ROCm/ROCmValidationSuite>`_
 
 
 Package manager installation
@@ -72,24 +72,13 @@ Ensure you review the following prerequisites carefully for each operating syste
         
         .. code-block:: shell
                         
-                sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
-
-
-    .. tab-item:: CentOS
-         
-          .. code-block:: shell   
-
-                sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel                        
+                sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel                       
 
 
 Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 -----------------------------------------------
 
-1. Install the ROCm software stack for Ubuntu, CentOS, SLES or RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details. 
-
-.. Note::
-
-    The ``rocm_smi64`` package has been renamed to ``rocm-smi-lib64 from >= ROCm3.0``. If you are using ROCm 3.0 or earlier, install the package as ``rocm_smi64``. The ``rocm-smi-lib64`` package has been renamed to ``rocm-smi-lib from >= ROCm4.1``.
+1. Install the ROCm software stack for Ubuntu, SLES or RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details. 
 
 2. Install rocBLAS and rocm-smi-lib.
 
@@ -101,8 +90,8 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
 
             sudo apt-get install rocblas rocm-smi-lib
 
-    .. tab-item:: CentOS and RHEL
-        :sync: CentOS
+    .. tab-item:: RHEL
+        :sync: RHEL
 
         .. code-block:: shell  
 
@@ -126,8 +115,8 @@ If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doe
               sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
 
 
-    .. tab-item:: CentOS and RHEL
-          :sync: CentOS
+    .. tab-item:: RHEL
+          :sync: RHEL
 
           .. code-block:: shell  
 
@@ -196,7 +185,7 @@ For example, if ROCm 5.5 was installed, run the following command:
 
             sudo dpkg -i rocm-validation-suite*.deb
 
-    .. tab-item:: CentOS, RHEL, and SUSE
+    .. tab-item:: RHEL and SUSE
 
         .. code-block:: shell  
 
@@ -218,7 +207,7 @@ For example, if ROCm 5.5 was installed, run the following command:
             sudo apt install rocm-validation-suite
 
 
-    .. tab-item:: CentOS and RHEL
+    .. tab-item:: RHEL
 
         .. code-block:: shell  
 
