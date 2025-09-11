@@ -58,6 +58,7 @@ Ensure you review the following prerequisites carefully for each operating syste
 
 
     .. tab-item:: RHEL
+        :sync: RHEL
          
           .. code-block:: shell                    
                     
@@ -68,7 +69,8 @@ Ensure you review the following prerequisites carefully for each operating syste
                     sudo rpm -ivh pciutils-devel-3.5.1-3.el7.x86_64.rpm
 
             
-    .. tab-item:: SLES
+    .. tab-item:: SUSE
+        :sync: SUSE
         
         .. code-block:: shell
                         
@@ -186,6 +188,7 @@ For example, if ROCm 5.5 was installed, run the following command:
             sudo dpkg -i rocm-validation-suite*.deb
 
     .. tab-item:: RHEL and SUSE
+        :sync: RHEL SUSE
 
         .. code-block:: shell  
 
@@ -208,12 +211,14 @@ For example, if ROCm 5.5 was installed, run the following command:
 
 
     .. tab-item:: RHEL
+        :sync: RHEL
 
         .. code-block:: shell  
 
                 sudo yum install rocm-validation-suite
 
     .. tab-item:: SUSE
+        :sync: SUSE
 
         .. code-block:: shell  
 
