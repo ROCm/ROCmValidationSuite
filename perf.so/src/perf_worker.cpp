@@ -182,7 +182,7 @@ bool PERFWorker::do_perf_stress_test(int *error, std::string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // run GEMM & wait for completion
-    gpu_blas->run_blas_gemm();
+    gpu_blas->run_blas_gemm(true);
 
     //End the timer
     end_time = gpu_blas->get_time_us();

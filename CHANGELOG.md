@@ -2,6 +2,12 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.2.0 for ROCm 7.0.1
+
+### Added
+
+- Support for new platform: RX9060
+
 ## RVS 1.2.0 for ROCm 7.0.0
 
 ### Added
