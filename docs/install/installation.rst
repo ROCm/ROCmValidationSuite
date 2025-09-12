@@ -185,12 +185,19 @@ For example, if ROCm 5.5 was installed, run the following command:
 
             sudo dpkg -i rocm-validation-suite*.deb
 
-    .. tab-item:: RHEL and SUSE
+    .. tab-item:: RHEL
+        :sync: RHEL
 
         .. code-block:: shell  
 
                 sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
+    .. tab-item:: SUSE
+        :sync: SUSE
+
+        .. code-block:: shell  
+
+                sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
 .. Note::
 
