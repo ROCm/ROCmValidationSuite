@@ -34,6 +34,15 @@
 
 using std::map;
 
+struct device_info {
+  std::string bus;
+  std::string name;
+  int32_t node_id;
+  int32_t gpu_id;
+  int32_t device_id;
+  uint64_t bdfId;// this is pcie location id to uniquely identify device
+};
+
 struct action_descriptor{
   std::string action_name;
   std::string module_name;
@@ -135,8 +144,9 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
     bool property_device_all, const std::vector<uint16_t>& property_device_index,
     bool property_device_index_all, bool mcm_check = false);
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function);
-int display_gpu_info(void);
+int display_gpu_info(std::vector<device_info>);
 void *json_list_create(std::string lname, int log_level);
+ std::vector<device_info>  get_gpu_info (void);
 
 template <typename... KVPairs>
 void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values ) {

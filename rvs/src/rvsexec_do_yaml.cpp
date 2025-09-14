@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <thread>
+#include <fstream>
 
 #include "include/rvsexec.h"
 #include "yaml-cpp/yaml.h"
@@ -39,6 +40,7 @@
 #include "include/rvsliblogger.h"
 #include "include/rvsoptions.h"
 #include "include/rvs_util.h"
+#include "include/gpu_util.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -175,11 +177,11 @@ int rvs::exec::do_yaml(const std::string& config_file) {
 }
 
 void rvs::exec::in_progress_thread(exec_action action_info) {
-  const char boundary = '|';
-  const int columnWidth = 12;
-  const int actionColumnWidth = 34;
 
-//  const char spinner[] = {'|', '/', '-', '\\'};
+  const char boundary = '|';
+  const int columnWidth = 14;
+  const int actionColumnWidth = 32;
+
   const string spinner[] = {"||||", "////", "----", "\\\\\\\\"};
   int spinnerIndex = 0;
 
@@ -188,11 +190,261 @@ void rvs::exec::in_progress_thread(exec_action action_info) {
     std::cout << "\r" << boundary << " "
       << std::setw(actionColumnWidth) << std::left << action_info.name
       << " | " << std::setw(columnWidth) << std::left << action_info.module
-      << " | " << std::setw(columnWidth + 1)  << std::left <<  spinner[spinnerIndex++] << boundary << std::flush;
+      << " | " << std::setw(columnWidth)  << std::left <<  spinner[spinnerIndex++]
+      << "  " << boundary << std::flush;
 
     spinnerIndex %= 4;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  }
+
+}
+
+std::string getROCmVersion(void) {
+
+  std::string line = "N/A";
+  std::ifstream inputFile("/opt/rocm/.info/version-rocm"); // Open the file
+  if (!inputFile) {
+    std::cerr << "Error opening file!" << std::endl;
+    return line;
+  }
+
+  std::getline(inputFile, line);
+
+  inputFile.close(); // Close the file
+
+  return line;
+}
+
+std::string getOSNameVersion(void) {
+
+  std::ifstream file("/etc/os-release");
+  std::string line;
+  std::string osName;
+
+  if (!file.is_open()) {
+    return "Unable to open /etc/os-release";
+  }
+
+  while (std::getline(file, line)) {
+    if (line.find("PRETTY_NAME=") == 0) {
+      // Remove the key and quotes
+      osName = line.substr(12); // Skip "PRETTY_NAME="
+      if (!osName.empty() && osName.front() == '"' && osName.back() == '"') {
+        osName = osName.substr(1, osName.size() - 2); // Remove surrounding quotes
+      }
+      break;
+    }
+  }
+
+  file.close();
+  return osName.empty() ? "N/A" : osName;
+}
+
+
+std::string getAmdGpuDriverVersion() {
+
+  std::array<char, 128> buffer;
+  std::string result;
+
+  // Run the command
+  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("dkms status", "r"), pclose);
+  if (!pipe) {
+  return "N/A";
+  }
+
+  // Read the output
+  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    result += buffer.data();
+  }
+
+  // Example output: "amdgpu/6.14.14-2204008.22.04, 6.8.0-59-generic, x86_64: installed "
+  // Extract version (e.g., 6.14.14)
+  size_t slashPos = result.find('/');
+  size_t commaPos = result.find('-', slashPos);
+  if (slashPos != std::string::npos && commaPos != std::string::npos) {
+    return result.substr(slashPos + 1, commaPos - slashPos - 1);
+  }
+
+  return "N/A";
+}
+
+void systemOverview() {
+
+  // Header column
+  std::string header = "System Overview";
+
+  std::string version1 = "RVS version";
+  std::string version2 = "ROCm version";
+  std::string version3 = "amdgpu version";
+  std::string OS = "Operating System";
+  std::string gpus = "GPUs";
+
+  // Define column width for consistent spacing
+  int columnWidth = 14;;
+  int actionColumnWidth = 32;
+  int TotalColumnWidth = 69;
+
+  const char boundary = '|';
+
+  // Function to print a horizontal boundary line
+  auto printBoundary = [&]() {
+    std::cout << "+";
+    for (int i = 0; i < TotalColumnWidth; ++i) {
+      std::cout << '-';
+    }
+    std::cout << "+" << std::endl;
+  };
+
+  auto printDoubleBoundary = [&]() {
+    std::cout << "+";
+    for (int i = 0; i < TotalColumnWidth; ++i) {
+      std::cout << '=';
+    }
+    std::cout << "+" << std::endl;
+  };
+
+  int padding = (TotalColumnWidth - header.size());
+  int padleft = padding/2;
+  int padright = padding - padleft;
+
+  // Print header row
+  std::cout << boundary << std::string(padleft, ' ') << header << std::string(padright, ' ') <<  boundary << std::endl;
+
+  // Print top boundary
+  printBoundary();
+  
+  std::cout << "\r" << boundary << " "
+    << std::setw(actionColumnWidth) << std::left << OS
+    << " | " << std::setw(actionColumnWidth) << std::left << getOSNameVersion()
+    << " " <<  boundary << std::endl;
+
+  std::cout << "\r" << boundary << " "
+    << std::setw(actionColumnWidth) << std::left << version1
+    << " | " << std::setw(actionColumnWidth) << std::left << RVS_VERSION_STRING
+    << " " <<  boundary << std::endl;
+
+  std::cout << "\r" << boundary << " "
+    << std::setw(actionColumnWidth) << std::left << version2
+    << " | " << std::setw(actionColumnWidth) << std::left << getROCmVersion()
+    << " " <<  boundary << std::endl;
+
+  std::cout << "\r" << boundary << " "
+    << std::setw(actionColumnWidth) << std::left << version3
+    << " | " << std::setw(actionColumnWidth) << std::left << getAmdGpuDriverVersion()
+    << " " <<  boundary << std::endl;
+  
+  rvs::gpulist::Initialize();
+
+  std::vector<device_info> gpu_info_list = get_gpu_info();
+
+  std::string gpu_list;
+  for (const auto& info : gpu_info_list) {
+    gpu_list += info.gpu_id + " ";
+  }
+
+  if (!gpu_list.empty()) {
+    gpu_list.pop_back(); // Remove trailing space
+  } else {
+    gpu_list = "N/A";
+  }
+
+  std::cout << "\r" << boundary << " "
+    << std::setw(actionColumnWidth) << std::left << "GPUs"
+    << " | " << std::setw(actionColumnWidth) << std::left << gpu_info_list.size()
+    << " " <<  boundary << std::endl;
+
+  // Print bottom boundary
+  printBoundary();
+
+  std::string GPUdetailsPart1 = "GPU Name - GPU ID";
+  std::string GPUdetailsPart2 = "ID - Node ID - BDF";
+  padding = (actionColumnWidth - GPUdetailsPart1.size());
+  padleft = padding/2;
+  padright = padding - padleft;
+  int gpu_index = 0;
+
+  if(gpu_info_list.size() % 2) {
+
+    std::string GPU1 = gpu_info_list[gpu_index].name + " - " + std::to_string(gpu_info_list[gpu_index].gpu_id);
+    padright = (actionColumnWidth - GPU1.size());
+
+    std::cout << "\r" << boundary << " " << std::left  << GPUdetailsPart1 << std::string(padding, ' ') << " " <<  boundary 
+      << " " << GPU1 << std::string(padright, ' ') << " " <<  boundary 
+      << std::endl;
+
+    GPU1 = std::to_string(gpu_index) + " - " + std::to_string(gpu_info_list[gpu_index].node_id) + " - " + 
+      gpu_info_list[gpu_index].bus;
+    padright = (actionColumnWidth - GPU1.size());
+
+    padding = (actionColumnWidth - GPUdetailsPart2.size());
+    std::cout << "\r" << boundary << " " << std::left  << GPUdetailsPart2 << std::string(padding, ' ') << " " <<  boundary 
+      << " " << GPU1 << std::string(padright, ' ') << " " <<  boundary 
+      << std::endl;
+
+    if (1 == gpu_info_list.size())
+      printDoubleBoundary();
+    else 
+      printBoundary();
+
+    gpu_index++;
+  }
+  else {
+
+    std::cout << "\r" << boundary << " " << std::left  << GPUdetailsPart1 << std::string(padding, ' ') << " " <<  boundary 
+      << " " << std::string(actionColumnWidth, ' ') << " " <<  boundary 
+      << std::endl;
+
+    padding = (actionColumnWidth - GPUdetailsPart2.size());
+    std::cout << "\r" << boundary << " " << std::left  << GPUdetailsPart2 << std::string(padding, ' ') << " " <<  boundary 
+      << " " << std::string(actionColumnWidth, ' ') << " " <<  boundary 
+      << std::endl;
+
+    printBoundary();
+
+  }
+
+  for (;gpu_index < gpu_info_list.size();) {
+#if 0
+    std::cout <<  info.bus << std::endl;
+    std::cout <<  info.name << std::endl;
+    std::cout <<  info.node_id << std::endl;
+    std::cout <<  info.gpu_id << std::endl;
+    std::cout <<  info.device_id << std::endl;
+    std::cout <<  info.bdfId << std::endl;
+#endif
+
+    std::string GPU1 = gpu_info_list[gpu_index].name + " - " + std::to_string(gpu_info_list[gpu_index].gpu_id);
+    padleft = (actionColumnWidth - GPU1.size());
+
+
+    std::string GPU2 = gpu_info_list[gpu_index + 1].name + " - " + std::to_string(gpu_info_list[gpu_index + 1].gpu_id);
+    padright = (actionColumnWidth - GPU2.size());
+
+    std::cout << "\r" << boundary 
+      << " " << GPU1 << std::string(padleft, ' ') << " " <<  boundary 
+      << " " << GPU2 << std::string(padright, ' ') << " " <<  boundary 
+      << std::endl;
+
+    GPU1 = std::to_string(gpu_index) + " - " + std::to_string(gpu_info_list[gpu_index].node_id) + " - " + 
+      gpu_info_list[gpu_index].bus;
+    padleft = (actionColumnWidth - GPU1.size());
+
+    GPU2 = std::to_string(gpu_index + 1) + " - " + std::to_string(gpu_info_list[gpu_index + 1].node_id) + " - " + 
+      gpu_info_list[gpu_index + 1].bus;
+    padright = (actionColumnWidth - GPU2.size());
+
+    std::cout << "\r" << boundary 
+      << " " << GPU1 << std::string(padleft, ' ') << " " <<  boundary 
+      << " " << GPU2 << std::string(padright, ' ') << " " <<  boundary 
+      << std::endl;
+
+    gpu_index=+2;;
+
+    if (gpu_index == gpu_info_list.size())
+      printDoubleBoundary();
+    else
+      printBoundary();
   }
 
 }
@@ -237,41 +489,54 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
   std::string header3 = "Result";
 
   // Define column width for consistent spacing
-  int columnWidth = 12;
-  int actionColumnWidth = 34;
-  int TotalColumnWidth = (actionColumnWidth + 2 * columnWidth + 8);
+  int columnWidth = 14;
+  int actionColumnWidth = 32;
+  int TotalColumnWidth = 69;
 
   // Function to print a horizontal boundary line
   auto printBoundary = [&]() {
     std::cout << "+";
-    for (int i = 0; i < (actionColumnWidth + 2 * columnWidth + 8); ++i) {
+    for (int i = 0; i < TotalColumnWidth; ++i) {
       std::cout << '-';
     }
     std::cout << "+" << std::endl;
   };
 
-  int padding = ((TotalColumnWidth - 2) / 2) + (header.size() / 2);
+  // Function to print a horizontal boundary line
+  auto printDoubleBoundary = [&]() {
+    std::cout << "+";
+    for (int i = 0; i < TotalColumnWidth; ++i) {
+      std::cout << '=';
+    }
+    std::cout << "+" << std::endl;
+  };
+
+  int padding = (TotalColumnWidth - header.size());
+  int padleft = padding/2;
+  int padright = padding - padleft;
 
   if (rvs::options::has_option("-q")) {
 
     // Print top boundary
-    printBoundary();
+    printDoubleBoundary();
 
     // Print header row
-    std::cout << boundary << std::setw(padding) << header << std::setw(TotalColumnWidth - padding + 1) <<  boundary << std::endl;
+    std::cout << boundary << std::string(padleft, ' ') << header << std::string(padright, ' ') <<  boundary << std::endl;
 
     // Print top boundary
-    printBoundary();
+    printDoubleBoundary();
+
+    systemOverview();
 
     // Print header row
     std::cout << boundary << " "
       << std::setw(actionColumnWidth) << std::left << header1
       << " | " << std::setw(columnWidth) << std::left << header2
       << " | " << std::setw(columnWidth) << std::left << header3
-      << " " << boundary << std::endl;
+      << "  " << boundary << std::endl;
 
     // Print inner boundary
-    printBoundary();
+    printDoubleBoundary();
   }
 
   /* Number of times to execute the test */
@@ -408,7 +673,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
           << std::setw(actionColumnWidth) << std::left << action_info.name
           << " | " << std::setw(columnWidth) << std::left << action_info.module
           << " | " << textcolor << std::setw(columnWidth) << std::left << actionresult << "\033[0m"
-          << " " <<  boundary << std::endl;
+          << "  " <<  boundary << std::endl;
       }
 
       // processing finished, release action object
@@ -452,39 +717,52 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
     std::string header3 = "Result";
 
     // Define column width for consistent spacing
-    int columnWidth = 12;
-    int actionColumnWidth = 34;
-    int TotalColumnWidth = (actionColumnWidth + 2 * columnWidth + 8);
+    int columnWidth = 14;
+    int actionColumnWidth = 32;;
+    int TotalColumnWidth = 69;;
 
     // Function to print a horizontal boundary line
     auto printBoundary = [&]() {
       std::cout << "+";
-      for (int i = 0; i < (actionColumnWidth + 2 * columnWidth + 8); ++i) {
+      for (int i = 0; i < TotalColumnWidth; ++i) {
         std::cout << '-';
       }
       std::cout << "+" << std::endl;
     };
 
-    int padding = ((TotalColumnWidth - 2) / 2) + (header.size() / 2);
+    // Function to print a horizontal boundary line
+    auto printDoubleBoundary = [&]() {
+      std::cout << "+";
+      for (int i = 0; i < TotalColumnWidth; ++i) {
+        std::cout << '=';
+      }
+      std::cout << "+" << std::endl;
+    };
 
-    // print top boundary
-    printBoundary();
-
-    // Print header row
-    std::cout << boundary << std::setw(padding) << header << std::setw(TotalColumnWidth - padding + 1) <<  boundary << std::endl;
+    int padding = (TotalColumnWidth - header.size());
+    int padleft = padding/2;
+    int padright = padding - padleft;
 
     // Print top boundary
-    printBoundary();
+    printDoubleBoundary();
+
+    // Print header row
+    std::cout << boundary << std::string(padleft, ' ') << header << std::string(padright, ' ') <<  boundary << std::endl;
+
+    // Print top boundary
+    printDoubleBoundary();
+
+    systemOverview();
 
     // Print header row
     std::cout << boundary << " "
       << std::setw(actionColumnWidth) << std::left << header1
       << " | " << std::setw(columnWidth) << std::left << header2
       << " | " << std::setw(columnWidth) << std::left << header3
-      << " " << boundary << std::endl;
+      << "  " << boundary << std::endl;
 
     // Print inner boundary
-    printBoundary();
+    printDoubleBoundary();
 
     for(size_t i = 0; i < action_details.size(); i++) {
 
@@ -496,7 +774,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
         << std::setw(actionColumnWidth) << std::left << action_details[i].name
         << " | " << std::setw(columnWidth) << std::left << action_details[i].module
         << " | " << textcolor << std::setw(columnWidth) << std::left << result << "\033[0m"
-        << " " <<  boundary << std::endl;
+        << "  " <<  boundary << std::endl;
     }
 
     // Print bottom boundary

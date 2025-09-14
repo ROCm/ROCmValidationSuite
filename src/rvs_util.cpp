@@ -231,16 +231,7 @@ void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device
     }
 }
 
-int display_gpu_info (void) {
-
-  struct device_info {
-    std::string bus;
-    std::string name;
-    int32_t node_id;
-    int32_t gpu_id;
-    int32_t device_id;
-    uint64_t bdfId;// this is pcie location id to uniquely identify device
-  };
+std::vector<device_info> get_gpu_info (void) {
 
   char buf[256];
   int hip_num_gpu_devices;
@@ -250,11 +241,13 @@ int display_gpu_info (void) {
   hipGetDeviceCount(&hip_num_gpu_devices);
   if( hip_num_gpu_devices == 0){
     std::cout << std::endl << errmsg << std::endl;
-    return 0;
+    return {};
   }
+
   for (int i = 0; i < hip_num_gpu_devices; i++) {
     hipDeviceProp_t props;
     hipGetDeviceProperties(&props, i);
+
     unsigned int pDom, pBus, pDev, pFun;
     getBDF(i , pDom, pBus, pDev, pFun);
     // compute device location_id (needed in order to identify this device
@@ -295,6 +288,14 @@ int display_gpu_info (void) {
   std::sort(gpu_info_list.begin(), gpu_info_list.end(),
            [](const struct device_info& a, const struct device_info& b) {
              return a.bdfId < b.bdfId; });
+
+  return gpu_info_list;
+}
+
+int display_gpu_info (std::vector<device_info> gpu_info_list) {
+
+  std::string errmsg = " No supported GPUs available.";
+
   if (!gpu_info_list.empty()) {
     std::cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {
