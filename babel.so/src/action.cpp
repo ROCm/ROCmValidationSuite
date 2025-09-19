@@ -101,8 +101,13 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
       workers[i].set_mibibytes(mibibytes);
       workers[i].set_output_csv(output_csv);
       workers[i].set_num_iterations(num_iterations);
-      workers[i].set_rwtest_type(rwtest);
-      workers[i].set_subtest_type(subtest);
+      workers[i].set_read(read);
+      workers[i].set_write(write);
+      workers[i].set_copy(copy);
+      workers[i].set_add(add);
+      workers[i].set_mul(mul);
+      workers[i].set_dot(dot);
+      workers[i].set_triad(triad);
       workers[i].set_dwords_per_lane(dwords_per_lane);
       workers[i].set_chunks_per_block(chunks_per_block);
       workers[i].set_tb_size(tb_size);
@@ -174,22 +179,6 @@ bool mem_action::get_all_mem_config_keys(void) {
     bsts = false;
   }
 
-  if (property_get_int<int>(RVS_CONF_RWTEST,
-        &rwtest, MEM_DEFAULT_RWTEST)) {
-    msg = "invalid '" +
-      std::string(RVS_CONF_RWTEST) + "' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
-  if (property_get_int<int>(RVS_CONF_SUBTEST,
-        &subtest, MEM_DEFAULT_SUBTEST)) {
-    msg = "invalid '" +
-      std::string(RVS_CONF_SUBTEST) + "' key value";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
-
   if (property_get_int<uint64_t>(RVS_CONF_NUM_ITER,
         &num_iterations, MEM_DEFAULT_NUM_ITER)) {
     msg = "invalid '" +
@@ -210,6 +199,62 @@ bool mem_action::get_all_mem_config_keys(void) {
         &output_csv, MEM_DEFAULT_OP_CSV)) {
     msg = "invalid '" +
       std::string(RVS_CONF_OP_CSV) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get<bool>(RVS_CONF_READ,
+        &read, MEM_DEFAULT_TEST_ENABLE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_READ) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get<bool>(RVS_CONF_WRITE,
+        &write, MEM_DEFAULT_TEST_ENABLE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_WRITE) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get<bool>(RVS_CONF_COPY,
+        &copy, MEM_DEFAULT_TEST_ENABLE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_COPY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get<bool>(RVS_CONF_ADD,
+        &add, MEM_DEFAULT_TEST_ENABLE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ADD) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get<bool>(RVS_CONF_MUL,
+        &mul, MEM_DEFAULT_TEST_ENABLE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_MUL) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get<bool>(RVS_CONF_DOT,
+        &dot, MEM_DEFAULT_TEST_ENABLE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_DOT) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get<bool>(RVS_CONF_TRIAD,
+        &triad, MEM_DEFAULT_TEST_ENABLE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_TRIAD) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
