@@ -987,7 +987,7 @@ Input keys are described in the table below:
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>rpmpackagelist</td><td>Collection of Strings</td>
-<td>Specifies the packages checked if installed on system for rhel/centos family.</td></tr>
+<td>Specifies the packages checked if installed on system for rhel family.</td></tr>
 <tr><td>debpackagelist</td><td>Collection of Strings</td>
 <td>Specifies the packages checked if installed on system for ubuntu family.
 </td></tr>
