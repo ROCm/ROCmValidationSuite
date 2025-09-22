@@ -14,6 +14,10 @@ with open('../CMakeLists.txt', encoding='utf-8') as f:
 
 left_nav_title = f"RVS {version_number} Documentation"
 
+exclude_patterns = [
+    'ug1main.md'
+]
+
 # for PDF output on Read the Docs
 project = "RVS Documentation"
 author = "Advanced Micro Devices, Inc."
