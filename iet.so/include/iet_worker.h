@@ -295,6 +295,8 @@ class IETWorker : public rvs::ThreadBase {
 
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
+    //! get worker job result
+    bool get_result(void) { return result; }
  protected:
     virtual void run(void);
     bool do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type);
@@ -421,6 +423,8 @@ class IETWorker : public rvs::ThreadBase {
     bool nt_loads;
     //! gemm output data type
     std::string iet_out_data_type;
+    //! Worker job result
+    bool result;
 };
 
 #endif  // IET_SO_INCLUDE_IET_WORKER_H_

@@ -170,7 +170,6 @@ bool IETWorker::do_iet_power_stress(void) {
   float     cur_power_value = 0;
   float     totalpower = 0;
   float     max_power = 0;
-  bool      result = true;
   bool      start = true;
   rvs::action_result_t action_result;
   char gpuid_buff[12];

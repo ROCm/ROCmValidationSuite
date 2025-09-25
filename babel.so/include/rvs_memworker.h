@@ -226,6 +226,8 @@ class MemWorker : public rvs::ThreadBase {
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
+    //! get worker job result
+    bool get_result(void) { return result; }
 
  protected:
     bool do_mem_stress_test(int *error, std::string *err_description);
@@ -270,6 +272,8 @@ class MemWorker : public rvs::ThreadBase {
     static bool bjson;
     //! synchronization mutex
     std::mutex wrkrmutex;
+    //! Worker job result
+    bool result;
 };
 
 #endif  // MEM_SO_INCLUDE_MEM_WORKER_H_

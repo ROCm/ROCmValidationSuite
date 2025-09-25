@@ -68,16 +68,16 @@ mem_action::~mem_action() {
  * @return true if no error occured, false otherwise
  */
 bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
-  size_t k = 0;
+
+  uint64_t k = 0;
   string    msg;
+  vector<MemWorker> workers(mem_gpus_device_index.size());
 
   for (;;) {
-    unsigned int i = 0;
     if (property_wait != 0)  // delay mem execution
       sleep(property_wait);
 
-    vector<MemWorker> workers(mem_gpus_device_index.size());
-
+    size_t i = 0;
     map<int, uint16_t>::iterator it;
 
     // all worker instances have the same json settings
@@ -139,7 +139,18 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
     }
   }
 
-  return rvs::lp::Stopping() ? false : true;
+  if (rvs::lp::Stopping()) {
+    return false;
+  }
+  else {
+    for (size_t i = 0; i <  mem_gpus_device_index.size(); i++) {
+      if(false == workers[i].get_result()) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 /**
