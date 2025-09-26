@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -55,7 +55,7 @@ rvs_memtest_t rvs_memtests[]={
     {test6, (char*)" Test7   [Moving inversions, 32 bit pat]",	  1},
     {test7, (char*)" Test8   [Random number sequence]",		  1},
     {test8, (char*)" Test9   [Modulo 20, random pattern]",	  1},
-    {test9, (char*)" Test10  [Bit fade test]",			  0},
+    {test9, (char*)" Test10  [Bit fade test]",			  1},
     {test10, (char*)"Test11  [Memory stress test]",		  1},
 };
 
