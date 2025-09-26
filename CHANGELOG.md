@@ -2,6 +2,18 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.3.0 for ROCm 7.0.2
+
+### Added
+
+- Support for new platform: RX9060
+- GEMM compute performance benchmark for MI350X and MI355X.
+- Support for Amazon Linux 2023 OS.
+
+### Changed
+
+- Improved ramp-up phase duration for GEMM execution in the GST module.
+
 ## RVS 1.2.0 for ROCm 7.0.0
 
 ### Added
