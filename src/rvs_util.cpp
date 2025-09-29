@@ -41,19 +41,20 @@
  */
 
 std::vector<std::string> str_split(const std::string& str_val,
-                                   const std::string& delimiter) {
-    std::vector<std::string> str_tokens;
-    int prev_pos = 0, cur_pos = 0;
-    do {
-        cur_pos = str_val.find(delimiter, prev_pos);
-        if (cur_pos == std::string::npos)
-            cur_pos = str_val.length();
-        std::string token = str_val.substr(prev_pos, cur_pos - prev_pos);
-        if (!token.empty())
-            str_tokens.push_back(token);
-        prev_pos = cur_pos + delimiter.length();
-    } while (cur_pos < str_val.length() && prev_pos < str_val.length());
-    return str_tokens;
+    const std::string& delimiter) {
+
+  std::vector<std::string> str_tokens;
+  int prev_pos = 0, cur_pos = 0;
+  do {
+    cur_pos = str_val.find(delimiter, prev_pos);
+    if (cur_pos == std::string::npos)
+      cur_pos = str_val.length();
+    std::string token = str_val.substr(prev_pos, cur_pos - prev_pos);
+    if (!token.empty())
+      str_tokens.push_back(token);
+    prev_pos = cur_pos + delimiter.length();
+  } while (cur_pos < str_val.length() && prev_pos < str_val.length());
+  return str_tokens;
 }
 
 
@@ -63,12 +64,14 @@ std::vector<std::string> str_split(const std::string& str_val,
  * @return true if std::string is a positive integer number, false otherwise
  */
 bool is_positive_integer(const std::string& str_val) {
-    return !str_val.empty()
-            && std::find_if(str_val.begin(), str_val.end(),
-                    [](char c) {return !std::isdigit(c);}) == str_val.end();
+
+  return !str_val.empty()
+    && std::find_if(str_val.begin(), str_val.end(),
+        [](char c) {return !std::isdigit(c);}) == str_val.end();
 }
 
 int rvs_util_parse(const std::string& buff, bool* pval) {
+
   if (buff.empty()) {  // method empty
     return 2;  // not found
   }
@@ -87,24 +90,22 @@ int rvs_util_parse(const std::string& buff, bool* pval) {
 }
 
 void *json_node_create(std::string module_name, std::string action_name,
-                     int log_level){
-        unsigned int sec;
-        unsigned int usec;
+    int log_level){
 
-        rvs::lp::get_ticks(&sec, &usec);
-        void *json_node = rvs::lp::LogRecordCreate(module_name.c_str(),
-                            action_name.c_str(), log_level, sec, usec, true);
-        return json_node;
+  unsigned int sec;
+  unsigned int usec;
+
+  rvs::lp::get_ticks(&sec, &usec);
+  void *json_node = rvs::lp::LogRecordCreate(module_name.c_str(),
+      action_name.c_str(), log_level, sec, usec, true);
+  return json_node;
 }
-
-
 
 void *json_list_create(std::string lname, int log_level){
 
-        void *json_node = rvs::lp::JsonNamedListCreate(lname.c_str() ,log_level);
-        return json_node;
+  void *json_node = rvs::lp::JsonNamedListCreate(lname.c_str() ,log_level);
+  return json_node;
 }
-
 
 /**
  * summary: Fetches gpu id to index map for valid set of GPUs as per config.
@@ -214,47 +215,39 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 }
 
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function){
-    char pciString[256] = {0};
-    auto hipRet = hipDeviceGetPCIBusId(pciString, 256, idx);
-    std::string msg;
-    if(hipRet != hipSuccess){
-      msg = "For GPU:" + std::to_string(idx) + ", failed to get PCI Bus id";
-      rvs::lp::Log(msg, rvs::logresults);
-      return;
-    }
-    if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&domain),
-       reinterpret_cast<unsigned int*>(&bus),
-       reinterpret_cast<unsigned int*>(&device),
-       reinterpret_cast<unsigned int*>(&function)) != 4) {
-         msg = std::string("parsing incomplete for BDF id: ") + pciString ;
-         rvs::lp::Log(msg, rvs::logresults);
-    }
+
+  char pciString[256] = {0};
+  auto hipRet = hipDeviceGetPCIBusId(pciString, 256, idx);
+  std::string msg;
+  if(hipRet != hipSuccess){
+    msg = "For GPU:" + std::to_string(idx) + ", failed to get PCI Bus id";
+    rvs::lp::Log(msg, rvs::logresults);
+    return;
+  }
+  if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&domain),
+        reinterpret_cast<unsigned int*>(&bus),
+        reinterpret_cast<unsigned int*>(&device),
+        reinterpret_cast<unsigned int*>(&function)) != 4) {
+    msg = std::string("parsing incomplete for BDF id: ") + pciString ;
+    rvs::lp::Log(msg, rvs::logresults);
+  }
 }
 
-int display_gpu_info (void) {
-
-  struct device_info {
-    std::string bus;
-    std::string name;
-    int32_t node_id;
-    int32_t gpu_id;
-    int32_t device_id;
-    uint64_t bdfId;// this is pcie location id to uniquely identify device
-  };
+std::vector<device_info> get_gpu_info (void) {
 
   char buf[256];
   int hip_num_gpu_devices;
-  std::string errmsg = " No supported GPUs available.";
   std::vector<device_info> gpu_info_list;
 
   hipGetDeviceCount(&hip_num_gpu_devices);
   if( hip_num_gpu_devices == 0){
-    std::cout << std::endl << errmsg << std::endl;
-    return 0;
+    return {};
   }
+
   for (int i = 0; i < hip_num_gpu_devices; i++) {
     hipDeviceProp_t props;
     hipGetDeviceProperties(&props, i);
+
     unsigned int pDom, pBus, pDev, pFun;
     getBDF(i , pDom, pBus, pDev, pFun);
     // compute device location_id (needed in order to identify this device
@@ -295,6 +288,14 @@ int display_gpu_info (void) {
   std::sort(gpu_info_list.begin(), gpu_info_list.end(),
            [](const struct device_info& a, const struct device_info& b) {
              return a.bdfId < b.bdfId; });
+
+  return gpu_info_list;
+}
+
+int display_gpu_info (std::vector<device_info> gpu_info_list) {
+
+  std::string errmsg = " No supported GPUs available.";
+
   if (!gpu_info_list.empty()) {
     std::cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {
@@ -308,8 +309,8 @@ int display_gpu_info (void) {
   return 0;
 }
 
-
 void json_add_primary_fields(std::string moduleName, std::string action_name){
+
   if (rvs::lp::JsonActionStartNodeCreate(moduleName.c_str(), action_name.c_str())){
     rvs::lp::Err("json start create failed", moduleName, action_name);
     return;

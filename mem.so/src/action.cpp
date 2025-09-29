@@ -82,7 +82,8 @@ mem_action::~mem_action() {
  * @return true if no error occured, false otherwise
  */
 bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
-    size_t k = 0;
+
+    uint64_t k = 0;
     string    msg;
 
     for (;;) {
