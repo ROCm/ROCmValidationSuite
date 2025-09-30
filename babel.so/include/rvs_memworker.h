@@ -103,6 +103,17 @@
 #define TRAID_FLOAT   3
 #define TRIAD_DOUBLE  4
 
+/* Babel subtest enable/disable */
+typedef struct {
+  bool read;
+  bool write;
+  bool copy;
+  bool add;
+  bool mul;
+  bool dot;
+  bool triad;
+} subtest;
+
 /**
  * @class MEMWorker
  * @ingroup MEM
@@ -176,19 +187,40 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the test type
     int get_test_type(void) { return test_type; }
 
-    //! sets rw test type
-    void set_rwtest_type(int _test_type) {
-        rwtest = _test_type;
+    //! sets read test enable/disable
+    void set_read(bool _read) {
+        read = _read;
     }
-    //! returns rw test type
-    int get_rwtest_type(void) { return rwtest; }
 
-    //! sets the sub test type
-    void set_subtest_type(int _test_type) {
-        subtest = _test_type;
+    //! sets write test enable/disable
+    void set_write(bool _write) {
+        write = _write;
     }
-    //! returns the sub test type
-    int get_subtest_type(void) { return subtest; }
+
+    //! sets copy test enable/disable
+    void set_copy(bool _copy) {
+        copy = _copy;
+    }
+
+    //! sets add test enable/disable
+    void set_add(bool _add) {
+        add = _add;
+    }
+
+    //! sets mul test enable/disable
+    void set_mul(bool _mul) {
+        mul = _mul;
+    }
+
+    //! sets dot test enable/disable
+    void set_dot(bool _dot) {
+        dot = _dot;
+    }
+
+    //! sets triad test enable/disable
+    void set_triad(bool _triad) {
+        triad = _triad;
+    }
 
     //! sets the mibi bytes
     void set_mibibytes(bool _mibibytes) {
@@ -257,10 +289,6 @@ class MemWorker : public rvs::ThreadBase {
     uint64_t array_size;
     //! Test type
     int test_type;
-    //! Read-Write Test type
-    int rwtest;
-    //! Sub Test type
-    int subtest;
     //! number of dwords per lane
     uint16_t dwords_per_lane;
     //! number of chunks per block
@@ -274,6 +302,21 @@ class MemWorker : public rvs::ThreadBase {
     std::mutex wrkrmutex;
     //! Worker job result
     bool result;
+
+    //! read test enable/disable
+    bool read;
+    //! write test enable/disable
+    bool write;
+    //! copy test enable/disable
+    bool copy;
+    //! add test enable/disable
+    bool add;
+    //! mul test enable/disable
+    bool mul;
+    //! dot test enable/disable
+    bool dot;
+    //! triad test enable/disable
+    bool triad;
 };
 
 #endif  // MEM_SO_INCLUDE_MEM_WORKER_H_
