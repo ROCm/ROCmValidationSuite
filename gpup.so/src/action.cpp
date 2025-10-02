@@ -514,7 +514,7 @@ int gpup_action::run(void) {
   }
   if (!b_gpu_found) {
     msg = "No device matches criteria from configuration. ";
-    rvs::lp::Err(msg, MODULE_NAME, action_name);
+//    rvs::lp::Err(msg, MODULE_NAME, action_name);
 
     // Action callback
     action_result.state = rvs::actionstate::ACTION_COMPLETED;

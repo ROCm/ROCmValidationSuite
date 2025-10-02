@@ -162,7 +162,7 @@ iet_action::iet_action() {
  * @brief class destructor
  */
 iet_action::~iet_action() {
-    property.clear();
+  property.clear();
 }
 
 /**
@@ -487,155 +487,159 @@ bool iet_action::get_all_iet_config_keys(void) {
  */
 
 void iet_action::hip_to_smi_indices(void) {
-    int hip_num_gpu_devices;
-    hipGetDeviceCount(&hip_num_gpu_devices);
-    // map this to smi as only these are visible
-    uint32_t smi_num_devices;
-    uint64_t val_ui64;
 
-    std::map<uint64_t, amdsmi_processor_handle> smi_map;
+  int hip_num_gpu_devices;
+  hipGetDeviceCount(&hip_num_gpu_devices);
+  // map this to smi as only these are visible
+  uint32_t smi_num_devices;
+  uint64_t val_ui64;
 
-    smi_map = rvs::get_smi_pci_map();
+  std::map<uint64_t, amdsmi_processor_handle> smi_map;
 
-    for (int i = 0; i < hip_num_gpu_devices; i++) {
-        // get GPU device properties
-        //hipDeviceProp_t props;
-        //hipGetDeviceProperties(&props, i);
-	 unsigned int pDom, pBus, pDev, pFun;
-         getBDF(i, pDom, pBus, pDev, pFun); 
-        // compute device location_id (needed to match this device
-        // with one of those found while querying the pci bus
-        uint64_t hip_dev_location_id = ( ( ((uint64_t)pDom & 0xffff ) << 32) |
-            (((uint64_t) pBus & 0xff ) << 8) | (((uint64_t)pDev & 0x1f ) << 3)| ((uint64_t)pFun ) );
+  smi_map = rvs::get_smi_pci_map();
 
-        if(smi_map.find(hip_dev_location_id) != smi_map.end()){
-            hip_to_smi_idxs.insert({i, smi_map[hip_dev_location_id]});
-        }
+  for (int i = 0; i < hip_num_gpu_devices; i++) {
+    // get GPU device properties
+    //hipDeviceProp_t props;
+    //hipGetDeviceProperties(&props, i);
+    unsigned int pDom, pBus, pDev, pFun;
+    getBDF(i, pDom, pBus, pDev, pFun);
+    // compute device location_id (needed to match this device
+    // with one of those found while querying the pci bus
+    uint64_t hip_dev_location_id = ( ( ((uint64_t)pDom & 0xffff ) << 32) |
+        (((uint64_t) pBus & 0xff ) << 8) | (((uint64_t)pDev & 0x1f ) << 3)| ((uint64_t)pFun ) );
+
+    if(smi_map.find(hip_dev_location_id) != smi_map.end()){
+      hip_to_smi_idxs.insert({i, smi_map[hip_dev_location_id]});
     }
+  }
 }
-
 
 /**
  * @brief runs the edp test
  * @return true if no error occured, false otherwise
  */
 bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
-    std::string  msg;
-    uint32_t     dev_idx = 0;
-    size_t       k = 0;
-    int          gpuId;
-    bool gpu_masking = false;    // if HIP_VISIBLE_DEVICES is set, this will be true
-    int hip_num_gpu_devices;
-    hipGetDeviceCount(&hip_num_gpu_devices);
-    
-    vector<IETWorker> workers(iet_gpus_device_index.size());
-    for (;;) {
-        unsigned int i = 0;
-        map<int, uint16_t>::iterator it;
 
-        if (property_wait != 0)  // delay iet execution
-            sleep(property_wait);
+  std::string  msg;
+  uint32_t     dev_idx = 0;
+  size_t       k = 0;
+  unsigned int i = 0;
+  int          gpuId;
+  bool gpu_masking = false;    // if HIP_VISIBLE_DEVICES is set, this will be true
+  int hip_num_gpu_devices;
+  hipGetDeviceCount(&hip_num_gpu_devices);
+  vector<IETWorker> workers(iet_gpus_device_index.size());
 
-	// map hip indexes to smi indexes
-	hip_to_smi_indices();
+  for (;;) {
+    map<int, uint16_t>::iterator it;
 
-        IETWorker::set_use_json(bjson);
-        for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
-            if(hip_to_smi_idxs.find(it->first) != hip_to_smi_idxs.end()){
-                workers[i].set_smi_device_handle(hip_to_smi_idxs[it->first]);
-            } else{
-                workers[i].set_smi_device_handle(nullptr);// this must not happen
-		msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(i) + " has no handle";
-		rvs::lp::Log(msg, rvs::logerror);
-            }
-            gpuId = it->second;
-            // set worker thread params
-            workers[i].set_name(action_name);
-            workers[i].set_action(*this);
-            workers[i].set_gpu_id(it->second);
-            workers[i].set_gpu_device_index(it->first);
-            workers[i].set_pwr_device_id(dev_idx++);
-            workers[i].set_run_wait_ms(property_wait);
-            workers[i].set_run_duration_ms(property_duration);
-            workers[i].set_ramp_interval(iet_ramp_interval);
-            workers[i].set_log_interval(property_log_interval);
-            workers[i].set_sample_interval(iet_sample_interval);
-            workers[i].set_max_violations(iet_max_violations);
-            workers[i].set_target_power(iet_target_power);
-            workers[i].set_tolerance(iet_tolerance);
-            workers[i].set_matrix_size(iet_matrix_size);
-            workers[i].set_matrix_size_a(iet_matrix_size_a);
-            workers[i].set_matrix_size_b(iet_matrix_size_b);
-            workers[i].set_matrix_size_c(iet_matrix_size_c);
-            workers[i].set_iet_ops_type(iet_ops_type);
-            workers[i].set_iet_data_type(iet_data_type);
-            workers[i].set_matrix_transpose_a(iet_trans_a);
-            workers[i].set_matrix_transpose_b(iet_trans_b);
-            workers[i].set_alpha_val(iet_alpha_val);
-            workers[i].set_beta_val(iet_beta_val);
-            workers[i].set_lda_offset(iet_lda_offset);
-            workers[i].set_ldb_offset(iet_ldb_offset);
-            workers[i].set_ldc_offset(iet_ldc_offset);
-            workers[i].set_ldd_offset(iet_ldd_offset);
-            workers[i].set_tp_flag(iet_tp_flag);
-            workers[i].set_bw_workload(iet_bw_workload);
-            workers[i].set_cp_workload(iet_cp_workload);
-            workers[i].set_hot_calls(iet_hot_calls);
-            workers[i].set_matrix_init(iet_matrix_init);
-            workers[i].set_gemm_mode(iet_gemm_mode);
-            workers[i].set_batch_size(iet_batch_size);
-            workers[i].set_stride_a(iet_stride_a);
-            workers[i].set_stride_b(iet_stride_b);
-            workers[i].set_stride_c(iet_stride_c);
-            workers[i].set_stride_d(iet_stride_d);
-            workers[i].set_blas_source(iet_blas_source);
-            workers[i].set_compute_type(iet_compute_type);
-            workers[i].set_wg_count(iet_wg_count);
-            workers[i].set_nt_loads(iet_nt_loads);
-            workers[i].set_iet_out_data_type(iet_out_data_type);
-            i++;
-        }
+    if (property_wait != 0)  // delay iet execution
+      sleep(property_wait);
 
-        if (property_parallel) {
-            for (i = 0; i < iet_gpus_device_index.size(); i++)
-                workers[i].start();
-            // join threads
-            for (i = 0; i < iet_gpus_device_index.size(); i++) 
-                workers[i].join();
+    // map hip indexes to smi indexes
+    hip_to_smi_indices();
 
-        } else {
-            for (i = 0; i < iet_gpus_device_index.size(); i++) {
-                workers[i].start();
-                workers[i].join();
-
-                // check if stop signal was received
-                if (rvs::lp::Stopping()) {
-                    return false;
-                }
-            }
-        }
-
-
-        msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Shutting down smi  ";
-        rvs::lp::Log(msg, rvs::loginfo);
-
-
-        // check if stop signal was received
-        if (rvs::lp::Stopping())
-            return false;
-
-        if (property_count == ++k) {
-            break;
-        }
+    IETWorker::set_use_json(bjson);
+    for (it = iet_gpus_device_index.begin(); it != iet_gpus_device_index.end(); ++it) {
+      if(hip_to_smi_idxs.find(it->first) != hip_to_smi_idxs.end()){
+        workers[i].set_smi_device_handle(hip_to_smi_idxs[it->first]);
+      } else{
+        workers[i].set_smi_device_handle(nullptr);// this must not happen
+        msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(i) + " has no handle";
+        rvs::lp::Log(msg, rvs::logerror);
+      }
+      gpuId = it->second;
+      // set worker thread params
+      workers[i].set_name(action_name);
+      workers[i].set_action(*this);
+      workers[i].set_gpu_id(it->second);
+      workers[i].set_gpu_device_index(it->first);
+      workers[i].set_pwr_device_id(dev_idx++);
+      workers[i].set_run_wait_ms(property_wait);
+      workers[i].set_run_duration_ms(property_duration);
+      workers[i].set_ramp_interval(iet_ramp_interval);
+      workers[i].set_log_interval(property_log_interval);
+      workers[i].set_sample_interval(iet_sample_interval);
+      workers[i].set_max_violations(iet_max_violations);
+      workers[i].set_target_power(iet_target_power);
+      workers[i].set_tolerance(iet_tolerance);
+      workers[i].set_matrix_size(iet_matrix_size);
+      workers[i].set_matrix_size_a(iet_matrix_size_a);
+      workers[i].set_matrix_size_b(iet_matrix_size_b);
+      workers[i].set_matrix_size_c(iet_matrix_size_c);
+      workers[i].set_iet_ops_type(iet_ops_type);
+      workers[i].set_iet_data_type(iet_data_type);
+      workers[i].set_matrix_transpose_a(iet_trans_a);
+      workers[i].set_matrix_transpose_b(iet_trans_b);
+      workers[i].set_alpha_val(iet_alpha_val);
+      workers[i].set_beta_val(iet_beta_val);
+      workers[i].set_lda_offset(iet_lda_offset);
+      workers[i].set_ldb_offset(iet_ldb_offset);
+      workers[i].set_ldc_offset(iet_ldc_offset);
+      workers[i].set_ldd_offset(iet_ldd_offset);
+      workers[i].set_tp_flag(iet_tp_flag);
+      workers[i].set_bw_workload(iet_bw_workload);
+      workers[i].set_cp_workload(iet_cp_workload);
+      workers[i].set_hot_calls(iet_hot_calls);
+      workers[i].set_matrix_init(iet_matrix_init);
+      workers[i].set_gemm_mode(iet_gemm_mode);
+      workers[i].set_batch_size(iet_batch_size);
+      workers[i].set_stride_a(iet_stride_a);
+      workers[i].set_stride_b(iet_stride_b);
+      workers[i].set_stride_c(iet_stride_c);
+      workers[i].set_stride_d(iet_stride_d);
+      workers[i].set_blas_source(iet_blas_source);
+      workers[i].set_compute_type(iet_compute_type);
+      workers[i].set_wg_count(iet_wg_count);
+      workers[i].set_nt_loads(iet_nt_loads);
+      workers[i].set_iet_out_data_type(iet_out_data_type);
+      i++;
     }
 
+    if (property_parallel) {
+      for (i = 0; i < iet_gpus_device_index.size(); i++)
+        workers[i].start();
+      // join threads
+      for (i = 0; i < iet_gpus_device_index.size(); i++)
+        workers[i].join();
 
-    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Done with iet test ";
+    } else {
+      for (i = 0; i < iet_gpus_device_index.size(); i++) {
+        workers[i].start();
+        workers[i].join();
+
+        // check if stop signal was received
+        if (rvs::lp::Stopping()) {
+          return false;
+        }
+      }
+    }
+
+    msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Shutting down smi  ";
     rvs::lp::Log(msg, rvs::loginfo);
 
-    sleep(1000);
+    // check if stop signal was received
+    if (rvs::lp::Stopping())
+      return false;
 
-    return true;
+    if (property_count == ++k) {
+      break;
+    }
+  }
+
+  msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Done with iet test ";
+  rvs::lp::Log(msg, rvs::loginfo);
+
+  sleep(1000);
+
+  for (i = 0; i < iet_gpus_device_index.size(); i++) {
+    if(false == workers[i].get_result())
+      return false;
+  }
+
+  /* IET action passed */
+  return true;
 }
 
 /**
@@ -643,64 +647,64 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
  * @return run number of GPUs
  */
 int iet_action::get_num_amd_gpu_devices(void) {
-    int hip_num_gpu_devices;
-    string msg;
 
-    hipGetDeviceCount(&hip_num_gpu_devices);
-    return hip_num_gpu_devices;
+  int hip_num_gpu_devices;
+  string msg;
+
+  hipGetDeviceCount(&hip_num_gpu_devices);
+  return hip_num_gpu_devices;
 }
-
-
 
 /**
  * @brief gets all selected GPUs and starts the worker threads
  * @return run result
  */
 int iet_action::get_all_selected_gpus(void) {
-    int hip_num_gpu_devices;
-    bool amd_gpus_found = false;
-    map<int, uint16_t> iet_gpus_device_index;
-    std::string msg;
-    std::stringstream msg_stream;
 
-    hipGetDeviceCount(&hip_num_gpu_devices);
-    if (hip_num_gpu_devices < 1)
-        return hip_num_gpu_devices;
-    
-    // find compatible GPUs to run edp tests
-    amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
-        property_device, property_device_id, property_device_all,
-        property_device_index, property_device_index_all, true);  // MCM checks
-    if(!amd_gpus_found){
-        msg = "No devices match criteria from the test configuation.";
-        rvs::lp::Log(msg, rvs::logerror);
-	if (bjson) {
-          unsigned int sec;
-          unsigned int usec;
-          rvs::lp::get_ticks(&sec, &usec);
-          void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-            action_name.c_str(), rvs::logerror, sec, usec, true);
-          if (!json_root_node) {
-             // log the error
-             string msg = std::string(JSON_CREATE_NODE_ERROR);
-             rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-             return -1;
-          }
+  int hip_num_gpu_devices;
+  bool amd_gpus_found = false;
+  map<int, uint16_t> iet_gpus_device_index;
+  std::string msg;
+  std::stringstream msg_stream;
 
-          rvs::lp::AddString(json_root_node, "ERROR", "No AMD compatible GPU found!");
-          rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
-        }
-        
-        return 0; // no GPUs is not error
+  hipGetDeviceCount(&hip_num_gpu_devices);
+  if (hip_num_gpu_devices < 1)
+    return hip_num_gpu_devices;
+
+  // find compatible GPUs to run edp tests
+  amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
+      property_device, property_device_id, property_device_all,
+      property_device_index, property_device_index_all, true);  // MCM checks
+  if(!amd_gpus_found){
+    msg = "No devices match criteria from the test configuation.";
+    rvs::lp::Log(msg, rvs::logerror);
+    if (bjson) {
+      unsigned int sec;
+      unsigned int usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+          action_name.c_str(), rvs::logerror, sec, usec, true);
+      if (!json_root_node) {
+        // log the error
+        string msg = std::string(JSON_CREATE_NODE_ERROR);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
+
+      rvs::lp::AddString(json_root_node, "ERROR", "No AMD compatible GPU found!");
+      rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
     }
 
-    int iet_res = 0;
-    if(do_edp_test(iet_gpus_device_index))
-        iet_res = 0;
-    else 
-        iet_res = -1;
-    // append end node to json
-    return iet_res;
+    return 0; // no GPUs is not error
+  }
+
+  int iet_res = 0;
+  if(do_edp_test(iet_gpus_device_index))
+    iet_res = 0;
+  else
+    iet_res = -1;
+  // append end node to json
+  return iet_res;
 }
 
 

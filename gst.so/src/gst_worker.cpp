@@ -345,7 +345,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
  */
 void GSTWorker::check_target_stress(double gflops_interval) {
   string msg;
-  bool result;
   rvs::action_result_t action_result;
   char gpuid_buff[12];
   auto desc = action_descriptor{action_name, MODULE_NAME,gpu_id};
