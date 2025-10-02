@@ -437,7 +437,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
   double start_time, end_time;
   double seconds_elapsed, gflops_interval;
   double timetakenforoneiteration;
-  double timetakenforniterations;
+  double timetakenforniterations = 0;
   string msg;
   std::chrono::time_point<std::chrono::system_clock> gst_start_time,
     gst_end_time, gst_log_interval_time;
