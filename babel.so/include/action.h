@@ -52,22 +52,26 @@ using std::map;
 #define RVS_CONF_TEST_TYPE              "test_type"
 #define RVS_CONF_MEM_MIBIBYTE           "mibibytes"
 #define RVS_CONF_OP_CSV                 "o/p_csv"
-#define RVS_CONF_RWTEST                 "rwtest"
-#define RVS_CONF_SUBTEST                "subtest"
 #define RVS_CONF_DWORDS_PER_LANE        "dwords_per_lane"
 #define RVS_CONF_CHUNKS_PER_BLOCK       "chunks_per_block"
 #define RVS_CONF_TB_SIZE                "tb_size"
+#define RVS_CONF_READ                   "read"
+#define RVS_CONF_WRITE                  "write"
+#define RVS_CONF_COPY                   "copy"
+#define RVS_CONF_ADD                    "add"
+#define RVS_CONF_MUL                    "mul"
+#define RVS_CONF_DOT                    "dot"
+#define RVS_CONF_TRIAD                  "triad"
 
 #define MEM_DEFAULT_ARRAY_SIZE          33554432   // 32 MB
 #define MEM_DEFAULT_NUM_ITER            100
 #define MEM_DEFAULT_TEST_TYPE           1
 #define MEM_DEFAULT_MEM_MIBIBYTE        false
 #define MEM_DEFAULT_OP_CSV              false
-#define MEM_DEFAULT_RWTEST              0
-#define MEM_DEFAULT_SUBTEST             5
 #define MEM_DEFAULT_DWORDS_PER_LANE     4
 #define MEM_DEFAULT_CHUNKS_PER_BLOCK    2
 #define MEM_DEFAULT_TB_SIZE             1024
+#define MEM_DEFAULT_TEST_ENABLE         false
 
 #define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
@@ -98,12 +102,22 @@ class mem_action: public rvs::actionbase {
     bool mibibytes;
     //! output in csv 
     bool output_csv;
+    //! read test enable/disable
+    bool read;
+    //! write test enable/disable
+    bool write;
+    //! copy test enable/disable
+    bool copy;
+    //! add test enable/disable
+    bool add;
+    //! mul test enable/disable
+    bool mul;
+    //! dot test enable/disable
+    bool dot;
+    //! triad test enable/disable
+    bool triad;
     //! test type
     int  test_type;
-    //read-write test selection
-    int  rwtest;
-    //subtest selection
-    int  subtest;
     //! number of iterations
     uint64_t num_iterations;
     //! number of iterations
