@@ -32,44 +32,46 @@ static bool triad_only = false;
  bool event_timing = false;
  std::string module_name{"babel"};
 
+// Total no. of babel subtests
+const int total_babel_subtests = 7;
 
 template <typename T>
 void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>& b, std::vector<T>& c, T& sum, uint64_t);
 
 template <typename T>
-bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, int rwtest);
+bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test);
 
 template <typename T>
-bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, int rwtest);
+bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test);
 
 void parseArguments(int argc, char *argv[]);
 
-bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type, int subtest,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, int rwtest) {
+bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test) {
 
   bool result = false;
 
   switch(test_type) {
     case FLOAT_TEST:
-      result = run_stress<float>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, rwtest);
+      result = run_stress<float>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
+          json, action, test);
       break;
 
     case DOUBLE_TEST:
-      result = run_stress<double>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, rwtest);
+      result = run_stress<double>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
+          json, action, test);
       break;
 
     case TRAID_FLOAT:
-      result = run_triad<float>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, rwtest);
+      result = run_triad<float>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
+          json, action, test);
       break;
 
     case TRIAD_DOUBLE:
-      result = run_triad<double>(device, num_times, array_size, output_csv, mibibytes, subtest, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, rwtest);
+      result = run_triad<double>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
+          json, action, test);
       break;
 
     default:
@@ -81,13 +83,14 @@ bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, b
 }
 
 template <typename T>
-bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, int rwtest)
+bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test)
 {
   std::string   msg;
   std::streamsize ss = std::cout.precision();
   std::stringstream sstr;
   auto desc = action_descriptor{action, module_name, device.second};
+
   if (!output_as_csv)
   {
     msg = "Running kernels " + std::to_string(num_times) + " times, " ;
@@ -150,60 +153,69 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   stream->init_arrays(startA, startB, startC);
 
   // List of times
-  std::vector<std::vector<double>> rwtimings(2);
-  std::vector<std::vector<double>> timings(5);
+  std::vector<std::vector<double>> timings(total_babel_subtests);
 
   // Declare timers
   std::chrono::high_resolution_clock::time_point t1, t2;
 
+  // Main loop - run each babel subtest if enabled
   for (unsigned int k = 0; k < num_times; k++)
   {
-    // Execute Read
-    t1 = std::chrono::high_resolution_clock::now();
-    stream->read();
-    t2 = std::chrono::high_resolution_clock::now();
-    rwtimings[0].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    if(test->read) {
+      // Execute Read
+      t1 = std::chrono::high_resolution_clock::now();
+      stream->read();
+      t2 = std::chrono::high_resolution_clock::now();
+      timings[0].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    }
 
-    // Execute Write
-    t1 = std::chrono::high_resolution_clock::now();
-    stream->write();
-    t2 = std::chrono::high_resolution_clock::now();
-    rwtimings[1].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
-  }
+    if(test->write) {
+      // Execute Write
+      t1 = std::chrono::high_resolution_clock::now();
+      stream->write();
+      t2 = std::chrono::high_resolution_clock::now();
+      timings[1].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    }
 
-  // Main loop
-  for (unsigned int k = 0; k < num_times; k++)
-  {
-    // Execute Copy
-    t1 = std::chrono::high_resolution_clock::now();
-    stream->copy();
-    t2 = std::chrono::high_resolution_clock::now();
-    timings[0].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    if(test->copy) {
+      // Execute Copy
+      t1 = std::chrono::high_resolution_clock::now();
+      stream->copy();
+      t2 = std::chrono::high_resolution_clock::now();
+      timings[2].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    }
 
-    // Execute Mul
-    t1 = std::chrono::high_resolution_clock::now();
-    stream->mul();
-    t2 = std::chrono::high_resolution_clock::now();
-    timings[1].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    if(test->mul) {
+      // Execute Mul
+      t1 = std::chrono::high_resolution_clock::now();
+      stream->mul();
+      t2 = std::chrono::high_resolution_clock::now();
+      timings[3].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    }
 
-    // Execute Add
-    t1 = std::chrono::high_resolution_clock::now();
-    stream->add();
-    t2 = std::chrono::high_resolution_clock::now();
-    timings[2].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    if(test->add) {
+      // Execute Add
+      t1 = std::chrono::high_resolution_clock::now();
+      stream->add();
+      t2 = std::chrono::high_resolution_clock::now();
+      timings[4].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    }
 
-    // Execute Triad
-    t1 = std::chrono::high_resolution_clock::now();
-    stream->triad();
-    t2 = std::chrono::high_resolution_clock::now();
-    timings[3].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    if(test->triad) {
+      // Execute Triad
+      t1 = std::chrono::high_resolution_clock::now();
+      stream->triad();
+      t2 = std::chrono::high_resolution_clock::now();
+      timings[5].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    }
 
-    // Execute Dot
-    t1 = std::chrono::high_resolution_clock::now();
-    sum = stream->dot();
-    t2 = std::chrono::high_resolution_clock::now();
-    timings[4].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
-
+    if(test->dot) {
+      // Execute Dot
+      t1 = std::chrono::high_resolution_clock::now();
+      sum = stream->dot();
+      t2 = std::chrono::high_resolution_clock::now();
+      timings[6].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    }
   }
 
   // Check solutions
@@ -237,60 +249,10 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       << std::fixed;
   }
 
-  std::string rwlabels[2] = {"Read", "Write"};
-  size_t rwsizes[2] = {
-    sizeof(T) * ARRAY_SIZE,
-    sizeof(T) * ARRAY_SIZE
-  };
-
-  for (int i = 0; i < rwtest; i++)
-  {
-    // Get min/max; ignore the first result
-    auto minmax = std::minmax_element(rwtimings[i].begin()+1, rwtimings[i].end());
-
-    // Calculate average; ignore the first result
-    double average = std::accumulate(rwtimings[i].begin()+1, rwtimings[i].end(), 0.0) / (double)(num_times - 1);
-    // Display results
-    if (output_as_csv)
-    {
-      sstr
-        << device.second << csv_separator
-        << rwlabels[i] << csv_separator
-        << num_times << csv_separator
-        << ARRAY_SIZE << csv_separator
-        << sizeof(T) << csv_separator
-        << ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * rwsizes[i] / (*minmax.first) << csv_separator
-        << *minmax.first << csv_separator
-        << *minmax.second << csv_separator
-        << average
-        << std::endl;
-    }
-    else
-    {
-      sstr
-        << std::left << std::setw(12) << device.second
-        << std::left << std::setw(12) << rwlabels[i]
-        << std::left << std::setw(12) << std::setprecision(3) <<
-          ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * rwsizes[i] / (*minmax.first)
-        << std::left << std::setw(12) << std::setprecision(5) << *minmax.first
-        << std::left << std::setw(12) << std::setprecision(5) << *minmax.second
-        << std::left << std::setw(12) << std::setprecision(5) << average
-        << std::endl;
-    }
-    if (json){
-      log_to_json(desc, rvs::logresults, "Function",std::string(rwlabels[i]),
-		      "MBytes/sec", (mibibytes) ?
-		      std::to_string(pow(2.0, -20.0)) : std::to_string((1.0E-6) * rwsizes[i] / (*minmax.first)),
-		      "Min(s)",std::to_string( *minmax.first),
-		      "Max(s)", std::to_string(*minmax.second),
-		      "Average(s)", std::to_string(average),
-		      "pass", "true");
-    }
-  }
-
-  //rvs::lp::Log(sstr.str(), rvs::logresults); 
-  std::string labels[5] = {"Copy", "Mul", "Add", "Triad", "Dot"};
-  size_t sizes[5] = {
+  std::string labels[total_babel_subtests] = {"Read","Write","Copy", "Mul", "Add", "Triad", "Dot"};
+  size_t sizes[total_babel_subtests] = {
+    2 * sizeof(T) * ARRAY_SIZE,
+    2 * sizeof(T) * ARRAY_SIZE,
     2 * sizeof(T) * ARRAY_SIZE,
     2 * sizeof(T) * ARRAY_SIZE,
     3 * sizeof(T) * ARRAY_SIZE,
@@ -298,51 +260,64 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
     2 * sizeof(T) * ARRAY_SIZE
   };
 
-  for (int i = 0; i < subtest; i++)
+  bool test_enable[total_babel_subtests] = {
+    test->read,
+    test->write,
+    test->copy,
+    test->mul,
+    test->add,
+    test->triad,
+    test->dot};
+
+  // Display babel subtest results
+  for (int i = 0; i < total_babel_subtests; i++)
   {
-    // Get min/max; ignore the first result
-    auto minmax = std::minmax_element(timings[i].begin()+1, timings[i].end());
-    //sstr.str( std::string() );
-    //sstr.clear();
-    // Calculate average; ignore the first result
-    double average = std::accumulate(timings[i].begin()+1, timings[i].end(), 0.0) / (double)(num_times - 1);
-    // Display results
-    if (output_as_csv)
-    {
-      sstr
-        << device.second << csv_separator
-        << labels[i] << csv_separator
-        << num_times << csv_separator
-        << ARRAY_SIZE << csv_separator
-        << sizeof(T) << csv_separator
-        << ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * sizes[i] / (*minmax.first) << csv_separator
-        << *minmax.first << csv_separator
-        << *minmax.second << csv_separator
-        << average
-        << std::endl;
-    }
-    else
-    {
-      sstr
-        << std::left << std::setw(12) << device.second
-        << std::left << std::setw(12) << labels[i]
-        << std::left << std::setw(12) << std::setprecision(3) << 
+    if(test_enable[i]) {
+
+      // Get min/max; ignore the first result
+      auto minmax = std::minmax_element(timings[i].begin()+1, timings[i].end());
+
+      // Calculate average; ignore the first result
+      double average = std::accumulate(timings[i].begin()+1, timings[i].end(), 0.0) / (double)(num_times - 1);
+      // Display results
+      if (output_as_csv)
+      {
+        sstr
+          << device.second << csv_separator
+          << labels[i] << csv_separator
+          << num_times << csv_separator
+          << ARRAY_SIZE << csv_separator
+          << sizeof(T) << csv_separator
+          << ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * sizes[i] / (*minmax.first) << csv_separator
+          << *minmax.first << csv_separator
+          << *minmax.second << csv_separator
+          << average
+          << std::endl;
+      }
+      else
+      {
+        sstr
+          << std::left << std::setw(12) << device.second
+          << std::left << std::setw(12) << labels[i]
+          << std::left << std::setw(12) << std::setprecision(3) <<
           ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * sizes[i] / (*minmax.first)
-        << std::left << std::setw(12) << std::setprecision(5) << *minmax.first
-        << std::left << std::setw(12) << std::setprecision(5) << *minmax.second
-        << std::left << std::setw(12) << std::setprecision(5) << average
-        << std::endl;
+          << std::left << std::setw(12) << std::setprecision(5) << *minmax.first
+          << std::left << std::setw(12) << std::setprecision(5) << *minmax.second
+          << std::left << std::setw(12) << std::setprecision(5) << average
+          << std::endl;
+      }
+      if (json){
+        log_to_json(desc, rvs::logresults, "Function",std::string(labels[i]),
+            "MBytes/sec", (mibibytes) ?
+            std::to_string(pow(2.0, -20.0)) : std::to_string((1.0E-6) * sizes[i] / (*minmax.first)),
+            "Min(s)",std::to_string( *minmax.first),
+            "Max(s)", std::to_string(*minmax.second),
+            "Average(s)", std::to_string(average),
+            "pass", "true");
+      }
     }
-    if (json){
-      log_to_json(desc, rvs::logresults, "Function",std::string(labels[i]),
-		      "MBytes/sec", (mibibytes) ? 
-		      std::to_string(pow(2.0, -20.0)) : std::to_string((1.0E-6) * sizes[i] / (*minmax.first)),
-		      "Min(s)",std::to_string( *minmax.first), 
-		      "Max(s)", std::to_string(*minmax.second),
-		      "Average(s)", std::to_string(average),
-		      "pass", "true");
-    } 
   }
+
   sstr
     << "------------------------------------------------------------------------" << std::endl;
   rvs::lp::Log(sstr.str(), rvs::logresults);
@@ -352,8 +327,8 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 }
 
 template <typename T>
-bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes, int subtest,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, int rwtest)
+bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test)
 {
   std::string msg;
   auto desc = action_descriptor{action, module_name, device.second};
