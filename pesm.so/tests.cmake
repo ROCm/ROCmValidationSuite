@@ -32,7 +32,7 @@ set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 find_package(OpenMP)
 
 set(UT_LINK_LIBS  libpthread.so libpci.so libm.so libdl.so ${AMD_SMI_LIB} OpenMP::OpenMP_CXX
-  ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_STATIC_LIBRARIES} ${HIPRAND_LIB} ${HIPBLASLT_LIB}
+  ${ROCBLAS_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${YAML_CPP_LIBRARIES} ${HIPRAND_LIB} ${HIPBLASLT_LIB}
 )
 
 # Add directories to look for library files to link
