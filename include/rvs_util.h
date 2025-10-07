@@ -147,6 +147,7 @@ void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device
 int display_gpu_info(std::vector<device_info>);
 void *json_list_create(std::string lname, int log_level);
 std::vector<device_info>  get_gpu_info (void);
+std::string get_gpu_name (void);
 
 template <typename... KVPairs>
 void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values ) {

@@ -321,3 +321,10 @@ void cleanup_logs(){
   rvs::lp::JsonEndNodeCreate();
 }
 
+std::string get_gpu_name (void) {
+
+  rvs::gpulist::Initialize();
+
+  return rvs::gpulist::gpu_get_platform_name () ;
+}
+

@@ -171,6 +171,10 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-p", sp));
   grammar.insert(gpair("--parallel", sp));
 
+  sp = std::make_shared<optbase>("-r", command, value);
+  grammar.insert(gpair("-r", sp));
+  grammar.insert(gpair("--run", sp));
+
   sp = std::make_shared<optbase>("-t", command);
   grammar.insert(gpair("-t", sp));
   grammar.insert(gpair("--listTests", sp));

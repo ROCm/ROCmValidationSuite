@@ -122,18 +122,29 @@ int rvs::exec::run() {
     logger::set_log_file(s_log_file);
   }
 
+  // check -r option
+  if (rvs::options::has_option("-r", &val)) {
+
+    std::string plaftorm_name = get_gpu_name();
+    std::cout << "Detected platform is: " << plaftorm_name << std::endl;
+    std::cout << "Test level is: " << val << std::endl;
+    return 0;
+  }
+
   // check -j option
   std::string s_json_log_file;
   if (rvs::options::has_option("-j", &s_json_log_file)) {
     logger::to_json(true);
     logger::set_json_log_file(s_json_log_file);
-    
   }
 
   // check -c option
   string config_file;
   if (rvs::options::has_option("-c", &val)) {
+
     config_file = val;
+
+
   } else {
     config_file = "../share/rocm-validation-suite/conf/rvs.conf";
     // Check if pConfig file exist if not use old path for backward compatibility
