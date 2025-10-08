@@ -48,6 +48,17 @@ std::vector<uint16_t> rvs::gpulist::domain_id;
 std::map<std::pair<uint16_t, uint16_t> , uint16_t> rvs::gpulist::domain_loc_map;
 std::vector<std::string> rvs::gpulist::pci_bdf;
 
+const std::map<uint16_t, std::string> gpu_dev_map = {
+  {0x740F, "MI210"},     // MI210X Bare Metal
+  {0x74a1, "MI300X"},    // MI300X Bare Metal
+  {0x74a9, "MI300X-HF"}, // MI300-HF Bare Metal
+  {0x74a2, "MI308X"},    // MI308X Bare Metal
+  {0x74a8, "MI308X-HF"}, // MI308X-HF Bare Metal
+  {0x74a5, "MI325X"},    // MI325X Bare Metal
+  {0x75a0, "MI350X"},    // MI350X AC Bare Metal
+  {0x75a3, "MI355X"}     // MI355X LC Bare Metal
+};
+
 using std::vector;
 using std::string;
 using std::ifstream;
@@ -743,5 +754,33 @@ bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &index) {
     }
   }
   return true;
+}
+
+/**
+ * @brief Get GPU platform name
+ * @param void
+ * @return GPU plaform name if found, else null
+ **/
+std::string rvs::gpulist::gpu_get_platform_name (void) {
+
+  uint16_t dev_id = 0;
+
+  if (rvs::gpulist::device_id.size()) {
+    dev_id =  rvs::gpulist::device_id[0];
+  }
+
+  for(auto i = 0; i <  rvs::gpulist::device_id.size(); i++) {
+
+    if(dev_id !=  rvs::gpulist::device_id[i]) {
+      return "";
+    }
+  }
+
+  auto it = gpu_dev_map.find(dev_id);
+  if (it == gpu_dev_map.end()) {
+    return "";
+  }
+
+  return it->second;
 }
 
