@@ -49,7 +49,7 @@ std::map<std::pair<uint16_t, uint16_t> , uint16_t> rvs::gpulist::domain_loc_map;
 std::vector<std::string> rvs::gpulist::pci_bdf;
 
 const std::map<uint16_t, std::string> gpu_dev_map = {
-  {0x740F, "MI210X"},    // MI210X Bare Metal
+  {0x740F, "MI210"},     // MI210X Bare Metal
   {0x74a1, "MI300X"},    // MI300X Bare Metal
   {0x74a9, "MI300X-HF"}, // MI300-HF Bare Metal
   {0x74a2, "MI308X"},    // MI308X Bare Metal

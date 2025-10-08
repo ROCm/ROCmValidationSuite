@@ -122,15 +122,6 @@ int rvs::exec::run() {
     logger::set_log_file(s_log_file);
   }
 
-  // check -r option
-  if (rvs::options::has_option("-r", &val)) {
-
-    std::string plaftorm_name = get_gpu_name();
-    std::cout << "Detected platform is: " << plaftorm_name << std::endl;
-    std::cout << "Test level is: " << val << std::endl;
-    return 0;
-  }
-
   // check -j option
   std::string s_json_log_file;
   if (rvs::options::has_option("-j", &s_json_log_file)) {
@@ -138,34 +129,74 @@ int rvs::exec::run() {
     logger::set_json_log_file(s_json_log_file);
   }
 
-  // check -c option
   string config_file;
-  if (rvs::options::has_option("-c", &val)) {
+  // check -r option
+  if (rvs::options::has_option("-r", &val)) {
 
-    config_file = val;
+    std::string plaftorm_name = get_gpu_name();
+    std::cout << "Detected platform is: " << plaftorm_name << std::endl;
+    std::cout << "Test level is: " << val << std::endl;
 
+    if(plaftorm_name.empty()) {
+      rvs::logger::Err("Could not detect platform name", MODULE_NAME_CAPS);
+      return -1;
+    }
 
-  } else {
-    config_file = "../share/rocm-validation-suite/conf/rvs.conf";
+    config_file = "../share/rocm-validation-suite/conf/" + plaftorm_name + "/levels/rvs_level_" + val + ".conf";
+
+    std::cout << "Using configuration file: " << path + config_file << std::endl;
+
     // Check if pConfig file exist if not use old path for backward compatibility
     std::ifstream file(path + config_file);
     if (!file.good()) {
-      config_file = "conf/rvs.conf";
+      config_file = "conf/" + plaftorm_name + "/levels/rvs_level_" + val + ".conf";
     }
     file.close();
     config_file = path + config_file;
+    std::cout << "Using configuration file: " << config_file << std::endl;
+
+    // Check if pConfig file exists
+    file.open(config_file);
+    if (!file.good()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "%s file is missing.", config_file.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    } else {
+      file.close();
+    }
   }
 
-  // Check if pConfig file exists
-  std::ifstream file(config_file);
-  if (!file.good()) {
-    char buff[1024];
-    snprintf(buff, sizeof(buff),
-              "%s file is missing.", config_file.c_str());
-    rvs::logger::Err(buff, MODULE_NAME_CAPS);
-    return -1;
-  } else {
-    file.close();
+  if (!rvs::options::has_option("-r", &val)) {
+
+    // check -c option
+    if (rvs::options::has_option("-c", &val)) {
+
+      config_file = val;
+
+    } else {
+      config_file = "../share/rocm-validation-suite/conf/rvs.conf";
+      // Check if pConfig file exist if not use old path for backward compatibility
+      std::ifstream file(path + config_file);
+      if (!file.good()) {
+        config_file = "conf/rvs.conf";
+      }
+      file.close();
+      config_file = path + config_file;
+    }
+
+    // Check if pConfig file exists
+    std::ifstream file(config_file);
+    if (!file.good()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "%s file is missing.", config_file.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    } else {
+      file.close();
+    }
   }
 
   // check -n options
