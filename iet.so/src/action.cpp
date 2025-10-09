@@ -669,7 +669,7 @@ int iet_action::get_all_selected_gpus(void) {
 
   hipGetDeviceCount(&hip_num_gpu_devices);
   if (hip_num_gpu_devices < 1)
-    return hip_num_gpu_devices;
+    return -1;
 
   // find compatible GPUs to run edp tests
   amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
@@ -695,7 +695,7 @@ int iet_action::get_all_selected_gpus(void) {
       rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
     }
 
-    return 0; // no GPUs is not error
+    return -1;
   }
 
   int iet_res = 0;
