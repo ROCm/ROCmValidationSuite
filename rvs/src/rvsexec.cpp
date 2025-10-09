@@ -493,6 +493,9 @@ void rvs::exec::do_help() {
 
   cout << "-c --config        Specify the test configuration file to use.\n\n";
 
+  cout << "-r --run           Specify the test level to run. Valid range is 1 to 5,\n";
+  cout << "                   with 5 indicating the highest stress test level.\n\n";
+
   cout << "-d --debugLevel    Specify the debug level for the output log. The range is 0-5 with\n";
   cout << "                   5 being the highest verbose level.\n\n";
 
