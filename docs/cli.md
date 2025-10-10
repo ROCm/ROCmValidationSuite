@@ -16,6 +16,9 @@
 -c --config        Specify the test configuration file to use. This is a mandatory
                    field for test execution.
 
+-r --run           Specify the test level to run. Valid range is 1 to 5, with 5
+                   indicating the highest stress test level.
+
 -d --debugLevel    Specify the debug level for the output log. The range is 0-5 with
                    5 being the highest verbose level.
 

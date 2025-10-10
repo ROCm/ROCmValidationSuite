@@ -238,6 +238,12 @@ std::string getOSNameVersion(void) {
       if (!osName.empty() && osName.front() == '"' && osName.back() == '"') {
         /* Remove surrounding quotes */
         osName = osName.substr(1, osName.size() - 2);
+
+        /* OS name till braces */
+        size_t pos = osName.find('(');
+        if (pos != std::string::npos) {
+          osName = osName.substr(0, pos);
+        }
       }
       break;
     }
