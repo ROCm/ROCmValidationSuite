@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -170,6 +170,10 @@ void rvs::cli::init_grammar() {
   sp = std::make_shared<optbase>("-p", command, optionalvalue);
   grammar.insert(gpair("-p", sp));
   grammar.insert(gpair("--parallel", sp));
+
+  sp = std::make_shared<optbase>("-r", command, value);
+  grammar.insert(gpair("-r", sp));
+  grammar.insert(gpair("--run", sp));
 
   sp = std::make_shared<optbase>("-t", command);
   grammar.insert(gpair("-t", sp));
