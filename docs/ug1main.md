@@ -247,6 +247,10 @@ of the current log. Use in conjuction with <b>-d</b> and <b>-l</b> options.
 This is a mandatory field for test execution.
 </td></tr>
 
+<tr><td>-r</td><td>--run</td><td>Specify the test level to run.
+Valid range is 1 to 5, with 5 indicating the highest stress test level.
+</td></tr>
+
 <tr><td>-d</td><td>--debugLevel</td><td>Specify the debug level for the output log.
 The range is 0-5 with 5 being the highest verbose level.
 </td></tr>
