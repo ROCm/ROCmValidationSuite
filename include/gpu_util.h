@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -46,6 +46,7 @@ extern bool gpu_check_if_mcm_die (int idx);
 extern int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_index);
 extern void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf);
 extern bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &idx);
+extern std::string gpu_get_platform_name (void);
 
 namespace rvs {
 
@@ -75,6 +76,7 @@ class gpulist {
   static int domlocation2gpu(const uint16_t domainID, const uint16_t LocationID,
                                     uint16_t* pGPUID);
   static int node2bdf(const uint16_t NodeID, std::string& pPciBDF);
+  static std::string gpu_get_platform_name (void);
  protected:
   //! Array of GPU location IDs
   static std::vector<uint16_t> location_id;
