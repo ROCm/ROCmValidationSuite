@@ -7,7 +7,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Added
 
 - Added test summary and system overview.
-- Support for different test levels with `-r` option.
+- Support for different test levels with the `-r` option.
 - NPS2/DPX partition mode support for MI350X and MI355X.
 - Support for Azure Linux and Alibaba Linux.
 - Individual subtest configurability in Babel.
