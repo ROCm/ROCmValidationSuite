@@ -18,7 +18,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 - Support for Amazon Linux.
 
 ### Changed
-- Update gst conf. files for MI350X and MI355X.
+- Update GST configuration files for MI350X and MI355X.
 - Change GEMM execution method during ramp-up.
 
 ## RVS 1.2.0 for ROCm 7.0.1
