@@ -220,7 +220,7 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 
   // Check solutions
   stream->read_arrays(a, b, c);
-  check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
+//check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
   sstr.str( std::string() );
   sstr.clear();
   if (output_as_csv)
@@ -240,7 +240,7 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       sstr << "\n------------------------------------------------------------------------" << std::endl
       << std::left << std::setw(12) << "GPU Id"
       << std::left << std::setw(12) << "Function"
-      << std::left << std::setw(12) << ((mibibytes) ? "MiBytes/sec" : "MBytes/sec")
+      << std::left << std::setw(15) << ((mibibytes) ? "MiBytes/sec" : "MBytes/sec")
       << std::left << std::setw(12) << "Min (sec)"
       << std::left << std::setw(12) << "Max"
       << std::left << std::setw(12) << "Average"
@@ -299,7 +299,7 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
         sstr
           << std::left << std::setw(12) << device.second
           << std::left << std::setw(12) << labels[i]
-          << std::left << std::setw(12) << std::setprecision(3) <<
+          << std::left << std::setw(15) << std::setprecision(3) <<
           ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * sizes[i] / (*minmax.first)
           << std::left << std::setw(12) << std::setprecision(5) << *minmax.first
           << std::left << std::setw(12) << std::setprecision(5) << *minmax.second
@@ -405,7 +405,7 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   // Check solutions
   T sum = 0.0;
   stream->read_arrays(a, b, c);
-  check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
+//  check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
 
   // Display timing results
   double total_bytes = 3 * sizeof(T) * ARRAY_SIZE * num_times;

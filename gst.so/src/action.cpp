@@ -637,7 +637,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
       rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
       rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
     }
-    return 0;
+    return -1;
   }
   return hip_num_gpu_devices;
 }

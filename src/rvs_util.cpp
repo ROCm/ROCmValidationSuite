@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -319,5 +319,12 @@ void json_add_primary_fields(std::string moduleName, std::string action_name){
 
 void cleanup_logs(){
   rvs::lp::JsonEndNodeCreate();
+}
+
+std::string get_gpu_name (void) {
+
+  rvs::gpulist::Initialize();
+
+  return rvs::gpulist::gpu_get_platform_name () ;
 }
 
