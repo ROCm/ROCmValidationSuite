@@ -330,12 +330,74 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 ################################################################################
 # check yaml-cpp available at configure time
-find_package(yaml-cpp)
-if (yaml-cpp_FOUND)
-  message("yaml-cpp found")
+# check yaml-cpp available at configure time
+# First try to find static yaml-cpp library
+find_library(YAML_CPP_STATIC_LIB 
+  NAMES libyaml-cpp.a yaml-cpp.a
+  PATHS /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib ${CMAKE_PREFIX_PATH}/lib64 ${CMAKE_PREFIX_PATH}/lib
+  DOC "Path to yaml-cpp static library"
+)
+
+find_path(YAML_CPP_INCLUDE_DIR 
+  NAMES yaml-cpp/yaml.h
+  PATHS /usr/include /usr/local/include ${CMAKE_PREFIX_PATH}/include
+  DOC "Path to yaml-cpp include directory"
+)
+
+# Set variables for yaml-cpp linking
+set(YAML_CPP_STATIC_FOUND FALSE)
+set(YAML_CPP_SHARED_FOUND FALSE)
+
+if (YAML_CPP_STATIC_LIB AND YAML_CPP_INCLUDE_DIR)
+  set(YAML_CPP_STATIC_FOUND TRUE)
+  message(STATUS "yaml-cpp static library found: ${YAML_CPP_STATIC_LIB}")
+  set(YAML_CPP_LIBRARIES ${YAML_CPP_STATIC_LIB})
+  get_filename_component(YAML_CPP_LIBRARY_DIR ${YAML_CPP_STATIC_LIB} DIRECTORY)
+  
+  # Create imported target for static linking
+  add_library(yaml-cpp-static STATIC IMPORTED)
+  set_target_properties(yaml-cpp-static PROPERTIES
+    IMPORTED_LOCATION ${YAML_CPP_STATIC_LIB}
+    INTERFACE_INCLUDE_DIRECTORIES ${YAML_CPP_INCLUDE_DIR}
+  )
+  
+  # For static linking, we might need pthread
+  find_package(Threads REQUIRED)
+  set_target_properties(yaml-cpp-static PROPERTIES
+    INTERFACE_LINK_LIBRARIES Threads::Threads
+  )
+  
+  # Use static library as the target
+  set(YAML_CPP_TARGET yaml-cpp-static)
+  
 else()
-  message(FATAL_ERROR "yaml-cpp not found !!! Install  to proceed ...")
-endif(yaml-cpp_FOUND)
+  # Fall back to find_package for shared library
+  find_package(yaml-cpp QUIET)
+  if (yaml-cpp_FOUND)
+    set(YAML_CPP_SHARED_FOUND TRUE)
+    message(STATUS "yaml-cpp shared library found: ${YAML_CPP_LIBRARIES}")
+    
+    if (TARGET yaml-cpp::yaml-cpp)
+      set(YAML_CPP_TARGET yaml-cpp::yaml-cpp)
+      get_target_property(YAML_CPP_INCLUDE_DIR yaml-cpp::yaml-cpp INTERFACE_INCLUDE_DIRECTORIES)
+      if (NOT YAML_CPP_INCLUDE_DIR)
+        set(YAML_CPP_INCLUDE_DIR ${YAML_CPP_INCLUDE_DIRS})
+      endif()
+    else()
+      # Legacy variables from find_package
+      set(YAML_CPP_TARGET ${YAML_CPP_LIBRARIES})
+    endif()
+  else()
+    message(FATAL_ERROR "yaml-cpp not found !!! Install yaml-cpp (preferably static version) to proceed ...")
+  endif()
+endif()
+
+# Final status message
+if (YAML_CPP_STATIC_FOUND)
+  message(STATUS "Using yaml-cpp STATIC library: ${YAML_CPP_LIBRARIES}")
+elseif (YAML_CPP_SHARED_FOUND)
+  message(STATUS "Using yaml-cpp SHARED library: ${YAML_CPP_LIBRARIES}")
+endif()
 
 ################################################################################
 ## GOOGLE TEST
