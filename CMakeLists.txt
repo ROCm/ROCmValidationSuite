@@ -330,7 +330,6 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 ################################################################################
 # check yaml-cpp available at configure time
-# check yaml-cpp available at configure time
 # First try to find static yaml-cpp library
 find_library(YAML_CPP_STATIC_LIB 
   NAMES libyaml-cpp.a yaml-cpp.a
@@ -361,11 +360,6 @@ if (YAML_CPP_STATIC_LIB AND YAML_CPP_INCLUDE_DIR)
     INTERFACE_INCLUDE_DIRECTORIES ${YAML_CPP_INCLUDE_DIR}
   )
   
-  # For static linking, we might need pthread
-  find_package(Threads REQUIRED)
-  set_target_properties(yaml-cpp-static PROPERTIES
-    INTERFACE_LINK_LIBRARIES Threads::Threads
-  )
   
   # Use static library as the target
   set(YAML_CPP_TARGET yaml-cpp-static)
