@@ -19,13 +19,13 @@ sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unz
 CentOS :
 
 ```
-sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel
+sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel yaml-cpp-static
 ```
 
 RHEL :
 
 ```
-sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel pciutils-devel
+sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel yaml-cpp-static pciutils-devel
 ```
 
 SLES :
