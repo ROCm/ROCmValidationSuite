@@ -124,7 +124,7 @@ set(CORE_RUNTIME_NAME "hsa-runtime")
 set(HIPRAND_LIB "hiprand")
 set(HIPBLASLT_LIB "hipblaslt")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
-set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
+set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_TARGET})
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
