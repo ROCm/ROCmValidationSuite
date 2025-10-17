@@ -235,14 +235,6 @@ if(FETCH_ROCMPATH_FROM_ROCMCORE)
 else()
   set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, amd-smi-lib, hiprand, hipblaslt")
 endif()
-if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
-elseif (${RVS_OS_TYPE} STREQUAL "sles")
-set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp0_6")
-else ()
-# other supported rpm distros - RHEL, CentOS
-set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, pciutils-libs, yaml-cpp")
-endif()
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
@@ -391,6 +383,32 @@ if (YAML_CPP_STATIC_FOUND)
   message(STATUS "Using yaml-cpp STATIC library: ${YAML_CPP_LIBRARIES}")
 elseif (YAML_CPP_SHARED_FOUND)
   message(STATUS "Using yaml-cpp SHARED library: ${YAML_CPP_LIBRARIES}")
+endif()
+
+
+# Package dependencies - yaml-cpp is conditionally required based on linking type
+if (YAML_CPP_STATIC_FOUND)
+  # Static linking - no runtime yaml-cpp dependency needed
+  if (${RVS_OS_TYPE} STREQUAL "ubuntu")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3")
+  elseif (${RVS_OS_TYPE} STREQUAL "sles")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3")
+  else ()
+    # other supported rpm distros - RHEL, CentOS
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, pciutils-libs")
+  endif()
+  message(STATUS "Package dependencies: yaml-cpp statically linked, no runtime dependency")
+else()
+  # Dynamic linking - yaml-cpp runtime dependency required
+  if (${RVS_OS_TYPE} STREQUAL "ubuntu")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
+  elseif (${RVS_OS_TYPE} STREQUAL "sles")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp0_6")
+  else ()
+    # other supported rpm distros - RHEL, CentOS
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, pciutils-libs, yaml-cpp")
+  endif()
+  message(STATUS "Package dependencies: yaml-cpp dynamically linked, runtime dependency included")
 endif()
 
 ################################################################################
