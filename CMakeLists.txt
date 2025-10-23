@@ -235,14 +235,6 @@ if(FETCH_ROCMPATH_FROM_ROCMCORE)
 else()
   set(ROCM_DEPENDENT_PACKAGES "hip-runtime-amd, comgr, hsa-rocr, rocblas, amd-smi-lib, hiprand, hipblaslt")
 endif()
-if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
-elseif (${RVS_OS_TYPE} STREQUAL "sles")
-set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp0_6")
-else ()
-# other supported rpm distros - RHEL, CentOS
-set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, pciutils-libs, yaml-cpp")
-endif()
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
@@ -330,12 +322,93 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 
 ################################################################################
 # check yaml-cpp available at configure time
-find_package(yaml-cpp)
-if (yaml-cpp_FOUND)
-  message("yaml-cpp found")
+# First try to find static yaml-cpp library
+find_library(YAML_CPP_STATIC_LIB 
+  NAMES libyaml-cpp.a yaml-cpp.a
+  PATHS /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib ${CMAKE_PREFIX_PATH}/lib64 ${CMAKE_PREFIX_PATH}/lib
+  DOC "Path to yaml-cpp static library"
+)
+find_path(YAML_CPP_INCLUDE_DIR 
+  NAMES yaml-cpp/yaml.h
+  PATHS /usr/include /usr/local/include ${CMAKE_PREFIX_PATH}/include
+  DOC "Path to yaml-cpp include directory"
+)
+
+# Set variables for yaml-cpp linking
+set(YAML_CPP_STATIC_FOUND FALSE)
+set(YAML_CPP_SHARED_FOUND FALSE)
+
+if (YAML_CPP_STATIC_LIB AND YAML_CPP_INCLUDE_DIR)
+  set(YAML_CPP_STATIC_FOUND TRUE)
+  message(STATUS "yaml-cpp static library found: ${YAML_CPP_STATIC_LIB}")
+  set(YAML_CPP_LIBRARIES ${YAML_CPP_STATIC_LIB})
+  get_filename_component(YAML_CPP_LIBRARY_DIR ${YAML_CPP_STATIC_LIB} DIRECTORY)
+  
+  # Create imported target for static linking
+  add_library(yaml-cpp-static STATIC IMPORTED)
+  set_target_properties(yaml-cpp-static PROPERTIES
+    IMPORTED_LOCATION ${YAML_CPP_STATIC_LIB}
+    INTERFACE_INCLUDE_DIRECTORIES ${YAML_CPP_INCLUDE_DIR}
+  )
+  
+  
+  # Use static library as the target
+  set(YAML_CPP_TARGET yaml-cpp-static)
+  
 else()
-  message(FATAL_ERROR "yaml-cpp not found !!! Install  to proceed ...")
-endif(yaml-cpp_FOUND)
+  # Fall back to find_package for shared library
+  find_package(yaml-cpp QUIET)
+  if (yaml-cpp_FOUND)
+    set(YAML_CPP_SHARED_FOUND TRUE)
+    message(STATUS "yaml-cpp shared library found: ${YAML_CPP_LIBRARIES}")
+    
+    if (TARGET yaml-cpp::yaml-cpp)
+      set(YAML_CPP_TARGET yaml-cpp::yaml-cpp)
+      get_target_property(YAML_CPP_INCLUDE_DIR yaml-cpp::yaml-cpp INTERFACE_INCLUDE_DIRECTORIES)
+      if (NOT YAML_CPP_INCLUDE_DIR)
+        set(YAML_CPP_INCLUDE_DIR ${YAML_CPP_INCLUDE_DIRS})
+      endif()
+    else()
+      # Legacy variables from find_package
+      set(YAML_CPP_TARGET ${YAML_CPP_LIBRARIES})
+    endif()
+  else()
+    message(FATAL_ERROR "yaml-cpp not found !!! Install yaml-cpp (preferably static version) to proceed ...")
+  endif()
+endif()
+
+# Final status message
+if (YAML_CPP_STATIC_FOUND)
+  message(STATUS "Using yaml-cpp STATIC library: ${YAML_CPP_LIBRARIES}")
+elseif (YAML_CPP_SHARED_FOUND)
+  message(STATUS "Using yaml-cpp SHARED library: ${YAML_CPP_LIBRARIES}")
+endif()
+
+
+# Package dependencies - yaml-cpp is conditionally required based on linking type
+if (YAML_CPP_STATIC_FOUND)
+  # Static linking - no runtime yaml-cpp dependency needed
+  if (${RVS_OS_TYPE} STREQUAL "ubuntu")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3")
+  elseif (${RVS_OS_TYPE} STREQUAL "sles")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3")
+  else ()
+    # other supported rpm distros - RHEL, CentOS
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, pciutils-libs")
+  endif()
+  message(STATUS "Package dependencies: yaml-cpp statically linked, no runtime dependency")
+else()
+# Dynamic linking - yaml-cpp runtime dependency required
+  if (${RVS_OS_TYPE} STREQUAL "ubuntu")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
+  elseif (${RVS_OS_TYPE} STREQUAL "sles")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp0_6")
+  else ()
+    # other supported rpm distros - RHEL, CentOS
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, pciutils-libs, yaml-cpp")
+  endif()
+  message(STATUS "Package dependencies: yaml-cpp dynamically linked, runtime dependency included")
+endif()
 
 ################################################################################
 ## GOOGLE TEST
