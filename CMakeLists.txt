@@ -325,7 +325,7 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 # First try to find static yaml-cpp library
 find_library(YAML_CPP_STATIC_LIB 
   NAMES libyaml-cpp.a yaml-cpp.a
-  PATHS /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib ${CMAKE_PREFIX_PATH}/lib64 ${CMAKE_PREFIX_PATH}/lib
+  PATHS /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib
   DOC "Path to yaml-cpp static library"
 )
 
@@ -403,7 +403,7 @@ else()
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
   elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp0_6")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp")
   else ()
     # other supported rpm distros - RHEL, CentOS
     set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, pciutils-libs, yaml-cpp")
