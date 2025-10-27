@@ -404,7 +404,7 @@ else()
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp-dev")
   elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, libpci3, libyaml-cpp0_6")
   else ()
     # other supported rpm distros - RHEL, CentOS
     set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_DEPENDENT_PACKAGES}, pciutils-libs, yaml-cpp")
