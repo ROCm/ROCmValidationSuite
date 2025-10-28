@@ -224,7 +224,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       sstr << "\n------------------------------------------------------------------------" << std::endl
       << std::left << std::setw(12) << "GPU Id"
       << std::left << std::setw(12) << "Function"
-      << std::left << std::setw(12) << ((mibibytes) ? "MiBytes/sec" : "MBytes/sec")
+      << std::left << std::setw(15) << ((mibibytes) ? "MiBytes/sec" : "MBytes/sec")
       << std::left << std::setw(12) << "Min (sec)"
       << std::left << std::setw(12) << "Max"
       << std::left << std::setw(12) << "Average"
@@ -266,7 +266,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       sstr
         << std::left << std::setw(12) << device.second
         << std::left << std::setw(12) << rwlabels[i]
-        << std::left << std::setw(12) << std::setprecision(3) <<
+        << std::left << std::setw(15) << std::setprecision(3) <<
           ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * rwsizes[i] / (*minmax.first)
         << std::left << std::setw(12) << std::setprecision(5) << *minmax.first
         << std::left << std::setw(12) << std::setprecision(5) << *minmax.second
@@ -322,7 +322,7 @@ void run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       sstr
         << std::left << std::setw(12) << device.second
         << std::left << std::setw(12) << labels[i]
-        << std::left << std::setw(12) << std::setprecision(3) << 
+        << std::left << std::setw(15) << std::setprecision(3) << 
           ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * sizes[i] / (*minmax.first)
         << std::left << std::setw(12) << std::setprecision(5) << *minmax.first
         << std::left << std::setw(12) << std::setprecision(5) << *minmax.second
