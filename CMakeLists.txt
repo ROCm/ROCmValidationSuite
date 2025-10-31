@@ -27,6 +27,9 @@ cmake_minimum_required ( VERSION 3.5.0 )
 set(CMAKE_SHARED_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN:$ORIGIN/.." CACHE STRING "RUNPATH for libraries")
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN/../lib" CACHE STRING "RUNPATH for executables")
 
+set( COMP_TYPE "applications" )
+set( BUILD_ENABLE_LINTIAN_OVERRIDES ON CACHE BOOL "Enable/Disable Lintian Overrides" )
+set( BUILD_DEBIAN_PKGING_FLAG ON CACHE BOOL "Internal Status Flag to indicate Debian Packaging Build" )
 project ("rocm-validation-suite"
           VERSION 1.3.0)
 
@@ -220,6 +223,8 @@ set ( RVS_VERSION "${PROJECT_VERSION}" )
 get_version ( ${RVS_VERSION} )
 
 # Package Generator  #######################################################
+set(PKG_MAINTAINER_NM  "ROCM Validation Suite Support")
+set(PKG_MAINTAINER_EMAIL  "rocm-validation-suite.support@amd.com")
 set(CPACK_PACKAGE_NAME "rocm-validation-suite")
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Tool for validating AMD GPU functionality, performance, reliability in ROCm.")
@@ -227,7 +232,7 @@ set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
-set(CPACK_PACKAGE_CONTACT "ROCM Validation Suite Support <rocm-validation-suite.support@amd.com>")
+set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 
 # Package dependencies
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
@@ -761,6 +766,7 @@ if(RVS_ROCMSMI EQUAL 1)
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rvsso.conf"
 	  DESTINATION /${CMAKE_INSTALL_SYSCONFDIR}/ld.so.conf.d
           COMPONENT rvsmodule)
+  set( COMP_TYPE "rvsmodule" )
 endif()  # if(RVS_ROCMSMI EQUAL 1)
 
 
@@ -791,5 +797,7 @@ install(FILES
 #add_test(NAME test1 COMMAND rvs)
 
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
+
+configure_pkg( ${CPACK_PACKAGE_NAME} ${COMP_TYPE} ${CPACK_PACKAGE_VERSION} ${PKG_MAINTAINER_NM} ${PKG_MAINTAINER_EMAIL} )
 
 include (CPack)
