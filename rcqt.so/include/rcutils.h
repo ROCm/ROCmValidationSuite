@@ -46,6 +46,7 @@ enum class OSType {
   Oracle,
   Azure,
   Amazon,
+  Alibaba,
   None
 };
 
@@ -59,7 +60,8 @@ const std::map<std::string, OSType> op_systems {
   {"red hat enterprise linux", OSType::RHEL},
   {"oracle linux server", OSType::Oracle},
   {"microsoft azure linux", OSType::Azure},
-  {"amazon linux", OSType::Amazon}
+  {"amazon linux", OSType::Amazon},
+  {"alibaba cloud linux", OSType::Alibaba},
 };
 
 struct package_info{
