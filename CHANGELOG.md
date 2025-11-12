@@ -2,12 +2,18 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.3.0 for ROCm 7.1.1
+
+### Added
+
+- Support for different test levels with `-r` option for MI3XXX.
+- Set compute type for DGEMM operations in MI350X and MI355X.
+
 ## RVS 1.3.0 for ROCm 7.1.0
 
 ### Added
 
 - Added test summary and system overview.
-- Support for different test levels with `-r` option.
 - NPS2/DPX partition mode support for MI350X and MI355X.
 - Support for Azure Linux and Alibaba Linux.
 - Individual subtest configurability in Babel.
