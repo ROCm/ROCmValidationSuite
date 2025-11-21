@@ -81,7 +81,7 @@ void MemWorker::run() {
   HIP_CHECK(hipSetDevice(deviceId));
 
   /* Set Babel subtests enable/disable */
-  subtest test = {read, write, copy, add, mul, triad, dot};
+  subtest test = {read, write, copy, add, mul, dot, triad};
 
   result = run_babel(device, num_iterations, array_size, output_csv, mibibytes,
       test_type, dwords_per_lane, chunks_per_block, tb_size,
