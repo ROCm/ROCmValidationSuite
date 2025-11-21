@@ -45,6 +45,9 @@
 #define RVS_CONF_HOT_CALLS_KEY          "hot_calls"
 #define RVS_CONF_WARM_CALLS_KEY         "warm_calls"
 #define RVS_CONF_B2B_KEY                "b2b"
+#define RVS_CONF_EXECUTOR_KEY           "executor"
+#define RVS_CONF_SUBEXECUTOR_KEY        "subexecutor"
+#define RVS_CONF_TRANSFER_METHOD_KEY    "transfer_method"
 
 #define DEFAULT_LOG_INTERVAL (1000u)
 #define DEFAULT_DURATION     (10000u)
@@ -53,6 +56,9 @@
 #define DEFAULT_HOT_CALLS    (1u)
 #define DEFAULT_WARM_CALLS   (1u)
 #define DEFAULT_B2B          false
+#define DEFAULT_TRANSFER_METHOD "native"
+#define DEFAULT_EXECUTOR     "gpu"
+#define DEFAULT_SUBEXECUTOR  (2u)
 
 #define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
 #define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\

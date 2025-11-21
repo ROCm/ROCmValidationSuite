@@ -101,6 +101,10 @@ class pebb_action : public rvs::actionbase {
  //! set to true for back-to-back transfers (resource allocation only once for entire transfer iterations)
  bool b2b;
 
+ string transfer_method;
+ string executor;
+ uint32_t subexecutor;
+
  protected:
   int create_threads();
   int destroy_threads();

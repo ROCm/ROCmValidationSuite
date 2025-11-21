@@ -138,6 +138,27 @@ bool pebb_action::get_all_pebb_config_keys(void) {
     bsts = false;
   }
 
+  error = property_get<std::string>(RVS_CONF_TRANSFER_METHOD_KEY, &transfer_method, DEFAULT_TRANSFER_METHOD);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_TRANSFER_METHOD_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_EXECUTOR_KEY, &executor, DEFAULT_EXECUTOR);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_EXECUTOR_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_SUBEXECUTOR_KEY, &subexecutor, DEFAULT_SUBEXECUTOR);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_SUBEXECUTOR_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
   if(!hot_calls) {
     hot_calls = DEFAULT_HOT_CALLS;
   }
@@ -299,6 +320,9 @@ int pebb_action::create_threads() {
             p->set_warm_calls(warm_calls);
             p->set_b2b(b2b);
             p->set_loglevel(property_log_level);
+            p->set_transfer_method(transfer_method);
+            p->set_executor(executor);
+            p->set_subexecutor(subexecutor);
             test_array.push_back(p);
           }
         }

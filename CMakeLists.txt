@@ -489,6 +489,37 @@ if (NOT DEFINED MXDATAGENERATOR_INC_DIR)
 endif ()
 ################################################################################
 
+################################################################################
+# TransferBench Download
+configure_file(CMakeTransferBenchDownload.cmake TransferBench-download/CMakeLists.txt)
+
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
+if(result)
+  message(FATAL_ERROR "CMake step for TransferBench failed: ${result}")
+endif()
+
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
+if(result)
+  message(FATAL_ERROR "Build step for TransferBench failed: ${result}")
+endif()
+
+execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/TransferBench-src -B${CMAKE_BINARY_DIR}/TransferBench-build -DCMAKE_CXX_COMPILER=/opt/rocm/bin/amdclang++
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-src )
+if(result)
+  message(FATAL_ERROR "Config step for TransferBench-src failed: ${result}")
+endif()
+
+if (NOT DEFINED TRANSFERBENCH_INC_DIR)
+  set (TRANSFERBENCH_INC_DIR "${CMAKE_BINARY_DIR}/TransferBench-src/src/header")
+  message ("TRANSFERBENCH_INC_DIR ${TRANSFERBENCH_INC_DIR}")
+endif ()
+################################################################################
+
 ## rocBLAS
 
 if(RVS_ROCBLAS EQUAL 1)

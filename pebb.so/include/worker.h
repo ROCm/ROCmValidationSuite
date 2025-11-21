@@ -92,6 +92,13 @@ class pebbworker : public rvs::ThreadBase {
   //! Set b2b
   void set_b2b(bool _b2b) { b2b = _b2b; }
 
+  //! Set transfer method
+  void set_transfer_method(std::string _transfer_method) { transfer_method = _transfer_method; }
+  //! Set executor
+  void set_executor(std::string _executor) { executor = _executor; }
+  //! Set subexecutor
+  void set_subexecutor(uint32_t _subexecutor) { subexecutor = _subexecutor; }
+
  protected:
   virtual void run(void);
 
@@ -144,6 +151,13 @@ class pebbworker : public rvs::ThreadBase {
   uint32_t warm_calls;
   //! 'true' if back-to-back transfers enabled
   bool b2b;
+
+  //! transfer method - TransferBench or Native
+  std::string transfer_method;
+  //! transfer executor to use - GPU or SDMA
+  std::string executor;
+  //! No. of subexecutors
+  uint32_t subexecutor;
 
   //! list of test block sizes
   std::vector<uint32_t> block_size;
