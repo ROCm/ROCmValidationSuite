@@ -356,17 +356,6 @@ void systemOverview() {
 
   std::vector<device_info> gpu_info_list = get_gpu_info();
 
-  std::string gpu_list;
-  for (const auto& info : gpu_info_list) {
-    gpu_list += info.gpu_id + " ";
-  }
-
-  if (!gpu_list.empty()) {
-    gpu_list.pop_back(); // Remove trailing space
-  } else {
-    gpu_list = "N/A";
-  }
-
   if(gpu_info_list.size()) {
 
     std::cout << "\r" << boundary << " "
