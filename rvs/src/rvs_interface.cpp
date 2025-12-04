@@ -27,6 +27,7 @@
 #include <include/rvs.h>
 #include <include/rvsinternal.h>
 #include <include/rvsexec.h>
+#include "include/gpu_util.h"  
 #include <map>
 #include <mutex>
 
@@ -290,6 +291,7 @@ rvs_status_t rvs_terminate(void) {
   if (RVS_STATE_INITIALIZED != rvs_state) {
     return RVS_STATUS_INVALID_STATE;
   }
+  rvs::gpulist::Shutdown();
   rvs_state = RVS_STATE_UNINITIALIZED;
 
   return RVS_STATUS_SUCCESS;

@@ -29,6 +29,8 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <unordered_map>
+#include <utility>
 #include "amd_smi/amdsmi.h"
 
 #define KFD_SYS_PATH_NODES              "/sys/class/kfd/kfd/topology/nodes"
@@ -51,17 +53,90 @@ extern std::string gpu_get_platform_name (void);
 namespace rvs {
 
 /**
+ * @struct GpuInfo
+ * @brief Unified structure containing all GPU identifiers and properties
+ * 
+ * This structure to replace the parallel arrays with a single cohesive data structure
+ * that keeps all GPU-related information together, improving maintainability.
+ * Older arrays if not updated in lockstep results in wrong behaviour
+ */
+struct GpuInfo {
+    uint16_t location_id;   //GPU Location ID(location_id) from KFD topology
+    uint16_t gpu_id;        //GPU ID from KFD
+    uint16_t gpu_idx;       // GPU index in system
+    uint16_t device_id;     // PCI Device ID
+    uint16_t node_id;       // HSA Node ID
+    uint16_t domain_id;     // PCI Domain ID
+    std::string pci_bdf;    // PCI Bus:Device.Function string
+    
+    GpuInfo() 
+        : location_id(0), gpu_id(0), gpu_idx(0), device_id(0),
+          node_id(0), domain_id(0), pci_bdf("") {}
+    
+    GpuInfo(uint16_t loc_id, uint16_t g_id, uint16_t idx, 
+            uint16_t dev_id, uint16_t n_id, uint16_t dom_id, 
+            const std::string& bdf)
+        : location_id(loc_id), gpu_id(g_id), gpu_idx(idx),
+          device_id(dev_id), node_id(n_id), domain_id(dom_id),
+          pci_bdf(bdf) {}
+
+    bool is_valid() const {
+        return gpu_id != 0;
+    }
+    
+    std::pair<uint16_t, uint16_t> get_domain_location_pair() const {
+        return std::make_pair(domain_id, location_id);
+    }
+};
+/**
+ * Error codes for GPU lookup operations
+ */
+enum class GpuLookupError {
+    SUCCESS = 0,              // Operation successful
+    NOT_FOUND = -1,           // GPU identifier not found
+    NULL_POINTER = -2,        // Null pointer passed as argument
+    UNINITIALIZED = -3,       // GPU list not initialized
+    INDEX_OUT_OF_BOUNDS = -4, // Internal index corruption
+    INVALID_ARGUMENT = -5     // Invalid argument value
+};
+
+/**
+ * Convert error code to human-readable string
+ */
+inline const char* error_to_string(GpuLookupError err) {
+    switch (err) {
+        case GpuLookupError::SUCCESS: 
+            return "Success";
+        case GpuLookupError::NOT_FOUND: 
+            return "GPU identifier not found in system";
+        case GpuLookupError::NULL_POINTER: 
+            return "Null pointer passed as argument";
+        case GpuLookupError::UNINITIALIZED: 
+            return "GPU list not initialized - call Initialize() first";
+        case GpuLookupError::INDEX_OUT_OF_BOUNDS: 
+            return "Internal index corruption detected";
+        case GpuLookupError::INVALID_ARGUMENT: 
+            return "Invalid argument value";
+        default: 
+            return "Unknown error";
+    }
+}
+
+
+/**
  * @class gpulist
  *
  * @brief GPU cross-indexing utility class
  *
  * Used to quickly get GPU ID from location ID and vs. versa
  *
+ * This class maintains a unified list of GPU information and provides
+ * fast lookups 
  */
 class gpulist {
  public:
   static int Initialize();
-
+  static int Shutdown();
   static int location2gpu(const uint16_t LocationID, uint16_t* pGpuID);
   static int gpu2location(const uint16_t GpuID, uint16_t* pLocationID);
   static int node2gpu(const uint16_t NodeID, uint16_t* pGpuID);
@@ -77,7 +152,42 @@ class gpulist {
                                     uint16_t* pGPUID);
   static int node2bdf(const uint16_t NodeID, std::string& pPciBDF);
   static std::string gpu_get_platform_name (void);
+  static const GpuInfo* get_gpu_info_by_gpu_id(uint16_t gpu_id);
+    
+  static const GpuInfo* get_gpu_info_by_location(uint16_t location_id);
+    
+  static const GpuInfo* get_gpu_info_by_node(uint16_t node_id);
+    
+  //Get all GPU information
+  static const std::vector<GpuInfo>& get_all_gpu_info();
+  static bool is_valid_gpu_id(uint16_t gpu_id);
+    
+  static size_t get_gpu_count();
+    
+  static void clear();
+    
  protected:
+  /// Master list of all GPU information
+  static std::vector<GpuInfo> gpu_info_list;
+    
+  static std::unordered_map<uint16_t, size_t> gpu_id_to_index;//get index in master list
+  static std::unordered_map<uint16_t, size_t> location_id_to_index;
+  static std::unordered_map<uint16_t, size_t> node_id_to_index;
+    
+  static std::unordered_map<uint16_t, size_t> device_id_to_index;
+ 
+  struct PairHash {
+      template <class T1, class T2>
+      std::size_t operator()(const std::pair<T1, T2>& p) const {
+          auto h1 = std::hash<T1>{}(p.first);
+          auto h2 = std::hash<T2>{}(p.second);
+          return h1 ^ (h2 << 1);
+      }
+  };
+    
+  static std::unordered_map<std::pair<uint16_t, uint16_t>, size_t, PairHash> 
+        domain_location_to_index;
+    
   //! Array of GPU location IDs
   static std::vector<uint16_t> location_id;
   //! Array of GPU IDs
@@ -93,6 +203,14 @@ class gpulist {
   //! Array of PCI BDFs
   static std::vector<std::string> pci_bdf;
   static std::map<std::pair<uint16_t, uint16_t>	, uint16_t> domain_loc_map;
+
+private:
+  // checkers for sanity
+  static bool validate_output_pointer(const void* ptr, const char* func_name);
+  
+  static bool check_initialized(const char* func_name);
+    
+  static bool validate_index(size_t index, const char* func_name);
 };
 
 }  // namespace rvs
