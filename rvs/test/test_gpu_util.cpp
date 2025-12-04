@@ -543,8 +543,7 @@ TEST_F(GpuUtilTest, Performance_HashMapVsLinearSearch) {
   // Verify the hash map structure exists
   EXPECT_GT(gpu_id_to_index.size(), 0) << "Hash map should be populated";
 }
-  }
-}
+  
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
