@@ -48,6 +48,15 @@ std::vector<uint16_t> rvs::gpulist::domain_id;
 std::map<std::pair<uint16_t, uint16_t> , uint16_t> rvs::gpulist::domain_loc_map;
 std::vector<std::string> rvs::gpulist::pci_bdf;
 
+
+std::vector<rvs::GpuInfo> rvs::gpulist::gpu_info_list;
+std::unordered_map<uint16_t, size_t> rvs::gpulist::gpu_id_to_index;
+std::unordered_map<uint16_t, size_t> rvs::gpulist::location_id_to_index;
+std::unordered_map<uint16_t, size_t> rvs::gpulist::node_id_to_index;
+std::unordered_map<uint16_t, size_t> rvs::gpulist::device_id_to_index;
+std::unordered_map<std::pair<uint16_t, uint16_t>, size_t, rvs::gpulist::PairHash> 
+            rvs::gpulist::domain_location_to_index;
+
 const std::map<uint16_t, std::string> gpu_dev_map = {
   {0x74a1, "MI300X"},    // MI300X Bare Metal
   {0x74a9, "MI300X-HF"}, // MI300-HF Bare Metal
@@ -506,10 +515,25 @@ int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_hdl) {
 }
 
 /**
- * @brief Initialize gpulist helper class
+ * @brief Initialize gpulists helper class
  * @return 0 if successful, -1 otherwise
  **/
 int rvs::gpulist::Initialize() {
+  gpu_info_list.clear();
+  gpu_id_to_index.clear();
+  location_id_to_index.clear();
+  node_id_to_index.clear();
+  device_id_to_index.clear();
+  domain_location_to_index.clear();
+  location_id.clear();
+  gpu_id.clear();
+  gpu_idx.clear();
+  device_id.clear();
+  node_id.clear();
+  domain_id.clear();
+  domain_loc_map.clear();
+  pci_bdf.clear();
+  // inits start here
   amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   gpu_get_all_location_id(&location_id);
   gpu_get_all_gpu_id(&gpu_id);
@@ -518,27 +542,95 @@ int rvs::gpulist::Initialize() {
   gpu_get_all_node_id(&node_id);
   gpu_get_all_domain_id(&domain_id, domain_loc_map);
   gpu_get_all_pci_bdf(pci_bdf);
+  // populate gpu_info_list and hash maps
+  size_t count = gpu_id.size();
 
+  // check any mismatches in lists
+  if (location_id.size() != count || 
+      gpu_idx.size() != count ||
+      device_id.size() != count || 
+      node_id.size() != count ||
+      domain_id.size() != count || 
+      pci_bdf.size() != count) {
+        std::cerr << "ERROR Initialising device arrays: " << std::endl;
+        return -1;
+  }
+
+  // update master list
+  gpu_info_list.reserve(count);
+  for (size_t i = 0; i < count; ++i) {
+      GpuInfo info(
+          location_id[i],
+          gpu_id[i],
+          gpu_idx[i],
+          device_id[i],
+          node_id[i],
+          domain_id[i],
+          pci_bdf[i]
+      );
+        
+      gpu_info_list.push_back(info);
+      
+      // Build index maps for fast lookup[O(1)],instead of std::find(), whihc is O(n)
+      gpu_id_to_index[gpu_id[i]] = i;
+      location_id_to_index[location_id[i]] = i;
+      node_id_to_index[node_id[i]] = i;
+      device_id_to_index[device_id[i]] = i;
+      
+      // Build composite key map, domain and location identifies devices uniquely
+      auto domain_loc_pair = std::make_pair(domain_id[i], location_id[i]);
+      domain_location_to_index[domain_loc_pair] = i;
+  }
   return 0;
 }
+
+
+/**
+ * @brief Shutdown/cleanup GPU utility resources and amdsmi library
+ * 
+ * This function should be called once during application shutdown to properly
+ * release all GPU-related resources and terminate the AMD SMI library.
+ * It clears all internal data structures and calls amdsmi_shut_down().
+ * 
+ * @return 0 if successful, -1 otherwise
+ */
+int rvs::gpulist::Shutdown() {
+  clear();
+
+  amdsmi_status_t ret = amdsmi_shut_down();
+  if (ret != AMDSMI_STATUS_SUCCESS) {
+    std::cerr << "WARNING [gpulist::Shutdown]: amdsmi_shut_down() failed with error code: " 
+              << ret << std::endl;
+    return -1;
+  }
+  
+  return 0;
+}
+
 
 
 /**
  * @brief Given Gpu ID return Location ID
  * @param GpuID Gpu ID
  * @param pLocationID Location ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
-int rvs::gpulist::gpu2location(const uint16_t GpuID,
-                               uint16_t* pLocationID) {
-  const auto it = std::find(gpu_id.cbegin(),
-                            gpu_id.cend(), GpuID);
-  if (it == gpu_id.cend()) {
-    return -1;
-  }
-  size_t pos = std::distance(gpu_id.cbegin(), it);
-  *pLocationID = location_id[pos];
-  return 0;
+int rvs::gpulist::gpu2location(const uint16_t GpuID, uint16_t* pLocationID) {
+    if (!validate_output_pointer(pLocationID, "gpu2location"))
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    if (!check_initialized("gpu2location"))
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+
+    auto it = gpu_id_to_index.find(GpuID);
+    if (it == gpu_id_to_index.end())
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+
+    size_t index = it->second;
+    if (!validate_index(index, "gpu2location"))
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+
+    *pLocationID = gpu_info_list[index].location_id;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 
@@ -546,17 +638,24 @@ int rvs::gpulist::gpu2location(const uint16_t GpuID,
  * @brief Given Location ID return GPU ID
  * @param LocationID Location ID of a GPU
  * @param pGpuID GPU ID of the GPU on Location ID
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
 int rvs::gpulist::location2gpu(const uint16_t LocationID, uint16_t* pGpuID) {
-  const auto it = std::find(location_id.cbegin(),
-                            location_id.cend(), LocationID);
-  if (it == location_id.cend()) {
-    return -1;
-  }
-  size_t pos = std::distance(location_id.cbegin(), it);
-  *pGpuID = gpu_id[pos];
-  return 0;
+    if (!validate_output_pointer(pGpuID, "location2gpu"))
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    if (!check_initialized("location2gpu"))
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+
+    auto it = location_id_to_index.find(LocationID);
+    if (it == location_id_to_index.end())
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+
+    size_t index = it->second;
+    if (!validate_index(index, "location2gpu"))
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+
+    *pGpuID = gpu_info_list[index].gpu_id;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 
@@ -564,54 +663,70 @@ int rvs::gpulist::location2gpu(const uint16_t LocationID, uint16_t* pGpuID) {
  * @brief Given Node ID return GPU ID
  * @param NodeID Location ID of a GPU
  * @param pGpuID device ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
 int rvs::gpulist::node2gpu(const uint16_t NodeID, uint16_t* pGpuID) {
-  const auto it = std::find(node_id.cbegin(),
-                            node_id.cend(), NodeID);
-  if (it == node_id.cend()) {
-    return -1;
-  }
-  size_t pos = std::distance(node_id.cbegin(), it);
-  *pGpuID = gpu_id[pos];
-  return 0;
+    if (!validate_output_pointer(pGpuID, "node2gpu"))
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    if (!check_initialized("node2gpu"))
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+
+    auto it = node_id_to_index.find(NodeID);
+    if (it == node_id_to_index.end())
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+
+    size_t index = it->second;
+    if (!validate_index(index, "node2gpu"))
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+
+    *pGpuID = gpu_info_list[index].gpu_id;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 /**
  * @brief Given Node ID return PCI BDF
  * @param NodeID GPU Node ID
  * @param pPciBDF GPU PCI BDF
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
 int rvs::gpulist::node2bdf(const uint16_t NodeID, std::string& pPciBDF) {
+    if (!check_initialized("node2bdf"))
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
 
-  const auto it = std::find(node_id.cbegin(),
-                            node_id.cend(), NodeID);
-  if (it == node_id.cend()) {
-    return -1;
-  }
+    auto it = node_id_to_index.find(NodeID);
+    if (it == node_id_to_index.end())
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
 
-  size_t pos = std::distance(node_id.cbegin(), it);
-  pPciBDF = pci_bdf[pos];
-  return 0;
+    size_t index = it->second;
+    if (!validate_index(index, "node2bdf"))
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+
+    pPciBDF = gpu_info_list[index].pci_bdf;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 /**
  * @brief Given Location ID return GPU device ID
  * @param LocationID Location ID of a GPU
  * @param pDeviceID device ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
-int rvs::gpulist::location2device(const uint16_t LocationID,
-                                  uint16_t* pDeviceID) {
-  const auto it = std::find(location_id.cbegin(),
-                            location_id.cend(), LocationID);
-  if (it == location_id.cend()) {
-    return -1;
-  }
-  size_t pos = std::distance(location_id.cbegin(), it);
-  *pDeviceID = device_id[pos];
-  return 0;
+int rvs::gpulist::location2device(const uint16_t LocationID, uint16_t* pDeviceID) {
+    if (!validate_output_pointer(pDeviceID, "location2device"))
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    if (!check_initialized("location2device"))
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+
+    auto it = location_id_to_index.find(LocationID);
+    if (it == location_id_to_index.end())
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+
+    size_t index = it->second;
+    if (!validate_index(index, "location2device"))
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+
+    *pDeviceID = gpu_info_list[index].device_id;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 
@@ -619,54 +734,91 @@ int rvs::gpulist::location2device(const uint16_t LocationID,
  * @brief Given Gpu ID return GPU device ID
  * @param GpuID Gpu ID of a GPU
  * @param pDeviceID device ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
 int rvs::gpulist::gpu2device(const uint16_t GpuID, uint16_t* pDeviceID) {
-  const auto it = std::find(gpu_id.cbegin(),
-                            gpu_id.cend(), GpuID);
-  if (it == gpu_id.cend()) {
-    return -1;
-  }
-
-  size_t pos = std::distance(gpu_id.cbegin(), it);
-  *pDeviceID = device_id[pos];
-  return 0;
+    if (!validate_output_pointer(pDeviceID, "gpu2device")) {
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    }
+    
+    if (!check_initialized("gpu2device")) {
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+    }
+    
+    auto it = gpu_id_to_index.find(GpuID);
+    if (it == gpu_id_to_index.end()) {
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+    }
+    
+    size_t index = it->second;
+    if (!validate_index(index, "gpu2device")) {
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+    }
+    
+    *pDeviceID = gpu_info_list[index].device_id;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 /**
  * @brief Given Gpu ID return GPU device index
  * @param GpuID Gpu ID of a GPU
  * @param pDeviceID device ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
 int rvs::gpulist::gpu2gpuindex(const uint16_t GpuID, uint16_t* pGpuIdx) {
-  const auto it = std::find(gpu_id.cbegin(),
-                            gpu_id.cend(), GpuID);
-  if (it == gpu_id.cend()) {
-    return -1;
-  }
-  size_t pos = std::distance(gpu_id.cbegin(), it);
-  *pGpuIdx = gpu_idx[pos];
-  return 0;
+    if (!validate_output_pointer(pGpuIdx, "gpu2gpuindex"))
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    if (!check_initialized("gpu2gpuindex"))
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+
+    auto it = gpu_id_to_index.find(GpuID);
+    if (it == gpu_id_to_index.end())
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+
+    size_t index = it->second;
+    if (!validate_index(index, "gpu2gpuindex"))
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+
+    *pGpuIdx = gpu_info_list[index].gpu_idx;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 
+
 /**
- * @brief Given Gpu ID return GPU HSA Node ID
+ * @brief Given Gpu ID return GPU HSA node id
  * @param GpuID Gpu ID of a GPU
- * @param pNodeID Node ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @param pNodeID Node ID of the GPU (output)
+ * @return 0 if found, error code otherwise
  **/
 int rvs::gpulist::gpu2node(const uint16_t GpuID, uint16_t* pNodeID) {
-  const auto it = std::find(gpu_id.cbegin(),
-                            gpu_id.cend(), GpuID);
-  if (it == gpu_id.cend()) {
-    return -1;
-  }
+    if (!validate_output_pointer(pNodeID, "gpu2node")) {
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    }
+    
 
-  size_t pos = std::distance(gpu_id.cbegin(), it);
-  *pNodeID = node_id[pos];
-  return 0;
+    if (!check_initialized("gpu2node")) {
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+    }
+    
+    auto it = gpu_id_to_index.find(GpuID);
+    if (it == gpu_id_to_index.end()) {
+        //std::string msg = "gpu2node: GPU ID 0x" + 
+           // std::to_string(GpuID) + " (decimal: " + std::to_string(GpuID) +
+          //  ") not found in system";
+        //std::cerr << "ERROR [GPU_UTIL]: " << msg << std::endl;
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+    }
+    
+
+    size_t index = it->second;
+    if (!validate_index(index, "gpu2node")) {
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+    }
+    
+    *pNodeID = gpu_info_list[index].node_id;
+    
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 
@@ -674,26 +826,36 @@ int rvs::gpulist::gpu2node(const uint16_t GpuID, uint16_t* pNodeID) {
  * @brief Given Location ID return GPU node ID
  * @param LocationID Location ID of a GPU
  * @param pNodeID Node ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
-int rvs::gpulist::location2node(const uint16_t LocationID,
-                                    uint16_t* pNodeID) {
-  const auto it = std::find(location_id.cbegin(),
-                            location_id.cend(), LocationID);
-  if (it == location_id.cend()) {
-    return -1;
-  }
-
-  size_t pos = std::distance(location_id.cbegin(), it);
-  *pNodeID = node_id[pos];
-  return 0;
+int rvs::gpulist::location2node(const uint16_t LocationID, uint16_t* pNodeID) {
+    if (!validate_output_pointer(pNodeID, "location2node")) {
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    }
+    
+    if (!check_initialized("location2node")) {
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+    }
+    
+    auto it = location_id_to_index.find(LocationID);
+    if (it == location_id_to_index.end()) {
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+    }
+    
+    size_t index = it->second;
+    if (!validate_index(index, "location2node")) {
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+    }
+    
+    *pNodeID = gpu_info_list[index].node_id;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 /**
  * @brief Given domain id and Location ID return GPU node ID
  * @param LocationID Location ID of a GPU
  * @param pNodeID Node ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
 int rvs::gpulist::domlocation2node(const uint16_t domainID, const uint16_t LocationID,
                                     uint16_t* pNodeID) {
@@ -709,33 +871,56 @@ int rvs::gpulist::domlocation2node(const uint16_t domainID, const uint16_t Locat
  * @brief Given domain id and Location ID return GPU node ID
  * @param LocationID Location ID of a GPU
  * @param pNodeID Node ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
-int rvs::gpulist::domlocation2gpu(const uint16_t domainID, const uint16_t LocationID,
-                                    uint16_t* pGPUID) {
-  auto it = domain_loc_map.find(std::make_pair(domainID, LocationID));
-  if (it == domain_loc_map.end()) {
-    return -1;
-  }
-  *pGPUID = it->second;
-  return 0;
+int rvs::gpulist::domlocation2gpu(const uint16_t domainID, 
+                                   const uint16_t LocationID,
+                                   uint16_t* pGPUID) {
+    if (!validate_output_pointer(pGPUID, "domlocation2gpu")) {
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    }
+    
+    if (!check_initialized("domlocation2gpu")) {
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+    }
+    
+    auto key = std::make_pair(domainID, LocationID);
+    auto it = domain_location_to_index.find(key);
+    if (it == domain_location_to_index.end()) {
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+    }
+    
+    size_t index = it->second;
+    if (!validate_index(index, "domlocation2gpu")) {
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+    }
+    
+    *pGPUID = gpu_info_list[index].gpu_id;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 /**
  * @brief Given Gpu ID return GPU domain ID
  * @param GpuID Gpu ID of a GPU
  * @param pDomain domain ID of the GPU
- * @return 0 if found, -1 otherwise
+ * @return 0 if found, errorcode otherwise
  **/
 int rvs::gpulist::gpu2domain(const uint16_t GpuID, uint16_t* pDomain) {
-  const auto it = std::find(gpu_id.cbegin(),
-                            gpu_id.cend(), GpuID);
-  if (it == gpu_id.cend()) {
-    return -1;
-  }
-  size_t pos = std::distance(gpu_id.cbegin(), it);
-  *pDomain = domain_id[pos];
-  return 0;
+    if (!validate_output_pointer(pDomain, "gpu2domain"))
+        return static_cast<int>(GpuLookupError::NULL_POINTER);
+    if (!check_initialized("gpu2domain"))
+        return static_cast<int>(GpuLookupError::UNINITIALIZED);
+
+    auto it = gpu_id_to_index.find(GpuID);
+    if (it == gpu_id_to_index.end())
+        return static_cast<int>(GpuLookupError::NOT_FOUND);
+
+    size_t index = it->second;
+    if (!validate_index(index, "gpu2domain"))
+        return static_cast<int>(GpuLookupError::INDEX_OUT_OF_BOUNDS);
+
+    *pDomain = gpu_info_list[index].domain_id;
+    return static_cast<int>(GpuLookupError::SUCCESS);
 }
 
 /**
@@ -758,7 +943,7 @@ bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &index) {
 /**
  * @brief Get GPU platform name
  * @param void
- * @return GPU plaform name if found, else null
+ * @return GPU plaform name if found, else null string
  **/
 std::string rvs::gpulist::gpu_get_platform_name (void) {
 
@@ -783,3 +968,136 @@ std::string rvs::gpulist::gpu_get_platform_name (void) {
   return it->second;
 }
 
+
+/**
+ * @brief Get complete GPU information by GPU ID
+ */
+const rvs::GpuInfo* rvs::gpulist::get_gpu_info_by_gpu_id(uint16_t gpu_id) {
+    auto it = gpu_id_to_index.find(gpu_id);
+    if (it == gpu_id_to_index.end()) {
+        return nullptr;
+    }
+    
+    size_t index = it->second;
+    if (index >= gpu_info_list.size()) {
+        return nullptr;
+    }
+    
+    return &gpu_info_list[index];
+}
+
+/**
+ * @brief Get complete GPU information by location ID
+ */
+const rvs::GpuInfo* rvs::gpulist::get_gpu_info_by_location(uint16_t location_id) {
+    auto it = location_id_to_index.find(location_id);
+    if (it == location_id_to_index.end()) {
+        return nullptr;
+    }
+    
+    size_t index = it->second;
+    if (index >= gpu_info_list.size()) {
+        return nullptr;
+    }
+    
+    return &gpu_info_list[index];
+}
+
+/**
+ * @brief Get complete GPU information by node ID
+ */
+const rvs::GpuInfo* rvs::gpulist::get_gpu_info_by_node(uint16_t node_id) {
+    auto it = node_id_to_index.find(node_id);
+    if (it == node_id_to_index.end()) {
+        return nullptr;
+    }
+    
+    size_t index = it->second;
+    if (index >= gpu_info_list.size()) {
+        return nullptr;
+    }
+    
+    return &gpu_info_list[index];
+}
+
+/**
+ * @brief Get all GPU information
+ */
+const std::vector<rvs::GpuInfo>& rvs::gpulist::get_all_gpu_info() {
+    return gpu_info_list;
+}
+
+/**
+ * @brief Check if GPU ID exists in system
+ */
+bool rvs::gpulist::is_valid_gpu_id(uint16_t gpu_id) {
+    return gpu_id_to_index.find(gpu_id) != gpu_id_to_index.end();
+}
+
+/**
+ * @brief Get total number of GPUs in system
+ */
+size_t rvs::gpulist::get_gpu_count() {
+    return gpu_info_list.size();
+}
+
+/**
+ * @brief Clear all GPU information
+ */
+void rvs::gpulist::clear() {
+    gpu_info_list.clear();
+    gpu_id_to_index.clear();
+    location_id_to_index.clear();
+    node_id_to_index.clear();
+    device_id_to_index.clear();
+    domain_location_to_index.clear();
+    
+    location_id.clear();
+    gpu_id.clear();
+    gpu_idx.clear();
+    device_id.clear();
+    node_id.clear();
+    domain_id.clear();
+    domain_loc_map.clear();
+    pci_bdf.clear();
+}
+
+
+/**
+ * @brief Validate result pointer
+ */
+bool rvs::gpulist::validate_output_pointer(const void* ptr, const char* func_name) {
+    if (!ptr) {
+        std::string msg = std::string(func_name) + ": null pointer passed as output parameter";
+        std::cerr << "ERROR [GPU_UTIL]: " << msg << std::endl;
+        return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Check if GPU lists are initialized
+ */
+bool rvs::gpulist::check_initialized(const char* func_name) {
+    if (gpu_info_list.empty() || gpu_id_to_index.empty()) {
+        std::string msg = std::string(func_name) + 
+            ": GPU list not initialized - call Initialize() first";
+        std::cerr << "ERROR [GPU_UTIL]: " << msg << std::endl;
+        return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Validate index bounds
+ */
+bool rvs::gpulist::validate_index(size_t index, const char* func_name) {
+    if (index >= gpu_info_list.size()) {
+        std::string msg = std::string(func_name) + 
+            ": internal index corruption - index " + std::to_string(index) +
+            " >= " + std::to_string(gpu_info_list.size());
+        std::cerr << "ERROR [GPU_UTIL]: " << msg << std::endl;
+        return false;
+    }
+    return true;
+}

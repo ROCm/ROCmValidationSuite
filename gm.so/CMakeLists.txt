@@ -107,19 +107,19 @@ else()
   set(ASAN_LIB_PATH "$ENV{LD_LIBRARY_PATH}")
 endif()
 
-if(DEFINED RVS_ROCMSMI)
-  if(NOT RVS_ROCMSMI EQUAL 1)
-    if(NOT EXISTS "${ROCM_SMI_LIB_DIR}/lib${ROCM_SMI_LIB}.so")
-      message("ERROR: rocm_smi library can't be found!...")
+if(DEFINED RVS_AMDSMI)
+  if(NOT RVS_AMDSMI EQUAL 1)
+    if(NOT EXISTS "${AMD_SMI_LIB_DIR}/lib${AMD_SMI_LIB}.so")
+      message("ERROR: amd_smi library can't be found!...")
       RETURN()
     endif()
   endif()
 endif()
 
 ## define include directories
-include_directories(./ ../ ${ROCM_SMI_INC_DIR} ${YAML_CPP_INCLUDE_DIR})
+include_directories(./ ../ ${AMD_SMI_INC_DIR} ${YAML_CPP_INCLUDE_DIR})
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${ROCM_SMI_LIB} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${HIPBLASLT_LIB_DIR})
+link_directories(${RVS_LIB_DIR} ${AMD_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${HIPBLASLT_LIB_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 
@@ -132,7 +132,7 @@ add_library( ${RVS_TARGET} SHARED ${SOURCES})
 set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${ROCM_SMI_LIB})
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${AMD_SMI_LIB})
 add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD

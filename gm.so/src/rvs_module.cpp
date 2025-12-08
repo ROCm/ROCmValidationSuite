@@ -88,7 +88,7 @@ extern "C" int   rvs_module_terminate(void) {
     pworker = nullptr;
   }
   RVSTRACE_
-  amdsmi_shut_down();
+  
 
   return 0;
 }
