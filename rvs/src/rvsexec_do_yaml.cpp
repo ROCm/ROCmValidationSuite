@@ -794,7 +794,9 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
   else {
     printBoundary();
   }
-
+  if (rvs::logger::to_json()) {
+    rvs::lp::JsonEndNodeCreate();
+  }
   result.status = RVS_STATUS_SUCCESS;
   result.output_log = "RVS session successfully completed.";
   callback(&result);
