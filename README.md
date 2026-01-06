@@ -34,7 +34,7 @@ SLES :
 sudo zypper install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 ```
 
-## Install ROCm stack, rocblas and SMI lib
+## Install ROCm stack, rocBLAS, and SMI library
 
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
  [ROCm installation guide](https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details.
