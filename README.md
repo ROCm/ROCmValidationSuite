@@ -34,7 +34,8 @@ SLES :
 sudo zypper install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 ```
 
-## Install ROCm stack, rocblas and rocm-smi-lib
+## Install ROCm stack, rocBLAS, and SMI library
+
 Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
  [ROCm installation guide](https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html) for more details.
 
@@ -43,7 +44,7 @@ Install ROCm stack for Ubuntu/CentOS/SLES/RHEL. Refer to
 rocm_smi64 package has been renamed to rocm-smi-lib64 from >= ROCm3.0. If you are using ROCm release < 3.0 , install the package as "rocm_smi64".
 rocm-smi-lib64 package has been renamed to rocm-smi-lib from >= ROCm4.1.
 
-Install rocBLAS and rocm-smi-lib :
+Install rocBLAS. For ROCm 6.4 and earlier, install ``rocm-smi-lib``. For ROCm 7.0 and later, install ``amd-smi-lib``.
 
 Ubuntu :
 
@@ -94,7 +95,7 @@ This section explains how to get and compile current development stream of RVS.
 git clone https://github.com/ROCm/ROCmValidationSuite.git
 ```
 
-**Note:** 
+**Note:**
 The above command clones the master branch. If you're using a specific ROCm release, it's recommended to use the corresponding RVS version from the same release branch to ensure compatibility.
 
 If ROCm 6.4 is installed, clone the RVS repository from the 6.4 release branch by running:
@@ -219,7 +220,7 @@ To run GPU specific test configuration, use configuration files from GPU folders
 ./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf ; Run Navi 32 specific GST test configuration
 ```
 
-**Note:** 
+**Note:**
 If present, always use GPU specific configurations instead of default test configurations.
 
 ## Reporting
