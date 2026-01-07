@@ -6,10 +6,10 @@
 **********************************
 Installing ROCm Validation Suite
 **********************************
-    
+
 You can obtain ROCm Validation Suite (RVS) by building it from:
 
-* the source code base 
+* the source code base
 
 * a prebuilt package
 
@@ -21,7 +21,7 @@ RVS is an open-source solution. For more details, refer to the `ROCm Validation 
 
 Package manager installation
 ------------------------------
-                                   
+
 Based on the OS, use the appropriate package manager to install the RVS package.
 
 For more details, refer to the `ROCm Validation Suite GitHub repository. <https://github.com/ROCm/ROCmValidationSuite>`_
@@ -58,30 +58,30 @@ Ensure you review the following prerequisites carefully for each operating syste
 
     .. tab-item:: RHEL
         :sync: RHEL
-         
-        .. code-block:: shell                    
-                
+
+        .. code-block:: shell
+
                 sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel pciutils-devel
 
     .. tab-item:: SUSE
         :sync: SUSE
-        
+
         .. code-block:: shell
-                        
-                sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel                       
+
+                sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
 
-Install ROCm stack, rocBLAS, and ROCm-SMI-lib
------------------------------------------------
+Install ROCm stack, rocBLAS, and SMI lib
+------------------------------------------
 
-1. Install the ROCm software stack for Ubuntu, SLES or RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details. 
+1. Install the ROCm software stack for Ubuntu, SLES or RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details.
 
-2. Install rocBLAS and rocm-smi-lib.
+2. Install rocBLAS. For ROCm 6.4 and earlier, install ``rocm-smi-lib``. For ROCm 7.0 and later, install ``amd-smi-lib``.
 
 .. tab-set::
     .. tab-item:: Ubuntu
         :sync: Ubuntu
-    
+
         .. code-block:: shell
 
             sudo apt-get install rocblas rocm-smi-lib
@@ -89,24 +89,24 @@ Install ROCm stack, rocBLAS, and ROCm-SMI-lib
     .. tab-item:: RHEL
         :sync: RHEL
 
-        .. code-block:: shell  
+        .. code-block:: shell
 
             sudo yum install --nogpgcheck rocblas rocm-smi-lib
 
     .. tab-item:: SUSE
         :sync: SUSE
 
-        .. code-block:: shell  
+        .. code-block:: shell
 
             sudo zypper install rocblas rocm-smi-lib
 
-If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doesn't exist, run the following command:
+If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doesn't exist, run the following commands as per the OS:
 
 .. tab-set::
     .. tab-item:: Ubuntu
           :sync: Ubuntu
-       
-          .. code-block:: shell  
+
+          .. code-block:: shell
 
               sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
 
@@ -114,14 +114,14 @@ If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doe
     .. tab-item:: RHEL
           :sync: RHEL
 
-          .. code-block:: shell  
+          .. code-block:: shell
 
               sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
 
     .. tab-item:: SUSE
          :sync: SUSE
 
-         .. code-block:: shell  
+         .. code-block:: shell
 
              sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
 
@@ -165,7 +165,7 @@ For example, if ROCm 5.5 was installed, run the following command:
 
 .. Note::
 
-    Depending on your OS, only DEB or RPM package will be built. 
+    Depending on your OS, only DEB or RPM package will be built.
 
 .. Note::
 
@@ -177,21 +177,21 @@ For example, if ROCm 5.5 was installed, run the following command:
     .. tab-item:: Ubuntu
         :sync: Ubuntu
 
-        .. code-block:: 
+        .. code-block::
 
             sudo dpkg -i rocm-validation-suite*.deb
 
     .. tab-item:: RHEL
         :sync: RHEL
 
-        .. code-block:: shell  
+        .. code-block:: shell
 
                 sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
     .. tab-item:: SUSE
         :sync: SUSE
 
-        .. code-block:: shell  
+        .. code-block:: shell
 
                 sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
@@ -205,7 +205,7 @@ For example, if ROCm 5.5 was installed, run the following command:
     .. tab-item:: Ubuntu
         :sync: Ubuntu
 
-        .. code-block:: 
+        .. code-block::
 
             sudo apt install rocm-validation-suite
 
@@ -213,14 +213,14 @@ For example, if ROCm 5.5 was installed, run the following command:
     .. tab-item:: RHEL
         :sync: RHEL
 
-        .. code-block:: shell  
+        .. code-block:: shell
 
                 sudo yum install rocm-validation-suite
 
     .. tab-item:: SUSE
         :sync: SUSE
 
-        .. code-block:: shell  
+        .. code-block:: shell
 
                 sudo zypper install rocm-validation-suite
 
@@ -230,7 +230,7 @@ Reporting
 
 Test results, errors, and verbose logs are printed as terminal output. To enable JSON logging, use the ``-j`` option. The JSON output file is stored in the ``/var/tmp`` folder and the file name will be printed.
 
-You can build RVS from the source code base or by installing from a pre-built package. See the preceding sections for more details. 
+You can build RVS from the source code base or by installing from a pre-built package. See the preceding sections for more details.
 
 Running RVS
 ------------
@@ -279,11 +279,7 @@ Run the following commands to build documentation locally.
 
 .. code-block::
 
-        cd docs     
-        pip3 install -r .sphinx/requirements.txt        
+        cd docs
+        pip3 install -r .sphinx/requirements.txt
         python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
-
-
-
-
 
