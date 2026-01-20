@@ -263,7 +263,7 @@ std::string getAmdGpuDriverVersion() {
   std::string result;
 
   // Run the command
-  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("dkms status", "r"), pclose);
+  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("dkms status 2>/dev/null", "r"), pclose);
   if (!pipe) {
     return "N/A";
   }
