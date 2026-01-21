@@ -145,6 +145,12 @@ else() #If hipblas-common not found
   message(FATAL_ERROR "hipblas-common not found !!! Install hipblas-common to proceed ...")
 endif(hipblas-common_FOUND)
 
+# Include the FindPkgConfig module
+find_package(PkgConfig REQUIRED)
+
+# Use pkg_check_modules to find libpci
+pkg_check_modules(PCI_PACKAGE REQUIRED libpci)
+
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
