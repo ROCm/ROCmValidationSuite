@@ -344,7 +344,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   }
   else if (rvs::options::has_option(opt, "module", &module)) {
 
-#define RVS_MODULE_MAX 11
+#define RVS_MODULE_MAX 12
     std::map <std::string, int> module_map = {
       {"babel", 0},
       {"gpup", 1},
@@ -356,7 +356,8 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
       {"pesm", 7},
       {"pbqt", 8},
       {"rcqt", 9},
-      {"smqt", 10}};
+      {"smqt", 10},
+      {"em", 11}};
 
     string module_config_file[RVS_MODULE_MAX] =
     {
@@ -370,7 +371,8 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
       "pesm_1.conf",
       "pbqt_single.conf",
       "rcqt_single.conf",
-      "smqt_single.conf"
+      "smqt_single.conf",
+      "em.conf"
     };
 
     auto itr = module_map.find(module);
