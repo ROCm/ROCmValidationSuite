@@ -302,6 +302,7 @@ void systemOverview() {
   int columnWidth = 14;;
   int actionColumnWidth = 32;
   int TotalColumnWidth = 69;
+  int maxGPUNameLength = 24;
 
   const char boundary = '|';
 
@@ -382,7 +383,10 @@ void systemOverview() {
 
   if(gpu_info_list.size() % 2) {
 
-    std::string GPU1 = gpu_info_list[gpu_index].name + " - " + std::to_string(gpu_info_list[gpu_index].gpu_id);
+    std::string GPU1name = gpu_info_list[gpu_index].name;
+    GPU1name = (GPU1name.size() > maxGPUNameLength) ? GPU1name.substr(0, maxGPUNameLength - 4) + "..." : GPU1name;
+
+    std::string GPU1 = GPU1name + " - " + std::to_string(gpu_info_list[gpu_index].gpu_id);
     padright = (actionColumnWidth - GPU1.size());
 
     std::cout << "\r" << boundary << " " << std::left  << GPUdetailsPart1 << std::string(padding, ' ') << " " <<  boundary 
@@ -431,11 +435,16 @@ void systemOverview() {
 
   for (;gpu_index < gpu_info_list.size();) {
 
-    std::string GPU1 = gpu_info_list[gpu_index].name + " - " + std::to_string(gpu_info_list[gpu_index].gpu_id);
+    std::string GPU1name = gpu_info_list[gpu_index].name;
+    GPU1name = (GPU1name.size() > maxGPUNameLength) ? GPU1name.substr(0, maxGPUNameLength - 4) + "..." : GPU1name;
+
+    std::string GPU1 = GPU1name + " - " + std::to_string(gpu_info_list[gpu_index].gpu_id);
     padleft = (actionColumnWidth - GPU1.size());
 
+    std::string GPU2name = gpu_info_list[gpu_index + 1].name;
+    GPU2name = (GPU2name.size() > maxGPUNameLength) ? GPU2name.substr(0, maxGPUNameLength - 4) + "..." : GPU2name;
 
-    std::string GPU2 = gpu_info_list[gpu_index + 1].name + " - " + std::to_string(gpu_info_list[gpu_index + 1].gpu_id);
+    std::string GPU2 = GPU2name + " - " + std::to_string(gpu_info_list[gpu_index + 1].gpu_id);
     padright = (actionColumnWidth - GPU2.size());
 
     std::cout << "\r" << boundary 
