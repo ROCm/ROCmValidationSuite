@@ -106,7 +106,7 @@ if console_usage == 'true':
       if os.path.getsize(result_log) > 0:
          f = open(result_log)
          s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-         if s.find('RESULT') == -1 and s.find('ERROR') == -1:
+         if s.find(b'RESULT') == -1 and s.find(b'ERROR') == -1:
             print("No found RESULT/ERROR")
             test_result = False
          f.close()
@@ -136,7 +136,7 @@ else:
          if os.path.getsize(result_log) > 0:
             f = open(result_log)
             s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-            if s.find('RESULT') == -1 and s.find('ERROR') == -1:
+            if s.find(b'RESULT') == -1 and s.find(b'ERROR') == -1:
                print("No found RESULT/ERROR")
                test_result = False
             f.close()
