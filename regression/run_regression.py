@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import subprocess
 import os
@@ -70,11 +70,11 @@ while True:
         print("Found log file " + confname[-5] + "\n")
         f = open(result_json)
         s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-        if s.find('INFO') != -1:
+        if s.find(b'INFO') != -1:
             print("Found INFO")
-        elif s.find('RESULT') != -1:
+        elif s.find(b'RESULT') != -1:
             print("Found RESULT")
-        elif s.find('ERROR') != -1:
+        elif s.find(b'ERROR') != -1:
             print("Found ERROR")
             res.write("FAIL: Testname " + confname + " not ERROR field" + "\n")
             count_fail = count_fail + 1
@@ -84,7 +84,7 @@ while True:
                 num_tries = num_tries + 1
             else:
                 restart = 0
-                if s.find('No GPU/peer combination matches criteria from test configuation') != -1:
+                if s.find(b'No GPU/peer combination matches criteria from test configuation') != -1:
                     res.write("WARN: Testname " + confname + " : No GPU/peer - maybe a infrastucture issue\n")
                 else:
                     res.write("FAIL: Testname " + confname + " does not have RESULT field" + "\n")

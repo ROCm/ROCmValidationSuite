@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 ###################################################################################
 ##
@@ -25,9 +25,6 @@
 ##
 ###################################################################################
 """
-
-# This script only creates valid combinations, invalid ones will be created as special cases
-from __future__ import print_function
 
 import os, fnmatch
 import itertools
