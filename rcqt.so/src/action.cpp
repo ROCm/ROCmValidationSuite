@@ -83,7 +83,7 @@
 
 #if DRVS_OS_TYPE_NUM == 1
 // debian defines
-#elseif DRVS_OS_TYPE_NUM == 2
+#elif DRVS_OS_TYPE_NUM == 2
 // fedora defines
 #endif
 
