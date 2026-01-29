@@ -116,7 +116,8 @@ void *json_list_create(std::string lname, int log_level){
 bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_index,
     const std::vector<uint16_t>& property_device, const int& property_device_id,
     bool property_device_all, const std::vector<uint16_t>& property_device_index,
-    bool property_device_index_all, bool mcm_check) {
+    bool property_device_index_all, bool mcm_check,
+    std::vector<mcm_type_t>* mcm_type) {
 
   bool amd_gpus_found = false;
   bool mcm_die = false;
@@ -191,8 +192,15 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
         rvs::lp::Log(msg_stream.str(), rvs::logresults);
 
         amd_mcm_gpu_found = true;
+        mcm_type->push_back(mcm_type_t::SECONDARY);
+
+      } else {
+        mcm_type->push_back(mcm_type_t::PRIMARY);
       }
+    } else {
+      mcm_type->push_back(mcm_type_t::PRIMARY);
     }
+
     // excluding secondary die from test list, drops power reading substantially
     if (cur_gpu_selected) { // need not exclude secondary die, just log it out.
       gpus_device_index.insert

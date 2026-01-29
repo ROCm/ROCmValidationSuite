@@ -440,9 +440,9 @@ void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf) {
 }
 
 /**
- * @brief Check if the GPU is die (chiplet) in Multi-Chip Module (MCM) GPU.
+ * @brief Check if the GPU is secondary die (chiplet) in Multi-Chip Module (MCM) GPU.
  * @param device_id GPU Device ID
- * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
+ * @return true if GPU is secondary die in MCM GPU, false if GPU is single die GPU.
  **/
 bool gpu_check_if_mcm_die (int idx) {
   amdsmi_status_t ret;
