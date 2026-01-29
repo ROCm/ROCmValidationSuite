@@ -293,6 +293,9 @@ class IETWorker : public rvs::ThreadBase {
     //! sets gemm output data type
     void set_iet_out_data_type(std::string out_data_type) { iet_out_data_type = out_data_type; }
 
+    //! set GPU MCM (Multi-Chip Module) type - Primary/Secondary
+    void set_mcm_type(mcm_type_t _mcm_type) { mcm_type = _mcm_type; }
+
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
     //! get worker job result
@@ -423,6 +426,9 @@ class IETWorker : public rvs::ThreadBase {
     bool nt_loads;
     //! gemm output data type
     std::string iet_out_data_type;
+    //! GPU MCM (Multi-Chip Module) type - Primary/Secondary
+    mcm_type_t mcm_type;
+
     //! Worker job result
     bool result;
 };

@@ -34,6 +34,12 @@
 
 using std::map;
 
+//! GPU MCM (Multi-Chip Module) types - Primary/Secondary
+enum class mcm_type_t {
+  PRIMARY = 0,
+  SECONDARY = 1
+};
+
 struct device_info {
   std::string bus;
   std::string name;
@@ -139,10 +145,13 @@ int rvs_util_parse(const std::string& buff,
 
 void *json_node_create(std::string module_name, std::string action_name,
                      int log_level);
+
 bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_index,
     const std::vector<uint16_t>& property_device, const int& property_device_id,
     bool property_device_all, const std::vector<uint16_t>& property_device_index,
-    bool property_device_index_all, bool mcm_check = false);
+    bool property_device_index_all, bool mcm_check = false,
+    std::vector<mcm_type_t>* mcm_type = nullptr);
+
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function);
 int display_gpu_info(std::vector<device_info>);
 void *json_list_create(std::string lname, int log_level);
