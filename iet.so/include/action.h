@@ -178,7 +178,8 @@ class iet_action: public rvs::actionbase {
  */    
     int get_all_selected_gpus(void);
 
-    bool do_edp_test(std::map<int, uint16_t> iet_gpus_device_index);
+    bool do_edp_test(map<int, uint16_t> iet_gpus_device_index,
+        std::vector<mcm_type_t>& mcm_type);
 };
 
 #endif  // IET_SO_INCLUDE_ACTION_H_

@@ -519,7 +519,8 @@ void iet_action::hip_to_smi_indices(void) {
  * @brief runs the edp test
  * @return true if no error occured, false otherwise
  */
-bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
+bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index,
+    std::vector<mcm_type_t>& mcm_type) {
 
   std::string  msg;
   uint32_t     dev_idx = 0;
@@ -594,6 +595,8 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index) {
       workers[i].set_wg_count(iet_wg_count);
       workers[i].set_nt_loads(iet_nt_loads);
       workers[i].set_iet_out_data_type(iet_out_data_type);
+      workers[i].set_mcm_type(mcm_type[i]);
+
       i++;
     }
 
@@ -666,6 +669,7 @@ int iet_action::get_all_selected_gpus(void) {
   map<int, uint16_t> iet_gpus_device_index;
   std::string msg;
   std::stringstream msg_stream;
+  std::vector<mcm_type_t> mcm_type;
 
   hipGetDeviceCount(&hip_num_gpu_devices);
   if (hip_num_gpu_devices < 1)
@@ -674,7 +678,7 @@ int iet_action::get_all_selected_gpus(void) {
   // find compatible GPUs to run edp tests
   amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
       property_device, property_device_id, property_device_all,
-      property_device_index, property_device_index_all, true);  // MCM checks
+      property_device_index, property_device_index_all, true, &mcm_type);  // MCM checks
   if(!amd_gpus_found){
     msg = "No devices match criteria from the test configuation.";
     rvs::lp::Log(msg, rvs::logerror);
@@ -699,7 +703,7 @@ int iet_action::get_all_selected_gpus(void) {
   }
 
   int iet_res = 0;
-  if(do_edp_test(iet_gpus_device_index))
+  if(do_edp_test(iet_gpus_device_index, mcm_type))
     iet_res = 0;
   else
     iet_res = -1;
