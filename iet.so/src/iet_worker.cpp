@@ -254,12 +254,23 @@ bool IETWorker::do_iet_power_stress(void) {
     result = true;
   }
   else {
-    msg = "[" + action_name + "] " + MODULE_NAME + " " +
-      std::to_string(gpu_id) + " " + " Average power could not meet the target power  \
-      in the given interval, increase the duration and try again, \
-      Average power is :" + " " + std::to_string(max_power);
-    rvs::lp::Log(msg, rvs::loginfo);
-    result = false;
+
+    if(mcm_type == mcm_type_t::PRIMARY) {
+      msg = "[" + action_name + "] " + MODULE_NAME + " " +
+        std::to_string(gpu_id) + " " + " Average power could not meet the target power  \
+        in the given interval, increase the duration and try again, \
+        Average power is :" + " " + std::to_string(max_power);
+      rvs::lp::Log(msg, rvs::loginfo);
+      result = false;
+    }
+    else {
+      /* For secondary MCM, there is no power reporting - so by default considering it as pass */
+      msg = "[" + action_name + "] " + MODULE_NAME + " " +
+        std::to_string(gpu_id) + " " + " No power reporting present for  \
+        secondary MCM, considering the test as pass by default" ;
+      rvs::lp::Log(msg, rvs::loginfo);
+      result = true;
+    }
   }
 
   if (IETWorker::bjson)
