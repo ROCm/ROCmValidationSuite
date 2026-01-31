@@ -61,8 +61,8 @@ jobs:
           # Make build script executable
           chmod +x build_packages_local.sh
           
-          # Run build script (handles dependency installation, ROCm setup, build, and packaging)
-          ROCM_VERSION=${{ env.ROCM_VERSION }} \
+          # Run build script with sudo (Ubuntu runner needs sudo for apt-get)
+          sudo ROCM_VERSION=${{ env.ROCM_VERSION }} \
           GPU_FAMILY=${{ env.GPU_FAMILY }} \
           BUILD_TYPE=${{ env.BUILD_TYPE }} \
           ./build_packages_local.sh
@@ -127,7 +127,7 @@ jobs:
           # Make build script executable
           chmod +x build_packages_local.sh
           
-          # Run build script (handles dependency installation, ROCm setup, build, and packaging)
+          # Run build script (no sudo needed - container runs as root)
           ROCM_VERSION=${{ env.ROCM_VERSION }} \
           GPU_FAMILY=${{ env.GPU_FAMILY }} \
           BUILD_TYPE=${{ env.BUILD_TYPE }} \

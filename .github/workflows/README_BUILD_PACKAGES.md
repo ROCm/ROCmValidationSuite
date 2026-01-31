@@ -127,7 +127,9 @@ sudo -E ./build_packages_local.sh
 sudo BUILD_TYPE=Debug ./build_packages_local.sh
 ```
 
-**Important**: The script requires root privileges to install system dependencies. Use `sudo` when running locally. In GitHub Actions, the workflow runs without `sudo` as the runner already has appropriate privileges.
+**Important**: The script requires root privileges to install system dependencies. Use `sudo` when running locally. In GitHub Actions:
+- **Ubuntu runners**: Use `sudo` (runner has sudo access but not root by default)
+- **Container builds** (Rocky/CentOS): No sudo needed (containers run as root)
 
 ### Environment Variables
 
