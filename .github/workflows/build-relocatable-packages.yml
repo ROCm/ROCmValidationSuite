@@ -1,0 +1,253 @@
+name: Build Relocatable Packages
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - 'release/**'
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+    inputs:
+      rocm_version:
+        description: 'ROCm version (e.g., 6.5.0rc20250610)'
+        required: false
+        default: ''
+      gpu_family:
+        description: 'GPU family target'
+        required: false
+        type: choice
+        options:
+          - gfx94X-dcgpu
+          - gfx950-dcgpu
+          - gfx110X-all
+          - gfx1151
+          - gfx120X-all
+        default: 'gfx110X-all'
+
+env:
+  ROCM_VERSION: '6.5.0rc20250610'
+  GPU_FAMILY: 'gfx110X-all'
+  BUILD_TYPE: Release
+
+jobs:
+  build-ubuntu:
+    name: Build Ubuntu Packages
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        ubuntu_version: ['22.04']
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set ROCm Version and GPU Family
+        run: |
+          if [ -n "${{ github.event.inputs.rocm_version }}" ]; then
+            echo "ROCM_VERSION=${{ github.event.inputs.rocm_version }}" >> $GITHUB_ENV
+          fi
+          if [ -n "${{ github.event.inputs.gpu_family }}" ]; then
+            echo "GPU_FAMILY=${{ github.event.inputs.gpu_family }}" >> $GITHUB_ENV
+          fi
+
+      - name: Build and Package RVS
+        run: |
+          # Make build script executable
+          chmod +x build_packages_local.sh
+          
+          # Run build script (handles dependency installation, ROCm setup, build, and packaging)
+          ROCM_VERSION=${{ env.ROCM_VERSION }} \
+          GPU_FAMILY=${{ env.GPU_FAMILY }} \
+          BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          ./build_packages_local.sh
+
+      - name: Verify DEB Package
+        run: |
+          cd ./build
+          DEB_FILE=$(ls rocm-validation-suite*.deb | head -1)
+          if [ -n "$DEB_FILE" ]; then
+            echo "=== DEB Package Info ==="
+            dpkg-deb -I "$DEB_FILE"
+            echo ""
+            echo "=== DEB Package Contents (first 30 files) ==="
+            dpkg-deb -c "$DEB_FILE" | head -30
+            echo ""
+            echo "Package filename: $DEB_FILE"
+          fi
+
+      - name: Upload Ubuntu Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-${{ matrix.ubuntu_version }}-packages-${{ env.GPU_FAMILY }}
+          path: |
+            build/rocm-validation-suite*.deb
+            build/rocm-validation-suite*.tar.gz
+          retention-days: 30
+
+  build-centos:
+    name: Build CentOS/RHEL Packages
+    runs-on: ubuntu-latest
+    container:
+      image: rockylinux:8
+    strategy:
+      matrix:
+        distro: ['rockylinux8']
+    
+    steps:
+      - name: Install Git (for checkout)
+        run: |
+          yum install -y git
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set ROCm Version and GPU Family
+        run: |
+          if [ -n "${{ github.event.inputs.rocm_version }}" ]; then
+            echo "ROCM_VERSION=${{ github.event.inputs.rocm_version }}" >> $GITHUB_ENV
+          else
+            echo "ROCM_VERSION=${{ env.ROCM_VERSION }}" >> $GITHUB_ENV
+          fi
+          if [ -n "${{ github.event.inputs.gpu_family }}" ]; then
+            echo "GPU_FAMILY=${{ github.event.inputs.gpu_family }}" >> $GITHUB_ENV
+          else
+            echo "GPU_FAMILY=${{ env.GPU_FAMILY }}" >> $GITHUB_ENV
+          fi
+
+      - name: Build and Package RVS
+        run: |
+          # Make build script executable
+          chmod +x build_packages_local.sh
+          
+          # Run build script (handles dependency installation, ROCm setup, build, and packaging)
+          ROCM_VERSION=${{ env.ROCM_VERSION }} \
+          GPU_FAMILY=${{ env.GPU_FAMILY }} \
+          BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          ./build_packages_local.sh
+
+      - name: Verify RPM Package
+        run: |
+          cd ./build
+          RPM_FILE=$(ls rocm-validation-suite*.rpm | head -1)
+          if [ -n "$RPM_FILE" ]; then
+            echo "=== RPM Package Info ==="
+            rpm -qip "$RPM_FILE"
+            echo ""
+            echo "=== RPM Package Contents (first 30 files) ==="
+            rpm -qlp "$RPM_FILE" | head -30
+            echo ""
+            echo "=== RPM Dependencies ==="
+            rpm -qRp "$RPM_FILE"
+            echo ""
+            echo "Package filename: $RPM_FILE"
+          fi
+
+      - name: Upload CentOS/RHEL Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.distro }}-packages-${{ env.GPU_FAMILY }}
+          path: |
+            build/rocm-validation-suite*.rpm
+            build/rocm-validation-suite*.tar.gz
+          retention-days: 30
+
+  create-release:
+    name: Create Release Summary
+    needs: [build-ubuntu, build-centos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./packages
+
+      - name: Display Package Structure
+        run: |
+          echo "=== Generated Packages ==="
+          find ./packages -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.tar.gz" \) -exec ls -lh {} \;
+          
+          echo ""
+          echo "=== Package Summary ==="
+          echo "DEB packages:"
+          find ./packages -name "*.deb" -exec basename {} \;
+          echo ""
+          echo "RPM packages:"
+          find ./packages -name "*.rpm" -exec basename {} \;
+          echo ""
+          echo "TGZ packages:"
+          find ./packages -name "*.tar.gz" -exec basename {} \;
+
+      - name: Generate Build Report
+        run: |
+          cat > build-report.md << 'EOF'
+          # ROCm Validation Suite - Build Report
+          
+          ## Build Information
+          - **Commit**: ${{ github.sha }}
+          - **Branch**: ${{ github.ref_name }}
+          - **RVS Version**: ${{ env.RVS_VERSION }}
+          - **ROCm Version**: ${{ env.ROCM_VERSION }}
+          - **GPU Family**: ${{ env.GPU_FAMILY }}
+          - **Build Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          
+          ## Generated Packages
+          
+          ### Ubuntu Packages
+          ```
+          $(find ./packages -name "*.deb" -exec basename {} \;)
+          ```
+          
+          ### CentOS/RHEL Packages
+          ```
+          $(find ./packages -name "*.rpm" -exec basename {} \;)
+          ```
+          
+          ### TGZ Archives (Relocatable)
+          ```
+          $(find ./packages -name "*.tar.gz" -exec basename {} \;)
+          ```
+          
+          ## Installation Instructions
+          
+          ### Ubuntu/Debian
+          ```bash
+          sudo dpkg -i rocm-validation-suite_*.deb
+          ```
+          
+          ### CentOS/RHEL
+          ```bash
+          sudo rpm -i --replacefiles --nodeps rocm-validation-suite-*.rpm
+          ```
+          
+          ### Relocatable TGZ (Any Linux Distribution)
+          ```bash
+          tar -xzf rocm-validation-suite-*.tar.gz -C /opt/
+          export PATH=/opt/rocm/rvs/bin:$PATH
+          export LD_LIBRARY_PATH=/opt/rocm/rvs/lib:$LD_LIBRARY_PATH
+          ```
+          
+          ## Notes
+          - All packages are built with relocatable RPATH settings
+          - TGZ packages can be extracted to any location
+          - Install path: /opt/rocm/rvs
+          - ROCm SDK from TheRock nightly builds is used
+          EOF
+          
+          cat build-report.md
+
+      - name: Upload Build Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-report
+          path: build-report.md
+          retention-days: 90
