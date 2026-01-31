@@ -94,7 +94,7 @@ chmod +x build_packages_local.sh
 sudo ./build_packages_local.sh
 ```
 
-**Note**: The script requires root privileges to install system dependencies. In GitHub Actions, the runner already has sudo privileges, so it runs without the `sudo` prefix.
+**Note**: The script requires root privileges to install system dependencies. In GitHub Actions, Ubuntu runners use `sudo` while container builds (Rocky/CentOS) run as root directly.
 
 This will:
 1. Automatically detect and install missing dependencies
