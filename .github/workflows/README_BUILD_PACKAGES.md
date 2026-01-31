@@ -112,21 +112,28 @@ The workflow uses `build_packages_local.sh` as the core build engine. This scrip
 ### Running Locally
 
 ```bash
-# Basic usage (uses default ROCm version and GPU family)
-./build_packages_local.sh
+# Basic usage (automatically installs dependencies, fetches latest ROCm)
+sudo ./build_packages_local.sh
 
-# Custom ROCm version and GPU family
-ROCM_VERSION=6.5.0rc20250610 GPU_FAMILY=gfx110X-all ./build_packages_local.sh
+# Custom ROCm version and GPU family (use sudo -E to preserve environment variables)
+sudo -E ROCM_VERSION=7.11.0a20260121 GPU_FAMILY=gfx110X-all ./build_packages_local.sh
+
+# Or export first, then run with sudo -E
+export ROCM_VERSION=7.11.0a20260121
+export GPU_FAMILY=gfx110X-all
+sudo -E ./build_packages_local.sh
 
 # Debug build
-BUILD_TYPE=Debug ./build_packages_local.sh
+sudo BUILD_TYPE=Debug ./build_packages_local.sh
 ```
+
+**Important**: The script requires root privileges to install system dependencies. Use `sudo` when running locally. In GitHub Actions, the workflow runs without `sudo` as the runner already has appropriate privileges.
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ROCM_VERSION` | `6.5.0rc20250610` | ROCm SDK version from TheRock |
+| `ROCM_VERSION` | Auto-fetched (fallback: `7.11.0a20260121`) | ROCm SDK version from TheRock. If not set, script fetches latest version automatically. |
 | `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
 
@@ -362,13 +369,16 @@ ldd /opt/rocm/rvs/bin/rvs
 To test the workflow locally before pushing:
 
 ```bash
-# Set environment variables
-export ROCM_VERSION=6.5.0rc20250610
+# Option 1: Auto-fetch latest ROCm version
+sudo ./build_packages_local.sh
+
+# Option 2: Set environment variables for custom configuration
+export ROCM_VERSION=7.11.0a20260121
 export GPU_FAMILY=gfx110X-all
 export BUILD_TYPE=Release
 
-# Run the build script
-./build_packages_local.sh
+# Run with sudo -E to preserve environment variables
+sudo -E ./build_packages_local.sh
 
 # Check generated packages
 ls -lh build/rocm-validation-suite*

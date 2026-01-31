@@ -90,14 +90,17 @@ The workflow automatically runs when you:
 # Make the script executable
 chmod +x build_packages_local.sh
 
-# Run the build script
-./build_packages_local.sh
+# Run the build script with sudo (required for installing dependencies)
+sudo ./build_packages_local.sh
 ```
 
+**Note**: The script requires root privileges to install system dependencies. In GitHub Actions, the runner already has sudo privileges, so it runs without the `sudo` prefix.
+
 This will:
-1. Download ROCm SDK (ROCm 6.5.0rc20250610, gfx110X-all)
-2. Configure and build RVS
-3. Generate DEB, RPM, and TGZ packages
+1. Automatically detect and install missing dependencies
+2. Fetch latest ROCm SDK version (or use default 7.11.0a20260121)
+3. Configure and build RVS
+4. Generate DEB, RPM, and TGZ packages
 4. Save packages to `./build/` directory
 
 ### Custom Build
@@ -106,7 +109,7 @@ Set environment variables before running:
 
 ```bash
 # Set custom ROCm version
-export ROCM_VERSION="6.5.0rc20250115"
+export ROCM_VERSION="7.11.0a20260121"
 
 # Set GPU family
 export GPU_FAMILY="gfx94X-dcgpu"  # For MI300A/MI300X
@@ -114,9 +117,11 @@ export GPU_FAMILY="gfx94X-dcgpu"  # For MI300A/MI300X
 # Set build type
 export BUILD_TYPE="Release"  # or "Debug"
 
-# Run the build
-./build_packages_local.sh
+# Run the build with sudo
+sudo -E ./build_packages_local.sh
 ```
+
+**Note**: Use `sudo -E` to preserve environment variables when running with sudo.
 
 ### Manual Build (Step-by-Step)
 
