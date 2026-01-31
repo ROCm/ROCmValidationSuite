@@ -7,7 +7,6 @@
 set -e  # Exit on error
 
 # Configuration
-ROCM_VERSION="${ROCM_VERSION:-6.5.0rc20250610}"
 GPU_FAMILY="${GPU_FAMILY:-gfx110X-all}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
 BUILD_DIR="./build"
@@ -35,6 +34,39 @@ print_warning() {
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
+
+# Function to fetch latest ROCm version for specified GPU family
+fetch_latest_rocm_version() {
+    local gpu_family="$1"
+    local index_url="https://therock-nightly-tarball.s3.amazonaws.com/index.html"
+    
+    print_info "Fetching latest ROCm version for $gpu_family from TheRock..."
+    
+    # Download index page and parse for latest tarball matching GPU family
+    # Pattern: therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz
+    local latest_version=$(wget -qO- "$index_url" 2>/dev/null | \
+        grep -oP "therock-dist-linux-${gpu_family}-\K[^<\"]+(?=\.tar\.gz)" | \
+        sort -V | tail -1)
+    
+    if [ -z "$latest_version" ]; then
+        print_error "Could not fetch latest ROCm version for $gpu_family"
+        print_info "Falling back to default version: 6.5.0rc20250610"
+        echo "6.5.0rc20250610"
+        return 1
+    fi
+    
+    print_success "Found latest ROCm version: $latest_version"
+    echo "$latest_version"
+    return 0
+}
+
+# Determine ROCm version: use environment variable or fetch latest
+if [ -n "$ROCM_VERSION" ]; then
+    print_info "Using specified ROCm version: $ROCM_VERSION"
+else
+    print_info "No ROCm version specified, fetching latest..."
+    ROCM_VERSION=$(fetch_latest_rocm_version "$GPU_FAMILY")
+fi
 
 # Print configuration
 echo "================================================================================"
