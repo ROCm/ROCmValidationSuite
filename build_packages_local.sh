@@ -50,8 +50,8 @@ fetch_latest_rocm_version() {
     
     if [ -z "$latest_version" ]; then
         print_error "Could not fetch latest ROCm version for $gpu_family"
-        print_info "Falling back to default version: 6.5.0rc20250610"
-        echo "6.5.0rc20250610"
+        print_info "Falling back to default version: 7.11.0a20260121"
+        echo "7.11.0a20260121"
         return 1
     fi
     
