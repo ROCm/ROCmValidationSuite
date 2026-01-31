@@ -94,23 +94,45 @@ check_and_install_dependencies() {
         exit 1
     fi
     
-    # Check for basic tools first
+    # Check for command-line tools
     MISSING_TOOLS=()
     command -v cmake >/dev/null 2>&1 || MISSING_TOOLS+=("cmake")
     command -v make >/dev/null 2>&1 || MISSING_TOOLS+=("make")
+    command -v gcc >/dev/null 2>&1 || MISSING_TOOLS+=("gcc")
+    command -v g++ >/dev/null 2>&1 || MISSING_TOOLS+=("g++")
+    command -v git >/dev/null 2>&1 || MISSING_TOOLS+=("git")
     command -v wget >/dev/null 2>&1 || MISSING_TOOLS+=("wget")
     command -v tar >/dev/null 2>&1 || MISSING_TOOLS+=("tar")
-    command -v gcc >/dev/null 2>&1 || MISSING_TOOLS+=("gcc/g++")
-    command -v git >/dev/null 2>&1 || MISSING_TOOLS+=("git")
+    command -v doxygen >/dev/null 2>&1 || MISSING_TOOLS+=("doxygen")
     
-    if [ ${#MISSING_TOOLS[@]} -ne 0 ]; then
-        print_warning "Missing required tools: ${MISSING_TOOLS[*]}"
+    # Check for library dependencies (platform-specific)
+    MISSING_LIBS=()
+    if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+        # Check for Ubuntu/Debian library headers
+        [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("libpci-dev")
+        [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("libyaml-cpp-dev")
+        command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm")
+        command -v unzip >/dev/null 2>&1 || MISSING_LIBS+=("unzip")
+    elif [[ "$OS" =~ ^(centos|rhel|rocky)$ ]]; then
+        # Check for CentOS/RHEL library headers
+        [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("pciutils-devel")
+        [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("yaml-cpp-devel")
+        command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm-build")
+    fi
+    
+    # Combine missing tools and libraries
+    MISSING_DEPS=()
+    [ ${#MISSING_TOOLS[@]} -ne 0 ] && MISSING_DEPS+=("${MISSING_TOOLS[@]}")
+    [ ${#MISSING_LIBS[@]} -ne 0 ] && MISSING_DEPS+=("${MISSING_LIBS[@]}")
+    
+    if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
+        print_warning "Missing dependencies: ${MISSING_DEPS[*]}"
         echo ""
         
         if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
             print_info "Installing dependencies for Ubuntu/Debian..."
-            sudo apt-get update
-            sudo apt-get install -y \
+            apt-get update
+            apt-get install -y \
                 build-essential \
                 cmake \
                 git \
@@ -123,8 +145,8 @@ check_and_install_dependencies() {
                 rpm
         elif [[ "$OS" =~ ^(centos|rhel|rocky)$ ]]; then
             print_info "Installing dependencies for CentOS/RHEL..."
-            sudo yum install -y epel-release
-            sudo yum install -y \
+            yum install -y epel-release
+            yum install -y \
                 gcc \
                 gcc-c++ \
                 cmake3 \
@@ -140,20 +162,41 @@ check_and_install_dependencies() {
             print_error "Unsupported OS: $OS"
             echo ""
             echo "Please install the following dependencies manually:"
-            echo "  - build tools (gcc, g++, make)"
+            echo ""
+            echo "Build Tools:"
+            echo "  - gcc, g++, make"
             echo "  - cmake"
             echo "  - git"
             echo "  - wget"
-            echo "  - libpci-dev (or pciutils-devel)"
+            echo "  - tar"
             echo "  - doxygen"
+            echo ""
+            echo "Development Libraries:"
+            echo "  - libpci-dev (or pciutils-devel)"
             echo "  - libyaml-cpp-dev (or yaml-cpp-devel)"
             echo "  - rpm-build tools"
             exit 1
         fi
         
         print_success "Dependencies installed successfully"
+        echo ""
+        
+        # Verify installation by re-checking
+        print_info "Verifying installation..."
+        VERIFY_FAILED=()
+        for tool in "${MISSING_TOOLS[@]}"; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+                VERIFY_FAILED+=("$tool")
+            fi
+        done
+        
+        if [ ${#VERIFY_FAILED[@]} -ne 0 ]; then
+            print_error "Failed to install: ${VERIFY_FAILED[*]}"
+            exit 1
+        fi
+        print_success "All dependencies verified"
     else
-        print_success "All required tools found"
+        print_success "All required dependencies found"
     fi
     echo ""
 }
