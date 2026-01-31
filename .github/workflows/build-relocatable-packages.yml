@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       rocm_version:
-        description: 'ROCm version (e.g., 6.5.0rc20250610)'
+        description: 'ROCm version (e.g., 7.11.0a20260121)'
         required: false
         default: ''
       gpu_family:
@@ -29,7 +29,7 @@ on:
         default: 'gfx110X-all'
 
 env:
-  ROCM_VERSION: '6.5.0rc20250610'
+  ROCM_VERSION: '7.11.0a20260121'
   GPU_FAMILY: 'gfx110X-all'
   BUILD_TYPE: Release
 
