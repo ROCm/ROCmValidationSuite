@@ -144,8 +144,28 @@ check_and_install_dependencies() {
                 libyaml-cpp-dev \
                 rpm
         elif [[ "$OS" =~ ^(centos|rhel|rocky)$ ]]; then
-            print_info "Installing dependencies for CentOS/RHEL..."
+            print_info "Installing dependencies for CentOS/RHEL/Rocky Linux..."
+            
+            # Enable PowerTools repository (contains doxygen)
+            print_info "Enabling PowerTools/CRB repository..."
+            if command -v dnf >/dev/null 2>&1; then
+                # Rocky Linux 8+ uses dnf and powertools
+                dnf install -y dnf-plugins-core
+                dnf config-manager --set-enabled powertools 2>/dev/null || \
+                dnf config-manager --set-enabled crb 2>/dev/null || \
+                print_warning "Could not enable PowerTools/CRB repo (may already be enabled)"
+            else
+                # CentOS 8 uses yum and PowerTools
+                yum install -y yum-utils
+                yum-config-manager --enable powertools 2>/dev/null || \
+                yum-config-manager --enable PowerTools 2>/dev/null || \
+                print_warning "Could not enable PowerTools repo (may already be enabled)"
+            fi
+            
+            print_info "Installing EPEL repository..."
             yum install -y epel-release
+            
+            print_info "Installing build dependencies..."
             yum install -y \
                 gcc \
                 gcc-c++ \
@@ -251,14 +271,30 @@ echo ""
 
 # Step 2: Setup environment
 print_info "Step 2: Setting up ROCm environment..."
+
+# Find HIP device library path (amdgcn/bitcode) first
+print_info "Locating HIP device libraries (amdgcn/bitcode)..."
+HIP_DEVICE_LIB_PATH=$(find "$ROCM_PATH" -type d -path "*/amdgcn/bitcode" 2>/dev/null | head -1)
+
+if [ -z "$HIP_DEVICE_LIB_PATH" ]; then
+    print_error "Could not find amdgcn/bitcode directory in $ROCM_PATH"
+    print_error "HIP device libraries are required for GPU code compilation"
+    print_error "Please verify your ROCm SDK installation"
+    exit 1
+fi
+
+# Export all environment variables
 export PATH="$ROCM_PATH/bin:$PATH"
 export LD_LIBRARY_PATH="$ROCM_PATH/lib:$LD_LIBRARY_PATH"
 export CMAKE_PREFIX_PATH="$ROCM_PATH:$CMAKE_PREFIX_PATH"
+export HIP_DEVICE_LIB_PATH="$HIP_DEVICE_LIB_PATH"
+
 
 print_info "Environment variables set:"
 echo "  ROCM_PATH=$ROCM_PATH"
 echo "  PATH includes: $ROCM_PATH/bin"
 echo "  LD_LIBRARY_PATH includes: $ROCM_PATH/lib"
+echo "  HIP_DEVICE_LIB_PATH=$HIP_DEVICE_LIB_PATH"
 
 # Verify ROCm installation
 print_info "Verifying ROCm installation..."
