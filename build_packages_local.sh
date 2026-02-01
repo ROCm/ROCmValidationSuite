@@ -104,6 +104,7 @@ check_and_install_dependencies() {
     command -v wget >/dev/null 2>&1 || MISSING_TOOLS+=("wget")
     command -v tar >/dev/null 2>&1 || MISSING_TOOLS+=("tar")
     command -v doxygen >/dev/null 2>&1 || MISSING_TOOLS+=("doxygen")
+    command -v python3 >/dev/null 2>&1 || MISSING_TOOLS+=("python3")
     
     # Check for library dependencies (platform-specific)
     MISSING_LIBS=()
@@ -142,7 +143,8 @@ check_and_install_dependencies() {
                 doxygen \
                 unzip \
                 libyaml-cpp-dev \
-                rpm
+                rpm \
+                python3
         elif [[ "$OS" =~ ^(centos|rhel|rocky)$ ]]; then
             print_info "Installing dependencies for CentOS/RHEL/Rocky Linux..."
             
@@ -177,7 +179,8 @@ check_and_install_dependencies() {
                 doxygen \
                 rpm-build \
                 yaml-cpp-devel \
-                yaml-cpp-static
+                yaml-cpp-static \
+                python3
         else
             print_error "Unsupported OS: $OS"
             echo ""
@@ -190,6 +193,7 @@ check_and_install_dependencies() {
             echo "  - wget"
             echo "  - tar"
             echo "  - doxygen"
+            echo "  - python3"
             echo ""
             echo "Development Libraries:"
             echo "  - libpci-dev (or pciutils-devel)"
