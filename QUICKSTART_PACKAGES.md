@@ -35,7 +35,8 @@ sudo apt-get install -y \
     doxygen \
     unzip \
     libyaml-cpp-dev \
-    rpm
+    rpm \
+    python3
 ```
 
 **CentOS/RHEL/Rocky Linux:**
@@ -44,7 +45,8 @@ sudo yum install -y epel-release
 sudo yum install -y \
     gcc gcc-c++ cmake3 make git wget \
     pciutils-devel doxygen rpm-build \
-    yaml-cpp-devel yaml-cpp-static
+    yaml-cpp-devel yaml-cpp-static \
+    python3
 ```
 
 ---
