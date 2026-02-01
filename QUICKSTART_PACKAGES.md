@@ -79,7 +79,7 @@ The workflow automatically runs when you:
    - Scroll down to the **Artifacts** section
    - Download the package artifacts:
      - `ubuntu-22.04-packages-${GPU_FAMILY}` - Contains DEB and TGZ
-     - `rockylinux8-packages-${GPU_FAMILY}` - Contains RPM and TGZ
+     - `manylinux_2_28-packages-${GPU_FAMILY}` - Contains RPM and TGZ
      - `build-report` - Build summary and details
 
 ---

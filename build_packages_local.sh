@@ -114,8 +114,8 @@ check_and_install_dependencies() {
         [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("libyaml-cpp-dev")
         command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm")
         command -v unzip >/dev/null 2>&1 || MISSING_LIBS+=("unzip")
-    elif [[ "$OS" =~ ^(centos|rhel|rocky)$ ]]; then
-        # Check for CentOS/RHEL library headers
+    elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|amzn)$ ]]; then
+        # Check for CentOS/RHEL/Rocky/AlmaLinux library headers
         [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("pciutils-devel")
         [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("yaml-cpp-devel")
         command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm-build")
@@ -145,42 +145,58 @@ check_and_install_dependencies() {
                 libyaml-cpp-dev \
                 rpm \
                 python3
-        elif [[ "$OS" =~ ^(centos|rhel|rocky)$ ]]; then
-            print_info "Installing dependencies for CentOS/RHEL/Rocky Linux..."
+        elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|amzn)$ ]]; then
+            print_info "Installing dependencies for CentOS/RHEL/Rocky/AlmaLinux..."
             
-            # Enable PowerTools repository (contains doxygen)
-            print_info "Enabling PowerTools/CRB repository..."
-            if command -v dnf >/dev/null 2>&1; then
-                # Rocky Linux 8+ uses dnf and powertools
-                dnf install -y dnf-plugins-core
-                dnf config-manager --set-enabled powertools 2>/dev/null || \
-                dnf config-manager --set-enabled crb 2>/dev/null || \
-                print_warning "Could not enable PowerTools/CRB repo (may already be enabled)"
-            else
-                # CentOS 8 uses yum and PowerTools
-                yum install -y yum-utils
-                yum-config-manager --enable powertools 2>/dev/null || \
-                yum-config-manager --enable PowerTools 2>/dev/null || \
-                print_warning "Could not enable PowerTools repo (may already be enabled)"
+            # Check if running in manylinux container (has /opt/python)
+            if [ -d /opt/python ]; then
+                print_info "Detected manylinux environment - some tools may be pre-installed"
             fi
             
+            # Enable PowerTools/CRB repository (contains doxygen and yaml-cpp)
+            print_info "Enabling PowerTools/CRB repository..."
+            if command -v dnf >/dev/null 2>&1; then
+                # AlmaLinux/Rocky Linux 8+ uses dnf
+                dnf install -y dnf-plugins-core 2>/dev/null || true
+                dnf config-manager --set-enabled powertools 2>/dev/null || \
+                dnf config-manager --set-enabled crb 2>/dev/null || \
+                dnf config-manager --set-enabled devel 2>/dev/null || \
+                print_warning "Could not enable PowerTools/CRB/devel repo (may already be enabled)"
+            else
+                # CentOS 8 uses yum
+                yum install -y yum-utils 2>/dev/null || true
+                yum-config-manager --enable powertools 2>/dev/null || \
+                yum-config-manager --enable PowerTools 2>/dev/null || \
+                yum-config-manager --enable devel 2>/dev/null || \
+                print_warning "Could not enable PowerTools/devel repo (may already be enabled)"
+            fi
+            
+            # Install EPEL repository (may already be present in manylinux)
             print_info "Installing EPEL repository..."
-            yum install -y epel-release
+            yum install -y epel-release 2>/dev/null || print_warning "EPEL may already be installed"
             
             print_info "Installing build dependencies..."
+            # Note: manylinux typically has gcc, g++, make pre-installed
             yum install -y \
                 gcc \
                 gcc-c++ \
-                cmake3 \
                 make \
                 git \
                 wget \
+                tar \
                 pciutils-devel \
                 doxygen \
                 rpm-build \
-                yaml-cpp-devel \
-                yaml-cpp-static \
-                python3
+                python3 \
+                || print_warning "Some packages may already be installed"
+            
+            # Install cmake and yaml-cpp separately as they may need special handling
+            print_info "Installing cmake..."
+            yum install -y cmake3 || yum install -y cmake || print_warning "cmake installation may have failed"
+            
+            print_info "Installing yaml-cpp..."
+            yum install -y yaml-cpp-devel yaml-cpp-static 2>/dev/null || \
+            print_warning "yaml-cpp may not be available - will try to continue"
         else
             print_error "Unsupported OS: $OS"
             echo ""

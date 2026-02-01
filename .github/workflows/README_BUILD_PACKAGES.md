@@ -146,7 +146,7 @@ The workflow builds packages for:
 | Platform | Container/Runner | Package Types | Script Mode |
 |----------|------------------|---------------|-------------|
 | Ubuntu 22.04 | ubuntu-22.04 | DEB, TGZ | Auto-detects Ubuntu |
-| Rocky Linux 8 | rockylinux:8 | RPM, TGZ | Auto-detects CentOS |
+| Manylinux 2.28 (AlmaLinux 8) | manylinux_2_28_x86_64 | RPM, TGZ | Auto-detects AlmaLinux |
 
 ## Package Naming Convention
 
@@ -232,7 +232,7 @@ rpm -qRp rocm-validation-suite-*.rpm  # Package dependencies
 3. Scroll down to **Artifacts** section
 4. Download the package artifacts:
    - `ubuntu-22.04-packages-${GPU_FAMILY}`
-   - `rockylinux8-packages-${GPU_FAMILY}`
+   - `manylinux_2_28-packages-${GPU_FAMILY}`
    - `build-report` (contains build summary)
 
 ## Customization
