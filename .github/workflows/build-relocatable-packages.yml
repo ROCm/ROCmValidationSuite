@@ -91,13 +91,13 @@ jobs:
           retention-days: 30
 
   build-centos:
-    name: Build CentOS/RHEL Packages
+    name: Build CentOS/RHEL Packages (manylinux_2_28)
     runs-on: ubuntu-latest
     container:
-      image: rockylinux:8
+      image: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
       matrix:
-        distro: ['rockylinux8']
+        distro: ['manylinux_2_28']
     
     steps:
       - name: Install Git (for checkout)
