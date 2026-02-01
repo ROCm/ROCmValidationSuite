@@ -309,12 +309,38 @@ export LD_LIBRARY_PATH="$ROCM_PATH/lib:$LD_LIBRARY_PATH"
 export CMAKE_PREFIX_PATH="$ROCM_PATH:$CMAKE_PREFIX_PATH"
 export HIP_DEVICE_LIB_PATH="$HIP_DEVICE_LIB_PATH"
 
+# TODO: Currently hipcc and cmake3 are only set for AlmaLinux (manylinux_2_28)
+# Ubuntu works fine without these settings. Need to verify later if these
+# should be applied universally for all OS or kept OS-specific.
+
+# AlmaLinux-specific settings for manylinux_2_28
+if [[ "$OS" == "almalinux" ]]; then
+    # Set C++ compiler to hipcc from ROCm for AlmaLinux
+    if [ -x "$ROCM_PATH/bin/hipcc" ]; then
+        export CMAKE_CXX_COMPILER="$ROCM_PATH/bin/hipcc"
+        print_success "Set CMAKE_CXX_COMPILER to hipcc (AlmaLinux)"
+    else
+        print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using system default compiler"
+    fi
+    
+    # Use cmake3 for AlmaLinux
+    export CMAKE_COMMAND="cmake3"
+    print_info "Using cmake3 (AlmaLinux/Manylinux)"
+else
+    # Ubuntu: use defaults (system compiler and cmake)
+    export CMAKE_COMMAND="cmake"
+    print_info "Using cmake (Ubuntu)"
+fi
 
 print_info "Environment variables set:"
 echo "  ROCM_PATH=$ROCM_PATH"
 echo "  PATH includes: $ROCM_PATH/bin"
 echo "  LD_LIBRARY_PATH includes: $ROCM_PATH/lib"
 echo "  HIP_DEVICE_LIB_PATH=$HIP_DEVICE_LIB_PATH"
+if [ -n "$CMAKE_CXX_COMPILER" ]; then
+    echo "  CMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER"
+fi
+echo "  CMAKE_COMMAND=$CMAKE_COMMAND"
 
 # Verify ROCm installation
 print_info "Verifying ROCm installation..."
@@ -340,16 +366,26 @@ if [ -d "$BUILD_DIR" ]; then
     rm -rf "$BUILD_DIR"
 fi
 
-cmake -B "$BUILD_DIR" \
-    -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-    -DROCM_PATH="$ROCM_PATH" \
-    -DHIP_PLATFORM=amd \
-    -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs \
-    -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs \
-    -DCMAKE_SKIP_RPATH=FALSE \
-    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE \
-    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs" \
+# Build cmake command with optional CXX compiler
+CMAKE_ARGS=(
+    -B "$BUILD_DIR"
+    -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+    -DROCM_PATH="$ROCM_PATH"
+    -DHIP_PLATFORM=amd
+    -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs
+    -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs
+    -DCMAKE_SKIP_RPATH=FALSE
+    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE
+    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs"
     -DRPATH_MODE=OFF
+)
+
+# Add CXX compiler if set
+if [ -n "$CMAKE_CXX_COMPILER" ]; then
+    CMAKE_ARGS+=(-DCMAKE_CXX_COMPILER="$CMAKE_CXX_COMPILER")
+fi
+
+$CMAKE_COMMAND "${CMAKE_ARGS[@]}"
 
 if [ $? -eq 0 ]; then
     print_success "CMake configuration successful"
