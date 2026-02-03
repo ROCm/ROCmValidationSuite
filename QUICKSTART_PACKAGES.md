@@ -68,8 +68,12 @@ The workflow automatically runs when you:
 
 2. **Click "Run workflow"**
    - Choose the branch to run from
-   - (Optional) Set custom ROCm version (e.g., `6.5.0rc20250610`)
-   - (Optional) Select GPU family target (default: `gfx110X-all`)
+   - (Optional) Set custom ROCm version (e.g., `7.11.0a20260121`)
+     - Default: `7.11.0a20260121`
+     - If not specified, script auto-fetches latest version from TheRock
+   - (Optional) Select GPU family target
+     - Default: `gfx110X-all` (AMD RX 7000 series)
+     - Options: `gfx94X-dcgpu`, `gfx950-dcgpu`, `gfx110X-all`, `gfx1151`, `gfx120X-all`
 
 3. **Wait for Build to Complete**
    - Build typically takes 20-30 minutes
@@ -96,14 +100,15 @@ chmod +x build_packages_local.sh
 sudo ./build_packages_local.sh
 ```
 
-**Note**: The script requires root privileges to install system dependencies. In GitHub Actions, Ubuntu runners use `sudo` while container builds (Rocky/CentOS) run as root directly.
+**Note**: The script requires root privileges to install system dependencies. In GitHub Actions, Ubuntu runners use `sudo` while container builds (Manylinux/AlmaLinux) run as root directly.
 
 This will:
 1. Automatically detect and install missing dependencies
-2. Fetch latest ROCm SDK version (or use default 7.11.0a20260121)
-3. Configure and build RVS
-4. Generate DEB, RPM, and TGZ packages
-4. Save packages to `./build/` directory
+2. Fetch latest ROCm SDK version from TheRock (or use default 7.11.0a20260121)
+3. Locate HIP device libraries (amdgcn/bitcode)
+4. Configure and build RVS with relocatable RPATH
+5. Generate DEB, RPM, and TGZ packages
+6. Save packages to `./build/` directory
 
 ### Custom Build
 
@@ -377,9 +382,9 @@ readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
 
 ### Default Configuration
 
-- **RVS Version:** Read from CMakeLists.txt by CMake/CPack (currently 1.3.0)
-- **ROCm Version:** 6.5.0rc20250610
-- **GPU Family:** gfx110X-all (AMD RX 7900 series)
+- **RVS Version:** Read from CMakeLists.txt by CMake/CPack
+- **ROCm Version:** Auto-fetched from TheRock (fallback: 7.11.0a20260121)
+- **GPU Family:** gfx110X-all (AMD RX 7000 series)
 - **Install Prefix:** /opt/rocm/rvs
 - **Build Type:** Release
 
@@ -387,11 +392,14 @@ readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ROCM_VERSION` | ROCm SDK version to download | 6.5.0rc20250610 |
+| `ROCM_VERSION` | ROCm SDK version to download | Auto-fetched (fallback: 7.11.0a20260121) |
 | `GPU_FAMILY` | Target GPU architecture | gfx110X-all |
 | `BUILD_TYPE` | CMake build type | Release |
 
-**Note:** RVS version is read from `CMakeLists.txt` by CMake/CPack automatically.
+**Note:** 
+- RVS version is read from `CMakeLists.txt` by CMake/CPack automatically.
+- ROCm version is automatically fetched from TheRock. Set `ROCM_VERSION` to override.
+- HIP device libraries (amdgcn/bitcode) are auto-located and exported.
 
 ---
 
