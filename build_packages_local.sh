@@ -20,22 +20,23 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${BLUE}[INFO]${NC} $1" >&2
 }
 
 print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}[WARNING]${NC} $1" >&2
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
 # Function to fetch latest ROCm version for specified GPU family
+# Sets the global ROCM_VERSION variable directly
 fetch_latest_rocm_version() {
     local gpu_family="$1"
     local index_url="https://therock-nightly-tarball.s3.amazonaws.com/index.html"
@@ -51,12 +52,12 @@ fetch_latest_rocm_version() {
     if [ -z "$latest_version" ]; then
         print_error "Could not fetch latest ROCm version for $gpu_family"
         print_info "Falling back to default version: 7.11.0a20260121"
-        echo "7.11.0a20260121"
+        ROCM_VERSION="7.11.0a20260121"
         return 1
     fi
     
     print_success "Found latest ROCm version: $latest_version"
-    echo "$latest_version"
+    ROCM_VERSION="$latest_version"
     return 0
 }
 
@@ -65,7 +66,13 @@ if [ -n "$ROCM_VERSION" ]; then
     print_info "Using specified ROCm version: $ROCM_VERSION"
 else
     print_info "No ROCm version specified, fetching latest..."
-    ROCM_VERSION=$(fetch_latest_rocm_version "$GPU_FAMILY")
+    fetch_latest_rocm_version "$GPU_FAMILY"
+    
+    # Validate that ROCM_VERSION was properly set
+    if [ -z "$ROCM_VERSION" ]; then
+        print_error "Failed to determine ROCm version"
+        exit 1
+    fi
 fi
 
 # Print configuration
@@ -375,7 +382,7 @@ CMAKE_ARGS=(
     -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs
     -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs
     -DCMAKE_SKIP_RPATH=FALSE
-    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE
+    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE
     -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs"
     -DRPATH_MODE=OFF
 )
