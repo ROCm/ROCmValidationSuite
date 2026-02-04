@@ -54,7 +54,7 @@ done
 ### Test 3: ROCm SDK Download Test
 ```bash
 # Test if ROCm tarball URL is accessible
-ROCM_VERSION="6.5.0rc20250610"
+ROCM_VERSION="7.11.0a20260121"
 GPU_FAMILY="gfx110X-all"
 TARBALL_URL="https://therock-nightly-tarball.s3.us-east-2.amazonaws.com/therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz"
 
@@ -64,7 +64,7 @@ wget --spider "$TARBALL_URL" 2>&1 | grep "200 OK" && echo "✓ Tarball accessibl
 ### Test 4: Full Local Build (Optional - Takes 30+ minutes)
 ```bash
 # Run full build locally
-export ROCM_VERSION="6.5.0rc20250610"
+export ROCM_VERSION="7.11.0a20260121"
 export GPU_FAMILY="gfx110X-all"
 ./build_packages_local.sh
 

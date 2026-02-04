@@ -161,7 +161,7 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `ROCM_VERSION` | Auto-fetched (fallback: `7.11.0a20260121`) | ROCm SDK version from TheRock. If not set, script fetches latest version automatically. |
 | `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
-| `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `6.5` → `0605`) - used for RVS version tagging |
+| `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `8.0` → `0800`) - used for RVS version tagging |
 | `CPACK_DEBIAN_PACKAGE_RELEASE` | Auto-generated from git | Package release string. **Dev branches**: `branch.commit` (e.g., `master.a1b2c3d`). **Release branches** (starting with "rel"): `GITHUB_RUN_NUMBER` (fallback: `1`) |
 | `CPACK_RPM_PACKAGE_RELEASE` | Auto-generated from git | Package release string. **Dev branches**: `branch.commit` (e.g., `master.a1b2c3d`). **Release branches** (starting with "rel"): `GITHUB_RUN_NUMBER` (fallback: `1`) |
 | `GITHUB_RUN_NUMBER` | `1` (local) | GitHub Actions run number - automatically set in CI, defaults to `1` for local builds |
@@ -271,7 +271,7 @@ rpm -qRp rocm-validation-suite-*.rpm  # Package dependencies
 1. Go to **Actions** → **Build Relocatable Packages**
 2. Click **Run workflow**
 3. Enter custom values for:
-   - ROCm Version (e.g., `6.5.0rc20250610`)
+   - ROCm Version (e.g., `7.11.0a20260121`)
    - GPU Family (e.g., `gfx110X-all`)
 
 **Option 2: Edit Workflow Defaults**
@@ -280,7 +280,7 @@ Edit the `env` section in `.github/workflows/build-relocatable-packages.yml`:
 
 ```yaml
 env:
-  ROCM_VERSION: '6.5.0rc20250610'  # Change this
+  ROCM_VERSION: '7.11.0a20260121'  # Change this
   GPU_FAMILY: 'gfx110X-all'         # Change this
   BUILD_TYPE: Release
 ```
@@ -290,7 +290,7 @@ env:
 Edit `build_packages_local.sh`:
 
 ```bash
-ROCM_VERSION="${ROCM_VERSION:-6.5.0rc20250610}"  # Change default here
+ROCM_VERSION="${ROCM_VERSION:-7.11.0a20260121}"  # Change default here
 GPU_FAMILY="${GPU_FAMILY:-gfx110X-all}"          # Change default here
 BUILD_TYPE="${BUILD_TYPE:-Release}"
 ```

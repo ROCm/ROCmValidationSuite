@@ -92,9 +92,9 @@ User-friendly guide for quick onboarding:
 
 ### ROCm Versions
 - Configurable via environment variable or workflow input
-- Default: `6.5.0rc20250610`
+- Default: `7.11.0a20260121` (auto-fetched if not specified)
 - Downloads from TheRock nightly builds
-- Format: `X.Y.ZrcYYYYMMDD`
+- Format: `X.Y.ZaYYYYMMDD` or `X.Y.ZrcYYYYMMDD`
 
 ## Technical Highlights
 
@@ -352,7 +352,7 @@ ROCmValidationSuite/
 Edit `.github/workflows/build-relocatable-packages.yml`:
 ```yaml
 env:
-  ROCM_VERSION: '6.5.0rc20250115'  # Update this
+  ROCM_VERSION: '7.11.0a20260121'  # Update this
 ```
 
 ### Add New Distribution

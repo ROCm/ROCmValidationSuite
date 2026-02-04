@@ -318,7 +318,7 @@ export HIP_DEVICE_LIB_PATH="$HIP_DEVICE_LIB_PATH"
 
 # Extract major.minor version from ROCM_VERSION for ROCM_LIBPATCH_VERSION
 # Convert to xxyy format with zero padding
-# Example: "7.11.0a20260121" -> "0711", "6.5.0" -> "0605", "10.2.0" -> "1002"
+# Example: "7.11.0a20260121" -> "0711", "8.0.0" -> "0800", "10.2.0" -> "1002"
 ROCM_VERSION_MAJOR_MINOR=$(echo "$ROCM_VERSION" | grep -oP '^\d+\.\d+')
 if [ -z "$ROCM_VERSION_MAJOR_MINOR" ]; then
     print_error "Could not extract major.minor version from ROCM_VERSION: $ROCM_VERSION"
