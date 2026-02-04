@@ -316,6 +316,50 @@ export LD_LIBRARY_PATH="$ROCM_PATH/lib:$LD_LIBRARY_PATH"
 export CMAKE_PREFIX_PATH="$ROCM_PATH:$CMAKE_PREFIX_PATH"
 export HIP_DEVICE_LIB_PATH="$HIP_DEVICE_LIB_PATH"
 
+# Extract major.minor version from ROCM_VERSION for ROCM_LIBPATCH_VERSION
+# Convert to xxyy format with zero padding
+# Example: "7.11.0a20260121" -> "0711", "6.5.0" -> "0605", "10.2.0" -> "1002"
+ROCM_VERSION_MAJOR_MINOR=$(echo "$ROCM_VERSION" | grep -oP '^\d+\.\d+')
+if [ -z "$ROCM_VERSION_MAJOR_MINOR" ]; then
+    print_error "Could not extract major.minor version from ROCM_VERSION: $ROCM_VERSION"
+    exit 1
+fi
+
+# Split into major and minor, zero-pad to 2 digits each
+ROCM_MAJOR=$(echo "$ROCM_VERSION_MAJOR_MINOR" | cut -d'.' -f1)
+ROCM_MINOR=$(echo "$ROCM_VERSION_MAJOR_MINOR" | cut -d'.' -f2)
+ROCM_LIBPATCH_VERSION=$(printf "%02d%02d" "$ROCM_MAJOR" "$ROCM_MINOR")
+
+export ROCM_LIBPATCH_VERSION
+print_success "Set ROCM_LIBPATCH_VERSION=$ROCM_LIBPATCH_VERSION (from $ROCM_VERSION_MAJOR_MINOR)"
+
+# Set CPACK package release based on branch type
+# - Non-release branches (not starting with "rel"): use branch.commit format
+# - Release branches (starting with "rel"): use GitHub run number
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+GIT_COMMIT_SHORT=$(git rev-parse --short HEAD 2>/dev/null || echo "0000000")
+
+if [[ "$GIT_BRANCH" =~ ^rel ]]; then
+    # Release branch: use GitHub run number (fallback to 1 for local builds)
+    GITHUB_RUN_NUMBER="${GITHUB_RUN_NUMBER:-1}"
+    PACKAGE_RELEASE="$GITHUB_RUN_NUMBER"
+    
+    export CPACK_DEBIAN_PACKAGE_RELEASE="$PACKAGE_RELEASE"
+    export CPACK_RPM_PACKAGE_RELEASE="$PACKAGE_RELEASE"
+    
+    print_success "Set CPACK package release: $PACKAGE_RELEASE (release branch: $GIT_BRANCH, run: $GITHUB_RUN_NUMBER)"
+else
+    # Development branch: use branch name and commit
+    # Sanitize branch name: replace / and other special chars with -
+    SANITIZED_BRANCH=$(echo "$GIT_BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+    PACKAGE_RELEASE="${SANITIZED_BRANCH}.${GIT_COMMIT_SHORT}"
+    
+    export CPACK_DEBIAN_PACKAGE_RELEASE="$PACKAGE_RELEASE"
+    export CPACK_RPM_PACKAGE_RELEASE="$PACKAGE_RELEASE"
+    
+    print_success "Set CPACK package release: $PACKAGE_RELEASE (dev branch: $GIT_BRANCH, commit: $GIT_COMMIT_SHORT)"
+fi
+
 # TODO: Currently hipcc and cmake3 are only set for AlmaLinux (manylinux_2_28)
 # Ubuntu works fine without these settings. Need to verify later if these
 # should be applied universally for all OS or kept OS-specific.
@@ -344,6 +388,13 @@ echo "  ROCM_PATH=$ROCM_PATH"
 echo "  PATH includes: $ROCM_PATH/bin"
 echo "  LD_LIBRARY_PATH includes: $ROCM_PATH/lib"
 echo "  HIP_DEVICE_LIB_PATH=$HIP_DEVICE_LIB_PATH"
+echo "  ROCM_LIBPATCH_VERSION=$ROCM_LIBPATCH_VERSION"
+if [ -n "$CPACK_DEBIAN_PACKAGE_RELEASE" ]; then
+    echo "  CPACK_DEBIAN_PACKAGE_RELEASE=$CPACK_DEBIAN_PACKAGE_RELEASE"
+fi
+if [ -n "$CPACK_RPM_PACKAGE_RELEASE" ]; then
+    echo "  CPACK_RPM_PACKAGE_RELEASE=$CPACK_RPM_PACKAGE_RELEASE"
+fi
 if [ -n "$CMAKE_CXX_COMPILER" ]; then
     echo "  CMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER"
 fi
@@ -385,6 +436,8 @@ CMAKE_ARGS=(
     -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE
     -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs"
     -DRPATH_MODE=OFF
+    -DCMAKE_VERBOSE_MAKEFILE=1
+    -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
 )
 
 # Add CXX compiler if set

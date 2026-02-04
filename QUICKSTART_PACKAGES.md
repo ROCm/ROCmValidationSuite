@@ -395,11 +395,17 @@ readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
 | `ROCM_VERSION` | ROCm SDK version to download | Auto-fetched (fallback: 7.11.0a20260121) |
 | `GPU_FAMILY` | Target GPU architecture | gfx110X-all |
 | `BUILD_TYPE` | CMake build type | Release |
+| `ROCM_LIBPATCH_VERSION` | Major.minor in xxyy format (auto-extracted) | Derived from ROCM_VERSION (e.g., `7.11` → `0711`) |
+| `CPACK_DEBIAN_PACKAGE_RELEASE` | DEB package release string (auto-generated) | **Dev**: `branch.commit` (e.g., `master.a1b2c3d`). **Rel**: `GITHUB_RUN_NUMBER` (default: `1`) |
+| `CPACK_RPM_PACKAGE_RELEASE` | RPM package release string (auto-generated) | **Dev**: `branch.commit` (e.g., `master.a1b2c3d`). **Rel**: `GITHUB_RUN_NUMBER` (default: `1`) |
+| `GITHUB_RUN_NUMBER` | GitHub Actions workflow run number | `1` (for local builds) |
 
 **Note:** 
 - RVS version is read from `CMakeLists.txt` by CMake/CPack automatically.
 - ROCm version is automatically fetched from TheRock. Set `ROCM_VERSION` to override.
 - HIP device libraries (amdgcn/bitcode) are auto-located and exported.
+- `ROCM_LIBPATCH_VERSION` is automatically extracted and formatted as xxyy (e.g., `6.5` → `0605`, `10.2` → `1002`).
+- Package release strings: **Development branches** use `branch.commit`, **Release branches** (starting with "rel") use GitHub run number.
 
 ---
 
