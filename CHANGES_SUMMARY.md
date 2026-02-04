@@ -167,7 +167,7 @@ mv "rocm-validation-suite_1.3.0_amd64.deb" \
 ./build_packages_local.sh
 
 # Custom configuration
-ROCM_VERSION=6.5.0rc20250610 GPU_FAMILY=gfx110X-all ./build_packages_local.sh
+ROCM_VERSION=7.11.0a20260121 GPU_FAMILY=gfx110X-all ./build_packages_local.sh
 ```
 
 ## Installation Path Changes
@@ -256,7 +256,7 @@ This ensures packages work regardless of installation directory.
 ## Version Management
 
 - **RVS Version**: Automatically read by CMake from `CMakeLists.txt` `project(VERSION)` command
-- **ROCm SDK Version**: 6.5.0rc20250610 (configurable via environment variable)
+- **ROCm SDK Version**: 7.11.0a20260121 (default, auto-fetched if not specified, configurable via environment variable)
 - **GPU Family**: gfx110X-all (default, configurable via environment variable)
 
 ## Files Modified

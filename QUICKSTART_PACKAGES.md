@@ -136,7 +136,7 @@ If you prefer manual control:
 
 ```bash
 # 1. Download ROCm SDK
-ROCM_VERSION="6.5.0rc20250610"
+ROCM_VERSION="7.11.0a20260121"
 GPU_FAMILY="gfx110X-all"
 mkdir -p ~/rocm-sdk
 cd ~/rocm-sdk
@@ -277,7 +277,7 @@ readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
 **Solution:**
 1. Check if the URL is accessible:
    ```bash
-   wget --spider "https://therock-nightly-tarball.s3.us-east-2.amazonaws.com/therock-dist-linux-gfx110X-all-6.5.0rc20250610.tar.gz"
+   wget --spider "https://therock-nightly-tarball.s3.us-east-2.amazonaws.com/therock-dist-linux-gfx110X-all-7.11.0a20260121.tar.gz"
    ```
 
 2. Verify the ROCm version exists:
@@ -286,7 +286,7 @@ readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
 
 3. Try a different ROCm version:
    ```bash
-   export ROCM_VERSION="6.5.0rc20250115"  # Use different date
+   export ROCM_VERSION="7.12.0a20260205"  # Use a later version
    ```
 
 ### Build Fails: Missing Dependencies
@@ -404,7 +404,7 @@ readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
 - RVS version is read from `CMakeLists.txt` by CMake/CPack automatically.
 - ROCm version is automatically fetched from TheRock. Set `ROCM_VERSION` to override.
 - HIP device libraries (amdgcn/bitcode) are auto-located and exported.
-- `ROCM_LIBPATCH_VERSION` is automatically extracted and formatted as xxyy (e.g., `6.5` → `0605`, `10.2` → `1002`).
+- `ROCM_LIBPATCH_VERSION` is automatically extracted and formatted as xxyy (e.g., `7.11` → `0711`, `10.2` → `1002`).
 - Package release strings: **Development branches** use `branch.commit`, **Release branches** (starting with "rel") use GitHub run number.
 
 ---
