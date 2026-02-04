@@ -22,8 +22,9 @@ The workflow runs automatically on:
 
 When manually triggering the workflow, you can specify:
 
-1. **ROCm Version** (e.g., `6.5.0rc20250610`)
-   - Default: `6.5.0rc20250610`
+1. **ROCm Version** (e.g., `7.11.0a20260121`)
+   - Default: `7.11.0a20260121`
+   - The script can also auto-fetch the latest version from TheRock
    
 2. **GPU Family Target**:
    - `gfx94X-dcgpu` - MI300A/MI300X
@@ -44,30 +45,40 @@ GitHub Actions Workflow
 ├── Set Environment Variables (ROCM_VERSION, GPU_FAMILY, BUILD_TYPE)
 └── Execute build_packages_local.sh
     ├── 1. Detect OS and Install Dependencies
-    │   ├── Ubuntu/Debian: apt-get install build-essential, cmake, etc.
-    │   └── CentOS/RHEL: yum install gcc, gcc-c++, cmake3, etc.
-    ├── 2. Download ROCm SDK from TheRock
+    │   ├── Ubuntu: apt-get install build-essential, cmake, python3, etc.
+    │   └── AlmaLinux: yum install gcc, gcc-c++, cmake3, python3, etc.
+    │       └── Enable PowerTools/CRB for doxygen and yaml-cpp
+    ├── 2. Auto-fetch Latest ROCm or Use Specified Version
     │   └── URL: https://therock-nightly-tarball.s3.../${GPU_FAMILY}-${ROCM_VERSION}.tar.gz
     ├── 3. Extract and Setup ROCm Environment
     │   ├── export ROCM_PATH="$HOME/rocm-sdk/install"
     │   ├── export PATH="$ROCM_PATH/bin:$PATH"
     │   ├── export LD_LIBRARY_PATH="$ROCM_PATH/lib:$LD_LIBRARY_PATH"
-    │   └── export CMAKE_PREFIX_PATH="$ROCM_PATH:$CMAKE_PREFIX_PATH"
+    │   ├── export CMAKE_PREFIX_PATH="$ROCM_PATH:$CMAKE_PREFIX_PATH"
+    │   ├── export HIP_DEVICE_LIB_PATH (auto-detected amdgcn/bitcode path)
+    │   ├── export ROCM_LIBPATCH_VERSION (major.minor in xxyy format, e.g., 0711)
+    │   ├── export CPACK_DEBIAN_PACKAGE_RELEASE (dev: branch.commit, rel: run number)
+    │   ├── export CPACK_RPM_PACKAGE_RELEASE (dev: branch.commit, rel: run number)
+    │   ├── export CMAKE_CXX_COMPILER=hipcc (AlmaLinux only)
+    │   └── export CMAKE_COMMAND=cmake3 (AlmaLinux) or cmake (Ubuntu)
     ├── 4. Configure CMake with Relocatable RPATH
-    │   └── cmake -B ./build \
+    │   └── $CMAKE_COMMAND -B ./build \
     │         -DCMAKE_BUILD_TYPE=Release \
     │         -DROCM_PATH=$ROCM_PATH \
     │         -DHIP_PLATFORM=amd \
+    │         -DCMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER (if set) \
     │         -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs \
     │         -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs \
     │         -DCMAKE_SKIP_RPATH=FALSE \
-    │         -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE \
-    │         -DCMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs"
+    │         -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
+    │         -DCMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs" \
+    │         -DCMAKE_VERBOSE_MAKEFILE=1 \
+    │         -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
     ├── 5. Build RVS
     │   └── make -C ./build -j$(nproc)
     └── 6. Create Packages
         ├── Ubuntu: DEB + TGZ (via CPack)
-        └── CentOS/RHEL: RPM + TGZ (via CPack)
+        └── AlmaLinux: RPM + TGZ (via CPack)
 ```
 
 ### Key Technical Details
@@ -80,7 +91,15 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs"
 
 **Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically.
 
-**HIP Platform**: Set to `amd` via CMake parameter for AMD GPU support.
+**HIP Device Libraries**: Automatically located and exported as `HIP_DEVICE_LIB_PATH` for clang device library discovery.
+
+**Compiler Selection**: For AlmaLinux (manylinux_2_28), `CMAKE_CXX_COMPILER` is set to ROCm's `hipcc`. Ubuntu uses system default compiler.
+
+**CMake Command**: Uses `cmake3` on AlmaLinux (manylinux_2_28) and `cmake` on Ubuntu.
+
+**Verbose Build Output**: `CMAKE_VERBOSE_MAKEFILE=1` enables detailed compilation output for debugging and transparency.
+
+**Dynamic ROCm Path Discovery**: `FETCH_ROCMPATH_FROM_ROCMCORE=ON` allows RVS to automatically detect ROCm installation location at runtime from ROCm core libraries.
 
 **Single Source of Truth**: All build logic resides in `build_packages_local.sh`, which can be used for both local builds and CI/CD.
 
@@ -100,10 +119,14 @@ The workflow uses `build_packages_local.sh` as the core build engine. This scrip
 
 ### Script Features
 
-- **OS Detection**: Automatically identifies Ubuntu/Debian vs CentOS/RHEL
+- **OS Detection**: Automatically identifies Ubuntu vs AlmaLinux
 - **Dependency Management**: Installs all required build tools and libraries
-- **ROCm SDK Setup**: Downloads and configures ROCm from TheRock tarballs
+  - Enables PowerTools/CRB repository on AlmaLinux for doxygen and yaml-cpp
+- **ROCm SDK Setup**: Auto-fetches latest version or downloads specified version from TheRock tarballs
+- **HIP Device Libraries**: Auto-locates amdgcn/bitcode directory and exports HIP_DEVICE_LIB_PATH
 - **CMake Configuration**: Sets up relocatable RPATHs and all build parameters
+  - Uses cmake3 on AlmaLinux, cmake on Ubuntu
+  - Sets CMAKE_CXX_COMPILER to hipcc on AlmaLinux
 - **Building**: Compiles RVS with parallel builds
 - **Packaging**: Creates DEB, RPM, and TGZ packages using CPack
 - **Color Output**: Clear, colored progress indicators
@@ -138,6 +161,10 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `ROCM_VERSION` | Auto-fetched (fallback: `7.11.0a20260121`) | ROCm SDK version from TheRock. If not set, script fetches latest version automatically. |
 | `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
+| `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `6.5` → `0605`) - used for RVS version tagging |
+| `CPACK_DEBIAN_PACKAGE_RELEASE` | Auto-generated from git | Package release string. **Dev branches**: `branch.commit` (e.g., `master.a1b2c3d`). **Release branches** (starting with "rel"): `GITHUB_RUN_NUMBER` (fallback: `1`) |
+| `CPACK_RPM_PACKAGE_RELEASE` | Auto-generated from git | Package release string. **Dev branches**: `branch.commit` (e.g., `master.a1b2c3d`). **Release branches** (starting with "rel"): `GITHUB_RUN_NUMBER` (fallback: `1`) |
+| `GITHUB_RUN_NUMBER` | `1` (local) | GitHub Actions run number - automatically set in CI, defaults to `1` for local builds |
 
 ## Build Matrix
 
@@ -328,9 +355,11 @@ cmake -B "$BUILD_DIR" \
     -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs \
     -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs \
     -DCMAKE_SKIP_RPATH=FALSE \
-    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE \
+    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
     -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs" \
     -DRPATH_MODE=OFF \
+    -DCMAKE_VERBOSE_MAKEFILE=1 \
+    -DFETCH_ROCMPATH_FROM_ROCMCORE=ON \
     -DYOUR_CUSTOM_OPTION=ON  # Add custom options here
 ```
 
