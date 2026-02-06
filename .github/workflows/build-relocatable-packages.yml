@@ -10,6 +10,9 @@ on:
     branches:
       - master
       - main
+  schedule:
+    # Run daily at 5:00 AM PST (13:00 UTC; PST is UTC-8)
+    - cron: '0 13 * * *'
   workflow_dispatch:
     inputs:
       rocm_version:
@@ -49,6 +52,11 @@ jobs:
 
       - name: Set ROCm Version and GPU Family
         run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Scheduled run: use latest ROCm (leave ROCM_VERSION unset for auto-fetch)
+            echo "ROCM_VERSION=" >> $GITHUB_ENV
+            echo "Scheduled run: will auto-fetch latest ROCm version"
+          fi
           if [ -n "${{ github.event.inputs.rocm_version }}" ]; then
             echo "ROCM_VERSION=${{ github.event.inputs.rocm_version }}" >> $GITHUB_ENV
           fi
@@ -111,7 +119,10 @@ jobs:
 
       - name: Set ROCm Version and GPU Family
         run: |
-          if [ -n "${{ github.event.inputs.rocm_version }}" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "ROCM_VERSION=" >> $GITHUB_ENV
+            echo "Scheduled run: will auto-fetch latest ROCm version"
+          elif [ -n "${{ github.event.inputs.rocm_version }}" ]; then
             echo "ROCM_VERSION=${{ github.event.inputs.rocm_version }}" >> $GITHUB_ENV
           else
             echo "ROCM_VERSION=${{ env.ROCM_VERSION }}" >> $GITHUB_ENV

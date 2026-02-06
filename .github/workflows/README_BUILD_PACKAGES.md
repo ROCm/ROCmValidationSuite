@@ -16,6 +16,7 @@ All packages are built with relocatable RPATH settings, meaning they can be inst
 The workflow runs automatically on:
 - Push to `master`, `main`, or `release/**` branches
 - Pull requests to `master` or `main` branches
+- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); uses **latest ROCm version** (auto-fetched from TheRock)
 - Manual trigger via GitHub Actions UI (workflow_dispatch)
 
 ### Manual Trigger Parameters
