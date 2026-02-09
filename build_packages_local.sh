@@ -61,33 +61,6 @@ fetch_latest_rocm_version() {
     return 0
 }
 
-# Determine ROCm version: use environment variable or fetch latest
-if [ -n "$ROCM_VERSION" ]; then
-    print_info "Using specified ROCm version: $ROCM_VERSION"
-else
-    print_info "No ROCm version specified, fetching latest..."
-    fetch_latest_rocm_version "$GPU_FAMILY"
-    
-    # Validate that ROCM_VERSION was properly set
-    if [ -z "$ROCM_VERSION" ]; then
-        print_error "Failed to determine ROCm version"
-        exit 1
-    fi
-fi
-
-# Print configuration
-echo "================================================================================"
-echo "  ROCm Validation Suite - Local Package Build Script"
-echo "================================================================================"
-print_info "ROCm Version: $ROCM_VERSION"
-print_info "GPU Family: $GPU_FAMILY"
-print_info "Build Type: $BUILD_TYPE"
-print_info "Build Directory: $BUILD_DIR"
-print_info "ROCm Install: $ROCM_INSTALL_DIR"
-print_info "RVS Version: Will be read from CMakeLists.txt by CMake/CPack"
-echo "================================================================================"
-echo ""
-
 # Function to check and install dependencies
 check_and_install_dependencies() {
     print_info "Checking for required build dependencies..."
@@ -248,8 +221,35 @@ check_and_install_dependencies() {
     echo ""
 }
 
-# Check and install dependencies
+# Check and install dependencies (installs wget, etc. - required before fetch_latest_rocm_version)
 check_and_install_dependencies
+
+# Determine ROCm version: use environment variable or fetch latest (wget is now available)
+if [ -n "$ROCM_VERSION" ]; then
+    print_info "Using specified ROCm version: $ROCM_VERSION"
+else
+    print_info "No ROCm version specified, fetching latest..."
+    fetch_latest_rocm_version "$GPU_FAMILY"
+    
+    # Validate that ROCM_VERSION was properly set
+    if [ -z "$ROCM_VERSION" ]; then
+        print_error "Failed to determine ROCm version"
+        exit 1
+    fi
+fi
+
+# Print configuration
+echo "================================================================================"
+echo "  ROCm Validation Suite - Local Package Build Script"
+echo "================================================================================"
+print_info "ROCm Version: $ROCM_VERSION"
+print_info "GPU Family: $GPU_FAMILY"
+print_info "Build Type: $BUILD_TYPE"
+print_info "Build Directory: $BUILD_DIR"
+print_info "ROCm Install: $ROCM_INSTALL_DIR"
+print_info "RVS Version: Will be read from CMakeLists.txt by CMake/CPack"
+echo "================================================================================"
+echo ""
 
 # Step 1: Download ROCm SDK
 print_info "Step 1: Downloading ROCm SDK tarball..."
