@@ -121,15 +121,11 @@ set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 set(RVS_TARGET "testif_no_if_methods")
 add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if_methods.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
-        SUFFIX .so.${LIB_VERSION_STRING}
+        VERSION ${LIB_VERSION_STRING}
+        SOVERSION ${VERSION_MAJOR}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
 add_dependencies(${RVS_TARGET} rvslib)
-
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${VERSION_MAJOR} lib${RVS_TARGET}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
 
 if (RVS_BUILD_TESTS)
   add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
@@ -142,15 +138,11 @@ endif()
 set(RVS_TARGET "testif_no_if0")
 add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if0.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
-        SUFFIX .so.${LIB_VERSION_STRING}
+        VERSION ${LIB_VERSION_STRING}
+        SOVERSION ${VERSION_MAJOR}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
 add_dependencies(${RVS_TARGET} rvslib)
-
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${VERSION_MAJOR} lib${RVS_TARGET}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
 
 if (RVS_BUILD_TESTS)
   add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
@@ -163,15 +155,11 @@ endif()
 set(RVS_TARGET "testif_no_if0_methods")
 add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if0_methods.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
-        SUFFIX .so.${LIB_VERSION_STRING}
+        VERSION ${LIB_VERSION_STRING}
+        SOVERSION ${VERSION_MAJOR}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
 add_dependencies(${RVS_TARGET} rvslib)
-
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${VERSION_MAJOR} lib${RVS_TARGET}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
 
 if (RVS_BUILD_TESTS)
   add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
@@ -184,15 +172,11 @@ endif()
 set(RVS_TARGET "testif_no_if1")
 add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if1.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
-        SUFFIX .so.${LIB_VERSION_STRING}
+        VERSION ${LIB_VERSION_STRING}
+        SOVERSION ${VERSION_MAJOR}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
 add_dependencies(${RVS_TARGET} rvslib)
-
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${VERSION_MAJOR} lib${RVS_TARGET}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
 
 if (RVS_BUILD_TESTS)
   add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
@@ -205,15 +189,11 @@ endif()
 set(RVS_TARGET "testif_no_if1_methods")
 add_library( ${RVS_TARGET} SHARED src/rvs_module_no_if1_methods.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
-        SUFFIX .so.${LIB_VERSION_STRING}
+        VERSION ${LIB_VERSION_STRING}
+        SOVERSION ${VERSION_MAJOR}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
 add_dependencies(${RVS_TARGET} rvslib)
-
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${VERSION_MAJOR} lib${RVS_TARGET}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
 
 if (RVS_BUILD_TESTS)
   add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
@@ -226,15 +206,11 @@ endif()
 set(RVS_TARGET "testif_fail_init")
 add_library( ${RVS_TARGET} SHARED src/rvs_module_fail_init.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
-        SUFFIX .so.${LIB_VERSION_STRING}
+        VERSION ${LIB_VERSION_STRING}
+        SOVERSION ${VERSION_MAJOR}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
 add_dependencies(${RVS_TARGET} rvslib)
-
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${VERSION_MAJOR} lib${RVS_TARGET}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
 
 if (RVS_BUILD_TESTS)
   add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
@@ -247,15 +223,11 @@ endif()
 set(RVS_TARGET "testif_fail_create_action")
 add_library( ${RVS_TARGET} SHARED src/rvs_module_fail_create_action.cpp)
 set_target_properties(${RVS_TARGET} PROPERTIES
-        SUFFIX .so.${LIB_VERSION_STRING}
+        VERSION ${LIB_VERSION_STRING}
+        SOVERSION ${VERSION_MAJOR}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${RVS_TARGET} rvslib ${PROJECT_LINK_LIBS} )
 add_dependencies(${RVS_TARGET} rvslib)
-
-add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${LIB_VERSION_STRING} lib${RVS_TARGET}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-COMMAND ln -fs ./lib${RVS_TARGET}.so.${VERSION_MAJOR} lib${RVS_TARGET}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
 
 if (RVS_BUILD_TESTS)
   add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
