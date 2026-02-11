@@ -336,21 +336,17 @@ print_success "Set ROCM_LIBPATCH_VERSION=$ROCM_LIBPATCH_VERSION (from $ROCM_VERS
 # Set CPACK package release based on branch type
 # - Non-release branches (not starting with "rel"): use branch.commit format
 # - Release branches (starting with "rel"): use GitHub run number
-# Branch: git branch --show-current gives a single branch name; empty in detached HEAD (e.g. CI) -> use GITHUB_REF_NAME
-GIT_BRANCH=$(git branch --show-current 2>/dev/null)
-if [ -z "$GIT_BRANCH" ] && [ -n "${GITHUB_REF_NAME:-}" ]; then
-    GIT_BRANCH="$GITHUB_REF_NAME"
+# Prefer GitHub Actions env vars (checkout is detached HEAD so git rev-parse --abbrev-ref returns "HEAD")
+# GITHUB_HEAD_REF = source branch (set for pull_request; empty for push/schedule)
+if [ -n "${GITHUB_HEAD_REF:-}" ]; then
+    GIT_BRANCH="$GITHUB_HEAD_REF"
+else
+    GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 fi
-if [ -z "$GIT_BRANCH" ]; then
-    GIT_BRANCH="unknown"
-fi
-# Commit: short hash (git works in detached HEAD; GITHUB_SHA fallback for CI)
-GIT_COMMIT_SHORT=$(git rev-parse --short HEAD 2>/dev/null)
-if [ -z "$GIT_COMMIT_SHORT" ] && [ -n "${GITHUB_SHA:-}" ]; then
+if [ -n "${GITHUB_SHA:-}" ]; then
     GIT_COMMIT_SHORT="${GITHUB_SHA:0:7}"
-fi
-if [ -z "$GIT_COMMIT_SHORT" ]; then
-    GIT_COMMIT_SHORT="0000000"
+else
+    GIT_COMMIT_SHORT=$(git rev-parse --short HEAD 2>/dev/null || echo "0000000")
 fi
 
 if [[ "$GIT_BRANCH" =~ ^rel ]]; then
