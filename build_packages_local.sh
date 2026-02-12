@@ -473,38 +473,11 @@ echo ""
 # Step 5: Create packages
 print_info "Step 5: Creating packages..."
 
-# Detect OS type
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    OS_NAME=$ID
-    OS_VERSION=$VERSION_ID
-else
-    OS_NAME="unknown"
-    OS_VERSION="unknown"
-fi
-
-print_info "Detected OS: $OS_NAME $OS_VERSION"
-
-# Create TGZ package
-print_info "Creating TGZ package..."
-cd "$BUILD_DIR"
-cpack -G TGZ
-
-if [ $? -eq 0 ]; then
-    TGZ_FILE=$(ls rocm-validation-suite*.tar.gz 2>/dev/null | head -1)
-    if [ -n "$TGZ_FILE" ]; then
-        print_success "Created TGZ package: $TGZ_FILE"
-        TGZ_SIZE=$(du -h "$TGZ_FILE" | cut -f1)
-        print_info "Package size: $TGZ_SIZE"
-    fi
-else
-    print_error "TGZ package creation failed"
-fi
-
 # Create DEB package (Ubuntu/Debian)
 if command -v dpkg >/dev/null 2>&1; then
     print_info "Creating DEB package..."
-    cpack -G DEB
+    cd "$BUILD_DIR"
+    cpack -G DEB --verbose
     
     if [ $? -eq 0 ]; then
         DEB_FILE=$(ls rocm-validation-suite*.deb 2>/dev/null | head -1)
@@ -520,12 +493,15 @@ if command -v dpkg >/dev/null 2>&1; then
     else
         print_warning "DEB package creation failed (might be expected on non-Debian systems)"
     fi
+    cd - > /dev/null
 fi
 
 # Create RPM package (CentOS/RHEL/SLES)
 if command -v rpm >/dev/null 2>&1; then
     print_info "Creating RPM package..."
-    cpack -G RPM
+    cd "$BUILD_DIR"
+    cpack -G RPM --verbose
+
     
     if [ $? -eq 0 ]; then
         RPM_FILE=$(ls rocm-validation-suite*.rpm 2>/dev/null | head -1)
@@ -541,6 +517,25 @@ if command -v rpm >/dev/null 2>&1; then
     else
         print_warning "RPM package creation failed (might be expected on non-RPM systems)"
     fi
+    cd - > /dev/null
+fi
+
+# Create TGZ package
+print_info "Creating TGZ package..."
+CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON -DCPACK_PACKAGING_INSTALL_PREFIX="")
+$CMAKE_COMMAND "${CMAKE_ARGS[@]}"
+cd "$BUILD_DIR"
+cpack -G TGZ --verbose
+
+if [ $? -eq 0 ]; then
+    TGZ_FILE=$(ls rocm-validation-suite*.tar.gz 2>/dev/null | head -1)
+    if [ -n "$TGZ_FILE" ]; then
+        print_success "Created TGZ package: $TGZ_FILE"
+        TGZ_SIZE=$(du -h "$TGZ_FILE" | cut -f1)
+        print_info "Package size: $TGZ_SIZE"
+    fi
+else
+    print_error "TGZ package creation failed"
 fi
 
 cd - > /dev/null
@@ -552,8 +547,13 @@ print_success "Package build completed successfully!"
 echo "================================================================================"
 print_info "Generated packages are in: $BUILD_DIR"
 echo ""
-ls -lh "$BUILD_DIR"/rocm-validation-suite*{.deb,.rpm,.tar.gz} 2>/dev/null || \
+# List only package types that were actually generated (DEB on Ubuntu, RPM on CentOS/RHEL, TGZ on all)
+PKGS=$(find "$BUILD_DIR" -maxdepth 1 -name 'rocm-validation-suite*' \( -name '*.deb' -o -name '*.rpm' -o -name '*.tar.gz' \) 2>/dev/null)
+if [ -n "$PKGS" ]; then
+    echo "$PKGS" | xargs ls -lh
+else
     print_warning "No packages found in build directory"
+fi
 echo ""
 
 # Installation instructions
