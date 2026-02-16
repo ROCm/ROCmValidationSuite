@@ -29,7 +29,7 @@ if not os.path.exists(conf_location):
 
 counter = 0
 total_iterations = (len(gpu_ids) + 1) * len(log_interval) * len(duration) * len(test_bandwidth) * len(bidirectional) * len(parralel) * len(device_id)
-print "Total number of combinations (including invalid) is " + str(total_iterations)
+print("Total number of combinations (including invalid) is " + str(total_iterations))
 
 gpu_ids_size = len(gpu_ids)
 
@@ -49,7 +49,7 @@ for test_bandwidth_f in test_bandwidth:
                             
                             # for each combination create the conf file
                             filename = conf_location + module_name + str(counter) + ".conf"
-                            print 'Iteration is %d' % (counter) + ", working on conf file " + filename
+                            print('Iteration is %d' % (counter) + ", working on conf file " + filename)
                             f = open(filename, "w")
                             counter = counter + 1
                             
