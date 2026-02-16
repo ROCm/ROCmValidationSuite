@@ -61,7 +61,7 @@ if not debug_level in ['0', '1', '2', '3', '4', '5']:
 # ./run_single_test /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pbqt0.conf 3 tmp_output_file.txt true tmp_console_file.txt
 
 # get current location
-curr_location = subprocess.check_output(["pwd", ""])
+curr_location = subprocess.check_output(["pwd"])
 curr_location_size = len(curr_location)
 curr_location = curr_location[0:curr_location_size-1]
 print curr_location
