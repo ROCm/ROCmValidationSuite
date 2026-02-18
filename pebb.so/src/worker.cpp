@@ -193,14 +193,27 @@ int pebbworker::do_transfer() {
 
     transfers[0].numBytes = block_size[0];
 
+//    printf ("src %d dst %d\n", src_node, dst_node);
+    uint16_t _src_node;
+    uint16_t _dst_node;
+
+    if (!prop_h2d && prop_d2h) {
+      _src_node = dst_node;
+      _dst_node = src_node;
+
+    } else {
+      _src_node = src_node;
+      _dst_node = dst_node;
+    }
+
     transfers[0].srcs.push_back({src_mem,
-        src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
+        src_mem == TransferBench::MEM_GPU ? _src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _src_node});
     transfers[0].dsts.push_back({dst_mem,
-        dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
+        dst_mem == TransferBench::MEM_GPU ? _dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _dst_node});
 
     // Note : Local read as default
     transfers[0].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
-      src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node};
+      src_mem == TransferBench::MEM_GPU ? _src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _src_node};
 
     transfers[0].exeSubIndex = -1;
 
@@ -211,13 +224,13 @@ int pebbworker::do_transfer() {
       transfers[1].numBytes = block_size[0];
 
       transfers[1].srcs.push_back({dst_mem,
-          dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
+          dst_mem == TransferBench::MEM_GPU ? _dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _dst_node});
       transfers[1].dsts.push_back({src_mem,
-          src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
+          src_mem == TransferBench::MEM_GPU ? _src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _src_node});
 
       // Note : Local read as default
       transfers[1].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
-        dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node};
+        dst_mem == TransferBench::MEM_GPU ? _dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _dst_node};
 
       transfers[1].exeSubIndex = -1;
 
@@ -239,7 +252,7 @@ int pebbworker::do_transfer() {
       std::lock_guard<std::mutex> lk(cntmutex);
       const auto& res = results.tfrResults[0];
 
-      printf("results.numTimedIterations -> %d\n", results.numTimedIterations);
+//      printf("results.numTimedIterations -> %d\n", results.numTimedIterations);
 
       running_size += results.numTimedIterations * res.numBytes;
       running_duration += (res.avgDurationMsec/1000) * results.numTimedIterations;
@@ -251,10 +264,13 @@ int pebbworker::do_transfer() {
       running_duration += (res.avgDurationMsec/1000) * results.numTimedIterations;
 #endif
 
+#if 0
       for (int dir = 0; dir <= bidirect; dir++) {
         double const avgBw   = results.tfrResults[dir].avgBandwidthGbPerSec;
         printf("bidirect %d -> %f GBps\n", dir, avgBw);
       }
+#endif
+
     }
   }
   else {
