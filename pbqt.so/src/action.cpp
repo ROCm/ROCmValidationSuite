@@ -223,6 +223,55 @@ bool pbqt_action::get_all_pbqt_config_keys(void) {
       link_type_string = "XGMI";
   }
 
+  if (property_get(RVS_CONF_B2B_KEY, &b2b, DEFAULT_B2B)) {
+    msg = "invalid '" + std::string(RVS_CONF_B2B_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_HOT_CALLS_KEY, &hot_calls, DEFAULT_HOT_CALLS);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_HOT_CALLS_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_WARM_CALLS_KEY, &warm_calls, DEFAULT_WARM_CALLS);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_WARM_CALLS_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_TRANSFER_METHOD_KEY, &transfer_method, DEFAULT_TRANSFER_METHOD);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_TRANSFER_METHOD_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_EXECUTOR_KEY, &executor, DEFAULT_EXECUTOR);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_EXECUTOR_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_SUBEXECUTOR_KEY, &subexecutor, DEFAULT_SUBEXECUTOR);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_SUBEXECUTOR_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  if(!hot_calls) {
+    hot_calls = DEFAULT_HOT_CALLS;
+  }
+
+  if(!warm_calls) {
+    warm_calls = DEFAULT_WARM_CALLS;
+  }
+
   return res;
 }
 
@@ -452,11 +501,18 @@ int pbqt_action::create_threads() {
             }
             p->initialize(srcnode, dstnode, prop_bidirectional);
             RVSTRACE_
-              p->set_name(action_name);
+            p->set_name(action_name);
             p->set_stop_name(action_name);
             p->set_transfer_ix(transfer_ix);
             p->set_block_sizes(block_size);
             p->set_conn_type(pbconn);
+            p->set_b2b(b2b);
+            p->set_hot_calls(hot_calls);
+            p->set_warm_calls(warm_calls);
+            p->set_transfer_method(transfer_method);
+            p->set_executor(executor);
+            p->set_subexecutor(subexecutor);
+
             test_array.push_back(p);
           }else{
             // no need to run bandwidth, just log interface info
