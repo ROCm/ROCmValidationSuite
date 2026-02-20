@@ -87,6 +87,17 @@ class pbqtworker : public rvs::ThreadBase {
   const std::string& get_conn_type(){
       return conn_type;
   }
+  void set_hot_calls(uint32_t _hot_calls) { hot_calls = _hot_calls; }
+  //! Set warm calls
+  void set_warm_calls(uint32_t _warm_calls) { warm_calls = _warm_calls; }
+  //! Set b2b
+  void set_b2b(bool _b2b) { b2b = _b2b; }
+  //! Set transfer method
+  void set_transfer_method(std::string _transfer_method) { transfer_method = _transfer_method; }
+  //! Set executor
+  void set_executor(std::string _executor) { executor = _executor; }
+  //! Set subexecutor
+  void set_subexecutor(uint32_t _subexecutor) { subexecutor = _subexecutor; }
  protected:
   virtual void run(void);
 
@@ -126,6 +137,20 @@ class pbqtworker : public rvs::ThreadBase {
   uint16_t transfer_ix;
   //! total number of transfers
   uint16_t transfer_num;
+
+  //! hot calls
+  uint32_t hot_calls;
+  //! warm calls
+  uint32_t warm_calls;
+  //! 'true' if back-to-back transfers enabled
+  bool b2b;
+
+  //! transfer method - TransferBench or Native
+  std::string transfer_method;
+  //! transfer executor to use - GPU or SDMA
+  std::string executor;
+  //! No. of subexecutors
+  uint32_t subexecutor;
 
   //! list of test block sizes
   std::vector<uint32_t> block_size;

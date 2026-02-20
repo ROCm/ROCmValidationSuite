@@ -45,7 +45,6 @@ extern "C" {
 #include "include/gpu_util.h"
 #include "include/rvsloglp.h"
 #include "include/rvshsa.h"
-#include "TransferBench.hpp"
 
 using std::string;
 using std::vector;

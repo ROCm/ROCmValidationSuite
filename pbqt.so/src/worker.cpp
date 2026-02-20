@@ -45,6 +45,7 @@ extern "C" {
 #include "include/gpu_util.h"
 #include "include/rvsloglp.h"
 #include "include/rvshsa.h"
+#include "TransferBench.hpp"
 #define MODULE_NAME "PBQT"
 
 
@@ -154,39 +155,125 @@ int pbqtworker::do_transfer() {
   unsigned int endusec;
   std::string msg;
 
-  uint32_t warm_calls = 1;
-  uint32_t hot_calls = 1;
-  bool b2b = false;
-
   msg = "[" + action_name + "] pbqt transfer " + std::to_string(src_node) + " "
-      + std::to_string(dst_node) + " ";
+    + std::to_string(dst_node) + " ";
 
   rvs::lp::get_ticks(&startsec, &startusec);
 
-  if (block_size.size() == 0) {
-    block_size = pHsa->size_list;
-  }
+  if (transfer_method == "transferbench") {
 
-  for (size_t i = 0; brun && i < block_size.size(); i++) {
-    current_size = block_size[i];
-    sts = pHsa->SendTraffic(src_node, dst_node, current_size,
-                            bidirect, b2b, warm_calls, hot_calls, &duration);
+    // Configure TransferBench parameters
+    TransferBench::ConfigOptions cfg;
 
-    if (sts) {
-      msg = "internal error, src: " + std::to_string(src_node)
-                + "   dst: " + std::to_string(dst_node)
-                + "   current size: " + std::to_string(current_size);
-      rvs::lp::Err(msg, MODULE_NAME, action_name);
-      return sts;
+    cfg.general.numIterations = hot_calls;
+    cfg.general.numWarmups = warm_calls;
+
+    TransferBench::MemType src_mem = TransferBench::MEM_GPU;
+    TransferBench::MemType dst_mem = TransferBench::MEM_GPU;
+
+    std::vector<TransferBench::Transfer> transfers(bidirect? 2 : 1);
+
+    transfers[0].numBytes = block_size[0];
+
+//    printf ("src %d dst %d\n", src_node, dst_node);
+
+    transfers[0].srcs.push_back({src_mem,
+        src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
+    transfers[0].dsts.push_back({dst_mem,
+        dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
+
+    // Note: Local read as default
+    transfers[0].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
+      src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node};
+
+    transfers[0].exeSubIndex = -1;
+
+    // Note: Subexecutors for DMA transfer set by default as 1
+    transfers[0].numSubExecs = (executor == "gpu" ? subexecutor:1);
+
+//    printf("transfers[0].numSubExecs -> %d\n", transfers[0].numSubExecs);
+//    printf("TransferBench::GetNumSubExecutors() -> %d\n",  TransferBench::GetNumSubExecutors({TransferBench::EXE_GPU_GFX, 0}));
+
+    if (bidirect) {
+      transfers[1].numBytes = block_size[0];
+
+      transfers[1].srcs.push_back({dst_mem,
+          dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
+      transfers[1].dsts.push_back({src_mem,
+          src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
+
+      // Note : Local read as default
+      transfers[1].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
+        dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node};
+
+      transfers[1].exeSubIndex = -1;
+
+      // TODO : Define properly the 4 hardcoded !!!
+      transfers[1].numSubExecs = (executor == "gpu" ? subexecutor:4);
     }
 
+    TransferBench::TestResults results;
+
+    // Initiate TransferBench transfer
+    if (!TransferBench::RunTransfers(cfg, transfers, results)) {
+      for (auto const& err : results.errResults)
+        printf("%s\n", err.errMsg.c_str());
+      exit(1);
+    }
+
+    // Update running totals
     {
       std::lock_guard<std::mutex> lk(cntmutex);
-      running_size += current_size;
-      running_duration += duration;
+      const auto& res = results.tfrResults[0];
+
+//      printf("results.numTimedIterations -> %d\n", results.numTimedIterations);
+
+      running_size += results.numTimedIterations * res.numBytes;
+      running_duration += (res.avgDurationMsec/1000) * results.numTimedIterations;
+
+#if 0
+      res = results.tfrResults[0];
+
+      running_size += results.numTimedIterations * results.totalBytesTransferred;
+      running_duration += (res.avgDurationMsec/1000) * results.numTimedIterations;
+#endif
+
+#if 0
+      for (int dir = 0; dir <= bidirect; dir++) {
+        double const avgBw   = results.tfrResults[dir].avgBandwidthGbPerSec;
+        printf("bidirect %d -> %f GBps\n", dir, avgBw);
+      }
+#endif
+
+    }
+
+  }
+  else {
+
+    if (block_size.size() == 0) {
+      block_size = pHsa->size_list;
+    }
+
+    for (size_t i = 0; brun && i < block_size.size(); i++) {
+      current_size = block_size[i];
+      sts = pHsa->SendTraffic(src_node, dst_node, current_size,
+          bidirect, b2b, warm_calls, hot_calls, &duration);
+
+      if (sts) {
+        msg = "internal error, src: " + std::to_string(src_node)
+          + "   dst: " + std::to_string(dst_node)
+          + "   current size: " + std::to_string(current_size);
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+        return sts;
+      }
+
+      {
+        std::lock_guard<std::mutex> lk(cntmutex);
+        running_size += current_size;
+        running_duration += duration;
+      }
     }
   }
-
   rvs::lp::get_ticks(&endsec, &endusec);
   rvs::lp::Log(msg + "start", rvs::logdebug, startsec, startusec);
   rvs::lp::Log(msg + "finish", rvs::logdebug, endsec, endusec);

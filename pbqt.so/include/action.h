@@ -99,6 +99,20 @@ class pbqt_action : public rvs::actionbase {
   int link_type;
 
   std::string link_type_string;
+  //! Number of warm calls (transfer iterations) before bandwidth calculation (hot calls)
+  //! to ignore few intial transfers for the bandwidth to settle
+  uint32_t warm_calls;
+  //! Number of hot calls (transfer iterations) for bandwidth calculation after warm calls
+  uint32_t hot_calls;
+  //! 'true' if back-to-back transfers enabled
+  bool b2b;
+
+  //! transfer method - TransferBench or Native
+  std::string transfer_method;
+  //! transfer executor to use - GPU or SDMA
+  std::string executor;
+  //! No. of subexecutors
+  uint32_t subexecutor;
 
  protected:
   int is_peer(uint16_t Src, uint16_t Dst);
