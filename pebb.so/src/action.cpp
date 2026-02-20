@@ -312,7 +312,7 @@ int pebb_action::create_threads() {
               p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
             }
             RVSTRACE_
-              p->set_name(action_name);
+            p->set_name(action_name);
             p->set_stop_name(action_name);
             p->set_transfer_ix(transfer_ix);
             p->set_block_sizes(block_size);
@@ -323,6 +323,7 @@ int pebb_action::create_threads() {
             p->set_transfer_method(transfer_method);
             p->set_executor(executor);
             p->set_subexecutor(subexecutor);
+
             test_array.push_back(p);
           }
         }

@@ -193,7 +193,7 @@ int pebbworker::do_transfer() {
 
     transfers[0].numBytes = block_size[0];
 
-//    printf ("src %d dst %d\n", src_node, dst_node);
+    printf ("src %d dst %d\n", src_node, dst_node);
     uint16_t _src_node;
     uint16_t _dst_node;
 
@@ -218,7 +218,9 @@ int pebbworker::do_transfer() {
     transfers[0].exeSubIndex = -1;
 
     // TODO : Define properly the 4 hardcoded !!!
-    transfers[0].numSubExecs = (executor == "gpu" ? TransferBench::GetNumSubExecutors({TransferBench::EXE_GPU_GFX, 0}):4);
+    transfers[0].numSubExecs = (executor == "gpu" ? subexecutor:4);
+
+    printf ("subexecutor %d\n", subexecutor);
 
     if (bidirect) {
       transfers[1].numBytes = block_size[0];
