@@ -193,7 +193,7 @@ int pebbworker::do_transfer() {
 
     transfers[0].numBytes = block_size[0];
 
-    printf ("src %d dst %d\n", src_node, dst_node);
+//    printf ("src %d dst %d\n", src_node, dst_node);
     uint16_t _src_node;
     uint16_t _dst_node;
 
