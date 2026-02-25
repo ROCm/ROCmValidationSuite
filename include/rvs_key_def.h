@@ -58,7 +58,7 @@
 #define DEFAULT_B2B          false
 #define DEFAULT_TRANSFER_METHOD "native"
 #define DEFAULT_EXECUTOR     "gpu"
-#define DEFAULT_SUBEXECUTOR  (2u)
+#define DEFAULT_SUBEXECUTOR  (1u)
 
 #define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
 #define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\

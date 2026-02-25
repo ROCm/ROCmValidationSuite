@@ -188,8 +188,7 @@ int pbqtworker::do_transfer() {
 
     transfers[0].exeSubIndex = -1;
 
-    // Note: Subexecutors for DMA transfer set by default as 1
-    transfers[0].numSubExecs = (executor == "gpu" ? subexecutor:1);
+    transfers[0].numSubExecs = subexecutor;
 
 //    printf("transfers[0].numSubExecs -> %d\n", transfers[0].numSubExecs);
 //    printf("TransferBench::GetNumSubExecutors() -> %d\n",  TransferBench::GetNumSubExecutors({TransferBench::EXE_GPU_GFX, 0}));
@@ -208,8 +207,7 @@ int pbqtworker::do_transfer() {
 
       transfers[1].exeSubIndex = -1;
 
-      // TODO : Define properly the 4 hardcoded !!!
-      transfers[1].numSubExecs = (executor == "gpu" ? subexecutor:4);
+      transfers[1].numSubExecs = subexecutor;
     }
 
     TransferBench::TestResults results;
