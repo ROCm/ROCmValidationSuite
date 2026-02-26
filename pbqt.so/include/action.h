@@ -109,10 +109,23 @@ class pbqt_action : public rvs::actionbase {
 
   //! transfer method - TransferBench or Native
   std::string transfer_method;
+  //! transferbench test type - p2p or alltoall
+  std::string transferbench_test;
   //! transfer executor to use - GPU or SDMA
   std::string executor;
   //! No. of subexecutors
   uint32_t subexecutor;
+
+  //! alltoall mode: 0=copy, 1=read-only, 2=write-only
+  uint32_t a2a_mode;
+  //! alltoall direct-only: 1=only direct XGMI links, 0=full all-to-all
+  uint32_t a2a_direct;
+  //! alltoall local: 1=include self-transfers, 0=exclude
+  uint32_t a2a_local;
+  //! number of GPUs for alltoall (0=all detected)
+  uint32_t a2a_num_gpus;
+  //! remote read: 1=use DST as executor, 0=use SRC
+  uint32_t use_remote_read;
 
  protected:
   int is_peer(uint16_t Src, uint16_t Dst);

@@ -250,6 +250,13 @@ bool pbqt_action::get_all_pbqt_config_keys(void) {
     res = false;
   }
 
+  error = property_get<std::string>(RVS_CONF_TRANSFERBENCH_TEST_KEY, &transferbench_test, DEFAULT_TRANSFERBENCH_TEST);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_TRANSFERBENCH_TEST_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
   error = property_get<std::string>(RVS_CONF_EXECUTOR_KEY, &executor, DEFAULT_EXECUTOR);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_EXECUTOR_KEY) + "' key value";
@@ -260,6 +267,41 @@ bool pbqt_action::get_all_pbqt_config_keys(void) {
   error = property_get_int<uint32_t>(RVS_CONF_SUBEXECUTOR_KEY, &subexecutor, DEFAULT_SUBEXECUTOR);
   if (error == 1) {
     msg = "invalid '" + std::string(RVS_CONF_SUBEXECUTOR_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_A2A_MODE_KEY, &a2a_mode, DEFAULT_A2A_MODE);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_A2A_MODE_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_A2A_DIRECT_KEY, &a2a_direct, DEFAULT_A2A_DIRECT);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_A2A_DIRECT_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_A2A_LOCAL_KEY, &a2a_local, DEFAULT_A2A_LOCAL);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_A2A_LOCAL_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_A2A_NUM_GPUS_KEY, &a2a_num_gpus, DEFAULT_A2A_NUM_GPUS);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_A2A_NUM_GPUS_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_USE_REMOTE_READ_KEY, &use_remote_read, DEFAULT_USE_REMOTE_READ);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_USE_REMOTE_READ_KEY) + "' key";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     res = false;
   }
@@ -510,8 +552,14 @@ int pbqt_action::create_threads() {
             p->set_hot_calls(hot_calls);
             p->set_warm_calls(warm_calls);
             p->set_transfer_method(transfer_method);
+            p->set_transferbench_test(transferbench_test);
             p->set_executor(executor);
             p->set_subexecutor(subexecutor);
+            p->set_a2a_mode(a2a_mode);
+            p->set_a2a_direct(a2a_direct);
+            p->set_a2a_local(a2a_local);
+            p->set_a2a_num_gpus(a2a_num_gpus);
+            p->set_use_remote_read(use_remote_read);
 
             test_array.push_back(p);
           }else{

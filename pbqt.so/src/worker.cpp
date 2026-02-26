@@ -53,6 +53,11 @@ pbqtworker::pbqtworker() {
   // set to 'true' so that do_transfer() will also work
   // when parallel: false
   brun = true;
+  a2a_mode = 0;
+  a2a_direct = 1;
+  a2a_local = 0;
+  a2a_num_gpus = 0;
+  use_remote_read = 0;
 }
 pbqtworker::~pbqtworker() {}
 
@@ -162,87 +167,172 @@ int pbqtworker::do_transfer() {
 
   if (transfer_method == "transferbench") {
 
-    // Configure TransferBench parameters
-    TransferBench::ConfigOptions cfg;
+    if (transferbench_test == "p2p") {
 
-    cfg.general.numIterations = hot_calls;
-    cfg.general.numWarmups = warm_calls;
+      // Configure TransferBench parameters
+      TransferBench::ConfigOptions cfg;
 
-    TransferBench::MemType src_mem = TransferBench::MEM_GPU;
-    TransferBench::MemType dst_mem = TransferBench::MEM_GPU;
+      cfg.general.numIterations = hot_calls;
+      cfg.general.numWarmups = warm_calls;
 
-    std::vector<TransferBench::Transfer> transfers(bidirect? 2 : 1);
+      TransferBench::MemType src_mem = TransferBench::MEM_GPU;
+      TransferBench::MemType dst_mem = TransferBench::MEM_GPU;
 
-    transfers[0].numBytes = block_size[0];
+      std::vector<TransferBench::Transfer> transfers(bidirect? 2 : 1);
 
-//    printf ("src %d dst %d\n", src_node, dst_node);
+      transfers[0].numBytes = block_size[0];
 
-    transfers[0].srcs.push_back({src_mem,
-        src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
-    transfers[0].dsts.push_back({dst_mem,
-        dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
-
-    // Note: Local read as default
-    transfers[0].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
-      src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node};
-
-    transfers[0].exeSubIndex = -1;
-
-    transfers[0].numSubExecs = subexecutor;
-
-//    printf("transfers[0].numSubExecs -> %d\n", transfers[0].numSubExecs);
-//    printf("TransferBench::GetNumSubExecutors() -> %d\n",  TransferBench::GetNumSubExecutors({TransferBench::EXE_GPU_GFX, 0}));
-
-    if (bidirect) {
-      transfers[1].numBytes = block_size[0];
-
-      transfers[1].srcs.push_back({dst_mem,
-          dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
-      transfers[1].dsts.push_back({src_mem,
+      transfers[0].srcs.push_back({src_mem,
           src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
+      transfers[0].dsts.push_back({dst_mem,
+          dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
 
-      // Note : Local read as default
-      transfers[1].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
-        dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node};
+      transfers[0].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
+        src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node};
 
-      transfers[1].exeSubIndex = -1;
+      transfers[0].exeSubIndex = -1;
 
-      transfers[1].numSubExecs = subexecutor;
-    }
+      transfers[0].numSubExecs = subexecutor;
 
-    TransferBench::TestResults results;
+      if (bidirect) {
+        transfers[1].numBytes = block_size[0];
 
-    // Initiate TransferBench transfer
-    if (!TransferBench::RunTransfers(cfg, transfers, results)) {
-      for (auto const& err : results.errResults)
-        printf("%s\n", err.errMsg.c_str());
-      exit(1);
-    }
+        transfers[1].srcs.push_back({dst_mem,
+            dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
+        transfers[1].dsts.push_back({src_mem,
+            src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
 
-    // Update running totals
-    {
-      std::lock_guard<std::mutex> lk(cntmutex);
-      const auto& res = results.tfrResults[0];
+        transfers[1].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
+          dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node};
 
-//      printf("results.numTimedIterations -> %d\n", results.numTimedIterations);
+        transfers[1].exeSubIndex = -1;
 
-      running_size += results.numTimedIterations * res.numBytes;
-      running_duration += (res.avgDurationMsec/1000) * results.numTimedIterations;
-
-#if 0
-      res = results.tfrResults[0];
-
-      running_size += results.numTimedIterations * results.totalBytesTransferred;
-      running_duration += (res.avgDurationMsec/1000) * results.numTimedIterations;
-#endif
-
-#if 0
-      for (int dir = 0; dir <= bidirect; dir++) {
-        double const avgBw   = results.tfrResults[dir].avgBandwidthGbPerSec;
-        printf("bidirect %d -> %f GBps\n", dir, avgBw);
+        transfers[1].numSubExecs = subexecutor;
       }
-#endif
 
+      TransferBench::TestResults results;
+
+      if (!TransferBench::RunTransfers(cfg, transfers, results)) {
+        for (auto const& err : results.errResults)
+          printf("%s\n", err.errMsg.c_str());
+        exit(1);
+      }
+
+      {
+        std::lock_guard<std::mutex> lk(cntmutex);
+
+        for (size_t t = 0; t < results.tfrResults.size(); t++) {
+          const auto& res = results.tfrResults[t];
+          running_size += results.numTimedIterations * res.numBytes;
+          running_duration += (res.avgDurationMsec/1000) * results.numTimedIterations;
+        }
+      }
+
+    } else if (transferbench_test == "alltoall") {
+
+      int numDetectedGpus = TransferBench::GetNumExecutors(TransferBench::EXE_GPU_GFX);
+      int numGpus = (a2a_num_gpus > 0 && static_cast<int>(a2a_num_gpus) <= numDetectedGpus)
+                    ? static_cast<int>(a2a_num_gpus) : numDetectedGpus;
+
+      if (numGpus < 2) {
+        msg += "alltoall requires at least 2 GPUs, detected: " + std::to_string(numDetectedGpus);
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+        return -1;
+      }
+
+      int numSrcs, numDsts;
+      switch (a2a_mode) {
+        case 1:  numSrcs = 1; numDsts = 0; break;
+        case 2:  numSrcs = 0; numDsts = 1; break;
+        default: numSrcs = 1; numDsts = 1; break;
+      }
+
+      TransferBench::ExeType exeType = (executor == "dma")
+          ? TransferBench::EXE_GPU_DMA : TransferBench::EXE_GPU_GFX;
+      TransferBench::MemType memType = TransferBench::MEM_GPU;
+
+      std::vector<TransferBench::Transfer> transfers;
+
+      for (int i = 0; i < numGpus; i++) {
+        for (int j = 0; j < numGpus; j++) {
+
+          if (i == j) {
+            if (!a2a_local) continue;
+          } else if (a2a_direct) {
+#if !defined(__NVCC__)
+            uint32_t linkType, hopCount;
+            hipError_t hip_err = hipExtGetLinkTypeAndHopCount(i, j, &linkType, &hopCount);
+            if (hip_err != hipSuccess || hopCount != 1) continue;
+#endif
+          }
+
+          TransferBench::Transfer transfer;
+          transfer.numBytes = block_size.size() > 0 ? block_size[0] : 0;
+          for (int x = 0; x < numSrcs; x++)
+            transfer.srcs.push_back({memType, i});
+          if (numDsts)
+            transfer.dsts.push_back({memType, j});
+          for (int x = 1; x < numDsts; x++)
+            transfer.dsts.push_back({memType, i});
+
+          transfer.exeDevice = {exeType, (use_remote_read ? j : i)};
+          transfer.exeSubIndex = -1;
+          transfer.numSubExecs = subexecutor;
+
+          transfers.push_back(transfer);
+        }
+      }
+
+      if (transfers.empty()) {
+        msg += "alltoall: no valid GPU pairs found";
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+        return -1;
+      }
+
+      TransferBench::ConfigOptions cfg;
+      cfg.general.numIterations = hot_calls;
+      cfg.general.numWarmups = warm_calls;
+
+      TransferBench::TestResults results;
+
+      if (!TransferBench::RunTransfers(cfg, transfers, results)) {
+        for (auto const& err : results.errResults) {
+          std::string errmsg = "[" + action_name + "] alltoall error: " + err.errMsg;
+          rvs::lp::Err(errmsg, MODULE_NAME, action_name);
+        }
+        return -1;
+      }
+
+      {
+        std::lock_guard<std::mutex> lk(cntmutex);
+
+        double totalBandwidthGbps = 0.0;
+        size_t totalBytes = 0;
+        double maxDurationMsec = 0.0;
+
+        for (size_t t = 0; t < results.tfrResults.size(); t++) {
+          const auto& res = results.tfrResults[t];
+          totalBandwidthGbps += res.avgBandwidthGbPerSec;
+          totalBytes += results.numTimedIterations * res.numBytes;
+          if (res.avgDurationMsec > maxDurationMsec)
+            maxDurationMsec = res.avgDurationMsec;
+        }
+
+        running_size += totalBytes;
+        running_duration += (maxDurationMsec / 1000.0) * results.numTimedIterations;
+      }
+
+      std::string a2a_msg = "[" + action_name + "] alltoall "
+          + std::to_string(numGpus) + " GPUs, "
+          + std::to_string(transfers.size()) + " transfers, "
+          + "aggregate bandwidth: "
+          + std::to_string(results.avgTotalBandwidthGbPerSec) + " GB/s";
+      rvs::lp::Log(a2a_msg, rvs::loginfo);
+
+    } else {
+      msg += "unknown transferbench_test: " + transferbench_test;
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      return -1;
     }
 
   }

@@ -98,6 +98,18 @@ class pbqtworker : public rvs::ThreadBase {
   void set_executor(std::string _executor) { executor = _executor; }
   //! Set subexecutor
   void set_subexecutor(uint32_t _subexecutor) { subexecutor = _subexecutor; }
+  //! Set transferbench test type (p2p or alltoall)
+  void set_transferbench_test(std::string _test) { transferbench_test = _test; }
+  //! Set alltoall mode (0=copy, 1=read-only, 2=write-only)
+  void set_a2a_mode(uint32_t val) { a2a_mode = val; }
+  //! Set alltoall direct-only flag (1=only direct XGMI links)
+  void set_a2a_direct(uint32_t val) { a2a_direct = val; }
+  //! Set alltoall local flag (1=include self-transfers)
+  void set_a2a_local(uint32_t val) { a2a_local = val; }
+  //! Set number of GPUs for alltoall (0=all detected)
+  void set_a2a_num_gpus(uint32_t val) { a2a_num_gpus = val; }
+  //! Set remote read flag (1=use DST as executor instead of SRC)
+  void set_use_remote_read(uint32_t val) { use_remote_read = val; }
  protected:
   virtual void run(void);
 
@@ -147,6 +159,8 @@ class pbqtworker : public rvs::ThreadBase {
 
   //! transfer method - TransferBench or Native
   std::string transfer_method;
+  //! transferbench test type - p2p or alltoall
+  std::string transferbench_test;
   //! transfer executor to use - GPU or SDMA
   std::string executor;
   //! No. of subexecutors
@@ -155,6 +169,18 @@ class pbqtworker : public rvs::ThreadBase {
   //! list of test block sizes
   std::vector<uint32_t> block_size;
   std::string conn_type;
+
+  //! alltoall mode: 0=copy, 1=read-only, 2=write-only
+  uint32_t a2a_mode;
+  //! alltoall direct-only: 1=only direct XGMI links, 0=full all-to-all
+  uint32_t a2a_direct;
+  //! alltoall local: 1=include self-transfers, 0=exclude
+  uint32_t a2a_local;
+  //! number of GPUs for alltoall (0=all detected)
+  uint32_t a2a_num_gpus;
+  //! remote read: 1=use DST as executor, 0=use SRC
+  uint32_t use_remote_read;
+
   //! synchronization mutex
   std::mutex cntmutex;
 };
