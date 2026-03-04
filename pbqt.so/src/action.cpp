@@ -379,14 +379,18 @@ int pbqt_action::create_threads() {
   std::vector<uint16_t> gpu_id;
   std::vector<uint16_t> gpu_idx;
   std::vector<uint16_t> gpu_device_id;
-  uint16_t transfer_ix = 0;
   bool bmatch_found = false;
   char srcgpuid_buff[12];
   char dstgpuid_buff[12];
-  std::string pbconn;
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
+
+  std::vector<peer_pair_t> valid_pairs;
+
+  // ---------------------------------------------------------------
+  // Loop 1: Discover all valid srcnode-dstnode peer pairs
+  // ---------------------------------------------------------------
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
 
     // filter out by source device id
@@ -444,7 +448,7 @@ int pbqt_action::create_threads() {
         }
 
       RVSTRACE_
-        // signal that at lease one matching src-dst combination
+        // signal that at least one matching src-dst combination
         // has been found:
         bmatch_found = true;
 
@@ -452,7 +456,7 @@ int pbqt_action::create_threads() {
       // get NUMA nodes
       uint16_t srcnode;
       if (rvs::gpulist::gpu2node(gpu_id[i], &srcnode)) {
-        msg + "no node found for GPU ID " + std::to_string(gpu_id[i]);
+        msg = "no node found for GPU ID " + std::to_string(gpu_id[i]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
@@ -518,52 +522,16 @@ int pbqt_action::create_threads() {
         if(distance == rvs::hsa::NO_CONN) {
           continue; // no point if no connection
         }
+
+        std::string pbconn;
         if (0 != arr_linkinfo.size()) {
-          /* Log link type */
           pbconn = arr_linkinfo[0].strtype;
-          //log_json_data(std::to_string(srcnode), std::to_string(gpu_id[j]), rvs::logresults, 
-          //   pbqt_json_data_t::PBQT_LINK_TYPE, arr_linkinfo[0].strtype);
-          /* Note: Assuming link type for all hops between GPUs are the same */
         }
 
         RVSTRACE_
-          // GPUs are peers, create transaction for them
           if (prop_test_bandwidth) {
-            RVSTRACE_
-              pbqtworker* p = nullptr;
-
-            transfer_ix += 1;
-
-            p = new pbqtworker;
-            if (p == nullptr) {
-              RVSTRACE_
-                msg = "internal error";
-              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-              return -1;
-            }
-            p->initialize(srcnode, dstnode, prop_bidirectional);
-            RVSTRACE_
-            p->set_name(action_name);
-            p->set_stop_name(action_name);
-            p->set_transfer_ix(transfer_ix);
-            p->set_block_sizes(block_size);
-            p->set_conn_type(pbconn);
-            p->set_b2b(b2b);
-            p->set_hot_calls(hot_calls);
-            p->set_warm_calls(warm_calls);
-            p->set_transfer_method(transfer_method);
-            p->set_transferbench_test(transferbench_test);
-            p->set_executor(executor);
-            p->set_subexecutor(subexecutor);
-            p->set_a2a_mode(a2a_mode);
-            p->set_a2a_direct(a2a_direct);
-            p->set_a2a_local(a2a_local);
-            p->set_a2a_num_gpus(a2a_num_gpus);
-            p->set_use_remote_read(use_remote_read);
-
-            test_array.push_back(p);
-          }else{
-            // no need to run bandwidth, just log interface info
+            valid_pairs.push_back({srcnode, dstnode, pbconn});
+          } else {
             log_json_data(std::to_string(gpu_id[srcnode]), std::to_string(gpu_id[j]), rvs::logresults,
                 pbconn, "NA" );
           }
@@ -596,8 +564,11 @@ int pbqt_action::create_threads() {
     }
   }
 
+  // ---------------------------------------------------------------
+  // Loop 2: Create pbqtworker for each valid srcnode-dstnode pair
+  // ---------------------------------------------------------------
   RVSTRACE_
-    if (prop_test_bandwidth && test_array.size() < 1) {
+    if (prop_test_bandwidth && valid_pairs.empty() ) {
       RVSTRACE_
         std::string diag;
       if (bmatch_found) {
@@ -628,6 +599,49 @@ int pbqt_action::create_threads() {
       RVSTRACE_
         return 0;
     }
+
+  uint16_t transfer_ix = 0;
+  bool alltoall_single = (transfer_method == "transferbench" &&
+                          transferbench_test == "alltoall");
+
+  for (const auto& pair : valid_pairs) {
+    RVSTRACE_
+      pbqtworker* p = nullptr;
+
+    transfer_ix += 1;
+
+    p = new pbqtworker;
+    if (p == nullptr) {
+      RVSTRACE_
+        msg = "internal error";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+    p->initialize(pair.srcnode, pair.dstnode, prop_bidirectional);
+    RVSTRACE_
+    p->set_name(action_name);
+    p->set_stop_name(action_name);
+    p->set_transfer_ix(transfer_ix);
+    p->set_block_sizes(block_size);
+    p->set_conn_type(pair.conn_type);
+    p->set_b2b(b2b);
+    p->set_hot_calls(hot_calls);
+    p->set_warm_calls(warm_calls);
+    p->set_transfer_method(transfer_method);
+    p->set_transferbench_test(transferbench_test);
+    p->set_executor(executor);
+    p->set_subexecutor(subexecutor);
+    p->set_a2a_mode(a2a_mode);
+    p->set_a2a_direct(a2a_direct);
+    p->set_a2a_local(a2a_local);
+    p->set_a2a_num_gpus(a2a_num_gpus);
+    p->set_use_remote_read(use_remote_read);
+
+    test_array.push_back(p);
+
+    if (alltoall_single)
+      break;
+  }
 
   RVSTRACE_
     for (auto it = test_array.begin(); it != test_array.end(); ++it) {

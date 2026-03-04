@@ -43,6 +43,12 @@
  *
  */
 
+struct peer_pair_t {
+  uint16_t srcnode;
+  uint16_t dstnode;
+  std::string conn_type;
+};
+
 namespace rvs {
 class hsa;
 }
@@ -169,6 +175,9 @@ class pbqtworker : public rvs::ThreadBase {
   //! list of test block sizes
   std::vector<uint32_t> block_size;
   std::string conn_type;
+
+  //! list of valid peer pairs discovered in action
+  std::vector<peer_pair_t> valid_pairs;
 
   //! alltoall mode: 0=copy, 1=read-only, 2=write-only
   uint32_t a2a_mode;

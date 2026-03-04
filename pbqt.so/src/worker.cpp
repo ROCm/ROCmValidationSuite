@@ -259,11 +259,9 @@ int pbqtworker::do_transfer() {
           if (i == j) {
             if (!a2a_local) continue;
           } else if (a2a_direct) {
-#if !defined(__NVCC__)
             uint32_t linkType, hopCount;
             hipError_t hip_err = hipExtGetLinkTypeAndHopCount(i, j, &linkType, &hopCount);
             if (hip_err != hipSuccess || hopCount != 1) continue;
-#endif
           }
 
           TransferBench::Transfer transfer;
