@@ -30,7 +30,8 @@ project(TransferBench-download NONE)
 include(ExternalProject)
 ExternalProject_Add(TransferBench
   GIT_REPOSITORY    https://github.com/ROCm/TransferBench.git
-  GIT_TAG           a824bc1b60fc6598e3f25c91434f5c95cb278d3e
+#  GIT_TAG           a824bc1b60fc6598e3f25c91434f5c95cb278d3e
+  GIT_TAG           c78c4aec95e5e8317ddecdf6e224443f63473312
   SOURCE_DIR        "${CMAKE_BINARY_DIR}/TransferBench-src"
   BINARY_DIR        ""
   CONFIGURE_COMMAND ""

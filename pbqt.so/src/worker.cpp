@@ -187,7 +187,7 @@ int pbqtworker::do_transfer() {
       transfers[0].dsts.push_back({dst_mem,
           dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
 
-      transfers[0].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
+      transfers[0].exeDevice = {executor == "gfx" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
         src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node};
 
       transfers[0].exeSubIndex = -1;
@@ -202,7 +202,7 @@ int pbqtworker::do_transfer() {
         transfers[1].dsts.push_back({src_mem,
             src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
 
-        transfers[1].exeDevice = {executor == "gpu" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
+        transfers[1].exeDevice = {executor == "gfx" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
           dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node};
 
         transfers[1].exeSubIndex = -1;
@@ -230,6 +230,8 @@ int pbqtworker::do_transfer() {
 
     } else if (transferbench_test == "alltoall") {
 
+      printf("Start all2all test\n");
+
       int numDetectedGpus = TransferBench::GetNumExecutors(TransferBench::EXE_GPU_GFX);
       int numGpus = (a2a_num_gpus > 0 && static_cast<int>(a2a_num_gpus) <= numDetectedGpus)
                     ? static_cast<int>(a2a_num_gpus) : numDetectedGpus;
@@ -249,7 +251,7 @@ int pbqtworker::do_transfer() {
 
       TransferBench::ExeType exeType = (executor == "dma")
           ? TransferBench::EXE_GPU_DMA : TransferBench::EXE_GPU_GFX;
-      TransferBench::MemType memType = TransferBench::MEM_GPU;
+      TransferBench::MemType memType = TransferBench::MEM_GPU_UNCACHED;
 
       std::vector<TransferBench::Transfer> transfers;
 
@@ -290,6 +292,7 @@ int pbqtworker::do_transfer() {
       TransferBench::ConfigOptions cfg;
       cfg.general.numIterations = hot_calls;
       cfg.general.numWarmups = warm_calls;
+      cfg.gfx.unrollFactor = 2;
 
       TransferBench::TestResults results;
 
@@ -311,10 +314,17 @@ int pbqtworker::do_transfer() {
         for (size_t t = 0; t < results.tfrResults.size(); t++) {
           const auto& res = results.tfrResults[t];
           totalBandwidthGbps += res.avgBandwidthGbPerSec;
+
+          printf("T%d -> %f\n", t, res.avgBandwidthGbPerSec);
+
           totalBytes += results.numTimedIterations * res.numBytes;
           if (res.avgDurationMsec > maxDurationMsec)
             maxDurationMsec = res.avgDurationMsec;
+
+
         }
+
+        printf("Total BW -> %f\n", totalBandwidthGbps);
 
         running_size += totalBytes;
         running_duration += (maxDurationMsec / 1000.0) * results.numTimedIterations;
@@ -325,14 +335,13 @@ int pbqtworker::do_transfer() {
           + std::to_string(transfers.size()) + " transfers, "
           + "aggregate bandwidth: "
           + std::to_string(results.avgTotalBandwidthGbPerSec) + " GB/s";
-      rvs::lp::Log(a2a_msg, rvs::loginfo);
+      rvs::lp::Log(a2a_msg, rvs::logresults);
 
     } else {
       msg += "unknown transferbench_test: " + transferbench_test;
       rvs::lp::Err(msg, MODULE_NAME, action_name);
       return -1;
     }
-
   }
   else {
 

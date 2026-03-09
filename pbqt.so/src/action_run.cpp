@@ -177,23 +177,25 @@ int pbqt_action::run() {
 
     pbqt_start_time = std::chrono::system_clock::now();
 
-    RVSTRACE_
-      do {
-        if (property_parallel) {
-          sts = run_parallel();
-        } else {
-          sts = run_single();
-        }
-        pbqt_end_time = std::chrono::system_clock::now();
-        uint64_t test_time = time_diff(pbqt_end_time, pbqt_start_time) ;
-        if(test_time >= property_duration) {
-          pbqt_action::do_final_average();
-          break;
-        }
-      } while (brun);
+
 
     RVSTRACE_
-      timer_running.stop();
+    do {
+      if (property_parallel) {
+        sts = run_parallel();
+      } else {
+        sts = run_single();
+      }
+      pbqt_end_time = std::chrono::system_clock::now();
+      uint64_t test_time = time_diff(pbqt_end_time, pbqt_start_time);
+      if((test_time >= property_duration) || ((transfer_method == "transferbench") && (transferbench_test == "alltoall"))) {
+        pbqt_action::do_final_average();
+        break;
+      }
+    } while (brun);
+
+    RVSTRACE_
+    timer_running.stop();
     timer_final.stop();
 
     iter -= step;
