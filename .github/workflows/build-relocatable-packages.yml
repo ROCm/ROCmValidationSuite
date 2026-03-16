@@ -43,6 +43,9 @@ jobs:
     strategy:
       matrix:
         ubuntu_version: ['22.04']
+    permissions:
+      id-token: write
+      contents: read
     
     steps:
       - name: Checkout Repository
@@ -98,6 +101,31 @@ jobs:
             build/rocm-validation-suite*.tar.gz
           retention-days: 30
 
+      - name: Install AWS CLI
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        run: sudo apt-get update && sudo apt-get install -y awscli
+
+      - name: Upload to S3
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # vars.AWS_S3_BUCKET = repository variable set in Settings → Secrets and variables → Actions → Variables
+      - name: Sync Ubuntu packages to S3
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          if [ -z "$BUCKET" ]; then
+            echo "::warning::AWS_S3_BUCKET not set. Skipping S3 upload."
+            exit 0
+          fi
+          PREFIX="rocm-validation-suite/${{ github.ref_name }}/${{ github.run_number }}/ubuntu-${{ matrix.ubuntu_version }}"
+          echo "Uploading to s3://${BUCKET}/${PREFIX}/"
+          aws s3 sync ./build "s3://${BUCKET}/${PREFIX}/" --exclude "*" --include "rocm-validation-suite*.deb" --include "rocm-validation-suite*.tar.gz" --no-progress
+          echo "Done. s3://${BUCKET}/${PREFIX}/"
+
   build-centos:
     name: Build CentOS/RHEL Packages (manylinux_2_28)
     runs-on: ubuntu-latest
@@ -106,6 +134,9 @@ jobs:
     strategy:
       matrix:
         distro: ['manylinux_2_28']
+    permissions:
+      id-token: write
+      contents: read
     
     steps:
       - name: Install Git (for checkout)
@@ -169,6 +200,31 @@ jobs:
             build/rocm-validation-suite*.rpm
             build/rocm-validation-suite*.tar.gz
           retention-days: 30
+
+      - name: Install AWS CLI
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        run: pip install --break-system-packages awscli 2>/dev/null || pip install awscli
+
+      - name: Upload to S3
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # vars.AWS_S3_BUCKET = repository variable set in Settings → Secrets and variables → Actions → Variables
+      - name: Sync CentOS/RHEL packages to S3
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          if [ -z "$BUCKET" ]; then
+            echo "::warning::AWS_S3_BUCKET not set. Skipping S3 upload."
+            exit 0
+          fi
+          PREFIX="rocm-validation-suite/${{ github.ref_name }}/${{ github.run_number }}/${{ matrix.distro }}"
+          echo "Uploading to s3://${BUCKET}/${PREFIX}/"
+          aws s3 sync ./build "s3://${BUCKET}/${PREFIX}/" --exclude "*" --include "rocm-validation-suite*.rpm" --include "rocm-validation-suite*.tar.gz" --no-progress
+          echo "Done. s3://${BUCKET}/${PREFIX}/"
 
   create-release:
     name: Create Release Summary
