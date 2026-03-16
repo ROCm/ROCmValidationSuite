@@ -113,11 +113,11 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload Artifacts** - Store packages with 30-day retention
-6. **Upload to S3** (push to `master`/`main` only) - Right after packages are built, each job (Ubuntu and CentOS) uploads its own packages to S3 using OIDC (no access keys). Requires repository variable `AWS_S3_BUCKET`.
+6. **Upload to S3** (on push to `master`/`main` or on pull request) - Right after packages are built, each job (Ubuntu and CentOS) uploads its own packages to S3 using OIDC (no access keys). Requires repository variable `AWS_S3_BUCKET`.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
-On push to `master` or `main`, **each build job** uploads its packages to S3 as soon as that job finishes building (no separate upload job). Uses **AWS OIDC**; no long-term access key or secret.
+On push to `master`/`main` or on pull request, **each build job** uploads its packages to S3 as soon as that job finishes building (no separate upload job). Uses **AWS OIDC**; no long-term access key or secret.
 
 **Where `vars` and `secrets` are defined**
 
