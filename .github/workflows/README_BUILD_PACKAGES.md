@@ -113,11 +113,11 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload Artifacts** - Store packages with 30-day retention
-6. **Upload to S3** (on push to `master`/`main` or on pull request) - Right after packages are built, each job (Ubuntu and CentOS) uploads its own packages to S3 using OIDC (no access keys). Requires repository variable `AWS_S3_BUCKET`.
+6. **Upload to S3** (on push to `master`/`main` or on pull request from the same repo) - Right after packages are built, each job uploads its own packages to S3 using OIDC (no access keys). Requires repository variable `AWS_S3_BUCKET` and secret `AWS_ROLE_ARN`. Skipped for pull requests from forks (secrets are not available).
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
-On push to `master`/`main` or on pull request, **each build job** uploads its packages to S3 as soon as that job finishes building (no separate upload job). Uses **AWS OIDC**; no long-term access key or secret.
+On push to `master`/`main` or on pull request from the **same repository**, **each build job** uploads its packages to S3 after building. Uses **AWS OIDC**; no long-term access key or secret. S3 upload is **skipped for pull requests from forks** because GitHub does not provide secrets to those workflows (avoids "Credentials could not be loaded" errors).
 
 **Where `vars` and `secrets` are defined**
 
@@ -393,6 +393,11 @@ cmake -B "$BUILD_DIR" \
 ```
 
 ## Troubleshooting
+
+### S3: "Credentials could not be loaded"
+
+- **PR from a fork:** S3 upload is skipped for fork PRs (secrets are not passed). Use a branch in the same repo or push to `main`/`master` to upload.
+- **Same repo / push:** Ensure the `AWS_ROLE_ARN` secret is set (Settings → Secrets and variables → Actions → Secrets) and the IAM role’s trust policy allows GitHub OIDC for this repo. Ensure the OIDC identity provider exists in the AWS account (`token.actions.githubusercontent.com`).
 
 ### Package Build Fails
 
