@@ -102,11 +102,11 @@ jobs:
           retention-days: 30
 
       - name: Install AWS CLI
-        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || github.event_name == 'pull_request'
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         run: sudo apt-get update && sudo apt-get install -y awscli
 
       - name: Upload to S3
-        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || github.event_name == 'pull_request'
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -114,7 +114,7 @@ jobs:
 
       # vars.AWS_S3_BUCKET = repository variable set in Settings → Secrets and variables → Actions → Variables
       - name: Sync Ubuntu packages to S3
-        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || github.event_name == 'pull_request'
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           if [ -z "$BUCKET" ]; then
@@ -204,11 +204,12 @@ jobs:
           retention-days: 30
 
       - name: Install AWS CLI
-        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || github.event_name == 'pull_request'
-        run: pip install --break-system-packages awscli 2>/dev/null || pip install awscli
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          python3 -m pip install --break-system-packages awscli || (yum install -y python3-pip && pip3 install awscli)
 
       - name: Upload to S3
-        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || github.event_name == 'pull_request'
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -216,7 +217,7 @@ jobs:
 
       # vars.AWS_S3_BUCKET = repository variable set in Settings → Secrets and variables → Actions → Variables
       - name: Sync CentOS/RHEL packages to S3
-        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || github.event_name == 'pull_request'
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           if [ -z "$BUCKET" ]; then
@@ -234,7 +235,7 @@ jobs:
     name: Create Release Summary
     needs: [build-ubuntu, build-centos]
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || github.event_name == 'pull_request'
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     
     steps:
       - name: Download All Artifacts
