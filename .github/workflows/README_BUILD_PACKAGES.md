@@ -113,6 +113,34 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload Artifacts** - Store packages with 30-day retention
+6. **Upload to S3** (push to `master`/`main` only) - Right after packages are built, each job (Ubuntu and CentOS) uploads its own packages to S3 using OIDC (no access keys). Requires repository variable `AWS_S3_BUCKET`.
+
+### S3 Upload (OIDC – No Stored Credentials)
+
+On push to `master` or `main`, **each build job** uploads its packages to S3 as soon as that job finishes building (no separate upload job). Uses **AWS OIDC**; no long-term access key or secret.
+
+**Where `vars` and `secrets` are defined**
+
+They are **not** in the workflow file. They are set in the repo:
+
+- **Secrets** (e.g. `secrets.AWS_ROLE_ARN`): **Settings** → **Secrets and variables** → **Actions** → **Secrets** tab → New repository secret.
+- **Variables** (e.g. `vars.AWS_S3_BUCKET`): **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → New repository variable.
+
+**Required setup for S3 upload:**
+
+1. **Repository secret** (Secrets tab, see above):
+   - Name: `AWS_ROLE_ARN`
+   - Value: the IAM role ARN to assume for S3 upload (e.g. `arn:aws:iam::123456789012:role/my-s3-upload-role`). Keeps the role ID hidden from the workflow.
+
+2. **Repository variable** (Variables tab, see above):
+   - Name: `AWS_S3_BUCKET`
+   - Value: your S3 bucket name (e.g. `my-rocm-packages`).
+
+3. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
+
+**Upload path (per job):** `s3://<bucket>/rocm-validation-suite/<branch>/<run_number>/ubuntu-22.04/` (DEB + TGZ) and `.../manylinux_2_28/` (RPM + TGZ).
+
+If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
 
 ## Build Script: build_packages_local.sh
 
