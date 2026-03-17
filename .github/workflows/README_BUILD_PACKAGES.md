@@ -113,11 +113,11 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload Artifacts** - Store packages with 30-day retention
-6. **Upload to S3** (on push to `master`/`main` or on pull request from the same repo) - Right after packages are built, each job uploads its own packages to S3 using OIDC (no access keys). Requires repository variable `AWS_S3_BUCKET` and secret `AWS_ROLE_ARN`. Skipped for pull requests from forks (secrets are not available).
+6. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite` and trigger is schedule, push to `master`/`main`/`release/*`, or same-repo PR) – Each job uploads its packages to S3 using OIDC. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped for other repos and for pull requests from forks.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
-On push to `master`/`main` or on pull request from the **same repository**, **each build job** uploads its packages to S3 after building. Uses **AWS OIDC**; no long-term access key or secret. S3 upload is **skipped for pull requests from forks** because GitHub does not provide secrets to those workflows (avoids "Credentials could not be loaded" errors).
+S3 upload runs **only when** the repository is **`ROCm/ROCmValidationSuite`** and the run is one of: scheduled (cron), push to `master`/`main`/`release/*`, or pull request from the same repository. Uses **AWS OIDC**; no long-term access key or secret. Skipped for other repos and for pull requests from forks.
 
 **Where `vars` and `secrets` are defined**
 
@@ -138,9 +138,17 @@ They are **not** in the workflow file. They are set in the repo:
 
 3. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
 
-**Upload path (per job):** `s3://<bucket>/rocm-validation-suite/<branch>/<run_number>/ubuntu-22.04/` (DEB + TGZ) and `.../manylinux_2_28/` (RPM + TGZ).
+**S3 path layout (all under `s3://<bucket>/rocm-validation-suite/`):**
+
+| Trigger | Path | Contents |
+|--------|------|----------|
+| **Scheduled (daily)** | `nightly/deb/`, `nightly/rpm/`, `nightly/tar/` | DEB and TGZ → `nightly/deb` and `nightly/tar` (Ubuntu job); RPM and TGZ → `nightly/rpm` and `nightly/tar` (CentOS job). |
+| **Push to `release/*`** | `release/<branch>/deb/`, `release/<branch>/rpm/`, `release/<branch>/tar/` | Same split by type; `<branch>` is e.g. `release/rocm-rel-6.4`. |
+| **Push to `master`/`main` or same-repo PR** | `<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | All built packages (DEB+TGZ or RPM+TGZ) in one prefix per job. |
 
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
+
+When packages are uploaded to S3, the **build report** artifact includes an **S3 Upload Locations** section with clickable links to each S3 prefix (AWS Console). This makes it easy to open the bucket and browse the uploaded DEB, RPM, and TGZ files from the report.
 
 ## Build Script: build_packages_local.sh
 
