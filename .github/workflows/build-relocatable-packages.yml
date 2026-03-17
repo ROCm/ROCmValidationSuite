@@ -123,7 +123,7 @@ jobs:
           fi
           PREFIX="rocm-validation-suite/${{ github.ref_name }}/${{ github.run_number }}/ubuntu-${{ matrix.ubuntu_version }}"
           echo "Uploading to s3://${BUCKET}/${PREFIX}/"
-          aws s3 sync ./build "s3://${BUCKET}/${PREFIX}/" --exclude "*" --include "rocm-validation-suite*.deb" --include "rocm-validation-suite*.tar.gz" --no-progress
+          aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "rocm-validation-suite*.deb" --include "rocm-validation-suite*.tar.gz" --no-progress
           echo "Listing uploaded files:"
           aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable
           echo "Done. s3://${BUCKET}/${PREFIX}/"
@@ -226,7 +226,7 @@ jobs:
           fi
           PREFIX="rocm-validation-suite/${{ github.ref_name }}/${{ github.run_number }}/${{ matrix.distro }}"
           echo "Uploading to s3://${BUCKET}/${PREFIX}/"
-          aws s3 sync ./build "s3://${BUCKET}/${PREFIX}/" --exclude "*" --include "rocm-validation-suite*.rpm" --include "rocm-validation-suite*.tar.gz" --no-progress
+          aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "rocm-validation-suite*.rpm" --include "rocm-validation-suite*.tar.gz" --no-progress
           echo "Listing uploaded files:"
           aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable
           echo "Done. s3://${BUCKET}/${PREFIX}/"
