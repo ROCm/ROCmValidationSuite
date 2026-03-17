@@ -126,7 +126,7 @@ jobs:
           aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "rocm-validation-suite*.deb" --include "rocm-validation-suite*.tar.gz" --no-progress
           echo "Listing uploaded files:"
           aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable
-          echo "Done. s3://${BUCKET}/${PREFIX}/"
+          echo "Done... s3://${BUCKET}/${PREFIX}/"
 
   build-centos:
     name: Build CentOS/RHEL Packages (manylinux_2_28)
@@ -229,7 +229,7 @@ jobs:
           aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "rocm-validation-suite*.rpm" --include "rocm-validation-suite*.tar.gz" --no-progress
           echo "Listing uploaded files:"
           aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable
-          echo "Done. s3://${BUCKET}/${PREFIX}/"
+          echo "Done... s3://${BUCKET}/${PREFIX}/"
 
   create-release:
     name: Create Release Summary
