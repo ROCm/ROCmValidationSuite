@@ -143,7 +143,7 @@ They are **not** in the workflow file. They are set in the repo:
 | Trigger | Path | Contents |
 |--------|------|----------|
 | **Scheduled (daily)** | `nightly/deb/`, `nightly/rpm/`, `nightly/tar/` | DEB and TGZ → `nightly/deb` and `nightly/tar` (Ubuntu job); RPM and TGZ → `nightly/rpm` and `nightly/tar` (CentOS job). |
-| **Push to `release/*`** | `release/<branch>/deb/`, `release/<branch>/rpm/`, `release/<branch>/tar/` | Same split by type; `<branch>` is e.g. `release/rocm-rel-6.4`. |
+| **Push to `release/*`** | `release/deb/`, `release/rpm/`, `release/tar/` | Same split by type; all release branches write to the same paths so the latest release is always at a fixed location for auto-update. |
 | **Push to `master`/`main` or same-repo PR** | `<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | All built packages (DEB+TGZ or RPM+TGZ) in one prefix per job. |
 
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
