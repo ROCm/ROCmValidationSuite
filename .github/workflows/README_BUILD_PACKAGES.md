@@ -138,13 +138,13 @@ They are **not** in the workflow file. They are set in the repo:
 
 3. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
 
-**S3 path layout (all under `s3://<bucket>/rocm-validation-suite/`):**
+**S3 path layout:**
 
 | Trigger | Path | Contents |
 |--------|------|----------|
-| **Scheduled (daily)** | `nightly/deb/`, `nightly/rpm/`, `nightly/tar/` | DEB and TGZ → `nightly/deb` and `nightly/tar` (Ubuntu job); RPM and TGZ → `nightly/rpm` and `nightly/tar` (CentOS job). |
-| **Push to `release/*`** | `release/deb/`, `release/rpm/`, `release/tar/` | Same split by type; all release branches write to the same paths so the latest release is always at a fixed location for auto-update. |
-| **Push to `master`/`main` or same-repo PR** | `<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | All built packages (DEB+TGZ or RPM+TGZ) in one prefix per job. |
+| **Scheduled (daily)** | `nightly/rocm-validation-suite/deb/`, `nightly/rocm-validation-suite/rpm/`, `nightly/rocm-validation-suite/tar/` | DEB and TGZ → `nightly/rocm-validation-suite/deb` and `.../tar` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (CentOS job). |
+| **Push to `release/*`** | `release/rocm-validation-suite/deb/`, `release/rocm-validation-suite/rpm/`, `release/rocm-validation-suite/tar/` | Same split by type; all release branches write to the same paths for auto-update. |
+| **Push to `master`/`main` or same-repo PR** | `rocm-validation-suite/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | All built packages (DEB+TGZ or RPM+TGZ) in one prefix per job. |
 
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
 
