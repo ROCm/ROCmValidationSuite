@@ -116,7 +116,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      # vars.AWS_S3_BUCKET = repository variable. Paths: nightly (schedule) → nightly/deb, nightly/tar; release/* → release/<branch>/deb, .../tar; else → <ref>/<run_number>/ubuntu-22.04
+      # vars.AWS_S3_BUCKET = repository variable. Paths: nightly (schedule) → nightly/deb, nightly/tar; release/* → release/deb, release/tar; else → <ref>/<run_number>/ubuntu-22.04
       - name: Upload Ubuntu packages to S3
         id: upload-s3-ubuntu
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
@@ -138,16 +138,15 @@ jobs:
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=Ubuntu DEB|${BASE}/nightly/deb||Ubuntu TGZ|${BASE}/nightly/tar" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
-            REF_NAME="${{ github.ref_name }}"
-            echo "Release branch build: uploading to release/${REF_NAME}/deb and release/${REF_NAME}/tar"
-            aws s3 cp ./build "s3://${BUCKET}/${BASE}/release/${REF_NAME}/deb/" --recursive --exclude "*" --include "rocm-validation-suite*.deb" --no-progress
-            aws s3 cp ./build "s3://${BUCKET}/${BASE}/release/${REF_NAME}/tar/" --recursive --exclude "*" --include "rocm-validation-suite*.tar.gz" --no-progress
-            echo "Listing s3://${BUCKET}/${BASE}/release/${REF_NAME}/deb/"
-            aws s3 ls "s3://${BUCKET}/${BASE}/release/${REF_NAME}/deb/" --human-readable
-            echo "Listing s3://${BUCKET}/${BASE}/release/${REF_NAME}/tar/"
-            aws s3 ls "s3://${BUCKET}/${BASE}/release/${REF_NAME}/tar/" --human-readable
+            echo "Release branch build: uploading to release/deb and release/tar"
+            aws s3 cp ./build "s3://${BUCKET}/${BASE}/release/deb/" --recursive --exclude "*" --include "rocm-validation-suite*.deb" --no-progress
+            aws s3 cp ./build "s3://${BUCKET}/${BASE}/release/tar/" --recursive --exclude "*" --include "rocm-validation-suite*.tar.gz" --no-progress
+            echo "Listing s3://${BUCKET}/${BASE}/release/deb/"
+            aws s3 ls "s3://${BUCKET}/${BASE}/release/deb/" --human-readable
+            echo "Listing s3://${BUCKET}/${BASE}/release/tar/"
+            aws s3 ls "s3://${BUCKET}/${BASE}/release/tar/" --human-readable
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
-            echo "paths=Ubuntu DEB|${BASE}/release/${REF_NAME}/deb||Ubuntu TGZ|${BASE}/release/${REF_NAME}/tar" >> $GITHUB_OUTPUT
+            echo "paths=Ubuntu DEB|${BASE}/release/deb||Ubuntu TGZ|${BASE}/release/tar" >> $GITHUB_OUTPUT
           else
             PREFIX="${BASE}/${{ github.ref_name }}/${{ github.run_number }}/ubuntu-${{ matrix.ubuntu_version }}"
             echo "Uploading to s3://${BUCKET}/${PREFIX}/"
@@ -250,7 +249,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      # vars.AWS_S3_BUCKET = repository variable. Paths: nightly (schedule) → nightly/rpm, nightly/tar; release/* → release/<branch>/rpm, .../tar; else → <ref>/<run_number>/manylinux_2_28
+      # vars.AWS_S3_BUCKET = repository variable. Paths: nightly (schedule) → nightly/rpm, nightly/tar; release/* → release/rpm, release/tar; else → <ref>/<run_number>/manylinux_2_28
       - name: Upload CentOS/RHEL packages to S3
         id: upload-s3-centos
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
@@ -272,16 +271,15 @@ jobs:
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=CentOS/RHEL RPM|${BASE}/nightly/rpm||CentOS/RHEL TGZ|${BASE}/nightly/tar" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
-            REF_NAME="${{ github.ref_name }}"
-            echo "Release branch build: uploading to release/${REF_NAME}/rpm and release/${REF_NAME}/tar"
-            aws s3 cp ./build "s3://${BUCKET}/${BASE}/release/${REF_NAME}/rpm/" --recursive --exclude "*" --include "rocm-validation-suite*.rpm" --no-progress
-            aws s3 cp ./build "s3://${BUCKET}/${BASE}/release/${REF_NAME}/tar/" --recursive --exclude "*" --include "rocm-validation-suite*.tar.gz" --no-progress
-            echo "Listing s3://${BUCKET}/${BASE}/release/${REF_NAME}/rpm/"
-            aws s3 ls "s3://${BUCKET}/${BASE}/release/${REF_NAME}/rpm/" --human-readable
-            echo "Listing s3://${BUCKET}/${BASE}/release/${REF_NAME}/tar/"
-            aws s3 ls "s3://${BUCKET}/${BASE}/release/${REF_NAME}/tar/" --human-readable
+            echo "Release branch build: uploading to release/rpm and release/tar"
+            aws s3 cp ./build "s3://${BUCKET}/${BASE}/release/rpm/" --recursive --exclude "*" --include "rocm-validation-suite*.rpm" --no-progress
+            aws s3 cp ./build "s3://${BUCKET}/${BASE}/release/tar/" --recursive --exclude "*" --include "rocm-validation-suite*.tar.gz" --no-progress
+            echo "Listing s3://${BUCKET}/${BASE}/release/rpm/"
+            aws s3 ls "s3://${BUCKET}/${BASE}/release/rpm/" --human-readable
+            echo "Listing s3://${BUCKET}/${BASE}/release/tar/"
+            aws s3 ls "s3://${BUCKET}/${BASE}/release/tar/" --human-readable
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
-            echo "paths=CentOS/RHEL RPM|${BASE}/release/${REF_NAME}/rpm||CentOS/RHEL TGZ|${BASE}/release/${REF_NAME}/tar" >> $GITHUB_OUTPUT
+            echo "paths=CentOS/RHEL RPM|${BASE}/release/rpm||CentOS/RHEL TGZ|${BASE}/release/tar" >> $GITHUB_OUTPUT
           else
             PREFIX="${BASE}/${{ github.ref_name }}/${{ github.run_number }}/${{ matrix.distro }}"
             echo "Uploading to s3://${BUCKET}/${PREFIX}/"
