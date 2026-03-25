@@ -272,6 +272,11 @@ else a file created in <b>/var/tmp/</b> with timestamp in name.
 <tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
 </td></tr>
 
+<tr><td>-m</td><td>--module</td><td>Specify a module name to run the corresponding
+platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>babel</b>, <b>gpup</b>,
+<b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>.
+</td></tr>
+
 <tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
 </td></tr>
 
