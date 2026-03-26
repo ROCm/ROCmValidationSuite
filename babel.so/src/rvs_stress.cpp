@@ -251,8 +251,8 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 
   std::string labels[total_babel_subtests] = {"Read","Write","Copy", "Mul", "Add", "Triad", "Dot"};
   size_t sizes[total_babel_subtests] = {
-    2 * sizeof(T) * ARRAY_SIZE,
-    2 * sizeof(T) * ARRAY_SIZE,
+    1 * sizeof(T) * ARRAY_SIZE,
+    1 * sizeof(T) * ARRAY_SIZE,
     2 * sizeof(T) * ARRAY_SIZE,
     2 * sizeof(T) * ARRAY_SIZE,
     3 * sizeof(T) * ARRAY_SIZE,
