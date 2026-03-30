@@ -255,6 +255,13 @@ class MemWorker : public rvs::ThreadBase {
         tb_size = _tb_size;
     }
 
+    //! sets data initialization mode
+    void set_data_init(const std::string& _data_init) {
+        data_init = _data_init;
+    }
+    //! returns data initialization mode
+    const std::string& get_data_init(void) { return data_init; }
+
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
@@ -295,6 +302,8 @@ class MemWorker : public rvs::ThreadBase {
     uint16_t chunks_per_block;
     //! thread block size
     uint16_t tb_size;
+    //! data initialization mode
+    std::string data_init;
 
     //! TRUE if JSON output is required
     static bool bjson;

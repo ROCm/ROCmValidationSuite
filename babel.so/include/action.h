@@ -62,6 +62,7 @@ using std::map;
 #define RVS_CONF_MUL                    "mul"
 #define RVS_CONF_DOT                    "dot"
 #define RVS_CONF_TRIAD                  "triad"
+#define RVS_CONF_DATA_INIT              "data_init"
 
 #define MEM_DEFAULT_ARRAY_SIZE          33554432   // 32 MB
 #define MEM_DEFAULT_NUM_ITER            100
@@ -72,6 +73,7 @@ using std::map;
 #define MEM_DEFAULT_CHUNKS_PER_BLOCK    2
 #define MEM_DEFAULT_TB_SIZE             1024
 #define MEM_DEFAULT_TEST_ENABLE         false
+#define MEM_DEFAULT_DATA_INIT           "default"
 
 #define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
@@ -128,6 +130,8 @@ class mem_action: public rvs::actionbase {
     uint16_t chunks_per_block;
     //! thread block size
     uint16_t tb_size;
+    //! data initialization mode ("gpu_norm_dist", "cpu_norm_dist", "zero_init" or "default")
+    std::string data_init;
 
     // configuration properties getters
     bool get_all_mem_config_keys(void);

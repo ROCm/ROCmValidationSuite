@@ -11,6 +11,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <sstream>
+#include <vector>
 
 #include "Stream.h"
 #include "hip/hip_runtime.h"
@@ -61,6 +62,8 @@ class HIPStream : public Stream<T>
     virtual T dot() override;
 
     virtual void init_arrays(T initA, T initB, T initC) override;
+    virtual void init_arrays_normdist(T mean, T stddev, bool gpu_init,
+                                      std::vector<T>& a, std::vector<T>& b, std::vector<T>& c);
     virtual void read_arrays(std::vector<T>& a, std::vector<T>& b, std::vector<T>& c) override;
 };
 
