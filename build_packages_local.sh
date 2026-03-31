@@ -92,12 +92,14 @@ check_and_install_dependencies() {
         # Check for Ubuntu/Debian library headers
         [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("libpci-dev")
         [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("libyaml-cpp-dev")
+        [ -f /usr/include/numa.h ] || MISSING_LIBS+=("libnuma-dev")
         command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm")
         command -v unzip >/dev/null 2>&1 || MISSING_LIBS+=("unzip")
     elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|amzn)$ ]]; then
         # Check for CentOS/RHEL/Rocky/AlmaLinux library headers
         [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("pciutils-devel")
         [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("yaml-cpp-devel")
+        [ -f /usr/include/numa.h ] || MISSING_LIBS+=("numactl-devel")
         command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm-build")
     fi
     
@@ -124,7 +126,8 @@ check_and_install_dependencies() {
                 unzip \
                 libyaml-cpp-dev \
                 rpm \
-                python3
+                python3 \
+                libnuma-dev
         elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|amzn)$ ]]; then
             print_info "Installing dependencies for CentOS/RHEL/Rocky/AlmaLinux..."
             
@@ -168,6 +171,7 @@ check_and_install_dependencies() {
                 doxygen \
                 rpm-build \
                 python3 \
+                numactl-devel\
                 || print_warning "Some packages may already be installed"
             
             # Install cmake and yaml-cpp separately as they may need special handling
@@ -194,6 +198,7 @@ check_and_install_dependencies() {
             echo "Development Libraries:"
             echo "  - libpci-dev (or pciutils-devel)"
             echo "  - libyaml-cpp-dev (or yaml-cpp-devel)"
+            echo "  - libnuma-dev (or numactl-devel)"
             echo "  - rpm-build tools"
             exit 1
         fi
