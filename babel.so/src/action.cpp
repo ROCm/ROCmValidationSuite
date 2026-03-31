@@ -111,6 +111,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
       workers[i].set_dwords_per_lane(dwords_per_lane);
       workers[i].set_chunks_per_block(chunks_per_block);
       workers[i].set_tb_size(tb_size);
+      workers[i].set_data_init(data_init);
 
       i++;
     }
@@ -288,6 +289,22 @@ bool mem_action::get_all_mem_config_keys(void) {
   if (property_get_int<uint16_t>(RVS_CONF_TB_SIZE, &tb_size, MEM_DEFAULT_TB_SIZE)) {
     msg = "invalid '" +
       std::string(RVS_CONF_TB_SIZE) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  auto it = property.find(RVS_CONF_DATA_INIT);
+  if (it != property.end()) {
+    data_init = it->second;
+  } else {
+    data_init = MEM_DEFAULT_DATA_INIT;
+  }
+
+  if (data_init != "default" && data_init != "gpu_norm_dist" &&
+      data_init != "cpu_norm_dist" && data_init != "zero_init") {
+    msg = "invalid '" + std::string(RVS_CONF_DATA_INIT) +
+      "' key value '" + data_init +
+      "'. Must be 'default', 'gpu_norm_dist', 'cpu_norm_dist' or 'zero_init'";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }

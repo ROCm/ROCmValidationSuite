@@ -8,8 +8,11 @@
 #include "include/HIPStream.h"
 #include "hip/hip_runtime.h"
 #include "include/rvsloglp.h"
+#include "hiprand/hiprand.hpp"
 
 #include <cfloat>
+#include <random>
+#include <thread>
 
 #ifndef TBSIZE
 #define TBSIZE 1024
@@ -198,6 +201,98 @@ void HIPStream<T>::init_arrays(T initA, T initB, T initC)
 }
 
 template <class T>
+void HIPStream<T>::init_arrays_normdist(
+    T mean, T stddev, bool gpu_init,
+    std::vector<T>& a, std::vector<T>& b, std::vector<T>& c)
+{
+  if (!gpu_init) {
+
+#if !defined(USE_CPU_THREADS_INIT)
+    rvs::lp::Log("Using a Single Thread on CPU to Initialize NORMAL distributed data",
+                  rvs::loginfo);
+
+    std::random_device rd{};
+    std::mt19937_64 gen{rd()};
+    std::normal_distribution<T> dist{mean, stddev};
+
+    auto gen_func = [&]() { return dist(gen); };
+
+    std::generate(a.begin(), a.end(), gen_func);
+    std::generate(b.begin(), b.end(), gen_func);
+    std::generate(c.begin(), c.end(), gen_func);
+
+#else
+    constexpr uint32_t NUM_CHUNKS = NUM_CPU_THREADS_INIT;
+    rvs::lp::Log(std::string("Using ") + std::to_string(NUM_CHUNKS) +
+                  " Threads on CPU to Initialize NORMAL distributed data",
+                  rvs::loginfo);
+
+    std::vector<std::thread> workers;
+    workers.reserve(NUM_CHUNKS);
+
+    const uint32_t CHUNK_SIZE = array_size / NUM_CHUNKS;
+
+    for (uint32_t work_id = 0; work_id < NUM_CHUNKS; ++work_id) {
+      const uint32_t start = work_id * CHUNK_SIZE;
+      const uint32_t end =
+          (work_id == NUM_CHUNKS - 1) ? array_size : start + CHUNK_SIZE;
+
+      workers.emplace_back([&, start, end]() {
+        std::random_device rd{};
+        std::mt19937_64 gen{rd()};
+        std::normal_distribution<T> dist{mean, stddev};
+        auto gen_func = [&]() { return dist(gen); };
+
+        std::generate(a.begin() + start, a.begin() + end, gen_func);
+        std::generate(b.begin() + start, b.begin() + end, gen_func);
+        std::generate(c.begin() + start, c.begin() + end, gen_func);
+      });
+    }
+
+    for (auto& w : workers) {
+      w.join();
+    }
+#endif
+
+    check_error(hipMemcpy(d_a, a.data(), sizeof(T) * array_size, hipMemcpyHostToDevice));
+    check_error(hipMemcpy(d_b, b.data(), sizeof(T) * array_size, hipMemcpyHostToDevice));
+    check_error(hipMemcpy(d_c, c.data(), sizeof(T) * array_size, hipMemcpyHostToDevice));
+
+  } else {
+
+    rvs::lp::Log("WARNING: Using GPU based NORMAL Distribution Initialization\n"
+                  "CPU based NORMAL Distribution Initialization is RECOMMENDED when validating",
+                  rvs::loginfo);
+
+    hiprand_cpp::mt19937_engine<HIPRAND_MT19937_DEFAULT_SEED> engine;
+    hiprand_cpp::normal_distribution<T> dist{mean, stddev};
+
+    try { dist(engine, d_a, array_size); }
+    catch (const std::exception& e) {
+      std::string err = std::string("hipRAND ERROR: ") + e.what();
+      rvs::lp::Log(err, rvs::logerror);
+      std::exit(EXIT_FAILURE);
+    }
+
+    try { dist(engine, d_b, array_size); }
+    catch (const std::exception& e) {
+      std::string err = std::string("hipRAND ERROR: ") + e.what();
+      rvs::lp::Log(err, rvs::logerror);
+      std::exit(EXIT_FAILURE);
+    }
+
+    try { dist(engine, d_c, array_size); }
+    catch (const std::exception& e) {
+      std::string err = std::string("hipRAND ERROR: ") + e.what();
+      rvs::lp::Log(err, rvs::logerror);
+      std::exit(EXIT_FAILURE);
+    }
+
+    check_error(hipDeviceSynchronize());
+  }
+}
+
+template <class T>
 void HIPStream<T>::read_arrays(std::vector<T>& a, std::vector<T>& b, std::vector<T>& c)
 {
   check_error(hipDeviceSynchronize());
@@ -207,16 +302,35 @@ void HIPStream<T>::read_arrays(std::vector<T>& a, std::vector<T>& b, std::vector
   check_error(hipMemcpy(c.data(), d_c, c.size()*sizeof(T), hipMemcpyDeviceToHost));
 }
 
+// Non-temporal load/store control:
+//   NONTEMPORAL == 1       : NT load + NT store (default)
+//   NONTEMPORAL_WRITE == 1 : normal load + NT store
+//   NONTEMPORAL_READ == 1  : NT load + normal store
+//   (none of the above)    : normal load + normal store
+#if NONTEMPORAL == 1
+template<typename T>
+__device__ __forceinline__ T load(const T& ref) {
+  return __builtin_nontemporal_load(&ref);
+}
 
-// turn on non-temporal by default
-#ifndef NONTEMPORAL
-#define NONTEMPORAL 1
-#endif
-
-#if NONTEMPORAL == 0
+template<typename T>
+__device__ __forceinline__ void store(const T& value, T& ref) {
+  __builtin_nontemporal_store(value, &ref);
+}
+#elif NONTEMPORAL_WRITE == 1
 template<typename T>
 __device__ __forceinline__ T load(const T& ref) {
   return ref;
+}
+
+template<typename T>
+__device__ __forceinline__ void store(const T& value, T& ref) {
+  __builtin_nontemporal_store(value, &ref);
+}
+#elif NONTEMPORAL_READ == 1
+template<typename T>
+__device__ __forceinline__ T load(const T& ref) {
+  return __builtin_nontemporal_load(&ref);
 }
 
 template<typename T>
@@ -226,12 +340,12 @@ __device__ __forceinline__ void store(const T& value, T& ref) {
 #else
 template<typename T>
 __device__ __forceinline__ T load(const T& ref) {
-  return __builtin_nontemporal_load(&ref);
+  return ref;
 }
 
 template<typename T>
 __device__ __forceinline__ void store(const T& value, T& ref) {
-  __builtin_nontemporal_store(value, &ref);
+  ref = value;
 }
 #endif
 

@@ -40,38 +40,41 @@ void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>
 
 template <typename T>
 bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test);
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
+    const std::string& data_init);
 
 template <typename T>
 bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test);
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
+    const std::string& data_init);
 
 void parseArguments(int argc, char *argv[]);
 
 bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test) {
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
+    const std::string& data_init) {
 
   bool result = false;
 
   switch(test_type) {
     case FLOAT_TEST:
       result = run_stress<float>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test);
+          json, action, test, data_init);
       break;
 
     case DOUBLE_TEST:
       result = run_stress<double>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test);
+          json, action, test, data_init);
       break;
 
     case TRAID_FLOAT:
       result = run_triad<float>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test);
+          json, action, test, data_init);
       break;
 
     case TRIAD_DOUBLE:
       result = run_triad<double>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test);
+          json, action, test, data_init);
       break;
 
     default:
@@ -84,7 +87,8 @@ bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, b
 
 template <typename T>
 bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test)
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
+    const std::string& data_init)
 {
   std::string   msg;
   std::streamsize ss = std::cout.precision();
@@ -145,12 +149,18 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   // Result of the Dot kernel
   T sum;
 
-  Stream<T> *stream;
-
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first, dwords_per_lane, chunks_per_block, tb_size);
+  HIPStream<T> *stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first, dwords_per_lane, chunks_per_block, tb_size);
 
-  stream->init_arrays(startA, startB, startC);
+  if (data_init == "gpu_norm_dist") {
+    stream->init_arrays_normdist(static_cast<T>(0.0), static_cast<T>(1.0), true, a, b, c);
+  } else if (data_init == "cpu_norm_dist") {
+    stream->init_arrays_normdist(static_cast<T>(0.0), static_cast<T>(1.0), false, a, b, c);
+  } else if (data_init == "zero_init") {
+    stream->init_arrays(T{0}, T{0}, T{0});
+  } else {
+    stream->init_arrays(startA, startB, startC);
+  }
 
   // List of times
   std::vector<std::vector<double>> timings(total_babel_subtests);
@@ -328,7 +338,8 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 
 template <typename T>
 bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
-    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test)
+    uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
+    const std::string& data_init)
 {
   std::string msg;
   auto desc = action_descriptor{action, module_name, device.second};
@@ -382,12 +393,18 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   std::vector<T> b(ARRAY_SIZE);
   std::vector<T> c(ARRAY_SIZE);
 
-  Stream<T> *stream;
-
   // Use the HIP implementation
-  stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first, dwords_per_lane, chunks_per_block, tb_size);
+  HIPStream<T> *stream = new HIPStream<T>(ARRAY_SIZE, event_timing, device.first, dwords_per_lane, chunks_per_block, tb_size);
 
-  stream->init_arrays(startA, startB, startC);
+  if (data_init == "gpu_norm_dist") {
+    stream->init_arrays_normdist(static_cast<T>(0.0), static_cast<T>(1.0), true, a, b, c);
+  } else if (data_init == "cpu_norm_dist") {
+    stream->init_arrays_normdist(static_cast<T>(0.0), static_cast<T>(1.0), false, a, b, c);
+  } else if (data_init == "zero_init") {
+    stream->init_arrays(T{0}, T{0}, T{0});
+  } else {
+    stream->init_arrays(startA, startB, startC);
+  }
 
   // Declare timers
   std::chrono::high_resolution_clock::time_point t1, t2;
