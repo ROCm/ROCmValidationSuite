@@ -29,6 +29,7 @@
 #include <map>
 #include <memory>
 #include <barrier>
+#include <atomic>
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,7 +80,7 @@ using std::map;
 #define RVS_CONF_BLAS_SOURCE_KEY          "blas_source"
 #define RVS_CONF_COMPUTE_TYPE_KEY         "compute_type"
 
-#define PULSE_DEFAULT_RATE                22000
+#define PULSE_DEFAULT_RATE                2
 #define PULSE_DEFAULT_HIGH_PHASE_RATIO    0.5f
 #define PULSE_DEFAULT_TOLERANCE           10.0f
 #define PULSE_DEFAULT_MATRIX_SIZE         4096
@@ -94,7 +95,7 @@ using std::map;
 #define PULSE_DEFAULT_LDB_OFFSET          0
 #define PULSE_DEFAULT_LDC_OFFSET          0
 #define PULSE_DEFAULT_LDD_OFFSET          0
-#define PULSE_DEFAULT_WORKLOAD_ITERS      1024
+#define PULSE_DEFAULT_WORKLOAD_ITERS      128
 #define PULSE_DEFAULT_HALT_ON_ERROR       false
 #define PULSE_DEFAULT_GPU_SYNC_WAIT       10000
 #define PULSE_DEFAULT_VERIFY_MODE         "diff"
@@ -365,6 +366,10 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
   int num_gpus = static_cast<int>(pulse_gpus_device_index.size());
   vector<PulseWorker> workers(num_gpus);
 
+  // Shared flag: when any GPU's duration expires, it sets this before
+  // arriving at the barrier so all GPUs see it and exit together.
+  std::atomic<bool> done_flag{false};
+
   // Allocate fine-grained coherent system memory for GPU-side barrier
   int32_t* gpu_arrival_count = nullptr;
   int32_t* gpu_release_flag = nullptr;
@@ -448,7 +453,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
 
       if (property_parallel && num_gpus > 1) {
         workers[i].set_sync_resources(&cpu_barrier,
-            gpu_arrival_count, gpu_release_flag);
+            gpu_arrival_count, gpu_release_flag, &done_flag);
       }
 
       i++;

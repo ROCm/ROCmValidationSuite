@@ -82,7 +82,7 @@ PulseWorker::PulseWorker()
       run_duration_ms(0),
       sample_interval(100),
       log_interval(1000),
-      pulse_rate(22000),
+      pulse_rate(2),
       high_phase_ratio(0.5f),
       tolerance(10.0f),
       matrix_size(4096),
@@ -94,7 +94,7 @@ PulseWorker::PulseWorker()
       pulse_ldb_offset(0),
       pulse_ldc_offset(0),
       pulse_ldd_offset(0),
-      workload_iterations(1024),
+      workload_iterations(128),
       halt_on_error(false),
       pulse_hot_calls(1),
       num_gpus(1),
@@ -102,6 +102,7 @@ PulseWorker::PulseWorker()
       cpu_barrier(nullptr),
       gpu_arrival_count(nullptr),
       gpu_release_flag(nullptr),
+      done_flag(nullptr),
       result(false) {
 }
 
@@ -224,6 +225,45 @@ bool PulseWorker::set_highest_clocks(void) {
   return ok;
 }
 
+bool PulseWorker::set_lowest_clocks(void) {
+  bool ok = true;
+  amdsmi_frequencies_t freqs{};
+
+  if (!valid_gfx_levels.empty()) {
+    if (amdsmi_get_clk_freq(smi_device_handle, AMDSMI_CLK_TYPE_SYS, &freqs)
+        == AMDSMI_STATUS_SUCCESS) {
+      uint32_t min_idx = valid_gfx_levels[0];
+      for (auto level : valid_gfx_levels) {
+        if (freqs.frequency[level] < freqs.frequency[min_idx])
+          min_idx = level;
+      }
+      uint64_t mask = (1ULL << min_idx);
+      if (amdsmi_set_clk_freq(smi_device_handle, AMDSMI_CLK_TYPE_SYS, mask)
+          != AMDSMI_STATUS_SUCCESS) {
+        ok = false;
+      }
+    }
+  }
+
+  if (!valid_mem_levels.empty()) {
+    if (amdsmi_get_clk_freq(smi_device_handle, AMDSMI_CLK_TYPE_MEM, &freqs)
+        == AMDSMI_STATUS_SUCCESS) {
+      uint32_t min_idx = valid_mem_levels[0];
+      for (auto level : valid_mem_levels) {
+        if (freqs.frequency[level] < freqs.frequency[min_idx])
+          min_idx = level;
+      }
+      uint64_t mask = (1ULL << min_idx);
+      if (amdsmi_set_clk_freq(smi_device_handle, AMDSMI_CLK_TYPE_MEM, mask)
+          != AMDSMI_STATUS_SUCCESS) {
+        ok = false;
+      }
+    }
+  }
+
+  return ok;
+}
+
 bool PulseWorker::restore_clocks(void) {
   bool ok = true;
 
@@ -276,12 +316,21 @@ bool PulseWorker::setup_blas(void) {
   return true;
 }
 
-void PulseWorker::gpu_barrier_sync(void) {
+bool PulseWorker::gpu_barrier_sync(bool time_up) {
   if (!cpu_barrier || !gpu_arrival_count || !gpu_release_flag)
-    return;
+    return !time_up;
 
-  // Level 1: CPU barrier — align host threads to microsecond precision
+  // Signal done BEFORE barrier so all threads see it atomically
+  if (time_up && done_flag)
+    done_flag->store(true, std::memory_order_release);
+
+  // Level 1: CPU barrier — all threads MUST arrive even if done,
+  // otherwise the remaining threads deadlock here forever.
   cpu_barrier->arrive_and_wait();
+
+  // After barrier, if any thread signaled done, all exit together
+  if (done_flag && done_flag->load(std::memory_order_acquire))
+    return false;
 
   // Reset sync counters (first worker resets, others wait)
   if (worker_index == 0) {
@@ -293,6 +342,7 @@ void PulseWorker::gpu_barrier_sync(void) {
   // Level 2: GPU barrier — launch tiny kernel that spins until all GPUs arrive
   gpu_sync_barrier_kernel<<<1, 1>>>(
       gpu_arrival_count, gpu_release_flag, num_gpus);
+  return true;
 }
 
 bool PulseWorker::do_pulse_stress(void) {
@@ -305,7 +355,6 @@ bool PulseWorker::do_pulse_stress(void) {
 
   snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
 
-  // Setup BLAS for GEMM workload
   if (!setup_blas()) {
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
       std::to_string(gpu_id) + " BLAS setup failed";
@@ -314,7 +363,6 @@ bool PulseWorker::do_pulse_stress(void) {
     return false;
   }
 
-  // Discover and probe valid clock levels
   discover_valid_clock_levels();
 
   float max_power_high = 0.0f;
@@ -326,22 +374,22 @@ bool PulseWorker::do_pulse_stress(void) {
   int pulse_count = 0;
   bool test_passed = true;
 
-  // Compute phase durations from pulse_rate and high_phase_ratio.
-  // For very high frequencies (kHz), the period is microseconds — GEMM
-  // iterations within a single phase provide the sustained load envelope
-  // while the alternation pattern creates the current transients.
-  double period_us = 1.0e6 / static_cast<double>(pulse_rate);
-  double high_phase_us = period_us * high_phase_ratio;
-  double low_phase_us = period_us * (1.0 - high_phase_ratio);
+  // Phase durations in milliseconds.
+  // For visible power deltas use pulse_rate 1-10 Hz (100ms-1s phases).
+  // Sub-10ms phases are too fast for real GPU power state transitions
+  // and the SMI reporting window (~100ms averaging).
+  double period_ms = 1000.0 / static_cast<double>(pulse_rate);
+  double high_phase_ms = period_ms * high_phase_ratio;
+  double low_phase_ms = period_ms * (1.0 - high_phase_ratio);
 
-  // Clamp to practical minimums (GEMM dispatch takes ~microseconds)
-  double high_phase_ms = std::max(high_phase_us / 1000.0, 1.0);
-  double low_phase_ms = std::max(low_phase_us / 1000.0, 0.5);
+  high_phase_ms = std::max(high_phase_ms, 10.0);
+  low_phase_ms = std::max(low_phase_ms, 10.0);
 
   msg = "[" + action_name + "] " + MODULE_NAME + " " +
     std::to_string(gpu_id) + " pulse_rate=" + std::to_string(pulse_rate) +
-    "Hz high_phase=" + std::to_string(high_phase_ms) +
-    "ms low_phase=" + std::to_string(low_phase_ms) + "ms";
+    "Hz period=" + std::to_string(period_ms) +
+    "ms high=" + std::to_string(high_phase_ms) +
+    "ms low=" + std::to_string(low_phase_ms) + "ms";
   rvs::lp::Log(msg, rvs::loginfo);
 
   test_start = std::chrono::system_clock::now();
@@ -350,16 +398,20 @@ bool PulseWorker::do_pulse_stress(void) {
   while (!rvs::lp::Stopping()) {
     now = std::chrono::system_clock::now();
     uint64_t elapsed_ms = time_diff(now, test_start);
+    bool time_up = (run_duration_ms > 0 && elapsed_ms >= run_duration_ms);
 
-    if (run_duration_ms > 0 && elapsed_ms >= run_duration_ms)
-      break;
-
-    // ─── Cross-GPU synchronized avalanche release ───
+    // Coordinated shutdown: when using multi-GPU barrier, all GPUs must
+    // arrive at the barrier even if their timer expired — otherwise the
+    // remaining GPUs deadlock.  After the barrier, if ANY GPU signaled
+    // done, ALL GPUs exit together.
     if (cpu_barrier && num_gpus > 1) {
-      gpu_barrier_sync();
+      if (!gpu_barrier_sync(time_up))
+        break;
+    } else if (time_up) {
+      break;
     }
 
-    // ═══ HIGH PHASE: Pin clocks + GEMM workload ═══
+    // ═══ HIGH PHASE: Pin clocks to max + sustained GEMM load ═══
     set_highest_clocks();
 
     phase_start = std::chrono::system_clock::now();
@@ -391,7 +443,6 @@ bool PulseWorker::do_pulse_stress(void) {
         if (power > max_power_high) max_power_high = power;
       }
 
-      // Check temperature during high phase
       float temp = read_temperature();
       if (temp > 105.0f) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -401,29 +452,36 @@ bool PulseWorker::do_pulse_stress(void) {
         test_passed = false;
         if (halt_on_error) goto done;
       }
-
-      now = std::chrono::system_clock::now();
-      phase_elapsed = std::chrono::duration<double, std::milli>(
-          now - phase_start).count();
-      if (phase_elapsed >= high_phase_ms)
-        break;
     }
 
-    // ═══ LOW PHASE: Restore clocks, minimal work ═══
-    restore_clocks();
-    std::this_thread::sleep_for(
-        std::chrono::microseconds(static_cast<int64_t>(low_phase_us)));
+    // Drain the GPU pipeline so all GEMM work finishes before the
+    // low phase — without this, kernels still in flight keep power
+    // elevated and the "low" reading is indistinguishable from "high".
+    hipDeviceSynchronize();
 
-    float power_low = read_power();
-    if (power_low > 0) {
-      total_power_low += power_low;
-      low_samples++;
-      if (power_low < min_power_low) min_power_low = power_low;
+    // ═══ LOW PHASE: Pin clocks to minimum + idle with sampling ═══
+    set_lowest_clocks();
+
+    phase_start = std::chrono::system_clock::now();
+    while (true) {
+      now = std::chrono::system_clock::now();
+      double phase_elapsed = std::chrono::duration<double, std::milli>(
+          now - phase_start).count();
+      if (phase_elapsed >= low_phase_ms)
+        break;
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+      float power_low = read_power();
+      if (power_low > 0) {
+        total_power_low += power_low;
+        low_samples++;
+        if (power_low < min_power_low) min_power_low = power_low;
+      }
     }
 
     pulse_count++;
 
-    // Periodic logging
     now = std::chrono::system_clock::now();
     if (time_diff(now, last_log_time) >= log_interval) {
       float avg_high = (high_samples > 0)
@@ -434,7 +492,9 @@ bool PulseWorker::do_pulse_stress(void) {
         "pulse #" + std::to_string(pulse_count) +
         " avg_high=" + std::to_string(avg_high) + "W" +
         " avg_low=" + std::to_string(avg_low) + "W" +
-        " max_high=" + std::to_string(max_power_high) + "W";
+        " max_high=" + std::to_string(max_power_high) + "W" +
+        " min_low=" + std::to_string(min_power_low) + "W" +
+        " delta=" + std::to_string(avg_high - avg_low) + "W";
       rvs::lp::Log(msg, rvs::logresults);
       last_log_time = now;
     }
@@ -444,7 +504,6 @@ bool PulseWorker::do_pulse_stress(void) {
   }
 
 done:
-  // Restore clocks to original state
   restore_clocks();
 
   float avg_power_high = (high_samples > 0)
@@ -458,10 +517,10 @@ done:
     " avg_high=" + std::to_string(avg_power_high) + "W" +
     " avg_low=" + std::to_string(avg_power_low) + "W" +
     " delta=" + std::to_string(power_delta) + "W" +
-    " max_high=" + std::to_string(max_power_high) + "W";
+    " max_high=" + std::to_string(max_power_high) + "W" +
+    " min_low=" + std::to_string(min_power_low) + "W";
   rvs::lp::Log(msg, rvs::logresults);
 
-  // For secondary MCM dies, there is no power reporting
   if (mcm_type == mcm_type_t::SECONDARY) {
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
       std::to_string(gpu_id) +

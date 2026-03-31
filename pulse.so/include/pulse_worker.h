@@ -31,6 +31,7 @@
 #include <barrier>
 #include <vector>
 #include <atomic>
+#include <cstdint>
 
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
@@ -162,10 +163,12 @@ class PulseWorker : public rvs::ThreadBase {
 
     void set_sync_resources(std::barrier<>* _cpu_barrier,
                             int32_t* _gpu_arrival_count,
-                            int32_t* _gpu_release_flag) {
+                            int32_t* _gpu_release_flag,
+                            std::atomic<bool>* _done_flag) {
         cpu_barrier = _cpu_barrier;
         gpu_arrival_count = _gpu_arrival_count;
         gpu_release_flag = _gpu_release_flag;
+        done_flag = _done_flag;
     }
 
     static void set_use_json(bool _bjson) { bjson = _bjson; }
@@ -181,9 +184,10 @@ class PulseWorker : public rvs::ThreadBase {
 
     bool discover_valid_clock_levels(void);
     bool set_highest_clocks(void);
+    bool set_lowest_clocks(void);
     bool restore_clocks(void);
 
-    void gpu_barrier_sync(void);
+    bool gpu_barrier_sync(bool time_up);
 
  protected:
     std::unique_ptr<rvs_blas> gpu_blas;
@@ -229,6 +233,7 @@ class PulseWorker : public rvs::ThreadBase {
     std::barrier<>* cpu_barrier;
     int32_t* gpu_arrival_count;
     int32_t* gpu_release_flag;
+    std::atomic<bool>* done_flag;
 
     //! Valid clock levels discovered via AMDSMI
     std::vector<uint32_t> valid_gfx_levels;
