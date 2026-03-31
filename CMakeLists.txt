@@ -657,6 +657,7 @@ add_subdirectory(mem.so)
 add_subdirectory(babel.so)
 add_subdirectory(perf.so)
 add_subdirectory(tst.so)
+add_subdirectory(pulse.so)
 
 if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
@@ -666,12 +667,14 @@ add_dependencies(pesm rvslib)
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_smi_target)
   add_dependencies(iet rvs_smi_target)
+  add_dependencies(pulse rvs_smi_target)
 endif()
 
 if(RVS_ROCBLAS EQUAL 1)
   add_dependencies(rvslib rvs_rblas_target)
   add_dependencies(gst rvs_rblas_target)
   add_dependencies(iet rvs_rblas_target)
+  add_dependencies(pulse rvs_rblas_target)
 endif()
 
 add_custom_target(rvs_bin_folder ALL
