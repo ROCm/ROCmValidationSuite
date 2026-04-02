@@ -23,7 +23,7 @@
 ##
 ################################################################################
 
-cmake_minimum_required(VERSION 2.8.2)
+cmake_minimum_required(VERSION 3.5.0)
 
 project(rvs_smi-download NONE)
 
