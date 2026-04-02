@@ -434,6 +434,10 @@ bool PulseWorker::do_pulse_stress(void) {
           if (halt_on_error) goto done;
           break;
         }
+        now = std::chrono::system_clock::now();
+        if (std::chrono::duration<double, std::milli>(
+                now - phase_start).count() >= high_phase_ms)
+          break;
       }
 
       float power = read_power();
