@@ -2,7 +2,18 @@
 ################################################################################
 # Local Build Script for Testing Package Generation
 # This script mimics the GitHub Actions workflow for local testing
+#
+# Note: This script uses 'return' instead of 'exit' so that when sourced
+# inside a Docker container (e.g., "source build_packages_local.sh"), it
+# does not kill the container's shell on error.
+# When run directly (./build_packages_local.sh), return behaves like exit.
 ################################################################################
+
+# Use return if sourced, exit if executed directly
+_exit() { return "$1" 2>/dev/null || exit "$1"; }
+
+# Trap ERR so that set -e failures also use _exit instead of killing the shell
+trap '_exit 1' ERR
 
 set -e  # Exit on error
 
@@ -71,7 +82,7 @@ check_and_install_dependencies() {
         OS=$ID
     else
         print_error "Cannot detect OS. Please install dependencies manually."
-        exit 1
+        _exit 1
     fi
     
     # Check for command-line tools
@@ -174,6 +185,36 @@ check_and_install_dependencies() {
                 numactl-devel\
                 || print_warning "Some packages may already be installed"
             
+            # Install a gcc-toolset with C++20 <barrier> support (requires GCC >= 11)
+            # Try highest available first for best C++20/C++23 support, fall back to minimum viable
+            # RHEL/AlmaLinux/Rocky 8+ use gcc-toolset-{ver}, CentOS 7 uses devtoolset-{ver}
+            if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
+                GCC_TOOLSET_INSTALLED=""
+                for ver in 14 13 12 11; do
+                    if yum list available gcc-toolset-${ver} &>/dev/null; then
+                        print_info "Found gcc-toolset-${ver} - installing for C++20 support..."
+                        if yum install -y gcc-toolset-${ver}; then
+                            GCC_TOOLSET_INSTALLED="gcc-toolset-${ver}"
+                            print_success "Installed gcc-toolset-${ver} (C++20 <barrier> supported)"
+                            break
+                        fi
+                    fi
+                done
+                # Fallback to devtoolset (CentOS 7) - only devtoolset-11 has <barrier>
+                if [ -z "$GCC_TOOLSET_INSTALLED" ]; then
+                    if yum list available devtoolset-11 &>/dev/null; then
+                        print_info "Found devtoolset-11 - installing for C++20 support (CentOS 7)..."
+                        if yum install -y devtoolset-11; then
+                            GCC_TOOLSET_INSTALLED="devtoolset-11"
+                            print_success "Installed devtoolset-11 (C++20 <barrier> supported)"
+                        fi
+                    fi
+                fi
+                if [ -z "$GCC_TOOLSET_INSTALLED" ]; then
+                    print_warning "No gcc-toolset (11-14) or devtoolset-11 available - C++20 headers like <barrier> may be missing"
+                fi
+            fi
+            
             # Install cmake and yaml-cpp separately as they may need special handling
             print_info "Installing cmake..."
             yum install -y cmake3 || yum install -y cmake || print_warning "cmake installation may have failed"
@@ -200,7 +241,7 @@ check_and_install_dependencies() {
             echo "  - libyaml-cpp-dev (or yaml-cpp-devel)"
             echo "  - libnuma-dev (or numactl-devel)"
             echo "  - rpm-build tools"
-            exit 1
+            _exit 1
         fi
         
         print_success "Dependencies installed successfully"
@@ -217,7 +258,7 @@ check_and_install_dependencies() {
         
         if [ ${#VERIFY_FAILED[@]} -ne 0 ]; then
             print_error "Failed to install: ${VERIFY_FAILED[*]}"
-            exit 1
+            _exit 1
         fi
         print_success "All dependencies verified"
     else
@@ -239,7 +280,7 @@ else
     # Validate that ROCM_VERSION was properly set
     if [ -z "$ROCM_VERSION" ]; then
         print_error "Failed to determine ROCm version"
-        exit 1
+        _exit 1
     fi
 fi
 
@@ -287,7 +328,7 @@ if [ -z "$goto_step2" ]; then
         print_error "Failed to download ROCm SDK tarball"
         print_error "URL: $TARBALL_URL"
         print_info "Please check if the ROCm version and GPU family are correct"
-        exit 1
+        _exit 1
     fi
     
     # Extract tarball
@@ -312,7 +353,7 @@ if [ -z "$HIP_DEVICE_LIB_PATH" ]; then
     print_error "Could not find amdgcn/bitcode directory in $ROCM_PATH"
     print_error "HIP device libraries are required for GPU code compilation"
     print_error "Please verify your ROCm SDK installation"
-    exit 1
+    _exit 1
 fi
 
 # Export all environment variables
@@ -327,7 +368,7 @@ export HIP_DEVICE_LIB_PATH="$HIP_DEVICE_LIB_PATH"
 ROCM_VERSION_MAJOR_MINOR=$(echo "$ROCM_VERSION" | grep -oP '^\d+\.\d+')
 if [ -z "$ROCM_VERSION_MAJOR_MINOR" ]; then
     print_error "Could not extract major.minor version from ROCM_VERSION: $ROCM_VERSION"
-    exit 1
+    _exit 1
 fi
 
 # Split into major and minor, zero-pad to 2 digits each
@@ -365,27 +406,40 @@ else
     print_success "Set CPACK package release: $PACKAGE_RELEASE (dev branch: $GIT_BRANCH, commit: $GIT_COMMIT_SHORT)"
 fi
 
-# TODO: Currently hipcc and cmake3 are only set for AlmaLinux (manylinux_2_28)
-# Ubuntu works fine without these settings. Need to verify later if these
-# should be applied universally for all OS or kept OS-specific.
+if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
+    # Enable the installed gcc-toolset/devtoolset so hipcc (clang) finds C++20 headers like <barrier>
+    # Discover the toolset path dynamically via rpm rather than hardcoding /opt/rh/
+    GCC_TOOLSET_ENABLED=""
+    for pkg in gcc-toolset-14 gcc-toolset-13 gcc-toolset-12 gcc-toolset-11 devtoolset-11; do
+        ENABLE_SCRIPT=$(rpm -ql ${pkg}-runtime 2>/dev/null | grep '/enable$' | head -1)
+        if [ -n "$ENABLE_SCRIPT" ] && [ -f "$ENABLE_SCRIPT" ]; then
+            TOOLSET_ROOT=$(dirname "$ENABLE_SCRIPT")
+            source "$ENABLE_SCRIPT"
+            export GCC_TOOLCHAIN="${TOOLSET_ROOT}/root/usr"
+            GCC_TOOLSET_ENABLED="$pkg"
+            print_success "Enabled ${pkg} from ${TOOLSET_ROOT} (GCC $(gcc -dumpversion))"
+            break
+        fi
+    done
+    if [ -z "$GCC_TOOLSET_ENABLED" ]; then
+        print_warning "No gcc-toolset (11-14) or devtoolset-11 found - C++20 headers may be missing"
+    fi
 
-# AlmaLinux-specific settings for manylinux_2_28
-if [[ "$OS" == "almalinux" ]]; then
-    # Set C++ compiler to hipcc from ROCm for AlmaLinux
+    # Set C++ compiler to hipcc from ROCm
     if [ -x "$ROCM_PATH/bin/hipcc" ]; then
         export CMAKE_CXX_COMPILER="$ROCM_PATH/bin/hipcc"
-        print_success "Set CMAKE_CXX_COMPILER to hipcc (AlmaLinux)"
+        print_success "Set CMAKE_CXX_COMPILER to hipcc (CentOS/RHEL/AlmaLinux/Rocky)"
     else
         print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using system default compiler"
     fi
     
-    # Use cmake3 for AlmaLinux
+    # Use cmake3 for RHEL-based distros
     export CMAKE_COMMAND="cmake3"
-    print_info "Using cmake3 (AlmaLinux/Manylinux)"
+    print_info "Using cmake3 (CentOS/RHEL/AlmaLinux/Rocky)"
 else
-    # Ubuntu: use defaults (system compiler and cmake)
+    # Ubuntu and others: use defaults (system compiler and cmake)
     export CMAKE_COMMAND="cmake"
-    print_info "Using cmake (Ubuntu)"
+    print_info "Using cmake (Ubuntu/other)"
 fi
 
 print_info "Environment variables set:"
@@ -403,6 +457,9 @@ fi
 if [ -n "$CMAKE_CXX_COMPILER" ]; then
     echo "  CMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER"
 fi
+if [ -n "$GCC_TOOLCHAIN" ]; then
+    echo "  GCC_TOOLCHAIN=$GCC_TOOLCHAIN"
+fi
 echo "  CMAKE_COMMAND=$CMAKE_COMMAND"
 
 # Verify ROCm installation
@@ -418,7 +475,7 @@ if [ -d "$ROCM_PATH/lib" ]; then
     print_success "Found $LIB_COUNT shared libraries in $ROCM_PATH/lib"
 else
     print_error "ROCm lib directory not found"
-    exit 1
+    _exit 1
 fi
 echo ""
 
@@ -450,13 +507,19 @@ if [ -n "$CMAKE_CXX_COMPILER" ]; then
     CMAKE_ARGS+=(-DCMAKE_CXX_COMPILER="$CMAKE_CXX_COMPILER")
 fi
 
+# Point hipcc at the GCC toolchain for C++20 standard library headers
+if [ -n "$GCC_TOOLCHAIN" ]; then
+    CMAKE_ARGS+=(-DCMAKE_CXX_FLAGS="--gcc-toolchain=$GCC_TOOLCHAIN")
+    print_success "Set --gcc-toolchain=$GCC_TOOLCHAIN for hipcc"
+fi
+
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"
 
 if [ $? -eq 0 ]; then
     print_success "CMake configuration successful"
 else
     print_error "CMake configuration failed"
-    exit 1
+    _exit 1
 fi
 echo ""
 
@@ -471,7 +534,7 @@ if [ $? -eq 0 ]; then
     print_success "Build successful"
 else
     print_error "Build failed"
-    exit 1
+    _exit 1
 fi
 echo ""
 

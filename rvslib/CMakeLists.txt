@@ -43,7 +43,7 @@ add_compile_options(-Wall )
 add_compile_options(-fPIC)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
 
-find_package(OpenMP)
+
 
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
@@ -173,7 +173,8 @@ target_compile_definitions(${RVS_TARGET} PRIVATE ROCM_USE_FLOAT16)
 set_target_properties(${RVS_TARGET}
  PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}
  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB} OpenMP::OpenMP_CXX)
+target_compile_options(${RVS_TARGET} PRIVATE -fopenmp)
+target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB} -fopenmp)
 ## Install shared library librvslib.so
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
