@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -502,6 +502,82 @@ int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_hdl) {
     *smi_hdl = smi_map[hip_bdf_id];
     return 0;
   }
+  return -1;
+}
+
+/**
+ * @brief Get node from hip index.
+ * @param hip_index GPU hip index
+ * @param node node id
+ * @return 0 if successful, -1 otherwise
+ **/
+int gpu_hip_to_node(int hip_index, int* node) {
+  int hip_num_gpu_devices = 0;
+  hipGetDeviceCount(&hip_num_gpu_devices);
+  if (hip_index >= hip_num_gpu_devices) {
+    return -1;
+  }
+
+  char pciString[256] = {0};
+  if (hipDeviceGetPCIBusId(pciString, 256, hip_index) != hipSuccess) {
+    return -1;
+  }
+
+  uint64_t pDom = 0, pBus = 0, pDev = 0, pFun = 0;
+  if (sscanf(pciString, "%04x:%02x:%02x.%01x",
+        reinterpret_cast<uint64_t *>(&pDom),
+        reinterpret_cast<uint64_t *>(&pBus),
+        reinterpret_cast<uint64_t *>(&pDev),
+        reinterpret_cast<uint64_t *>(&pFun)) != 4) {
+    return -1;
+  }
+
+  uint64_t hip_bdf_id =
+      ((((pDom) & 0x00000000ffffffff) << 32) |
+       (((pBus) & 0x00000000000000ff) << 8) |
+       (((pDev) & 0x000000000000001f) << 3) |
+        ((pFun) & 0x0000000000000007));
+
+  ifstream f_id, f_prop;
+  char path[KFD_PATH_MAX_LENGTH];
+  int gpu_id;
+  std::string prop_name;
+  int num_nodes = gpu_num_subdirs(KFD_SYS_PATH_NODES, "");
+
+  for (int node_id = 0; node_id < num_nodes; node_id++) {
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id",
+        KFD_SYS_PATH_NODES, node_id);
+    f_id.open(path);
+    f_id >> gpu_id;
+    f_id.close();
+
+    if (gpu_id == 0) continue;
+
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties",
+        KFD_SYS_PATH_NODES, node_id);
+    f_prop.open(path);
+
+    uint32_t domain_val = 0, location_val = 0;
+    while (f_prop >> prop_name) {
+      if (prop_name == "domain") {
+        f_prop >> domain_val;
+      } else if (prop_name == "location_id") {
+        f_prop >> location_val;
+      } else {
+        std::string dummy;
+        f_prop >> dummy;
+      }
+    }
+    f_prop.close();
+
+    uint64_t kfd_bdf_id = (((uint64_t)domain_val) << 32) | location_val;
+
+    if (hip_bdf_id == kfd_bdf_id) {
+      *node = node_id;
+      return 0;
+    }
+  }
+
   return -1;
 }
 
