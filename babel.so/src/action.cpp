@@ -112,6 +112,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
       workers[i].set_chunks_per_block(chunks_per_block);
       workers[i].set_tb_size(tb_size);
       workers[i].set_data_init(data_init);
+      workers[i].set_nontemporal(nontemporal);
 
       i++;
     }
@@ -305,6 +306,22 @@ bool mem_action::get_all_mem_config_keys(void) {
     msg = "invalid '" + std::string(RVS_CONF_DATA_INIT) +
       "' key value '" + data_init +
       "'. Must be 'default', 'gpu_norm_dist', 'cpu_norm_dist' or 'zero_init'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  it = property.find(RVS_CONF_NONTEMPORAL);
+  if (it != property.end()) {
+    nontemporal = it->second;
+  } else {
+    nontemporal = MEM_DEFAULT_NONTEMPORAL;
+  }
+
+  if (nontemporal != "none" && nontemporal != "all" &&
+      nontemporal != "read" && nontemporal != "write") {
+    msg = "invalid '" + std::string(RVS_CONF_NONTEMPORAL) +
+      "' key value '" + nontemporal +
+      "'. Must be 'none', 'all', 'read' or 'write'";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
