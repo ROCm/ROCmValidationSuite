@@ -411,6 +411,11 @@ bool PulseWorker::do_pulse_stress(void) {
       break;
     }
 
+    float pulse_peak_high = 0.0f;
+    float pulse_trough_low = 999999.0f;
+    float pulse_temp = -1.0f;
+    int pulse_gemm_count = 0;
+
     // ═══ HIGH PHASE: Pin clocks to max + sustained GEMM load ═══
     set_highest_clocks();
 
@@ -434,6 +439,7 @@ bool PulseWorker::do_pulse_stress(void) {
           if (halt_on_error) goto done;
           break;
         }
+        pulse_gemm_count++;
         now = std::chrono::system_clock::now();
         if (std::chrono::duration<double, std::milli>(
                 now - phase_start).count() >= high_phase_ms)
@@ -445,9 +451,11 @@ bool PulseWorker::do_pulse_stress(void) {
         total_power_high += power;
         high_samples++;
         if (power > max_power_high) max_power_high = power;
+        if (power > pulse_peak_high) pulse_peak_high = power;
       }
 
       float temp = read_temperature();
+      if (temp > 0) pulse_temp = temp;
       if (temp > 105.0f) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " +
           std::to_string(gpu_id) + " thermal violation: " +
@@ -462,6 +470,9 @@ bool PulseWorker::do_pulse_stress(void) {
     // low phase — without this, kernels still in flight keep power
     // elevated and the "low" reading is indistinguishable from "high".
     hipDeviceSynchronize();
+    now = std::chrono::system_clock::now();
+    double actual_high_ms = std::chrono::duration<double, std::milli>(
+        now - phase_start).count();
 
     // ═══ LOW PHASE: Pin clocks to minimum + idle with sampling ═══
     set_lowest_clocks();
@@ -481,12 +492,33 @@ bool PulseWorker::do_pulse_stress(void) {
         total_power_low += power_low;
         low_samples++;
         if (power_low < min_power_low) min_power_low = power_low;
+        if (power_low < pulse_trough_low) pulse_trough_low = power_low;
       }
     }
 
+    now = std::chrono::system_clock::now();
+    double actual_low_ms = std::chrono::duration<double, std::milli>(
+        now - phase_start).count();
+
     pulse_count++;
 
-    now = std::chrono::system_clock::now();
+    if (PulseWorker::bjson) {
+      uint64_t pulse_elapsed_ms = time_diff(now, test_start);
+      log_to_json(desc, rvs::logresults,
+          "record_type", "pulse",
+          "pulse_num", std::to_string(pulse_count),
+          "elapsed_ms", std::to_string(pulse_elapsed_ms),
+          "power_high_w", std::to_string(pulse_peak_high),
+          "power_low_w", std::to_string(
+              pulse_trough_low < 999999.0f ? pulse_trough_low : 0.0f),
+          "power_delta_w", std::to_string(
+              pulse_peak_high - (pulse_trough_low < 999999.0f
+                  ? pulse_trough_low : 0.0f)),
+          "high_duration_ms", std::to_string(actual_high_ms),
+          "low_duration_ms", std::to_string(actual_low_ms),
+          "temp_c", std::to_string(pulse_temp),
+          "gemm_count", std::to_string(pulse_gemm_count));
+    }
     if (time_diff(now, last_log_time) >= log_interval) {
       float avg_high = (high_samples > 0)
         ? total_power_high / high_samples : 0.0f;
@@ -537,9 +569,17 @@ done:
 
   if (PulseWorker::bjson) {
     log_to_json(desc, rvs::logresults,
-        PULSE_JSON_POWER_HIGH_KEY, std::to_string(avg_power_high),
-        PULSE_JSON_POWER_LOW_KEY, std::to_string(avg_power_low),
+        "record_type", "summary",
         "pulse_count", std::to_string(pulse_count),
+        "avg_power_high_w", std::to_string(avg_power_high),
+        "avg_power_low_w", std::to_string(avg_power_low),
+        "avg_delta_w", std::to_string(power_delta),
+        "max_power_high_w", std::to_string(max_power_high),
+        "min_power_low_w", std::to_string(min_power_low),
+        "duration_ms", std::to_string(run_duration_ms),
+        "pulse_rate_hz", std::to_string(pulse_rate),
+        "ops_type", pulse_ops_type,
+        "matrix_size", std::to_string(matrix_size),
         PULSE_PASS_KEY, result ? "true" : "false");
   }
 
