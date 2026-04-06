@@ -43,7 +43,7 @@ add_compile_options(-pthread)
 add_compile_options(-Wall)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
 
-find_package(OpenMP)
+
 
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
@@ -128,7 +128,7 @@ set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_TARGET})
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
-target_link_libraries(${RVS_TARGET} rvslib OpenMP::OpenMP_CXX
+target_link_libraries(${RVS_TARGET} rvslib -fopenmp
 	${ROCBLAS_LIB} ${AMD_SMI_LIB} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS} ${HIPRAND_LIB} ${HIPBLASLT_LIB})
 add_dependencies(${RVS_TARGET} rvslib)
 
