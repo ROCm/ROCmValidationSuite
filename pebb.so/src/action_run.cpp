@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -149,35 +149,45 @@ int pebb_action::run() {
     // start timers
     if (property_duration) {
       RVSTRACE_
-        timer_final.start(property_duration, true);  // ticks only once
-    }
+        timer_final.start(property_duration, true); // ticks only once
 
-    if (property_log_interval) {
+      if (property_log_interval) {
+        RVSTRACE_
+          timer_running.start(property_log_interval); // ticks continuously
+      }
+
       RVSTRACE_
-        timer_running.start(property_log_interval);        // ticks continuously
+        pebb_start_time = std::chrono::system_clock::now();
+
+      do {
+        if (property_parallel) {
+          sts = run_parallel();
+        } else {
+          sts = run_single();
+        }
+
+        pebb_end_time = std::chrono::system_clock::now();
+        uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
+        if(test_time >= property_duration) {
+          pebb_action::do_final_average();
+          break;
+        }
+      } while(brun);
+
+      RVSTRACE_
+        timer_running.stop();
+      timer_final.stop();
     }
+    else {
 
-    RVSTRACE_
-      pebb_start_time = std::chrono::system_clock::now();
-
-    do {
       if (property_parallel) {
         sts = run_parallel();
       } else {
         sts = run_single();
       }
 
-      pebb_end_time = std::chrono::system_clock::now();
-      uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
-      if(test_time >= property_duration) {
-        pebb_action::do_final_average();
-        break;
-      }
-    } while(brun);
-
-    RVSTRACE_
-      timer_running.stop();
-    timer_final.stop();
+      pebb_action::do_final_average();
+    }
 
     iter -= step;
 
