@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -42,6 +42,20 @@
  * in its run() method.
  *
  */
+
+struct peer_pair_t {
+  uint16_t srcnode;
+  uint16_t dstnode;
+  std::string conn_type;
+};
+
+struct gpu_pair_bw_t {
+  int srcGpu;
+  int dstGpu;
+  int srcNode;
+  int dstNode;
+  double avgBandwidthGbPerSec;
+};
 
 namespace rvs {
 class hsa;
@@ -87,6 +101,33 @@ class pbqtworker : public rvs::ThreadBase {
   const std::string& get_conn_type(){
       return conn_type;
   }
+  void set_hot_calls(uint32_t _hot_calls) { hot_calls = _hot_calls; }
+  //! Set warm calls
+  void set_warm_calls(uint32_t _warm_calls) { warm_calls = _warm_calls; }
+  //! Set b2b
+  void set_b2b(bool _b2b) { b2b = _b2b; }
+  //! Set transfer method
+  void set_transfer_method(std::string _transfer_method) { transfer_method = _transfer_method; }
+  //! Set executor
+  void set_executor(std::string _executor) { executor = _executor; }
+  //! Set subexecutor
+  void set_subexecutor(uint32_t _subexecutor) { subexecutor = _subexecutor; }
+  //! Set transferbench test type (p2p or alltoall)
+  void set_transferbench_test(std::string _test) { transferbench_test = _test; }
+  //! Set alltoall mode (0=copy, 1=read-only, 2=write-only)
+  void set_a2a_mode(uint32_t val) { a2a_mode = val; }
+  //! Set alltoall direct-only flag (1=only direct XGMI links)
+  void set_a2a_direct(uint32_t val) { a2a_direct = val; }
+  //! Set alltoall local flag (1=include self-transfers)
+  void set_a2a_local(uint32_t val) { a2a_local = val; }
+  //! Set number of GPUs for alltoall (0=all detected)
+  void set_a2a_num_gpus(uint32_t val) { a2a_num_gpus = val; }
+  //! Set remote read flag (1=use DST as executor instead of SRC)
+  void set_use_remote_read(uint32_t val) { use_remote_read = val; }
+  //! Set GFX kernel unroll factor
+  void set_gfx_unroll(uint32_t val) { gfx_unroll = val; }
+  //! Get per GPU-pair bandwidth results from alltoall
+  const std::vector<gpu_pair_bw_t>& get_gpu_pair_bw() const { return gpu_pair_bw; }
  protected:
   virtual void run(void);
 
@@ -127,9 +168,42 @@ class pbqtworker : public rvs::ThreadBase {
   //! total number of transfers
   uint16_t transfer_num;
 
+  //! hot calls
+  uint32_t hot_calls;
+  //! warm calls
+  uint32_t warm_calls;
+  //! 'true' if back-to-back transfers enabled
+  bool b2b;
+
+  //! transfer method - TransferBench or Native
+  std::string transfer_method;
+  //! transferbench test type - p2p or alltoall
+  std::string transferbench_test;
+  //! transfer executor to use - GPU or SDMA
+  std::string executor;
+  //! No. of subexecutors
+  uint32_t subexecutor;
+
   //! list of test block sizes
   std::vector<uint32_t> block_size;
   std::string conn_type;
+
+  //! alltoall mode: 0=copy, 1=read-only, 2=write-only
+  uint32_t a2a_mode;
+  //! alltoall direct-only: 1=only direct XGMI links, 0=full all-to-all
+  uint32_t a2a_direct;
+  //! alltoall local: 1=include self-transfers, 0=exclude
+  uint32_t a2a_local;
+  //! number of GPUs for alltoall (0=all detected)
+  uint32_t a2a_num_gpus;
+  //! remote read: 1=use DST as executor, 0=use SRC
+  uint32_t use_remote_read;
+  //! GFX kernel unroll factor
+  uint32_t gfx_unroll;
+
+  //! per GPU-pair bandwidth results from alltoall
+  std::vector<gpu_pair_bw_t> gpu_pair_bw;
+
   //! synchronization mutex
   std::mutex cntmutex;
 };

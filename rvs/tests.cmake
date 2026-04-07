@@ -36,14 +36,12 @@ set(HIPBLASLT_LIB "hipblaslt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
 
-find_package(OpenMP)
-
 ## define lib directories
 link_directories(${RVS_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${HIPRAND_LIB_DIR})
 
 ## define target for "test-to-fail"
 add_executable(${RVS_TARGET}fail src/rvs.cpp)
-target_link_libraries(${RVS_TARGET}fail rvslib rvslibut ${PROJECT_LINK_LIBS} OpenMP::OpenMP_CXX
+target_link_libraries(${RVS_TARGET}fail rvslib rvslibut ${PROJECT_LINK_LIBS} -fopenmp
   ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${ROCM_CORE} ${CORE_RUNTIME_TARGET} ${HIPRAND_LIB} ${HIPBLASLT_LIB})
 
 target_compile_definitions(${RVS_TARGET}fail PRIVATE RVS_INVERT_RETURN_STATUS)
@@ -212,7 +210,7 @@ FOREACH(SINGLE_TEST ${TESTSOURCES})
   target_link_libraries(${TEST_NAME}
     ${PROJECT_LINK_LIBS}
     ${PROJECT_TEST_LINK_LIBS}
-    rvslib rvslibut gtest_main gtest pthread OpenMP::OpenMP_CXX
+    rvslib rvslibut gtest_main gtest pthread -fopenmp
     ${ROCM_SMI_LIB} ${ROCBLAS_LIB} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${HIPRAND_LIB} ${HIPBLASLT_LIB}
   )
   add_dependencies(${TEST_NAME} rvs_gtest_target)

@@ -92,12 +92,14 @@ check_and_install_dependencies() {
         # Check for Ubuntu/Debian library headers
         [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("libpci-dev")
         [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("libyaml-cpp-dev")
+        [ -f /usr/include/numa.h ] || MISSING_LIBS+=("libnuma-dev")
         command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm")
         command -v unzip >/dev/null 2>&1 || MISSING_LIBS+=("unzip")
     elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|amzn)$ ]]; then
         # Check for CentOS/RHEL/Rocky/AlmaLinux library headers
         [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("pciutils-devel")
         [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("yaml-cpp-devel")
+        [ -f /usr/include/numa.h ] || MISSING_LIBS+=("numactl-devel")
         command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm-build")
     fi
     
@@ -124,7 +126,8 @@ check_and_install_dependencies() {
                 unzip \
                 libyaml-cpp-dev \
                 rpm \
-                python3
+                python3 \
+                libnuma-dev
         elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|amzn)$ ]]; then
             print_info "Installing dependencies for CentOS/RHEL/Rocky/AlmaLinux..."
             
@@ -168,7 +171,38 @@ check_and_install_dependencies() {
                 doxygen \
                 rpm-build \
                 python3 \
+                numactl-devel\
                 || print_warning "Some packages may already be installed"
+            
+            # Install a gcc-toolset with C++20 <barrier> support (requires GCC >= 11)
+            # Try highest available first for best C++20/C++23 support, fall back to minimum viable
+            # RHEL/AlmaLinux/Rocky 8+ use gcc-toolset-{ver}, CentOS 7 uses devtoolset-{ver}
+            if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
+                GCC_TOOLSET_INSTALLED=""
+                for ver in 14 13 12 11; do
+                    if yum list available gcc-toolset-${ver} &>/dev/null; then
+                        print_info "Found gcc-toolset-${ver} - installing for C++20 support..."
+                        if yum install -y gcc-toolset-${ver}; then
+                            GCC_TOOLSET_INSTALLED="gcc-toolset-${ver}"
+                            print_success "Installed gcc-toolset-${ver} (C++20 <barrier> supported)"
+                            break
+                        fi
+                    fi
+                done
+                # Fallback to devtoolset (CentOS 7) - only devtoolset-11 has <barrier>
+                if [ -z "$GCC_TOOLSET_INSTALLED" ]; then
+                    if yum list available devtoolset-11 &>/dev/null; then
+                        print_info "Found devtoolset-11 - installing for C++20 support (CentOS 7)..."
+                        if yum install -y devtoolset-11; then
+                            GCC_TOOLSET_INSTALLED="devtoolset-11"
+                            print_success "Installed devtoolset-11 (C++20 <barrier> supported)"
+                        fi
+                    fi
+                fi
+                if [ -z "$GCC_TOOLSET_INSTALLED" ]; then
+                    print_warning "No gcc-toolset (11-14) or devtoolset-11 available - C++20 headers like <barrier> may be missing"
+                fi
+            fi
             
             # Install cmake and yaml-cpp separately as they may need special handling
             print_info "Installing cmake..."
@@ -194,6 +228,7 @@ check_and_install_dependencies() {
             echo "Development Libraries:"
             echo "  - libpci-dev (or pciutils-devel)"
             echo "  - libyaml-cpp-dev (or yaml-cpp-devel)"
+            echo "  - libnuma-dev (or numactl-devel)"
             echo "  - rpm-build tools"
             exit 1
         fi
@@ -360,16 +395,29 @@ else
     print_success "Set CPACK package release: $PACKAGE_RELEASE (dev branch: $GIT_BRANCH, commit: $GIT_COMMIT_SHORT)"
 fi
 
-# TODO: Currently hipcc and cmake3 are only set for AlmaLinux (manylinux_2_28)
-# Ubuntu works fine without these settings. Need to verify later if these
-# should be applied universally for all OS or kept OS-specific.
+if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
+    # Enable the installed gcc-toolset/devtoolset so hipcc (clang) finds C++20 headers like <barrier>
+    # Discover the toolset path dynamically via rpm rather than hardcoding /opt/rh/
+    GCC_TOOLSET_ENABLED=""
+    for pkg in gcc-toolset-14 gcc-toolset-13 gcc-toolset-12 gcc-toolset-11 devtoolset-11; do
+        ENABLE_SCRIPT=$(rpm -ql ${pkg}-runtime 2>/dev/null | grep '/enable$' | head -1)
+        if [ -n "$ENABLE_SCRIPT" ] && [ -f "$ENABLE_SCRIPT" ]; then
+            TOOLSET_ROOT=$(dirname "$ENABLE_SCRIPT")
+            source "$ENABLE_SCRIPT"
+            export GCC_TOOLCHAIN="${TOOLSET_ROOT}/root/usr"
+            GCC_TOOLSET_ENABLED="$pkg"
+            print_success "Enabled ${pkg} from ${TOOLSET_ROOT} (GCC $(gcc -dumpversion))"
+            break
+        fi
+    done
+    if [ -z "$GCC_TOOLSET_ENABLED" ]; then
+        print_warning "No gcc-toolset (11-14) or devtoolset-11 found - C++20 headers may be missing"
+    fi
 
-# AlmaLinux-specific settings for manylinux_2_28
-if [[ "$OS" == "almalinux" ]]; then
-    # Set C++ compiler to hipcc from ROCm for AlmaLinux
+    # Set C++ compiler to hipcc from ROCm
     if [ -x "$ROCM_PATH/bin/hipcc" ]; then
         export CMAKE_CXX_COMPILER="$ROCM_PATH/bin/hipcc"
-        print_success "Set CMAKE_CXX_COMPILER to hipcc (AlmaLinux)"
+        print_success "Set CMAKE_CXX_COMPILER to hipcc (CentOS/RHEL/AlmaLinux/Rocky)"
     else
         print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using system default compiler"
     fi
@@ -390,12 +438,13 @@ if [[ "$OS" == "almalinux" ]]; then
     fi
 
     # Use cmake3 for AlmaLinux
+    # Use cmake3 for RHEL-based distros
     export CMAKE_COMMAND="cmake3"
-    print_info "Using cmake3 (AlmaLinux/Manylinux)"
+    print_info "Using cmake3 (CentOS/RHEL/AlmaLinux/Rocky)"
 else
-    # Ubuntu: use defaults (system compiler and cmake)
+    # Ubuntu and others: use defaults (system compiler and cmake)
     export CMAKE_COMMAND="cmake"
-    print_info "Using cmake (Ubuntu)"
+    print_info "Using cmake (Ubuntu/other)"
 fi
 
 print_info "Environment variables set:"
@@ -412,6 +461,9 @@ if [ -n "$CPACK_RPM_PACKAGE_RELEASE" ]; then
 fi
 if [ -n "$CMAKE_CXX_COMPILER" ]; then
     echo "  CMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER"
+fi
+if [ -n "$GCC_TOOLCHAIN" ]; then
+    echo "  GCC_TOOLCHAIN=$GCC_TOOLCHAIN"
 fi
 echo "  CMAKE_COMMAND=$CMAKE_COMMAND"
 
@@ -460,9 +512,10 @@ if [ -n "$CMAKE_CXX_COMPILER" ]; then
     CMAKE_ARGS+=(-DCMAKE_CXX_COMPILER="$CMAKE_CXX_COMPILER")
 fi
 
-# Add GCC toolchain flag so hipcc/clang finds C++20 libstdc++ headers
-if [ -n "$GCC_TOOLCHAIN_FLAG" ]; then
-    CMAKE_ARGS+=(-DCMAKE_CXX_FLAGS="$GCC_TOOLCHAIN_FLAG")
+# Point hipcc at the GCC toolchain for C++20 standard library headers
+if [ -n "$GCC_TOOLCHAIN" ]; then
+    CMAKE_ARGS+=(-DCMAKE_CXX_FLAGS="--gcc-toolchain=$GCC_TOOLCHAIN")
+    print_success "Set --gcc-toolchain=$GCC_TOOLCHAIN for hipcc"
 fi
 
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"

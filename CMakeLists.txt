@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -491,6 +491,30 @@ endif()
 if (NOT DEFINED MXDATAGENERATOR_INC_DIR)
   set (MXDATAGENERATOR_INC_DIR "${CMAKE_BINARY_DIR}/mxDataGenerator-src/lib/include")
   message ("MXDATAGENERATOR_INC_DIR ${MXDATAGENERATOR_INC_DIR}")
+endif ()
+################################################################################
+
+################################################################################
+# TransferBench Download
+configure_file(CMakeTransferBenchDownload.cmake TransferBench-download/CMakeLists.txt)
+
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
+if(result)
+  message(FATAL_ERROR "CMake step for TransferBench failed: ${result}")
+endif()
+
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
+if(result)
+  message(FATAL_ERROR "Build step for TransferBench failed: ${result}")
+endif()
+
+if (NOT DEFINED TRANSFERBENCH_INC_DIR)
+  set (TRANSFERBENCH_INC_DIR "${CMAKE_BINARY_DIR}/TransferBench-src/src/header")
+  message ("TRANSFERBENCH_INC_DIR ${TRANSFERBENCH_INC_DIR}")
 endif ()
 ################################################################################
 

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -36,6 +36,8 @@ extern "C" {
 #include <cstring>
 #include <string>
 #include <vector>
+#include <map>
+#include <set>
 
 #include "include/rvs_key_def.h"
 #include "include/pci_caps.h"
@@ -223,6 +225,104 @@ bool pbqt_action::get_all_pbqt_config_keys(void) {
       link_type_string = "XGMI";
   }
 
+  if (property_get(RVS_CONF_B2B_KEY, &b2b, DEFAULT_B2B)) {
+    msg = "invalid '" + std::string(RVS_CONF_B2B_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_HOT_CALLS_KEY, &hot_calls, DEFAULT_HOT_CALLS);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_HOT_CALLS_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_WARM_CALLS_KEY, &warm_calls, DEFAULT_WARM_CALLS);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_WARM_CALLS_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_TRANSFER_METHOD_KEY, &transfer_method, DEFAULT_TRANSFER_METHOD);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_TRANSFER_METHOD_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_TRANSFERBENCH_TEST_KEY, &transferbench_test, DEFAULT_TRANSFERBENCH_TEST);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_TRANSFERBENCH_TEST_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_EXECUTOR_KEY, &executor, DEFAULT_EXECUTOR);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_EXECUTOR_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_SUBEXECUTOR_KEY, &subexecutor, DEFAULT_SUBEXECUTOR);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_SUBEXECUTOR_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_A2A_MODE_KEY, &a2a_mode, DEFAULT_A2A_MODE);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_A2A_MODE_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_A2A_DIRECT_KEY, &a2a_direct, DEFAULT_A2A_DIRECT);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_A2A_DIRECT_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_A2A_LOCAL_KEY, &a2a_local, DEFAULT_A2A_LOCAL);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_A2A_LOCAL_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_A2A_NUM_GPUS_KEY, &a2a_num_gpus, DEFAULT_A2A_NUM_GPUS);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_A2A_NUM_GPUS_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_USE_REMOTE_READ_KEY, &use_remote_read, DEFAULT_USE_REMOTE_READ);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_USE_REMOTE_READ_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_GFX_UNROLL_KEY, &gfx_unroll, DEFAULT_GFX_UNROLL);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_GFX_UNROLL_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    res = false;
+  }
+
+  if(!hot_calls) {
+    hot_calls = DEFAULT_HOT_CALLS;
+  }
+
+  if(!warm_calls) {
+    warm_calls = DEFAULT_WARM_CALLS;
+  }
+
   return res;
 }
 
@@ -288,14 +388,18 @@ int pbqt_action::create_threads() {
   std::vector<uint16_t> gpu_id;
   std::vector<uint16_t> gpu_idx;
   std::vector<uint16_t> gpu_device_id;
-  uint16_t transfer_ix = 0;
   bool bmatch_found = false;
   char srcgpuid_buff[12];
   char dstgpuid_buff[12];
-  std::string pbconn;
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
+
+  std::vector<peer_pair_t> valid_pairs;
+
+  // ---------------------------------------------------------------
+  // Loop 1: Discover all valid srcnode-dstnode peer pairs
+  // ---------------------------------------------------------------
   for (size_t i = 0; i < gpu_id.size(); i++) {    // all possible sources
 
     // filter out by source device id
@@ -353,7 +457,7 @@ int pbqt_action::create_threads() {
         }
 
       RVSTRACE_
-        // signal that at lease one matching src-dst combination
+        // signal that at least one matching src-dst combination
         // has been found:
         bmatch_found = true;
 
@@ -361,7 +465,7 @@ int pbqt_action::create_threads() {
       // get NUMA nodes
       uint16_t srcnode;
       if (rvs::gpulist::gpu2node(gpu_id[i], &srcnode)) {
-        msg + "no node found for GPU ID " + std::to_string(gpu_id[i]);
+        msg = "no node found for GPU ID " + std::to_string(gpu_id[i]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
@@ -427,39 +531,16 @@ int pbqt_action::create_threads() {
         if(distance == rvs::hsa::NO_CONN) {
           continue; // no point if no connection
         }
+
+        std::string pbconn;
         if (0 != arr_linkinfo.size()) {
-          /* Log link type */
           pbconn = arr_linkinfo[0].strtype;
-          //log_json_data(std::to_string(srcnode), std::to_string(gpu_id[j]), rvs::logresults, 
-          //   pbqt_json_data_t::PBQT_LINK_TYPE, arr_linkinfo[0].strtype);
-          /* Note: Assuming link type for all hops between GPUs are the same */
         }
 
         RVSTRACE_
-          // GPUs are peers, create transaction for them
           if (prop_test_bandwidth) {
-            RVSTRACE_
-              pbqtworker* p = nullptr;
-
-            transfer_ix += 1;
-
-            p = new pbqtworker;
-            if (p == nullptr) {
-              RVSTRACE_
-                msg = "internal error";
-              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-              return -1;
-            }
-            p->initialize(srcnode, dstnode, prop_bidirectional);
-            RVSTRACE_
-              p->set_name(action_name);
-            p->set_stop_name(action_name);
-            p->set_transfer_ix(transfer_ix);
-            p->set_block_sizes(block_size);
-            p->set_conn_type(pbconn);
-            test_array.push_back(p);
-          }else{
-            // no need to run bandwidth, just log interface info
+            valid_pairs.push_back({srcnode, dstnode, pbconn});
+          } else {
             log_json_data(std::to_string(gpu_id[srcnode]), std::to_string(gpu_id[j]), rvs::logresults,
                 pbconn, "NA" );
           }
@@ -492,8 +573,11 @@ int pbqt_action::create_threads() {
     }
   }
 
+  // ---------------------------------------------------------------
+  // Loop 2: Create pbqtworker for each valid srcnode-dstnode pair
+  // ---------------------------------------------------------------
   RVSTRACE_
-    if (prop_test_bandwidth && test_array.size() < 1) {
+    if (prop_test_bandwidth && valid_pairs.empty()) {
       RVSTRACE_
         std::string diag;
       if (bmatch_found) {
@@ -524,6 +608,50 @@ int pbqt_action::create_threads() {
       RVSTRACE_
         return 0;
     }
+
+  uint16_t transfer_ix = 0;
+  bool alltoall_single = (transfer_method == "transferbench" &&
+                          transferbench_test == "alltoall");
+
+  for (const auto& pair : valid_pairs) {
+    RVSTRACE_
+      pbqtworker* p = nullptr;
+
+    transfer_ix += 1;
+
+    p = new pbqtworker;
+    if (p == nullptr) {
+      RVSTRACE_
+        msg = "internal error";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
+    p->initialize(pair.srcnode, pair.dstnode, prop_bidirectional);
+    RVSTRACE_
+    p->set_name(action_name);
+    p->set_stop_name(action_name);
+    p->set_transfer_ix(transfer_ix);
+    p->set_block_sizes(block_size);
+    p->set_conn_type(pair.conn_type);
+    p->set_b2b(b2b);
+    p->set_hot_calls(hot_calls);
+    p->set_warm_calls(warm_calls);
+    p->set_transfer_method(transfer_method);
+    p->set_transferbench_test(transferbench_test);
+    p->set_executor(executor);
+    p->set_subexecutor(subexecutor);
+    p->set_a2a_mode(a2a_mode);
+    p->set_a2a_direct(a2a_direct);
+    p->set_a2a_local(a2a_local);
+    p->set_a2a_num_gpus(a2a_num_gpus);
+    p->set_use_remote_read(use_remote_read);
+    p->set_gfx_unroll(gfx_unroll);
+
+    test_array.push_back(p);
+
+    if (alltoall_single)
+      break;
+  }
 
   RVSTRACE_
     for (auto it = test_array.begin(); it != test_array.end(); ++it) {
@@ -739,79 +867,202 @@ int pbqt_action::print_final_average() {
   rvs::action_result_t result;
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
-    (*it)->get_final_data(&src_node, &dst_node, &bidir,
-        &current_size, &duration);
 
-    if (duration) {
-      bandwidth = current_size/duration/1000 / 1000 / 1000;
-      if (bidir) {
-        bandwidth *=2;
+    if (transferbench_test != "alltoall") {
+      (*it)->get_final_data(&src_node, &dst_node, &bidir,
+          &current_size, &duration);
+
+      if (duration) {
+        bandwidth = current_size/duration/1000 / 1000 / 1000;
+        if (bidir) {
+          bandwidth *=2;
+        }
+        snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
+      } else {
+        snprintf( buff, sizeof(buff), "(not measured)");
       }
-      snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
-    } else {
-      snprintf( buff, sizeof(buff), "(not measured)");
-    }
 
-    RVSTRACE_
-      if (rvs::gpulist::node2gpu(src_node, &src_id)) {
+
+      RVSTRACE_
+        if (rvs::gpulist::node2gpu(src_node, &src_id)) {
+          RVSTRACE_
+            std::string msg = "could not find GPU id for node " +
+            std::to_string(src_node);
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+          return -1;
+        }
+      RVSTRACE_
+        if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+          RVSTRACE_
+            std::string msg = "could not find GPU id for node " +
+            std::to_string(dst_node);
+          rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+          return -1;
+        }
+
+      std::string src_pci_bdf;
+      if (rvs::gpulist::node2bdf(src_node, src_pci_bdf)) {
         RVSTRACE_
-          std::string msg = "could not find GPU id for node " +
+          std::string msg = "could not find PCI BDF for node " +
           std::to_string(src_node);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
-    RVSTRACE_
-      if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+
+      std::string dst_pci_bdf;
+      if (rvs::gpulist::node2bdf(dst_node, dst_pci_bdf)) {
         RVSTRACE_
-          std::string msg = "could not find GPU id for node " +
+          std::string msg = "could not find PCI BDF for node " +
           std::to_string(dst_node);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
         return -1;
       }
 
-    std::string src_pci_bdf;
-    if (rvs::gpulist::node2bdf(src_node, src_pci_bdf)) {
-      RVSTRACE_
-        std::string msg = "could not find PCI BDF for node " +
-        std::to_string(src_node);
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      transfer_ix = (*it)->get_transfer_ix();
+      transfer_num = (*it)->get_transfer_num();
+
+      snprintf(transfer_buff, sizeof(transfer_buff), "%2d", transfer_ix);
+      snprintf(srcgpuid_buff, sizeof(srcgpuid_buff), "%5d", src_id);
+      snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", dst_id);
+
+      msg = "[" + action_name + "] p2p-bandwidth["
+        + transfer_buff + "/" + std::to_string(transfer_num) + "]"
+        + " [GPU:: " + std::to_string(src_node) + " - " + srcgpuid_buff + " - " + src_pci_bdf  + "]"
+        + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + dst_pci_bdf  + "]"
+        + " bidirectional: " + std::string(bidir ? "true" : "false")
+        + " " + buff + " duration: " + std::to_string(duration) + " secs";
+
+      rvs::lp::Log(msg, rvs::logresults);
+
+      result.state = rvs::actionstate::ACTION_RUNNING;
+      result.status = rvs::actionstatus::ACTION_SUCCESS;
+      result.output = msg.c_str();
+      action_callback(&result);
+
+      log_json_data(std::to_string(src_id), std::to_string(dst_id), rvs::logresults,
+          (*it)->get_conn_type(), buff);
+
+      sleep(1);
     }
+    else {
 
-    std::string dst_pci_bdf;
-    if (rvs::gpulist::node2bdf(dst_node, dst_pci_bdf)) {
-      RVSTRACE_
-        std::string msg = "could not find PCI BDF for node " +
-        std::to_string(dst_node);
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      /* AlltoAll final results */
+
+      const auto& pair_bw = (*it)->get_gpu_pair_bw();
+      std::map<int, double> gpuAggregateBw;
+      std::set<int> uniqueGpus;
+      double a2a_total_bandwidth = 0.0;
+
+      for (size_t p = 0; p < pair_bw.size(); p++) {
+        const auto& pb = pair_bw[p];
+
+        gpuAggregateBw[pb.srcGpu] += pb.avgBandwidthGbPerSec;
+        uniqueGpus.insert(pb.srcGpu);
+        uniqueGpus.insert(pb.dstGpu);
+        a2a_total_bandwidth += pb.avgBandwidthGbPerSec;
+
+        uint16_t pb_src_id = 0, pb_dst_id = 0;
+        if (rvs::gpulist::node2gpu(pb.srcNode, &pb_src_id)) {
+          std::string errmsg = "could not find GPU id for node " +
+            std::to_string(pb.srcNode);
+          rvs::lp::Err(errmsg, MODULE_NAME_CAPS, action_name);
+          continue;
+        }
+        if (rvs::gpulist::node2gpu(pb.dstNode, &pb_dst_id)) {
+          std::string errmsg = "could not find GPU id for node " +
+            std::to_string(pb.dstNode);
+          rvs::lp::Err(errmsg, MODULE_NAME_CAPS, action_name);
+          continue;
+        }
+
+        std::string pb_src_bdf;
+        if (rvs::gpulist::node2bdf(pb.srcNode, pb_src_bdf)) {
+          std::string errmsg = "could not find PCI BDF for node " +
+            std::to_string(pb.srcNode);
+          rvs::lp::Err(errmsg, MODULE_NAME_CAPS, action_name);
+          continue;
+        }
+
+        std::string pb_dst_bdf;
+        if (rvs::gpulist::node2bdf(pb.dstNode, pb_dst_bdf)) {
+          std::string errmsg = "could not find PCI BDF for node " +
+            std::to_string(pb.dstNode);
+          rvs::lp::Err(errmsg, MODULE_NAME_CAPS, action_name);
+          continue;
+        }
+
+        char pb_transfer_buff[8];
+        char pb_srcgpuid_buff[12];
+        char pb_dstgpuid_buff[12];
+        char pb_bw_buff[128];
+
+        snprintf(pb_transfer_buff, sizeof(pb_transfer_buff), "%2zu", p + 1);
+        snprintf(pb_srcgpuid_buff, sizeof(pb_srcgpuid_buff), "%5d", pb_src_id);
+        snprintf(pb_dstgpuid_buff, sizeof(pb_dstgpuid_buff), "%5d", pb_dst_id);
+        snprintf(pb_bw_buff, sizeof(pb_bw_buff), "%.3f GBps", pb.avgBandwidthGbPerSec);
+
+        msg = "[" + action_name + "] a2a-p2p-bandwidth["
+          + pb_transfer_buff + "/" + std::to_string(pair_bw.size()) + "]"
+          + " [GPU:: " + std::to_string(pb.srcNode) + " - " + pb_srcgpuid_buff + " - " + pb_src_bdf + "]"
+          + " [GPU:: " + std::to_string(pb.dstNode) + " - " + pb_dstgpuid_buff + " - " + pb_dst_bdf + "]"
+          + " " + pb_bw_buff;
+
+        rvs::lp::Log(msg, rvs::logresults);
+
+        result.state = rvs::actionstate::ACTION_RUNNING;
+        result.status = rvs::actionstatus::ACTION_SUCCESS;
+        result.output = msg.c_str();
+        action_callback(&result);
+
+        log_json_data(std::to_string(pb_src_id), std::to_string(pb_dst_id),
+            rvs::logresults, (*it)->get_conn_type(), pb_bw_buff);
+      }
+
+      if (!gpuAggregateBw.empty()) {
+
+        for (const auto& entry : gpuAggregateBw) {
+          int gpuNode = -1;
+          gpu_hip_to_node(entry.first, &gpuNode);
+
+          uint16_t gpu_id_val = 0;
+          std::string gpu_bdf;
+          rvs::gpulist::node2gpu(gpuNode, &gpu_id_val);
+          rvs::gpulist::node2bdf(gpuNode, gpu_bdf);
+
+          char aggr_gpuid_buff[12];
+          char aggr_bw_buff[128];
+          snprintf(aggr_gpuid_buff, sizeof(aggr_gpuid_buff), "%5d", gpu_id_val);
+          snprintf(aggr_bw_buff, sizeof(aggr_bw_buff), "%.3f GBps", entry.second);
+
+          msg = "[" + action_name + "] a2a-gpu-bandwidth"
+            + " [GPU:: " + std::to_string(gpuNode) + " - " + aggr_gpuid_buff + " - " + gpu_bdf + "]"
+            + " Aggregate peer bandwidth: " + aggr_bw_buff;
+
+          rvs::lp::Log(msg, rvs::logresults);
+
+          result.state = rvs::actionstate::ACTION_RUNNING;
+          result.status = rvs::actionstatus::ACTION_SUCCESS;
+          result.output = msg.c_str();
+          action_callback(&result);
+        }
+
+      char total_bw_buff[128];
+      snprintf(total_bw_buff, sizeof(total_bw_buff), "%.3f GBps",
+          a2a_total_bandwidth);
+
+        msg = "[" + action_name + "] a2a-bandwidth "
+          + "[" + std::to_string(uniqueGpus.size()) + " GPUs]"
+          + "[" + std::to_string(pair_bw.size()) + " p2p transfers]"
+          + " Aggregate bandwidth: " + total_bw_buff;
+
+        rvs::lp::Log(msg, rvs::logresults);
+
+        result.state = rvs::actionstate::ACTION_RUNNING;
+        result.status = rvs::actionstatus::ACTION_SUCCESS;
+        result.output = msg.c_str();
+        action_callback(&result);
+      }
     }
-
-    transfer_ix = (*it)->get_transfer_ix();
-    transfer_num = (*it)->get_transfer_num();
-
-    snprintf(transfer_buff, sizeof(transfer_buff), "%2d", transfer_ix);
-    snprintf(srcgpuid_buff, sizeof(srcgpuid_buff), "%5d", src_id);
-    snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", dst_id);
-
-    msg = "[" + action_name + "] p2p-bandwidth["
-      + transfer_buff + "/" + std::to_string(transfer_num) + "]"
-      + " [GPU:: " + std::to_string(src_node) + " - " + srcgpuid_buff + " - " + src_pci_bdf  + "]"
-      + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + dst_pci_bdf  + "]"
-      + " bidirectional: " + std::string(bidir ? "true" : "false")
-      + " " + buff + " duration: " + std::to_string(duration) + " secs";
-
-    rvs::lp::Log(msg, rvs::logresults);
-
-    result.state = rvs::actionstate::ACTION_RUNNING;
-    result.status = rvs::actionstatus::ACTION_SUCCESS;
-    result.output = msg.c_str();
-    action_callback(&result);
-
-    log_json_data(std::to_string(src_id), std::to_string(dst_id), rvs::logresults,
-        (*it)->get_conn_type(), buff);
-
-    sleep(1);
   }
 
   return 0;
