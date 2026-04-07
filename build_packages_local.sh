@@ -171,7 +171,7 @@ check_and_install_dependencies() {
                 doxygen \
                 rpm-build \
                 python3 \
-                numactl-devel\
+                numactl-devel \
                 || print_warning "Some packages may already be installed"
             
             # Install a gcc-toolset with C++20 <barrier> support (requires GCC >= 11)
@@ -396,22 +396,40 @@ else
 fi
 
 if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
-    # Enable the installed gcc-toolset/devtoolset so hipcc (clang) finds C++20 headers like <barrier>
-    # Discover the toolset path dynamically via rpm rather than hardcoding /opt/rh/
-    GCC_TOOLSET_ENABLED=""
+    # hipcc (clang) auto-detects the system GCC 8.5 whose libstdc++ lacks
+    # C++20 headers like <barrier>.  Find a gcc-toolset with C++20 support
+    # and point hipcc at it via --gcc-toolchain.
+    GCC_TOOLCHAIN=""
+
+    # Try rpm-based detection first (most reliable when toolset was yum-installed)
     for pkg in gcc-toolset-14 gcc-toolset-13 gcc-toolset-12 gcc-toolset-11 devtoolset-11; do
         ENABLE_SCRIPT=$(rpm -ql ${pkg}-runtime 2>/dev/null | grep '/enable$' | head -1)
         if [ -n "$ENABLE_SCRIPT" ] && [ -f "$ENABLE_SCRIPT" ]; then
             TOOLSET_ROOT=$(dirname "$ENABLE_SCRIPT")
             source "$ENABLE_SCRIPT"
-            export GCC_TOOLCHAIN="${TOOLSET_ROOT}/root/usr"
-            GCC_TOOLSET_ENABLED="$pkg"
+            GCC_TOOLCHAIN="${TOOLSET_ROOT}/root/usr"
             print_success "Enabled ${pkg} from ${TOOLSET_ROOT} (GCC $(gcc -dumpversion))"
             break
         fi
     done
-    if [ -z "$GCC_TOOLSET_ENABLED" ]; then
-        print_warning "No gcc-toolset (11-14) or devtoolset-11 found - C++20 headers may be missing"
+
+    # Fallback: probe /opt/rh/ directly (e.g. manylinux images with pre-installed toolsets)
+    if [ -z "$GCC_TOOLCHAIN" ]; then
+        for ts_ver in 14 13 12 11; do
+            ts_root="/opt/rh/gcc-toolset-${ts_ver}/root/usr"
+            if [ -d "${ts_root}/include/c++" ]; then
+                GCC_TOOLCHAIN="${ts_root}"
+                if [ -f "/opt/rh/gcc-toolset-${ts_ver}/enable" ]; then
+                    source "/opt/rh/gcc-toolset-${ts_ver}/enable"
+                fi
+                print_success "Using gcc-toolset-${ts_ver} for C++20 stdlib (${ts_root})"
+                break
+            fi
+        done
+    fi
+
+    if [ -z "$GCC_TOOLCHAIN" ]; then
+        print_warning "No gcc-toolset (11-14) found; C++20 headers like <barrier> may be missing"
     fi
 
     # Set C++ compiler to hipcc from ROCm
@@ -421,23 +439,7 @@ if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     else
         print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using system default compiler"
     fi
-    
-    # hipcc (clang) auto-detects the system GCC 8.5 whose libstdc++ lacks
-    # C++20 headers like <barrier>.  Point it at the gcc-toolset instead.
-    GCC_TOOLCHAIN_FLAG=""
-    for ts_ver in 14 13 12; do
-        ts_root="/opt/rh/gcc-toolset-${ts_ver}/root/usr"
-        if [ -d "${ts_root}/include/c++" ]; then
-            GCC_TOOLCHAIN_FLAG="--gcc-toolchain=${ts_root}"
-            print_success "Using gcc-toolset-${ts_ver} for C++20 stdlib (${ts_root})"
-            break
-        fi
-    done
-    if [ -z "$GCC_TOOLCHAIN_FLAG" ]; then
-        print_warning "No gcc-toolset found; C++20 headers like <barrier> may be missing"
-    fi
 
-    # Use cmake3 for AlmaLinux
     # Use cmake3 for RHEL-based distros
     export CMAKE_COMMAND="cmake3"
     print_info "Using cmake3 (CentOS/RHEL/AlmaLinux/Rocky)"
@@ -574,7 +576,6 @@ if command -v rpm >/dev/null 2>&1; then
     print_info "Creating RPM package..."
     cd "$BUILD_DIR"
     cpack -G RPM --verbose
-
     
     if [ $? -eq 0 ]; then
         RPM_FILE=$(ls rocm-validation-suite*.rpm 2>/dev/null | head -1)
