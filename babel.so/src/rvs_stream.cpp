@@ -62,6 +62,49 @@ __device__ __forceinline__ constexpr T scalar(const T scalar) {
     }                                                                          \
   } while(0)
 
+// Non-temporal load/store control
+//   NT_ALL  (1) : NT load + NT store (default)
+//   NT_READ (2) : NT load + normal store
+//   NT_WRITE(3) : normal load + NT store
+//   NT_NONE (0) : normal load + normal store
+enum NTMode { NT_NONE = 0, NT_ALL = 1, NT_READ = 2, NT_WRITE = 3 };
+
+#define NT_KERNEL_LAUNCH_EVENTS(kernel, epl, cpb, T, grid, block, smem, start, stop, ...) \
+  switch (nt_mode) {                                                                \
+    case NT_NONE:  hipLaunchKernelWithEvents((kernel<NT_NONE, epl, cpb, T>),        \
+        grid, block, smem, start, stop, __VA_ARGS__); break;                        \
+    case NT_READ:  hipLaunchKernelWithEvents((kernel<NT_READ, epl, cpb, T>),        \
+        grid, block, smem, start, stop, __VA_ARGS__); break;                        \
+    case NT_WRITE: hipLaunchKernelWithEvents((kernel<NT_WRITE, epl, cpb, T>),       \
+        grid, block, smem, start, stop, __VA_ARGS__); break;                        \
+    default:       hipLaunchKernelWithEvents((kernel<NT_ALL, epl, cpb, T>),         \
+        grid, block, smem, start, stop, __VA_ARGS__); break;                        \
+  }
+
+#define NT_KERNEL_LAUNCH_SYNC(kernel, epl, cpb, T, grid, block, smem, stop, ...) \
+  switch (nt_mode) {                                                 \
+    case NT_NONE:  hipLaunchKernelSynchronous((kernel<NT_NONE, epl, cpb, T>),  \
+        grid, block, smem, stop, __VA_ARGS__); break;                          \
+    case NT_READ:  hipLaunchKernelSynchronous((kernel<NT_READ, epl, cpb, T>),  \
+        grid, block, smem, stop, __VA_ARGS__); break;                          \
+    case NT_WRITE: hipLaunchKernelSynchronous((kernel<NT_WRITE, epl, cpb, T>), \
+        grid, block, smem, stop, __VA_ARGS__); break;                          \
+    default:       hipLaunchKernelSynchronous((kernel<NT_ALL, epl, cpb, T>),   \
+        grid, block, smem, stop, __VA_ARGS__); break;                          \
+  }
+
+#define NT_KERNEL_LAUNCH_DOT_SYNC(kernel, epl, cpb, T, tbs, grid, block, smem, stop, ...) \
+  switch (nt_mode) {                                                           \
+    case NT_NONE:  hipLaunchKernelSynchronous((kernel<NT_NONE, epl, cpb, T, tbs>),  \
+        grid, block, smem, stop, __VA_ARGS__); break;                                \
+    case NT_READ:  hipLaunchKernelSynchronous((kernel<NT_READ, epl, cpb, T, tbs>),  \
+        grid, block, smem, stop, __VA_ARGS__); break;                                \
+    case NT_WRITE: hipLaunchKernelSynchronous((kernel<NT_WRITE, epl, cpb, T, tbs>), \
+        grid, block, smem, stop, __VA_ARGS__); break;                                \
+    default:       hipLaunchKernelSynchronous((kernel<NT_ALL, epl, cpb, T, tbs>),   \
+        grid, block, smem, stop, __VA_ARGS__); break;                                \
+  }
+
 template <typename... Args, typename F = void (*)(Args...)>
 static void hipLaunchKernelWithEvents(F kernel, const dim3& numBlocks,
                            const dim3& dimBlocks, hipStream_t stream,
@@ -97,11 +140,18 @@ static void hipLaunchKernelSynchronous(F kernel, const dim3& numBlocks,
   template <class T>
 HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
     const int device_index, const unsigned int _dwords_per_lane, const unsigned int _chunks_per_block,
-    const unsigned int _threads_per_block)
+    const unsigned int _threads_per_block, const std::string& nontemporal)
   : array_size{ARRAY_SIZE}, evt_timing(event_timing),
   dwords_per_lane(_dwords_per_lane), chunks_per_block(_chunks_per_block), tb_size(_threads_per_block)
 {
+
   std::string msg;
+
+  // Set Non-temporal mode
+  if (nontemporal == "none")       nt_mode = 0; // NT_NONE
+  else if (nontemporal == "read")  nt_mode = 2; // NT_READ
+  else if (nontemporal == "write") nt_mode = 3; // NT_WRITE
+  else                             nt_mode = 1; // NT_ALL
 
   // make sure that either:
   //    DWORDS_PER_LANE is less than sizeof(T), in which case we default to 1 element
@@ -302,54 +352,23 @@ void HIPStream<T>::read_arrays(std::vector<T>& a, std::vector<T>& b, std::vector
   check_error(hipMemcpy(c.data(), d_c, c.size()*sizeof(T), hipMemcpyDeviceToHost));
 }
 
-// Non-temporal load/store control:
-//   NONTEMPORAL == 1       : NT load + NT store (default)
-//   NONTEMPORAL_WRITE == 1 : normal load + NT store
-//   NONTEMPORAL_READ == 1  : NT load + normal store
-//   (none of the above)    : normal load + normal store
-#if NONTEMPORAL == 1
-template<typename T>
+template<int nt_mode, typename T>
 __device__ __forceinline__ T load(const T& ref) {
-  return __builtin_nontemporal_load(&ref);
+  if constexpr (nt_mode == NT_ALL || nt_mode == NT_READ)
+    return __builtin_nontemporal_load(&ref);
+  else
+    return ref;
 }
 
-template<typename T>
+template<int nt_mode, typename T>
 __device__ __forceinline__ void store(const T& value, T& ref) {
-  __builtin_nontemporal_store(value, &ref);
-}
-#elif NONTEMPORAL_WRITE == 1
-template<typename T>
-__device__ __forceinline__ T load(const T& ref) {
-  return ref;
+  if constexpr (nt_mode == NT_ALL || nt_mode == NT_WRITE)
+    __builtin_nontemporal_store(value, &ref);
+  else
+    ref = value;
 }
 
-template<typename T>
-__device__ __forceinline__ void store(const T& value, T& ref) {
-  __builtin_nontemporal_store(value, &ref);
-}
-#elif NONTEMPORAL_READ == 1
-template<typename T>
-__device__ __forceinline__ T load(const T& ref) {
-  return __builtin_nontemporal_load(&ref);
-}
-
-template<typename T>
-__device__ __forceinline__ void store(const T& value, T& ref) {
-  ref = value;
-}
-#else
-template<typename T>
-__device__ __forceinline__ T load(const T& ref) {
-  return ref;
-}
-
-template<typename T>
-__device__ __forceinline__ void store(const T& value, T& ref) {
-  ref = value;
-}
-#endif
-
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <int nt_mode, unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void read_kernel(const T * __restrict a, T * __restrict c)
@@ -362,7 +381,7 @@ void read_kernel(const T * __restrict a, T * __restrict c)
   {
     for (auto j = 0u; j != elements_per_lane; ++j)
     {
-      tmp += load(a[gidx + i * dx + j]);
+      tmp += load<nt_mode>(a[gidx + i * dx + j]);
     }
   }
 
@@ -379,35 +398,20 @@ float HIPStream<T>::read()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    // Support for dwords_per_lane = 4 & chunks_per_block = 1/2/4
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(read_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(read_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(read_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(read_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(read_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(read_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(read_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(read_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(read_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(read_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(read_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(read_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else
-      hipLaunchKernelWithEvents(read_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(read_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
 
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
@@ -415,38 +419,24 @@ float HIPStream<T>::read()
   else
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(read_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(read_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(read_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(read_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(read_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(read_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(read_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(read_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(read_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(read_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(read_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(read_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else
-      hipLaunchKernelSynchronous(read_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(read_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <int nt_mode, unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void write_kernel(T * __restrict c)
@@ -458,7 +448,7 @@ void write_kernel(T * __restrict c)
   {
     for (auto j = 0u; j != elements_per_lane; ++j)
     {
-      store(scalar<T>(startC), c[gidx + i * dx + j]);
+      store<nt_mode>(scalar<T>(startC), c[gidx + i * dx + j]);
     }
   }
 }
@@ -469,35 +459,20 @@ float HIPStream<T>::write()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    // Support for dwords_per_lane = 4 & chunks_per_block = 1/2/4
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(write_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(write_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(write_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(write_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(write_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(write_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(write_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(write_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(write_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(write_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(write_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(write_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_c)
     else
-      hipLaunchKernelWithEvents(write_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(write_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_c)
 
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
@@ -505,38 +480,24 @@ float HIPStream<T>::write()
   else
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(write_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_c);
+      NT_KERNEL_LAUNCH_SYNC(write_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(write_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_c);
+      NT_KERNEL_LAUNCH_SYNC(write_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(write_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_c);
+      NT_KERNEL_LAUNCH_SYNC(write_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(write_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_c);
+      NT_KERNEL_LAUNCH_SYNC(write_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(write_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_c);
+      NT_KERNEL_LAUNCH_SYNC(write_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(write_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_c);
+      NT_KERNEL_LAUNCH_SYNC(write_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_c)
     else
-      hipLaunchKernelSynchronous(write_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_c);
+      NT_KERNEL_LAUNCH_SYNC(write_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_c)
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <int nt_mode, unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void copy_kernel(const T * __restrict a, T * __restrict c)
@@ -548,7 +509,7 @@ void copy_kernel(const T * __restrict a, T * __restrict c)
   {
     for (auto j = 0u; j != elements_per_lane; ++j)
     {
-      store(load(a[gidx + i * dx + j]), c[gidx + i * dx + j]);
+      store<nt_mode>(load<nt_mode>(a[gidx + i * dx + j]), c[gidx + i * dx + j]);
     }
   }
 }
@@ -559,35 +520,20 @@ float HIPStream<T>::copy()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    // Support for dwords_per_lane = 4 & chunks_per_block = 1/2/4
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(copy_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(copy_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(copy_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(copy_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(copy_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(copy_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(copy_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(copy_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(copy_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(copy_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(copy_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(copy_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
     else
-      hipLaunchKernelWithEvents(copy_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(copy_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_c)
 
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
@@ -595,38 +541,24 @@ float HIPStream<T>::copy()
   else
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(copy_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(copy_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(copy_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(copy_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(copy_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(copy_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(copy_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(copy_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(copy_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(copy_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(copy_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(copy_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
     else
-      hipLaunchKernelSynchronous(copy_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_c);
+      NT_KERNEL_LAUNCH_SYNC(copy_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_c)
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <int nt_mode, unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void mul_kernel(T * __restrict b, const T * __restrict c)
@@ -638,7 +570,7 @@ void mul_kernel(T * __restrict b, const T * __restrict c)
   {
     for (auto j = 0u; j != elements_per_lane; ++j)
     {
-      store(scalar<T>(startScalar) * load(c[gidx + i * dx + j]), b[gidx + i * dx + j]);
+      store<nt_mode>(scalar<T>(startScalar) * load<nt_mode>(c[gidx + i * dx + j]), b[gidx + i * dx + j]);
     }
   }
 }
@@ -649,35 +581,20 @@ float HIPStream<T>::mul()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    // Support for dwords_per_lane = 4 & chunks_per_block = 1/2/4
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(mul_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(mul_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(mul_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(mul_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(mul_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(mul_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(mul_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(mul_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(mul_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(mul_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(mul_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(mul_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_b, d_c)
     else
-      hipLaunchKernelWithEvents(mul_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(mul_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_b, d_c)
 
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
@@ -685,38 +602,24 @@ float HIPStream<T>::mul()
   else
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(mul_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(mul_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(mul_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(mul_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(mul_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(mul_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(mul_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(mul_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(mul_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(mul_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(mul_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(mul_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_b, d_c)
     else
-      hipLaunchKernelSynchronous(mul_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(mul_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_b, d_c)
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <int nt_mode, unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void add_kernel(const T * __restrict a, const T * __restrict b,
@@ -729,7 +632,7 @@ void add_kernel(const T * __restrict a, const T * __restrict b,
   {
     for (auto j = 0u; j != elements_per_lane; ++j)
     {
-      store(load(a[gidx + i * dx + j]) + load(b[gidx + i * dx + j]), c[gidx + i * dx + j]);
+      store<nt_mode>(load<nt_mode>(a[gidx + i * dx + j]) + load<nt_mode>(b[gidx + i * dx + j]), c[gidx + i * dx + j]);
     }
   }
 }
@@ -740,35 +643,20 @@ float HIPStream<T>::add()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    // Support for dwords_per_lane = 4 & chunks_per_block = 1/2/4
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(add_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(add_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(add_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(add_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(add_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(add_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(add_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(add_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(add_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(add_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(add_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(add_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else
-      hipLaunchKernelWithEvents(add_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(add_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
 
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
@@ -776,38 +664,24 @@ float HIPStream<T>::add()
   else
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(add_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(add_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(add_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(add_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(add_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(add_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(add_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(add_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(add_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(add_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(add_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(add_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else
-      hipLaunchKernelSynchronous(add_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(add_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
   }
   return kernel_time;
 }
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
+template <int nt_mode, unsigned int elements_per_lane, unsigned int chunks_per_block, typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void triad_kernel(T * __restrict a, const T * __restrict b,
@@ -820,7 +694,7 @@ void triad_kernel(T * __restrict a, const T * __restrict b,
   {
     for (auto j = 0u; j != elements_per_lane; ++j)
     {
-      store(load(b[gidx + i * dx + j]) + scalar<T>(startScalar) * load(c[gidx + i * dx + j]),
+      store<nt_mode>(load<nt_mode>(b[gidx + i * dx + j]) + scalar<T>(startScalar) * load<nt_mode>(c[gidx + i * dx + j]),
             a[gidx + i * dx + j]);
     }
   }
@@ -832,35 +706,20 @@ float HIPStream<T>::triad()
   float kernel_time = 0.;
   if (evt_timing)
   {
-    // Support for dwords_per_lane = 4 & chunks_per_block = 1/2/4
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(triad_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(triad_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelWithEvents(triad_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(triad_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(triad_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(triad_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelWithEvents(triad_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(triad_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(triad_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(triad_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelWithEvents(triad_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(triad_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
     else
-      hipLaunchKernelWithEvents(triad_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, start_ev,
-          stop_ev, d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_EVENTS(triad_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, start_ev, stop_ev, d_a, d_b, d_c)
 
     check_error(hipEventSynchronize(stop_ev));
     check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
@@ -868,33 +727,19 @@ float HIPStream<T>::triad()
   else
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(triad_kernel<4, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(triad_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 1)
-      hipLaunchKernelSynchronous(triad_kernel<2, 1, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(triad_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(triad_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(triad_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 2)
-      hipLaunchKernelSynchronous(triad_kernel<2, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(triad_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 4 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(triad_kernel<4, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(triad_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else if(elements_per_lane == 2 && chunks_per_block == 4)
-      hipLaunchKernelSynchronous(triad_kernel<2, 4, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(triad_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
     else
-      hipLaunchKernelSynchronous(triad_kernel<4, 2, T>,
-          dim3(block_cnt), dim3(tb_size), nullptr, stop_ev,
-          d_a, d_b, d_c);
+      NT_KERNEL_LAUNCH_SYNC(triad_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), nullptr, stop_ev, d_a, d_b, d_c)
   }
   return kernel_time;
 }
@@ -931,7 +776,7 @@ struct Reducer<1u> {
   {}
 };
 
-template <unsigned int elements_per_lane, unsigned int chunks_per_block, typename T, unsigned int tb_size>
+template <int nt_mode, unsigned int elements_per_lane, unsigned int chunks_per_block, typename T, unsigned int tb_size>
 __launch_bounds__(TBSIZE)
 __global__
 void dot_kernel(const T * __restrict a, const T * __restrict b,
@@ -945,7 +790,7 @@ void dot_kernel(const T * __restrict a, const T * __restrict b,
   {
     for (auto j = 0u; j != elements_per_lane; ++j)
     {
-      tmp += load(a[gidx + i * dx + j]) * load(b[gidx + i * dx + j]);
+      tmp += load<nt_mode>(a[gidx + i * dx + j]) * load<nt_mode>(b[gidx + i * dx + j]);
     }
   }
 
@@ -960,89 +805,62 @@ void dot_kernel(const T * __restrict a, const T * __restrict b,
   {
     return;
   }
-  store(tb_sum[0], sum[blockIdx.x]);
+  store<nt_mode>(tb_sum[0], sum[blockIdx.x]);
 }
 
 template <class T>
 T HIPStream<T>::dot()
 {
-  // Support for dwords_per_lane = 4 & chunks_per_block = 1/2/4
   if(elements_per_lane == 4 && chunks_per_block == 1) {
     if(tb_size == 1024) {
-      hipLaunchKernelSynchronous(dot_kernel<4, 1, T, 1024>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 4, 1, T, 1024, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
     else if(tb_size == 512) {
-      hipLaunchKernelSynchronous(dot_kernel<4, 1, T, 512>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 4, 1, T, 512, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
   }
   else if(elements_per_lane == 2 && chunks_per_block == 1) {
     if(tb_size == 1024) {
-      hipLaunchKernelSynchronous(dot_kernel<2, 1, T, 1024>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 2, 1, T, 1024, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
     else if(tb_size == 512) {
-      hipLaunchKernelSynchronous(dot_kernel<2, 1, T, 512>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 2, 1, T, 512, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
   }
   else if(elements_per_lane == 4 && chunks_per_block == 2) {
     if(tb_size == 1024) {
-      hipLaunchKernelSynchronous(dot_kernel<4, 2, T, 1024>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 4, 2, T, 1024, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
     else if(tb_size == 512) {
-      hipLaunchKernelSynchronous(dot_kernel<4, 2, T, 512>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 4, 2, T, 512, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
   }
   else if(elements_per_lane == 2 && chunks_per_block == 2) {
     if(tb_size == 1024) {
-      hipLaunchKernelSynchronous(dot_kernel<2, 2, T, 1024>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 2, 2, T, 1024, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
     else if(tb_size == 512) {
-      hipLaunchKernelSynchronous(dot_kernel<2, 2, T, 512>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 2, 2, T, 512, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
   }
   else if(elements_per_lane == 4 && chunks_per_block == 4) {
     if(tb_size == 1024) {
-      hipLaunchKernelSynchronous(dot_kernel<4, 4, T, 1024>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 4, 4, T, 1024, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
     else if(tb_size == 512) {
-      hipLaunchKernelSynchronous(dot_kernel<4, 4, T, 512>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 4, 4, T, 512, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
   }
   else if(elements_per_lane == 2 && chunks_per_block == 4) {
     if(tb_size == 1024) {
-      hipLaunchKernelSynchronous(dot_kernel<2, 4, T, 1024>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 2, 4, T, 1024, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
     else if(tb_size == 512) {
-      hipLaunchKernelSynchronous(dot_kernel<2, 4, T, 512>,
-          dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-          d_a, d_b, sums);
+      NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 2, 4, T, 512, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
     }
   }
   else
-    hipLaunchKernelSynchronous(dot_kernel<4, 2, T, 1024>,
-        dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev,
-        d_a, d_b, sums);
+    NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 4, 2, T, 1024, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
 
   T sum{0};
   for (auto i = 0u; i != block_cnt; ++i)
