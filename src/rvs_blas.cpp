@@ -136,8 +136,8 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     transb = (transB == 0) ? rocblas_operation_none : rocblas_operation_transpose;
 
     // minimum leading dimensions
-    rocblas_int min_lda = transA == rocblas_operation_none ? m : k;
-    rocblas_int min_ldb = transB == rocblas_operation_none ? k : n;
+    rocblas_int min_lda = transa == rocblas_operation_none ? m : k;
+    rocblas_int min_ldb = transb == rocblas_operation_none ? k : n;
     rocblas_int min_ldc = m;
     rocblas_int min_ldd = m;
 
@@ -160,10 +160,10 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
     if(gemm_mode == "strided_batched") {
 
       if(stride_a == 0)
-        stride_a = (transA == rocblas_operation_none) ? blas_lda_offset * k : blas_lda_offset * m;
+        stride_a = (transa == rocblas_operation_none) ? blas_lda_offset * k : blas_lda_offset * m;
 
       if(stride_b == 0)
-        stride_b = (transB == rocblas_operation_none) ? blas_ldb_offset * n : blas_ldb_offset * k;
+        stride_b = (transb == rocblas_operation_none) ? blas_ldb_offset * n : blas_ldb_offset * k;
 
       if(stride_c == 0)
         stride_c = blas_ldc_offset * n;
