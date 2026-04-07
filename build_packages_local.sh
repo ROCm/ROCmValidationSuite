@@ -374,6 +374,21 @@ if [[ "$OS" == "almalinux" ]]; then
         print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using system default compiler"
     fi
     
+    # hipcc (clang) auto-detects the system GCC 8.5 whose libstdc++ lacks
+    # C++20 headers like <barrier>.  Point it at the gcc-toolset instead.
+    GCC_TOOLCHAIN_FLAG=""
+    for ts_ver in 14 13 12; do
+        ts_root="/opt/rh/gcc-toolset-${ts_ver}/root/usr"
+        if [ -d "${ts_root}/include/c++" ]; then
+            GCC_TOOLCHAIN_FLAG="--gcc-toolchain=${ts_root}"
+            print_success "Using gcc-toolset-${ts_ver} for C++20 stdlib (${ts_root})"
+            break
+        fi
+    done
+    if [ -z "$GCC_TOOLCHAIN_FLAG" ]; then
+        print_warning "No gcc-toolset found; C++20 headers like <barrier> may be missing"
+    fi
+
     # Use cmake3 for AlmaLinux
     export CMAKE_COMMAND="cmake3"
     print_info "Using cmake3 (AlmaLinux/Manylinux)"
@@ -443,6 +458,11 @@ CMAKE_ARGS=(
 # Add CXX compiler if set
 if [ -n "$CMAKE_CXX_COMPILER" ]; then
     CMAKE_ARGS+=(-DCMAKE_CXX_COMPILER="$CMAKE_CXX_COMPILER")
+fi
+
+# Add GCC toolchain flag so hipcc/clang finds C++20 libstdc++ headers
+if [ -n "$GCC_TOOLCHAIN_FLAG" ]; then
+    CMAKE_ARGS+=(-DCMAKE_CXX_FLAGS="$GCC_TOOLCHAIN_FLAG")
 fi
 
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"
