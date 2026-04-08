@@ -142,9 +142,9 @@ They are **not** in the workflow file. They are set in the repo:
 
 | Trigger | Path | Contents |
 |--------|------|----------|
-| **Scheduled (daily)** | `nightly/rocm-validation-suite/deb/`, `nightly/rocm-validation-suite/rpm/`, `nightly/rocm-validation-suite/tar/` | DEB and TGZ → `nightly/rocm-validation-suite/deb` and `.../tar` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (CentOS job). |
-| **Push to `release/*`** | `release/rocm-validation-suite/deb/`, `release/rocm-validation-suite/rpm/`, `release/rocm-validation-suite/tar/` | Same split by type; all release branches write to the same paths for auto-update. |
-| **Push to `master`/`main` or same-repo PR** | `rocm-validation-suite/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | All built packages (DEB+TGZ or RPM+TGZ) in one prefix per job. |
+| **Scheduled (daily)** | `nightly/rocm-validation-suite/deb/`, `nightly/rocm-validation-suite/rpm/`, `nightly/rocm-validation-suite/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). |
+| **Push to `release/*`** | `release/rocm-validation-suite/deb/`, `release/rocm-validation-suite/rpm/`, `release/rocm-validation-suite/tar/` | Same split by type; all release branches write to the same paths for auto-update. TGZ uploaded only by manylinux job. |
+| **Push to `master`/`main` or same-repo PR** | `rocm-validation-suite/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). |
 
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
 
