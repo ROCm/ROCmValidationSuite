@@ -173,6 +173,13 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the number of iterations
     uint64_t get_num_iterations(void) { return num_iterations; }
 
+    //! sets the test duration in milliseconds (0 = use num_iterations)
+    void set_duration(uint64_t _duration) {
+        duration = _duration;
+    }
+    //! returns the test duration in milliseconds
+    uint64_t get_duration(void) { return duration; }
+
     //! sets the array size
     void set_array_size(uint64_t _array_size) {
         array_size = _array_size;
@@ -295,6 +302,8 @@ class MemWorker : public rvs::ThreadBase {
     uint64_t run_duration_ms;
     //! Number of iterations
     uint64_t num_iterations;
+    //! Test duration in milliseconds (0 = use num_iterations)
+    uint64_t duration;
     //! output as csv
     bool output_csv;
     //! Mibibytes

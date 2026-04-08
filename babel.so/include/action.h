@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -63,10 +63,12 @@ using std::map;
 #define RVS_CONF_DOT                    "dot"
 #define RVS_CONF_TRIAD                  "triad"
 #define RVS_CONF_DATA_INIT              "data_init"
-#define RVS_CONF_NONTEMPORAL           "nontemporal"
+#define RVS_CONF_NONTEMPORAL            "nontemporal"
+#define RVS_CONF_DURATION               "duration"
 
 #define MEM_DEFAULT_ARRAY_SIZE          33554432   // 32 MB
 #define MEM_DEFAULT_NUM_ITER            100
+#define MEM_DEFAULT_DURATION            0          // 0 means use num_iter instead
 #define MEM_DEFAULT_TEST_TYPE           1
 #define MEM_DEFAULT_MEM_MIBIBYTE        false
 #define MEM_DEFAULT_OP_CSV              false
@@ -124,7 +126,9 @@ class mem_action: public rvs::actionbase {
     int  test_type;
     //! number of iterations
     uint64_t num_iterations;
-    //! number of iterations
+    //! test duration in milliseconds (0 = use num_iterations)
+    uint64_t duration;
+    //! array size
     uint64_t array_size;
     //! number of dwords per lane
     uint16_t dwords_per_lane;
