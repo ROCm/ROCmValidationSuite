@@ -29,6 +29,9 @@
 #include <iomanip>
 #include <thread>
 #include <fstream>
+#include <vector>
+#include <set>
+#include <sstream>
 
 #include "include/rvsexec.h"
 #include "yaml-cpp/yaml.h"
@@ -81,12 +84,52 @@ int rvs::exec::do_yaml(const std::string& config_file) {
     return -1;
   }
 
+  std::set<std::string> selected_action_names;
+  std::set<int> selected_action_indices;
+  std::string select_val;
+  if (rvs::options::has_option("-s", &select_val) && !select_val.empty()) {
+    std::replace(select_val.begin(), select_val.end(), ',', ' ');
+    std::istringstream iss(select_val);
+    std::vector<std::string> tokens;
+    std::string token;
+    bool all_numeric = true;
+    while (iss >> token) {
+      tokens.push_back(token);
+      try {
+        size_t pos = 0;
+        int idx = std::stoi(token, &pos);
+        if (pos != token.size() || idx < 0)
+          all_numeric = false;
+      } catch (...) {
+        all_numeric = false;
+      }
+    }
+    for (const auto& t : tokens) {
+      if (all_numeric)
+        selected_action_indices.insert(std::stoi(t));
+      else
+        selected_action_names.insert(t);
+    }
+  }
+  bool has_selection = !selected_action_names.empty() ||
+                       !selected_action_indices.empty();
+
   /* Number of times to repeat the test */
   for (int i = 0; i < num_times; i++) {
 
+    int action_idx = 0;
     // for all actions...
-    for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
+    for (YAML::const_iterator it = actions.begin(); it != actions.end();
+        ++it, ++action_idx) {
       const YAML::Node& action = *it;
+
+      if (has_selection) {
+        std::string action_name = action["name"].as<std::string>();
+        if (selected_action_names.find(action_name) == selected_action_names.end() &&
+            selected_action_indices.find(action_idx) == selected_action_indices.end()) {
+          continue;
+        }
+      }
 
       sts = 0;
       rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
@@ -569,12 +612,52 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
   /* Start of action tests */
 
+  std::set<std::string> selected_action_names;
+  std::set<int> selected_action_indices;
+  std::string select_val;
+  if (rvs::options::has_option("-s", &select_val) && !select_val.empty()) {
+    std::replace(select_val.begin(), select_val.end(), ',', ' ');
+    std::istringstream iss(select_val);
+    std::vector<std::string> tokens;
+    std::string token;
+    bool all_numeric = true;
+    while (iss >> token) {
+      tokens.push_back(token);
+      try {
+        size_t pos = 0;
+        int idx = std::stoi(token, &pos);
+        if (pos != token.size() || idx < 0)
+          all_numeric = false;
+      } catch (...) {
+        all_numeric = false;
+      }
+    }
+    for (const auto& t : tokens) {
+      if (all_numeric)
+        selected_action_indices.insert(std::stoi(t));
+      else
+        selected_action_names.insert(t);
+    }
+  }
+  bool has_selection = !selected_action_names.empty() ||
+                       !selected_action_indices.empty();
+
   /* Number of times to execute the test */
   for (int i = 0; i < num_times; i++) {
 
+    int action_idx = 0;
     // for all actions...
-    for (YAML::const_iterator it = actions.begin(); it != actions.end(); ++it) {
+    for (YAML::const_iterator it = actions.begin(); it != actions.end();
+        ++it, ++action_idx) {
       const YAML::Node& action = *it;
+
+      if (has_selection) {
+        std::string action_name = action["name"].as<std::string>();
+        if (selected_action_names.find(action_name) == selected_action_names.end() &&
+            selected_action_indices.find(action_idx) == selected_action_indices.end()) {
+          continue;
+        }
+      }
 
       sts = 0;
       rvs::logger::log("Action name :" + action["name"].as<std::string>(), rvs::logresults);
