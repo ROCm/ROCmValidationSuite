@@ -114,6 +114,7 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload Artifacts** - Store packages with 30-day retention
 6. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite` and trigger is schedule, push to `master`/`main`/`release/*`, or same-repo PR) – Each job uploads its packages to S3 using OIDC. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped for other repos and for pull requests from forks.
+7. **Generate Repo Metadata** (nightly and release builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
@@ -149,6 +150,82 @@ They are **not** in the workflow file. They are set in the repo:
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
 
 When packages are uploaded to S3, the **build report** artifact includes an **S3 Upload Locations** section with clickable links to each S3 prefix (AWS Console). This makes it easy to open the bucket and browse the uploaded DEB, RPM, and TGZ files from the report.
+
+### Repository Metadata (repodata)
+
+For **nightly** and **release** builds, the workflow also generates package repository metadata so that the S3 paths can be used directly as `apt` (DEB) and `yum`/`dnf` (RPM) repositories. This runs after the package upload step in each job.
+
+**RPM repodata** (CentOS/RHEL job):
+- Tool: `createrepo_c` (falls back to `createrepo`)
+- Downloads existing RPMs from S3, merges in the newly built RPM, regenerates the `repodata/` directory, and syncs everything back
+- Result: `repodata/repomd.xml`, `repodata/primary.xml.gz`, `repodata/filelists.xml.gz`, `repodata/other.xml.gz`
+
+**DEB repo metadata** (Ubuntu job):
+- Tools: `dpkg-scanpackages`, `apt-ftparchive`
+- Downloads existing DEBs from S3, merges in the newly built DEB, regenerates `Packages`, `Packages.gz`, and `Release`, and syncs everything back
+- Result: `Packages`, `Packages.gz`, `Release`
+
+**S3 directory layout after metadata generation:**
+
+```
+s3://<bucket>/nightly/rocm-validation-suite/
+├── deb/
+│   ├── rocm-validation-suite_1.0.0_amd64.deb
+│   ├── Packages
+│   ├── Packages.gz
+│   └── Release
+├── rpm/
+│   ├── rocm-validation-suite-1.0.0.x86_64.rpm
+│   └── repodata/
+│       ├── repomd.xml
+│       ├── primary.xml.gz
+│       ├── filelists.xml.gz
+│       └── other.xml.gz
+└── tar/
+    └── rocm-validation-suite-1.0.0-Linux.tar.gz
+```
+
+**Using the S3 repo with apt (Ubuntu/Debian):**
+
+```bash
+# Add the nightly repo (replace <bucket> with the actual S3 bucket name)
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rocm-validation-suite/deb/ ./" \
+  | sudo tee /etc/apt/sources.list.d/rvs-nightly.list
+
+# Or the release repo
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rocm-validation-suite/deb/ ./" \
+  | sudo tee /etc/apt/sources.list.d/rvs-release.list
+
+sudo apt update
+sudo apt install rocm-validation-suite
+```
+
+**Using the S3 repo with yum/dnf (CentOS/RHEL/Rocky):**
+
+```bash
+# Add the nightly repo (replace <bucket> with the actual S3 bucket name)
+cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-nightly.repo
+[rvs-nightly]
+name=RVS Nightly Packages
+baseurl=https://<bucket>.s3.amazonaws.com/nightly/rocm-validation-suite/rpm/
+enabled=1
+gpgcheck=0
+EOF
+
+# Or the release repo
+cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-release.repo
+[rvs-release]
+name=RVS Release Packages
+baseurl=https://<bucket>.s3.amazonaws.com/release/rocm-validation-suite/rpm/
+enabled=1
+gpgcheck=0
+EOF
+
+sudo yum install rocm-validation-suite
+# or: sudo dnf install rocm-validation-suite
+```
+
+> **Note:** `[trusted=yes]` (apt) and `gpgcheck=0` (yum) disable GPG verification. For production use, sign the packages and metadata with a GPG key and distribute the public key to users. Repository metadata is only generated for **nightly** (scheduled) and **release** builds; per-branch/PR builds upload raw packages without metadata.
 
 ## Build Script: build_packages_local.sh
 
