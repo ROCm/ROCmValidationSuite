@@ -153,6 +153,42 @@ jobs:
           fi
           echo "Done."
 
+      # Generate APT repo metadata (Packages, Packages.gz, Release) so the S3 path
+      # can be consumed directly as a DEB repository by apt.
+      - name: Generate and upload DEB repo metadata to S3
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))))
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          [ -z "$BUCKET" ] && exit 0
+
+          sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
+
+          BASE="rocm-validation-suite"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            DEB_PREFIX="nightly/${BASE}/deb"
+          else
+            DEB_PREFIX="release/${BASE}/deb"
+          fi
+
+          STAGING=$(mktemp -d)
+
+          echo "Downloading existing DEBs from s3://${BUCKET}/${DEB_PREFIX}/ ..."
+          aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/" "$STAGING/" \
+            --exclude "Packages*" --exclude "Release*" --exclude "InRelease" \
+            --no-progress || true
+
+          cp ./build/rocm-validation-suite*.deb "$STAGING/" 2>/dev/null || true
+
+          cd "$STAGING"
+          dpkg-scanpackages --multiversion . /dev/null > Packages
+          gzip -k -f Packages
+          apt-ftparchive release . > Release
+
+          aws s3 sync "$STAGING/" "s3://${BUCKET}/${DEB_PREFIX}/" --no-progress
+
+          echo "=== DEB repo metadata uploaded to s3://${BUCKET}/${DEB_PREFIX}/ ==="
+          aws s3 ls "s3://${BUCKET}/${DEB_PREFIX}/" --human-readable
+
   build-centos:
     name: Build CentOS/RHEL Packages (manylinux_2_28)
     runs-on: ubuntu-latest
@@ -285,6 +321,38 @@ jobs:
             echo "paths=CentOS/RHEL packages|${PREFIX}" >> $GITHUB_OUTPUT
           fi
           echo "Done."
+
+      # Generate YUM/DNF repo metadata (repodata/) so the S3 path can be consumed
+      # directly as an RPM repository by yum/dnf.
+      - name: Generate and upload RPM repodata to S3
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))))
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          [ -z "$BUCKET" ] && exit 0
+
+          yum install -y createrepo_c || yum install -y createrepo
+
+          BASE="rocm-validation-suite"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            RPM_PREFIX="nightly/${BASE}/rpm"
+          else
+            RPM_PREFIX="release/${BASE}/rpm"
+          fi
+
+          STAGING=$(mktemp -d)
+
+          echo "Downloading existing RPMs from s3://${BUCKET}/${RPM_PREFIX}/ ..."
+          aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
+            --exclude "repodata/*" --no-progress || true
+
+          cp ./build/rocm-validation-suite*.rpm "$STAGING/" 2>/dev/null || true
+
+          createrepo_c "$STAGING" || createrepo "$STAGING"
+
+          aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
+
+          echo "=== RPM repodata uploaded to s3://${BUCKET}/${RPM_PREFIX}/repodata/ ==="
+          aws s3 ls "s3://${BUCKET}/${RPM_PREFIX}/repodata/" --human-readable
 
   create-release:
     name: Create Release Summary
