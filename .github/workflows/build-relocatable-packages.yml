@@ -31,21 +31,22 @@ on:
           - gfx120X-all
         default: 'gfx110X-all'
 
+permissions:
+  contents: read
+  id-token: write
+
 env:
-  ROCM_VERSION: ${{ vars.ROCM_VERSION }}
-  GPU_FAMILY: ${{ vars.GPU_FAMILY }}
+  ROCM_VERSION: ${{ vars.ROCM_VERSION || '7.11.0a20260121' }}
+  GPU_FAMILY: ${{ vars.GPU_FAMILY || 'gfx110X-all' }}
   BUILD_TYPE: Release
 
 jobs:
   build-ubuntu:
     name: Build Ubuntu Packages
-    runs-on: ${{ vars.RUNNER_LABEL }}
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
     strategy:
       matrix:
         ubuntu_version: ['22.04']
-    permissions:
-      id-token: write
-      contents: read
     outputs:
       s3_bucket_ubuntu: ${{ steps.upload-s3-ubuntu.outputs.bucket }}
       s3_paths_ubuntu: ${{ steps.upload-s3-ubuntu.outputs.paths }}
@@ -196,15 +197,12 @@ jobs:
 
   build-centos:
     name: Build CentOS/RHEL Packages (manylinux_2_28)
-    runs-on: ${{ vars.RUNNER_LABEL_CONTAINER }}
+    runs-on: ${{ vars.RUNNER_LABEL_CONTAINER || 'ubuntu-latest' }}
     container:
       image: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
       matrix:
         distro: ['manylinux_2_28']
-    permissions:
-      id-token: write
-      contents: read
     outputs:
       s3_bucket_centos: ${{ steps.upload-s3-centos.outputs.bucket }}
       s3_paths_centos: ${{ steps.upload-s3-centos.outputs.paths }}
@@ -356,7 +354,7 @@ jobs:
   create-release:
     name: Create Release Summary
     needs: [build-ubuntu, build-centos]
-    runs-on: ${{ vars.RUNNER_LABEL_UTILITY }}
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
     if: github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     
     steps:

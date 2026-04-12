@@ -14,13 +14,10 @@ ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
 # SDK Source Configuration
 # Default: TheRock public S3 nightly bucket (works from any network).
+# Override via environment variables or GitHub Actions repository variables (vars.*).
 #
-# For AMD internal genesis server (requires AMD network / self-hosted runners):
-#   export ROCM_SDK_BASE_URL="https://rocm.genesis.amd.com/tarball"
-#   export ROCM_SDK_INDEX_URL=""    # genesis has no index page
-#   export ROCM_VERSION="7.13.0"   # must be set explicitly
-#
-# In GitHub Actions, these are set via repository variables (vars.*).
+# If your SDK server has no index page for auto-detection, set ROCM_SDK_INDEX_URL=""
+# and provide ROCM_VERSION explicitly.
 ROCM_SDK_BASE_URL="${ROCM_SDK_BASE_URL:-https://therock-nightly-tarball.s3.us-east-2.amazonaws.com}"
 ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL-https://therock-nightly-tarball.s3.amazonaws.com/index.html}"
 
@@ -305,7 +302,7 @@ elif [ -n "$ROCM_SDK_INDEX_URL" ]; then
     fi
 else
     print_error "ROCM_VERSION is required"
-    print_info "Genesis server does not provide an index page for auto-detection."
+    print_info "The configured SDK server does not provide an index page for auto-detection."
     print_info "Set it via environment variable, e.g.:"
     echo ""
     echo "  export ROCM_VERSION=\"7.11.0a20260121\""
