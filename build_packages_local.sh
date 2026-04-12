@@ -12,6 +12,41 @@ BUILD_TYPE="${BUILD_TYPE:-Release}"
 BUILD_DIR="./build"
 ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
+# SDK Source Configuration
+# Default: TheRock public S3 nightly bucket (works from any network).
+#
+# For AMD internal genesis server (requires AMD network / self-hosted runners):
+#   export ROCM_SDK_BASE_URL="https://rocm.genesis.amd.com/tarball"
+#   export ROCM_SDK_INDEX_URL=""    # genesis has no index page
+#   export ROCM_VERSION="7.13.0"   # must be set explicitly
+#
+# In GitHub Actions, these are set via repository variables (vars.*).
+ROCM_SDK_BASE_URL="${ROCM_SDK_BASE_URL:-https://therock-nightly-tarball.s3.us-east-2.amazonaws.com}"
+ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL-https://therock-nightly-tarball.s3.amazonaws.com/index.html}"
+
+# Post-build upload configuration
+# Set UPLOAD_TARGET to enable automatic upload of built packages after the build.
+# Packages are organized into: <UPLOAD_TARGET>/<repo>/<branch>/<YYYY-MM-DD>/
+#
+# Supported formats:
+#   Local path:  UPLOAD_TARGET="/mnt/shared/packages/"
+#   SCP:         UPLOAD_TARGET="scp://user@buildserver:/opt/packages/"
+#   Rsync:       UPLOAD_TARGET="rsync://user@buildserver:/opt/packages/"
+#   HTTP PUT:    UPLOAD_TARGET="http://localhost:8080"
+#                (use with packages_server/ nginx setup for auto directory creation)
+#
+# If the local nginx package server is running, auto-detect it:
+#   UPLOAD_TARGET="http://localhost:8080" when nginx is serving on 8080
+#
+# UPLOAD_REPO overrides the repo name in the upload path (auto-detected from git remote).
+if [ -z "${UPLOAD_TARGET:-}" ]; then
+    if curl -s -o /dev/null -w '' http://localhost:8080/ 2>/dev/null; then
+        UPLOAD_TARGET="http://localhost:8080"
+    fi
+fi
+UPLOAD_TARGET="${UPLOAD_TARGET:-}"
+UPLOAD_REPO="${UPLOAD_REPO:-}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -39,13 +74,13 @@ print_error() {
 # Sets the global ROCM_VERSION variable directly
 fetch_latest_rocm_version() {
     local gpu_family="$1"
-    local index_url="https://therock-nightly-tarball.s3.amazonaws.com/index.html"
-    
-    print_info "Fetching latest ROCm version for $gpu_family from TheRock..."
-    
+
+    print_info "Fetching latest ROCm version for $gpu_family..."
+    print_info "Index URL: $ROCM_SDK_INDEX_URL"
+
     # Download index page and parse for latest tarball matching GPU family
     # Pattern: therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz
-    local latest_version=$(wget -qO- "$index_url" 2>/dev/null | \
+    local latest_version=$(wget -qO- "$ROCM_SDK_INDEX_URL" 2>/dev/null | \
         grep -oP "therock-dist-linux-${gpu_family}-\K[^<\"]+(?=\.tar\.gz)" | \
         sort -V | tail -1)
     
@@ -171,12 +206,10 @@ check_and_install_dependencies() {
                 doxygen \
                 rpm-build \
                 python3 \
-                numactl-devel\
+                numactl-devel \
                 || print_warning "Some packages may already be installed"
             
             # Install a gcc-toolset with C++20 <barrier> support (requires GCC >= 11)
-            # Try highest available first for best C++20/C++23 support, fall back to minimum viable
-            # RHEL/AlmaLinux/Rocky 8+ use gcc-toolset-{ver}, CentOS 7 uses devtoolset-{ver}
             if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
                 GCC_TOOLSET_INSTALLED=""
                 for ver in 14 13 12 11; do
@@ -189,7 +222,6 @@ check_and_install_dependencies() {
                         fi
                     fi
                 done
-                # Fallback to devtoolset (CentOS 7) - only devtoolset-11 has <barrier>
                 if [ -z "$GCC_TOOLSET_INSTALLED" ]; then
                     if yum list available devtoolset-11 &>/dev/null; then
                         print_info "Found devtoolset-11 - installing for C++20 support (CentOS 7)..."
@@ -262,15 +294,29 @@ check_and_install_dependencies
 # Determine ROCm version: use environment variable or fetch latest (wget is now available)
 if [ -n "$ROCM_VERSION" ]; then
     print_info "Using specified ROCm version: $ROCM_VERSION"
-else
-    print_info "No ROCm version specified, fetching latest..."
+elif [ -n "$ROCM_SDK_INDEX_URL" ]; then
+    # Auto-detection only works when an index URL is available (e.g. S3 bucket)
+    print_info "No ROCm version specified, fetching latest from index..."
     fetch_latest_rocm_version "$GPU_FAMILY"
-    
-    # Validate that ROCM_VERSION was properly set
+
     if [ -z "$ROCM_VERSION" ]; then
         print_error "Failed to determine ROCm version"
         exit 1
     fi
+else
+    print_error "ROCM_VERSION is required"
+    print_info "Genesis server does not provide an index page for auto-detection."
+    print_info "Set it via environment variable, e.g.:"
+    echo ""
+    echo "  export ROCM_VERSION=\"7.11.0a20260121\""
+    echo "  ./build_packages_local.sh"
+    echo ""
+    print_info "Or in GitHub Actions workflow:"
+    echo ""
+    echo "  env:"
+    echo "    ROCM_VERSION: \"7.11.0a20260121\""
+    echo ""
+    exit 1
 fi
 
 # Print configuration
@@ -282,25 +328,37 @@ print_info "GPU Family: $GPU_FAMILY"
 print_info "Build Type: $BUILD_TYPE"
 print_info "Build Directory: $BUILD_DIR"
 print_info "ROCm Install: $ROCM_INSTALL_DIR"
+print_info "SDK Source: $ROCM_SDK_BASE_URL"
+if [ -n "$UPLOAD_TARGET" ]; then
+    print_info "Upload Target: $UPLOAD_TARGET"
+fi
 print_info "RVS Version: Will be read from CMakeLists.txt by CMake/CPack"
 echo "================================================================================"
 echo ""
 
 # Step 1: Download ROCm SDK
 print_info "Step 1: Downloading ROCm SDK tarball..."
-TARBALL_URL="https://therock-nightly-tarball.s3.us-east-2.amazonaws.com/therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz"
+TARBALL_URL="${ROCM_SDK_BASE_URL}/therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz"
 TARBALL_FILE="$ROCM_INSTALL_DIR/rocm-sdk.tar.gz"
 
 mkdir -p "$ROCM_INSTALL_DIR"
 
 if [ -f "$ROCM_INSTALL_DIR/install/bin/hipconfig" ]; then
     print_warning "ROCm SDK already exists at $ROCM_INSTALL_DIR/install"
-    read -p "Do you want to re-download? (y/N): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        rm -rf "$ROCM_INSTALL_DIR/install"
+    if [ -t 0 ]; then
+        read -p "Do you want to re-download? (y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            rm -rf "$ROCM_INSTALL_DIR/install"
+        else
+            print_info "Using existing ROCm SDK"
+            export ROCM_PATH="$ROCM_INSTALL_DIR/install"
+            print_success "ROCm SDK path set to: $ROCM_PATH"
+            echo ""
+            goto_step2=true
+        fi
     else
-        print_info "Using existing ROCm SDK"
+        print_info "Non-interactive mode: reusing existing ROCm SDK"
         export ROCM_PATH="$ROCM_INSTALL_DIR/install"
         print_success "ROCm SDK path set to: $ROCM_PATH"
         echo ""
@@ -397,7 +455,6 @@ fi
 
 if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     # Enable the installed gcc-toolset/devtoolset so hipcc (clang) finds C++20 headers like <barrier>
-    # Discover the toolset path dynamically via rpm rather than hardcoding /opt/rh/
     GCC_TOOLSET_ENABLED=""
     for pkg in gcc-toolset-14 gcc-toolset-13 gcc-toolset-12 gcc-toolset-11 devtoolset-11; do
         ENABLE_SCRIPT=$(rpm -ql ${pkg}-runtime 2>/dev/null | grep '/enable$' | head -1)
@@ -414,7 +471,6 @@ if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
         print_warning "No gcc-toolset (11-14) or devtoolset-11 found - C++20 headers may be missing"
     fi
 
-    # Set C++ compiler to hipcc from ROCm
     if [ -x "$ROCM_PATH/bin/hipcc" ]; then
         export CMAKE_CXX_COMPILER="$ROCM_PATH/bin/hipcc"
         print_success "Set CMAKE_CXX_COMPILER to hipcc (CentOS/RHEL/AlmaLinux/Rocky)"
@@ -422,11 +478,9 @@ if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
         print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using system default compiler"
     fi
     
-    # Use cmake3 for RHEL-based distros
     export CMAKE_COMMAND="cmake3"
     print_info "Using cmake3 (CentOS/RHEL/AlmaLinux/Rocky)"
 else
-    # Ubuntu and others: use defaults (system compiler and cmake)
     export CMAKE_COMMAND="cmake"
     print_info "Using cmake (Ubuntu/other)"
 fi
@@ -496,7 +550,6 @@ if [ -n "$CMAKE_CXX_COMPILER" ]; then
     CMAKE_ARGS+=(-DCMAKE_CXX_COMPILER="$CMAKE_CXX_COMPILER")
 fi
 
-# Point hipcc at the GCC toolchain for C++20 standard library headers
 if [ -n "$GCC_TOOLCHAIN" ]; then
     CMAKE_ARGS+=(-DCMAKE_CXX_FLAGS="--gcc-toolchain=$GCC_TOOLCHAIN")
     print_success "Set --gcc-toolchain=$GCC_TOOLCHAIN for hipcc"
@@ -597,6 +650,105 @@ fi
 
 cd - > /dev/null
 echo ""
+
+# Step 6: Upload packages (optional)
+if [ -n "$UPLOAD_TARGET" ]; then
+    print_info "Step 6: Uploading packages to $UPLOAD_TARGET..."
+
+    # Build organized upload subpath: <repo>/<branch>/<date>
+    if [ -z "$UPLOAD_REPO" ]; then
+        UPLOAD_REPO=$(git remote get-url origin 2>/dev/null | sed 's|.*/||; s|\.git$||')
+        [ -z "$UPLOAD_REPO" ] && UPLOAD_REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null)
+        [ -z "$UPLOAD_REPO" ] && UPLOAD_REPO="unknown"
+    fi
+    UPLOAD_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | sed 's|[^a-zA-Z0-9._-]|-|g')
+    [ -z "$UPLOAD_BRANCH" ] && UPLOAD_BRANCH="unknown"
+    UPLOAD_DATE=$(date +%Y-%m-%d)
+    UPLOAD_SUBPATH="${UPLOAD_REPO}/${UPLOAD_BRANCH}/${UPLOAD_DATE}"
+
+    print_info "Upload path: .../${UPLOAD_SUBPATH}/"
+
+    PKGS=$(find "$BUILD_DIR" -maxdepth 1 -name 'rocm-validation-suite*' \( -name '*.deb' -o -name '*.rpm' -o -name '*.tar.gz' \) 2>/dev/null)
+    if [ -z "$PKGS" ]; then
+        print_error "No packages found to upload"
+    else
+        UPLOAD_OK=true
+
+        case "$UPLOAD_TARGET" in
+            scp://*)
+                SCP_DEST="${UPLOAD_TARGET#scp://}"
+                SCP_DEST="${SCP_DEST%/}/${UPLOAD_SUBPATH}/"
+                print_info "Uploading via SCP to $SCP_DEST"
+                # Create remote directory first
+                SCP_HOST="${SCP_DEST%%:*}"
+                SCP_PATH="${SCP_DEST#*:}"
+                ssh "$SCP_HOST" "mkdir -p '$SCP_PATH'" 2>/dev/null || true
+                for pkg in $PKGS; do
+                    print_info "  $(basename "$pkg")"
+                    if ! scp "$pkg" "$SCP_DEST"; then
+                        print_error "SCP upload failed for $(basename "$pkg")"
+                        UPLOAD_OK=false
+                    fi
+                done
+                ;;
+            rsync://*)
+                RSYNC_DEST="${UPLOAD_TARGET#rsync://}"
+                RSYNC_DEST="${RSYNC_DEST%/}/${UPLOAD_SUBPATH}/"
+                print_info "Uploading via rsync to $RSYNC_DEST"
+                if ! echo "$PKGS" | xargs -I{} rsync -avz --progress {} "$RSYNC_DEST"; then
+                    print_error "Rsync upload failed"
+                    UPLOAD_OK=false
+                fi
+                ;;
+            http://*|https://*)
+                UPLOAD_URL="${UPLOAD_TARGET%/}/${UPLOAD_SUBPATH}"
+                print_info "Uploading via HTTP PUT to $UPLOAD_URL/"
+                for pkg in $PKGS; do
+                    local_name=$(basename "$pkg")
+                    print_info "  $local_name"
+                    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+                        -X PUT -T "$pkg" \
+                        "${UPLOAD_URL}/${local_name}")
+                    if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+                        print_success "  Uploaded $local_name (HTTP $HTTP_CODE)"
+                    else
+                        print_error "  Failed to upload $local_name (HTTP $HTTP_CODE)"
+                        UPLOAD_OK=false
+                    fi
+                done
+                # Show shareable URL (resolve localhost to real IP for team sharing)
+                if [[ "$UPLOAD_TARGET" =~ localhost|127\.0\.0\.1 ]]; then
+                    SHARE_IP=$(ip -4 route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[0-9.]+' | head -1)
+                    [ -z "$SHARE_IP" ] && SHARE_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+                    if [ -n "$SHARE_IP" ]; then
+                        SHARE_URL=$(echo "$UPLOAD_URL" | sed "s|localhost|$SHARE_IP|;s|127\.0\.0\.1|$SHARE_IP|")
+                        print_info "Share this URL with your team: ${SHARE_URL}/"
+                    fi
+                fi
+                print_info "Browse uploads: ${UPLOAD_URL}/"
+                ;;
+            *)
+                LOCAL_DEST="${UPLOAD_TARGET%/}/${UPLOAD_SUBPATH}"
+                print_info "Copying packages to $LOCAL_DEST"
+                mkdir -p "$LOCAL_DEST"
+                for pkg in $PKGS; do
+                    print_info "  $(basename "$pkg")"
+                    if ! cp "$pkg" "$LOCAL_DEST/"; then
+                        print_error "Copy failed for $(basename "$pkg")"
+                        UPLOAD_OK=false
+                    fi
+                done
+                ;;
+        esac
+
+        if [ "$UPLOAD_OK" = true ]; then
+            print_success "All packages uploaded successfully"
+        else
+            print_warning "Some uploads failed - check errors above"
+        fi
+    fi
+    echo ""
+fi
 
 # Summary
 echo "================================================================================"

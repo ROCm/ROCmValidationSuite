@@ -32,14 +32,14 @@ on:
         default: 'gfx110X-all'
 
 env:
-  ROCM_VERSION: '7.11.0a20260121'
-  GPU_FAMILY: 'gfx110X-all'
+  ROCM_VERSION: ${{ vars.ROCM_VERSION }}
+  GPU_FAMILY: ${{ vars.GPU_FAMILY }}
   BUILD_TYPE: Release
 
 jobs:
   build-ubuntu:
     name: Build Ubuntu Packages
-    runs-on: ubuntu-22.04
+    runs-on: ${{ vars.RUNNER_LABEL }}
     strategy:
       matrix:
         ubuntu_version: ['22.04']
@@ -51,6 +51,11 @@ jobs:
       s3_paths_ubuntu: ${{ steps.upload-s3-ubuntu.outputs.paths }}
     
     steps:
+      - name: Clean workspace
+        run: |
+          sudo rm -rf "${{ github.workspace }}/build" || true
+          sudo chown -R $(id -u):$(id -g) "${{ github.workspace }}" || true
+
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -58,8 +63,7 @@ jobs:
 
       - name: Set ROCm Version and GPU Family
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            # Scheduled run: use latest ROCm (leave ROCM_VERSION unset for auto-fetch)
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -n "${{ vars.ROCM_SDK_INDEX_URL }}" ]; then
             echo "ROCM_VERSION=" >> $GITHUB_ENV
             echo "Scheduled run: will auto-fetch latest ROCm version"
           fi
@@ -72,14 +76,19 @@ jobs:
 
       - name: Build and Package RVS
         run: |
-          # Make build script executable
           chmod +x build_packages_local.sh
           
-          # Run build script with sudo (Ubuntu runner needs sudo for apt-get)
-          sudo ROCM_VERSION=${{ env.ROCM_VERSION }} \
+          sudo -E ROCM_VERSION=${{ env.ROCM_VERSION }} \
           GPU_FAMILY=${{ env.GPU_FAMILY }} \
           BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          ROCM_SDK_BASE_URL=${{ vars.ROCM_SDK_BASE_URL }} \
+          ROCM_SDK_INDEX_URL=${{ vars.ROCM_SDK_INDEX_URL }} \
           ./build_packages_local.sh
+
+      - name: Fix file ownership
+        if: always()
+        run: |
+          sudo chown -R $(id -u):$(id -g) "${{ github.workspace }}" || true
 
       - name: Verify DEB Package
         run: |
@@ -116,8 +125,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      # vars.AWS_S3_BUCKET = repository variable. Paths: nightly → nightly/rocm-validation-suite/deb; release/* → release/rocm-validation-suite/deb; else → rocm-validation-suite/<ref>/<run_number>/ubuntu-22.04
-      # tar.gz is uploaded only by the manylinux (CentOS) job
       - name: Upload Ubuntu packages to S3
         id: upload-s3-ubuntu
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
@@ -153,8 +160,6 @@ jobs:
           fi
           echo "Done."
 
-      # Generate APT repo metadata (Packages, Packages.gz, Release) so the S3 path
-      # can be consumed directly as a DEB repository by apt.
       - name: Generate and upload DEB repo metadata to S3
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))))
         run: |
@@ -191,7 +196,7 @@ jobs:
 
   build-centos:
     name: Build CentOS/RHEL Packages (manylinux_2_28)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL_CONTAINER }}
     container:
       image: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
@@ -216,29 +221,26 @@ jobs:
 
       - name: Set ROCm Version and GPU Family
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -n "${{ vars.ROCM_SDK_INDEX_URL }}" ]; then
             echo "ROCM_VERSION=" >> $GITHUB_ENV
             echo "Scheduled run: will auto-fetch latest ROCm version"
-          elif [ -n "${{ github.event.inputs.rocm_version }}" ]; then
+          fi
+          if [ -n "${{ github.event.inputs.rocm_version }}" ]; then
             echo "ROCM_VERSION=${{ github.event.inputs.rocm_version }}" >> $GITHUB_ENV
-          else
-            echo "ROCM_VERSION=${{ env.ROCM_VERSION }}" >> $GITHUB_ENV
           fi
           if [ -n "${{ github.event.inputs.gpu_family }}" ]; then
             echo "GPU_FAMILY=${{ github.event.inputs.gpu_family }}" >> $GITHUB_ENV
-          else
-            echo "GPU_FAMILY=${{ env.GPU_FAMILY }}" >> $GITHUB_ENV
           fi
 
       - name: Build and Package RVS
         run: |
-          # Make build script executable
           chmod +x build_packages_local.sh
           
-          # Run build script (no sudo needed - container runs as root)
           ROCM_VERSION=${{ env.ROCM_VERSION }} \
           GPU_FAMILY=${{ env.GPU_FAMILY }} \
           BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          ROCM_SDK_BASE_URL=${{ vars.ROCM_SDK_BASE_URL }} \
+          ROCM_SDK_INDEX_URL=${{ vars.ROCM_SDK_INDEX_URL }} \
           ./build_packages_local.sh
 
       - name: Verify RPM Package
@@ -280,7 +282,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      # vars.AWS_S3_BUCKET = repository variable. Paths: nightly (schedule) → nightly/rocm-validation-suite/rpm,tar; release/* → release/rocm-validation-suite/rpm,tar; else → rocm-validation-suite/<ref>/<run_number>/manylinux_2_28
       - name: Upload CentOS/RHEL packages to S3
         id: upload-s3-centos
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
@@ -322,8 +323,6 @@ jobs:
           fi
           echo "Done."
 
-      # Generate YUM/DNF repo metadata (repodata/) so the S3 path can be consumed
-      # directly as an RPM repository by yum/dnf.
       - name: Generate and upload RPM repodata to S3
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))))
         run: |
@@ -357,7 +356,7 @@ jobs:
   create-release:
     name: Create Release Summary
     needs: [build-ubuntu, build-centos]
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY }}
     if: github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     
     steps:
