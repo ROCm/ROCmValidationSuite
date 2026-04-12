@@ -19,7 +19,7 @@ ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 # If your SDK server has no index page for auto-detection, set ROCM_SDK_INDEX_URL=""
 # and provide ROCM_VERSION explicitly.
 ROCM_SDK_BASE_URL="${ROCM_SDK_BASE_URL:-https://therock-nightly-tarball.s3.us-east-2.amazonaws.com}"
-ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL-https://therock-nightly-tarball.s3.amazonaws.com/index.html}"
+ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL:-https://therock-nightly-tarball.s3.amazonaws.com/index.html}"
 
 # Post-build upload configuration
 # Set UPLOAD_TARGET to enable automatic upload of built packages after the build.
