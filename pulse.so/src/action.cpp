@@ -317,6 +317,35 @@ bool pulse_action::get_all_pulse_config_keys(void) {
     bsts = false;
   }
 
+  if (pulse_blas_source != "rocblas" && pulse_blas_source != "hipblaslt") {
+    msg = "'" + std::string(RVS_CONF_BLAS_SOURCE_KEY)
+      + "' must be 'rocblas' or 'hipblaslt'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  // hipBLASLt needs explicit matrix data types; rocBLAS can rely on ops_type alone.
+  if (pulse_blas_source == "hipblaslt" && pulse_data_type.empty()) {
+    if (pulse_ops_type == "sgemm") {
+      pulse_data_type = "fp32_r";
+    } else if (pulse_ops_type == "dgemm") {
+      pulse_data_type = "fp64_r";
+    } else if (pulse_ops_type == "hgemm") {
+      pulse_data_type = "fp16_r";
+    } else {
+      msg = "hipblaslt requires 'data_type' in the action when 'ops_type' is not "
+        "sgemm, dgemm, or hgemm";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+  }
+
+  // Default compute_type is fp32_r; double GEMM with hipBLASLt needs fp64 compute.
+  if (pulse_blas_source == "hipblaslt" && pulse_ops_type == "dgemm" &&
+      pulse_compute_type == std::string(PULSE_DEFAULT_COMPUTE_TYPE)) {
+    pulse_compute_type = "fp64_r";
+  }
+
   if (high_phase_ratio < 0.0f || high_phase_ratio > 1.0f) {
     msg = "'" + std::string(RVS_CONF_HIGH_PHASE_RATIO_KEY)
       + "' must be between 0.0 and 1.0";
