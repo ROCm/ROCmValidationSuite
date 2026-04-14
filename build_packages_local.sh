@@ -32,11 +32,13 @@ ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL:-https://therock-nightly-tarball.s3.ama
 #   HTTP PUT:    UPLOAD_TARGET="http://localhost:8080"
 #                (use with packages_server/ nginx setup for auto directory creation)
 #
-# If the local nginx package server is running, auto-detect it:
-#   UPLOAD_TARGET="http://localhost:8080" when nginx is serving on 8080
+# Internal-only convenience: if UPLOAD_TARGET is unset, set RVS_AUTO_DETECT_LOCAL_UPLOAD=1
+# (e.g. in workflow env or shell) to probe http://localhost:8080/ once and use it when
+# something responds. Default is off so external/CI builds never curl localhost; GitHub
+# uploads use the workflow S3 steps, not Step 6 of this script.
 #
 # UPLOAD_REPO overrides the repo name in the upload path (auto-detected from git remote).
-if [ -z "${UPLOAD_TARGET:-}" ]; then
+if [ -z "${UPLOAD_TARGET:-}" ] && [ -n "${RVS_AUTO_DETECT_LOCAL_UPLOAD:-}" ]; then
     if curl -s -o /dev/null -w '' http://localhost:8080/ 2>/dev/null; then
         UPLOAD_TARGET="http://localhost:8080"
     fi

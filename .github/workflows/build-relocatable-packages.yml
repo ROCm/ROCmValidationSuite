@@ -39,6 +39,10 @@ env:
   ROCM_VERSION: ${{ vars.ROCM_VERSION || '7.11.0a20260121' }}
   GPU_FAMILY: ${{ vars.GPU_FAMILY || 'gfx110X-all' }}
   BUILD_TYPE: Release
+  # Optional Step 6 in build_packages_local.sh: set repo Actions variable
+  # RVS_AUTO_DETECT_LOCAL_UPLOAD to "1" to probe localhost:8080 when UPLOAD_TARGET is unset.
+  # Leave the variable undefined for default (no probe; S3 uses workflow steps only).
+  RVS_AUTO_DETECT_LOCAL_UPLOAD: ${{ vars.RVS_AUTO_DETECT_LOCAL_UPLOAD }}
 
 jobs:
   build-ubuntu:
