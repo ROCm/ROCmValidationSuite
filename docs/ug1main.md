@@ -126,6 +126,9 @@ The GPU Stress Test runs various GEMM computations as workloads to stress the GP
 #### Input EDPp Test - IET module
 The Input EDPp Test runs GEMM workloads to stress the GPU power (that is, TGP). This test is used to verify if the GPU is capable of handling max. power stress for a sustained period of time. Also checks whether GPU power reaches a set target power.
 
+#### GPU Power Pulse Test - PULSE module
+The Pulse test drives repeating **high-power** (GEMM compute) and **low-power** (idle, minimum clocks) phases at a configurable rate so that GPU power swings over time. That pattern stresses the power supply and voltage regulators with transients rather than a single sustained power level. With **parallel: true** on multiple GPUs, the module uses a CPU-side barrier and a GPU-side fine-grained barrier so that devices tend to enter the heavy phase together, increasing aggregate current steps. Power and temperature are read through **AMD SMI**. GEMM execution uses the same **rvs_blas** stack as GST/IET (**rocBLAS** or **hipBLASLt**).
+
 #### Memory Test - MEM module
 The Memory module tests the GPU memory for hardware errors and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
 
@@ -2559,3 +2562,103 @@ The output for such a configuration file may look like this:
 **) please increase the ramp_interval and/or the tolerance value(s) and try again (in case of a 'ramp time exceeded' message)
 
 **) please increase the tolerance value (in case too many 'power violation message' are logged out)
+
+
+## Pulse Module
+
+The **Pulse** module is intended for **time-varying** GPU power stress: it alternates **high** phases (maximum clocks plus continuous GEMM) and **low** phases (minimum clocks plus idle/sleep), repeating for the action **duration**. That produces periodic power swings useful for exercising PSU transient response and platform power delivery, complementing **IET** (which targets a sustained power level).
+
+GEMM type, matrix size, and BLAS backend follow the same concepts as **GST** / **IET** (see those sections and `rvs_blas`). Sample reference configuration: `rvs/conf/pulse_single.conf`.
+
+### Behavior summary
+
+- Each **pulse cycle** is one high phase followed by one low phase. Phase lengths derive from **pulse_rate** (Hz) and **high_phase_ratio**; each phase is at least **10 ms** after rounding.
+- **High phase:** sets GPU clocks high, runs GEMM in a loop (**workload_iterations** per inner batch) until the high-phase time budget elapses, samples power, checks junction temperature (**failure if above 105°C**).
+- After the high phase, the module calls **hipDeviceSynchronize** so work drains before the low phase (clearer separation of high vs. low power).
+- **Low phase:** sets clocks low, sleeps briefly between **sample_interval**-style sampling (5 ms sleep steps in the implementation), samples power.
+- With **parallel: true** and **more than one GPU**, threads coordinate with a **std::barrier** and a small **GPU kernel** using **fine-grained coherent** host memory so all GPUs synchronize across the pulse loop (avoids deadlock on shutdown via a shared **done** flag).
+- **Pass:** for primary MCM dies, the action passes if **at least one** pulse completed, there was **no** BLAS enqueue/sync failure (unless **halt_on_error** stops earlier), and **no** thermal violation; **secondary MCM** GPUs are treated as pass by default. **Fail** otherwise.
+
+### Prerequisites
+
+- **ROCm** with **hipBLASLt** and **rocBLAS** available as for the rest of RVS (the `rvs` binary links **hipblaslt**; GEMM code lives in **rvslib**).
+- **AMD SMI** initialized for power and temperature queries (same family of requirements as other SMI-based modules). Elevated privileges are often required for clock control and power metrics.
+- For **hipBLASLt**, **data_type** must be valid (e.g. **fp32_r** with **sgemm**, **fp16_r** with **hgemm** and **compute_type** such as **fp32_r**). If **data_type** is omitted with **blas_source: hipblaslt**, the module infers **fp32_r** / **fp64_r** / **fp16_r** from **ops_type** **sgemm** / **dgemm** / **hgemm** respectively; for **dgemm** with hipBLASLt, if **compute_type** is still the default **fp32_r**, it is adjusted to **fp64_r**.
+
+### Module specific keys
+
+Keys below are in addition to **common** keys (**name**, **module**, **device**, **duration**, **parallel**, **log_interval**, **count**, **wait**, etc.—see **Common Configuration Keys**).
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th>Description</th></tr>
+<tr><td>pulse_rate</td><td>Integer</td><td>Pulse frequency in **Hertz** (cycles per second). Default <b>2</b>. Use roughly **1–5 Hz** if you want power readings to show clear high/low separation; very high rates shorten phases below typical GPU power-state and SMI averaging windows, so reported averages may converge.</td></tr>
+<tr><td>high_phase_ratio</td><td>Float</td><td>Fraction of each cycle spent in the **high** (GEMM) phase, **0.0–1.0**. Default <b>0.5</b>. Lower values spend more time in the low phase.</td></tr>
+<tr><td>matrix_size</td><td>Integer</td><td>Square GEMM dimension **M = N = K**. Default <b>4096</b>. Larger matrices increase compute and power draw during the high phase.</td></tr>
+<tr><td>ops_type</td><td>String</td><td>GEMM operation flavor (e.g. <b>sgemm</b>, <b>dgemm</b>, <b>hgemm</b>). Default <b>sgemm</b>. Must match **data_type** / **compute_type** when using hipBLASLt.</td></tr>
+<tr><td>data_type</td><td>String</td><td>Matrix data type string for hipBLASLt (e.g. <b>fp32_r</b>, <b>fp16_r</b>). Default empty (rocBLAS can infer from **ops_type** alone).</td></tr>
+<tr><td>out_data_type</td><td>String</td><td>Optional output type for GEMM; default empty (same as input type where applicable).</td></tr>
+<tr><td>compute_type</td><td>String</td><td>hipBLASLt compute type (e.g. <b>fp32_r</b>). Default <b>fp32_r</b>.</td></tr>
+<tr><td>blas_source</td><td>String</td><td><b>rocblas</b> or <b>hipblaslt</b>. Default <b>rocblas</b>.</td></tr>
+<tr><td>alpha</td><td>Float</td><td>GEMM scalar α. Default <b>2.0</b>.</td></tr>
+<tr><td>beta</td><td>Float</td><td>GEMM scalar β. Default <b>-1.0</b>.</td></tr>
+<tr><td>transa</td><td>Integer</td><td>Transpose A: **0** no transpose, **1** transpose. Default <b>0</b>.</td></tr>
+<tr><td>transb</td><td>Integer</td><td>Transpose B: **0** no transpose, **1** transpose. Default <b>1</b>.</td></tr>
+<tr><td>lda</td><td>Integer</td><td>Leading dimension offset A (0 = use minimum). Defaults <b>0</b>.</td></tr>
+<tr><td>ldb</td><td>Integer</td><td>Leading dimension offset B. Default <b>0</b>.</td></tr>
+<tr><td>ldc</td><td>Integer</td><td>Leading dimension offset C. Default <b>0</b>.</td></tr>
+<tr><td>ldd</td><td>Integer</td><td>Leading dimension offset D. Default <b>0</b>.</td></tr>
+<tr><td>matrix_init</td><td>String</td><td>Host matrix initialization (e.g. <b>default</b>, <b>hiprand</b>). Default <b>default</b>.</td></tr>
+<tr><td>workload_iterations</td><td>Integer</td><td>GEMM calls per inner batch in the high phase before re-checking time and power. Default <b>128</b>. Increase for heavier per-iteration work; tune with **pulse_rate** and phase length.</td></tr>
+<tr><td>sample_interval</td><td>Integer</td><td>Reserved sampling interval (ms) for pulse-specific logic; values below **50** are raised to **50**. Default <b>100</b>.</td></tr>
+<tr><td>tolerance</td><td>Float</td><td>Default <b>10.0</b>. Parsed and passed to the worker; **not** currently used in pass/fail logic (reserved for future checks).</td></tr>
+<tr><td>verify_mode</td><td>String</td><td>e.g. <b>diff</b> / <b>crc</b>. Default <b>diff</b>. Parsed; **not** currently used in pass/fail logic (reserved for future GEMM verification).</td></tr>
+<tr><td>halt_on_error</td><td>Bool</td><td>If **true**, stop the GPU thread on first BLAS or thermal error. Default <b>false</b>.</td></tr>
+<tr><td>hot_calls</td><td>Integer</td><td>BLAS “hot call” / warmup-related parameter forwarded to **rvs_blas**. Default <b>1</b>.</td></tr>
+<tr><td>gpu_sync_wait</td><td>Integer</td><td>Default <b>10000</b>. Parsed from configuration; **not** referenced by the current barrier implementation (placeholder for future timeout behavior).</td></tr>
+</table>
+
+### Output
+
+Log lines use the action **name**, module tag **pulse**, and GPU id.
+
+<table>
+<tr><th>Output / log</th> <th>Description</th></tr>
+<tr><td>Start</td><td><code>[INFO] ... pulse &lt;gpu_id&gt; start pulse_rate=&lt;hz&gt;</code></td></tr>
+<tr><td>Parameters</td><td><code>[INFO] ... pulse_rate=... Hz period=...ms high=...ms low=...ms</code></td></tr>
+<tr><td>Thermal error</td><td><code>[ERROR] ... thermal violation: &lt;temp&gt;C</code> (junction &gt; 105°C)</td></tr>
+<tr><td>Periodic summary</td><td>At each <b>log_interval</b>, moving averages and extrema: <code>pulse #N avg_high=...W avg_low=...W max_high=...W min_low=...W delta=...W</code></td></tr>
+<tr><td>Completion</td><td>Summary over the run: pulse count, average high/low power, delta, max high, min low.</td></tr>
+<tr><td>pass</td><td><code>[RESULT] ... pass: TRUE</code> or <code>FALSE</code> per GPU.</td></tr>
+</table>
+
+With **JSON** logging enabled, per-pulse records can include **power_high_w**, **power_low_w**, **power_delta_w**, phase durations, **temp_c**, **gemm_count**, and a final **summary** with **pass**.
+
+### Example
+
+Minimal illustration (see **pulse_single.conf** for full examples including **hipblaslt** + **fp16_r**):
+
+    actions:
+    - name: pulse_stress_basic
+      device: all
+      module: pulse
+      parallel: true
+      duration: 60000
+      log_interval: 5000
+      pulse_rate: 2
+      high_phase_ratio: 0.5
+      ops_type: sgemm
+      matrix_size: 8192
+      blas_source: hipblaslt
+      data_type: fp32_r
+      compute_type: fp32_r
+      workload_iterations: 128
+      halt_on_error: false
+
+Run from the build or package **bin** directory, for example:
+
+    ./rvs -c conf/pulse_single.conf -d 3
+
+### Notes
+
+- Tune **matrix_size**, **pulse_rate**, and **high_phase_ratio** to match GPU class and the transient behavior you want to stress.
+- **hipBLASLt** often delivers higher GEMM throughput than rocBLAS on supported GPUs; **fp16_r** / **hgemm** with **compute_type: fp32_r** is a common high-throughput choice (as in the **pulse_stress_fp16** action in **pulse_single.conf**).
