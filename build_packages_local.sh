@@ -209,6 +209,8 @@ check_and_install_dependencies() {
                 || print_warning "Some packages may already be installed"
             
             # Install a gcc-toolset with C++20 <barrier> support (requires GCC >= 11)
+            # Try highest available first for best C++20/C++23 support, fall back to minimum viable
+            # RHEL/AlmaLinux/Rocky 8+ use gcc-toolset-{ver}, CentOS 7 uses devtoolset-{ver}
             if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
                 GCC_TOOLSET_INSTALLED=""
                 for ver in 14 13 12 11; do
@@ -221,6 +223,7 @@ check_and_install_dependencies() {
                         fi
                     fi
                 done
+                # Fallback to devtoolset (CentOS 7) - only devtoolset-11 has <barrier>
                 if [ -z "$GCC_TOOLSET_INSTALLED" ]; then
                     if yum list available devtoolset-11 &>/dev/null; then
                         print_info "Found devtoolset-11 - installing for C++20 support (CentOS 7)..."
@@ -454,6 +457,8 @@ fi
 
 if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     # Enable the installed gcc-toolset/devtoolset so hipcc (clang) finds C++20 headers like <barrier>
+    # Discover the toolset path dynamically via rpm rather than hardcoding /opt/rh/
+
     GCC_TOOLSET_ENABLED=""
     for pkg in gcc-toolset-14 gcc-toolset-13 gcc-toolset-12 gcc-toolset-11 devtoolset-11; do
         ENABLE_SCRIPT=$(rpm -ql ${pkg}-runtime 2>/dev/null | grep '/enable$' | head -1)
@@ -477,9 +482,11 @@ if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
         print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using system default compiler"
     fi
     
+    # Use cmake3 for RHEL-based distros
     export CMAKE_COMMAND="cmake3"
     print_info "Using cmake3 (CentOS/RHEL/AlmaLinux/Rocky)"
 else
+    # Ubuntu and others: use defaults (system compiler and cmake)
     export CMAKE_COMMAND="cmake"
     print_info "Using cmake (Ubuntu/other)"
 fi
@@ -549,6 +556,7 @@ if [ -n "$CMAKE_CXX_COMPILER" ]; then
     CMAKE_ARGS+=(-DCMAKE_CXX_COMPILER="$CMAKE_CXX_COMPILER")
 fi
 
+# Point hipcc at the GCC toolchain for C++20 standard library headers
 if [ -n "$GCC_TOOLCHAIN" ]; then
     CMAKE_ARGS+=(-DCMAKE_CXX_FLAGS="--gcc-toolchain=$GCC_TOOLCHAIN")
     print_success "Set --gcc-toolchain=$GCC_TOOLCHAIN for hipcc"

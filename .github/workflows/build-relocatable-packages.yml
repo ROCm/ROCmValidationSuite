@@ -82,7 +82,7 @@ jobs:
       - name: Build and Package RVS
         run: |
           chmod +x build_packages_local.sh
-          
+           # Run build script with sudo (Ubuntu runner needs sudo for apt-get)
           sudo -E ROCM_VERSION=${{ env.ROCM_VERSION }} \
           GPU_FAMILY=${{ env.GPU_FAMILY }} \
           BUILD_TYPE=${{ env.BUILD_TYPE }} \
@@ -142,6 +142,11 @@ jobs:
         env:
           AWS_DEFAULT_REGION: us-east-1
 
+      # vars.AWS_S3_BUCKET = repository variable. 
+      # Paths: nightly → nightly/rocm-validation-suite/deb; 
+      # release/* → release/rocm-validation-suite/deb; 
+      # else → rocm-validation-suite/<ref>/<run_number>/ubuntu-22.04
+      # tar.gz is uploaded only by the manylinux (CentOS) job
       - name: Upload Ubuntu packages to S3
         id: upload-s3-ubuntu
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
@@ -177,6 +182,8 @@ jobs:
           fi
           echo "Done."
 
+      # Generate APT repo metadata (Packages, Packages.gz, Release) so the S3 path
+      # can be consumed directly as a DEB repository by apt.     
       - name: Generate and upload DEB repo metadata to S3
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))))
         run: |
@@ -283,7 +290,8 @@ jobs:
             build/rocm-validation-suite*.tar.gz
           retention-days: 30
 
-      # S3 upload only for repo ROCm/ROCmValidationSuite (schedule, release/* push, master/main push, or same-repo PR)
+      # S3 upload only for repo ROCm/ROCmValidationSuite 
+      # (schedule, release/* push, master/main push, or same-repo PR)
       - name: Install AWS CLI
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
         run: |
@@ -308,6 +316,10 @@ jobs:
         env:
           AWS_DEFAULT_REGION: us-east-1
 
+      # vars.AWS_S3_BUCKET = repository variable. 
+      # Paths: nightly (schedule) → nightly/rocm-validation-suite/rpm,tar; 
+      # release/* → release/rocm-validation-suite/rpm,tar; 
+      # else → rocm-validation-suite/<ref>/<run_number>/manylinux_2_28
       - name: Upload CentOS/RHEL packages to S3
         id: upload-s3-centos
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
@@ -348,7 +360,9 @@ jobs:
             echo "paths=CentOS/RHEL packages|${PREFIX}" >> $GITHUB_OUTPUT
           fi
           echo "Done."
-
+      
+      # Generate YUM/DNF repo metadata (repodata/) so the S3 path can be consumed
+      # directly as an RPM repository by yum/dnf.
       - name: Generate and upload RPM repodata to S3
         if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))))
         run: |
