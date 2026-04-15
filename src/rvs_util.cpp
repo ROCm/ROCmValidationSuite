@@ -192,13 +192,13 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
         rvs::lp::Log(msg_stream.str(), rvs::logresults);
 
         amd_mcm_gpu_found = true;
-        mcm_type->push_back(mcm_type_t::SECONDARY);
+        if (mcm_type) mcm_type->push_back(mcm_type_t::SECONDARY);
 
       } else {
-        mcm_type->push_back(mcm_type_t::PRIMARY);
+        if (mcm_type) mcm_type->push_back(mcm_type_t::PRIMARY);
       }
     } else {
-      if(mcm_check)
+      if(mcm_check && mcm_type)
         mcm_type->push_back(mcm_type_t::PRIMARY);
     }
 

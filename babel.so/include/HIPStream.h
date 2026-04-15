@@ -11,6 +11,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "Stream.h"
@@ -48,9 +49,12 @@ class HIPStream : public Stream<T>
     T *d_b;
     T *d_c;
 
+    int nt_mode = 1; // NT_ALL
+
   public:
     HIPStream(const unsigned int, const bool, const int,
-        const unsigned int, const unsigned int, const unsigned int);
+        const unsigned int, const unsigned int, const unsigned int,
+        const std::string& nontemporal = "all");
     ~HIPStream();
 
     virtual float read() override;

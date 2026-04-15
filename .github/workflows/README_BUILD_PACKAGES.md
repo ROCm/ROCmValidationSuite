@@ -113,6 +113,119 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload Artifacts** - Store packages with 30-day retention
+6. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite` and trigger is schedule, push to `master`/`main`/`release/*`, or same-repo PR) – Each job uploads its packages to S3 using OIDC. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped for other repos and for pull requests from forks.
+7. **Generate Repo Metadata** (nightly and release builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories.
+
+### S3 Upload (OIDC – No Stored Credentials)
+
+S3 upload runs **only when** the repository is **`ROCm/ROCmValidationSuite`** and the run is one of: scheduled (cron), push to `master`/`main`/`release/*`, or pull request from the same repository. Uses **AWS OIDC**; no long-term access key or secret. Skipped for other repos and for pull requests from forks.
+
+**Where `vars` and `secrets` are defined**
+
+They are **not** in the workflow file. They are set in the repo:
+
+- **Secrets** (e.g. `secrets.AWS_ROLE_ARN`): **Settings** → **Secrets and variables** → **Actions** → **Secrets** tab → New repository secret.
+- **Variables** (e.g. `vars.AWS_S3_BUCKET`): **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → New repository variable.
+
+**Required setup for S3 upload:**
+
+1. **Repository secret** (Secrets tab, see above):
+   - Name: `AWS_ROLE_ARN`
+   - Value: the IAM role ARN to assume for S3 upload (e.g. `arn:aws:iam::123456789012:role/my-s3-upload-role`). Keeps the role ID hidden from the workflow.
+
+2. **Repository variable** (Variables tab, see above):
+   - Name: `AWS_S3_BUCKET`
+   - Value: your S3 bucket name (e.g. `my-rocm-packages`).
+
+3. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
+
+**S3 path layout:**
+
+| Trigger | Path | Contents |
+|--------|------|----------|
+| **Scheduled (daily)** | `nightly/rocm-validation-suite/deb/`, `nightly/rocm-validation-suite/rpm/`, `nightly/rocm-validation-suite/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). |
+| **Push to `release/*`** | `release/rocm-validation-suite/deb/`, `release/rocm-validation-suite/rpm/`, `release/rocm-validation-suite/tar/` | Same split by type; all release branches write to the same paths for auto-update. TGZ uploaded only by manylinux job. |
+| **Push to `master`/`main` or same-repo PR** | `rocm-validation-suite/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). |
+
+If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
+
+When packages are uploaded to S3, the **build report** artifact includes an **S3 Upload Locations** section with clickable links to each S3 prefix (AWS Console). This makes it easy to open the bucket and browse the uploaded DEB, RPM, and TGZ files from the report.
+
+### Repository Metadata (repodata)
+
+For **nightly** and **release** builds, the workflow also generates package repository metadata so that the S3 paths can be used directly as `apt` (DEB) and `yum`/`dnf` (RPM) repositories. This runs after the package upload step in each job.
+
+**RPM repodata** (CentOS/RHEL job):
+- Tool: `createrepo_c` (falls back to `createrepo`)
+- Downloads existing RPMs from S3, merges in the newly built RPM, regenerates the `repodata/` directory, and syncs everything back
+- Result: `repodata/repomd.xml`, `repodata/primary.xml.gz`, `repodata/filelists.xml.gz`, `repodata/other.xml.gz`
+
+**DEB repo metadata** (Ubuntu job):
+- Tools: `dpkg-scanpackages`, `apt-ftparchive`
+- Downloads existing DEBs from S3, merges in the newly built DEB, regenerates `Packages`, `Packages.gz`, and `Release`, and syncs everything back
+- Result: `Packages`, `Packages.gz`, `Release`
+
+**S3 directory layout after metadata generation:**
+
+```
+s3://<bucket>/nightly/rocm-validation-suite/
+├── deb/
+│   ├── rocm-validation-suite_1.0.0_amd64.deb
+│   ├── Packages
+│   ├── Packages.gz
+│   └── Release
+├── rpm/
+│   ├── rocm-validation-suite-1.0.0.x86_64.rpm
+│   └── repodata/
+│       ├── repomd.xml
+│       ├── primary.xml.gz
+│       ├── filelists.xml.gz
+│       └── other.xml.gz
+└── tar/
+    └── rocm-validation-suite-1.0.0-Linux.tar.gz
+```
+
+**Using the S3 repo with apt (Ubuntu/Debian):**
+
+```bash
+# Add the nightly repo (replace <bucket> with the actual S3 bucket name)
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rocm-validation-suite/deb/ ./" \
+  | sudo tee /etc/apt/sources.list.d/rvs-nightly.list
+
+# Or the release repo
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rocm-validation-suite/deb/ ./" \
+  | sudo tee /etc/apt/sources.list.d/rvs-release.list
+
+sudo apt update
+sudo apt install rocm-validation-suite
+```
+
+**Using the S3 repo with yum/dnf (CentOS/RHEL/Rocky):**
+
+```bash
+# Add the nightly repo (replace <bucket> with the actual S3 bucket name)
+cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-nightly.repo
+[rvs-nightly]
+name=RVS Nightly Packages
+baseurl=https://<bucket>.s3.amazonaws.com/nightly/rocm-validation-suite/rpm/
+enabled=1
+gpgcheck=0
+EOF
+
+# Or the release repo
+cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-release.repo
+[rvs-release]
+name=RVS Release Packages
+baseurl=https://<bucket>.s3.amazonaws.com/release/rocm-validation-suite/rpm/
+enabled=1
+gpgcheck=0
+EOF
+
+sudo yum install rocm-validation-suite
+# or: sudo dnf install rocm-validation-suite
+```
+
+> **Note:** `[trusted=yes]` (apt) and `gpgcheck=0` (yum) disable GPG verification. For production use, sign the packages and metadata with a GPG key and distribute the public key to users. Repository metadata is only generated for **nightly** (scheduled) and **release** builds; per-branch/PR builds upload raw packages without metadata.
 
 ## Build Script: build_packages_local.sh
 
@@ -365,6 +478,11 @@ cmake -B "$BUILD_DIR" \
 ```
 
 ## Troubleshooting
+
+### S3: "Credentials could not be loaded"
+
+- **PR from a fork:** S3 upload is skipped for fork PRs (secrets are not passed). Use a branch in the same repo or push to `main`/`master` to upload.
+- **Same repo / push:** Ensure the `AWS_ROLE_ARN` secret is set (Settings → Secrets and variables → Actions → Secrets) and the IAM role’s trust policy allows GitHub OIDC for this repo. Ensure the OIDC identity provider exists in the AWS account (`token.actions.githubusercontent.com`).
 
 ### Package Build Fails
 

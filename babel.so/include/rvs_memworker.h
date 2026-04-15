@@ -262,6 +262,13 @@ class MemWorker : public rvs::ThreadBase {
     //! returns data initialization mode
     const std::string& get_data_init(void) { return data_init; }
 
+    //! sets non-temporal access mode
+    void set_nontemporal(const std::string& _nontemporal) {
+        nontemporal = _nontemporal;
+    }
+    //! returns non-temporal access mode
+    const std::string& get_nontemporal(void) { return nontemporal; }
+
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
@@ -304,6 +311,8 @@ class MemWorker : public rvs::ThreadBase {
     uint16_t tb_size;
     //! data initialization mode
     std::string data_init;
+    //! non-temporal access mode
+    std::string nontemporal;
 
     //! TRUE if JSON output is required
     static bool bjson;
