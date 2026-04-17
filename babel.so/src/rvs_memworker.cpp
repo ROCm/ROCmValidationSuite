@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -41,7 +41,7 @@ bool MemWorker::bjson = false;
 
 extern bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes,
     int test_type, uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal);
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration);
 
 #define FLOAT_TEST     1 
 #define DOUBLE_TEST    2 
@@ -86,6 +86,6 @@ void MemWorker::run() {
 
   result = run_babel(device, num_iterations, array_size, output_csv, mibibytes,
       test_type, dwords_per_lane, chunks_per_block, tb_size,
-      MemWorker::bjson, action_name, &test, data_init, nontemporal);
+      MemWorker::bjson, action_name, &test, data_init, nontemporal, duration);
 }
 

@@ -41,40 +41,40 @@ void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>
 template <typename T>
 bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal);
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration);
 
 template <typename T>
 bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal);
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration);
 
 void parseArguments(int argc, char *argv[]);
 
 bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal) {
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration) {
 
   bool result = false;
 
   switch(test_type) {
     case FLOAT_TEST:
       result = run_stress<float>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test, data_init, nontemporal);
+          json, action, test, data_init, nontemporal, duration);
       break;
 
     case DOUBLE_TEST:
       result = run_stress<double>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test, data_init, nontemporal);
+          json, action, test, data_init, nontemporal, duration);
       break;
 
     case TRAID_FLOAT:
       result = run_triad<float>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test, data_init, nontemporal);
+          json, action, test, data_init, nontemporal, duration);
       break;
 
     case TRIAD_DOUBLE:
       result = run_triad<double>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test, data_init, nontemporal);
+          json, action, test, data_init, nontemporal, duration);
       break;
 
     default:
@@ -88,16 +88,20 @@ bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, b
 template <typename T>
 bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal)
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration)
 {
   std::string   msg;
   std::streamsize ss = std::cout.precision();
   std::stringstream sstr;
   auto desc = action_descriptor{action, module_name, device.second};
+  bool time_based = (duration > 0);
 
   if (!output_as_csv)
   {
-    msg = "Running kernels " + std::to_string(num_times) + " times, " ;
+    if (time_based)
+      msg = "Running kernels for " + std::to_string(duration) + " ms, ";
+    else
+      msg = "Running kernels " + std::to_string(num_times) + " times, " ;
 
 
     if (sizeof(T) == sizeof(float)) 
@@ -136,9 +140,14 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 	    ARRAY_SIZE*sizeof(T)*1.0E-6;
     auto total_size = mibibytes ? 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
 	    3.0*ARRAY_SIZE*sizeof(T)*1.0E-6;
-    log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
-	      "Total size", std::to_string(total_size),
-	      "Iterations", std::to_string(num_times) );
+    if (time_based)
+      log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
+	        "Total size", std::to_string(total_size),
+	        "Duration(ms)", std::to_string(duration) );
+    else
+      log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
+	        "Total size", std::to_string(total_size),
+	        "Iterations", std::to_string(num_times) );
   }
 
   // Create host vectors
@@ -168,9 +177,21 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   // Declare timers
   std::chrono::high_resolution_clock::time_point t1, t2;
 
+  auto loop_start = std::chrono::high_resolution_clock::now();
+  auto duration_limit = std::chrono::milliseconds(duration);
+  uint64_t actual_iterations = 0;
+
   // Main loop - run each babel subtest if enabled
-  for (unsigned int k = 0; k < num_times; k++)
+  // When duration > 0: run until elapsed time exceeds duration
+  // When duration == 0: run for num_times iterations
+  for (uint64_t k = 0; !time_based ? (k < (uint64_t)num_times) : true; k++)
   {
+    if (time_based) {
+      auto elapsed = std::chrono::high_resolution_clock::now() - loop_start;
+      if (elapsed >= duration_limit)
+        break;
+    }
+
     if(test->read) {
       // Execute Read
       t1 = std::chrono::high_resolution_clock::now();
@@ -226,6 +247,18 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       t2 = std::chrono::high_resolution_clock::now();
       timings[6].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
     }
+
+    actual_iterations++;
+  }
+
+  uint64_t effective_num_times = time_based ? actual_iterations : (uint64_t)num_times;
+
+  if (time_based) {
+    auto total_elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(
+        std::chrono::high_resolution_clock::now() - loop_start).count();
+    msg = "Completed " + std::to_string(actual_iterations) + " iterations in " +
+        std::to_string(total_elapsed) + " seconds";
+    rvs::lp::Log(msg, rvs::logresults);
   }
 
   // Check solutions
@@ -288,14 +321,14 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       auto minmax = std::minmax_element(timings[i].begin()+1, timings[i].end());
 
       // Calculate average; ignore the first result
-      double average = std::accumulate(timings[i].begin()+1, timings[i].end(), 0.0) / (double)(num_times - 1);
+      double average = std::accumulate(timings[i].begin()+1, timings[i].end(), 0.0) / (double)(effective_num_times - 1);
       // Display results
       if (output_as_csv)
       {
         sstr
           << device.second << csv_separator
           << labels[i] << csv_separator
-          << num_times << csv_separator
+          << effective_num_times << csv_separator
           << ARRAY_SIZE << csv_separator
           << sizeof(T) << csv_separator
           << ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * sizes[i] / (*minmax.first) << csv_separator
@@ -339,15 +372,19 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 template <typename T>
 bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal)
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration)
 {
   std::string msg;
   auto desc = action_descriptor{action, module_name, device.second};
   triad_only = true;
+  bool time_based = (duration > 0);
   std::stringstream sstr;
   if (!output_as_csv)
   {
-    msg = "Running triad " + std::to_string (num_times) + " times,";
+    if (time_based)
+      msg = "Running triad for " + std::to_string(duration) + " ms,";
+    else
+      msg = "Running triad " + std::to_string (num_times) + " times,";
     msg += "Number of elements: " + std::to_string(ARRAY_SIZE) + ", ";
 
     if (sizeof(T) == sizeof(float))
@@ -380,9 +417,14 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
 	      ARRAY_SIZE*sizeof(T)*1.0E-6;
      auto total_size = mibibytes  ? 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
 	     3.0*ARRAY_SIZE*sizeof(T)*1.0E-6;
-     log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
-              "Total size", std::to_string(total_size),
-              "Iterations", std::to_string(num_times) );
+     if (time_based)
+       log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
+                "Total size", std::to_string(total_size),
+                "Duration(ms)", std::to_string(duration) );
+     else
+       log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
+                "Total size", std::to_string(total_size),
+                "Iterations", std::to_string(num_times) );
     }
     std::cout.precision(ss);
   }
@@ -409,15 +451,35 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   // Declare timers
   std::chrono::high_resolution_clock::time_point t1, t2;
 
+  uint64_t actual_iterations = 0;
+
   // Run triad in loop
   t1 = std::chrono::high_resolution_clock::now();
-  for (unsigned int k = 0; k < num_times; k++)
-  {
-    stream->triad();
+  if (time_based) {
+    auto duration_limit = std::chrono::milliseconds(duration);
+    while (true) {
+      auto elapsed = std::chrono::high_resolution_clock::now() - t1;
+      if (elapsed >= duration_limit)
+        break;
+      stream->triad();
+      actual_iterations++;
+    }
+  } else {
+    for (unsigned int k = 0; k < num_times; k++)
+    {
+      stream->triad();
+    }
+    actual_iterations = num_times;
   }
   t2 = std::chrono::high_resolution_clock::now();
 
   double runtime = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+
+  if (time_based) {
+    msg = "Completed " + std::to_string(actual_iterations) + " triad iterations in " +
+        std::to_string(runtime) + " seconds";
+    rvs::lp::Log(msg, rvs::logresults);
+  }
 
   // Check solutions
   T sum = 0.0;
@@ -425,7 +487,7 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
 //  check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
 
   // Display timing results
-  double total_bytes = 3 * sizeof(T) * ARRAY_SIZE * num_times;
+  double total_bytes = 3 * sizeof(T) * ARRAY_SIZE * actual_iterations;
   double bandwidth = ((mibibytes) ? pow(2.0, -30.0) : 1.0E-9) * (total_bytes / runtime);
 
   if (output_as_csv)
@@ -441,7 +503,7 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
       << std::endl
       << device.second << csv_separator
       << "Triad" << csv_separator
-      << num_times << csv_separator
+      << actual_iterations << csv_separator
       << ARRAY_SIZE << csv_separator
       << sizeof(T) << csv_separator
       << bandwidth << csv_separator
@@ -529,4 +591,3 @@ void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>
      rvs::lp::Log(sstr.str() ,rvs::logerror);
   }
 }
-
