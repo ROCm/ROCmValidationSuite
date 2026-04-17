@@ -151,6 +151,10 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-i", sp));
   grammar.insert(gpair("--indexes", sp));
 
+  sp = std::make_shared<optbase>("-s", command, value);
+  grammar.insert(gpair("-s", sp));
+  grammar.insert(gpair("--selectActions", sp));
+
   sp = std::make_shared<optbase>("-j", command, optionalvalue);
   grammar.insert(gpair("-j", sp));
   grammar.insert(gpair("--json", sp));

@@ -264,6 +264,11 @@ This overrides the <b>device/device_index</b> parameter values specified for eve
 configuration file, including the <b>all</b> value.
 </td></tr>
 
+<tr><td>-s</td><td>--selectActions</td><td>Comma separated list of action names or 0-based action
+index numbers to run from the configuration file. Only the matching actions will be executed.
+All other actions are skipped.
+</td></tr>
+
 <tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
 if a path follows this argument, that will be used as json log file;
 else a file created in <b>/var/tmp/</b> with timestamp in name.

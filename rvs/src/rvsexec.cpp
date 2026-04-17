@@ -510,6 +510,10 @@ void rvs::exec::do_help() {
   cout << "                   if a path follows this argument, that will be used as json log file\n";
   cout << "                   else a file created in /var/tmp/ with timestamp in name.\n\n";
 
+  cout << "-s --selectActions Comma separated list of action names or 0-based action index numbers\n";
+  cout << "                   to run from the configuration file. Only the matching actions will\n";
+  cout << "                   be executed. All other actions are skipped.\n\n";
+
   cout << "-l --debugLogFile  Generate log file with output and debug information.\n\n";
  
 
