@@ -79,6 +79,7 @@ using std::map;
 #define RVS_CONF_MATRIX_INIT_KEY          "matrix_init"
 #define RVS_CONF_BLAS_SOURCE_KEY          "blas_source"
 #define RVS_CONF_COMPUTE_TYPE_KEY         "compute_type"
+#define RVS_CONF_MAX_TEMP_C_KEY           "max_temp_c"
 
 #define PULSE_DEFAULT_RATE                2
 #define PULSE_DEFAULT_HIGH_PHASE_RATIO    0.5f
@@ -104,6 +105,7 @@ using std::map;
 #define PULSE_DEFAULT_MATRIX_INIT         "default"
 #define PULSE_DEFAULT_BLAS_SOURCE         "rocblas"
 #define PULSE_DEFAULT_COMPUTE_TYPE        "fp32_r"
+#define PULSE_DEFAULT_MAX_TEMP_C          105.0f
 
 #define PULSE_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define JSON_CREATE_NODE_ERROR            "JSON cannot create node"
@@ -113,6 +115,7 @@ static constexpr auto MODULE_NAME_CAPS = "PULSE";
 
 pulse_action::pulse_action() {
   module_name = MODULE_NAME;
+  pulse_max_temp_c = PULSE_DEFAULT_MAX_TEMP_C;
 }
 
 pulse_action::~pulse_action() {
@@ -317,6 +320,21 @@ bool pulse_action::get_all_pulse_config_keys(void) {
     bsts = false;
   }
 
+  if (property_get<float>(RVS_CONF_MAX_TEMP_C_KEY,
+        &pulse_max_temp_c, PULSE_DEFAULT_MAX_TEMP_C)) {
+    msg = "invalid '" + std::string(RVS_CONF_MAX_TEMP_C_KEY)
+      + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+  if (pulse_max_temp_c < 0.0f ||
+      (pulse_max_temp_c > 0.0f && pulse_max_temp_c > 200.0f)) {
+    msg = "'" + std::string(RVS_CONF_MAX_TEMP_C_KEY)
+      + "' must be 0 to disable the thermal check, or a limit in (0, 200] °C";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
   if (pulse_blas_source != "rocblas" && pulse_blas_source != "hipblaslt") {
     msg = "'" + std::string(RVS_CONF_BLAS_SOURCE_KEY)
       + "' must be 'rocblas' or 'hipblaslt'";
@@ -476,6 +494,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
       workers[i].set_matrix_init(pulse_matrix_init);
       workers[i].set_blas_source(pulse_blas_source);
       workers[i].set_compute_type(pulse_compute_type);
+      workers[i].set_max_temp_c(pulse_max_temp_c);
       workers[i].set_mcm_type(mcm_type[i]);
       workers[i].set_num_gpus(num_gpus);
       workers[i].set_worker_index(i);

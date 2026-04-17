@@ -106,6 +106,8 @@ class pulse_action: public rvs::actionbase {
     std::string pulse_blas_source;
     //! gemm compute type
     std::string pulse_compute_type;
+    //! fail high phase if junction/edge temp (C) exceeds this; 0 disables check
+    float pulse_max_temp_c;
 
     friend class PulseWorker;
 

@@ -96,6 +96,10 @@ class PulseWorker : public rvs::ThreadBase {
         tolerance = _tolerance;
     }
 
+    void set_max_temp_c(float _c) {
+        max_temp_c = _c;
+    }
+
     void set_matrix_size(uint64_t _matrix_size) {
         matrix_size = _matrix_size;
     }
@@ -187,9 +191,11 @@ class PulseWorker : public rvs::ThreadBase {
     bool set_lowest_clocks(void);
     bool restore_clocks(void);
 
-    bool gpu_barrier_sync(bool time_up);
+    bool gpu_barrier_sync(bool time_up, bool& test_passed);
 
- protected:
+    bool run_gemm_verify(bool& test_passed);
+
+  protected:
     std::unique_ptr<rvs_blas> gpu_blas;
 
     std::string action_name;
@@ -204,6 +210,7 @@ class PulseWorker : public rvs::ThreadBase {
     int pulse_rate;
     float high_phase_ratio;
     float tolerance;
+    float max_temp_c;
     uint64_t matrix_size;
 
     std::string pulse_ops_type;

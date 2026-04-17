@@ -60,7 +60,8 @@ extern "C" const char* rvs_module_get_config(void) {
     "matrix_size (int), ops_type (string), "
     "tolerance (float), sample_interval (int), "
     "workload_iterations (int), halt_on_error (bool), "
-    "gpu_sync_wait (int), verify_mode (string)";
+    "gpu_sync_wait (int, reserved), verify_mode (string), "
+    "max_temp_c (float, 0=off)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {

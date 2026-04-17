@@ -1,5 +1,10 @@
 /********************************************************************************
  *
+ * Pulse worker: alternating GEMM / idle phases, SMI power & temperature,
+ * optional end-of-run GEMM verify (verify_mode / tolerance; CPU accuracy
+ * skipped for matrix_size > 2048), sample_interval throttling, multi-GPU
+ * barriers on the default HIP stream, configurable max_temp_c.
+ *
  * Copyright (c) 2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
@@ -31,6 +36,8 @@
 #include <memory>
 #include <thread>
 #include <cmath>
+#include <algorithm>
+#include <cctype>
 
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
@@ -49,6 +56,48 @@
 using std::string;
 
 bool PulseWorker::bjson = false;
+
+static string pulse_mode_normalize(const string& in) {
+  string out;
+  for (char c : in) {
+    if (!std::isspace(static_cast<unsigned char>(c)))
+      out.push_back(static_cast<char>(
+          std::tolower(static_cast<unsigned char>(c))));
+  }
+  return out;
+}
+
+/** Map verify_mode to rvs_blas::validate_gemm flags (GST-style semantics). */
+static void pulse_verify_flags(const string& verify_mode,
+    const string& ops_type, const string& data_type,
+    bool& self_check, bool& accu_check) {
+  self_check = false;
+  accu_check = false;
+  const string m = pulse_mode_normalize(verify_mode);
+  if (m.empty() || m == "none" || m == "off" || m == "false")
+    return;
+  if (m == "crc") {
+    self_check = true;
+    return;
+  }
+  if (m == "diff") {
+    if (ops_type == "sgemm" || ops_type == "dgemm") {
+      accu_check = true;
+    } else if (data_type == "fp16_r" || data_type == "bf16_r" ||
+        data_type == "fp8_r" || ops_type == "hgemm") {
+      self_check = true;
+    } else {
+      self_check = true;
+    }
+    return;
+  }
+  if (m == "both" || m == "full") {
+    self_check = true;
+    if (ops_type == "sgemm" || ops_type == "dgemm")
+      accu_check = true;
+    return;
+  }
+}
 
 static uint64_t time_diff(
     std::chrono::time_point<std::chrono::system_clock> t_end,
@@ -85,6 +134,7 @@ PulseWorker::PulseWorker()
       pulse_rate(2),
       high_phase_ratio(0.5f),
       tolerance(10.0f),
+      max_temp_c(105.0f),
       matrix_size(4096),
       pulse_trans_a(0),
       pulse_trans_b(1),
@@ -118,6 +168,16 @@ float PulseWorker::read_power(void) {
   return -1.0f;
 }
 
+// amdsmi_get_temp_metric: some stacks return millidegree Celsius (e.g. 43000
+// for 43 °C, as in gm.so); others return whole degrees in the int64 (as in
+// tst_worker). Values with magnitude above 1000 are treated as millidegrees.
+static float amdsmi_temperature_to_celsius(int64_t raw) {
+  const int64_t mag = raw >= 0 ? raw : -raw;
+  if (mag > 1000)
+    return static_cast<float>(raw) / 1000.0f;
+  return static_cast<float>(raw);
+}
+
 float PulseWorker::read_temperature(void) {
   int64_t temp = 0;
   amdsmi_status_t stat = amdsmi_get_temp_metric(smi_device_handle,
@@ -127,7 +187,7 @@ float PulseWorker::read_temperature(void) {
         AMDSMI_TEMPERATURE_TYPE_EDGE, AMDSMI_TEMP_CURRENT, &temp);
   }
   if (stat == AMDSMI_STATUS_SUCCESS) {
-    return static_cast<float>(temp) / 1000.0f;
+    return amdsmi_temperature_to_celsius(temp);
   }
   return -1.0f;
 }
@@ -136,7 +196,8 @@ bool PulseWorker::discover_valid_clock_levels(void) {
   amdsmi_frequencies_t freqs{};
   string msg;
 
-  // Discover GFX clock levels
+  // Discover GFX clock levels — brief sleep after each set_clk_freq so the
+  // driver can apply the request before the next probe.
   if (amdsmi_get_clk_freq(smi_device_handle, AMDSMI_CLK_TYPE_SYS, &freqs)
       == AMDSMI_STATUS_SUCCESS) {
     for (uint32_t level = 0; level < freqs.num_supported; ++level) {
@@ -316,7 +377,7 @@ bool PulseWorker::setup_blas(void) {
   return true;
 }
 
-bool PulseWorker::gpu_barrier_sync(bool time_up) {
+bool PulseWorker::gpu_barrier_sync(bool time_up, bool& test_passed) {
   if (!cpu_barrier || !gpu_arrival_count || !gpu_release_flag)
     return !time_up;
 
@@ -339,15 +400,78 @@ bool PulseWorker::gpu_barrier_sync(bool time_up) {
   }
   cpu_barrier->arrive_and_wait();
 
-  // Level 2: GPU barrier — launch tiny kernel that spins until all GPUs arrive
+  if (gpu_device_index >= 0)
+    hipSetDevice(gpu_device_index);
+
+  // Default stream + device sync (same pattern as pre-stream refactor).
   gpu_sync_barrier_kernel<<<1, 1>>>(
       gpu_arrival_count, gpu_release_flag, num_gpus);
+  if (hipDeviceSynchronize() != hipSuccess) {
+    string msg = "[" + action_name + "] " + MODULE_NAME + " " +
+      std::to_string(gpu_id) + " hipDeviceSynchronize failed after "
+      "GPU barrier kernel";
+    rvs::lp::Err(msg, "PULSE", action_name);
+    test_passed = false;
+  }
+  return true;
+}
+
+bool PulseWorker::run_gemm_verify(bool& test_passed) {
+  bool self_check = false;
+  bool accu_check = false;
+  pulse_verify_flags(verify_mode, pulse_ops_type, pulse_data_type,
+      self_check, accu_check);
+  if (!self_check && !accu_check)
+    return true;
+
+  // CPU accuracy reference is O(n³) — do not run per pulse on large matrices.
+  constexpr uint64_t kMaxAccuMatrixDim = 2048ULL;
+  if (accu_check && matrix_size > kMaxAccuMatrixDim) {
+    accu_check = false;
+    if (!self_check)
+      self_check = true;
+  }
+
+  if (gpu_device_index >= 0)
+    hipSetDevice(gpu_device_index);
+
+  double self_error = 0.0;
+  double accu_error = 0.0;
+  if (!gpu_blas->validate_gemm(self_check, accu_check, self_error,
+          accu_error)) {
+    string msg = "[" + action_name + "] " + MODULE_NAME + " " +
+      std::to_string(gpu_id) + " GEMM validate_gemm failed (unsupported "
+      "combination for verify_mode)";
+    rvs::lp::Err(msg, "PULSE", action_name);
+    test_passed = false;
+    return false;
+  }
+
+  const double tol = static_cast<double>(tolerance);
+  if (self_check && self_error > tol) {
+    string msg = "[" + action_name + "] " + MODULE_NAME + " " +
+      std::to_string(gpu_id) + " GEMM self-check error " +
+      std::to_string(self_error) + " exceeds tolerance " +
+      std::to_string(tol);
+    rvs::lp::Err(msg, "PULSE", action_name);
+    test_passed = false;
+    return false;
+  }
+  if (accu_check && accu_error > tol) {
+    string msg = "[" + action_name + "] " + MODULE_NAME + " " +
+      std::to_string(gpu_id) + " GEMM accuracy error " +
+      std::to_string(accu_error) + " exceeds tolerance " +
+      std::to_string(tol);
+    rvs::lp::Err(msg, "PULSE", action_name);
+    test_passed = false;
+    return false;
+  }
   return true;
 }
 
 bool PulseWorker::do_pulse_stress(void) {
   std::chrono::time_point<std::chrono::system_clock> test_start, phase_start,
-    now, last_log_time;
+    now, last_log_time, last_sample_time;
   string msg;
   char gpuid_buff[12];
   rvs::action_result_t action_result;
@@ -385,6 +509,8 @@ bool PulseWorker::do_pulse_stress(void) {
   high_phase_ms = std::max(high_phase_ms, 10.0);
   low_phase_ms = std::max(low_phase_ms, 10.0);
 
+  const uint64_t smpl_ms = std::max<uint64_t>(1ULL, sample_interval);
+
   msg = "[" + action_name + "] " + MODULE_NAME + " " +
     std::to_string(gpu_id) + " pulse_rate=" + std::to_string(pulse_rate) +
     "Hz period=" + std::to_string(period_ms) +
@@ -405,7 +531,7 @@ bool PulseWorker::do_pulse_stress(void) {
     // remaining GPUs deadlock.  After the barrier, if ANY GPU signaled
     // done, ALL GPUs exit together.
     if (cpu_barrier && num_gpus > 1) {
-      if (!gpu_barrier_sync(time_up))
+      if (!gpu_barrier_sync(time_up, test_passed))
         break;
     } else if (time_up) {
       break;
@@ -420,6 +546,8 @@ bool PulseWorker::do_pulse_stress(void) {
     set_highest_clocks();
 
     phase_start = std::chrono::system_clock::now();
+    last_sample_time = phase_start;
+
     while (true) {
       now = std::chrono::system_clock::now();
       double phase_elapsed = std::chrono::duration<double, std::milli>(
@@ -446,23 +574,28 @@ bool PulseWorker::do_pulse_stress(void) {
           break;
       }
 
-      float power = read_power();
-      if (power > 0) {
-        total_power_high += power;
-        high_samples++;
-        if (power > max_power_high) max_power_high = power;
-        if (power > pulse_peak_high) pulse_peak_high = power;
-      }
+      now = std::chrono::system_clock::now();
+      if (time_diff(now, last_sample_time) >= smpl_ms) {
+        float power = read_power();
+        if (power > 0) {
+          total_power_high += power;
+          high_samples++;
+          if (power > max_power_high) max_power_high = power;
+          if (power > pulse_peak_high) pulse_peak_high = power;
+        }
 
-      float temp = read_temperature();
-      if (temp > 0) pulse_temp = temp;
-      if (temp > 105.0f) {
-        msg = "[" + action_name + "] " + MODULE_NAME + " " +
-          std::to_string(gpu_id) + " thermal violation: " +
-          std::to_string(temp) + "C";
-        rvs::lp::Log(msg, rvs::logerror);
-        test_passed = false;
-        if (halt_on_error) goto done;
+        float temp = read_temperature();
+        if (temp > 0) pulse_temp = temp;
+        if (max_temp_c > 0.0f && temp > max_temp_c) {
+          msg = "[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) + " thermal violation: " +
+            std::to_string(temp) + "C (limit " + std::to_string(max_temp_c) +
+            "C)";
+          rvs::lp::Log(msg, rvs::logerror);
+          test_passed = false;
+          if (halt_on_error) goto done;
+        }
+        last_sample_time = now;
       }
     }
 
@@ -478,6 +611,7 @@ bool PulseWorker::do_pulse_stress(void) {
     set_lowest_clocks();
 
     phase_start = std::chrono::system_clock::now();
+    last_sample_time = phase_start;
     while (true) {
       now = std::chrono::system_clock::now();
       double phase_elapsed = std::chrono::duration<double, std::milli>(
@@ -485,14 +619,23 @@ bool PulseWorker::do_pulse_stress(void) {
       if (phase_elapsed >= low_phase_ms)
         break;
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      double remain_ms = low_phase_ms - phase_elapsed;
+      unsigned sleep_chunk = static_cast<unsigned>(
+          std::min(remain_ms, static_cast<double>(smpl_ms)));
+      if (sleep_chunk < 1u)
+        sleep_chunk = 1u;
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleep_chunk));
 
-      float power_low = read_power();
-      if (power_low > 0) {
-        total_power_low += power_low;
-        low_samples++;
-        if (power_low < min_power_low) min_power_low = power_low;
-        if (power_low < pulse_trough_low) pulse_trough_low = power_low;
+      now = std::chrono::system_clock::now();
+      if (time_diff(now, last_sample_time) >= smpl_ms) {
+        float power_low = read_power();
+        if (power_low > 0) {
+          total_power_low += power_low;
+          low_samples++;
+          if (power_low < min_power_low) min_power_low = power_low;
+          if (power_low < pulse_trough_low) pulse_trough_low = power_low;
+        }
+        last_sample_time = now;
       }
     }
 
@@ -540,6 +683,11 @@ bool PulseWorker::do_pulse_stress(void) {
   }
 
 done:
+  if (gpu_blas && gpu_device_index >= 0) {
+    hipSetDevice(gpu_device_index);
+    hipDeviceSynchronize();
+    (void)run_gemm_verify(test_passed);
+  }
   restore_clocks();
 
   float avg_power_high = (high_samples > 0)
