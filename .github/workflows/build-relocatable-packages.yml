@@ -68,11 +68,10 @@ jobs:
 
       - name: Set ROCm Version and GPU Family
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] && [ -z "${{ vars.ROCM_VERSION }}" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
             echo "ROCM_VERSION=" >> $GITHUB_ENV
-            echo "Scheduled run: will auto-fetch latest ROCm version"
-          fi
-          if [ -n "${{ github.event.inputs.rocm_version }}" ]; then
+            echo "Scheduled run: build script will auto-fetch latest ROCm version"
+          elif [ -n "${{ github.event.inputs.rocm_version }}" ]; then
             echo "ROCM_VERSION=${{ github.event.inputs.rocm_version }}" >> $GITHUB_ENV
           fi
           if [ -n "${{ github.event.inputs.gpu_family }}" ]; then
@@ -242,11 +241,10 @@ jobs:
 
       - name: Set ROCm Version and GPU Family
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] && [ -z "${{ vars.ROCM_VERSION }}" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
             echo "ROCM_VERSION=" >> $GITHUB_ENV
-            echo "Scheduled run: will auto-fetch latest ROCm version"
-          fi
-          if [ -n "${{ github.event.inputs.rocm_version }}" ]; then
+            echo "Scheduled run: build script will auto-fetch latest ROCm version"
+          elif [ -n "${{ github.event.inputs.rocm_version }}" ]; then
             echo "ROCM_VERSION=${{ github.event.inputs.rocm_version }}" >> $GITHUB_ENV
           fi
           if [ -n "${{ github.event.inputs.gpu_family }}" ]; then
