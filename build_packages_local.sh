@@ -458,28 +458,31 @@ fi
 if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     # Enable the installed gcc-toolset/devtoolset so hipcc (clang) finds C++20 headers like <barrier>
     # Discover the toolset path dynamically via rpm rather than hardcoding /opt/rh/
-
-    GCC_TOOLSET_ENABLED=""
+    GCC_TOOLCHAIN=""
     for pkg in gcc-toolset-14 gcc-toolset-13 gcc-toolset-12 gcc-toolset-11 devtoolset-11; do
-        ENABLE_SCRIPT=$(rpm -ql ${pkg}-runtime 2>/dev/null | grep '/enable$' | head -1)
+        ENABLE_SCRIPT=$(rpm -ql "${pkg}-runtime" 2>/dev/null | grep '/enable$' | head -1)
         if [ -n "$ENABLE_SCRIPT" ] && [ -f "$ENABLE_SCRIPT" ]; then
             TOOLSET_ROOT=$(dirname "$ENABLE_SCRIPT")
+            # shellcheck source=/dev/null
             source "$ENABLE_SCRIPT"
             GCC_TOOLCHAIN="${TOOLSET_ROOT}/root/usr"
+            export GCC_TOOLCHAIN
             print_success "Enabled ${pkg} from ${TOOLSET_ROOT} (GCC $(gcc -dumpversion))"
             break
         fi
     done
 
-    # Fallback: probe /opt/rh/ directly (e.g. manylinux images with pre-installed toolsets)
+    # Fallback: manylinux / images with toolsets under /opt/rh/ without rpm -ql match
     if [ -z "$GCC_TOOLCHAIN" ]; then
         for ts_ver in 14 13 12 11; do
             ts_root="/opt/rh/gcc-toolset-${ts_ver}/root/usr"
             if [ -d "${ts_root}/include/c++" ]; then
                 GCC_TOOLCHAIN="${ts_root}"
                 if [ -f "/opt/rh/gcc-toolset-${ts_ver}/enable" ]; then
+                    # shellcheck source=/dev/null
                     source "/opt/rh/gcc-toolset-${ts_ver}/enable"
                 fi
+                export GCC_TOOLCHAIN
                 print_success "Using gcc-toolset-${ts_ver} for C++20 stdlib (${ts_root})"
                 break
             fi
@@ -487,7 +490,7 @@ if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     fi
 
     if [ -z "$GCC_TOOLCHAIN" ]; then
-        print_warning "No gcc-toolset (11-14) found; C++20 headers like <barrier> may be missing"
+        print_warning "No gcc-toolset (11-14) or devtoolset-11 found - C++20 headers like <barrier> may be missing"
     fi
 
     if [ -x "$ROCM_PATH/bin/hipcc" ]; then
@@ -496,7 +499,7 @@ if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     else
         print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using system default compiler"
     fi
-
+    
     # Use cmake3 for RHEL-based distros
     export CMAKE_COMMAND="cmake3"
     print_info "Using cmake3 (CentOS/RHEL/AlmaLinux/Rocky)"
@@ -633,6 +636,7 @@ if command -v rpm >/dev/null 2>&1; then
     print_info "Creating RPM package..."
     cd "$BUILD_DIR"
     cpack -G RPM --verbose
+
     
     if [ $? -eq 0 ]; then
         RPM_FILE=$(ls rocm-validation-suite*.rpm 2>/dev/null | head -1)
