@@ -371,7 +371,8 @@ jobs:
     name: Create Release Summary
     needs: [build-ubuntu, build-centos]
     runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
-    if: github.event_name == 'schedule' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    # Only runs when the workflow is not cancelled and always() is true
+    if: always() && !cancelled()
     
     steps:
       - name: Generate Build Report
