@@ -450,7 +450,7 @@ elif [[ "$GIT_BRANCH" =~ ^rel ]]; then
     PACKAGE_RELEASE="$GITHUB_RUN_NUMBER"
     print_success "Set CPACK package release: $PACKAGE_RELEASE (release branch: $GIT_BRANCH, run: $GITHUB_RUN_NUMBER)"
 else
-    SANITIZED_BRANCH=$(echo "$GIT_BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+    SANITIZED_BRANCH=$(echo "$GIT_BRANCH" | sed 's/[^A-Za-z0-9.+~]/./g')
     PACKAGE_RELEASE="${SANITIZED_BRANCH}.${GIT_COMMIT_SHORT}"
     print_success "Set CPACK package release: $PACKAGE_RELEASE (dev branch: $GIT_BRANCH, commit: $GIT_COMMIT_SHORT)"
 fi
