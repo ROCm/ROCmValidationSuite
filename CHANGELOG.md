@@ -2,6 +2,25 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.4.0
+
+### Added
+
+- TransferBench support to PEBB and PBQT.
+- IET power stress test for MI250X.
+- Babel support for normal distribution–based data initialization.
+- Configurable Non-Temporal support in Babel.
+- Support for action selection using the `-s` option.
+- Support for module-based test execution using the `-m` option.
+- Support for time‑duration based Babel test execution.
+
+## RVS 1.3.0 for ROCm 7.2
+
+### Added
+
+- Babel subtest configurability
+
+
 ## RVS 1.3.0 for ROCm 7.1.1
 
 ### Added
