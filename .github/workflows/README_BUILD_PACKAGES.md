@@ -24,8 +24,8 @@ The workflow runs automatically on:
 When manually triggering the workflow, you can specify:
 
 1. **ROCm Version** (e.g., `7.11.0a20260121`)
-   - Default: `7.11.0a20260121`
-   - The script can also auto-fetch the latest version from TheRock
+   - Default: empty (auto-fetches latest from TheRock)
+   - Or specify an explicit version string
    
 2. **GPU Family Target**:
    - `gfx94X-dcgpu` - MI300A/MI300X
@@ -112,13 +112,12 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 2. **Set Environment Variables** from workflow inputs or defaults
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
-5. **Upload Artifacts** - Store packages with 30-day retention
-6. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite` and trigger is schedule, push to `master`/`main`/`release/*`, or same-repo PR) – Each job uploads its packages to S3 using OIDC. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped for other repos and for pull requests from forks.
-7. **Generate Repo Metadata** (nightly and release builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories.
+5. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
+6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
-S3 upload runs **only when** the repository is **`ROCm/ROCmValidationSuite`** and the run is one of: scheduled (cron), push to `master`/`main`/`release/*`, or pull request from the same repository. Uses **AWS OIDC**; no long-term access key or secret. Skipped for other repos and for pull requests from forks.
+S3 upload runs **only when** the repository is **`ROCm/ROCmValidationSuite`** (the `if` guard prevents forks from attempting credential setup). The upload step itself is always reached, but exits gracefully if `AWS_S3_BUCKET` is not set. Uses **AWS OIDC**; no long-term access key or secret. The bash routing inside the upload step determines the S3 destination based on the event type and branch.
 
 **Where `vars` and `secrets` are defined**
 
@@ -126,6 +125,18 @@ They are **not** in the workflow file. They are set in the repo:
 
 - **Secrets** (e.g. `secrets.AWS_ROLE_ARN`): **Settings** → **Secrets and variables** → **Actions** → **Secrets** tab → New repository secret.
 - **Variables** (e.g. `vars.AWS_S3_BUCKET`): **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → New repository variable.
+
+### Runner Configuration
+
+The workflow uses GitHub repository variables to control which runners execute each job, allowing you to use self-hosted runners or GitHub-provided runners:
+
+| Variable | Default | Used by |
+|----------|---------|---------|
+| `RUNNER_LABEL` | `ubuntu-22.04` | Ubuntu build job |
+| `RUNNER_LABEL_CONTAINER` | `ubuntu-latest` | CentOS/manylinux build job (container) |
+| `RUNNER_LABEL_UTILITY` | `ubuntu-latest` | Release summary job |
+
+To use a self-hosted runner, set the variable to your runner's label (e.g., `self-hosted` or a custom label) in **Settings** → **Secrets and variables** → **Actions** → **Variables**.
 
 **Required setup for S3 upload:**
 
@@ -143,9 +154,9 @@ They are **not** in the workflow file. They are set in the repo:
 
 | Trigger | Path | Contents |
 |--------|------|----------|
-| **Scheduled (daily)** | `nightly/rocm-validation-suite/deb/`, `nightly/rocm-validation-suite/rpm/`, `nightly/rocm-validation-suite/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). |
-| **Push to `release/*`** | `release/rocm-validation-suite/deb/`, `release/rocm-validation-suite/rpm/`, `release/rocm-validation-suite/tar/` | Same split by type; all release branches write to the same paths for auto-update. TGZ uploaded only by manylinux job. |
-| **Push to `master`/`main` or same-repo PR** | `rocm-validation-suite/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). |
+| **`release/*` branch** (`push` or `workflow_dispatch`) | `release/rocm-validation-suite/deb/`, `release/rocm-validation-suite/rpm/`, `release/rocm-validation-suite/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). Only PR merges into release branches or manual dispatch on release branches write here. |
+| **Scheduled**, **push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rocm-validation-suite/deb/`, `nightly/rocm-validation-suite/rpm/`, `nightly/rocm-validation-suite/tar/` | Same split by type. All non-release builds go to nightly. |
+| **Pull request** (same-repo) | `rocm-validation-suite/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). One-off path, no repo metadata generated. |
 
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
 
@@ -153,7 +164,7 @@ When packages are uploaded to S3, the **build report** artifact includes an **S3
 
 ### Repository Metadata (repodata)
 
-For **nightly** and **release** builds, the workflow also generates package repository metadata so that the S3 paths can be used directly as `apt` (DEB) and `yum`/`dnf` (RPM) repositories. This runs after the package upload step in each job.
+For **scheduled**, **push**, and **manual** (`workflow_dispatch`) builds, the workflow generates package repository metadata so that the S3 paths can be used directly as `apt` (DEB) and `yum`/`dnf` (RPM) repositories. This runs after the package upload step in each job. PR builds are excluded since their packages go to one-off ref-specific paths.
 
 **RPM repodata** (CentOS/RHEL job):
 - Tool: `createrepo_c` (falls back to `createrepo`)
@@ -225,7 +236,7 @@ sudo yum install rocm-validation-suite
 # or: sudo dnf install rocm-validation-suite
 ```
 
-> **Note:** `[trusted=yes]` (apt) and `gpgcheck=0` (yum) disable GPG verification. For production use, sign the packages and metadata with a GPG key and distribute the public key to users. Repository metadata is only generated for **nightly** (scheduled) and **release** builds; per-branch/PR builds upload raw packages without metadata.
+> **Note:** `[trusted=yes]` (apt) and `gpgcheck=0` (yum) disable GPG verification. For production use, sign the packages and metadata with a GPG key and distribute the public key to users. Repository metadata is generated for **scheduled**, **push**, and **manual** builds; PR builds upload raw packages to ref-specific paths without metadata.
 
 ## Build Script: build_packages_local.sh
 
@@ -311,7 +322,7 @@ rocm-validation-suite-1.0.0-Linux.tar.gz
 ### Ubuntu/Debian (DEB)
 
 ```bash
-# Download the artifact from GitHub Actions
+# Download the package from S3 (or use the apt repo described above)
 sudo dpkg -i rocm-validation-suite_*.deb
 
 # Run RVS
@@ -321,7 +332,7 @@ sudo dpkg -i rocm-validation-suite_*.deb
 ### CentOS/RHEL/Rocky Linux (RPM)
 
 ```bash
-# Download the artifact from GitHub Actions
+# Download the package from S3 (or use the yum/dnf repo described above)
 sudo rpm -i --replacefiles --nodeps rocm-validation-suite-*.rpm
 
 # Run RVS
@@ -366,15 +377,14 @@ rpm -qlp rocm-validation-suite-*.rpm  # Package contents
 rpm -qRp rocm-validation-suite-*.rpm  # Package dependencies
 ```
 
-## Accessing Build Artifacts
+## Accessing Build Packages
+
+Packages are uploaded directly to **S3** (not GitHub Actions artifacts). To find them:
 
 1. Go to the **Actions** tab in your GitHub repository
 2. Click on the latest workflow run
-3. Scroll down to **Artifacts** section
-4. Download the package artifacts:
-   - `ubuntu-22.04-packages-${GPU_FAMILY}`
-   - `manylinux_2_28-packages-${GPU_FAMILY}`
-   - `build-report` (contains build summary)
+3. Download the **`build-report`** artifact — it contains S3 console links to each package location
+4. Or browse S3 directly using the path layout described above
 
 ## Customization
 
