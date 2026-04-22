@@ -95,6 +95,104 @@ fetch_latest_rocm_version() {
     return 0
 }
 
+# Install gcc-N and g++-N together. Some apt mirrors satisfy "g++-N" alone with clang/llvm (no GNU <barrier>).
+# Dry-run rejects plans that install clang-*; co-installing gcc-N usually selects the GNU toolchain.
+apt_get_install_gnu_gplusplus_pair() {
+    local ver="$1"
+    local gc="gcc-${ver}"
+    local gp="g++-${ver}"
+    apt-cache show "$gp" &>/dev/null || return 1
+    apt-cache show "$gc" &>/dev/null || return 1
+    local sim
+    sim=$(apt-get install -s -y "$gc" "$gp" 2>/dev/null) || return 1
+    # apt versions differ: "Inst clang-11 (...)" vs indented list under "NEW packages will be installed"
+    if echo "$sim" | grep -qE '^Inst clang-[0-9]+' || echo "$sim" | grep -qE '^  clang-[0-9]+'; then
+        print_warning "Skipping $gc/$gp: resolver would install clang-* (need GNU gcc/g++ for libstdc++ <barrier>)"
+        return 1
+    fi
+    apt-get install -y "$gc" "$gp"
+}
+
+# hipcc (Clang) needs a host libstdc++ with C++20 <barrier> (GCC 11+). TransferBench pulls it in.
+# Self-hosted Ubuntu runners often pass the cmake/gcc/g++ checks, so the apt block below is
+# skipped and never installs g++-11+. This runs unconditionally after that check.
+ensure_ubuntu_barrier_toolchain() {
+    [ -f /etc/os-release ] || return 0
+    # shellcheck source=/dev/null
+    . /etc/os-release
+    case "${ID:-}" in
+        ubuntu|debian) ;;
+        *) return 0 ;;
+    esac
+    command -v apt-get >/dev/null 2>&1 || return 0
+    if compgen -G "/usr/include/c++/*/barrier" >/dev/null 2>&1; then
+        print_success "libstdc++ C++20 header <barrier> is available"
+        return 0
+    fi
+    print_info "C++20 <barrier> missing (required for TransferBench / pebb / pbqt with hipcc). Installing GCC 11+ via apt..."
+    print_info "ensure_ubuntu_barrier_toolchain: ${ID:-unknown} ${VERSION_ID:-unknown} (script installs real libstdc++ headers, then verifies <barrier>)"
+    apt-get update
+    # Ubuntu 20.04: use explicit Ubuntu package names (universe). Internal mirrors may advertise
+    # bogus g++-NN metapackages that apt "installs" with 0 new packages and no headers.
+    if [ "${ID:-}" = "ubuntu" ] && [ "${VERSION_ID:-}" = "20.04" ]; then
+        print_info "Ubuntu 20.04: ensuring universe repository (needed for g++-11)..."
+        apt-get install -y software-properties-common
+        add-apt-repository -y universe 2>/dev/null || print_warning "Could not run add-apt-repository universe (it may already be enabled)"
+        apt-get update
+        # Install GNU gcc-11 + g++-11 together. Some mirrors expose "g++-11" as a virtual package
+        # that resolves to clang/llvm (no libstdc++ <barrier>); co-installing gcc-11 forces the GNU toolchain.
+        print_info "Ubuntu 20.04: installing gcc-11 and g++-11 (GNU; pulls libstdc++ C++20 headers)..."
+        if apt_get_install_gnu_gplusplus_pair 11; then
+            if compgen -G "/usr/include/c++/*/barrier" >/dev/null 2>&1; then
+                print_success "libstdc++ C++20 <barrier> available (gcc-11 / g++-11)"
+                return 0
+            fi
+            print_warning "gcc-11 / g++-11 installed but <barrier> still missing; trying gcc-12..14 / g++-12..14..."
+        else
+            print_warning "GNU gcc-11 / g++-11 not available from apt; trying 12..14..."
+        fi
+    fi
+    # Try g++-N in ascending order; after each install, require /usr/include/c++/*/barrier.
+    # Ubuntu 20.04: only 11–14 come from Ubuntu archives; some internal mirrors ship bogus
+    # high-numbered g++-* metapackages that install without libstdc++ C++20 headers — skip those.
+    if [ "${ID:-}" = "ubuntu" ] && [ "${VERSION_ID:-}" = "20.04" ]; then
+        barrier_vers=$(seq 11 14)
+    else
+        barrier_vers=$(seq 11 40)
+    fi
+    for ver in $barrier_vers; do
+        if apt_get_install_gnu_gplusplus_pair "$ver"; then
+            if compgen -G "/usr/include/c++/*/barrier" >/dev/null 2>&1; then
+                print_success "Installed gcc-${ver}/g++-${ver}; libstdc++ C++20 <barrier> is available"
+                return 0
+            fi
+            print_warning "Installed gcc-${ver}/g++-${ver} but <barrier> is still missing; trying next..."
+        fi
+    done
+    # Many internal mirrors sync main/security but omit universe gcc-N; PPA provides GNU GCC 11+ for focal.
+    if [ "${ID:-}" = "ubuntu" ] && [ "${VERSION_ID:-}" = "20.04" ] && [ "${RVS_SKIP_TOOLCHAIN_PPA:-}" != "1" ]; then
+        if ! compgen -G "/usr/include/c++/*/barrier" >/dev/null 2>&1; then
+            print_info "Ubuntu 20.04: adding ubuntu-toolchain-r/test PPA for GNU gcc/g++ 11+ (set RVS_SKIP_TOOLCHAIN_PPA=1 to skip)"
+            if add-apt-repository -y ppa:ubuntu-toolchain-r/test; then
+                apt-get update
+                for ver in $(seq 11 14); do
+                    if apt_get_install_gnu_gplusplus_pair "$ver"; then
+                        if compgen -G "/usr/include/c++/*/barrier" >/dev/null 2>&1; then
+                            print_success "Installed gcc-${ver}/g++-${ver} (toolchain PPA); libstdc++ C++20 <barrier> is available"
+                            return 0
+                        fi
+                    fi
+                done
+            else
+                print_warning "Could not add ubuntu-toolchain-r/test (network or policy)"
+            fi
+        fi
+    fi
+    print_error "Could not install a g++ package that provides C++20 <barrier> (see script version range for this Ubuntu release)."
+    print_error "On Ubuntu 20.04: enable full universe gcc-N, or allow this script to add ubuntu-toolchain-r/test PPA (unset RVS_SKIP_TOOLCHAIN_PPA), or install GNU gcc-11+ manually."
+    exit 1
+}
+
 # Function to check and install dependencies
 check_and_install_dependencies() {
     print_info "Checking for required build dependencies..."
@@ -292,6 +390,7 @@ check_and_install_dependencies() {
 
 # Check and install dependencies (installs wget, etc. - required before fetch_latest_rocm_version)
 check_and_install_dependencies
+ensure_ubuntu_barrier_toolchain
 
 # Determine ROCm version: use environment variable or fetch latest (wget is now available)
 if [ -n "$ROCM_VERSION" ]; then
@@ -486,9 +585,46 @@ if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     export CMAKE_COMMAND="cmake3"
     print_info "Using cmake3 (CentOS/RHEL/AlmaLinux/Rocky)"
 else
-    # Ubuntu and others: use defaults (system compiler and cmake)
+    # Ubuntu/Debian: modules (pebb/pbqt) compile with hipcc, which is Clang-based and does not
+    # bundle libstdc++ C++20 headers such as <barrier>. Pass the system GCC tree to hipcc via
+    # CMAKE_CXX_FLAGS --gcc-toolchain (same mechanism as GCC_TOOLCHAIN on RHEL).
     export CMAKE_COMMAND="cmake"
-    print_info "Using cmake (Ubuntu/other)"
+    print_info "Using cmake (Ubuntu/Debian/other)"
+
+    if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+        if [ -x "$ROCM_PATH/bin/hipcc" ]; then
+            export CMAKE_CXX_COMPILER="$ROCM_PATH/bin/hipcc"
+            print_success "Set CMAKE_CXX_COMPILER to hipcc (Ubuntu/Debian)"
+        else
+            print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using CMake default C++ compiler"
+        fi
+        if compgen -G "/usr/include/c++/*/barrier" >/dev/null 2>&1; then
+            export GCC_TOOLCHAIN="/usr"
+            print_success "Set GCC_TOOLCHAIN=/usr so hipcc finds system libstdc++ (C++20 <barrier>)"
+            # Ubuntu 20.04 often keeps gcc-9 as default while g++-11 supplies <barrier>. Pin libstdc++ includes/libs.
+            CPP_GCC_VER=""
+            for try in $(ls -1 /usr/include/c++ 2>/dev/null | grep -E '^[0-9]+$' | sort -n | tac); do
+                [ -f "/usr/include/c++/$try/barrier" ] || continue
+                CPP_GCC_VER="$try"
+                break
+            done
+            if [ -n "$CPP_GCC_VER" ]; then
+                triplet=""
+                if command -v "gcc-${CPP_GCC_VER}" >/dev/null 2>&1; then
+                    triplet="$(gcc-${CPP_GCC_VER} -print-multiarch 2>/dev/null || true)"
+                elif command -v "g++-${CPP_GCC_VER}" >/dev/null 2>&1; then
+                    triplet="$(g++-${CPP_GCC_VER} -dumpmachine 2>/dev/null || true)"
+                fi
+                [ -z "$triplet" ] && triplet="x86_64-linux-gnu"
+                if [ -d "/usr/lib/gcc/${triplet}/${CPP_GCC_VER}" ]; then
+                    export GCC_INSTALL_DIR_FOR_HIPCC="/usr/lib/gcc/${triplet}/${CPP_GCC_VER}"
+                    print_success "Set GCC_INSTALL_DIR_FOR_HIPCC=$GCC_INSTALL_DIR_FOR_HIPCC (use with hipcc on multi-GCC hosts)"
+                fi
+            fi
+        else
+            print_warning "No /usr/include/c++/.../barrier found; install g++ 11+ (e.g. apt install g++-11 build-essential)"
+        fi
+    fi
 fi
 
 print_info "Environment variables set:"
@@ -508,6 +644,9 @@ if [ -n "$CMAKE_CXX_COMPILER" ]; then
 fi
 if [ -n "$GCC_TOOLCHAIN" ]; then
     echo "  GCC_TOOLCHAIN=$GCC_TOOLCHAIN"
+fi
+if [ -n "${GCC_INSTALL_DIR_FOR_HIPCC:-}" ]; then
+    echo "  GCC_INSTALL_DIR_FOR_HIPCC=$GCC_INSTALL_DIR_FOR_HIPCC"
 fi
 echo "  CMAKE_COMMAND=$CMAKE_COMMAND"
 
@@ -558,8 +697,12 @@ fi
 
 # Point hipcc at the GCC toolchain for C++20 standard library headers
 if [ -n "$GCC_TOOLCHAIN" ]; then
-    CMAKE_ARGS+=(-DCMAKE_CXX_FLAGS="--gcc-toolchain=$GCC_TOOLCHAIN")
-    print_success "Set --gcc-toolchain=$GCC_TOOLCHAIN for hipcc"
+    HIPCC_STDLIB_FLAGS="--gcc-toolchain=$GCC_TOOLCHAIN"
+    if [ -n "${GCC_INSTALL_DIR_FOR_HIPCC:-}" ]; then
+        HIPCC_STDLIB_FLAGS="$HIPCC_STDLIB_FLAGS --gcc-install-dir=$GCC_INSTALL_DIR_FOR_HIPCC"
+    fi
+    CMAKE_ARGS+=(-DCMAKE_CXX_FLAGS="$HIPCC_STDLIB_FLAGS")
+    print_success "Set CMAKE_CXX_FLAGS for hipcc: $HIPCC_STDLIB_FLAGS"
 fi
 
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"

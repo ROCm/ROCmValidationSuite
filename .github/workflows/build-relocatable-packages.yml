@@ -45,6 +45,10 @@ env:
   RVS_AUTO_DETECT_LOCAL_UPLOAD: ${{ vars.RVS_AUTO_DETECT_LOCAL_UPLOAD }}
 
 jobs:
+  # Ubuntu job: vars.RUNNER_LABEL can be any supported LTS or newer (20.04–24.04+). Match
+  # matrix.ubuntu_version to the real OS for labeling. build_packages_local.sh installs g++-N
+  # (g++-11..40 / gcc-N pairs; verifies <barrier>; 20.04 may add ubuntu-toolchain-r PPA unless RVS_SKIP_TOOLCHAIN_PPA=1),
+  # and passes --gcc-toolchain / --gcc-install-dir to hipcc for multi-GCC hosts.
   build-ubuntu:
     name: Build Ubuntu Packages
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
