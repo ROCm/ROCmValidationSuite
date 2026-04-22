@@ -151,6 +151,21 @@ set(ROCM_MAJOR_VERSION "0" CACHE STRING "ROCm major version (e.g. 7 for ROCm 7.x
 # Auto-compute patch version: count commits since last v<major>.<minor>.* tag
 find_program(GIT_EXECUTABLE git)
 if(GIT_EXECUTABLE)
+    # When cmake runs under sudo (e.g. Ubuntu CI), git refuses to operate in a
+    # directory owned by a different user. Mark the source dir as safe.
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} config --global --get-all safe.directory
+        OUTPUT_VARIABLE _SAFE_DIRS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    string(FIND "${_SAFE_DIRS}" "${CMAKE_SOURCE_DIR}" _SAFE_DIR_IDX)
+    if(_SAFE_DIR_IDX EQUAL -1)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} config --global --add safe.directory "${CMAKE_SOURCE_DIR}"
+            ERROR_QUIET
+        )
+    endif()
     set(_TAG_PATTERN "v${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.*")
     execute_process(
         COMMAND ${GIT_EXECUTABLE} describe --tags --match "${_TAG_PATTERN}" --long
