@@ -145,12 +145,40 @@ else() #If hipblas-common not found
   message(FATAL_ERROR "hipblas-common not found !!! Install hipblas-common to proceed ...")
 endif(hipblas-common_FOUND)
 
+# ROCm major version for package naming and install paths (per RFC0012)
+set(ROCM_MAJOR_VERSION "0" CACHE STRING "ROCm major version (e.g. 7 for ROCm 7.x)")
+
+# Auto-compute patch version: count commits since last v<major>.<minor>.* tag
+find_program(GIT_EXECUTABLE git)
+if(GIT_EXECUTABLE)
+    set(_TAG_PATTERN "v${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.*")
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} describe --tags --match "${_TAG_PATTERN}" --long
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE _GIT_DESCRIBE_OUTPUT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE _GIT_DESCRIBE_RESULT
+        ERROR_QUIET
+    )
+    if(_GIT_DESCRIBE_RESULT EQUAL 0)
+        string(REGEX MATCH "-([0-9]+)-g[0-9a-f]+$" _MATCH "${_GIT_DESCRIBE_OUTPUT}")
+        set(RVS_PATCH_FROM_TAG "${CMAKE_MATCH_1}")
+        message(STATUS "RVS patch from tag: ${RVS_PATCH_FROM_TAG} (${_GIT_DESCRIBE_OUTPUT})")
+    else()
+        set(RVS_PATCH_FROM_TAG "0")
+        message(STATUS "No matching v${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.* tag found, patch defaults to 0")
+    endif()
+else()
+    set(RVS_PATCH_FROM_TAG "0")
+    message(STATUS "git not found, patch version defaults to 0")
+endif()
+
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
-set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
-set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
+set(CMAKE_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "CMAKE installation directory")
+set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 
 add_definitions(-DROCM_PATH="${ROCM_PATH}")
@@ -225,12 +253,16 @@ get_version ( ${RVS_VERSION} )
 # Package Generator  #######################################################
 set(PKG_MAINTAINER_NM  "ROCM Validation Suite Support")
 set(PKG_MAINTAINER_EMAIL  "rocm-validation-suite.support@amd.com")
-set(CPACK_PACKAGE_NAME "rocm-validation-suite")
+set(CPACK_PACKAGE_NAME "amdrocm${ROCM_MAJOR_VERSION}-rvs")
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Tool for validating AMD GPU functionality, performance, reliability in ROCm.")
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
-set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+if(RVS_PATCH_FROM_TAG GREATER "0")
+    set(CPACK_PACKAGE_VERSION_PATCH "${RVS_PATCH_FROM_TAG}")
+else()
+    set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+endif()
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 
@@ -245,14 +277,6 @@ endif()
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
-
-# Set default ROCm version for package naming
-set(ROCM_VERSION_FOR_PACKAGE "99999")
-
-# Update ROCm version for package naming
-if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
-  set(ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_LIBPATCH_VERSION})
-endif()
 
 # debian related changes
 if (DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
@@ -274,8 +298,7 @@ if(CPACK_RPM_PACKAGE_RELEASE)
   set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
 endif()
 
-# Complete RVS package version naming
-set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}.${ROCM_VERSION_FOR_PACKAGE}")
+set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
 
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")

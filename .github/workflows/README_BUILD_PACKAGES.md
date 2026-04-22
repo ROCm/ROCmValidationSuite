@@ -68,11 +68,12 @@ GitHub Actions Workflow
     │         -DROCM_PATH=$ROCM_PATH \
     │         -DHIP_PLATFORM=amd \
     │         -DCMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER (if set) \
-    │         -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs \
-    │         -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs \
+    │         -DROCM_MAJOR_VERSION=$ROCM_MAJOR \
+    │         -DCMAKE_INSTALL_PREFIX=/opt/rocm/extras-$ROCM_MAJOR \
+    │         -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/extras-$ROCM_MAJOR \
     │         -DCMAKE_SKIP_RPATH=FALSE \
     │         -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
-    │         -DCMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs" \
+    │         -DCMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-$ROCM_MAJOR/lib" \
     │         -DCMAKE_VERBOSE_MAKEFILE=1 \
     │         -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
     ├── 5. Build RVS
@@ -87,10 +88,10 @@ GitHub Actions Workflow
 **Relocatable RPATH**: The `$ORIGIN` relative RPATH ensures binaries can find their libraries regardless of installation location:
 
 ```bash
-CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs"
+CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-<ROCM_MAJOR>/lib"
 ```
 
-**Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically.
+**Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically. The **patch version** is auto-computed at CMake configure time: `git describe --tags --match "v<major>.<minor>.*"` counts commits since the last matching `v` tag. For example, if the tag is `v1.3.0` and there have been 15 commits since, the package version becomes `1.3.15`. If no matching tag exists or git is unavailable, the patch defaults to `0` from `CMakeLists.txt`. This works for both CI builds and direct local `cmake` invocations.
 
 **HIP Device Libraries**: Automatically located and exported as `HIP_DEVICE_LIB_PATH` for clang device library discovery.
 
@@ -154,9 +155,9 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
 
 | Trigger | Path | Contents |
 |--------|------|----------|
-| **`release/*` branch** (`push` or `workflow_dispatch`) | `release/rocm-validation-suite/deb/`, `release/rocm-validation-suite/rpm/`, `release/rocm-validation-suite/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). Only PR merges into release branches or manual dispatch on release branches write here. |
-| **Scheduled**, **push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rocm-validation-suite/deb/`, `nightly/rocm-validation-suite/rpm/`, `nightly/rocm-validation-suite/tar/` | Same split by type. All non-release builds go to nightly. |
-| **Pull request** (same-repo) | `rocm-validation-suite/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). One-off path, no repo metadata generated. |
+| **`release/*` branch** (`push` or `workflow_dispatch`) | `release/rvs/deb/`, `release/rvs/rpm/`, `release/rvs/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). Only PR merges into release branches or manual dispatch on release branches write here. |
+| **Scheduled**, **push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same split by type. All non-release builds go to nightly. |
+| **Pull request** (same-repo) | `rvs/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). One-off path, no repo metadata generated. |
 
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
 
@@ -179,36 +180,36 @@ For **scheduled**, **push**, and **manual** (`workflow_dispatch`) builds, the wo
 **S3 directory layout after metadata generation:**
 
 ```
-s3://<bucket>/nightly/rocm-validation-suite/
+s3://<bucket>/nightly/rvs/
 ├── deb/
-│   ├── rocm-validation-suite_1.0.0_amd64.deb
+│   ├── amdrocm7-rvs_1.3.15_amd64.deb
 │   ├── Packages
 │   ├── Packages.gz
 │   └── Release
 ├── rpm/
-│   ├── rocm-validation-suite-1.0.0.x86_64.rpm
+│   ├── amdrocm7-rvs-1.3.15.x86_64.rpm
 │   └── repodata/
 │       ├── repomd.xml
 │       ├── primary.xml.gz
 │       ├── filelists.xml.gz
 │       └── other.xml.gz
 └── tar/
-    └── rocm-validation-suite-1.0.0-Linux.tar.gz
+    └── amdrocm7-rvs-1.3.15-Linux.tar.gz
 ```
 
 **Using the S3 repo with apt (Ubuntu/Debian):**
 
 ```bash
 # Add the nightly repo (replace <bucket> with the actual S3 bucket name)
-echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rocm-validation-suite/deb/ ./" \
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rvs/deb/ ./" \
   | sudo tee /etc/apt/sources.list.d/rvs-nightly.list
 
 # Or the release repo
-echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rocm-validation-suite/deb/ ./" \
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rvs/deb/ ./" \
   | sudo tee /etc/apt/sources.list.d/rvs-release.list
 
 sudo apt update
-sudo apt install rocm-validation-suite
+sudo apt install amdrocm7-rvs  # Replace 7 with your ROCm major version
 ```
 
 **Using the S3 repo with yum/dnf (CentOS/RHEL/Rocky):**
@@ -218,7 +219,7 @@ sudo apt install rocm-validation-suite
 cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-nightly.repo
 [rvs-nightly]
 name=RVS Nightly Packages
-baseurl=https://<bucket>.s3.amazonaws.com/nightly/rocm-validation-suite/rpm/
+baseurl=https://<bucket>.s3.amazonaws.com/nightly/rvs/rpm/
 enabled=1
 gpgcheck=0
 EOF
@@ -227,13 +228,13 @@ EOF
 cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-release.repo
 [rvs-release]
 name=RVS Release Packages
-baseurl=https://<bucket>.s3.amazonaws.com/release/rocm-validation-suite/rpm/
+baseurl=https://<bucket>.s3.amazonaws.com/release/rvs/rpm/
 enabled=1
 gpgcheck=0
 EOF
 
-sudo yum install rocm-validation-suite
-# or: sudo dnf install rocm-validation-suite
+sudo yum install amdrocm7-rvs  # Replace 7 with your ROCm major version
+# or: sudo dnf install amdrocm7-rvs
 ```
 
 > **Note:** `[trusted=yes]` (apt) and `gpgcheck=0` (yum) disable GPG verification. For production use, sign the packages and metadata with a GPG key and distribute the public key to users. Repository metadata is generated for **scheduled**, **push**, and **manual** builds; PR builds upload raw packages to ref-specific paths without metadata.
@@ -304,18 +305,20 @@ The workflow builds packages for:
 
 Packages are named automatically by CPack using the RVS version from `CMakeLists.txt`:
 
-- **DEB**: `rocm-validation-suite_${RVS_VERSION}_amd64.deb`
-- **RPM**: `rocm-validation-suite-${RVS_VERSION}.x86_64.rpm`
-- **TGZ**: `rocm-validation-suite-${RVS_VERSION}-Linux.tar.gz`
+- **DEB**: `amdrocm<ROCM_MAJOR>-rvs_${RVS_VERSION}_amd64.deb`
+- **RPM**: `amdrocm<ROCM_MAJOR>-rvs-${RVS_VERSION}.x86_64.rpm`
+- **TGZ**: `amdrocm<ROCM_MAJOR>-rvs-${RVS_VERSION}-Linux.tar.gz`
 
-Example (if RVS version is 1.0.0):
+The **patch version** in `RVS_VERSION` is automatically computed from the number of commits since the last `v<major>.<minor>.*` git tag. For example, with tag `v1.3.0` and 15 commits since:
 ```
-rocm-validation-suite_1.0.0_amd64.deb
-rocm-validation-suite-1.0.0.x86_64.rpm
-rocm-validation-suite-1.0.0-Linux.tar.gz
+amdrocm7-rvs_1.3.15_amd64.deb
+amdrocm7-rvs-1.3.15.x86_64.rpm
+amdrocm7-rvs-1.3.15-Linux.tar.gz
 ```
 
-**Important**: Package filenames match the internal package metadata, ensuring compliance with Debian and RPM standards. The version is sourced directly from `CMakeLists.txt` via CMake's `project(VERSION)` command.
+If no matching `v` tag is found, the patch defaults to `0` from `project(VERSION)` in `CMakeLists.txt`.
+
+**Important**: Package filenames match the internal package metadata, ensuring compliance with Debian and RPM standards. The version major and minor are sourced from `CMakeLists.txt` via CMake's `project(VERSION)` command, while the patch is auto-computed from git history at configure time.
 
 ## Installing Generated Packages
 
@@ -323,36 +326,31 @@ rocm-validation-suite-1.0.0-Linux.tar.gz
 
 ```bash
 # Download the package from S3 (or use the apt repo described above)
-sudo dpkg -i rocm-validation-suite_*.deb
+sudo dpkg -i amdrocm7-rvs_*.deb
 
 # Run RVS
-/opt/rocm/rvs/bin/rvs --help
+/opt/rocm/extras-7/bin/rvs --help
 ```
 
 ### CentOS/RHEL/Rocky Linux (RPM)
 
 ```bash
 # Download the package from S3 (or use the yum/dnf repo described above)
-sudo rpm -i --replacefiles --nodeps rocm-validation-suite-*.rpm
+sudo rpm -i --replacefiles --nodeps amdrocm7-rvs-*.rpm
 
 # Run RVS
-/opt/rocm/rvs/bin/rvs --help
+/opt/rocm/extras-7/bin/rvs --help
 ```
 
 ### Any Linux Distribution (TGZ - Relocatable)
 
 ```bash
-# Extract to /opt (or any location)
-sudo mkdir -p /opt/rocm
-sudo tar -xzf rocm-validation-suite-*.tar.gz -C /opt/
-
-# Or extract to custom location
-mkdir -p ~/myrocm
-tar -xzf rocm-validation-suite-*.tar.gz -C ~/myrocm/
+# Extract to the extras directory
+sudo tar -xzf amdrocm7-rvs-*.tar.gz -C /opt/rocm/extras-7
 
 # Setup environment
-export PATH=/opt/rocm/rvs/bin:$PATH
-export LD_LIBRARY_PATH=/opt/rocm/rvs/lib:$LD_LIBRARY_PATH
+export PATH=/opt/rocm/extras-7/bin:$PATH
+export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:$LD_LIBRARY_PATH
 
 # Run RVS
 rvs --help
@@ -365,16 +363,16 @@ The workflow automatically verifies package contents:
 ### DEB Package Verification
 
 ```bash
-dpkg-deb -I rocm-validation-suite_*.deb  # Package info
-dpkg-deb -c rocm-validation-suite_*.deb  # Package contents
+dpkg-deb -I amdrocm*-rvs_*.deb  # Package info
+dpkg-deb -c amdrocm*-rvs_*.deb  # Package contents
 ```
 
 ### RPM Package Verification
 
 ```bash
-rpm -qip rocm-validation-suite-*.rpm  # Package info
-rpm -qlp rocm-validation-suite-*.rpm  # Package contents
-rpm -qRp rocm-validation-suite-*.rpm  # Package dependencies
+rpm -qip amdrocm*-rvs-*.rpm  # Package info
+rpm -qlp amdrocm*-rvs-*.rpm  # Package contents
+rpm -qRp amdrocm*-rvs-*.rpm  # Package dependencies
 ```
 
 ## Accessing Build Packages
@@ -476,11 +474,12 @@ cmake -B "$BUILD_DIR" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DROCM_PATH="$ROCM_PATH" \
     -DHIP_PLATFORM=amd \
-    -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs \
-    -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs \
+    -DROCM_MAJOR_VERSION="$ROCM_MAJOR" \
+    -DCMAKE_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}" \
+    -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}" \
     -DCMAKE_SKIP_RPATH=FALSE \
     -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
-    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs" \
+    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs:/opt/rocm/extras-${ROCM_MAJOR}/lib" \
     -DRPATH_MODE=OFF \
     -DCMAKE_VERBOSE_MAKEFILE=1 \
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON \
@@ -507,10 +506,10 @@ cmake -B "$BUILD_DIR" \
 If binaries can't find libraries:
 
 ```bash
-# Check RPATH settings
-readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
+# Check RPATH settings (replace 7 with your ROCm major version)
+readelf -d /opt/rocm/extras-7/bin/rvs | grep RPATH
 
-# Should show: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs
+# Should show: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-7/lib
 ```
 
 ### Missing Dependencies
@@ -518,8 +517,8 @@ readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
 If the package reports missing dependencies:
 
 ```bash
-# Check what libraries are needed
-ldd /opt/rocm/rvs/bin/rvs
+# Check what libraries are needed (replace 7 with your ROCm major version)
+ldd /opt/rocm/extras-7/bin/rvs
 
 # Install missing ROCm components if needed
 ```
@@ -541,7 +540,7 @@ export BUILD_TYPE=Release
 sudo -E ./build_packages_local.sh
 
 # Check generated packages
-ls -lh build/rocm-validation-suite*
+ls -lh build/amdrocm*-rvs*
 ```
 
 ## References

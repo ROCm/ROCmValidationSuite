@@ -65,6 +65,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
       - name: Set ROCm Version and GPU Family
         run: |
@@ -97,7 +98,7 @@ jobs:
       - name: Verify DEB Package
         run: |
           cd ./build
-          DEB_FILE=$(ls rocm-validation-suite*.deb | head -1)
+          DEB_FILE=$(ls amdrocm*-rvs*.deb | head -1)
           if [ -n "$DEB_FILE" ]; then
             echo "=== DEB Package Info ==="
             dpkg-deb -I "$DEB_FILE"
@@ -142,17 +143,17 @@ jobs:
             echo "::warning::AWS_S3_BUCKET not set. Skipping S3 upload."
             exit 0
           fi
-          BASE="rocm-validation-suite"
+          BASE="rvs"
           if [[ "${{ github.ref }}" == refs/heads/release/* ]] && { [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; }; then
-            echo "Release branch build: uploading to release/rocm-validation-suite/deb"
-            aws s3 cp ./build "s3://${BUCKET}/release/${BASE}/deb/" --recursive --exclude "*" --include "rocm-validation-suite*.deb" --no-progress
+            echo "Release branch build: uploading to release/rvs/deb"
+            aws s3 cp ./build "s3://${BUCKET}/release/${BASE}/deb/" --recursive --exclude "*" --include "amdrocm*-rvs*.deb" --no-progress
             echo "Listing s3://${BUCKET}/release/${BASE}/deb/"
             aws s3 ls "s3://${BUCKET}/release/${BASE}/deb/" --human-readable
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=Ubuntu DEB|release/${BASE}/deb" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Nightly/push build: uploading to nightly/rocm-validation-suite/deb"
-            aws s3 cp ./build "s3://${BUCKET}/nightly/${BASE}/deb/" --recursive --exclude "*" --include "rocm-validation-suite*.deb" --no-progress
+            echo "Nightly/push build: uploading to nightly/rvs/deb"
+            aws s3 cp ./build "s3://${BUCKET}/nightly/${BASE}/deb/" --recursive --exclude "*" --include "amdrocm*-rvs*.deb" --no-progress
             echo "Listing s3://${BUCKET}/nightly/${BASE}/deb/"
             aws s3 ls "s3://${BUCKET}/nightly/${BASE}/deb/" --human-readable
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
@@ -160,7 +161,7 @@ jobs:
           else
             PREFIX="${BASE}/${{ github.ref_name }}/${{ github.run_number }}/ubuntu-${{ matrix.ubuntu_version }}"
             echo "Uploading to s3://${BUCKET}/${PREFIX}/"
-            aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "rocm-validation-suite*.deb" --no-progress
+            aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "amdrocm*-rvs*.deb" --no-progress
             echo "Listing s3://${BUCKET}/${PREFIX}/"
             aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
@@ -179,7 +180,7 @@ jobs:
 
           sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
 
-          BASE="rocm-validation-suite"
+          BASE="rvs"
           if [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
             DEB_PREFIX="release/${BASE}/deb"
           else
@@ -193,7 +194,7 @@ jobs:
             --exclude "Packages*" --exclude "Release*" --exclude "InRelease" \
             --no-progress || true
 
-          cp ./build/rocm-validation-suite*.deb "$STAGING/" 2>/dev/null || true
+          cp ./build/amdrocm*-rvs*.deb "$STAGING/" 2>/dev/null || true
 
           cd "$STAGING"
           dpkg-scanpackages --multiversion . /dev/null > Packages
@@ -226,6 +227,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
       - name: Set ROCm Version and GPU Family
         run: |
@@ -253,7 +255,7 @@ jobs:
       - name: Verify RPM Package
         run: |
           cd ./build
-          RPM_FILE=$(ls rocm-validation-suite*.rpm | head -1)
+          RPM_FILE=$(ls amdrocm*-rvs*.rpm | head -1)
           if [ -n "$RPM_FILE" ]; then
             echo "=== RPM Package Info ==="
             rpm -qip "$RPM_FILE"
@@ -302,11 +304,11 @@ jobs:
             echo "::warning::AWS_S3_BUCKET not set. Skipping S3 upload."
             exit 0
           fi
-          BASE="rocm-validation-suite"
+          BASE="rvs"
           if [[ "${{ github.ref }}" == refs/heads/release/* ]] && { [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; }; then
-            echo "Release branch build: uploading to release/rocm-validation-suite/rpm and release/rocm-validation-suite/tar"
-            aws s3 cp ./build "s3://${BUCKET}/release/${BASE}/rpm/" --recursive --exclude "*" --include "rocm-validation-suite*.rpm" --no-progress
-            aws s3 cp ./build "s3://${BUCKET}/release/${BASE}/tar/" --recursive --exclude "*" --include "rocm-validation-suite*.tar.gz" --no-progress
+            echo "Release branch build: uploading to release/rvs/rpm and release/rvs/tar"
+            aws s3 cp ./build "s3://${BUCKET}/release/${BASE}/rpm/" --recursive --exclude "*" --include "amdrocm*-rvs*.rpm" --no-progress
+            aws s3 cp ./build "s3://${BUCKET}/release/${BASE}/tar/" --recursive --exclude "*" --include "amdrocm*-rvs*.tar.gz" --no-progress
             echo "Listing s3://${BUCKET}/release/${BASE}/rpm/"
             aws s3 ls "s3://${BUCKET}/release/${BASE}/rpm/" --human-readable
             echo "Listing s3://${BUCKET}/release/${BASE}/tar/"
@@ -314,9 +316,9 @@ jobs:
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=CentOS/RHEL RPM|release/${BASE}/rpm||CentOS/RHEL TGZ|release/${BASE}/tar" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Nightly/push build: uploading to nightly/rocm-validation-suite/rpm and nightly/rocm-validation-suite/tar"
-            aws s3 cp ./build "s3://${BUCKET}/nightly/${BASE}/rpm/" --recursive --exclude "*" --include "rocm-validation-suite*.rpm" --no-progress
-            aws s3 cp ./build "s3://${BUCKET}/nightly/${BASE}/tar/" --recursive --exclude "*" --include "rocm-validation-suite*.tar.gz" --no-progress
+            echo "Nightly/push build: uploading to nightly/rvs/rpm and nightly/rvs/tar"
+            aws s3 cp ./build "s3://${BUCKET}/nightly/${BASE}/rpm/" --recursive --exclude "*" --include "amdrocm*-rvs*.rpm" --no-progress
+            aws s3 cp ./build "s3://${BUCKET}/nightly/${BASE}/tar/" --recursive --exclude "*" --include "amdrocm*-rvs*.tar.gz" --no-progress
             echo "Listing s3://${BUCKET}/nightly/${BASE}/rpm/"
             aws s3 ls "s3://${BUCKET}/nightly/${BASE}/rpm/" --human-readable
             echo "Listing s3://${BUCKET}/nightly/${BASE}/tar/"
@@ -326,7 +328,7 @@ jobs:
           else
             PREFIX="${BASE}/${{ github.ref_name }}/${{ github.run_number }}/${{ matrix.distro }}"
             echo "Uploading to s3://${BUCKET}/${PREFIX}/"
-            aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "rocm-validation-suite*.rpm" --include "rocm-validation-suite*.tar.gz" --no-progress
+            aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "amdrocm*-rvs*.rpm" --include "amdrocm*-rvs*.tar.gz" --no-progress
             echo "Listing s3://${BUCKET}/${PREFIX}/"
             aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
@@ -345,7 +347,7 @@ jobs:
 
           yum install -y createrepo_c || yum install -y createrepo
 
-          BASE="rocm-validation-suite"
+          BASE="rvs"
           if [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
             RPM_PREFIX="release/${BASE}/rpm"
           else
@@ -358,7 +360,7 @@ jobs:
           aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
             --exclude "repodata/*" --no-progress || true
 
-          cp ./build/rocm-validation-suite*.rpm "$STAGING/" 2>/dev/null || true
+          cp ./build/amdrocm*-rvs*.rpm "$STAGING/" 2>/dev/null || true
 
           createrepo_c "$STAGING" || createrepo "$STAGING"
 
@@ -389,17 +391,17 @@ jobs:
 
           ### Ubuntu/Debian
           ```bash
-          sudo dpkg -i rocm-validation-suite_*.deb
+          sudo dpkg -i amdrocm*-rvs_*.deb
           ```
 
           ### CentOS/RHEL
           ```bash
-          sudo rpm -i --replacefiles --nodeps rocm-validation-suite-*.rpm
+          sudo rpm -i --replacefiles --nodeps amdrocm*-rvs-*.rpm
           ```
 
           ### Relocatable TGZ (Any Linux Distribution)
           ```bash
-          tar -xzf rocm-validation-suite-*.tar.gz -C /opt/
+          tar -xzf amdrocm*-rvs-*.tar.gz -C /opt/rocm/
           export PATH=/opt/rocm/rvs/bin:$PATH
           export LD_LIBRARY_PATH=/opt/rocm/rvs/lib:$LD_LIBRARY_PATH
           ```
