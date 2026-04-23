@@ -645,7 +645,7 @@ fi
 
 # Create TGZ package
 print_info "Creating TGZ package..."
-CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON -DCPACK_PACKAGING_INSTALL_PREFIX="")
+CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON -DCPACK_PACKAGING_INSTALL_PREFIX="" -DCPACK_INCLUDE_TOPLEVEL_DIRECTORY=OFF)
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"
 cd "$BUILD_DIR"
 cpack -G TGZ --verbose
@@ -791,6 +791,7 @@ echo "CentOS/RHEL (RPM):"
 echo "  sudo rpm -i --replacefiles --nodeps $BUILD_DIR/amdrocm${ROCM_MAJOR}-rvs-*.rpm"
 echo ""
 echo "Any Linux (TGZ - Relocatable):"
+echo "  sudo mkdir -p /opt/rocm/extras-${ROCM_MAJOR}"
 echo "  sudo tar -xzf $BUILD_DIR/amdrocm${ROCM_MAJOR}-rvs-*.tar.gz -C /opt/rocm/extras-${ROCM_MAJOR}"
 echo "  export PATH=/opt/rocm/extras-${ROCM_MAJOR}/bin:\$PATH"
 echo "  export LD_LIBRARY_PATH=/opt/rocm/extras-${ROCM_MAJOR}/lib:\$LD_LIBRARY_PATH"

@@ -346,6 +346,7 @@ sudo rpm -i --replacefiles --nodeps amdrocm7-rvs-*.rpm
 
 ```bash
 # Extract to the extras directory
+sudo mkdir -p /opt/rocm/extras-7
 sudo tar -xzf amdrocm7-rvs-*.tar.gz -C /opt/rocm/extras-7
 
 # Setup environment
