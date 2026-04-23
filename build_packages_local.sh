@@ -426,71 +426,56 @@ ROCM_MINOR=$(echo "$ROCM_VERSION_MAJOR_MINOR" | cut -d'.' -f2)
 ROCM_LIBPATCH_VERSION=$(printf "%02d%02d" "$ROCM_MAJOR" "$ROCM_MINOR")
 
 export ROCM_LIBPATCH_VERSION
-print_success "Set ROCM_LIBPATCH_VERSION=$ROCM_LIBPATCH_VERSION (from $ROCM_VERSION_MAJOR_MINOR)"
+export ROCM_MAJOR
+print_success "Set ROCM_LIBPATCH_VERSION=$ROCM_LIBPATCH_VERSION, ROCM_MAJOR=$ROCM_MAJOR (from $ROCM_VERSION_MAJOR_MINOR)"
 
-# Set CPACK package release based on branch type
-# - Non-release branches (not starting with "rel"): use branch.commit format
-# - Release branches (starting with "rel"): use GitHub run number
-GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-GIT_COMMIT_SHORT=$(git rev-parse --short HEAD 2>/dev/null || echo "0000000")
+# Set CPACK package release based on event/branch type
+# - Scheduled builds: yyyymmdd date stamp
+# - Release branches (starting with "rel"): GitHub run number
+# - Dev/PR builds: branch.commit (same for DEB and RPM)
+# Prefer GITHUB_REF_NAME / GITHUB_SHA (always available in Actions, unaffected
+# by sudo safe.directory restrictions); fall back to git for local builds.
+GIT_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}"
+if [ -n "$GITHUB_SHA" ]; then
+    GIT_COMMIT_SHORT="${GITHUB_SHA:0:7}"
+else
+    GIT_COMMIT_SHORT=$(git rev-parse --short HEAD 2>/dev/null || echo "0000000")
+fi
 
-if [[ "$GIT_BRANCH" =~ ^rel ]]; then
-    # Release branch: use GitHub run number (fallback to 1 for local builds)
+if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+    PACKAGE_RELEASE="$(date +%Y%m%d)"
+    print_success "Set CPACK package release: $PACKAGE_RELEASE (scheduled build)"
+elif [[ "$GIT_BRANCH" =~ ^rel ]]; then
     GITHUB_RUN_NUMBER="${GITHUB_RUN_NUMBER:-1}"
     PACKAGE_RELEASE="$GITHUB_RUN_NUMBER"
-    
-    export CPACK_DEBIAN_PACKAGE_RELEASE="$PACKAGE_RELEASE"
-    export CPACK_RPM_PACKAGE_RELEASE="$PACKAGE_RELEASE"
-    
     print_success "Set CPACK package release: $PACKAGE_RELEASE (release branch: $GIT_BRANCH, run: $GITHUB_RUN_NUMBER)"
 else
-    # Development branch: use branch name and commit
-    # Sanitize branch name: replace / and other special chars with -
-    SANITIZED_BRANCH=$(echo "$GIT_BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+    SANITIZED_BRANCH=$(echo "$GIT_BRANCH" | sed 's/[^A-Za-z0-9.+~]/./g')
     PACKAGE_RELEASE="${SANITIZED_BRANCH}.${GIT_COMMIT_SHORT}"
-    
-    export CPACK_DEBIAN_PACKAGE_RELEASE="$PACKAGE_RELEASE"
-    export CPACK_RPM_PACKAGE_RELEASE="$PACKAGE_RELEASE"
-    
     print_success "Set CPACK package release: $PACKAGE_RELEASE (dev branch: $GIT_BRANCH, commit: $GIT_COMMIT_SHORT)"
 fi
+
+export CPACK_DEBIAN_PACKAGE_RELEASE="$PACKAGE_RELEASE"
+export CPACK_RPM_PACKAGE_RELEASE="$PACKAGE_RELEASE"
 
 if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     # Enable the installed gcc-toolset/devtoolset so hipcc (clang) finds C++20 headers like <barrier>
     # Discover the toolset path dynamically via rpm rather than hardcoding /opt/rh/
-    GCC_TOOLCHAIN=""
+
+    GCC_TOOLSET_ENABLED=""
     for pkg in gcc-toolset-14 gcc-toolset-13 gcc-toolset-12 gcc-toolset-11 devtoolset-11; do
-        ENABLE_SCRIPT=$(rpm -ql "${pkg}-runtime" 2>/dev/null | grep '/enable$' | head -1)
+        ENABLE_SCRIPT=$(rpm -ql ${pkg}-runtime 2>/dev/null | grep '/enable$' | head -1)
         if [ -n "$ENABLE_SCRIPT" ] && [ -f "$ENABLE_SCRIPT" ]; then
             TOOLSET_ROOT=$(dirname "$ENABLE_SCRIPT")
-            # shellcheck source=/dev/null
             source "$ENABLE_SCRIPT"
-            GCC_TOOLCHAIN="${TOOLSET_ROOT}/root/usr"
-            export GCC_TOOLCHAIN
+            export GCC_TOOLCHAIN="${TOOLSET_ROOT}/root/usr"
+            GCC_TOOLSET_ENABLED="$pkg"
             print_success "Enabled ${pkg} from ${TOOLSET_ROOT} (GCC $(gcc -dumpversion))"
             break
         fi
     done
-
-    # Fallback: manylinux / images with toolsets under /opt/rh/ without rpm -ql match
-    if [ -z "$GCC_TOOLCHAIN" ]; then
-        for ts_ver in 14 13 12 11; do
-            ts_root="/opt/rh/gcc-toolset-${ts_ver}/root/usr"
-            if [ -d "${ts_root}/include/c++" ]; then
-                GCC_TOOLCHAIN="${ts_root}"
-                if [ -f "/opt/rh/gcc-toolset-${ts_ver}/enable" ]; then
-                    # shellcheck source=/dev/null
-                    source "/opt/rh/gcc-toolset-${ts_ver}/enable"
-                fi
-                export GCC_TOOLCHAIN
-                print_success "Using gcc-toolset-${ts_ver} for C++20 stdlib (${ts_root})"
-                break
-            fi
-        done
-    fi
-
-    if [ -z "$GCC_TOOLCHAIN" ]; then
-        print_warning "No gcc-toolset (11-14) or devtoolset-11 found - C++20 headers like <barrier> may be missing"
+    if [ -z "$GCC_TOOLSET_ENABLED" ]; then
+        print_warning "No gcc-toolset (11-14) or devtoolset-11 found - C++20 headers may be missing"
     fi
 
     if [ -x "$ROCM_PATH/bin/hipcc" ]; then
@@ -554,16 +539,19 @@ if [ -d "$BUILD_DIR" ]; then
 fi
 
 # Build cmake command with optional CXX compiler
+# TODO: May be cleanup RPATH later with lesser options.
 CMAKE_ARGS=(
     -B "$BUILD_DIR"
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
     -DROCM_PATH="$ROCM_PATH"
     -DHIP_PLATFORM=amd
-    -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs
-    -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs
+    -DROCM_MAJOR_VERSION="$ROCM_MAJOR"
+    -DCPACK_PACKAGE_NAME="amdrocm${ROCM_MAJOR}-rvs"
+    -DCMAKE_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}"
+    -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}"
     -DCMAKE_SKIP_RPATH=FALSE
     -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE
-    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs"
+    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs:/opt/rocm/extras-${ROCM_MAJOR}/lib"
     -DRPATH_MODE=OFF
     -DCMAKE_VERBOSE_MAKEFILE=1
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
@@ -615,7 +603,7 @@ if command -v dpkg >/dev/null 2>&1; then
     cpack -G DEB --verbose
     
     if [ $? -eq 0 ]; then
-        DEB_FILE=$(ls rocm-validation-suite*.deb 2>/dev/null | head -1)
+        DEB_FILE=$(ls amdrocm*-rvs*.deb 2>/dev/null | head -1)
         if [ -n "$DEB_FILE" ]; then
             print_success "Created DEB package: $DEB_FILE"
             DEB_SIZE=$(du -h "$DEB_FILE" | cut -f1)
@@ -639,7 +627,7 @@ if command -v rpm >/dev/null 2>&1; then
 
     
     if [ $? -eq 0 ]; then
-        RPM_FILE=$(ls rocm-validation-suite*.rpm 2>/dev/null | head -1)
+        RPM_FILE=$(ls amdrocm*-rvs*.rpm 2>/dev/null | head -1)
         if [ -n "$RPM_FILE" ]; then
             print_success "Created RPM package: $RPM_FILE"
             RPM_SIZE=$(du -h "$RPM_FILE" | cut -f1)
@@ -657,13 +645,13 @@ fi
 
 # Create TGZ package
 print_info "Creating TGZ package..."
-CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON -DCPACK_PACKAGING_INSTALL_PREFIX="")
+CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON "-DCPACK_PACKAGING_INSTALL_PREFIX:PATH=" -DCPACK_INCLUDE_TOPLEVEL_DIRECTORY=OFF)
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"
 cd "$BUILD_DIR"
 cpack -G TGZ --verbose
 
 if [ $? -eq 0 ]; then
-    TGZ_FILE=$(ls rocm-validation-suite*.tar.gz 2>/dev/null | head -1)
+    TGZ_FILE=$(ls amdrocm*-rvs*.tar.gz 2>/dev/null | head -1)
     if [ -n "$TGZ_FILE" ]; then
         print_success "Created TGZ package: $TGZ_FILE"
         TGZ_SIZE=$(du -h "$TGZ_FILE" | cut -f1)
@@ -682,18 +670,19 @@ if [ -n "$UPLOAD_TARGET" ]; then
 
     # Build organized upload subpath: <repo>/<branch>/<date>
     if [ -z "$UPLOAD_REPO" ]; then
-        UPLOAD_REPO=$(git remote get-url origin 2>/dev/null | sed 's|.*/||; s|\.git$||')
+        UPLOAD_REPO="${GITHUB_REPOSITORY##*/}"
+        [ -z "$UPLOAD_REPO" ] && UPLOAD_REPO=$(git remote get-url origin 2>/dev/null | sed 's|.*/||; s|\.git$||')
         [ -z "$UPLOAD_REPO" ] && UPLOAD_REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null)
         [ -z "$UPLOAD_REPO" ] && UPLOAD_REPO="unknown"
     fi
-    UPLOAD_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | sed 's|[^a-zA-Z0-9._-]|-|g')
-    [ -z "$UPLOAD_BRANCH" ] && UPLOAD_BRANCH="unknown"
+    UPLOAD_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}"
+    UPLOAD_BRANCH=$(echo "$UPLOAD_BRANCH" | sed 's|[^a-zA-Z0-9._-]|-|g')
     UPLOAD_DATE=$(date +%Y-%m-%d)
     UPLOAD_SUBPATH="${UPLOAD_REPO}/${UPLOAD_BRANCH}/${UPLOAD_DATE}"
 
     print_info "Upload path: .../${UPLOAD_SUBPATH}/"
 
-    PKGS=$(find "$BUILD_DIR" -maxdepth 1 -name 'rocm-validation-suite*' \( -name '*.deb' -o -name '*.rpm' -o -name '*.tar.gz' \) 2>/dev/null)
+    PKGS=$(find "$BUILD_DIR" -maxdepth 1 -name 'amdrocm*-rvs*' \( -name '*.deb' -o -name '*.rpm' -o -name '*.tar.gz' \) 2>/dev/null)
     if [ -z "$PKGS" ]; then
         print_error "No packages found to upload"
     else
@@ -782,7 +771,7 @@ echo "==========================================================================
 print_info "Generated packages are in: $BUILD_DIR"
 echo ""
 # List only package types that were actually generated (DEB on Ubuntu, RPM on CentOS/RHEL, TGZ on all)
-PKGS=$(find "$BUILD_DIR" -maxdepth 1 -name 'rocm-validation-suite*' \( -name '*.deb' -o -name '*.rpm' -o -name '*.tar.gz' \) 2>/dev/null)
+PKGS=$(find "$BUILD_DIR" -maxdepth 1 -name 'amdrocm*-rvs*' \( -name '*.deb' -o -name '*.rpm' -o -name '*.tar.gz' \) 2>/dev/null)
 if [ -n "$PKGS" ]; then
     echo "$PKGS" | xargs ls -lh
 else
@@ -796,15 +785,16 @@ echo "  Installation Instructions"
 echo "================================================================================"
 echo ""
 echo "Ubuntu/Debian (DEB):"
-echo "  sudo dpkg -i $BUILD_DIR/rocm-validation-suite_*.deb"
+echo "  sudo dpkg -i $BUILD_DIR/amdrocm${ROCM_MAJOR}-rvs_*.deb"
 echo ""
 echo "CentOS/RHEL (RPM):"
-echo "  sudo rpm -i --replacefiles --nodeps $BUILD_DIR/rocm-validation-suite-*.rpm"
+echo "  sudo rpm -i --replacefiles --nodeps $BUILD_DIR/amdrocm${ROCM_MAJOR}-rvs-*.rpm"
 echo ""
 echo "Any Linux (TGZ - Relocatable):"
-echo "  sudo tar -xzf $BUILD_DIR/rocm-validation-suite-*.tar.gz -C /"
-echo "  export PATH=/opt/rocm/rvs/bin:\$PATH"
-echo "  export LD_LIBRARY_PATH=/opt/rocm/rvs/lib:\$LD_LIBRARY_PATH"
+echo "  sudo mkdir -p /opt/rocm/extras-${ROCM_MAJOR}"
+echo "  sudo tar -xzf $BUILD_DIR/amdrocm${ROCM_MAJOR}-rvs-*.tar.gz -C /opt/rocm/extras-${ROCM_MAJOR}"
+echo "  export PATH=/opt/rocm/extras-${ROCM_MAJOR}/bin:\$PATH"
+echo "  export LD_LIBRARY_PATH=/opt/rocm/extras-${ROCM_MAJOR}/lib:\$LD_LIBRARY_PATH"
 echo ""
 echo "================================================================================"
 
