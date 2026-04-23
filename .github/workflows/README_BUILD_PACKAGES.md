@@ -182,19 +182,19 @@ For **scheduled**, **push**, and **manual** (`workflow_dispatch`) builds, the wo
 ```
 s3://<bucket>/nightly/rvs/
 ├── deb/
-│   ├── amdrocm7-rvs_1.3.15_amd64.deb
+│   ├── amdrocm7-rvs_1.3.15-r0711.20260423_amd64.deb
 │   ├── Packages
 │   ├── Packages.gz
 │   └── Release
 ├── rpm/
-│   ├── amdrocm7-rvs-1.3.15.x86_64.rpm
+│   ├── amdrocm7-rvs-1.3.15-r0711.20260423.x86_64.rpm
 │   └── repodata/
 │       ├── repomd.xml
 │       ├── primary.xml.gz
 │       ├── filelists.xml.gz
 │       └── other.xml.gz
 └── tar/
-    └── amdrocm7-rvs-1.3.15-Linux.tar.gz
+    └── amdrocm7-rvs-1.3.15-r0711.20260423-Linux.tar.gz
 ```
 
 **Using the S3 repo with apt (Ubuntu/Debian):**
@@ -307,14 +307,16 @@ Packages are named automatically by CPack using the RVS version from `CMakeLists
 
 - **DEB**: `amdrocm<ROCM_MAJOR>-rvs_${RVS_VERSION}_amd64.deb`
 - **RPM**: `amdrocm<ROCM_MAJOR>-rvs-${RVS_VERSION}.x86_64.rpm`
-- **TGZ**: `amdrocm<ROCM_MAJOR>-rvs-${RVS_VERSION}-Linux.tar.gz`
+- **TGZ**: `amdrocm<ROCM_MAJOR>-rvs-<RVS_VERSION>-<PACKAGE_RELEASE>-Linux.tar.gz` (CPack: same **release** suffix as DEB/RPM, e.g. `r0711.20260423` from `ROCM_LIBPATCH_VERSION` and date, or a PR-specific suffix)
 
-The **patch version** in `RVS_VERSION` is automatically computed from the number of commits since the last `v<major>.<minor>.*` git tag. For example, with tag `v1.3.0` and 15 commits since:
+The **patch version** in `RVS_VERSION` is automatically computed from the number of commits since the last `v<major>.<minor>.*` git tag. For example, with tag `v1.3.0` and 15 commits since, and a release of `r0711.20260423`:
 ```
-amdrocm7-rvs_1.3.15_amd64.deb
-amdrocm7-rvs-1.3.15.x86_64.rpm
-amdrocm7-rvs-1.3.15-Linux.tar.gz
+amdrocm7-rvs_1.3.15-r0711.20260423_amd64.deb
+amdrocm7-rvs-1.3.15-r0711.20260423.el8.x86_64.rpm
+amdrocm7-rvs-1.3.15-r0711.20260423-Linux.tar.gz
 ```
+
+`CPACK_PACKAGE_FILE_NAME` in CMake is set to include the same **release** as DEB/RPM (from `CPACK_RPM_PACKAGE_RELEASE` in the build environment).
 
 If no matching `v` tag is found, the patch defaults to `0` from `project(VERSION)` in `CMakeLists.txt`.
 
