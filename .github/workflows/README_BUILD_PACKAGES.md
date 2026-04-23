@@ -58,8 +58,8 @@ GitHub Actions Workflow
     │   ├── export CMAKE_PREFIX_PATH="$ROCM_PATH:$CMAKE_PREFIX_PATH"
     │   ├── export HIP_DEVICE_LIB_PATH (auto-detected amdgcn/bitcode path)
     │   ├── export ROCM_LIBPATCH_VERSION (major.minor in xxyy format, e.g., 0711)
-    │   ├── export CPACK_DEBIAN_PACKAGE_RELEASE (dev: branch.commit, rel: run number)
-    │   ├── export CPACK_RPM_PACKAGE_RELEASE (dev: branch.commit, rel: run number)
+    │   ├── export CPACK_DEBIAN_PACKAGE_RELEASE (see env table: r<libpatch>.date, PRs add .branch.commit)
+    │   ├── export CPACK_RPM_PACKAGE_RELEASE (same as DEB)
     │   ├── export CMAKE_CXX_COMPILER=hipcc (AlmaLinux only)
     │   └── export CMAKE_COMMAND=cmake3 (AlmaLinux) or cmake (Ubuntu)
     ├── 4. Configure CMake with Relocatable RPATH
@@ -288,8 +288,8 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
 | `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `8.0` → `0800`) - used for RVS version tagging |
-| `CPACK_DEBIAN_PACKAGE_RELEASE` | Auto-generated from git | Package release string. **Dev branches**: `branch.commit` (e.g., `master.a1b2c3d`). **Release branches** (starting with "rel"): `GITHUB_RUN_NUMBER` (fallback: `1`) |
-| `CPACK_RPM_PACKAGE_RELEASE` | Auto-generated from git | Package release string. **Dev branches**: `branch.commit` (e.g., `master.a1b2c3d`). **Release branches** (starting with "rel"): `GITHUB_RUN_NUMBER` (fallback: `1`) |
+| `CPACK_DEBIAN_PACKAGE_RELEASE` | Auto-generated | **Default** (`schedule`, `push`, `workflow_dispatch`, local): `r<ROCM_LIBPATCH_VERSION>.<yyyymmdd>` (e.g. `r0711.20260423` where `0711` = ROCm 7.11 from `ROCM_VERSION`). **Pull requests**: `r<libpatch>.<yyyymmdd>.<source-branch>.<commit>`. **Release branches** (name starts with `rel`, non-PR): `GITHUB_RUN_NUMBER` (fallback: `1`). |
+| `CPACK_RPM_PACKAGE_RELEASE` | same as `CPACK_DEBIAN_PACKAGE_RELEASE` | Identical to DEB. |
 | `GITHUB_RUN_NUMBER` | `1` (local) | GitHub Actions run number - automatically set in CI, defaults to `1` for local builds |
 
 ## Build Matrix
