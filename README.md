@@ -223,6 +223,39 @@ To run GPU specific test configuration, use configuration files from GPU folders
 **Note:**
 If present, always use GPU specific configurations instead of default test configurations.
 
+
+## Level-Based Validation Tests
+
+RVS supports tiered validation testing through the `-r` command-line option. This allows running pre-configured test suites at different intensity levels.
+
+./rvs -r <level> # Valid range: 1 to 5
+
+
+| Level | Description |
+|-------|-------------|
+| 1 | Basic sanity - ROCm package validation, driver checks |
+| 2 | Quick hardware validation - PCIe configuration, basic HBM bandwidth |
+| 3 | Standard validation - PCIe/XGMI bandwidth, short compute stress tests |
+| 4 | Extended validation - Longer duration tests, memory stress |
+| 5 | Full stress testing - Comprehensive long-duration power, thermal, and compute stress |
+
+Level-based configurations are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X
+
+## GPU-Specific Configurations
+
+RVS provides optimized test configurations for different GPU families. Configuration folders are located in `conf/<GPU>/`:
+
+**AMD Instinct Series:**
+- MI210, MI250X, MI300A, MI300X, MI308X, MI325X, MI350X, MI355X
+- High-frequency variants: MI300X-HF, MI308X-HF
+
+**AMD Radeon Series:**
+- nv21, nv31, nv32, gfx1200, gfx1201
+- RX9060, RX9070, RX9070GRE, R9600D
+
+
+**Note:** Always use GPU-specific configurations when available. They contain calibrated target values for accurate pass/fail results. Same goes with NPS modes, CPX and DPX modes based configs when available.
+
 ## Reporting
 
 Test results, errors and verbose logs are printed as terminal output. To enable json logging use "-j" command line option.
