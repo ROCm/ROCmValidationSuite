@@ -267,12 +267,22 @@ This overrides the <b>device/device_index</b> parameter values specified for eve
 configuration file, including the <b>all</b> value.
 </td></tr>
 
+<tr><td>-s</td><td>--selectActions</td><td>Comma separated list of action names or 0-based action
+index numbers to run from the configuration file. Only the matching actions will be executed.
+All other actions are skipped.
+</td></tr>
+
 <tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
 if a path follows this argument, that will be used as json log file;
 else a file created in <b>/var/tmp/</b> with timestamp in name.
 </td></tr>
 
 <tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
+</td></tr>
+
+<tr><td>-m</td><td>--module</td><td>Specify a module name to run the corresponding
+platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>babel</b>, <b>gpup</b>,
+<b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>.
 </td></tr>
 
 <tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.

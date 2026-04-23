@@ -101,6 +101,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
       workers[i].set_mibibytes(mibibytes);
       workers[i].set_output_csv(output_csv);
       workers[i].set_num_iterations(num_iterations);
+      workers[i].set_duration(duration);
       workers[i].set_read(read);
       workers[i].set_write(write);
       workers[i].set_copy(copy);
@@ -255,6 +256,14 @@ bool mem_action::get_all_mem_config_keys(void) {
     bsts = false;
   }
 
+  if (property_get_int<uint64_t>(RVS_CONF_DURATION,
+        &duration, MEM_DEFAULT_DURATION)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_DURATION) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
   if (property_get<bool>(RVS_CONF_MEM_MIBIBYTE,
         &mibibytes, MEM_DEFAULT_MEM_MIBIBYTE)) {
     msg = "invalid '" +
@@ -322,6 +331,13 @@ bool mem_action::get_all_mem_config_keys(void) {
     msg = "invalid '" + std::string(RVS_CONF_NONTEMPORAL) +
       "' key value '" + nontemporal +
       "'. Must be 'none', 'all', 'read' or 'write'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (num_iterations  < 2) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_NUM_ITER) + "' key value" + " - expected value greater than 1" ;
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }

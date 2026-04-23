@@ -31,7 +31,7 @@ set( COMP_TYPE "applications" )
 set( BUILD_ENABLE_LINTIAN_OVERRIDES ON CACHE BOOL "Enable/Disable Lintian Overrides" )
 set( BUILD_DEBIAN_PKGING_FLAG ON CACHE BOOL "Internal Status Flag to indicate Debian Packaging Build" )
 project ("rocm-validation-suite"
-          VERSION 1.3.0)
+          VERSION 1.4.0)
 
 # Default libdir to "lib", this skips GNUInstallDirs from trying to take a guess if it's unset:
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
@@ -145,12 +145,55 @@ else() #If hipblas-common not found
   message(FATAL_ERROR "hipblas-common not found !!! Install hipblas-common to proceed ...")
 endif(hipblas-common_FOUND)
 
+# ROCm major version for package naming and install paths (per RFC0012)
+set(ROCM_MAJOR_VERSION "0" CACHE STRING "ROCm major version (e.g. 7 for ROCm 7.x)")
+
+# Auto-compute patch version: count commits since last v<major>.<minor>.* tag
+find_program(GIT_EXECUTABLE git)
+if(GIT_EXECUTABLE)
+    # When cmake runs under sudo (e.g. Ubuntu CI), git refuses to operate in a
+    # directory owned by a different user. Mark the source dir as safe.
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} config --global --get-all safe.directory
+        OUTPUT_VARIABLE _SAFE_DIRS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    string(FIND "${_SAFE_DIRS}" "${CMAKE_SOURCE_DIR}" _SAFE_DIR_IDX)
+    if(_SAFE_DIR_IDX EQUAL -1)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} config --global --add safe.directory "${CMAKE_SOURCE_DIR}"
+            ERROR_QUIET
+        )
+    endif()
+    set(_TAG_PATTERN "v${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.*")
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} describe --tags --match "${_TAG_PATTERN}" --long
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE _GIT_DESCRIBE_OUTPUT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE _GIT_DESCRIBE_RESULT
+        ERROR_QUIET
+    )
+    if(_GIT_DESCRIBE_RESULT EQUAL 0)
+        string(REGEX MATCH "-([0-9]+)-g[0-9a-f]+$" _MATCH "${_GIT_DESCRIBE_OUTPUT}")
+        set(RVS_PATCH_FROM_TAG "${CMAKE_MATCH_1}")
+        message(STATUS "RVS patch from tag: ${RVS_PATCH_FROM_TAG} (${_GIT_DESCRIBE_OUTPUT})")
+    else()
+        set(RVS_PATCH_FROM_TAG "0")
+        message(STATUS "No matching v${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.* tag found, patch defaults to 0")
+    endif()
+else()
+    set(RVS_PATCH_FROM_TAG "0")
+    message(STATUS "git not found, patch version defaults to 0")
+endif()
+
 # Making ROCM_PATH, CMAKE_INSTALL_PREFIX, CPACK_PACKAGING_INSTALL_PREFIX as CACHE
 # variables since we will pass them as cmake params appropriately, and 
 # all find_packages relevant to this build will be in ROCM path hence appending it to CMAKE_PREFIX_PATH 
 set(ROCM_PATH "/opt/rocm" CACHE PATH "ROCM install path")
-set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CMAKE installation directory")
-set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Prefix used in built packages")
+set(CMAKE_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "CMAKE installation directory")
+set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 
 add_definitions(-DROCM_PATH="${ROCM_PATH}")
@@ -225,12 +268,17 @@ get_version ( ${RVS_VERSION} )
 # Package Generator  #######################################################
 set(PKG_MAINTAINER_NM  "ROCM Validation Suite Support")
 set(PKG_MAINTAINER_EMAIL  "rocm-validation-suite.support@amd.com")
-set(CPACK_PACKAGE_NAME "rocm-validation-suite")
+set(CPACK_PACKAGE_NAME "rocm-validation-suite" CACHE STRING "Package name for CPack")
+set(CMAKE_INSTALL_DOCDIR "${CMAKE_INSTALL_DATAROOTDIR}/doc/${CPACK_PACKAGE_NAME}" CACHE PATH "Documentation install directory" FORCE)
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Tool for validating AMD GPU functionality, performance, reliability in ROCm.")
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
-set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+if(RVS_PATCH_FROM_TAG GREATER "0")
+    set(CPACK_PACKAGE_VERSION_PATCH "${RVS_PATCH_FROM_TAG}")
+else()
+    set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+endif()
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 
@@ -245,14 +293,6 @@ endif()
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
-
-# Set default ROCm version for package naming
-set(ROCM_VERSION_FOR_PACKAGE "99999")
-
-# Update ROCm version for package naming
-if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
-  set(ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_LIBPATCH_VERSION})
-endif()
 
 # debian related changes
 if (DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
@@ -274,8 +314,7 @@ if(CPACK_RPM_PACKAGE_RELEASE)
   set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
 endif()
 
-# Complete RVS package version naming
-set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}.${ROCM_VERSION_FOR_PACKAGE}")
+set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
 
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
@@ -767,7 +806,7 @@ install(DIRECTORY "${CMAKE_BINARY_DIR}/doc/man/man1/"
 )
 
 install(DIRECTORY ${CMAKE_BINARY_DIR}/doc/userguide/html
-	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/userguide
+	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}/userguide
   COMPONENT applications
 )
 
@@ -780,11 +819,11 @@ configure_file(${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh.in
   ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
   @ONLY)
 install(FILES ${CMAKE_SOURCE_DIR}/rvs/conf/deviceid.sh
-	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/conf/
+	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}/conf/
         COMPONENT rvsmodule
 )
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/testscripts/
-	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/testscripts
+	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}/testscripts
   COMPONENT rvsmodule
 )
 

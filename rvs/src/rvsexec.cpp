@@ -168,7 +168,86 @@ int rvs::exec::run() {
     }
   }
 
-  if (!rvs::options::has_option("-r", &val)) {
+  // check -m option
+  string module;
+  if (rvs::options::has_option("-m", &module)) {
+
+    std::map<std::string, std::string> module_config_map = {
+      {"babel", "babel.conf"},
+      {"gpup", "gpup_single.conf"},
+      {"gst", "gst_single.conf"},
+      {"iet", "iet_stress.conf"},
+      {"mem", "mem.conf"},
+      {"pebb", "pebb_single.conf"},
+      {"peqt", "peqt_single.conf"},
+      {"pbqt", "pbqt_single.conf"},
+      {"rcqt", "rcqt_single.conf"},
+      {"tst", "tst_single.conf"}
+    };
+
+    auto itr = module_config_map.find(module);
+    if (itr == module_config_map.end()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "Invalid module name: %s", module.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+
+    std::string platform_name = get_gpu_name();
+    if (platform_name.empty()) {
+      rvs::logger::Err("No platform support for the detected GPU or no GPU detected !", MODULE_NAME_CAPS);
+      return -1;
+    }
+
+    std::vector<std::string> confs = {itr->second};
+    if (module == "iet") {
+      confs.push_back("iet_single.conf");
+    }
+
+    bool found = false;
+    for (const auto& conf : confs) {
+
+      /* Plaform specific module conf. from RVS installation path */
+      config_file = "../share/rocm-validation-suite/conf/" + platform_name + "/" + conf;
+
+      std::ifstream file(path + config_file);
+      if (!file.good()) {
+        /* Plaform specific module conf. from RVS local build path */
+        config_file = "conf/" + platform_name + "/" + conf;
+      }
+      file.close();
+      config_file = path + config_file;
+
+      file.open(config_file);
+      if (file.good()) {
+        file.close();
+        found = true;
+        break;
+      }
+      else {
+        /* Try default module conf. */
+        config_file = path + "conf/" + conf;
+        file.open(config_file);
+        if (file.good()) {
+          file.close();
+          found = true;
+          break;
+        }
+      }
+      file.close();
+    }
+
+    if (!found) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "%s file is missing.", config_file.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+  }
+
+  if (!rvs::options::has_option("-r", &val) && !rvs::options::has_option("-m")) {
 
     // check -c option
     if (rvs::options::has_option("-c", &val)) {
@@ -510,8 +589,15 @@ void rvs::exec::do_help() {
   cout << "                   if a path follows this argument, that will be used as json log file\n";
   cout << "                   else a file created in /var/tmp/ with timestamp in name.\n\n";
 
+  cout << "-s --selectActions Comma separated list of action names or 0-based action index numbers\n";
+  cout << "                   to run from the configuration file. Only the matching actions will\n";
+  cout << "                   be executed. All other actions are skipped.\n\n";
+
   cout << "-l --debugLogFile  Generate log file with output and debug information.\n\n";
- 
+
+  cout << "-m --module        Specify a module name to run the corresponding platform-specific\n";
+  cout << "                   (MI-series GPUs) module configuration file. Valid modules: babel, gpup, gst, iet,\n";
+  cout << "                   mem, pebb, peqt, pbqt, rcqt.\n\n";
 
   cout << "-t --listTests     List the test modules present in RVS.\n\n";
 

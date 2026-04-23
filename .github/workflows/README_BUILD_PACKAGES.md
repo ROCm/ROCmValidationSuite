@@ -24,8 +24,8 @@ The workflow runs automatically on:
 When manually triggering the workflow, you can specify:
 
 1. **ROCm Version** (e.g., `7.11.0a20260121`)
-   - Default: `7.11.0a20260121`
-   - The script can also auto-fetch the latest version from TheRock
+   - Default: empty (auto-fetches latest from TheRock)
+   - Or specify an explicit version string
    
 2. **GPU Family Target**:
    - `gfx94X-dcgpu` - MI300A/MI300X
@@ -68,11 +68,12 @@ GitHub Actions Workflow
     │         -DROCM_PATH=$ROCM_PATH \
     │         -DHIP_PLATFORM=amd \
     │         -DCMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER (if set) \
-    │         -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs \
-    │         -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs \
+    │         -DROCM_MAJOR_VERSION=$ROCM_MAJOR \
+    │         -DCMAKE_INSTALL_PREFIX=/opt/rocm/extras-$ROCM_MAJOR \
+    │         -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/extras-$ROCM_MAJOR \
     │         -DCMAKE_SKIP_RPATH=FALSE \
     │         -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
-    │         -DCMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs" \
+    │         -DCMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-$ROCM_MAJOR/lib" \
     │         -DCMAKE_VERBOSE_MAKEFILE=1 \
     │         -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
     ├── 5. Build RVS
@@ -87,10 +88,10 @@ GitHub Actions Workflow
 **Relocatable RPATH**: The `$ORIGIN` relative RPATH ensures binaries can find their libraries regardless of installation location:
 
 ```bash
-CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs"
+CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-<ROCM_MAJOR>/lib"
 ```
 
-**Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically.
+**Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically. The **patch version** is auto-computed at CMake configure time: `git describe --tags --match "v<major>.<minor>.*"` counts commits since the last matching `v` tag. For example, if the tag is `v1.3.0` and there have been 15 commits since, the package version becomes `1.3.15`. If no matching tag exists or git is unavailable, the patch defaults to `0` from `CMakeLists.txt`. This works for both CI builds and direct local `cmake` invocations.
 
 **HIP Device Libraries**: Automatically located and exported as `HIP_DEVICE_LIB_PATH` for clang device library discovery.
 
@@ -112,13 +113,12 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 2. **Set Environment Variables** from workflow inputs or defaults
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
-5. **Upload Artifacts** - Store packages with 30-day retention
-6. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite` and trigger is schedule, push to `master`/`main`/`release/*`, or same-repo PR) – Each job uploads its packages to S3 using OIDC. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped for other repos and for pull requests from forks.
-7. **Generate Repo Metadata** (nightly and release builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories.
+5. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
+6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
-S3 upload runs **only when** the repository is **`ROCm/ROCmValidationSuite`** and the run is one of: scheduled (cron), push to `master`/`main`/`release/*`, or pull request from the same repository. Uses **AWS OIDC**; no long-term access key or secret. Skipped for other repos and for pull requests from forks.
+S3 upload runs **only when** the repository is **`ROCm/ROCmValidationSuite`** (the `if` guard prevents forks from attempting credential setup). The upload step itself is always reached, but exits gracefully if `AWS_S3_BUCKET` is not set. Uses **AWS OIDC**; no long-term access key or secret. The bash routing inside the upload step determines the S3 destination based on the event type and branch.
 
 **Where `vars` and `secrets` are defined**
 
@@ -126,6 +126,18 @@ They are **not** in the workflow file. They are set in the repo:
 
 - **Secrets** (e.g. `secrets.AWS_ROLE_ARN`): **Settings** → **Secrets and variables** → **Actions** → **Secrets** tab → New repository secret.
 - **Variables** (e.g. `vars.AWS_S3_BUCKET`): **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → New repository variable.
+
+### Runner Configuration
+
+The workflow uses GitHub repository variables to control which runners execute each job, allowing you to use self-hosted runners or GitHub-provided runners:
+
+| Variable | Default | Used by |
+|----------|---------|---------|
+| `RUNNER_LABEL` | `ubuntu-22.04` | Ubuntu build job |
+| `RUNNER_LABEL_CONTAINER` | `ubuntu-latest` | CentOS/manylinux build job (container) |
+| `RUNNER_LABEL_UTILITY` | `ubuntu-latest` | Release summary job |
+
+To use a self-hosted runner, set the variable to your runner's label (e.g., `self-hosted` or a custom label) in **Settings** → **Secrets and variables** → **Actions** → **Variables**.
 
 **Required setup for S3 upload:**
 
@@ -143,9 +155,9 @@ They are **not** in the workflow file. They are set in the repo:
 
 | Trigger | Path | Contents |
 |--------|------|----------|
-| **Scheduled (daily)** | `nightly/rocm-validation-suite/deb/`, `nightly/rocm-validation-suite/rpm/`, `nightly/rocm-validation-suite/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). |
-| **Push to `release/*`** | `release/rocm-validation-suite/deb/`, `release/rocm-validation-suite/rpm/`, `release/rocm-validation-suite/tar/` | Same split by type; all release branches write to the same paths for auto-update. TGZ uploaded only by manylinux job. |
-| **Push to `master`/`main` or same-repo PR** | `rocm-validation-suite/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). |
+| **`release/*` branch** (`push` or `workflow_dispatch`) | `release/rvs/deb/`, `release/rvs/rpm/`, `release/rvs/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). Only PR merges into release branches or manual dispatch on release branches write here. |
+| **Scheduled**, **push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same split by type. All non-release builds go to nightly. |
+| **Pull request** (same-repo) | `rvs/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). One-off path, no repo metadata generated. |
 
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
 
@@ -153,7 +165,7 @@ When packages are uploaded to S3, the **build report** artifact includes an **S3
 
 ### Repository Metadata (repodata)
 
-For **nightly** and **release** builds, the workflow also generates package repository metadata so that the S3 paths can be used directly as `apt` (DEB) and `yum`/`dnf` (RPM) repositories. This runs after the package upload step in each job.
+For **scheduled**, **push**, and **manual** (`workflow_dispatch`) builds, the workflow generates package repository metadata so that the S3 paths can be used directly as `apt` (DEB) and `yum`/`dnf` (RPM) repositories. This runs after the package upload step in each job. PR builds are excluded since their packages go to one-off ref-specific paths.
 
 **RPM repodata** (CentOS/RHEL job):
 - Tool: `createrepo_c` (falls back to `createrepo`)
@@ -168,36 +180,36 @@ For **nightly** and **release** builds, the workflow also generates package repo
 **S3 directory layout after metadata generation:**
 
 ```
-s3://<bucket>/nightly/rocm-validation-suite/
+s3://<bucket>/nightly/rvs/
 ├── deb/
-│   ├── rocm-validation-suite_1.0.0_amd64.deb
+│   ├── amdrocm7-rvs_1.3.15_amd64.deb
 │   ├── Packages
 │   ├── Packages.gz
 │   └── Release
 ├── rpm/
-│   ├── rocm-validation-suite-1.0.0.x86_64.rpm
+│   ├── amdrocm7-rvs-1.3.15.x86_64.rpm
 │   └── repodata/
 │       ├── repomd.xml
 │       ├── primary.xml.gz
 │       ├── filelists.xml.gz
 │       └── other.xml.gz
 └── tar/
-    └── rocm-validation-suite-1.0.0-Linux.tar.gz
+    └── amdrocm7-rvs-1.3.15-Linux.tar.gz
 ```
 
 **Using the S3 repo with apt (Ubuntu/Debian):**
 
 ```bash
 # Add the nightly repo (replace <bucket> with the actual S3 bucket name)
-echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rocm-validation-suite/deb/ ./" \
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rvs/deb/ ./" \
   | sudo tee /etc/apt/sources.list.d/rvs-nightly.list
 
 # Or the release repo
-echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rocm-validation-suite/deb/ ./" \
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rvs/deb/ ./" \
   | sudo tee /etc/apt/sources.list.d/rvs-release.list
 
 sudo apt update
-sudo apt install rocm-validation-suite
+sudo apt install amdrocm7-rvs  # Replace 7 with your ROCm major version
 ```
 
 **Using the S3 repo with yum/dnf (CentOS/RHEL/Rocky):**
@@ -207,7 +219,7 @@ sudo apt install rocm-validation-suite
 cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-nightly.repo
 [rvs-nightly]
 name=RVS Nightly Packages
-baseurl=https://<bucket>.s3.amazonaws.com/nightly/rocm-validation-suite/rpm/
+baseurl=https://<bucket>.s3.amazonaws.com/nightly/rvs/rpm/
 enabled=1
 gpgcheck=0
 EOF
@@ -216,16 +228,16 @@ EOF
 cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-release.repo
 [rvs-release]
 name=RVS Release Packages
-baseurl=https://<bucket>.s3.amazonaws.com/release/rocm-validation-suite/rpm/
+baseurl=https://<bucket>.s3.amazonaws.com/release/rvs/rpm/
 enabled=1
 gpgcheck=0
 EOF
 
-sudo yum install rocm-validation-suite
-# or: sudo dnf install rocm-validation-suite
+sudo yum install amdrocm7-rvs  # Replace 7 with your ROCm major version
+# or: sudo dnf install amdrocm7-rvs
 ```
 
-> **Note:** `[trusted=yes]` (apt) and `gpgcheck=0` (yum) disable GPG verification. For production use, sign the packages and metadata with a GPG key and distribute the public key to users. Repository metadata is only generated for **nightly** (scheduled) and **release** builds; per-branch/PR builds upload raw packages without metadata.
+> **Note:** `[trusted=yes]` (apt) and `gpgcheck=0` (yum) disable GPG verification. For production use, sign the packages and metadata with a GPG key and distribute the public key to users. Repository metadata is generated for **scheduled**, **push**, and **manual** builds; PR builds upload raw packages to ref-specific paths without metadata.
 
 ## Build Script: build_packages_local.sh
 
@@ -293,55 +305,53 @@ The workflow builds packages for:
 
 Packages are named automatically by CPack using the RVS version from `CMakeLists.txt`:
 
-- **DEB**: `rocm-validation-suite_${RVS_VERSION}_amd64.deb`
-- **RPM**: `rocm-validation-suite-${RVS_VERSION}.x86_64.rpm`
-- **TGZ**: `rocm-validation-suite-${RVS_VERSION}-Linux.tar.gz`
+- **DEB**: `amdrocm<ROCM_MAJOR>-rvs_${RVS_VERSION}_amd64.deb`
+- **RPM**: `amdrocm<ROCM_MAJOR>-rvs-${RVS_VERSION}.x86_64.rpm`
+- **TGZ**: `amdrocm<ROCM_MAJOR>-rvs-${RVS_VERSION}-Linux.tar.gz`
 
-Example (if RVS version is 1.0.0):
+The **patch version** in `RVS_VERSION` is automatically computed from the number of commits since the last `v<major>.<minor>.*` git tag. For example, with tag `v1.3.0` and 15 commits since:
 ```
-rocm-validation-suite_1.0.0_amd64.deb
-rocm-validation-suite-1.0.0.x86_64.rpm
-rocm-validation-suite-1.0.0-Linux.tar.gz
+amdrocm7-rvs_1.3.15_amd64.deb
+amdrocm7-rvs-1.3.15.x86_64.rpm
+amdrocm7-rvs-1.3.15-Linux.tar.gz
 ```
 
-**Important**: Package filenames match the internal package metadata, ensuring compliance with Debian and RPM standards. The version is sourced directly from `CMakeLists.txt` via CMake's `project(VERSION)` command.
+If no matching `v` tag is found, the patch defaults to `0` from `project(VERSION)` in `CMakeLists.txt`.
+
+**Important**: Package filenames match the internal package metadata, ensuring compliance with Debian and RPM standards. The version major and minor are sourced from `CMakeLists.txt` via CMake's `project(VERSION)` command, while the patch is auto-computed from git history at configure time.
 
 ## Installing Generated Packages
 
 ### Ubuntu/Debian (DEB)
 
 ```bash
-# Download the artifact from GitHub Actions
-sudo dpkg -i rocm-validation-suite_*.deb
+# Download the package from S3 (or use the apt repo described above)
+sudo dpkg -i amdrocm7-rvs_*.deb
 
 # Run RVS
-/opt/rocm/rvs/bin/rvs --help
+/opt/rocm/extras-7/bin/rvs --help
 ```
 
 ### CentOS/RHEL/Rocky Linux (RPM)
 
 ```bash
-# Download the artifact from GitHub Actions
-sudo rpm -i --replacefiles --nodeps rocm-validation-suite-*.rpm
+# Download the package from S3 (or use the yum/dnf repo described above)
+sudo rpm -i --replacefiles --nodeps amdrocm7-rvs-*.rpm
 
 # Run RVS
-/opt/rocm/rvs/bin/rvs --help
+/opt/rocm/extras-7/bin/rvs --help
 ```
 
 ### Any Linux Distribution (TGZ - Relocatable)
 
 ```bash
-# Extract to /opt (or any location)
-sudo mkdir -p /opt/rocm
-sudo tar -xzf rocm-validation-suite-*.tar.gz -C /opt/
-
-# Or extract to custom location
-mkdir -p ~/myrocm
-tar -xzf rocm-validation-suite-*.tar.gz -C ~/myrocm/
+# Extract to the extras directory
+sudo mkdir -p /opt/rocm/extras-7
+sudo tar -xzf amdrocm7-rvs-*.tar.gz -C /opt/rocm/extras-7
 
 # Setup environment
-export PATH=/opt/rocm/rvs/bin:$PATH
-export LD_LIBRARY_PATH=/opt/rocm/rvs/lib:$LD_LIBRARY_PATH
+export PATH=/opt/rocm/extras-7/bin:$PATH
+export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:$LD_LIBRARY_PATH
 
 # Run RVS
 rvs --help
@@ -354,27 +364,26 @@ The workflow automatically verifies package contents:
 ### DEB Package Verification
 
 ```bash
-dpkg-deb -I rocm-validation-suite_*.deb  # Package info
-dpkg-deb -c rocm-validation-suite_*.deb  # Package contents
+dpkg-deb -I amdrocm*-rvs_*.deb  # Package info
+dpkg-deb -c amdrocm*-rvs_*.deb  # Package contents
 ```
 
 ### RPM Package Verification
 
 ```bash
-rpm -qip rocm-validation-suite-*.rpm  # Package info
-rpm -qlp rocm-validation-suite-*.rpm  # Package contents
-rpm -qRp rocm-validation-suite-*.rpm  # Package dependencies
+rpm -qip amdrocm*-rvs-*.rpm  # Package info
+rpm -qlp amdrocm*-rvs-*.rpm  # Package contents
+rpm -qRp amdrocm*-rvs-*.rpm  # Package dependencies
 ```
 
-## Accessing Build Artifacts
+## Accessing Build Packages
+
+Packages are uploaded directly to **S3** (not GitHub Actions artifacts). To find them:
 
 1. Go to the **Actions** tab in your GitHub repository
 2. Click on the latest workflow run
-3. Scroll down to **Artifacts** section
-4. Download the package artifacts:
-   - `ubuntu-22.04-packages-${GPU_FAMILY}`
-   - `manylinux_2_28-packages-${GPU_FAMILY}`
-   - `build-report` (contains build summary)
+3. Download the **`build-report`** artifact — it contains S3 console links to each package location
+4. Or browse S3 directly using the path layout described above
 
 ## Customization
 
@@ -466,11 +475,12 @@ cmake -B "$BUILD_DIR" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DROCM_PATH="$ROCM_PATH" \
     -DHIP_PLATFORM=amd \
-    -DCMAKE_INSTALL_PREFIX=/opt/rocm/rvs \
-    -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/rvs \
+    -DROCM_MAJOR_VERSION="$ROCM_MAJOR" \
+    -DCMAKE_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}" \
+    -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}" \
     -DCMAKE_SKIP_RPATH=FALSE \
     -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
-    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs" \
+    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs:/opt/rocm/extras-${ROCM_MAJOR}/lib" \
     -DRPATH_MODE=OFF \
     -DCMAKE_VERBOSE_MAKEFILE=1 \
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON \
@@ -497,10 +507,10 @@ cmake -B "$BUILD_DIR" \
 If binaries can't find libraries:
 
 ```bash
-# Check RPATH settings
-readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
+# Check RPATH settings (replace 7 with your ROCm major version)
+readelf -d /opt/rocm/extras-7/bin/rvs | grep RPATH
 
-# Should show: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs
+# Should show: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-7/lib
 ```
 
 ### Missing Dependencies
@@ -508,8 +518,8 @@ readelf -d /opt/rocm/rvs/bin/rvs | grep RPATH
 If the package reports missing dependencies:
 
 ```bash
-# Check what libraries are needed
-ldd /opt/rocm/rvs/bin/rvs
+# Check what libraries are needed (replace 7 with your ROCm major version)
+ldd /opt/rocm/extras-7/bin/rvs
 
 # Install missing ROCm components if needed
 ```
@@ -531,7 +541,7 @@ export BUILD_TYPE=Release
 sudo -E ./build_packages_local.sh
 
 # Check generated packages
-ls -lh build/rocm-validation-suite*
+ls -lh build/amdrocm*-rvs*
 ```
 
 ## References

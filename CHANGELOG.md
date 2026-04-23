@@ -15,7 +15,6 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 - Support for module-based test execution using the `-m` option.
 - Support for time‑duration based Babel test execution.
 
-
 ## RVS 1.3.0 for ROCm 7.2
 
 ### Added

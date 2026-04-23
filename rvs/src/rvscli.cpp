@@ -151,6 +151,10 @@ void rvs::cli::init_grammar() {
   grammar.insert(gpair("-i", sp));
   grammar.insert(gpair("--indexes", sp));
 
+  sp = std::make_shared<optbase>("-s", command, value);
+  grammar.insert(gpair("-s", sp));
+  grammar.insert(gpair("--selectActions", sp));
+
   sp = std::make_shared<optbase>("-j", command, optionalvalue);
   grammar.insert(gpair("-j", sp));
   grammar.insert(gpair("--json", sp));
@@ -170,6 +174,10 @@ void rvs::cli::init_grammar() {
   sp = std::make_shared<optbase>("-p", command, optionalvalue);
   grammar.insert(gpair("-p", sp));
   grammar.insert(gpair("--parallel", sp));
+
+  sp = std::make_shared<optbase>("-m", command, value);
+  grammar.insert(gpair("-m", sp));
+  grammar.insert(gpair("--module", sp));
 
   sp = std::make_shared<optbase>("-r", command, value);
   grammar.insert(gpair("-r", sp));
