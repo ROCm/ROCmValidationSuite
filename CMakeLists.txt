@@ -268,7 +268,7 @@ get_version ( ${RVS_VERSION} )
 # Package Generator  #######################################################
 set(PKG_MAINTAINER_NM  "ROCM Validation Suite Support")
 set(PKG_MAINTAINER_EMAIL  "rocm-validation-suite.support@amd.com")
-set(CPACK_PACKAGE_NAME "amdrocm${ROCM_MAJOR_VERSION}-rvs")
+set(CPACK_PACKAGE_NAME "rocm-validation-suite" CACHE STRING "Package name for CPack")
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Tool for validating AMD GPU functionality, performance, reliability in ROCm.")
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
