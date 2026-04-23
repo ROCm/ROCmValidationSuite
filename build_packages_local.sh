@@ -430,29 +430,36 @@ export ROCM_MAJOR
 print_success "Set ROCM_LIBPATCH_VERSION=$ROCM_LIBPATCH_VERSION, ROCM_MAJOR=$ROCM_MAJOR (from $ROCM_VERSION_MAJOR_MINOR)"
 
 # Set CPACK package release based on event/branch type
-# - Scheduled builds: yyyymmdd date stamp
-# - Release branches (starting with "rel"): GitHub run number
-# - Dev/PR builds: branch.commit (same for DEB and RPM)
-# Prefer GITHUB_REF_NAME / GITHUB_SHA (always available in Actions, unaffected
-# by sudo safe.directory restrictions); fall back to git for local builds.
-GIT_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}"
+# - Base (schedule, push, workflow_dispatch, local): r<ROCM_LIBPATCH_VERSION>.yyyymmdd
+#   (ROCM_LIBPATCH_VERSION is major+minor as xxyy, e.g. 0711 for ROCm 7.11)
+# - pull_request: same base + .branch.commit (source branch from GITHUB_HEAD_REF)
+# - Release branches (starting with "rel"): GITHUB run number
+# Prefer GITHUB_REF_NAME / GITHUB_HEAD_REF / GITHUB_SHA in Actions; fall back to git locally.
+RELEASE_DATE="$(date +%Y%m%d)"
+BASE_PACKAGE_RELEASE="r${ROCM_LIBPATCH_VERSION}.${RELEASE_DATE}"
+
+if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -n "${GITHUB_HEAD_REF:-}" ]; then
+    GIT_BRANCH="${GITHUB_HEAD_REF}"
+else
+    GIT_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}"
+fi
 if [ -n "$GITHUB_SHA" ]; then
     GIT_COMMIT_SHORT="${GITHUB_SHA:0:7}"
 else
     GIT_COMMIT_SHORT=$(git rev-parse --short HEAD 2>/dev/null || echo "0000000")
 fi
+SANITIZED_BRANCH=$(echo "$GIT_BRANCH" | sed 's/[^A-Za-z0-9.+~]/./g')
 
-if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-    PACKAGE_RELEASE="$(date +%Y%m%d)"
-    print_success "Set CPACK package release: $PACKAGE_RELEASE (scheduled build)"
-elif [[ "$GIT_BRANCH" =~ ^rel ]]; then
+if [ "${GITHUB_EVENT_NAME}" != "pull_request" ] && [[ "$GIT_BRANCH" =~ ^rel ]]; then
     GITHUB_RUN_NUMBER="${GITHUB_RUN_NUMBER:-1}"
     PACKAGE_RELEASE="$GITHUB_RUN_NUMBER"
     print_success "Set CPACK package release: $PACKAGE_RELEASE (release branch: $GIT_BRANCH, run: $GITHUB_RUN_NUMBER)"
+elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+    PACKAGE_RELEASE="${BASE_PACKAGE_RELEASE}.${SANITIZED_BRANCH}.${GIT_COMMIT_SHORT}"
+    print_success "Set CPACK package release: $PACKAGE_RELEASE (PR: $BASE_PACKAGE_RELEASE + $GIT_BRANCH + $GIT_COMMIT_SHORT)"
 else
-    SANITIZED_BRANCH=$(echo "$GIT_BRANCH" | sed 's/[^A-Za-z0-9.+~]/./g')
-    PACKAGE_RELEASE="${SANITIZED_BRANCH}.${GIT_COMMIT_SHORT}"
-    print_success "Set CPACK package release: $PACKAGE_RELEASE (dev branch: $GIT_BRANCH, commit: $GIT_COMMIT_SHORT)"
+    PACKAGE_RELEASE="$BASE_PACKAGE_RELEASE"
+    print_success "Set CPACK package release: $PACKAGE_RELEASE (r<libpatch>.date: ${BASE_PACKAGE_RELEASE}, event: ${GITHUB_EVENT_NAME:-local})"
 fi
 
 export CPACK_DEBIAN_PACKAGE_RELEASE="$PACKAGE_RELEASE"
