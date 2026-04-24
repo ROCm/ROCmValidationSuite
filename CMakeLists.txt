@@ -261,9 +261,12 @@ endif()
 ## Include common cmake modules
 include ( utils )
 
-## Update RVS version
-set ( RVS_VERSION "${PROJECT_VERSION}" )
-get_version ( ${RVS_VERSION} )
+# get_version() in cmake_modules/utils.cmake:
+#   - Takes ONE string argument: a baseline semver (here: project(VERSION), e.g. "1.4.0").
+#   - Runs parse_version() and sets VERSION_MAJOR/MINOR/PATCH (and related) for legacy uses
+#     (doxygen RVSVER, etc.). It does NOT set RVS_VERSION and does not know about git tag distance.
+#   - May override VERSION_PATCH from env ROCM_LIBPATCH_VERSION (ROCm xxyy encoding) — unrelated to RVS display semver.
+get_version(${PROJECT_VERSION})
 
 # Package Generator  #######################################################
 set(PKG_MAINTAINER_NM  "ROCM Validation Suite Support")
@@ -272,6 +275,8 @@ set(CPACK_PACKAGE_NAME "rocm-validation-suite" CACHE STRING "Package name for CP
 set(CMAKE_INSTALL_DOCDIR "${CMAKE_INSTALL_DATAROOTDIR}/doc/${CPACK_PACKAGE_NAME}" CACHE PATH "Documentation install directory" FORCE)
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Tool for validating AMD GPU functionality, performance, reliability in ROCm.")
+
+# CPack + "rvs -v" string: major/minor from project(), patch from git describe (RVS_PATCH_FROM_TAG) when > 0.
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 if(RVS_PATCH_FROM_TAG GREATER "0")
@@ -279,6 +284,9 @@ if(RVS_PATCH_FROM_TAG GREATER "0")
 else()
     set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 endif()
+set(RVS_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+message(STATUS "RVS_VERSION (rvs -v / CPack, not get_version input): ${RVS_VERSION}")
+
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 
