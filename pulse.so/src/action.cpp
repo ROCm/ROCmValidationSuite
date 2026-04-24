@@ -113,6 +113,19 @@ using std::map;
 static constexpr auto MODULE_NAME = "pulse";
 static constexpr auto MODULE_NAME_CAPS = "PULSE";
 
+// Beta banner shown once at the start of every pulse action invocation.
+// Plain ASCII so it survives non-UTF-8 terminals, log scrapers, and CI capture.
+static const char* kPulseBetaBanner =
+"\n"
+"##############################################################################\n"
+"#                                                                            #\n"
+"#                  *** PULSE STRESS TEST - BETA VERSION ***                  #\n"
+"#                                                                            #\n"
+"#   This pulse test is a BETA version and is NOT to be used in               #\n"
+"#   production environments. Pass/fail criteria are still being tuned.       #\n"
+"#                                                                            #\n"
+"##############################################################################\n";
+
 pulse_action::pulse_action() {
   module_name = MODULE_NAME;
   pulse_max_temp_c = PULSE_DEFAULT_MAX_TEMP_C;
@@ -602,6 +615,8 @@ int pulse_action::get_all_selected_gpus(void) {
 int pulse_action::run(void) {
   string msg;
   rvs::action_result_t action_result;
+
+  rvs::lp::Log(std::string(kPulseBetaBanner), rvs::logresults);
 
   if (!get_all_common_config_keys())
     return -1;

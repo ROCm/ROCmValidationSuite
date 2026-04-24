@@ -129,6 +129,8 @@ The Input EDPp Test runs GEMM workloads to stress the GPU power (that is, TGP). 
 #### GPU Power Pulse Test - PULSE module
 The Pulse test drives repeating **high-power** (GEMM compute) and **low-power** (idle, minimum clocks) phases at a configurable rate so that GPU power swings over time. That pattern stresses the power supply and voltage regulators with transients rather than a single sustained power level. With **parallel: true** on multiple GPUs, the module uses a CPU-side barrier and a GPU-side fine-grained barrier so that devices tend to enter the heavy phase together, increasing aggregate current steps. Power and temperature are read through **AMD SMI**. GEMM execution uses the same **rvs_blas** stack as GST/IET (**rocBLAS** or **hipBLASLt**).
 
+**PS: Beta version — not intended for production use. Pass/fail criteria are still being tuned.**
+
 #### Memory Test - MEM module
 The Memory module tests the GPU memory for hardware errors and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
 
@@ -2575,6 +2577,8 @@ The output for such a configuration file may look like this:
 
 
 ## Pulse Module
+
+> **PS: Beta version.** This module is in beta and is **not intended for production use**. Pass/fail criteria (especially around power-delta enforcement, clock-pinning verification, and throttle detection) are still being tuned and may change between releases.
 
 The **Pulse** module is intended for **time-varying** GPU power stress: it alternates **high** phases (maximum clocks plus continuous GEMM) and **low** phases (minimum clocks plus idle/sleep), repeating for the action **duration**. That produces periodic power swings useful for exercising PSU transient response and platform power delivery, complementing **IET** (which targets a sustained power level).
 

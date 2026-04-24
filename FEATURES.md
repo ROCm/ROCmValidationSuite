@@ -61,3 +61,5 @@ The Thermal Stress Test (TST) measures/monitors the GPU edge and junction temper
 
 ## Pulse Stress Test- Pulse module
 The Pulse Stress Test creates power fluctuations by alternating between high-compute (GEMM) and idle phases at a configurable rate. Two-level barrier synchronizes all GPUs so they spike current simultaneously, maximizing stress on the PSU.
+
+**PS: Beta version — not intended for production use. Pass/fail criteria are still being tuned.**

@@ -7,7 +7,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Added
 
 - TransferBench support to PEBB and PBQT.
-- Pulse stressor module (`pulse.so`) for GPU power pulse stress testing.
+- Pulse stressor module (`pulse.so`) for GPU power pulse stress testing. **(Beta — not for production use.)**
 - IET power stress test for MI250X.
 - Babel support for normal distribution–based data initialization.
 - Configurable Non-Temporal support in Babel.
