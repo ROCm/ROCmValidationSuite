@@ -70,8 +70,8 @@ std::string rvs_get_rocm_install_path_string(void);
 
 /**
  * RVS data root .../share/.../rocm-validation-suite: RVS_PREFIX env, else path
- * derived from the running rvs process (*/bin/rvs -> install prefix) on Linux,
- * else the build-time RVS_DATA_ROOT macro.
+ * derived from the running rvs process (e.g. prefix/bin/rvs) on Linux,
+ * else the build-time RVS_DATA_ROOT macro. Install prefix is the parent of bin/.
  */
 std::string rvs_get_rvs_data_root_string(void);
 /** RVS module lib directory .../lib/rvs — same resolution order. */
