@@ -174,7 +174,11 @@ set_target_properties(${RVS_TARGET}
  PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}
  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_compile_options(${RVS_TARGET} PRIVATE -fopenmp)
-target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB} -fopenmp)
+if(FETCH_ROCMPATH_FROM_ROCMCORE)
+  target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB} ${ROCM_CORE} -fopenmp)
+else()
+  target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB} -fopenmp)
+endif()
 ## Install shared library librvslib.so
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

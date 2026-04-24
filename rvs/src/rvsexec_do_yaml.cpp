@@ -45,7 +45,28 @@
 #include "include/rvs_util.h"
 #include "include/gpu_util.h"
 
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
+#include "rocm-core/rocm_version.h"
+#endif
+
 #define MODULE_NAME_CAPS "CLI"
+
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
+/**
+ * C API getROCmVersion (rocm_version.h) must be called from a function declared
+ * before the C++ getROCmVersion in this file so the name does not self-resolve.
+ */
+static bool rvsGetROCmVersionStringFromRcmcore(std::string* out) {
+  unsigned int mj = 0, mn = 0, p = 0;
+  if (getROCmVersion(&mj, &mn, &p) != VerSuccess) {
+    return false;
+  }
+  std::ostringstream oss;
+  oss << mj << "." << mn << "." << p;
+  *out = oss.str();
+  return true;
+}
+#endif
 
 /*** Example rvs.conf file structure
 
@@ -248,14 +269,24 @@ void rvs::exec::in_progress_thread(exec_action action_info) {
 std::string getROCmVersion(void) {
 
   std::string line = "N/A";
-  std::ifstream inputFile("/opt/rocm/.info/version-rocm");
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
+  if (rvsGetROCmVersionStringFromRcmcore(&line)) {
+    return line;
+  }
+  return "N/A";
+#else
+  const std::string vfile = rvs_get_rocm_install_path_string() + "/.info/version-rocm";
+  std::ifstream inputFile(vfile);
   if (!inputFile) {
     return line;
   }
   std::getline(inputFile, line);
   inputFile.close();
-
+  if (line.empty()) {
+    line = "N/A";
+  }
   return line;
+#endif
 }
 
 /**

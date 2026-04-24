@@ -38,9 +38,7 @@
 #include "include/rvsliblogger.h"
 #include "include/rvsoptions.h"
 #include "include/rvstrace.h"
-#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
-#include "rocm-core/rocm_getpath.h"
-#endif
+#include "include/rvs_util.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -397,24 +395,6 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   string  module;
   string config;
   yaml_data_type_t data_type;
-#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
-  char *installPath = nullptr;
-  unsigned int installPathLen = 0;
-  string rocmPath;
-  PathErrors_t retVal = PathSuccess;
-  // Get ROCM install path
-  retVal = getROCmInstallPath( &installPath, &installPathLen );
-  if(retVal == PathSuccess){
-    rocmPath = installPath;
-  }
-  else {
-    std::cout << "Failed to get ROCm Install Path: " << retVal <<"\nSet ROCM_PATH in env" << std::endl;
-  }
-  // free allocated memory
-  if(installPath != nullptr) {
-    free(installPath);
-  }
-#endif
   options::has_option("pwd", &path);
   logger::log_level(rvs::logerror);
 
@@ -466,13 +446,9 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
       config = "conf/" + module_config_file[module_index];
       std::ifstream file(path + config);
       if (!file.good()) {
-        // configuration file exist in ROCM path ?
-#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
-        path = rocmPath;
-#else
-        path = ROCM_PATH;
-#endif
-        config = "/share/rocm-validation-suite/conf/" + module_config_file[module_index];
+        // RVS data dir: from rvs binary, $RVS_PREFIX, or build-time RVS_DATA_ROOT
+        path = rvs_get_rvs_data_root_string();
+        config = "/conf/" + module_config_file[module_index];
       }
       file.close();
     }
@@ -508,13 +484,8 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
     val = path + ".rvsmodules.config";
     std::ifstream conf_file(val);
     if (!conf_file.good()) {
-      // Modules config. file exist in ROCM path ?
-#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
-      path = rocmPath;
-#else
-      path = ROCM_PATH;
-#endif
-      val = path + "/share/rocm-validation-suite/conf/.rvsmodules.config";
+      path = rvs_get_rvs_data_root_string();
+      val = path + "/conf/.rvsmodules.config";
     }
   }
   conf_file.close();

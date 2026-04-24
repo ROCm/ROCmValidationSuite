@@ -47,11 +47,12 @@ if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
 enable_testing()
-# In future use the api provided by rocm-core library to get ROCm Install path
-# For backward compatibility use ROCM_PATH provided by build arguments.
-# Using the api option is turned OFF by default
+# When ON, link rocm-core: getROCmInstallPath for the ROCm install path, and
+# getROCmVersion (rocm_version.h) for the YAML system-overview ROCm string — no
+# .info file read for that path. When OFF, use ROCM_PATH and the version file
+# under that prefix only.
 option(FETCH_ROCMPATH_FROM_ROCMCORE
-        "Use the api provided by rocm-core library to get ROCM_PATH" OFF)
+        "Use rocm-core C API for ROCm path and YAML system-overview ROCm version" OFF)
 
 # Prerequisite - Check if rocblas was already installed
 find_package (rocblas)
@@ -196,20 +197,21 @@ set(CMAKE_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "CM
 set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 
+# Compile-time default used by rvs_get_rocm_install_path_string() after
+# getROCmInstallPath (if FETCH_*) and $ROCM_PATH env are considered.
 add_definitions(-DROCM_PATH="${ROCM_PATH}")
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
   add_compile_options(-DFETCH_ROCMPATH_FROM_ROCMCORE=${FETCH_ROCMPATH_FROM_ROCMCORE})
-  # rocm-core library will provide the ROCM_PATH during runtime
-  # Link the library as required
   set(ROCM_CORE "rocm-core")
-  # The absolute library path will be ${ROCM_PATH}/${RVS_LIB_PATH}
-  # Usage is ROCM_PATH will be fetched from rocm-core and append ${RVS_LIB_PATH}
-  add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_LIBDIR}/rvs")
 else()
-  add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
-  # Set ROCM_CORE to empty, so no linking to rocm-core library/package
   set(ROCM_CORE "")
 endif()
+# RVS module .so and shared data (conf) live under the RVS install prefix, not under ROCm.
+add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
+add_definitions(-DRVS_DATA_ROOT="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}")
+# Suffixes relative to that prefix for runtime resolution from the rvs binary path.
+add_definitions(-DRVS_RELPATH_DATA_DIR="${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}")
+add_definitions(-DRVS_RELPATH_MODULE_LIB_DIR="${CMAKE_INSTALL_LIBDIR}/rvs")
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
 # definition and dump it in the cache along with proper documentation,
