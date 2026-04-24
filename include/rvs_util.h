@@ -60,6 +60,24 @@ extern std::vector<std::string> str_split(const std::string& str_val,
         const std::string& delimiter);
 
 /**
+ * ROCm install **root** for runtime: if built with FETCH_ROCMPATH_FROM_ROCMCORE,
+ * tries getROCmInstallPath (rocm-core) first, then the ROCM_PATH environment
+ * variable, then the build-time ROCM_PATH string. Otherwise: getenv(ROCM_PATH)
+ * first, then the build-time macro. Use this to resolve relocatable or
+ * non-default ROCm locations instead of relying on the prebuilt #define alone.
+ */
+std::string rvs_get_rocm_install_path_string(void);
+
+/**
+ * RVS data root .../share/.../rocm-validation-suite: RVS_PREFIX env, else path
+ * derived from the running rvs process (*/bin/rvs -> install prefix) on Linux,
+ * else the build-time RVS_DATA_ROOT macro.
+ */
+std::string rvs_get_rvs_data_root_string(void);
+/** RVS module lib directory .../lib/rvs — same resolution order. */
+std::string rvs_get_rvs_modules_lib_dir_string(void);
+
+/**
  * Convert array of strings into array of signed integers of type T
  * @param sArr input string
  * @param iArr tokens' delimiter
