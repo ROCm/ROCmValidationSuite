@@ -59,3 +59,7 @@ The Babel module executes BabelStream (synthetic GPU benchmark based on the orig
 ## Thermal Stress Test - TST module
 The Thermal Stress Test (TST) measures/monitors the GPU edge and junction temperatures under various stressful workloads. Also checks whether GPU junction temperature reaches target and trottle temperatures.
 
+## Pulse Stress Test- Pulse module
+The Pulse Stress Test creates power fluctuations by alternating between high-compute (GEMM) and idle phases at a configurable rate. Two-level barrier synchronizes all GPUs so they spike current simultaneously, maximizing stress on the PSU.
+
+**PS: Beta version — not intended for production use. Pass/fail criteria are still being tuned.**
