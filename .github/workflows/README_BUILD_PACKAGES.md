@@ -346,16 +346,69 @@ sudo rpm -i --replacefiles --nodeps amdrocm7-rvs-*.rpm
 
 ### Any Linux Distribution (TGZ - Relocatable)
 
+#### Pre-install: ROCm
+
+Before you install the RVS TGZ, **ROCm must be installed, configured, and on your `PATH` / `LD_LIBRARY_PATH` as in AMD’s documentation** so HIP, HSA, and other ROCm libraries are discoverable. Follow the current Linux install guide in **rocm docs**:
+
+- **ROCm documentation (start here)**: <https://rocm.docs.amd.com/>
+- **Linux install / deployment (paths, env, post-install)**: <https://rocm.docs.amd.com/en/latest/deploy/linux/index.html>
+
+**Assumptions (TGZ use):** ROCm is set up on the machine, `ROCM_PATH` (or your install prefix) is correct, and the runtime can load ROCm/LLVM libraries. The TGZ only ships RVS; it does not replace a full ROCm stack.
+
+#### Install RVS run-time dependencies (on the target system)
+
+The TGZ is built against ROCm, but the host still needs a few system libraries. Install at least **PCI (libpci)** and an **OpenMP runtime**; exact package names differ by family:
+
+| Family | Typical packages |
+|--------|------------------|
+| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) — PCI access; for OpenMP use the distro’s `libgomp1` and/or an LLVM **libomp** runtime (e.g. `libomp5` / `libllvm-*` depending on the release; match your `apt` search for `libomp` / `libgomp`). |
+| **RHEL / CentOS / Rocky / Alma (dnf/yum)** | `pciutils-libs` (provides `libpci`); for OpenMP: `libgomp` (GCC) and/or `libomp` if provided in the repo. |
+| **SUSE / openSUSE (zypper)** | `libpci3` and `pciutils` as needed; OpenMP: `libgomp1` and/or a `libllvm-openmp*`-style package, depending on the release. |
+
+Examples (adjust package versions to your release):
+
 ```bash
-# Extract to the extras directory
+# Ubuntu / Debian
+sudo apt update
+sudo apt install -y libpci3 libgomp1
+
+# RHEL / Rocky / Alma 8+ (DNF)
+sudo dnf install -y pciutils-libs libgomp
+# if available in your repo:
+# sudo dnf install -y libomp
+
+# openSUSE / SUSE (zypper)
+sudo zypper install libpci3 libgomp1
+```
+
+**Note:** RVS is often linked to **LLVM OpenMP** (`libomp`) from the ROCm toolchain. If the dynamic linker cannot find `libomp.so` after the steps below, that library may already be present under the **ROCm installation’s LLVM** tree (see post-install). Install host packages only where you still need a system copy.
+
+#### Extract the TGZ
+
+```bash
+# Extract to the extras directory (example for ROCm major 7; match your path)
 sudo mkdir -p /opt/rocm/extras-7
 sudo tar -xzf amdrocm7-rvs-*.tar.gz -C /opt/rocm/extras-7
+```
 
-# Setup environment
-export PATH=/opt/rocm/extras-7/bin:$PATH
-export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:$LD_LIBRARY_PATH
+#### Post-install: `PATH` and `LD_LIBRARY_PATH`
 
-# Run RVS
+Point the shell at the extracted RVS prefix and the ROCm you installed (replace paths with your real `ROCM_PATH` and extras major version). Copy and paste the block as one unit:
+
+```bash
+export ROCM_PATH=/opt/rocm              # or your real ROCm root, per rocm docs
+export PATH=/opt/rocm/extras-7/bin:$ROCM_PATH/bin:$PATH
+export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:\
+$ROCM_PATH/lib:\
+$ROCM_PATH/lib/llvm/lib:\
+$LD_LIBRARY_PATH
+```
+
+**`libomp` (LLVM OpenMP):** `$ROCM_PATH/lib/llvm/lib` is already in the `export` block above: **`libomp.so` is often there** (ROCm’s LLVM), not only from the host distro. If your layout differs, run `find $ROCM_PATH -name 'libomp.so' 2>/dev/null` and point `LD_LIBRARY_PATH` at the directory you find. `rvs` also has rpath relative to its install; you may still need a host `libomp` or `libgomp` package. If you still get `libomp.so: cannot open shared object` from the dynamic linker, change the LLVM path for your ROCm version or add packages from the prerequisite section.
+
+**Run RVS**
+
+```bash
 rvs --help
 ```
 
