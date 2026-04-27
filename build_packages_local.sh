@@ -95,6 +95,81 @@ fetch_latest_rocm_version() {
     return 0
 }
 
+# ROCm SDK CMake configs (e.g. hipblaslt-config.cmake) call block(), which was added
+# in CMake 3.25. Ubuntu 22.04 ships cmake 3.22 — too old.
+# Try Kitware's APT repo first (clean apt integration); fall back to pip for restricted
+# networks. Set RVS_SKIP_KITWARE_REPO=1 to skip the Kitware step (e.g. air-gapped runners).
+ensure_recent_cmake_ubuntu() {
+    [ -f /etc/os-release ] || return 0
+    # shellcheck source=/dev/null
+    . /etc/os-release
+    case "${ID:-}" in
+        ubuntu|debian) ;;
+        *) return 0 ;;
+    esac
+    command -v apt-get >/dev/null 2>&1 || return 0
+
+    local need_major=3 need_minor=25
+    local cur_major=0 cur_minor=0 v=""
+    if command -v cmake >/dev/null 2>&1; then
+        v="$(cmake --version 2>/dev/null | head -1 | awk '{print $3}')"
+        cur_major="${v%%.*}"
+        local _rest="${v#*.}"
+        cur_minor="${_rest%%.*}"
+        cur_major="${cur_major:-0}"
+        cur_minor="${cur_minor:-0}"
+        if { [ "$cur_major" -gt "$need_major" ] 2>/dev/null; } \
+           || { [ "$cur_major" -eq "$need_major" ] 2>/dev/null && [ "$cur_minor" -ge "$need_minor" ] 2>/dev/null; }; then
+            print_success "cmake $v is recent enough (>= ${need_major}.${need_minor})"
+            return 0
+        fi
+        print_info "cmake $v is older than ${need_major}.${need_minor}; upgrading (ROCm hipblaslt-config uses block())"
+    else
+        print_info "cmake not installed; installing recent version (>= ${need_major}.${need_minor})"
+    fi
+
+    # Try Kitware APT repo first
+    if [ -n "${VERSION_CODENAME:-}" ] && [ "${RVS_SKIP_KITWARE_REPO:-}" != "1" ]; then
+        print_info "Trying Kitware APT repo for cmake (codename: ${VERSION_CODENAME})..."
+        apt-get install -y --no-install-recommends ca-certificates gnupg wget >/dev/null 2>&1 || true
+        if wget -qO - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null \
+            | gpg --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg 2>/dev/null \
+            && [ -s /usr/share/keyrings/kitware-archive-keyring.gpg ]; then
+            echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ ${VERSION_CODENAME} main" \
+                > /etc/apt/sources.list.d/kitware.list
+            if apt-get update >/dev/null 2>&1 && apt-get install -y --no-install-recommends cmake; then
+                hash -r
+                local v_new
+                v_new="$(cmake --version 2>/dev/null | head -1 | awk '{print $3}')"
+                print_success "Installed cmake $v_new from Kitware APT repo"
+                return 0
+            fi
+            print_warning "Kitware APT install failed; falling back to pip"
+        else
+            print_warning "Could not reach apt.kitware.com; falling back to pip (set RVS_SKIP_KITWARE_REPO=1 to silence this)"
+        fi
+    fi
+
+    # pip fallback: works regardless of distro repo state, needs PyPI access.
+    if ! command -v pip3 >/dev/null 2>&1; then
+        apt-get install -y --no-install-recommends python3-pip >/dev/null 2>&1 || true
+    fi
+    if command -v pip3 >/dev/null 2>&1; then
+        if pip3 install --break-system-packages --upgrade cmake 2>/dev/null \
+           || pip3 install --upgrade cmake; then
+            hash -r
+            local v_new
+            v_new="$(cmake --version 2>/dev/null | head -1 | awk '{print $3}')"
+            print_success "Installed cmake $v_new via pip"
+            return 0
+        fi
+    fi
+
+    print_error "Could not install cmake >= ${need_major}.${need_minor}; ROCm hipblaslt configure will fail."
+    print_error "Either expose apt.kitware.com / PyPI to this runner, or pre-install cmake>=3.25 in the image."
+    return 1
+}
+
 # Function to check and install dependencies
 check_and_install_dependencies() {
     print_info "Checking for required build dependencies..."
@@ -292,6 +367,7 @@ check_and_install_dependencies() {
 
 # Check and install dependencies (installs wget, etc. - required before fetch_latest_rocm_version)
 check_and_install_dependencies
+ensure_recent_cmake_ubuntu
 
 # Determine ROCm version: use environment variable or fetch latest (wget is now available)
 if [ -n "$ROCM_VERSION" ]; then
@@ -429,6 +505,13 @@ export ROCM_LIBPATCH_VERSION
 export ROCM_MAJOR
 print_success "Set ROCM_LIBPATCH_VERSION=$ROCM_LIBPATCH_VERSION, ROCM_MAJOR=$ROCM_MAJOR (from $ROCM_VERSION_MAJOR_MINOR)"
 
+# Git 2.35+ refuses commands in container workspaces owned by a different UID than the
+# checkout (Actions mounts ${{ github.workspace }} into the container as root). Mark the
+# workspace as safe so subsequent git rev-parse calls below don't return "0000000".
+if [ -n "${GITHUB_WORKSPACE:-}" ] && command -v git >/dev/null 2>&1; then
+    git config --global --add safe.directory "$GITHUB_WORKSPACE" 2>/dev/null || true
+fi
+
 # Set CPACK package release based on event/branch type
 # - Base (schedule, push, workflow_dispatch, local): r<ROCM_LIBPATCH_VERSION>.yyyymmdd
 #   (ROCM_LIBPATCH_VERSION is major+minor as xxyy, e.g. 0711 for ROCm 7.11)
@@ -496,9 +579,26 @@ if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     export CMAKE_COMMAND="cmake3"
     print_info "Using cmake3 (CentOS/RHEL/AlmaLinux/Rocky)"
 else
-    # Ubuntu and others: use defaults (system compiler and cmake)
+    # Ubuntu/Debian: modules (pebb/pbqt) compile with hipcc, which is Clang-based and does not
+    # bundle libstdc++ C++20 headers such as <barrier>. Pass the system GCC tree to hipcc via
+    # CMAKE_CXX_FLAGS --gcc-toolchain (same mechanism as GCC_TOOLCHAIN on RHEL).
     export CMAKE_COMMAND="cmake"
-    print_info "Using cmake (Ubuntu/other)"
+    print_info "Using cmake (Ubuntu/Debian/other)"
+
+    if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+        if [ -x "$ROCM_PATH/bin/hipcc" ]; then
+            export CMAKE_CXX_COMPILER="$ROCM_PATH/bin/hipcc"
+            print_success "Set CMAKE_CXX_COMPILER to hipcc (Ubuntu/Debian)"
+        else
+            print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using CMake default C++ compiler"
+        fi
+        if compgen -G "/usr/include/c++/*/barrier" >/dev/null 2>&1; then
+            export GCC_TOOLCHAIN="/usr"
+            print_success "Set GCC_TOOLCHAIN=/usr so hipcc finds system libstdc++ (C++20 <barrier>)"
+        else
+            print_warning "No /usr/include/c++/.../barrier found; install g++ 11+ (e.g. apt install g++-11 build-essential)"
+        fi
+    fi
 fi
 
 print_info "Environment variables set:"
