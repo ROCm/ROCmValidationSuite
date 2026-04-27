@@ -339,8 +339,8 @@ class rvs_blas {
         (datatype == "fp6_e2m3_r") ? HIP_R_6F_E2M3 :
         (datatype == "i8_r")       ? HIP_R_8I  :
         (datatype == "fp8_r")      ? HIP_R_8F_E4M3_FNUZ : // FP8-FNUZ
-        (datatype == "fp8_e4m3_r") ? HIP_R_8F_E4M3  : // FP8-OCP E4M3
-        (datatype == "fp8_e5m2_r") ? HIP_R_8F_E5M2  : // FP8-OCP E5M2
+        (datatype == "fp8_e4m3_r" || datatype == "mxfp8_e4m3_r") ? HIP_R_8F_E4M3  : // FP8-OCP E4M3
+        (datatype == "fp8_e5m2_r" || datatype == "mxfp8_e5m2_r") ? HIP_R_8F_E5M2  : // FP8-OCP E5M2
         (datatype == "bf16_r")     ? HIP_R_16BF :
         (datatype == "fp16_r")     ? HIP_R_16F  :
         (datatype == "fp32_r")     ? HIP_R_32F  :
