@@ -48,18 +48,36 @@ jobs:
   build-ubuntu:
     name: Build Ubuntu Packages
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
+    container:
+      image: ubuntu:${{ matrix.ubuntu_version }}
     strategy:
       matrix:
         ubuntu_version: ['22.04']
+    # Apply to every step in the job so apt never drops into an interactive
+    # frontend (tzdata, libssl, etc.) — each Actions step runs in a fresh
+    # shell, so an `export` inside one step does not propagate to the next.
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      TZ: Etc/UTC
     outputs:
       s3_bucket_ubuntu: ${{ steps.upload-s3-ubuntu.outputs.bucket }}
       s3_paths_ubuntu: ${{ steps.upload-s3-ubuntu.outputs.paths }}
     
     steps:
-      - name: Clean workspace
+      # Bootstrap the bare ubuntu:* image so actions/checkout and downstream steps
+      # (dpkg-deb verify, apt-ftparchive, awscli) work without needing sudo on bare metal.
+      - name: Bootstrap container (git, curl, packaging tools)
         run: |
-          sudo rm -rf "${{ github.workspace }}/build" || true
-          sudo chown -R $(id -u):$(id -g) "${{ github.workspace }}" || true
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates \
+            curl \
+            git \
+            dpkg-dev \
+            apt-utils \
+            python3 \
+            python3-pip
 
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -82,18 +100,12 @@ jobs:
       - name: Build and Package RVS
         run: |
           chmod +x build_packages_local.sh
-           # Run build script with sudo (Ubuntu runner needs sudo for apt-get)
-          sudo -E ROCM_VERSION=${{ env.ROCM_VERSION }} \
+          ROCM_VERSION=${{ env.ROCM_VERSION }} \
           GPU_FAMILY=${{ env.GPU_FAMILY }} \
           BUILD_TYPE=${{ env.BUILD_TYPE }} \
           ROCM_SDK_BASE_URL=${{ vars.ROCM_SDK_BASE_URL }} \
           ROCM_SDK_INDEX_URL=${{ vars.ROCM_SDK_INDEX_URL }} \
           ./build_packages_local.sh
-
-      - name: Fix file ownership
-        if: always()
-        run: |
-          sudo chown -R $(id -u):$(id -g) "${{ github.workspace }}" || true
 
       - name: Verify DEB Package
         run: |
@@ -112,7 +124,7 @@ jobs:
       # S3 upload for repo ROCm/ROCmValidationSuite (schedule, push, pull request, manual)
       - name: Install AWS CLI
         if: github.repository == 'ROCm/ROCmValidationSuite'
-        run: sudo apt-get update && sudo apt-get install -y awscli
+        run: apt-get update && apt-get install -y awscli
 
       - name: Configure AWS credentials
         if: github.repository == 'ROCm/ROCmValidationSuite'
@@ -148,14 +160,14 @@ jobs:
             echo "Release branch build: uploading to release/rvs/deb"
             aws s3 cp ./build "s3://${BUCKET}/release/${BASE}/deb/" --recursive --exclude "*" --include "amdrocm*-rvs*.deb" --no-progress
             echo "Listing s3://${BUCKET}/release/${BASE}/deb/"
-            aws s3 ls "s3://${BUCKET}/release/${BASE}/deb/" --human-readable
+            aws s3 ls "s3://${BUCKET}/release/${BASE}/deb/" --human-readable || true
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=Ubuntu DEB|release/${BASE}/deb" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Nightly/push build: uploading to nightly/rvs/deb"
             aws s3 cp ./build "s3://${BUCKET}/nightly/${BASE}/deb/" --recursive --exclude "*" --include "amdrocm*-rvs*.deb" --no-progress
             echo "Listing s3://${BUCKET}/nightly/${BASE}/deb/"
-            aws s3 ls "s3://${BUCKET}/nightly/${BASE}/deb/" --human-readable
+            aws s3 ls "s3://${BUCKET}/nightly/${BASE}/deb/" --human-readable || true
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=Ubuntu DEB|nightly/${BASE}/deb" >> $GITHUB_OUTPUT
           else
@@ -163,7 +175,7 @@ jobs:
             echo "Uploading to s3://${BUCKET}/${PREFIX}/"
             aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "amdrocm*-rvs*.deb" --no-progress
             echo "Listing s3://${BUCKET}/${PREFIX}/"
-            aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable
+            aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable || true
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=Ubuntu DEB|${PREFIX}" >> $GITHUB_OUTPUT
           fi
@@ -178,7 +190,7 @@ jobs:
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           [ -z "$BUCKET" ] && exit 0
 
-          sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
+          # dpkg-dev and apt-utils were installed in the Bootstrap container step.
 
           BASE="rvs"
           if [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
@@ -204,7 +216,7 @@ jobs:
           aws s3 sync "$STAGING/" "s3://${BUCKET}/${DEB_PREFIX}/" --no-progress
 
           echo "=== DEB repo metadata uploaded to s3://${BUCKET}/${DEB_PREFIX}/ ==="
-          aws s3 ls "s3://${BUCKET}/${DEB_PREFIX}/" --human-readable
+          aws s3 ls "s3://${BUCKET}/${DEB_PREFIX}/" --human-readable || true
 
   build-centos:
     name: Build CentOS/RHEL Packages (manylinux_2_28)
@@ -310,9 +322,9 @@ jobs:
             aws s3 cp ./build "s3://${BUCKET}/release/${BASE}/rpm/" --recursive --exclude "*" --include "amdrocm*-rvs*.rpm" --no-progress
             aws s3 cp ./build "s3://${BUCKET}/release/${BASE}/tar/" --recursive --exclude "*" --include "amdrocm*-rvs*.tar.gz" --no-progress
             echo "Listing s3://${BUCKET}/release/${BASE}/rpm/"
-            aws s3 ls "s3://${BUCKET}/release/${BASE}/rpm/" --human-readable
+            aws s3 ls "s3://${BUCKET}/release/${BASE}/rpm/" --human-readable || true
             echo "Listing s3://${BUCKET}/release/${BASE}/tar/"
-            aws s3 ls "s3://${BUCKET}/release/${BASE}/tar/" --human-readable
+            aws s3 ls "s3://${BUCKET}/release/${BASE}/tar/" --human-readable || true
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=CentOS/RHEL RPM|release/${BASE}/rpm||CentOS/RHEL TGZ|release/${BASE}/tar" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -320,9 +332,9 @@ jobs:
             aws s3 cp ./build "s3://${BUCKET}/nightly/${BASE}/rpm/" --recursive --exclude "*" --include "amdrocm*-rvs*.rpm" --no-progress
             aws s3 cp ./build "s3://${BUCKET}/nightly/${BASE}/tar/" --recursive --exclude "*" --include "amdrocm*-rvs*.tar.gz" --no-progress
             echo "Listing s3://${BUCKET}/nightly/${BASE}/rpm/"
-            aws s3 ls "s3://${BUCKET}/nightly/${BASE}/rpm/" --human-readable
+            aws s3 ls "s3://${BUCKET}/nightly/${BASE}/rpm/" --human-readable || true
             echo "Listing s3://${BUCKET}/nightly/${BASE}/tar/"
-            aws s3 ls "s3://${BUCKET}/nightly/${BASE}/tar/" --human-readable
+            aws s3 ls "s3://${BUCKET}/nightly/${BASE}/tar/" --human-readable || true
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=CentOS/RHEL RPM|nightly/${BASE}/rpm||CentOS/RHEL TGZ|nightly/${BASE}/tar" >> $GITHUB_OUTPUT
           else
@@ -330,7 +342,7 @@ jobs:
             echo "Uploading to s3://${BUCKET}/${PREFIX}/"
             aws s3 cp ./build "s3://${BUCKET}/${PREFIX}/" --recursive --exclude "*" --include "amdrocm*-rvs*.rpm" --include "amdrocm*-rvs*.tar.gz" --no-progress
             echo "Listing s3://${BUCKET}/${PREFIX}/"
-            aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable
+            aws s3 ls "s3://${BUCKET}/${PREFIX}/" --human-readable || true
             echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
             echo "paths=CentOS/RHEL packages|${PREFIX}" >> $GITHUB_OUTPUT
           fi
@@ -367,7 +379,7 @@ jobs:
           aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
 
           echo "=== RPM repodata uploaded to s3://${BUCKET}/${RPM_PREFIX}/repodata/ ==="
-          aws s3 ls "s3://${BUCKET}/${RPM_PREFIX}/repodata/" --human-readable
+          aws s3 ls "s3://${BUCKET}/${RPM_PREFIX}/repodata/" --human-readable || true
 
   create-release:
     name: Create Release Summary
