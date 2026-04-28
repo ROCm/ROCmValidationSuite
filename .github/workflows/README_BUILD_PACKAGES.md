@@ -351,7 +351,7 @@ sudo rpm -i --replacefiles --nodeps amdrocm7-rvs-*.rpm
 Before you install the RVS TGZ, **ROCm must be installed, configured, and on your `PATH` / `LD_LIBRARY_PATH` as in AMD’s documentation** so HIP, HSA, and other ROCm libraries are discoverable. Follow the current Linux install guide in **rocm docs**:
 
 - **ROCm documentation (start here)**: <https://rocm.docs.amd.com/>
-- **Linux install / deployment (paths, env, post-install)**: <https://rocm.docs.amd.com/en/latest/deploy/linux/index.html>
+- **Linux install / deployment (paths, env, post-install)**: <https://rocm.docs.amd.com/en/latest/install/rocm.html>
 
 **Assumptions (TGZ use):** ROCm is set up on the machine, `ROCM_PATH` (or your install prefix) is correct, and the runtime can load ROCm/LLVM libraries. The TGZ only ships RVS; it does not replace a full ROCm stack.
 
