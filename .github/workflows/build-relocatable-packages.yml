@@ -183,8 +183,10 @@ jobs:
           BASE="rvs"
           if [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
             DEB_PREFIX="release/${BASE}/deb"
+            APT_SUITE="rvs-release"
           else
             DEB_PREFIX="nightly/${BASE}/deb"
+            APT_SUITE="rvs-nightly"
           fi
 
           STAGING=$(mktemp -d)
@@ -198,8 +200,16 @@ jobs:
 
           cd "$STAGING"
           dpkg-scanpackages --multiversion . /dev/null > Packages
+          # dpkg-scanpackages emits "Filename: ./foo.deb". APT resolves that under the repo URL and may
+          # request .../deb/./foo.deb — S3/CloudFront keys are literal, so that path 404s. Strip "./".
+          sed -i 's#^Filename: \./#Filename: #g' Packages
           gzip -k -f Packages
-          apt-ftparchive release . > Release
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin="ROCm Validation Suite" \
+            -o APT::FTPArchive::Release::Label="${APT_SUITE}" \
+            -o APT::FTPArchive::Release::Suite="${APT_SUITE}" \
+            -o APT::FTPArchive::Release::Codename="${APT_SUITE}" \
+            release . > Release
 
           aws s3 sync "$STAGING/" "s3://${BUCKET}/${DEB_PREFIX}/" --no-progress
 

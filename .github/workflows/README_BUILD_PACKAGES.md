@@ -197,17 +197,20 @@ s3://<bucket>/nightly/rvs/
 **Using the S3 repo with apt (Ubuntu/Debian):**
 
 ```bash
-# Add the nightly repo (replace <bucket> with the actual S3 bucket name)
-echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rvs/deb/ ./" \
+# Add the nightly repo (replace <bucket> with the actual S3 bucket name).
+# Use "/" as the suite field for this flat repo layout.
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rvs/deb /" \
   | sudo tee /etc/apt/sources.list.d/rvs-nightly.list
 
 # Or the release repo
-echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rvs/deb/ ./" \
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rvs/deb /" \
   | sudo tee /etc/apt/sources.list.d/rvs-release.list
 
 sudo apt update
 sudo apt install amdrocm7-rvs  # Replace 7 with your ROCm major version
 ```
+
+After `apt update`, **`apt list`** should show **`rvs-nightly`** or **`rvs-release`** (matching the bucket: `nightly/rvs/deb` vs `release/rvs/deb`) in the suite/codename column, because CI sets `Suite`, `Label`, and `Codename` in the flat `Release` file via `apt-ftparchive` options. If you still see **`unknown`**, run `apt update` again after a fresh metadata upload, or check that your `Release` on the server includes those fields. **`apt install amdrocm7-rvs`** still resolves versions from `Packages` either way.
 
 **Using the S3 repo with yum/dnf (CentOS/RHEL/Rocky):**
 
