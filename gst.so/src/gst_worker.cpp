@@ -202,10 +202,10 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 
   // make sure that the ramp_interval & duration are not less than
   // NMAX_MS_GPU_RUN_PEAK_PERFORMANCE (e.g.: 1000)
-  if (run_duration_ms < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
+  if (run_duration_ms > 0 && run_duration_ms < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
     run_duration_ms += NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
 
-  if (ramp_interval < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
+  if (ramp_interval > 0 && ramp_interval < NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
     ramp_interval += NMAX_MS_GPU_RUN_PEAK_PERFORMANCE;
 
   // stage 1. setup rvs blas
@@ -498,7 +498,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     log_interval_milliseconds = time_diff(gst_end_time,
         gst_log_interval_time);
 
-    if (log_interval_milliseconds >= log_interval && num_gemm_ops > 0) {
+    if ((log_interval_milliseconds >= log_interval || 0 == run_duration_ms) && num_gemm_ops > 0) {
 
       seconds_elapsed = static_cast<double> (log_interval_milliseconds) / 1000;
 
@@ -559,7 +559,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
       " run_duration_ms :" + std::to_string(run_duration_ms);
     rvs::lp::Log(msg, rvs::logtrace);
 
-    if (total_milliseconds >= run_duration_ms)
+    if (0 == run_duration_ms || total_milliseconds >= run_duration_ms)
       break;
   }
   
@@ -621,71 +621,34 @@ void GSTWorker::run() {
     std::to_string(gpu_id) + " " + " GST ramp completed for interval :" + " " +
     std::to_string(ramp_interval);
   rvs::lp::Log(msg, rvs::loginfo);
-  if (run_duration_ms > 0) {
-    gst_test_passed = do_gst_stress_test(&error, &err_description);
-    // check if stop signal was received
-    if (rvs::lp::Stopping())
-      return;
 
-    if (error) {
-      // GPU didn't complete the test (HIP/rocBlas error(s) occurred)
-      string msg = "[" + action_name + "] " + MODULE_NAME + " " +
-        std::to_string(gpu_id) + " " + err_description;
-      rvs::lp::Log(msg, rvs::logerror);
-      if (bjson)
-          log_to_json(desc, rvs::logerror,"err", err_description);
+  gst_test_passed = do_gst_stress_test(&error, &err_description);
+  // check if stop signal was received
+  if (rvs::lp::Stopping())
+    return;
 
-      action_result.state = rvs::actionstate::ACTION_COMPLETED;
-      action_result.status = rvs::actionstatus::ACTION_FAILED;
-      action_result.output = msg.c_str();
-      action.action_callback(&action_result);
+  if (error) {
+    // GPU didn't complete the test (HIP/rocBlas error(s) occurred)
+    string msg = "[" + action_name + "] " + MODULE_NAME + " " +
+      std::to_string(gpu_id) + " " + err_description;
+    rvs::lp::Log(msg, rvs::logerror);
+    if (bjson)
+      log_to_json(desc, rvs::logerror,"err", err_description);
 
-      return;
-    }
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg.c_str();
+    action.action_callback(&action_result);
+
+    return;
   }
 
-  log_interval_gflops(max_gflops);
   check_target_stress(max_gflops);
 }
 
 void GSTWorker::log_gst_test_result(bool gst_test_passed) {
 }
-/**
- * @brief logs the GST test result
- * @param gst_test_passed true if test succeeded, false otherwise
- 
-void GSTWorker::log_gst_test_result(bool gst_test_passed) {
-  string msg;
 
-  double flops_per_op = (2 * (static_cast<double>(gpu_blas->get_m())/1000) *
-      (static_cast<double>(gpu_blas->get_n())/1000) *
-      (static_cast<double>(gpu_blas->get_k())/1000));
-  msg = "[" + action_name + "] " + MODULE_NAME + " " +
-    std::to_string(gpu_id) + " " + GST_MAX_GFLOPS_OUTPUT_KEY + ": " +
-    std::to_string(max_gflops) + " " + GST_FLOPS_PER_OP_OUTPUT_KEY + ": " +
-    std::to_string(flops_per_op) + "x1e9" + " " +
-    GST_BYTES_COPIED_PER_OP_OUTPUT_KEY + ": " +
-    std::to_string(gpu_blas->get_bytes_copied_per_op()) +
-    " " + GST_TRY_OPS_PER_SEC_OUTPUT_KEY + ": "+
-    std::to_string(target_stress / gpu_blas->gemm_gflop_count()) +
-    " "  ;
-  rvs::lp::Log(msg, rvs::logresults);
-
-  log_to_json(GST_MAX_GFLOPS_OUTPUT_KEY, std::to_string(max_gflops),
-      rvs::loginfo);
-  log_to_json(GST_FLOPS_PER_OP_OUTPUT_KEY, std::to_string(flops_per_op) +
-      "x1e9", rvs::loginfo);
-  log_to_json(GST_BYTES_COPIED_PER_OP_OUTPUT_KEY,
-      std::to_string(gpu_blas->get_bytes_copied_per_op()),
-      rvs::loginfo);
-  log_to_json(GST_TRY_OPS_PER_SEC_OUTPUT_KEY,
-      std::to_string(target_stress / gpu_blas->gemm_gflop_count()),
-      rvs::loginfo);
-  log_to_json(GST_PASS_KEY, (gst_test_passed ?
-        GST_RESULT_PASS_MESSAGE : GST_RESULT_FAIL_MESSAGE),
-      rvs::logresults);
-}
-*/
 /**
  * @brief computes the difference (in milliseconds) between 2 points in time
  * @param t_end second point in time
@@ -699,8 +662,6 @@ uint64_t GSTWorker::time_diff(
       t_end - t_start);
   return milliseconds.count();
 }
-
-
 
 /**
  * @brief extends the usleep for more than 1000000us
