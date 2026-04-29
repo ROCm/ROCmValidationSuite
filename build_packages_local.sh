@@ -545,8 +545,8 @@ if [ -d "$BUILD_DIR" ]; then
     rm -rf "$BUILD_DIR"
 fi
 
-# Build cmake command with optional CXX compiler
-# TODO: May be cleanup RPATH later with lesser options.
+# Build cmake command with optional CXX compiler.
+# CMAKE_INSTALL_RPATH / CMAKE_SKIP_RPATH / CMAKE_INSTALL_RPATH_USE_LINK_PATH live in CMakeLists.txt.
 CMAKE_ARGS=(
     -B "$BUILD_DIR"
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
@@ -556,10 +556,6 @@ CMAKE_ARGS=(
     -DCPACK_PACKAGE_NAME="amdrocm${ROCM_MAJOR}-rvs"
     -DCMAKE_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}"
     -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}"
-    -DCMAKE_SKIP_RPATH=FALSE
-    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE
-    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs:/opt/rocm/extras-${ROCM_MAJOR}/lib"
-    -DRPATH_MODE=OFF
     -DCMAKE_VERBOSE_MAKEFILE=1
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
 )

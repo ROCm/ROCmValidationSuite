@@ -62,7 +62,7 @@ GitHub Actions Workflow
     │   ├── export CPACK_RPM_PACKAGE_RELEASE (same as DEB)
     │   ├── export CMAKE_CXX_COMPILER=hipcc (AlmaLinux only)
     │   └── export CMAKE_COMMAND=cmake3 (AlmaLinux) or cmake (Ubuntu)
-    ├── 4. Configure CMake with Relocatable RPATH
+    ├── 4. Configure CMake (install RPATH defaults live in CMakeLists.txt)
     │   └── $CMAKE_COMMAND -B ./build \
     │         -DCMAKE_BUILD_TYPE=Release \
     │         -DROCM_PATH=$ROCM_PATH \
@@ -71,9 +71,6 @@ GitHub Actions Workflow
     │         -DROCM_MAJOR_VERSION=$ROCM_MAJOR \
     │         -DCMAKE_INSTALL_PREFIX=/opt/rocm/extras-$ROCM_MAJOR \
     │         -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/extras-$ROCM_MAJOR \
-    │         -DCMAKE_SKIP_RPATH=FALSE \
-    │         -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
-    │         -DCMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-$ROCM_MAJOR/lib" \
     │         -DCMAKE_VERBOSE_MAKEFILE=1 \
     │         -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
     ├── 5. Build RVS
@@ -85,10 +82,10 @@ GitHub Actions Workflow
 
 ### Key Technical Details
 
-**Relocatable RPATH**: The `$ORIGIN` relative RPATH ensures binaries can find their libraries regardless of installation location:
+**Relocatable RPATH**: Defaults are set in **`CMakeLists.txt`** (`CMAKE_INSTALL_RPATH`, **`CMAKE_BUILD_RPATH`** (same list for the build tree), `CMAKE_SKIP_RPATH`, `CMAKE_INSTALL_RPATH_USE_LINK_PATH`). **`CMAKE_*_LINKER_FLAGS_INIT`** only adds **`--enable-new-dtags`** (RUNPATH behavior), not a second copy of **`$ORIGIN`**. On **GitHub Actions** (`GITHUB_ACTIONS=true`), **`CMAKE_SKIP_BUILD_RPATH`** is set so build-tree binaries do not pick up extra RPATH entries from the CI ROCm SDK path (e.g. **`.../rocm-sdk/install/lib/llvm/lib`**); **install/CPack** still use **`CMAKE_INSTALL_RPATH`**. The **`$ORIGIN`** relative entries resolve to the install prefix (`.../extras-<N>/bin` → `.../extras-<N>/lib`), so **`/opt/rocm/extras-<N>/lib` is not duplicated** in the list. Absolute paths add **`/opt/rocm/lib`**, **`/opt/rocm/core-<ROCM_MAJOR>/lib`**, and **`/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib`** — equivalent to:
 
 ```bash
-CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-<ROCM_MAJOR>/lib"
+CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/core-<ROCM_MAJOR>/lib:/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib"
 ```
 
 **Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically. The **patch version** is auto-computed at CMake configure time: `git describe --tags --match "v<major>.<minor>.*"` counts commits since the last matching `v` tag. For example, if the tag is `v1.3.0` and there have been 15 commits since, the package version becomes `1.3.15`. If no matching tag exists or git is unavailable, the patch defaults to `0` from `CMakeLists.txt`. This works for both CI builds and direct local `cmake` invocations.
@@ -103,7 +100,7 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-
 
 **Dynamic ROCm Path Discovery**: `FETCH_ROCMPATH_FROM_ROCMCORE=ON` allows RVS to automatically detect ROCm installation location at runtime from ROCm core libraries.
 
-**Single Source of Truth**: All build logic resides in `build_packages_local.sh`, which can be used for both local builds and CI/CD.
+**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script.
 
 ### Workflow Steps
 
@@ -353,33 +350,30 @@ Before you install the RVS TGZ, **ROCm must be installed, configured, and on you
 - **ROCm documentation (start here)**: <https://rocm.docs.amd.com/>
 - **Linux install / deployment (paths, env, post-install)**: <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/>
 
-**Assumptions (TGZ use):** ROCm is set up on the machine, `ROCM_PATH` (or your install prefix) is correct, and the runtime can load ROCm/LLVM libraries. The TGZ only ships RVS; it does not replace a full ROCm stack.
+**Assumptions (TGZ use):** ROCm is set up on the machine, `ROCM_PATH` (or your install prefix) is correct, and the runtime can load ROCm libraries. Install a ROCm stack that includes **ROCm’s LLVM** (for example the **`rocm-llvm`** package from the ROCm repo). **DEB/RPM** packages from this project declare that dependency; TGZ users should mirror that on the host. The TGZ only ships RVS; it does not replace a full ROCm stack.
 
 #### Install RVS run-time dependencies (on the target system)
 
-The TGZ is built against ROCm, but the host still needs a few system libraries. Install at least **PCI (libpci)** and **LLVM OpenMP** (**`libomp.so`**).
+The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration:
 
-| Family | PCI | LLVM OpenMP (`libomp.so`) |
-|--------|-----|---------------------------|
-| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0`) | **`libomp5`** on many releases (`apt search '^libomp'`). |
-| **RHEL / Rocky / Alma 8+** | `pciutils-libs` | **`libomp`** (LLVM OpenMP for Clang, **AppStream**). |
-| **SUSE / openSUSE** | `libpci3`, `pciutils` as needed | **Versioned** packages, e.g. **`libomp18`**, **`libomp17`** — use **`zypper search -s libomp`** and install the **runtime** package for your release (names differ between Leap, SLE, and Tumbleweed). |
-
-Examples:
+| Family | Typical PCI package |
+|--------|---------------------|
+| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) |
+| **RHEL / Rocky / Alma 8+** | `pciutils-libs` |
+| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release |
 
 ```bash
 # Ubuntu / Debian
-sudo apt update
-sudo apt install -y libpci3 libomp5
+sudo apt update && sudo apt install -y libpci3
 
 # RHEL / Rocky / Alma 8+
-sudo dnf install -y pciutils-libs libomp
+sudo dnf install -y pciutils-libs
 
-# openSUSE (example package name for Tumbleweed; adjust after zypper search)
-sudo zypper install libpci3 libomp18
+# openSUSE / SUSE (adjust package names per release)
+sudo zypper install libpci3
 ```
 
-**Note:** Prefer **`libomp.so`** from **ROCm** when possible; host **`libomp`** packages are for when the linker still cannot find the library after setting `LD_LIBRARY_PATH`.
+User-facing install steps for TGZ (PATH / `LD_LIBRARY_PATH`, **`RPATH`** including **`/opt/rocm/lib`**, **`/opt/rocm/core-<major>/lib`**, and **`/opt/rocm/core-<major>/lib/llvm/lib`**) are in **[docs/INSTALL_TGZ.md](../../docs/INSTALL_TGZ.md)**.
 
 #### Extract the TGZ
 
@@ -396,13 +390,10 @@ Point the shell at the extracted RVS prefix and the ROCm you installed (replace 
 ```bash
 export ROCM_PATH=/opt/rocm              # or your real ROCm root, per rocm docs
 export PATH=/opt/rocm/extras-7/bin:$ROCM_PATH/bin:$PATH
-export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:\
-$ROCM_PATH/lib:\
-$ROCM_PATH/lib/llvm/lib:\
-$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
 ```
 
-**`libomp` (LLVM OpenMP):** `$ROCM_PATH/lib/llvm/lib` is already in the `export` block above. If **`libomp.so`** is still missing, use `find $ROCM_PATH -name 'libomp.so'` or install host **`libomp`** packages from the table above.
+**`rvs`** embeds **`RPATH`** for those paths, so it usually does not need **`LD_LIBRARY_PATH`** for them. The export still includes **`$ROCM_PATH/lib/llvm/lib`** for a typical ROCm tree, other tools, and troubleshooting; if LLVM is only under **`$ROCM_PATH/core-<major>/lib/llvm/lib`**, add that path instead or as well.
 
 **Run RVS**
 
@@ -521,7 +512,7 @@ Note: You may need to update the OS detection logic in `build_packages_local.sh`
 
 ### Customizing Build Parameters
 
-Edit the CMake configuration section in `build_packages_local.sh`:
+Edit the CMake arguments in `build_packages_local.sh`, or override **`CMAKE_INSTALL_RPATH`** / **`CMAKE_SKIP_RPATH`** from the command line when needed. Defaults match packaged builds:
 
 ```bash
 cmake -B "$BUILD_DIR" \
@@ -531,10 +522,6 @@ cmake -B "$BUILD_DIR" \
     -DROCM_MAJOR_VERSION="$ROCM_MAJOR" \
     -DCMAKE_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}" \
     -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}" \
-    -DCMAKE_SKIP_RPATH=FALSE \
-    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
-    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs:/opt/rocm/extras-${ROCM_MAJOR}/lib" \
-    -DRPATH_MODE=OFF \
     -DCMAKE_VERBOSE_MAKEFILE=1 \
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON \
     -DYOUR_CUSTOM_OPTION=ON  # Add custom options here
@@ -563,7 +550,7 @@ If binaries can't find libraries:
 # Check RPATH settings (replace 7 with your ROCm major version)
 readelf -d /opt/rocm/extras-7/bin/rvs | grep RPATH
 
-# Should show: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-7/lib
+# Should include: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/core-7/lib:/opt/rocm/core-7/lib/llvm/lib
 ```
 
 ### Missing Dependencies
