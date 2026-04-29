@@ -82,10 +82,10 @@ GitHub Actions Workflow
 
 ### Key Technical Details
 
-**Relocatable RPATH**: Defaults are set in **`CMakeLists.txt`** (`CMAKE_INSTALL_RPATH`, **`CMAKE_BUILD_RPATH`** (same list for the build tree), `CMAKE_SKIP_RPATH`, `CMAKE_INSTALL_RPATH_USE_LINK_PATH`). **`CMAKE_*_LINKER_FLAGS_INIT`** only adds **`--enable-new-dtags`** (RUNPATH behavior), not a second copy of **`$ORIGIN`**. On **GitHub Actions** (`GITHUB_ACTIONS=true`), **`CMAKE_SKIP_BUILD_RPATH`** is set so build-tree binaries do not pick up extra RPATH entries from the CI ROCm SDK path (e.g. **`.../rocm-sdk/install/lib/llvm/lib`**); **install/CPack** still use **`CMAKE_INSTALL_RPATH`**. The **`$ORIGIN`** relative entries resolve to the install prefix (`.../extras-<N>/bin` → `.../extras-<N>/lib`), so **`/opt/rocm/extras-<N>/lib` is not duplicated** in the list. Absolute paths add **`/opt/rocm/lib`**, **`/opt/rocm/core-<ROCM_MAJOR>/lib`**, and **`/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib`** — equivalent to:
+**Relocatable RPATH**: Defaults are set in **`CMakeLists.txt`** (`CMAKE_INSTALL_RPATH`, **`CMAKE_BUILD_RPATH`** (same list for the build tree), `CMAKE_SKIP_RPATH`, `CMAKE_INSTALL_RPATH_USE_LINK_PATH`). **`CMAKE_*_LINKER_FLAGS_INIT`** only adds **`--enable-new-dtags`** (RUNPATH behavior), not a second copy of **`$ORIGIN`**. On **GitHub Actions** (`GITHUB_ACTIONS=true`), **`CMAKE_SKIP_BUILD_RPATH`** applies when using **CMake 3.9+**, and **`CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH`** (strip implicit SDK paths on install) when using **CMake 3.16+**. The **`$ORIGIN`** relative entries resolve to the install prefix (`.../extras-<N>/bin` → `.../extras-<N>/lib`), so **`/opt/rocm/extras-<N>/lib` is not duplicated** in the list. Absolute paths add **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`** (older ROCm layouts), **`/opt/rocm/core-<ROCM_MAJOR>/lib`**, and **`/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib`** — equivalent to:
 
 ```bash
-CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/core-<ROCM_MAJOR>/lib:/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib"
+CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-<ROCM_MAJOR>/lib:/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib"
 ```
 
 **Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically. The **patch version** is auto-computed at CMake configure time: `git describe --tags --match "v<major>.<minor>.*"` counts commits since the last matching `v` tag. For example, if the tag is `v1.3.0` and there have been 15 commits since, the package version becomes `1.3.15`. If no matching tag exists or git is unavailable, the patch defaults to `0` from `CMakeLists.txt`. This works for both CI builds and direct local `cmake` invocations.
@@ -373,7 +373,7 @@ sudo dnf install -y pciutils-libs
 sudo zypper install libpci3
 ```
 
-User-facing install steps for TGZ (PATH / `LD_LIBRARY_PATH`, **`RPATH`** including **`/opt/rocm/lib`**, **`/opt/rocm/core-<major>/lib`**, and **`/opt/rocm/core-<major>/lib/llvm/lib`**) are in **[docs/INSTALL_TGZ.md](../../docs/INSTALL_TGZ.md)**.
+User-facing install steps for TGZ (PATH / `LD_LIBRARY_PATH`, **`RPATH`** including **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`/opt/rocm/core-<major>/lib`**, and **`/opt/rocm/core-<major>/lib/llvm/lib`**) are in **[docs/INSTALL_TGZ.md](../../docs/INSTALL_TGZ.md)**.
 
 #### Extract the TGZ
 
@@ -393,7 +393,7 @@ export PATH=/opt/rocm/extras-7/bin:$ROCM_PATH/bin:$PATH
 export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
 ```
 
-**`rvs`** embeds **`RPATH`** for those paths, so it usually does not need **`LD_LIBRARY_PATH`** for them. The export still includes **`$ROCM_PATH/lib/llvm/lib`** for a typical ROCm tree, other tools, and troubleshooting; if LLVM is only under **`$ROCM_PATH/core-<major>/lib/llvm/lib`**, add that path instead or as well.
+**`rvs`** embeds **`RPATH`** for **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`core-<major>`** paths, and the extras-relative **`$ORIGIN`** paths, so it usually does not need **`LD_LIBRARY_PATH`** for them. The export still includes **`$ROCM_PATH/lib/llvm/lib`** for a typical ROCm tree, other tools, and troubleshooting; if LLVM is only under **`$ROCM_PATH/core-<major>/lib/llvm/lib`**, add that path instead or as well.
 
 **Run RVS**
 
@@ -550,7 +550,7 @@ If binaries can't find libraries:
 # Check RPATH settings (replace 7 with your ROCm major version)
 readelf -d /opt/rocm/extras-7/bin/rvs | grep RPATH
 
-# Should include: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/core-7/lib:/opt/rocm/core-7/lib/llvm/lib
+# Should include: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-7/lib:/opt/rocm/core-7/lib/llvm/lib
 ```
 
 ### Missing Dependencies
