@@ -203,17 +203,24 @@ list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 set(CMAKE_SKIP_RPATH FALSE CACHE BOOL "Skip RPATH for build targets")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE CACHE BOOL "Append link paths to install RPATH")
 set(CMAKE_INSTALL_RPATH
-  "\$ORIGIN;\$ORIGIN/../lib;\$ORIGIN/../lib/rvs;/opt/rocm/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib"
+  "\$ORIGIN;\$ORIGIN/../lib;\$ORIGIN/../lib/rvs;/opt/rocm/lib;/opt/rocm/lib/llvm/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib"
   CACHE STRING "RPATH for installed RVS binaries and modules")
 set(CMAKE_BUILD_RPATH "${CMAKE_INSTALL_RPATH}")
 
-# CI (GitHub Actions) uses a relocatable ROCm SDK under e.g. $HOME/rocm-sdk/install; the linker
-# can still record those directories in build-tree binaries. Skip CMake's build RPATH there only —
-# local builds keep CMAKE_BUILD_RPATH so uninstalled binaries/tests resolve libs. Install/CPack
-# still apply CMAKE_INSTALL_RPATH (requires CMake 3.9+ for CMAKE_SKIP_BUILD_RPATH).
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
-  if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
-    set(CMAKE_SKIP_BUILD_RPATH TRUE CACHE BOOL "On GitHub Actions, skip build-tree RPATH (avoid embedding CI SDK paths)")
+# CI (GitHub Actions): GITHUB_ACTIONS flags below need CMake 3.9+ / 3.16+ at configure time.
+if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
+  message(STATUS "RVS RPATH (GitHub Actions): CMake ${CMAKE_VERSION}")
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
+    set(CMAKE_SKIP_BUILD_RPATH TRUE CACHE BOOL "On GitHub Actions, skip CMake build-tree RPATH")
+    message(STATUS "RVS RPATH (GitHub Actions): CMAKE_SKIP_BUILD_RPATH=${CMAKE_SKIP_BUILD_RPATH}")
+  else()
+    message(STATUS "RVS RPATH (GitHub Actions): CMAKE_SKIP_BUILD_RPATH not applied (need CMake 3.9+)")
+  endif()
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+    set(CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH TRUE CACHE BOOL "On GitHub Actions, strip implicit link-dir RPATH on install")
+    message(STATUS "RVS RPATH (GitHub Actions): CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH=${CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH}")
+  else()
+    message(STATUS "RVS RPATH (GitHub Actions): CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH not applied (need CMake 3.16+)")
   endif()
 endif()
 
