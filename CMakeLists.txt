@@ -24,8 +24,9 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
-set(CMAKE_SHARED_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN:$ORIGIN/.." CACHE STRING "RUNPATH for libraries")
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN/../lib" CACHE STRING "RUNPATH for executables")
+# Prefer RUNPATH (DT_RUNPATH); do not embed $ORIGIN here — CMAKE_BUILD_RPATH / CMAKE_INSTALL_RPATH below are the single source of truth.
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags" CACHE STRING "Shared linker flags")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags" CACHE STRING "Executable linker flags")
 
 set( COMP_TYPE "applications" )
 set( BUILD_ENABLE_LINTIAN_OVERRIDES ON CACHE BOOL "Enable/Disable Lintian Overrides" )
@@ -197,6 +198,25 @@ set(CMAKE_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "CM
 set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 
+# RPATH (build tree + install): one list — avoids duplicating $ORIGIN paths that previously
+# appeared in both CMAKE_*_LINKER_FLAGS_INIT and CMAKE_INSTALL_RPATH.
+set(CMAKE_SKIP_RPATH FALSE CACHE BOOL "Skip RPATH for build targets")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE CACHE BOOL "Append link paths to install RPATH")
+set(CMAKE_INSTALL_RPATH
+  "\$ORIGIN;\$ORIGIN/../lib;\$ORIGIN/../lib/rvs;/opt/rocm/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib"
+  CACHE STRING "RPATH for installed RVS binaries and modules")
+set(CMAKE_BUILD_RPATH "${CMAKE_INSTALL_RPATH}")
+
+# CI (GitHub Actions) uses a relocatable ROCm SDK under e.g. $HOME/rocm-sdk/install; the linker
+# can still record those directories in build-tree binaries. Skip CMake's build RPATH there only —
+# local builds keep CMAKE_BUILD_RPATH so uninstalled binaries/tests resolve libs. Install/CPack
+# still apply CMAKE_INSTALL_RPATH (requires CMake 3.9+ for CMAKE_SKIP_BUILD_RPATH).
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
+  if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
+    set(CMAKE_SKIP_BUILD_RPATH TRUE CACHE BOOL "On GitHub Actions, skip build-tree RPATH (avoid embedding CI SDK paths)")
+  endif()
+endif()
+
 # Compile-time default used by rvs_get_rocm_install_path_string() after
 # getROCmInstallPath (if FETCH_*) and $ROCM_PATH env are considered.
 add_definitions(-DROCM_PATH="${ROCM_PATH}")
@@ -294,8 +314,9 @@ set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 
 # Package dependencies: support both legacy (ROCm <=6.x) and new amdrocm-* naming (TheRock/ROCm 8.x per RFC0009)
 # DEB uses "old | new" OR syntax, RPM uses "(old or new)" boolean dependency syntax
-set(ROCM_DEB_DEPS "hip-runtime-amd | amdrocm-runtimes, comgr | amdrocm-runtimes, hsa-rocr | amdrocm-runtimes, rocblas | amdrocm-blas, amd-smi-lib | amdrocm-amdsmi, hiprand | amdrocm-rand, hipblaslt | amdrocm-blas")
-set(ROCM_RPM_DEPS "(hip-runtime-amd or amdrocm-runtimes), (comgr or amdrocm-runtimes), (hsa-rocr or amdrocm-runtimes), (rocblas or amdrocm-blas), (amd-smi-lib or amdrocm-amdsmi), (hiprand or amdrocm-rand), (hipblaslt or amdrocm-blas)")
+# rocm-llvm: ROCm LLVM (includes libomp used by HIP/RVS); pull OpenMP runtime from the ROCm stack, not host libgomp.
+set(ROCM_DEB_DEPS "hip-runtime-amd | amdrocm-runtimes, comgr | amdrocm-runtimes, hsa-rocr | amdrocm-runtimes, rocblas | amdrocm-blas, amd-smi-lib | amdrocm-amdsmi, hiprand | amdrocm-rand, hipblaslt | amdrocm-blas, rocm-llvm | amdrocm-llvm")
+set(ROCM_RPM_DEPS "(hip-runtime-amd or amdrocm-runtimes), (comgr or amdrocm-runtimes), (hsa-rocr or amdrocm-runtimes), (rocblas or amdrocm-blas), (amd-smi-lib or amdrocm-amdsmi), (hiprand or amdrocm-rand), (hipblaslt or amdrocm-blas), (rocm-llvm or amdrocm-llvm)")
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
   set(ROCM_DEB_DEPS "${ROCM_DEB_DEPS}, ${ROCM_CORE} | amdrocm-base")
   set(ROCM_RPM_DEPS "${ROCM_RPM_DEPS}, (${ROCM_CORE} or amdrocm-base)")
