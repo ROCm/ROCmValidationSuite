@@ -411,9 +411,14 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 ################################################################################
 # check yaml-cpp available at configure time
 # First try to find static yaml-cpp library
-find_library(YAML_CPP_STATIC_LIB 
+find_library(YAML_CPP_STATIC_LIB
   NAMES libyaml-cpp.a yaml-cpp.a
-  PATHS /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib
+  PATHS
+    /usr/lib/x86_64-linux-gnu
+    /usr/lib64
+    /usr/lib
+    /usr/local/lib64
+    /usr/local/lib
   NO_DEFAULT_PATH # avoid searches in cmake_install_prefix etc
   DOC "Path to yaml-cpp static library"
 )
