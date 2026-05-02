@@ -646,9 +646,6 @@ void GSTWorker::run() {
   check_target_stress(max_gflops);
 }
 
-void GSTWorker::log_gst_test_result(bool gst_test_passed) {
-}
-
 /**
  * @brief computes the difference (in milliseconds) between 2 points in time
  * @param t_end second point in time
