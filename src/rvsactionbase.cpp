@@ -77,7 +77,14 @@ rvs::actionbase::~actionbase() {
  *
  * */
 int rvs::actionbase::property_set(const char* pKey, const char* pVal) {
-  property.insert(property.cend(), std::pair<string, string>(pKey, pVal));
+
+  auto it = property.find(pKey);
+  if (it != property.end()) {
+    property[pKey] = pVal;
+  }
+  else {
+    property.insert(property.cend(), std::pair<string, string>(pKey, pVal));
+  }
   return 0;
 }
 

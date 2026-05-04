@@ -119,7 +119,8 @@ perf_action::~perf_action() {
  * @return true if no error occured, false otherwise
  */
 bool perf_action::do_gpu_stress_test(map<int, uint16_t> perf_gpus_device_index) {
-    size_t k = 0;
+
+    uint64_t k = 0;
     for (;;) {
         unsigned int i = 0;
         if (property_wait != 0)  // delay perf execution

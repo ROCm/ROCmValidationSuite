@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -88,7 +88,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
         gst_alpha_val, gst_beta_val,
         gst_lda_offset, gst_ldb_offset, gst_ldc_offset, gst_ldd_offset, gst_ops_type, gst_data_type,
         gemm_mode, batch_size, stride_a, stride_b, stride_c, stride_d, blas_source, compute_type,
-        gst_out_data_type, gst_scale_a, gst_scale_b));
+        gst_out_data_type, gst_scale_a, gst_scale_b, gst_rotating, gst_hot_calls));
 
   if (!gpu_blas) {
     *error = 1;
@@ -151,7 +151,7 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
     }
 
     // run GEMM operation
-    if (!gpu_blas->run_blas_gemm())
+    if (!gpu_blas->run_blas_gemm(false))
       continue;  // failed to run the GEMM operation
 
     // Waits for GEMM operation to complete
@@ -252,7 +252,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // run GEMM operation
-    if(!gpu_blas->run_blas_gemm()) {
+    if(!gpu_blas->run_blas_gemm(false)) {
 
       *err_description = GST_BLAS_ERROR;
       *error = 1;
@@ -345,7 +345,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
  */
 void GSTWorker::check_target_stress(double gflops_interval) {
   string msg;
-  bool result;
   rvs::action_result_t action_result;
   char gpuid_buff[12];
   auto desc = action_descriptor{action_name, MODULE_NAME,gpu_id};
@@ -438,7 +437,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
   double start_time, end_time;
   double seconds_elapsed, gflops_interval;
   double timetakenforoneiteration;
-  double timetakenforniterations;
+  double timetakenforniterations = 0;
   string msg;
   std::chrono::time_point<std::chrono::system_clock> gst_start_time,
     gst_end_time, gst_log_interval_time;
@@ -470,15 +469,12 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     //Start the timer
     start_time = gpu_blas->get_time_us();
 
-    for (uint64_t i = 0; i < gst_hot_calls; i++) {
+    // launch GEMM operation
+    if(!gpu_blas->run_blas_gemm(true)) {
 
-      // launch GEMM operation
-      if(!gpu_blas->run_blas_gemm()) {
-
-        *err_description = GST_BLAS_ERROR;
-        *error = 1;
-        return false;
-      }
+      *err_description = GST_BLAS_ERROR;
+      *error = 1;
+      return false;
     }
 
     // Wait for all the GEMM operations to complete

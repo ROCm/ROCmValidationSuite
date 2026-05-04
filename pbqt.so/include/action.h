@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -99,6 +99,35 @@ class pbqt_action : public rvs::actionbase {
   int link_type;
 
   std::string link_type_string;
+  //! Number of warm calls (transfer iterations) before bandwidth calculation (hot calls)
+  //! to ignore few intial transfers for the bandwidth to settle
+  uint32_t warm_calls;
+  //! Number of hot calls (transfer iterations) for bandwidth calculation after warm calls
+  uint32_t hot_calls;
+  //! 'true' if back-to-back transfers enabled
+  bool b2b;
+
+  //! transfer method - TransferBench or Native
+  std::string transfer_method;
+  //! transferbench test type - p2p or alltoall
+  std::string transferbench_test;
+  //! transfer executor to use - GPU or SDMA
+  std::string executor;
+  //! No. of subexecutors
+  uint32_t subexecutor;
+
+  //! alltoall mode: 0=copy, 1=read-only, 2=write-only
+  uint32_t a2a_mode;
+  //! alltoall direct-only: 1=only direct XGMI links, 0=full all-to-all
+  uint32_t a2a_direct;
+  //! alltoall local: 1=include self-transfers, 0=exclude
+  uint32_t a2a_local;
+  //! number of GPUs for alltoall (0=all detected)
+  uint32_t a2a_num_gpus;
+  //! remote read: 1=use DST as executor, 0=use SRC
+  uint32_t use_remote_read;
+  //! GFX kernel unroll factor
+  uint32_t gfx_unroll;
 
  protected:
   int is_peer(uint16_t Src, uint16_t Dst);

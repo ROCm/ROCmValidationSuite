@@ -82,7 +82,8 @@ mem_action::~mem_action() {
  * @return true if no error occured, false otherwise
  */
 bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
-    size_t k = 0;
+
+    uint64_t k = 0;
     string    msg;
 
     for (;;) {
@@ -264,7 +265,7 @@ int mem_action::get_num_amd_gpu_devices(void) {
             rvs::lp::AddString(json_root_node, "ERROR", MEM_NO_COMPATIBLE_GPUS);
             rvs::lp::LogRecordFlush(json_root_node);
         }
-        return 0;
+        return -1;
     }
     return hip_num_gpu_devices;
 }

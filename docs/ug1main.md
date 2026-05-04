@@ -240,11 +240,15 @@ Command line options are summarized in the table below:
 <table>
 <tr><th>Short option</th><th>Long option</th><th> Description</th></tr>
 <tr><td>-a</td><td>--appendLog</td><td>When generating a debug logfile, do not overwrite the content
-of the current log. Use in conjuction with -d and -l options.
+of the current log. Use in conjuction with <b>-d</b> and <b>-l</b> options.
 </td></tr>
 
 <tr><td>-c</td><td>--config</td><td>Specify the test configuration file to use.
 This is a mandatory field for test execution.
+</td></tr>
+
+<tr><td>-r</td><td>--run</td><td>Specify the test level to run.
+Valid range is 1 to 5, with 5 indicating the highest stress test level.
 </td></tr>
 
 <tr><td>-d</td><td>--debugLevel</td><td>Specify the debug level for the output log.
@@ -256,26 +260,44 @@ that RVS supports and has visibility.
 </td></tr>
 
 <tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids/indexes to run test on.
-This overrides the device/device_index values specified for every actions in the
-configuration file, including the ‘all’ value.
+This overrides the <b>device/device_index</b> parameter values specified for every actions in the
+configuration file, including the <b>all</b> value.
+</td></tr>
+
+<tr><td>-s</td><td>--selectActions</td><td>Comma separated list of action names or 0-based action
+index numbers to run from the configuration file. Only the matching actions will be executed.
+All other actions are skipped.
 </td></tr>
 
 <tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
 if a path follows this argument, that will be used as json log file;
-else a file created in /var/tmp/ with timestamp in name.
+else a file created in <b>/var/tmp/</b> with timestamp in name.
 </td></tr>
 
 <tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
 </td></tr>
 
+<tr><td>-m</td><td>--module</td><td>Specify a module name to run the corresponding
+platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>babel</b>, <b>gpup</b>,
+<b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>.
+</td></tr>
+
 <tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
 </td></tr>
 
-<tr><td>-v</td><td>--verbose</td><td>Enable verbose reporting. This is Enable verbose reporting.
+<tr><td>-v</td><td>--verbose</td><td>Enable detailed logging. Equivalent to specifying <b>-d 5</b> option.
+</td></tr>
+
+<tr><td>-p</td><td>--parallel</td><td>Enables or Disables parallel execution across multiple GPUs.
+Use this option in conjunction with <b>-c</b> option.
+Accepted Values:
+<b>true</b> – Enables parallel execution.
+<b>false</b> – Disables parallel execution.
+If no value is provided for the option, it defaults to <b>true</b>.
 </td></tr>
 
 <tr><td>-n</td><td>--numTimes</td><td>Number of times the test repeatedly executes.
-Use in conjunction with -c option.
+Use this option in conjunction with <b>-c</b> option.
 </td></tr>
 
 <tr><td></td><td>--quiet</td><td>No console output given. See logs and return
@@ -979,7 +1001,7 @@ Input keys are described in the table below:
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>rpmpackagelist</td><td>Collection of Strings</td>
-<td>Specifies the packages checked if installed on system for rhel/centos family.</td></tr>
+<td>Specifies the packages checked if installed on system for rhel family.</td></tr>
 <tr><td>debpackagelist</td><td>Collection of Strings</td>
 <td>Specifies the packages checked if installed on system for ubuntu family.
 </td></tr>

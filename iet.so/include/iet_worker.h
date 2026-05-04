@@ -68,12 +68,12 @@ class IETWorker : public rvs::ThreadBase {
     }
     //! returns the GPU index
     int get_gpu_device_index(void) { return gpu_device_index; }
-    //! sets the GPU smi index
-    void set_smi_device_index(int _smi_device_index) {
-        smi_device_index = _smi_device_index;
+    //! sets the GPU smi handle
+    void set_smi_device_handle(amdsmi_processor_handle _smi_device_handle) {
+        smi_device_handle = _smi_device_handle;
     }
-    //! returns the GPU smi index
-    int get_smi_device_index(void) { return smi_device_index; }
+    //! returns the GPU smi handle
+    amdsmi_processor_handle get_smi_device_handle(void) { return smi_device_handle; }
     //! sets the GPU power-index
     void set_pwr_device_id(int _pwr_device_id) {
         pwr_device_id = _pwr_device_id;
@@ -293,8 +293,13 @@ class IETWorker : public rvs::ThreadBase {
     //! sets gemm output data type
     void set_iet_out_data_type(std::string out_data_type) { iet_out_data_type = out_data_type; }
 
+    //! set GPU MCM (Multi-Chip Module) type - Primary/Secondary
+    void set_mcm_type(mcm_type_t _mcm_type) { mcm_type = _mcm_type; }
+
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
+    //! get worker job result
+    bool get_result(void) { return result; }
  protected:
     virtual void run(void);
     bool do_gpu_init_training(int gpuIdx,  uint64_t matrix_size, std::string  iet_ops_type);
@@ -314,8 +319,8 @@ class IETWorker : public rvs::ThreadBase {
     iet_action action;
     //! index of the GPU (as reported by HIP API) that will run the EDPp test
     int gpu_device_index;
-    //! index of GPU (in view of smi lib) which is sometimes different to above index
-    int smi_device_index;
+    //! handle of GPU (in view of smi lib) which is sometimes different to above index
+    amdsmi_processor_handle smi_device_handle;
     //! ID of the GPU that will run the EDPp test
     uint16_t gpu_id;
 
@@ -421,6 +426,11 @@ class IETWorker : public rvs::ThreadBase {
     bool nt_loads;
     //! gemm output data type
     std::string iet_out_data_type;
+    //! GPU MCM (Multi-Chip Module) type - Primary/Secondary
+    mcm_type_t mcm_type;
+
+    //! Worker job result
+    bool result;
 };
 
 #endif  // IET_SO_INCLUDE_IET_WORKER_H_

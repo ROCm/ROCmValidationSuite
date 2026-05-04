@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -45,6 +45,16 @@
 #define RVS_CONF_HOT_CALLS_KEY          "hot_calls"
 #define RVS_CONF_WARM_CALLS_KEY         "warm_calls"
 #define RVS_CONF_B2B_KEY                "b2b"
+#define RVS_CONF_EXECUTOR_KEY           "executor"
+#define RVS_CONF_SUBEXECUTOR_KEY        "subexecutor"
+#define RVS_CONF_TRANSFER_METHOD_KEY    "transfer_method"
+#define RVS_CONF_TRANSFERBENCH_TEST_KEY "transferbench_test"
+#define RVS_CONF_A2A_MODE_KEY          "a2a_mode"
+#define RVS_CONF_A2A_DIRECT_KEY        "a2a_direct"
+#define RVS_CONF_A2A_LOCAL_KEY         "a2a_local"
+#define RVS_CONF_A2A_NUM_GPUS_KEY      "a2a_num_gpus"
+#define RVS_CONF_USE_REMOTE_READ_KEY   "use_remote_read"
+#define RVS_CONF_GFX_UNROLL_KEY        "gfx_unroll"
 
 #define DEFAULT_LOG_INTERVAL (1000u)
 #define DEFAULT_DURATION     (10000u)
@@ -53,6 +63,18 @@
 #define DEFAULT_HOT_CALLS    (1u)
 #define DEFAULT_WARM_CALLS   (1u)
 #define DEFAULT_B2B          false
+#define DEFAULT_TRANSFER_METHOD "native"
+#define DEFAULT_TRANSFERBENCH_TEST "p2p"
+#define DEFAULT_EXECUTOR     "gfx"
+#define DEFAULT_SUBEXECUTOR  (1u)
+#define DEFAULT_A2A_MODE     (0u)
+#define DEFAULT_A2A_DIRECT   (1u)
+#define DEFAULT_A2A_LOCAL    (0u)
+#define DEFAULT_A2A_NUM_GPUS (0u)
+#define DEFAULT_USE_REMOTE_READ (0u)
+#define DEFAULT_GFX_UNROLL      (4u)
+#define DEFAULT_SRC_MEMORY "null"
+#define DEFAULT_DST_MEMORY "null"
 
 #define YAML_DEVICE_PROPERTY_ERROR      "Error while parsing <device> property"
 #define YAML_DEVICEID_PROPERTY_ERROR    "Error while parsing <deviceid> "\

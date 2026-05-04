@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -49,6 +49,10 @@ using std::vector;
 using std::map;
 using std::regex;
 
+#if(defined(RVS_ROCBLAS_VERSION_FLAT) && (RVS_ROCBLAS_VERSION_FLAT >= 3001000 && RVS_ROCBLAS_VERSION_FLAT < 5000000))
+  #define RVS_ROCBLAS_HAS_F8_DATATYPES 1
+#endif
+
 #define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_interval"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
 #define RVS_CONF_MAX_VIOLATIONS_KEY     "max_violations"
@@ -86,6 +90,7 @@ using std::regex;
 #define RVS_CONF_GST_OUT_DATA_TYPE      "out_data_type"
 #define RVS_CONF_SCALE_A                "scale_a"
 #define RVS_CONF_SCALE_B                "scale_b"
+#define RVS_CONF_ROTATING               "rotating"
 
 #define TARGET_KEY                      "target"
 #define DTYPE_KEY                       "dtype"
@@ -132,6 +137,7 @@ using std::regex;
 #define GST_DEFAULT_OUT_DATA_TYPE       ""
 #define GST_DEFAULT_SCALE_A             ""
 #define GST_DEFAULT_SCALE_B             ""
+#define GST_DEFAULT_ROTATING            0
 
 static constexpr auto MODULE_NAME = "gst";
 static constexpr auto MODULE_NAME_CAPS = "GST";
@@ -156,15 +162,16 @@ gst_action::~gst_action() {
  * @return true if no error occured, false otherwise
  */
 bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
-  size_t k = 0;
+
+  uint64_t k = 0;
+  vector<GSTWorker> workers(gst_gpus_device_index.size());
+
   for (;;) {
-    unsigned int i = 0;
     if (property_wait != 0)  // delay gst execution
       sleep(property_wait);
 
-    vector<GSTWorker> workers(gst_gpus_device_index.size());
-
     map<int, uint16_t>::iterator it;
+    size_t i = 0;
 
     // all worker instances have the same json settings
     GSTWorker::set_use_json(bjson);
@@ -215,6 +222,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_gst_out_data_type(gst_out_data_type);
       workers[i].set_gst_scale_a(gst_scale_a);
       workers[i].set_gst_scale_b(gst_scale_b);
+      workers[i].set_gst_rotating(gst_rotating);
 
       i++;
     }
@@ -248,7 +256,20 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     }
   }
 
-  return rvs::lp::Stopping() ? false : true;
+  if (rvs::lp::Stopping()) {
+    return false;
+  }
+  else {
+
+    for (size_t i = 0; i < gst_gpus_device_index.size(); i++) {
+      if(false == workers[i].get_result()) {
+        return false;
+      }
+    }
+  }
+
+  /* Action passed */
+  return true;
 }
 
 /**
@@ -553,6 +574,14 @@ bool gst_action::get_all_gst_config_keys(void) {
     bsts = false;
   }
 
+  error = property_get_int<uint32_t>(RVS_CONF_ROTATING, &gst_rotating, GST_DEFAULT_ROTATING);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ROTATING) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
   /* If operation and data type both not set, default to sgemm */
   if ((gst_ops_type == GST_DEFAULT_OPS_TYPE) && (gst_data_type == GST_DEFAULT_OPS_TYPE)) {
     gst_ops_type = "sgemm";
@@ -565,6 +594,16 @@ bool gst_action::get_all_gst_config_keys(void) {
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
+
+#if !defined(RVS_ROCBLAS_HAS_F8_DATATYPES)
+  if (gst_blas_source == "rocblas") {
+    if(gst_data_type == "fp8_r") {
+      msg = "The version of rocBLAS currently in use no longer supports FP8.";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      bsts = false;
+    }
+  }
+#endif
 
   return bsts;
 }
@@ -598,7 +637,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
       rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
       rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
     }
-    return 0;
+    return -1;
   }
   return hip_num_gpu_devices;
 }

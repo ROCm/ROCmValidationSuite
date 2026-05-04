@@ -260,6 +260,6 @@ int pesm_action::run(void) {
  *
  * */
 int pesm_action::do_gpu_list() {
-  return display_gpu_info();
+  return display_gpu_info(get_gpu_info());
 }
 

@@ -41,7 +41,7 @@ extern "C" {
 
 
 #include "include/rvsactionbase.h"
-#include "rocm_smi/rocm_smi.h"
+#include "amd_smi/amdsmi.h"
 
 using std::vector;
 using std::string;
@@ -162,7 +162,7 @@ class iet_action: public rvs::actionbase {
     //! list of GPUs (along with some identification data) which are
     //! selected for EDPp test
     std::vector<gpu_hwmon_info> edpp_gpus;
-    std::map<int, int> hip_to_smi_idxs;
+    std::map<int, amdsmi_processor_handle> hip_to_smi_idxs;
     void hip_to_smi_indices();
     bool get_all_iet_config_keys(void);
 
@@ -178,7 +178,8 @@ class iet_action: public rvs::actionbase {
  */    
     int get_all_selected_gpus(void);
 
-    bool do_edp_test(std::map<int, uint16_t> iet_gpus_device_index);
+    bool do_edp_test(map<int, uint16_t> iet_gpus_device_index,
+        std::vector<mcm_type_t>& mcm_type);
 };
 
 #endif  // IET_SO_INCLUDE_ACTION_H_

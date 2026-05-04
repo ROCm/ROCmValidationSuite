@@ -2,12 +2,101 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.5.0
+
+### Added
+
+
+## RVS 1.4.0
+
+### Added
+
+- TransferBench support to PEBB and PBQT.
+- IET power stress test for MI250X.
+- Babel support for normal distribution–based data initialization.
+- Configurable Non-Temporal support in Babel.
+- Support for action selection using the `-s` option.
+- Support for module-based test execution using the `-m` option.
+- Support for time‑duration based Babel test execution.
+
+## RVS 1.3.0 for ROCm 7.2
+
+### Added
+
+- Babel subtest configurability
+
+
+## RVS 1.3.0 for ROCm 7.1.1
+
+### Added
+
+- Support for different test levels with `-r` option for MI3XXX.
+- Set compute type for DGEMM operations in MI350X and MI355X.
+
+## RVS 1.3.0 for ROCm 7.1.0
+
+### Added
+
+- Added test summary and system overview.
+- NPS2/DPX partition mode support for MI350X and MI355X.
+- Support for Azure Linux and Alibaba Linux.
+- Individual subtest configurability in Babel.
+
+## RVS 1.2.0 for ROCm 7.0.2
+
+### Added
+- Support for Amazon Linux.
+
+### Changed
+- Update gst conf. files for MI350X and MI355X.
+- Change GEMM execution method during ramp-up.
+
+## RVS 1.2.0 for ROCm 7.0.1
+
+### Added
+- Support for new platform: RX9060
+
+## RVS 1.2.0 for ROCm 7.0.0
+
+### Added
+
+- Support for new platforms: MI350X and MI355X.
+- Introduced rotating buffer mechanism for GEMM operations.
+- Support for read and write tests in Babel.
+- Support for new platforms: RX9070 and RX9070GRE.
+
+### Changed
+
+- Migrated SMI API usage from `rocm-smi` to `amd-smi`.
+- Updated FP8 GEMM operations to use hipBLASLt instead of rocBLAS.
+
+## RVS 1.1.0 for ROCm 6.4.2
+
+### Added
+
+- NPS2/DPX and NPS4/CPX partition modes support for MI300X.
+
+## RVS 1.1.0 for ROCm 6.4.0
+
+### Added
+
+- Configuration files for MI210.
+- Support for OCP fp8 datatype.
+- Support for new platform MI308X-HF.
+- GPU index based cli. execution.
+
+### Changed
+
+- json logging with updated schema.
+- Updated babel conf. files for MI308X and MI308X-HF.
+
 ## RVS 1.1.0 for ROCm 6.3.0
 
 ### Added
 
 - Support for hipBLASLT blas library and option to select blas library in conf. file.
 - Added Babel, thermal and performance benchmark test for MI308X.
+- Support for new platform MI325X.
 
 ### Changed
 

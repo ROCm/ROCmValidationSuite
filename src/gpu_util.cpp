@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -32,8 +32,9 @@
 #include <algorithm>
 #include <iostream>
 
-#include "rocm_smi/rocm_smi.h"
+#include "amd_smi/amdsmi.h"
 #include "include/gpu_util.h"
+#include "include/rsmi_util.h"
 #define __HIP_PLATFORM_HCC__
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
@@ -46,6 +47,16 @@ std::vector<uint16_t> rvs::gpulist::node_id;
 std::vector<uint16_t> rvs::gpulist::domain_id;
 std::map<std::pair<uint16_t, uint16_t> , uint16_t> rvs::gpulist::domain_loc_map;
 std::vector<std::string> rvs::gpulist::pci_bdf;
+
+const std::map<uint16_t, std::string> gpu_dev_map = {
+  {0x74a1, "MI300X"},    // MI300X
+  {0x74a9, "MI300X-HF"}, // MI300-HF
+  {0x74a2, "MI308X"},    // MI308X
+  {0x74a8, "MI308X-HF"}, // MI308X-HF
+  {0x74a5, "MI325X"},    // MI325X
+  {0x75a0, "MI350X"},    // MI350X AC
+  {0x75a3, "MI355X"}     // MI355X LC
+};
 
 using std::vector;
 using std::string;
@@ -188,6 +199,32 @@ void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id) {
   }
 }
 
+vector<amdsmi_processor_handle>
+get_smi_processors(){
+  std::vector<amdsmi_processor_handle> proc_handles;
+  uint32_t socket_num = 0;
+  auto ret = amdsmi_get_socket_handles(&socket_num, nullptr);
+  std::vector<amdsmi_socket_handle> sockets(socket_num);
+  ret = amdsmi_get_socket_handles(&socket_num, &sockets[0]);
+  for(auto socket : sockets){
+    uint32_t dev_cnt = 0;
+    ret = amdsmi_get_processor_handles(socket, &dev_cnt, nullptr);
+    std::vector<amdsmi_processor_handle> dev_handles(dev_cnt);
+    ret = amdsmi_get_processor_handles(socket,
+        &dev_cnt, &dev_handles[0]);
+    if (ret == AMDSMI_STATUS_SUCCESS){
+      for (auto dev : dev_handles){
+        processor_type_t processor_type;
+	amdsmi_get_processor_type(dev, &processor_type);
+	if (processor_type == AMDSMI_PROCESSOR_TYPE_AMD_GPU) {
+          proc_handles.push_back(dev);
+        }
+      }
+    }
+  }
+  return proc_handles;
+}
+
 /**
  * gets all GPU device indexes
  * @param pgpus_device_idx ptr to vector that will store all the GPU indexes
@@ -195,25 +232,21 @@ void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id) {
  */
 void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
 
-  std::map<uint64_t, uint32_t> smi_map;
-  uint32_t smi_num_devices = 0;
+  std::map<uint64_t, uint16_t> smi_map;
+  //uint32_t smi_num_devices = 0;
   uint64_t gpuid;
-
-  rsmi_init(0);
-
-  rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-  if(err == RSMI_STATUS_SUCCESS){
-    for(auto i = 0; i < smi_num_devices; ++i){
-      err = rsmi_dev_guid_get(i, &gpuid);
-      smi_map.insert({gpuid, i});
-    }
-  }
-  else {
-    rsmi_shut_down();
+  amdsmi_status_t smi_ret;
+  auto proc_handles = get_smi_processors();
+  if (proc_handles.empty()){
     return;
   }
-  rsmi_shut_down();
-
+  for(auto i=0; i<proc_handles.size();++i ){
+    amdsmi_kfd_info_t kfd_info;
+    smi_ret = amdsmi_get_gpu_kfd_info(proc_handles[i], &kfd_info);
+    if(AMDSMI_STATUS_SUCCESS == smi_ret){
+      smi_map.insert({kfd_info.kfd_id, i});
+    }
+  }
   ifstream f_id, f_prop;
   char path[KFD_PATH_MAX_LENGTH];
 
@@ -241,6 +274,7 @@ void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
       if(smi_map.find(gpu_id) != smi_map.end()) {
         (*pgpus_gpu_idx).push_back(smi_map[gpu_id]);
       }
+
     }
 
     f_id.close();
@@ -406,23 +440,23 @@ void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf) {
 }
 
 /**
- * @brief Check if the GPU is die (chiplet) in Multi-Chip Module (MCM) GPU.
+ * @brief Check if the GPU is secondary die (chiplet) in Multi-Chip Module (MCM) GPU.
  * @param device_id GPU Device ID
- * @return true if GPU is die in MCM GPU, false if GPU is single die GPU.
+ * @return true if GPU is secondary die in MCM GPU, false if GPU is single die GPU.
  **/
 bool gpu_check_if_mcm_die (int idx) {
-  rsmi_status_t ret;
+  amdsmi_status_t ret;
   uint64_t val =0 , time_stamp;
   float cntr_resolution;
-  uint32_t smi_index = 0;
+  amdsmi_processor_handle smi_hdl = 0;
 
-  if (gpu_hip_to_smi_index(idx, &smi_index)) {
+  if (gpu_hip_to_smi_hdl(idx, &smi_hdl)) {
     return false;
   }
 
   // in case of secondary die, energy accumulator will return zero. 
-  ret = rsmi_dev_energy_count_get(smi_index, &val, &cntr_resolution, &time_stamp);
-  if (!((RSMI_STATUS_SUCCESS == ret) && val == 0))
+  ret = amdsmi_get_energy_count(smi_hdl, &val, &cntr_resolution, &time_stamp);
+  if (!((AMDSMI_STATUS_SUCCESS == ret) && val == 0))
     return false;
   return true;
 }
@@ -433,34 +467,18 @@ bool gpu_check_if_mcm_die (int idx) {
  * @param smi_index GPU smi index
  * @return 0 if successful, -1 otherwise
  **/
-int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
+int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_hdl) {
 
   int hip_num_gpu_devices = 0;
   uint32_t smi_num_devices = 0;
   uint64_t smi_bdf_id = 0;
-  std::map<uint64_t, int> smi_map;
 
   // map this to smi as only these are visible
   hipGetDeviceCount(&hip_num_gpu_devices);
   if(hip_index >= hip_num_gpu_devices) {
     return -1;
   }
-
-  rsmi_init(0);
-
-  rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-  if(err == RSMI_STATUS_SUCCESS){
-    for(auto i = 0; i < smi_num_devices; ++i){
-      err = rsmi_dev_pci_id_get(i, &smi_bdf_id);
-      smi_map.insert({smi_bdf_id, i});
-    }
-  }
-  else {
-    rsmi_shut_down();
-    return -1;
-  }
-  rsmi_shut_down();
-
+  auto smi_map = rvs::get_smi_pci_map();
   /* Fetch Domain, Bus, Device and Function numbers from HIP PCIe id */
   uint64_t pDom = 0, pBus = 0, pDev = 0, pFun = 0;
   char pciString[256] = {0};
@@ -481,9 +499,85 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
 
   /* Check for matching bdf id in smi list */
   if(smi_map.find(hip_bdf_id) != smi_map.end()) {
-    *smi_index = smi_map[hip_bdf_id];
+    *smi_hdl = smi_map[hip_bdf_id];
     return 0;
   }
+  return -1;
+}
+
+/**
+ * @brief Get node from hip index.
+ * @param hip_index GPU hip index
+ * @param node node id
+ * @return 0 if successful, -1 otherwise
+ **/
+int gpu_hip_to_node(int hip_index, int* node) {
+  int hip_num_gpu_devices = 0;
+  hipGetDeviceCount(&hip_num_gpu_devices);
+  if (hip_index >= hip_num_gpu_devices) {
+    return -1;
+  }
+
+  char pciString[256] = {0};
+  if (hipDeviceGetPCIBusId(pciString, 256, hip_index) != hipSuccess) {
+    return -1;
+  }
+
+  uint64_t pDom = 0, pBus = 0, pDev = 0, pFun = 0;
+  if (sscanf(pciString, "%04x:%02x:%02x.%01x",
+        reinterpret_cast<uint64_t *>(&pDom),
+        reinterpret_cast<uint64_t *>(&pBus),
+        reinterpret_cast<uint64_t *>(&pDev),
+        reinterpret_cast<uint64_t *>(&pFun)) != 4) {
+    return -1;
+  }
+
+  uint64_t hip_bdf_id =
+      ((((pDom) & 0x00000000ffffffff) << 32) |
+       (((pBus) & 0x00000000000000ff) << 8) |
+       (((pDev) & 0x000000000000001f) << 3) |
+        ((pFun) & 0x0000000000000007));
+
+  ifstream f_id, f_prop;
+  char path[KFD_PATH_MAX_LENGTH];
+  int gpu_id;
+  std::string prop_name;
+  int num_nodes = gpu_num_subdirs(KFD_SYS_PATH_NODES, "");
+
+  for (int node_id = 0; node_id < num_nodes; node_id++) {
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/gpu_id",
+        KFD_SYS_PATH_NODES, node_id);
+    f_id.open(path);
+    f_id >> gpu_id;
+    f_id.close();
+
+    if (gpu_id == 0) continue;
+
+    snprintf(path, KFD_PATH_MAX_LENGTH, "%s/%d/properties",
+        KFD_SYS_PATH_NODES, node_id);
+    f_prop.open(path);
+
+    uint32_t domain_val = 0, location_val = 0;
+    while (f_prop >> prop_name) {
+      if (prop_name == "domain") {
+        f_prop >> domain_val;
+      } else if (prop_name == "location_id") {
+        f_prop >> location_val;
+      } else {
+        std::string dummy;
+        f_prop >> dummy;
+      }
+    }
+    f_prop.close();
+
+    uint64_t kfd_bdf_id = (((uint64_t)domain_val) << 32) | location_val;
+
+    if (hip_bdf_id == kfd_bdf_id) {
+      *node = node_id;
+      return 0;
+    }
+  }
+
   return -1;
 }
 
@@ -492,7 +586,7 @@ int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index) {
  * @return 0 if successful, -1 otherwise
  **/
 int rvs::gpulist::Initialize() {
-
+  amdsmi_init(AMDSMI_INIT_AMD_GPUS);
   gpu_get_all_location_id(&location_id);
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
@@ -627,7 +721,6 @@ int rvs::gpulist::gpu2gpuindex(const uint16_t GpuID, uint16_t* pGpuIdx) {
   if (it == gpu_id.cend()) {
     return -1;
   }
-
   size_t pos = std::distance(gpu_id.cbegin(), it);
   *pGpuIdx = gpu_idx[pos];
   return 0;
@@ -729,24 +822,40 @@ int rvs::gpulist::gpu2domain(const uint16_t GpuID, uint16_t* pDomain) {
 bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &index) {
 
   uint32_t smi_num_devices = 0;
-
-  rsmi_init(0);
-
-  rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-  if(err != RSMI_STATUS_SUCCESS) {
-    rsmi_shut_down();
-    return false;
-  }
-
+  smi_num_devices = rvs::get_smi_pci_map().size();
   for(auto i = 0; i < index.size(); i++) {
-
     if(index[i] >= smi_num_devices) {
-      rsmi_shut_down();
       return false;
     }
   }
-
-  rsmi_shut_down();
   return true;
+}
+
+/**
+ * @brief Get GPU platform name
+ * @param void
+ * @return GPU plaform name if found, else null
+ **/
+std::string rvs::gpulist::gpu_get_platform_name (void) {
+
+  uint16_t dev_id = 0;
+
+  if (rvs::gpulist::device_id.size()) {
+    dev_id =  rvs::gpulist::device_id[0];
+  }
+
+  for(auto i = 0; i <  rvs::gpulist::device_id.size(); i++) {
+
+    if(dev_id !=  rvs::gpulist::device_id[i]) {
+      return "";
+    }
+  }
+
+  auto it = gpu_dev_map.find(dev_id);
+  if (it == gpu_dev_map.end()) {
+    return "";
+  }
+
+  return it->second;
 }
 

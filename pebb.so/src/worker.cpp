@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -45,6 +45,9 @@ extern "C" {
 #include "include/gpu_util.h"
 #include "include/rvsloglp.h"
 #include "include/rvshsa.h"
+
+#include <cstdio>
+#include "TransferBench.hpp"
 
 #define MODULE_NAME "PEBB"
 
@@ -156,12 +159,14 @@ int pebbworker::initialize(uint16_t Src, uint16_t Dst, bool h2d, bool d2h) {
  *
  * */
 int pebbworker::do_transfer() {
+
   double duration;
   int sts = -1;
   unsigned int startsec;
   unsigned int startusec;
   unsigned int endsec;
   unsigned int endusec;
+  std::string msg;
 
   RVSTRACE_
 
@@ -169,45 +174,149 @@ int pebbworker::do_transfer() {
   if (loglevel >= rvs::logdebug)
     rvs::lp::get_ticks(&startsec, &startusec);
 
-  if (block_size.size() == 0) {
-    RVSTRACE_
-    block_size = pHsa->size_list;
-  }
+  if (transfer_method == "transferbench") {
 
-  for (size_t i = 0; brun && i < block_size.size(); i++) {
-    RVSTRACE_
-    current_size = block_size[i];
-
-    if (rvs::lp::Stopping()) {
-      RVSTRACE_
+    size_t transfer_block_size = 0;
+    if(block_size.size() > 0) {
+      transfer_block_size = block_size[0];
+    }
+    else {
+      msg = "Transfer block size not set !";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
       return -1;
     }
 
-    // Check if unidirectional device(GPU) to host (CPU)
-    // if so, swap source and destination node
+    // Configure TransferBench parameters
+    TransferBench::ConfigOptions cfg;
+
+    cfg.general.numIterations = hot_calls;
+    cfg.general.numWarmups = warm_calls;
+    cfg.gfx.unrollFactor = gfx_unroll;
+
+    // Set Memory types
+    auto str_to_memtype = [](const std::string& mem) -> TransferBench::MemType {
+      if (mem == "cpu")           return TransferBench::MEM_CPU;
+      if (mem == "gpu")           return TransferBench::MEM_GPU;
+      if (mem == "null")          return TransferBench::MEM_NULL;
+      return TransferBench::MEM_NULL;
+    };
+
+    TransferBench::MemType src_mem = str_to_memtype(source_memory);
+    TransferBench::MemType dst_mem = str_to_memtype(destination_memory);
+
+    std::vector<TransferBench::Transfer> transfers(bidirect? 2 : 1);
+
+    transfers[0].numBytes = transfer_block_size;
+
+    uint16_t _src_node;
+    uint16_t _dst_node;
+
     if (!prop_h2d && prop_d2h) {
-      RVSTRACE_
-      sts = pHsa->SendTraffic(dst_node, src_node, current_size,
-                              bidirect, b2b, warm_calls, hot_calls, &duration);
+      _src_node = dst_node;
+      _dst_node = src_node;
     } else {
-      RVSTRACE_
-      sts = pHsa->SendTraffic(src_node, dst_node, current_size,
-                              bidirect, b2b, warm_calls, hot_calls, &duration);
-    }
-    if (sts) {
-      std::string msg = "internal error, src: " + std::to_string(src_node)
-      + "   dst: " + std::to_string(dst_node)
-      + "   current size: " + std::to_string(current_size)
-      + " status "+ std::to_string(sts);
-      rvs::lp::Err(msg, MODULE_NAME, action_name);
-      return sts;
+      _src_node = src_node;
+      _dst_node = dst_node;
     }
 
+    if(src_mem != TransferBench::MEM_NULL) {
+      transfers[0].srcs.push_back({src_mem,
+          src_mem == TransferBench::MEM_GPU ? _src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _src_node});
+    }
+
+    if(dst_mem != TransferBench::MEM_NULL) {
+      transfers[0].dsts.push_back({dst_mem,
+          dst_mem == TransferBench::MEM_GPU ? _dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _dst_node});
+    }
+
+    transfers[0].exeDevice = {executor == "gfx" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
+      dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU)};
+
+    transfers[0].exeSubIndex = -1;
+    transfers[0].numSubExecs = subexecutor;
+
+    if (bidirect) {
+      transfers[1].numBytes = transfer_block_size;
+
+      if(dst_mem != TransferBench::MEM_NULL) {
+        transfers[1].srcs.push_back({dst_mem,
+            dst_mem == TransferBench::MEM_GPU ? _dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _dst_node});
+      }
+
+      if(src_mem != TransferBench::MEM_NULL) {
+        transfers[1].dsts.push_back({src_mem,
+            src_mem == TransferBench::MEM_GPU ? _src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _src_node});
+      }
+
+      transfers[1].exeDevice = {executor == "gfx" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
+        dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU)};
+
+      transfers[1].exeSubIndex = -1;
+      transfers[1].numSubExecs = subexecutor;
+    }
+
+    TransferBench::TestResults results;
+
+    // Initiate TransferBench transfer
+    if (!TransferBench::RunTransfers(cfg, transfers, results)) {
+      for (auto const& err : results.errResults) {
+        msg = "Transferbench error: " + err.errMsg;
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+        return -1;
+      }
+    }
+
+    // Update running totals
     {
-      RVSTRACE_
       std::lock_guard<std::mutex> lk(cntmutex);
-      running_size += current_size * hot_calls;
-      running_duration += duration;
+      const auto& res = results.tfrResults[0];
+
+      running_size += results.numTimedIterations * res.numBytes;
+      running_duration += (res.avgDurationMsec/1000) * results.numTimedIterations;
+    }
+  }
+  else {
+
+    if (block_size.size() == 0) {
+      RVSTRACE_
+        block_size = pHsa->size_list;
+    }
+
+    for (size_t i = 0; brun && i < block_size.size(); i++) {
+      RVSTRACE_
+        current_size = block_size[i];
+
+      if (rvs::lp::Stopping()) {
+        RVSTRACE_
+          return -1;
+      }
+
+      // Check if unidirectional device(GPU) to host (CPU)
+      // if so, swap source and destination node
+      if (!prop_h2d && prop_d2h) {
+        RVSTRACE_
+          sts = pHsa->SendTraffic(dst_node, src_node, current_size,
+              bidirect, b2b, warm_calls, hot_calls, &duration);
+      } else {
+        RVSTRACE_
+          sts = pHsa->SendTraffic(src_node, dst_node, current_size,
+              bidirect, b2b, warm_calls, hot_calls, &duration);
+      }
+      if (sts) {
+        std::string msg = "internal error, src: " + std::to_string(src_node)
+          + "   dst: " + std::to_string(dst_node)
+          + "   current size: " + std::to_string(current_size)
+          + " status "+ std::to_string(sts);
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+        return sts;
+      }
+
+      {
+        RVSTRACE_
+          std::lock_guard<std::mutex> lk(cntmutex);
+        running_size += current_size * hot_calls;
+        running_duration += duration;
+      }
     }
   }
 

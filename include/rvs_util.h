@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -34,6 +34,21 @@
 
 using std::map;
 
+//! GPU MCM (Multi-Chip Module) types - Primary/Secondary
+enum class mcm_type_t {
+  PRIMARY = 0,
+  SECONDARY = 1
+};
+
+struct device_info {
+  std::string bus;
+  std::string name;
+  int32_t node_id;
+  int32_t gpu_id;
+  int32_t device_id;
+  uint64_t bdfId;// this is pcie location id to uniquely identify device
+};
+
 struct action_descriptor{
   std::string action_name;
   std::string module_name;
@@ -43,6 +58,24 @@ extern bool is_positive_integer(const std::string& str_val);
 
 extern std::vector<std::string> str_split(const std::string& str_val,
         const std::string& delimiter);
+
+/**
+ * ROCm install **root** for runtime: if built with FETCH_ROCMPATH_FROM_ROCMCORE,
+ * tries getROCmInstallPath (rocm-core) first, then the ROCM_PATH environment
+ * variable, then the build-time ROCM_PATH string. Otherwise: getenv(ROCM_PATH)
+ * first, then the build-time macro. Use this to resolve relocatable or
+ * non-default ROCm locations instead of relying on the prebuilt #define alone.
+ */
+std::string rvs_get_rocm_install_path_string(void);
+
+/**
+ * RVS data root .../share/.../rocm-validation-suite: RVS_PREFIX env, else path
+ * derived from the running rvs process (e.g. prefix/bin/rvs) on Linux,
+ * else the build-time RVS_DATA_ROOT macro. Install prefix is the parent of bin/.
+ */
+std::string rvs_get_rvs_data_root_string(void);
+/** RVS module lib directory .../lib/rvs — same resolution order. */
+std::string rvs_get_rvs_modules_lib_dir_string(void);
 
 /**
  * Convert array of strings into array of signed integers of type T
@@ -130,13 +163,18 @@ int rvs_util_parse(const std::string& buff,
 
 void *json_node_create(std::string module_name, std::string action_name,
                      int log_level);
+
 bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_index,
     const std::vector<uint16_t>& property_device, const int& property_device_id,
     bool property_device_all, const std::vector<uint16_t>& property_device_index,
-    bool property_device_index_all, bool mcm_check = false);
+    bool property_device_index_all, bool mcm_check = false,
+    std::vector<mcm_type_t>* mcm_type = nullptr);
+
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function);
-int display_gpu_info(void);
+int display_gpu_info(std::vector<device_info>);
 void *json_list_create(std::string lname, int log_level);
+std::vector<device_info>  get_gpu_info (void);
+std::string get_gpu_name (void);
 
 template <typename... KVPairs>
 void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values ) {

@@ -433,7 +433,6 @@ int gpup_action::run(void) {
 
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
-
   bool b_gpu_found = false;
 
   if (bjson){
@@ -515,7 +514,7 @@ int gpup_action::run(void) {
   }
   if (!b_gpu_found) {
     msg = "No device matches criteria from configuration. ";
-    rvs::lp::Err(msg, MODULE_NAME, action_name);
+//    rvs::lp::Err(msg, MODULE_NAME, action_name);
 
     // Action callback
     action_result.state = rvs::actionstate::ACTION_COMPLETED;

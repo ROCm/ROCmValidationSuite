@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -44,6 +44,9 @@ enum class OSType {
   SLES,
   RHEL,
   Oracle,
+  Azure,
+  Amazon,
+  Alibaba,
   None
 };
 
@@ -55,7 +58,10 @@ const std::map<std::string, OSType> op_systems {
   {"centos", OSType::Centos},
   {"sles", OSType::SLES},
   {"red hat enterprise linux", OSType::RHEL},
-  {"oracle linux server", OSType::Oracle}
+  {"oracle linux server", OSType::Oracle},
+  {"microsoft azure linux", OSType::Azure},
+  {"amazon linux", OSType::Amazon},
+  {"alibaba cloud linux", OSType::Alibaba},
 };
 
 struct package_info{

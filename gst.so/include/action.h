@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -106,6 +106,9 @@ class gst_action: public rvs::actionbase {
 
     // gemm data type
     std::string gst_data_type;
+
+    // Rotating buffer size
+    uint32_t gst_rotating;
 
     // gemm output self-check
     bool gst_self_check;
