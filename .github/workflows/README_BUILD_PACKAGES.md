@@ -58,11 +58,11 @@ GitHub Actions Workflow
     │   ├── export CMAKE_PREFIX_PATH="$ROCM_PATH:$CMAKE_PREFIX_PATH"
     │   ├── export HIP_DEVICE_LIB_PATH (auto-detected amdgcn/bitcode path)
     │   ├── export ROCM_LIBPATCH_VERSION (major.minor in xxyy format, e.g., 0711)
-    │   ├── export CPACK_DEBIAN_PACKAGE_RELEASE (dev: branch.commit, rel: run number)
-    │   ├── export CPACK_RPM_PACKAGE_RELEASE (dev: branch.commit, rel: run number)
+    │   ├── export CPACK_DEBIAN_PACKAGE_RELEASE (see env table: r<libpatch>.date, PRs add .branch.commit)
+    │   ├── export CPACK_RPM_PACKAGE_RELEASE (same as DEB)
     │   ├── export CMAKE_CXX_COMPILER=hipcc (AlmaLinux only)
     │   └── export CMAKE_COMMAND=cmake3 (AlmaLinux) or cmake (Ubuntu)
-    ├── 4. Configure CMake with Relocatable RPATH
+    ├── 4. Configure CMake (install RPATH defaults live in CMakeLists.txt)
     │   └── $CMAKE_COMMAND -B ./build \
     │         -DCMAKE_BUILD_TYPE=Release \
     │         -DROCM_PATH=$ROCM_PATH \
@@ -71,9 +71,6 @@ GitHub Actions Workflow
     │         -DROCM_MAJOR_VERSION=$ROCM_MAJOR \
     │         -DCMAKE_INSTALL_PREFIX=/opt/rocm/extras-$ROCM_MAJOR \
     │         -DCPACK_PACKAGING_INSTALL_PREFIX=/opt/rocm/extras-$ROCM_MAJOR \
-    │         -DCMAKE_SKIP_RPATH=FALSE \
-    │         -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
-    │         -DCMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-$ROCM_MAJOR/lib" \
     │         -DCMAKE_VERBOSE_MAKEFILE=1 \
     │         -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
     ├── 5. Build RVS
@@ -85,10 +82,10 @@ GitHub Actions Workflow
 
 ### Key Technical Details
 
-**Relocatable RPATH**: The `$ORIGIN` relative RPATH ensures binaries can find their libraries regardless of installation location:
+**Relocatable RPATH**: Defaults are set in **`CMakeLists.txt`** (`CMAKE_INSTALL_RPATH`, **`CMAKE_BUILD_RPATH`** (same list for the build tree), `CMAKE_SKIP_RPATH`, `CMAKE_INSTALL_RPATH_USE_LINK_PATH`). **`CMAKE_*_LINKER_FLAGS_INIT`** only adds **`--enable-new-dtags`** (RUNPATH behavior), not a second copy of **`$ORIGIN`**. On **GitHub Actions** (`GITHUB_ACTIONS=true`), **`CMAKE_SKIP_BUILD_RPATH`** applies when using **CMake 3.9+**, and **`CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH`** (strip implicit SDK paths on install) when using **CMake 3.16+**. The **`$ORIGIN`** relative entries resolve to the install prefix (`.../extras-<N>/bin` → `.../extras-<N>/lib`), so **`/opt/rocm/extras-<N>/lib` is not duplicated** in the list. Absolute paths add **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`** (older ROCm layouts), **`/opt/rocm/core-<ROCM_MAJOR>/lib`**, and **`/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib`** — equivalent to:
 
 ```bash
-CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-<ROCM_MAJOR>/lib"
+CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-<ROCM_MAJOR>/lib:/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib"
 ```
 
 **Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically. The **patch version** is auto-computed at CMake configure time: `git describe --tags --match "v<major>.<minor>.*"` counts commits since the last matching `v` tag. For example, if the tag is `v1.3.0` and there have been 15 commits since, the package version becomes `1.3.15`. If no matching tag exists or git is unavailable, the patch defaults to `0` from `CMakeLists.txt`. This works for both CI builds and direct local `cmake` invocations.
@@ -103,7 +100,7 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-
 
 **Dynamic ROCm Path Discovery**: `FETCH_ROCMPATH_FROM_ROCMCORE=ON` allows RVS to automatically detect ROCm installation location at runtime from ROCm core libraries.
 
-**Single Source of Truth**: All build logic resides in `build_packages_local.sh`, which can be used for both local builds and CI/CD.
+**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script.
 
 ### Workflow Steps
 
@@ -182,35 +179,38 @@ For **scheduled**, **push**, and **manual** (`workflow_dispatch`) builds, the wo
 ```
 s3://<bucket>/nightly/rvs/
 ├── deb/
-│   ├── amdrocm7-rvs_1.3.15_amd64.deb
+│   ├── amdrocm7-rvs_1.3.15-r0711.20260423_amd64.deb
 │   ├── Packages
 │   ├── Packages.gz
 │   └── Release
 ├── rpm/
-│   ├── amdrocm7-rvs-1.3.15.x86_64.rpm
+│   ├── amdrocm7-rvs-1.3.15-r0711.20260423.x86_64.rpm
 │   └── repodata/
 │       ├── repomd.xml
 │       ├── primary.xml.gz
 │       ├── filelists.xml.gz
 │       └── other.xml.gz
 └── tar/
-    └── amdrocm7-rvs-1.3.15-Linux.tar.gz
+    └── amdrocm7-rvs-1.3.15-r0711.20260423-Linux.tar.gz
 ```
 
 **Using the S3 repo with apt (Ubuntu/Debian):**
 
 ```bash
-# Add the nightly repo (replace <bucket> with the actual S3 bucket name)
-echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rvs/deb/ ./" \
+# Add the nightly repo (replace <bucket> with the actual S3 bucket name).
+# Use "/" as the suite field for this flat repo layout.
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/nightly/rvs/deb /" \
   | sudo tee /etc/apt/sources.list.d/rvs-nightly.list
 
 # Or the release repo
-echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rvs/deb/ ./" \
+echo "deb [trusted=yes] https://<bucket>.s3.amazonaws.com/release/rvs/deb /" \
   | sudo tee /etc/apt/sources.list.d/rvs-release.list
 
 sudo apt update
 sudo apt install amdrocm7-rvs  # Replace 7 with your ROCm major version
 ```
+
+After `apt update`, **`apt list`** should show **`rvs-nightly`** or **`rvs-release`** (matching the bucket: `nightly/rvs/deb` vs `release/rvs/deb`) in the suite/codename column, because CI sets `Suite`, `Label`, and `Codename` in the flat `Release` file via `apt-ftparchive` options. If you still see **`unknown`**, run `apt update` again after a fresh metadata upload, or check that your `Release` on the server includes those fields. **`apt install amdrocm7-rvs`** still resolves versions from `Packages` either way.
 
 **Using the S3 repo with yum/dnf (CentOS/RHEL/Rocky):**
 
@@ -288,8 +288,8 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
 | `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `8.0` → `0800`) - used for RVS version tagging |
-| `CPACK_DEBIAN_PACKAGE_RELEASE` | Auto-generated from git | Package release string. **Dev branches**: `branch.commit` (e.g., `master.a1b2c3d`). **Release branches** (starting with "rel"): `GITHUB_RUN_NUMBER` (fallback: `1`) |
-| `CPACK_RPM_PACKAGE_RELEASE` | Auto-generated from git | Package release string. **Dev branches**: `branch.commit` (e.g., `master.a1b2c3d`). **Release branches** (starting with "rel"): `GITHUB_RUN_NUMBER` (fallback: `1`) |
+| `CPACK_DEBIAN_PACKAGE_RELEASE` | Auto-generated | **Default** (`schedule`, `push`, `workflow_dispatch`, local): `r<ROCM_LIBPATCH_VERSION>.<yyyymmdd>` (e.g. `r0711.20260423` where `0711` = ROCm 7.11 from `ROCM_VERSION`). **Pull requests**: `r<libpatch>.<yyyymmdd>.<source-branch>.<commit>`. **Release branches** (name starts with `rel`, non-PR): `GITHUB_RUN_NUMBER` (fallback: `1`). |
+| `CPACK_RPM_PACKAGE_RELEASE` | same as `CPACK_DEBIAN_PACKAGE_RELEASE` | Identical to DEB. |
 | `GITHUB_RUN_NUMBER` | `1` (local) | GitHub Actions run number - automatically set in CI, defaults to `1` for local builds |
 
 ## Build Matrix
@@ -307,14 +307,16 @@ Packages are named automatically by CPack using the RVS version from `CMakeLists
 
 - **DEB**: `amdrocm<ROCM_MAJOR>-rvs_${RVS_VERSION}_amd64.deb`
 - **RPM**: `amdrocm<ROCM_MAJOR>-rvs-${RVS_VERSION}.x86_64.rpm`
-- **TGZ**: `amdrocm<ROCM_MAJOR>-rvs-${RVS_VERSION}-Linux.tar.gz`
+- **TGZ**: `amdrocm<ROCM_MAJOR>-rvs-<RVS_VERSION>-<PACKAGE_RELEASE>-Linux.tar.gz` (CPack: same **release** suffix as DEB/RPM, e.g. `r0711.20260423` from `ROCM_LIBPATCH_VERSION` and date, or a PR-specific suffix)
 
-The **patch version** in `RVS_VERSION` is automatically computed from the number of commits since the last `v<major>.<minor>.*` git tag. For example, with tag `v1.3.0` and 15 commits since:
+The **patch version** in `RVS_VERSION` is automatically computed from the number of commits since the last `v<major>.<minor>.*` git tag. For example, with tag `v1.3.0` and 15 commits since, and a release of `r0711.20260423`:
 ```
-amdrocm7-rvs_1.3.15_amd64.deb
-amdrocm7-rvs-1.3.15.x86_64.rpm
-amdrocm7-rvs-1.3.15-Linux.tar.gz
+amdrocm7-rvs_1.3.15-r0711.20260423_amd64.deb
+amdrocm7-rvs-1.3.15-r0711.20260423.el8.x86_64.rpm
+amdrocm7-rvs-1.3.15-r0711.20260423-Linux.tar.gz
 ```
+
+`CPACK_PACKAGE_FILE_NAME` in CMake is set to include the same **release** as DEB/RPM (from `CPACK_RPM_PACKAGE_RELEASE` in the build environment).
 
 If no matching `v` tag is found, the patch defaults to `0` from `project(VERSION)` in `CMakeLists.txt`.
 
@@ -344,16 +346,61 @@ sudo rpm -i --replacefiles --nodeps amdrocm7-rvs-*.rpm
 
 ### Any Linux Distribution (TGZ - Relocatable)
 
+#### Pre-install: ROCm
+
+Before you install the RVS TGZ, **ROCm must be installed, configured, and on your `PATH` / `LD_LIBRARY_PATH` as in AMD’s documentation** so HIP, HSA, and other ROCm libraries are discoverable. Follow the current Linux install guide in **rocm docs**:
+
+- **ROCm documentation (start here)**: <https://rocm.docs.amd.com/>
+- **Linux install / deployment (paths, env, post-install)**: <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/>
+
+**Assumptions (TGZ use):** ROCm is set up on the machine, `ROCM_PATH` (or your install prefix) is correct, and the runtime can load ROCm libraries. Install a ROCm stack that includes **ROCm’s LLVM** (for example the **`rocm-llvm`** package from the ROCm repo). **DEB/RPM** packages from this project declare that dependency; TGZ users should mirror that on the host. The TGZ only ships RVS; it does not replace a full ROCm stack.
+
+#### Install RVS run-time dependencies (on the target system)
+
+The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration:
+
+| Family | Typical PCI package |
+|--------|---------------------|
+| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) |
+| **RHEL / Rocky / Alma 8+** | `pciutils-libs` |
+| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release |
+
 ```bash
-# Extract to the extras directory
+# Ubuntu / Debian
+sudo apt update && sudo apt install -y libpci3
+
+# RHEL / Rocky / Alma 8+
+sudo dnf install -y pciutils-libs
+
+# openSUSE / SUSE (adjust package names per release)
+sudo zypper install libpci3
+```
+
+User-facing install steps for TGZ (PATH / `LD_LIBRARY_PATH`, **`RPATH`** including **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`/opt/rocm/core-<major>/lib`**, and **`/opt/rocm/core-<major>/lib/llvm/lib`**) are in **[docs/INSTALL_TGZ.md](../../docs/INSTALL_TGZ.md)**.
+
+#### Extract the TGZ
+
+```bash
+# Extract to the extras directory (example for ROCm major 7; match your path)
 sudo mkdir -p /opt/rocm/extras-7
 sudo tar -xzf amdrocm7-rvs-*.tar.gz -C /opt/rocm/extras-7
+```
 
-# Setup environment
-export PATH=/opt/rocm/extras-7/bin:$PATH
-export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:$LD_LIBRARY_PATH
+#### Post-install: `PATH` and `LD_LIBRARY_PATH`
 
-# Run RVS
+Point the shell at the extracted RVS prefix and the ROCm you installed (replace paths with your real `ROCM_PATH` and extras major version). Copy and paste the block as one unit:
+
+```bash
+export ROCM_PATH=/opt/rocm              # or your real ROCm root, per rocm docs
+export PATH=/opt/rocm/extras-7/bin:$ROCM_PATH/bin:$PATH
+export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
+```
+
+**`rvs`** embeds **`RPATH`** for **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`core-<major>`** paths, and the extras-relative **`$ORIGIN`** paths, so it usually does not need **`LD_LIBRARY_PATH`** for them. The export still includes **`$ROCM_PATH/lib/llvm/lib`** for a typical ROCm tree, other tools, and troubleshooting; if LLVM is only under **`$ROCM_PATH/core-<major>/lib/llvm/lib`**, add that path instead or as well.
+
+**Run RVS**
+
+```bash
 rvs --help
 ```
 
@@ -468,7 +515,7 @@ Note: You may need to update the OS detection logic in `build_packages_local.sh`
 
 ### Customizing Build Parameters
 
-Edit the CMake configuration section in `build_packages_local.sh`:
+Edit the CMake arguments in `build_packages_local.sh`, or override **`CMAKE_INSTALL_RPATH`** / **`CMAKE_SKIP_RPATH`** from the command line when needed. Defaults match packaged builds:
 
 ```bash
 cmake -B "$BUILD_DIR" \
@@ -478,10 +525,6 @@ cmake -B "$BUILD_DIR" \
     -DROCM_MAJOR_VERSION="$ROCM_MAJOR" \
     -DCMAKE_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}" \
     -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}" \
-    -DCMAKE_SKIP_RPATH=FALSE \
-    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE \
-    -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib/rvs:/opt/rocm/extras-${ROCM_MAJOR}/lib" \
-    -DRPATH_MODE=OFF \
     -DCMAKE_VERBOSE_MAKEFILE=1 \
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON \
     -DYOUR_CUSTOM_OPTION=ON  # Add custom options here
@@ -510,7 +553,7 @@ If binaries can't find libraries:
 # Check RPATH settings (replace 7 with your ROCm major version)
 readelf -d /opt/rocm/extras-7/bin/rvs | grep RPATH
 
-# Should show: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/extras-7/lib
+# Should include: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-7/lib:/opt/rocm/core-7/lib/llvm/lib
 ```
 
 ### Missing Dependencies

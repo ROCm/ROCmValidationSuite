@@ -25,9 +25,17 @@
 #include "include/rvs_util.h"
 #include <vector>
 #include <string>
+#include <cstdlib>
+#include <cstring>
 #include <regex>
+#if defined(__linux__)
+#include <unistd.h>
+#endif
 #include <iomanip>
 #include <algorithm>
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
+#include "rocm-core/rocm_getpath.h"
+#endif
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
 #include "amd_smi/amdsmi.h"
@@ -335,5 +343,127 @@ std::string get_gpu_name (void) {
   rvs::gpulist::Initialize();
 
   return rvs::gpulist::gpu_get_platform_name () ;
+}
+
+std::string rvs_get_rocm_install_path_string(void) {
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
+  char* installPath = nullptr;
+  unsigned int installPathLen = 0;
+  PathErrors_t perr = getROCmInstallPath(&installPath, &installPathLen);
+  if (perr == PathSuccess && installPath != nullptr) {
+    std::string s(installPath);
+    free(installPath);
+    if (!s.empty()) {
+      return s;
+    }
+  } else if (installPath != nullptr) {
+    free(installPath);
+  }
+#endif
+  if (const char* env = std::getenv("ROCM_PATH")) {
+    if (env[0] != '\0') {
+      return std::string(env);
+    }
+  }
+  return std::string(ROCM_PATH);
+}
+
+namespace {
+
+std::string rvs_strip_trailing_slashes(std::string s) {
+  while (s.size() > 1 && s.back() == '/') {
+    s.pop_back();
+  }
+  return s;
+}
+
+std::string rvs_path_dirname(const std::string& path) {
+  if (path.empty()) {
+    return path;
+  }
+  size_t end = path.size();
+  while (end > 1 && path[end - 1] == '/') {
+    --end;
+  }
+  const size_t pos = path.rfind('/', end - 1);
+  if (pos == std::string::npos) {
+    return ".";
+  }
+  if (pos == 0) {
+    return std::string("/");
+  }
+  return path.substr(0, pos);
+}
+
+std::string rvs_path_basename(const std::string& path) {
+  if (path.empty()) {
+    return path;
+  }
+  size_t end = path.size();
+  while (end > 0 && path[end - 1] == '/') {
+    --end;
+  }
+  if (end == 0) {
+    return std::string();
+  }
+  const size_t start = path.rfind('/', end - 1);
+  if (start == std::string::npos) {
+    return path.substr(0, end);
+  }
+  return path.substr(start + 1, end - start - 1);
+}
+
+#if defined(__linux__)
+std::string rvs_linux_resolved_exe_path() {
+  char linkbuf[4096] = {0};
+  const ssize_t n = readlink("/proc/self/exe", linkbuf, sizeof(linkbuf) - 1);
+  if (n <= 0) {
+    return std::string();
+  }
+  linkbuf[n] = '\0';
+  char resolved[4096] = {0};
+  if (realpath(linkbuf, resolved) != nullptr) {
+    return std::string(resolved);
+  }
+  return std::string(linkbuf);
+}
+#endif
+
+std::string rvs_rvs_prefix_from_rvs_process() {
+  if (const char* pfx = std::getenv("RVS_PREFIX")) {
+    if (pfx[0] != '\0') {
+      return rvs_strip_trailing_slashes(std::string(pfx));
+    }
+  }
+#if defined(__linux__)
+  const std::string exe = rvs_linux_resolved_exe_path();
+  if (exe.empty() || rvs_path_basename(exe) != "rvs") {
+    return std::string();
+  }
+  const std::string bindir = rvs_path_dirname(exe);
+  const std::string binname = rvs_path_basename(bindir);
+  if (binname == "bin" || binname == "sbin") {
+    return rvs_path_dirname(bindir);
+  }
+#endif
+  return std::string();
+}
+
+}  // namespace
+
+std::string rvs_get_rvs_data_root_string(void) {
+  const std::string pfx = rvs_rvs_prefix_from_rvs_process();
+  if (!pfx.empty()) {
+    return pfx + std::string("/") + RVS_RELPATH_DATA_DIR;
+  }
+  return std::string(RVS_DATA_ROOT);
+}
+
+std::string rvs_get_rvs_modules_lib_dir_string(void) {
+  const std::string pfx = rvs_rvs_prefix_from_rvs_process();
+  if (!pfx.empty()) {
+    return pfx + std::string("/") + RVS_RELPATH_MODULE_LIB_DIR;
+  }
+  return std::string(RVS_LIB_PATH);
 }
 
