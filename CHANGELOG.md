@@ -6,7 +6,8 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Added
 
-
+- Pulse stressor module (`pulse.so`) for GPU power pulse stress testing. **(Beta — not for production use.)**
+  
 ## RVS 1.4.0
 
 ### Added
