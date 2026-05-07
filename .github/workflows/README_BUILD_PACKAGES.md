@@ -16,16 +16,32 @@ All packages are built with relocatable RPATH settings, meaning they can be inst
 The workflow runs automatically on:
 - Push to `master`, `main`, or `release/**` branches
 - Pull requests to `master` or `main` branches
-- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); uses **latest ROCm version** (auto-fetched from TheRock)
-- Manual trigger via GitHub Actions UI (workflow_dispatch)
+- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); **latest ROCm nightly** from [ROCm SDK nightly tarballs](https://rocm.nightlies.amd.com/tarball-multi-arch/) (or repo variable overrides).
+- **Pull requests** and **pushes** to `master`, `main`, or `release/**` (including merges): **latest ROCm release** (**X.Y.Z**) from [repo.amd.com ROCm tarballs](https://repo.amd.com/rocm/tarball/).
+- **Manual** (`workflow_dispatch`): if **`ROCM_VERSION`** is pinned (**workflow input** and/or **`vars.ROCM_VERSION`**), the tarball is chosen by **version format** (nightly `x.y.za…` vs release `X.Y.Z`). If no version is pinned, the job uses **latest nightly** (same as schedule).
+
+### ROCm SDK: nightly vs release in CI
+
+The workflow sets `ROCM_SDK_CHANNEL` and SDK URLs before calling `build_packages_local.sh`:
+
+| Trigger | SDK source |
+|---------|------------|
+| **`schedule`** | **Nightly** — latest nightly tarball from the nightly listing |
+| **`pull_request`** (to `master` / `main`) | **Release** — latest **X.Y.Z** from the release listing |
+| **`push`** to `master`, `main`, or `release/**` | **Release** — same (covers merge-after-PR) |
+| **`push`** to other branches | **Nightly** |
+| **`workflow_dispatch`** | **Format-based** when `rocm_version` input or `vars.ROCM_VERSION` is set; otherwise **latest nightly** |
+
+Local builds (no CI): default is **latest nightly** if `ROCM_VERSION` is unset; if set, tarball location follows the same **format** rules as in `build_packages_local.sh`.
 
 ### Manual Trigger Parameters
 
 When manually triggering the workflow, you can specify:
 
-1. **ROCm Version** (e.g., `7.11.0a20260121`)
-   - Default: empty (auto-fetches latest from TheRock)
-   - Or specify an explicit version string
+1. **ROCm Version**
+   - Empty — **latest nightly** (unless `vars.ROCM_VERSION` is set in the repo, which pins a version and triggers format-based selection).
+   - **`X.Y.Z`** — release tarball at [repo.amd.com](https://repo.amd.com/rocm/tarball/).
+   - **`x.y.za…`** — nightly tarball at [nightlies](https://rocm.nightlies.amd.com/tarball-multi-arch/).
    
 2. **GPU Family Target**:
    - `gfx94X-dcgpu` - MI300A/MI300X
@@ -284,7 +300,14 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ROCM_VERSION` | Auto-fetched (fallback: `7.11.0a20260121`) | ROCm SDK version from TheRock. If not set, script fetches latest version automatically. |
+| `ROCM_VERSION` | _(unset)_ | If set, selects tarball by **format** (see below). If unset locally: **latest nightly**. If unset in CI: channel selects latest **nightly** vs **release X.Y.Z**. |
+| `ROCM_SDK_RELEASE_URL` | `https://repo.amd.com/rocm/tarball/` | HTML listing for **release** tarballs (`therock-dist-linux-<GPU_FAMILY>-X.Y.Z.tar.gz`). Used when `ROCM_SDK_CHANNEL=release` or `auto` with this URL set. |
+| `ROCM_SDK_RELEASE_BASE_URL` | `https://repo.amd.com/rocm/tarball` | Directory URL for downloading **X.Y.Z** tarballs; overridden when version string is nightly-shaped. |
+| `ROCM_SDK_BASE_URL` | See script | Effective tarball base after channel + version-shape resolution. |
+| `ROCM_SDK_INDEX_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch/` | **Nightly** listing for latest nightly SDK discovery. |
+| `ROCM_SDK_NIGHTLY_BASE_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch` | Tarball base for **nightly** builds (`x.y.za…` versions). |
+| `ROCM_SDK_NIGHTLY_INDEX_URL` | _(same as index default)_ | Optional override for nightly listing URL. |
+| `ROCM_SDK_CHANNEL` | `auto` locally | **`nightly`** / **`release`** / **`auto`**. CI sets channel per trigger (see table above); manual with a pin uses **`auto`** so tarball follows version format. |
 | `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
 | `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `8.0` → `0800`) - used for RVS version tagging |
