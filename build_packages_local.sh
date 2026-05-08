@@ -47,7 +47,8 @@ elif [ "$ROCM_SDK_CHANNEL" = "release" ]; then
         if [ -n "${ROCM_SDK_RELEASE_BASE_URL:-}" ]; then
             ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_BASE_URL}"
         else
-            ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_URL%/*}"
+            # Same directory as listing: strip trailing / only (not %/* — that drops /tarball when URL has no trailing slash).
+            ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_URL%/}"
         fi
     fi
     ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL:-}"
@@ -58,7 +59,8 @@ else
             if [ -n "${ROCM_SDK_RELEASE_BASE_URL:-}" ]; then
                 ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_BASE_URL}"
             else
-                ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_URL%/*}"
+                # Listing URL and tarball base share the same path; normalize trailing slash only.
+                ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_URL%/}"
             fi
         fi
     else
