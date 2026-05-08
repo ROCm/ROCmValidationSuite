@@ -109,13 +109,13 @@ jobs:
             echo "Package filename: $DEB_FILE"
           fi
 
-      # S3 upload for repo ROCm/ROCmValidationSuite (schedule, push, pull request, manual)
+      # S3 upload for ROCm/ROCmValidationSuite only (skip fork PRs: OIDC token response is empty → JSON parse fails)
       - name: Install AWS CLI
-        if: github.repository == 'ROCm/ROCmValidationSuite'
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         run: sudo apt-get update && sudo apt-get install -y awscli
 
       - name: Configure AWS credentials
-        if: github.repository == 'ROCm/ROCmValidationSuite'
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
@@ -136,7 +136,7 @@ jobs:
       # S3 routing: release/* (push/manual) → release/; schedule/push/manual → nightly/; else → ref-specific
       - name: Upload Ubuntu packages to S3
         id: upload-s3-ubuntu
-        if: github.repository == 'ROCm/ROCmValidationSuite'
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           if [ -z "$BUCKET" ]; then
@@ -173,7 +173,7 @@ jobs:
       # can be consumed directly as a DEB repository by apt.
       # Only runs when the repository is ROCm/ROCmValidationSuite and the event is schedule, push, or manual.
       - name: Generate and upload DEB repo metadata to S3
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           [ -z "$BUCKET" ] && exit 0
@@ -279,14 +279,14 @@ jobs:
             echo "Package filename: $RPM_FILE"
           fi
 
-      # S3 upload for repo ROCm/ROCmValidationSuite (schedule, push, pull request, manual)
+      # S3 upload for ROCm/ROCmValidationSuite only (skip fork PRs — OIDC not usable)
       - name: Install AWS CLI
-        if: github.repository == 'ROCm/ROCmValidationSuite'
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           python3 -m pip install --break-system-packages awscli || (yum install -y python3-pip && pip3 install awscli)
 
       - name: Configure AWS credentials
-        if: github.repository == 'ROCm/ROCmValidationSuite'
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
@@ -307,7 +307,7 @@ jobs:
       # S3 routing: release/* (push/manual) → release/; schedule/push/manual → nightly/; else → ref-specific
       - name: Upload CentOS/RHEL packages to S3
         id: upload-s3-centos
-        if: github.repository == 'ROCm/ROCmValidationSuite'
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           if [ -z "$BUCKET" ]; then
@@ -350,7 +350,7 @@ jobs:
       # directly as an RPM repository by yum/dnf.
       # Only runs when the repository is ROCm/ROCmValidationSuite and the event is schedule, push, or manual.
       - name: Generate and upload RPM repodata to S3
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           [ -z "$BUCKET" ] && exit 0
