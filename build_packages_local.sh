@@ -13,13 +13,61 @@ BUILD_DIR="./build"
 ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
 # SDK Source Configuration
-# Default: TheRock public S3 nightly bucket (works from any network).
-# Override via environment variables or GitHub Actions repository variables (vars.*).
+# Defaults point at AMD-hosted listings (override via env or GitHub vars).
+# - Nightly index: https://rocm.nightlies.amd.com/tarball-multi-arch/
+# - Release listing: https://repo.amd.com/rocm/tarball/
 #
-# If your SDK server has no index page for auto-detection, set ROCM_SDK_INDEX_URL=""
-# and provide ROCM_VERSION explicitly.
-ROCM_SDK_BASE_URL="${ROCM_SDK_BASE_URL:-https://therock-nightly-tarball.s3.us-east-2.amazonaws.com}"
-ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL:-https://therock-nightly-tarball.s3.amazonaws.com/index.html}"
+# Local builds: if ROCM_VERSION is unset (channel auto, no release listing env), latest *nightly* is fetched.
+# If ROCM_VERSION is set, tarball base follows format:
+# - Nightly: x.y.za<date> (e.g. 7.11.0a20260121) → nightly base URL
+# - Release: X.Y.Z (e.g. 7.11.0) → release base URL
+#
+# ROCM_SDK_CHANNEL: nightly | release | auto (default auto).
+# - nightly: latest SDK from nightly listing (ROCM_SDK_INDEX_URL).
+# - release: latest X.Y.Z from release listing (ROCM_SDK_RELEASE_URL).
+# - auto: release listing URL set → release discovery; else nightly index.
+#
+# Optional: ROCM_SDK_NIGHTLY_BASE_URL, ROCM_SDK_NIGHTLY_INDEX_URL, ROCM_SDK_RELEASE_URL (listing),
+# ROCM_SDK_RELEASE_BASE_URL (tarball directory for X.Y.Z downloads).
+_ROCM_NIGHTLY_INDEX_DEFAULT="https://rocm.nightlies.amd.com/tarball-multi-arch/"
+_ROCM_NIGHTLY_BASE_DEFAULT="https://rocm.nightlies.amd.com/tarball-multi-arch"
+_ROCM_RELEASE_LIST_DEFAULT="https://repo.amd.com/rocm/tarball/"
+_ROCM_RELEASE_BASE_DEFAULT="https://repo.amd.com/rocm/tarball"
+
+ROCM_SDK_CHANNEL="${ROCM_SDK_CHANNEL:-auto}"
+ROCM_SDK_RELEASE_URL="${ROCM_SDK_RELEASE_URL:-}"
+
+if [ "$ROCM_SDK_CHANNEL" = "nightly" ]; then
+    ROCM_SDK_RELEASE_URL=""
+    ROCM_SDK_BASE_URL="${ROCM_SDK_NIGHTLY_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_NIGHTLY_BASE_DEFAULT}}"
+    ROCM_SDK_INDEX_URL="${ROCM_SDK_NIGHTLY_INDEX_URL:-${ROCM_SDK_INDEX_URL:-$_ROCM_NIGHTLY_INDEX_DEFAULT}}"
+elif [ "$ROCM_SDK_CHANNEL" = "release" ]; then
+    ROCM_SDK_RELEASE_URL="${ROCM_SDK_RELEASE_URL:-$_ROCM_RELEASE_LIST_DEFAULT}"
+    if [ -z "${ROCM_SDK_BASE_URL:-}" ]; then
+        if [ -n "${ROCM_SDK_RELEASE_BASE_URL:-}" ]; then
+            ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_BASE_URL}"
+        else
+            # Same directory as listing: strip trailing / only (not %/* — that drops /tarball when URL has no trailing slash).
+            ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_URL%/}"
+        fi
+    fi
+    ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL:-}"
+else
+    # auto (local: no release URL → nightly latest; CI sets channel explicitly)
+    if [ -n "${ROCM_SDK_RELEASE_URL}" ]; then
+        if [ -z "${ROCM_SDK_BASE_URL:-}" ]; then
+            if [ -n "${ROCM_SDK_RELEASE_BASE_URL:-}" ]; then
+                ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_BASE_URL}"
+            else
+                # Listing URL and tarball base share the same path; normalize trailing slash only.
+                ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_URL%/}"
+            fi
+        fi
+    else
+        ROCM_SDK_BASE_URL="${ROCM_SDK_NIGHTLY_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_NIGHTLY_BASE_DEFAULT}}"
+    fi
+    ROCM_SDK_INDEX_URL="${ROCM_SDK_NIGHTLY_INDEX_URL:-${ROCM_SDK_INDEX_URL:-$_ROCM_NIGHTLY_INDEX_DEFAULT}}"
+fi
 
 # Post-build upload configuration
 # Set UPLOAD_TARGET to enable automatic upload of built packages after the build.
@@ -69,6 +117,27 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
+# Join base URL and filename without duplicate slashes
+join_base_and_file() {
+    local base="$1"
+    local path="$2"
+    base="${base%/}"
+    printf '%s/%s' "$base" "$path"
+}
+
+# After ROCM_VERSION is known: pick tarball host directory from version shape (overrides channel defaults).
+# Nightly: x.y.za<digits>  Release: X.Y.Z (three-part semver only)
+apply_sdk_tarball_base_for_version() {
+    local v="$1"
+    if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+'; then
+        ROCM_SDK_BASE_URL="${ROCM_SDK_NIGHTLY_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_NIGHTLY_BASE_DEFAULT}}"
+        print_info "Version matches ROCm nightly format (x.y.za…) → tarball base: $ROCM_SDK_BASE_URL"
+    elif echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_RELEASE_BASE_DEFAULT}}"
+        print_info "Version matches ROCm release format (X.Y.Z) → tarball base: $ROCM_SDK_BASE_URL"
+    fi
+}
+
 # Function to fetch latest ROCm version for specified GPU family
 # Sets the global ROCM_VERSION variable directly
 fetch_latest_rocm_version() {
@@ -84,13 +153,35 @@ fetch_latest_rocm_version() {
         sort -V | tail -1)
     
     if [ -z "$latest_version" ]; then
-        print_error "Could not fetch latest ROCm version for $gpu_family"
-        print_info "Falling back to default version: 7.11.0a20260121"
-        ROCM_VERSION="7.11.0a20260121"
+        print_error "Could not fetch latest ROCm nightly version for $gpu_family from $ROCM_SDK_INDEX_URL"
         return 1
     fi
-    
+
     print_success "Found latest ROCm version: $latest_version"
+    ROCM_VERSION="$latest_version"
+    return 0
+}
+
+# Fetch latest ROCm *release* tarball version (semantic X.Y.Z only; excludes nightly builds like 7.11.0a20260121).
+# Parses ROCM_SDK_RELEASE_URL (HTML listing / index). Sets ROCM_VERSION.
+fetch_latest_rocm_release_version() {
+    local gpu_family="$1"
+    local list_url="${ROCM_SDK_RELEASE_URL:-$_ROCM_RELEASE_LIST_DEFAULT}"
+
+    print_info "Fetching latest ROCm release version (X.Y.Z) for $gpu_family..."
+    print_info "Release listing URL: $list_url"
+
+    local latest_version
+    latest_version=$(wget -qO- "$list_url" 2>/dev/null | \
+        grep -oP "therock-dist-linux-${gpu_family}-\K[0-9]+\.[0-9]+\.[0-9]+(?=\.tar\.gz)" | \
+        sort -V | uniq | tail -1)
+
+    if [ -z "$latest_version" ]; then
+        print_error "No therock-dist-linux-${gpu_family}-X.Y.Z.tar.gz found under release listing (expected forms like 7.11.0)"
+        return 1
+    fi
+
+    print_success "Found latest ROCm release version: $latest_version"
     ROCM_VERSION="$latest_version"
     return 0
 }
@@ -293,12 +384,40 @@ check_and_install_dependencies() {
 # Check and install dependencies (installs wget, etc. - required before fetch_latest_rocm_version)
 check_and_install_dependencies
 
-# Determine ROCm version: use environment variable or fetch latest (wget is now available)
+# Determine ROCm version: explicit env > channel-specific listing
 if [ -n "$ROCM_VERSION" ]; then
     print_info "Using specified ROCm version: $ROCM_VERSION"
+elif [ "$ROCM_SDK_CHANNEL" = "nightly" ]; then
+    print_info "No ROCm version specified; fetching latest from ROCm nightly index (channel=nightly)..."
+    if [ -z "$ROCM_SDK_INDEX_URL" ]; then
+        print_error "ROCM_SDK_CHANNEL=nightly requires ROCM_SDK_INDEX_URL"
+        exit 1
+    fi
+    fetch_latest_rocm_version "$GPU_FAMILY"
+    if [ -z "$ROCM_VERSION" ]; then
+        print_error "Failed to determine ROCm nightly version"
+        exit 1
+    fi
+elif [ "$ROCM_SDK_CHANNEL" = "release" ]; then
+    print_info "No ROCm version specified; fetching latest release X.Y.Z from ROCM_SDK_RELEASE_URL..."
+    if [ -z "$ROCM_SDK_RELEASE_URL" ]; then
+        print_error "ROCM_SDK_CHANNEL=release requires ROCM_SDK_RELEASE_URL when ROCM_VERSION is unset"
+        exit 1
+    fi
+    fetch_latest_rocm_release_version "$GPU_FAMILY"
+    if [ -z "$ROCM_VERSION" ]; then
+        print_error "Failed to determine ROCm release version"
+        exit 1
+    fi
+elif [ -n "$ROCM_SDK_RELEASE_URL" ]; then
+    print_info "No ROCm version specified; resolving latest release from ROCM_SDK_RELEASE_URL (channel=auto)..."
+    fetch_latest_rocm_release_version "$GPU_FAMILY"
+    if [ -z "$ROCM_VERSION" ]; then
+        print_error "Failed to determine ROCm release version"
+        exit 1
+    fi
 elif [ -n "$ROCM_SDK_INDEX_URL" ]; then
-    # Auto-detection only works when an index URL is available (e.g. S3 bucket)
-    print_info "No ROCm version specified, fetching latest from index..."
+    print_info "No ROCm version specified, fetching latest from nightly index (channel=auto)..."
     fetch_latest_rocm_version "$GPU_FAMILY"
 
     if [ -z "$ROCM_VERSION" ]; then
@@ -307,25 +426,23 @@ elif [ -n "$ROCM_SDK_INDEX_URL" ]; then
     fi
 else
     print_error "ROCM_VERSION is required"
-    print_info "The configured SDK server does not provide an index page for auto-detection."
-    print_info "Set it via environment variable, e.g.:"
+    print_info "Set ROCM_VERSION, or configure ROCM_SDK_RELEASE_URL (release X.Y.Z tarballs) or ROCM_SDK_INDEX_URL (nightly listing)."
+    print_info "Example:"
     echo ""
-    echo "  export ROCM_VERSION=\"7.11.0a20260121\""
+    echo "  export ROCM_VERSION=\"7.11.0\""
     echo "  ./build_packages_local.sh"
-    echo ""
-    print_info "Or in GitHub Actions workflow:"
-    echo ""
-    echo "  env:"
-    echo "    ROCM_VERSION: \"7.11.0a20260121\""
     echo ""
     exit 1
 fi
+
+apply_sdk_tarball_base_for_version "$ROCM_VERSION"
 
 # Print configuration
 echo "================================================================================"
 echo "  ROCm Validation Suite - Local Package Build Script"
 echo "================================================================================"
 print_info "ROCm Version: $ROCM_VERSION"
+print_info "ROCm SDK channel: ${ROCM_SDK_CHANNEL:-auto}"
 print_info "GPU Family: $GPU_FAMILY"
 print_info "Build Type: $BUILD_TYPE"
 print_info "Build Directory: $BUILD_DIR"
@@ -340,7 +457,7 @@ echo ""
 
 # Step 1: Download ROCm SDK
 print_info "Step 1: Downloading ROCm SDK tarball..."
-TARBALL_URL="${ROCM_SDK_BASE_URL}/therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz"
+TARBALL_URL=$(join_base_and_file "$ROCM_SDK_BASE_URL" "therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz")
 TARBALL_FILE="$ROCM_INSTALL_DIR/rocm-sdk.tar.gz"
 
 mkdir -p "$ROCM_INSTALL_DIR"
