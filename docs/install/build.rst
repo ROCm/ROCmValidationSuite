@@ -1,41 +1,13 @@
 .. meta::
-  :description: Install ROCm Validation Suite
-  :keywords: install, rocm validation suite, rvs, RVS, AMD, ROCm
+  :description: Build ROCm Validation Suite from source
+  :keywords: install, rocm validation suite, rvs, RVS, AMD, ROCm, build, source
 
 
-**********************************
-Installing ROCm Validation Suite
-**********************************
+***************************************
+Build ROCm Validation Suite from source
+***************************************
 
-You can obtain ROCm Validation Suite (RVS) by building it from:
-
-* the source code base
-
-* a prebuilt package
-
-Building from source code
----------------------------
-
-RVS is an open-source solution. For more details, refer to the `ROCm Validation Suite GitHub repository. <https://github.com/ROCm/ROCmValidationSuite>`_
-
-
-Package manager installation
-------------------------------
-
-Based on the OS, use the appropriate package manager to install the RVS package.
-
-For more details, refer to the `ROCm Validation Suite GitHub repository. <https://github.com/ROCm/ROCmValidationSuite>`_
-
-RVS package components are installed in ``/opt/rocm``. The package contains:
-
-- executable binary, located in ``_install-base_/bin/rvs``.
-- public shared libraries, located in ``_install-base_/lib``.
-- module specific shared libraries, located in ``_install-base_/lib/rvs``.
-- default configuration files, located in ``_install-base_/share/rocm-validation-suite/conf``.
-- GPU specific configuration files, located in ``_install-base_/share/rocm-validation-suite/conf/<GPU folder>``.
-- testscripts, located in ``_install-base_/share/rocm-validation-suite/testscripts``.
-- user guide, located in ``_install-base_/share/rocm-validation-suite/userguide``.
-- man page, located in ``_install-base_/share/man``.
+Use the following steps to build and install RVS from source.
 
 Prerequisites
 ------------------
@@ -71,59 +43,15 @@ Ensure you review the following prerequisites carefully for each operating syste
                 sudo zypper  install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
 
 
-Install ROCm stack, rocBLAS, and SMI lib
-------------------------------------------
+Install the ROCm Core SDK
+-------------------------
 
-1. Install the ROCm software stack for Ubuntu, SLES or RHEL. Refer to the `ROCm installation guide <https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html>`_ for more details.
+RVS is a ROCm Extra requiring the ROCm Core SDK to be installed.
 
-2. Install rocBLAS. For ROCm 6.4 and earlier, install ``rocm-smi-lib``. For ROCm 7.0 and later, install ``amd-smi-lib``.
-
-.. tab-set::
-    .. tab-item:: Ubuntu
-        :sync: Ubuntu
-
-        .. code-block:: shell
-
-            sudo apt-get install rocblas rocm-smi-lib
-
-    .. tab-item:: RHEL
-        :sync: RHEL
-
-        .. code-block:: shell
-
-            sudo yum install --nogpgcheck rocblas rocm-smi-lib
-
-    .. tab-item:: SUSE
-        :sync: SUSE
-
-        .. code-block:: shell
-
-            sudo zypper install rocblas rocm-smi-lib
-
-If rocm-smi-lib is already installed, but ``/opt/rocm/lib/librocm_smi64.so`` doesn't exist, run the following commands as per the OS:
-
-.. tab-set::
-    .. tab-item:: Ubuntu
-          :sync: Ubuntu
-
-          .. code-block:: shell
-
-              sudo dpkg -r rocm-smi-lib && sudo apt install rocm-smi-lib
-
-
-    .. tab-item:: RHEL
-          :sync: RHEL
-
-          .. code-block:: shell
-
-              sudo rpm -e  rocm-smi-lib && sudo yum install  rocm-smi-lib
-
-    .. tab-item:: SUSE
-         :sync: SUSE
-
-         .. code-block:: shell
-
-             sudo rpm -e  rocm-smi-lib && sudo zypper install  rocm-smi-lib
+For instructions, see `Install AMD ROCm
+<https://rocm.amd.com/en/7.13.0-preview/install/rocm.html?fam=all&i=pkgman>`__. Use the
+selector panel on that page to view instructions appropriate for your system
+environment.
 
 
 Building from source
@@ -195,7 +123,7 @@ For example, if ROCm 5.5 was installed, run the following command:
 
                 sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 
-.. Note::
+.. note::
 
     RVS is packaged as part of the ROCm release starting from 3.0. You can install the pre-compiled package as indicated below. Ensure prerequisites, ROCm stack, rocblas and rocm-smi-lib64 are already installed.
 
@@ -277,9 +205,18 @@ Building documentation
 
 Run the following commands to build documentation locally.
 
-.. code-block::
+1. Create a Python virtual environment and install documentation dependencies.
 
-        cd docs
-        pip3 install -r .sphinx/requirements.txt
-        python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
+   .. code-block:: bash
 
+      python3.12 -m venv docs/.venv
+      source docs/.venv/bin/activate
+
+      pip install -r docs/sphinx/requirements.txt
+
+2. Build the documentation using Sphinx.
+
+   python -m sphinx docs docs/_build -E -j auto
+
+3. Open ``docs/_build/index.html`` in your web browser to view the
+   documentation.
