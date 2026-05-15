@@ -154,7 +154,11 @@ For example, if ROCm 5.5 was installed, run the following command:
 
 .. code-block::
 
-    make -C ./build
+    make -C ./build -j $(nproc)
+
+.. Note::
+
+    ``$(nproc)`` automatically uses all available CPU cores for parallel compilation, which can significantly speed up the build process. You can replace it with a specific number (e.g., ``-j 8``) to limit core usage.
 
 4. Build the package.
 
