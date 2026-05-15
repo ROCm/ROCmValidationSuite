@@ -2,23 +2,18 @@ defaults:
   numbered: False
 root: index
 subtrees:
-- caption: Install
-  entries:
-  - file: install/installation.rst
-    title: ROCm Validation Suite installation 
+  - caption: Install
+    entries:
+      - file: install/installation.rst
+        title: ROCm Validation Suite installation
 
+  - caption: Reference
+    entries:
+      - file: ug1main.md
+        title: User guide
+      - file: features.md
+        title: ROCm Validation Suite modules
 
-- caption: How to
-  entries:
-   - file: how to/configure-rvs.rst
-     title: Configure ROCm Validation Suite
-
-- caption: Conceptual
-  entries:
-  - file: conceptual/rvs-modules.rst
-    title: ROCm Validation Suite modules
-
-
-- caption: About
-  entries:
-  - file: license.md
+  - caption: About
+    entries:
+      - file: license.md

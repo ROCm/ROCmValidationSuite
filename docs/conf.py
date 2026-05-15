@@ -15,7 +15,9 @@ with open('../CMakeLists.txt', encoding='utf-8') as f:
 left_nav_title = f"RVS {version_number} Documentation"
 
 exclude_patterns = [
-    'ug1main.md'
+    'conceptual/**',
+    'how to/**',
+    'schemas/**',
 ]
 
 # for PDF output on Read the Docs
