@@ -3,14 +3,14 @@
 ## Introduction
 The ROCm Validation Suite (RVS) is a system validation and diagnostics tool
 for monitoring, stress testing, detecting and troubleshooting issues that
-affects the functionality and performance of AMD GPU(s) operating in a
+affect the functionality and performance of AMD GPU(s) operating in a
 high-performance/AI/ML computing environment. RVS is enabled using the ROCm
 software stack on a compatible software and hardware platform.
 
 RVS is a collection of tests, benchmarks, and qualification tools each
 targeting a specific sub-system of the ROCm platform. The tools are
-implemented in software and share a common command line interface. Each set of
-tests are implemented in a “module” which is a library encapsulating the
+implemented in software and share a common command-line interface. Each set of
+tests is implemented in a “module” which is a library encapsulating the
 functionality specific to the tool. The CLI can specify the directory containing
 modules to use when searching for libraries to load. Each module may have a set
 of options that it defines and a configuration file that supports its execution.
@@ -50,23 +50,27 @@ RVS package components are installed in `/opt/rocm`. Package contains:
     cd <source folder>/build/bin
 
     Command examples
-    ./rvs --help ; Lists all options to run RVS test suite
-    ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
+    ./rvs --help  # Lists all options to run RVS test suite
+    ./rvs -g      # Lists supported GPUs available in the machine
+    ./rvs -c conf/gst_single.conf  # Run GST module default test configuration
+    ./rvs -m gst  # Run GST module using platform-detected config
+    ./rvs -r 3    # Run RVS level 3 (range: 1–5, 5 = highest) tests for the platform-detected
 
-### Run version pre-compiled and packaged with ROCm release
+#### Run version pre-compiled and packaged with ROCm release
 
     cd /opt/rocm/bin
 
     Command examples
-    ./rvs --help ; Lists all options to run RVS test suite
-    ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
+    ./rvs --help  # Lists all options to run RVS test suite
+    ./rvs -g      # Lists supported GPUs available in the machine
+    ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf  # Run GST default test configuration
+    ./rvs -m gst  # Run GST module using platform-detected config
+    ./rvs -r 3    # Run RVS level 3 (range: 1–5, 5 = highest) tests for the platform-detected
 
 To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
 
-    ./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf ; Run MI300X specific GST test configuration
-    ./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf ; Run Navi 32 specific GST test configuration
+    ./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf  # Run MI300X specific GST test configuration
+    ./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf  # Run Navi 32 specific GST test configuration
 
 Note: If present, always use GPU specific configurations instead of default test configurations.
 
@@ -88,7 +92,7 @@ allowing for easy addition of new modules in the future.
 The GPU Properties module queries the configuration of a target device and returns the device’s static characteristics. These static values can be used to debug issues such as device support, performance and firmware problems.
 
 #### GPU Monitor – GM module
-The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information at regular intervals. The module can be configured to halt another RVS modules execution if one of the quantities exceeds a specified boundary value.
+The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information at regular intervals. The module can be configured to halt another RVS module's execution if one of the quantities exceeds a specified boundary value.
 
 #### PCI Express State Monitor – PESM module
 The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU. The module will register a “listener” on a target GPU’s PCIe interconnect, and log a message whenever it detects a state change. The PESM will be able to detect the following state changes:
@@ -97,7 +101,7 @@ The PCIe State Monitor tool is used to actively monitor the PCIe interconnect be
 2.	GPU power state changes
 
 #### ROCm Configuration Qualification Tool - RCQT module
-The ROCm Configuration Qualification Tool ensures the platform is capable of running ROCm applications and is configured correctly. It checks the installed versions of the ROCm components and the platform configuration of the system. This includes checking the dependencies corresponding to the ROCm meta-packages are installed correctly.
+The ROCm Configuration Qualification Tool ensures the platform is capable of running ROCm applications and is configured correctly. It checks the installed versions of the ROCm components and the platform configuration of the system. This includes verifying that the dependencies corresponding to the ROCm meta-packages are installed correctly.
 
 #### PCI Express Qualification Tool – PEQT module
 The PCIe Qualification Tool is used to qualify the PCIe bus on which the GPU is connected. The qualification test will be capable of determining the following characteristics of the PCIe bus interconnect to a GPU:
@@ -121,7 +125,7 @@ Please see the web page “ROCm, a New Era in Open GPU Computing” to find out 
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory. The maximum bandwidth obtained is reported to help debug low bandwidth issues. The benchmark should be capable of  targeting one, some or all of the GPUs installed in a platform, reporting individual benchmark statistics for each.
 
 #### GPU Stress Test - GST module
-The GPU Stress Test runs various GEMM computations as workloads to stress the GPU FLOPS performance and check whether it meets the configured target GFLOPS. GEMM workloads shall be configured as either operation type or data type. GEMM based on operation types include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) - configured using operation parameter. GEMM based on data types include `fp8`, `i8`, `fp16`, `bf16`, `fp32` and  `tf32` (`xf32`) - configured using data type parameter. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
+The GPU Stress Test runs various GEMM computations as workloads to stress the GPU FLOPS performance and check whether it meets the configured target GFLOPS. GEMM workloads shall be configured as either operation type or data type. GEMM based on operation types include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) - configured using operation parameter. GEMM based on data types include `fp8`, `i8`, `fp16`, `bf16`, `fp32` and `tf32` (`xf32`) - configured using data type parameter. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
 
 #### Input EDPp Test - IET module
 The Input EDPp Test runs GEMM workloads to stress the GPU power (that is, TGP). This test is used to verify if the GPU is capable of handling max. power stress for a sustained period of time. Also checks whether GPU power reaches a set target power.
@@ -222,11 +226,11 @@ isn’t specified the default is 1. Some modules will ignore this
 parameter.</td></tr>
 
 <tr><td>wait</td><td>Integer</td><td>This indicates how long the test should
-wait
-between executions, in milliseconds. Some
+wait between executions, in milliseconds. Some
 modules will ignore this parameter. If the
-count key is not specified, this key is ignored.
-duration Integer This parameter overrides the count key, if
+count key is not specified, this key is ignored.</td></tr>
+
+<tr><td>duration</td><td>Integer</td><td>This parameter overrides the count key, if
 specified. This indicates how long the test
 should run, given in milliseconds. Some
 modules will ignore this parameter.</td></tr>
@@ -409,7 +413,7 @@ format will be returned:
 
 **Example 1:**
 
-Consider action>
+Consider action:
 
     actions:
     - name: action_1
@@ -562,7 +566,7 @@ message will be printed to stdout while the bounding value is still exceeded.
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
 <tr><td>monitor</td><td>Bool</td>
-<td>If this this key is set to true, the GM module will start monitoring on
+<td>If this key is set to true, the GM module will start monitoring on
 specified devices. If this key is set to false, all other keys are ignored and
 monitoring of the specified device will be stopped.</td></tr>
 <tr><td>metrics</td>
@@ -589,7 +593,7 @@ specified, no logging will occur.</td></tr>
 monitor will terminate the RVS process when a bounds violation is encountered on
 any of the metrics specified.</td></tr>
 <tr><td>force</td><td>Bool</td> <td>If 'true'  and terminate key is also 'true'
-the RVS process will terminate immediately. **Note:** this may cose resource leaks
+the RVS process will terminate immediately. **Note:** this may cause resource leaks
 within GPUs.</td></tr>
 </table>
 
@@ -612,7 +616,7 @@ with the following format:
 
     [RESULT][<timestamp>][<action name>] gm <gpu id> started
 
-In addition, an informational message is provided for each for each metric
+In addition, an informational message is provided for each metric
 being monitored:
 
     [INFO ][<timestamp>][<action name>] gm <gpu id> monitoring <metric> bounds min:<min_metric> max: <max_metric>
@@ -783,7 +787,7 @@ Monitoring is performed by polling respective PCIe registers roughly every 1ms
 ### Module Specific Keys
 <table>
 <tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>monitor</td><td>Bool</td><td>This this key is set to true, the PESM
+<tr><td>monitor</td><td>Bool</td><td>This key is set to true, the PESM
 module will start monitoring on specified devices. If this key is set to false,
 all other keys are ignored and monitoring will be stopped for all devices.</td>
 </tr> </table>
@@ -889,7 +893,7 @@ Consider this file:
       monitor: true
 
 
-This file has and invalid entry in **deviceid** key.
+This file has an invalid entry in **deviceid** key.
 If execute, an error will be reported:
 
     RVS-PESM: action: act1  invalide 'deviceid' key value: xxx
@@ -909,12 +913,12 @@ checks required for ROCm support. The checks in this module do not target a
 specific device.
 \n\n
 Two types of actions are performed by RCQT.
-1)Metapackage Check
+1) Metapackage Check
 metapackage-validation: This will check the installation of the mentioned 
 metapackages and their dependencies and their respective versions as required
 by metapackage. List of metapackages are provided with key **package**
 
-2)Packages installation check
+2) Packages installation check
 packagelist-install-validation: This action checks if the package is installed.
   Packages are provided against key **rpmpackagelist** and **debpackagelist**
 
@@ -954,7 +958,7 @@ along with versions of each sub package:
 </table>
 
 The check will emit a result message with the following format:
-    Meta package >metapakcage-name> :
+    Meta package <metapackage-name> :
     Package <dep-package1> installed version is <version>
     Package <dep-package2> installed version is <version>
     Package <dep-package3> installed version is <version>
@@ -1036,7 +1040,7 @@ Output keys are described in the table below:
 
 **Example 1:**
 
-In this example, given user does not exist.
+In this example, all given packages are installed.
 
     actions:
     - name: packagelist-install-validation
@@ -1515,7 +1519,7 @@ Please note that suitable values for **log\_interval** and **duration** depend
 on your system.
 
 - **log_interval**, in sequential mode, should be long enough to allow all
-transfer tests to finish at lest once or "(pending)" and "(*)" will be displayed
+transfer tests to finish at least once or "(pending)" and "(*)" will be displayed
 (see below). Number of transfers depends on number of peer NUMA nodes in your
 system. In parallel mode, it should be roughly 1.5 times the duration of single
 longest individual test.
@@ -1642,7 +1646,7 @@ From the second line of result, we can see that source GPU (ID 3254) can access 
 
 Here all source GPUs (device: all) with all destination GPUs (peers: all) are
 tested for p2p capability including bandwidth testing (test_bandwidth: true)
-with bidirectional transfers (bidirectional: true) and with emmediate output
+with bidirectional transfers (bidirectional: true) and with immediate output
 for each completed transfer (log_interval: 0)
 
     actions:
@@ -1864,7 +1868,7 @@ Please note that suitable values for **log\_interval** and **duration** depend
 on your system.
 
 - **log_interval**, in sequential mode, should be long enough to allow all
-transfer tests to finish at lest once or "(pending)" and "(*)" will be displayed
+transfer tests to finish at least once or "(pending)" and "(*)" will be displayed
 (see below). Number of transfers depends on number of peer NUMA nodes in your
 system. In parallel mode, it should be roughly 1.5 times the duration of single
 longest individual test.
@@ -1933,7 +1937,7 @@ peers. You may need to increase test duration.
 <td>Cumulative duration of all transfers between the two particular nodes</td></tr>
 </table>
 
-At the beginning, test will display link infor for every CPU/GPU pair:
+At the beginning, the test will display link info for every CPU/GPU pair:
 
     [RESULT][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu node> <gpu id> distance:<distance> <hop_type>:<hop_dist>[ <hop_type>:<hop_dist>]
 
@@ -2102,7 +2106,7 @@ gigaflops. This parameter is required.</td></tr>
 <td>This parameter indicates if each operation should copy the matrix data to
 the GPU before executing. The default value is true.</td></tr>
 <tr><td>ramp_interval</td><td>Integer</td>
-<td>This is an time interval, specified in milliseconds, given to the test to
+<td>This is a time interval, specified in milliseconds, given to the test to
 reach the given target_stress gigaflops. The default value is 5000 (5 seconds).
 This time is counted against the duration of the test. If the target gflops, or
 stress, is not achieved in this time frame, the test will fail. If the target
@@ -2152,7 +2156,7 @@ gigaflops.</td></tr>
 level.</td></tr>
 </table>
 
-An informational message indicating will be emitted when the test starts
+An informational message will be emitted when the test starts
 execution:
 
     [INFO ][<timestamp>][<action name>] gst <gpu id> start <target_stress> copy matrix: <copy_matrix>
@@ -2321,7 +2325,7 @@ __[RESULT] [172077.448182] action_1 gst 33367 Gflop: 6558.348080 flops_per_op:
 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
 TRUE__<br />
 
-When setting the __parallel__ to false, the __RVS__ will run the stress tests on
+When setting the __parallel__ to true, the __RVS__ will run the stress tests on
 all selected GPUs in parallel and the output may look like this:
 
 __[INFO  ] [173381.407428] action_1 gst 50599 start 5000.000000 copy
@@ -2382,7 +2386,7 @@ Module specific keys are described in the table below:
 <td>This is a floating point value specifying the target sustained power level
 for the test.</td></tr>
 <tr><td>ramp_interval</td><td>Integer</td>
-<td>This is an time interval, specified in milliseconds, given to the test to
+<td>This is a time interval, specified in milliseconds, given to the test to
 determine the compute load that will sustain the target power. The default value
 is 5000 (5 seconds). This time is counted against the duration of the test.
 </td></tr>

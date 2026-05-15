@@ -19,23 +19,16 @@ For more information, refer to `GitHub. <https://github.com/ROCm/ROCmValidationS
 
      * :doc:`Install ROCm Validation Suite <./install/installation>`
 
+  .. grid-item-card:: Reference
 
-  .. grid-item-card:: How to
-
-     * :doc:`Configure ROCm Validation Suite <how to/configure-rvs>`
+     * :doc:`User guide <ug1main>`
 
   .. grid-item-card:: Conceptual
 
-     * :doc:`ROCm Validation Suite modules <./conceptual/rvs-modules>`
-
+     * :doc:`ROCm Validation Suite modules <features>`
 
 To contribute to the documentation, refer to
 `Contributing to ROCm <https://rocm.docs.amd.com/en/latest/contribute/contributing.html>`_.
 
 You can find licensing information on the
 `Licensing <https://rocm.docs.amd.com/en/latest/about/license.html>`_ page.
-
-    
-    
-    
-
