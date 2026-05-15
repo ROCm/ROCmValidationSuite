@@ -17,7 +17,7 @@ For more information, refer to `GitHub. <https://github.com/ROCm/ROCmValidationS
 
   .. grid-item-card:: Install
 
-     * :doc:`ROCm Validation Suite installation <./install/installation>`
+     * :doc:`Install ROCm Validation Suite <./install/installation>`
 
   .. grid-item-card:: Reference
 
