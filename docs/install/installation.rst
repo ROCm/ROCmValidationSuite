@@ -11,7 +11,7 @@ supported by ROCm. See the :doc:`ROCm compatibilty matrix
 <rocm:compatibility/compatibility-matrix>` for support information.
 
 For advanced workflows, source builds, or custom configurations, see
-:doc:`./build`.
+`<https://github.com/ROCm/ROCmValidationSuite#rocmvalidationsuite>`__.
 
 Install RVS on Linux
 ====================
