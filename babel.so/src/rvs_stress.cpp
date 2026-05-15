@@ -274,21 +274,21 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       << "n_elements" << csv_separator
       << "sizeof" << csv_separator
       << ((mibibytes) ? "max_mibytes_per_sec" : "max_mbytes_per_sec") << csv_separator
-      << "min_runtime" << csv_separator
-      << "max_runtime" << csv_separator
-      << "avg_runtime" << std::endl;
+      << ((mibibytes) ? "mibps_at_min_t" : "mbps_at_min_t") << csv_separator
+      << ((mibibytes) ? "mibps_at_max_t" : "mbps_at_max_t") << csv_separator
+      << ((mibibytes) ? "mibps_at_avg_t" : "mbps_at_avg_t") << std::endl;
   }
   else
   {
-      sstr << "\n------------------------------------------------------------------------" << std::endl
+      sstr << "\n---------------------------------------------------------------------------------" << std::endl
       << std::left << std::setw(12) << "GPU Id"
       << std::left << std::setw(12) << "Function"
       << std::left << std::setw(15) << ((mibibytes) ? "MiBytes/sec" : "MBytes/sec")
-      << std::left << std::setw(12) << "Min (sec)"
-      << std::left << std::setw(12) << "Max"
-      << std::left << std::setw(12) << "Average"
+      << std::left << std::setw(15) << ((mibibytes) ? "Max MiB/s" : "Max MB/s")
+      << std::left << std::setw(15) << ((mibibytes) ? "Min MiB/s" : "Min MB/s")
+      << std::left << std::setw(15) << ((mibibytes) ? "Avg MiB/s" : "Avg MB/s")
       << std::endl
-      << "------------------------------------------------------------------------" << std::endl
+      << "---------------------------------------------------------------------------------" << std::endl
       << std::fixed;
   }
 
@@ -322,6 +322,7 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 
       // Calculate average; ignore the first result
       double average = std::accumulate(timings[i].begin()+1, timings[i].end(), 0.0) / (double)(effective_num_times - 1);
+      const double bw_scale = (mibibytes) ? pow(2.0, -20.0) : 1.0E-6;
       // Display results
       if (output_as_csv)
       {
@@ -331,10 +332,10 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
           << effective_num_times << csv_separator
           << ARRAY_SIZE << csv_separator
           << sizeof(T) << csv_separator
-          << ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * sizes[i] / (*minmax.first) << csv_separator
-          << *minmax.first << csv_separator
-          << *minmax.second << csv_separator
-          << average
+          << bw_scale * sizes[i] / (*minmax.first) << csv_separator
+          << bw_scale * sizes[i] / (*minmax.first) << csv_separator
+          << bw_scale * sizes[i] / (*minmax.second) << csv_separator
+          << bw_scale * sizes[i] / average
           << std::endl;
       }
       else
@@ -343,26 +344,32 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
           << std::left << std::setw(12) << device.second
           << std::left << std::setw(12) << labels[i]
           << std::left << std::setw(15) << std::setprecision(3) <<
-          ((mibibytes) ? pow(2.0, -20.0) : 1.0E-6) * sizes[i] / (*minmax.first)
-          << std::left << std::setw(12) << std::setprecision(5) << *minmax.first
-          << std::left << std::setw(12) << std::setprecision(5) << *minmax.second
-          << std::left << std::setw(12) << std::setprecision(5) << average
+          bw_scale * sizes[i] / (*minmax.first)
+          << std::left << std::setw(15) << std::setprecision(3) <<
+          bw_scale * sizes[i] / (*minmax.first)
+          << std::left << std::setw(15) << std::setprecision(3) <<
+          bw_scale * sizes[i] / (*minmax.second)
+          << std::left << std::setw(15) << std::setprecision(3) <<
+          bw_scale * sizes[i] / average
           << std::endl;
       }
       if (json){
+        const char *key = mibibytes ? "MiBytes/sec" : "MBytes/sec";
+        const char *peak_key = mibibytes ? "Max_MiBytes/sec" : "Max_MBytes/sec";
+        const char *worst_key = mibibytes ? "Min_MiBytes/sec" : "Min_MBytes/sec";
+        const char *avg_key = mibibytes ? "Avg_MiBytes/sec" : "Avg_MBytes/sec";
         log_to_json(desc, rvs::logresults, "Function",std::string(labels[i]),
-            "MBytes/sec", (mibibytes) ?
-            std::to_string(pow(2.0, -20.0)) : std::to_string((1.0E-6) * sizes[i] / (*minmax.first)),
-            "Min(s)",std::to_string( *minmax.first),
-            "Max(s)", std::to_string(*minmax.second),
-            "Average(s)", std::to_string(average),
+            key, std::to_string(bw_scale * sizes[i] / (*minmax.first)),
+            peak_key, std::to_string(bw_scale * sizes[i] / (*minmax.first)),
+            worst_key, std::to_string(bw_scale * sizes[i] / (*minmax.second)),
+            avg_key, std::to_string(bw_scale * sizes[i] / average),
             "pass", "true");
       }
     }
   }
 
   sstr
-    << "------------------------------------------------------------------------" << std::endl;
+    << "---------------------------------------------------------------------------------" << std::endl;
   rvs::lp::Log(sstr.str(), rvs::logresults);
   delete stream;
 

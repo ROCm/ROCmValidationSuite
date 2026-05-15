@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2026 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -29,7 +29,7 @@ if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 endif ()
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-set ( RVS "rvslib" )
+set ( RVS "pulse" )
 set ( RVS_PACKAGE "rvs-roct" )
 set ( RVS_COMPONENT "lib${RVS}" )
 set ( RVS_TARGET "${RVS}" )
@@ -38,13 +38,7 @@ project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
 
-add_compile_options(-pthread)
-add_compile_options(-Wall )
-add_compile_options(-fPIC)
-add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
-
-
-
+add_compile_options(-Wall)
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
   set(CMAKE_EXE_LINKER_FLAGS "--coverage")
@@ -58,9 +52,8 @@ endif ()
 
 ## Include common cmake modules
 include ( utils )
-#include (CTest)
 
-## Setup the package version default (the actual one is taken from the latest Git tag).
+## Setup the package version.
 get_version ( "0.0.0" )
 
 set ( BUILD_VERSION_MAJOR ${VERSION_MAJOR} )
@@ -79,7 +72,9 @@ add_compile_options(-DBUILD_VERSION_MINOR=${VERSION_MINOR})
 add_compile_options(-DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_compile_options(-DLIB_VERSION_STRING="${LIB_VERSION_STRING}")
 add_compile_options(-DBUILD_VERSION_STRING="${BUILD_VERSION_STRING}")
-add_compile_options(-DRVS_VERSION_STRING="${RVS_VERSION}")
+
+set(ROCBLAS_LIB "rocblas")
+set(HIP_HCC_LIB "amdhip64")
 
 #ROCBLAS VERSION CHECK FLAGS TO CHECK REORG VERSION 2.44.0
 add_compile_options(-DRVS_ROCBLAS_VERSION_FLAT=${RVS_ROCBLAS_VERSION_FLAT})
@@ -99,7 +94,8 @@ set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSIO
 set(HIP_HCC_BUILD_FLAGS)
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
-#Set compiler and compiler flags
+
+# Set compiler and compiler flags
 set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
 set(CMAKE_C_COMPILER   "${HIPCC_PATH}/bin/hipcc")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_HCC_BUILD_FLAGS}")
@@ -115,85 +111,77 @@ else()
   set(ASAN_LIB_PATH "$ENV{LD_LIBRARY_PATH}")
 endif()
 
-## define include directories
-include_directories(./ ../ ../rvs
-  ${AMD_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${HIPBLASLT_INC_DIR} ${YAML_CPP_INCLUDE_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${HIPBLAS-COMMON_INCLUDE_DIR} ${MXDATAGENERATOR_INC_DIR})
-
-link_directories(${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR})
-
-## define common source files
-set(SOURCES
-  ../src/gpu_util.cpp
-  ../src/rvs_util.cpp
-  ../src/rsmi_util.cpp
-
-  ../src/rvsactionbase.cpp
-  ../src/rvsthreadbase.cpp
-
-  ../src/rvsliblogger.cpp
-  ../src/rvslognodebase.cpp
-  ../src/rvslognoderec.cpp
-  ../src/rvslognode.cpp
-  ../src/rvslognodestring.cpp
-  ../src/rvslognodeint.cpp
-  ../src/rvsminnode.cpp
-  ../src/rvslognodelist.cpp
-  ../src/rvs_blas.cpp
-  ../src/rvshsa.cpp
-
-## Run-time specific source files
-  ../src/rvsloglp.cpp
-  ../src/pci_caps.cpp
-
-## rvshelper source files
-  ../rvs/src/rvsmodule.cpp
-  ../rvs/src/rvsif_base.cpp
-  ../rvs/src/rvsif0.cpp
-  ../rvs/src/rvsif1.cpp
-  ../rvs/src/rvsaction.cpp
-  ../rvs/src/rvscli.cpp
-  ../rvs/src/rvsexec.cpp
-  ../rvs/src/rvsexec_do_yaml.cpp
-  ../rvs/src/rvsoptions.cpp
-  ../rvs/src/rvs_interface.cpp
-)
-
-## define unit testing specific source files (mocking)
-set(SOURCES_UT
-  ../src/rvsloglp_utest.cpp
-  ../src/pci_caps.cpp
-  ../src/rvs_unit_testing_defs.cpp
-   )
-
-## define rvslib library
-add_library(${RVS_TARGET} SHARED ${SOURCES})
-
-target_compile_options(${RVS_TARGET} PRIVATE -mf16c)
-target_compile_definitions(${RVS_TARGET} PRIVATE ROCM_USE_FLOAT16)
-set_target_properties(${RVS_TARGET}
- PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}
- LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-target_compile_options(${RVS_TARGET} PRIVATE -fopenmp)
-if(FETCH_ROCMPATH_FROM_ROCMCORE)
-  target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB} ${ROCM_CORE} -fopenmp)
-else()
-  target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB} -fopenmp)
+# Determine Roc Runtime header files are accessible
+if(NOT EXISTS ${HIP_INC_DIR}/hip/hip_runtime.h)
+  message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
+  RETURN()
 endif()
-## Install shared library librvslib.so
+
+if(NOT EXISTS ${HIP_INC_DIR}/hip/hip_runtime_api.h)
+  message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
+  RETURN()
+endif()
+
+# Determine Roc Runtime header files are accessible
+if(DEFINED RVS_ROCMSMI)
+  if(NOT RVS_ROCMSMI EQUAL 1)
+    if(NOT EXISTS ${ROCBLAS_INC_DIR}/${ROCBLAS_MODULE_NM_PREFIX}rocblas.h)
+    message("ERROR: rocBLAS headers can't be found under specified path. Please set ROCBLAS_INC_DIR path. Current value is : " ${ROCBLAS_INC_DIR})
+    RETURN()
+    endif()
+
+    if(NOT EXISTS "${ROCBLAS_LIB_DIR}/lib${ROCBLAS_LIB}.so")
+      message("ERROR: rocBLAS library can't be found under specified path. Please set ROCBLAS_LIB_DIR path. Current value is : " ${ROCBLAS_LIB_DIR})
+      RETURN()
+    endif()
+  endif()
+endif()
+
+if(NOT EXISTS "${HIP_LIB_DIR}/lib${HIP_HCC_LIB}.so")
+  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set HIP_LIB_DIR path. Current value is : " ${HIP_LIB_DIR})
+  RETURN()
+endif()
+
+if(DEFINED RVS_AMDSMI)
+  if(NOT RVS_AMDSMI EQUAL 1)
+    if(NOT EXISTS "${AMD_SMI_LIB_DIR}/lib${AMD_SMI_LIB}.so")
+      message("ERROR: ${AMD_SMI_LIB} amd_smi library can't be found!...")
+      RETURN()
+    endif()
+  endif()
+endif()
+
+## define include directories
+include_directories(./ ../ ${AMD_SMI_INC_DIR} ${ROCBLAS_INC_DIR} ${ROCR_INC_DIR} ${HIP_INC_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${HIPBLASLT_INC_DIR} ${HIPBLAS-COMMON_INCLUDE_DIR})
+# Add directories to look for library files to link
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${AMD_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR} ${HIPBLASLT_LIB_DIR})
+## additional libraries
+set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
+
+set(SOURCES src/rvs_module.cpp src/action.cpp src/pulse_worker.cpp )
+
+## define target
+add_library( ${RVS_TARGET} SHARED ${SOURCES})
+set_target_properties(${RVS_TARGET} PROPERTIES
+        SUFFIX .so.${LIB_VERSION_STRING}
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} ${ROCBLAS_LIB} ${AMD_SMI_LIB})
+add_dependencies(${RVS_TARGET} rvslib)
+
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 COMMAND ln -fs ./lib${RVS}.so.${VERSION_MAJOR} lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
 
-install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR} COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}"
-	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR} COMPONENT rvsmodule)
-install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so"
-	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR} COMPONENT rvsmodule)
+install(TARGETS ${RVS_TARGET} LIBRARY DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR}" 
+	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
+install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so" 
+	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs COMPONENT rvsmodule)
 
+# TEST SECTION
 if (RVS_BUILD_TESTS)
-  ## define rvslibut (unit test) library
-  add_library(${RVS_TARGET}ut SHARED ${SOURCES_UT})
-  target_compile_definitions(${RVS_TARGET}ut PRIVATE RVS_UNIT_TEST)
-  add_dependencies(${RVS_TARGET}ut ${RVS_TARGET})
+  add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
+  COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  )
 endif()

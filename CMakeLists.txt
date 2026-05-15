@@ -24,14 +24,15 @@
 ################################################################################
 
 cmake_minimum_required ( VERSION 3.5.0 )
-set(CMAKE_SHARED_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN:$ORIGIN/.." CACHE STRING "RUNPATH for libraries")
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags,--rpath,$ORIGIN/../lib" CACHE STRING "RUNPATH for executables")
+# Prefer RUNPATH (DT_RUNPATH); do not embed $ORIGIN here — CMAKE_BUILD_RPATH / CMAKE_INSTALL_RPATH below are the single source of truth.
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags" CACHE STRING "Shared linker flags")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--enable-new-dtags" CACHE STRING "Executable linker flags")
 
 set( COMP_TYPE "applications" )
 set( BUILD_ENABLE_LINTIAN_OVERRIDES ON CACHE BOOL "Enable/Disable Lintian Overrides" )
 set( BUILD_DEBIAN_PKGING_FLAG ON CACHE BOOL "Internal Status Flag to indicate Debian Packaging Build" )
 project ("rocm-validation-suite"
-          VERSION 1.4.0)
+          VERSION 1.5.0)
 
 # Default libdir to "lib", this skips GNUInstallDirs from trying to take a guess if it's unset:
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
@@ -47,11 +48,12 @@ if ( ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   message(FATAL "In-source build is not allowed")
 endif ()
 enable_testing()
-# In future use the api provided by rocm-core library to get ROCm Install path
-# For backward compatibility use ROCM_PATH provided by build arguments.
-# Using the api option is turned OFF by default
+# When ON, link rocm-core: getROCmInstallPath for the ROCm install path, and
+# getROCmVersion (rocm_version.h) for the YAML system-overview ROCm string — no
+# .info file read for that path. When OFF, use ROCM_PATH and the version file
+# under that prefix only.
 option(FETCH_ROCMPATH_FROM_ROCMCORE
-        "Use the api provided by rocm-core library to get ROCM_PATH" OFF)
+        "Use rocm-core C API for ROCm path and YAML system-overview ROCm version" OFF)
 
 # Prerequisite - Check if rocblas was already installed
 find_package (rocblas)
@@ -196,20 +198,47 @@ set(CMAKE_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "CM
 set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 
+# RPATH (build tree + install): one list — avoids duplicating $ORIGIN paths that previously
+# appeared in both CMAKE_*_LINKER_FLAGS_INIT and CMAKE_INSTALL_RPATH.
+set(CMAKE_SKIP_RPATH FALSE CACHE BOOL "Skip RPATH for build targets")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE CACHE BOOL "Append link paths to install RPATH")
+set(CMAKE_INSTALL_RPATH
+  "\$ORIGIN;\$ORIGIN/../lib;\$ORIGIN/../lib/rvs;/opt/rocm/lib;/opt/rocm/lib/llvm/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib"
+  CACHE STRING "RPATH for installed RVS binaries and modules")
+set(CMAKE_BUILD_RPATH "${CMAKE_INSTALL_RPATH}")
+
+# CI (GitHub Actions): GITHUB_ACTIONS flags below need CMake 3.9+ / 3.16+ at configure time.
+if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
+  message(STATUS "RVS RPATH (GitHub Actions): CMake ${CMAKE_VERSION}")
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
+    set(CMAKE_SKIP_BUILD_RPATH TRUE CACHE BOOL "On GitHub Actions, skip CMake build-tree RPATH")
+    message(STATUS "RVS RPATH (GitHub Actions): CMAKE_SKIP_BUILD_RPATH=${CMAKE_SKIP_BUILD_RPATH}")
+  else()
+    message(STATUS "RVS RPATH (GitHub Actions): CMAKE_SKIP_BUILD_RPATH not applied (need CMake 3.9+)")
+  endif()
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+    set(CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH TRUE CACHE BOOL "On GitHub Actions, strip implicit link-dir RPATH on install")
+    message(STATUS "RVS RPATH (GitHub Actions): CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH=${CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH}")
+  else()
+    message(STATUS "RVS RPATH (GitHub Actions): CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH not applied (need CMake 3.16+)")
+  endif()
+endif()
+
+# Compile-time default used by rvs_get_rocm_install_path_string() after
+# getROCmInstallPath (if FETCH_*) and $ROCM_PATH env are considered.
 add_definitions(-DROCM_PATH="${ROCM_PATH}")
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
   add_compile_options(-DFETCH_ROCMPATH_FROM_ROCMCORE=${FETCH_ROCMPATH_FROM_ROCMCORE})
-  # rocm-core library will provide the ROCM_PATH during runtime
-  # Link the library as required
   set(ROCM_CORE "rocm-core")
-  # The absolute library path will be ${ROCM_PATH}/${RVS_LIB_PATH}
-  # Usage is ROCM_PATH will be fetched from rocm-core and append ${RVS_LIB_PATH}
-  add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_LIBDIR}/rvs")
 else()
-  add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
-  # Set ROCM_CORE to empty, so no linking to rocm-core library/package
   set(ROCM_CORE "")
 endif()
+# RVS module .so and shared data (conf) live under the RVS install prefix, not under ROCm.
+add_definitions(-DRVS_LIB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/rvs")
+add_definitions(-DRVS_DATA_ROOT="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}")
+# Suffixes relative to that prefix for runtime resolution from the rvs binary path.
+add_definitions(-DRVS_RELPATH_DATA_DIR="${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}")
+add_definitions(-DRVS_RELPATH_MODULE_LIB_DIR="${CMAKE_INSTALL_LIBDIR}/rvs")
 #
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
 # definition and dump it in the cache along with proper documentation,
@@ -261,9 +290,12 @@ endif()
 ## Include common cmake modules
 include ( utils )
 
-## Update RVS version
-set ( RVS_VERSION "${PROJECT_VERSION}" )
-get_version ( ${RVS_VERSION} )
+# get_version() in cmake_modules/utils.cmake:
+#   - Takes ONE string argument: a baseline semver (here: project(VERSION), e.g. "1.4.0").
+#   - Runs parse_version() and sets VERSION_MAJOR/MINOR/PATCH (and related) for legacy uses
+#     (doxygen RVSVER, etc.). It does NOT set RVS_VERSION and does not know about git tag distance.
+#   - May override VERSION_PATCH from env ROCM_LIBPATCH_VERSION (ROCm xxyy encoding) — unrelated to RVS display semver.
+get_version(${PROJECT_VERSION})
 
 # Package Generator  #######################################################
 set(PKG_MAINTAINER_NM  "ROCM Validation Suite Support")
@@ -272,6 +304,8 @@ set(CPACK_PACKAGE_NAME "rocm-validation-suite" CACHE STRING "Package name for CP
 set(CMAKE_INSTALL_DOCDIR "${CMAKE_INSTALL_DATAROOTDIR}/doc/${CPACK_PACKAGE_NAME}" CACHE PATH "Documentation install directory" FORCE)
 set(CPACK_PACKAGE_DESCRIPTION "ROCm Validation Suite")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Tool for validating AMD GPU functionality, performance, reliability in ROCm.")
+
+# CPack + "rvs -v" string: major/minor from project(), patch from git describe (RVS_PATCH_FROM_TAG) when > 0.
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 if(RVS_PATCH_FROM_TAG GREATER "0")
@@ -279,13 +313,17 @@ if(RVS_PATCH_FROM_TAG GREATER "0")
 else()
     set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 endif()
+set(RVS_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+message(STATUS "RVS_VERSION (rvs -v / CPack, not get_version input): ${RVS_VERSION}")
+
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 
 # Package dependencies: support both legacy (ROCm <=6.x) and new amdrocm-* naming (TheRock/ROCm 8.x per RFC0009)
 # DEB uses "old | new" OR syntax, RPM uses "(old or new)" boolean dependency syntax
-set(ROCM_DEB_DEPS "hip-runtime-amd | amdrocm-runtimes, comgr | amdrocm-runtimes, hsa-rocr | amdrocm-runtimes, rocblas | amdrocm-blas, amd-smi-lib | amdrocm-amdsmi, hiprand | amdrocm-rand, hipblaslt | amdrocm-blas")
-set(ROCM_RPM_DEPS "(hip-runtime-amd or amdrocm-runtimes), (comgr or amdrocm-runtimes), (hsa-rocr or amdrocm-runtimes), (rocblas or amdrocm-blas), (amd-smi-lib or amdrocm-amdsmi), (hiprand or amdrocm-rand), (hipblaslt or amdrocm-blas)")
+# rocm-llvm: ROCm LLVM (includes libomp used by HIP/RVS); pull OpenMP runtime from the ROCm stack, not host libgomp.
+set(ROCM_DEB_DEPS "hip-runtime-amd | amdrocm-runtimes, comgr | amdrocm-runtimes, hsa-rocr | amdrocm-runtimes, rocblas | amdrocm-blas, amd-smi-lib | amdrocm-amdsmi, hiprand | amdrocm-rand, hipblaslt | amdrocm-blas, rocm-llvm | amdrocm-llvm")
+set(ROCM_RPM_DEPS "(hip-runtime-amd or amdrocm-runtimes), (comgr or amdrocm-runtimes), (hsa-rocr or amdrocm-runtimes), (rocblas or amdrocm-blas), (amd-smi-lib or amdrocm-amdsmi), (hiprand or amdrocm-rand), (hipblaslt or amdrocm-blas), (rocm-llvm or amdrocm-llvm)")
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
   set(ROCM_DEB_DEPS "${ROCM_DEB_DEPS}, ${ROCM_CORE} | amdrocm-base")
   set(ROCM_RPM_DEPS "${ROCM_RPM_DEPS}, (${ROCM_CORE} or amdrocm-base)")
@@ -373,9 +411,14 @@ message (STATUS "CPACK_GENERATOR ${CPACK_GENERATOR}" )
 ################################################################################
 # check yaml-cpp available at configure time
 # First try to find static yaml-cpp library
-find_library(YAML_CPP_STATIC_LIB 
+find_library(YAML_CPP_STATIC_LIB
   NAMES libyaml-cpp.a yaml-cpp.a
-  PATHS /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib
+  PATHS
+    /usr/lib/x86_64-linux-gnu
+    /usr/lib64
+    /usr/lib
+    /usr/local/lib64
+    /usr/local/lib
   NO_DEFAULT_PATH # avoid searches in cmake_install_prefix etc
   DOC "Path to yaml-cpp static library"
 )
@@ -726,6 +769,7 @@ add_subdirectory(mem.so)
 add_subdirectory(babel.so)
 add_subdirectory(perf.so)
 add_subdirectory(tst.so)
+add_subdirectory(pulse.so)
 
 if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
@@ -735,12 +779,14 @@ add_dependencies(pesm rvslib)
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(gm rvs_smi_target)
   add_dependencies(iet rvs_smi_target)
+  add_dependencies(pulse rvs_smi_target)
 endif()
 
 if(RVS_ROCBLAS EQUAL 1)
   add_dependencies(rvslib rvs_rblas_target)
   add_dependencies(gst rvs_rblas_target)
   add_dependencies(iet rvs_rblas_target)
+  add_dependencies(pulse rvs_rblas_target)
 endif()
 
 add_custom_target(rvs_bin_folder ALL
