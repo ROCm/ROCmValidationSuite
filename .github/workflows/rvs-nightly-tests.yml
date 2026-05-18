@@ -1,9 +1,9 @@
 name: RVS Nightly Tests
 
-# Picks up the latest RVS tarball published at
-# https://repo.amd.com/rocm/rvs/tarball/ once per day, installs it on a
-# self-hosted GPU runner, runs RVS levels 3 and 4, and uploads a Markdown
-# report + per-level logs as an artifact.
+# Picks up the latest RVS tarball published at the index URL configured in
+# vars.RVS_TARBALL_INDEX_URL once per day, installs it on a self-hosted GPU
+# runner, runs RVS levels 3 and 4, and uploads a Markdown report + per-level
+# logs as an artifact.
 
 on:
   schedule:
@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       tarball_url:
-        description: 'Override tarball URL (default: latest from repo.amd.com)'
+        description: 'Override tarball URL (default: latest from vars.RVS_TARBALL_INDEX_URL)'
         required: false
         default: ''
       force:
@@ -28,7 +28,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TARBALL_INDEX_URL: ${{ vars.RVS_TARBALL_INDEX_URL || 'https://repo.amd.com/rocm/rvs/tarball/' }}
+  # Required: configure per-repo under
+  # Settings → Secrets and variables → Actions → Variables.
+  # Workflow fails fast if unset.
+  TARBALL_INDEX_URL: ${{ vars.RVS_TARBALL_INDEX_URL }}
   RVS_BIN: /opt/rocm/extras-7/bin/rvs
 
 jobs:
@@ -58,6 +61,11 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
+
+          if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL:-}" ]; then
+            echo "::error::vars.RVS_TARBALL_INDEX_URL is not set (Settings → Secrets and variables → Actions → Variables); set it or pass workflow_dispatch.tarball_url"
+            exit 1
+          fi
 
           fetch_latest() {
             local idx="$1"
