@@ -1,0 +1,253 @@
+name: RVS Nightly Tests
+
+# Picks up the latest RVS tarball published at
+# https://repo.amd.com/rocm/rvs/tarball/ once per day, installs it on a
+# self-hosted GPU runner, runs RVS levels 3 and 4, and uploads a Markdown
+# report + per-level logs as an artifact.
+
+on:
+  schedule:
+    # 15:00 UTC daily (08:00 PST / 07:00 PDT). Adjust to match your build cadence.
+    - cron: '0 15 * * *'
+  workflow_dispatch:
+    inputs:
+      tarball_url:
+        description: 'Override tarball URL (default: latest from repo.amd.com)'
+        required: false
+        default: ''
+      force:
+        description: 'Run even if the latest tarball matches the last run'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rvs-nightly-${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  TARBALL_INDEX_URL: ${{ vars.RVS_TARBALL_INDEX_URL || 'https://repo.amd.com/rocm/rvs/tarball/' }}
+  RVS_BIN: /opt/rocm/extras-7/bin/rvs
+
+jobs:
+  detect:
+    name: Detect latest RVS tarball
+    runs-on: ubuntu-latest
+    outputs:
+      tarball_url:  ${{ steps.resolve.outputs.tarball_url }}
+      tarball_name: ${{ steps.resolve.outputs.tarball_name }}
+      should_run:   ${{ steps.resolve.outputs.should_run }}
+    steps:
+      - name: Restore last-seen marker (cron path)
+        if: github.event_name == 'schedule'
+        uses: actions/cache@v4
+        with:
+          path: last_tarball_marker.txt
+          key: rvs-nightly-tarball-${{ github.run_id }}
+          restore-keys: |
+            rvs-nightly-tarball-
+
+      - name: Resolve latest tarball URL
+        id: resolve
+        env:
+          INDEX_URL: ${{ env.TARBALL_INDEX_URL }}
+          INPUT_URL: ${{ inputs.tarball_url }}
+          FORCE:     ${{ inputs.force }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          fetch_latest() {
+            local idx="$1"
+            local html
+            html="$(curl -sL --max-time 30 "$idx" || true)"
+            # Match any amdrocm*-rvs-*-Linux.tar.gz filename in the listing HTML.
+            # `sort -V` picks the highest version (handles 1.4.21-9 vs 1.4.21-100 correctly).
+            echo "$html" \
+              | grep -oE 'amdrocm[0-9]*-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' \
+              | sort -uV \
+              | tail -n 1 \
+              | awk -v p="${idx%/}" '{print p "/" $0}'
+          }
+
+          if [ -n "${INPUT_URL:-}" ]; then
+            URL="$INPUT_URL"
+          else
+            URL="$(fetch_latest "$INDEX_URL")"
+          fi
+
+          if [ -z "${URL:-}" ]; then
+            echo "::error::Could not resolve a tarball URL from $INDEX_URL"
+            exit 1
+          fi
+
+          NAME="$(basename "$URL")"
+
+          SHOULD_RUN=true
+          if [ "$EVENT_NAME" = "schedule" ] && [ "$FORCE" != "true" ] && [ -f last_tarball_marker.txt ]; then
+            if [ "$(cat last_tarball_marker.txt)" = "$NAME" ]; then
+              SHOULD_RUN=false
+              echo "Latest tarball ($NAME) unchanged since last run — skipping."
+            fi
+          fi
+          echo "$NAME" > last_tarball_marker.txt
+
+          {
+            echo "tarball_url=$URL"
+            echo "tarball_name=$NAME"
+            echo "should_run=$SHOULD_RUN"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Latest tarball : $NAME"
+          echo "URL            : $URL"
+          echo "Should run     : $SHOULD_RUN"
+
+      - name: Save marker (cron path)
+        if: github.event_name == 'schedule'
+        uses: actions/cache/save@v4
+        with:
+          path: last_tarball_marker.txt
+          key: rvs-nightly-tarball-${{ steps.resolve.outputs.tarball_name }}
+
+  test:
+    name: Install RVS and run levels 3 + 4
+    needs: detect
+    if: needs.detect.outputs.should_run == 'true'
+    runs-on: ${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 180
+    env:
+      TARBALL_URL:  ${{ needs.detect.outputs.tarball_url }}
+      TARBALL_NAME: ${{ needs.detect.outputs.tarball_name }}
+    steps:
+      - name: Show GPU / system info
+        run: |
+          uname -a
+          (rocm-smi || true) | head -40
+          (rocminfo | head -40 || true)
+
+      - name: Download tarball
+        run: |
+          set -euo pipefail
+          mkdir -p ./pkg
+          echo "Downloading: $TARBALL_URL"
+          curl -fL --max-time 600 -o "./pkg/${TARBALL_NAME}" "${TARBALL_URL}"
+          ls -la ./pkg/
+          file "./pkg/${TARBALL_NAME}" || true
+
+      - name: Install RVS (extract TGZ to /)
+        run: |
+          set -euo pipefail
+          PKG="./pkg/${TARBALL_NAME}"
+          echo "Installing $PKG into /opt/rocm/extras-7/"
+          sudo mkdir -p /opt/rocm
+          # The TGZ payload is rooted at /opt/rocm/extras-7/... so extract at /.
+          sudo tar -xzf "$PKG" -C /
+          ls -la /opt/rocm/extras-7/bin/rvs
+          "$RVS_BIN" --version || true
+
+      - name: Run RVS level 3
+        id: rvs3
+        run: |
+          set +e
+          mkdir -p ./reports
+          START=$(date -u +%FT%TZ)
+          echo "::group::RVS level 3 (${RVS_BIN} -r 3)"
+          "$RVS_BIN" -r 3 2>&1 | tee ./reports/rvs_level_3.log
+          RC=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          END=$(date -u +%FT%TZ)
+          echo "rc=$RC"       >> "$GITHUB_OUTPUT"
+          echo "start=$START" >> "$GITHUB_OUTPUT"
+          echo "end=$END"     >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run RVS level 4
+        id: rvs4
+        run: |
+          set +e
+          mkdir -p ./reports
+          START=$(date -u +%FT%TZ)
+          echo "::group::RVS level 4 (${RVS_BIN} -r 4)"
+          "$RVS_BIN" -r 4 2>&1 | tee ./reports/rvs_level_4.log
+          RC=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          END=$(date -u +%FT%TZ)
+          echo "rc=$RC"       >> "$GITHUB_OUTPUT"
+          echo "start=$START" >> "$GITHUB_OUTPUT"
+          echo "end=$END"     >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Build test report
+        id: report
+        run: |
+          set -euo pipefail
+          mkdir -p ./reports
+
+          RC3=${{ steps.rvs3.outputs.rc }}
+          RC4=${{ steps.rvs4.outputs.rc }}
+          [ "$RC3" -eq 0 ] && S3=PASS || S3=FAIL
+          [ "$RC4" -eq 0 ] && S4=PASS || S4=FAIL
+          if [ "$RC3" -eq 0 ] && [ "$RC4" -eq 0 ]; then
+            OVERALL=PASS
+          else
+            OVERALL=FAIL
+          fi
+
+          RVS_VERSION=$("$RVS_BIN" --version 2>/dev/null | head -1 || echo "unknown")
+
+          REPORT=./reports/SUMMARY.md
+          {
+            echo "# RVS Nightly Test Report"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Run | [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"
+            echo "| Trigger | \`${{ github.event_name }}\` |"
+            echo "| Runner | \`$(hostname)\` |"
+            echo "| Tarball | \`${TARBALL_NAME}\` |"
+            echo "| Source URL | ${TARBALL_URL} |"
+            echo "| RVS version | \`${RVS_VERSION}\` |"
+            echo "| Overall result | **${OVERALL}** |"
+            echo ""
+            echo "## Results"
+            echo ""
+            echo "| Test | Command | Result | Exit | Started (UTC) | Ended (UTC) |"
+            echo "|---|---|:--:|---:|---|---|"
+            echo "| Level 3 | \`${RVS_BIN} -r 3\` | ${S3} | ${RC3} | ${{ steps.rvs3.outputs.start }} | ${{ steps.rvs3.outputs.end }} |"
+            echo "| Level 4 | \`${RVS_BIN} -r 4\` | ${S4} | ${RC4} | ${{ steps.rvs4.outputs.start }} | ${{ steps.rvs4.outputs.end }} |"
+            echo ""
+            echo "## Logs"
+            echo ""
+            echo "Full per-level stdout/stderr is attached to the run artifact"
+            echo "\`rvs-nightly-report-${{ github.run_id }}\`:"
+            echo ""
+            echo "- \`rvs_level_3.log\`"
+            echo "- \`rvs_level_4.log\`"
+            echo "- \`SUMMARY.md\` (this file)"
+          } > "$REPORT"
+
+          cat "$REPORT"
+          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            echo "overall=$OVERALL"
+            echo "rc3=$RC3"
+            echo "rc4=$RC4"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-nightly-report-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Fail the job if any level failed
+        if: steps.report.outputs.overall == 'FAIL'
+        run: |
+          echo "::error::RVS test failure — level3 rc=${{ steps.report.outputs.rc3 }}, level4 rc=${{ steps.report.outputs.rc4 }}"
+          exit 1
