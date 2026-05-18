@@ -1,9 +1,9 @@
 name: RVS Nightly Tests
 
 # Picks up the latest RVS tarball published at the index URL configured in
-# vars.RVS_TARBALL_INDEX_URL once per day, installs it on a self-hosted GPU
-# runner, runs RVS levels 3 and 4, and uploads a Markdown report + per-level
-# logs as an artifact.
+# vars.RVS_TARBALL_INDEX_URL once per day, installs it on a
+# self-hosted GPU runner, runs RVS levels 3 and 4, and uploads a Markdown
+# report + per-level logs as an artifact.
 
 on:
   schedule:
@@ -32,7 +32,8 @@ env:
   # Settings → Secrets and variables → Actions → Variables.
   # Workflow fails fast if unset.
   TARBALL_INDEX_URL: ${{ vars.RVS_TARBALL_INDEX_URL }}
-  RVS_BIN: /opt/rocm/extras-7/bin/rvs
+  # RVS_BIN is populated by the install step based on the ROCm major version
+  # parsed from the tarball filename (e.g. amdrocm7-rvs-… → extras-7/bin/rvs).
 
 jobs:
   detect:
@@ -129,11 +130,93 @@ jobs:
       TARBALL_URL:  ${{ needs.detect.outputs.tarball_url }}
       TARBALL_NAME: ${{ needs.detect.outputs.tarball_name }}
     steps:
-      - name: Show GPU / system info
+      - name: Verify ROCm prerequisites
         run: |
+          set -uo pipefail
+          fail=0
+
+          echo "=== System ==="
           uname -a
-          (rocm-smi || true) | head -40
-          (rocminfo | head -40 || true)
+          echo
+
+          echo "=== /opt/rocm/ ==="
+          if [ -d /opt/rocm ]; then
+            ls -la /opt/rocm | head -20
+            [ -L /opt/rocm ] && echo "/opt/rocm -> $(readlink /opt/rocm)"
+          else
+            echo "::error::/opt/rocm/ does not exist; ROCm is not installed on this runner."
+            fail=1
+          fi
+          echo
+
+          echo "=== ROCm version ==="
+          if [ -f /opt/rocm/.info/version ]; then
+            ROCM_VERSION=$(cat /opt/rocm/.info/version)
+            echo "/opt/rocm/.info/version : $ROCM_VERSION"
+          elif [ -f /opt/rocm/share/doc/rocm-core/version ]; then
+            ROCM_VERSION=$(cat /opt/rocm/share/doc/rocm-core/version)
+            echo "rocm-core version       : $ROCM_VERSION"
+          else
+            ROCM_VERSION=""
+            echo "::warning::no ROCm version file found at /opt/rocm/.info/version or /opt/rocm/share/doc/rocm-core/version"
+          fi
+          echo
+
+          echo "=== Major version match (tarball vs runner) ==="
+          EXPECTED_MAJOR=$(echo "$TARBALL_NAME" | grep -oE '^amdrocm[0-9]+' | grep -oE '[0-9]+' | head -1)
+          INSTALLED_MAJOR=$(echo "$ROCM_VERSION" | grep -oE '^[0-9]+' | head -1)
+          echo "tarball expects ROCm major : ${EXPECTED_MAJOR:-?}"
+          echo "runner has ROCm major      : ${INSTALLED_MAJOR:-?}"
+          if [ -n "$EXPECTED_MAJOR" ] && [ -n "$INSTALLED_MAJOR" ] && [ "$EXPECTED_MAJOR" != "$INSTALLED_MAJOR" ]; then
+            echo "::error::ROCm major version mismatch (tarball=$EXPECTED_MAJOR, runner=$INSTALLED_MAJOR)"
+            fail=1
+          fi
+          echo
+
+          echo "=== rocm-smi ==="
+          if command -v rocm-smi >/dev/null 2>&1; then
+            if rocm-smi --showid 2>&1 | tee /tmp/rocm-smi.out; then
+              echo "rocm-smi OK"
+            else
+              echo "::error::rocm-smi is on PATH but exited non-zero; check that the amdgpu kernel driver is loaded."
+              fail=1
+            fi
+          else
+            echo "::error::rocm-smi not found on PATH; ROCm runtime tools are missing."
+            fail=1
+          fi
+          echo
+
+          echo "=== rocminfo (GPU enumeration) ==="
+          if command -v rocminfo >/dev/null 2>&1; then
+            rocminfo 2>&1 | head -40 || true
+            N_GPU=$(rocminfo 2>/dev/null | grep -c 'Device Type:.*GPU' || true)
+            N_GPU=${N_GPU:-0}
+            echo "GPU agents enumerated: $N_GPU"
+            if [ "$N_GPU" -lt 1 ]; then
+              echo "::error::rocminfo enumerated 0 GPU agents; the runner does not have a usable GPU."
+              fail=1
+            fi
+          else
+            echo "::warning::rocminfo not found on PATH; skipping GPU enumeration check."
+          fi
+          echo
+
+          echo "=== Key ROCm runtime libraries ==="
+          for lib in libhsa-runtime64.so.1 libamdhip64.so; do
+            if ldconfig -p 2>/dev/null | grep -q "$lib"; then
+              echo "  OK    : $lib"
+            else
+              echo "::warning::library $lib not found in ldconfig cache"
+            fi
+          done
+          echo
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::ROCm prerequisites check FAILED — refusing to install RVS."
+            exit 1
+          fi
+          echo "::notice::ROCm prerequisites OK${ROCM_VERSION:+ (version $ROCM_VERSION)}"
 
       - name: Download tarball
         run: |
@@ -144,16 +227,56 @@ jobs:
           ls -la ./pkg/
           file "./pkg/${TARBALL_NAME}" || true
 
-      - name: Install RVS (extract TGZ to /)
+      - name: Install RVS (detect ROCm major from filename)
         run: |
           set -euo pipefail
           PKG="./pkg/${TARBALL_NAME}"
-          echo "Installing $PKG into /opt/rocm/extras-7/"
-          sudo mkdir -p /opt/rocm
-          # The TGZ payload is rooted at /opt/rocm/extras-7/... so extract at /.
-          sudo tar -xzf "$PKG" -C /
-          ls -la /opt/rocm/extras-7/bin/rvs
-          "$RVS_BIN" --version || true
+
+          # Filenames look like amdrocm<MAJOR>-rvs-<version>-Linux.tar.gz
+          # e.g. amdrocm7-rvs-1.4.21-r0711.20260423-Linux.tar.gz → MAJOR=7.
+          if [[ "$TARBALL_NAME" =~ ^amdrocm([0-9]+)- ]]; then
+            ROCM_MAJOR="${BASH_REMATCH[1]}"
+          else
+            echo "::error::Cannot parse ROCm major version from tarball name: $TARBALL_NAME"
+            exit 1
+          fi
+          INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
+          RVS_BIN_PATH="${INSTALL_DIR}/bin/rvs"
+
+          echo "Detected ROCm major version : ${ROCM_MAJOR}"
+          echo "Install target              : ${INSTALL_DIR}"
+
+          sudo mkdir -p "$INSTALL_DIR"
+          sudo tar -xzf "$PKG" -C "$INSTALL_DIR"
+
+          export LD_LIBRARY_PATH="/opt/rocm/extras-${ROCM_MAJOR}/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+
+          if [ ! -x "$RVS_BIN_PATH" ]; then
+            echo "::error::rvs binary not found or not executable at $RVS_BIN_PATH after install"
+            ls -la "$INSTALL_DIR/" || true
+            ls -la "$INSTALL_DIR/bin/" || true
+            exit 1
+          fi
+
+          echo "RVS_BIN=$RVS_BIN_PATH" >> "$GITHUB_ENV"
+          echo "Installed RVS at: $RVS_BIN_PATH"
+          "$RVS_BIN_PATH" --version || true
+
+      - name: Verify RVS binary library resolution
+        run: |
+          set -euo pipefail
+          if [ ! -x "$RVS_BIN" ]; then
+            echo "::error::$RVS_BIN was not produced by tarball extraction."
+            exit 1
+          fi
+          echo "=== ldd $RVS_BIN ==="
+          LDD_OUTPUT=$(ldd "$RVS_BIN" 2>&1 || true)
+          echo "$LDD_OUTPUT"
+          if echo "$LDD_OUTPUT" | grep -q "not found"; then
+            echo "::error::RVS binary has unresolved library dependencies (see above)."
+            exit 1
+          fi
+          echo "::notice::RVS binary's library dependencies resolved OK."
 
       - name: Run RVS level 3
         id: rvs3
