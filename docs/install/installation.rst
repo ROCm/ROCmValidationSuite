@@ -23,7 +23,7 @@ Install the ROCm Core SDK
 -------------------------
 
 For instructions, see `Install AMD ROCm
-<https://rocm.amd.com/en/7.13.0-preview/install/rocm.html?fam=all&i=pkgman>`__. Use the
+<https://rocm.docs.amd.com/en/7.13.0-preview/install/rocm.html?fam=all&i=pkgman>`__. Use the
 selector panel on that page to view instructions appropriate for your system
 environment.
 
