@@ -1,9 +1,31 @@
 name: RVS Nightly Tests
 
 # Picks up the latest RVS tarball published at the index URL configured in
-# vars.RVS_TARBALL_INDEX_URL once per day, installs it on a
-# self-hosted GPU runner, runs RVS levels 3 and 4, and uploads a Markdown
-# report + per-level logs as an artifact.
+# vars.RVS_TARBALL_INDEX_URL once per day, copies it to a configurable target
+# node, installs it there, runs RVS levels 3 and 4 on that node, and uploads a
+# Markdown report + per-level logs as an artifact from the GitHub runner.
+#
+# The GitHub Actions runner ("RVS Runner") only orchestrates. All RVS install,
+# binary verification, and rvs -r 3 / -r 4 execution happens on the target node
+# reached over SSH. The target node is configurable so the same workflow can be
+# pointed at any GPU host without code changes.
+#
+# Required repo configuration
+# ---------------------------
+# Variables (Settings → Secrets and variables → Actions → Variables):
+#   RVS_TARBALL_INDEX_URL  HTTP listing the published amdrocm*-rvs-*.tar.gz files.
+#   RVS_TARGET_NODE        Default hostname/IP of the node that runs RVS.
+#                          Can be overridden per-run via workflow_dispatch input.
+#   RVS_TARGET_USER        (Optional) SSH user on the target node. Default: urtiwari.
+#   RVS_REMOTE_WORK_DIR    (Optional) Working dir on the target node.
+#                          Default: /tmp/rvs-nightly-<run_id>.
+#   RVS_TEST_RUNNER_LABEL  (Optional) Label of the GitHub runner. Default: self-hosted.
+#
+# Secrets (Settings → Secrets and variables → Actions → Secrets):
+#   RVS_TARGET_SSH_KEY     Private SSH key (in PEM/OpenSSH format) authorized on
+#                          the target node for RVS_TARGET_USER. The user on the
+#                          target node must have NOPASSWD sudo for installs into
+#                          /opt/rocm/extras-<major>.
 
 on:
   schedule:
@@ -19,6 +41,18 @@ on:
         description: 'Run even if the latest tarball matches the last run'
         type: boolean
         default: false
+      target_node:
+        description: 'Hostname/IP of node to install RVS on and run tests (default: vars.RVS_TARGET_NODE)'
+        required: false
+        default: ''
+      target_user:
+        description: 'SSH user on the target node (default: vars.RVS_TARGET_USER or "urtiwari")'
+        required: false
+        default: ''
+      remote_work_dir:
+        description: 'Working dir on the target node (default: vars.RVS_REMOTE_WORK_DIR or /tmp/rvs-nightly-<run_id>)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -32,8 +66,6 @@ env:
   # Settings → Secrets and variables → Actions → Variables.
   # Workflow fails fast if unset.
   TARBALL_INDEX_URL: ${{ vars.RVS_TARBALL_INDEX_URL }}
-  # RVS_BIN is populated by the install step based on the ROCm major version
-  # parsed from the tarball filename (e.g. amdrocm7-rvs-… → extras-7/bin/rvs).
 
 jobs:
   detect:
@@ -121,7 +153,7 @@ jobs:
           key: rvs-nightly-tarball-${{ steps.resolve.outputs.tarball_name }}
 
   test:
-    name: Install RVS and run levels 3 + 4
+    name: Install RVS and run levels 3 + 4 (on remote target node)
     needs: detect
     if: needs.detect.outputs.should_run == 'true'
     runs-on: ${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
@@ -129,9 +161,105 @@ jobs:
     env:
       TARBALL_URL:  ${{ needs.detect.outputs.tarball_url }}
       TARBALL_NAME: ${{ needs.detect.outputs.tarball_name }}
+      # Target node where install + tests actually run. Inputs win over repo vars
+      # so individual runs can be retargeted via workflow_dispatch.
+      TARGET_NODE:  ${{ inputs.target_node || vars.RVS_TARGET_NODE }}
+      TARGET_USER:  ${{ inputs.target_user || vars.RVS_TARGET_USER || 'urtiwari' }}
+      # Workflow-scoped SSH state (in runner.temp so we never touch the runner
+      # user's own ~/.ssh on a shared self-hosted runner).
+      SSH_KEY_FILE:    ${{ runner.temp }}/rvs_target_key
+      SSH_CONFIG_FILE: ${{ runner.temp }}/rvs_target_ssh_config
     steps:
-      - name: Verify ROCm prerequisites
+      - name: Validate target node configuration
+        env:
+          INPUT_REMOTE_WORK_DIR: ${{ inputs.remote_work_dir }}
+          VAR_REMOTE_WORK_DIR:   ${{ vars.RVS_REMOTE_WORK_DIR }}
         run: |
+          set -euo pipefail
+
+          if [ -z "${TARGET_NODE:-}" ]; then
+            echo "::error::No target node configured. Set workflow_dispatch input 'target_node' or repo variable 'RVS_TARGET_NODE'."
+            exit 1
+          fi
+
+          if   [ -n "${INPUT_REMOTE_WORK_DIR:-}" ]; then REMOTE_WORK_DIR="$INPUT_REMOTE_WORK_DIR"
+          elif [ -n "${VAR_REMOTE_WORK_DIR:-}"   ]; then REMOTE_WORK_DIR="$VAR_REMOTE_WORK_DIR"
+          else REMOTE_WORK_DIR="/tmp/rvs-nightly-${{ github.run_id }}"
+          fi
+
+          # Derive ROCm major (and therefore the install dir / RVS binary path) up
+          # front so every remote step can refer to it without re-parsing.
+          if [[ "$TARBALL_NAME" =~ ^amdrocm([0-9]+)- ]]; then
+            ROCM_MAJOR="${BASH_REMATCH[1]}"
+          else
+            echo "::error::Cannot parse ROCm major version from tarball name: $TARBALL_NAME"
+            exit 1
+          fi
+          INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
+          RVS_BIN_PATH="${INSTALL_DIR}/bin/rvs"
+
+          {
+            echo "REMOTE_WORK_DIR=$REMOTE_WORK_DIR"
+            echo "ROCM_MAJOR=$ROCM_MAJOR"
+            echo "INSTALL_DIR=$INSTALL_DIR"
+            echo "RVS_BIN=$RVS_BIN_PATH"
+          } >> "$GITHUB_ENV"
+
+          echo "Orchestrator runner : $(hostname)"
+          echo "Target node         : $TARGET_USER@$TARGET_NODE"
+          echo "Remote work dir     : $REMOTE_WORK_DIR"
+          echo "ROCm major          : $ROCM_MAJOR"
+          echo "Expected RVS binary : $RVS_BIN_PATH"
+
+      - name: Setup SSH key for target node
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.RVS_TARGET_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SSH_PRIVATE_KEY:-}" ]; then
+            echo "::error::secrets.RVS_TARGET_SSH_KEY is not set; cannot SSH to target node."
+            exit 1
+          fi
+
+          # Write key + config to workflow-scoped paths under runner.temp so we
+          # never modify the runner user's own ~/.ssh on a shared self-hosted runner.
+          install -m 600 /dev/null "$SSH_KEY_FILE"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY_FILE"
+          chmod 600 "$SSH_KEY_FILE"
+
+          # known_hosts is local to this workflow run too.
+          KNOWN_HOSTS_FILE="${SSH_CONFIG_FILE}.known_hosts"
+          : > "$KNOWN_HOSTS_FILE"
+          chmod 600 "$KNOWN_HOSTS_FILE"
+          # Best-effort host key seeding; StrictHostKeyChecking=accept-new below
+          # still handles the case where keyscan fails (e.g. behind a bastion).
+          ssh-keyscan -T 15 -H "$TARGET_NODE" >> "$KNOWN_HOSTS_FILE" 2>/dev/null || true
+
+          cat > "$SSH_CONFIG_FILE" <<EOF
+          Host rvs-target
+            HostName $TARGET_NODE
+            User $TARGET_USER
+            IdentityFile $SSH_KEY_FILE
+            IdentitiesOnly yes
+            BatchMode yes
+            LogLevel ERROR
+            StrictHostKeyChecking accept-new
+            UserKnownHostsFile $KNOWN_HOSTS_FILE
+            ServerAliveInterval 30
+            ServerAliveCountMax 10
+          EOF
+          chmod 600 "$SSH_CONFIG_FILE"
+
+          echo "Verifying SSH connectivity to $TARGET_USER@$TARGET_NODE..."
+          ssh -q -F "$SSH_CONFIG_FILE" rvs-target 'echo __START__; hostname; id; uptime' \
+            2>&1 | sed -n '/^__START__$/,$p' | tail -n +2
+
+          ssh -q -F "$SSH_CONFIG_FILE" rvs-target "mkdir -p '$REMOTE_WORK_DIR/pkg' '$REMOTE_WORK_DIR/reports'"
+
+      - name: Verify ROCm prerequisites on target node
+        run: |
+          set -euo pipefail
+          ssh -q -F "$SSH_CONFIG_FILE" rvs-target "TARBALL_NAME='$TARBALL_NAME' bash -s" <<'REMOTE'
           set -uo pipefail
           fail=0
 
@@ -144,7 +272,7 @@ jobs:
             ls -la /opt/rocm | head -20
             [ -L /opt/rocm ] && echo "/opt/rocm -> $(readlink /opt/rocm)"
           else
-            echo "::error::/opt/rocm/ does not exist; ROCm is not installed on this runner."
+            echo "::error::/opt/rocm/ does not exist; ROCm is not installed on the target node."
             fail=1
           fi
           echo
@@ -162,13 +290,13 @@ jobs:
           fi
           echo
 
-          echo "=== Major version match (tarball vs runner) ==="
+          echo "=== Major version match (tarball vs target node) ==="
           EXPECTED_MAJOR=$(echo "$TARBALL_NAME" | grep -oE '^amdrocm[0-9]+' | grep -oE '[0-9]+' | head -1)
           INSTALLED_MAJOR=$(echo "$ROCM_VERSION" | grep -oE '^[0-9]+' | head -1)
           echo "tarball expects ROCm major : ${EXPECTED_MAJOR:-?}"
-          echo "runner has ROCm major      : ${INSTALLED_MAJOR:-?}"
+          echo "target has ROCm major      : ${INSTALLED_MAJOR:-?}"
           if [ -n "$EXPECTED_MAJOR" ] && [ -n "$INSTALLED_MAJOR" ] && [ "$EXPECTED_MAJOR" != "$INSTALLED_MAJOR" ]; then
-            echo "::error::ROCm major version mismatch (tarball=$EXPECTED_MAJOR, runner=$INSTALLED_MAJOR)"
+            echo "::error::ROCm major version mismatch (tarball=$EXPECTED_MAJOR, target=$INSTALLED_MAJOR)"
             fail=1
           fi
           echo
@@ -182,7 +310,7 @@ jobs:
               fail=1
             fi
           else
-            echo "::error::rocm-smi not found on PATH; ROCm runtime tools are missing."
+            echo "::error::rocm-smi not found on PATH; ROCm runtime tools are missing on target."
             fail=1
           fi
           echo
@@ -194,7 +322,7 @@ jobs:
             N_GPU=${N_GPU:-0}
             echo "GPU agents enumerated: $N_GPU"
             if [ "$N_GPU" -lt 1 ]; then
-              echo "::error::rocminfo enumerated 0 GPU agents; the runner does not have a usable GPU."
+              echo "::error::rocminfo enumerated 0 GPU agents; the target node does not have a usable GPU."
               fail=1
             fi
           else
@@ -213,12 +341,13 @@ jobs:
           echo
 
           if [ "$fail" -ne 0 ]; then
-            echo "::error::ROCm prerequisites check FAILED — refusing to install RVS."
+            echo "::error::ROCm prerequisites check FAILED on target node — refusing to install RVS."
             exit 1
           fi
-          echo "::notice::ROCm prerequisites OK${ROCM_VERSION:+ (version $ROCM_VERSION)}"
+          echo "::notice::ROCm prerequisites OK on target node${ROCM_VERSION:+ (version $ROCM_VERSION)}"
+          REMOTE
 
-      - name: Download tarball
+      - name: Download tarball on runner
         run: |
           set -euo pipefail
           mkdir -p ./pkg
@@ -227,66 +356,83 @@ jobs:
           ls -la ./pkg/
           file "./pkg/${TARBALL_NAME}" || true
 
-      - name: Install RVS (detect ROCm major from filename)
+      - name: Copy tarball to target node
         run: |
           set -euo pipefail
-          PKG="./pkg/${TARBALL_NAME}"
+          echo "Copying ./pkg/${TARBALL_NAME} -> rvs-target:${REMOTE_WORK_DIR}/pkg/"
+          scp -q -F "$SSH_CONFIG_FILE" "./pkg/${TARBALL_NAME}" "rvs-target:${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
+          ssh -q -F "$SSH_CONFIG_FILE" rvs-target "ls -la '${REMOTE_WORK_DIR}/pkg/'"
 
-          # Filenames look like amdrocm<MAJOR>-rvs-<version>-Linux.tar.gz
-          # e.g. amdrocm7-rvs-1.4.21-r0711.20260423-Linux.tar.gz → MAJOR=7.
-          if [[ "$TARBALL_NAME" =~ ^amdrocm([0-9]+)- ]]; then
-            ROCM_MAJOR="${BASH_REMATCH[1]}"
-          else
-            echo "::error::Cannot parse ROCm major version from tarball name: $TARBALL_NAME"
-            exit 1
-          fi
-          INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
-          RVS_BIN_PATH="${INSTALL_DIR}/bin/rvs"
+      - name: Install RVS on target node
+        run: |
+          set -euo pipefail
+          ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
+            "TARBALL_NAME='$TARBALL_NAME' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' ROCM_MAJOR='$ROCM_MAJOR' INSTALL_DIR='$INSTALL_DIR' RVS_BIN='$RVS_BIN' bash -s" <<'REMOTE'
+          set -euo pipefail
+          PKG="${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
 
           echo "Detected ROCm major version : ${ROCM_MAJOR}"
           echo "Install target              : ${INSTALL_DIR}"
+          echo "Expected RVS binary         : ${RVS_BIN}"
 
-          sudo mkdir -p "$INSTALL_DIR"
-          sudo tar -xzf "$PKG" -C "$INSTALL_DIR"
+          if [ ! -f "$PKG" ]; then
+            echo "::error::Tarball not found on target node at $PKG"
+            exit 1
+          fi
 
-          export LD_LIBRARY_PATH="/opt/rocm/extras-${ROCM_MAJOR}/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+          sudo -n mkdir -p "$INSTALL_DIR"
+          sudo -n tar -xzf "$PKG" -C "$INSTALL_DIR"
 
-          if [ ! -x "$RVS_BIN_PATH" ]; then
-            echo "::error::rvs binary not found or not executable at $RVS_BIN_PATH after install"
+          if [ ! -x "$RVS_BIN" ]; then
+            echo "::error::rvs binary not found or not executable at $RVS_BIN after install"
             ls -la "$INSTALL_DIR/" || true
             ls -la "$INSTALL_DIR/bin/" || true
             exit 1
           fi
 
-          echo "RVS_BIN=$RVS_BIN_PATH" >> "$GITHUB_ENV"
-          echo "Installed RVS at: $RVS_BIN_PATH"
-          "$RVS_BIN_PATH" --version || true
+          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+          echo "Installed RVS at: $RVS_BIN"
+          "$RVS_BIN" --version || true
+          REMOTE
 
-      - name: Verify RVS binary library resolution
+      - name: Verify RVS binary library resolution on target node
         run: |
           set -euo pipefail
+          ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
+            "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' bash -s" <<'REMOTE'
+          set -euo pipefail
           if [ ! -x "$RVS_BIN" ]; then
-            echo "::error::$RVS_BIN was not produced by tarball extraction."
+            echo "::error::$RVS_BIN was not produced by tarball extraction on target."
             exit 1
           fi
+          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
           echo "=== ldd $RVS_BIN ==="
           LDD_OUTPUT=$(ldd "$RVS_BIN" 2>&1 || true)
           echo "$LDD_OUTPUT"
           if echo "$LDD_OUTPUT" | grep -q "not found"; then
-            echo "::error::RVS binary has unresolved library dependencies (see above)."
+            echo "::error::RVS binary has unresolved library dependencies on target (see above)."
             exit 1
           fi
-          echo "::notice::RVS binary's library dependencies resolved OK."
+          echo "::notice::RVS binary's library dependencies resolved OK on target."
+          REMOTE
 
-      - name: Run RVS level 3
+      - name: Run RVS level 3 on target node
         id: rvs3
         run: |
           set +e
-          mkdir -p ./reports
           START=$(date -u +%FT%TZ)
-          echo "::group::RVS level 3 (${RVS_BIN} -r 3)"
-          "$RVS_BIN" -r 3 2>&1 | tee ./reports/rvs_level_3.log
+          echo "::group::RVS level 3 (${RVS_BIN} -r 3) on $TARGET_NODE"
+          ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
+            "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' bash -s" <<'REMOTE'
+          set +e
+          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+          mkdir -p "${REMOTE_WORK_DIR}/reports"
+          "$RVS_BIN" -r 3 2>&1 | tee "${REMOTE_WORK_DIR}/reports/rvs_level_3.log"
           RC=${PIPESTATUS[0]}
+          echo "remote_rc=$RC"
+          exit $RC
+          REMOTE
+          RC=$?
           echo "::endgroup::"
           END=$(date -u +%FT%TZ)
           echo "rc=$RC"       >> "$GITHUB_OUTPUT"
@@ -294,21 +440,43 @@ jobs:
           echo "end=$END"     >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Run RVS level 4
+      - name: Run RVS level 4 on target node
         id: rvs4
         run: |
           set +e
-          mkdir -p ./reports
           START=$(date -u +%FT%TZ)
-          echo "::group::RVS level 4 (${RVS_BIN} -r 4)"
-          "$RVS_BIN" -r 4 2>&1 | tee ./reports/rvs_level_4.log
+          echo "::group::RVS level 4 (${RVS_BIN} -r 4) on $TARGET_NODE"
+          ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
+            "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' bash -s" <<'REMOTE'
+          set +e
+          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+          mkdir -p "${REMOTE_WORK_DIR}/reports"
+          "$RVS_BIN" -r 4 2>&1 | tee "${REMOTE_WORK_DIR}/reports/rvs_level_4.log"
           RC=${PIPESTATUS[0]}
+          echo "remote_rc=$RC"
+          exit $RC
+          REMOTE
+          RC=$?
           echo "::endgroup::"
           END=$(date -u +%FT%TZ)
           echo "rc=$RC"       >> "$GITHUB_OUTPUT"
           echo "start=$START" >> "$GITHUB_OUTPUT"
           echo "end=$END"     >> "$GITHUB_OUTPUT"
           exit 0
+
+      - name: Collect logs from target node
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p ./reports
+          if [ ! -f "$SSH_CONFIG_FILE" ]; then
+            echo "::warning::SSH config not present; skipping log collection."
+            exit 0
+          fi
+          echo "Copying logs from rvs-target:${REMOTE_WORK_DIR}/reports/ -> ./reports/"
+          scp -q -F "$SSH_CONFIG_FILE" "rvs-target:${REMOTE_WORK_DIR}/reports/*.log" ./reports/ || \
+            echo "::warning::No log files retrieved from target node (tests may have failed before producing output)."
+          ls -la ./reports/ || true
 
       - name: Build test report
         id: report
@@ -326,7 +494,17 @@ jobs:
             OVERALL=FAIL
           fi
 
-          RVS_VERSION=$("$RVS_BIN" --version 2>/dev/null | head -1 || echo "unknown")
+          # Query the actual version from the target so the report reflects the
+          # binary the tests ran against, not a stale local copy.
+          RVS_VERSION=$(
+            ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
+              "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' bash -s" <<'REMOTE' 2>/dev/null | head -1 || echo "unknown"
+          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+          "$RVS_BIN" --version 2>/dev/null
+          REMOTE
+          )
+
+          TARGET_HOSTNAME=$(ssh -q -F "$SSH_CONFIG_FILE" rvs-target 'hostname' 2>/dev/null || echo "$TARGET_NODE")
 
           REPORT=./reports/SUMMARY.md
           {
@@ -336,7 +514,9 @@ jobs:
             echo "|---|---|"
             echo "| Run | [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"
             echo "| Trigger | \`${{ github.event_name }}\` |"
-            echo "| Runner | \`$(hostname)\` |"
+            echo "| Orchestrator (GitHub runner) | \`$(hostname)\` |"
+            echo "| Target node (test execution) | \`${TARGET_HOSTNAME}\` (\`${TARGET_USER}@${TARGET_NODE}\`) |"
+            echo "| Remote work dir | \`${REMOTE_WORK_DIR}\` |"
             echo "| Tarball | \`${TARBALL_NAME}\` |"
             echo "| Source URL | ${TARBALL_URL} |"
             echo "| RVS version | \`${RVS_VERSION}\` |"
@@ -346,8 +526,8 @@ jobs:
             echo ""
             echo "| Test | Command | Result | Exit | Started (UTC) | Ended (UTC) |"
             echo "|---|---|:--:|---:|---|---|"
-            echo "| Level 3 | \`${RVS_BIN} -r 3\` | ${S3} | ${RC3} | ${{ steps.rvs3.outputs.start }} | ${{ steps.rvs3.outputs.end }} |"
-            echo "| Level 4 | \`${RVS_BIN} -r 4\` | ${S4} | ${RC4} | ${{ steps.rvs4.outputs.start }} | ${{ steps.rvs4.outputs.end }} |"
+            echo "| Level 3 | \`${RVS_BIN} -r 3\` (on \`${TARGET_HOSTNAME}\`) | ${S3} | ${RC3} | ${{ steps.rvs3.outputs.start }} | ${{ steps.rvs3.outputs.end }} |"
+            echo "| Level 4 | \`${RVS_BIN} -r 4\` (on \`${TARGET_HOSTNAME}\`) | ${S4} | ${RC4} | ${{ steps.rvs4.outputs.start }} | ${{ steps.rvs4.outputs.end }} |"
             echo ""
             echo "## Logs"
             echo ""
@@ -376,6 +556,19 @@ jobs:
           path: ./reports/
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Cleanup remote work dir and local SSH state
+        if: always()
+        run: |
+          set +e
+          if [ -n "${REMOTE_WORK_DIR:-}" ] && [ -f "$SSH_CONFIG_FILE" ]; then
+            ssh -q -F "$SSH_CONFIG_FILE" rvs-target "rm -rf '${REMOTE_WORK_DIR}'" || \
+              echo "::warning::Failed to clean up ${REMOTE_WORK_DIR} on target node."
+          fi
+          # Scrub the private key + config from the runner so they cannot linger
+          # between jobs on a shared self-hosted runner. runner.temp is also
+          # cleaned automatically by the runner, this is just defense in depth.
+          rm -f "$SSH_KEY_FILE" "$SSH_CONFIG_FILE" "${SSH_CONFIG_FILE}.known_hosts"
 
       - name: Fail the job if any level failed
         if: steps.report.outputs.overall == 'FAIL'
