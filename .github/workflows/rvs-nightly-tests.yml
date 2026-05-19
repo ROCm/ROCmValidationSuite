@@ -16,7 +16,7 @@ name: RVS Nightly Tests
 #   RVS_TARBALL_INDEX_URL  HTTP listing the published amdrocm*-rvs-*.tar.gz files.
 #   RVS_TARGET_NODE        Default hostname/IP of the node that runs RVS.
 #                          Can be overridden per-run via workflow_dispatch input.
-#   RVS_TARGET_USER        (Optional) SSH user on the target node. Default: urtiwari.
+#   RVS_TARGET_USER        (Optional) SSH user on the target node.
 #   RVS_REMOTE_WORK_DIR    (Optional) Working dir on the target node.
 #                          Default: /tmp/rvs-nightly-<run_id>.
 #   RVS_TEST_RUNNER_LABEL  (Optional) Label of the GitHub runner. Default: self-hosted.
@@ -46,7 +46,7 @@ on:
         required: false
         default: ''
       target_user:
-        description: 'SSH user on the target node (default: vars.RVS_TARGET_USER or "urtiwari")'
+        description: 'SSH user on the target node (default: vars.RVS_TARGET_USER)'
         required: false
         default: ''
       remote_work_dir:
@@ -164,7 +164,7 @@ jobs:
       # Target node where install + tests actually run. Inputs win over repo vars
       # so individual runs can be retargeted via workflow_dispatch.
       TARGET_NODE:  ${{ inputs.target_node || vars.RVS_TARGET_NODE }}
-      TARGET_USER:  ${{ inputs.target_user || vars.RVS_TARGET_USER || 'urtiwari' }}
+      TARGET_USER:  ${{ inputs.target_user || vars.RVS_TARGET_USER }}
       # Workflow-scoped SSH state (in runner.temp so we never touch the runner
       # user's own ~/.ssh on a shared self-hosted runner).
       SSH_KEY_FILE:    ${{ runner.temp }}/rvs_target_key

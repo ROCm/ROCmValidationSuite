@@ -58,7 +58,7 @@ adjust the cron string in the workflow if your publish cadence is different.
 | `tarball_url` | _(empty)_ | If set, the workflow downloads this exact URL instead of scraping the index. Useful for re-running an older build. |
 | `force` | `false` | When `true`, runs even if the latest tarball filename matches the cached marker. |
 | `target_node` | _(empty → `vars.RVS_TARGET_NODE`)_ | Hostname or IP of the node to install RVS on and run tests against. **This is the variable that retargets the test execution.** |
-| `target_user` | _(empty → `vars.RVS_TARGET_USER`, then `urtiwari`)_ | SSH user on the target node. Must have `NOPASSWD` sudo on the target (see prerequisites). |
+| `target_user` | _(empty → `vars.RVS_TARGET_USER`)_ | SSH user on the target node. Must have `NOPASSWD` sudo on the target (see prerequisites). |
 | `remote_work_dir` | _(empty → `vars.RVS_REMOTE_WORK_DIR`, then `/tmp/rvs-nightly-<run_id>`)_ | Working dir on the target node where the tarball is staged, logs are written, and which gets `rm -rf`'d at the end. |
 
 Workflow inputs **win over repo variables**, so individual `workflow_dispatch`
@@ -69,8 +69,8 @@ Example — point a single run at a specific node:
 ```bash
 gh workflow run rvs-nightly-tests.yml \
   -f tarball_url="<INDEX_URL>/amdrocm7-rvs-1.4.21-288-Linux.tar.gz" \
-  -f target_node="10.245.134.83" \
-  -f target_user="urtiwari" \
+  -f target_node="x.x.x.x" \
+  -f target_user="userID" \
   -f force=true
 ```
 
@@ -88,7 +88,7 @@ gh workflow run rvs-nightly-tests.yml -f target_node="e17u13.maas"
 |---|---|---|
 | `RVS_TARBALL_INDEX_URL` | **Required** | Directory listing scraped for the latest tarball, e.g. `https://repo.amd.com/rocm/rvs/tarball/`. No fallback — the workflow fails fast if unset and no `tarball_url` input is supplied. |
 | `RVS_TARGET_NODE` | **Required** *(unless every run sets `target_node` input)* | Default hostname/IP of the node where RVS is installed and tests run. Workflow fails fast on `schedule` if neither this var nor `target_node` input is set. |
-| `RVS_TARGET_USER` | optional (default `urtiwari`) | SSH user on the target node. |
+| `RVS_TARGET_USER` | optional  | SSH user on the target node. |
 | `RVS_REMOTE_WORK_DIR` | optional (default `/tmp/rvs-nightly-<run_id>`) | Working dir on the target node. Cleared with `rm -rf` at the end of the job. |
 | `RVS_TEST_RUNNER_LABEL` | optional (default `self-hosted`) | Label of the GitHub runner that orchestrates the workflow. The runner doesn't need a GPU or ROCm — it just needs `ssh`, `scp`, and `curl`. |
 
@@ -248,7 +248,7 @@ e.g.:
 | Run | `1234567890` |
 | Trigger | `schedule` |
 | Orchestrator (GitHub runner) | `gha-orchestrator-01` |
-| Target node (test execution) | `e16u07` (`urtiwari@10.245.134.83`) |
+| Target node (test execution) | `hostname` (`user@x.x.x.x`) |
 | Remote work dir | `/tmp/rvs-nightly-1234567890` |
 | Tarball | `amdrocm7-rvs-1.4.21-288-Linux.tar.gz` |
 | Source URL | `$RVS_TARBALL_INDEX_URL/amdrocm7-rvs-1.4.21-288-Linux.tar.gz` |
@@ -259,8 +259,8 @@ e.g.:
 
 | Test    | Command                                              | Result | Exit | Started (UTC)         | Ended (UTC)           |
 |---------|------------------------------------------------------|:------:|-----:|-----------------------|-----------------------|
-| Level 3 | `/opt/rocm/extras-7/bin/rvs -r 3` (on `e16u07`)      | PASS   |    0 | 2026-05-19T15:01:00Z  | 2026-05-19T15:25:11Z  |
-| Level 4 | `/opt/rocm/extras-7/bin/rvs -r 4` (on `e16u07`)      | PASS   |    0 | 2026-05-19T15:25:12Z  | 2026-05-19T16:02:47Z  |
+| Level 3 | `/opt/rocm/extras-7/bin/rvs -r 3` (on `hostname`)      | PASS   |    0 | 2026-05-19T15:01:00Z  | 2026-05-19T15:25:11Z  |
+| Level 4 | `/opt/rocm/extras-7/bin/rvs -r 4` (on `hostname`)      | PASS   |    0 | 2026-05-19T15:25:12Z  | 2026-05-19T16:02:47Z  |
 ```
 
 The full artifact contents:
