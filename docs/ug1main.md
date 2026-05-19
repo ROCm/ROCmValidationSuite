@@ -1,5 +1,32 @@
 # User Guide
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installing RVS](#installing-rvs)
+  - [Building from Source Code](#building-from-source-code)
+  - [Installing from Package](#installing-from-package)
+  - [Running RVS](#running-rvs)
+- [Basic Concepts](#basic-concepts)
+  - [RVS Architecture](#rvs-architecture)
+  - [Available Modules](#available-modules)
+  - [Command Line Options](#command-line-options)
+  - [Configuration Files](#configuration-files)
+  - [Common Configuration Keys](#common-configuration-keys)
+- [GPUP Module](#gpup-module)
+- [GM Module](#gm-module)
+- [PESM Module](#pesm-module)
+- [RCQT Module](#rcqt-module)
+- [PEQT Module](#peqt-module)
+- [SMQT Module](#smqt-module)
+- [PBQT Module](#pbqt-module)
+- [PEBB Module](#pebb-module)
+- [GST Module](#gst-module)
+- [IET Module](#iet-module)
+- [Pulse Module](#pulse-module)
+- [MEM Module](#mem-module)
+- [BABEL Module](#babel-module)
+
 ## Introduction
 The ROCm Validation Suite (RVS) is a system validation and diagnostics tool
 for monitoring, stress testing, detecting and troubleshooting issues that
@@ -152,6 +179,147 @@ The Memory module tests the GPU memory for hardware errors and soft errors using
 #### BABEL benchmark Test - BABEL module
 The Babel module executes BabelStream (synthetic GPU benchmark based on the original STREAM benchmark for CPUs) benchmark that measures memory transfer rates (bandwidth) to and from global device memory. Various benchmark tests are implemented using GPU kernels in HIP (Heterogeneous Interface for Portability) programming language.
 
+### Command Line Options
+
+Command line options are summarized in the table below:
+
+> **Note:** Command line options take precedence over the same parameters set in the configuration file. For example, if `parallel: false` is specified in the configuration file but `-p true` is passed on the command line, parallel execution will be enabled.
+
+<table>
+<tr><th>Short option</th><th>Long option</th><th> Description</th></tr>
+<tr><td>-a</td><td>--appendLog</td><td>When generating a debug logfile, do not overwrite the content
+of the current log. Use in conjuction with <b>-d</b> and <b>-l</b> options.
+</td></tr>
+
+<tr><td>-c</td><td>--config</td><td>Specify the test configuration file to use.
+This is a mandatory field for test execution.
+</td></tr>
+
+<tr><td>-r</td><td>--run</td><td>Specify the test level to run.
+Valid range is 1 to 5, with 5 indicating the highest stress test level.
+</td></tr>
+
+<tr><td>-d</td><td>--debugLevel</td><td>Specify the debug level for the output log.
+The range is 0-5 with 5 being the highest verbose level.
+</td></tr>
+
+<tr><td>-g</td><td>--listGpus</td><td>List all the GPUs available in the machine,
+that RVS supports and has visibility.
+</td></tr>
+
+<tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids/indexes to run test on.
+This overrides the <b>device/device_index</b> parameter values specified for every actions in the
+configuration file, including the <b>all</b> value.
+</td></tr>
+
+<tr><td>-s</td><td>--selectActions</td><td>Comma separated list of action names or 0-based action
+index numbers to run from the configuration file. Only the matching actions will be executed.
+All other actions are skipped.
+</td></tr>
+
+<tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
+if a path follows this argument, that will be used as json log file;
+else a file created in <b>/var/tmp/</b> with timestamp in name.
+</td></tr>
+
+<tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
+</td></tr>
+
+<tr><td>-m</td><td>--module</td><td>Specify a module name to run the corresponding
+platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>babel</b>, <b>gpup</b>,
+<b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>.
+</td></tr>
+
+<tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
+</td></tr>
+
+<tr><td>-v</td><td>--verbose</td><td>Enable detailed logging. Equivalent to specifying <b>-d 5</b> option.
+</td></tr>
+
+<tr><td>-p</td><td>--parallel</td><td>Enables or Disables parallel execution across multiple GPUs.
+Use this option in conjunction with <b>-c</b> option.
+Accepted Values:
+<b>true</b> – Enables parallel execution.
+<b>false</b> – Disables parallel execution.
+If no value is provided for the option, it defaults to <b>true</b>.
+</td></tr>
+
+<tr><td>-n</td><td>--numTimes</td><td>Number of times the test repeatedly executes.
+Use this option in conjunction with <b>-c</b> option.
+</td></tr>
+
+<tr><td></td><td>--quiet</td><td>No console output given. See logs and return
+code for errors.</td></tr>
+
+<tr><td></td><td>--version</td><td>Displays the version information and exits.
+</td></tr>
+
+<tr><td>-h</td><td>--help</td><td>Display usage information and exit.
+</td></tr>
+
+</table>
+
+#### Examples
+
+Print version information and exit:
+```bash
+./rvs --version
+```
+
+List all available test modules:
+```bash
+./rvs -t
+```
+List all GPUs visible to RVS:
+```bash
+./rvs -g
+```
+
+Run a specific configuration file:
+```bash
+./rvs -c conf/gst_single.conf
+```
+
+Repeat a test 5 times in sequence (soak/stability testing):
+```bash
+./rvs -c conf/gst_single.conf -n 5
+```
+
+Run only the GST module using the built-in platform configuration:
+```bash
+./rvs -m gst
+```
+
+Run a configuration file at stress level 3:
+```bash
+./rvs -c conf/gst_single.conf -r 3
+```
+
+Run a configuration file on specific GPUs (by index) with parallel execution enabled:
+```bash
+./rvs -c conf/gst_single.conf -i 0,1 -p true
+```
+
+Run only selected actions from a configuration file (by name or 0-based index):
+```bash
+./rvs -c conf/iet_single.conf -s action_1,action_2
+./rvs -c conf/iet_single.conf -s 0,2
+```
+
+Generate JSON output to a specific file:
+```bash
+./rvs -c conf/gst_single.conf -j /tmp/rvs_results.json
+```
+
+Run with verbose logging and save the log to a file:
+```bash
+./rvs -c conf/gst_single.conf -v -l /tmp/rvs_debug.log
+```
+
+Suppress console output and write results to a JSON file (useful in CI pipelines):
+```bash
+./rvs -c conf/gst_single.conf --quiet -j /tmp/rvs_results.json
+```
 
 ### Configuration Files
 
@@ -240,85 +408,13 @@ modules will ignore this parameter.</td></tr>
 will be used in the execution of the action. Each module has a set of sub-tests
 or sub-actions that can be configured based on its specific
 parameters.</td></tr>
+
+<tr><td>log_interval</td><td>Integer</td><td>This specifies how often, in
+milliseconds, the module emits a progress or status log message during a
+running test. If a value isn't specified the default is 1000 ms. Some modules
+will ignore this parameter.</td></tr>
 </table>
 
-### Command Line Options
-
-Command line options are summarized in the table below:
-
-<table>
-<tr><th>Short option</th><th>Long option</th><th> Description</th></tr>
-<tr><td>-a</td><td>--appendLog</td><td>When generating a debug logfile, do not overwrite the content
-of the current log. Use in conjuction with <b>-d</b> and <b>-l</b> options.
-</td></tr>
-
-<tr><td>-c</td><td>--config</td><td>Specify the test configuration file to use.
-This is a mandatory field for test execution.
-</td></tr>
-
-<tr><td>-r</td><td>--run</td><td>Specify the test level to run.
-Valid range is 1 to 5, with 5 indicating the highest stress test level.
-</td></tr>
-
-<tr><td>-d</td><td>--debugLevel</td><td>Specify the debug level for the output log.
-The range is 0-5 with 5 being the highest verbose level.
-</td></tr>
-
-<tr><td>-g</td><td>--listGpus</td><td>List all the GPUs available in the machine,
-that RVS supports and has visibility.
-</td></tr>
-
-<tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids/indexes to run test on.
-This overrides the <b>device/device_index</b> parameter values specified for every actions in the
-configuration file, including the <b>all</b> value.
-</td></tr>
-
-<tr><td>-s</td><td>--selectActions</td><td>Comma separated list of action names or 0-based action
-index numbers to run from the configuration file. Only the matching actions will be executed.
-All other actions are skipped.
-</td></tr>
-
-<tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
-if a path follows this argument, that will be used as json log file;
-else a file created in <b>/var/tmp/</b> with timestamp in name.
-</td></tr>
-
-<tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
-</td></tr>
-
-<tr><td>-m</td><td>--module</td><td>Specify a module name to run the corresponding
-platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>babel</b>, <b>gpup</b>,
-<b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>.
-</td></tr>
-
-<tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
-</td></tr>
-
-<tr><td>-v</td><td>--verbose</td><td>Enable detailed logging. Equivalent to specifying <b>-d 5</b> option.
-</td></tr>
-
-<tr><td>-p</td><td>--parallel</td><td>Enables or Disables parallel execution across multiple GPUs.
-Use this option in conjunction with <b>-c</b> option.
-Accepted Values:
-<b>true</b> – Enables parallel execution.
-<b>false</b> – Disables parallel execution.
-If no value is provided for the option, it defaults to <b>true</b>.
-</td></tr>
-
-<tr><td>-n</td><td>--numTimes</td><td>Number of times the test repeatedly executes.
-Use this option in conjunction with <b>-c</b> option.
-</td></tr>
-
-<tr><td></td><td>--quiet</td><td>No console output given. See logs and return
-code for errors.</td></tr>
-
-<tr><td></td><td>--version</td><td>Displays the version information and exits.
-</td></tr>
-
-<tr><td>-h</td><td>--help</td><td>Display usage information and exit.
-</td></tr>
-
-</table>
 
 ## GPUP Module
 The GPU properties module provides an interface to easily dump the static
@@ -790,7 +886,11 @@ Monitoring is performed by polling respective PCIe registers roughly every 1ms
 <tr><td>monitor</td><td>Bool</td><td>This key is set to true, the PESM
 module will start monitoring on specified devices. If this key is set to false,
 all other keys are ignored and monitoring will be stopped for all devices.</td>
-</tr> </table>
+</tr>
+<tr><td>debugwait</td><td>Integer</td><td>Debug wait period in milliseconds
+inserted before monitoring begins. Intended for development and debugging use.
+The default value is 0 (no wait).</td></tr>
+</table>
 
 ### Output
 
@@ -1513,6 +1613,75 @@ key will be performed.</td></tr>
 <td>This is a positive integer indicating type of link to be included in
 bandwidth test. Numbering follows that listed in **hsa\_amd\_link\_info\_type\_t** in
 **hsa\_ext\_amd.h** file.</td></tr>
+
+<tr><td>b2b</td><td>Bool</td>
+<td>If true, transfers are run back-to-back continuously for the full test
+duration. Only applicable when using the native transfer method. If not
+specified the default value is false.</td></tr>
+
+<tr><td>hot_calls</td><td>Integer</td>
+<td>Number of timed transfer iterations used to measure bandwidth. If not
+specified the default value is 1.</td></tr>
+
+<tr><td>warm_calls</td><td>Integer</td>
+<td>Number of warm-up transfer iterations run before timing begins. Warm-up
+iterations are not included in the bandwidth measurement. If not specified
+the default value is 1.</td></tr>
+
+<tr><td>transfer_method</td><td>String</td>
+<td>Transfer backend to use. Accepted values:
+<b>native</b> – Use the ROCm native SDMA transfer path (default).
+<b>transferbench</b> – Use the TransferBench library as the transfer backend.
+If not specified the default is <b>native</b>.</td></tr>
+
+<tr><td>transferbench_test</td><td>String</td>
+<td>TransferBench test type. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>p2p</b> – Point-to-point transfer test (default).
+<b>alltoall</b> – All-to-all transfer test across all participating GPUs.
+If not specified the default is <b>p2p</b>.</td></tr>
+
+<tr><td>executor</td><td>String</td>
+<td>Execution engine used by TransferBench. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>gfx</b> – Use GPU shader kernels (default).
+<b>dma</b> – Use the DMA engine.
+If not specified the default is <b>gfx</b>.</td></tr>
+
+<tr><td>subexecutor</td><td>Integer</td>
+<td>Number of sub-executors (wavefronts or threads) per transfer. Only
+applicable when <b>transfer_method: transferbench</b>. If not specified the
+default value is 1.</td></tr>
+
+<tr><td>gfx_unroll</td><td>Integer</td>
+<td>Unroll factor for the GFX shader kernel. Only applicable when
+<b>transfer_method: transferbench</b> and <b>executor: gfx</b>. If not
+specified the default value is 4.</td></tr>
+
+<tr><td>use_remote_read</td><td>Integer</td>
+<td>If set to 1, transfers use remote read instead of remote write. If not
+specified the default value is 0 (remote write).</td></tr>
+
+<tr><td>a2a_mode</td><td>Integer</td>
+<td>All-to-all transfer pattern mode. Only applicable when
+<b>transferbench_test: alltoall</b>. If not specified the default value is
+0.</td></tr>
+
+<tr><td>a2a_direct</td><td>Integer</td>
+<td>If set to 1, enables direct peer-to-peer transfers in the all-to-all
+test. Only applicable when <b>transferbench_test: alltoall</b>. If not
+specified the default value is 1.</td></tr>
+
+<tr><td>a2a_local</td><td>Integer</td>
+<td>If set to 1, includes local (same-GPU) transfers in the all-to-all test.
+Only applicable when <b>transferbench_test: alltoall</b>. If not specified
+the default value is 0.</td></tr>
+
+<tr><td>a2a_num_gpus</td><td>Integer</td>
+<td>Number of GPUs to include in the all-to-all test. A value of 0 means all
+detected GPUs are included. Only applicable when
+<b>transferbench_test: alltoall</b>. If not specified the default value is
+0.</td></tr>
 </table>
 
 Please note that suitable values for **log\_interval** and **duration** depend
@@ -1862,6 +2031,59 @@ key will be performed.</td></tr>
 <td>This is a positive integer indicating type of link to be included in
 bandwidth test. Numbering follows that listed in **hsa\_amd\_link\_info\_type\_t** in
 **hsa\_ext\_amd.h** file.</td></tr>
+
+<tr><td>b2b</td><td>Bool</td>
+<td>If true, transfers are run back-to-back continuously for the full test
+duration. Only applicable when using the native transfer method. If not
+specified the default value is false.</td></tr>
+
+<tr><td>hot_calls</td><td>Integer</td>
+<td>Number of timed transfer iterations used to measure bandwidth. If not
+specified the default value is 1.</td></tr>
+
+<tr><td>warm_calls</td><td>Integer</td>
+<td>Number of warm-up transfer iterations run before timing begins. Warm-up
+iterations are not included in the bandwidth measurement. If not specified
+the default value is 1.</td></tr>
+
+<tr><td>transfer_method</td><td>String</td>
+<td>Transfer backend to use. Accepted values:
+<b>native</b> – Use the ROCm native SDMA transfer path (default).
+<b>transferbench</b> – Use the TransferBench library as the transfer backend.
+If not specified the default is <b>native</b>.</td></tr>
+
+<tr><td>executor</td><td>String</td>
+<td>Execution engine used by TransferBench. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>gfx</b> – Use GPU shader kernels (default).
+<b>dma</b> – Use the DMA engine.
+If not specified the default is <b>gfx</b>.</td></tr>
+
+<tr><td>subexecutor</td><td>Integer</td>
+<td>Number of sub-executors (wavefronts or threads) per transfer. Only
+applicable when <b>transfer_method: transferbench</b>. If not specified the
+default value is 1.</td></tr>
+
+<tr><td>gfx_unroll</td><td>Integer</td>
+<td>Unroll factor for the GFX shader kernel. Only applicable when
+<b>transfer_method: transferbench</b> and <b>executor: gfx</b>. If not
+specified the default value is 4.</td></tr>
+
+<tr><td>source_memory</td><td>String</td>
+<td>Memory type for the transfer source. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>cpu</b> – System (host) memory.
+<b>gpu</b> – GPU device memory.
+<b>null</b> – No explicit memory allocation; let TransferBench decide (default).
+If not specified the default is <b>null</b>.</td></tr>
+
+<tr><td>destination_memory</td><td>String</td>
+<td>Memory type for the transfer destination. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>cpu</b> – System (host) memory.
+<b>gpu</b> – GPU device memory.
+<b>null</b> – No explicit memory allocation; let TransferBench decide (default).
+If not specified the default is <b>null</b>.</td></tr>
 </table>
 
 Please note that suitable values for **log\_interval** and **duration** depend
@@ -1918,8 +2140,8 @@ Module specific output keys are described in the table below:
 </td></tr>
 
 <tr><td>interval_bandwidth</td><td>Float</td>
-<td>The average bandwidth of a p2p transfer, during the log_interval time
-period.\n This field may also take values:
+<td>The average bandwidth of a CPU-to-GPU or GPU-to-CPU transfer, during the
+log_interval time period.\n This field may also take values:
 - (pending) - this means that no measurement has taken place
 yet.
 - xxxGBps (*) - this means no measurement within current log_interval but
@@ -1927,8 +2149,8 @@ average from previous measurements is displayed.
 
 </td></tr>
 <tr><td>bandwidth</td><td>Float</td>
-<td>The average bandwidth of a p2p transfer, averaged over the entire test
-duration of the interval. This field may also take value:
+<td>The average bandwidth of a CPU-to-GPU or GPU-to-CPU transfer, averaged
+over the entire test duration. This field may also take value:
 - (not measured) - this means no test transfer completed for those
 peers. You may need to increase test duration.
 
@@ -2115,7 +2337,7 @@ duration specified by the action, sustaining the stress load during that
 time.</td></tr>
 <tr><td>tolerance</td><td>Float</td>
 <td>A value indicating how much the target_stress can fluctuate after the ramp
-period for the test to succeed. The default value is 0.1 or 10%.</td></tr>
+period for the test to succeed. The default value is 0.05 (5%).</td></tr>
 <tr><td>max_violations</td><td>Integer</td>
 <td>The number of tolerance violations that can occur after the ramp_interval
 for the test to still pass. The default value is 0.</td></tr>
@@ -2124,8 +2346,151 @@ for the test to still pass. The default value is 0.</td></tr>
 interval over which the moving average of the bandwidth will be calculated and
 logged.</td></tr>
 <tr><td>matrix_size</td><td>Integer</td>
-<td>Size of the matrices of the SGEMM operations. The default value is
+<td>Sets all three matrix dimensions (M, N, and K) to the same value. Equivalent
+to setting <b>matrix_size_a</b>, <b>matrix_size_b</b>, and <b>matrix_size_c</b>
+to the same value. The default value is 5760.</td></tr>
+<tr><td>matrix_size_a</td><td>Integer</td>
+<td>Number of rows of matrix A (the M dimension in GEMM). Overrides
+<b>matrix_size</b> for this dimension. The default value is 5760.</td></tr>
+<tr><td>matrix_size_b</td><td>Integer</td>
+<td>Number of columns of matrix B (the N dimension in GEMM). Overrides
+<b>matrix_size</b> for this dimension. The default value is 5760.</td></tr>
+<tr><td>matrix_size_c</td><td>Integer</td>
+<td>Inner (shared) dimension K of the GEMM operation (columns of A / rows of B).
+Overrides <b>matrix_size</b> for this dimension. The default value is
 5760.</td></tr>
+
+<tr><td>ops_type</td><td>String</td>
+<td>GEMM operation type. Accepted values: <b>sgemm</b>, <b>dgemm</b>,
+<b>hgemm</b>. If neither <b>ops_type</b> nor <b>data_type</b> is set, the
+module defaults to <b>sgemm</b>. Mutually exclusive with <b>data_type</b>.</td></tr>
+
+<tr><td>data_type</td><td>String</td>
+<td>Data type for the GEMM computation. Accepted values include:
+<b>fp4_r</b>, <b>fp6_r</b>, <b>fp8_r</b>, <b>bf16_r</b>, <b>fp16_r</b>,
+<b>fp32_r</b>, <b>tf32_r</b> (<b>xf32_r</b>), <b>i8_r</b>. If not specified
+the module falls back to the type implied by <b>ops_type</b>.</td></tr>
+
+<tr><td>out_data_type</td><td>String</td>
+<td>Output (result) data type, e.g. <b>fp16_r</b>, <b>fp32_r</b>. Only
+applicable when using hipBLASLt. If not specified the default matches the
+compute type.</td></tr>
+
+<tr><td>compute_type</td><td>String</td>
+<td>Accumulation/compute type used internally by the BLAS library. If not
+specified the default is <b>fp32_r</b>.</td></tr>
+
+<tr><td>blas_source</td><td>String</td>
+<td>BLAS library backend to use. Accepted values:
+<b>rocblas</b> (default), <b>hipblaslt</b>.</td></tr>
+
+<tr><td>hot_calls</td><td>Integer</td>
+<td>Number of GEMM kernel invocations per measurement window used to amortise
+launch overhead. The default value is 1.</td></tr>
+
+<tr><td>matrix_init</td><td>String</td>
+<td>Matrix initialization method. Accepted values:
+<b>default</b> – Initialize with default pattern (default).
+<b>trig</b> – Initialize with trigonometric (sine/cosine) values.
+<b>random</b> – Initialize with random values.</td></tr>
+
+<tr><td>transa</td><td>Integer</td>
+<td>Transpose operation applied to matrix A before the GEMM call.
+0 = no transpose (default), 1 = transpose.</td></tr>
+
+<tr><td>transb</td><td>Integer</td>
+<td>Transpose operation applied to matrix B before the GEMM call.
+0 = no transpose, 1 = transpose (default).</td></tr>
+
+<tr><td>alpha</td><td>Float</td>
+<td>Scalar multiplier applied to the product of matrices A and B in the GEMM
+operation (C = alpha * A * B + beta * C). The default value is 1.</td></tr>
+
+<tr><td>beta</td><td>Float</td>
+<td>Scalar multiplier applied to matrix C in the GEMM operation. The default
+value is 1.</td></tr>
+
+<tr><td>lda</td><td>Integer</td>
+<td>Leading dimension offset added to the computed leading dimension of matrix
+A. The default value is 0.</td></tr>
+
+<tr><td>ldb</td><td>Integer</td>
+<td>Leading dimension offset added to the computed leading dimension of matrix
+B. The default value is 0.</td></tr>
+
+<tr><td>ldc</td><td>Integer</td>
+<td>Leading dimension offset added to the computed leading dimension of matrix
+C. The default value is 0.</td></tr>
+
+<tr><td>ldd</td><td>Integer</td>
+<td>Leading dimension offset added to the computed leading dimension of matrix
+D (output). The default value is 0.</td></tr>
+
+<tr><td>scale_a</td><td>String</td>
+<td>Scaling mode applied to matrix A. Used with low-precision types such as
+fp8. Accepted values include <b>block</b>. If not specified no scaling is
+applied.</td></tr>
+
+<tr><td>scale_b</td><td>String</td>
+<td>Scaling mode applied to matrix B. Used with low-precision types such as
+fp8. Accepted values include <b>block</b>. If not specified no scaling is
+applied.</td></tr>
+
+<tr><td>rotating</td><td>Integer</td>
+<td>Size of the rotating buffer (in elements) used to prevent data from
+residing in cache between iterations, enabling cache-cold benchmarking. A
+value of 0 disables rotating buffers. The default value is 0.</td></tr>
+
+<tr><td>gemm_mode</td><td>String</td>
+<td>GEMM execution mode. Accepted values:
+<b>""</b> or unset – Standard (single) GEMM (default).
+<b>batched</b> – Batched GEMM; use with <b>batch_size</b>.
+<b>strided_batched</b> – Strided batched GEMM; use with <b>batch_size</b> and
+<b>stride_*</b> keys.</td></tr>
+
+<tr><td>batch_size</td><td>Integer</td>
+<td>Number of GEMM operations in a batched or strided-batched call. Only
+applicable when <b>gemm_mode</b> is <b>batched</b> or
+<b>strided_batched</b>. The default value is 0.</td></tr>
+
+<tr><td>stride_a</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices A in a strided-batched
+GEMM. Only applicable when <b>gemm_mode: strided_batched</b>. The default
+value is 0.</td></tr>
+
+<tr><td>stride_b</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices B in a strided-batched
+GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_c</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices C in a strided-batched
+GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_d</td><td>Integer</td>
+<td>Stride (in elements) between consecutive output matrices D in a
+strided-batched GEMM. The default value is 0.</td></tr>
+
+<tr><td>self_check</td><td>Bool</td>
+<td>If true, validates the GEMM result for correctness after each operation.
+Adds overhead; intended for debugging. The default value is false.</td></tr>
+
+<tr><td>accuracy_check</td><td>Bool</td>
+<td>If true, runs a numerical accuracy check after each GEMM operation. The
+default value is false.</td></tr>
+
+<tr><td>error_inject</td><td>Bool</td>
+<td>If true, enables error injection mode to deliberately introduce errors
+into the computation for testing error detection. The default value is
+false.</td></tr>
+
+<tr><td>error_freq</td><td>Integer</td>
+<td>Frequency of error injection; specifies how often (every N operations) an
+error is injected. Only applicable when <b>error_inject: true</b>. The
+default value is 0.</td></tr>
+
+<tr><td>error_count</td><td>Integer</td>
+<td>Number of errors to inject per injection event. Only applicable when
+<b>error_inject: true</b>. The default value is 0.</td></tr>
 </table>
 
 ### Output
@@ -2146,8 +2511,8 @@ the ramp interval.</td></tr>
 <td>Flops (floating point operations) per operation queued to the GPU queue.
 One operation is one call to SGEMM/DGEMM.</td></tr>
 <tr><td>bytes_copied_per_op</td><td>Integer</td>
-<td>Calculated number of ops/second necessary to achieve target
-gigaflops.</td></tr>
+<td>Number of bytes copied to the GPU per GEMM operation when
+<b>copy_matrix</b> is true.</td></tr>
 <tr><td>try_ops_per_sec</td><td>Float</td>
 <td>Calculated number of ops/second necessary to achieve target
 gigaflops.</td></tr>
@@ -2392,19 +2757,150 @@ is 5000 (5 seconds). This time is counted against the duration of the test.
 </td></tr>
 <tr><td>tolerance</td><td>Float</td>
 <td>A value indicating how much the target_power can fluctuate after the ramp
-period for the test to succeed. The default value is 0.1 or 10%.
+period for the test to succeed. The default value is 0 (any violation
+immediately fails the test).
 </td></tr>
 <tr><td>max_violations</td><td>Integer</td>
 <td>The number of tolerance violations that can occur after the ramp_interval
 for the test to still pass. The default value is 0.</td></tr>
 <tr><td>sample_interval</td><td>Integer</td>
 <td>The sampling rate for target_power values given in milliseconds. The default
-value is 100 (.1 seconds).
+value is 1000 (1 second).
 </td></tr>
 <tr><td>log_interval</td><td>Integer</td>
 <td>This is a positive integer, given in milliseconds, that specifies an
 interval over which the moving average of the bandwidth will be calculated and
 logged.</td></tr>
+
+<tr><td>cp_workload</td><td>Bool</td>
+<td>If true, enables the GEMM compute workload to drive GPU power. This is the
+primary workload used to reach the target power level. The default value is
+true.</td></tr>
+
+<tr><td>bw_workload</td><td>Bool</td>
+<td>If true, enables a memory bandwidth kernel workload in addition to or
+instead of the GEMM workload. The default value is false.</td></tr>
+
+<tr><td>wg_count</td><td>Integer</td>
+<td>Number of GPU workgroups used for the bandwidth kernel. Only applicable
+when <b>bw_workload: true</b>. The default value is 80.</td></tr>
+
+<tr><td>nt_loads</td><td>Bool</td>
+<td>If true, the bandwidth kernel uses non-temporal loads that bypass the L2
+cache, exercising memory bandwidth more directly. Only applicable when
+<b>bw_workload: true</b>. The default value is false.</td></tr>
+
+<tr><td>matrix_size</td><td>Integer</td>
+<td>Sets all three GEMM matrix dimensions (M, N, and K) to the same value.
+Equivalent to setting <b>matrix_size_a</b>, <b>matrix_size_b</b>, and
+<b>matrix_size_c</b> to the same value. The default value is 5760.</td></tr>
+
+<tr><td>matrix_size_a</td><td>Integer</td>
+<td>Number of rows of matrix A (the M dimension in GEMM). Overrides
+<b>matrix_size</b> for this dimension. Default is 0 (uses
+<b>matrix_size</b>).</td></tr>
+
+<tr><td>matrix_size_b</td><td>Integer</td>
+<td>Number of columns of matrix B (the N dimension in GEMM). Overrides
+<b>matrix_size</b> for this dimension. Default is 0 (uses
+<b>matrix_size</b>).</td></tr>
+
+<tr><td>matrix_size_c</td><td>Integer</td>
+<td>Inner (shared) dimension K of the GEMM operation. Overrides
+<b>matrix_size</b> for this dimension. Default is 0 (uses
+<b>matrix_size</b>).</td></tr>
+
+<tr><td>ops_type</td><td>String</td>
+<td>GEMM operation type. Accepted values: <b>sgemm</b>, <b>dgemm</b>,
+<b>hgemm</b>. If neither <b>ops_type</b> nor <b>data_type</b> is set, the
+module defaults to <b>sgemm</b>. Mutually exclusive with
+<b>data_type</b>.</td></tr>
+
+<tr><td>data_type</td><td>String</td>
+<td>Data type for the GEMM computation. Accepted values include:
+<b>fp4_r</b>, <b>fp6_r</b>, <b>fp8_r</b>, <b>bf16_r</b>, <b>fp16_r</b>,
+<b>fp32_r</b>, <b>tf32_r</b> (<b>xf32_r</b>), <b>i8_r</b>. If not specified
+the module falls back to the type implied by <b>ops_type</b>.</td></tr>
+
+<tr><td>out_data_type</td><td>String</td>
+<td>Output (result) data type, e.g. <b>fp16_r</b>, <b>fp32_r</b>. Only
+applicable when using hipBLASLt. If not specified the default matches the
+compute type.</td></tr>
+
+<tr><td>compute_type</td><td>String</td>
+<td>Accumulation/compute type used internally by the BLAS library. If not
+specified the default is <b>fp32_r</b>.</td></tr>
+
+<tr><td>blas_source</td><td>String</td>
+<td>BLAS library backend to use. Accepted values:
+<b>rocblas</b> (default), <b>hipblaslt</b>.</td></tr>
+
+<tr><td>hot_calls</td><td>Integer</td>
+<td>Number of GEMM kernel invocations per measurement window used to amortise
+launch overhead. The default value is 1.</td></tr>
+
+<tr><td>matrix_init</td><td>String</td>
+<td>Matrix initialization method. Accepted values:
+<b>default</b> – Initialize with default pattern (default).
+<b>trig</b> – Initialize with trigonometric (sine/cosine) values.
+<b>random</b> – Initialize with random values.</td></tr>
+
+<tr><td>transa</td><td>Integer</td>
+<td>Transpose operation applied to matrix A before the GEMM call.
+0 = no transpose (default), 1 = transpose.</td></tr>
+
+<tr><td>transb</td><td>Integer</td>
+<td>Transpose operation applied to matrix B before the GEMM call.
+0 = no transpose, 1 = transpose (default).</td></tr>
+
+<tr><td>alpha</td><td>Float</td>
+<td>Scalar multiplier applied to the product of matrices A and B
+(C = alpha * A * B + beta * C). The default value is 1.</td></tr>
+
+<tr><td>beta</td><td>Float</td>
+<td>Scalar multiplier applied to matrix C in the GEMM operation. The default
+value is 1.</td></tr>
+
+<tr><td>lda</td><td>Integer</td>
+<td>Leading dimension offset for matrix A. The default value is 0.</td></tr>
+
+<tr><td>ldb</td><td>Integer</td>
+<td>Leading dimension offset for matrix B. The default value is 0.</td></tr>
+
+<tr><td>ldc</td><td>Integer</td>
+<td>Leading dimension offset for matrix C. The default value is 0.</td></tr>
+
+<tr><td>ldd</td><td>Integer</td>
+<td>Leading dimension offset for matrix D (output). The default value is
+0.</td></tr>
+
+<tr><td>gemm_mode</td><td>String</td>
+<td>GEMM execution mode. Accepted values:
+<b>""</b> or unset – Standard (single) GEMM (default).
+<b>batched</b> – Batched GEMM; use with <b>batch_size</b>.
+<b>strided_batched</b> – Strided batched GEMM; use with <b>batch_size</b>
+and <b>stride_*</b> keys.</td></tr>
+
+<tr><td>batch_size</td><td>Integer</td>
+<td>Number of GEMM operations in a batched or strided-batched call. Only
+applicable when <b>gemm_mode</b> is <b>batched</b> or
+<b>strided_batched</b>. The default value is 0.</td></tr>
+
+<tr><td>stride_a</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices A in a
+strided-batched GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_b</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices B in a
+strided-batched GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_c</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices C in a
+strided-batched GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_d</td><td>Integer</td>
+<td>Stride (in elements) between consecutive output matrices D in a
+strided-batched GEMM. The default value is 0.</td></tr>
 </table>
 
 
@@ -2417,7 +2913,7 @@ Module specific output keys are described in the table below:
 <tr><td>current_power</td><td>Time Series Floats</td>
 <td>The current measured power of the GPU.</td></tr>
 <tr><td>power_violations</td><td>Integer</td>
-<td>The number of power reading that violated the tolerance of the test after
+<td>The number of power readings that violated the tolerance of the test after
 the ramp interval.
 </td></tr>
 <tr><td>pass</td><td>Bool</td>
@@ -2633,6 +3129,7 @@ Keys below are in addition to **common** keys (**name**, **module**, **device**,
 <tr><td>halt_on_error</td><td>Bool</td><td>If **true**, stop the GPU thread on first BLAS or thermal error. Default <b>false</b>.</td></tr>
 <tr><td>hot_calls</td><td>Integer</td><td>BLAS “hot call” / warmup-related parameter forwarded to **rvs_blas**. Default <b>1</b>.</td></tr>
 <tr><td>gpu_sync_wait</td><td>Integer</td><td>Default <b>10000</b>. Parsed from configuration; **not** referenced by the current barrier implementation (placeholder for future timeout behavior).</td></tr>
+<tr><td>max_temp_c</td><td>Float</td><td>Junction temperature ceiling in degrees Celsius. If the GPU junction temperature exceeds this threshold during the run, the worker logs a thermal-violation error and, when <b>halt_on_error</b> is true, terminates that GPU thread. Default <b>105.0</b>.</td></tr>
 </table>
 
 ### Output
@@ -2680,3 +3177,228 @@ Run from the build or package **bin** directory, for example:
 
 - Tune **matrix_size**, **pulse_rate**, and **high_phase_ratio** to match GPU class and the transient behavior you want to stress.
 - **hipBLASLt** often delivers higher GEMM throughput than rocBLAS on supported GPUs; **fp16_r** / **hgemm** with **compute_type: fp32_r** is a common high-throughput choice (as in the **pulse_stress_fp16** action in **pulse_single.conf**).
+
+## MEM Module
+
+The Memory module tests GPU memory for hardware errors and soft errors using
+HIP. It executes a configurable suite of memory test algorithms that exercise
+various data patterns and access sequences. Each test can be individually
+included or excluded. The module reports errors found per test and passes only
+if no memory errors are detected.
+
+The following tests are available (referenced by index in `exclude`):
+
+| Index | Test Name |
+|---|---|
+| 0 | Walking 1 bit |
+| 1 | Own address test |
+| 2 | Moving inversions, ones & zeros |
+| 3 | Moving inversions, 8-bit pattern |
+| 4 | Moving inversions, random pattern |
+| 5 | Block move, 64 moves |
+| 6 | Moving inversions, 32-bit pattern |
+| 7 | Random number sequence |
+| 8 | Modulo 20, random pattern |
+| 9 | Bit fade test |
+| 10 | Memory stress test |
+
+### Module Specific Keys
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>mem_blocks</td><td>Integer</td>
+<td>Number of GPU memory blocks used per test iteration. The default value is
+256.</td></tr>
+<tr><td>num_passes</td><td>Integer</td>
+<td>Number of passes (repeats) per block in each test. The default value is
+1.</td></tr>
+<tr><td>thrds_per_blk</td><td>Integer</td>
+<td>Number of HIP threads per block launched for each test kernel. The default
+value is 128.</td></tr>
+<tr><td>stress</td><td>Bool</td>
+<td>If true, enables the memory stress test (Test 10) in addition to the
+standard tests. The default value is false.</td></tr>
+<tr><td>mapped_memory</td><td>Bool</td>
+<td>If true, uses host-mapped (pinned) memory instead of device memory for the
+test buffers. The default value is false.</td></tr>
+<tr><td>num_iter</td><td>Integer</td>
+<td>Number of iterations to run per test. The default value is 1.</td></tr>
+<tr><td>exclude</td><td>Collection of Integers</td>
+<td>Space-separated list of test indices (0–10) to skip. All tests not listed
+here will be executed. For example, <b>exclude: 9 10</b> skips the bit fade
+and memory stress tests.</td></tr>
+</table>
+
+### Output
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>Test</td><td>String</td>
+<td>Name of the memory test that was executed.</td></tr>
+<tr><td>Time Taken</td><td>Float</td>
+<td>Time in seconds taken to complete the test on this GPU.</td></tr>
+<tr><td>errors</td><td>Integer</td>
+<td>Number of memory errors detected during the test. A value of 0 indicates
+no errors.</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>True if no memory errors were detected for this test.</td></tr>
+</table>
+
+### Examples
+
+**Example 1:**
+
+Run all tests in parallel on all GPUs, excluding bit fade (9) and stress (10):
+
+    actions:
+    - name: action_1
+      device: all
+      module: mem
+      parallel: true
+      count: 1
+      wait: 100
+      mapped_memory: false
+      mem_blocks: 128
+      num_passes: 500
+      thrds_per_blk: 64
+      stress: true
+      num_iter: 50000
+      exclude: 9 10
+
+Run with:
+
+    ./rvs -c conf/mem.conf -d 3
+
+The test passes if no memory errors are detected on any GPU. A typical result
+message looks like:
+
+    [RESULT][<timestamp>][action_1] mem <gpu_id> Test 1  [Walking 1 bit] : pass: true  errors: 0 Time Taken: 0.652 s
+    [RESULT][<timestamp>][action_1] mem <gpu_id> Test 2  [Own address test] : pass: true  errors: 0 Time Taken: 0.423 s
+
+
+## BABEL Module
+
+The BABEL module executes BabelStream benchmark tests that measure GPU memory
+bandwidth. BabelStream is a synthetic benchmark based on the STREAM benchmark
+for CPUs. It runs configurable memory kernels (Copy, Mul, Add, Triad, Dot,
+Read, Write) using HIP and reports the achieved bandwidth in GB/s or GiB/s for
+each kernel. The benchmark is useful for characterizing peak memory bandwidth
+and detecting bandwidth regressions.
+
+### Module Specific Keys
+
+<table>
+<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>array_size</td><td>Integer</td>
+<td>Size of the test buffer in bytes (or in mebibytes if <b>mibibytes: true</b>).
+The default value is 33554432 (32 MB).</td></tr>
+<tr><td>test_type</td><td>Integer</td>
+<td>Data precision used for the benchmark. Accepted values:
+<b>1</b> – Float (32-bit, default).
+<b>2</b> – Double (64-bit).
+<b>3</b> – Triad float.
+<b>4</b> – Triad double.</td></tr>
+<tr><td>num_iter</td><td>Integer</td>
+<td>Number of kernel launch iterations. Used when <b>duration</b> is 0. The
+default value is 100.</td></tr>
+<tr><td>duration</td><td>Integer</td>
+<td>Duration of the test in milliseconds. When greater than 0, the test runs
+for this time instead of a fixed number of iterations. A value of 0 means use
+<b>num_iter</b>. The default value is 0.</td></tr>
+<tr><td>mibibytes</td><td>Bool</td>
+<td>If true, <b>array_size</b> is interpreted in mebibytes (MiB) and bandwidth
+is reported in GiB/s. If false, bytes and GB/s are used. The default value is
+false.</td></tr>
+<tr><td>o/p_csv</td><td>Bool</td>
+<td>If true, outputs results in CSV format in addition to the standard log.
+The default value is false.</td></tr>
+<tr><td>read</td><td>Bool</td>
+<td>If true, enables the Read kernel (measures read-only bandwidth). The
+default value is false.</td></tr>
+<tr><td>write</td><td>Bool</td>
+<td>If true, enables the Write kernel (measures write-only bandwidth). The
+default value is false.</td></tr>
+<tr><td>copy</td><td>Bool</td>
+<td>If true, enables the Copy kernel (a[i] = b[i]). The default value is
+false.</td></tr>
+<tr><td>mul</td><td>Bool</td>
+<td>If true, enables the Mul kernel (a[i] = scalar * b[i]). The default value
+is false.</td></tr>
+<tr><td>add</td><td>Bool</td>
+<td>If true, enables the Add kernel (a[i] = b[i] + c[i]). The default value
+is false.</td></tr>
+<tr><td>dot</td><td>Bool</td>
+<td>If true, enables the Dot kernel (sum of a[i] * b[i]). The default value
+is false.</td></tr>
+<tr><td>triad</td><td>Bool</td>
+<td>If true, enables the Triad kernel (a[i] = b[i] + scalar * c[i]). The
+default value is false.</td></tr>
+<tr><td>data_init</td><td>String</td>
+<td>Data initialization method for the test arrays. Accepted values:
+<b>default</b> – Initialize with default constant values (default).
+Other values may be supported depending on the build.</td></tr>
+<tr><td>nontemporal</td><td>String</td>
+<td>Non-temporal (streaming) memory access mode for the kernels. Non-temporal
+stores bypass the cache and can be useful for measuring true memory bandwidth.
+Accepted values:
+<b>all</b> – Apply non-temporal accesses to all kernels (default).
+<b>none</b> – Disable non-temporal accesses.
+<b>read</b> – Apply only to read accesses.
+<b>write</b> – Apply only to write accesses.</td></tr>
+<tr><td>dwords_per_lane</td><td>Integer</td>
+<td>Number of 32-bit words processed per GPU lane per kernel invocation. The
+default value is 4.</td></tr>
+<tr><td>chunks_per_block</td><td>Integer</td>
+<td>Number of data chunks processed per GPU thread block. The default value
+is 2.</td></tr>
+<tr><td>tb_size</td><td>Integer</td>
+<td>Thread block size (number of threads per block). The default value is
+1024.</td></tr>
+</table>
+
+### Output
+
+<table>
+<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<tr><td>Array size</td><td>Integer</td>
+<td>Size of the test array used for the measurement, in bytes or MiB depending
+on the <b>mibibytes</b> setting.</td></tr>
+<tr><td>Function</td><td>String</td>
+<td>Name of the BabelStream kernel executed (e.g., Copy, Mul, Add, Triad,
+Dot, Read, Write).</td></tr>
+<tr><td>bandwidth</td><td>Float</td>
+<td>Measured memory bandwidth for this kernel in GB/s (or GiB/s if
+<b>mibibytes: true</b>).</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>True if the kernel completed successfully.</td></tr>
+</table>
+
+### Examples
+
+**Example 1:**
+
+Run all BABEL kernels with a 32 MB buffer, 5000 iterations, double precision:
+
+    actions:
+    - name: action_1
+      device: all
+      module: babel
+      parallel: true
+      count: 1
+      num_iter: 5000
+      duration: 0
+      array_size: 33554432
+      test_type: 2
+      mibibytes: false
+      o/p_csv: false
+      copy: true
+      read: true
+      write: true
+      mul: true
+      add: true
+      dot: true
+      triad: true
+
+Run with:
+
+    ./rvs -c conf/babel.conf -d 3
