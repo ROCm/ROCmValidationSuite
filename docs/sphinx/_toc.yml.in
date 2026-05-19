@@ -5,15 +5,13 @@ subtrees:
   - caption: Install
     entries:
       - file: install/installation.rst
-        title: ROCm Validation Suite installation
-
+        title: Install ROCm Validation Suite
   - caption: Reference
     entries:
       - file: ug1main.md
         title: User guide
       - file: features.md
         title: ROCm Validation Suite modules
-
   - caption: About
     entries:
       - file: license.md

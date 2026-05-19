@@ -76,7 +76,7 @@ GitHub Actions Workflow
     │   ├── export ROCM_LIBPATCH_VERSION (major.minor in xxyy format, e.g., 0711)
     │   ├── export CPACK_DEBIAN_PACKAGE_RELEASE (see env table: r<libpatch>.date, PRs add .branch.commit)
     │   ├── export CPACK_RPM_PACKAGE_RELEASE (same as DEB)
-    │   ├── export CMAKE_CXX_COMPILER=hipcc (AlmaLinux only)
+    │   ├── export CMAKE_CXX_COMPILER=hipcc (AlmaLinux and Ubuntu/Debian)
     │   └── export CMAKE_COMMAND=cmake3 (AlmaLinux) or cmake (Ubuntu)
     ├── 4. Configure CMake (install RPATH defaults live in CMakeLists.txt)
     │   └── $CMAKE_COMMAND -B ./build \
@@ -108,7 +108,7 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/op
 
 **HIP Device Libraries**: Automatically located and exported as `HIP_DEVICE_LIB_PATH` for clang device library discovery.
 
-**Compiler Selection**: For AlmaLinux (manylinux_2_28), `CMAKE_CXX_COMPILER` is set to ROCm's `hipcc`. Ubuntu uses system default compiler.
+**Compiler Selection**: `CMAKE_CXX_COMPILER` is set to ROCm's `hipcc` on both AlmaLinux (manylinux_2_28) and Ubuntu/Debian. Because hipcc is Clang-based and does not bundle libstdc++, the system GCC tree is plumbed in via `--gcc-toolchain=$GCC_TOOLCHAIN`: on AlmaLinux this points at the discovered `gcc-toolset-<N>`; on Ubuntu/Debian it is `/usr` (set when `/usr/include/c++/*/barrier` exists).
 
 **CMake Command**: Uses `cmake3` on AlmaLinux (manylinux_2_28) and `cmake` on Ubuntu.
 
@@ -268,7 +268,7 @@ The workflow uses `build_packages_local.sh` as the core build engine. This scrip
 - **HIP Device Libraries**: Auto-locates amdgcn/bitcode directory and exports HIP_DEVICE_LIB_PATH
 - **CMake Configuration**: Sets up relocatable RPATHs and all build parameters
   - Uses cmake3 on AlmaLinux, cmake on Ubuntu
-  - Sets CMAKE_CXX_COMPILER to hipcc on AlmaLinux
+  - Sets CMAKE_CXX_COMPILER to hipcc on AlmaLinux and Ubuntu/Debian (Ubuntu also gets `--gcc-toolchain=/usr` for C++20 libstdc++ headers)
 - **Building**: Compiles RVS with parallel builds
 - **Packaging**: Creates DEB, RPM, and TGZ packages using CPack
 - **Color Output**: Clear, colored progress indicators
@@ -292,9 +292,9 @@ sudo -E ./build_packages_local.sh
 sudo BUILD_TYPE=Debug ./build_packages_local.sh
 ```
 
-**Important**: The script requires root privileges to install system dependencies. Use `sudo` when running locally. In GitHub Actions:
-- **Ubuntu runners**: Use `sudo` (runner has sudo access but not root by default)
-- **Container builds** (Rocky/CentOS): No sudo needed (containers run as root)
+**Important**: The script requires root privileges to install system dependencies. Use `sudo` when running locally on a bare-metal host. In GitHub Actions every build job runs inside a container as root, so the workflow invokes `./build_packages_local.sh` directly without `sudo`:
+- **Ubuntu job**: runs in the `ubuntu:22.04` container
+- **CentOS/manylinux job**: runs in the `manylinux_2_28_x86_64` container
 
 ### Environment Variables
 
@@ -321,8 +321,8 @@ The workflow builds packages for:
 
 | Platform | Container/Runner | Package Types | Script Mode |
 |----------|------------------|---------------|-------------|
-| Ubuntu 22.04 | ubuntu-22.04 | DEB, TGZ | Auto-detects Ubuntu |
-| Manylinux 2.28 (AlmaLinux 8) | manylinux_2_28_x86_64 | RPM, TGZ | Auto-detects AlmaLinux |
+| Ubuntu 22.04 | `ubuntu:22.04` container on `ubuntu-22.04` host | DEB, TGZ | Auto-detects Ubuntu |
+| Manylinux 2.28 (AlmaLinux 8) | `manylinux_2_28_x86_64` container | RPM, TGZ | Auto-detects AlmaLinux |
 
 ## Package Naming Convention
 
