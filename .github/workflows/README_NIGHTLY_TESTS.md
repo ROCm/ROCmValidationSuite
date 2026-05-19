@@ -58,7 +58,7 @@ adjust the cron string in the workflow if your publish cadence is different.
 | `tarball_url` | _(empty)_ | If set, the workflow downloads this exact URL instead of scraping the index. Useful for re-running an older build. |
 | `force` | `false` | When `true`, runs even if the latest tarball filename matches the cached marker. |
 | `target_node` | _(empty → `vars.RVS_TARGET_NODE`)_ | Hostname or IP of the node to install RVS on and run tests against. **This is the variable that retargets the test execution.** |
-| `target_user` | _(empty → `vars.RVS_TARGET_USER`)_ | SSH user on the target node. Must have `NOPASSWD` sudo on the target (see prerequisites). |
+| `target_user` | _(empty → `vars.RVS_TARGET_USER`; if both are unset, SSH defaults to the orchestrator runner's local user)_ | SSH user on the target node. Must have `NOPASSWD` sudo on the target (see prerequisites). |
 | `remote_work_dir` | _(empty → `vars.RVS_REMOTE_WORK_DIR`, then `/tmp/rvs-nightly-<run_id>`)_ | Working dir on the target node where the tarball is staged, logs are written, and which gets `rm -rf`'d at the end. |
 
 Workflow inputs **win over repo variables**, so individual `workflow_dispatch`
@@ -88,7 +88,7 @@ gh workflow run rvs-nightly-tests.yml -f target_node="e17u13.maas"
 |---|---|---|
 | `RVS_TARBALL_INDEX_URL` | **Required** | Directory listing scraped for the latest tarball, e.g. `https://repo.amd.com/rocm/rvs/tarball/`. No fallback — the workflow fails fast if unset and no `tarball_url` input is supplied. |
 | `RVS_TARGET_NODE` | **Required** *(unless every run sets `target_node` input)* | Default hostname/IP of the node where RVS is installed and tests run. Workflow fails fast on `schedule` if neither this var nor `target_node` input is set. |
-| `RVS_TARGET_USER` | optional  | SSH user on the target node. |
+| `RVS_TARGET_USER` | optional (no hard-coded default) | SSH user on the target node. If unset and `target_user` input is empty, the SSH client falls back to the orchestrator runner's local user — set this var explicitly to avoid surprises. |
 | `RVS_REMOTE_WORK_DIR` | optional (default `/tmp/rvs-nightly-<run_id>`) | Working dir on the target node. Cleared with `rm -rf` at the end of the job. |
 | `RVS_TEST_RUNNER_LABEL` | optional (default `self-hosted`) | Label of the GitHub runner that orchestrates the workflow. The runner doesn't need a GPU or ROCm — it just needs `ssh`, `scp`, and `curl`. |
 
@@ -338,7 +338,7 @@ Watch the Actions tab for:
 
 There are three ways to point the workflow at a different node, in increasing order of permanence:
 
-1. **Single run, from the Actions UI:** Run workflow → fill in `target_node` (and optionally `target_user` / `remote_work_dir`). Anything left blank falls back to the repo variable, then to the hard-coded default. This is the right path for "test this tarball on host X today".
+1. **Single run, from the Actions UI:** Run workflow → fill in `target_node` (and optionally `target_user` / `remote_work_dir`). Anything left blank falls back to the matching repo variable. `target_node` has no hard-coded default (workflow fails fast), `target_user` falls through to the orchestrator runner's local user, and `remote_work_dir` falls through to `/tmp/rvs-nightly-<run_id>`. This is the right path for "test this tarball on host X today".
 2. **Single run, from `gh` CLI:**
    ```bash
    gh workflow run rvs-nightly-tests.yml -f target_node="<host-or-ip>"

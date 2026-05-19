@@ -165,10 +165,10 @@ jobs:
       # so individual runs can be retargeted via workflow_dispatch.
       TARGET_NODE:  ${{ inputs.target_node || vars.RVS_TARGET_NODE }}
       TARGET_USER:  ${{ inputs.target_user || vars.RVS_TARGET_USER }}
-      # Workflow-scoped SSH state (in runner.temp so we never touch the runner
-      # user's own ~/.ssh on a shared self-hosted runner).
-      SSH_KEY_FILE:    ${{ runner.temp }}/rvs_target_key
-      SSH_CONFIG_FILE: ${{ runner.temp }}/rvs_target_ssh_config
+      # SSH_KEY_FILE / SSH_CONFIG_FILE are derived from $RUNNER_TEMP in the
+      # validate step and exported via $GITHUB_ENV so every subsequent step
+      # inherits them. We can't reference runner.temp here because the
+      # `runner.*` context is only available inside steps, not in job-level env.
     steps:
       - name: Validate target node configuration
         env:
@@ -198,11 +198,20 @@ jobs:
           INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
           RVS_BIN_PATH="${INSTALL_DIR}/bin/rvs"
 
+          # Workflow-scoped SSH state under $RUNNER_TEMP so we never touch the
+          # runner user's own ~/.ssh on a shared self-hosted runner. $RUNNER_TEMP
+          # is set automatically by the runner; fall back to /tmp if absent.
+          SSH_BASE="${RUNNER_TEMP:-/tmp}"
+          SSH_KEY_FILE_PATH="${SSH_BASE}/rvs_target_key"
+          SSH_CONFIG_FILE_PATH="${SSH_BASE}/rvs_target_ssh_config"
+
           {
             echo "REMOTE_WORK_DIR=$REMOTE_WORK_DIR"
             echo "ROCM_MAJOR=$ROCM_MAJOR"
             echo "INSTALL_DIR=$INSTALL_DIR"
             echo "RVS_BIN=$RVS_BIN_PATH"
+            echo "SSH_KEY_FILE=$SSH_KEY_FILE_PATH"
+            echo "SSH_CONFIG_FILE=$SSH_CONFIG_FILE_PATH"
           } >> "$GITHUB_ENV"
 
           echo "Orchestrator runner : $(hostname)"
@@ -210,6 +219,8 @@ jobs:
           echo "Remote work dir     : $REMOTE_WORK_DIR"
           echo "ROCm major          : $ROCM_MAJOR"
           echo "Expected RVS binary : $RVS_BIN_PATH"
+          echo "SSH key file        : $SSH_KEY_FILE_PATH"
+          echo "SSH config file     : $SSH_CONFIG_FILE_PATH"
 
       - name: Setup SSH key for target node
         env:
