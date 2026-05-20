@@ -413,57 +413,76 @@ or wait key values.
 
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
-<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
-<tr><td>properties</td><td>Collection of Strings</td>
-<td>The properties key specifies what configuration property or properties the
-query is interested in. Possible values are:\n
-all - collect all settings\n
-gpu_id\n
-cpu_cores_count\n
-simd_count\n
-mem_banks_count\n
-caches_count\n
-io_links_count\n
-cpu_core_id_base\n
-simd_id_base\n
-max_waves_per_simd\n
-lds_size_in_kb\n
-gds_size_in_kb\n
-wave_front_size\n
-array_count\n
-simd_arrays_per_engine\n
-cu_per_simd_array\n
-simd_per_cu\n
-max_slots_scratch_cu\n
-vendor_id\n
-device_id\n
-location_id\n
-drm_render_minor\n
-max_engine_clk_fcompute\n
-local_mem_size\n
-fw_version\n
-capability\n
-max_engine_clk_ccompute\n
-</td></tr>
-<tr><td>io_links-properties</td><td>Collection of Strings</td>
-<td>The properties key specifies what configuration
-property or properties the query is interested in.
-Possible values are:\n
-all - collect all settings\n
-count - the number of io_links\n
-type\n
-version_major\n
-version_minor\n
-node_from\n
-node_to\n
-weight\n
-min_latency\n
-max_latency\n
-min_bandwidth\n
-max_bandwidth\n
-recommended_transfer_size\n
-flags\n
-</td></tr>
+  <thead>
+    <tr>
+      <th class="head">Config Key</th>
+      <th class="head">Type</th>
+      <th class="head">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>properties</code></td>
+      <td>Collection of Strings</td>
+      <td>
+        The <code>properties</code> key specifies what configuration property or properties the
+        query is interested in. Possible values are:
+        <ul>
+          <li><code>all</code> - collect all settings</li>
+          <li><code>gpu_id</code></li>
+          <li><code>cpu_cores_count</code></li>
+          <li><code>simd_count</code></li>
+          <li><code>mem_banks_count</code></li>
+          <li><code>caches_count</code></li>
+          <li><code>io_links_count</code></li>
+          <li><code>cpu_core_id_base</code></li>
+          <li><code>simd_id_base</code></li>
+          <li><code>max_waves_per_simd</code></li>
+          <li><code>lds_size_in_kb</code></li>
+          <li><code>gds_size_in_kb</code></li>
+          <li><code>wave_front_size</code></li>
+          <li><code>array_count</code></li>
+          <li><code>simd_arrays_per_engine</code></li>
+          <li><code>cu_per_simd_array</code></li>
+          <li><code>simd_per_cu</code></li>
+          <li><code>max_slots_scratch_cu</code></li>
+          <li><code>vendor_id</code></li>
+          <li><code>device_id</code></li>
+          <li><code>location_id</code></li>
+          <li><code>drm_render_minor</code></li>
+          <li><code>max_engine_clk_fcompute</code></li>
+          <li><code>local_mem_size</code></li>
+          <li><code>fw_version</code></li>
+          <li><code>capability</code></li>
+          <li><code>max_engine_clk_ccompute</code></li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><code>io_links-properties</code></td>
+      <td>Collection of Strings</td>
+      <td>
+        The <code>properties</code> key specifies what configuration property or properties the
+        query is interested in. Possible values are:
+        <ul>
+          <li><code>all</code> - collect all settings</li>
+          <li><code>count</code> - the number of io_links</li>
+          <li><code>type</code></li>
+          <li><code>version_major</code></li>
+          <li><code>version_minor</code></li>
+          <li><code>node_from</code></li>
+          <li><code>node_to</code></li>
+          <li><code>weight</code></li>
+          <li><code>min_latency</code></li>
+          <li><code>max_latency</code></li>
+          <li><code>min_bandwidth</code></li>
+          <li><code>max_bandwidth</code></li>
+          <li><code>recommended_transfer_size</code></li>
+          <li><code>flags</code></li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
 </table>
 </div>
 
@@ -635,8 +654,6 @@ Output for such configuration is:
     RVS-GPUP: action: action_1  invalid 'deviceid' key value
 
 
-
-
 ## GM module
 The GPU monitor module can be used monitor and characterize the response of a
 GPU to different levels of use. This module is intended to run concurrently with
@@ -650,37 +667,86 @@ message will be printed to stdout while the bounding value is still exceeded.
 
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
-<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
-<tr><td>monitor</td><td>Bool</td>
-<td>If this key is set to true, the GM module will start monitoring on
-specified devices. If this key is set to false, all other keys are ignored and
-monitoring of the specified device will be stopped.</td></tr>
-<tr><td>metrics</td>
-<td>Collection of Structures, specifying the metric, if there are bounds and the
-bound values. The structures have the following format:\n{String, Bool, Integer,
-Integer}</td>
-<td>The set of metrics to monitor during the monitoring period. Example values
-are:\n{‘temp’, ‘true’, max_temp, min_temp}\n {‘clock’, ‘false’, max_clock,
-min_clock}\n {‘mem_clock’, ‘true’, max_mem_clock, min_mem_clock}\n {‘fan’,
-‘true’, max_fan, min_fan}\n {‘power’, ‘true’, max_power, min_power}\n The set of
-upper bounds for each metric are specified as an integer. The units and values
-for each metric are:\n temp - degrees Celsius\n clock - MHz \n mem_clock - MHz
-\n fan - Integer between 0 and 255 \n power - Power in Watts</td></tr>
-<tr><td>sample_interval</td><td>Integer</td>
-<td>If this key is specified metrics will be sampled at the given rate. The
-units for the sample_interval are milliseconds. The default value is 1000.
-</td></tr>
-<tr><td>log_interval</td><td>Integer</td>
-<td>If this key is specified informational messages will be emitted at the given
-interval, providing the current values of all parameters specified. This
-parameter must be equal to or greater than the sample rate. If this value is not
-specified, no logging will occur.</td></tr>
-<tr><td>terminate</td><td>Bool</td> <td>If the terminate key is true the GM
-monitor will terminate the RVS process when a bounds violation is encountered on
-any of the metrics specified.</td></tr>
-<tr><td>force</td><td>Bool</td> <td>If 'true'  and terminate key is also 'true'
-the RVS process will terminate immediately. **Note:** this may cause resource leaks
-within GPUs.</td></tr>
+  <thead>
+    <tr>
+      <th class="head">Config Key</th>
+      <th class="head">Type</th>
+      <th class="head">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>monitor</code></td>
+      <td>Bool</td>
+      <td>
+        If this key is set to <code>true</code>, the GM module will start monitoring on
+        specified devices. If this key is set to <code>false</code>, all other keys are ignored
+        and monitoring of the specified device will be stopped.
+      </td>
+    </tr>
+    <tr>
+      <td><code>metrics</code></td>
+      <td>
+        Collection of Structures, specifying the metric, if there are bounds and the
+        bound values. The structures have the following format:
+        <pre><code>{String, Bool, Integer, Integer}</code></pre>
+      </td>
+      <td>
+        The set of metrics to monitor during the monitoring period. Example values are:
+        <ul>
+          <li><code>{'temp', 'true', max_temp, min_temp}</code></li>
+          <li><code>{'clock', 'false', max_clock, min_clock}</code></li>
+          <li><code>{'mem_clock', 'true', max_mem_clock, min_mem_clock}</code></li>
+          <li><code>{'fan', 'true', max_fan, min_fan}</code></li>
+          <li><code>{'power', 'true', max_power, min_power}</code></li>
+        </ul>
+        The set of upper bounds for each metric are specified as an integer. The units and
+        values for each metric are:
+        <ul>
+          <li><code>temp</code> - degrees Celsius</li>
+          <li><code>clock</code> - MHz</li>
+          <li><code>mem_clock</code> - MHz</li>
+          <li><code>fan</code> - Integer between 0 and 255</li>
+          <li><code>power</code> - Power in Watts</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><code>sample_interval</code></td>
+      <td>Integer</td>
+      <td>
+        If this key is specified metrics will be sampled at the given rate. The units for
+        the <code>sample_interval</code> are milliseconds. The default value is <code>1000</code>.
+      </td>
+    </tr>
+    <tr>
+      <td><code>log_interval</code></td>
+      <td>Integer</td>
+      <td>
+        If this key is specified informational messages will be emitted at the given
+        interval, providing the current values of all parameters specified. This parameter
+        must be equal to or greater than the sample rate. If this value is not specified,
+        no logging will occur.
+      </td>
+    </tr>
+    <tr>
+      <td><code>terminate</code></td>
+      <td>Bool</td>
+      <td>
+        If the <code>terminate</code> key is <code>true</code> the GM monitor will terminate
+        the RVS process when a bounds violation is encountered on any of the metrics specified.
+      </td>
+    </tr>
+    <tr>
+      <td><code>force</code></td>
+      <td>Bool</td>
+      <td>
+        If <code>true</code> and <code>terminate</code> key is also <code>true</code> the
+        RVS process will terminate immediately. <strong>Note:</strong> this may cause
+        resource leaks within GPUs.
+      </td>
+    </tr>
+  </tbody>
 </table>
 </div>
 
@@ -866,17 +932,18 @@ detects a state change. The PESM is able to detect the following state changes:
 
 This module is intended to run concurrently with other actions, and provides a
 ‘start’ and ‘stop’ configuration key to start the monitoring and then stop it
-after testing has completed. For information on GPU power state monitoring
-please consult the 7.6. PCI Power Management Capability Structure, Gen 3 spec,
-page 601, device states D0-D3. For information on link status changes please
-consult the 7.8.8. Link Status Register (Offset 12h), Gen 3 spec, page 635.
+after testing has completed. For information on GPU power state monitoring, 
+see PCI Power Management Capability Structure, Gen 3 spec, device states D0-D3. 
+For information on link status changes see Status Register (Offset 12h), Gen 3 spec.
 
 Monitoring is performed by polling respective PCIe registers roughly every 1ms
 (one millisecond).
 
 ### Module Specific Keys
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>monitor</td><td>Bool</td><td>This key is set to true, the PESM
 module will start monitoring on specified devices. If this key is set to false,
 all other keys are ignored and monitoring will be stopped for all devices.</td>
@@ -885,6 +952,7 @@ all other keys are ignored and monitoring will be stopped for all devices.</td>
 inserted before monitoring begins. Intended for development and debugging use.
 The default value is 0 (no wait).</td></tr>
 </table>
+</div>
 
 ### Output
 
@@ -1027,11 +1095,13 @@ applicable.
 
 Input keys are described in the table below:
 
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>package</td><td>Collection of Strings</td>
 <td>Specifies the list of metapackages to check. This key is required.</td></tr>
 </table>
+</div>
 
 #### Output
 
@@ -1182,33 +1252,49 @@ Module specific output keys are described in the table below:
 
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
-<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
-<tr><td>capability</td><td>Collection of Structures with the
-following format:\n{String,String}</td>
-<td>The PCIe capability key contains a collection of structures that specify
-which PCIe capability to check and the expected value of the capability. A check
-structure must contain the PCIe capability value, but an expected value may be
-omitted. The value of all valid capabilities that are a part of this collection
-will be entered into the capability_value field. Possible capabilities, and
-their value types are:\n\n
-link_cap_max_speed\n
-link_cap_max_width\n
-link_stat_cur_speed\n
-link_stat_neg_width\n
-slot_pwr_limit_value\n
-slot_physical_num\n
-bus_id\n
-atomic_op_32_completer\n
-atomic_op_64_completer\n
-atomic_op_128_CAS_completer\n
-atomic_op_routing\n
-dev_serial_num\n
-kernel_driver\n
-pwr_base_pwr\n
-pwr_rail_type\n
-device_id\n
-vendor_id\n\n
-</td></tr>
+  <thead>
+    <tr>
+      <th class="head">Config Key</th>
+      <th class="head">Type</th>
+      <th class="head">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>capability</code></td>
+      <td>
+        Collection of Structures with the following format:
+        <pre><code>{String, String}</code></pre>
+      </td>
+      <td>
+        The PCIe capability key contains a collection of structures that specify
+        which PCIe capability to check and the expected value of the capability. A check
+        structure must contain the PCIe capability value, but an expected value may be
+        omitted. The value of all valid capabilities that are a part of this collection
+        will be entered into the <code>capability_value</code> field. Possible capabilities,
+        and their value types are:
+        <ul>
+          <li><code>link_cap_max_speed</code></li>
+          <li><code>link_cap_max_width</code></li>
+          <li><code>link_stat_cur_speed</code></li>
+          <li><code>link_stat_neg_width</code></li>
+          <li><code>slot_pwr_limit_value</code></li>
+          <li><code>slot_physical_num</code></li>
+          <li><code>bus_id</code></li>
+          <li><code>atomic_op_32_completer</code></li>
+          <li><code>atomic_op_64_completer</code></li>
+          <li><code>atomic_op_128_CAS_completer</code></li>
+          <li><code>atomic_op_routing</code></li>
+          <li><code>dev_serial_num</code></li>
+          <li><code>kernel_driver</code></li>
+          <li><code>pwr_base_pwr</code></li>
+          <li><code>pwr_rail_type</code></li>
+          <li><code>device_id</code></li>
+          <li><code>vendor_id</code></li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
 </table>
 </div>
 
@@ -1391,7 +1477,7 @@ The GPU SBIOS mapping qualification tool is designed to verify that a platform�
 SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct
 products for ROCm support. These are the current BAR requirements:
 
-**BAR 1: GPU Frame Buffer BAR **
+**BAR 1: GPU Frame Buffer BAR**
 
 In this example it happens to be 256M, but
 typically this will be size of the GPU memory (typically 4GB+). This BAR has to
@@ -1399,7 +1485,7 @@ be placed < 2^40 to allow peer- to-peer access from other GFX8 AMD GPUs. For
 GFX9 (Vega GPU) the BAR has to be placed < 2^44 to allow peer-to-peer access
 from other GFX9 AMD GPUs.
 
-**BAR 2: Doorbell BAR **
+**BAR 2: Doorbell BAR**
 
 The size of the BAR is typically will be < 10MB (currently
 fixed at 2MB) for this generation GPUs. This BAR has to be placed < 2^40 to
@@ -1417,13 +1503,13 @@ This is required for the AMD Driver SW to access the
 configuration registers. Since the reminder of the BAR available is only 1 DWORD
 (32bit), this is placed < 4GB. This is fixed at 256KB.
 
-**BAR 5: Expansion ROM **
+**BAR 5: Expansion ROM**
 
 This is required for the AMD Driver SW to access the
 GPU’s video-BIOS. This is currently fixed at 128KB.
 
 Refer to the ROCm Use of Advanced PCIe Features and Overview of How BAR Memory
-is Used In ROCm Enabled System web page for more information about how BAR
+is Used In ROCm Enabled System page for more information about how BAR
 memory is initialized by VDI and Radeon products. Iteration keys, for example, count,
 wait and duration will be ignored.
 
@@ -1473,7 +1559,6 @@ Module specific output keys are described in the table below:
 
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
-<table>
 <tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>bar1_size</td><td>Integer</td><td>The actual size of BAR1.</td></tr>
 <tr><td>bar1_base_addr</td><td>Integer</td><td>The actual base address of BAR1
@@ -2700,22 +2785,22 @@ A more complex configuration file looks like this:
       tolerance: 0.07
       matrix_size: 5760
 
-For this configuration file, the RVS tool:
-  - will run the stress test only for the GPUs having the ID 50599 or 33367. To
+For this configuration file, the RVS tool will:
+  - run the stress test only for the GPUs having the ID 50599 or 33367. To
 get all the available GPU IDs, run __RVS__ tool with __-g__ option
-  - will run the test on the selected GPUs, one after the other
-  - will run each test, 12 times
-  - will only copy the matrices to the GPUs at the beginning of the test
-  - will wait 100ms before each test execution
-  - will try to reach 5000 gflops in maximum 3000ms
-  - if __target_stress__ (5000) is achieved in the __ramp_interval__ (3000 ms)
+  - run the test on the selected GPUs, one after the other
+  - run each test, 12 times
+  - only copy the matrices to the GPUs at the beginning of the test
+  - wait 100ms before each test execution
+  - try to reach 5000 gflops in maximum 3000ms
+  - if `target_stress` (5000) is achieved in the `ramp_interval` (3000 ms)
 it will attempt to run the test for the rest of the duration, sustaining the
 stress load during that time
-  - will allow a 7% __target_stress__ __tolerance__ (each __target_stress__
-violation will generate a __stress violation__ message as shown in the first
+  - allow a 7% `target_stress` tolerance (each `target_stress`
+violation will generate a stress violation message as shown in the first
 example)
-  - will allow only 2 __target_stress__ violations. Exceeding the
-__max_violations__ will not terminate the test, but the __RVS__ will mark the
+  - allow only 2 `target_stress` violations. Exceeding the
+`max_violations` will not terminate the test, but RVS will mark the
 test result as "fail".
 
 The output for such a configuration key may look like this:
@@ -2963,7 +3048,6 @@ Module specific output keys are described in the table below:
 
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
-<table>
 <tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>current_power</td><td>Time Series Floats</td>
 <td>The current measured power of the GPU.</td></tr>
@@ -3183,7 +3267,7 @@ Keys below are in addition to common keys (`name`, `module`, `device`, `duration
 <tr><td>sample_interval</td><td>Integer</td><td>Reserved sampling interval (ms) for pulse-specific logic; values below **50** are raised to **50**. Default <b>100</b>.</td></tr>
 <tr><td>tolerance</td><td>Float</td><td>Default <b>10.0</b>. Parsed and passed to the worker; **not** currently used in pass/fail logic (reserved for future checks).</td></tr>
 <tr><td>verify_mode</td><td>String</td><td>e.g. <b>diff</b> / <b>crc</b>. Default <b>diff</b>. Parsed; **not** currently used in pass/fail logic (reserved for future GEMM verification).</td></tr>
-<tr><td>halt_on_error</td><td>Bool</td><td>If **true**, stop the GPU thread on first BLAS or thermal error. Default <b>false</b>.</td></tr>
+<tr><td>halt_on_error</td><td>Bool</td><td>If true, stop the GPU thread on first BLAS or thermal error. Default <b>false</b>.</td></tr>
 <tr><td>hot_calls</td><td>Integer</td><td>BLAS “hot call” / warmup-related parameter forwarded to **rvs_blas**. Default <b>1</b>.</td></tr>
 <tr><td>gpu_sync_wait</td><td>Integer</td><td>Default <b>10000</b>. Parsed from configuration; **not** referenced by the current barrier implementation (placeholder for future timeout behavior).</td></tr>
 <tr><td>max_temp_c</td><td>Float</td><td>Junction temperature ceiling in degrees Celsius. If the GPU junction temperature exceeds this threshold during the run, the worker logs a thermal-violation error and, when <b>halt_on_error</b> is true, terminates that GPU thread. Default <b>105.0</b>.</td></tr>
@@ -3427,7 +3511,6 @@ is 2.</td></tr>
 
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
-<table>
 <tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>Array size</td><td>Integer</td>
 <td>Size of the test array used for the measurement, in bytes or MiB depending
