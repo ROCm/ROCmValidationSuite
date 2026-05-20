@@ -501,8 +501,6 @@ jobs:
           REMOTE
           )
 
-          TARGET_HOSTNAME=$(ssh -q -F "$SSH_CONFIG_FILE" rvs-target 'hostname' 2>/dev/null || echo "$TARGET_NODE")
-
           REPORT=./reports/SUMMARY.md
           {
             echo "# RVS Nightly Test Report"
@@ -511,8 +509,6 @@ jobs:
             echo "|---|---|"
             echo "| Run | [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"
             echo "| Trigger | \`${{ github.event_name }}\` |"
-            echo "| Orchestrator (GitHub runner) | \`$(hostname)\` |"
-            echo "| Target node (test execution) | \`${TARGET_HOSTNAME}\` (\`${TARGET_USER}@${TARGET_NODE}\`) |"
             echo "| Target ROCm path | \`${TARGET_ROCM_PATH}\` (version \`${TARGET_ROCM_VERSION}\`) |"
             echo "| Remote work dir | \`${REMOTE_WORK_DIR}\` |"
             echo "| Tarball | \`${TARBALL_NAME}\` |"
@@ -524,7 +520,7 @@ jobs:
             echo ""
             echo "| Test | Command | Result | Exit | Started (UTC) | Ended (UTC) |"
             echo "|---|---|:--:|---:|---|---|"
-            echo "| Level 4 | \`${RVS_BIN} -r 4\` (on \`${TARGET_HOSTNAME}\`) | ${S4} | ${RC4} | ${{ steps.rvs4.outputs.start }} | ${{ steps.rvs4.outputs.end }} |"
+            echo "| Level 4 | \`${RVS_BIN} -r 4\` | ${S4} | ${RC4} | ${{ steps.rvs4.outputs.start }} | ${{ steps.rvs4.outputs.end }} |"
             echo ""
             echo "## Logs"
             echo ""

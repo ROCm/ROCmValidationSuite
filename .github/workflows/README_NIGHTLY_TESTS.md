@@ -359,8 +359,6 @@ e.g.:
 |---|---|
 | Run | `1234567890` |
 | Trigger | `schedule` |
-| Orchestrator (GitHub runner) | `<orchestrator-runner-hostname>` |
-| Target node (test execution) | `<target-hostname>` (`<USER>@<HOST_OR_IP>`) |
 | Target ROCm path | `<ROCM_INSTALL_PATH>` (version `<ROCM_VERSION>`) |
 | Remote work dir | `/tmp/rvs-nightly-1234567890` |
 | Tarball | `amdrocm7-rvs-1.4.21-288-Linux.tar.gz` |
@@ -370,9 +368,9 @@ e.g.:
 
 ## Results
 
-| Test    | Command                                              | Result | Exit | Started (UTC)         | Ended (UTC)           |
-|---------|------------------------------------------------------|:------:|-----:|-----------------------|-----------------------|
-| Level 4 | `/opt/rocm/extras-7/bin/rvs -r 4` (on `hostname`)      | PASS   |    0 | 2026-05-19T15:25:12Z  | 2026-05-19T16:02:47Z  |
+| Test    | Command                              | Result | Exit | Started (UTC)         | Ended (UTC)           |
+|---------|--------------------------------------|:------:|-----:|-----------------------|-----------------------|
+| Level 4 | `/opt/rocm/extras-7/bin/rvs -r 4`    | PASS   |    0 | 2026-05-19T15:25:12Z  | 2026-05-19T16:02:47Z  |
 ```
 
 The full artifact contents:
@@ -419,7 +417,7 @@ Watch the Actions tab for:
 5. **Verify ROCm prerequisites on target node** prints `::notice::ROCm prerequisites OK on target node at <TARGET_ROCM_PATH>`.
 6. **Install RVS on target node** prints the detected `ROCM_MAJOR`, the chosen `Target ROCm path`, and `Installed RVS at: <TARGET_ROCM_PATH>/extras-<N>/bin/rvs`.
 7. **Verify RVS binary library resolution on target node** prints `::notice::RVS binary's library dependencies resolved OK on target, all from <TARGET_ROCM_PATH>`.
-8. RVS level 4 step completes; the run summary shows the results table with both **Orchestrator** and **Target node** rows.
+8. RVS level 4 step completes; the run summary shows the results table with the Level 4 row and overall PASS/FAIL.
 
 ## Debugging a failed run
 
