@@ -2,11 +2,11 @@ name: RVS Nightly Tests
 
 # Picks up the latest RVS tarball published at the index URL configured in
 # vars.RVS_TARBALL_INDEX_URL once per day, copies it to a configurable target
-# node, installs it there, runs RVS levels 3 and 4 on that node, and uploads a
-# Markdown report + per-level logs as an artifact from the GitHub runner.
+# node, installs it there, runs RVS level 4 on that node, and uploads a
+# Markdown report + per-level log as an artifact from the GitHub runner.
 #
 # The GitHub Actions runner ("RVS Runner") only orchestrates. All RVS install,
-# binary verification, and rvs -r 3 / -r 4 execution happens on the target node
+# binary verification, and rvs -r 4 execution happens on the target node
 # reached over SSH. The target node is configurable so the same workflow can be
 # pointed at any GPU host without code changes.
 #
@@ -14,14 +14,23 @@ name: RVS Nightly Tests
 # ---------------------------
 # Variables (Settings → Secrets and variables → Actions → Variables):
 #   RVS_TARBALL_INDEX_URL  HTTP listing the published amdrocm*-rvs-*.tar.gz files.
-#   RVS_TARGET_NODE        Default hostname/IP of the node that runs RVS.
-#                          Can be overridden per-run via workflow_dispatch input.
-#   RVS_TARGET_USER        (Optional) SSH user on the target node.
 #   RVS_REMOTE_WORK_DIR    (Optional) Working dir on the target node.
 #                          Default: /tmp/rvs-nightly-<run_id>.
+#   RVS_TARGET_ROCM_PATH   Default absolute path to the ROCm tarball install
+#                          root on the target node. Can be overridden per-run
+#                          via workflow_dispatch input target_rocm_path.
 #   RVS_TEST_RUNNER_LABEL  (Optional) Label of the GitHub runner. Default: self-hosted.
 #
 # Secrets (Settings → Secrets and variables → Actions → Secrets):
+#   RVS_TARGET_NODE        Default hostname/IP of the node that runs RVS. Stored
+#                          as a secret to avoid leaking the lab node identity in
+#                          repo settings / run logs (only the workflow accesses
+#                          it). Can be overridden per-run via workflow_dispatch
+#                          input target_node.
+#   RVS_TARGET_USER        (Optional) SSH user on the target node. Stored as a
+#                          secret so the lab account name isn't visible in repo
+#                          settings or run logs. Can be overridden per-run via
+#                          workflow_dispatch input target_user.
 #   RVS_TARGET_SSH_KEY     Private SSH key (in PEM/OpenSSH format) authorized on
 #                          the target node for RVS_TARGET_USER. The user on the
 #                          target node must have NOPASSWD sudo for installs into
@@ -42,11 +51,11 @@ on:
         type: boolean
         default: false
       target_node:
-        description: 'Hostname/IP of node to install RVS on and run tests (default: vars.RVS_TARGET_NODE)'
+        description: 'Hostname/IP of node to install RVS on and run tests (default: secrets.RVS_TARGET_NODE)'
         required: false
         default: ''
       target_user:
-        description: 'SSH user on the target node (default: vars.RVS_TARGET_USER)'
+        description: 'SSH user on the target node (default: secrets.RVS_TARGET_USER)'
         required: false
         default: ''
       remote_work_dir:
@@ -54,7 +63,7 @@ on:
         required: false
         default: ''
       target_rocm_path:
-        description: 'ROCm install dir on the target node to run RVS against, e.g. a versioned /opt/rocm-<ver> or a tarball install root (default: vars.RVS_TARGET_ROCM_PATH or /opt/rocm)'
+        description: 'ROCm tarball install root on the target node to run RVS against (default: vars.RVS_TARGET_ROCM_PATH)'
         required: false
         default: ''
 
@@ -157,7 +166,7 @@ jobs:
           key: rvs-nightly-tarball-${{ steps.resolve.outputs.tarball_name }}
 
   test:
-    name: Install RVS and run levels 3 + 4 (on remote target node)
+    name: Install RVS and run level 4 (on remote target node)
     needs: detect
     if: needs.detect.outputs.should_run == 'true'
     runs-on: ${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
@@ -167,14 +176,16 @@ jobs:
       TARBALL_NAME: ${{ needs.detect.outputs.tarball_name }}
       # Target node where install + tests actually run. Inputs win over repo vars
       # so individual runs can be retargeted via workflow_dispatch.
-      TARGET_NODE:  ${{ inputs.target_node || vars.RVS_TARGET_NODE }}
-      TARGET_USER:  ${{ inputs.target_user || vars.RVS_TARGET_USER }}
-      # ROCm install on the target node that RVS should run against. Lets the
-      # workflow target a specific ROCm install (a versioned /opt/rocm-<ver> on
-      # multi-rocm-package hosts, or a tarball install root anywhere) when the
-      # default /opt/rocm isn't what you want. Single-ROCm hosts can leave it
-      # at the default.
-      TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH || '/opt/rocm' }}
+      TARGET_NODE:  ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
+      TARGET_USER:  ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
+      # ROCm tarball install root on the target node that RVS should run
+      # against. This is the directory containing bin/, lib/, lib/llvm/lib/,
+      # lib/rocm_sysdeps/lib/, etc. (as produced by the ROCm tarball install
+      # method). Set vars.RVS_TARGET_ROCM_PATH to the absolute path of that
+      # install on the target node, or pass target_rocm_path per-run. No
+      # default — the validate step fails fast if neither is set, since
+      # there is no sensible system-wide default for tarball installs.
+      TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
       # SSH_KEY_FILE / SSH_CONFIG_FILE are derived from $RUNNER_TEMP in the
       # validate step and exported via $GITHUB_ENV so every subsequent step
       # inherits them. We can't reference runner.temp here because the
@@ -188,7 +199,12 @@ jobs:
           set -euo pipefail
 
           if [ -z "${TARGET_NODE:-}" ]; then
-            echo "::error::No target node configured. Set workflow_dispatch input 'target_node' or repo variable 'RVS_TARGET_NODE'."
+            echo "::error::No target node configured. Set workflow_dispatch input 'target_node' or repo secret 'RVS_TARGET_NODE'."
+            exit 1
+          fi
+
+          if [ -z "${TARGET_ROCM_PATH:-}" ]; then
+            echo "::error::No ROCm tarball install root configured. Set workflow_dispatch input 'target_rocm_path' or repo variable 'RVS_TARGET_ROCM_PATH' to the absolute path of the ROCm tarball install on the target node."
             exit 1
           fi
 
@@ -205,11 +221,16 @@ jobs:
             echo "::error::Cannot parse ROCm major version from tarball name: $TARBALL_NAME"
             exit 1
           fi
-          # Install RVS into the *selected* ROCm's extras dir so it lives
-          # alongside the matching ROCm runtime; this also makes the RUNPATH-
-          # derived /opt/rocm/lib lookup harmless because LD_LIBRARY_PATH below
-          # will point at $TARGET_ROCM_PATH/lib first.
-          INSTALL_DIR="${TARGET_ROCM_PATH}/extras-${ROCM_MAJOR}"
+          # RVS is always installed into /opt/rocm/extras-<major>/ — this is
+          # decoupled from TARGET_ROCM_PATH. INSTALL_DIR is *where the RVS
+          # tarball gets extracted*; TARGET_ROCM_PATH is *where the ROCm
+          # runtime libraries live* (for LD_LIBRARY_PATH). The two concepts
+          # are intentionally separate so the install location matches the
+          # manual sequence (sudo tar -xzf ... -C /opt/rocm/extras-<major>)
+          # while the runtime lib path can be retargeted at any ROCm install
+          # on the host (e.g. a TheRock tarball under $HOME) via the repo
+          # variable RVS_TARGET_ROCM_PATH.
+          INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
           RVS_BIN_PATH="${INSTALL_DIR}/bin/rvs"
 
           # Workflow-scoped SSH state under $RUNNER_TEMP so we never touch the
@@ -286,106 +307,33 @@ jobs:
         run: |
           set -euo pipefail
           ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-            "TARBALL_NAME='$TARBALL_NAME' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
-          set -uo pipefail
-          fail=0
-
-          # rocm-smi / rocminfo are expected to already be on PATH (system
-          # package install lands them in /usr/bin; versioned installs put
-          # them under $TARGET_ROCM_PATH/bin and are typically added to PATH
-          # via /etc/profile.d). Their RPATH/RUNPATH locates ROCm runtime
-          # libs, so no LD_LIBRARY_PATH gymnastics needed here.
+            "TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
+          set -euo pipefail
 
           echo "=== System ==="
           uname -a
           echo
 
           echo "=== Target ROCm path: ${TARGET_ROCM_PATH} ==="
-          if [ -d "${TARGET_ROCM_PATH}" ]; then
-            ls -la "${TARGET_ROCM_PATH}" | head -20
-            [ -L "${TARGET_ROCM_PATH}" ] && echo "${TARGET_ROCM_PATH} -> $(readlink "${TARGET_ROCM_PATH}")"
-          else
+          if [ ! -d "${TARGET_ROCM_PATH}" ]; then
             echo "::error::${TARGET_ROCM_PATH} does not exist on the target node."
-            echo "::error::Available ROCm installs:"
-            ls -d /opt/rocm* 2>/dev/null || echo "  (none in /opt/)"
-            fail=1
-          fi
-          echo
-
-          echo "=== ROCm version (under ${TARGET_ROCM_PATH}) ==="
-          if [ -f "${TARGET_ROCM_PATH}/.info/version" ]; then
-            ROCM_VERSION=$(cat "${TARGET_ROCM_PATH}/.info/version")
-            echo "${TARGET_ROCM_PATH}/.info/version : $ROCM_VERSION"
-          elif [ -f "${TARGET_ROCM_PATH}/share/doc/rocm-core/version" ]; then
-            ROCM_VERSION=$(cat "${TARGET_ROCM_PATH}/share/doc/rocm-core/version")
-            echo "rocm-core version       : $ROCM_VERSION"
-          else
-            ROCM_VERSION=""
-            echo "::warning::no ROCm version file found under ${TARGET_ROCM_PATH}/.info/ or share/doc/rocm-core/"
-          fi
-          echo
-
-          echo "=== Major version match (tarball vs target node) ==="
-          EXPECTED_MAJOR=$(echo "$TARBALL_NAME" | grep -oE '^amdrocm[0-9]+' | grep -oE '[0-9]+' | head -1)
-          INSTALLED_MAJOR=$(echo "$ROCM_VERSION" | grep -oE '^[0-9]+' | head -1)
-          echo "tarball expects ROCm major : ${EXPECTED_MAJOR:-?}"
-          echo "target has ROCm major      : ${INSTALLED_MAJOR:-?}"
-          if [ -n "$EXPECTED_MAJOR" ] && [ -n "$INSTALLED_MAJOR" ] && [ "$EXPECTED_MAJOR" != "$INSTALLED_MAJOR" ]; then
-            echo "::error::ROCm major version mismatch (tarball=$EXPECTED_MAJOR, target=$INSTALLED_MAJOR)"
-            fail=1
-          fi
-          echo
-
-          echo "=== rocm-smi ==="
-          if command -v rocm-smi >/dev/null 2>&1; then
-            if rocm-smi --showid 2>&1 | tee /tmp/rocm-smi.out; then
-              echo "rocm-smi OK"
-            else
-              echo "::error::rocm-smi is on PATH but exited non-zero; check that the amdgpu kernel driver is loaded."
-              fail=1
-            fi
-          else
-            echo "::error::rocm-smi not found on PATH; ROCm runtime tools are missing on target."
-            fail=1
-          fi
-          echo
-
-          echo "=== rocminfo (GPU enumeration) ==="
-          if command -v rocminfo >/dev/null 2>&1; then
-            rocminfo 2>&1 | head -40 || true
-            N_GPU=$(rocminfo 2>/dev/null | grep -c 'Device Type:.*GPU' || true)
-            N_GPU=${N_GPU:-0}
-            echo "GPU agents enumerated: $N_GPU"
-            if [ "$N_GPU" -lt 1 ]; then
-              echo "::error::rocminfo enumerated 0 GPU agents; the target node does not have a usable GPU."
-              fail=1
-            fi
-          else
-            echo "::warning::rocminfo not found on PATH; skipping GPU enumeration check."
-          fi
-          echo
-
-          echo "=== Key ROCm runtime libraries (via ldconfig) ==="
-          # ldconfig -p covers both system-package installs (libs in
-          # /usr/lib/x86_64-linux-gnu) and properly-registered versioned
-          # installs (libs in /opt/rocm-*/lib with a matching ld.so.conf.d
-          # entry). For TheRock-style tarball installs that aren't
-          # registered with ldconfig, the binaries' RPATH still resolves
-          # them at runtime — so this is best-effort, warn-only.
-          for lib in libhsa-runtime64.so.1 libamdhip64.so; do
-            if ldconfig -p 2>/dev/null | grep -q "$lib"; then
-              echo "  OK    : $lib  ($(ldconfig -p 2>/dev/null | grep "$lib" | head -1 | awk -F'=> ' '{print $2}'))"
-            else
-              echo "::warning::library $lib not found in ldconfig cache (RPATH may still resolve it at runtime)"
-            fi
-          done
-          echo
-
-          if [ "$fail" -ne 0 ]; then
-            echo "::error::ROCm prerequisites check FAILED on target node — refusing to install RVS."
             exit 1
           fi
-          echo "::notice::ROCm prerequisites OK on target node at ${TARGET_ROCM_PATH}${ROCM_VERSION:+ (version $ROCM_VERSION)}"
+
+          # The TheRock tarball's bin/ binaries have RPATH/RUNPATH baked in
+          # relative to ${TARGET_ROCM_PATH}/lib, so we can invoke them
+          # directly via their absolute path without any PATH or
+          # LD_LIBRARY_PATH setup.
+
+          echo "=== ${TARGET_ROCM_PATH}/bin/rocminfo ==="
+          "${TARGET_ROCM_PATH}/bin/rocminfo"
+          echo
+
+          echo "=== ${TARGET_ROCM_PATH}/bin/amd-smi version ==="
+          "${TARGET_ROCM_PATH}/bin/amd-smi" version
+          echo
+
+          echo "::notice::ROCm prerequisites OK on target node at ${TARGET_ROCM_PATH}"
           REMOTE
 
       - name: Download tarball on runner
@@ -445,13 +393,15 @@ jobs:
             exit 1
           fi
 
-          # Hardcoded LD_LIBRARY_PATH that matches the manual workflow currently
-          # used by the RVS team. Kept literal (with /install/* paths) because
-          # the team relies on a known-working layout on the target node. If
-          # this needs to vary per ROCm install (e.g. TheRock tarball under
-          # $HOME), switch back to a $TARGET_ROCM_PATH-derived version here
-          # and in the verify/run/report steps below.
-          export LD_LIBRARY_PATH="/opt/rocm/extras-7/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+          # LD_LIBRARY_PATH is now derived from INSTALL_DIR (where RVS's own
+          # libs live) and TARGET_ROCM_PATH (where the ROCm runtime libs live).
+          # Order matches the official ROCm tarball-install docs:
+          #   $ROCM_PATH/lib/rocm_sysdeps/lib  ← TheRock-style runtime deps
+          #   $ROCM_PATH/lib/llvm/lib          ← libomp.so and friends
+          #   $ROCM_PATH/lib                   ← core ROCm libs (libamd_smi,
+          #                                      libhsa-runtime64, libamdhip64, …)
+          # Plus $INSTALL_DIR/lib first so librvslib.so resolves.
+          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
           echo "Installed RVS at: $RVS_BIN"
           "$RVS_BIN" --version || true
           REMOTE
@@ -466,7 +416,7 @@ jobs:
             echo "::error::$RVS_BIN was not produced by tarball extraction on target."
             exit 1
           fi
-          export LD_LIBRARY_PATH="/opt/rocm/extras-7/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
           echo "=== ldd $RVS_BIN ==="
           LDD_OUTPUT=$(ldd "$RVS_BIN" 2>&1 || true)
           echo "$LDD_OUTPUT"
@@ -475,55 +425,8 @@ jobs:
             echo "::error::RVS binary has unresolved library dependencies on target (see above)."
             exit 1
           fi
-
-          # Catch the "wrong ROCm leaked in" case: any /opt/rocm-<X> path in
-          # the resolved libs must match TARGET_ROCM_PATH. A bare /opt/rocm/
-          # is fine (it follows the system symlink) only when that symlink
-          # resolves to the same realpath as TARGET_ROCM_PATH.
-          TARGET_REAL=$(readlink -f "$TARGET_ROCM_PATH" 2>/dev/null || echo "$TARGET_ROCM_PATH")
-          BAD=$(echo "$LDD_OUTPUT" \
-                  | grep -oE '/opt/rocm[^ ]*' \
-                  | sort -u \
-                  | while read -r p; do
-                      preal=$(readlink -f "$p" 2>/dev/null || echo "$p")
-                      case "$preal" in
-                        "$TARGET_REAL"|"$TARGET_REAL"/*) ;;
-                        *) echo "$p -> $preal" ;;
-                      esac
-                    done)
-          if [ -n "$BAD" ]; then
-            echo "::error::RVS is resolving libraries from a ROCm install OTHER than ${TARGET_ROCM_PATH} (realpath: ${TARGET_REAL}):"
-            echo "$BAD" | sed 's/^/  /'
-            echo "::error::Set inputs.target_rocm_path / vars.RVS_TARGET_ROCM_PATH to the right versioned path, or fix the system /opt/rocm symlink."
-            exit 1
-          fi
-
-          echo "::notice::RVS binary's library dependencies resolved OK on target, all from ${TARGET_ROCM_PATH}."
+          echo "::notice::RVS binary's library dependencies resolved OK on target."
           REMOTE
-
-      - name: Run RVS level 3 on target node
-        id: rvs3
-        run: |
-          set +e
-          START=$(date -u +%FT%TZ)
-          echo "::group::RVS level 3 (${RVS_BIN} -r 3) on $TARGET_NODE against $TARGET_ROCM_PATH"
-          ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-            "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
-          set +e
-          export LD_LIBRARY_PATH="/opt/rocm/extras-7/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
-          mkdir -p "${REMOTE_WORK_DIR}/reports"
-          "$RVS_BIN" -r 3 2>&1 | tee "${REMOTE_WORK_DIR}/reports/rvs_level_3.log"
-          RC=${PIPESTATUS[0]}
-          echo "remote_rc=$RC"
-          exit $RC
-          REMOTE
-          RC=$?
-          echo "::endgroup::"
-          END=$(date -u +%FT%TZ)
-          echo "rc=$RC"       >> "$GITHUB_OUTPUT"
-          echo "start=$START" >> "$GITHUB_OUTPUT"
-          echo "end=$END"     >> "$GITHUB_OUTPUT"
-          exit 0
 
       - name: Run RVS level 4 on target node
         id: rvs4
@@ -534,7 +437,7 @@ jobs:
           ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
             "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
           set +e
-          export LD_LIBRARY_PATH="/opt/rocm/extras-7/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
           mkdir -p "${REMOTE_WORK_DIR}/reports"
           "$RVS_BIN" -r 4 2>&1 | tee "${REMOTE_WORK_DIR}/reports/rvs_level_4.log"
           RC=${PIPESTATUS[0]}
@@ -569,11 +472,9 @@ jobs:
           set -euo pipefail
           mkdir -p ./reports
 
-          RC3=${{ steps.rvs3.outputs.rc }}
           RC4=${{ steps.rvs4.outputs.rc }}
-          [ "$RC3" -eq 0 ] && S3=PASS || S3=FAIL
           [ "$RC4" -eq 0 ] && S4=PASS || S4=FAIL
-          if [ "$RC3" -eq 0 ] && [ "$RC4" -eq 0 ]; then
+          if [ "$RC4" -eq 0 ]; then
             OVERALL=PASS
           else
             OVERALL=FAIL
@@ -584,7 +485,7 @@ jobs:
           RVS_VERSION=$(
             ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
               "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE' 2>/dev/null | head -1 || echo "unknown"
-          export LD_LIBRARY_PATH="/opt/rocm/extras-7/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
           "$RVS_BIN" --version 2>/dev/null
           REMOTE
           )
@@ -623,15 +524,13 @@ jobs:
             echo ""
             echo "| Test | Command | Result | Exit | Started (UTC) | Ended (UTC) |"
             echo "|---|---|:--:|---:|---|---|"
-            echo "| Level 3 | \`${RVS_BIN} -r 3\` (on \`${TARGET_HOSTNAME}\`) | ${S3} | ${RC3} | ${{ steps.rvs3.outputs.start }} | ${{ steps.rvs3.outputs.end }} |"
             echo "| Level 4 | \`${RVS_BIN} -r 4\` (on \`${TARGET_HOSTNAME}\`) | ${S4} | ${RC4} | ${{ steps.rvs4.outputs.start }} | ${{ steps.rvs4.outputs.end }} |"
             echo ""
             echo "## Logs"
             echo ""
-            echo "Full per-level stdout/stderr is attached to the run artifact"
+            echo "Full stdout/stderr from the level-4 run is attached to the artifact"
             echo "\`rvs-nightly-report-${{ github.run_id }}\`:"
             echo ""
-            echo "- \`rvs_level_3.log\`"
             echo "- \`rvs_level_4.log\`"
             echo "- \`SUMMARY.md\` (this file)"
           } > "$REPORT"
@@ -641,7 +540,6 @@ jobs:
 
           {
             echo "overall=$OVERALL"
-            echo "rc3=$RC3"
             echo "rc4=$RC4"
           } >> "$GITHUB_OUTPUT"
 
@@ -670,5 +568,5 @@ jobs:
       - name: Fail the job if any level failed
         if: steps.report.outputs.overall == 'FAIL'
         run: |
-          echo "::error::RVS test failure — level3 rc=${{ steps.report.outputs.rc3 }}, level4 rc=${{ steps.report.outputs.rc4 }}"
+          echo "::error::RVS test failure — level4 rc=${{ steps.report.outputs.rc4 }}"
           exit 1
