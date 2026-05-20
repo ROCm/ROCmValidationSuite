@@ -60,6 +60,7 @@ adjust the cron string in the workflow if your publish cadence is different.
 | `target_node` | _(empty → `vars.RVS_TARGET_NODE`)_ | Hostname or IP of the node to install RVS on and run tests against. **This is the variable that retargets the test execution.** |
 | `target_user` | _(empty → `vars.RVS_TARGET_USER`; if both are unset, SSH defaults to the orchestrator runner's local user)_ | SSH user on the target node. Must have `NOPASSWD` sudo on the target (see prerequisites). |
 | `remote_work_dir` | _(empty → `vars.RVS_REMOTE_WORK_DIR`, then `/tmp/rvs-nightly-<run_id>`)_ | Working dir on the target node where the tarball is staged, logs are written, and which gets `rm -rf`'d at the end. |
+| `target_rocm_path` | _(empty → `vars.RVS_TARGET_ROCM_PATH`, then `/opt/rocm`)_ | Which ROCm install on the target node to run RVS against. Could be the default `/opt/rocm`, a versioned `/opt/rocm-<ver>/` (only present on hosts that use the AMD multi-ROCm apt repos), or a TheRock-style tarball install rooted anywhere (e.g. `$HOME/<wherever>/install`). RVS is installed into `<this>/extras-<major>/` and the prereq tools probe under `<this>`. |
 
 Workflow inputs **win over repo variables**, so individual `workflow_dispatch`
 runs can be retargeted from the Actions UI without changing repo settings.
@@ -69,15 +70,23 @@ Example — point a single run at a specific node:
 ```bash
 gh workflow run rvs-nightly-tests.yml \
   -f tarball_url="<INDEX_URL>/amdrocm7-rvs-1.4.21-288-Linux.tar.gz" \
-  -f target_node="x.x.x.x" \
-  -f target_user="userID" \
+  -f target_node="<HOST_OR_IP>" \
+  -f target_user="<USER>" \
   -f force=true
 ```
 
 Example — keep the default tarball but run on a different host today:
 
 ```bash
-gh workflow run rvs-nightly-tests.yml -f target_node="e17u13.maas"
+gh workflow run rvs-nightly-tests.yml -f target_node="<HOST_OR_IP>"
+```
+
+Example — point at a specific ROCm install on a multi-ROCm host:
+
+```bash
+gh workflow run rvs-nightly-tests.yml \
+  -f target_node="<HOST_OR_IP>" \
+  -f target_rocm_path="<ROCM_INSTALL_PATH>"
 ```
 
 ## Repository configuration
@@ -90,6 +99,7 @@ gh workflow run rvs-nightly-tests.yml -f target_node="e17u13.maas"
 | `RVS_TARGET_NODE` | **Required** *(unless every run sets `target_node` input)* | Default hostname/IP of the node where RVS is installed and tests run. Workflow fails fast on `schedule` if neither this var nor `target_node` input is set. |
 | `RVS_TARGET_USER` | optional (no hard-coded default) | SSH user on the target node. If unset and `target_user` input is empty, the SSH client falls back to the orchestrator runner's local user — set this var explicitly to avoid surprises. |
 | `RVS_REMOTE_WORK_DIR` | optional (default `/tmp/rvs-nightly-<run_id>`) | Working dir on the target node. Cleared with `rm -rf` at the end of the job. |
+| `RVS_TARGET_ROCM_PATH` | optional (default `/opt/rocm`) | ROCm install on the target node that RVS should run against. Set this when `/opt/rocm` isn't what you want — e.g. when running against a versioned `/opt/rocm-<ver>/` on a multi-ROCm-package host, or a TheRock-style tarball install under `$HOME`. The `Verify RVS binary library resolution` step fails fast if any lib resolves from a different ROCm install. |
 | `RVS_TEST_RUNNER_LABEL` | optional (default `self-hosted`) | Label of the GitHub runner that orchestrates the workflow. The runner doesn't need a GPU or ROCm — it just needs `ssh`, `scp`, and `curl`. |
 
 **Secrets** (Settings → Secrets and variables → Actions → Secrets):
@@ -117,26 +127,137 @@ suffixes like `1.4.21-9` and `1.4.21-100` compare correctly. The
 ## How the tarball is installed (on the target node)
 
 The runner derives the ROCm major version from the tarball filename
-(e.g. `amdrocm7-rvs-1.4.21-…-Linux.tar.gz` → `7`), writes the derived
-paths to `$GITHUB_ENV`, then SSHes into the target with those values
-exported so the install runs against the matching `extras-<major>`
-directory. The same workflow handles ROCm 6, 7, etc. without code changes:
+(e.g. `amdrocm7-rvs-1.4.21-…-Linux.tar.gz` → `7`), combines it with
+`TARGET_ROCM_PATH` (which selects *which* ROCm install to use), writes
+the derived paths to `$GITHUB_ENV`, then SSHes into the target with those
+values exported so the install runs against the matching `extras-<major>`
+directory under the chosen ROCm. The same workflow handles ROCm 6, 7,
+etc., and any version inside `7.x` without code changes:
 
 ```bash
 # On the runner (Validate target node configuration step):
 # Parsed from $TARBALL_NAME via [[ "$TARBALL_NAME" =~ ^amdrocm([0-9]+)- ]]
 ROCM_MAJOR=7
-INSTALL_DIR=/opt/rocm/extras-${ROCM_MAJOR}    # /opt/rocm/extras-7
+# TARGET_ROCM_PATH comes from inputs.target_rocm_path / vars.RVS_TARGET_ROCM_PATH
+# (default: /opt/rocm).
+INSTALL_DIR=${TARGET_ROCM_PATH}/extras-${ROCM_MAJOR}   # <ROCM_INSTALL_PATH>/extras-7
 RVS_BIN=${INSTALL_DIR}/bin/rvs
 
 # On the target node (Install RVS on target node step), via SSH:
-sudo -n mkdir -p "$INSTALL_DIR"
-sudo -n tar -xzf "$REMOTE_WORK_DIR/pkg/<tarball>.tar.gz" -C "$INSTALL_DIR"
+# sudo is used only when $INSTALL_DIR isn't user-writable (e.g. under
+# /opt/rocm-*). For TheRock tarball installs in $HOME, plain mkdir/tar is used.
+mkdir -p "$INSTALL_DIR"     # (with `sudo -n` if needed)
+tar -xzf "$REMOTE_WORK_DIR/pkg/<tarball>.tar.gz" -C "$INSTALL_DIR"
 
-export LD_LIBRARY_PATH="$INSTALL_DIR/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
+# LD_LIBRARY_PATH for the rvs binary is currently HARDCODED to match the
+# layout the RVS team uses manually. If you point target_rocm_path at a
+# non-/opt/rocm install (e.g. TheRock under $HOME), update the literal
+# strings in the workflow's install / verify-ldd / level-3 / level-4 /
+# report steps to match — see the "Hardcoded LD_LIBRARY_PATH" note below.
+export LD_LIBRARY_PATH="/opt/rocm/extras-7/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:${LD_LIBRARY_PATH:-}"
 
 "$RVS_BIN" --version
 ```
+
+### Hardcoded `LD_LIBRARY_PATH` (current temporary state)
+
+To stay 1:1 with the manual sequence the RVS team uses today, the workflow
+hardcodes the runtime `LD_LIBRARY_PATH` for every step that executes the
+`rvs` binary (install, ldd-verify, level 3, level 4, and the report's
+`--version` query) to exactly:
+
+```bash
+LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:$LD_LIBRARY_PATH
+```
+
+That mirrors the manual flow:
+
+```bash
+sudo mkdir -p /opt/rocm/extras-7
+sudo tar -xzf amdrocm7-rvs-1.4.21-288-Linux.tar.gz -C /opt/rocm/extras-7
+export LD_LIBRARY_PATH=/opt/rocm/extras-7/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:$LD_LIBRARY_PATH
+```
+
+Consequences and trade-offs:
+
+- The default `target_rocm_path=/opt/rocm` case "just works" — `INSTALL_DIR` resolves to `/opt/rocm/extras-7`, which is exactly what the hardcoded path points at.
+- If you set `target_rocm_path` to something else (a versioned `/opt/rocm-<ver>/` or a TheRock home-dir install), RVS will install into the new path but the hardcoded `LD_LIBRARY_PATH` will still point at `/opt/rocm/extras-7/lib`. The `Verify RVS binary library resolution` step will catch this and fail with a clear error listing the offending paths — so it's loud, not silent. To actually retarget at a different ROCm, edit the five `LD_LIBRARY_PATH=` lines in `.github/workflows/rvs-nightly-tests.yml` (grep for `/opt/rocm/extras-7/lib`) to the corresponding paths under the new install.
+- This is a deliberate temporary state. When the team is ready for full multi-ROCm support, replace those five literals with `"${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${INSTALL_DIR}/lib/rocm_sysdeps/lib:${INSTALL_DIR}/lib:${LD_LIBRARY_PATH:-}"` — the prereq-check step already uses that dynamic form as a reference.
+
+### Multi-ROCm hosts (`/opt/rocm-<ver1>`, `/opt/rocm-<ver2>`, …)
+
+When the target node has several versioned ROCm installs side-by-side,
+`/opt/rocm` is typically a symlink to one of them and the RVS binary's
+RUNPATH resolves to `/opt/rocm/lib`. Without `target_rocm_path`/
+`RVS_TARGET_ROCM_PATH`, the dynamic linker will silently pull libraries
+from whichever ROCm the symlink happens to point at — which may not be
+the one you want to test. Symptom: `ldd $RVS_BIN` shows paths like
+`/opt/rocm-<wrong-ver>/lib/libamd_smi.so.<N>` when you expected a different version.
+
+Find the right path on the node:
+
+```bash
+ssh <USER>@<HOST_OR_IP> '
+  ls -d /opt/rocm* 2>/dev/null
+  echo "/opt/rocm -> $(readlink /opt/rocm 2>/dev/null || echo "(not a symlink)")"
+  for d in /opt/rocm-*; do
+    v=$(cat "$d/.info/version" 2>/dev/null || echo "?")
+    printf "  %-30s version=%s\n" "$d" "$v"
+  done
+'
+```
+
+Then either set `vars.RVS_TARGET_ROCM_PATH=<ROCM_INSTALL_PATH>` once for
+all runs, or pass `-f target_rocm_path=<ROCM_INSTALL_PATH>` for a single
+dispatch. The workflow's `Verify RVS binary library resolution` step
+explicitly fails the job if any resolved library lives in a `/opt/rocm-*`
+other than `TARGET_ROCM_PATH`, so cross-contamination can't go unnoticed.
+
+### TheRock-style tarball ROCm installs (no `/opt/rocm-<ver>`)
+
+The [official ROCm 7.12+ "tarball" install method](https://rocm.docs.amd.com/en/7.12.0-preview/install/rocm.html?fam=instinct&gpu=mi350x&os=ubuntu&os-version=24.04&i=tar)
+doesn't drop ROCm under `/opt/rocm-<ver>/`. Instead you extract a
+single distribution archive (e.g.
+`therock-dist-linux-<arch>-dcgpu-<version>.tar.gz`) into an
+arbitrary directory, set `ROCM_PATH=$(pwd)/install`, and source the
+env. So the layout looks like:
+
+```
+/home/<user>/<wherever-you-ran-tar>/install/
+├── bin/                     ← rocm-smi, rocminfo, hipcc, …
+├── lib/
+│   ├── rocm_sysdeps/lib/    ← ROCm runtime libs live HERE in TheRock builds
+│   └── llvm/lib/
+├── share/
+└── …
+```
+
+This works with the workflow as-is, with two things to be aware of:
+
+1. **Find the absolute path of the install on the target node** — there's no canonical location, you pick it at install time. Either ask whoever installed it, or search:
+   ```bash
+   ssh <USER>@<HOST_OR_IP> '
+     for cand in ~/install ~/*/install ~/rocm*/install /opt/therock*/install; do
+       [ -x "$cand/bin/rocminfo" ] && echo "  found ROCm install: $cand"
+     done
+   '
+   ```
+2. **Pass that absolute path as `target_rocm_path`.** Example:
+   ```bash
+   gh workflow run rvs-nightly-tests.yml \
+     -f target_node=<HOST_OR_IP> \
+     -f target_rocm_path=$HOME/<wherever-you-extracted>/install
+   ```
+
+What the workflow handles automatically for tarball installs:
+
+- The install step **skips `sudo`** when the destination is user-writable (TheRock installs in `$HOME` don't need root); only system `/opt/rocm-*` installs trigger `sudo -n`.
+- The prereq check uses whatever `rocm-smi` / `rocminfo` are first on `PATH` (system package installs land them in `/usr/bin/`; versioned installs typically register them via `/etc/profile.d/rocm.sh`). The binaries' RPATH locates the matching ROCm runtime libs, so no `LD_LIBRARY_PATH` setup is needed for the prereq tools.
+- Tarball installs typically don't ship a `.info/version` file, so the version-string row in the report may show `unknown` — the major-version cross-check is automatically skipped in that case (no false failure).
+
+**What you have to do manually right now** to actually run RVS against a TheRock-style install:
+
+Because `LD_LIBRARY_PATH` for the rvs binary itself is currently [hardcoded](#hardcoded-ld_library_path-current-temporary-state) to `/opt/rocm/extras-7/lib:/install/lib:/install/lib/rocm_sysdeps/:/install/lib/llvm/lib:...`, simply pointing `target_rocm_path` at a tarball install root is **not enough** — RVS will install into the right place, but the loader won't see the libs and the `Verify RVS binary library resolution` step will hard-fail. To use a non-`/opt/rocm` ROCm install today, edit the five `LD_LIBRARY_PATH=` literals in `.github/workflows/rvs-nightly-tests.yml` (grep for `/opt/rocm/extras-7/lib`) to point at the matching paths under your install. Or revert those literals to the dynamic form documented above so the workflow follows `TARGET_ROCM_PATH` automatically.
 
 `sudo -n` is non-interactive — it fails fast instead of hanging if
 `NOPASSWD` isn't configured. There's no PTY over the SSH channel anyway,
@@ -168,34 +289,37 @@ Before downloading or installing the tarball, the workflow runs **`Verify ROCm p
 
 | Sub-check | Action on failure | Catches |
 |---|---|---|
-| `/opt/rocm/` directory exists | hard fail (`exit 1`) | ROCm not installed on target |
-| Read ROCm version from `/opt/rocm/.info/version` (fallback `/opt/rocm/share/doc/rocm-core/version`) | warn if missing | Partial install, dev pkgs only |
-| Major version match (regex on tarball name vs target's ROCm version) | hard fail on mismatch | RVS-7 tarball on a ROCm-6 host |
+| `$TARGET_ROCM_PATH` directory exists | hard fail (`exit 1`, also prints the available `/opt/rocm*` installs to ease debugging) | ROCm not installed on target, or the configured path is wrong (typo, point-release suffix mismatch, etc.) |
+| Read ROCm version from `$TARGET_ROCM_PATH/.info/version` (fallback `share/doc/rocm-core/version`) | warn if missing | Partial install, dev pkgs only |
+| Major version match (regex on tarball name vs target's ROCm version) | hard fail on mismatch | RVS-7 tarball pointed at a ROCm-6 install |
 | `rocm-smi --showid` runs and exits 0 | hard fail | `amdgpu` driver not loaded, or `rocm-smi` missing |
 | `rocminfo` enumerates ≥ 1 GPU | hard fail | "ROCm installed but no GPU exposed" (group/permissions, BIOS IOMMU, etc.) |
-| `libhsa-runtime64.so.1` and `libamdhip64.so` present in `ldconfig -p` | warn only | Missing/broken `ldconfig` cache (RPATH usually compensates) |
+| `libhsa-runtime64.so.1` and `libamdhip64.so` present in `ldconfig -p` | warn only | Covers both system-package installs (libs in `/usr/lib/x86_64-linux-gnu`) and properly-registered versioned `/opt/rocm-*` installs. Warn-only because TheRock-style tarball installs that aren't registered with `ldconfig` still resolve at runtime via the binaries' RPATH. |
 
-A typical successful log:
+A typical successful log (with `target_rocm_path=<ROCM_INSTALL_PATH>`):
 
 ```
-=== /opt/rocm/ ===
-/opt/rocm -> /opt/rocm-7.11.0
-=== ROCm version ===
-/opt/rocm/.info/version : 7.11.0
+=== Target ROCm path: <ROCM_INSTALL_PATH> ===
+<ROCM_INSTALL_PATH> -> <ROCM_INSTALL_PATH>.<point-release>
+=== ROCm version (under <ROCM_INSTALL_PATH>) ===
+<ROCM_INSTALL_PATH>/.info/version : <ROCM_VERSION>
 === Major version match (tarball vs target node) ===
 tarball expects ROCm major : 7
 target has ROCm major      : 7
 === rocm-smi ===
-GPU[0]  : ID  : 0x74a1
+GPU[0]  : ID  : 0xXXXX
 === rocminfo (GPU enumeration) ===
-GPU agents enumerated: 8
-=== Key ROCm runtime libraries ===
-  OK    : libhsa-runtime64.so.1
-  OK    : libamdhip64.so
-::notice::ROCm prerequisites OK on target node (version 7.11.0)
+GPU agents enumerated: <N>
+=== Key ROCm runtime libraries (via ldconfig) ===
+  OK    : libhsa-runtime64.so.1  (<some-resolved-path>/libhsa-runtime64.so.1)
+  OK    : libamdhip64.so  (<some-resolved-path>/libamdhip64.so)
+::notice::ROCm prerequisites OK on target node at <ROCM_INSTALL_PATH> (version <ROCM_VERSION>)
 ```
 
-After install, **`Verify RVS binary library resolution on target node`** runs `ldd "$RVS_BIN"` over SSH (where `$RVS_BIN` = `/opt/rocm/extras-${ROCM_MAJOR}/bin/rvs`) and fails the job if any library shows up as `not found` — preventing the workflow from spending hours on `rvs -r 3`/`-r 4` only to discover a `dlopen` error in the level log.
+After install, **`Verify RVS binary library resolution on target node`** runs `ldd "$RVS_BIN"` over SSH (where `$RVS_BIN` = `${TARGET_ROCM_PATH}/extras-${ROCM_MAJOR}/bin/rvs`) and fails the job in two cases:
+
+- **Unresolved deps:** any library shows up as `not found` — prevents the workflow from spending hours on `rvs -r 3`/`-r 4` only to discover a `dlopen` error in the level log.
+- **Wrong-ROCm contamination:** any resolved library lives in a `/opt/rocm-<X>` whose `realpath` differs from `$TARGET_ROCM_PATH` (e.g. `ldd` shows a library under a different `/opt/rocm-<other-ver>/` than the one you targeted). The step prints which paths leaked and suggests setting `target_rocm_path` to fix it.
 
 ### Manual one-liner (validate a candidate target node)
 
@@ -247,8 +371,9 @@ e.g.:
 |---|---|
 | Run | `1234567890` |
 | Trigger | `schedule` |
-| Orchestrator (GitHub runner) | `gha-orchestrator-01` |
-| Target node (test execution) | `hostname` (`user@x.x.x.x`) |
+| Orchestrator (GitHub runner) | `<orchestrator-runner-hostname>` |
+| Target node (test execution) | `<target-hostname>` (`<USER>@<HOST_OR_IP>`) |
+| Target ROCm path | `<ROCM_INSTALL_PATH>` (version `<ROCM_VERSION>`) |
 | Remote work dir | `/tmp/rvs-nightly-1234567890` |
 | Tarball | `amdrocm7-rvs-1.4.21-288-Linux.tar.gz` |
 | Source URL | `$RVS_TARBALL_INDEX_URL/amdrocm7-rvs-1.4.21-288-Linux.tar.gz` |
@@ -303,11 +428,11 @@ Watch the Actions tab for:
 
 1. `detect` resolves a tarball URL (`Latest tarball : amdrocm<N>-rvs-…`).
 2. `test` job picks up on your orchestrator runner.
-3. **Validate target node configuration** prints the resolved `Target node`, `Remote work dir`, and `Expected RVS binary` path.
+3. **Validate target node configuration** prints the resolved `Target node`, `Target ROCm path`, `Remote work dir`, and `Expected RVS binary` path.
 4. **Setup SSH key for target node** prints the target's `hostname` / `id` / `uptime` from the connectivity probe.
-5. **Verify ROCm prerequisites on target node** prints `::notice::ROCm prerequisites OK on target node`.
-6. **Install RVS on target node** prints the detected `ROCM_MAJOR` and `Installed RVS at: /opt/rocm/extras-<N>/bin/rvs`.
-7. **Verify RVS binary library resolution on target node** prints `::notice::RVS binary's library dependencies resolved OK on target`.
+5. **Verify ROCm prerequisites on target node** prints `::notice::ROCm prerequisites OK on target node at <TARGET_ROCM_PATH>`.
+6. **Install RVS on target node** prints the detected `ROCM_MAJOR`, the chosen `Target ROCm path`, and `Installed RVS at: <TARGET_ROCM_PATH>/extras-<N>/bin/rvs`.
+7. **Verify RVS binary library resolution on target node** prints `::notice::RVS binary's library dependencies resolved OK on target, all from <TARGET_ROCM_PATH>`.
 8. Two RVS level steps complete; the run summary shows the results table with both **Orchestrator** and **Target node** rows.
 
 ## Debugging a failed run
@@ -322,13 +447,14 @@ Watch the Actions tab for:
 | **Setup SSH key for target node** fails: `Permission denied (publickey)` | The key in `RVS_TARGET_SSH_KEY` isn't authorized on the target node for `$TARGET_USER`, or the key format is wrong. Verify by `ssh -i <key> $TARGET_USER@$TARGET_NODE hostname` from a workstation. |
 | **Setup SSH key for target node** fails: `Connection timed out` / `Connection refused` | Network reachability problem between the orchestrator runner and the target node. Check firewall / VPN / bastion routing. |
 | **Setup SSH key for target node** fails: `Host key verification failed` | `ssh-keyscan` couldn't pre-seed the key and `accept-new` rejected it (rare). Remove any stale entry for the target in the runner's `known_hosts`, or pre-populate it manually. |
-| **Verify ROCm prerequisites on target node** fails: `/opt/rocm/ does not exist` | Target node has no ROCm install. Install ROCm or pick a different `target_node`. |
-| **Verify ROCm prerequisites on target node** fails: `ROCm major version mismatch` | The tarball is for ROCm `<X>` but the target has ROCm `<Y>`. Either pin a matching tarball with `tarball_url`, or upgrade the target's ROCm. |
+| **Verify ROCm prerequisites on target node** fails: `<TARGET_ROCM_PATH> does not exist on the target node` | The configured `target_rocm_path` / `vars.RVS_TARGET_ROCM_PATH` doesn't point at a real directory on the target. The step prints all `/opt/rocm*` installs that *do* exist — pick one of those (or fix the symlink). |
+| **Verify ROCm prerequisites on target node** fails: `ROCm major version mismatch` | The tarball is for ROCm `<X>` but `$TARGET_ROCM_PATH` is a ROCm `<Y>` install. Either pin a matching tarball with `tarball_url`, or change `target_rocm_path`. |
+| **Verify RVS binary library resolution on target node** fails: `RVS is resolving libraries from a ROCm install OTHER than ...` | RVS picked up libraries from a different ROCm than the one you targeted (typical on hosts where `/opt/rocm` symlinks to the "wrong" version). The step lists the offending paths. Set `target_rocm_path` to the specific install path you want (a versioned `/opt/rocm-<ver>/` on multi-rocm-package hosts, or a tarball install root). |
 | **Verify ROCm prerequisites on target node** fails: `rocm-smi … exited non-zero` | `amdgpu` kernel driver is not loaded on the target. SSH in and `lsmod \| grep amdgpu`, then `sudo modprobe amdgpu` and check `dmesg`. |
 | **Verify ROCm prerequisites on target node** fails: `rocminfo enumerated 0 GPU agents` | Driver loaded but no GPU exposed to `$TARGET_USER`. Add the user to `video` and `render` groups, log out and back in. |
 | **Install RVS on target node** fails: `Cannot parse ROCm major version from tarball name` | The tarball doesn't match `^amdrocm<digits>-`. Either pin a correctly-named tarball with `tarball_url`, or fix the upstream filename. |
-| **Install RVS on target node** fails: `sudo: a password is required` | `$TARGET_USER` doesn't have `NOPASSWD` sudo on the target. Add a sudoers entry permitting `mkdir` and `tar` into `/opt/rocm/extras-*` without a password. |
-| **Install RVS on target node** fails: `rvs binary not found or not executable at /opt/rocm/extras-<N>/bin/rvs after install` | The tarball isn't rooted at `./bin/`, `./lib/`, etc. The extraction landed `bin/rvs` somewhere else inside `/opt/rocm/extras-<N>/`. Inspect the step log (`ls -la` output) to see the actual layout; the workflow may need `--strip-components=<N>` added to the `tar` invocation. |
+| **Install RVS on target node** fails: `sudo: a password is required` | `$TARGET_USER` doesn't have `NOPASSWD` sudo on the target. Add a sudoers entry permitting `mkdir` and `tar` into `$TARGET_ROCM_PATH/extras-*` without a password. |
+| **Install RVS on target node** fails: `rvs binary not found or not executable at <TARGET_ROCM_PATH>/extras-<N>/bin/rvs after install` | The tarball isn't rooted at `./bin/`, `./lib/`, etc. The extraction landed `bin/rvs` somewhere else inside `$TARGET_ROCM_PATH/extras-<N>/`. Inspect the step log (`ls -la` output) to see the actual layout; the workflow may need `--strip-components=<N>` added to the `tar` invocation. |
 | **Verify RVS binary library resolution on target node** fails with `not found` | A ROCm runtime library is missing or not in `RPATH` on the target. The step prints the `ldd` output; install the matching ROCm component (typically `rocm-llvm`, `rocm-core`, `hip-runtime-amd`). |
 | **Run RVS level N on target node** exits non-zero immediately (after both verify steps passed) | RVS plugin's own dependency missing on the target (e.g. `libpci3` on Debian). Check the level log for the specific error. |
 | **Collect logs from target node** warns: `No log files retrieved from target node` | The level steps exited so early they didn't produce any output, or `$REMOTE_WORK_DIR` was wiped. Inspect the level-step logs in the run UI for the original error. |
@@ -338,12 +464,14 @@ Watch the Actions tab for:
 
 There are three ways to point the workflow at a different node, in increasing order of permanence:
 
-1. **Single run, from the Actions UI:** Run workflow → fill in `target_node` (and optionally `target_user` / `remote_work_dir`). Anything left blank falls back to the matching repo variable. `target_node` has no hard-coded default (workflow fails fast), `target_user` falls through to the orchestrator runner's local user, and `remote_work_dir` falls through to `/tmp/rvs-nightly-<run_id>`. This is the right path for "test this tarball on host X today".
+1. **Single run, from the Actions UI:** Run workflow → fill in `target_node` (and optionally `target_user` / `remote_work_dir` / `target_rocm_path`). Anything left blank falls back to the matching repo variable. `target_node` has no hard-coded default (workflow fails fast), `target_user` falls through to the orchestrator runner's local user, `remote_work_dir` falls through to `/tmp/rvs-nightly-<run_id>`, and `target_rocm_path` falls through to `/opt/rocm`. This is the right path for "test this tarball on host X today".
 2. **Single run, from `gh` CLI:**
    ```bash
-   gh workflow run rvs-nightly-tests.yml -f target_node="<host-or-ip>"
+   gh workflow run rvs-nightly-tests.yml \
+     -f target_node="<host-or-ip>" \
+     -f target_rocm_path="<ROCM_INSTALL_PATH>"   # only needed on multi-ROCm hosts
    ```
-3. **Permanent change:** update repo variable `RVS_TARGET_NODE` (and optionally `RVS_TARGET_USER` / `RVS_REMOTE_WORK_DIR`). All subsequent scheduled and manual runs will pick this up unless an input overrides it.
+3. **Permanent change:** update repo variable `RVS_TARGET_NODE` (and optionally `RVS_TARGET_USER` / `RVS_REMOTE_WORK_DIR` / `RVS_TARGET_ROCM_PATH`). All subsequent scheduled and manual runs will pick this up unless an input overrides it.
 
 The same `RVS_TARGET_SSH_KEY` secret is reused across nodes — make sure the
 public counterpart of that key is added to `$TARGET_USER`'s `~/.ssh/authorized_keys`
