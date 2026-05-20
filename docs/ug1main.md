@@ -422,63 +422,63 @@ or wait key values.
   </thead>
   <tbody>
     <tr>
-      <td><code>properties</code></td>
+      <td>properties</td>
       <td>Collection of Strings</td>
       <td>
-        The <code>properties</code> key specifies what configuration property or properties the
+        The properties key specifies what configuration property or properties the
         query is interested in. Possible values are:
         <ul>
-          <li><code>all</code> - collect all settings</li>
-          <li><code>gpu_id</code></li>
-          <li><code>cpu_cores_count</code></li>
-          <li><code>simd_count</code></li>
-          <li><code>mem_banks_count</code></li>
-          <li><code>caches_count</code></li>
-          <li><code>io_links_count</code></li>
-          <li><code>cpu_core_id_base</code></li>
-          <li><code>simd_id_base</code></li>
-          <li><code>max_waves_per_simd</code></li>
-          <li><code>lds_size_in_kb</code></li>
-          <li><code>gds_size_in_kb</code></li>
-          <li><code>wave_front_size</code></li>
-          <li><code>array_count</code></li>
-          <li><code>simd_arrays_per_engine</code></li>
-          <li><code>cu_per_simd_array</code></li>
-          <li><code>simd_per_cu</code></li>
-          <li><code>max_slots_scratch_cu</code></li>
-          <li><code>vendor_id</code></li>
-          <li><code>device_id</code></li>
-          <li><code>location_id</code></li>
-          <li><code>drm_render_minor</code></li>
-          <li><code>max_engine_clk_fcompute</code></li>
-          <li><code>local_mem_size</code></li>
-          <li><code>fw_version</code></li>
-          <li><code>capability</code></li>
-          <li><code>max_engine_clk_ccompute</code></li>
+          <li>all - collect all settings</li>
+          <li>gpu_id</li>
+          <li>cpu_cores_count</li>
+          <li>simd_count</li>
+          <li>mem_banks_count</li>
+          <li>caches_count</li>
+          <li>io_links_count</li>
+          <li>cpu_core_id_base</li>
+          <li>simd_id_base</li>
+          <li>max_waves_per_simd</li>
+          <li>lds_size_in_kb</li>
+          <li>gds_size_in_kb</li>
+          <li>wave_front_size</li>
+          <li>array_count</li>
+          <li>simd_arrays_per_engine</li>
+          <li>cu_per_simd_array</li>
+          <li>simd_per_cu</li>
+          <li>max_slots_scratch_cu</li>
+          <li>vendor_id</li>
+          <li>device_id</li>
+          <li>location_id</li>
+          <li>drm_render_minor</li>
+          <li>max_engine_clk_fcompute</li>
+          <li>local_mem_size</li>
+          <li>fw_version</li>
+          <li>capability</li>
+          <li>max_engine_clk_ccompute</li>
         </ul>
       </td>
     </tr>
     <tr>
-      <td><code>io_links-properties</code></td>
+      <td>io_links-properties</td>
       <td>Collection of Strings</td>
       <td>
-        The <code>properties</code> key specifies what configuration property or properties the
+        The properties key specifies what configuration property or properties the
         query is interested in. Possible values are:
         <ul>
-          <li><code>all</code> - collect all settings</li>
-          <li><code>count</code> - the number of io_links</li>
-          <li><code>type</code></li>
-          <li><code>version_major</code></li>
-          <li><code>version_minor</code></li>
-          <li><code>node_from</code></li>
-          <li><code>node_to</code></li>
-          <li><code>weight</code></li>
-          <li><code>min_latency</code></li>
-          <li><code>max_latency</code></li>
-          <li><code>min_bandwidth</code></li>
-          <li><code>max_bandwidth</code></li>
-          <li><code>recommended_transfer_size</code></li>
-          <li><code>flags</code></li>
+          <li>all - collect all settings</li>
+          <li>count - the number of io_links</li>
+          <li>type</li>
+          <li>version_major</li>
+          <li>version_minor</li>
+          <li>node_from</li>
+          <li>node_to</li>
+          <li>weight</li>
+          <li>min_latency</li>
+          <li>max_latency</li>
+          <li>min_bandwidth</li>
+          <li>max_bandwidth</li>
+          <li>recommended_transfer_size</li>
+          <li>flags</li>
         </ul>
       </td>
     </tr>
@@ -663,7 +663,7 @@ configured with bounding box values for interested GPU parameters. If any of the
 GPU’s parameters exceed the bounding values on a specific GPU an INFO warning
 message will be printed to stdout while the bounding value is still exceeded.
 
-### Module Specific Keys
+### Module specific keys
 
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
@@ -676,51 +676,51 @@ message will be printed to stdout while the bounding value is still exceeded.
   </thead>
   <tbody>
     <tr>
-      <td><code>monitor</code></td>
+      <td>monitor</td>
       <td>Bool</td>
       <td>
-        If this key is set to <code>true</code>, the GM module will start monitoring on
-        specified devices. If this key is set to <code>false</code>, all other keys are ignored
+        If this key is set to true, the GM module will start monitoring on
+        specified devices. If this key is set to false, all other keys are ignored
         and monitoring of the specified device will be stopped.
       </td>
     </tr>
     <tr>
-      <td><code>metrics</code></td>
+      <td>metrics</td>
       <td>
         Collection of Structures, specifying the metric, if there are bounds and the
         bound values. The structures have the following format:
-        <pre><code>{String, Bool, Integer, Integer}</code></pre>
+        <pre>{String, Bool, Integer, Integer}</pre>
       </td>
       <td>
         The set of metrics to monitor during the monitoring period. Example values are:
         <ul>
-          <li><code>{'temp', 'true', max_temp, min_temp}</code></li>
-          <li><code>{'clock', 'false', max_clock, min_clock}</code></li>
-          <li><code>{'mem_clock', 'true', max_mem_clock, min_mem_clock}</code></li>
-          <li><code>{'fan', 'true', max_fan, min_fan}</code></li>
-          <li><code>{'power', 'true', max_power, min_power}</code></li>
+          <li>{'temp', 'true', max_temp, min_temp}</li>
+          <li>{'clock', 'false', max_clock, min_clock}</li>
+          <li>{'mem_clock', 'true', max_mem_clock, min_mem_clock}</li>
+          <li>{'fan', 'true', max_fan, min_fan}</li>
+          <li>{'power', 'true', max_power, min_power}</li>
         </ul>
         The set of upper bounds for each metric are specified as an integer. The units and
         values for each metric are:
         <ul>
-          <li><code>temp</code> - degrees Celsius</li>
-          <li><code>clock</code> - MHz</li>
-          <li><code>mem_clock</code> - MHz</li>
-          <li><code>fan</code> - Integer between 0 and 255</li>
-          <li><code>power</code> - Power in Watts</li>
+          <li>temp - degrees Celsius</li>
+          <li>clock - MHz</li>
+          <li>mem_clock - MHz</li>
+          <li>fan - Integer between 0 and 255</li>
+          <li>power - Power in Watts</li>
         </ul>
       </td>
     </tr>
     <tr>
-      <td><code>sample_interval</code></td>
+      <td>sample_interval</td>
       <td>Integer</td>
       <td>
         If this key is specified metrics will be sampled at the given rate. The units for
-        the <code>sample_interval</code> are milliseconds. The default value is <code>1000</code>.
+        the sample_interval are milliseconds. The default value is 1000.
       </td>
     </tr>
     <tr>
-      <td><code>log_interval</code></td>
+      <td>log_interval</td>
       <td>Integer</td>
       <td>
         If this key is specified informational messages will be emitted at the given
@@ -730,18 +730,18 @@ message will be printed to stdout while the bounding value is still exceeded.
       </td>
     </tr>
     <tr>
-      <td><code>terminate</code></td>
+      <td>terminate</td>
       <td>Bool</td>
       <td>
-        If the <code>terminate</code> key is <code>true</code> the GM monitor will terminate
+        If the terminate key is true the GM monitor will terminate
         the RVS process when a bounds violation is encountered on any of the metrics specified.
       </td>
     </tr>
     <tr>
-      <td><code>force</code></td>
+      <td>force</td>
       <td>Bool</td>
       <td>
-        If <code>true</code> and <code>terminate</code> key is also <code>true</code> the
+        If true and terminate key is also true the
         RVS process will terminate immediately. <strong>Note:</strong> this may cause
         resource leaks within GPUs.
       </td>
@@ -1261,36 +1261,36 @@ Module specific output keys are described in the table below:
   </thead>
   <tbody>
     <tr>
-      <td><code>capability</code></td>
+      <td>capability</td>
       <td>
         Collection of Structures with the following format:
-        <pre><code>{String, String}</code></pre>
+        <pre>{String, String}</pre>
       </td>
       <td>
         The PCIe capability key contains a collection of structures that specify
         which PCIe capability to check and the expected value of the capability. A check
         structure must contain the PCIe capability value, but an expected value may be
         omitted. The value of all valid capabilities that are a part of this collection
-        will be entered into the <code>capability_value</code> field. Possible capabilities,
+        will be entered into the capability_value field. Possible capabilities,
         and their value types are:
         <ul>
-          <li><code>link_cap_max_speed</code></li>
-          <li><code>link_cap_max_width</code></li>
-          <li><code>link_stat_cur_speed</code></li>
-          <li><code>link_stat_neg_width</code></li>
-          <li><code>slot_pwr_limit_value</code></li>
-          <li><code>slot_physical_num</code></li>
-          <li><code>bus_id</code></li>
-          <li><code>atomic_op_32_completer</code></li>
-          <li><code>atomic_op_64_completer</code></li>
-          <li><code>atomic_op_128_CAS_completer</code></li>
-          <li><code>atomic_op_routing</code></li>
-          <li><code>dev_serial_num</code></li>
-          <li><code>kernel_driver</code></li>
-          <li><code>pwr_base_pwr</code></li>
-          <li><code>pwr_rail_type</code></li>
-          <li><code>device_id</code></li>
-          <li><code>vendor_id</code></li>
+          <li>link_cap_max_speed</li>
+          <li>link_cap_max_width</li>
+          <li>link_stat_cur_speed</li>
+          <li>link_stat_neg_width</li>
+          <li>slot_pwr_limit_value</li>
+          <li>slot_physical_num</li>
+          <li>bus_id</li>
+          <li>atomic_op_32_completer</li>
+          <li>atomic_op_64_completer</li>
+          <li>atomic_op_128_CAS_completer</li>
+          <li>atomic_op_routing</li>
+          <li>dev_serial_num</li>
+          <li>kernel_driver</li>
+          <li>pwr_base_pwr</li>
+          <li>pwr_rail_type</li>
+          <li>device_id</li>
+          <li>vendor_id</li>
         </ul>
       </td>
     </tr>
