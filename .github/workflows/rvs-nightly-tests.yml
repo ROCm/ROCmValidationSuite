@@ -54,7 +54,7 @@ on:
         required: false
         default: ''
       target_rocm_path:
-        description: 'ROCm install dir on the target node to run RVS against, e.g. /opt/rocm-7.13 (default: vars.RVS_TARGET_ROCM_PATH or /opt/rocm)'
+        description: 'ROCm install dir on the target node to run RVS against, e.g. a versioned /opt/rocm-<ver> or a tarball install root (default: vars.RVS_TARGET_ROCM_PATH or /opt/rocm)'
         required: false
         default: ''
 
@@ -170,9 +170,10 @@ jobs:
       TARGET_NODE:  ${{ inputs.target_node || vars.RVS_TARGET_NODE }}
       TARGET_USER:  ${{ inputs.target_user || vars.RVS_TARGET_USER }}
       # ROCm install on the target node that RVS should run against. Lets the
-      # workflow target a specific ROCm (e.g. /opt/rocm-7.13) on hosts that
-      # have multiple ROCm versions side-by-side; defaults to the system
-      # /opt/rocm symlink for single-ROCm hosts.
+      # workflow target a specific ROCm install (a versioned /opt/rocm-<ver> on
+      # multi-rocm-package hosts, or a tarball install root anywhere) when the
+      # default /opt/rocm isn't what you want. Single-ROCm hosts can leave it
+      # at the default.
       TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH || '/opt/rocm' }}
       # SSH_KEY_FILE / SSH_CONFIG_FILE are derived from $RUNNER_TEMP in the
       # validate step and exported via $GITHUB_ENV so every subsequent step
