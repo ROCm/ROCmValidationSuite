@@ -146,11 +146,11 @@ cmake -B ./build -DROCM_PATH=/opt/rocm -DCMAKE_INSTALL_PREFIX=/opt/rocm -DCPACK_
 ### Build binary
 
 ```
-make -C ./build
+make -C ./build -j $(nproc)
 ```
 
 **Note:**
-Use the `-j` option with the build command to enable parallel compilation, which can significantly speed up the build process.
+`$(nproc)` automatically uses all available CPU cores for parallel compilation, which can significantly speed up the build process. You can replace it with a specific number (e.g., `-j 8`) to limit core usage.
 
 ### Build package
 
