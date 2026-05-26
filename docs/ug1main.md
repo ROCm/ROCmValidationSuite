@@ -46,30 +46,41 @@ RVS package components are installed in `/opt/rocm`. Package contains:
 
 #### Run version built from source code
 
-    cd <source folder>/build/bin
+```bash
+cd <source folder>/build/bin
+```
 
     Command examples
-    ./rvs --help  # Lists all options to run RVS test suite
-    ./rvs -g      # Lists supported GPUs available in the machine
-    ./rvs -c conf/gst_single.conf  # Run GST module default test configuration
-    ./rvs -m gst  # Run GST module using platform-detected config
-    ./rvs -r 3    # Run RVS level 3 (range: 1–5, 5 = highest) tests for the platform-detected
+
+```bash
+./rvs --help                       # List all options
+./rvs -g                           # List supported GPUs available in the machine
+./rvs -c conf/gst_single.conf      # Run GST module default test configuration
+./rvs -m gst                       # Run GST module using platform-detected config
+./rvs -r 3                         # Run predefined level 3 tests (range: 1–5, 5 = highest stress)
+```
 
 #### Run version pre-compiled and packaged with ROCm release
 
-    cd /opt/rocm/bin
+```bash
+cd /opt/rocm/bin
+```
 
     Command examples
-    ./rvs --help  # Lists all options to run RVS test suite
-    ./rvs -g      # Lists supported GPUs available in the machine
-    ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf  # Run GST default test configuration
-    ./rvs -m gst  # Run GST module using platform-detected config
-    ./rvs -r 3    # Run RVS level 3 (range: 1–5, 5 = highest) tests for the platform-detected
+```bash
+./rvs --help                                                                      # List all options
+./rvs -g                                                                          # List supported GPUs available in the machine
+./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf                     # Run GST default test configuration
+./rvs -m gst                                                                      # Run GST module using platform-detected config
+./rvs -r 3                                                                        # Run predefined level 3 tests (range: 1–5, 5 = highest stress)
+```
 
-To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
+To run a GPU-specific test configuration, use configuration files from the GPU subfolders under `/opt/rocm/share/rocm-validation-suite/conf/`:
 
-    ./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf  # Run MI300X specific GST test configuration
-    ./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf  # Run Navi 32 specific GST test configuration
+```bash
+./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf  # Run MI300X-specific GST test configuration
+./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf    # Run Navi 32-specific GST test configuration
+```
 
 ```{note}
 If present, always use GPU specific configurations instead of default test configurations.
@@ -174,8 +185,9 @@ of the current log. Use in conjuction with <b>-d</b> and <b>-l</b> options.
 This is a mandatory field for test execution.
 </td></tr>
 
-<tr><td>-r</td><td>--run</td><td>Specify the test level to run.
-Valid range is 1 to 5, with 5 indicating the highest stress test level.
+<tr><td>-r</td><td>--run</td><td>Specify the predefined test level to run (1–5).
+Each level selects a GPU-specific configuration file without requiring a <b>-c</b> argument.
+See <a href="#test-levels">Test Levels</a> for details.
 </td></tr>
 
 <tr><td>-d</td><td>--debugLevel</td><td>Specify the debug level for the output log.
@@ -186,9 +198,8 @@ The range is 0-5 with 5 being the highest verbose level.
 that RVS supports and has visibility.
 </td></tr>
 
-<tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids/indexes to run test on.
-This overrides the <b>device/device_index</b> parameter values specified for every actions in the
-configuration file, including the <b>all</b> value.
+<tr><td>-i</td><td>--indexes</td><td>Comma-separated list of GPU IDs or SMI-based indexes to run tests on.
+Overrides the <b>device</b> and <b>device_index</b> values specified in all actions of the configuration file, including the <b>all</b> value.
 </td></tr>
 
 <tr><td>-s</td><td>--selectActions</td><td>Comma separated list of action names or 0-based action
@@ -239,6 +250,23 @@ code for errors.</td></tr>
 </table>
 </div>
 
+### Test Levels
+
+When using the `-r` option, RVS automatically selects a predefined configuration file based on the detected GPU platform (for example, `conf/MI300X/levels/rvs_level_N.conf`). No `-c` argument is needed. The five levels represent progressively increasing test coverage and duration:
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Level</th><th class="head">Test</th><th class="head">Description</th><th class="head">Modules</th><th class="head">Typical Duration</th></tr>
+<tr><td>1</td><td>Software validation</td><td>Verifies that all required ROCm packages and metapackages are correctly installed.</td><td>rcqt</td><td>Short (seconds)</td></tr>
+<tr><td>2</td><td>Hardware capability checks</td><td>Checks PCIe link speed and width, performs a quick HBM read/write pass, and verifies basic PCIe and XGMI interface connectivity.</td><td>peqt, babel, pebb, pbqt</td><td>Short (seconds)</td></tr>
+<tr><td>3</td><td>Basic performance</td><td>Measures HBM bandwidth across common operations, PCIe host-to-device and device-to-host throughput, bidirectional XGMI bandwidth, and limited gemm compute performance runs.</td><td>babel, pebb, pbqt, gst</td><td>Minutes</td></tr>
+<tr><td>4</td><td>Extended performance</td><td>Same coverage as level 3 with longer test durations, full HBM operation set, bidirectional PCIe transfers, a basic memory test pass, and full gemm compute performance runs.</td><td>babel, pebb, pbqt, mem, gst, iet</td><td>Tens of minutes</td></tr>
+<tr><td>5</td><td>Full stress test</td><td>Runs all tests from level 4 at maximum duration, adds high-iteration memory stress testing, and includes a sustained power stress test targeting peak GPU TDP. Intended for thorough pre-production validation.</td><td>babel, pebb, pbqt, mem, gst, iet</td><td>Hours</td></tr>
+</table>
+</div>
+
+The exact tests and thresholds within each level vary by GPU platform.
+
 #### Examples
 
 Print version information and exit:
@@ -260,6 +288,11 @@ Run a specific configuration file:
 ./rvs -c conf/gst_single.conf
 ```
 
+Run a platform-specific configuration file (for example, MI350X GST):
+```bash
+./rvs -c conf/MI350X/gst_single.conf
+```
+
 Repeat a test 5 times in sequence (soak/stability testing):
 ```bash
 ./rvs -c conf/gst_single.conf -n 5
@@ -270,9 +303,15 @@ Run only the GST module using the built-in platform configuration:
 ./rvs -m gst
 ```
 
-Run a configuration file at stress level 3:
+
+Run the predefined level 3 test suite (basic performance):
 ```bash
-./rvs -c conf/gst_single.conf -r 3
+./rvs -r 3
+```
+
+Run the predefined level 5 (full stress) test suite on specific GPUs only:
+```bash
+./rvs -r 5 -i 0,1
 ```
 
 Run a configuration file on specific GPUs (by index) with parallel execution enabled:
@@ -300,6 +339,21 @@ Suppress console output and write results to a JSON file (useful in CI pipelines
 ```bash
 ./rvs -c conf/gst_single.conf --quiet -j /tmp/rvs_results.json
 ```
+
+The configuration files in the top-level `conf/` folder are generic samples and may not reflect the correct thresholds or parameters for your hardware. For accurate results, use the platform-specific configuration files under `conf/<GPU>/` (for example, `conf/MI350X/`), or use the `-r` or `-m` option, which automatically selects the appropriate platform configuration.
+
+### GPU-Specific Configurations
+
+RVS includes optimized test configurations for a range of GPU families, organized under `conf/<GPU>/`. 
+Level-based configurations (usable with `-r`) are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X.
+
+**AMD Instinct Series:**
+- MI210, MI250X, MI300A, MI300X, MI308X, MI325X, MI350X, MI355X
+- High-frequency variants: MI300X-HF, MI308X-HF
+
+**AMD Radeon Series:**
+- nv21, nv31, nv32, gfx1200, gfx1201
+- RX9060, RX9070, RX9070GRE, R9600D
 
 ### Configuration files
 
