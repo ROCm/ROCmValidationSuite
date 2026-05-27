@@ -13,25 +13,25 @@ Please do this before compilation/installing compiled package.
 Ubuntu :
 
 ```
-sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev
+sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev libnuma-dev
 ```
 
 CentOS :
 
 ```
-sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel yaml-cpp-static
+sudo yum install -y cmake3 doxygen pciutils-devel rpm rpm-build git gcc-c++ yaml-cpp-devel yaml-cpp-static numactl-devel
 ```
 
 RHEL :
 
 ```
-sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel yaml-cpp-static pciutils-devel
+sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel yaml-cpp-static pciutils-devel numactl-devel
 ```
 
 SLES :
 
 ```
-sudo zypper install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel
+sudo zypper install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel numactl-devel
 ```
 
 ## Install ROCm stack, rocBLAS, and SMI library
@@ -146,11 +146,11 @@ cmake -B ./build -DROCM_PATH=/opt/rocm -DCMAKE_INSTALL_PREFIX=/opt/rocm -DCPACK_
 ### Build binary
 
 ```
-make -C ./build
+make -C ./build -j $(nproc)
 ```
 
 **Note:**
-Use the `-j` option with the build command to enable parallel compilation, which can significantly speed up the build process.
+`$(nproc)` automatically uses all available CPU cores for parallel compilation, which can significantly speed up the build process. You can replace it with a specific number (e.g., `-j 8`) to limit core usage.
 
 ### Build package
 
@@ -198,6 +198,56 @@ SUSE :
 
 ```
 sudo zypper install rocm-validation-suite
+```
+
+## Install RVS from Tarball - for TheRock based ROCm installation
+
+Follow these steps to install RVS from a prebuilt tarball on top of an existing ROCm Core SDK installation using the TheRock build system.
+
+### Download the RVS tarball
+
+```
+wget https://repo.amd.com/rocm/rvs/tarball/amdrocm7-rvs-1.4.21-288-Linux.tar.gz
+```
+
+### Extract the tarball
+
+Set `ROCM_PATH` to your ROCm Core SDK location. For a package manager installation, the default is `/opt/rocm`:
+
+```
+export ROCM_PATH=/opt/rocm
+sudo mkdir -p $ROCM_PATH/extras-7
+sudo tar -xzf amdrocm7-rvs-1.4.21-288-Linux.tar.gz -C $ROCM_PATH/extras-7
+```
+
+### Set up your environment
+
+**User setup** 
+
+Add the following to `~/.bashrc`, then run `source ~/.bashrc`:
+
+```
+export ROCM_PATH=/opt/rocm
+export PATH=$ROCM_PATH/extras-7/bin:$ROCM_PATH/bin:$PATH
+export LD_LIBRARY_PATH=$ROCM_PATH/extras-7/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
+```
+
+**System-wide setup:**
+
+```
+sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+export ROCM_PATH=/opt/rocm
+export PATH=\$ROCM_PATH/extras-7/bin:\$ROCM_PATH/bin:\$PATH
+export LD_LIBRARY_PATH=\$ROCM_PATH/extras-7/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+EOF
+sudo chmod +x /etc/profile.d/set-rocm-env.sh
+source /etc/profile.d/set-rocm-env.sh
+```
+
+### Verify the installation
+
+```
+rvs -h
 ```
 
 ## Running RVS
