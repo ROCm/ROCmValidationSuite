@@ -53,11 +53,6 @@ jobs:
     outputs:
       branches_json: ${{ steps.branches.outputs.branches_json }}
     steps:
-      - name: Checkout (for remote branch list)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Resolve branch matrix
         id: branches
         env:
@@ -66,12 +61,43 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           python3 <<'PY'
           import json
           import os
           import re
-          import subprocess
+          import urllib.request
+
+          def list_remote_branches() -> list[str]:
+              token = os.environ["GITHUB_TOKEN"]
+              repo = os.environ["GITHUB_REPOSITORY"]
+              names: list[str] = []
+              page = 1
+              while True:
+                  url = (
+                      f"https://api.github.com/repos/{repo}/branches"
+                      f"?per_page=100&page={page}"
+                  )
+                  req = urllib.request.Request(
+                      url,
+                      headers={
+                          "Authorization": f"Bearer {token}",
+                          "Accept": "application/vnd.github+json",
+                          "User-Agent": "rvs-build-relocatable-packages",
+                      },
+                  )
+                  with urllib.request.urlopen(req) as resp:
+                      batch = json.loads(resp.read().decode())
+                  if not batch:
+                      break
+                  for item in batch:
+                      names.append(item["name"])
+                  if len(batch) < 100:
+                      break
+                  page += 1
+              return names
 
           def branch_prefix(name: str) -> str:
               return name.split("/", 1)[0] if "/" in name else name
@@ -114,20 +140,7 @@ jobs:
                   for p in os.environ.get("ACTIVE_BRANCHES", "").split(",")
                   if p.strip()
               ]
-              subprocess.run(["git", "fetch", "origin", "--prune"], check=True)
-              result = subprocess.run(
-                  ["git", "branch", "-r"],
-                  capture_output=True,
-                  text=True,
-                  check=True,
-              )
-              remote_names = []
-              for line in result.stdout.splitlines():
-                  line = line.strip()
-                  if not line or "->" in line:
-                      continue
-                  if line.startswith("origin/"):
-                      remote_names.append(line[len("origin/"):])
+              remote_names = list_remote_branches()
 
               matched = set()
               for pattern in patterns:
