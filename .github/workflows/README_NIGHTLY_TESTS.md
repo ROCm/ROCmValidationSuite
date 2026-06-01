@@ -21,7 +21,7 @@ schedule (or manual)
 detect      [ubuntu-latest]
     │  curl $RVS_TARBALL_INDEX_URL
     │  → grep amdrocm*-rvs-*-Linux.tar.gz, sort -V, pick newest
-    │  → compare with cached marker (skip if unchanged)
+    │  → compare with cached marker (notice only; tests always run)
     ▼
 test        [GitHub runner = orchestrator]    ──ssh──▶  [target node = GPU host]
     │  validate target_node / target_user                                         │
@@ -44,8 +44,8 @@ artifact: rvs-nightly-report-<run_id>
 
 | Trigger | Cadence | What fires |
 |---|---|---|
-| `schedule` | `0 15 * * *` UTC daily (08:00 PST / 07:00 PDT) | Polls the tarball index. If the latest filename matches the previous run's, the run is **skipped** to avoid re-testing the same package. |
-| `workflow_dispatch` | Manual | Always runs. Supports overriding the tarball URL, forcing a re-run, and **retargeting at any node** without editing the workflow. |
+| `schedule` | `0 15 * * *` UTC daily (08:00 PST / 07:00 PDT) | Polls the tarball index and always runs install + level 4, even when the latest tarball filename matches the previous run (a notice is logged when unchanged). |
+| `workflow_dispatch` | Manual | Always runs. Supports overriding the tarball URL and **retargeting at any node** without editing the workflow. |
 
 The cron deliberately runs after AMD's typical nightly publish window;
 adjust the cron string in the workflow if your publish cadence is different.
@@ -55,7 +55,6 @@ adjust the cron string in the workflow if your publish cadence is different.
 | Input | Default | Description |
 |---|---|---|
 | `tarball_url` | _(empty)_ | If set, the workflow downloads this exact URL instead of scraping the index. Useful for re-running an older build. |
-| `force` | `false` | When `true`, runs even if the latest tarball filename matches the cached marker. |
 | `target_node` | _(empty → `secrets.RVS_TARGET_NODE`)_ | Hostname or IP of the node to install RVS on and run tests against. **This is the value that retargets the test execution.** Stored as a secret so the lab node identity isn't visible in repo settings or run logs (GitHub Actions automatically masks secret values as `***` in step output). |
 | `target_user` | _(empty → `secrets.RVS_TARGET_USER`; if both are unset, SSH defaults to the orchestrator runner's local user)_ | SSH user on the target node. Must have `NOPASSWD` sudo on the target (see prerequisites). Stored as a secret so the lab account name isn't visible in repo settings or run logs (GitHub Actions automatically masks secret values as `***` in step output). |
 | `remote_work_dir` | _(empty → `vars.RVS_REMOTE_WORK_DIR`, then `/tmp/rvs-nightly-<run_id>`)_ | Working dir on the target node where the tarball is staged, logs are written, and which gets `rm -rf`'d at the end. |
@@ -70,8 +69,7 @@ Example — point a single run at a specific node:
 gh workflow run rvs-nightly-tests.yml \
   -f tarball_url="<INDEX_URL>/amdrocm7-rvs-1.4.21-288-Linux.tar.gz" \
   -f target_node="<HOST_OR_IP>" \
-  -f target_user="<USER>" \
-  -f force=true
+  -f target_user="<USER>"
 ```
 
 Example — keep the default tarball but run on a different host today:
@@ -405,7 +403,7 @@ After committing the workflow file to `master`, the fastest sanity check
 is:
 
 ```bash
-gh workflow run rvs-nightly-tests.yml -f force=true
+gh workflow run rvs-nightly-tests.yml
 ```
 
 Watch the Actions tab for:
@@ -442,7 +440,7 @@ Watch the Actions tab for:
 | **Verify RVS binary library resolution on target node** fails with `not found` | A ROCm runtime library is missing or not in `RPATH` on the target. The step prints the `ldd` output; install the matching ROCm component (typically `rocm-llvm`, `rocm-core`, `hip-runtime-amd`). |
 | **Run RVS level 4 on target node** exits non-zero immediately (after both verify steps passed) | RVS plugin's own dependency missing on the target (e.g. `libpci3` on Debian). Check `rvs_level_4.log` in the artifact for the specific error. |
 | **Collect logs from target node** warns: `No log files retrieved from target node` | The level steps exited so early they didn't produce any output, or `$REMOTE_WORK_DIR` was wiped. Inspect the level-step logs in the run UI for the original error. |
-| Cron skipped a day | GitHub may delay or drop schedules under high load. Run once manually with `force=true` to validate. |
+| Cron skipped a day | GitHub may delay or drop schedules under high load. Run once manually via `workflow_dispatch` to validate. |
 
 ## Retargeting at a different node
 

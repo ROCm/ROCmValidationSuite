@@ -46,10 +46,6 @@ on:
         description: 'Override tarball URL (default: latest from vars.RVS_TARBALL_INDEX_URL)'
         required: false
         default: ''
-      force:
-        description: 'Run even if the latest tarball matches the last run'
-        type: boolean
-        default: false
       target_node:
         description: 'Hostname/IP of node to install RVS on and run tests (default: secrets.RVS_TARGET_NODE)'
         required: false
@@ -87,7 +83,6 @@ jobs:
     outputs:
       tarball_url:  ${{ steps.resolve.outputs.tarball_url }}
       tarball_name: ${{ steps.resolve.outputs.tarball_name }}
-      should_run:   ${{ steps.resolve.outputs.should_run }}
     steps:
       - name: Restore last-seen marker (cron path)
         if: github.event_name == 'schedule'
@@ -103,7 +98,6 @@ jobs:
         env:
           INDEX_URL: ${{ env.TARBALL_INDEX_URL }}
           INPUT_URL: ${{ inputs.tarball_url }}
-          FORCE:     ${{ inputs.force }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
@@ -139,11 +133,12 @@ jobs:
 
           NAME="$(basename "$URL")"
 
-          SHOULD_RUN=true
-          if [ "$EVENT_NAME" = "schedule" ] && [ "$FORCE" != "true" ] && [ -f last_tarball_marker.txt ]; then
-            if [ "$(cat last_tarball_marker.txt)" = "$NAME" ]; then
-              SHOULD_RUN=false
-              echo "Latest tarball ($NAME) unchanged since last run — skipping."
+          if [ "$EVENT_NAME" = "schedule" ] && [ -f last_tarball_marker.txt ]; then
+            LAST="$(cat last_tarball_marker.txt)"
+            if [ "$LAST" = "$NAME" ]; then
+              echo "::notice::Latest tarball ($NAME) unchanged since last scheduled run — running tests anyway."
+            else
+              echo "::notice::New tarball (previous: $LAST, now: $NAME)."
             fi
           fi
           echo "$NAME" > last_tarball_marker.txt
@@ -151,12 +146,10 @@ jobs:
           {
             echo "tarball_url=$URL"
             echo "tarball_name=$NAME"
-            echo "should_run=$SHOULD_RUN"
           } >> "$GITHUB_OUTPUT"
 
           echo "Latest tarball : $NAME"
           echo "URL            : $URL"
-          echo "Should run     : $SHOULD_RUN"
 
       - name: Save marker (cron path)
         if: github.event_name == 'schedule'
@@ -168,7 +161,6 @@ jobs:
   test:
     name: Install RVS and run level 4 (on remote target node)
     needs: detect
-    if: needs.detect.outputs.should_run == 'true'
     runs-on: ${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
     timeout-minutes: 180
     env:
