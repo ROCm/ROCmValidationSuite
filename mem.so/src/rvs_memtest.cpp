@@ -147,10 +147,9 @@ unsigned int error_checking(const std::string& pmsg, unsigned int blockidx)
     hipMemset(ptCntOfError, 0, sizeof(unsigned int));
     hipMemset((void*)&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
     hipMemset((void*)&ptExpectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
-	  hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+	hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 
-    hipDeviceReset();
-    exit(ERR_BAD_STATE);
+    return numOfErrors;
 
 }
 
@@ -1639,14 +1638,18 @@ void allocate_small_mem(void)
 
 void free_small_mem(void)
 {
-    //Initialize memory
     hipFree((void*)ptCntOfError);
+    ptCntOfError = nullptr;
 
     hipFree((void*)ptFailedAdress);
+    ptFailedAdress = nullptr;
 
     hipFree((void*)ptExpectedValue);
+    ptExpectedValue = nullptr;
 
     hipFree((void*)ptCurrentValue);
+    ptCurrentValue = nullptr;
 
     hipFree((void*)ptValueOfSecondRead);
+    ptValueOfSecondRead = nullptr;
 }
