@@ -36,10 +36,21 @@ name: RVS Nightly Tests
 #                          target node must have NOPASSWD sudo for installs into
 #                          /opt/rocm/extras-<major>.
 
+# Triggers
+# --------
+# - schedule: daily poll of vars.RVS_TARBALL_INDEX_URL
+# - workflow_dispatch: manual run with optional overrides
+# - workflow_run: after Build Relocatable Packages completes successfully
+#   (no changes required in build-relocatable-packages.yml)
+
 on:
   schedule:
     # 15:00 UTC daily (08:00 PST / 07:00 PDT). Adjust to match your build cadence.
     - cron: '0 15 * * *'
+  workflow_run:
+    workflows: ["Build Relocatable Packages"]
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       tarball_url:
@@ -79,6 +90,7 @@ env:
 jobs:
   detect:
     name: Detect latest RVS tarball
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       tarball_url:  ${{ steps.resolve.outputs.tarball_url }}
