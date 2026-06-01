@@ -23,8 +23,6 @@
  *
  *******************************************************************************/
 #include "include/rvsliblogger.h"
-#include <sys/types.h>
-#include <dirent.h>
 #include <sys/stat.h>
 
 #include <unistd.h>
@@ -38,6 +36,7 @@
 #include <fstream>
 #include <string>
 #include <mutex>
+#include <filesystem>
 
 #include "include/rvstrace.h"
 #include "include/rvslognode.h"
@@ -85,17 +84,16 @@ bool isPathedFile(const std::string &fname){
 
 bool doesFolderExist(const std::string &fname){
   auto loc = fname.find_last_of('/');
-  auto dirName = fname.substr(0,loc);
-  DIR* dir = opendir(dirName.c_str());
-  if (dir == NULL) {
-    // try creating directory, this doesnt exist. if fails return
-     std::string command{"mkdir -p "};
-     command += dirName;     
-     int ret = system(command.c_str());
-    if (ret){
-      return false;
-    }
-  } 
+  if (loc == std::string::npos) {
+    return true;
+  }
+  auto dirName = fname.substr(0, loc);
+  std::error_code ec;
+  std::filesystem::create_directories(dirName, ec);
+  if (ec) {
+    cerr << "RVS folder creation error: " << ec.message() << std::endl;
+    return false;
+  }
   std::fstream fs;
   fs.open(fname,  std::ios::out | std::ios::trunc);
   if (fs.fail()){// unable to create file in dir
@@ -140,7 +138,8 @@ bool rvs::logger::append() {
 }
 
 void rvs::logger::set_log_file(const std::string& fname) {
-    strncpy(log_file, fname.c_str(), sizeof(log_file));
+    strncpy(log_file, fname.c_str(), sizeof(log_file) - 1);
+    log_file[sizeof(log_file) - 1] = '\0';
     if (isPathedFile(log_file)){
         if (!doesFolderExist(log_file)){
           std::cout << "Unable to create log file, check path.";
