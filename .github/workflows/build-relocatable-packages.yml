@@ -70,10 +70,10 @@ jobs:
           import re
           import urllib.request
 
-          def list_remote_branches() -> list[str]:
+          def list_remote_branches():
               token = os.environ["GITHUB_TOKEN"]
               repo = os.environ["GITHUB_REPOSITORY"]
-              names: list[str] = []
+              names = []
               page = 1
               while True:
                   url = (
