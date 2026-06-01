@@ -7,6 +7,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Added
 
 - Pulse stressor module (`pulse.so`) for GPU power pulse stress testing. **(Beta — not for production use.)**
+- Test-level configurations for MI350P-450W and MI350P-600W (`conf/MI350P-450W/levels/`, `conf/MI350P-600W/levels/`), auto-selected by `-r N` via amdsmi power-cap disambiguation (PCI device ID `0x75a8`).
   
 ## RVS 1.4.0
 

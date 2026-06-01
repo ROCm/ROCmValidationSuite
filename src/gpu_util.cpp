@@ -55,7 +55,8 @@ const std::map<uint16_t, std::string> gpu_dev_map = {
   {0x74a8, "MI308X-HF"}, // MI308X-HF
   {0x74a5, "MI325X"},    // MI325X
   {0x75a0, "MI350X"},    // MI350X AC
-  {0x75a3, "MI355X"}     // MI355X LC
+  {0x75a3, "MI355X"},    // MI355X LC
+  {0x75a8, "MI350P"}     // MI350P workstation (450W / 600W disambiguated by power cap)
 };
 
 using std::vector;
@@ -854,6 +855,38 @@ std::string rvs::gpulist::gpu_get_platform_name (void) {
   auto it = gpu_dev_map.find(dev_id);
   if (it == gpu_dev_map.end()) {
     return "";
+  }
+
+  /* MI350P (0x75a8) shares one PCI device ID across the 450W and 600W SKUs;
+   differentiate by reading the hardware power cap reported by amdsmi. The
+   two SKUs ship with distinct TDP caps (~450 W vs ~600 W) Prefer max_power_cap from
+   amdsmi_get_power_cap_info (the hardware limit, in microwatts on Linux
+   bare metal) */
+  if (it->second == "MI350P") {
+    constexpr uint64_t MI350P_TDP_SPLIT_UW = 525000000ULL;  // 525 W in microwatts
+    constexpr uint32_t MI350P_TDP_SPLIT_W  = 525;           // 525 W
+    auto smi_map = rvs::get_smi_pci_map();
+    if (!smi_map.empty()) {
+      amdsmi_processor_handle hdl = smi_map.begin()->second;
+      amdsmi_power_cap_info_t cap_info{};
+      if (amdsmi_get_power_cap_info(hdl, 0, &cap_info) == AMDSMI_STATUS_SUCCESS
+          && cap_info.max_power_cap > 0) {
+        return (cap_info.max_power_cap < MI350P_TDP_SPLIT_UW)
+                   ? std::string("MI350P-450W")
+                   : std::string("MI350P-600W");
+      }
+      amdsmi_power_info_t pwr_info{};
+      if (amdsmi_get_power_info(hdl, &pwr_info) == AMDSMI_STATUS_SUCCESS
+          && pwr_info.power_limit > 0) {
+        return (pwr_info.power_limit < MI350P_TDP_SPLIT_W)
+                   ? std::string("MI350P-450W")
+                   : std::string("MI350P-600W");
+      }
+    }
+    std::cout << "MI350P detected but power cap could not be read via amdsmi; "
+                 "falling back to MI350P-450W. Use -c explicitly if this is "
+                 "incorrect." << std::endl;
+    return "MI350P-450W";
   }
 
   return it->second;
