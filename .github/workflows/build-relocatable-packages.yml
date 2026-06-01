@@ -168,9 +168,36 @@ jobs:
               out.write(f"branches_json={payload}\n")
           PY
 
+  # Runs on the host (no job container) so we can reclaim runner disk before Docker
+  # image pulls and ROCm SDK extracts. Failures here are often "No space left on device".
+  runner-disk-prep:
+    name: Free runner disk space
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
+    steps:
+      - name: Free disk space (GitHub-hosted runners)
+        if: runner.environment == 'github-hosted'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+
+      - name: Prune Docker and report disk usage
+        run: |
+          echo "=== Disk before prune ==="
+          df -h / || df -h
+          if command -v docker >/dev/null 2>&1; then
+            docker system prune -af --volumes || true
+          fi
+          echo "=== Disk after prune ==="
+          df -h / || df -h
+
   build-ubuntu:
     name: Build Ubuntu Packages (${{ matrix.branch }})
-    needs: prepare-nightly-branches
+    needs: [prepare-nightly-branches, runner-disk-prep]
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
     container:
       image: ubuntu:22.04
@@ -203,6 +230,7 @@ jobs:
             apt-utils \
             python3 \
             python3-pip
+          rm -rf /var/lib/apt/lists/*
 
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -312,6 +340,12 @@ jobs:
           chmod +x build_packages_local.sh
           # Container runs as root; ROCM_SDK_* come from "Configure ROCm SDK channel" via GITHUB_ENV.
           ./build_packages_local.sh
+
+      - name: Remove ROCm SDK tree after build
+        if: always()
+        run: |
+          rm -rf "$HOME/rocm-sdk" 2>/dev/null || true
+          df -h / || df -h
 
       - name: Verify DEB Package
         run: |
@@ -448,7 +482,7 @@ jobs:
 
   build-centos:
     name: Build CentOS/RHEL Packages (${{ matrix.branch }})
-    needs: prepare-nightly-branches
+    needs: [prepare-nightly-branches, runner-disk-prep]
     runs-on: ${{ vars.RUNNER_LABEL_CONTAINER || 'ubuntu-latest' }}
     container:
       image: quay.io/pypa/manylinux_2_28_x86_64
