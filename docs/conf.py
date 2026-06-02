@@ -31,11 +31,9 @@ html_title = left_nav_title
 extensions = ["rocm_docs"]
 html_theme = "rocm_docs_theme"
 html_theme_options = {
-    "announcement": f"This is ROCm 7.13 technology preview release documentation. For the latest production stream release, refer to <a id='rocm-banner' href='https://rocm.docs.amd.com/en/latest/'>ROCm documentation</a>.",
     "flavor": "generic",
     "header_title": f"ROCm Extras",
     "header_link": f"https://rocm.docs.amd.com/en/7.13.0-preview/components/extras.html",
-    "version_list_link": f"https://rocm.docs.amd.com/en/7.13.0-preview/release/versions.html",
     "nav_secondary_items": {
         "GitHub": "https://github.com/ROCm/ROCm",
         "Community": "https://github.com/ROCm/ROCm/discussions",
