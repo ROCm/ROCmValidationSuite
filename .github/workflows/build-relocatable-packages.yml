@@ -45,6 +45,9 @@ env:
   # RVS_AUTO_DETECT_LOCAL_UPLOAD to "1" to probe localhost:8080 when UPLOAD_TARGET is unset.
   # Leave the variable undefined for default (no probe; S3 uses workflow steps only).
   RVS_AUTO_DETECT_LOCAL_UPLOAD: ${{ vars.RVS_AUTO_DETECT_LOCAL_UPLOAD }}
+  # Optional local package server upload (Step 6 of build_packages_local.sh).
+  # Disabled by default. To enable, set repo Actions variable
+  # LOCAL_PACKAGE_SERVER_URL to a reachable HTTP server that accepts PUT.
 
 jobs:
   prepare-nightly-branches:
@@ -174,6 +177,8 @@ jobs:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
     container:
       image: ubuntu:22.04
+      # Allow the build container to reach the runner host via host.docker.internal.
+      options: --add-host=host.docker.internal:host-gateway
     strategy:
       fail-fast: false
       matrix:
@@ -307,11 +312,36 @@ jobs:
             echo "ROCm SDK channel: nightly (fallback)"
           fi
 
+      # Forward LOCAL_PACKAGE_SERVER_URL to the build script as UPLOAD_TARGET.
+      - name: Configure local package upload
+        if: vars.LOCAL_PACKAGE_SERVER_URL != ''
+        run: |
+          echo "UPLOAD_TARGET=${{ vars.LOCAL_PACKAGE_SERVER_URL }}" >> "$GITHUB_ENV"
+
       - name: Build and Package RVS
         run: |
           chmod +x build_packages_local.sh
           # Container runs as root; ROCM_SDK_* come from "Configure ROCm SDK channel" via GITHUB_ENV.
           ./build_packages_local.sh
+
+      # Print the resulting download URL in the step log and run Summary.
+      - name: Print local package download URL
+        if: vars.LOCAL_PACKAGE_SERVER_URL != ''
+        run: |
+          REPO="${GITHUB_REPOSITORY##*/}"
+          BRANCH="${GITHUB_REF_NAME}"
+          SAFE_BRANCH=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9._-]|-|g')
+          DATE=$(date +%Y-%m-%d)
+          URL="${{ vars.LOCAL_PACKAGE_SERVER_URL }}/${REPO}/${SAFE_BRANCH}/${DATE}/"
+          echo "================================================================"
+          echo "  Package downloads for this build (Ubuntu)"
+          echo "  $URL"
+          echo "================================================================"
+          {
+            echo "## Package Downloads (Ubuntu)"
+            echo ""
+            echo "[$URL]($URL)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify DEB Package
         run: |
@@ -452,6 +482,8 @@ jobs:
     runs-on: ${{ vars.RUNNER_LABEL_CONTAINER || 'ubuntu-latest' }}
     container:
       image: quay.io/pypa/manylinux_2_28_x86_64
+      # Allow the build container to reach the runner host via host.docker.internal.
+      options: --add-host=host.docker.internal:host-gateway
     strategy:
       fail-fast: false
       matrix:
@@ -566,10 +598,33 @@ jobs:
             echo "ROCm SDK channel: nightly (fallback)"
           fi
 
+      - name: Configure local package upload
+        if: vars.LOCAL_PACKAGE_SERVER_URL != ''
+        run: |
+          echo "UPLOAD_TARGET=${{ vars.LOCAL_PACKAGE_SERVER_URL }}" >> "$GITHUB_ENV"
+
       - name: Build and Package RVS
         run: |
           chmod +x build_packages_local.sh
           ./build_packages_local.sh
+
+      - name: Print local package download URL
+        if: vars.LOCAL_PACKAGE_SERVER_URL != ''
+        run: |
+          REPO="${GITHUB_REPOSITORY##*/}"
+          BRANCH="${GITHUB_REF_NAME}"
+          SAFE_BRANCH=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9._-]|-|g')
+          DATE=$(date +%Y-%m-%d)
+          URL="${{ vars.LOCAL_PACKAGE_SERVER_URL }}/${REPO}/${SAFE_BRANCH}/${DATE}/"
+          echo "================================================================"
+          echo "  Package downloads for this build (CentOS/RHEL)"
+          echo "  $URL"
+          echo "================================================================"
+          {
+            echo "## Package Downloads (CentOS/RHEL)"
+            echo ""
+            echo "[$URL]($URL)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify RPM Package
         run: |
