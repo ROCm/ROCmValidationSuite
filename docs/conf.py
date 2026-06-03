@@ -23,7 +23,7 @@ exclude_patterns = [
 # for PDF output on Read the Docs
 project = "RVS Documentation"
 author = "Advanced Micro Devices, Inc."
-copyright = "Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved."
+copyright = "Copyright (c) 2023-2026 Advanced Micro Devices, Inc. All rights reserved."
 version = version_number
 release = version_number
 
@@ -35,11 +35,11 @@ html_theme_options = {
     "header_title": f"ROCm Extras",
     "header_link": f"https://rocm.docs.amd.com/en/7.13.0-preview/components/extras.html",
     "nav_secondary_items": {
-        "GitHub": "https://github.com/ROCm/ROCm",
+        "GitHub": "https://github.com/ROCm/ROCmValidationSuite",
         "Community": "https://github.com/ROCm/ROCm/discussions",
         "Blogs": "https://rocm.blogs.amd.com/",
         "System and Infra Docs": "https://instinct.docs.amd.com/",
-        "Support": "https://github.com/ROCm/ROCm/issues/new/choose",
+        "Support": "https://github.com/ROCm/ROCmValidationSuite/issues/new/choose",
     },
     "link_main_doc": False,
 }
