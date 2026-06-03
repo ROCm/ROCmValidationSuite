@@ -233,6 +233,7 @@ void MemWorker::run() {
                            std::to_string(tot_num_blocks); 
 
             rvs::lp::Log(msg, rvs::logtrace);
+            free_small_mem();
             return; 
 
         }
@@ -279,6 +280,14 @@ void MemWorker::run() {
     rvs::lp::Log(msg, rvs::logtrace);
 
     run_tests(ptr, tot_num_blocks);
+
+    if (useMappedMemory) {
+        hipHostFree(mappedHostPtr);
+        mappedHostPtr = nullptr;
+    } else {
+        hipFree(ptr);
+        ptr = nullptr;
+    }
 
     free_small_mem();
 }

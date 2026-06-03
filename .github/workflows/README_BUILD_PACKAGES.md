@@ -16,9 +16,22 @@ All packages are built with relocatable RPATH settings, meaning they can be inst
 The workflow runs automatically on:
 - Push to `master`, `main`, or `release/**` branches
 - Pull requests to `master` or `main` branches
-- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); **latest ROCm nightly** from [ROCm SDK nightly tarballs](https://rocm.nightlies.amd.com/tarball-multi-arch/) (or repo variable overrides).
-- **Pull requests** and **pushes** to `master`, `main`, or `release/**` (including merges): **latest ROCm release** (**X.Y.Z**) from [repo.amd.com ROCm tarballs](https://repo.amd.com/rocm/tarball/).
+- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); **latest ROCm nightly** from [ROCm SDK nightly tarballs](https://rocm.nightlies.amd.com/tarball-multi-arch/) (or repo variable overrides). The cron fans out to the **default branch** plus every branch matched by the repository variable **`ACTIVE_BRANCHES`** (comma-separated literals/globs, e.g. `npi/**,release/**` — do not list the default branch there).
 - **Manual** (`workflow_dispatch`): if **`ROCM_VERSION`** is pinned (**workflow input** and/or **`vars.ROCM_VERSION`**), the tarball is chosen by **version format** (nightly `x.y.za…` vs release `X.Y.Z`). If no version is pinned, the job uses **latest nightly** (same as schedule).
+
+### Scheduled multi-branch nightly (`ACTIVE_BRANCHES`)
+
+| Branch source | Built on schedule? | S3 upload on schedule? | S3 path (under bucket) |
+|---------------|-------------------|------------------------|-------------------------|
+| **Default branch** (`master` / `main`) | Always | Yes | Unchanged: `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` (+ APT/YUM metadata) |
+| **`ACTIVE_BRANCHES`** matches (non-default) | Yes | Yes (except `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` |
+| **`release*`** matches from `ACTIVE_BRANCHES` | Yes | **No** | Packages are built and verified only |
+
+- **`branch_prefix`**: first path segment of the branch name (`npi` for `npi/foo`; for a branch with no `/`, the full branch name).
+- **`push` / `pull_request` / `workflow_dispatch`**: single-branch matrix; S3 routing is unchanged from the table below.
+- Set **`ACTIVE_BRANCHES`** under **Settings → Secrets and variables → Actions → Variables** (example: `npi/**,release/**`).
+
+- **Pull requests** and **pushes** to `master`, `main`, or `release/**` (including merges): **latest ROCm release** (**X.Y.Z**) from [repo.amd.com ROCm tarballs](https://repo.amd.com/rocm/tarball/).
 
 ### ROCm SDK: nightly vs release in CI
 
@@ -146,6 +159,7 @@ The workflow uses GitHub repository variables to control which runners execute e
 
 | Variable | Default | Used by |
 |----------|---------|---------|
+| `ACTIVE_BRANCHES` | _(unset)_ | **Scheduled** nightly only: comma-separated branch literals/globs (`npi/**`, `release/**`). Default branch is always built; do not list it here. `release*` matches build but do not upload on schedule. |
 | `RUNNER_LABEL` | `ubuntu-22.04` | Ubuntu build job |
 | `RUNNER_LABEL_CONTAINER` | `ubuntu-latest` | CentOS/manylinux build job (container) |
 | `RUNNER_LABEL_UTILITY` | `ubuntu-latest` | Release summary job |
@@ -169,7 +183,10 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
 | Trigger | Path | Contents |
 |--------|------|----------|
 | **`release/*` branch** (`push` or `workflow_dispatch`) | `release/rvs/deb/`, `release/rvs/rpm/`, `release/rvs/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). Only PR merges into release branches or manual dispatch on release branches write here. |
-| **Scheduled**, **push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same split by type. All non-release builds go to nightly. |
+| **Scheduled** (default branch only) | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same as before; APT/YUM metadata generated here. |
+| **Scheduled** (`ACTIVE_BRANCHES`, non-default, not `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` | No shared `rvs/` segment; no repo metadata on these paths. |
+| **Scheduled** (`release*` from `ACTIVE_BRANCHES`) | _(none)_ | Build only; upload skipped. |
+| **Push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same split by type. |
 | **Pull request** (same-repo) | `rvs/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). One-off path, no repo metadata generated. |
 
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
