@@ -1,51 +1,23 @@
 name: RVS Nightly Tests
 
 # Picks up the latest RVS tarball published at the index URL configured in
-# vars.RVS_TARBALL_INDEX_URL once per day, copies it to a configurable target
-# node, installs it there, runs RVS level 4 on that node, and uploads a
-# Markdown report + per-level log as an artifact from the GitHub runner.
+# vars.RVS_TARBALL_INDEX_URL, copies it to a configurable target node, installs
+# it there, runs RVS level 4 on that node, and uploads a Markdown report + logs.
 #
-# The GitHub Actions runner ("RVS Runner") only orchestrates. All RVS install,
-# binary verification, and rvs -r 4 execution happens on the target node
-# reached over SSH. The target node is configurable so the same workflow can be
-# pointed at any GPU host without code changes.
+# Orchestration lives in this workflow; install/test/report steps run via
+# rvs_nightly_test.sh (same pattern as build-relocatable-packages.yml +
+# build_packages_local.sh).
 #
-# Required repo configuration
-# ---------------------------
-# Variables (Settings → Secrets and variables → Actions → Variables):
-#   RVS_TARBALL_INDEX_URL  HTTP listing the published amdrocm*-rvs-*.tar.gz files.
-#   RVS_REMOTE_WORK_DIR    (Optional) Working dir on the target node.
-#                          Default: /tmp/rvs-nightly-<run_id>.
-#   RVS_TARGET_ROCM_PATH   Default absolute path to the ROCm tarball install
-#                          root on the target node. Can be overridden per-run
-#                          via workflow_dispatch input target_rocm_path.
-#   RVS_TEST_RUNNER_LABEL  (Optional) Label of the GitHub runner. Default: self-hosted.
-#
-# Secrets (Settings → Secrets and variables → Actions → Secrets):
-#   RVS_TARGET_NODE        Default hostname/IP of the node that runs RVS. Stored
-#                          as a secret to avoid leaking the lab node identity in
-#                          repo settings / run logs (only the workflow accesses
-#                          it). Can be overridden per-run via workflow_dispatch
-#                          input target_node.
-#   RVS_TARGET_USER        (Optional) SSH user on the target node. Stored as a
-#                          secret so the lab account name isn't visible in repo
-#                          settings or run logs. Can be overridden per-run via
-#                          workflow_dispatch input target_user.
-#   RVS_TARGET_SSH_KEY     Private SSH key (in PEM/OpenSSH format) authorized on
-#                          the target node for RVS_TARGET_USER. The user on the
-#                          target node must have NOPASSWD sudo for installs into
-#                          /opt/rocm/extras-<major>.
+# Required repo configuration: see README_NIGHTLY_TESTS.md
 
 # Triggers
 # --------
 # - schedule: daily poll of vars.RVS_TARBALL_INDEX_URL
 # - workflow_dispatch: manual run with optional overrides
 # - workflow_run: after Build Relocatable Packages completes successfully
-#   (no changes required in build-relocatable-packages.yml)
 
 on:
   schedule:
-    # 15:00 UTC daily (08:00 PST / 07:00 PDT). Adjust to match your build cadence.
     - cron: '0 15 * * *'
   workflow_run:
     workflows: ["Build Relocatable Packages"]
@@ -70,7 +42,7 @@ on:
         required: false
         default: ''
       target_rocm_path:
-        description: 'ROCm tarball install root on the target node to run RVS against (default: vars.RVS_TARGET_ROCM_PATH)'
+        description: 'ROCm tarball install root on the target node (default: vars.RVS_TARGET_ROCM_PATH)'
         required: false
         default: ''
 
@@ -82,16 +54,13 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Required: configure per-repo under
-  # Settings → Secrets and variables → Actions → Variables.
-  # Workflow fails fast if unset.
   TARBALL_INDEX_URL: ${{ vars.RVS_TARBALL_INDEX_URL }}
 
 jobs:
-  detect:
+  detect-tarball:
     name: Detect latest RVS tarball
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
     outputs:
       tarball_url:  ${{ steps.resolve.outputs.tarball_url }}
       tarball_name: ${{ steps.resolve.outputs.tarball_name }}
@@ -115,7 +84,7 @@ jobs:
           set -euo pipefail
 
           if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL:-}" ]; then
-            echo "::error::vars.RVS_TARBALL_INDEX_URL is not set (Settings → Secrets and variables → Actions → Variables); set it or pass workflow_dispatch.tarball_url"
+            echo "::error::vars.RVS_TARBALL_INDEX_URL is not set; set it or pass workflow_dispatch.tarball_url"
             exit 1
           fi
 
@@ -123,8 +92,6 @@ jobs:
             local idx="$1"
             local html
             html="$(curl -sL --max-time 30 "$idx" || true)"
-            # Match any amdrocm*-rvs-*-Linux.tar.gz filename in the listing HTML.
-            # `sort -V` picks the highest version (handles 1.4.21-9 vs 1.4.21-100 correctly).
             echo "$html" \
               | grep -oE 'amdrocm[0-9]*-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' \
               | sort -uV \
@@ -170,378 +137,180 @@ jobs:
           path: last_tarball_marker.txt
           key: rvs-nightly-tarball-${{ steps.resolve.outputs.tarball_name }}
 
-  test:
-    name: Install RVS and run level 4 (on remote target node)
-    needs: detect
-    runs-on: ${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
-    timeout-minutes: 180
-    env:
-      TARBALL_URL:  ${{ needs.detect.outputs.tarball_url }}
-      TARBALL_NAME: ${{ needs.detect.outputs.tarball_name }}
-      # Target node where install + tests actually run. Inputs win over repo vars
-      # so individual runs can be retargeted via workflow_dispatch.
-      TARGET_NODE:  ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
-      TARGET_USER:  ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
-      # ROCm tarball install root on the target node that RVS should run
-      # against. This is the directory containing bin/, lib/, lib/llvm/lib/,
-      # lib/rocm_sysdeps/lib/, etc. (as produced by the ROCm tarball install
-      # method). Set vars.RVS_TARGET_ROCM_PATH to the absolute path of that
-      # install on the target node, or pass target_rocm_path per-run. No
-      # default — the validate step fails fast if neither is set, since
-      # there is no sensible system-wide default for tarball installs.
-      TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
-      # SSH_KEY_FILE / SSH_CONFIG_FILE are derived from $RUNNER_TEMP in the
-      # validate step and exported via $GITHUB_ENV so every subsequent step
-      # inherits them. We can't reference runner.temp here because the
-      # `runner.*` context is only available inside steps, not in job-level env.
+  prepare-test-context:
+    name: Prepare test run context
+    needs: detect-tarball
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    outputs:
+      remote_work_dir:  ${{ steps.prepare.outputs.remote_work_dir }}
+      rocm_major:       ${{ steps.prepare.outputs.rocm_major }}
+      install_dir:      ${{ steps.prepare.outputs.install_dir }}
+      rvs_bin:          ${{ steps.prepare.outputs.rvs_bin }}
+      ssh_key_file:     ${{ steps.prepare.outputs.ssh_key_file }}
+      ssh_config_file:  ${{ steps.prepare.outputs.ssh_config_file }}
     steps:
-      - name: Validate target node configuration
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate configuration and derive paths
+        id: prepare
         env:
+          TARBALL_NAME: ${{ needs.detect-tarball.outputs.tarball_name }}
+          TARGET_NODE:  ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
+          TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
           INPUT_REMOTE_WORK_DIR: ${{ inputs.remote_work_dir }}
           VAR_REMOTE_WORK_DIR:   ${{ vars.RVS_REMOTE_WORK_DIR }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
-          set -euo pipefail
+          chmod +x rvs_nightly_test.sh
+          ./rvs_nightly_test.sh validate-config
 
-          if [ -z "${TARGET_NODE:-}" ]; then
-            echo "::error::No target node configured. Set workflow_dispatch input 'target_node' or repo secret 'RVS_TARGET_NODE'."
-            exit 1
-          fi
+  install-rvs-on-target:
+    name: Install RVS on target node
+    needs: [detect-tarball, prepare-test-context]
+    runs-on: ${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 120
+    env:
+      TARBALL_URL:      ${{ needs.detect-tarball.outputs.tarball_url }}
+      TARBALL_NAME:     ${{ needs.detect-tarball.outputs.tarball_name }}
+      TARGET_NODE:      ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
+      TARGET_USER:      ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
+      TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
+      REMOTE_WORK_DIR:  ${{ needs.prepare-test-context.outputs.remote_work_dir }}
+      ROCM_MAJOR:       ${{ needs.prepare-test-context.outputs.rocm_major }}
+      INSTALL_DIR:      ${{ needs.prepare-test-context.outputs.install_dir }}
+      RVS_BIN:          ${{ needs.prepare-test-context.outputs.rvs_bin }}
+      SSH_KEY_FILE:     ${{ needs.prepare-test-context.outputs.ssh_key_file }}
+      SSH_CONFIG_FILE:  ${{ needs.prepare-test-context.outputs.ssh_config_file }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-          if [ -z "${TARGET_ROCM_PATH:-}" ]; then
-            echo "::error::No ROCm tarball install root configured. Set workflow_dispatch input 'target_rocm_path' or repo variable 'RVS_TARGET_ROCM_PATH' to the absolute path of the ROCm tarball install on the target node."
-            exit 1
-          fi
-
-          if   [ -n "${INPUT_REMOTE_WORK_DIR:-}" ]; then REMOTE_WORK_DIR="$INPUT_REMOTE_WORK_DIR"
-          elif [ -n "${VAR_REMOTE_WORK_DIR:-}"   ]; then REMOTE_WORK_DIR="$VAR_REMOTE_WORK_DIR"
-          else REMOTE_WORK_DIR="/tmp/rvs-nightly-${{ github.run_id }}"
-          fi
-
-          # Derive ROCm major (and therefore the install dir / RVS binary path) up
-          # front so every remote step can refer to it without re-parsing.
-          if [[ "$TARBALL_NAME" =~ ^amdrocm([0-9]+)- ]]; then
-            ROCM_MAJOR="${BASH_REMATCH[1]}"
-          else
-            echo "::error::Cannot parse ROCm major version from tarball name: $TARBALL_NAME"
-            exit 1
-          fi
-          # RVS is always installed into /opt/rocm/extras-<major>/ — this is
-          # decoupled from TARGET_ROCM_PATH. INSTALL_DIR is *where the RVS
-          # tarball gets extracted*; TARGET_ROCM_PATH is *where the ROCm
-          # runtime libraries live* (for LD_LIBRARY_PATH). The two concepts
-          # are intentionally separate so the install location matches the
-          # manual sequence (sudo tar -xzf ... -C /opt/rocm/extras-<major>)
-          # while the runtime lib path can be retargeted at any ROCm install
-          # on the host (e.g. a TheRock tarball under $HOME) via the repo
-          # variable RVS_TARGET_ROCM_PATH.
-          INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
-          RVS_BIN_PATH="${INSTALL_DIR}/bin/rvs"
-
-          # Workflow-scoped SSH state under $RUNNER_TEMP so we never touch the
-          # runner user's own ~/.ssh on a shared self-hosted runner. $RUNNER_TEMP
-          # is set automatically by the runner; fall back to /tmp if absent.
-          SSH_BASE="${RUNNER_TEMP:-/tmp}"
-          SSH_KEY_FILE_PATH="${SSH_BASE}/rvs_target_key"
-          SSH_CONFIG_FILE_PATH="${SSH_BASE}/rvs_target_ssh_config"
-
-          {
-            echo "REMOTE_WORK_DIR=$REMOTE_WORK_DIR"
-            echo "ROCM_MAJOR=$ROCM_MAJOR"
-            echo "INSTALL_DIR=$INSTALL_DIR"
-            echo "RVS_BIN=$RVS_BIN_PATH"
-            echo "SSH_KEY_FILE=$SSH_KEY_FILE_PATH"
-            echo "SSH_CONFIG_FILE=$SSH_CONFIG_FILE_PATH"
-          } >> "$GITHUB_ENV"
-
-          echo "Orchestrator runner : $(hostname)"
-          echo "Target node         : $TARGET_USER@$TARGET_NODE"
-          echo "Target ROCm path    : $TARGET_ROCM_PATH"
-          echo "Remote work dir     : $REMOTE_WORK_DIR"
-          echo "ROCm major          : $ROCM_MAJOR"
-          echo "Expected RVS binary : $RVS_BIN_PATH"
-          echo "SSH key file        : $SSH_KEY_FILE_PATH"
-          echo "SSH config file     : $SSH_CONFIG_FILE_PATH"
-
-      - name: Setup SSH key for target node
+      - name: Setup SSH for target node
         env:
           SSH_PRIVATE_KEY: ${{ secrets.RVS_TARGET_SSH_KEY }}
         run: |
-          set -euo pipefail
-          if [ -z "${SSH_PRIVATE_KEY:-}" ]; then
-            echo "::error::secrets.RVS_TARGET_SSH_KEY is not set; cannot SSH to target node."
-            exit 1
-          fi
-
-          # Write key + config to workflow-scoped paths under runner.temp so we
-          # never modify the runner user's own ~/.ssh on a shared self-hosted runner.
-          install -m 600 /dev/null "$SSH_KEY_FILE"
-          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY_FILE"
-          chmod 600 "$SSH_KEY_FILE"
-
-          # known_hosts is local to this workflow run too.
-          KNOWN_HOSTS_FILE="${SSH_CONFIG_FILE}.known_hosts"
-          : > "$KNOWN_HOSTS_FILE"
-          chmod 600 "$KNOWN_HOSTS_FILE"
-          # Best-effort host key seeding; StrictHostKeyChecking=accept-new below
-          # still handles the case where keyscan fails (e.g. behind a bastion).
-          ssh-keyscan -T 15 -H "$TARGET_NODE" >> "$KNOWN_HOSTS_FILE" 2>/dev/null || true
-
-          cat > "$SSH_CONFIG_FILE" <<EOF
-          Host rvs-target
-            HostName $TARGET_NODE
-            User $TARGET_USER
-            IdentityFile $SSH_KEY_FILE
-            IdentitiesOnly yes
-            BatchMode yes
-            LogLevel ERROR
-            StrictHostKeyChecking accept-new
-            UserKnownHostsFile $KNOWN_HOSTS_FILE
-            ServerAliveInterval 30
-            ServerAliveCountMax 10
-          EOF
-          chmod 600 "$SSH_CONFIG_FILE"
-
-          echo "Verifying SSH connectivity to $TARGET_USER@$TARGET_NODE..."
-          ssh -q -F "$SSH_CONFIG_FILE" rvs-target 'echo __START__; hostname; id; uptime' \
-            2>&1 | sed -n '/^__START__$/,$p' | tail -n +2
-
-          ssh -q -F "$SSH_CONFIG_FILE" rvs-target "mkdir -p '$REMOTE_WORK_DIR/pkg' '$REMOTE_WORK_DIR/reports'"
+          chmod +x rvs_nightly_test.sh
+          ./rvs_nightly_test.sh setup-ssh
 
       - name: Verify ROCm prerequisites on target node
-        run: |
-          set -euo pipefail
-          ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-            "TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
-          set -euo pipefail
-
-          echo "=== System ==="
-          uname -a
-          echo
-
-          echo "=== Target ROCm path: ${TARGET_ROCM_PATH} ==="
-          if [ ! -d "${TARGET_ROCM_PATH}" ]; then
-            echo "::error::${TARGET_ROCM_PATH} does not exist on the target node."
-            exit 1
-          fi
-
-          # The TheRock tarball's bin/ binaries have RPATH/RUNPATH baked in
-          # relative to ${TARGET_ROCM_PATH}/lib, so we can invoke them
-          # directly via their absolute path without any PATH or
-          # LD_LIBRARY_PATH setup.
-
-          echo "=== ${TARGET_ROCM_PATH}/bin/rocminfo ==="
-          "${TARGET_ROCM_PATH}/bin/rocminfo"
-          echo
-
-          echo "=== ${TARGET_ROCM_PATH}/bin/amd-smi version ==="
-          "${TARGET_ROCM_PATH}/bin/amd-smi" version
-          echo
-
-          echo "::notice::ROCm prerequisites OK on target node at ${TARGET_ROCM_PATH}"
-          REMOTE
+        run: ./rvs_nightly_test.sh verify-rocm
 
       - name: Download tarball on runner
-        run: |
-          set -euo pipefail
-          mkdir -p ./pkg
-          echo "Downloading: $TARBALL_URL"
-          curl -fL --max-time 600 -o "./pkg/${TARBALL_NAME}" "${TARBALL_URL}"
-          ls -la ./pkg/
-          file "./pkg/${TARBALL_NAME}" || true
+        run: ./rvs_nightly_test.sh download-tarball
 
       - name: Copy tarball to target node
-        run: |
-          set -euo pipefail
-          echo "Copying ./pkg/${TARBALL_NAME} -> rvs-target:${REMOTE_WORK_DIR}/pkg/"
-          scp -q -F "$SSH_CONFIG_FILE" "./pkg/${TARBALL_NAME}" "rvs-target:${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
-          ssh -q -F "$SSH_CONFIG_FILE" rvs-target "ls -la '${REMOTE_WORK_DIR}/pkg/'"
+        run: ./rvs_nightly_test.sh copy-to-target
 
       - name: Install RVS on target node
-        run: |
-          set -euo pipefail
-          ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-            "TARBALL_NAME='$TARBALL_NAME' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' ROCM_MAJOR='$ROCM_MAJOR' INSTALL_DIR='$INSTALL_DIR' RVS_BIN='$RVS_BIN' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
-          set -euo pipefail
-          PKG="${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
-
-          echo "Target ROCm path            : ${TARGET_ROCM_PATH}"
-          echo "Detected ROCm major version : ${ROCM_MAJOR}"
-          echo "Install target              : ${INSTALL_DIR}"
-          echo "Expected RVS binary         : ${RVS_BIN}"
-
-          if [ ! -f "$PKG" ]; then
-            echo "::error::Tarball not found on target node at $PKG"
-            exit 1
-          fi
-
-          # Use sudo only when needed. For system ROCm installs under /opt/rocm
-          # we need root to write into /opt; for TheRock-style tarball installs
-          # in the user's home dir, sudo is unnecessary (and would fail if the
-          # user doesn't have NOPASSWD configured).
-          probe="$INSTALL_DIR"
-          while [ ! -d "$probe" ] && [ "$probe" != "/" ]; do probe=$(dirname "$probe"); done
-          if [ -w "$probe" ]; then
-            echo "Installing into $INSTALL_DIR without sudo (writable path)"
-            mkdir -p "$INSTALL_DIR"
-            tar -xzf "$PKG" -C "$INSTALL_DIR"
-          else
-            echo "Installing into $INSTALL_DIR via sudo -n (path not user-writable)"
-            sudo -n mkdir -p "$INSTALL_DIR"
-            sudo -n tar -xzf "$PKG" -C "$INSTALL_DIR"
-          fi
-
-          if [ ! -x "$RVS_BIN" ]; then
-            echo "::error::rvs binary not found or not executable at $RVS_BIN after install"
-            ls -la "$INSTALL_DIR/" || true
-            ls -la "$INSTALL_DIR/bin/" || true
-            exit 1
-          fi
-
-          # LD_LIBRARY_PATH is now derived from INSTALL_DIR (where RVS's own
-          # libs live) and TARGET_ROCM_PATH (where the ROCm runtime libs live).
-          # Order matches the official ROCm tarball-install docs:
-          #   $ROCM_PATH/lib/rocm_sysdeps/lib  ← TheRock-style runtime deps
-          #   $ROCM_PATH/lib/llvm/lib          ← libomp.so and friends
-          #   $ROCM_PATH/lib                   ← core ROCm libs (libamd_smi,
-          #                                      libhsa-runtime64, libamdhip64, …)
-          # Plus $INSTALL_DIR/lib first so librvslib.so resolves.
-          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
-          echo "Installed RVS at: $RVS_BIN"
-          "$RVS_BIN" --version || true
-          REMOTE
+        run: ./rvs_nightly_test.sh install-rvs
 
       - name: Verify RVS binary library resolution on target node
-        run: |
-          set -euo pipefail
-          ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-            "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
-          set -euo pipefail
-          if [ ! -x "$RVS_BIN" ]; then
-            echo "::error::$RVS_BIN was not produced by tarball extraction on target."
-            exit 1
-          fi
-          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
-          echo "=== ldd $RVS_BIN ==="
-          LDD_OUTPUT=$(ldd "$RVS_BIN" 2>&1 || true)
-          echo "$LDD_OUTPUT"
+        run: ./rvs_nightly_test.sh verify-rvs-binary
 
-          if echo "$LDD_OUTPUT" | grep -q "not found"; then
-            echo "::error::RVS binary has unresolved library dependencies on target (see above)."
-            exit 1
-          fi
-          echo "::notice::RVS binary's library dependencies resolved OK on target."
-          REMOTE
+      - name: Cleanup local SSH state
+        if: always()
+        run: ./rvs_nightly_test.sh cleanup-local-ssh
+
+  run-rvs-level-4:
+    name: Run RVS level 4 on target node
+    needs: [detect-tarball, prepare-test-context, install-rvs-on-target]
+    runs-on: ${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 180
+    outputs:
+      rc:                   ${{ steps.level4.outputs.rc }}
+      start:                ${{ steps.level4.outputs.start }}
+      end:                  ${{ steps.level4.outputs.end }}
+      rvs_version:          ${{ steps.versions.outputs.rvs_version }}
+      target_rocm_version:  ${{ steps.versions.outputs.target_rocm_version }}
+    env:
+      TARBALL_URL:      ${{ needs.detect-tarball.outputs.tarball_url }}
+      TARBALL_NAME:     ${{ needs.detect-tarball.outputs.tarball_name }}
+      TARGET_NODE:      ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
+      TARGET_USER:      ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
+      TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
+      REMOTE_WORK_DIR:  ${{ needs.prepare-test-context.outputs.remote_work_dir }}
+      ROCM_MAJOR:       ${{ needs.prepare-test-context.outputs.rocm_major }}
+      INSTALL_DIR:      ${{ needs.prepare-test-context.outputs.install_dir }}
+      RVS_BIN:          ${{ needs.prepare-test-context.outputs.rvs_bin }}
+      SSH_KEY_FILE:     ${{ needs.prepare-test-context.outputs.ssh_key_file }}
+      SSH_CONFIG_FILE:  ${{ needs.prepare-test-context.outputs.ssh_config_file }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH for target node
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.RVS_TARGET_SSH_KEY }}
+        run: |
+          chmod +x rvs_nightly_test.sh
+          ./rvs_nightly_test.sh setup-ssh
 
       - name: Run RVS level 4 on target node
-        id: rvs4
-        run: |
-          set +e
-          START=$(date -u +%FT%TZ)
-          echo "::group::RVS level 4 (${RVS_BIN} -r 4) on $TARGET_NODE against $TARGET_ROCM_PATH"
-          ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-            "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
-          set +e
-          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
-          mkdir -p "${REMOTE_WORK_DIR}/reports"
-          "$RVS_BIN" -r 4 2>&1 | tee "${REMOTE_WORK_DIR}/reports/rvs_level_4.log"
-          RC=${PIPESTATUS[0]}
-          echo "remote_rc=$RC"
-          exit $RC
-          REMOTE
-          RC=$?
-          echo "::endgroup::"
-          END=$(date -u +%FT%TZ)
-          echo "rc=$RC"       >> "$GITHUB_OUTPUT"
-          echo "start=$START" >> "$GITHUB_OUTPUT"
-          echo "end=$END"     >> "$GITHUB_OUTPUT"
-          exit 0
+        id: level4
+        run: ./rvs_nightly_test.sh run-level4
 
       - name: Collect logs from target node
         if: always()
+        run: ./rvs_nightly_test.sh collect-logs
+
+      - name: Capture RVS and ROCm versions from target
+        id: versions
+        if: always()
+        run: ./rvs_nightly_test.sh capture-versions
+
+      - name: Upload test logs (intermediate)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-nightly-logs-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Cleanup remote work dir and local SSH state
+        if: always()
         run: |
-          set -euo pipefail
-          mkdir -p ./reports
-          if [ ! -f "$SSH_CONFIG_FILE" ]; then
-            echo "::warning::SSH config not present; skipping log collection."
-            exit 0
-          fi
-          echo "Copying logs from rvs-target:${REMOTE_WORK_DIR}/reports/ -> ./reports/"
-          scp -q -F "$SSH_CONFIG_FILE" "rvs-target:${REMOTE_WORK_DIR}/reports/*.log" ./reports/ || \
-            echo "::warning::No log files retrieved from target node (tests may have failed before producing output)."
-          ls -la ./reports/ || true
+          ./rvs_nightly_test.sh cleanup-remote
+          ./rvs_nightly_test.sh cleanup-local-ssh
+
+  create-test-report:
+    name: Create Test Report
+    needs: [detect-tarball, prepare-test-context, run-rvs-level-4]
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    if: always() && !cancelled() && needs.detect-tarball.result == 'success' && needs.run-rvs-level-4.result != 'skipped'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download test logs
+        uses: actions/download-artifact@v4
+        with:
+          name: rvs-nightly-logs-${{ github.run_id }}
+          path: ./reports
+        continue-on-error: true
 
       - name: Build test report
         id: report
+        env:
+          TARBALL_URL:          ${{ needs.detect-tarball.outputs.tarball_url }}
+          TARBALL_NAME:         ${{ needs.detect-tarball.outputs.tarball_name }}
+          TARGET_ROCM_PATH:     ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
+          REMOTE_WORK_DIR:      ${{ needs.prepare-test-context.outputs.remote_work_dir }}
+          RVS_BIN:              ${{ needs.prepare-test-context.outputs.rvs_bin }}
+          RVS_LEVEL4_RC:        ${{ needs.run-rvs-level-4.outputs.rc }}
+          RVS_LEVEL4_START:     ${{ needs.run-rvs-level-4.outputs.start }}
+          RVS_LEVEL4_END:       ${{ needs.run-rvs-level-4.outputs.end }}
+          RVS_VERSION:          ${{ needs.run-rvs-level-4.outputs.rvs_version }}
+          TARGET_ROCM_VERSION:  ${{ needs.run-rvs-level-4.outputs.target_rocm_version }}
+          GITHUB_RUN_ID:        ${{ github.run_id }}
+          GITHUB_SERVER_URL:    ${{ github.server_url }}
+          GITHUB_REPOSITORY:    ${{ github.repository }}
+          GITHUB_EVENT_NAME:    ${{ github.event_name }}
         run: |
-          set -euo pipefail
+          chmod +x rvs_nightly_test.sh
           mkdir -p ./reports
-
-          RC4=${{ steps.rvs4.outputs.rc }}
-          [ "$RC4" -eq 0 ] && S4=PASS || S4=FAIL
-          if [ "$RC4" -eq 0 ]; then
-            OVERALL=PASS
-          else
-            OVERALL=FAIL
-          fi
-
-          # Query the actual version from the target so the report reflects the
-          # binary the tests ran against, not a stale local copy.
-          RVS_VERSION=$(
-            ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-              "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE' 2>/dev/null | head -1 || echo "unknown"
-          export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
-          "$RVS_BIN" --version 2>/dev/null
-          REMOTE
-          )
-
-          # Also fetch the target's actual ROCm version string so the report
-          # shows what RVS ran against, not just the path.
-          TARGET_ROCM_VERSION=$(
-            ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-              "TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE' 2>/dev/null || echo "unknown"
-          cat "${TARGET_ROCM_PATH}/.info/version" 2>/dev/null \
-            || cat "${TARGET_ROCM_PATH}/share/doc/rocm-core/version" 2>/dev/null \
-            || echo "unknown"
-          REMOTE
-          )
-
-          REPORT=./reports/SUMMARY.md
-          {
-            echo "# RVS Nightly Test Report"
-            echo ""
-            echo "| Field | Value |"
-            echo "|---|---|"
-            echo "| Run | [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"
-            echo "| Trigger | \`${{ github.event_name }}\` |"
-            echo "| Target ROCm path | \`${TARGET_ROCM_PATH}\` (version \`${TARGET_ROCM_VERSION}\`) |"
-            echo "| Remote work dir | \`${REMOTE_WORK_DIR}\` |"
-            echo "| Tarball | \`${TARBALL_NAME}\` |"
-            echo "| Source URL | ${TARBALL_URL} |"
-            echo "| RVS version | \`${RVS_VERSION}\` |"
-            echo "| Overall result | **${OVERALL}** |"
-            echo ""
-            echo "## Results"
-            echo ""
-            echo "| Test | Command | Result | Exit | Started (UTC) | Ended (UTC) |"
-            echo "|---|---|:--:|---:|---|---|"
-            echo "| Level 4 | \`${RVS_BIN} -r 4\` | ${S4} | ${RC4} | ${{ steps.rvs4.outputs.start }} | ${{ steps.rvs4.outputs.end }} |"
-            echo ""
-            echo "## Logs"
-            echo ""
-            echo "Full stdout/stderr from the level-4 run is attached to the artifact"
-            echo "\`rvs-nightly-report-${{ github.run_id }}\`:"
-            echo ""
-            echo "- \`rvs_level_4.log\`"
-            echo "- \`SUMMARY.md\` (this file)"
-          } > "$REPORT"
-
-          cat "$REPORT"
-          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
-
-          {
-            echo "overall=$OVERALL"
-            echo "rc4=$RC4"
-          } >> "$GITHUB_OUTPUT"
+          ./rvs_nightly_test.sh build-report
 
       - name: Upload report and logs
         if: always()
@@ -552,21 +321,8 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Cleanup remote work dir and local SSH state
-        if: always()
+      - name: Fail the workflow if level 4 failed
+        if: steps.report.outputs.overall == 'FAIL' || needs.run-rvs-level-4.result == 'failure'
         run: |
-          set +e
-          if [ -n "${REMOTE_WORK_DIR:-}" ] && [ -f "$SSH_CONFIG_FILE" ]; then
-            ssh -q -F "$SSH_CONFIG_FILE" rvs-target "rm -rf '${REMOTE_WORK_DIR}'" || \
-              echo "::warning::Failed to clean up ${REMOTE_WORK_DIR} on target node."
-          fi
-          # Scrub the private key + config from the runner so they cannot linger
-          # between jobs on a shared self-hosted runner. runner.temp is also
-          # cleaned automatically by the runner, this is just defense in depth.
-          rm -f "$SSH_KEY_FILE" "$SSH_CONFIG_FILE" "${SSH_CONFIG_FILE}.known_hosts"
-
-      - name: Fail the job if any level failed
-        if: steps.report.outputs.overall == 'FAIL'
-        run: |
-          echo "::error::RVS test failure — level4 rc=${{ steps.report.outputs.rc4 }}"
+          echo "::error::RVS test failure — level4 rc=${{ needs.run-rvs-level-4.outputs.rc }}"
           exit 1
