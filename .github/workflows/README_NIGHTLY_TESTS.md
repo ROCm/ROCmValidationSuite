@@ -15,36 +15,39 @@ at any GPU host without code changes.
 ## What it does
 
 ```
-schedule (or manual)
+schedule / workflow_run / manual
     │
     ▼
-detect      [ubuntu-latest]
-    │  curl $RVS_TARBALL_INDEX_URL
-    │  → grep amdrocm*-rvs-*-Linux.tar.gz, sort -V, pick newest
-    │  → compare with cached marker (notice only; tests always run)
+detect-tarball              [utility runner]
+    │  curl $RVS_TARBALL_INDEX_URL → pick newest amdrocm*-rvs-*.tar.gz
     ▼
-test        [GitHub runner = orchestrator]    ──ssh──▶  [target node = GPU host]
-    │  validate target_node / target_user                                         │
-    │  write SSH key + config to $RUNNER_TEMP                                     │
-    │  ssh rvs-target hostname; id                ─────────────────────────────▶  │ connectivity check
-    │  ssh rvs-target <prereq script>             ─────────────────────────────▶  │ rocminfo + amd-smi version on $TARGET_ROCM_PATH
-    │  curl <tarball URL>                         → ./pkg/<file>.tar.gz           │
-    │  scp ./pkg/<file>.tar.gz rvs-target:…       ─────────────────────────────▶  │ $REMOTE_WORK_DIR/pkg/
-    │  ssh rvs-target <install script>            ─────────────────────────────▶  │ sudo -n tar -xzf → /opt/rocm/extras-<N>/
-    │  ssh rvs-target <ldd script>                ─────────────────────────────▶  │ verify RVS lib resolution
-    │  ssh rvs-target rvs -r 4                    ─────────────────────────────▶  │ writes $REMOTE_WORK_DIR/reports/rvs_level_4.log
-    │  scp rvs-target:…/reports/*.log ./reports/  ◀─────────────────────────────  │
-    │  build Markdown SUMMARY.md                  → GitHub job summary + artifact │
-    │  ssh rvs-target rm -rf $REMOTE_WORK_DIR     ─────────────────────────────▶  │ cleanup
+prepare-test-context        [utility runner]
+    │  rvs_nightly_test.sh validate-config → paths + remote work dir
+    ▼
+install-rvs-on-target       [test runner]  ──ssh──▶  [target GPU node]
+    │  rvs_nightly_test.sh: setup-ssh, verify-rocm, download, copy,
+    │                         install-rvs, verify-rvs-binary
+    ▼
+run-rvs-level-4             [test runner]  ──ssh──▶  [target GPU node]
+    │  rvs_nightly_test.sh: run-level4, collect-logs, capture-versions
+    │  upload intermediate logs artifact; cleanup remote work dir
+    ▼
+create-test-report          [utility runner]
+    │  rvs_nightly_test.sh build-report → SUMMARY.md + final artifact
     ▼
 artifact: rvs-nightly-report-<run_id>
 ```
+
+Install, test, and report logic lives in [`rvs_nightly_test.sh`](../../rvs_nightly_test.sh)
+at the repo root — the same split as `build-relocatable-packages.yml` +
+`build_packages_local.sh`.
 
 ## Triggers
 
 | Trigger | Cadence | What fires |
 |---|---|---|
 | `schedule` | `0 15 * * *` UTC daily (08:00 PST / 07:00 PDT) | Polls the tarball index and always runs install + level 4, even when the latest tarball filename matches the previous run (a notice is logged when unchanged). |
+| `workflow_run` | After **Build Relocatable Packages** completes | Runs only when that workflow's overall conclusion is **success**. No changes to the build workflow are required. |
 | `workflow_dispatch` | Manual | Always runs. Supports overriding the tarball URL and **retargeting at any node** without editing the workflow. |
 
 The cron deliberately runs after AMD's typical nightly publish window;
