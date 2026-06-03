@@ -12,7 +12,7 @@ with open('../CMakeLists.txt', encoding='utf-8') as f:
         raise ValueError("VERSION not found!")
     version_number = match[1]
 
-left_nav_title = f"RVS {version_number} Documentation"
+left_nav_title = f"ROCm RVS 1.4.21 Documentation"
 
 exclude_patterns = [
     'conceptual/**',
@@ -32,8 +32,9 @@ extensions = ["rocm_docs"]
 html_theme = "rocm_docs_theme"
 html_theme_options = {
     "flavor": "generic",
-    "header_title": f"ROCm Extras",
-    "header_link": f"https://rocm.docs.amd.com/en/7.13.0-preview/components/extras.html",
+    "header_title": f"ROCm™ RVS 1.4.21",
+    "header_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/",
+    "version_list_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/versions.html",
     "nav_secondary_items": {
         "GitHub": "https://github.com/ROCm/ROCmValidationSuite",
         "Community": "https://github.com/ROCm/ROCm/discussions",
