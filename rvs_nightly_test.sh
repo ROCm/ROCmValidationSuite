@@ -66,10 +66,6 @@ cmd_validate_config() {
   INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
   RVS_BIN="${INSTALL_DIR}/bin/rvs"
 
-  SSH_BASE="${RUNNER_TEMP:-/tmp}"
-  SSH_KEY_FILE="${SSH_BASE}/rvs_target_key"
-  SSH_CONFIG_FILE="${SSH_BASE}/rvs_target_ssh_config"
-
   echo "Orchestrator runner : $(hostname)"
   echo "Target node         : ${TARGET_USER:-}@${TARGET_NODE}"
   echo "Target ROCm path    : $TARGET_ROCM_PATH"
@@ -83,19 +79,31 @@ cmd_validate_config() {
       echo "rocm_major=$ROCM_MAJOR"
       echo "install_dir=$INSTALL_DIR"
       echo "rvs_bin=$RVS_BIN"
-      echo "ssh_key_file=$SSH_KEY_FILE"
-      echo "ssh_config_file=$SSH_CONFIG_FILE"
     } >> "$GITHUB_OUTPUT"
   fi
 
-  export REMOTE_WORK_DIR ROCM_MAJOR INSTALL_DIR RVS_BIN SSH_KEY_FILE SSH_CONFIG_FILE
+  export REMOTE_WORK_DIR ROCM_MAJOR INSTALL_DIR RVS_BIN
+}
+
+ssh_state_paths() {
+  local base="${RUNNER_TEMP:-/tmp}"
+  SSH_KEY_FILE="${base}/rvs_target_key"
+  SSH_CONFIG_FILE="${base}/rvs_target_ssh_config"
+  mkdir -p "$base"
 }
 
 cmd_setup_ssh() {
   require_env TARGET_NODE
-  require_env SSH_KEY_FILE
-  require_env SSH_CONFIG_FILE
   require_env REMOTE_WORK_DIR
+
+  ssh_state_paths
+
+  if [ -n "${GITHUB_ENV:-}" ]; then
+    {
+      echo "SSH_KEY_FILE=$SSH_KEY_FILE"
+      echo "SSH_CONFIG_FILE=$SSH_CONFIG_FILE"
+    } >> "$GITHUB_ENV"
+  fi
 
   if [ -z "${SSH_PRIVATE_KEY:-}" ]; then
     echo "::error::SSH_PRIVATE_KEY is not set; cannot SSH to target node." >&2
@@ -127,8 +135,11 @@ EOF
   chmod 600 "$SSH_CONFIG_FILE"
 
   echo "Verifying SSH connectivity to ${TARGET_USER:-}@${TARGET_NODE}..."
-  ssh -q -F "$SSH_CONFIG_FILE" rvs-target 'echo __START__; hostname; id; uptime' \
-    2>&1 | sed -n '/^__START__$/,$p' | tail -n +2
+  if ! ssh -F "$SSH_CONFIG_FILE" rvs-target 'echo __START__; hostname; id; uptime' \
+    2>&1 | sed -n '/^__START__$/,$p' | tail -n +2; then
+    echo "::error::SSH connectivity check failed for ${TARGET_USER:-}@${TARGET_NODE}. Verify secrets RVS_TARGET_NODE, RVS_TARGET_USER, RVS_TARGET_SSH_KEY and network access from this runner." >&2
+    exit 1
+  fi
 
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
     "mkdir -p '${REMOTE_WORK_DIR}/pkg' '${REMOTE_WORK_DIR}/reports'"

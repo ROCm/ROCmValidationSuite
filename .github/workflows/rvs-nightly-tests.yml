@@ -146,8 +146,6 @@ jobs:
       rocm_major:       ${{ steps.prepare.outputs.rocm_major }}
       install_dir:      ${{ steps.prepare.outputs.install_dir }}
       rvs_bin:          ${{ steps.prepare.outputs.rvs_bin }}
-      ssh_key_file:     ${{ steps.prepare.outputs.ssh_key_file }}
-      ssh_config_file:  ${{ steps.prepare.outputs.ssh_config_file }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -180,8 +178,6 @@ jobs:
       ROCM_MAJOR:       ${{ needs.prepare-test-context.outputs.rocm_major }}
       INSTALL_DIR:      ${{ needs.prepare-test-context.outputs.install_dir }}
       RVS_BIN:          ${{ needs.prepare-test-context.outputs.rvs_bin }}
-      SSH_KEY_FILE:     ${{ needs.prepare-test-context.outputs.ssh_key_file }}
-      SSH_CONFIG_FILE:  ${{ needs.prepare-test-context.outputs.ssh_config_file }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -233,8 +229,6 @@ jobs:
       ROCM_MAJOR:       ${{ needs.prepare-test-context.outputs.rocm_major }}
       INSTALL_DIR:      ${{ needs.prepare-test-context.outputs.install_dir }}
       RVS_BIN:          ${{ needs.prepare-test-context.outputs.rvs_bin }}
-      SSH_KEY_FILE:     ${{ needs.prepare-test-context.outputs.ssh_key_file }}
-      SSH_CONFIG_FILE:  ${{ needs.prepare-test-context.outputs.ssh_config_file }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
