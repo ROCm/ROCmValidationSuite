@@ -11,7 +11,8 @@
 | Version | Release date |
 | ------- | ------------ |
 | [1.4.21](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.4.21/) | May 15, 2026 |
-| [1.3.0](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-7.1.1/) | November 26, 2025 |
-| [1.2.0](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-7.1.0/) | September 16, 2025 |
-| [1.1.0](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-6.3.0/) | December 3, 2024 |
-| [1.0.0](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-6.1.0/) | Apr 16, 2024 |
+
+```{note}
+RVS 1.4.21 is a technology preview intended for use only with [AMD ROCm 7.13.0 technology preview](https://rocm.docs.amd.com/en/7.13.0-preview/index.html). 
+For the latest production release, see the [RVS 1.3.0 documentation](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-7.1.1/).
+```
