@@ -858,29 +858,53 @@ std::string rvs::gpulist::gpu_get_platform_name (void) {
   }
 
   /* MI350P (0x75a8) shares one PCI device ID across the 450W and 600W SKUs;
-   differentiate by reading the hardware power cap reported by amdsmi. The
-   two SKUs ship with distinct TDP caps (~450 W vs ~600 W) Prefer max_power_cap from
-   amdsmi_get_power_cap_info (the hardware limit, in microwatts on Linux
-   bare metal) */
+   differentiate by reading the hardware power cap reported by amdsmi. Each
+   known SKU is classified only when the reported cap lies within a +/-50 W
+   band around its nominal TDP (allowing for firmware/sysfs reporting drift);
+   an out-of-band value is treated as unknown and routed to the safe-default
+   fallback rather than silently bucketed to the nearest neighbor, so any
+   future intermediate SKU using the same device ID surfaces a warning.
+   Prefer max_power_cap from amdsmi_get_power_cap_info (the hardware limit,
+   in microwatts on Linux bare metal) since it is independent of any runtime
+   power-cap override the user may have set via rocm-smi which is in Watts. */
   if (it->second == "MI350P") {
-    constexpr uint64_t MI350P_TDP_SPLIT_UW = 525000000ULL;  // 525 W in microwatts
-    constexpr uint32_t MI350P_TDP_SPLIT_W  = 525;           // 525 W
+    constexpr uint64_t W_TO_UW = 1000000ULL;
+
+    auto classify_uw = [](uint64_t cap_uw) -> std::string {
+      if (cap_uw >= 400 * W_TO_UW && cap_uw <= 500 * W_TO_UW) return "MI350P-450W";
+      if (cap_uw >= 550 * W_TO_UW && cap_uw <= 650 * W_TO_UW) return "MI350P-600W";
+      return "";
+    };
+    auto classify_w = [](uint32_t cap_w) -> std::string {
+      if (cap_w >= 400 && cap_w <= 500) return "MI350P-450W";
+      if (cap_w >= 550 && cap_w <= 650) return "MI350P-600W";
+      return "";
+    };
+
     auto smi_map = rvs::get_smi_pci_map();
     if (!smi_map.empty()) {
       amdsmi_processor_handle hdl = smi_map.begin()->second;
       amdsmi_power_cap_info_t cap_info{};
       if (amdsmi_get_power_cap_info(hdl, 0, &cap_info) == AMDSMI_STATUS_SUCCESS
           && cap_info.max_power_cap > 0) {
-        return (cap_info.max_power_cap < MI350P_TDP_SPLIT_UW)
-                   ? std::string("MI350P-450W")
-                   : std::string("MI350P-600W");
+        std::string sku = classify_uw(cap_info.max_power_cap);
+        if (!sku.empty()) return sku;
+        std::cout << "MI350P max_power_cap " << (cap_info.max_power_cap / W_TO_UW)
+                  << " W does not match any known SKU band (450 W / 600 W); "
+                     "falling back to MI350P-450W. Use -c explicitly if this is "
+                     "incorrect." << std::endl;
+        return "MI350P-450W";
       }
       amdsmi_power_info_t pwr_info{};
       if (amdsmi_get_power_info(hdl, &pwr_info) == AMDSMI_STATUS_SUCCESS
           && pwr_info.power_limit > 0) {
-        return (pwr_info.power_limit < MI350P_TDP_SPLIT_W)
-                   ? std::string("MI350P-450W")
-                   : std::string("MI350P-600W");
+        std::string sku = classify_w(pwr_info.power_limit);
+        if (!sku.empty()) return sku;
+        std::cout << "MI350P power_limit " << pwr_info.power_limit
+                  << " W does not match any known SKU band (450 W / 600 W); "
+                     "falling back to MI350P-450W. Use -c explicitly if this is "
+                     "incorrect." << std::endl;
+        return "MI350P-450W";
       }
     }
     std::cout << "MI350P detected but power cap could not be read via amdsmi; "
