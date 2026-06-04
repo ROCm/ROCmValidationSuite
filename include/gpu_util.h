@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -29,6 +29,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include "amd_smi/amdsmi.h"
 
 #define KFD_SYS_PATH_NODES              "/sys/class/kfd/kfd/topology/nodes"
 #define KFD_PATH_MAX_LENGTH             256
@@ -36,13 +37,17 @@
 extern int  gpu_num_subdirs(const char* dirpath, const char* prefix);
 extern void gpu_get_all_location_id(std::vector<uint16_t>* pgpus_location_id);
 extern void gpu_get_all_gpu_id(std::vector<uint16_t>* pgpus_id);
+extern void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_idx);
 extern void gpu_get_all_device_id(std::vector<uint16_t>* pgpus_device_id);
 extern void gpu_get_all_node_id(std::vector<uint16_t>* pgpus_node_id);
 extern void gpu_get_all_domain_id(std::vector<uint16_t>* pgpus_domain_id,
                 std::map<std::pair<uint16_t, uint16_t> , uint16_t>& pgpus_dom_loc_map); 
 extern bool gpu_check_if_mcm_die (int idx);
-extern int gpu_hip_to_smi_index(int hip_index, uint32_t* smi_index);
+extern int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_index);
+extern int gpu_hip_to_node(int hip_index, int* node);
 extern void gpu_get_all_pci_bdf(std::vector<std::string>& ppci_bdf);
+extern bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &idx);
+extern std::string gpu_get_platform_name (void);
 
 namespace rvs {
 
@@ -63,6 +68,7 @@ class gpulist {
   static int node2gpu(const uint16_t NodeID, uint16_t* pGpuID);
   static int location2device(const uint16_t LocationID, uint16_t* pDeviceID);
   static int gpu2device(const uint16_t GpuID, uint16_t* pDeviceID);
+  static int gpu2gpuindex(const uint16_t GpuID, uint16_t* pGpuIdx);
   static int location2node(const uint16_t LocationID, uint16_t* pNodeID);
   static int gpu2node(const uint16_t GpuID, uint16_t* pNodeID);
   static int gpu2domain(const uint16_t GpuID, uint16_t* pDomain);
@@ -71,11 +77,14 @@ class gpulist {
   static int domlocation2gpu(const uint16_t domainID, const uint16_t LocationID,
                                     uint16_t* pGPUID);
   static int node2bdf(const uint16_t NodeID, std::string& pPciBDF);
+  static std::string gpu_get_platform_name (void);
  protected:
   //! Array of GPU location IDs
   static std::vector<uint16_t> location_id;
   //! Array of GPU IDs
   static std::vector<uint16_t> gpu_id;
+  //! Array of GPU Indexes
+  static std::vector<uint16_t> gpu_idx;
   //! Array of device IDs
   static std::vector<uint16_t> device_id;
   //! Array of node IDs

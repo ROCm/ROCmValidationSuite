@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "version" : {
+      "type": "string",
+      "const": "1.0"
+    },
+    "mem": {
+      "type": "object",
+      "properties": {
+        "action_1": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "gpu_id": {
+                "type": "string"
+              },"gpu_index": {
+                "type": "string"
+              },
+              "Test": {
+                "type": "string"
+              },
+              "Time Taken": {
+                "type": "string"
+              },
+              "errors": {
+                "type": "string"
+              },
+              "pass": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "Test",
+              "Time Taken",
+              "errors",
+              "gpu_id",
+              "gpu_index",
+              "pass"
+            ]
+          }
+        }
+      },
+      "required": [
+        "action_1"
+      ]
+    }
+  },
+  "required": [
+    "mem"
+  ]
+}

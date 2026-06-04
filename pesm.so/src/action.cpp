@@ -196,10 +196,7 @@ int pesm_action::run(void) {
     sleep(prop_debugwait);
   }
   if (bjson){
-    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-      rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-      return 1;
-    }      
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
   // end of monitoring requested?
   if (!prop_monitor) {
@@ -238,6 +235,7 @@ int pesm_action::run(void) {
   pworker->set_action(*this);
   pworker->json(bjson);
   pworker->set_gpuids(property_device);
+  pworker->set_gpuidx(property_device_index);
   pworker->set_deviceid(property_device_id);
 
   // start worker thread
@@ -262,6 +260,6 @@ int pesm_action::run(void) {
  *
  * */
 int pesm_action::do_gpu_list() {
-  return display_gpu_info();
+  return display_gpu_info(get_gpu_info());
 }
 

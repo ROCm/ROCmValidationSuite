@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -38,9 +38,7 @@
 #include "include/rvsliblogger.h"
 #include "include/rvsoptions.h"
 #include "include/rvstrace.h"
-#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
-#include "rocm-core/rocm_getpath.h"
-#endif
+#include "include/rvs_util.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -127,34 +125,155 @@ int rvs::exec::run() {
   if (rvs::options::has_option("-j", &s_json_log_file)) {
     logger::to_json(true);
     logger::set_json_log_file(s_json_log_file);
-    
   }
 
-  // check -c option
   string config_file;
-  if (rvs::options::has_option("-c", &val)) {
-    config_file = val;
-  } else {
-    config_file = "../share/rocm-validation-suite/conf/rvs.conf";
+  // check -r option
+  if (rvs::options::has_option("-r", &val)) {
+
+    std::string plaftorm_name = get_gpu_name();
+
+    if(val != "1" && val != "2" && val != "3" && val != "4" && val != "5") {
+      rvs::logger::Err("Test level must be between 1 and 5 !", MODULE_NAME_CAPS);
+      return -1;
+    }
+
+    if(plaftorm_name.empty()) {
+      rvs::logger::Err("No test levels support for the detected GPU or no GPU detected !", MODULE_NAME_CAPS);
+      return -1;
+    }
+
+    config_file = "../share/rocm-validation-suite/conf/" + plaftorm_name + "/levels/rvs_level_" + val + ".conf";
+
     // Check if pConfig file exist if not use old path for backward compatibility
     std::ifstream file(path + config_file);
     if (!file.good()) {
-      config_file = "conf/rvs.conf";
+      config_file = "conf/" + plaftorm_name + "/levels/rvs_level_" + val + ".conf";
     }
     file.close();
     config_file = path + config_file;
+
+    // Check if pConfig file exists
+    file.open(config_file);
+    if (!file.good()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "%s file is missing.", config_file.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    } else {
+      file.close();
+    }
   }
 
-  // Check if pConfig file exists
-  std::ifstream file(config_file);
-  if (!file.good()) {
-    char buff[1024];
-    snprintf(buff, sizeof(buff),
-              "%s file is missing.", config_file.c_str());
-    rvs::logger::Err(buff, MODULE_NAME_CAPS);
-    return -1;
-  } else {
-    file.close();
+  // check -m option
+  string module;
+  if (rvs::options::has_option("-m", &module)) {
+
+    std::map<std::string, std::string> module_config_map = {
+      {"babel", "babel.conf"},
+      {"gpup", "gpup_single.conf"},
+      {"gst", "gst_single.conf"},
+      {"iet", "iet_stress.conf"},
+      {"mem", "mem.conf"},
+      {"pebb", "pebb_single.conf"},
+      {"peqt", "peqt_single.conf"},
+      {"pbqt", "pbqt_single.conf"},
+      {"rcqt", "rcqt_single.conf"},
+      {"tst", "tst_single.conf"}
+    };
+
+    auto itr = module_config_map.find(module);
+    if (itr == module_config_map.end()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "Invalid module name: %s", module.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+
+    std::string platform_name = get_gpu_name();
+    if (platform_name.empty()) {
+      rvs::logger::Err("No platform support for the detected GPU or no GPU detected !", MODULE_NAME_CAPS);
+      return -1;
+    }
+
+    std::vector<std::string> confs = {itr->second};
+    if (module == "iet") {
+      confs.push_back("iet_single.conf");
+    }
+
+    bool found = false;
+    for (const auto& conf : confs) {
+
+      /* Plaform specific module conf. from RVS installation path */
+      config_file = "../share/rocm-validation-suite/conf/" + platform_name + "/" + conf;
+
+      std::ifstream file(path + config_file);
+      if (!file.good()) {
+        /* Plaform specific module conf. from RVS local build path */
+        config_file = "conf/" + platform_name + "/" + conf;
+      }
+      file.close();
+      config_file = path + config_file;
+
+      file.open(config_file);
+      if (file.good()) {
+        file.close();
+        found = true;
+        break;
+      }
+      else {
+        /* Try default module conf. */
+        config_file = path + "conf/" + conf;
+        file.open(config_file);
+        if (file.good()) {
+          file.close();
+          found = true;
+          break;
+        }
+      }
+      file.close();
+    }
+
+    if (!found) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "%s file is missing.", config_file.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+  }
+
+  if (!rvs::options::has_option("-r", &val) && !rvs::options::has_option("-m")) {
+
+    // check -c option
+    if (rvs::options::has_option("-c", &val)) {
+
+      config_file = val;
+
+    } else {
+      config_file = "../share/rocm-validation-suite/conf/rvs.conf";
+      // Check if pConfig file exist if not use old path for backward compatibility
+      std::ifstream file(path + config_file);
+      if (!file.good()) {
+        config_file = "conf/rvs.conf";
+      }
+      file.close();
+      config_file = path + config_file;
+    }
+
+    // Check if pConfig file exists
+    std::ifstream file(config_file);
+    if (!file.good()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "%s file is missing.", config_file.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    } else {
+      file.close();
+    }
   }
 
   // check -n options
@@ -276,24 +395,6 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   string  module;
   string config;
   yaml_data_type_t data_type;
-#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
-  char *installPath = nullptr;
-  unsigned int installPathLen = 0;
-  string rocmPath;
-  PathErrors_t retVal = PathSuccess;
-  // Get ROCM install path
-  retVal = getROCmInstallPath( &installPath, &installPathLen );
-  if(retVal == PathSuccess){
-    rocmPath = installPath;
-  }
-  else {
-    std::cout << "Failed to get ROCm Install Path: " << retVal <<"\nSet ROCM_PATH in env" << std::endl;
-  }
-  // free allocated memory
-  if(installPath != nullptr) {
-    free(installPath);
-  }
-#endif
   options::has_option("pwd", &path);
   logger::log_level(rvs::logerror);
 
@@ -345,13 +446,9 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
       config = "conf/" + module_config_file[module_index];
       std::ifstream file(path + config);
       if (!file.good()) {
-        // configuration file exist in ROCM path ?
-#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
-        path = rocmPath;
-#else
-        path = ROCM_PATH;
-#endif
-        config = "/share/rocm-validation-suite/conf/" + module_config_file[module_index];
+        // RVS data dir: from rvs binary, $RVS_PREFIX, or build-time RVS_DATA_ROOT
+        path = rvs_get_rvs_data_root_string();
+        config = "/conf/" + module_config_file[module_index];
       }
       file.close();
     }
@@ -387,13 +484,8 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
     val = path + ".rvsmodules.config";
     std::ifstream conf_file(val);
     if (!conf_file.good()) {
-      // Modules config. file exist in ROCM path ?
-#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
-      path = rocmPath;
-#else
-      path = ROCM_PATH;
-#endif
-      val = path + "/share/rocm-validation-suite/conf/.rvsmodules.config";
+      path = rvs_get_rvs_data_root_string();
+      val = path + "/conf/.rvsmodules.config";
     }
   }
   conf_file.close();
@@ -451,27 +543,43 @@ void rvs::exec::do_help() {
 
   cout << "-c --config        Specify the test configuration file to use.\n\n";
 
+  cout << "-r --run           Specify the test level to run. Valid range is 1 to 5,\n";
+  cout << "                   with 5 indicating the highest stress test level.\n\n";
+
   cout << "-d --debugLevel    Specify the debug level for the output log. The range is 0-5 with\n";
   cout << "                   5 being the highest verbose level.\n\n";
 
   cout << "-g --listGpus      List all the GPUs available in the machine, that RVS supports and\n";
   cout << "                   has visibility.\n\n";
 
-  cout << "-i --indexes       Comma separated list of GPU ids to run test on. This overrides\n";
-  cout << "                   the device values specified for every actions in the\n";
+  cout << "-i --indexes       Comma separated list of GPU ids/indexes to run test on. This overrides\n";
+  cout << "                   the device/device_index values specified for every actions in the\n";
   cout << "                   configuration file, including the ‘all’ value.\n\n";
 
   cout << "-j --json          Generate output file in JSON format.\n";
   cout << "                   if a path follows this argument, that will be used as json log file\n";
   cout << "                   else a file created in /var/tmp/ with timestamp in name.\n\n";
 
+  cout << "-s --selectActions Comma separated list of action names or 0-based action index numbers\n";
+  cout << "                   to run from the configuration file. Only the matching actions will\n";
+  cout << "                   be executed. All other actions are skipped.\n\n";
+
   cout << "-l --debugLogFile  Generate log file with output and debug information.\n\n";
- 
+
+  cout << "-m --module        Specify a module name to run the corresponding platform-specific\n";
+  cout << "                   (MI-series GPUs) module configuration file. Valid modules: babel, gpup, gst, iet,\n";
+  cout << "                   mem, pebb, peqt, pbqt, rcqt.\n\n";
 
   cout << "-t --listTests     List the test modules present in RVS.\n\n";
 
-  cout << "-v --verbose       Enable verbose reporting. Equivalent to specifying -d 5 option.\n\n";
+  cout << "-v --verbose       Enable detailed logging. Equivalent to specifying -d 5 option.\n\n";
 
+  cout << "-p --parallel      Enables or Disables parallel execution across multiple GPUs.\n";
+  cout << "                   Use this option in conjunction with -c option.\n";
+  cout << "                   Accepted Values:\n";
+  cout << "                   true – Enables parallel execution.\n";
+  cout << "                   false – Disables parallel execution.\n";
+  cout << "                   If no value is provided for the option, it defaults to true.\n\n";
 
   cout << "-n --numTimes      Number of times the test repeatedly executes. Use in conjunction\n";
   cout << "                   with -c option.\n\n";
@@ -483,7 +591,7 @@ void rvs::exec::do_help() {
   cout << "-h --help          Display usage information and exit.\n\n";
 }
 
-//! Reports list of AMD GPUs presnt in the system
+//! Reports list of AMD GPUs present in the system
 int rvs::exec::do_gpu_list() {
   cout << "\nROCm Validation Suite (version " << RVS_VERSION_STRING << ")\n\n";
 

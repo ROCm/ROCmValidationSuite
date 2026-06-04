@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -80,11 +80,11 @@ bool pebb_action::get_all_pebb_config_keys(void) {
 
   RVSTRACE_
 
-  if (property_get("host_to_device", &prop_h2d, true)) {
-    msg = "invalid 'host_to_device' key";
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    bsts = false;
-  }
+    if (property_get("host_to_device", &prop_h2d, true)) {
+      msg = "invalid 'host_to_device' key";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
 
   if (property_get("device_to_host", &prop_d2h, true)) {
     msg = "invalid 'device_to_host' key";
@@ -138,6 +138,48 @@ bool pebb_action::get_all_pebb_config_keys(void) {
     bsts = false;
   }
 
+  error = property_get<std::string>(RVS_CONF_TRANSFER_METHOD_KEY, &transfer_method, DEFAULT_TRANSFER_METHOD);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_TRANSFER_METHOD_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_EXECUTOR_KEY, &executor, DEFAULT_EXECUTOR);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_EXECUTOR_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_SUBEXECUTOR_KEY, &subexecutor, DEFAULT_SUBEXECUTOR);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_SUBEXECUTOR_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>("source_memory", &source_memory, DEFAULT_SRC_MEMORY);
+  if (error == 1) {
+    msg = "invalid 'source_memory' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>("destination_memory", &destination_memory, DEFAULT_DST_MEMORY);
+  if (error == 1) {
+    msg = "invalid 'destination_memory' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_GFX_UNROLL_KEY, &gfx_unroll, DEFAULT_GFX_UNROLL);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_GFX_UNROLL_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
   if(!hot_calls) {
     hot_calls = DEFAULT_HOT_CALLS;
   }
@@ -150,6 +192,14 @@ bool pebb_action::get_all_pebb_config_keys(void) {
     link_type_string = "PCIe";
   else if(link_type == 4)
     link_type_string = "XGMI";
+
+  if(transfer_method == "transferbench") {
+    if((source_memory == "null") && (destination_memory == "null")) {
+      msg = "Set proper values for source and destination memory.";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+  }
 
   return bsts;
 }
@@ -169,162 +219,181 @@ bool pebb_action::get_all_pebb_config_keys(void) {
 int pebb_action::create_threads() {
   std::string msg;
   std::vector<uint16_t> gpu_id;
+  std::vector<uint16_t> gpu_idx;
   std::vector<uint16_t> gpu_device_id;
   uint16_t transfer_ix = 0;
   bool bmatch_found = false;
 
   RVSTRACE_
-  gpu_get_all_gpu_id(&gpu_id);
+    gpu_get_all_gpu_id(&gpu_id);
+  gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
-
   RVSTRACE_
-  for (size_t i = 0; i < gpu_id.size(); i++) {
-    RVSTRACE_
-    if (property_device_id > 0) {
+    for (size_t i = 0; i < gpu_id.size(); i++) {
       RVSTRACE_
-      if (property_device_id != gpu_device_id[i]) {
-        RVSTRACE_
-        continue;
+        if (property_device_id > 0) {
+          RVSTRACE_
+            if (property_device_id != gpu_device_id[i]) {
+              RVSTRACE_
+                continue;
+            }
+        }
+
+      // filter out by listed sources
+      RVSTRACE_
+        if (!property_device_all && property_device.size()) {
+          RVSTRACE_
+            const auto it = std::find(property_device.cbegin(),
+                property_device.cend(),
+                gpu_id[i]);
+          if (it == property_device.cend()) {
+            RVSTRACE_
+              continue;
+          }
+        }
+
+      // filter out by listed sources
+      if (!property_device_index_all && property_device_index.size()) {
+        const auto it = std::find(property_device_index.cbegin(),
+            property_device_index.cend(),
+            gpu_idx[i]);
+        if (it == property_device_index.cend()) {
+          RVSTRACE_
+            continue;
+        }
       }
-    }
 
-    // filter out by listed sources
-    RVSTRACE_
-    if (!property_device_all) {
+      uint16_t dstnode;
+      int srcnode;
+
       RVSTRACE_
-      const auto it = std::find(property_device.cbegin(),
-                                property_device.cend(),
-                                gpu_id[i]);
-      if (it == property_device.cend()) {
-        RVSTRACE_
-        continue;
-      }
-    }
+        for (uint cpu_index = 0;
+            cpu_index < rvs::hsa::Get()->cpu_list.size();
+            cpu_index++) {
+          RVSTRACE_
 
-    uint16_t dstnode;
-    int srcnode;
+            if (rvs::gpulist::gpu2node(gpu_id[i], &dstnode)) {
+              RVSTRACE_
+                msg = "no node found for destination GPU ID "
+                + std::to_string(gpu_id[i]);
+              rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+              return -1;
+            }
+          RVSTRACE_
+            srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
 
-    RVSTRACE_
-    for (uint cpu_index = 0;
-         cpu_index < rvs::hsa::Get()->cpu_list.size();
-         cpu_index++) {
-      RVSTRACE_
+          // get link info regardless of peer status (just in case...)
+          uint32_t distance = 0;
+          bool b_reverse = false;
 
-      if (rvs::gpulist::gpu2node(gpu_id[i], &dstnode)) {
-        RVSTRACE_
-        msg = "no node found for destination GPU ID "
-          + std::to_string(gpu_id[i]);
-        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
-      }
-      RVSTRACE_
-      srcnode = rvs::hsa::Get()->cpu_list[cpu_index].node;
-
-      // get link info regardless of peer status (just in case...)
-      uint32_t distance = 0;
-      bool b_reverse = false;
-
-      std::vector<rvs::linkinfo_t> arr_linkinfo;
-      rvs::hsa::Get()->GetLinkInfo(srcnode, dstnode,
-                                         &distance, &arr_linkinfo);
-      if (distance == rvs::hsa::NO_CONN) {
-        RVSTRACE_
-          rvs::hsa::Get()->GetLinkInfo(dstnode, srcnode,
+          std::vector<rvs::linkinfo_t> arr_linkinfo;
+          rvs::hsa::Get()->GetLinkInfo(srcnode, dstnode,
               &distance, &arr_linkinfo);
-        if (distance != rvs::hsa::NO_CONN) {
-          RVSTRACE_
-            // there is a path if transfer is initiated by
-            // destination agent:
-            b_reverse = true;
-        }else{// if no connection either way, no point in adding to list
-          continue;
-        }
-      }
-
-      // if link type is specified, check that it matches
-      if (!rvs::hsa::check_link_type(arr_linkinfo, link_type))
-        continue;
-
-      bmatch_found = true;
-      transfer_ix += 1;
-
-      print_link_info(srcnode, dstnode, gpu_id[i],
-                      distance, arr_linkinfo, b_reverse);
-
-      // if GPUs are peers, create transaction for them
-      if (rvs::hsa::Get()->GetPeerStatus(srcnode, dstnode)) {
-        RVSTRACE_
-        pebbworker* p = nullptr;
-        if (property_parallel && b2b_block_size > 0) {
-          RVSTRACE_
-          pebbworker_b2b* pb2b = new pebbworker_b2b;
-          if (pb2b == nullptr) {
+          if (distance == rvs::hsa::NO_CONN) {
             RVSTRACE_
-            msg = "internal error";
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return -1;
+              rvs::hsa::Get()->GetLinkInfo(dstnode, srcnode,
+                  &distance, &arr_linkinfo);
+            if (distance != rvs::hsa::NO_CONN) {
+              RVSTRACE_
+                // there is a path if transfer is initiated by
+                // destination agent:
+                b_reverse = true;
+            }else{// if no connection either way, no point in adding to list
+              continue;
+            }
           }
-          pb2b->initialize(srcnode, dstnode,
-                           prop_h2d, prop_d2h, b2b_block_size);
-          p = pb2b;
-        } else {
-          RVSTRACE_
-          p = new pebbworker;
-          if (p == nullptr) {
+
+          // if link type is specified, check that it matches
+          if (!rvs::hsa::check_link_type(arr_linkinfo, link_type))
+            continue;
+
+          bmatch_found = true;
+          transfer_ix += 1;
+
+          print_link_info(srcnode, dstnode, gpu_id[i],
+              distance, arr_linkinfo, b_reverse);
+
+          // if GPUs are peers, create transaction for them
+          if (rvs::hsa::Get()->GetPeerStatus(srcnode, dstnode)) {
             RVSTRACE_
-            msg = "internal error";
-            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return -1;
+              pebbworker* p = nullptr;
+            if (property_parallel && b2b_block_size > 0) {
+              RVSTRACE_
+                pebbworker_b2b* pb2b = new pebbworker_b2b;
+              if (pb2b == nullptr) {
+                RVSTRACE_
+                  msg = "internal error";
+                rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+                return -1;
+              }
+              pb2b->initialize(srcnode, dstnode,
+                  prop_h2d, prop_d2h, b2b_block_size);
+              p = pb2b;
+            } else {
+              RVSTRACE_
+                p = new pebbworker;
+              if (p == nullptr) {
+                RVSTRACE_
+                  msg = "internal error";
+                rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+                return -1;
+              }
+              p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
+            }
+            RVSTRACE_
+            p->set_name(action_name);
+            p->set_stop_name(action_name);
+            p->set_transfer_ix(transfer_ix);
+            p->set_block_sizes(block_size);
+            p->set_hot_calls(hot_calls);
+            p->set_warm_calls(warm_calls);
+            p->set_b2b(b2b);
+            p->set_loglevel(property_log_level);
+            p->set_transfer_method(transfer_method);
+            p->set_executor(executor);
+            p->set_subexecutor(subexecutor);
+            p->set_source_memory(source_memory);
+            p->set_destination_memory(destination_memory);
+            p->set_gfx_unroll(gfx_unroll);
+
+            test_array.push_back(p);
           }
-          p->initialize(srcnode, dstnode, prop_h2d, prop_d2h);
         }
-        RVSTRACE_
-        p->set_name(action_name);
-        p->set_stop_name(action_name);
-        p->set_transfer_ix(transfer_ix);
-        p->set_block_sizes(block_size);
-        p->set_hot_calls(hot_calls);
-        p->set_warm_calls(warm_calls);
-        p->set_b2b(b2b);
-        p->set_loglevel(property_log_level);
-        test_array.push_back(p);
-      }
     }
-  }
 
   RVSTRACE_
-  if (test_array.size() < 1) {
-    std::string diag;
-    if (bmatch_found) {
-      diag = "No peers found";
-    } else {
-      diag = "No devices match criteria from the test configuration";
-    }
-    msg = "[" + action_name + "] pcie-bandwidth  " + diag;
-    rvs::lp::Log(msg, rvs::logerror);
-    if (bjson) {
-      unsigned int sec;
-      unsigned int usec;
-      rvs::lp::get_ticks(&sec, &usec);
-      void* pjson = rvs::lp::LogRecordCreate("pcie-bandwidth",
-                              action_name.c_str(), rvs::logerror, sec, usec);
-      if (pjson != NULL) {
-        rvs::lp::AddString(pjson,
-          "message",
-          diag);
-        rvs::lp::LogRecordFlush(pjson);
+    if (test_array.size() < 1) {
+      std::string diag;
+      if (bmatch_found) {
+        diag = "No peers found";
+      } else {
+        diag = "No devices match criteria from the test configuration";
       }
+      msg = "[" + action_name + "] pcie-bandwidth  " + diag;
+      rvs::lp::Log(msg, rvs::logerror);
+      if (bjson) {
+        unsigned int sec;
+        unsigned int usec;
+        rvs::lp::get_ticks(&sec, &usec);
+        void* pjson = rvs::lp::LogRecordCreate("pcie-bandwidth",
+            action_name.c_str(), rvs::logerror, sec, usec);
+        if (pjson != NULL) {
+          rvs::lp::AddString(pjson,
+              "message",
+              diag);
+          rvs::lp::LogRecordFlush(pjson);
+        }
+      }
+      return -1;
     }
-    return -1;
-  }
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     RVSTRACE_
-    (*it)->set_transfer_num(test_array.size());
+      (*it)->set_transfer_num(test_array.size());
   }
 
   RVSTRACE_
-  return 0;
+    return 0;
 }
 
 /**
@@ -366,7 +435,7 @@ int pebb_action::print_running_average() {
  *      */
 void* pebb_action::json_base_node(int log_level) {
   void *json_node = json_node_create(std::string(MODULE_NAME),
-    action_name.c_str(), log_level);
+      action_name.c_str(), log_level);
   if(!json_node){
     // log error
     return nullptr;
@@ -386,23 +455,18 @@ void pebb_action::json_to_file(void *json_node,int log_level){
 }
 
 void pebb_action::log_json_bandwidth(std::string srcnode, std::string dstnode,
-								 int log_level, std::string bandwidth){
-	
+    int log_level, std::string bandwidth){
+
   if(bjson){
     void *json_node = json_base_node(log_level);
     json_add_kv(json_node, "srccpu", srcnode);
     json_add_kv(json_node, "dstgpu", dstnode);
-    if(bandwidth.empty()){
-      json_add_kv(json_node, "intf", link_type_string);
-    }else{
-      json_add_kv(json_node, "throughput", bandwidth);
-    }
+    json_add_kv(json_node, "intf", link_type_string);
+    json_add_kv(json_node, "throughput", bandwidth.empty() ? "NA" : bandwidth);
     json_add_kv(json_node, "pass", "true");
     json_to_file(json_node, log_level);
   }
 }
-
-
 
 /**
  * @brief Collect running average for this particular transfer.
@@ -427,54 +491,54 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
   char        dstgpuid_buff[12];
 
   RVSTRACE_
-  // get running average
-  pWorker->get_running_data(&src_node, &dst_node, &bidir,
-                            &current_size, &duration);
+    // get running average
+    pWorker->get_running_data(&src_node, &dst_node, &bidir,
+        &current_size, &duration);
 
   if (duration > 0) {
     RVSTRACE_
-    bandwidth = current_size/duration/1000/1000/1000;
+      bandwidth = current_size/duration/1000/1000/1000;
     if (bidir) {
       RVSTRACE_
-      bandwidth *=2;
+        bandwidth *=2;
     }
     snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
   } else {
     RVSTRACE_
-    // no running average in this iteration, try getting total so far
-    // (do not reset final totals as this is just intermediate query)
-    pWorker->get_final_data(&src_node, &dst_node, &bidir,
-                            &current_size, &duration, false);
-      RVSTRACE_
-      bandwidth = current_size/duration/1000/1000/1000;
-      if (bidir) {
-        RVSTRACE_
-        bandwidth *=2;
-      }
-      snprintf( buff, sizeof(buff), "%.3f GBps (*)", bandwidth);
-  }
-
-  RVSTRACE_
-  if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+      // no running average in this iteration, try getting total so far
+      // (do not reset final totals as this is just intermediate query)
+      pWorker->get_final_data(&src_node, &dst_node, &bidir,
+          &current_size, &duration, false);
     RVSTRACE_
-    std::string msg = "could not find GPU id for node " +
-                      std::to_string(dst_node);
-    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+      bandwidth = current_size/duration/1000/1000/1000;
+    if (bidir) {
+      RVSTRACE_
+        bandwidth *=2;
+    }
+    snprintf( buff, sizeof(buff), "%.3f GBps (*)", bandwidth);
   }
+
+  RVSTRACE_
+    if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+      RVSTRACE_
+        std::string msg = "could not find GPU id for node " +
+        std::to_string(dst_node);
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      return -1;
+    }
   RVSTRACE_
 
-  std::string pci_bdf;
+    std::string pci_bdf;
   if (rvs::gpulist::node2bdf(dst_node, pci_bdf)) {
     RVSTRACE_
-    std::string msg = "could not find PCI BDF for node " +
-                      std::to_string(dst_node);
+      std::string msg = "could not find PCI BDF for node " +
+      std::to_string(dst_node);
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return -1;
   }
   RVSTRACE_
 
-  transfer_ix = pWorker->get_transfer_ix();
+    transfer_ix = pWorker->get_transfer_ix();
   transfer_num = pWorker->get_transfer_num();
 
   snprintf(transfer_buff, sizeof(transfer_buff), "%2d", transfer_ix);
@@ -492,7 +556,7 @@ int pebb_action::print_running_average(pebbworker* pWorker) {
 
   log_json_bandwidth(std::to_string(src_node), std::to_string(dst_id),rvs::loginfo, buff);
   RVSTRACE_
-  return 0;
+    return 0;
 }
 
 /**
@@ -521,56 +585,56 @@ int pebb_action::print_final_average() {
 
   for (auto it = test_array.begin(); it != test_array.end(); ++it) {
     RVSTRACE_
-    (*it)->get_final_data(&src_node, &dst_node, &bidir,
-                          &current_size, &duration);
+      (*it)->get_final_data(&src_node, &dst_node, &bidir,
+          &current_size, &duration);
 
     if (duration) {
       RVSTRACE_
-      bandwidth = current_size/duration/1000/1000/1000;
+        bandwidth = current_size/duration/1000/1000/1000;
       if (bidir) {
         RVSTRACE_
-        bandwidth *=2;
+          bandwidth *=2;
       }
       snprintf( buff, sizeof(buff), "%.3f GBps", bandwidth);
     } else {
       RVSTRACE_
-      snprintf( buff, sizeof(buff), "(not measured)");
+        snprintf( buff, sizeof(buff), "(not measured)");
     }
 
     RVSTRACE_
-    if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
-      RVSTRACE_
-      std::string msg = "could not find GPU id for node " +
-                        std::to_string(dst_node);
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
-    }
+      if (rvs::gpulist::node2gpu(dst_node, &dst_id)) {
+        RVSTRACE_
+          std::string msg = "could not find GPU id for node " +
+          std::to_string(dst_node);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return -1;
+      }
     RVSTRACE_
-    transfer_ix = (*it)->get_transfer_ix();
+      transfer_ix = (*it)->get_transfer_ix();
     transfer_num = (*it)->get_transfer_num();
 
     RVSTRACE_
-    std::string pci_bdf;
+      std::string pci_bdf;
     if (rvs::gpulist::node2bdf(dst_node, pci_bdf)) {
       RVSTRACE_
-      std::string msg = "could not find PCI BDF for node " +
-                        std::to_string(dst_node);
+        std::string msg = "could not find PCI BDF for node " +
+        std::to_string(dst_node);
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       return -1;
     }
     RVSTRACE_
 
-    snprintf(transfer_buff, sizeof(transfer_buff), "%2d", transfer_ix);
+      snprintf(transfer_buff, sizeof(transfer_buff), "%2d", transfer_ix);
     snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", dst_id);
 
     msg = "[" + action_name + "] pcie-bandwidth ["
-        + transfer_buff + "/" + std::to_string(transfer_num) + "]"
-        + " [CPU:: " + std::to_string(src_node) + "]"
-        + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + pci_bdf + "]"
-        + " h2d::" + (prop_h2d ? "true" : "false")
-        + " d2h::" + (prop_d2h ? "true" : "false")
-        + " " + buff
-        + " duration: " + std::to_string(duration) + " secs";
+      + transfer_buff + "/" + std::to_string(transfer_num) + "]"
+      + " [CPU:: " + std::to_string(src_node) + "]"
+      + " [GPU:: " + std::to_string(dst_node) + " - " + dstgpuid_buff + " - " + pci_bdf + "]"
+      + " h2d::" + (prop_h2d ? "true" : "false")
+      + " d2h::" + (prop_d2h ? "true" : "false")
+      + " " + buff
+      + " duration: " + std::to_string(duration) + " secs";
 
     rvs::lp::Log(msg, rvs::logresults);
 
@@ -589,7 +653,7 @@ int pebb_action::print_final_average() {
     RVSTRACE_
   }
   RVSTRACE_
-  return 0;
+    return 0;
 }
 
 /**
@@ -610,7 +674,7 @@ void pebb_action::do_final_average() {
 
   if (bjson) {
     void* pjson = rvs::lp::LogRecordCreate(MODULE_NAME,
-                            action_name.c_str(), rvs::logtrace, sec, usec);
+        action_name.c_str(), rvs::logtrace, sec, usec);
     if (pjson != NULL) {
       rvs::lp::AddString(pjson, "message", "pebb in do_final_average");
       rvs::lp::LogRecordFlush(pjson);
@@ -665,19 +729,19 @@ void pebb_action::do_running_average() {
  *
  * */
 int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
-                      uint32_t Distance,
-                      const std::vector<rvs::linkinfo_t>& arrLinkInfo,
-                      bool bReverse) {
+    uint32_t Distance,
+    const std::vector<rvs::linkinfo_t>& arrLinkInfo,
+    bool bReverse) {
   RVSTRACE_
-  std::string msg;
+    std::string msg;
   rvs::action_result_t result;
   std::string pci_bdf;
   char dstgpuid_buff[8];
 
   if (rvs::gpulist::node2bdf(DstNode, pci_bdf)) {
     RVSTRACE_
-    std::string msg = "could not find PCI BDF for node " +
-                      std::to_string(DstNode);
+      std::string msg = "could not find PCI BDF for node " +
+      std::to_string(DstNode);
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return -1;
   }
@@ -685,9 +749,9 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
   snprintf(dstgpuid_buff, sizeof(dstgpuid_buff), "%5d", DstGpuID);
 
   msg = "[" + action_name + "] pcie-bandwidth "
-      + "[CPU:: " +  std::to_string(SrcNode) + "] "
-      + "[GPU:: " + std::to_string(DstNode)
-      + " - " + dstgpuid_buff + " - " + pci_bdf + "]";
+    + "[CPU:: " +  std::to_string(SrcNode) + "] "
+    + "[GPU:: " + std::to_string(DstNode)
+    + " - " + dstgpuid_buff + " - " + pci_bdf + "]";
 
   if (Distance == rvs::hsa::NO_CONN) {
     msg += " distance:-1";
@@ -708,7 +772,7 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
   }
 
   rvs::lp::Log(msg, rvs::logresults);
-  log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstGpuID),rvs::logresults);
+  //log_json_bandwidth(std::to_string(SrcNode), std::to_string(DstGpuID),rvs::logresults);
 
   result.state = rvs::actionstate::ACTION_RUNNING;
   result.status = rvs::actionstatus::ACTION_SUCCESS;
@@ -717,5 +781,4 @@ int pebb_action::print_link_info(int SrcNode, int DstNode, int DstGpuID,
 
   return 0;
 }
-
 

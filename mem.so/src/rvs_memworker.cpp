@@ -163,7 +163,7 @@ void MemWorker::run() {
     size_t          free;
     size_t          total;
     int             deviceId;
-   
+    bool info_jsonlogs = false;  
 
     // log MEM stress test - start message
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -199,15 +199,19 @@ void MemWorker::run() {
             std::to_string(total) + " " + " Free Memory from hipMemGetInfo " + " " + 
             std::to_string(free);
     rvs::lp::Log(msg, rvs::logtrace);
-    if (bjson){
+    if (bjson && info_jsonlogs){
 	void *json_node = json_node_create(std::string(MODULE_NAME),
       		action_name.c_str(), rvs::loginfo);
 	if (json_node){
-		rvs::lp::AddString(json_node, "gpu_id",
-          		std::to_string(gpu_id));
+		rvs::lp::AddString(json_node, "gpu_id", std::to_string(gpu_id));
+
+    uint16_t gpu_index = 0;
+    rvs::gpulist::gpu2gpuindex(gpu_id, &gpu_index);
+    rvs::lp::AddString(json_node, "gpu_index", std::to_string(gpu_index));
+
 		rvs::lp::AddString(json_node,"Total Memory", std::to_string(total));
 		rvs::lp::AddString(json_node,"Free Memory", std::to_string(free));
-		rvs::lp::LogRecordFlush(json_node, rvs::logresults);
+		rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
 	}
     } 
     allocate_small_mem();
@@ -229,6 +233,7 @@ void MemWorker::run() {
                            std::to_string(tot_num_blocks); 
 
             rvs::lp::Log(msg, rvs::logtrace);
+            free_small_mem();
             return; 
 
         }
@@ -276,6 +281,14 @@ void MemWorker::run() {
 
     run_tests(ptr, tot_num_blocks);
 
+    if (useMappedMemory) {
+        hipHostFree(mappedHostPtr);
+        mappedHostPtr = nullptr;
+    } else {
+        hipFree(ptr);
+        ptr = nullptr;
+    }
+
     free_small_mem();
 }
 
@@ -289,8 +302,12 @@ void MemWorker::log_to_json(int log_level, KVPairs...  key_values ) {
     void *json_node = json_node_create(std::string(MODULE_NAME),
         action_name.c_str(), log_level);
     if (json_node) {
-      rvs::lp::AddString(json_node, "gpu_id",
-          std::to_string(gpu_id));
+      rvs::lp::AddString(json_node, "gpu_id", std::to_string(gpu_id));
+
+      uint16_t gpu_index = 0;
+      rvs::gpulist::gpu2gpuindex(gpu_id, &gpu_index);
+      rvs::lp::AddString(json_node, "gpu_index", std::to_string(gpu_index));
+
       for (int i =0; i< kvlist.size()-1; i +=2){
           rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
       }

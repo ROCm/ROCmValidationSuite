@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -67,25 +67,13 @@ uint64_t test_duration;
  * @return time difference in milliseconds
  */
 uint64_t time_diff(
-                std::chrono::time_point<std::chrono::system_clock> t_end,
-                std::chrono::time_point<std::chrono::system_clock> t_start) {
-    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            t_end - t_start);
-    return milliseconds.count();
+    std::chrono::time_point<std::chrono::system_clock> t_end,
+    std::chrono::time_point<std::chrono::system_clock> t_start) {
+  auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+      t_end - t_start);
+  return milliseconds.count();
 }
 
-
-/**
- * @brief flushes target and dtype fields to json file
- * @return
- */
-
-void pebb_action::json_add_primary_fields(){
-  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-    return;
-  }	
-}
 /**
  * @brief Main action execution entry point. Implements test logic.
  *
@@ -138,7 +126,7 @@ int pebb_action::run() {
 
   test_duration = property_duration;
   if(bjson){
-    json_add_primary_fields();
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
   int sts = create_threads();
 
@@ -161,35 +149,45 @@ int pebb_action::run() {
     // start timers
     if (property_duration) {
       RVSTRACE_
-        timer_final.start(property_duration, true);  // ticks only once
-    }
+        timer_final.start(property_duration, true); // ticks only once
 
-    if (property_log_interval) {
+      if (property_log_interval) {
+        RVSTRACE_
+          timer_running.start(property_log_interval); // ticks continuously
+      }
+
       RVSTRACE_
-        timer_running.start(property_log_interval);        // ticks continuously
+        pebb_start_time = std::chrono::system_clock::now();
+
+      do {
+        if (property_parallel) {
+          sts = run_parallel();
+        } else {
+          sts = run_single();
+        }
+
+        pebb_end_time = std::chrono::system_clock::now();
+        uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
+        if(test_time >= property_duration) {
+          pebb_action::do_final_average();
+          break;
+        }
+      } while(brun);
+
+      RVSTRACE_
+        timer_running.stop();
+      timer_final.stop();
     }
+    else {
 
-    RVSTRACE_
-      pebb_start_time = std::chrono::system_clock::now();
-
-    do {
       if (property_parallel) {
         sts = run_parallel();
       } else {
         sts = run_single();
       }
 
-      pebb_end_time = std::chrono::system_clock::now();
-      uint64_t test_time = time_diff(pebb_end_time, pebb_start_time) ;
-      if(test_time >= property_duration) {
-        pebb_action::do_final_average();
-        break;
-      }
-    } while(brun);
-
-    RVSTRACE_
-    timer_running.stop();
-    timer_final.stop();
+      pebb_action::do_final_average();
+    }
 
     iter -= step;
 
@@ -273,3 +271,4 @@ int pebb_action::run_parallel() {
 
   return rvs::lp::Stopping() ? -1 : 0;
 }
+

@@ -1,16 +1,15 @@
-# User Guide
+# User guide
 
-## Introduction
 The ROCm Validation Suite (RVS) is a system validation and diagnostics tool
 for monitoring, stress testing, detecting and troubleshooting issues that
-affects the functionality and performance of AMD GPU(s) operating in a
+affect the functionality and performance of AMD GPU(s) operating in a
 high-performance/AI/ML computing environment. RVS is enabled using the ROCm
 software stack on a compatible software and hardware platform.
 
 RVS is a collection of tests, benchmarks, and qualification tools each
 targeting a specific sub-system of the ROCm platform. The tools are
-implemented in software and share a common command line interface. Each set of
-tests are implemented in a “module” which is a library encapsulating the
+implemented in software and share a common command-line interface. Each set of
+tests is implemented in a “module” which is a library encapsulating the
 functionality specific to the tool. The CLI can specify the directory containing
 modules to use when searching for libraries to load. Each module may have a set
 of options that it defines and a configuration file that supports its execution.
@@ -20,7 +19,7 @@ of options that it defines and a configuration file that supports its execution.
 RVS can be obtained by building it from source code base or by installing from
 pre-built package.
 
-### Building from Source Code
+### Building from source code
 
 RVS has been developed as open source solution. Its source code and belonging
 documentation can be found at AMD's GitHub page.
@@ -29,50 +28,67 @@ In order to build RVS from source code, refer
 site](https://github.com/ROCm/ROCmValidationSuite)
 and follow instructions in README file.
 
-### Installing from Package
+### Installing from package
 Based on the OS, use the appropriate package manager to install the **rocm-validation-suite** package.
-For more details, refer [ROCm Validation Suite GitHub site](https://github.com/ROCm/ROCmValidationSuite).
+For more details, refer to the [ROCm Validation Suite GitHub site](https://github.com/ROCm/ROCmValidationSuite).
 
 RVS package components are installed in `/opt/rocm`. Package contains:
-- executable binary (located in _install-base_/bin/rvs)
-- public shared libraries (located in _install-base_/lib)
-- module specific shared libraries (located in _install-base_/lib/rvs)
-- default configuration files (located in _install-base_/share/rocm-validation-suite/conf)
-- GPU specific configuration files (located in _install-base_/share/rocm-validation-suite/conf/<GPU folder>)
-- testscripts (located in _install-base_/share/rocm-validation-suite/testscripts)
-- user guide (located in _install-base_/share/rocm-validation-suite/userguide)
-- man page (located in _install-base_/share/man)
+- executable binary (located in `_install-base_/bin/rvs`)
+- public shared libraries (located in `_install-base_/lib`)
+- module specific shared libraries (located in `_install-base_/lib/rvs`)
+- default configuration files (located in `_install-base_/share/rocm-validation-suite/conf`)
+- GPU specific configuration files (located in `_install-base_/share/rocm-validation-suite/conf/<GPU folder>`)
+- testscripts (located in `_install-base_/share/rocm-validation-suite/testscripts`)
+- user guide (located in `_install-base_/share/rocm-validation-suite/userguide`)
+- man page (located in `_install-base_/share/man`)
 
 ### Running RVS
 
 #### Run version built from source code
 
-    cd <source folder>/build/bin
+```bash
+cd <source folder>/build/bin
+```
 
     Command examples
-    ./rvs --help ; Lists all options to run RVS test suite
-    ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -c conf/gst_single.conf ; Run GST module default test configuration
 
-### Run version pre-compiled and packaged with ROCm release
+```bash
+./rvs --help                       # List all options
+./rvs -g                           # List supported GPUs available in the machine
+./rvs -c conf/gst_single.conf      # Run GST module default test configuration
+./rvs -m gst                       # Run GST module using platform-detected config
+./rvs -r 3                         # Run predefined level 3 tests (range: 1–5, 5 = highest stress)
+```
 
-    cd /opt/rocm/bin
+#### Run version pre-compiled and packaged with ROCm release
+
+```bash
+cd /opt/rocm/bin
+```
 
     Command examples
-    ./rvs --help ; Lists all options to run RVS test suite
-    ./rvs -g ; Lists supported GPUs available in the machine
-    ./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf ; Run GST default test configuration
+```bash
+./rvs --help                                                                      # List all options
+./rvs -g                                                                          # List supported GPUs available in the machine
+./rvs -c ../share/rocm-validation-suite/conf/gst_single.conf                     # Run GST default test configuration
+./rvs -m gst                                                                      # Run GST module using platform-detected config
+./rvs -r 3                                                                        # Run predefined level 3 tests (range: 1–5, 5 = highest stress)
+```
 
-To run GPU specific test configuration, use configuration files from GPU folders in "/opt/rocm/share/rocm-validation-suite/conf"
+To run a GPU-specific test configuration, use configuration files from the GPU subfolders under `/opt/rocm/share/rocm-validation-suite/conf/`:
 
-    ./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf ; Run MI300X specific GST test configuration
-    ./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf ; Run Navi 32 specific GST test configuration
+```bash
+./rvs -c ../share/rocm-validation-suite/conf/MI300X/gst_single.conf  # Run MI300X-specific GST test configuration
+./rvs -c ../share/rocm-validation-suite/conf/nv32/gst_single.conf    # Run Navi 32-specific GST test configuration
+```
 
-Note: If present, always use GPU specific configurations instead of default test configurations.
+```{note}
+If present, always use GPU specific configurations instead of default test configurations.
+```
 
-## Basic Concepts
+## Basic concepts
 
-### RVS Architecture
+### RVS architecture
 
 RVS is implemented as a set of modules each implementing particular test
 functionality. Modules are invoked from one central place (aka Launcher) which
@@ -82,13 +98,13 @@ architecture is built around concept of Linux shared objects, thus
 allowing for easy addition of new modules in the future.
 
 
-### Available Modules
+### Available modules
 
-#### GPU Properties – GPUP
+#### GPU Properties – GPUP module
 The GPU Properties module queries the configuration of a target device and returns the device’s static characteristics. These static values can be used to debug issues such as device support, performance and firmware problems.
 
 #### GPU Monitor – GM module
-The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information at regular intervals. The module can be configured to halt another RVS modules execution if one of the quantities exceeds a specified boundary value.
+The GPU monitor tool is capable of running on one, some or all of the GPU(s) installed and will report various information at regular intervals. The module can be configured to halt another RVS module's execution if one of the quantities exceeds a specified boundary value.
 
 #### PCI Express State Monitor – PESM module
 The PCIe State Monitor tool is used to actively monitor the PCIe interconnect between the host platform and the GPU. The module will register a “listener” on a target GPU’s PCIe interconnect, and log a message whenever it detects a state change. The PESM will be able to detect the following state changes:
@@ -97,7 +113,7 @@ The PCIe State Monitor tool is used to actively monitor the PCIe interconnect be
 2.	GPU power state changes
 
 #### ROCm Configuration Qualification Tool - RCQT module
-The ROCm Configuration Qualification Tool ensures the platform is capable of running ROCm applications and is configured correctly. It checks the installed versions of the ROCm components and the platform configuration of the system. This includes checking the dependencies corresponding to the ROCm meta-packages are installed correctly.
+The ROCm Configuration Qualification Tool ensures the platform is capable of running ROCm applications and is configured correctly. It checks the installed versions of the ROCm components and the platform configuration of the system. This includes verifying that the dependencies corresponding to the ROCm meta-packages are installed correctly.
 
 #### PCI Express Qualification Tool – PEQT module
 The PCIe Qualification Tool is used to qualify the PCIe bus on which the GPU is connected. The qualification test will be capable of determining the following characteristics of the PCIe bus interconnect to a GPU:
@@ -121,10 +137,17 @@ Please see the web page “ROCm, a New Era in Open GPU Computing” to find out 
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA transfers between system memory and a target GPU card’s memory. The maximum bandwidth obtained is reported to help debug low bandwidth issues. The benchmark should be capable of  targeting one, some or all of the GPUs installed in a platform, reporting individual benchmark statistics for each.
 
 #### GPU Stress Test - GST module
-The GPU Stress Test runs various GEMM computations as workloads to stress the GPU FLOPS performance and check whether it meets the configured target GFLOPS. GEMM workloads shall be configured as either operation type or data type. GEMM based on operation types include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) - configured using operation parameter. GEMM based on data types include `fp8`, `i8`, `fp16`, `bf16`, `fp32` and  `tf32` (`xf32`) - configured using data type parameter. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
+The GPU Stress Test runs various GEMM computations as workloads to stress the GPU FLOPS performance and check whether it meets the configured target GFLOPS. GEMM workloads shall be configured as either operation type or data type. GEMM based on operation types include SGEMM, DGEMM and HGEMM (Single/Double/Half-precision General Matrix Multiplication) - configured using operation parameter. GEMM based on data types include `fp8`, `i8`, `fp16`, `bf16`, `fp32` and `tf32` (`xf32`) - configured using data type parameter. The duration of the test is configurable, both in terms of time (how long to run) and iterations (how many times to run).
 
 #### Input EDPp Test - IET module
 The Input EDPp Test runs GEMM workloads to stress the GPU power (that is, TGP). This test is used to verify if the GPU is capable of handling max. power stress for a sustained period of time. Also checks whether GPU power reaches a set target power.
+
+#### GPU Power Pulse Test - PULSE module
+The Pulse test drives repeating **high-power** (GEMM compute) and **low-power** (idle, minimum clocks) phases at a configurable rate so that GPU power swings over time. That pattern stresses the power supply and voltage regulators with transients rather than a single sustained power level. With **parallel: true** on multiple GPUs, the module uses a CPU-side barrier and a GPU-side fine-grained barrier so that devices tend to enter the heavy phase together, increasing aggregate current steps. Power and temperature are read through **AMD SMI**. GEMM execution uses the same **rvs_blas** stack as GST/IET (**rocBLAS** or **hipBLASLt**).
+
+```{Warning}
+This is a beta feature and is not intended for production use. Pass/fail criteria are still being refined.
+```
 
 #### Memory Test - MEM module
 The Memory module tests the GPU memory for hardware errors and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
@@ -140,11 +163,199 @@ The Memory module tests the GPU memory for hardware errors and soft errors using
 9. Modulo 20, random pattern
 10. Memory stress test
 
-#### BABEL benchmark Test - BABEL module
+#### BABEL Benchmark Test - BABEL module
 The Babel module executes BabelStream (synthetic GPU benchmark based on the original STREAM benchmark for CPUs) benchmark that measures memory transfer rates (bandwidth) to and from global device memory. Various benchmark tests are implemented using GPU kernels in HIP (Heterogeneous Interface for Portability) programming language.
 
+### Command line options
 
-### Configuration Files
+Command line options are summarized in the table below:
+
+```{note}
+Command line options take precedence over the same parameters set in the configuration file. For example, if `parallel: false` is specified in the configuration file but `-p true` is passed on the command line, parallel execution will be enabled.
+```
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Short option</th><th class="head">Long option</th><th class="head"> Description</th></tr>
+<tr><td>-a</td><td>--appendLog</td><td>When generating a debug logfile, do not overwrite the content
+of the current log. Use in conjuction with <b>-d</b> and <b>-l</b> options.
+</td></tr>
+
+<tr><td>-c</td><td>--config</td><td>Specify the test configuration file to use.
+This is a mandatory field for test execution.
+</td></tr>
+
+<tr><td>-r</td><td>--run</td><td>Specify the predefined test level to run (1–5).
+Each level selects a GPU-specific configuration file without requiring a <b>-c</b> argument.
+See <a href="#test-levels">Test Levels</a> for details.
+</td></tr>
+
+<tr><td>-d</td><td>--debugLevel</td><td>Specify the debug level for the output log.
+The range is 0-5 with 5 being the highest verbose level.
+</td></tr>
+
+<tr><td>-g</td><td>--listGpus</td><td>List all the GPUs available in the machine,
+that RVS supports and has visibility.
+</td></tr>
+
+<tr><td>-i</td><td>--indexes</td><td>Comma-separated list of GPU IDs or SMI-based indexes to run tests on.
+Overrides the <b>device</b> and <b>device_index</b> values specified in all actions of the configuration file, including the <b>all</b> value.
+</td></tr>
+
+<tr><td>-s</td><td>--selectActions</td><td>Comma separated list of action names or 0-based action
+index numbers to run from the configuration file. Only the matching actions will be executed.
+All other actions are skipped.
+</td></tr>
+
+<tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
+if a path follows this argument, that will be used as json log file;
+else a file created in <b>/var/tmp/</b> with timestamp in name.
+</td></tr>
+
+<tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
+</td></tr>
+
+<tr><td>-m</td><td>--module</td><td>Specify a module name to run the corresponding
+platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>babel</b>, <b>gpup</b>,
+<b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>.
+</td></tr>
+
+<tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
+</td></tr>
+
+<tr><td>-v</td><td>--verbose</td><td>Enable detailed logging. Equivalent to specifying <b>-d 5</b> option.
+</td></tr>
+
+<tr><td>-p</td><td>--parallel</td><td>Enables or Disables parallel execution across multiple GPUs.
+Use this option in conjunction with <b>-c</b> option.
+Accepted Values:
+<b>true</b> – Enables parallel execution.
+<b>false</b> – Disables parallel execution.
+If no value is provided for the option, it defaults to <b>true</b>.
+</td></tr>
+
+<tr><td>-n</td><td>--numTimes</td><td>Number of times the test repeatedly executes.
+Use this option in conjunction with <b>-c</b> option.
+</td></tr>
+
+<tr><td></td><td>--quiet</td><td>No console output given. See logs and return
+code for errors.</td></tr>
+
+<tr><td></td><td>--version</td><td>Displays the version information and exits.
+</td></tr>
+
+<tr><td>-h</td><td>--help</td><td>Display usage information and exit.
+</td></tr>
+
+</table>
+</div>
+
+### Test Levels
+
+When using the `-r` option, RVS automatically selects a predefined configuration file based on the detected GPU platform (for example, `conf/MI300X/levels/rvs_level_N.conf`). No `-c` argument is needed. The five levels represent progressively increasing test coverage and duration:
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Level</th><th class="head">Test</th><th class="head">Description</th><th class="head">Modules</th><th class="head">Typical Duration</th></tr>
+<tr><td>1</td><td>Software validation</td><td>Verifies that all required ROCm packages and metapackages are correctly installed.</td><td>rcqt</td><td>Short (seconds)</td></tr>
+<tr><td>2</td><td>Hardware capability checks</td><td>Checks PCIe link speed and width, performs a quick HBM read/write pass, and verifies basic PCIe and XGMI interface connectivity.</td><td>peqt, babel, pebb, pbqt</td><td>Short (seconds)</td></tr>
+<tr><td>3</td><td>Basic performance</td><td>Measures HBM bandwidth across common operations, PCIe host-to-device and device-to-host throughput, bidirectional XGMI bandwidth, and limited gemm compute performance runs.</td><td>babel, pebb, pbqt, gst</td><td>Minutes</td></tr>
+<tr><td>4</td><td>Extended performance</td><td>Same coverage as level 3 with longer test durations, full HBM operation set, bidirectional PCIe transfers, a basic memory test pass, and full gemm compute performance runs.</td><td>babel, pebb, pbqt, mem, gst, iet</td><td>Tens of minutes</td></tr>
+<tr><td>5</td><td>Full stress test</td><td>Runs all tests from level 4 at maximum duration, adds high-iteration memory stress testing, and includes a sustained power stress test targeting peak GPU TDP. Intended for thorough pre-production validation.</td><td>babel, pebb, pbqt, mem, gst, iet</td><td>Hours</td></tr>
+</table>
+</div>
+
+The exact tests and thresholds within each level vary by GPU platform.
+
+#### Examples
+
+Print version information and exit:
+```bash
+./rvs --version
+```
+
+List all available test modules:
+```bash
+./rvs -t
+```
+List all GPUs visible to RVS:
+```bash
+./rvs -g
+```
+
+Run a specific configuration file:
+```bash
+./rvs -c conf/gst_single.conf
+```
+
+Run a platform-specific configuration file (for example, MI350X GST):
+```bash
+./rvs -c conf/MI350X/gst_single.conf
+```
+
+Repeat a test 5 times in sequence (soak/stability testing):
+```bash
+./rvs -c conf/gst_single.conf -n 5
+```
+
+Run only the GST module using the built-in platform configuration:
+```bash
+./rvs -m gst
+```
+
+
+Run the predefined level 3 test suite (basic performance):
+```bash
+./rvs -r 3
+```
+
+Run the predefined level 5 (full stress) test suite on specific GPUs only:
+```bash
+./rvs -r 5 -i 0,1
+```
+
+Run a configuration file on specific GPUs (by index) with parallel execution enabled:
+```bash
+./rvs -c conf/gst_single.conf -i 0,1 -p true
+```
+
+Run only selected actions from a configuration file (by name or 0-based index):
+```bash
+./rvs -c conf/iet_single.conf -s action_1,action_2
+./rvs -c conf/iet_single.conf -s 0,2
+```
+
+Generate JSON output to a specific file:
+```bash
+./rvs -c conf/gst_single.conf -j /tmp/rvs_results.json
+```
+
+Run with verbose logging and save the log to a file:
+```bash
+./rvs -c conf/gst_single.conf -v -l /tmp/rvs_debug.log
+```
+
+Suppress console output and write results to a JSON file (useful in CI pipelines):
+```bash
+./rvs -c conf/gst_single.conf --quiet -j /tmp/rvs_results.json
+```
+
+The configuration files in the top-level `conf/` folder are generic samples and may not reflect the correct thresholds or parameters for your hardware. For accurate results, use the platform-specific configuration files under `conf/<GPU>/` (for example, `conf/MI350X/`), or use the `-r` or `-m` option, which automatically selects the appropriate platform configuration.
+
+### GPU-Specific Configurations
+
+RVS includes optimized test configurations for a range of GPU families, organized under `conf/<GPU>/`. 
+Level-based configurations (usable with `-r`) are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X.
+
+**AMD Instinct Series:**
+- MI210, MI250X, MI300A, MI300X, MI308X, MI325X, MI350X, MI355X
+- High-frequency variants: MI300X-HF, MI308X-HF
+
+**AMD Radeon Series:**
+- nv21, nv31, nv32, gfx1200, gfx1201
+- RX9060, RX9070, RX9070GRE, R9600D
+
+### Configuration files
 
 The RVS tool will allow the user to indicate a configuration file, adhering to
 the YAML 1.2 specification, which details the validation tests to run and the
@@ -187,12 +398,14 @@ An example of RVS configuration file is given here:
     ...
 
 
-### Common Configuration Keys
+### Common configuration keys
 
 Common configuration keys applicable to most module are summarized in the
-table below:\n
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+table below:
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>name</td><td>String</td><td>The name of the defined action.</td></tr>
 <tr><td>device</td><td>Collection of String</td>
 <td>This is a list of device indexes (gpu ids), or the keyword “all”. The
@@ -217,11 +430,11 @@ isn’t specified the default is 1. Some modules will ignore this
 parameter.</td></tr>
 
 <tr><td>wait</td><td>Integer</td><td>This indicates how long the test should
-wait
-between executions, in milliseconds. Some
+wait between executions, in milliseconds. Some
 modules will ignore this parameter. If the
-count key is not specified, this key is ignored.
-duration Integer This parameter overrides the count key, if
+count key is not specified, this key is ignored.</td></tr>
+
+<tr><td>duration</td><td>Integer</td><td>This parameter overrides the count key, if
 specified. This indicates how long the test
 should run, given in milliseconds. Some
 modules will ignore this parameter.</td></tr>
@@ -231,65 +444,15 @@ modules will ignore this parameter.</td></tr>
 will be used in the execution of the action. Each module has a set of sub-tests
 or sub-actions that can be configured based on its specific
 parameters.</td></tr>
+
+<tr><td>log_interval</td><td>Integer</td><td>This specifies how often, in
+milliseconds, the module emits a progress or status log message during a
+running test. If a value isn't specified the default is 1000 ms. Some modules
+will ignore this parameter.</td></tr>
 </table>
+</div>
 
-### Command Line Options
-
-Command line options are summarized in the table below:
-
-<table>
-<tr><th>Short option</th><th>Long option</th><th> Description</th></tr>
-<tr><td>-a</td><td>--appendLog</td><td>When generating a debug logfile, do not overwrite the content
-of the current log. Use in conjuction with -d and -l options.
-</td></tr>
-
-<tr><td>-c</td><td>--config</td><td>Specify the test configuration file to use.
-This is a mandatory field for test execution.
-</td></tr>
-
-<tr><td>-d</td><td>--debugLevel</td><td>Specify the debug level for the output log.
-The range is 0-5 with 5 being the highest verbose level.
-</td></tr>
-
-<tr><td>-g</td><td>--listGpus</td><td>List all the GPUs available in the machine,
-that RVS supports and has visibility.
-</td></tr>
-
-<tr><td>-i</td><td>--indexes</td><td>Comma separated list of GPU ids to run test on.
-This overrides the device values specified for every actions in the
-configuration file, including the ‘all’ value.
-</td></tr>
-
-<tr><td>-j</td><td>--json</td><td>Generate output file in JSON format.
-if a path follows this argument, that will be used as json log file;
-else a file created in /var/tmp/ with timestamp in name.
-</td></tr>
-
-<tr><td>-l</td><td>--debugLogFile</td><td>Generate log file with output and debug information.
-</td></tr>
-
-<tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
-</td></tr>
-
-<tr><td>-v</td><td>--verbose</td><td>Enable verbose reporting. This is Enable verbose reporting.
-</td></tr>
-
-<tr><td>-n</td><td>--numTimes</td><td>Number of times the test repeatedly executes.
-Use in conjunction with -c option.
-</td></tr>
-
-<tr><td></td><td>--quiet</td><td>No console output given. See logs and return
-code for errors.</td></tr>
-
-<tr><td></td><td>--version</td><td>Displays the version information and exits.
-</td></tr>
-
-<tr><td>-h</td><td>--help</td><td>Display usage information and exit.
-</td></tr>
-
-</table>
-
-## GPUP Module
+## GPUP module
 The GPU properties module provides an interface to easily dump the static
 characteristics of a GPU. This information is stored in the sysfs file system
 for the kfd, with the following path:
@@ -300,66 +463,90 @@ Each of the GPU nodes in the directory is identified with a number,
 indicating the device index of the GPU. This module will ignore count, duration
 or wait key values.
 
-### Module Specific Keys
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>properties</td><td>Collection of Strings</td>
-<td>The properties key specifies what configuration property or properties the
-query is interested in. Possible values are:\n
-all - collect all settings\n
-gpu_id\n
-cpu_cores_count\n
-simd_count\n
-mem_banks_count\n
-caches_count\n
-io_links_count\n
-cpu_core_id_base\n
-simd_id_base\n
-max_waves_per_simd\n
-lds_size_in_kb\n
-gds_size_in_kb\n
-wave_front_size\n
-array_count\n
-simd_arrays_per_engine\n
-cu_per_simd_array\n
-simd_per_cu\n
-max_slots_scratch_cu\n
-vendor_id\n
-device_id\n
-location_id\n
-drm_render_minor\n
-max_engine_clk_fcompute\n
-local_mem_size\n
-fw_version\n
-capability\n
-max_engine_clk_ccompute\n
-</td></tr>
-<tr><td>io_links-properties</td><td>Collection of Strings</td>
-<td>The properties key specifies what configuration
-property or properties the query is interested in.
-Possible values are:\n
-all - collect all settings\n
-count - the number of io_links\n
-type\n
-version_major\n
-version_minor\n
-node_from\n
-node_to\n
-weight\n
-min_latency\n
-max_latency\n
-min_bandwidth\n
-max_bandwidth\n
-recommended_transfer_size\n
-flags\n
-</td></tr>
+### Module specific keys
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+  <thead>
+    <tr>
+      <th class="head">Config Key</th>
+      <th class="head">Type</th>
+      <th class="head">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>properties</td>
+      <td>Collection of Strings</td>
+      <td>
+        The properties key specifies what configuration property or properties the
+        query is interested in. Possible values are:
+        <ul>
+          <li>all - collect all settings</li>
+          <li>gpu_id</li>
+          <li>cpu_cores_count</li>
+          <li>simd_count</li>
+          <li>mem_banks_count</li>
+          <li>caches_count</li>
+          <li>io_links_count</li>
+          <li>cpu_core_id_base</li>
+          <li>simd_id_base</li>
+          <li>max_waves_per_simd</li>
+          <li>lds_size_in_kb</li>
+          <li>gds_size_in_kb</li>
+          <li>wave_front_size</li>
+          <li>array_count</li>
+          <li>simd_arrays_per_engine</li>
+          <li>cu_per_simd_array</li>
+          <li>simd_per_cu</li>
+          <li>max_slots_scratch_cu</li>
+          <li>vendor_id</li>
+          <li>device_id</li>
+          <li>location_id</li>
+          <li>drm_render_minor</li>
+          <li>max_engine_clk_fcompute</li>
+          <li>local_mem_size</li>
+          <li>fw_version</li>
+          <li>capability</li>
+          <li>max_engine_clk_ccompute</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>io_links-properties</td>
+      <td>Collection of Strings</td>
+      <td>
+        The properties key specifies what configuration property or properties the
+        query is interested in. Possible values are:
+        <ul>
+          <li>all - collect all settings</li>
+          <li>count - the number of io_links</li>
+          <li>type</li>
+          <li>version_major</li>
+          <li>version_minor</li>
+          <li>node_from</li>
+          <li>node_to</li>
+          <li>weight</li>
+          <li>min_latency</li>
+          <li>max_latency</li>
+          <li>min_bandwidth</li>
+          <li>max_bandwidth</li>
+          <li>recommended_transfer_size</li>
+          <li>flags</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
 </table>
+</div>
 
 ### Output
 
 Module specific output keys are described in the table below:
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>properties-values</td><td>Collection of Integers</td>
 <td>The collection will contain a positive integer value for each of the valid
 properties specified in the properties config key.</td></tr>
@@ -367,6 +554,8 @@ properties specified in the properties config key.</td></tr>
 <td>The collection will contain a positive integer value for each of the valid
 properties specified in the io_links-properties config key.</td></tr>
 </table>
+</div>
+
 Each of the settings specified has a positive integer value. For each
 setting requested in the properties key a message with the following format will
 be returned:
@@ -382,7 +571,7 @@ format will be returned:
 
 **Example 1:**
 
-Consider action>
+Consider action:
 
     actions:
     - name: action_1
@@ -519,58 +708,109 @@ Output for such configuration is:
     RVS-GPUP: action: action_1  invalid 'deviceid' key value
 
 
-
-
-## GM Module
+## GM module
 The GPU monitor module can be used monitor and characterize the response of a
 GPU to different levels of use. This module is intended to run concurrently with
-other actions, and provides a ‘start’ and ‘stop’ configuration key to start the
+other actions, and provides a start and stop configuration key to start the
 monitoring and then stop it after testing has completed. The module can also be
 configured with bounding box values for interested GPU parameters. If any of the
 GPU’s parameters exceed the bounding values on a specific GPU an INFO warning
 message will be printed to stdout while the bounding value is still exceeded.
 
-### Module Specific Keys
+### Module specific keys
 
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>monitor</td><td>Bool</td>
-<td>If this this key is set to true, the GM module will start monitoring on
-specified devices. If this key is set to false, all other keys are ignored and
-monitoring of the specified device will be stopped.</td></tr>
-<tr><td>metrics</td>
-<td>Collection of Structures, specifying the metric, if there are bounds and the
-bound values. The structures have the following format:\n{String, Bool, Integer,
-Integer}</td>
-<td>The set of metrics to monitor during the monitoring period. Example values
-are:\n{‘temp’, ‘true’, max_temp, min_temp}\n {‘clock’, ‘false’, max_clock,
-min_clock}\n {‘mem_clock’, ‘true’, max_mem_clock, min_mem_clock}\n {‘fan’,
-‘true’, max_fan, min_fan}\n {‘power’, ‘true’, max_power, min_power}\n The set of
-upper bounds for each metric are specified as an integer. The units and values
-for each metric are:\n temp - degrees Celsius\n clock - MHz \n mem_clock - MHz
-\n fan - Integer between 0 and 255 \n power - Power in Watts</td></tr>
-<tr><td>sample_interval</td><td>Integer</td>
-<td>If this key is specified metrics will be sampled at the given rate. The
-units for the sample_interval are milliseconds. The default value is 1000.
-</td></tr>
-<tr><td>log_interval</td><td>Integer</td>
-<td>If this key is specified informational messages will be emitted at the given
-interval, providing the current values of all parameters specified. This
-parameter must be equal to or greater than the sample rate. If this value is not
-specified, no logging will occur.</td></tr>
-<tr><td>terminate</td><td>Bool</td> <td>If the terminate key is true the GM
-monitor will terminate the RVS process when a bounds violation is encountered on
-any of the metrics specified.</td></tr>
-<tr><td>force</td><td>Bool</td> <td>If 'true'  and terminate key is also 'true'
-the RVS process will terminate immediately. **Note:** this may cose resource leaks
-within GPUs.</td></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+  <thead>
+    <tr>
+      <th class="head">Config Key</th>
+      <th class="head">Type</th>
+      <th class="head">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>monitor</td>
+      <td>Bool</td>
+      <td>
+        If this key is set to true, the GM module will start monitoring on
+        specified devices. If this key is set to false, all other keys are ignored
+        and monitoring of the specified device will be stopped.
+      </td>
+    </tr>
+    <tr>
+      <td>metrics</td>
+      <td>
+        Collection of Structures, specifying the metric, if there are bounds and the
+        bound values. The structures have the following format:
+        <pre>{String, Bool, Integer, Integer}</pre>
+      </td>
+      <td>
+        The set of metrics to monitor during the monitoring period. Example values are:
+        <ul>
+          <li>{'temp', 'true', max_temp, min_temp}</li>
+          <li>{'clock', 'false', max_clock, min_clock}</li>
+          <li>{'mem_clock', 'true', max_mem_clock, min_mem_clock}</li>
+          <li>{'fan', 'true', max_fan, min_fan}</li>
+          <li>{'power', 'true', max_power, min_power}</li>
+        </ul>
+        The set of upper bounds for each metric are specified as an integer. The units and
+        values for each metric are:
+        <ul>
+          <li>temp - degrees Celsius</li>
+          <li>clock - MHz</li>
+          <li>mem_clock - MHz</li>
+          <li>fan - Integer between 0 and 255</li>
+          <li>power - Power in Watts</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>sample_interval</td>
+      <td>Integer</td>
+      <td>
+        If this key is specified metrics will be sampled at the given rate. The units for
+        the sample_interval are milliseconds. The default value is 1000.
+      </td>
+    </tr>
+    <tr>
+      <td>log_interval</td>
+      <td>Integer</td>
+      <td>
+        If this key is specified informational messages will be emitted at the given
+        interval, providing the current values of all parameters specified. This parameter
+        must be equal to or greater than the sample rate. If this value is not specified,
+        no logging will occur.
+      </td>
+    </tr>
+    <tr>
+      <td>terminate</td>
+      <td>Bool</td>
+      <td>
+        If the terminate key is true the GM monitor will terminate
+        the RVS process when a bounds violation is encountered on any of the metrics specified.
+      </td>
+    </tr>
+    <tr>
+      <td>force</td>
+      <td>Bool</td>
+      <td>
+        If true and terminate key is also true the
+        RVS process will terminate immediately. <strong>Note:</strong> this may cause
+        resource leaks within GPUs.
+      </td>
+    </tr>
+  </tbody>
 </table>
+</div>
 
 ### Output
 
 Module specific output keys are described in the table below:
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>metric_values</td><td>Time Series Collection of Result
 Integers</td><td>A collection of integers containing the result values for each
 of the metrics being monitored. </td></tr>
@@ -579,13 +819,14 @@ collection of integers containing the violation count for each of the metrics
 being monitored. </td></tr>
 <tr><td>metric_average</td><td>Collection of Result Integers </td><td></td></tr>
 </table>
+</div>
 
 When monitoring is started for a target GPU, a result message is logged
 with the following format:
 
     [RESULT][<timestamp>][<action name>] gm <gpu id> started
 
-In addition, an informational message is provided for each for each metric
+In addition, an informational message is provided for each metric
 being monitored:
 
     [INFO ][<timestamp>][<action name>] gm <gpu id> monitoring <metric> bounds min:<min_metric> max: <max_metric>
@@ -734,7 +975,7 @@ Output for such configuration is:
     RVS-GM: action: action_1 Log interval has the lower value than the sample interval
 
 
-## PESM Module
+## PESM module
 The PCIe State Monitor (PESM) tool is used to actively monitor the PCIe
 interconnect between the host platform and the GPU. The module registers
 “listener” on a target GPUs PCIe interconnect, and log a message whenever it
@@ -745,30 +986,39 @@ detects a state change. The PESM is able to detect the following state changes:
 
 This module is intended to run concurrently with other actions, and provides a
 ‘start’ and ‘stop’ configuration key to start the monitoring and then stop it
-after testing has completed. For information on GPU power state monitoring
-please consult the 7.6. PCI Power Management Capability Structure, Gen 3 spec,
-page 601, device states D0-D3. For information on link status changes please
-consult the 7.8.8. Link Status Register (Offset 12h), Gen 3 spec, page 635.
+after testing has completed. For information on GPU power state monitoring, 
+see PCI Power Management Capability Structure, Gen 3 spec, device states D0-D3. 
+For information on link status changes see Status Register (Offset 12h), Gen 3 spec.
 
 Monitoring is performed by polling respective PCIe registers roughly every 1ms
 (one millisecond).
 
 ### Module Specific Keys
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>monitor</td><td>Bool</td><td>This this key is set to true, the PESM
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
+<tr><td>monitor</td><td>Bool</td><td>This key is set to true, the PESM
 module will start monitoring on specified devices. If this key is set to false,
 all other keys are ignored and monitoring will be stopped for all devices.</td>
-</tr> </table>
+</tr>
+<tr><td>debugwait</td><td>Integer</td><td>Debug wait period in milliseconds
+inserted before monitoring begins. Intended for development and debugging use.
+The default value is 0 (no wait).</td></tr>
+</table>
+</div>
 
 ### Output
 
 Module specific output keys are described in the table below:
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>state</td><td>String</td><td>A string detailing the current power state
 of the GPU or the speed of the PCIe link.</td></tr>
 </table>
+</div>
 
 When monitoring is started for a target GPU, a result message is logged
 with the following format:
@@ -816,9 +1066,9 @@ Here is a typical check utilizing PESM functionality:
       module: pesm
       monitor: false
 
--  **action_1** will initiate monitoring on all devices by setting key **monitor** to **true**\n
--  **action_2** will start GPU stress test
--  **action_3** will stop monitoring
+-  `action_1` will initiate monitoring on all devices by setting key `monitor` to `true`
+-  `action_2` will start GPU stress test
+-  `action_3` will stop monitoring
 
 If executed like this:
 
@@ -862,13 +1112,13 @@ Consider this file:
       monitor: true
 
 
-This file has and invalid entry in **deviceid** key.
+This file has an invalid entry in `deviceid` key.
 If execute, an error will be reported:
 
     RVS-PESM: action: act1  invalide 'deviceid' key value: xxx
 
 
-## RCQT Module
+## RCQT module
 
 
 RCQT ensures the platform is capable of running ROCm applications and is 
@@ -882,14 +1132,14 @@ checks required for ROCm support. The checks in this module do not target a
 specific device.
 \n\n
 Two types of actions are performed by RCQT.
-1)Metapackage Check
+1) Metapackage Check
 metapackage-validation: This will check the installation of the mentioned 
 metapackages and their dependencies and their respective versions as required
-by metapackage. List of metapackages are provided with key **package**
+by metapackage. List of metapackages are provided with key `package`
 
-2)Packages installation check
+2) Packages installation check
 packagelist-install-validation: This action checks if the package is installed.
-  Packages are provided against key **rpmpackagelist** and **debpackagelist**
+  Packages are provided against key `rpmpackagelist` and `debpackagelist`
 
 This feature is used to check installed packages on the system. It provides
 checks for installed packages and the currently available package versions, if
@@ -899,19 +1149,22 @@ applicable.
 
 Input keys are described in the table below:
 
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>package</td><td>Collection of Strings</td>
 <td>Specifies the list of metapackages to check. This key is required.</td></tr>
 </table>
+</div>
 
 #### Output
 
 Output keys are described in the table below for each metapackage 
 along with versions of each sub package:
 
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>Total packages validated</td><td>Integer</td>
 <td>total dependency packages under the said metapackage 
 </td></tr>
@@ -925,9 +1178,11 @@ along with versions of each sub package:
 <td>installed dependency packages but with wrong versions
 </td></tr>
 </table>
+</div>
 
 The check will emit a result message with the following format:
-    Meta package >metapakcage-name> :
+
+    Meta package <metapackage-name> :
     Package <dep-package1> installed version is <version>
     Package <dep-package2> installed version is <version>
     Package <dep-package3> installed version is <version>
@@ -949,6 +1204,7 @@ In this example, given package has all dependencies installed.
       package: rocm-ml-sdk
 
 The output for such configuration is:
+
     [RESULT] [3648664.1164  ] Action name :metapackage-validation
     [RESULT] [3648664.1363  ] Module name :rcqt
 
@@ -970,27 +1226,30 @@ with respective count
 ### Packages installation check
 
 This action checks if the package is installed.
-  Packages are provided against key **rpmpackagelist** and **debpackagelist**
+  Packages are provided against key `rpmpackagelist` and `debpackagelist`
 
 #### Packages installation Specific Keys
 
 Input keys are described in the table below:
 
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>rpmpackagelist</td><td>Collection of Strings</td>
-<td>Specifies the packages checked if installed on system for rhel/centos family.</td></tr>
+<td>Specifies the packages checked if installed on system for rhel family.</td></tr>
 <tr><td>debpackagelist</td><td>Collection of Strings</td>
 <td>Specifies the packages checked if installed on system for ubuntu family.
 </td></tr>
 </table>
+</div>
 
 #### Output
 
 Output keys are described in the table below:
 
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>Package</td><td>String</td>
 <td>Name of checked package
 </td></tr>
@@ -1004,12 +1263,13 @@ Output keys are described in the table below:
 <td>Number of packages installed.
 </td></tr>
 </table>
+</div>
 
 #### Examples
 
 **Example 1:**
 
-In this example, given user does not exist.
+In this example, all given packages are installed.
 
     actions:
     - name: packagelist-install-validation
@@ -1029,7 +1289,7 @@ The output for such configuration is:
         Installed packages    : 2
 
 
-## PEQT Module
+## PEQT module
 
 PCI Express Qualification Tool module targets and qualifies the configuration of
 the platforms PCIe connections to the GPUs. The purpose of the PEQT module is to
@@ -1041,52 +1301,73 @@ control, status and capabilities registers. These registers are specified in the
 PCI Express Base Specification, Revision 3. Iteration keys, i.e. count, wait and
 duration will be ignored for actions using the PEQT module.
 
-### Module Specific Keys
+### Module specific keys
 Module specific output keys are described in the table below:
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
-<tr><td>capability</td><td>Collection of Structures with the
-following format:\n{String,String}</td>
-<td>The PCIe capability key contains a collection of structures that specify
-which PCIe capability to check and the expected value of the capability. A check
-structure must contain the PCIe capability value, but an expected value may be
-omitted. The value of all valid capabilities that are a part of this collection
-will be entered into the capability_value field. Possible capabilities, and
-their value types are:\n\n
-link_cap_max_speed\n
-link_cap_max_width\n
-link_stat_cur_speed\n
-link_stat_neg_width\n
-slot_pwr_limit_value\n
-slot_physical_num\n
-bus_id\n
-atomic_op_32_completer\n
-atomic_op_64_completer\n
-atomic_op_128_CAS_completer\n
-atomic_op_routing\n
-dev_serial_num\n
-kernel_driver\n
-pwr_base_pwr\n
-pwr_rail_type\n
-device_id\n
-vendor_id\n\n
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+  <thead>
+    <tr>
+      <th class="head">Config Key</th>
+      <th class="head">Type</th>
+      <th class="head">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>capability</td>
+      <td>
+        Collection of Structures with the following format:
+        <pre>{String, String}</pre>
+      </td>
+      <td>
+        The PCIe capability key contains a collection of structures that specify
+        which PCIe capability to check and the expected value of the capability. A check
+        structure must contain the PCIe capability value, but an expected value may be
+        omitted. The value of all valid capabilities that are a part of this collection
+        will be entered into the capability_value field. Possible capabilities,
+        and their value types are:
+        <ul>
+          <li>link_cap_max_speed</li>
+          <li>link_cap_max_width</li>
+          <li>link_stat_cur_speed</li>
+          <li>link_stat_neg_width</li>
+          <li>slot_pwr_limit_value</li>
+          <li>slot_physical_num</li>
+          <li>bus_id</li>
+          <li>atomic_op_32_completer</li>
+          <li>atomic_op_64_completer</li>
+          <li>atomic_op_128_CAS_completer</li>
+          <li>atomic_op_routing</li>
+          <li>dev_serial_num</li>
+          <li>kernel_driver</li>
+          <li>pwr_base_pwr</li>
+          <li>pwr_rail_type</li>
+          <li>device_id</li>
+          <li>vendor_id</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
 The expected value String is a regular expression that is used to check the
 actual value of the capability.
 
-</td></tr>
-</table>
-
 ### Output
 Module specific output keys are described in the table below:
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>capability_value</td><td>Collection of Strings</td>
 <td>For each of the capabilities specified in the capability key, the actual
 value of the capability will be returned, represented as a String.</td></tr>
 <tr><td>pass</td><td>String</td> <td>'true' if all of the properties match the
 values given, 'false' otherwise.</td></tr>
 </table>
+</div>
 
 The qualification check queries the specified PCIe capabilities and
 properties and checks that their actual values satisfy the regular expression
@@ -1131,16 +1412,16 @@ A regular PEQT configuration file looks like this:
         atomic_op_128_CAS_completer:
       device: all
 
-Please note:
-- when setting the 'device' configuration key to 'all', the RVS will detect all the AMD compatible GPUs and run the test on all of them
+```{note}
+- When setting the `device` configuration key to `all`, the RVS will detect all the AMD compatible GPUs and run the test on all of them
+- There are no regular expression for this `.conf` file, therefore RVS will report `TRUE` if at least one AMD compatible GPU is registered within the system. Otherwise it will report `FALSE`.
+```
 
-- there are no regular expression for this .conf file, therefore RVS will report TRUE if at least one AMD compatible GPU is registered within the system. Otherwise it will report FALSE.
-
-Please note that the Power Budgeting capability is a dynamic one, having the following form:
+The Power Budgeting capability is a dynamic one, having the following form:
 
     <PM_State>_<Type>_<Power rail>
 
-where:
+Where:
 
     PM_State = D0/D1/D2/D3
     Type=PMEAux/Auxiliary/Idle/Sustained/Maximum
@@ -1212,15 +1493,15 @@ Another example of a configuration file, which queries for a smaller subset of P
         kernel_driver:
       device: all
 
-For this example, the expected PEQT check result is TRUE if:
+For this example, the expected PEQT check result is `TRUE` if:
 
-- at least one AMD compatible GPU is registered within the system and:
-- all \<link_cap_max_speed> values for all AMD compatible GPUs match the given regular expression and
-- all \<link_stat_cur_speed> values for all AMD compatible GPUs match the given regular expression
+- At least one AMD compatible GPU is registered within the system and:
+- All `<link_cap_max_speed>` values for all AMD compatible GPUs match the given regular expression and
+- All `<link_stat_cur_speed>` values for all AMD compatible GPUs match the given regular expression
 
-Please note that the \<slot_pwr_limit_value> regular expression is not valid and
-will be skipped without affecting the PEQT module's check RESULT (however, an
-error will be logged out)
+Please note that the `<slot_pwr_limit_value>` regular expression is not valid and
+will be skipped without affecting the PEQT module's check result, however, an
+error will be logged out.
 
 **Example 3:**
 
@@ -1245,41 +1526,54 @@ match their corresponding regular expressions.
         atomic_op_128_CAS_completer: ^((TRUE|FALSE){1})$
       device: 3254 33367
 
-## SMQT Module
+## SMQT module
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s
 SBIOS has satisfied the BAR mapping requirements for VDI and Radeon Instinct
-products for ROCm support. These are the current BAR requirements:\n\n
+products for ROCm support. These are the current BAR requirements:
 
-BAR 1: GPU Frame Buffer BAR – In this example it happens to be 256M, but
+**BAR 1: GPU Frame Buffer BAR**
+
+In this example it happens to be 256M, but
 typically this will be size of the GPU memory (typically 4GB+). This BAR has to
 be placed < 2^40 to allow peer- to-peer access from other GFX8 AMD GPUs. For
 GFX9 (Vega GPU) the BAR has to be placed < 2^44 to allow peer-to-peer access
-from other GFX9 AMD GPUs.\n\n
+from other GFX9 AMD GPUs.
 
-BAR 2: Doorbell BAR – The size of the BAR is typically will be < 10MB (currently
+**BAR 2: Doorbell BAR**
+
+The size of the BAR is typically will be < 10MB (currently
 fixed at 2MB) for this generation GPUs. This BAR has to be placed < 2^40 to
-allow peer-to-peer access from other current generation AMD GPUs.\n\n
-BAR 3: IO BAR - This is for legacy VGA and boot device support, but since this
+allow peer-to-peer access from other current generation AMD GPUs.
+
+**BAR 3: IO BAR**
+
+This is for legacy VGA and boot device support, but since this
 the GPUs in this project are not VGA devices (headless), this is not a concern
-even if the SBIOS does not setup.\n\n
+even if the SBIOS does not setup.
 
-BAR 4: MMIO BAR – This is required for the AMD Driver SW to access the
+**BAR 4: MMIO BAR**
+
+This is required for the AMD Driver SW to access the
 configuration registers. Since the reminder of the BAR available is only 1 DWORD
-(32bit), this is placed < 4GB. This is fixed at 256KB.\n\n
+(32bit), this is placed < 4GB. This is fixed at 256KB.
 
-BAR 5: Expansion ROM – This is required for the AMD Driver SW to access the
-GPU’s video-BIOS. This is currently fixed at 128KB.\n\n
+**BAR 5: Expansion ROM**
+
+This is required for the AMD Driver SW to access the
+GPU’s video-BIOS. This is currently fixed at 128KB.
 
 Refer to the ROCm Use of Advanced PCIe Features and Overview of How BAR Memory
-is Used In ROCm Enabled System web page for more information about how BAR
-memory is initialized by VDI and Radeon products. Iteration keys, i.e. count,
+is Used In ROCm Enabled System page for more information about how BAR
+memory is initialized by VDI and Radeon products. Iteration keys, for example, count,
 wait and duration will be ignored.
 
-### Module Specific Keys
+### Module specific keys
 
 Module specific output keys are described in the table below:
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>bar1_req_size</td><td>Integer</td>
 <td>This is an integer specifying the required size of the BAR1 frame buffer
 region.</td></tr>
@@ -1311,12 +1605,15 @@ be.</td></tr>
 <td>This is an integer specifying the required size of the BAR5 frame buffer
 region.</td></tr>
 </table>
+</div>
 
 ### Output
 
 Module specific output keys are described in the table below:
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>bar1_size</td><td>Integer</td><td>The actual size of BAR1.</td></tr>
 <tr><td>bar1_base_addr</td><td>Integer</td><td>The actual base address of BAR1
 memory.</td></tr>
@@ -1330,6 +1627,7 @@ memory.</td></tr>
 <tr><td>pass</td><td>String</td> <td>'true' if all of the properties match the
 values given, 'false' otherwise.</td></tr>
 </table>
+</div>
 
 The qualification check will query the specified bar properties and check that
 they satisfy the give parameters. The pass output key will be true and the test
@@ -1397,7 +1695,7 @@ Results for three GPUs are:
 In this example, BAR sizes reported by GPUs match those listed in configuration
 key except for the BAR5, hence the test fails.
 
-## PBQT Module
+## PBQT module
 
 The P2P Qualification Tool is designed to provide the list of all GPUs that
 support P2P and characterize the P2P links between peers. In addition to testing
@@ -1406,10 +1704,11 @@ between all unique P2P pairs for performance evaluation. These are known as
 device-to-device transfers, and can be either uni-directional or bi-directional.
 The average bandwidth obtained is reported to help debug low bandwidth issues.
 
-### Module Specific Keys
+### Module specific keys
 
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>peers</td><td>Collection of Strings</td>
 <td>This is a required key, and specifies the set of GPU(s) considered being
 peers of the GPU specified in the action. If ‘all’ is specified, all other
@@ -1482,17 +1781,87 @@ key will be performed.</td></tr>
 <td>This is a positive integer indicating type of link to be included in
 bandwidth test. Numbering follows that listed in **hsa\_amd\_link\_info\_type\_t** in
 **hsa\_ext\_amd.h** file.</td></tr>
-</table>
 
-Please note that suitable values for **log\_interval** and **duration** depend
+<tr><td>b2b</td><td>Bool</td>
+<td>If true, transfers are run back-to-back continuously for the full test
+duration. Only applicable when using the native transfer method. If not
+specified the default value is false.</td></tr>
+
+<tr><td>hot_calls</td><td>Integer</td>
+<td>Number of timed transfer iterations used to measure bandwidth. If not
+specified the default value is 1.</td></tr>
+
+<tr><td>warm_calls</td><td>Integer</td>
+<td>Number of warm-up transfer iterations run before timing begins. Warm-up
+iterations are not included in the bandwidth measurement. If not specified
+the default value is 1.</td></tr>
+
+<tr><td>transfer_method</td><td>String</td>
+<td>Transfer backend to use. Accepted values:
+<b>native</b> – Use the ROCm native SDMA transfer path (default).
+<b>transferbench</b> – Use the TransferBench library as the transfer backend.
+If not specified the default is <b>native</b>.</td></tr>
+
+<tr><td>transferbench_test</td><td>String</td>
+<td>TransferBench test type. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>p2p</b> – Point-to-point transfer test (default).
+<b>alltoall</b> – All-to-all transfer test across all participating GPUs.
+If not specified the default is <b>p2p</b>.</td></tr>
+
+<tr><td>executor</td><td>String</td>
+<td>Execution engine used by TransferBench. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>gfx</b> – Use GPU shader kernels (default).
+<b>dma</b> – Use the DMA engine.
+If not specified the default is <b>gfx</b>.</td></tr>
+
+<tr><td>subexecutor</td><td>Integer</td>
+<td>Number of sub-executors (wavefronts or threads) per transfer. Only
+applicable when <b>transfer_method: transferbench</b>. If not specified the
+default value is 1.</td></tr>
+
+<tr><td>gfx_unroll</td><td>Integer</td>
+<td>Unroll factor for the GFX shader kernel. Only applicable when
+<b>transfer_method: transferbench</b> and <b>executor: gfx</b>. If not
+specified the default value is 4.</td></tr>
+
+<tr><td>use_remote_read</td><td>Integer</td>
+<td>If set to 1, transfers use remote read instead of remote write. If not
+specified the default value is 0 (remote write).</td></tr>
+
+<tr><td>a2a_mode</td><td>Integer</td>
+<td>All-to-all transfer pattern mode. Only applicable when
+<b>transferbench_test: alltoall</b>. If not specified the default value is
+0.</td></tr>
+
+<tr><td>a2a_direct</td><td>Integer</td>
+<td>If set to 1, enables direct peer-to-peer transfers in the all-to-all
+test. Only applicable when <b>transferbench_test: alltoall</b>. If not
+specified the default value is 1.</td></tr>
+
+<tr><td>a2a_local</td><td>Integer</td>
+<td>If set to 1, includes local (same-GPU) transfers in the all-to-all test.
+Only applicable when <b>transferbench_test: alltoall</b>. If not specified
+the default value is 0.</td></tr>
+
+<tr><td>a2a_num_gpus</td><td>Integer</td>
+<td>Number of GPUs to include in the all-to-all test. A value of 0 means all
+detected GPUs are included. Only applicable when
+<b>transferbench_test: alltoall</b>. If not specified the default value is
+0.</td></tr>
+</table>
+</div>
+
+Suitable values for **log\_interval** and **duration** depend
 on your system.
 
-- **log_interval**, in sequential mode, should be long enough to allow all
-transfer tests to finish at lest once or "(pending)" and "(*)" will be displayed
+- `log_interval`, in sequential mode, should be long enough to allow all
+transfer tests to finish at least once or "(pending)" and "(*)" will be displayed
 (see below). Number of transfers depends on number of peer NUMA nodes in your
 system. In parallel mode, it should be roughly 1.5 times the duration of single
 longest individual test.
-- **duration**, regardless of mode should be at least, 4 * log_interval.
+- `duration`, regardless of mode should be at least, 4 * `log_interval`.
 
 You may obtain indication of how long single transfer between two NUMA nodes
 take by running test with "-d 4" switch and observing DEBUG messages for
@@ -1512,13 +1881,15 @@ transfer start/finish. An output may look like this:
     [DEBUG ] [183944.700868] [action_1] pbqt transfer 6 4 finish
 
 From this printout, it can be concluded that single transfer takes on average
-800ms. Values for **log\_interval** and **duration** should be set accordingly.
+800ms. Values for `log_interval` and `duration` should be set accordingly.
 
 ### Output
 
 Module specific output keys are described in the table below:
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>p2p_result</td><td>Bool</td>
 <td>Indicates if the gpu and the specified peer have P2P capabilities. If this
 quantity is true, the GPU pair tested has p2p capabilities. If false, they are
@@ -1555,6 +1926,7 @@ peers. You may need to increase test duration.
 <tr><td>duration</td><td>Float</td>
 <td>Cumulative duration of all transfers between the two particular nodes</td></tr>
 </table>
+</div>
 
 If the value of test_bandwidth key is false, the tool will only try to determine
 if the GPU(s) in the peers key are P2P to the action’s GPU. In this case the
@@ -1570,7 +1942,7 @@ each of its peers will take place in parallel or in sequence, depending on the
 value of the parallel flag. During the duration of bandwidth benchmarking,
 informational output providing the moving average of the transfer’s bandwidth
 will be calculated and logged at every time increment specified by the
-log_interval parameter. The messages will have the following output:
+`log_interval` parameter. The messages will have the following output:
 
     [INFO  ][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <interval_bandwidth>
 
@@ -1615,7 +1987,7 @@ From the second line of result, we can see that source GPU (ID 3254) can access 
 
 Here all source GPUs (device: all) with all destination GPUs (peers: all) are
 tested for p2p capability including bandwidth testing (test_bandwidth: true)
-with bidirectional transfers (bidirectional: true) and with emmediate output
+with bidirectional transfers (bidirectional: true) and with immediate output
 for each completed transfer (log_interval: 0)
 
     actions:
@@ -1761,16 +2133,17 @@ It can be seen that transfers [2/6] and [5/6] did not take place in the second
 log interval so average from the previous cycle is displayed instead and
 marked with "(*)"
 
-## PEBB Module
+## PEBB module
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
 transfers between system memory and a target GPU card’s memory. These are known
 as host-to-device or device- to-host transfers, and can be either unidirectional
 or bidirectional transfers. The maximum bandwidth obtained is reported.
 
-### Module Specific Keys
+### Module specific keys
 
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>host_to_device</td><td>Bool</td>
 <td>This key indicates if host to device transfers
 will be considered. The default value is true.</td></tr>
@@ -1831,17 +2204,71 @@ key will be performed.</td></tr>
 <td>This is a positive integer indicating type of link to be included in
 bandwidth test. Numbering follows that listed in **hsa\_amd\_link\_info\_type\_t** in
 **hsa\_ext\_amd.h** file.</td></tr>
-</table>
 
-Please note that suitable values for **log\_interval** and **duration** depend
+<tr><td>b2b</td><td>Bool</td>
+<td>If true, transfers are run back-to-back continuously for the full test
+duration. Only applicable when using the native transfer method. If not
+specified the default value is false.</td></tr>
+
+<tr><td>hot_calls</td><td>Integer</td>
+<td>Number of timed transfer iterations used to measure bandwidth. If not
+specified the default value is 1.</td></tr>
+
+<tr><td>warm_calls</td><td>Integer</td>
+<td>Number of warm-up transfer iterations run before timing begins. Warm-up
+iterations are not included in the bandwidth measurement. If not specified
+the default value is 1.</td></tr>
+
+<tr><td>transfer_method</td><td>String</td>
+<td>Transfer backend to use. Accepted values:
+<b>native</b> – Use the ROCm native SDMA transfer path (default).
+<b>transferbench</b> – Use the TransferBench library as the transfer backend.
+If not specified the default is <b>native</b>.</td></tr>
+
+<tr><td>executor</td><td>String</td>
+<td>Execution engine used by TransferBench. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>gfx</b> – Use GPU shader kernels (default).
+<b>dma</b> – Use the DMA engine.
+If not specified the default is <b>gfx</b>.</td></tr>
+
+<tr><td>subexecutor</td><td>Integer</td>
+<td>Number of sub-executors (wavefronts or threads) per transfer. Only
+applicable when <b>transfer_method: transferbench</b>. If not specified the
+default value is 1.</td></tr>
+
+<tr><td>gfx_unroll</td><td>Integer</td>
+<td>Unroll factor for the GFX shader kernel. Only applicable when
+<b>transfer_method: transferbench</b> and <b>executor: gfx</b>. If not
+specified the default value is 4.</td></tr>
+
+<tr><td>source_memory</td><td>String</td>
+<td>Memory type for the transfer source. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>cpu</b> – System (host) memory.
+<b>gpu</b> – GPU device memory.
+<b>null</b> – No explicit memory allocation; let TransferBench decide (default).
+If not specified the default is <b>null</b>.</td></tr>
+
+<tr><td>destination_memory</td><td>String</td>
+<td>Memory type for the transfer destination. Only applicable when
+<b>transfer_method: transferbench</b>. Accepted values:
+<b>cpu</b> – System (host) memory.
+<b>gpu</b> – GPU device memory.
+<b>null</b> – No explicit memory allocation; let TransferBench decide (default).
+If not specified the default is <b>null</b>.</td></tr>
+</table>
+</div>
+
+Suitable values for `log_interval` and `duration` depend
 on your system.
 
-- **log_interval**, in sequential mode, should be long enough to allow all
-transfer tests to finish at lest once or "(pending)" and "(*)" will be displayed
+- `log_interval`, in sequential mode, should be long enough to allow all
+transfer tests to finish at least once or "(pending)" and "(*)" will be displayed
 (see below). Number of transfers depends on number of peer NUMA nodes in your
 system. In parallel mode, it should be roughly 1.5 times the duration of single
 longest individual test.
-- **duration**, regardless of mode should be at least, 4 * log_interval.
+- `duration`, regardless of mode should be at least, 4 * `log_interval`.
 
 You may obtain indication of how long single transfer between two NUMA nodes
 take by running test with "-d 4" switch and observing DEBUG messages for
@@ -1863,14 +2290,16 @@ transfer start/finish. An output may look like this:
     [DEBUG ] [187031.605326] [action_1] pebb transfer 0 5 finish
 
 From this printout, it can be concluded that single transfer takes on average
-5500ms. Values for **log\_interval** and **duration** should be set accordingly.
+5500ms. Values for `log_interval` and `duration` should be set accordingly.
 
 
 ### Output
 
 Module specific output keys are described in the table below:
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>CPU node</td><td>Integer</td>
 <td>Particular CPU node involved in transfer</td></tr>
 <tr><td>distance</td><td>Integer</td>
@@ -1887,8 +2316,8 @@ Module specific output keys are described in the table below:
 </td></tr>
 
 <tr><td>interval_bandwidth</td><td>Float</td>
-<td>The average bandwidth of a p2p transfer, during the log_interval time
-period.\n This field may also take values:
+<td>The average bandwidth of a CPU-to-GPU or GPU-to-CPU transfer, during the
+log_interval time period.\n This field may also take values:
 - (pending) - this means that no measurement has taken place
 yet.
 - xxxGBps (*) - this means no measurement within current log_interval but
@@ -1896,8 +2325,8 @@ average from previous measurements is displayed.
 
 </td></tr>
 <tr><td>bandwidth</td><td>Float</td>
-<td>The average bandwidth of a p2p transfer, averaged over the entire test
-duration of the interval. This field may also take value:
+<td>The average bandwidth of a CPU-to-GPU or GPU-to-CPU transfer, averaged
+over the entire test duration. This field may also take value:
 - (not measured) - this means no test transfer completed for those
 peers. You may need to increase test duration.
 
@@ -1905,8 +2334,9 @@ peers. You may need to increase test duration.
 <tr><td>duration</td><td>Float</td>
 <td>Cumulative duration of all transfers between the two particular nodes</td></tr>
 </table>
+</div>
 
-At the beginning, test will display link infor for every CPU/GPU pair:
+At the beginning, the test will display link info for every CPU/GPU pair:
 
     [RESULT][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu node> <gpu id> distance:<distance> <hop_type>:<hop_dist>[ <hop_type>:<hop_dist>]
 
@@ -1941,7 +2371,8 @@ Consider action:
       parallel: false
 
 This will initiate host to device transfer to all GPUs with immediate output
-(**parallel: false**, **log_interval: 0**)\n
+(`parallel: false`, `log_interval: 0`)
+
 Output from this action might look like:
 
     [RESULT] [1658774.978614] [action_1] pcie-bandwidth 0 4 3254  distance:36 HyperTransport:36
@@ -2042,7 +2473,8 @@ Please note that in link information results, some records could be marked with
 (R). This means, that communication is possible if initiated by the destination
 NUMA node HSA agent.
 
-## GST Module
+## GST module
+
 The GPU Stress Test drives and measures the specified GPU(s) performance (GFLOPS) -
 by means of large matrix multiplications using GEMM operation types based computations like
 SGEMM/DGEMM/HGEMM (Single/Double-precision/Half-precision General Matrix Multiplication)
@@ -2062,12 +2494,13 @@ of the generated stats can also show variations in the required power, clocks or
 temperatures to reach these targets, and thus highlight GPUs or nodes that are
 operating less efficiently.
 
-### Module Specific Keys
+### Module specific keys
 
 Module specific keys are described in the table below:
 
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>target_stress</td><td>Float</td>
 <td>The maximum relative performance the GPU will attempt to achieve in
 gigaflops. This parameter is required.</td></tr>
@@ -2075,7 +2508,7 @@ gigaflops. This parameter is required.</td></tr>
 <td>This parameter indicates if each operation should copy the matrix data to
 the GPU before executing. The default value is true.</td></tr>
 <tr><td>ramp_interval</td><td>Integer</td>
-<td>This is an time interval, specified in milliseconds, given to the test to
+<td>This is a time interval, specified in milliseconds, given to the test to
 reach the given target_stress gigaflops. The default value is 5000 (5 seconds).
 This time is counted against the duration of the test. If the target gflops, or
 stress, is not achieved in this time frame, the test will fail. If the target
@@ -2084,7 +2517,7 @@ duration specified by the action, sustaining the stress load during that
 time.</td></tr>
 <tr><td>tolerance</td><td>Float</td>
 <td>A value indicating how much the target_stress can fluctuate after the ramp
-period for the test to succeed. The default value is 0.1 or 10%.</td></tr>
+period for the test to succeed. The default value is 0.05 (5%).</td></tr>
 <tr><td>max_violations</td><td>Integer</td>
 <td>The number of tolerance violations that can occur after the ramp_interval
 for the test to still pass. The default value is 0.</td></tr>
@@ -2093,16 +2526,161 @@ for the test to still pass. The default value is 0.</td></tr>
 interval over which the moving average of the bandwidth will be calculated and
 logged.</td></tr>
 <tr><td>matrix_size</td><td>Integer</td>
-<td>Size of the matrices of the SGEMM operations. The default value is
+<td>Sets all three matrix dimensions (M, N, and K) to the same value. Equivalent
+to setting <b>matrix_size_a</b>, <b>matrix_size_b</b>, and <b>matrix_size_c</b>
+to the same value. The default value is 5760.</td></tr>
+<tr><td>matrix_size_a</td><td>Integer</td>
+<td>Number of rows of matrix A (the M dimension in GEMM). Overrides
+<b>matrix_size</b> for this dimension. The default value is 5760.</td></tr>
+<tr><td>matrix_size_b</td><td>Integer</td>
+<td>Number of columns of matrix B (the N dimension in GEMM). Overrides
+<b>matrix_size</b> for this dimension. The default value is 5760.</td></tr>
+<tr><td>matrix_size_c</td><td>Integer</td>
+<td>Inner (shared) dimension K of the GEMM operation (columns of A / rows of B).
+Overrides <b>matrix_size</b> for this dimension. The default value is
 5760.</td></tr>
+
+<tr><td>ops_type</td><td>String</td>
+<td>GEMM operation type. Accepted values: <b>sgemm</b>, <b>dgemm</b>,
+<b>hgemm</b>. If neither <b>ops_type</b> nor <b>data_type</b> is set, the
+module defaults to <b>sgemm</b>. Mutually exclusive with <b>data_type</b>.</td></tr>
+
+<tr><td>data_type</td><td>String</td>
+<td>Data type for the GEMM computation. Accepted values include:
+<b>fp4_r</b>, <b>fp6_r</b>, <b>fp8_r</b>, <b>bf16_r</b>, <b>fp16_r</b>,
+<b>fp32_r</b>, <b>tf32_r</b> (<b>xf32_r</b>), <b>i8_r</b>. If not specified
+the module falls back to the type implied by <b>ops_type</b>.</td></tr>
+
+<tr><td>out_data_type</td><td>String</td>
+<td>Output (result) data type, e.g. <b>fp16_r</b>, <b>fp32_r</b>. Only
+applicable when using hipBLASLt. If not specified the default matches the
+compute type.</td></tr>
+
+<tr><td>compute_type</td><td>String</td>
+<td>Accumulation/compute type used internally by the BLAS library. If not
+specified the default is <b>fp32_r</b>.</td></tr>
+
+<tr><td>blas_source</td><td>String</td>
+<td>BLAS library backend to use. Accepted values:
+<b>rocblas</b> (default), <b>hipblaslt</b>.</td></tr>
+
+<tr><td>hot_calls</td><td>Integer</td>
+<td>Number of GEMM kernel invocations per measurement window used to amortise
+launch overhead. The default value is 1.</td></tr>
+
+<tr><td>matrix_init</td><td>String</td>
+<td>Matrix initialization method. Accepted values:
+<b>default</b> – Initialize with default pattern (default).
+<b>trig</b> – Initialize with trigonometric (sine/cosine) values.
+<b>random</b> – Initialize with random values.</td></tr>
+
+<tr><td>transa</td><td>Integer</td>
+<td>Transpose operation applied to matrix A before the GEMM call.
+0 = no transpose (default), 1 = transpose.</td></tr>
+
+<tr><td>transb</td><td>Integer</td>
+<td>Transpose operation applied to matrix B before the GEMM call.
+0 = no transpose, 1 = transpose (default).</td></tr>
+
+<tr><td>alpha</td><td>Float</td>
+<td>Scalar multiplier applied to the product of matrices A and B in the GEMM
+operation (C = alpha * A * B + beta * C). The default value is 1.</td></tr>
+
+<tr><td>beta</td><td>Float</td>
+<td>Scalar multiplier applied to matrix C in the GEMM operation. The default
+value is 1.</td></tr>
+
+<tr><td>lda</td><td>Integer</td>
+<td>Leading dimension offset added to the computed leading dimension of matrix
+A. The default value is 0.</td></tr>
+
+<tr><td>ldb</td><td>Integer</td>
+<td>Leading dimension offset added to the computed leading dimension of matrix
+B. The default value is 0.</td></tr>
+
+<tr><td>ldc</td><td>Integer</td>
+<td>Leading dimension offset added to the computed leading dimension of matrix
+C. The default value is 0.</td></tr>
+
+<tr><td>ldd</td><td>Integer</td>
+<td>Leading dimension offset added to the computed leading dimension of matrix
+D (output). The default value is 0.</td></tr>
+
+<tr><td>scale_a</td><td>String</td>
+<td>Scaling mode applied to matrix A. Used with low-precision types such as
+fp8. Accepted values include <b>block</b>. If not specified no scaling is
+applied.</td></tr>
+
+<tr><td>scale_b</td><td>String</td>
+<td>Scaling mode applied to matrix B. Used with low-precision types such as
+fp8. Accepted values include <b>block</b>. If not specified no scaling is
+applied.</td></tr>
+
+<tr><td>rotating</td><td>Integer</td>
+<td>Size of the rotating buffer (in elements) used to prevent data from
+residing in cache between iterations, enabling cache-cold benchmarking. A
+value of 0 disables rotating buffers. The default value is 0.</td></tr>
+
+<tr><td>gemm_mode</td><td>String</td>
+<td>GEMM execution mode. Accepted values:
+<b>""</b> or unset – Standard (single) GEMM (default).
+<b>batched</b> – Batched GEMM; use with <b>batch_size</b>.
+<b>strided_batched</b> – Strided batched GEMM; use with <b>batch_size</b> and
+<b>stride_*</b> keys.</td></tr>
+
+<tr><td>batch_size</td><td>Integer</td>
+<td>Number of GEMM operations in a batched or strided-batched call. Only
+applicable when <b>gemm_mode</b> is <b>batched</b> or
+<b>strided_batched</b>. The default value is 0.</td></tr>
+
+<tr><td>stride_a</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices A in a strided-batched
+GEMM. Only applicable when <b>gemm_mode: strided_batched</b>. The default
+value is 0.</td></tr>
+
+<tr><td>stride_b</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices B in a strided-batched
+GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_c</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices C in a strided-batched
+GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_d</td><td>Integer</td>
+<td>Stride (in elements) between consecutive output matrices D in a
+strided-batched GEMM. The default value is 0.</td></tr>
+
+<tr><td>self_check</td><td>Bool</td>
+<td>If true, validates the GEMM result for correctness after each operation.
+Adds overhead; intended for debugging. The default value is false.</td></tr>
+
+<tr><td>accuracy_check</td><td>Bool</td>
+<td>If true, runs a numerical accuracy check after each GEMM operation. The
+default value is false.</td></tr>
+
+<tr><td>error_inject</td><td>Bool</td>
+<td>If true, enables error injection mode to deliberately introduce errors
+into the computation for testing error detection. The default value is
+false.</td></tr>
+
+<tr><td>error_freq</td><td>Integer</td>
+<td>Frequency of error injection; specifies how often (every N operations) an
+error is injected. Only applicable when <b>error_inject: true</b>. The
+default value is 0.</td></tr>
+
+<tr><td>error_count</td><td>Integer</td>
+<td>Number of errors to inject per injection event. Only applicable when
+<b>error_inject: true</b>. The default value is 0.</td></tr>
 </table>
+</div>
 
 ### Output
 
 Module specific output keys are described in the table below:
 
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>target_stress</td><td>Time Series Floats</td>
 <td>The average gflops over the last log interval.</td></tr>
 <tr><td>max_gflops</td><td>Float</td>
@@ -2115,8 +2693,8 @@ the ramp interval.</td></tr>
 <td>Flops (floating point operations) per operation queued to the GPU queue.
 One operation is one call to SGEMM/DGEMM.</td></tr>
 <tr><td>bytes_copied_per_op</td><td>Integer</td>
-<td>Calculated number of ops/second necessary to achieve target
-gigaflops.</td></tr>
+<td>Number of bytes copied to the GPU per GEMM operation when
+<b>copy_matrix</b> is true.</td></tr>
 <tr><td>try_ops_per_sec</td><td>Float</td>
 <td>Calculated number of ops/second necessary to achieve target
 gigaflops.</td></tr>
@@ -2124,15 +2702,16 @@ gigaflops.</td></tr>
 <td>'true' if the GPU achieves its desired sustained performance
 level.</td></tr>
 </table>
+</div>
 
-An informational message indicating will be emitted when the test starts
+An informational message will be emitted when the test starts
 execution:
 
     [INFO ][<timestamp>][<action name>] gst <gpu id> start <target_stress> copy matrix: <copy_matrix>
 
 
 During the execution of the test, informational output providing the moving
-average the GPU(s) gflops will be logged at each log_interval:
+average the GPU(s) gflops will be logged at each `log_interval`:
 
     [INFO ][<timestamp>][<action name>] gst Gflops: <interval_gflops>
 
@@ -2140,7 +2719,7 @@ When the target gflops is achieved, the following message will be logged:
 
     [INFO ][<timestamp>][<action name>] gst <gpu id> target achieved <target_stress>
 
-If the target gflops, or stress, is not achieved in the “ramp_interval”
+If the target gflops, or stress, is not achieved in the `ramp_interval`
 provided, the test will terminate and the following message will be logged:
 
     [INFO ][<timestamp>][<action name>] gst <gpu id> ramp time exceeded <ramp_time>
@@ -2159,12 +2738,12 @@ When the test completes, the following result message will be printed:
     [RESULT][<timestamp>][<action name>] gst <gpu id> Gflop: <max_gflops> flops_per_op:<flops_per_op> bytes_copied_per_op: <bytes_copied_per_op> try_ops_per_sec: <try_ops_per_sec> pass: <pass>
 
 The test will pass if the target_stress is reached before the end of the
-ramp_interval and the stress_violations value is less than the given
-max_violations value. Otherwise, the test will fail.
+`ramp_interval` and the `stress_violations` value is less than the given
+`max_violations` value. Otherwise, the test will fail.
 
 ### Examples
 
-When running the __GST__ module, users should provide at least an action name,
+When running the GST module, users should provide at least an action name,
 the module name (gst), a list of GPU IDs, the test duration and a target stress
 value (gigaflops). Thus, the most basic configuration file looks like this:
 
@@ -2177,53 +2756,64 @@ value (gigaflops). Thus, the most basic configuration file looks like this:
 
 For the above configuration file, all the missing configuration keys will have
 their default
-values (e.g.: __copy_matrix=true__, __matrix_size=5760__ etc.). For more
+values (for example: `copy_matrix=true`, `matrix_size=5760`). For more
 information about the default
-values please consult the dedicated sections (__3.3 Common Configuration Keys__
-and __5.1 Configuration keys__).
+values, see Common configuration keys
+and Configuration keys.
 
-When the __RVS__ tool runs against such a configuration file, it will do the
+When the RVS tool runs against such a configuration file, it will do the
 following:
   - run the stress test on all available (and compatible) AMD GPUs, one after
 the other
-  - log a start message containing the GPU ID, the __target_stress__ and the
-value of the __copy_matrix__:<br />
+  - log a start message containing the GPU ID, the `target_stress` and the
+value of the `copy_matrix`:
 
+    ```
     [INFO  ] [164337.932824] action_gst_1 gst 50599 start 3500.000000 copy matrix:true
+    ```
 
-  - emit, each __log_interval__ (e.g.: 1000ms), a message containing the
-gigaflops value that the current GPU achieved:<br />
+  - emit, each `log_interval` (for example: 1000ms), a message containing the
+gigaflops value that the current GPU achieved:
 
+    ```
     [INFO  ] [164355.111207] action_gst_1 gst 33367 Gflops 3535.670231
+    ```
 
-  - log a message as soon as the current GPU reaches the given __target_stress__:
+  - log a message as soon as the current GPU reaches the given `target_stress`:
 
+    ```
     [INFO  ] [164350.804843] action_gst_1 gst 33367 target achieved 500.000000
+    ```
 
-  - log a __ramp time exceeded__ message if the GPU was not able to reach the
-__target_stress__ in the __ramp_interval__ time frame (e.g.: 5000). In such a
-case, the test will also terminate:<br/>
+  - log a ramp time exceeded message if the GPU was not able to reach the
+`target_stress` in the `ramp_interval` time frame (for example: 5000). In such a
+case, the test will also terminate:
 
+    ```
     [INFO  ] [164013.788870] action_gst_1 gst 3254 ramp time exceeded 5000
+    ```
 
   - log the test result, when the stress test completes. The message contains
-the test's overall result and some other statistics according to __5.2 Output
-keys__:<br />
+the test's overall result and some other statistics according in Output
+keys:
 
+    ```
     [RESULT] [164355.647523] action_gst_1 gst 33367 Gflop: 4066.020766 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 9.157367 pass: TRUE
+    ```
 
-  - log a __stress violation__ message when the current gigaflops (for the last
-__log_interval__, e.g.; 1000ms) violates the bounds set by the __tolerance__
-configuration key (e.g.: 0.1). Please note that this message is not logged
-during the __ramp_interval__ time frame:<br />
+  - log a stress violation message when the current gigaflops (for the last
+`log_interval`, for example: 1000ms) violates the bounds set by the `tolerance`
+configuration key (for example: 0.1). Note that this message is not logged
+during the `ramp_interval` time frame:
 
+    ```
     [INFO  ] [164013.788870] action_gst_1 gst 3254 stress violation 2500
+    ```
 
-If a mandatory configuration key is missing, the __RVS__ tool will log an error
+If a mandatory configuration key is missing, the RVS tool will log an error
 message and terminate the execution of the current module. For example, the
-following configuration file will cause the __RVS__ to terminate with the
-following error message:<br /> __RVS-GST: action: action_gst_1  key
-'target_stress' was not found__
+following configuration file will cause the RVS to terminate with the
+following error message: `RVS-GST: action: action_gst_1  key 'target_stress' was not found`
 
     actions:
     - name: action_gst_1
@@ -2249,85 +2839,81 @@ A more complex configuration file looks like this:
       tolerance: 0.07
       matrix_size: 5760
 
-For this configuration file, the RVS tool:
-  - will run the stress test only for the GPUs having the ID 50599 or 33367. To
+For this configuration file, the RVS tool will:
+  - run the stress test only for the GPUs having the ID 50599 or 33367. To
 get all the available GPU IDs, run __RVS__ tool with __-g__ option
-  - will run the test on the selected GPUs, one after the other
-  - will run each test, 12 times
-  - will only copy the matrices to the GPUs at the beginning of the test
-  - will wait 100ms before each test execution
-  - will try to reach 5000 gflops in maximum 3000ms
-  - if __target_stress__ (5000) is achieved in the __ramp_interval__ (3000 ms)
+  - run the test on the selected GPUs, one after the other
+  - run each test, 12 times
+  - only copy the matrices to the GPUs at the beginning of the test
+  - wait 100ms before each test execution
+  - try to reach 5000 gflops in maximum 3000ms
+  - if `target_stress` (5000) is achieved in the `ramp_interval` (3000 ms)
 it will attempt to run the test for the rest of the duration, sustaining the
 stress load during that time
-  - will allow a 7% __target_stress__ __tolerance__ (each __target_stress__
-violation will generate a __stress violation__ message as shown in the first
+  - allow a 7% `target_stress` tolerance (each `target_stress`
+violation will generate a stress violation message as shown in the first
 example)
-  - will allow only 2 __target_stress__ violations. Exceeding the
-__max_violations__ will not terminate the test, but the __RVS__ will mark the
+  - allow only 2 `target_stress` violations. Exceeding the
+`max_violations` will not terminate the test, but RVS will mark the
 test result as "fail".
 
 The output for such a configuration key may look like this:
 
-__[INFO  ] [172061.758830] action_1 gst 50599 start 5000.000000 copy
-matrix:false__<br />
-__[INFO  ] [172063.547668] action_1 gst 50599 Gflops 6471.614725__<br />
-__[INFO  ] [172064.577715] action_1 gst 50599 target achieved 5000.000000__<br
-/>
-__[INFO  ] [172065.609224] action_1 gst 50599 Gflops 5189.993529__<br />
-__[INFO  ] [172066.634360] action_1 gst 50599 Gflops 5220.373979__<br />
-__[INFO  ] [172067.659262] action_1 gst 50599 Gflops 5225.472000__<br />
-__[INFO  ] [172068.694305] action_1 gst 50599 Gflops 5169.935583__<br />
-__[RESULT] [172069.573967] action_1 gst 50599 Gflop: 6471.614725 flops_per_op:
-382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
-TRUE__<br />
-__[INFO  ] [172069.574369] action_1 gst 33367 start 5000.000000 copy
-matrix:false__<br />
-__[INFO  ] [172071.409483] action_1 gst 33367 Gflops 6558.348080__<br />
-__[INFO  ] [172072.438104] action_1 gst 33367 target achieved 5000.000000__<br
-/>
-__[INFO  ] [172073.465033] action_1 gst 33367 Gflops 5215.285895__<br />
-__[INFO  ] [172074.501571] action_1 gst 33367 Gflops 5164.945297__<br />
-__[INFO  ] [172075.529468] action_1 gst 33367 Gflops 5210.207720__<br />
-__[INFO  ] [172076.558102] action_1 gst 33367 Gflops 5205.139424__<br />
-__[RESULT] [172077.448182] action_1 gst 33367 Gflop: 6558.348080 flops_per_op:
-382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
-TRUE__<br />
+    [INFO  ] [172061.758830] action_1 gst 50599 start 5000.000000 copy
+    matrix:false
+    [INFO  ] [172063.547668] action_1 gst 50599 Gflops 6471.614725
+    [INFO  ] [172064.577715] action_1 gst 50599 target achieved 5000.000000
+    [INFO  ] [172065.609224] action_1 gst 50599 Gflops 5189.993529
+    [INFO  ] [172066.634360] action_1 gst 50599 Gflops 5220.373979
+    [INFO  ] [172067.659262] action_1 gst 50599 Gflops 5225.472000
+    [INFO  ] [172068.694305] action_1 gst 50599 Gflops 5169.935583
+    [RESULT] [172069.573967] action_1 gst 50599 Gflop: 6471.614725 flops_per_op:
+    382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
+    TRUE
+    [INFO  ] [172069.574369] action_1 gst 33367 start 5000.000000 copy
+    matrix:false
+    [INFO  ] [172071.409483] action_1 gst 33367 Gflops 6558.348080
+    [INFO  ] [172072.438104] action_1 gst 33367 target achieved 5000.000000
+    [INFO  ] [172073.465033] action_1 gst 33367 Gflops 5215.285895
+    [INFO  ] [172074.501571] action_1 gst 33367 Gflops 5164.945297
+    [INFO  ] [172075.529468] action_1 gst 33367 Gflops 5210.207720
+    [INFO  ] [172076.558102] action_1 gst 33367 Gflops 5205.139424
+    [RESULT] [172077.448182] action_1 gst 33367 Gflop: 6558.348080 flops_per_op:
+    382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
+    TRUE
 
-When setting the __parallel__ to false, the __RVS__ will run the stress tests on
+When setting the parallel to true, RVS will run the stress tests on
 all selected GPUs in parallel and the output may look like this:
 
-__[INFO  ] [173381.407428] action_1 gst 50599 start 5000.000000 copy
-matrix:false__<br />
-__[INFO  ] [173381.407744] action_1 gst 33367 start 5000.000000 copy
-matrix:false__<br />
-__[INFO  ] [173383.245771] action_1 gst 33367 Gflops 6558.348080__<br />
-__[INFO  ] [173383.256935] action_1 gst 50599 Gflops 6484.532120__<br />
-__[INFO  ] [173384.274202] action_1 gst 33367 target achieved 5000.000000__<br
-/>
-__[INFO  ] [173384.286014] action_1 gst 50599 target achieved 5000.000000__<br
-/>
-__[INFO  ] [173385.301038] action_1 gst 33367 Gflops 5215.285895__<br />
-__[INFO  ] [173385.315794] action_1 gst 50599 Gflops 5200.080980__<br />
-__[INFO  ] [173386.337638] action_1 gst 33367 Gflops 5164.945297__<br />
-__[INFO  ] [173386.353274] action_1 gst 50599 Gflops 5159.964636__<br />
-__[INFO  ] [173387.365494] action_1 gst 33367 Gflops 5210.207720__<br />
-__[INFO  ] [173387.383437] action_1 gst 50599 Gflops 5195.032357__<br />
-__[INFO  ] [173388.401250] action_1 gst 33367 Gflops 5169.935583__<br />
-__[INFO  ] [173388.421599] action_1 gst 50599 Gflops 5154.993572__<br />
-__[RESULT] [173389.282710] action_1 gst 33367 Gflop: 6558.348080 flops_per_op:
-382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
-TRUE__<br />
-__[RESULT] [173389.305479] action_1 gst 50599 Gflop: 6484.532120 flops_per_op:
-382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
-TRUE__<br />
+    [INFO  ] [173381.407428] action_1 gst 50599 start 5000.000000 copy
+    matrix:false
+    [INFO  ] [173381.407744] action_1 gst 33367 start 5000.000000 copy
+    matrix:false
+    [INFO  ] [173383.245771] action_1 gst 33367 Gflops 6558.348080
+    [INFO  ] [173383.256935] action_1 gst 50599 Gflops 6484.532120
+    [INFO  ] [173384.274202] action_1 gst 33367 target achieved 5000.000000
+    [INFO  ] [173384.286014] action_1 gst 50599 target achieved 5000.000000
+    [INFO  ] [173385.301038] action_1 gst 33367 Gflops 5215.285895
+    [INFO  ] [173385.315794] action_1 gst 50599 Gflops 5200.080980
+    [INFO  ] [173386.337638] action_1 gst 33367 Gflops 5164.945297
+    [INFO  ] [173386.353274] action_1 gst 50599 Gflops 5159.964636
+    [INFO  ] [173387.365494] action_1 gst 33367 Gflops 5210.207720
+    [INFO  ] [173387.383437] action_1 gst 50599 Gflops 5195.032357
+    [INFO  ] [173388.401250] action_1 gst 33367 Gflops 5169.935583
+    [INFO  ] [173388.421599] action_1 gst 50599 Gflops 5154.993572
+    [RESULT] [173389.282710] action_1 gst 33367 Gflop: 6558.348080 flops_per_op:
+    382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
+    TRUE
+    [RESULT] [173389.305479] action_1 gst 50599 Gflop: 6484.532120 flops_per_op:
+    382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
+    TRUE
 
 It is important that all the configuration keys will be adjusted/fine-tuned
 according to the actual GPUs and HW platform capabilities. For example, a matrix
 size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20
 GPUs.
 
-## IET Module
+## IET module
 
 The Input EDPp Test can be used to characterize the peak power capabilities of a
 GPU (that is, TGP) for a sustained duration of time. This tool leverage GEMM workload
@@ -2345,54 +2931,189 @@ of the generated stats can also show variations in the required power, clocks or
 temperatures to reach these targets, and thus highlight GPUs or nodes that are
 operating less efficiently.
 
-### Module Specific Keys
+### Module specific keys
 
 Module specific keys are described in the table below:
 
-<table>
-<tr><th>Config Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>target_power</td><td>Float</td>
 <td>This is a floating point value specifying the target sustained power level
 for the test.</td></tr>
 <tr><td>ramp_interval</td><td>Integer</td>
-<td>This is an time interval, specified in milliseconds, given to the test to
+<td>This is a time interval, specified in milliseconds, given to the test to
 determine the compute load that will sustain the target power. The default value
 is 5000 (5 seconds). This time is counted against the duration of the test.
 </td></tr>
 <tr><td>tolerance</td><td>Float</td>
 <td>A value indicating how much the target_power can fluctuate after the ramp
-period for the test to succeed. The default value is 0.1 or 10%.
+period for the test to succeed. The default value is 0 (any violation
+immediately fails the test).
 </td></tr>
 <tr><td>max_violations</td><td>Integer</td>
 <td>The number of tolerance violations that can occur after the ramp_interval
 for the test to still pass. The default value is 0.</td></tr>
 <tr><td>sample_interval</td><td>Integer</td>
 <td>The sampling rate for target_power values given in milliseconds. The default
-value is 100 (.1 seconds).
+value is 1000 (1 second).
 </td></tr>
 <tr><td>log_interval</td><td>Integer</td>
 <td>This is a positive integer, given in milliseconds, that specifies an
 interval over which the moving average of the bandwidth will be calculated and
 logged.</td></tr>
+
+<tr><td>cp_workload</td><td>Bool</td>
+<td>If true, enables the GEMM compute workload to drive GPU power. This is the
+primary workload used to reach the target power level. The default value is
+true.</td></tr>
+
+<tr><td>bw_workload</td><td>Bool</td>
+<td>If true, enables a memory bandwidth kernel workload in addition to or
+instead of the GEMM workload. The default value is false.</td></tr>
+
+<tr><td>wg_count</td><td>Integer</td>
+<td>Number of GPU workgroups used for the bandwidth kernel. Only applicable
+when <b>bw_workload: true</b>. The default value is 80.</td></tr>
+
+<tr><td>nt_loads</td><td>Bool</td>
+<td>If true, the bandwidth kernel uses non-temporal loads that bypass the L2
+cache, exercising memory bandwidth more directly. Only applicable when
+<b>bw_workload: true</b>. The default value is false.</td></tr>
+
+<tr><td>matrix_size</td><td>Integer</td>
+<td>Sets all three GEMM matrix dimensions (M, N, and K) to the same value.
+Equivalent to setting <b>matrix_size_a</b>, <b>matrix_size_b</b>, and
+<b>matrix_size_c</b> to the same value. The default value is 5760.</td></tr>
+
+<tr><td>matrix_size_a</td><td>Integer</td>
+<td>Number of rows of matrix A (the M dimension in GEMM). Overrides
+<b>matrix_size</b> for this dimension. Default is 0 (uses
+<b>matrix_size</b>).</td></tr>
+
+<tr><td>matrix_size_b</td><td>Integer</td>
+<td>Number of columns of matrix B (the N dimension in GEMM). Overrides
+<b>matrix_size</b> for this dimension. Default is 0 (uses
+<b>matrix_size</b>).</td></tr>
+
+<tr><td>matrix_size_c</td><td>Integer</td>
+<td>Inner (shared) dimension K of the GEMM operation. Overrides
+<b>matrix_size</b> for this dimension. Default is 0 (uses
+<b>matrix_size</b>).</td></tr>
+
+<tr><td>ops_type</td><td>String</td>
+<td>GEMM operation type. Accepted values: <b>sgemm</b>, <b>dgemm</b>,
+<b>hgemm</b>. If neither <b>ops_type</b> nor <b>data_type</b> is set, the
+module defaults to <b>sgemm</b>. Mutually exclusive with
+<b>data_type</b>.</td></tr>
+
+<tr><td>data_type</td><td>String</td>
+<td>Data type for the GEMM computation. Accepted values include:
+<b>fp4_r</b>, <b>fp6_r</b>, <b>fp8_r</b>, <b>bf16_r</b>, <b>fp16_r</b>,
+<b>fp32_r</b>, <b>tf32_r</b> (<b>xf32_r</b>), <b>i8_r</b>. If not specified
+the module falls back to the type implied by <b>ops_type</b>.</td></tr>
+
+<tr><td>out_data_type</td><td>String</td>
+<td>Output (result) data type, e.g. <b>fp16_r</b>, <b>fp32_r</b>. Only
+applicable when using hipBLASLt. If not specified the default matches the
+compute type.</td></tr>
+
+<tr><td>compute_type</td><td>String</td>
+<td>Accumulation/compute type used internally by the BLAS library. If not
+specified the default is <b>fp32_r</b>.</td></tr>
+
+<tr><td>blas_source</td><td>String</td>
+<td>BLAS library backend to use. Accepted values:
+<b>rocblas</b> (default), <b>hipblaslt</b>.</td></tr>
+
+<tr><td>hot_calls</td><td>Integer</td>
+<td>Number of GEMM kernel invocations per measurement window used to amortise
+launch overhead. The default value is 1.</td></tr>
+
+<tr><td>matrix_init</td><td>String</td>
+<td>Matrix initialization method. Accepted values:
+<b>default</b> – Initialize with default pattern (default).
+<b>trig</b> – Initialize with trigonometric (sine/cosine) values.
+<b>random</b> – Initialize with random values.</td></tr>
+
+<tr><td>transa</td><td>Integer</td>
+<td>Transpose operation applied to matrix A before the GEMM call.
+0 = no transpose (default), 1 = transpose.</td></tr>
+
+<tr><td>transb</td><td>Integer</td>
+<td>Transpose operation applied to matrix B before the GEMM call.
+0 = no transpose, 1 = transpose (default).</td></tr>
+
+<tr><td>alpha</td><td>Float</td>
+<td>Scalar multiplier applied to the product of matrices A and B
+(C = alpha * A * B + beta * C). The default value is 1.</td></tr>
+
+<tr><td>beta</td><td>Float</td>
+<td>Scalar multiplier applied to matrix C in the GEMM operation. The default
+value is 1.</td></tr>
+
+<tr><td>lda</td><td>Integer</td>
+<td>Leading dimension offset for matrix A. The default value is 0.</td></tr>
+
+<tr><td>ldb</td><td>Integer</td>
+<td>Leading dimension offset for matrix B. The default value is 0.</td></tr>
+
+<tr><td>ldc</td><td>Integer</td>
+<td>Leading dimension offset for matrix C. The default value is 0.</td></tr>
+
+<tr><td>ldd</td><td>Integer</td>
+<td>Leading dimension offset for matrix D (output). The default value is
+0.</td></tr>
+
+<tr><td>gemm_mode</td><td>String</td>
+<td>GEMM execution mode. Accepted values:
+<b>""</b> or unset – Standard (single) GEMM (default).
+<b>batched</b> – Batched GEMM; use with <b>batch_size</b>.
+<b>strided_batched</b> – Strided batched GEMM; use with <b>batch_size</b>
+and <b>stride_*</b> keys.</td></tr>
+
+<tr><td>batch_size</td><td>Integer</td>
+<td>Number of GEMM operations in a batched or strided-batched call. Only
+applicable when <b>gemm_mode</b> is <b>batched</b> or
+<b>strided_batched</b>. The default value is 0.</td></tr>
+
+<tr><td>stride_a</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices A in a
+strided-batched GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_b</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices B in a
+strided-batched GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_c</td><td>Integer</td>
+<td>Stride (in elements) between consecutive matrices C in a
+strided-batched GEMM. The default value is 0.</td></tr>
+
+<tr><td>stride_d</td><td>Integer</td>
+<td>Stride (in elements) between consecutive output matrices D in a
+strided-batched GEMM. The default value is 0.</td></tr>
 </table>
+</div>
 
 
 ### Output
 
 Module specific output keys are described in the table below:
 
-<table>
-<tr><th>Output Key</th> <th>Type</th><th> Description</th></tr>
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>current_power</td><td>Time Series Floats</td>
 <td>The current measured power of the GPU.</td></tr>
 <tr><td>power_violations</td><td>Integer</td>
-<td>The number of power reading that violated the tolerance of the test after
+<td>The number of power readings that violated the tolerance of the test after
 the ramp interval.
 </td></tr>
 <tr><td>pass</td><td>Bool</td>
 <td>'true' if the GPU achieves its desired sustained power level in the ramp
 interval.</td></tr>
 </table>
+</div>
 
 ### Examples
 
@@ -2416,37 +3137,51 @@ A regular IET configuration file looks like this:
       tolerance: 0.1
       matrix_size: 5760
 
-*Please note:*
-- when setting the 'device' configuration key to 'all', the RVS will detect all the AMD compatible GPUs and run the test on all of them
+```{note}
+- when setting the `device` configuration key to `all`, the RVS will detect all the AMD compatible GPUs and run the test on all of them
 - the test will run 2 times on each GPU (count = 2)
-- only one power violation is allowed. If the total number of violations is bigger than 1 the IET test result will be marked as 'failed'
+- only one power violation is allowed. If the total number of violations is bigger than 1 the IET test result will be marked as `failed`
+```
 
 When the RVS tool runs against such a configuration file, it will do the following:
+
 - run the test on all AMD compatible GPUs
 
-- log a start message containing the GPU ID and the target_power, e.g.:
+- log a start message containing the GPU ID and the `target_power`, for example:
 
+    ```
     [INFO ] [167316.308057] action_1 iet 50599 start 135.000000
+    ```
 
-- emit, each log_interval (e.g.: 500ms), a message containing the power for the current GPU
+- emit, each log_interval (for example: 500ms), a message containing the power for the current GPU
 
+    ```
     [INFO ] [167319.266707] action_1 iet 50599 current power 136.878342
+    ```
 
-- log a message as soon as the current GPU reaches the given target_power
+- log a message as soon as the current GPU reaches the given `target_power`
 
+    ```
     [INFO ] [167318.793062] action_1 iet 50599 target achieved 135.000000
+    ```
 
-- log a 'ramp time exceeded' message if the GPU was not able to reach the target_power in the ramp_interval time frame (e.g.: 5000ms). In such a case, the test will also terminate
+- log a 'ramp time exceeded' message if the GPU was not able to reach the `target_power` in the `ramp_interval` time frame (for example: 5000ms). In such a case, the test will also terminate
 
+    ```
     [INFO ] [167648.832413] action_1 iet 50599 ramp time exceeded 5000
+    ```
 
-- log a 'power violation message' when the current power (for the last sample_interval, e.g.; 500ms) violates the bounds set by the tolerance configuration key (e.g.: 0.1). Please note that this message is never logged during the ramp_interval time frame
+- log a 'power violation message' when the current power (for the last `sample_interval`, for example: 500ms) violates the bounds set by the tolerance configuration key (for example: 0.1). Please note that this message is never logged during the `ramp_interval` time frame
 
+    ```
     [INFO ] [161251.971277] action_1 iet 3254 power violation 73.783211
+    ```
 
 - log the test result, when the stress test completes.
 
+    ```
     [RESULT] [167305.260051] action_1 iet 33367 pass: TRUE
+    ```
 
 The output for such a configuration file may look like this:
 
@@ -2524,26 +3259,353 @@ The output for such a configuration file may look like this:
     [RESULT] [161263.771631] action_1 iet 50599 pass: TRUE
 
 
-*Important notes:*
+- All the missing configuration keys (if any) will have their default values. For more information about the default values please consult the dedicated sections (3.3 Common Configuration Keys and 13.1 Module specific keys).
+- If a mandatory configuration key is missing, the RVS tool will log an error message and terminate the execution of the current module. For example, if the target_power is missing, the RVS to terminate with the following error message: "RVS-IET: action: action_1 key 'target_power' was not found"
+- All the configuration keys will be adjusted/fine-tuned according to the actual GPUs and HW platform capabilities.
+    - For example, a matrix size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20 GPUs
+    - For small` target_power` values (for example: 30-40W), the `sample_interval` should be increased, otherwise the IET may fail either to achieve the given `target_power` or to sustain it (for example: `ramp_interval = 1500` for `target_power = 40`). In case there are problems reaching/sustaining the given `target_power`: 
+        - Increase the `ramp_interval` and/or the tolerance value(s) and try again (in case of a 'ramp time exceeded' message)
+        - Increase the tolerance value (in case too many 'power violation message' are logged out)
 
 
-- all the missing configuration keys (if any) will have their default values. For more information about the default values please consult the dedicated sections (3.3 Common Configuration Keys and 13.1 Module specific keys).
+## Pulse Module
+
+```{warning}
+This module is in beta and is not intended for production use. Pass/fail criteria (especially around power-delta enforcement, clock-pinning verification, and throttle detection) are still being tuned and may change between releases.
+```
+
+The **Pulse** module is intended for **time-varying** GPU power stress: it alternates **high** phases (maximum clocks plus continuous GEMM) and **low** phases (minimum clocks plus idle/sleep), repeating for the action **duration**. That produces periodic power swings useful for exercising PSU transient response and platform power delivery, complementing **IET** (which targets a sustained power level).
+
+GEMM type, matrix size, and BLAS backend follow the same concepts as **GST** / **IET** (see those sections and `rvs_blas`). Sample reference configuration: `rvs/conf/pulse_single.conf`.
+
+### Behavior summary
+
+- Each **pulse cycle** is one high phase followed by one low phase. Phase lengths derive from `pulse_rate` (Hz) and `high_phase_ratio`; each phase is at least 10 ms after rounding.
+- **High phase:** sets GPU clocks high, runs GEMM in a loop (`workload_iterations` per inner batch) until the high-phase time budget elapses, samples power, checks junction temperature (**failure if above 105°C**).
+- After the high phase, the module calls `hipDeviceSynchronize` so work drains before the low phase (clearer separation of high vs. low power).
+- **Low phase:** sets clocks low, sleeps briefly between `sample_interval`-style sampling (5 ms sleep steps in the implementation), samples power.
+- With `parallel: true` and more than one GPU, threads coordinate with a `std::barrier` and a small GPU kernel using fine-grained coherent host memory so all GPUs synchronize across the pulse loop (avoids deadlock on shutdown via a shared done flag).
+- **Pass:** for primary MCM dies, the action passes if at least one pulse completed, there was **no** BLAS enqueue/sync failure (unless `halt_on_error` stops earlier), and no thermal violation; secondary MCM GPUs are treated as pass by default. Fail otherwise.
+
+### Prerequisites
+
+- ROCm with hipBLASLt and rocBLAS available as for the rest of RVS (the `rvs` binary links hipblaslt; GEMM code lives in rvslib).
+- AMD SMI initialized for power and temperature queries (same family of requirements as other SMI-based modules). Elevated privileges are often required for clock control and power metrics.
+- For hipBLASLt, `data_type` must be valid (for example, `fp32_r` with `sgemm`, `fp16_r` with `hgemm` and `compute_type` such as `fp32_r`). If `data_type` is omitted with `blas_source: hipblaslt`, the module infers `fp32_r`/`fp64_r`/`fp16_r` from `ops_type`/`sgemm`/`dgemm`/`hgemm` respectively; for `dgemm` with hipBLASLt, if `compute_type` is still the default `fp32_r`, it is adjusted to `fp64_r`.
+
+### Module specific keys
+
+Keys below are in addition to common keys (`name`, `module`, `device`, `duration`, `parallel`, `log_interval`, `count`, `wait` and so on. For more information, see Common configuration keys.
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th class="head"> <th class="head">Type</th><th class="head">Description</th></tr>
+<tr><td>pulse_rate</td><td>Integer</td><td>Pulse frequency in **Hertz** (cycles per second). Default <b>2</b>. Use roughly **1–5 Hz** if you want power readings to show clear high/low separation; very high rates shorten phases below typical GPU power-state and SMI averaging windows, so reported averages may converge.</td></tr>
+<tr><td>high_phase_ratio</td><td>Float</td><td>Fraction of each cycle spent in the **high** (GEMM) phase, **0.0–1.0**. Default <b>0.5</b>. Lower values spend more time in the low phase.</td></tr>
+<tr><td>matrix_size</td><td>Integer</td><td>Square GEMM dimension **M = N = K**. Default <b>4096</b>. Larger matrices increase compute and power draw during the high phase.</td></tr>
+<tr><td>ops_type</td><td>String</td><td>GEMM operation flavor (e.g. <b>sgemm</b>, <b>dgemm</b>, <b>hgemm</b>). Default <b>sgemm</b>. Must match **data_type** / **compute_type** when using hipBLASLt.</td></tr>
+<tr><td>data_type</td><td>String</td><td>Matrix data type string for hipBLASLt (e.g. <b>fp32_r</b>, <b>fp16_r</b>). Default empty (rocBLAS can infer from **ops_type** alone).</td></tr>
+<tr><td>out_data_type</td><td>String</td><td>Optional output type for GEMM; default empty (same as input type where applicable).</td></tr>
+<tr><td>compute_type</td><td>String</td><td>hipBLASLt compute type (e.g. <b>fp32_r</b>). Default <b>fp32_r</b>.</td></tr>
+<tr><td>blas_source</td><td>String</td><td><b>rocblas</b> or <b>hipblaslt</b>. Default <b>rocblas</b>.</td></tr>
+<tr><td>alpha</td><td>Float</td><td>GEMM scalar α. Default <b>2.0</b>.</td></tr>
+<tr><td>beta</td><td>Float</td><td>GEMM scalar β. Default <b>-1.0</b>.</td></tr>
+<tr><td>transa</td><td>Integer</td><td>Transpose A: **0** no transpose, **1** transpose. Default <b>0</b>.</td></tr>
+<tr><td>transb</td><td>Integer</td><td>Transpose B: **0** no transpose, **1** transpose. Default <b>1</b>.</td></tr>
+<tr><td>lda</td><td>Integer</td><td>Leading dimension offset A (0 = use minimum). Defaults <b>0</b>.</td></tr>
+<tr><td>ldb</td><td>Integer</td><td>Leading dimension offset B. Default <b>0</b>.</td></tr>
+<tr><td>ldc</td><td>Integer</td><td>Leading dimension offset C. Default <b>0</b>.</td></tr>
+<tr><td>ldd</td><td>Integer</td><td>Leading dimension offset D. Default <b>0</b>.</td></tr>
+<tr><td>matrix_init</td><td>String</td><td>Host matrix initialization (e.g. <b>default</b>, <b>hiprand</b>). Default <b>default</b>.</td></tr>
+<tr><td>workload_iterations</td><td>Integer</td><td>GEMM calls per inner batch in the high phase before re-checking time and power. Default <b>128</b>. Increase for heavier per-iteration work; tune with **pulse_rate** and phase length.</td></tr>
+<tr><td>sample_interval</td><td>Integer</td><td>Reserved sampling interval (ms) for pulse-specific logic; values below **50** are raised to **50**. Default <b>100</b>.</td></tr>
+<tr><td>tolerance</td><td>Float</td><td>Default <b>10.0</b>. Parsed and passed to the worker; **not** currently used in pass/fail logic (reserved for future checks).</td></tr>
+<tr><td>verify_mode</td><td>String</td><td>e.g. <b>diff</b> / <b>crc</b>. Default <b>diff</b>. Parsed; **not** currently used in pass/fail logic (reserved for future GEMM verification).</td></tr>
+<tr><td>halt_on_error</td><td>Bool</td><td>If true, stop the GPU thread on first BLAS or thermal error. Default <b>false</b>.</td></tr>
+<tr><td>hot_calls</td><td>Integer</td><td>BLAS “hot call” / warmup-related parameter forwarded to **rvs_blas**. Default <b>1</b>.</td></tr>
+<tr><td>gpu_sync_wait</td><td>Integer</td><td>Default <b>10000</b>. Parsed from configuration; **not** referenced by the current barrier implementation (placeholder for future timeout behavior).</td></tr>
+<tr><td>max_temp_c</td><td>Float</td><td>Junction temperature ceiling in degrees Celsius. If the GPU junction temperature exceeds this threshold during the run, the worker logs a thermal-violation error and, when <b>halt_on_error</b> is true, terminates that GPU thread. Default <b>105.0</b>.</td></tr>
+</table>
+</div>
+
+### Output
+
+Log lines use the action name, module tag pulse, and GPU ID.
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output / log</th> <th class="head">Description</th></tr>
+<tr><td>Start</td><td><code>[INFO] ... pulse &lt;gpu_id&gt; start pulse_rate=&lt;hz&gt;</code></td></tr>
+<tr><td>Parameters</td><td><code>[INFO] ... pulse_rate=... Hz period=...ms high=...ms low=...ms</code></td></tr>
+<tr><td>Thermal error</td><td><code>[ERROR] ... thermal violation: &lt;temp&gt;C</code> (junction &gt; 105°C)</td></tr>
+<tr><td>Periodic summary</td><td>At each <b>log_interval</b>, moving averages and extrema: <code>pulse #N avg_high=...W avg_low=...W max_high=...W min_low=...W delta=...W</code></td></tr>
+<tr><td>Completion</td><td>Summary over the run: pulse count, average high/low power, delta, max high, min low.</td></tr>
+<tr><td>pass</td><td><code>[RESULT] ... pass: TRUE</code> or <code>FALSE</code> per GPU.</td></tr>
+</table>
+</div>
+
+With JSON logging enabled, per-pulse records can include `power_high_w`, `power_low_w`, `power_delta_w`, phase durations, `temp_c`, `gemm_count`, and a final summary with pass.
+
+### Example
+
+Minimal illustration (see `pulse_single.conf` for full examples including hipblaslt + `fp16_r`):
+
+    actions:
+    - name: pulse_stress_basic
+      device: all
+      module: pulse
+      parallel: true
+      duration: 60000
+      log_interval: 5000
+      pulse_rate: 2
+      high_phase_ratio: 0.5
+      ops_type: sgemm
+      matrix_size: 8192
+      blas_source: hipblaslt
+      data_type: fp32_r
+      compute_type: fp32_r
+      workload_iterations: 128
+      halt_on_error: false
+
+Run from the build or package `bin` directory, for example:
+
+    ./rvs -c conf/pulse_single.conf -d 3
 
 
-- if a mandatory configuration key is missing, the RVS tool will log an error message and terminate the execution of the current module. For example, if the target_power is missing, the RVS to terminate with the following error message: "RVS-IET: action: action_1 key 'target_power' was not found"
+```{note}
+- Tune `matrix_size`, `pulse_rate`, and `high_phase_ratio` to match GPU class and the transient behavior you want to stress.
+- hipBLASLt often delivers higher GEMM throughput than rocBLAS on supported GPUs; `fp16_r`/`hgemm` with `compute_type`: `fp32_r` is a common high-throughput choice (as in the `pulse_stress_fp16` action in `pulse_single.conf`).
+```
+
+## MEM module
+
+The Memory module tests GPU memory for hardware errors and soft errors using
+HIP. It executes a configurable suite of memory test algorithms that exercise
+various data patterns and access sequences. Each test can be individually
+included or excluded. The module reports errors found per test and passes only
+if no memory errors are detected.
+
+The following tests are available (referenced by index in `exclude`):
+
+| Index | Test Name |
+|---|---|
+| 0 | Walking 1 bit |
+| 1 | Own address test |
+| 2 | Moving inversions, ones & zeros |
+| 3 | Moving inversions, 8-bit pattern |
+| 4 | Moving inversions, random pattern |
+| 5 | Block move, 64 moves |
+| 6 | Moving inversions, 32-bit pattern |
+| 7 | Random number sequence |
+| 8 | Modulo 20, random pattern |
+| 9 | Bit fade test |
+| 10 | Memory stress test |
+
+### Module specific keys
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
+<tr><td>mem_blocks</td><td>Integer</td>
+<td>Number of GPU memory blocks used per test iteration. The default value is
+256.</td></tr>
+<tr><td>num_passes</td><td>Integer</td>
+<td>Number of passes (repeats) per block in each test. The default value is
+1.</td></tr>
+<tr><td>thrds_per_blk</td><td>Integer</td>
+<td>Number of HIP threads per block launched for each test kernel. The default
+value is 128.</td></tr>
+<tr><td>stress</td><td>Bool</td>
+<td>If true, enables the memory stress test (Test 10) in addition to the
+standard tests. The default value is false.</td></tr>
+<tr><td>mapped_memory</td><td>Bool</td>
+<td>If true, uses host-mapped (pinned) memory instead of device memory for the
+test buffers. The default value is false.</td></tr>
+<tr><td>num_iter</td><td>Integer</td>
+<td>Number of iterations to run per test. The default value is 1.</td></tr>
+<tr><td>exclude</td><td>Collection of Integers</td>
+<td>Space-separated list of test indices (0–10) to skip. All tests not listed
+here will be executed. For example, <b>exclude: 9 10</b> skips the bit fade
+and memory stress tests.</td></tr>
+</table>
+</div>
+
+### Output
+
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
+<tr><td>Test</td><td>String</td>
+<td>Name of the memory test that was executed.</td></tr>
+<tr><td>Time Taken</td><td>Float</td>
+<td>Time in seconds taken to complete the test on this GPU.</td></tr>
+<tr><td>errors</td><td>Integer</td>
+<td>Number of memory errors detected during the test. A value of 0 indicates
+no errors.</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>True if no memory errors were detected for this test.</td></tr>
+</table>
+</div>
+
+### Examples
+
+**Example 1:**
+
+Run all tests in parallel on all GPUs, excluding bit fade (9) and stress (10):
+
+    actions:
+    - name: action_1
+      device: all
+      module: mem
+      parallel: true
+      count: 1
+      wait: 100
+      mapped_memory: false
+      mem_blocks: 128
+      num_passes: 500
+      thrds_per_blk: 64
+      stress: true
+      num_iter: 50000
+      exclude: 9 10
+
+Run with:
+
+    ./rvs -c conf/mem.conf -d 3
+
+The test passes if no memory errors are detected on any GPU. A typical result
+message looks like:
+
+    [RESULT][<timestamp>][action_1] mem <gpu_id> Test 1  [Walking 1 bit] : pass: true  errors: 0 Time Taken: 0.652 s
+    [RESULT][<timestamp>][action_1] mem <gpu_id> Test 2  [Own address test] : pass: true  errors: 0 Time Taken: 0.423 s
 
 
-- it is important that all the configuration keys will be adjusted/fine-tuned according to the actual GPUs and HW platform capabilities.
+## BABEL module
 
+The BABEL module executes BabelStream benchmark tests that measure GPU memory
+bandwidth. BabelStream is a synthetic benchmark based on the STREAM benchmark
+for CPUs. It runs configurable memory kernels (Copy, Mul, Add, Triad, Dot,
+Read, Write) using HIP and reports the achieved bandwidth in GB/s or GiB/s for
+each kernel. The benchmark is useful for characterizing peak memory bandwidth
+and detecting bandwidth regressions.
 
-*) for example, a matrix size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20 GPUs
+### Module specific keys
 
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
+<tr><td>array_size</td><td>Integer</td>
+<td>Size of the test buffer in bytes (or in mebibytes if <b>mibibytes: true</b>).
+The default value is 33554432 (32 MB).</td></tr>
+<tr><td>test_type</td><td>Integer</td>
+<td>Data precision used for the benchmark. Accepted values:
+<b>1</b> – Float (32-bit, default).
+<b>2</b> – Double (64-bit).
+<b>3</b> – Triad float.
+<b>4</b> – Triad double.</td></tr>
+<tr><td>num_iter</td><td>Integer</td>
+<td>Number of kernel launch iterations. Used when <b>duration</b> is 0. The
+default value is 100.</td></tr>
+<tr><td>duration</td><td>Integer</td>
+<td>Duration of the test in milliseconds. When greater than 0, the test runs
+for this time instead of a fixed number of iterations. A value of 0 means use
+<b>num_iter</b>. The default value is 0.</td></tr>
+<tr><td>mibibytes</td><td>Bool</td>
+<td>If true, <b>array_size</b> is interpreted in mebibytes (MiB) and bandwidth
+is reported in GiB/s. If false, bytes and GB/s are used. The default value is
+false.</td></tr>
+<tr><td>o/p_csv</td><td>Bool</td>
+<td>If true, outputs results in CSV format in addition to the standard log.
+The default value is false.</td></tr>
+<tr><td>read</td><td>Bool</td>
+<td>If true, enables the Read kernel (measures read-only bandwidth). The
+default value is false.</td></tr>
+<tr><td>write</td><td>Bool</td>
+<td>If true, enables the Write kernel (measures write-only bandwidth). The
+default value is false.</td></tr>
+<tr><td>copy</td><td>Bool</td>
+<td>If true, enables the Copy kernel (a[i] = b[i]). The default value is
+false.</td></tr>
+<tr><td>mul</td><td>Bool</td>
+<td>If true, enables the Mul kernel (a[i] = scalar * b[i]). The default value
+is false.</td></tr>
+<tr><td>add</td><td>Bool</td>
+<td>If true, enables the Add kernel (a[i] = b[i] + c[i]). The default value
+is false.</td></tr>
+<tr><td>dot</td><td>Bool</td>
+<td>If true, enables the Dot kernel (sum of a[i] * b[i]). The default value
+is false.</td></tr>
+<tr><td>triad</td><td>Bool</td>
+<td>If true, enables the Triad kernel (a[i] = b[i] + scalar * c[i]). The
+default value is false.</td></tr>
+<tr><td>data_init</td><td>String</td>
+<td>Data initialization method for the test arrays. Accepted values:
+<b>default</b> – Initialize with default constant values (default).
+Other values may be supported depending on the build.</td></tr>
+<tr><td>nontemporal</td><td>String</td>
+<td>Non-temporal (streaming) memory access mode for the kernels. Non-temporal
+stores bypass the cache and can be useful for measuring true memory bandwidth.
+Accepted values:
+<b>all</b> – Apply non-temporal accesses to all kernels (default).
+<b>none</b> – Disable non-temporal accesses.
+<b>read</b> – Apply only to read accesses.
+<b>write</b> – Apply only to write accesses.</td></tr>
+<tr><td>dwords_per_lane</td><td>Integer</td>
+<td>Number of 32-bit words processed per GPU lane per kernel invocation. The
+default value is 4.</td></tr>
+<tr><td>chunks_per_block</td><td>Integer</td>
+<td>Number of data chunks processed per GPU thread block. The default value
+is 2.</td></tr>
+<tr><td>tb_size</td><td>Integer</td>
+<td>Thread block size (number of threads per block). The default value is
+1024.</td></tr>
+</table>
+</div>
 
-*) for small target_power values (e.g.: 30-40W), the sample_interval should be increased, otherwise the IET may fail either to achieve the given target_power or to sustain it (e.g.: ramp_interval = 1500 for target_power = 40)
+### Output
 
+<div class="pst-scrollable-table-container">
+<table class="table table--middle-left">
+<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
+<tr><td>Array size</td><td>Integer</td>
+<td>Size of the test array used for the measurement, in bytes or MiB depending
+on the <b>mibibytes</b> setting.</td></tr>
+<tr><td>Function</td><td>String</td>
+<td>Name of the BabelStream kernel executed (e.g., Copy, Mul, Add, Triad,
+Dot, Read, Write).</td></tr>
+<tr><td>bandwidth</td><td>Float</td>
+<td>Measured memory bandwidth for this kernel in GB/s (or GiB/s if
+<b>mibibytes: true</b>).</td></tr>
+<tr><td>pass</td><td>Bool</td>
+<td>True if the kernel completed successfully.</td></tr>
+</table>
+</div>
 
-*) in case there are problems reaching/sustaining the given target_power
+### Examples
 
-**) please increase the ramp_interval and/or the tolerance value(s) and try again (in case of a 'ramp time exceeded' message)
+**Example 1:**
 
-**) please increase the tolerance value (in case too many 'power violation message' are logged out)
+Run all BABEL kernels with a 32 MB buffer, 5000 iterations, double precision:
+
+    actions:
+    - name: action_1
+      device: all
+      module: babel
+      parallel: true
+      count: 1
+      num_iter: 5000
+      duration: 0
+      array_size: 33554432
+      test_type: 2
+      mibibytes: false
+      o/p_csv: false
+      copy: true
+      read: true
+      write: true
+      mul: true
+      add: true
+      dot: true
+      triad: true
+
+Run with:
+
+    ./rvs -c conf/babel.conf -d 3

@@ -174,6 +174,11 @@ bool peqt_action::get_all_common_config_keys(void) {
     rvs::lp::Log(msg, rvs::loginfo);
   }
 
+  if (property_device_index.size() || property_device.size()) {
+    property_device_all = false;
+    property_device_index_all = false;
+  }
+
   return res;
 }
 
@@ -198,8 +203,11 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
         action_name.c_str(), rvs::logresults);
     
       if (json_pcaps_node != NULL) {
-        rvs::lp::AddString(json_pcaps_node, RVS_JSON_LOG_GPU_ID_KEY,
-                std::to_string(gpu_id));
+        rvs::lp::AddString(json_pcaps_node, RVS_JSON_LOG_GPU_ID_KEY, std::to_string(gpu_id));
+
+        uint16_t gpu_index = 0;
+        rvs::gpulist::gpu2gpuindex(gpu_id, &gpu_index);
+        rvs::lp::AddString(json_pcaps_node, RVS_JSON_LOG_GPU_IDX_KEY, std::to_string(gpu_index));
       }
     }
     for (it = property.begin(); it != property.end(); ++it) {
@@ -350,11 +358,8 @@ int peqt_action::run(void) {
       return -1;
     }
     if (bjson){
-      if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-        return 1;
-      }
-  }
+	json_add_primary_fields(std::string(MODULE_NAME), action_name);
+    }
     // get the pci_access structure
     pacc = pci_alloc();
 
@@ -441,18 +446,34 @@ int peqt_action::run(void) {
         continue;
       }
 
+      uint16_t gpu_idx;
+      if (rvs::gpulist::gpu2gpuindex(gpu_id, &gpu_idx)) {
+        RVSTRACE_
+        continue;
+      }
+
       // check for deviceid filtering
       if (property_device_id > 0 && dev->device_id != property_device_id) {
         RVSTRACE_
         continue;
       }
 
-      if (!property_device_all) {
+      if (!property_device_all && property_device.size()) {
         RVSTRACE_
         if (find(property_device.begin(), property_device.end(), gpu_id) ==
                  property_device.end()) {
           RVSTRACE_
-            continue;
+          continue;
+        }
+      }
+      RVSTRACE_
+
+      if (!property_device_index_all && property_device_index.size()) {
+        RVSTRACE_
+        if (find(property_device_index.begin(), property_device_index.end(), gpu_idx) ==
+                 property_device_index.end()) {
+          RVSTRACE_
+          continue;
         }
       }
       RVSTRACE_

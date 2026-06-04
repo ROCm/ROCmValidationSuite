@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -44,17 +44,24 @@ enum class OSType {
   SLES,
   RHEL,
   Oracle,
+  Azure,
+  Amazon,
+  Alibaba,
   None
 };
 
 const std::string os_release_file {"/etc/os-release"};
 const std::string name_key {"NAME"};
+const std::string id_key {"ID"};
 const std::map<std::string, OSType> op_systems {
   {"ubuntu", OSType::Ubuntu},
   {"centos", OSType::Centos},
   {"sles", OSType::SLES},
   {"red hat enterprise linux", OSType::RHEL},
-  {"oracle linux server", OSType::Oracle}
+  {"oracle linux server", OSType::Oracle},
+  {"microsoft azure linux", OSType::Azure},
+  {"amazon linux", OSType::Amazon},
+  {"alibaba cloud linux", OSType::Alibaba},
 };
 
 struct package_info{
@@ -64,7 +71,8 @@ struct package_info{
 
 // common funtions
 std::string get_last_word(const std::string& input);
-OSType getOS();
+OSType getOSOrId();
+OSType getOS(std::string keyname);
 std::string remSpaces(std::string str);
 std::string pfilename(const std::string& package);
 

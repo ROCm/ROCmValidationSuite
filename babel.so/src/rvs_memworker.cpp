@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -39,8 +39,9 @@
 using std::string;
 bool MemWorker::bjson = false;
 
-extern void run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes,
-    int test_type, int subtest, uint16_t dwords_per_lane, uint16_t chunks_per_block, bool json, std::string action);
+extern bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes,
+    int test_type, uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration);
 
 #define FLOAT_TEST     1 
 #define DOUBLE_TEST    2 
@@ -55,31 +56,36 @@ MemWorker::~MemWorker() {}
  * @brief performs the stress test on the given GPU
  */
 void MemWorker::run() {
-    hipDeviceProp_t props;
-    char*           ptr = NULL;
-    string          err_description;
-    string          msg;
-    int             deviceId;
-    uint16_t        gpuId;
-    std::pair<int, uint16_t> device;
+  hipDeviceProp_t props;
+  char*           ptr = NULL;
+  string          err_description;
+  string          msg;
+  int             deviceId;
+  uint16_t        gpuId;
+  std::pair<int, uint16_t> device;
 
-    // log MEM stress test - start message
-    msg = "[" + action_name + "] " + "[GPU:: " +
-            std::to_string(gpu_id) + "] " + "Starting the Babel memory stress test";
-    rvs::lp::Log(msg, rvs::logresults);
+  // log MEM stress test - start message
+  msg = "[" + action_name + "] " + "[GPU:: " +
+    std::to_string(gpu_id) + "] " + "Starting the Babel memory stress test";
+  rvs::lp::Log(msg, rvs::logresults);
 
-    /* Device Index */
-    deviceId  = get_gpu_device_index();
-    device.first = deviceId;
+  /* Device Index */
+  deviceId  = get_gpu_device_index();
+  device.first = deviceId;
 
-    /* GPU ID */
-    gpuId = get_gpu_id();
-    device.second = gpuId;
+  /* GPU ID */
+  gpuId = get_gpu_id();
+  device.second = gpuId;
 
-    HIP_CHECK(hipGetDeviceProperties(&props, deviceId));
+  HIP_CHECK(hipGetDeviceProperties(&props, deviceId));
 
-    HIP_CHECK(hipSetDevice(deviceId));
+  HIP_CHECK(hipSetDevice(deviceId));
 
-    run_babel(device, num_iterations, array_size, output_csv, mibibytes, test_type, subtest, dwords_per_lane, chunks_per_block, MemWorker::bjson,action_name);
+  /* Set Babel subtests enable/disable */
+  subtest test = {read, write, copy, add, mul, dot, triad};
+
+  result = run_babel(device, num_iterations, array_size, output_csv, mibibytes,
+      test_type, dwords_per_lane, chunks_per_block, tb_size,
+      MemWorker::bjson, action_name, &test, data_init, nontemporal, duration);
 }
 

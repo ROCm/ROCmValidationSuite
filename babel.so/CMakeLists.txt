@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -36,7 +36,6 @@ set ( RVS_TARGET "${RVS}" )
 project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
-add_compile_options(-std=c++11)
 add_compile_options(-c -o)
 ##add_compile_options(-Wall -Wextra)
 
@@ -59,9 +58,9 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include ${ASAN_CXX_FLAGS}")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
-set(HIP_STREAM_BUILD_FLAGS "-DNONTEMPORAL=1 -DTBSIZE=1024 -O3 -std=c++17")
+set(HIP_STREAM_BUILD_FLAGS "-O3 -std=c++17")
 
 # Set compiler and compiler flags
 set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
@@ -109,12 +108,12 @@ set(HIP_HCC_LIB "amdhip64")
 add_compile_options(-DRVS_ROCBLAS_VERSION_FLAT=${RVS_ROCBLAS_VERSION_FLAT})
 
 # Determine Roc Runtime header files are accessible
-if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime.h)
+if(NOT EXISTS ${HIP_INC_DIR}/hip/hip_runtime.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
 
-if(NOT EXISTS ${HIP_INC_DIR}/include/hip/hip_runtime_api.h)
+if(NOT EXISTS ${HIP_INC_DIR}/hip/hip_runtime_api.h)
   message("ERROR: ROC Runtime headers can't be found under specified path. Please set HIP_INC_DIR path. Current value is : " ${HIP_INC_DIR})
   RETURN()
 endif()
@@ -135,8 +134,8 @@ if(DEFINED RVS_ROCMSMI)
 endif()
 
 
-if(NOT EXISTS "${ROCR_LIB_DIR}/lib${HIP_HCC_LIB}.so")
-  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set ROCR_LIB_DIR path. Current value is : " ${ROCR_LIB_DIR})
+if(NOT EXISTS "${HIP_LIB_DIR}/lib${HIP_HCC_LIB}.so")
+  message("ERROR: ROC Runtime libraries can't be found under specified path. Please set HIP_LIB_DIR path. Current value is : " ${HIP_LIB_DIR})
   RETURN()
 endif()
 
@@ -144,7 +143,7 @@ endif()
 include_directories(./ ../ ${ROCR_INC_DIR} ${HIP_INC_DIR})
 
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH})
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
 

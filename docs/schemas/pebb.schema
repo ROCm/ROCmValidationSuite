@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "version" : {
+      "type": "string",
+      "const": "1.0"
+    },
+    "pebb": {
+      "type": "object",
+      "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "srccpu": {
+                "type": "string"
+              },
+              "dstgpu": {
+                "type": "string"
+              },
+              "intf": {
+                "type": "string"
+              },
+              "pass": {
+                "type": "string"
+              },
+              "throughput": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "dstgpu",
+              "pass",
+              "srccpu"
+            ]
+          }
+        }
+        }
+  },
+  "required": [
+    "pebb"
+  ]
+}

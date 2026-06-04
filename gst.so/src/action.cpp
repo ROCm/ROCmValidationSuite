@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -49,6 +49,10 @@ using std::vector;
 using std::map;
 using std::regex;
 
+#if(defined(RVS_ROCBLAS_VERSION_FLAT) && (RVS_ROCBLAS_VERSION_FLAT >= 3001000 && RVS_ROCBLAS_VERSION_FLAT < 5000000))
+  #define RVS_ROCBLAS_HAS_F8_DATATYPES 1
+#endif
+
 #define RVS_CONF_RAMP_INTERVAL_KEY      "ramp_interval"
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
 #define RVS_CONF_MAX_VIOLATIONS_KEY     "max_violations"
@@ -83,13 +87,17 @@ using std::regex;
 #define RVS_CONF_STRIDE_D               "stride_d"
 #define RVS_CONF_BLAS_SOURCE_KEY        "blas_source"
 #define RVS_CONF_COMPUTE_TYPE_KEY       "compute_type"
+#define RVS_CONF_GST_OUT_DATA_TYPE      "out_data_type"
+#define RVS_CONF_SCALE_A                "scale_a"
+#define RVS_CONF_SCALE_B                "scale_b"
+#define RVS_CONF_ROTATING               "rotating"
 
 #define TARGET_KEY                      "target"
 #define DTYPE_KEY                       "dtype"
 #define GST_DEFAULT_RAMP_INTERVAL       5000
 #define GST_DEFAULT_LOG_INTERVAL        1000
 #define GST_DEFAULT_MAX_VIOLATIONS      0
-#define GST_DEFAULT_TOLERANCE           0.1
+#define GST_DEFAULT_TOLERANCE           0.05
 #define GST_DEFAULT_COPY_MATRIX         true
 #define GST_DEFAULT_MATRIX_SIZE         5760
 #define GST_DEFAULT_MATRIX_INIT         "default"
@@ -115,9 +123,7 @@ using std::regex;
 #define GST_DEFAULT_STRIDE_D            0
 #define GST_DEFAULT_BLAS_SOURCE         "rocblas"
 #define GST_DEFAULT_COMPUTE_TYPE        "fp32_r"
-
-#define RVS_DEFAULT_PARALLEL            false
-#define RVS_DEFAULT_DURATION            0
+#define GST_DEFAULT_DURATION            0
 
 #define GST_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 
@@ -126,7 +132,10 @@ using std::regex;
 #define JSON_CREATE_NODE_ERROR          "JSON cannot create node"
 #define GST_DEFAULT_OPS_TYPE            ""
 #define GST_DEFAULT_DATA_TYPE           ""
-
+#define GST_DEFAULT_OUT_DATA_TYPE       ""
+#define GST_DEFAULT_SCALE_A             ""
+#define GST_DEFAULT_SCALE_B             ""
+#define GST_DEFAULT_ROTATING            0
 
 static constexpr auto MODULE_NAME = "gst";
 static constexpr auto MODULE_NAME_CAPS = "GST";
@@ -151,15 +160,16 @@ gst_action::~gst_action() {
  * @return true if no error occured, false otherwise
  */
 bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
-  size_t k = 0;
+
+  uint64_t k = 0;
+  vector<GSTWorker> workers(gst_gpus_device_index.size());
+
   for (;;) {
-    unsigned int i = 0;
     if (property_wait != 0)  // delay gst execution
       sleep(property_wait);
 
-    vector<GSTWorker> workers(gst_gpus_device_index.size());
-
     map<int, uint16_t>::iterator it;
+    size_t i = 0;
 
     // all worker instances have the same json settings
     GSTWorker::set_use_json(bjson);
@@ -207,6 +217,10 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_stride_d(gst_stride_d);
       workers[i].set_blas_source(gst_blas_source);
       workers[i].set_compute_type(gst_compute_type);
+      workers[i].set_gst_out_data_type(gst_out_data_type);
+      workers[i].set_gst_scale_a(gst_scale_a);
+      workers[i].set_gst_scale_b(gst_scale_b);
+      workers[i].set_gst_rotating(gst_rotating);
 
       i++;
     }
@@ -240,7 +254,20 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     }
   }
 
-  return rvs::lp::Stopping() ? false : true;
+  if (rvs::lp::Stopping()) {
+    return false;
+  }
+  else {
+
+    for (size_t i = 0; i < gst_gpus_device_index.size(); i++) {
+      if(false == workers[i].get_result()) {
+        return false;
+      }
+    }
+  }
+
+  /* Action passed */
+  return true;
 }
 
 /**
@@ -524,6 +551,42 @@ bool gst_action::get_all_gst_config_keys(void) {
     bsts = false;
   }
 
+  if (property_get<std::string>(RVS_CONF_GST_OUT_DATA_TYPE, &gst_out_data_type, GST_DEFAULT_OUT_DATA_TYPE)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_GST_OUT_DATA_TYPE) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_SCALE_A, &gst_scale_a, GST_DEFAULT_SCALE_A);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_SCALE_A) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<std::string>(RVS_CONF_SCALE_B, &gst_scale_b, GST_DEFAULT_SCALE_B);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_SCALE_B) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint32_t>(RVS_CONF_ROTATING, &gst_rotating, GST_DEFAULT_ROTATING);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_ROTATING) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY, &property_duration, GST_DEFAULT_DURATION)) {
+    msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
+      "' key";
+    rvs::lp::Err(msg, module_name, action_name);
+    bsts = false;
+  }
+
   /* If operation and data type both not set, default to sgemm */
   if ((gst_ops_type == GST_DEFAULT_OPS_TYPE) && (gst_data_type == GST_DEFAULT_OPS_TYPE)) {
     gst_ops_type = "sgemm";
@@ -536,6 +599,16 @@ bool gst_action::get_all_gst_config_keys(void) {
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
+
+#if !defined(RVS_ROCBLAS_HAS_F8_DATATYPES)
+  if (gst_blas_source == "rocblas") {
+    if(gst_data_type == "fp8_r") {
+      msg = "The version of rocBLAS currently in use no longer supports FP8.";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      bsts = false;
+    }
+  }
+#endif
 
   return bsts;
 }
@@ -558,7 +631,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
       unsigned int usec;
       rvs::lp::get_ticks(&sec, &usec);
       void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
-          action_name.c_str(), rvs::loginfo, sec, usec, true);
+          action_name.c_str(), rvs::logerror, sec, usec, true);
       if (!json_root_node) {
         // log the error
         string msg = std::string(JSON_CREATE_NODE_ERROR);
@@ -569,7 +642,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
       rvs::lp::AddString(json_root_node, "ERROR", GST_NO_COMPATIBLE_GPUS);
       rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
     }
-    return 0;
+    return -1;
   }
   return hip_num_gpu_devices;
 }
@@ -587,8 +660,10 @@ int gst_action::get_all_selected_gpus(void) {
   hip_num_gpu_devices = get_num_amd_gpu_devices();
   if (hip_num_gpu_devices < 1)
     return hip_num_gpu_devices;
+
   amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, gst_gpus_device_index, 
-      property_device, property_device_id, property_device_all);
+      property_device, property_device_id, property_device_all,
+      property_device_index, property_device_index_all); 
   // iterate over all available & compatible AMD GPUs
 
   if (amd_gpus_found) {
@@ -604,32 +679,7 @@ int gst_action::get_all_selected_gpus(void) {
 
   return 0;
 }
-/**
- * @brief flushes target and dtype fields to json file
- * @return 
- */
 
-void gst_action::json_add_primary_fields(){
-  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-    return;
-  }
-  void *json_node = json_node_create(std::string(MODULE_NAME),
-      action_name.c_str(), rvs::logresults);
-  if(json_node){
-    rvs::lp::AddString(json_node,TARGET_KEY, std::to_string(gst_target_stress));
-    rvs::lp::LogRecordFlush(json_node, rvs::logresults);
-    json_node = nullptr;
-  }
-  json_node = json_node_create(std::string(MODULE_NAME),
-      action_name.c_str(), rvs::logresults);
-  if(json_node){
-    rvs::lp::AddString(json_node,DTYPE_KEY, gst_ops_type);
-    rvs::lp::LogRecordFlush(json_node, rvs::logresults);
-    json_node = nullptr;
-  }
-
-}
 
 /**
  * @brief runs the whole GST logic
@@ -646,7 +696,7 @@ int gst_action::run(void) {
 
   if(bjson){
     // add prelims for each action, dtype and target stress
-    json_add_primary_fields();
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
   auto res =  get_all_selected_gpus();
   if(bjson){

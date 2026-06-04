@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -52,18 +52,32 @@ using std::map;
 #define RVS_CONF_TEST_TYPE              "test_type"
 #define RVS_CONF_MEM_MIBIBYTE           "mibibytes"
 #define RVS_CONF_OP_CSV                 "o/p_csv"
-#define RVS_CONF_SUBTEST                "subtest"
 #define RVS_CONF_DWORDS_PER_LANE        "dwords_per_lane"
 #define RVS_CONF_CHUNKS_PER_BLOCK       "chunks_per_block"
+#define RVS_CONF_TB_SIZE                "tb_size"
+#define RVS_CONF_READ                   "read"
+#define RVS_CONF_WRITE                  "write"
+#define RVS_CONF_COPY                   "copy"
+#define RVS_CONF_ADD                    "add"
+#define RVS_CONF_MUL                    "mul"
+#define RVS_CONF_DOT                    "dot"
+#define RVS_CONF_TRIAD                  "triad"
+#define RVS_CONF_DATA_INIT              "data_init"
+#define RVS_CONF_NONTEMPORAL            "nontemporal"
+#define RVS_CONF_DURATION               "duration"
 
 #define MEM_DEFAULT_ARRAY_SIZE          33554432   // 32 MB
 #define MEM_DEFAULT_NUM_ITER            100
+#define MEM_DEFAULT_DURATION            0          // 0 means use num_iter instead
 #define MEM_DEFAULT_TEST_TYPE           1
 #define MEM_DEFAULT_MEM_MIBIBYTE        false
 #define MEM_DEFAULT_OP_CSV              false
-#define MEM_DEFAULT_SUBTEST             5
 #define MEM_DEFAULT_DWORDS_PER_LANE     4
 #define MEM_DEFAULT_CHUNKS_PER_BLOCK    2
+#define MEM_DEFAULT_TB_SIZE             1024
+#define MEM_DEFAULT_TEST_ENABLE         false
+#define MEM_DEFAULT_DATA_INIT           "default"
+#define MEM_DEFAULT_NONTEMPORAL         "all"
 
 #define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
@@ -94,18 +108,38 @@ class mem_action: public rvs::actionbase {
     bool mibibytes;
     //! output in csv 
     bool output_csv;
+    //! read test enable/disable
+    bool read;
+    //! write test enable/disable
+    bool write;
+    //! copy test enable/disable
+    bool copy;
+    //! add test enable/disable
+    bool add;
+    //! mul test enable/disable
+    bool mul;
+    //! dot test enable/disable
+    bool dot;
+    //! triad test enable/disable
+    bool triad;
     //! test type
     int  test_type;
-    //subtest selection
-    int  subtest;
     //! number of iterations
     uint64_t num_iterations;
-    //! number of iterations
+    //! test duration in milliseconds (0 = use num_iterations)
+    uint64_t duration;
+    //! array size
     uint64_t array_size;
     //! number of dwords per lane
     uint16_t dwords_per_lane;
     //! number of chunks per block
     uint16_t chunks_per_block;
+    //! thread block size
+    uint16_t tb_size;
+    //! data initialization mode ("gpu_norm_dist", "cpu_norm_dist", "zero_init" or "default")
+    std::string data_init;
+    //! non-temporal access mode ("none", "all", "read" or "write")
+    std::string nontemporal;
 
     // configuration properties getters
     bool get_all_mem_config_keys(void);
@@ -116,7 +150,6 @@ class mem_action: public rvs::actionbase {
   */
   int get_num_amd_gpu_devices(void);
   int get_all_selected_gpus(void);
-  void json_add_primary_fields();
   bool do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index);
 };
 

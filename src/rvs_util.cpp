@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,11 +25,20 @@
 #include "include/rvs_util.h"
 #include <vector>
 #include <string>
+#include <cstdlib>
+#include <cstring>
 #include <regex>
+#if defined(__linux__)
+#include <unistd.h>
+#endif
 #include <iomanip>
 #include <algorithm>
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
+#include "rocm-core/rocm_getpath.h"
+#endif
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
+#include "amd_smi/amdsmi.h"
 
 
 /**
@@ -40,19 +49,20 @@
  */
 
 std::vector<std::string> str_split(const std::string& str_val,
-                                   const std::string& delimiter) {
-    std::vector<std::string> str_tokens;
-    int prev_pos = 0, cur_pos = 0;
-    do {
-        cur_pos = str_val.find(delimiter, prev_pos);
-        if (cur_pos == std::string::npos)
-            cur_pos = str_val.length();
-        std::string token = str_val.substr(prev_pos, cur_pos - prev_pos);
-        if (!token.empty())
-            str_tokens.push_back(token);
-        prev_pos = cur_pos + delimiter.length();
-    } while (cur_pos < str_val.length() && prev_pos < str_val.length());
-    return str_tokens;
+    const std::string& delimiter) {
+
+  std::vector<std::string> str_tokens;
+  int prev_pos = 0, cur_pos = 0;
+  do {
+    cur_pos = str_val.find(delimiter, prev_pos);
+    if (cur_pos == std::string::npos)
+      cur_pos = str_val.length();
+    std::string token = str_val.substr(prev_pos, cur_pos - prev_pos);
+    if (!token.empty())
+      str_tokens.push_back(token);
+    prev_pos = cur_pos + delimiter.length();
+  } while (cur_pos < str_val.length() && prev_pos < str_val.length());
+  return str_tokens;
 }
 
 
@@ -62,12 +72,14 @@ std::vector<std::string> str_split(const std::string& str_val,
  * @return true if std::string is a positive integer number, false otherwise
  */
 bool is_positive_integer(const std::string& str_val) {
-    return !str_val.empty()
-            && std::find_if(str_val.begin(), str_val.end(),
-                    [](char c) {return !std::isdigit(c);}) == str_val.end();
+
+  return !str_val.empty()
+    && std::find_if(str_val.begin(), str_val.end(),
+        [](char c) {return !std::isdigit(c);}) == str_val.end();
 }
 
 int rvs_util_parse(const std::string& buff, bool* pval) {
+
   if (buff.empty()) {  // method empty
     return 2;  // not found
   }
@@ -86,24 +98,22 @@ int rvs_util_parse(const std::string& buff, bool* pval) {
 }
 
 void *json_node_create(std::string module_name, std::string action_name,
-                     int log_level){
-        unsigned int sec;
-        unsigned int usec;
+    int log_level){
 
-        rvs::lp::get_ticks(&sec, &usec);
-        void *json_node = rvs::lp::LogRecordCreate(module_name.c_str(),
-                            action_name.c_str(), log_level, sec, usec, true);
-        return json_node;
+  unsigned int sec;
+  unsigned int usec;
+
+  rvs::lp::get_ticks(&sec, &usec);
+  void *json_node = rvs::lp::LogRecordCreate(module_name.c_str(),
+      action_name.c_str(), log_level, sec, usec, true);
+  return json_node;
 }
-
-
 
 void *json_list_create(std::string lname, int log_level){
 
-        void *json_node = rvs::lp::JsonNamedListCreate(lname.c_str() ,log_level);
-        return json_node;
+  void *json_node = rvs::lp::JsonNamedListCreate(lname.c_str() ,log_level);
+  return json_node;
 }
-
 
 /**
  * summary: Fetches gpu id to index map for valid set of GPUs as per config.
@@ -112,126 +122,149 @@ void *json_list_create(std::string lname, int log_level){
  * @out: map of gpu id to index in gpus_device_index and returns true if found 
  */
 bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_index,
-                const std::vector<uint16_t>& property_device,
-                const int& property_device_id, bool property_device_all, bool mcm_check){
-    bool amd_gpus_found = false;
-    bool mcm_die = false;
-    bool amd_mcm_gpu_found = false;
-    for (int i = 0; i < hip_num_gpu_devices; i++) {
-        // get GPU device properties
-        hipDeviceProp_t props;
-        hipGetDeviceProperties(&props, i);
+    const std::vector<uint16_t>& property_device, const int& property_device_id,
+    bool property_device_all, const std::vector<uint16_t>& property_device_index,
+    bool property_device_index_all, bool mcm_check,
+    std::vector<mcm_type_t>* mcm_type) {
 
-        // compute device location_id (needed in order to identify this device
-        // in the gpus_id/gpus_device_id list
-	unsigned int pDom, pBus, pDev, pFun;
-	getBDF(i, pDom, pBus, pDev, pFun);
-        unsigned int dev_location_id =
-            ((((unsigned int) (pBus)) << 8) | (((unsigned int)(pDev)) << 3)  | ((unsigned int)(pFun)));
-        uint16_t dev_domain = pDom;
-        uint16_t devId;
-        uint16_t gpu_id;
-        if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
-            continue;
-        }
-        if (rvs::gpulist::gpu2device(gpu_id, &devId)){
-            continue;
-        }
-        // filter by device id if needed
-        if (property_device_id > 0 && property_device_id != devId)
-          continue;
+  bool amd_gpus_found = false;
+  bool mcm_die = false;
+  bool amd_mcm_gpu_found = false;
 
-        // check if this GPU is part of the select ones as per config
-        // (device = "all" or the gpu_id is in the device: <gpu id> list)
-        bool cur_gpu_selected = false;
+  for (int i = 0; i < hip_num_gpu_devices; i++) {
 
-        if (property_device_all) {
-            cur_gpu_selected = true;
-        } else {
-            // search for this gpu in the list
-            // provided under the <device> property
-            auto it_gpu_id = find(property_device.begin(),
-                                  property_device.end(),
-                                  gpu_id);
+    // get GPU device properties
+    hipDeviceProp_t props;
+    hipGetDeviceProperties(&props, i);
 
-            if (it_gpu_id != property_device.end())
-                cur_gpu_selected = true;
-        }
-	// if mcm check enabled, print message if device is MCM
-	//  MCM is only for mi200, so check only if gfx90a
-        if (mcm_check && (std::string{props.gcnArchName}.find("gfx90a") != std::string::npos) ){
-	    std::stringstream msg_stream;
-            mcm_die =  gpu_check_if_mcm_die(i);
-	    if (mcm_die) {
-                msg_stream.str("");
-                msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
-                        " - " << "GPU is a die/chiplet in Multi-Chip Module (MCM) GPU";
-                rvs::lp::Log(msg_stream.str(), rvs::logresults);
+    // compute device location_id (needed in order to identify this device
+    // in the gpus_id/gpus_device_id list
+    unsigned int pDom, pBus, pDev, pFun;
+    getBDF(i, pDom, pBus, pDev, pFun);
+    unsigned int dev_location_id =
+      ((((unsigned int) (pBus)) << 8) | (((unsigned int)(pDev)) << 3)  | ((unsigned int)(pFun)));
+    uint16_t dev_domain = pDom;
+    uint16_t devId;
+    uint16_t gpuIdx;
+    uint16_t gpu_id;
 
-                amd_mcm_gpu_found = true;
-            }
-	}
-	// excluding secondary die from test list, drops power reading substantially
-	if (cur_gpu_selected) { // need not exclude secondary die, just log it out.
-                    gpus_device_index.insert
-                        (std::pair<int, uint16_t>(i, gpu_id));
-                    amd_gpus_found = true;
-	}
-	mcm_die = false;
+    if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
+      continue;
     }
-    if (amd_mcm_gpu_found && mcm_check) {
-        std::stringstream msg_stream;
+    if (rvs::gpulist::gpu2device(gpu_id, &devId)){
+      continue;
+    }
+    if (rvs::gpulist::gpu2gpuindex(gpu_id, &gpuIdx)){
+      continue;
+    }
+
+    // filter by device id if needed
+    if (property_device_id > 0 && property_device_id != devId)
+      continue;
+
+    // check if this GPU is part of the select ones as per config
+    // (device = "all" or the gpu_id is in the device: <gpu id> list)
+    bool cur_gpu_selected = false;
+
+    if (property_device_all || property_device_index_all) {
+      cur_gpu_selected = true;
+    } else {
+      // search for this gpu in the list
+      // provided under the <device> property
+      auto it_gpu_id = find(property_device.begin(),
+          property_device.end(),
+          gpu_id);
+
+      if (it_gpu_id != property_device.end())
+        cur_gpu_selected = true;
+
+      // search for this gpu in the list
+      // provided under the <device_index> property
+      auto it_gpu_idx = find(property_device_index.begin(),
+          property_device_index.end(),
+          gpuIdx);
+
+      if (it_gpu_idx != property_device_index.end())
+        cur_gpu_selected = true;
+    }
+
+    // if mcm check enabled, print message if device is MCM
+    //  MCM is only for mi200, so check only if gfx90a
+    if (mcm_check && (std::string{props.gcnArchName}.find("gfx90a") != std::string::npos)){
+      std::stringstream msg_stream;
+      mcm_die =  gpu_check_if_mcm_die(i);
+      if (mcm_die) {
         msg_stream.str("");
-        msg_stream << "Note: The system has Multi-Chip Module (MCM) GPU/s." << "\n"
-                   << "In MCM GPU, primary GPU die shows total socket (primary + secondary) power information." << "\n"
-                   << "Secondary GPU die does not have any power information associated with it independently."<< "\n"
-                   << "So, expect power reading from Secondary GPU die as 0."<< "\n";
+        msg_stream << "GPU ID : " << std::setw(5) << gpu_id << " - " << "Device : " << std::setw(5) << devId <<
+          " - " << "GPU is a die/chiplet in Multi-Chip Module (MCM) GPU";
         rvs::lp::Log(msg_stream.str(), rvs::logresults);
-     }
-    return amd_gpus_found;
+
+        amd_mcm_gpu_found = true;
+        if (mcm_type) mcm_type->push_back(mcm_type_t::SECONDARY);
+
+      } else {
+        if (mcm_type) mcm_type->push_back(mcm_type_t::PRIMARY);
+      }
+    } else {
+      if(mcm_check && mcm_type)
+        mcm_type->push_back(mcm_type_t::PRIMARY);
+    }
+
+    // excluding secondary die from test list, drops power reading substantially
+    if (cur_gpu_selected) { // need not exclude secondary die, just log it out.
+      gpus_device_index.insert
+        (std::pair<int, uint16_t>(i, gpu_id));
+      amd_gpus_found = true;
+    }
+    mcm_die = false;
+  }
+
+  if (amd_mcm_gpu_found && mcm_check) {
+    std::stringstream msg_stream;
+    msg_stream.str("");
+    msg_stream << "Note: The system has Multi-Chip Module (MCM) GPU/s." << "\n"
+      << "In MCM GPU, primary GPU die shows total socket (primary + secondary) power information." << "\n"
+      << "Secondary GPU die does not have any power information associated with it independently."<< "\n"
+      << "So, expect power reading from Secondary GPU die as 0."<< "\n";
+    rvs::lp::Log(msg_stream.str(), rvs::logresults);
+  }
+  return amd_gpus_found;
 }
 
 void getBDF(int idx ,unsigned int& domain,unsigned int& bus,unsigned int& device,unsigned int& function){
-    char pciString[256] = {0};
-    auto hipRet = hipDeviceGetPCIBusId(pciString, 256, idx);
-    std::string msg;
-    if(hipRet != hipSuccess){
-      msg = "For GPU:" + std::to_string(idx) + ", failed to get PCI Bus id";
-      rvs::lp::Log(msg, rvs::logresults);
-      return;
-    }
-    if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&domain),
-       reinterpret_cast<unsigned int*>(&bus),
-       reinterpret_cast<unsigned int*>(&device),
-       reinterpret_cast<unsigned int*>(&function)) != 4) {
-         msg = std::string("parsing incomplete for BDF id: ") + pciString ;
-         rvs::lp::Log(msg, rvs::logresults);
-    }
+
+  char pciString[256] = {0};
+  auto hipRet = hipDeviceGetPCIBusId(pciString, 256, idx);
+  std::string msg;
+  if(hipRet != hipSuccess){
+    msg = "For GPU:" + std::to_string(idx) + ", failed to get PCI Bus id";
+    rvs::lp::Log(msg, rvs::logresults);
+    return;
+  }
+  if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<unsigned int*>(&domain),
+        reinterpret_cast<unsigned int*>(&bus),
+        reinterpret_cast<unsigned int*>(&device),
+        reinterpret_cast<unsigned int*>(&function)) != 4) {
+    msg = std::string("parsing incomplete for BDF id: ") + pciString ;
+    rvs::lp::Log(msg, rvs::logresults);
+  }
 }
 
-int display_gpu_info (void) {
-
-  struct device_info {
-    std::string bus;
-    std::string name;
-    int32_t node_id;
-    int32_t gpu_id;
-    int32_t device_id;
-  };
+std::vector<device_info> get_gpu_info (void) {
 
   char buf[256];
   int hip_num_gpu_devices;
-  std::string errmsg = " No supported GPUs available.";
   std::vector<device_info> gpu_info_list;
 
   hipGetDeviceCount(&hip_num_gpu_devices);
   if( hip_num_gpu_devices == 0){
-    std::cout << std::endl << errmsg << std::endl;
-    return 0;
+    return {};
   }
+
   for (int i = 0; i < hip_num_gpu_devices; i++) {
     hipDeviceProp_t props;
     hipGetDeviceProperties(&props, i);
+
     unsigned int pDom, pBus, pDev, pFun;
     getBDF(i , pDom, pBus, pDev, pFun);
     // compute device location_id (needed in order to identify this device
@@ -251,6 +284,13 @@ int display_gpu_info (void) {
     if (rvs::gpulist::gpu2device(gpu_id, &dev_id)){
       continue;
     }
+
+    uint64_t completBDFId = 0;
+    completBDFId |= (static_cast<uint64_t>(pDom) & 0xFFFF) << 24;
+    completBDFId |= (static_cast<uint64_t>(pBus) & 0xFF) << 16;
+    completBDFId |= (static_cast<uint64_t>(pDev) & 0x1F) << 3;
+    completBDFId |= (static_cast<uint64_t>(pFun) & 0x7);
+
     hipDeviceGetPCIBusId(buf, 256, i);
     device_info info;
     info.bus       = buf;
@@ -258,12 +298,21 @@ int display_gpu_info (void) {
     info.node_id   = node_id;
     info.gpu_id    = gpu_id;
     info.device_id = dev_id;
+    info.bdfId = completBDFId;
     gpu_info_list.push_back(info);
-
   }
+
   std::sort(gpu_info_list.begin(), gpu_info_list.end(),
            [](const struct device_info& a, const struct device_info& b) {
-             return a.node_id < b.node_id; });
+             return a.bdfId < b.bdfId; });
+
+  return gpu_info_list;
+}
+
+int display_gpu_info (std::vector<device_info> gpu_info_list) {
+
+  std::string errmsg = " No supported GPUs available.";
+
   if (!gpu_info_list.empty()) {
     std::cout << "Supported GPUs available:\n";
     for (const auto& info : gpu_info_list) {
@@ -277,7 +326,144 @@ int display_gpu_info (void) {
   return 0;
 }
 
+void json_add_primary_fields(std::string moduleName, std::string action_name){
+
+  if (rvs::lp::JsonActionStartNodeCreate(moduleName.c_str(), action_name.c_str())){
+    rvs::lp::Err("json start create failed", moduleName, action_name);
+    return;
+  }
+}
+
 void cleanup_logs(){
   rvs::lp::JsonEndNodeCreate();
+}
+
+std::string get_gpu_name (void) {
+
+  rvs::gpulist::Initialize();
+
+  return rvs::gpulist::gpu_get_platform_name () ;
+}
+
+std::string rvs_get_rocm_install_path_string(void) {
+#ifdef FETCH_ROCMPATH_FROM_ROCMCORE
+  char* installPath = nullptr;
+  unsigned int installPathLen = 0;
+  PathErrors_t perr = getROCmInstallPath(&installPath, &installPathLen);
+  if (perr == PathSuccess && installPath != nullptr) {
+    std::string s(installPath);
+    free(installPath);
+    if (!s.empty()) {
+      return s;
+    }
+  } else if (installPath != nullptr) {
+    free(installPath);
+  }
+#endif
+  if (const char* env = std::getenv("ROCM_PATH")) {
+    if (env[0] != '\0') {
+      return std::string(env);
+    }
+  }
+  return std::string(ROCM_PATH);
+}
+
+namespace {
+
+std::string rvs_strip_trailing_slashes(std::string s) {
+  while (s.size() > 1 && s.back() == '/') {
+    s.pop_back();
+  }
+  return s;
+}
+
+std::string rvs_path_dirname(const std::string& path) {
+  if (path.empty()) {
+    return path;
+  }
+  size_t end = path.size();
+  while (end > 1 && path[end - 1] == '/') {
+    --end;
+  }
+  const size_t pos = path.rfind('/', end - 1);
+  if (pos == std::string::npos) {
+    return ".";
+  }
+  if (pos == 0) {
+    return std::string("/");
+  }
+  return path.substr(0, pos);
+}
+
+std::string rvs_path_basename(const std::string& path) {
+  if (path.empty()) {
+    return path;
+  }
+  size_t end = path.size();
+  while (end > 0 && path[end - 1] == '/') {
+    --end;
+  }
+  if (end == 0) {
+    return std::string();
+  }
+  const size_t start = path.rfind('/', end - 1);
+  if (start == std::string::npos) {
+    return path.substr(0, end);
+  }
+  return path.substr(start + 1, end - start - 1);
+}
+
+#if defined(__linux__)
+std::string rvs_linux_resolved_exe_path() {
+  char linkbuf[4096] = {0};
+  const ssize_t n = readlink("/proc/self/exe", linkbuf, sizeof(linkbuf) - 1);
+  if (n <= 0) {
+    return std::string();
+  }
+  linkbuf[n] = '\0';
+  char resolved[4096] = {0};
+  if (realpath(linkbuf, resolved) != nullptr) {
+    return std::string(resolved);
+  }
+  return std::string(linkbuf);
+}
+#endif
+
+std::string rvs_rvs_prefix_from_rvs_process() {
+  if (const char* pfx = std::getenv("RVS_PREFIX")) {
+    if (pfx[0] != '\0') {
+      return rvs_strip_trailing_slashes(std::string(pfx));
+    }
+  }
+#if defined(__linux__)
+  const std::string exe = rvs_linux_resolved_exe_path();
+  if (exe.empty() || rvs_path_basename(exe) != "rvs") {
+    return std::string();
+  }
+  const std::string bindir = rvs_path_dirname(exe);
+  const std::string binname = rvs_path_basename(bindir);
+  if (binname == "bin" || binname == "sbin") {
+    return rvs_path_dirname(bindir);
+  }
+#endif
+  return std::string();
+}
+
+}  // namespace
+
+std::string rvs_get_rvs_data_root_string(void) {
+  const std::string pfx = rvs_rvs_prefix_from_rvs_process();
+  if (!pfx.empty()) {
+    return pfx + std::string("/") + RVS_RELPATH_DATA_DIR;
+  }
+  return std::string(RVS_DATA_ROOT);
+}
+
+std::string rvs_get_rvs_modules_lib_dir_string(void) {
+  const std::string pfx = rvs_rvs_prefix_from_rvs_process();
+  if (!pfx.empty()) {
+    return pfx + std::string("/") + RVS_RELPATH_MODULE_LIB_DIR;
+  }
+  return std::string(RVS_LIB_PATH);
 }
 

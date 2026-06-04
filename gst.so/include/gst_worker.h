@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -283,6 +283,19 @@ class GSTWorker : public rvs::ThreadBase {
 
     //! set gemm compute type
     void set_compute_type(std::string _compute_type) { compute_type = _compute_type; }
+
+    //! set output data format based gemm operation
+    void set_gst_out_data_type(std::string _out_data_type) { gst_out_data_type = _out_data_type; }
+
+    //! set scale matrix a
+    void set_gst_scale_a(std::string _scale_a) { gst_scale_a = _scale_a; }
+    //! set scale matrix b
+    void set_gst_scale_b(std::string _scale_b) { gst_scale_b = _scale_b; }
+    //! set rotating buffer size
+    void set_gst_rotating(uint32_t _rotating) { gst_rotating = _rotating; }
+    //! get worker job result
+    bool get_result(void) { return result; }
+
  protected:
     void setup_blas(int *error, std::string *err_description);
     void hit_max_gflops(int *error, std::string *err_description);
@@ -392,6 +405,16 @@ class GSTWorker : public rvs::ThreadBase {
     std::string blas_source;
     //! gemm compute type
     std::string compute_type;
+    //! Type of output data
+    std::string gst_out_data_type;
+    //! Scale matrix a
+    std::string gst_scale_a;
+    //! Scale matrix b
+    std::string gst_scale_b;
+    //! Rotating buffer size
+    uint32_t gst_rotating;
+    //! Worker job result
+    bool result;
 };
 
 #endif  // GST_SO_INCLUDE_GST_WORKER_H_

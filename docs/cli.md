@@ -16,14 +16,17 @@
 -c --config        Specify the test configuration file to use. This is a mandatory
                    field for test execution.
 
+-r --run           Specify the test level to run. Valid range is 1 to 5, with 5
+                   indicating the highest stress test level.
+
 -d --debugLevel    Specify the debug level for the output log. The range is 0-5 with
                    5 being the highest verbose level.
 
 -g --listGpus      List all the GPUs available in the machine, that RVS supports and
                    has visibility.
 
--i --indexes       Comma separated list of GPU ids to run test on. This overrides
-                   the device values specified for every actions in the
+-i --indexes       Comma separated list of GPU ids/indexes to run test on. This overrides
+                   the device/device_index values specified for every actions in the
                    configuration file, including the ‘all’ value.
 
 -j --json          Generate output file in JSON format.

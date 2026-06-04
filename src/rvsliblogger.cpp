@@ -69,6 +69,8 @@ const char*  rvs::logger::loglevelname[] = {
 
 // Json specific consts
 const std::string node_start{"{"};
+const std::string version_key{"version"};
+const std::string version_val{"1.0"};
 const std::string node_end{"}"};
 const std::string kv_delimit{":"};
 const std::string list_start{"["};
@@ -80,13 +82,16 @@ bool isPathedFile(const std::string &fname){
   return fname.find('/') != std::string::npos ;
 }
 
+
 bool doesFolderExist(const std::string &fname){
   auto loc = fname.find_last_of('/');
   auto dirName = fname.substr(0,loc);
   DIR* dir = opendir(dirName.c_str());
   if (dir == NULL) {
     // try creating directory, this doesnt exist. if fails return
-    int ret = mkdir(dirName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
+     std::string command{"mkdir -p "};
+     command += dirName;     
+     int ret = system(command.c_str());
     if (ret){
       return false;
     }
@@ -393,6 +398,9 @@ int rvs::logger::JsonStartNodeCreate(const char* Module, const char* Action) {
         std::cout << "json log file is " << json_log_file<< std::endl;
   }
   std::string row{node_start};
+  row += newline;
+  row += std::string("\"") + version_key + std::string("\"") +kv_delimit ;
+  row += std::string("\"") + version_val + std::string("\"") + "," + newline;
   row += std::string("\"") + Module + std::string("\"") + kv_delimit + node_start + newline;
   std::lock_guard<std::mutex> lk(json_log_mutex);
   return ToFile(row, true);
