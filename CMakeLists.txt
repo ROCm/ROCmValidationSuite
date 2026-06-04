@@ -319,15 +319,33 @@ message(STATUS "RVS_VERSION (rvs -v / CPack, not get_version input): ${RVS_VERSI
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 
-# Package dependencies: support both legacy (ROCm <=6.x) and new amdrocm-* naming (TheRock/ROCm 8.x per RFC0009)
-# DEB uses "old | new" OR syntax, RPM uses "(old or new)" boolean dependency syntax
-# rocm-llvm: ROCm LLVM (includes libomp used by HIP/RVS); pull OpenMP runtime from the ROCm stack, not host libgomp.
-set(ROCM_DEB_DEPS "hip-runtime-amd | amdrocm-runtimes, comgr | amdrocm-runtimes, hsa-rocr | amdrocm-runtimes, rocblas | amdrocm-blas, amd-smi-lib | amdrocm-amdsmi, hiprand | amdrocm-rand, hipblaslt | amdrocm-blas, rocm-llvm | amdrocm-llvm")
-set(ROCM_RPM_DEPS "(hip-runtime-amd or amdrocm-runtimes), (comgr or amdrocm-runtimes), (hsa-rocr or amdrocm-runtimes), (rocblas or amdrocm-blas), (amd-smi-lib or amdrocm-amdsmi), (hiprand or amdrocm-rand), (hipblaslt or amdrocm-blas), (rocm-llvm or amdrocm-llvm)")
+# Package dependencies: TheRock / ROCm SDK (amdrocm-*). Stack range [min, major(min)+1.0) on each component.
+# amdrocm-llvm: ROCm LLVM (includes libomp used by HIP/RVS); pull OpenMP runtime from the ROCm stack, not host libgomp.
+set(RVS_ROCM_VERSION_MIN "7.14" CACHE STRING "Minimum ROCm stack version in package Depends (inclusive)")
+string(REGEX MATCH "^([0-9]+)" _rvs_rocm_min_major "${RVS_ROCM_VERSION_MIN}")
+math(EXPR _rvs_rocm_max_major "${_rvs_rocm_min_major} + 1")
+set(RVS_ROCM_VERSION_MAX "${_rvs_rocm_max_major}.0")
+set(_rvs_amdrocm_pkgs amdrocm-runtimes amdrocm-blas amdrocm-amdsmi amdrocm-rand amdrocm-llvm)
+set(_rvs_deb_dep_parts "")
+set(_rvs_rpm_dep_parts "")
+foreach(_rvs_pkg IN LISTS _rvs_amdrocm_pkgs)
+  list(APPEND _rvs_deb_dep_parts
+      "${_rvs_pkg} (>= ${RVS_ROCM_VERSION_MIN})"
+      "${_rvs_pkg} (<< ${RVS_ROCM_VERSION_MAX})")
+  list(APPEND _rvs_rpm_dep_parts
+      "${_rvs_pkg} >= ${RVS_ROCM_VERSION_MIN}"
+      "${_rvs_pkg} < ${RVS_ROCM_VERSION_MAX}")
+endforeach()
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
-  set(ROCM_DEB_DEPS "${ROCM_DEB_DEPS}, ${ROCM_CORE} | amdrocm-base")
-  set(ROCM_RPM_DEPS "${ROCM_RPM_DEPS}, (${ROCM_CORE} or amdrocm-base)")
+  list(APPEND _rvs_deb_dep_parts
+      "amdrocm-base (>= ${RVS_ROCM_VERSION_MIN})"
+      "amdrocm-base (<< ${RVS_ROCM_VERSION_MAX})")
+  list(APPEND _rvs_rpm_dep_parts
+      "amdrocm-base >= ${RVS_ROCM_VERSION_MIN}"
+      "amdrocm-base < ${RVS_ROCM_VERSION_MAX}")
 endif()
+string(JOIN ", " ROCM_DEB_DEPS ${_rvs_deb_dep_parts})
+string(JOIN ", " ROCM_RPM_DEPS ${_rvs_rpm_dep_parts})
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL applications rvsmodule)
@@ -481,26 +499,33 @@ endif()
 
 
 # Package dependencies - yaml-cpp is conditionally required based on linking type
+if(ROCM_DEB_DEPS)
+  set(_rvs_rocm_deb_prefix "${ROCM_DEB_DEPS}, ")
+  set(_rvs_rocm_rpm_prefix "${ROCM_RPM_DEPS}, ")
+else()
+  set(_rvs_rocm_deb_prefix "")
+  set(_rvs_rocm_rpm_prefix "")
+endif()
 if (YAML_CPP_STATIC_FOUND)
   # Static linking - no runtime yaml-cpp dependency needed
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libpci3")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${_rvs_rocm_deb_prefix}libpci3")
   elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libpci3")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${_rvs_rocm_rpm_prefix}libpci3")
   else ()
     # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, pciutils-libs")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${_rvs_rocm_rpm_prefix}pciutils-libs")
   endif()
   message(STATUS "Package dependencies: yaml-cpp statically linked, no runtime dependency")
 else()
   # Dynamic linking - yaml-cpp runtime dependency required
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libpci3, libyaml-cpp-dev")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${_rvs_rocm_deb_prefix}libpci3, libyaml-cpp-dev")
   elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libpci3, libyaml-cpp0_6")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${_rvs_rocm_rpm_prefix}libpci3, libyaml-cpp0_6")
   else ()
     # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, pciutils-libs, yaml-cpp")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${_rvs_rocm_rpm_prefix}pciutils-libs, yaml-cpp")
   endif()
   message(STATUS "Package dependencies: yaml-cpp dynamically linked, runtime dependency included")
 endif()
