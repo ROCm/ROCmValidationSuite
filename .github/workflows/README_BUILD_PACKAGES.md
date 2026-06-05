@@ -364,6 +364,15 @@ If no matching `v` tag is found, the patch defaults to `0` from `project(VERSION
 
 ## Installing Generated Packages
 
+### ROCm SDK package dependencies (DEB/RPM)
+
+`amdrocm<N>-rvs` packages declare **minimum-only** dependencies on the TheRock / ROCm SDK (`amdrocm-*` packages, per RFC0009):
+
+- **Always required** (each with `>= 7.14`): `amdrocm-runtimes`, `amdrocm-blas`, `amdrocm-amdsmi`, `amdrocm-rand`, `amdrocm-llvm` (ROCm LLVM / `libomp` for HIP/RVS — not host `libgomp`).
+- **`amdrocm-base (>= 7.14)`** is included when the package is built with `FETCH_ROCMPATH_FROM_ROCMCORE=ON` (default in CI and `build_packages_local.sh`).
+
+There is **no upper bound** on these dependencies so `apt`/`dnf` can upgrade the system ROCm stack to **8.0+** without being forced to remove an installed `amdrocm7-rvs` package. **`amdrocm7-rvs` is built and tested against ROCm 7.x** (layout from 7.14); after a major stack upgrade, 7.x RVS may not run correctly until you install **`amdrocm8-rvs`** (when available). **`rpm --nodeps`** and **TGZ** installs do not enforce these metadata fields.
+
 ### Ubuntu/Debian (DEB)
 
 ```bash

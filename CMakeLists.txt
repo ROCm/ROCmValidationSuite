@@ -319,30 +319,19 @@ message(STATUS "RVS_VERSION (rvs -v / CPack, not get_version input): ${RVS_VERSI
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices Inc.")
 set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 
-# Package dependencies: TheRock / ROCm SDK (amdrocm-*). Stack range [min, major(min)+1.0) on each component.
+# Package dependencies: TheRock / ROCm SDK (amdrocm-*). Minimum stack version on each component (no upper bound).
 # amdrocm-llvm: ROCm LLVM (includes libomp used by HIP/RVS); pull OpenMP runtime from the ROCm stack, not host libgomp.
 set(RVS_ROCM_VERSION_MIN "7.14" CACHE STRING "Minimum ROCm stack version in package Depends (inclusive)")
-string(REGEX MATCH "^([0-9]+)" _rvs_rocm_min_major "${RVS_ROCM_VERSION_MIN}")
-math(EXPR _rvs_rocm_max_major "${_rvs_rocm_min_major} + 1")
-set(RVS_ROCM_VERSION_MAX "${_rvs_rocm_max_major}.0")
 set(_rvs_amdrocm_pkgs amdrocm-runtimes amdrocm-blas amdrocm-amdsmi amdrocm-rand amdrocm-llvm)
 set(_rvs_deb_dep_parts "")
 set(_rvs_rpm_dep_parts "")
 foreach(_rvs_pkg IN LISTS _rvs_amdrocm_pkgs)
-  list(APPEND _rvs_deb_dep_parts
-      "${_rvs_pkg} (>= ${RVS_ROCM_VERSION_MIN})"
-      "${_rvs_pkg} (<< ${RVS_ROCM_VERSION_MAX})")
-  list(APPEND _rvs_rpm_dep_parts
-      "${_rvs_pkg} >= ${RVS_ROCM_VERSION_MIN}"
-      "${_rvs_pkg} < ${RVS_ROCM_VERSION_MAX}")
+  list(APPEND _rvs_deb_dep_parts "${_rvs_pkg} (>= ${RVS_ROCM_VERSION_MIN})")
+  list(APPEND _rvs_rpm_dep_parts "${_rvs_pkg} >= ${RVS_ROCM_VERSION_MIN}")
 endforeach()
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
-  list(APPEND _rvs_deb_dep_parts
-      "amdrocm-base (>= ${RVS_ROCM_VERSION_MIN})"
-      "amdrocm-base (<< ${RVS_ROCM_VERSION_MAX})")
-  list(APPEND _rvs_rpm_dep_parts
-      "amdrocm-base >= ${RVS_ROCM_VERSION_MIN}"
-      "amdrocm-base < ${RVS_ROCM_VERSION_MAX}")
+  list(APPEND _rvs_deb_dep_parts "amdrocm-base (>= ${RVS_ROCM_VERSION_MIN})")
+  list(APPEND _rvs_rpm_dep_parts "amdrocm-base >= ${RVS_ROCM_VERSION_MIN}")
 endif()
 string(JOIN ", " ROCM_DEB_DEPS ${_rvs_deb_dep_parts})
 string(JOIN ", " ROCM_RPM_DEPS ${_rvs_rpm_dep_parts})
