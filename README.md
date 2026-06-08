@@ -117,8 +117,16 @@ This section explains how to get and compile current development stream of RVS.
 ### Clone repository
 
 ```
-git clone https://github.com/ROCm/ROCmValidationSuite.git
+git clone --recurse-submodules https://github.com/ROCm/ROCmValidationSuite.git
 ```
+
+If the repository was already cloned without `--recurse-submodules`, initialise the TransferBench submodule from inside the clone:
+
+```
+git submodule update --init --recursive
+```
+
+The TransferBench CLI is built and installed alongside `rvs` by default. Pass `-DBUILD_TRANSFERBENCH_CLI=OFF` to cmake to skip it.
 
 **Note:**
 The above command clones the master branch. If you're using a specific ROCm release, it's recommended to use the corresponding RVS version from the same release branch to ensure compatibility.

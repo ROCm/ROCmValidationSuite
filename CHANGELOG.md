@@ -6,6 +6,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Added
 
+- Build and install the TransferBench CLI alongside rvs (vendored as a git submodule under external/TransferBench). Opt out with -DBUILD_TRANSFERBENCH_CLI=OFF.
 - Added the pulse stressor module (`pulse.so`) for GPU power pulse stress testing. **(Beta — not intended for production use.)**
 - Added support for MI350X QPX mode.
 - Added support for the MXFP8 data type.

@@ -583,27 +583,32 @@ endif ()
 ################################################################################
 
 ################################################################################
-# TransferBench Download
-configure_file(CMakeTransferBenchDownload.cmake TransferBench-download/CMakeLists.txt)
+# TransferBench (vendored as a git submodule under external/TransferBench)
+#
+# Headers are consumed directly from the submodule by the PEBB and PBQT modules.
+# The TransferBench CLI binary is built as an isolated sub-build and installed
+# alongside rvs when BUILD_TRANSFERBENCH_CLI is ON (default).
+################################################################################
+set(TRANSFERBENCH_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/TransferBench")
 
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-      RESULT_VARIABLE result
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
-if(result)
-  message(FATAL_ERROR "CMake step for TransferBench failed: ${result}")
+if(NOT EXISTS "${TRANSFERBENCH_SOURCE_DIR}/CMakeLists.txt")
+  message(FATAL_ERROR
+    "TransferBench submodule not initialised. Run:\n"
+    "  git submodule update --init --recursive\n"
+    "from the repository root and re-run cmake.")
 endif()
 
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-      RESULT_VARIABLE result
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
-if(result)
-  message(FATAL_ERROR "Build step for TransferBench failed: ${result}")
+if(NOT DEFINED TRANSFERBENCH_INC_DIR)
+  set(TRANSFERBENCH_INC_DIR "${TRANSFERBENCH_SOURCE_DIR}/src/header")
+  message(STATUS "TRANSFERBENCH_INC_DIR ${TRANSFERBENCH_INC_DIR}")
 endif()
 
-if (NOT DEFINED TRANSFERBENCH_INC_DIR)
-  set (TRANSFERBENCH_INC_DIR "${CMAKE_BINARY_DIR}/TransferBench-src/src/header")
-  message ("TRANSFERBENCH_INC_DIR ${TRANSFERBENCH_INC_DIR}")
-endif ()
+option(BUILD_TRANSFERBENCH_CLI
+       "Build and install the TransferBench CLI alongside rvs" ON)
+
+if(BUILD_TRANSFERBENCH_CLI)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeTransferBenchCLI.cmake)
+endif()
 ################################################################################
 
 ## rocBLAS
