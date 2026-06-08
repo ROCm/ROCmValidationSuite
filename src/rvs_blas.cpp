@@ -552,7 +552,9 @@ bool rvs_blas::copy_data_to_gpu(void) {
     return copy_data_to_gpu<rocblas_half, rocblas_half>();
   }
 
-  if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r") {
+  if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r" ||
+      data_type == "mxfp8_e4m3_r" || data_type == "mxfp8_e5m2_r") {
+
     if (blas_source == "hipblaslt") {
       return copy_data_to_gpu<uint8_t, float>();
     }
@@ -656,7 +658,9 @@ bool rvs_blas::allocate_gpu_matrix_mem(void) {
     return allocate_gpu_matrix_mem<rocblas_half, rocblas_half>();
   }
 
-  if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r") {
+  if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r" ||
+      data_type == "mxfp8_e4m3_r" || data_type == "mxfp8_e5m2_r") {
+
     if (blas_source == "hipblaslt") {
       return allocate_gpu_matrix_mem<uint8_t, float>();
     }
@@ -818,7 +822,8 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
       hc = new rocblas_half[size_c];
     }
 
-    if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r") {
+    if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r" ||
+      data_type == "mxfp8_e4m3_r" || data_type == "mxfp8_e5m2_r") {
 
       if (blas_source == "hipblaslt") {
         ha = new uint8_t[size_a * block_count];
@@ -1386,7 +1391,8 @@ void rvs_blas::generate_random_matrix_data(void) {
         }
       }
 
-      if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r") {
+      if(data_type == "fp4_r" || data_type == "fp6_e3m2_r" || data_type == "fp6_e2m3_r" ||
+          data_type == "mxfp8_e4m3_r" || data_type == "mxfp8_e5m2_r") {
 
         generateMXInput(hbl_datatype,
             ha,

@@ -123,9 +123,7 @@ using std::regex;
 #define GST_DEFAULT_STRIDE_D            0
 #define GST_DEFAULT_BLAS_SOURCE         "rocblas"
 #define GST_DEFAULT_COMPUTE_TYPE        "fp32_r"
-
-#define RVS_DEFAULT_PARALLEL            false
-#define RVS_DEFAULT_DURATION            0
+#define GST_DEFAULT_DURATION            0
 
 #define GST_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 
@@ -579,6 +577,13 @@ bool gst_action::get_all_gst_config_keys(void) {
     msg = "invalid '" +
       std::string(RVS_CONF_ROTATING) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY, &property_duration, GST_DEFAULT_DURATION)) {
+    msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
+      "' key";
+    rvs::lp::Err(msg, module_name, action_name);
     bsts = false;
   }
 
