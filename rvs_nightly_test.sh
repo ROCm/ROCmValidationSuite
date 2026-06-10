@@ -66,8 +66,10 @@ cmd_validate_config() {
   INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
   RVS_BIN="${INSTALL_DIR}/bin/rvs"
 
-  echo "Orchestrator runner : $(hostname)"
-  echo "Target node         : ${TARGET_USER:-}@${TARGET_NODE}"
+  # Do not print orchestrator or target host identity here (hostname/IP may be
+  # workflow inputs and must not appear in CI logs). GitHub may still log runner
+  # metadata in the job "Set up job" phase.
+  echo "SSH target          : (omitted — use secrets RVS_TARGET_* / workflow inputs)"
   echo "Target ROCm path    : $TARGET_ROCM_PATH"
   echo "Remote work dir     : $REMOTE_WORK_DIR"
   echo "ROCm major          : $ROCM_MAJOR"
@@ -153,7 +155,8 @@ cmd_verify_rocm() {
     "TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
 set -euo pipefail
 echo "=== System ==="
-uname -a
+# Omit nodename (uname -a prints hostname); -srvmo keeps kernel/OS/arch only.
+uname -srvmo
 echo
 echo "=== Target ROCm path: ${TARGET_ROCM_PATH} ==="
 if [ ! -d "${TARGET_ROCM_PATH}" ]; then
@@ -265,12 +268,11 @@ cmd_run_level4() {
   require_env INSTALL_DIR
   require_env REMOTE_WORK_DIR
   require_env TARGET_ROCM_PATH
-  require_env TARGET_NODE
 
   set +e
   local start end rc
   start=$(date -u +%FT%TZ)
-  echo "::group::RVS level 4 (${RVS_BIN} -r 4) on ${TARGET_NODE} against ${TARGET_ROCM_PATH}"
+  echo "::group::RVS level 4 (${RVS_BIN} -r 4) against ${TARGET_ROCM_PATH}"
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
     "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
 set +e
