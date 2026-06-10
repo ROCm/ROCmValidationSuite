@@ -414,7 +414,7 @@ Watch the Actions tab for:
 1. `detect` resolves a tarball URL (`Latest tarball : amdrocm<N>-rvs-…`).
 2. `test` job picks up on your orchestrator runner.
 3. **Validate target node configuration** prints the resolved `Target node`, `Target ROCm path`, `Remote work dir`, and `Expected RVS binary` path.
-4. **Setup SSH key for target node** prints the target's `hostname` / `id` / `uptime` from the connectivity probe.
+4. **Setup SSH key for target node** verifies SSH connectivity (no host identity printed to logs).
 5. **Verify ROCm prerequisites on target node** prints `::notice::ROCm prerequisites OK on target node at <TARGET_ROCM_PATH>`.
 6. **Install RVS on target node** prints the detected `ROCM_MAJOR`, the chosen `Target ROCm path`, and `Installed RVS at: <TARGET_ROCM_PATH>/extras-<N>/bin/rvs`.
 7. **Verify RVS binary library resolution on target node** prints `::notice::RVS binary's library dependencies resolved OK on target, all from <TARGET_ROCM_PATH>`.
