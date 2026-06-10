@@ -252,8 +252,8 @@ jobs:
         if: vars.LOCAL_PACKAGE_SERVER_URL != ''
         run: |
           REPO="${GITHUB_REPOSITORY##*/}"
-          BRANCH="${GITHUB_REF_NAME}"
-          SAFE_BRANCH=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9._-]|-|g')
+          BRANCH="${RVS_BUILD_REF_NAME:-$GITHUB_REF_NAME}"
+          SAFE_BRANCH=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9._/-]|-|g')
           DATE=$(date +%Y-%m-%d)
           URL="${{ vars.LOCAL_PACKAGE_SERVER_URL }}/${REPO}/${SAFE_BRANCH}/${DATE}/"
           echo "================================================================"
@@ -417,8 +417,8 @@ jobs:
         if: vars.LOCAL_PACKAGE_SERVER_URL != ''
         run: |
           REPO="${GITHUB_REPOSITORY##*/}"
-          BRANCH="${GITHUB_REF_NAME}"
-          SAFE_BRANCH=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9._-]|-|g')
+          BRANCH="${RVS_BUILD_REF_NAME:-$GITHUB_REF_NAME}"
+          SAFE_BRANCH=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9._/-]|-|g')
           DATE=$(date +%Y-%m-%d)
           URL="${{ vars.LOCAL_PACKAGE_SERVER_URL }}/${REPO}/${SAFE_BRANCH}/${DATE}/"
           echo "================================================================"

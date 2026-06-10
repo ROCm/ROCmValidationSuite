@@ -641,7 +641,7 @@ BASE_PACKAGE_RELEASE="r${ROCM_LIBPATCH_VERSION}.${RELEASE_DATE}"
 if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -n "${GITHUB_HEAD_REF:-}" ]; then
     GIT_BRANCH="${GITHUB_HEAD_REF}"
 else
-    GIT_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}"
+    GIT_BRANCH="${RVS_BUILD_REF_NAME:-${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}}"
 fi
 if [ -n "$GITHUB_SHA" ]; then
     GIT_COMMIT_SHORT="${GITHUB_SHA:0:7}"
@@ -895,8 +895,8 @@ if [ -n "$UPLOAD_TARGET" ]; then
         [ -z "$UPLOAD_REPO" ] && UPLOAD_REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null)
         [ -z "$UPLOAD_REPO" ] && UPLOAD_REPO="unknown"
     fi
-    UPLOAD_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}"
-    UPLOAD_BRANCH=$(echo "$UPLOAD_BRANCH" | sed 's|[^a-zA-Z0-9._-]|-|g')
+    UPLOAD_BRANCH="${RVS_BUILD_REF_NAME:-${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}}"
+    UPLOAD_BRANCH=$(echo "$UPLOAD_BRANCH" | sed 's|[^a-zA-Z0-9._/-]|-|g')
     UPLOAD_DATE=$(date +%Y-%m-%d)
     UPLOAD_SUBPATH="${UPLOAD_REPO}/${UPLOAD_BRANCH}/${UPLOAD_DATE}"
 
