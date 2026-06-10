@@ -7,8 +7,8 @@ Install ROCm Validation Suite
 *****************************
 
 ROCm Validation Suite (RVS) is supported on AMD Instinct and Radeon GPUs
-supported by ROCm. See the :doc:`ROCm compatibilty matrix
-<rocm:compatibility/compatibility-matrix>` for support information.
+supported by ROCm. See the `ROCm compatibilty matrix
+<https://rocm.docs.amd.com/en/7.13.0-preview/compatibility/compatibility-matrix.html>`__ for support information.
 
 For advanced workflows, source builds, or custom configurations, see
 `<https://github.com/ROCm/ROCmValidationSuite#rocmvalidationsuite>`__.
