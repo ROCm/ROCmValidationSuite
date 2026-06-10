@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -125,9 +125,19 @@ class GSTWorker : public rvs::ThreadBase {
         gst_hot_calls = _hot_calls;
     }
  
-    //! sets hot calls
+    //! gets hot calls
     uint64_t get_gst_hot_calls(void) {
         return gst_hot_calls;
+    }
+
+    //! sets warm calls
+    void set_gst_warm_calls(uint64_t _warm_calls) {
+        gst_warm_calls = _warm_calls;
+    }
+
+    //! gets warm calls
+    uint64_t get_gst_warm_calls(void) {
+        return gst_warm_calls;
     }
 
     //! sets the matrix size
@@ -355,6 +365,8 @@ class GSTWorker : public rvs::ThreadBase {
     std::string matrix_init;
     //num of hot calls
     uint64_t gst_hot_calls;
+    //num of warm-up calls during ramp period
+    uint64_t gst_warm_calls;
     //! actual ramp time in case the GPU achieves the given target_stress Gflops
     uint64_t ramp_actual_time;
     //! rvs_blas pointer

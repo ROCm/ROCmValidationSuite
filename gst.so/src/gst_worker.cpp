@@ -151,7 +151,7 @@ void GSTWorker::hit_max_gflops(int *error, string *err_description) {
     }
 
     // run GEMM operation
-    if (!gpu_blas->run_blas_gemm(false))
+    if (!gpu_blas->run_blas_gemm(1))
       continue;  // failed to run the GEMM operation
 
     // Waits for GEMM operation to complete
@@ -221,6 +221,8 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
   // the delay which gives the SGEMM frequency will be dynamically computed
   delay_target_stress = 0;
 
+  bool ramp_single_shot = (ramp_interval == 0);
+
   gst_start_time = std::chrono::system_clock::now();
   gst_log_interval_time = std::chrono::system_clock::now();
   gst_start_gflops_time = std::chrono::system_clock::now();
@@ -230,10 +232,12 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     if (rvs::lp::Stopping())
       return false;
 
-    gst_end_time = std::chrono::system_clock::now();
-    if (time_diff(gst_end_time,  gst_start_time) >
-        ramp_interval * 1000u - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE * 1000u)
-      return false;
+    if (!ramp_single_shot) {
+      gst_end_time = std::chrono::system_clock::now();
+      if (time_diff(gst_end_time,  gst_start_time) >
+          ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
+        return false;
+    }
 
     gst_last_sgemm_start_time = std::chrono::system_clock::now();
 
@@ -252,7 +256,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // run GEMM operation
-    if(!gpu_blas->run_blas_gemm(false)) {
+    if(!gpu_blas->run_blas_gemm(1)) {
 
       *err_description = GST_BLAS_ERROR;
       *error = 1;
@@ -334,6 +338,9 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
       num_sgemm_ops_log_interval = 0;
       gst_log_interval_time = std::chrono::system_clock::now();
     }
+
+    if (ramp_single_shot)
+      return true;
   }
 
   return false;
@@ -470,7 +477,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // launch GEMM operation
-    if(!gpu_blas->run_blas_gemm(true)) {
+    if(!gpu_blas->run_blas_gemm(gst_hot_calls)) {
 
       *err_description = GST_BLAS_ERROR;
       *error = 1;
