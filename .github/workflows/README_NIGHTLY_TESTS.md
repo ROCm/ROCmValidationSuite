@@ -293,7 +293,7 @@ A typical successful log (with `target_rocm_path=<ROCM_INSTALL_PATH>`):
 
 ```
 === System ===
-Linux <hostname> 6.x.x-x-generic ...
+Linux 6.x.x-x-generic #... SMP ... x86_64 GNU/Linux
 
 === Target ROCm path: <ROCM_INSTALL_PATH> ===
 
@@ -384,6 +384,28 @@ rvs-nightly-report-<run_id>/
 
 Artifact retention is 30 days.
 
+## Log privacy (runner vs target)
+
+GitHub Actions always prints **Runner name** and **Machine name** in the **Set up job**
+log group before any step from this repository runs. That text is emitted by the
+[actions/runner](https://github.com/actions/runner) application when it accepts a job;
+it is **not** produced by `rvs_nightly_test.sh` or this workflow YAML.
+
+**There is no supported way to suppress or hide those two lines** from repository
+code (no workflow flag, secret, `::add-mask::`, or script can remove them — masking
+only affects output *after* a step registers a value, and does not rewrite the setup
+header GitHub has already recorded).
+
+What you *can* do on the infrastructure side:
+
+| Goal | Practical option |
+|---|---|
+| The literal strings should not identify a lab asset | Register the self-hosted runner under a **generic** name in GitHub (**Settings → Actions → Runners**), and/or use a hostname that is not inventory-sensitive — the lines will still exist, but the values are less revealing. |
+| Avoid self-hosted runner logs entirely for orchestration | Run the `install-rvs-on-target` / `run-rvs-level-4` jobs on **GitHub-hosted** runners (`ubuntu-latest`) **only if** the target node is reachable from the public internet on SSH (unusual for internal lab hosts). |
+
+`validate-config` intentionally does **not** print the orchestrator hostname so
+we do not duplicate host identity in our own script output.
+
 ## GitHub runner vs target node
 
 The `test` job runs on `${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}`,
@@ -413,7 +435,7 @@ Watch the Actions tab for:
 
 1. `detect` resolves a tarball URL (`Latest tarball : amdrocm<N>-rvs-…`).
 2. `test` job picks up on your orchestrator runner.
-3. **Validate target node configuration** prints the resolved `Target node`, `Target ROCm path`, `Remote work dir`, and `Expected RVS binary` path.
+3. **Validate target node configuration** prints `Target ROCm path`, `Remote work dir`, and `Expected RVS binary` (SSH target host/user are **not** printed).
 4. **Setup SSH key for target node** verifies SSH connectivity (no host identity printed to logs).
 5. **Verify ROCm prerequisites on target node** prints `::notice::ROCm prerequisites OK on target node at <TARGET_ROCM_PATH>`.
 6. **Install RVS on target node** prints the detected `ROCM_MAJOR`, the chosen `Target ROCm path`, and `Installed RVS at: <TARGET_ROCM_PATH>/extras-<N>/bin/rvs`.
@@ -429,7 +451,7 @@ Watch the Actions tab for:
 | `test` job stuck "Queued" | No orchestrator runner online with the label in `vars.RVS_TEST_RUNNER_LABEL`. |
 | **Validate target node configuration** fails: `No target node configured` | Neither `inputs.target_node` nor `secrets.RVS_TARGET_NODE` is set. Add the secret in Settings → Secrets and variables → Actions → Secrets, or pass `target_node` via `workflow_dispatch`. |
 | **Setup SSH key for target node** fails: `secrets.RVS_TARGET_SSH_KEY is not set` | The required secret is missing. Add the private SSH key as a repo secret. |
-| **Setup SSH key for target node** fails: `Permission denied (publickey)` | The key in `RVS_TARGET_SSH_KEY` isn't authorized on the target node for `$TARGET_USER`, or the key format is wrong. Verify by `ssh -i <key> $TARGET_USER@$TARGET_NODE hostname` from a workstation. |
+| **Setup SSH key for target node** fails: `Permission denied (publickey)` | The key in `RVS_TARGET_SSH_KEY` isn't authorized on the target node for `$TARGET_USER`, or the key format is wrong. Verify from a workstation with `ssh -i <keyfile> -o BatchMode=yes <user>@<host> true` (use your real user, host, and key; exit code 0 means the key works). |
 | **Setup SSH key for target node** fails: `Connection timed out` / `Connection refused` | Network reachability problem between the orchestrator runner and the target node. Check firewall / VPN / bastion routing. |
 | **Setup SSH key for target node** fails: `Host key verification failed` | `ssh-keyscan` couldn't pre-seed the key and `accept-new` rejected it (rare). Remove any stale entry for the target in the runner's `known_hosts`, or pre-populate it manually. |
 | **Verify ROCm prerequisites on target node** fails: `<TARGET_ROCM_PATH> does not exist on the target node` | The configured `target_rocm_path` / `vars.RVS_TARGET_ROCM_PATH` doesn't point at a real directory on the target. Verify by `ssh <USER>@<HOST_OR_IP> 'ls -d <TARGET_ROCM_PATH>'`. |
