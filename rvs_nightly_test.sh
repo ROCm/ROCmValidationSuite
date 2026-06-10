@@ -134,12 +134,12 @@ Host rvs-target
 EOF
   chmod 600 "$SSH_CONFIG_FILE"
 
-  echo "Verifying SSH connectivity to ${TARGET_USER:-}@${TARGET_NODE}..."
-  if ! ssh -F "$SSH_CONFIG_FILE" rvs-target 'echo __START__; hostname; id; uptime' \
-    2>&1 | sed -n '/^__START__$/,$p' | tail -n +2; then
-    echo "::error::SSH connectivity check failed for ${TARGET_USER:-}@${TARGET_NODE}. Verify secrets RVS_TARGET_NODE, RVS_TARGET_USER, RVS_TARGET_SSH_KEY and network access from this runner." >&2
+  echo "Verifying SSH connectivity to target node..."
+  if ! ssh -q -F "$SSH_CONFIG_FILE" rvs-target 'true'; then
+    echo "::error::SSH connectivity check failed. Verify secrets RVS_TARGET_NODE, RVS_TARGET_USER, RVS_TARGET_SSH_KEY and network access from this runner." >&2
     exit 1
   fi
+  echo "::notice::SSH connectivity OK."
 
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
     "mkdir -p '${REMOTE_WORK_DIR}/pkg' '${REMOTE_WORK_DIR}/reports'"
