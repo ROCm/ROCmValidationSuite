@@ -864,9 +864,27 @@ if command -v rpm >/dev/null 2>&1; then
 fi
 
 # Create TGZ package
+#
+# TGZ uses a different layout than DEB/RPM: CPACK_PACKAGING_INSTALL_PREFIX is
+# emptied so files land at the tarball root (bin/, lib/, share/) rather than
+# under /opt/rocm/extras-<major>/. RVS bakes CPACK_PACKAGING_INSTALL_PREFIX into
+# each install() DESTINATION at configure time, so we must RE-configure (not
+# just re-cpack) for the destinations to flip.
+#
+# Two extra steps are needed for a clean tarball:
+#  - Re-build after the re-configure so ExternalProject sub-builds (the bundled
+#    TransferBench CLI) are rebuilt against the new state; otherwise cpack would
+#    copy from a stale sub-build tree and silently miss files.
+#  - Flip CMAKE_INSTALL_PREFIX to / for the TGZ pass. Install rules key off the
+#    emptied CPACK_PACKAGING_INSTALL_PREFIX so files still land at the tarball
+#    root, but with CPACK_SET_DESTDIR=ON CPack otherwise materialises
+#    CMAKE_INSTALL_PREFIX under DESTDIR, leaving an empty opt/rocm/extras-<major>/
+#    tree in the tarball. Pointing the prefix at / makes the staged prefix the
+#    tarball root, so no orphan directory remains. (The later -D wins.)
 print_info "Creating TGZ package..."
-CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON "-DCPACK_PACKAGING_INSTALL_PREFIX:PATH=" -DCPACK_INCLUDE_TOPLEVEL_DIRECTORY=OFF)
+CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON "-DCPACK_PACKAGING_INSTALL_PREFIX:PATH=" -DCMAKE_INSTALL_PREFIX:PATH=/ -DCPACK_INCLUDE_TOPLEVEL_DIRECTORY=OFF)
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"
+$CMAKE_COMMAND --build "$BUILD_DIR" -- -j"$(nproc 2>/dev/null || echo 4)" || print_warning "Re-build before TGZ packaging reported errors; proceeding with cpack"
 cd "$BUILD_DIR"
 cpack -G TGZ --verbose
 
