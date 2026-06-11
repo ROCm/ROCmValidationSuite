@@ -12,10 +12,17 @@
 # add_subdirectory would conflict with the parent compiler. ExternalProject_Add
 # runs the child build in an isolated CMake invocation.
 #
-# BUILD_RELOCATABLE_PACKAGE=ON selects TransferBench's non-rocm-cmake install
-# branch (plain install(TARGETS ...)), avoiding a hard dependency on
-# rocm-cmake-time install macros and matching the relocatable RPATH layout
-# RVS itself uses.
+# The child build is BUILD-ONLY: we never invoke TransferBench's own install
+# rules. TransferBench installs unconditionally via rocm_install() into an
+# absolute prefix; letting it install into a build-tree directory caused that
+# directory to leak verbatim into the packaged TGZ (e.g.
+# __w/.../build/TransferBench-cli-install/bin/TransferBench). Instead we set
+# INSTALL_COMMAND to a no-op and pick the binary straight out of the child
+# build tree, then install it ourselves into the rvs package layout.
+#
+# TransferBench writes its CLI binary to the build-tree root via
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY .), so it lands at
+# ${TRANSFERBENCH_BUILD_DIR}/TransferBench.
 #
 # We forward CMAKE_CXX_FLAGS so the child build inherits things like
 # --gcc-toolchain=... that RVS's build script sets to make amdclang++ pick up
@@ -35,8 +42,7 @@ if(NOT TRANSFERBENCH_SOURCE_DIR)
   message(FATAL_ERROR "TRANSFERBENCH_SOURCE_DIR not set")
 endif()
 
-set(TRANSFERBENCH_BUILD_DIR   "${CMAKE_BINARY_DIR}/TransferBench-cli-build")
-set(TRANSFERBENCH_INSTALL_DIR "${CMAKE_BINARY_DIR}/TransferBench-cli-install")
+set(TRANSFERBENCH_BUILD_DIR "${CMAKE_BINARY_DIR}/TransferBench-cli-build")
 
 # Narrow GPU target set by default. Empty string = take TB's own default.
 set(TRANSFERBENCH_GPU_TARGETS
@@ -45,9 +51,7 @@ set(TRANSFERBENCH_GPU_TARGETS
 
 set(_tb_cmake_args
   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-  -DCMAKE_INSTALL_PREFIX=${TRANSFERBENCH_INSTALL_DIR}
   -DROCM_PATH=${ROCM_PATH}
-  -DBUILD_RELOCATABLE_PACKAGE=ON
   -DBUILD_PACKAGES=OFF
 )
 
@@ -64,27 +68,26 @@ endif()
 if(DEFINED ROCM_MAJOR_VERSION)
   list(APPEND _tb_cmake_args -DROCM_MAJOR_VERSION=${ROCM_MAJOR_VERSION})
 endif()
-if(DEFINED CPACK_PACKAGING_INSTALL_PREFIX)
-  list(APPEND _tb_cmake_args
-       -DCPACK_PACKAGING_INSTALL_PREFIX=${CPACK_PACKAGING_INSTALL_PREFIX})
-endif()
 
+# Build only -- never run TransferBench's own install rules (see header). The
+# binary is consumed directly from the build tree by the install(PROGRAMS)
+# below, so there is no separate child install directory to leak into packages.
 ExternalProject_Add(TransferBenchCLI
   SOURCE_DIR        "${TRANSFERBENCH_SOURCE_DIR}"
   BINARY_DIR        "${TRANSFERBENCH_BUILD_DIR}"
-  INSTALL_DIR       "${TRANSFERBENCH_INSTALL_DIR}"
   CMAKE_ARGS        ${_tb_cmake_args}
   BUILD_ALWAYS      OFF
-  INSTALL_COMMAND   ${CMAKE_COMMAND} --install <BINARY_DIR> --component devel
+  INSTALL_COMMAND   ""
   TEST_COMMAND      ""
   LOG_CONFIGURE     ON
   LOG_BUILD         ON
-  LOG_INSTALL       ON
   LOG_OUTPUT_ON_FAILURE ON
 )
 
 # Install the TransferBench CLI binary into the rvs package layout (same
-# component as rvs itself, so it lands in the same DEB/RPM).
-install(PROGRAMS "${TRANSFERBENCH_INSTALL_DIR}/bin/TransferBench"
+# component as rvs itself, so it lands in the same DEB/RPM). Pulled straight
+# from the child build tree -- TransferBench emits it at the build-dir root via
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY .).
+install(PROGRAMS "${TRANSFERBENCH_BUILD_DIR}/TransferBench"
         DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}
         COMPONENT rvsmodule)
