@@ -11,6 +11,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "Stream.h"
 #include "hip/hip_runtime.h"
@@ -29,6 +31,7 @@ class HIPStream : public Stream<T>
     unsigned int dwords_per_lane;
     unsigned int chunks_per_block;
     unsigned int elements_per_lane;
+    unsigned int tb_size;
 
     // Size of arrays
     const unsigned int array_size;
@@ -46,9 +49,12 @@ class HIPStream : public Stream<T>
     T *d_b;
     T *d_c;
 
+    int nt_mode = 1; // NT_ALL
+
   public:
     HIPStream(const unsigned int, const bool, const int,
-        const unsigned int, const unsigned int);
+        const unsigned int, const unsigned int, const unsigned int,
+        const std::string& nontemporal = "all");
     ~HIPStream();
 
     virtual float read() override;
@@ -60,6 +66,8 @@ class HIPStream : public Stream<T>
     virtual T dot() override;
 
     virtual void init_arrays(T initA, T initB, T initC) override;
+    virtual void init_arrays_normdist(T mean, T stddev, bool gpu_init,
+                                      std::vector<T>& a, std::vector<T>& b, std::vector<T>& c);
     virtual void read_arrays(std::vector<T>& a, std::vector<T>& b, std::vector<T>& c) override;
 };
 

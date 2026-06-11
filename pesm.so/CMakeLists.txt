@@ -39,7 +39,6 @@ project ( ${RVS_TARGET} )
 message(STATUS "MODULE: ${RVS}")
 
 ## Set default module path if not already set
-add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall)
 if (RVS_COVERAGE)
@@ -88,7 +87,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include ${ASAN_CXX_FLAGS}")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
 # Set compiler and compiler flags
 set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
@@ -109,7 +108,7 @@ endif()
 ## define include directories
 include_directories(./ ../ pci)
 # Add directories to look for library files to link
-link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH})
+link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_DIR} ${ROCRAND_DIR})
 ## additional libraries
 set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
 
@@ -137,9 +136,9 @@ install(FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so"
 
 # TEST SECTION
 if (RVS_BUILD_TESTS)
-  add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
-  COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  )
-  include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
+	  add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
+	 COMMAND ln -fs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${RVS}.so.${VERSION_MAJOR} ${RVS_BINTEST_FOLDER}/lib${RVS}.so WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+	)
+	include(${CMAKE_CURRENT_SOURCE_DIR}/tests.cmake)
 endif()
 

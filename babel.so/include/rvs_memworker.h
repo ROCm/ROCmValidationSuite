@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -103,6 +103,17 @@
 #define TRAID_FLOAT   3
 #define TRIAD_DOUBLE  4
 
+/* Babel subtest enable/disable */
+typedef struct {
+  bool read;
+  bool write;
+  bool copy;
+  bool add;
+  bool mul;
+  bool dot;
+  bool triad;
+} subtest;
+
 /**
  * @class MEMWorker
  * @ingroup MEM
@@ -162,6 +173,13 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the number of iterations
     uint64_t get_num_iterations(void) { return num_iterations; }
 
+    //! sets the test duration in milliseconds (0 = use num_iterations)
+    void set_duration(uint64_t _duration) {
+        duration = _duration;
+    }
+    //! returns the test duration in milliseconds
+    uint64_t get_duration(void) { return duration; }
+
     //! sets the array size
     void set_array_size(uint64_t _array_size) {
         array_size = _array_size;
@@ -176,12 +194,40 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the test type
     int get_test_type(void) { return test_type; }
 
-    //! sets the sub test type
-    void set_subtest_type(int _test_type) {
-        subtest = _test_type;
+    //! sets read test enable/disable
+    void set_read(bool _read) {
+        read = _read;
     }
-    //! returns the sub test type
-    int get_subtest_type(void) { return subtest; }
+
+    //! sets write test enable/disable
+    void set_write(bool _write) {
+        write = _write;
+    }
+
+    //! sets copy test enable/disable
+    void set_copy(bool _copy) {
+        copy = _copy;
+    }
+
+    //! sets add test enable/disable
+    void set_add(bool _add) {
+        add = _add;
+    }
+
+    //! sets mul test enable/disable
+    void set_mul(bool _mul) {
+        mul = _mul;
+    }
+
+    //! sets dot test enable/disable
+    void set_dot(bool _dot) {
+        dot = _dot;
+    }
+
+    //! sets triad test enable/disable
+    void set_triad(bool _triad) {
+        triad = _triad;
+    }
 
     //! sets the mibi bytes
     void set_mibibytes(bool _mibibytes) {
@@ -211,9 +257,30 @@ class MemWorker : public rvs::ThreadBase {
     //! returns the numbers of chunks per block
     uint16_t get_chunks_per_block(void) { return chunks_per_block; }
 
+    //! set thread block size
+    void set_tb_size(uint16_t _tb_size) {
+        tb_size = _tb_size;
+    }
+
+    //! sets data initialization mode
+    void set_data_init(const std::string& _data_init) {
+        data_init = _data_init;
+    }
+    //! returns data initialization mode
+    const std::string& get_data_init(void) { return data_init; }
+
+    //! sets non-temporal access mode
+    void set_nontemporal(const std::string& _nontemporal) {
+        nontemporal = _nontemporal;
+    }
+    //! returns non-temporal access mode
+    const std::string& get_nontemporal(void) { return nontemporal; }
+
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
+    //! get worker job result
+    bool get_result(void) { return result; }
 
  protected:
     bool do_mem_stress_test(int *error, std::string *err_description);
@@ -235,6 +302,8 @@ class MemWorker : public rvs::ThreadBase {
     uint64_t run_duration_ms;
     //! Number of iterations
     uint64_t num_iterations;
+    //! Test duration in milliseconds (0 = use num_iterations)
+    uint64_t duration;
     //! output as csv
     bool output_csv;
     //! Mibibytes
@@ -243,17 +312,38 @@ class MemWorker : public rvs::ThreadBase {
     uint64_t array_size;
     //! Test type
     int test_type;
-    //! Sub Test type
-    int subtest;
     //! number of dwords per lane
     uint16_t dwords_per_lane;
     //! number of chunks per block
     uint16_t chunks_per_block;
+    //! thread block size
+    uint16_t tb_size;
+    //! data initialization mode
+    std::string data_init;
+    //! non-temporal access mode
+    std::string nontemporal;
 
     //! TRUE if JSON output is required
     static bool bjson;
     //! synchronization mutex
     std::mutex wrkrmutex;
+    //! Worker job result
+    bool result;
+
+    //! read test enable/disable
+    bool read;
+    //! write test enable/disable
+    bool write;
+    //! copy test enable/disable
+    bool copy;
+    //! add test enable/disable
+    bool add;
+    //! mul test enable/disable
+    bool mul;
+    //! dot test enable/disable
+    bool dot;
+    //! triad test enable/disable
+    bool triad;
 };
 
 #endif  // MEM_SO_INCLUDE_MEM_WORKER_H_

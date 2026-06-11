@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -43,6 +43,8 @@
 #include <hiprand/hiprand.h>
 
 #include <hipblaslt/hipblaslt.h>
+#include <map>
+using std::map;
 
 #define RVS_BLAS_HIP_DATATYPE_INVALID static_cast<hipDataType>(0XFFFF)
 #define RVS_BLAS_HIPBLAS_COMPUTETYPE_INVALID static_cast<hipblasComputeType_t>(0XFFFF)
@@ -63,7 +65,8 @@ class rvs_blas {
        int lda, int ldb, int ldc, int ldd,
        std::string _ops_type, std::string _data_type, std::string _gemm_mode,
        int _batch_count, uint64_t stride_a, uint64_t stride_b, uint64_t stride_c, uint64_t stride_d,
-       std::string _blas_source, std::string _compute_type);
+       std::string _blas_source, std::string _compute_type, std::string _out_data_type,
+       std::string _scale_a, std::string _scale_b, uint32_t rotating, uint64_t _hot_calls);
     rvs_blas() = delete;
     rvs_blas(const rvs_blas&) = delete;
     rvs_blas& operator=(const rvs_blas&) = delete;
@@ -103,7 +106,8 @@ class rvs_blas {
     bool error(void) { return is_error; }
     void generate_random_matrix_data(void);
     bool copy_data_to_gpu(void);
-    bool run_blas_gemm(void);
+    template <typename Ti, typename To> bool copy_data_to_gpu(void);
+    bool run_blas_gemm(bool hot_call);
     bool is_gemm_op_complete(void);
     bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
     void set_gemm_error(uint64_t _error_freq, uint64_t _error_count);
@@ -120,8 +124,10 @@ class rvs_blas {
     int gpu_device_index;
     //! Type of operation
     std::string ops_type;
-    //! Type of data
+    //! Type of input data
     std::string data_type;
+    //! Type of output data
+    std::string out_data_type;
     //! matrix size m
     rocblas_int m;
     //! matrix size n
@@ -143,49 +149,30 @@ class rvs_blas {
     //! Transpose matrix B
     rocblas_operation transb;
 
-    //SGEMM DECLARATION
-    //! pointer to device (GPU) memory
-    float *da;
-    //! pointer to device (GPU) memory
-    float *db;
-    //! pointer to device (GPU) memory
-    float *dc;
-    //! pointer to host memory
-    float *ha;
-    //! pointer to host memory
-    float *hb;
-    //! pointer to host memory
-    float *hc;
-
-    //DGEMM Declaration
-    //! pointer to device (GPU) memory
-    double *ddbla;
-    //! pointer to device (GPU) memory
-    double *ddblb;
-    //! pointer to device (GPU) memory
-    double *ddblc;
-    //! pointer to host memory
-    double *hdbla;
-    //! pointer to host memory
-    double *hdblb;
-    //! pointer to host memory
-    double *hdblc;
-
     //Data type Declaration
     //! pointer to device (GPU) memory
-    void *dda;
+    void *da;
     //! pointer to device (GPU) memory
-    void *ddb;
+    void *db;
     //! pointer to device (GPU) memory
-    void *ddc;
+    void *dc;
     //! pointer to device (GPU) memory
-    void *ddd;
+    void *dd;
     //! pointer to host memory
-    void *hda;
+    void *ha;
     //! pointer to host memory
-    void *hdb;
+    void *hb;
     //! pointer to host memory
-    void *hdc;
+    void *hc;
+
+    //! pointer to device scale A memory
+    void *dsa;
+    //! pointer to device scale B memory
+    void *dsb;
+    //! pointer to host scale A memory
+    void *hsa;
+    //! pointer to host scale B memory
+    void *hsb;
 
     //! pointer to current gemm output (host memory)
     void *hco;
@@ -209,23 +196,6 @@ class rvs_blas {
     rocblas_int blas_ldc_offset;
     //!Blas offsets
     rocblas_int blas_ldd_offset;
-
-    //HGEMM Declaration
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfa;
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfb;
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfc;
-    //! pointer to device (GPU) memory
-    rocblas_half *dhlfd;
-
-    //! pointer to host memory
-    rocblas_half *hhlfa;
-    //! pointer to host memory
-    rocblas_half *hhlfb;
-    //! pointer to host memory
-    rocblas_half *hhlfc;
 
     //! HIP API stream - used to query for GEMM completion
     hipStream_t hip_stream;
@@ -295,16 +265,38 @@ class rvs_blas {
     //! hipblaslt matrix data-type
     hipDataType hbl_datatype;
 
+    //! hipblaslt matrix output data-type
+    hipDataType hbl_out_datatype;
+
     //! hipblaslt compute-type
     hipblasComputeType_t hbl_computetype;
 
     //! Create hipblaslt matrix multiply descriptor
-    hipblasLtMatmulDesc_t hbl_matmul;
+    std::vector <hipblasLtMatmulDesc_t> hbl_matmul;
+
+    uint64_t block_count;
 
     //! Transpose matrix A
     hipblasOperation_t hbl_trans_a;
     //! Transpose matrix B
     hipblasOperation_t hbl_trans_b;
+
+    //! Scale matrix A
+    std::string hbl_scale_a;
+    //! Scale matrix B
+    std::string hbl_scale_b;
+    //! Scale matrix A size
+    size_t hbl_scale_a_size;
+    //! Scale matrix B size
+    size_t hbl_scale_b_size;
+    //! Scale matrix A block row size
+    const size_t hbl_scale_a_block_row = 32;
+    //! Scale matrix A block column size
+    const size_t hbl_scale_a_block_col = 1;
+    //! Scale matrix B block row size
+    const size_t hbl_scale_b_block_row = 1;
+    //! Scale matrix B block column size
+    const size_t hbl_scale_b_block_col = 32;
 
     //! Workspace buffer for matrix multiplication
     void* hbl_workspace;
@@ -321,8 +313,12 @@ class rvs_blas {
     //! hipblaslt heuristic algorithm result
     hipblasLtMatmulHeuristicResult_t hbl_heuristic_result;
 
+    //! number of gemm calls at once
+    uint64_t hot_calls;
+
     bool init_gpu_device(void);
     bool allocate_gpu_matrix_mem(void);
+    template <typename Ti, typename To> bool allocate_gpu_matrix_mem(void);
     void release_gpu_matrix_mem(void);
 
     bool allocate_host_matrix_mem(void);
@@ -338,12 +334,17 @@ class rvs_blas {
     hipDataType datatype_to_hip_datatype(const std::string& datatype)
     {
       return
-        (datatype == "i8_r")   ? HIP_R_8I  :
-        (datatype == "fp8_r")  ? HIP_R_8F_E4M3_FNUZ  :
-        (datatype == "bf16_r") ? HIP_R_16BF :
-        (datatype == "fp16_r") ? HIP_R_16F  :
-        (datatype == "fp32_r") ? HIP_R_32F  :
-        (datatype == "fp64_r") ? HIP_R_64F  :
+        (datatype == "fp4_r")      ? HIP_R_4F_E2M1 :
+        (datatype == "fp6_e3m2_r") ? HIP_R_6F_E3M2 :
+        (datatype == "fp6_e2m3_r") ? HIP_R_6F_E2M3 :
+        (datatype == "i8_r")       ? HIP_R_8I  :
+        (datatype == "fp8_r")      ? HIP_R_8F_E4M3_FNUZ : // FP8-FNUZ
+        (datatype == "fp8_e4m3_r" || datatype == "mxfp8_e4m3_r") ? HIP_R_8F_E4M3  : // FP8-OCP E4M3
+        (datatype == "fp8_e5m2_r" || datatype == "mxfp8_e5m2_r") ? HIP_R_8F_E5M2  : // FP8-OCP E5M2
+        (datatype == "bf16_r")     ? HIP_R_16BF :
+        (datatype == "fp16_r")     ? HIP_R_16F  :
+        (datatype == "fp32_r")     ? HIP_R_32F  :
+        (datatype == "fp64_r")     ? HIP_R_64F  :
         RVS_BLAS_HIP_DATATYPE_INVALID;
     }
 
@@ -351,6 +352,7 @@ class rvs_blas {
     hipblasComputeType_t computetype_to_hipblas_computetype(const std::string& computetype)
     {
       return
+        computetype == "fp16_r" ? HIPBLAS_COMPUTE_16F  :
         computetype == "fp32_r" ? HIPBLAS_COMPUTE_32F  :
         computetype == "xf32_r" ? HIPBLAS_COMPUTE_32F_FAST_TF32 :
         computetype == "fp64_r" ? HIPBLAS_COMPUTE_64F :
@@ -358,6 +360,48 @@ class rvs_blas {
         RVS_BLAS_HIPBLAS_COMPUTETYPE_INVALID;
     }
 
+    inline size_t get_hipdatatype_size(hipDataType hipdatatype)
+    {
+      static const std::map<hipDataType, size_t> hipdatatype_sizemap {
+        {HIP_R_32F, 4},
+        {HIP_R_64F, 8},
+        {HIP_R_16F, 2},
+        {HIP_R_8I, 1},
+        {HIP_R_8U, 1},
+        {HIP_R_32I, 4},
+        {HIP_R_32U, 4},
+        {HIP_R_16BF, 2},
+        {HIP_R_4I, 1},
+        {HIP_R_4U, 1},
+        {HIP_R_16I, 2},
+        {HIP_R_16U, 2},
+        {HIP_R_64I, 8},
+        {HIP_R_64U, 8},
+        {HIP_R_8F_E4M3_FNUZ, 1},
+        {HIP_R_8F_E5M2_FNUZ, 1},
+        {HIP_R_8F_E4M3, 1},
+        {HIP_R_8F_E5M2, 1},
+        {HIP_R_4F_E2M1, 1},
+        {HIP_R_6F_E2M3, 1},
+        {HIP_R_6F_E3M2, 1}
+      };
+
+      return hipdatatype_sizemap.at(hipdatatype);
+    }
+
+std::vector<float> generateMXInput(hipDataType            dataType,
+                                   void*                  data,
+                                   void*                  scale,
+                                   int                    row,
+                                   int                    col,
+                                   int                    stride,
+                                   bool                   isTranspose,
+                                   int const              scaleBlockRowSize,
+                                   int const              scaleBlockColSize,
+                                   bool                   isMatrixA,
+                                   std::string_view const initMethod = "Bounded",
+                                   float                  min_val    = -1.0f,
+                                   float                  max_val    = 1.0f);
 };
 
 #endif  // INCLUDE_RVS_BLAS_H_

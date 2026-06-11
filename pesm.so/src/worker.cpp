@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -43,6 +43,7 @@ extern "C" {
 #include "include/rvs_module.h"
 #include "include/pci_caps.h"
 #include "include/gpu_util.h"
+#include "include/rvs_util.h"
 #include "include/rvsloglp.h"
 #define MODULE_NAME "PESM"
 
@@ -52,6 +53,7 @@ using std::map;
 
 Worker::Worker() {
   bfiltergpu = false;
+  bfiltergpuidx = false;
 }
 Worker::~Worker() {}
 
@@ -63,6 +65,17 @@ void Worker::set_gpuids(const std::vector<uint16_t>& GpuIds) {
   gpuids = GpuIds;
   if (gpuids.size()) {
     bfiltergpu = true;
+  }
+}
+
+/**
+ * @brief Sets GPU Indexes for filtering
+ * @arg GpuIdx Array of GPU indexes
+ */
+void Worker::set_gpuidx(const std::vector<uint16_t>& GpuIdx) {
+  gpuidx = GpuIdx;
+  if (gpuidx.size()) {
+    bfiltergpuidx = true;
   }
 }
 
@@ -102,8 +115,7 @@ void Worker::run() {
 
   if (bjson) {
     // add JSON output
-    r = rvs::lp::LogRecordCreate("pesm", action_name.c_str(), rvs::logresults,
-        sec, usec);
+    r = json_node_create("pesm", action_name.c_str(), rvs::logresults);
     rvs::lp::AddString(r, "msg", "started");
     rvs::lp::LogRecordFlush(r);
   }
@@ -135,6 +147,10 @@ void Worker::run() {
       if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
         continue;
 
+      uint16_t gpu_idx;
+      if (rvs::gpulist::gpu2gpuindex(gpu_id, &gpu_idx))
+        continue;
+
       // device_id filtering
       if ( device_id != 0 && dev->device_id != device_id)
         continue;
@@ -143,6 +159,13 @@ void Worker::run() {
       if (bfiltergpu) {
         auto itgpuid = find(gpuids.begin(), gpuids.end(), gpu_id);
         if (itgpuid == gpuids.end())
+          continue;
+      }
+
+      // gpu index filtering
+      if (bfiltergpuidx) {
+        auto itgpuidx = find(gpuidx.begin(), gpuidx.end(), gpu_idx);
+        if (itgpuidx == gpuidx.end())
           continue;
       }
 
@@ -206,7 +229,7 @@ void Worker::run() {
         power_change[gpu_id] = "true";
       }
       else {
-        msg = "[" + action_name + "] " + 
+        msg = "[" + action_name + "] " +
           std::to_string(gpu_id) + " PCIe power state unchanged " + new_pwr_val;
         rvs::lp::Log(msg, rvs::loginfo, sec, usec);
 
@@ -224,13 +247,6 @@ void Worker::run() {
   // get timestamp
   rvs::lp::get_ticks(&sec, &usec);
 
-  if (bjson) {
-    // add JSON output
-    r = rvs::lp::LogRecordCreate("PESM",
-        stop_action_name.c_str(), rvs::logresults,
-        sec, usec);
-  }
-
   string gpu_json;
   string speed_json;
   string power_json;
@@ -243,38 +259,40 @@ void Worker::run() {
     rvs::lp::Log(msg, rvs::logresults, sec, usec);
 
     if (bjson) {
-      gpu_json += std::to_string(i.first) + ", ";
-      speed_json += i.second + ", ";
+      r = json_node_create("PESM",
+        stop_action_name.c_str(), rvs::logresults);
+      rvs::lp::AddString(r, "gpu_id", std::to_string(i.first));
+
+      uint16_t gpu_index = 0;
+      rvs::gpulist::gpu2gpuindex(i.first, &gpu_index);
+      rvs::lp::AddString(r, "gpu_index", std::to_string(gpu_index));
+
+      rvs::lp::AddString(r, "pcie speed change",i.second);
+      rvs::lp::LogRecordFlush(r);
+      r = nullptr;
     }
   }
 
-  if (bjson) {
-    gpu_json = gpu_json.substr(0, (gpu_json.size() - 2));
-    speed_json = speed_json.substr(0, (speed_json.size() - 2));
-
-    rvs::lp::AddString(r, "gpu", gpu_json);
-    rvs::lp::AddString(r, "speed_change", speed_json);
-  }
 
   for(auto i : power_change) {
 
     msg = "[" + stop_action_name + "]" +
       " GPU " + std::to_string(i.first) + " PCIe power change " +  i.second;
     rvs::lp::Log(msg, rvs::logresults, sec, usec);
+    if (bjson){
+      r = json_node_create("PESM",
+        stop_action_name.c_str(), rvs::logresults);
+      rvs::lp::AddString(r, "gpu_id", std::to_string(i.first));
 
-    if (bjson) {
-      power_json += i.second + ", ";
+      uint16_t gpu_index = 0;
+      rvs::gpulist::gpu2gpuindex(i.first, &gpu_index);
+      rvs::lp::AddString(r, "gpu_index", std::to_string(gpu_index));
+
+      rvs::lp::AddString(r, "power_change", i.second);
+      rvs::lp::AddString(r, "msg", "stopped");
+      rvs::lp::LogRecordFlush(r);
+      r = nullptr;
     }
-  }
-
-  if (bjson) {
-    power_json = power_json.substr(0, (power_json.size() - 2));
-
-    rvs::lp::AddString(r, "power_change", power_json);
-    rvs::lp::AddString(r, "msg", "stopped");
-    rvs::lp::AddString(r, "result", "true");
-
-    rvs::lp::LogRecordFlush(r);
   }
 
   // add string output
@@ -314,3 +332,4 @@ void Worker::stop() {
   catch(...) {
   }
 }
+

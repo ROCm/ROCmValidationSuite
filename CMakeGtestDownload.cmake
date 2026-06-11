@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -23,14 +23,14 @@
 ##
 ################################################################################
 
-cmake_minimum_required(VERSION 2.8.2)
+cmake_minimum_required(VERSION 3.5.0)
 
 project(googletest-download NONE)
 
 include(ExternalProject)
 ExternalProject_Add(googletest
   GIT_REPOSITORY    https://github.com/google/googletest.git
-  GIT_TAG           release-1.11.0
+  GIT_TAG           v1.16.0
   SOURCE_DIR        "${CMAKE_BINARY_DIR}/googletest-src"
   BINARY_DIR        "${CMAKE_BINARY_DIR}/googletest-build"
   CONFIGURE_COMMAND ""

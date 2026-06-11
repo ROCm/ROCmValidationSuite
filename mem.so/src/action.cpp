@@ -82,7 +82,8 @@ mem_action::~mem_action() {
  * @return true if no error occured, false otherwise
  */
 bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
-    size_t k = 0;
+
+    uint64_t k = 0;
     string    msg;
 
     for (;;) {
@@ -264,7 +265,7 @@ int mem_action::get_num_amd_gpu_devices(void) {
             rvs::lp::AddString(json_root_node, "ERROR", MEM_NO_COMPATIBLE_GPUS);
             rvs::lp::LogRecordFlush(json_root_node);
         }
-        return 0;
+        return -1;
     }
     return hip_num_gpu_devices;
 }
@@ -290,7 +291,8 @@ int mem_action::get_all_selected_gpus(void) {
     
     // iterate over all available & compatible AMD GPUs
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, mem_gpus_device_index,
-                    property_device, property_device_id, property_device_all);
+        property_device, property_device_id, property_device_all,
+        property_device_index, property_device_index_all);
     if (amd_gpus_found) {
         if (do_mem_stress_test(mem_gpus_device_index))
             return 0;
@@ -336,7 +338,7 @@ int mem_action::run(void) {
   }
     if(bjson){
     // add prelims for each action, dtype and target stress
-    json_add_primary_fields();
+    json_add_primary_fields(std::string(MODULE_NAME), action_name);
   }
 
   auto res =  get_all_selected_gpus();
@@ -353,19 +355,6 @@ int mem_action::run(void) {
 }
 
 
-/**
- * @brief flushes target and dtype fields to json file
- * @return
- */
 
-void mem_action::json_add_primary_fields(){
-  if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-    rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-    return;
-  }
-}
 
-void mem_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}
 

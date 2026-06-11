@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -60,14 +60,15 @@ class cli {
  * @brief Possible continuation types
  *
  * Defines possible type for the next token:
- * |value    |meaning
- * |---------|-------------------------
- * |eof      |end of input
- * |value    |value expected (must be different then command strings defined throuth grammar)
- * |command  |command string as defined in grammar
+ * |value          |meaning
+ * |---------------|-------------------------
+ * |eof            |end of input
+ * |value          |value always expected (must be different then command strings defined through grammar)
+ * |optionalvalue  |value not always expected (must be different then command strings defined through grammar)
+ * |command        |command string as defined in grammar
  *
  */
-  typedef enum {eof, value, command} econtext;
+  typedef enum {eof, value, optionalvalue, command} econtext;
 
   /**
  * @class optbase
@@ -100,6 +101,7 @@ class cli {
   const char*  get_token();
   bool  try_command(const std::string& token);
   bool  try_value(const std::string& token);
+  bool  try_optionalvalue(const std::string& token);
   bool  emit_option(void);
   void  init_grammar(void);
   void  extract_path(void);

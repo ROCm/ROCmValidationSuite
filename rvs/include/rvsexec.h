@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -40,6 +40,14 @@ enum class yaml_data_type_t {
   YAML_FILE = 0,
   YAML_STRING = 1
 };
+
+typedef struct {
+  std::string name;
+  std::string module;
+  std::string category;
+  bool result;
+  uint64_t duration;
+} exec_action;
 
 /**
  * @class exec
@@ -85,6 +93,15 @@ class exec {
   /* Application Callback */
   void (*app_callback)(const rvs_results_t * results, int user_param);
   int user_param;
+  /* Number of times to execute the test */
+  int num_times;
+  /* Details of all executed actions */
+  std::vector <exec_action> action_details;
+
+  bool in_progress;
+
+  void in_progress_thread(exec_action action_info);
+
 };
 
 }  // namespace rvs

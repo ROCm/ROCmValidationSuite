@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -55,7 +55,6 @@ class pebb_action : public rvs::actionbase {
  public:
   pebb_action();
   virtual ~pebb_action();
-  static void cleanup_logs();
   virtual int run(void);
 
   typedef struct bandwidth{
@@ -94,13 +93,26 @@ class pebb_action : public rvs::actionbase {
   int link_type;
   std::string link_type_string;
 
- //! Number of warm calls (transfer iterations) before bandwidth calculation (hot calls)
- //! to ignore few intial transfers for the bandwidth to settle
- uint32_t warm_calls;
- //! Number of hot calls (transfer iterations) for bandwidth calculation after warm calls
- uint32_t hot_calls;
- //! set to true for back-to-back transfers (resource allocation only once for entire transfer iterations)
- bool b2b;
+  //! Number of warm calls (transfer iterations) before bandwidth calculation (hot calls)
+  //! to ignore few intial transfers for the bandwidth to settle
+  uint32_t warm_calls;
+  //! Number of hot calls (transfer iterations) for bandwidth calculation after warm calls
+  uint32_t hot_calls;
+  //! set to true for back-to-back transfers (resource allocation only once for entire transfer iterations)
+  bool b2b;
+
+  //! transfer method - TransferBench or Native
+  std::string transfer_method;
+  //! transfer executor to use - GPU or SDMA
+  std::string executor;
+  //! No. of subexecutors
+  uint32_t subexecutor;
+  //! source memory type (e.g., cpu, gpu, null)
+  std::string source_memory;
+  //! destination memory type (e.g., cpu, gpu, null)
+  std::string destination_memory;
+  //! GFX kernel unroll factor
+  uint32_t gfx_unroll;
 
  protected:
   int create_threads();
@@ -113,7 +125,6 @@ class pebb_action : public rvs::actionbase {
                       uint32_t Distance,
                       const std::vector<rvs::linkinfo_t>& arrLinkInfo,
                       bool bReverse);
-  void json_add_primary_fields();
   void* json_base_node(int log_level);
   void json_add_kv(void *json_node, const std::string &key, const std::string &value);
   void json_to_file(void *json_node,int log_level);

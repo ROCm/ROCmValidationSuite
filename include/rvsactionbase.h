@@ -31,7 +31,6 @@
 #include <type_traits>
 
 #include "include/rvs_util.h"
-
 namespace rvs {
 
 enum class actionstate {

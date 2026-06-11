@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -61,6 +61,8 @@ class Worker : public rvs::ThreadBase {
   void set_deviceid(const int id) { device_id = id; }
   //! Sets GPU IDs for filtering
   void set_gpuids(const std::vector<uint16_t>& GpuIds);
+  //! Sets GPU indexes for filtering
+  void set_gpuidx(const std::vector<uint16_t>& GpuIdx);
   //! Sets GPU IDs for filtering (string used in messages)
   //! @param Devices List of devices to monitor
   void set_strgpuids(const std::string& Devices) { strgpuids = Devices; }
@@ -81,8 +83,12 @@ class Worker : public rvs::ThreadBase {
   int device_id;
   //! GPU id filtering flag
   bool bfiltergpu;
+  //! GPU indexes filtering flag
+  bool bfiltergpuidx;
   //! list of GPU devices to monitor
   std::vector<uint16_t> gpuids;
+  //! list of GPU device indexes to monitor
+  std::vector<uint16_t> gpuidx;
   //! list of GPU devices to monitor (string used in messages)
   std::string strgpuids;
   //! Name of the action which initiated monitoring

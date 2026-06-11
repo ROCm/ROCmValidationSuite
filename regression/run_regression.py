@@ -7,7 +7,7 @@ import sys
 
 from shutil import copyfile
 
-curr_location = subprocess.check_output(["pwd", ""])
+curr_location = subprocess.check_output(["pwd"])
 curr_location_size = len(curr_location)
 curr_location = curr_location[0:curr_location_size-1]
 print('curr_location',curr_location)

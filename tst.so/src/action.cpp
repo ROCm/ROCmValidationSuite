@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -144,7 +144,7 @@ bool tst_action::get_all_tst_config_keys(void) {
     bool bsts = true;
 
     if ((error =
-      property_get(RVS_CONF_TARGET_TEMP_KEY, &tst_throttle_temp))) {
+      property_get(RVS_CONF_TARGET_TEMP_KEY, &tst_target_temp))) {
       switch (error) {
         case 1:
           msg = "invalid '" + std::string(RVS_CONF_TARGET_TEMP_KEY) +
@@ -343,16 +343,10 @@ void tst_action::hip_to_smi_indices(void) {
     // map this to smi as only these are visible
     uint32_t smi_num_devices;
     uint64_t val_ui64;
-    std::map<uint64_t, int> smi_map;
+    std::map<uint64_t, amdsmi_processor_handle> smi_map;
 
-    rsmi_status_t err = rsmi_num_monitor_devices(&smi_num_devices);
-    if( err == RSMI_STATUS_SUCCESS){
-        for(auto i = 0; i < smi_num_devices; ++i){
-            err = rsmi_dev_pci_id_get(i, &val_ui64);
-            smi_map.insert({val_ui64, i});
-        }
-    }
-
+    //rvs::smi_pci_hdl_mapping();
+    smi_map = rvs::get_smi_pci_map();
     for (int i = 0; i < hip_num_gpu_devices; i++) {
         // get GPU device properties
          unsigned int pDom, pBus, pDev, pFun;
@@ -396,9 +390,11 @@ bool tst_action::do_thermal_test(map<int, uint16_t> tst_gpus_device_index) {
         TSTWorker::set_use_json(bjson);
         for (it = tst_gpus_device_index.begin(); it != tst_gpus_device_index.end(); ++it) {
             if(hip_to_smi_idxs.find(it->first) != hip_to_smi_idxs.end()){
-                workers[i].set_smi_device_index(hip_to_smi_idxs[it->first]);
+                workers[i].set_smi_device_handle(hip_to_smi_idxs[it->first]);
             } else{
-                workers[i].set_smi_device_index(it->first);
+                workers[i].set_smi_device_handle(nullptr);
+		msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(i) + " has no handle";
+                rvs::lp::Log(msg, rvs::logerror);
             }
             gpuId = it->second;
             // set worker thread params
@@ -452,7 +448,7 @@ bool tst_action::do_thermal_test(map<int, uint16_t> tst_gpus_device_index) {
         }
 
 
-        msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Shutting down rocm-smi  ";
+        msg = "[" + action_name + "] " + MODULE_NAME + " " + std::to_string(gpuId) + " Shutting down smi  ";
         rvs::lp::Log(msg, rvs::loginfo);
 
 
@@ -487,30 +483,6 @@ int tst_action::get_num_amd_gpu_devices(void) {
 }
 
 
-/**
- * @brief flushes target temperature and dtype fields to json file
- * @return
- */
-
-void tst_action::json_add_primary_fields(){
-    if (rvs::lp::JsonActionStartNodeCreate(MODULE_NAME, action_name.c_str())){
-        rvs::lp::Err("json start create failed", MODULE_NAME_CAPS, action_name);
-        return;
-    }
-    void *json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_TT_MESSAGE, std::to_string(tst_throttle_temp));
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
-            json_node = nullptr;
-    }
-    json_node = json_node_create(std::string(MODULE_NAME),
-                        action_name.c_str(), rvs::loginfo);
-    if(json_node){
-            rvs::lp::AddString(json_node,RVS_DTYPE_MESSAGE, tst_ops_type);
-            rvs::lp::LogRecordFlush(json_node, rvs::loginfo);
-    }
-}
 
 /**
  * @brief gets all selected GPUs and starts the worker threads
@@ -526,32 +498,41 @@ int tst_action::get_all_selected_gpus(void) {
     hipGetDeviceCount(&hip_num_gpu_devices);
     if (hip_num_gpu_devices < 1)
         return hip_num_gpu_devices;
-    rsmi_init(0);
     // find compatible GPUs to run tst tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, tst_gpus_device_index,
-                    property_device, property_device_id, property_device_all, true); // MCM checks
+        property_device, property_device_id, property_device_all,
+        property_device_index, property_device_index_all, true);  // MCM checks
     if(!amd_gpus_found){
 
         msg = "No devices match criteria from the test configuation.";
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        rsmi_shut_down();
-        return 1;
+        //amdsmi_shut_down();
+        if (bjson) {
+          unsigned int sec;
+          unsigned int usec;
+          rvs::lp::get_ticks(&sec, &usec);
+          void *json_root_node = rvs::lp::LogRecordCreate(MODULE_NAME,
+            action_name.c_str(), rvs::logerror, sec, usec, true);
+          if (!json_root_node) {
+            // log the error
+            string msg = std::string(JSON_CREATE_NODE_ERROR);
+            rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+            return -1;
+         }
+
+        rvs::lp::AddString(json_root_node, "ERROR","No AMD compatible GPU found!");
+        rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
+       }
+
+        return 0;
     }
 
-    if(bjson){
-        // add prelims for each action, dtype and target stress
-        json_add_primary_fields();
-    }
     int tst_res = 0;
     if(do_thermal_test(tst_gpus_device_index))
         tst_res = 0;
     else 
         tst_res = -1;
-    // append end node to json
-    if(bjson){
-        rvs::lp::JsonActionEndNodeCreate();
-    }
-    rsmi_shut_down();
+     //amdsmi_shut_down();
     return tst_res;
 }
 
@@ -578,8 +559,16 @@ int tst_action::run(void) {
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     return -1;
   }
+  if(bjson){
+        // add prelims for each action,
+      json_add_primary_fields(std::string(MODULE_NAME), action_name);
+   }
 
   auto res =  get_all_selected_gpus();
+  // append end node to json
+  if(bjson){
+    rvs::lp::JsonActionEndNodeCreate();
+  }
 
   action_result.state = rvs::actionstate::ACTION_COMPLETED;
   action_result.status = (!res) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
@@ -589,6 +578,3 @@ int tst_action::run(void) {
   return res;
 }
 
-void tst_action::cleanup_logs(){
-  rvs::lp::JsonEndNodeCreate();
-}

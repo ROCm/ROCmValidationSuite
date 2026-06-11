@@ -41,7 +41,7 @@ extern "C" {
 
 
 #include "include/rvsactionbase.h"
-#include "rocm_smi/rocm_smi.h"
+#include "amd_smi/amdsmi.h"
 
 using std::vector;
 using std::string;
@@ -70,7 +70,6 @@ class tst_action: public rvs::actionbase {
  public:
     tst_action();
     virtual ~tst_action();
-    static void cleanup_logs();
     virtual int run(void);
 
  protected:
@@ -122,10 +121,9 @@ class tst_action: public rvs::actionbase {
     //! list of GPUs (along with some identification data) which are
     //! selected for TST test
     std::vector<gpu_hwmon_info> tst_gpus;
-    std::map<int, int> hip_to_smi_idxs;
+    std::map<int, amdsmi_processor_handle> hip_to_smi_idxs;
     void hip_to_smi_indices();
     bool get_all_tst_config_keys(void);
-    void json_add_primary_fields();
 
 
 /**

@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -38,11 +38,12 @@ project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
 
-add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall )
 add_compile_options(-fPIC)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
+
+
 
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
@@ -96,7 +97,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include ${ASAN_CXX_FLAGS}")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
 #Set compiler and compiler flags
 set(CMAKE_CXX_COMPILER "${HIPCC_PATH}/bin/hipcc")
@@ -116,9 +117,9 @@ endif()
 
 ## define include directories
 include_directories(./ ../ ../rvs
-  ${ROCM_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${HIPBLASLT_INC_DIR})
+  ${AMD_SMI_INC_DIR} ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${HIPBLASLT_INC_DIR} ${YAML_CPP_INCLUDE_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${HIPBLAS-COMMON_INCLUDE_DIR} ${MXDATAGENERATOR_INC_DIR})
 
-link_directories(${ASAN_LIB_PATH} ${ROCM_SMI_LIB_DIR})
+link_directories(${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR})
 
 ## define common source files
 set(SOURCES
@@ -172,7 +173,12 @@ target_compile_definitions(${RVS_TARGET} PRIVATE ROCM_USE_FLOAT16)
 set_target_properties(${RVS_TARGET}
  PROPERTIES SUFFIX .so.${LIB_VERSION_STRING}
  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
+target_compile_options(${RVS_TARGET} PRIVATE -fopenmp)
+if(FETCH_ROCMPATH_FROM_ROCMCORE)
+  target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB} ${ROCM_CORE} -fopenmp)
+else()
+  target_link_libraries(${RVS_TARGET} ${AMD_SMI_LIB} -fopenmp)
+endif()
 ## Install shared library librvslib.so
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
 COMMAND ln -fs ./lib${RVS}.so.${LIB_VERSION_STRING} lib${RVS}.so.${VERSION_MAJOR} WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

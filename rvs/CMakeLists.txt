@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -39,10 +39,11 @@ project ( ${RVS_TARGET} )
 
 message(STATUS "MODULE: ${RVS}")
 
-add_compile_options(-std=c++11)
 add_compile_options(-pthread)
 add_compile_options(-Wall)
 add_compile_options(-DRVS_OS_TYPE_NUM=${RVS_OS_TYPE_NUM})
+
+
 
 if (RVS_COVERAGE)
   add_compile_options(-o0 -fprofile-arcs -ftest-coverage)
@@ -93,7 +94,7 @@ endif()
 set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -DHIP_VERSION_MAJOR=${HIP_VERSION_MAJOR} -DHIP_VERSION_MINOR=${HIP_VERSION_MINOR} -DHIP_VERSION_PATCH=${HIP_VERSION_GITDATE}")
 
 set(HIP_HCC_BUILD_FLAGS)
-set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_PATH}/include ${ASAN_CXX_FLAGS}")
+set(HIP_HCC_BUILD_FLAGS "${HIP_HCC_BUILD_FLAGS} -fPIC ${HCC_CXX_FLAGS} -I${HSA_INC_DIR} ${ASAN_CXX_FLAGS}")
 
 
 # Set compiler and compiler flags
@@ -113,23 +114,22 @@ else()
 endif()
 
 ## define include directories
-include_directories(./ ../ ${YAML_CPP_INCLUDE_DIRS})
+include_directories(./ ../ ${YAML_CPP_INCLUDE_DIR})
 ## define lib directories
-link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCT_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_DIR})
+link_directories(${CMAKE_CURRENT_BINARY_DIR} ${RVS_LIB_DIR} ${ROCBLAS_LIB_DIR} ${AMD_SMI_LIB_DIR} ${ASAN_LIB_PATH} ${HIPRAND_LIB_DIR} ${HSA_LIB_DIR} ${HIPBLASLT_LIB_DIR} ${YAML_CPP_LIBRARY_DIR})
 
 ## additional libraries
 set(ROCBLAS_LIB "rocblas")
-set(ROC_THUNK_NAME "hsakmt")
 set(CORE_RUNTIME_NAME "hsa-runtime")
 set(HIPRAND_LIB "hiprand")
 set(HIPBLASLT_LIB "hipblaslt")
 set(CORE_RUNTIME_TARGET "${CORE_RUNTIME_NAME}64")
-set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_LIBRARIES})
+set(PROJECT_LINK_LIBS libdl.so libpthread.so libpci.so ${YAML_CPP_TARGET})
 
 ## define target
 add_executable(${RVS_TARGET} src/rvs.cpp)
-target_link_libraries(${RVS_TARGET} rvslib
-  ${ROCBLAS_LIB} ${ROCM_SMI_LIB} ${ROC_THUNK_NAME} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS} ${HIPRAND_LIB} ${HIPBLASLT_LIB})
+target_link_libraries(${RVS_TARGET} rvslib -fopenmp
+	${ROCBLAS_LIB} ${AMD_SMI_LIB} ${CORE_RUNTIME_TARGET} ${ROCM_CORE} ${PROJECT_LINK_LIBS} ${HIPRAND_LIB} ${HIPBLASLT_LIB})
 add_dependencies(${RVS_TARGET} rvslib)
 
 install(TARGETS ${RVS_TARGET}
@@ -139,13 +139,13 @@ install(TARGETS ${RVS_TARGET}
 )
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/conf
-	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/
+	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}/
   COMPONENT applications
   FILES_MATCHING PATTERN "*.conf"
 )
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/.rvsmodules.config"
-	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CPACK_PACKAGE_NAME}/conf
+	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}/conf
   COMPONENT applications
 )
 
@@ -153,22 +153,6 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/rvs.h"
 	DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/rvs
   COMPONENT rvsmodule
 )
-
-option(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY "Build with file/folder reorg with backward compatibility enabled" OFF)
-if(BUILD_FILE_REORG_BACKWARD_COMPATIBILITY)
-  #Create the softlink rvs/rvs->../bin/rvs in install path for backward compatibility
-  install(CODE "
-    set(EXE_FILE rvs)
-    set(BIN_LINK_DIR \${CPACK_PACKAGING_INSTALL_PREFIX}/rvs)
-    file(MAKE_DIRECTORY \${BIN_LINK_DIR})
-    execute_process(COMMAND ln -sf ../${CMAKE_INSTALL_BINDIR}/\${EXE_FILE} rvs/\${EXE_FILE})
-  ")
-  #Install the soft link to package
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/rvs"
-          DESTINATION ${CPACK_PACKAGING_INSTALL_PREFIX}/rvs/
-	  COMPONENT applications
-	 )
-endif() #BUILD_FILE_REORG_BACKWARD_COMPATIBILITY
 
 # TEST SECTION
 if (RVS_BUILD_TESTS)
