@@ -277,7 +277,7 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 
   uint64_t arr_size   = (uint64_t)ARRAY_SIZE * sizeof(T);
   uint64_t total_size = 3ULL * ARRAY_SIZE * sizeof(T);
-  std::string iter_key = time_based ? "Duration(ms)" : "Iterations";
+  std::string iter_key = time_based ? "duration_ms" : "iterations";
   std::string iter_val = time_based ? std::to_string(duration) : std::to_string(num_times);
 
   std::string labels[total_babel_subtests] = {"Read","Write","Copy", "Mul", "Add", "Triad", "Dot"};
@@ -300,7 +300,7 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
     test->triad,
     test->dot};
 
-  auto fmt3 = [](double val) -> std::string {
+  auto format_bw = [](double val) -> std::string {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(3) << val;
     return oss.str();
@@ -319,8 +319,8 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       uint16_t gpu_index = 0;
       rvs::gpulist::gpu2gpuindex(device.second, &gpu_index);
       rvs::lp::AddString(json_root, "gpu_index", std::to_string(gpu_index));
-      rvs::lp::AddString(json_root, "Array size", std::to_string(arr_size));
-      rvs::lp::AddString(json_root, "Total size", std::to_string(total_size));
+      rvs::lp::AddString(json_root, "array_size", std::to_string(arr_size));
+      rvs::lp::AddString(json_root, "total_size", std::to_string(total_size));
       rvs::lp::AddString(json_root, iter_key, iter_val);
       json_results = rvs::lp::CreateNode(json_root, "results");
     }
@@ -357,31 +357,27 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
         sstr
           << std::left << std::setw(12) << device.second
           << std::left << std::setw(12) << labels[i]
-          << std::left << std::setw(15) << std::setprecision(3) <<
-          bw_scale * sizes[i] / (*minmax.first)
-          << std::left << std::setw(15) << std::setprecision(3) <<
-          bw_scale * sizes[i] / (*minmax.first)
-          << std::left << std::setw(15) << std::setprecision(3) <<
-          bw_scale * sizes[i] / (*minmax.second)
-          << std::left << std::setw(15) << std::setprecision(3) <<
-          bw_scale * sizes[i] / average
+          << std::left << std::setw(15) << format_bw(bw_scale * sizes[i] / (*minmax.first))
+          << std::left << std::setw(15) << format_bw(bw_scale * sizes[i] / (*minmax.first))
+          << std::left << std::setw(15) << format_bw(bw_scale * sizes[i] / (*minmax.second))
+          << std::left << std::setw(15) << format_bw(bw_scale * sizes[i] / average)
           << std::endl;
       }
       if (json && json_results) {
-        const char *key = mibibytes ? "MiBytes/sec" : "MBytes/sec";
-        const char *peak_key = mibibytes ? "Max_MiBytes/sec" : "Max_MBytes/sec";
-        const char *worst_key = mibibytes ? "Min_MiBytes/sec" : "Min_MBytes/sec";
-        const char *avg_key = mibibytes ? "Avg_MiBytes/sec" : "Avg_MBytes/sec";
+        const char *key = mibibytes ? "mibytes_per_sec" : "mbytes_per_sec";
+        const char *peak_key = mibibytes ? "max_mibytes_per_sec" : "max_mbytes_per_sec";
+        const char *worst_key = mibibytes ? "min_mibytes_per_sec" : "min_mbytes_per_sec";
+        const char *avg_key = mibibytes ? "avg_mibytes_per_sec" : "avg_mbytes_per_sec";
         void* subtest_node = rvs::lp::CreateNode(json_results, labels[i].c_str());
         if (subtest_node) {
           rvs::lp::AddString(subtest_node, key,
-              fmt3(bw_scale * sizes[i] / (*minmax.first)));
+              format_bw(bw_scale * sizes[i] / (*minmax.first)));
           rvs::lp::AddString(subtest_node, peak_key,
-              fmt3(bw_scale * sizes[i] / (*minmax.first)));
+              format_bw(bw_scale * sizes[i] / (*minmax.first)));
           rvs::lp::AddString(subtest_node, worst_key,
-              fmt3(bw_scale * sizes[i] / (*minmax.second)));
+              format_bw(bw_scale * sizes[i] / (*minmax.second)));
           rvs::lp::AddString(subtest_node, avg_key,
-              fmt3(bw_scale * sizes[i] / average));
+              format_bw(bw_scale * sizes[i] / average));
           rvs::lp::AddString(subtest_node, "pass", "true");
           rvs::lp::AddNode(json_results, subtest_node);
         }
@@ -414,7 +410,7 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   std::stringstream sstr;
   uint64_t arr_size   = (uint64_t)ARRAY_SIZE * sizeof(T);
   uint64_t total_size = 3ULL * ARRAY_SIZE * sizeof(T);
-  std::string iter_key = time_based ? "Duration(ms)" : "Iterations";
+  std::string iter_key = time_based ? "duration_ms" : "iterations";
   std::string iter_val = time_based ? std::to_string(duration) : std::to_string(num_times);
   if (!output_as_csv)
   {
@@ -555,13 +551,12 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
        uint16_t gpu_index = 0;
        rvs::gpulist::gpu2gpuindex(device.second, &gpu_index);
        rvs::lp::AddString(json_root, "gpu_index", std::to_string(gpu_index));
-       rvs::lp::AddString(json_root, "Array size", std::to_string(arr_size));
-       rvs::lp::AddString(json_root, "Total size", std::to_string(total_size));
+       rvs::lp::AddString(json_root, "array_size", std::to_string(arr_size));
+       rvs::lp::AddString(json_root, "total_size", std::to_string(total_size));
        rvs::lp::AddString(json_root, iter_key, iter_val);
-       std::string bw_field = std::string("Bandwidth (") +
-           ((mibibytes) ? "GiB/s" : "GB/s") + ")";
-       rvs::lp::AddString(json_root, "Runtime (seconds)", std::to_string(runtime));
-       rvs::lp::AddString(json_root, bw_field.c_str(), std::to_string(bandwidth));
+       const char *bw_key = mibibytes ? "bandwidth_gib_per_sec" : "bandwidth_gb_per_sec";
+       rvs::lp::AddString(json_root, "runtime_sec", std::to_string(runtime));
+       rvs::lp::AddString(json_root, bw_key, std::to_string(bandwidth));
        rvs::lp::AddString(json_root, "pass", "true");
        rvs::lp::LogRecordFlush(json_root, true);
      }
