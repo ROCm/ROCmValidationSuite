@@ -875,20 +875,40 @@ fi
 #  - Re-build after the re-configure so ExternalProject sub-builds (the bundled
 #    TransferBench CLI) are rebuilt against the new state; otherwise cpack would
 #    copy from a stale sub-build tree and silently miss files.
-#  - Flip CMAKE_INSTALL_PREFIX to / for the TGZ pass. Install rules key off the
-#    emptied CPACK_PACKAGING_INSTALL_PREFIX so files still land at the tarball
-#    root, but with CPACK_SET_DESTDIR=ON CPack otherwise materialises
-#    CMAKE_INSTALL_PREFIX under DESTDIR, leaving an empty opt/rocm/extras-<major>/
-#    tree in the tarball. Pointing the prefix at / makes the staged prefix the
-#    tarball root, so no orphan directory remains. (The later -D wins.)
+#  - Prune empty directories from the tarball afterwards. With
+#    CPACK_SET_DESTDIR=ON, CPack materialises CMAKE_INSTALL_PREFIX
+#    (/opt/rocm/extras-<major>) under DESTDIR even though every real install()
+#    destination keys off the emptied CPACK_PACKAGING_INSTALL_PREFIX, leaving an
+#    empty opt/rocm/extras-<major>/ tree. We must NOT fix this by setting
+#    CMAKE_INSTALL_PREFIX=/ : GNUInstallDirs' FHS special case then rewrites
+#    bin->usr/bin, lib->usr/lib, ... (and -DCMAKE_INSTALL_BINDIR=bin does not
+#    override it), nesting the whole package under usr/. Instead keep the root
+#    layout and strip empty dirs from the tarball after cpack. RVS never ships
+#    intentionally-empty directories.
 print_info "Creating TGZ package..."
-CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON "-DCPACK_PACKAGING_INSTALL_PREFIX:PATH=" -DCMAKE_INSTALL_PREFIX:PATH=/ -DCPACK_INCLUDE_TOPLEVEL_DIRECTORY=OFF)
+CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON "-DCPACK_PACKAGING_INSTALL_PREFIX:PATH=" -DCPACK_INCLUDE_TOPLEVEL_DIRECTORY=OFF)
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"
 $CMAKE_COMMAND --build "$BUILD_DIR" -- -j"$(nproc 2>/dev/null || echo 4)" || print_warning "Re-build before TGZ packaging reported errors; proceeding with cpack"
 cd "$BUILD_DIR"
 cpack -G TGZ --verbose
+cpack_tgz_status=$?
 
-if [ $? -eq 0 ]; then
+# Strip empty directories left in the tarball by CPack DESTDIR staging
+# (notably opt/rocm/extras-<major>/). See the comment above the TGZ configure.
+if [ $cpack_tgz_status -eq 0 ]; then
+    for _tgz in amdrocm*-rvs*.tar.gz; do
+        [ -e "$_tgz" ] || continue
+        _staged=$(mktemp -d)
+        if tar xzf "$_tgz" -C "$_staged"; then
+            find "$_staged" -depth -mindepth 1 -type d -empty -delete
+            ( cd "$_staged" && tar czf "$OLDPWD/$_tgz" -- * )
+            print_info "Pruned empty staging directories from $_tgz"
+        fi
+        rm -rf "$_staged"
+    done
+fi
+
+if [ $cpack_tgz_status -eq 0 ]; then
     TGZ_FILE=$(ls amdrocm*-rvs*.tar.gz 2>/dev/null | head -1)
     if [ -n "$TGZ_FILE" ]; then
         print_success "Created TGZ package: $TGZ_FILE"
