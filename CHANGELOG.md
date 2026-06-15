@@ -2,11 +2,23 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.6.0
+
+### Added
+
+
 ## RVS 1.5.0
 
 ### Added
 
-- Pulse stressor module (`pulse.so`) for GPU power pulse stress testing. **(Beta — not for production use.)**
+- Added the pulse stressor module (`pulse.so`) for GPU power pulse stress testing. **(Beta — not intended for production use.)**
+- Added support for MI350X QPX mode.
+- Added support for the MXFP8 data type.
+- Added iterations-based GST hot run support.
+
+### Changed
+
+- Updated Babel output to report throughput instead of execution time.
   
 ## RVS 1.4.0
 

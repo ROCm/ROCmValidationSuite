@@ -35,7 +35,9 @@ The workflow runs automatically on:
 
 ### ROCm SDK: nightly vs release in CI
 
-The workflow sets `ROCM_SDK_CHANNEL` and SDK URLs before calling `build_packages_local.sh`:
+The workflow runs [`.github/scripts/configure-rocm-sdk-channel.sh`](../scripts/configure-rocm-sdk-channel.sh) to set `ROCM_SDK_CHANNEL`, SDK URLs, and `ROCM_VERSION` (from `vars.ROCM_VERSION` on push/PR, or `workflow_dispatch` input) before calling `build_packages_local.sh`. Release-branch detection uses POSIX `case` (not bash `[[`), so it works in the Ubuntu `ubuntu:22.04` container where steps may run under `sh`.
+
+**ROCm pin vs S3 layout:** A nightly SDK pin (e.g. `7.14.0a20260528`) only affects **which tarball is downloaded**. **`workflow_dispatch` or `push` on a `release/**` branch** still uploads packages to **`release/rvs/`** (see S3 table below).
 
 | Trigger | SDK source |
 |---------|------------|
@@ -178,7 +180,7 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
 
 3. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
 
-**S3 path layout:**
+**S3 path layout** (resolved by [`.github/scripts/rvs-s3-upload-route.sh`](../scripts/rvs-s3-upload-route.sh), POSIX-safe for Ubuntu `sh`):
 
 | Trigger | Path | Contents |
 |--------|------|----------|

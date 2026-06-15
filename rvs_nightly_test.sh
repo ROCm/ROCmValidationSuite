@@ -66,8 +66,10 @@ cmd_validate_config() {
   INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
   RVS_BIN="${INSTALL_DIR}/bin/rvs"
 
-  echo "Orchestrator runner : $(hostname)"
-  echo "Target node         : ${TARGET_USER:-}@${TARGET_NODE}"
+  # Do not print orchestrator or target host identity here (hostname/IP may be
+  # workflow inputs and must not appear in CI logs). GitHub may still log runner
+  # metadata in the job "Set up job" phase.
+  echo "SSH target          : (omitted — use secrets RVS_TARGET_* / workflow inputs)"
   echo "Target ROCm path    : $TARGET_ROCM_PATH"
   echo "Remote work dir     : $REMOTE_WORK_DIR"
   echo "ROCm major          : $ROCM_MAJOR"
@@ -134,12 +136,12 @@ Host rvs-target
 EOF
   chmod 600 "$SSH_CONFIG_FILE"
 
-  echo "Verifying SSH connectivity to ${TARGET_USER:-}@${TARGET_NODE}..."
-  if ! ssh -F "$SSH_CONFIG_FILE" rvs-target 'echo __START__; hostname; id; uptime' \
-    2>&1 | sed -n '/^__START__$/,$p' | tail -n +2; then
-    echo "::error::SSH connectivity check failed for ${TARGET_USER:-}@${TARGET_NODE}. Verify secrets RVS_TARGET_NODE, RVS_TARGET_USER, RVS_TARGET_SSH_KEY and network access from this runner." >&2
+  echo "Verifying SSH connectivity to target node..."
+  if ! ssh -q -F "$SSH_CONFIG_FILE" rvs-target 'true'; then
+    echo "::error::SSH connectivity check failed. Verify secrets RVS_TARGET_NODE, RVS_TARGET_USER, RVS_TARGET_SSH_KEY and network access from this runner." >&2
     exit 1
   fi
+  echo "::notice::SSH connectivity OK."
 
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
     "mkdir -p '${REMOTE_WORK_DIR}/pkg' '${REMOTE_WORK_DIR}/reports'"
@@ -153,7 +155,8 @@ cmd_verify_rocm() {
     "TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
 set -euo pipefail
 echo "=== System ==="
-uname -a
+# Omit nodename (uname -a prints hostname); -srvmo keeps kernel/OS/arch only.
+uname -srvmo
 echo
 echo "=== Target ROCm path: ${TARGET_ROCM_PATH} ==="
 if [ ! -d "${TARGET_ROCM_PATH}" ]; then
@@ -265,12 +268,11 @@ cmd_run_level4() {
   require_env INSTALL_DIR
   require_env REMOTE_WORK_DIR
   require_env TARGET_ROCM_PATH
-  require_env TARGET_NODE
 
   set +e
   local start end rc
   start=$(date -u +%FT%TZ)
-  echo "::group::RVS level 4 (${RVS_BIN} -r 4) on ${TARGET_NODE} against ${TARGET_ROCM_PATH}"
+  echo "::group::RVS level 4 (${RVS_BIN} -r 4) against ${TARGET_ROCM_PATH}"
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
     "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
 set +e
