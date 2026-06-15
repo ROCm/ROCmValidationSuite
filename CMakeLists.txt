@@ -322,7 +322,7 @@ set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 # Package dependencies: TheRock / ROCm SDK (amdrocm-*). Minimum stack version on each component (no upper bound).
 # amdrocm-llvm: ROCm LLVM (includes libomp used by HIP/RVS); pull OpenMP runtime from the ROCm stack, not host libgomp.
 set(RVS_ROCM_VERSION_MIN "7.14" CACHE STRING "Minimum ROCm stack version in package Depends (inclusive)")
-set(_rvs_amdrocm_pkgs amdrocm-runtimes amdrocm-blas amdrocm-amdsmi amdrocm-rand amdrocm-llvm)
+set(_rvs_amdrocm_pkgs amdrocm-runtime amdrocm-blas amdrocm-amdsmi amdrocm-rand amdrocm-llvm)
 set(_rvs_deb_dep_parts "")
 set(_rvs_rpm_dep_parts "")
 foreach(_rvs_pkg IN LISTS _rvs_amdrocm_pkgs)
