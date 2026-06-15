@@ -322,8 +322,8 @@ set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 # Package dependencies: support both legacy (ROCm <=6.x) and new amdrocm-* naming (TheRock/ROCm 8.x per RFC0009)
 # DEB uses "old | new" OR syntax, RPM uses "(old or new)" boolean dependency syntax
 # rocm-llvm: ROCm LLVM (includes libomp used by HIP/RVS); pull OpenMP runtime from the ROCm stack, not host libgomp.
-set(ROCM_DEB_DEPS "hip-runtime-amd | amdrocm-runtimes, comgr | amdrocm-runtimes, hsa-rocr | amdrocm-runtimes, rocblas | amdrocm-blas, amd-smi-lib | amdrocm-amdsmi, hiprand | amdrocm-rand, hipblaslt | amdrocm-blas, rocm-llvm | amdrocm-llvm")
-set(ROCM_RPM_DEPS "(hip-runtime-amd or amdrocm-runtimes), (comgr or amdrocm-runtimes), (hsa-rocr or amdrocm-runtimes), (rocblas or amdrocm-blas), (amd-smi-lib or amdrocm-amdsmi), (hiprand or amdrocm-rand), (hipblaslt or amdrocm-blas), (rocm-llvm or amdrocm-llvm)")
+set(ROCM_DEB_DEPS "hip-runtime-amd | amdrocm-runtime, comgr | amdrocm-runtime, hsa-rocr | amdrocm-runtime, rocblas | amdrocm-blas, amd-smi-lib | amdrocm-amdsmi, hiprand | amdrocm-rand, hipblaslt | amdrocm-blas, rocm-llvm | amdrocm-llvm")
+set(ROCM_RPM_DEPS "(hip-runtime-amd or amdrocm-runtime), (comgr or amdrocm-runtime), (hsa-rocr or amdrocm-runtime), (rocblas or amdrocm-blas), (amd-smi-lib or amdrocm-amdsmi), (hiprand or amdrocm-rand), (hipblaslt or amdrocm-blas), (rocm-llvm or amdrocm-llvm)")
 if(FETCH_ROCMPATH_FROM_ROCMCORE)
   set(ROCM_DEB_DEPS "${ROCM_DEB_DEPS}, ${ROCM_CORE} | amdrocm-base")
   set(ROCM_RPM_DEPS "${ROCM_RPM_DEPS}, (${ROCM_CORE} or amdrocm-base)")
