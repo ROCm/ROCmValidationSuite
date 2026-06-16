@@ -15,37 +15,40 @@ at any GPU host without code changes.
 ## What it does
 
 ```
-schedule (or manual)
+schedule / workflow_run / manual
     │
     ▼
-detect      [ubuntu-latest]
-    │  curl $RVS_TARBALL_INDEX_URL
-    │  → grep amdrocm*-rvs-*-Linux.tar.gz, sort -V, pick newest
-    │  → compare with cached marker (skip if unchanged)
+detect-tarball              [utility runner]
+    │  curl $RVS_TARBALL_INDEX_URL → pick newest amdrocm*-rvs-*.tar.gz
     ▼
-test        [GitHub runner = orchestrator]    ──ssh──▶  [target node = GPU host]
-    │  validate target_node / target_user                                         │
-    │  write SSH key + config to $RUNNER_TEMP                                     │
-    │  ssh rvs-target hostname; id                ─────────────────────────────▶  │ connectivity check
-    │  ssh rvs-target <prereq script>             ─────────────────────────────▶  │ rocminfo + amd-smi version on $TARGET_ROCM_PATH
-    │  curl <tarball URL>                         → ./pkg/<file>.tar.gz           │
-    │  scp ./pkg/<file>.tar.gz rvs-target:…       ─────────────────────────────▶  │ $REMOTE_WORK_DIR/pkg/
-    │  ssh rvs-target <install script>            ─────────────────────────────▶  │ sudo -n tar -xzf → /opt/rocm/extras-<N>/
-    │  ssh rvs-target <ldd script>                ─────────────────────────────▶  │ verify RVS lib resolution
-    │  ssh rvs-target rvs -r 4                    ─────────────────────────────▶  │ writes $REMOTE_WORK_DIR/reports/rvs_level_4.log
-    │  scp rvs-target:…/reports/*.log ./reports/  ◀─────────────────────────────  │
-    │  build Markdown SUMMARY.md                  → GitHub job summary + artifact │
-    │  ssh rvs-target rm -rf $REMOTE_WORK_DIR     ─────────────────────────────▶  │ cleanup
+prepare-test-context        [utility runner]
+    │  rvs_nightly_test.sh validate-config → paths + remote work dir
+    ▼
+install-rvs-on-target       [test runner]  ──ssh──▶  [target GPU node]
+    │  rvs_nightly_test.sh: setup-ssh, verify-rocm, download, copy,
+    │                         install-rvs, verify-rvs-binary
+    ▼
+run-rvs-level-4             [test runner]  ──ssh──▶  [target GPU node]
+    │  rvs_nightly_test.sh: run-level4, collect-logs, capture-versions
+    │  upload intermediate logs artifact; cleanup remote work dir
+    ▼
+create-test-report          [utility runner]
+    │  rvs_nightly_test.sh build-report → SUMMARY.md + final artifact
     ▼
 artifact: rvs-nightly-report-<run_id>
 ```
+
+Install, test, and report logic lives in [`rvs_nightly_test.sh`](../../rvs_nightly_test.sh)
+at the repo root — the same split as `build-relocatable-packages.yml` +
+`build_packages_local.sh`.
 
 ## Triggers
 
 | Trigger | Cadence | What fires |
 |---|---|---|
-| `schedule` | `0 15 * * *` UTC daily (08:00 PST / 07:00 PDT) | Polls the tarball index. If the latest filename matches the previous run's, the run is **skipped** to avoid re-testing the same package. |
-| `workflow_dispatch` | Manual | Always runs. Supports overriding the tarball URL, forcing a re-run, and **retargeting at any node** without editing the workflow. |
+| `schedule` | `0 15 * * *` UTC daily (08:00 PST / 07:00 PDT) | Polls the tarball index and always runs install + level 4, even when the latest tarball filename matches the previous run (a notice is logged when unchanged). |
+| `workflow_run` | After **Build Relocatable Packages** completes | Runs only when that workflow's overall conclusion is **success**. No changes to the build workflow are required. |
+| `workflow_dispatch` | Manual | Always runs. Supports overriding the tarball URL and **retargeting at any node** without editing the workflow. |
 
 The cron deliberately runs after AMD's typical nightly publish window;
 adjust the cron string in the workflow if your publish cadence is different.
@@ -55,7 +58,6 @@ adjust the cron string in the workflow if your publish cadence is different.
 | Input | Default | Description |
 |---|---|---|
 | `tarball_url` | _(empty)_ | If set, the workflow downloads this exact URL instead of scraping the index. Useful for re-running an older build. |
-| `force` | `false` | When `true`, runs even if the latest tarball filename matches the cached marker. |
 | `target_node` | _(empty → `secrets.RVS_TARGET_NODE`)_ | Hostname or IP of the node to install RVS on and run tests against. **This is the value that retargets the test execution.** Stored as a secret so the lab node identity isn't visible in repo settings or run logs (GitHub Actions automatically masks secret values as `***` in step output). |
 | `target_user` | _(empty → `secrets.RVS_TARGET_USER`; if both are unset, SSH defaults to the orchestrator runner's local user)_ | SSH user on the target node. Must have `NOPASSWD` sudo on the target (see prerequisites). Stored as a secret so the lab account name isn't visible in repo settings or run logs (GitHub Actions automatically masks secret values as `***` in step output). |
 | `remote_work_dir` | _(empty → `vars.RVS_REMOTE_WORK_DIR`, then `/tmp/rvs-nightly-<run_id>`)_ | Working dir on the target node where the tarball is staged, logs are written, and which gets `rm -rf`'d at the end. |
@@ -70,8 +72,7 @@ Example — point a single run at a specific node:
 gh workflow run rvs-nightly-tests.yml \
   -f tarball_url="<INDEX_URL>/amdrocm7-rvs-1.4.21-288-Linux.tar.gz" \
   -f target_node="<HOST_OR_IP>" \
-  -f target_user="<USER>" \
-  -f force=true
+  -f target_user="<USER>"
 ```
 
 Example — keep the default tarball but run on a different host today:
@@ -292,7 +293,7 @@ A typical successful log (with `target_rocm_path=<ROCM_INSTALL_PATH>`):
 
 ```
 === System ===
-Linux <hostname> 6.x.x-x-generic ...
+Linux 6.x.x-x-generic #... SMP ... x86_64 GNU/Linux
 
 === Target ROCm path: <ROCM_INSTALL_PATH> ===
 
@@ -383,6 +384,28 @@ rvs-nightly-report-<run_id>/
 
 Artifact retention is 30 days.
 
+## Log privacy (runner vs target)
+
+GitHub Actions always prints **Runner name** and **Machine name** in the **Set up job**
+log group before any step from this repository runs. That text is emitted by the
+[actions/runner](https://github.com/actions/runner) application when it accepts a job;
+it is **not** produced by `rvs_nightly_test.sh` or this workflow YAML.
+
+**There is no supported way to suppress or hide those two lines** from repository
+code (no workflow flag, secret, `::add-mask::`, or script can remove them — masking
+only affects output *after* a step registers a value, and does not rewrite the setup
+header GitHub has already recorded).
+
+What you *can* do on the infrastructure side:
+
+| Goal | Practical option |
+|---|---|
+| The literal strings should not identify a lab asset | Register the self-hosted runner under a **generic** name in GitHub (**Settings → Actions → Runners**), and/or use a hostname that is not inventory-sensitive — the lines will still exist, but the values are less revealing. |
+| Avoid self-hosted runner logs entirely for orchestration | Run the `install-rvs-on-target` / `run-rvs-level-4` jobs on **GitHub-hosted** runners (`ubuntu-latest`) **only if** the target node is reachable from the public internet on SSH (unusual for internal lab hosts). |
+
+`validate-config` intentionally does **not** print the orchestrator hostname so
+we do not duplicate host identity in our own script output.
+
 ## GitHub runner vs target node
 
 The `test` job runs on `${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}`,
@@ -405,15 +428,15 @@ After committing the workflow file to `master`, the fastest sanity check
 is:
 
 ```bash
-gh workflow run rvs-nightly-tests.yml -f force=true
+gh workflow run rvs-nightly-tests.yml
 ```
 
 Watch the Actions tab for:
 
 1. `detect` resolves a tarball URL (`Latest tarball : amdrocm<N>-rvs-…`).
 2. `test` job picks up on your orchestrator runner.
-3. **Validate target node configuration** prints the resolved `Target node`, `Target ROCm path`, `Remote work dir`, and `Expected RVS binary` path.
-4. **Setup SSH key for target node** prints the target's `hostname` / `id` / `uptime` from the connectivity probe.
+3. **Validate target node configuration** prints `Target ROCm path`, `Remote work dir`, and `Expected RVS binary` (SSH target host/user are **not** printed).
+4. **Setup SSH key for target node** verifies SSH connectivity (no host identity printed to logs).
 5. **Verify ROCm prerequisites on target node** prints `::notice::ROCm prerequisites OK on target node at <TARGET_ROCM_PATH>`.
 6. **Install RVS on target node** prints the detected `ROCM_MAJOR`, the chosen `Target ROCm path`, and `Installed RVS at: <TARGET_ROCM_PATH>/extras-<N>/bin/rvs`.
 7. **Verify RVS binary library resolution on target node** prints `::notice::RVS binary's library dependencies resolved OK on target, all from <TARGET_ROCM_PATH>`.
@@ -428,7 +451,7 @@ Watch the Actions tab for:
 | `test` job stuck "Queued" | No orchestrator runner online with the label in `vars.RVS_TEST_RUNNER_LABEL`. |
 | **Validate target node configuration** fails: `No target node configured` | Neither `inputs.target_node` nor `secrets.RVS_TARGET_NODE` is set. Add the secret in Settings → Secrets and variables → Actions → Secrets, or pass `target_node` via `workflow_dispatch`. |
 | **Setup SSH key for target node** fails: `secrets.RVS_TARGET_SSH_KEY is not set` | The required secret is missing. Add the private SSH key as a repo secret. |
-| **Setup SSH key for target node** fails: `Permission denied (publickey)` | The key in `RVS_TARGET_SSH_KEY` isn't authorized on the target node for `$TARGET_USER`, or the key format is wrong. Verify by `ssh -i <key> $TARGET_USER@$TARGET_NODE hostname` from a workstation. |
+| **Setup SSH key for target node** fails: `Permission denied (publickey)` | The key in `RVS_TARGET_SSH_KEY` isn't authorized on the target node for `$TARGET_USER`, or the key format is wrong. Verify from a workstation with `ssh -i <keyfile> -o BatchMode=yes <user>@<host> true` (use your real user, host, and key; exit code 0 means the key works). |
 | **Setup SSH key for target node** fails: `Connection timed out` / `Connection refused` | Network reachability problem between the orchestrator runner and the target node. Check firewall / VPN / bastion routing. |
 | **Setup SSH key for target node** fails: `Host key verification failed` | `ssh-keyscan` couldn't pre-seed the key and `accept-new` rejected it (rare). Remove any stale entry for the target in the runner's `known_hosts`, or pre-populate it manually. |
 | **Verify ROCm prerequisites on target node** fails: `<TARGET_ROCM_PATH> does not exist on the target node` | The configured `target_rocm_path` / `vars.RVS_TARGET_ROCM_PATH` doesn't point at a real directory on the target. Verify by `ssh <USER>@<HOST_OR_IP> 'ls -d <TARGET_ROCM_PATH>'`. |
@@ -442,7 +465,7 @@ Watch the Actions tab for:
 | **Verify RVS binary library resolution on target node** fails with `not found` | A ROCm runtime library is missing or not in `RPATH` on the target. The step prints the `ldd` output; install the matching ROCm component (typically `rocm-llvm`, `rocm-core`, `hip-runtime-amd`). |
 | **Run RVS level 4 on target node** exits non-zero immediately (after both verify steps passed) | RVS plugin's own dependency missing on the target (e.g. `libpci3` on Debian). Check `rvs_level_4.log` in the artifact for the specific error. |
 | **Collect logs from target node** warns: `No log files retrieved from target node` | The level steps exited so early they didn't produce any output, or `$REMOTE_WORK_DIR` was wiped. Inspect the level-step logs in the run UI for the original error. |
-| Cron skipped a day | GitHub may delay or drop schedules under high load. Run once manually with `force=true` to validate. |
+| Cron skipped a day | GitHub may delay or drop schedules under high load. Run once manually via `workflow_dispatch` to validate. |
 
 ## Retargeting at a different node
 

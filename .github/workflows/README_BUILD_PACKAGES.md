@@ -35,7 +35,9 @@ The workflow runs automatically on:
 
 ### ROCm SDK: nightly vs release in CI
 
-The workflow sets `ROCM_SDK_CHANNEL` and SDK URLs before calling `build_packages_local.sh`:
+The workflow runs [`.github/scripts/configure-rocm-sdk-channel.sh`](../scripts/configure-rocm-sdk-channel.sh) to set `ROCM_SDK_CHANNEL`, SDK URLs, and `ROCM_VERSION` (from `vars.ROCM_VERSION` on push/PR, or `workflow_dispatch` input) before calling `build_packages_local.sh`. Release-branch detection uses POSIX `case` (not bash `[[`), so it works in the Ubuntu `ubuntu:22.04` container where steps may run under `sh`.
+
+**ROCm pin vs S3 layout:** A nightly SDK pin (e.g. `7.14.0a20260528`) only affects **which tarball is downloaded**. **`workflow_dispatch` or `push` on a `release/**` branch** still uploads packages to **`release/rvs/`** (see S3 table below).
 
 | Trigger | SDK source |
 |---------|------------|
@@ -139,12 +141,12 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 2. **Set Environment Variables** from workflow inputs or defaults
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
-5. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
+5. **Upload to S3** (when the repo is `ROCm/ROCmValidationSuite`, or when repository variable `RVS_S3_UPLOAD_ENABLED` is `true`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
 6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
-S3 upload runs **only when** the repository is **`ROCm/ROCmValidationSuite`** (the `if` guard prevents forks from attempting credential setup). The upload step itself is always reached, but exits gracefully if `AWS_S3_BUCKET` is not set. Uses **AWS OIDC**; no long-term access key or secret. The bash routing inside the upload step determines the S3 destination based on the event type and branch.
+S3 upload runs when the repository is **`ROCm/ROCmValidationSuite`** **or** when **`RVS_S3_UPLOAD_ENABLED`** is set to the literal string **`true`** (for forks, mirrors, or other org repositories that opt in after IAM trust is updated). Fork PRs from other repositories are still skipped (no OIDC for cross-repo PR heads). The upload step is reached when those guards pass, but exits gracefully if `AWS_S3_BUCKET` is not set. Uses **AWS OIDC**; no long-term access key or secret. The bash routing inside the upload step determines the S3 destination based on the event type and branch.
 
 **Where `vars` and `secrets` are defined**
 
@@ -163,6 +165,7 @@ The workflow uses GitHub repository variables to control which runners execute e
 | `RUNNER_LABEL` | `ubuntu-22.04` | Ubuntu build job |
 | `RUNNER_LABEL_CONTAINER` | `ubuntu-latest` | CentOS/manylinux build job (container) |
 | `RUNNER_LABEL_UTILITY` | `ubuntu-latest` | Release summary job |
+| `RVS_S3_UPLOAD_ENABLED` | _(unset)_ | Set to `true` to run S3/OIDC upload steps when the repo is not `ROCm/ROCmValidationSuite`. Requires `AWS_S3_BUCKET`, `AWS_ROLE_ARN`, and IAM trust for this repository. |
 
 To use a self-hosted runner, set the variable to your runner's label (e.g., `self-hosted` or a custom label) in **Settings** → **Secrets and variables** → **Actions** → **Variables**.
 
@@ -176,9 +179,13 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
    - Name: `AWS_S3_BUCKET`
    - Value: your S3 bucket name (e.g. `my-rocm-packages`).
 
-3. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
+3. **Repository variable** (only if the repo is **not** `ROCm/ROCmValidationSuite` and you want S3 upload from this repo):
+   - Name: `RVS_S3_UPLOAD_ENABLED`
+   - Value: `true` (must be this exact string). Upstream does not need this variable.
 
-**S3 path layout:**
+4. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it for the **repository that runs the workflow** (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
+
+**S3 path layout** (resolved by [`.github/scripts/rvs-s3-upload-route.sh`](../scripts/rvs-s3-upload-route.sh), POSIX-safe for Ubuntu `sh`):
 
 | Trigger | Path | Contents |
 |--------|------|----------|
