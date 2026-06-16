@@ -6,13 +6,13 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Added
 
+- Test-level configurations for MI350P-450W and MI350P-600W .
 
 ## RVS 1.5.0
 
 ### Added
 
 - Added the pulse stressor module (`pulse.so`) for GPU power pulse stress testing. **(Beta — not intended for production use.)**
-- Test-level configurations for MI350P-450W and MI350P-600W .
 - Added support for MI350X QPX mode.
 - Added support for the MXFP8 data type.
 - Added iterations-based GST hot run support.
