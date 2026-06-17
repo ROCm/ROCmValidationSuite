@@ -220,7 +220,11 @@ platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>
 <b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>.
 </td></tr>
 
-<tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
+<tr><td>-t</td><td>--duration</td><td>Specify the test duration (in seconds) for each action.
+Overrides the <b>duration</b> value in all actions of the configuration file.
+</td></tr>
+
+<tr><td></td><td>--listTests</td><td>List the test modules present in RVS.
 </td></tr>
 
 <tr><td>-v</td><td>--verbose</td><td>Enable detailed logging. Equivalent to specifying <b>-d 5</b> option.
@@ -238,7 +242,7 @@ If no value is provided for the option, it defaults to <b>true</b>.
 Use this option in conjunction with <b>-c</b> option.
 </td></tr>
 
-<tr><td></td><td>--quiet</td><td>No console output given. See logs and return
+<tr><td>-q</td><td>--quiet</td><td>No console output given. See logs and return
 code for errors.</td></tr>
 
 <tr><td></td><td>--version</td><td>Displays the version information and exits.
@@ -276,7 +280,7 @@ Print version information and exit:
 
 List all available test modules:
 ```bash
-./rvs -t
+./rvs --listTests
 ```
 List all GPUs visible to RVS:
 ```bash

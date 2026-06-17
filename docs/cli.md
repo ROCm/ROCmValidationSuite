@@ -2,7 +2,7 @@
 
 ## Synopsis
 
-<b>rvs</b>  [<b>-h</b>|<b>-g</b>|<b>-t</b>|<b>--version</b>|<b>--help</b>|<b>--listTests</b>|<b>--listGpus</b>]
+<b>rvs</b>  [<b>-h</b>|<b>-g</b>|<b>--version</b>|<b>--help</b>|<b>--listTests</b>|<b>--listGpus</b>]
 <b>rvs</b> [[[<b>-d</b>|<b>--debugLevel</b>] 0|<b>--quiet</b>] | [[<b>-d</b>|<b>--debugLevel</b>] 1|2|3|4] | [[<b>-d</b>|<b>--debugLevel</b>] 5|<b>--verbose</b>|<b>-v</b>]]
 [<b>-c</b> <i>path/config_file</i>]
 [<b>-l</b> <i>path/log_file</i> [<b>-a</b>] [<b>-j</b>]] 
@@ -27,22 +27,37 @@
 
 -i --indexes       Comma separated list of GPU ids/indexes to run test on. This overrides
                    the device/device_index values specified for every actions in the
-                   configuration file, including the ‘all’ value.
+                   configuration file, including the 'all' value.
+
+-s --selectActions Comma separated list of action names or 0-based action index numbers
+                   to run from the configuration file. Only the matching actions will
+                   be executed. All other actions are skipped.
 
 -j --json          Generate output file in JSON format.
                    if a path follows this argument, that will be used as json log file;
                    else a file created in /var/tmp/ with timestamp in name.
+
 -l --debugLogFile  Generate log file with output and debug information.
 
+-m --module        Specify a module name to run the corresponding platform-specific
+                   (MI-series GPUs) module configuration file. Valid modules: babel,
+                   gpup, gst, iet, mem, pebb, peqt, pbqt, rcqt.
 
--t --listTests     List the test modules present in RVS.
+-t --duration      Specify the test duration (in seconds) for each action. Overrides
+                   the duration value in all actions of the configuration file.
+
+   --listTests     List the test modules present in RVS.
 
 -v --verbose       Enable verbose reporting. Equivalent to specifying -d 5 option.
+
+-p --parallel      Enables or disables parallel execution across multiple GPUs. Use in
+                   conjunction with -c option. Accepted values: true, false. If no
+                   value is provided, defaults to true.
 
 -n --numTimes      Number of times the test repeatedly executes. Use in conjunction
                    with -c option.
 
-   --quiet         No console output given. See logs and return code for errors.
+-q --quiet         No console output given. See logs and return code for errors.
 
    --version       Display version information and exit.
 
