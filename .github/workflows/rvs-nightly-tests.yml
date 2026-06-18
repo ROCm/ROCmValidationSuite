@@ -1,7 +1,7 @@
 name: RVS Nightly Tests
 
 # Picks up the latest RVS tarball from the tarball index (secrets.RVS_TARBALL_INDEX_URL
-# if set, otherwise https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/), copies it
+# if set, otherwise the fallback URL in env.TARBALL_INDEX_URL below), copies it
 # to a configurable target node, installs it there, runs RVS level 4 on that node,
 # and uploads a Markdown report + logs.
 #
@@ -13,7 +13,7 @@ name: RVS Nightly Tests
 
 # Triggers
 # --------
-# - schedule: daily poll of tarball index (repo secret or CloudFront nightly default)
+# - schedule: daily poll of tarball index (repo secret or workflow fallback URL)
 # - workflow_dispatch: manual run with optional overrides
 # - workflow_run: after Build Relocatable Packages completes successfully
 
@@ -27,7 +27,7 @@ on:
   workflow_dispatch:
     inputs:
       tarball_url:
-        description: 'Override tarball URL (default: latest from index — secrets.RVS_TARBALL_INDEX_URL or CloudFront nightly)'
+        description: 'Override tarball URL (default: latest from index — secrets.RVS_TARBALL_INDEX_URL or workflow fallback)'
         required: false
         default: ''
       target_node:
@@ -55,7 +55,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Default: public nightly tarball directory (override with repo Secret RVS_TARBALL_INDEX_URL, e.g. repo.amd.com listing).
+  # Fallback index URL when secrets.RVS_TARBALL_INDEX_URL is unset (override via that secret).
   TARBALL_INDEX_URL: ${{ secrets.RVS_TARBALL_INDEX_URL || 'https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/' }}
 
 jobs:
