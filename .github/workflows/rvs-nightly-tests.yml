@@ -94,26 +94,40 @@ jobs:
       - name: Resolve latest tarball URL (orchestrator only)
         id: resolve
         env:
-          INDEX_URL: ${{ env.TARBALL_INDEX_URL }}
+          # Do not set INDEX_URL here from ${{ env.* }} — it can be empty on some runners and
+          # masks workflow env. Use inherited TARBALL_INDEX_URL inside the script.
           INPUT_URL: ${{ inputs.tarball_url }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
 
-          if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL:-}" ]; then
-            echo "::error::No tarball index URL and no workflow_dispatch.tarball_url (unexpected — workflow should set a default index)."
+          # Workflow-level env.TARBALL_INDEX_URL (secret override or YAML fallback).
+          INDEX_URL="${TARBALL_INDEX_URL:-}"
+
+          if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL}" ]; then
+            echo "::error::No tarball index URL (set secret RVS_TARBALL_INDEX_URL or workflow env TARBALL_INDEX_URL) and no workflow_dispatch.tarball_url."
             exit 1
           fi
 
           fetch_latest() {
             local idx="$1"
-            local html
-            html="$(curl -sL --max-time 30 "$idx" || true)"
-            echo "$html" \
-              | grep -oE 'amdrocm[0-9]*-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' \
-              | sort -uV \
-              | tail -n 1 \
-              | awk -v p="${idx%/}" '{print p "/" $0}'
+            local html raw name
+            html="$(curl -sSL --max-time 60 --retry 2 --retry-delay 2 "$idx" 2>/dev/null || true)"
+            if [ -z "$html" ]; then
+              echo "::error::curl returned empty body for index URL (check orchestrator HTTPS egress and URL): ${idx}" >&2
+              return 0
+            fi
+            # grep exits 1 when there are no matches — must not trip pipefail before we check results.
+            raw="$(printf '%s' "$html" | grep -oE 'amdrocm[0-9]*-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' 2>/dev/null || true)"
+            name="$(printf '%s\n' "$raw" | sort -uV | tail -n 1 || true)"
+            if [ -z "$name" ]; then
+              echo "::error::Index page contained no amdrocm*-rvs-*-Linux.tar.gz links (check listing format or regex). Index URL: ${idx}" >&2
+              echo "::notice::First 800 chars of response (for debugging):" >&2
+              printf '%.800s\n' "$html" >&2 || true
+              echo "" >&2
+              return 0
+            fi
+            printf '%s/%s\n' "${idx%/}" "$name"
           }
 
           if [ -n "${INPUT_URL:-}" ]; then
@@ -123,7 +137,7 @@ jobs:
           fi
 
           if [ -z "${URL:-}" ]; then
-            echo "::error::Could not resolve a tarball URL from $INDEX_URL"
+            echo "::error::Could not resolve a tarball URL from index: ${INDEX_URL}"
             exit 1
           fi
 
