@@ -1,9 +1,7 @@
 # RVS Nightly Tests Workflow
 
 This document describes [`.github/workflows/rvs-nightly-tests.yml`](./rvs-nightly-tests.yml),
-which picks up the **latest RVS tarball** from the tarball index (`secrets.RVS_TARBALL_INDEX_URL` if set, otherwise the default
-[`https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/`](https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/))
-once per day, copies it to a **configurable remote target node** over SSH,
+which picks up the **latest RVS tarball** from the tarball index (`secrets.RVS_TARBALL_INDEX_URL` if set, otherwise the **built-in default index URL** in [`rvs-nightly-tests.yml`](./rvs-nightly-tests.yml) — see `env.TARBALL_INDEX_URL`), once per day, copies it to a **configurable remote target node** over SSH,
 installs it there, and runs RVS level 4 on that node.
 
 The GitHub Actions runner ("RVS Runner") is only an **orchestrator** — it
@@ -19,7 +17,7 @@ schedule / workflow_run / manual
     │
     ▼
 detect-tarball              [utility runner]
-    │  curl <index URL> → pick newest amdrocm*-rvs-*.tar.gz (index = secret or CloudFront nightly default)
+    │  curl <index URL> → pick newest amdrocm*-rvs-*.tar.gz (index = secret or workflow default)
     ▼
 prepare-test-context        [utility runner]
     │  rvs_nightly_test.sh validate-config → paths + remote work dir
@@ -103,14 +101,14 @@ gh workflow run rvs-nightly-tests.yml \
 
 | Name | Required? | Purpose |
 |---|---|---|
-| `RVS_TARBALL_INDEX_URL` | optional | Directory listing URL scraped for the latest tarball (same `curl` + `grep` logic as before). **Default in workflow:** `https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/` when this secret is unset. Set the secret to override, e.g. `https://repo.amd.com/rocm/rvs/tarball/` for the AMD repo listing. GitHub masks secret values in logs when printed. If this name was previously an Actions **Variable**, copy the value to this secret and remove the variable. |
+| `RVS_TARBALL_INDEX_URL` | optional | Directory listing URL scraped for the latest tarball (same `curl` + `grep` logic as before). When unset, the workflow uses the **default index URL** baked into `rvs-nightly-tests.yml` (`env.TARBALL_INDEX_URL`). Set this secret to point at another listing (for example your organization’s internal index). GitHub masks secret values in logs when printed. If this name was previously an Actions **Variable**, copy the value to this secret and remove the variable. |
 | `RVS_TARGET_NODE` | **Required** *(unless every run sets `target_node` input)* | Hostname or IP of the node where RVS is installed and tests run. Stored as a secret so the lab node identity isn't visible in repo Variables or in run logs — GitHub Actions automatically masks secret values as `***` wherever they appear in step output. Workflow fails fast on `schedule` if neither this secret nor `target_node` input is set. |
 | `RVS_TARGET_USER` | optional (no hard-coded default) | SSH user on the target node. If unset and `target_user` input is empty, the SSH client falls back to the orchestrator runner's local user — set this secret explicitly to avoid surprises. Stored as a secret so the lab account name isn't visible in repo settings or run logs (auto-masked as `***`). |
 | `RVS_TARGET_SSH_KEY` | **Required** | Private SSH key (OpenSSH or PEM format) authorized on the target node for `RVS_TARGET_USER`. Written to `$RUNNER_TEMP/rvs_target_key` for the duration of the job and scrubbed in the cleanup step. |
 
 ## How the latest tarball is picked
 
-The `detect` job does (with `$INDEX_URL` = `secrets.RVS_TARBALL_INDEX_URL` if set, else the workflow default CloudFront nightly URL):
+The `detect` job does (with `$INDEX_URL` = `secrets.RVS_TARBALL_INDEX_URL` if set, else the default from the workflow `env.TARBALL_INDEX_URL` expression):
 
 ```bash
 curl -sL "$INDEX_URL" \
@@ -266,7 +264,7 @@ if `$RVS_BIN` isn't executable after extraction.
 
 - `ssh`, `scp`, `ssh-keyscan`, and `curl` on `PATH`.
 - Network egress to:
-  - the host serving the tarball index URL (typically port 443; default CloudFront nightly or `secrets.RVS_TARBALL_INDEX_URL`),
+  - the host serving the tarball index URL (typically HTTPS port 443; either `secrets.RVS_TARBALL_INDEX_URL` or the workflow’s built-in default),
   - the target node (port 22 — or wherever its sshd listens, configurable in the SSH config block of the workflow).
 - The runner does **not** need a GPU, ROCm, or `sudo`.
 
@@ -363,7 +361,7 @@ e.g.:
 | Target ROCm path | `<ROCM_INSTALL_PATH>` (version `<ROCM_VERSION>`) |
 | Remote work dir | `/tmp/rvs-nightly-1234567890` |
 | Tarball | `amdrocm7-rvs-1.4.21-288-Linux.tar.gz` |
-| Source URL | resolved tarball URL (default index: CloudFront nightly, unless secret `RVS_TARBALL_INDEX_URL` overrides) |
+| Source URL | resolved tarball URL (default index comes from the workflow unless secret `RVS_TARBALL_INDEX_URL` overrides) |
 | RVS version | `RVS 1.4.21.0-...` |
 | Overall result | **PASS** |
 
@@ -447,7 +445,7 @@ Watch the Actions tab for:
 | Symptom | Likely cause |
 |---|---|
 | `detect` job exits with "No tarball index URL…" (should not occur) | Report as a workflow bug; the YAML supplies a default index when the secret is unset. |
-| `detect` job exits with "Could not resolve a tarball URL" | The index page returned no matches. Verify the default [`https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/`](https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/) is reachable, or set secret `RVS_TARBALL_INDEX_URL` to a listing that contains at least one `amdrocm*-rvs-*-Linux.tar.gz` link. |
+| `detect` job exits with "Could not resolve a tarball URL" | The index page returned no matches. Confirm network access to the index host, inspect the HTML listing for `amdrocm*-rvs-*-Linux.tar.gz` links, and/or set secret `RVS_TARBALL_INDEX_URL` to a valid listing URL. Compare with the fallback string in `env.TARBALL_INDEX_URL` in [`rvs-nightly-tests.yml`](./rvs-nightly-tests.yml) if you rely on the built-in default. |
 | `test` job stuck "Queued" | No orchestrator runner online with the label in `vars.RVS_TEST_RUNNER_LABEL`. |
 | **Validate target node configuration** fails: `No target node configured` | Neither `inputs.target_node` nor `secrets.RVS_TARGET_NODE` is set. Add the secret in Settings → Secrets and variables → Actions → Secrets, or pass `target_node` via `workflow_dispatch`. |
 | **Setup SSH key for target node** fails: `secrets.RVS_TARGET_SSH_KEY is not set` | The required secret is missing. Add the private SSH key as a repo secret. |
