@@ -14,7 +14,7 @@ Commands (workflow order):
   validate-config     Fail fast; emit prepare job outputs to GITHUB_OUTPUT
   setup-ssh           Write SSH key/config under RUNNER_TEMP and verify connectivity
   verify-rocm         Remote rocminfo + amd-smi on TARGET_ROCM_PATH
-  download-tarball    curl tarball to ./pkg/ on the orchestrator runner
+  download-tarball    curl tarball to ./pkg/ on the orchestrator runner only (never on SSH target)
   copy-to-target      scp tarball to REMOTE_WORK_DIR/pkg on target
   install-rvs         Extract tarball on target under INSTALL_DIR
   verify-rvs-binary   Remote ldd check on RVS_BIN
@@ -177,7 +177,8 @@ cmd_download_tarball() {
   require_env TARBALL_URL
   require_env TARBALL_NAME
   mkdir -p ./pkg
-  echo "Downloading: $TARBALL_URL"
+  echo "Downloading tarball on orchestrator runner (target node is not used for this fetch):"
+  echo "  $TARBALL_URL"
   curl -fL --max-time 600 -o "./pkg/${TARBALL_NAME}" "${TARBALL_URL}"
   ls -la ./pkg/
   file "./pkg/${TARBALL_NAME}" || true
