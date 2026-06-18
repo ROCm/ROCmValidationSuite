@@ -1,8 +1,9 @@
 name: RVS Nightly Tests
 
-# Picks up the latest RVS tarball published at the index URL configured in
-# vars.RVS_TARBALL_INDEX_URL, copies it to a configurable target node, installs
-# it there, runs RVS level 4 on that node, and uploads a Markdown report + logs.
+# Picks up the latest RVS tarball from the tarball index (secrets.RVS_TARBALL_INDEX_URL
+# if set, otherwise https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/), copies it
+# to a configurable target node, installs it there, runs RVS level 4 on that node,
+# and uploads a Markdown report + logs.
 #
 # Orchestration lives in this workflow; install/test/report steps run via
 # rvs_nightly_test.sh (same pattern as build-relocatable-packages.yml +
@@ -12,7 +13,7 @@ name: RVS Nightly Tests
 
 # Triggers
 # --------
-# - schedule: daily poll of vars.RVS_TARBALL_INDEX_URL
+# - schedule: daily poll of tarball index (repo secret or CloudFront nightly default)
 # - workflow_dispatch: manual run with optional overrides
 # - workflow_run: after Build Relocatable Packages completes successfully
 
@@ -26,7 +27,7 @@ on:
   workflow_dispatch:
     inputs:
       tarball_url:
-        description: 'Override tarball URL (default: latest from vars.RVS_TARBALL_INDEX_URL)'
+        description: 'Override tarball URL (default: latest from index — secrets.RVS_TARBALL_INDEX_URL or CloudFront nightly)'
         required: false
         default: ''
       target_node:
@@ -54,7 +55,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TARBALL_INDEX_URL: ${{ vars.RVS_TARBALL_INDEX_URL }}
+  # Default: public nightly tarball directory (override with repo Secret RVS_TARBALL_INDEX_URL, e.g. repo.amd.com listing).
+  TARBALL_INDEX_URL: ${{ secrets.RVS_TARBALL_INDEX_URL || 'https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/' }}
 
 jobs:
   detect-tarball:
@@ -84,7 +86,7 @@ jobs:
           set -euo pipefail
 
           if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL:-}" ]; then
-            echo "::error::vars.RVS_TARBALL_INDEX_URL is not set; set it or pass workflow_dispatch.tarball_url"
+            echo "::error::No tarball index URL and no workflow_dispatch.tarball_url (unexpected — workflow should set a default index)."
             exit 1
           fi
 
