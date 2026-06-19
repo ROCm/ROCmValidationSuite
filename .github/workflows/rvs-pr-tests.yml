@@ -1,36 +1,26 @@
-name: RVS Nightly Tests
+name: RVS PR Tests
 
-# Picks up the latest RVS tarball from the tarball index (secrets.RVS_TARBALL_INDEX_URL
-# into env.TARBALL_INDEX_URL below — no baked-in default URL), copies it
-# to a configurable target node, installs it there, runs RVS level 4 on that node,
-# and uploads a Markdown report + logs.
+# Same orchestration pattern as rvs-nightly-tests.yml: package URL from
+# secrets.RVS_PR_DEB_PACKAGE_URL (or legacy secrets.RVS_PR_PACKAGE_URL) into env.PR_DEB_PACKAGE_URL
+# (no baked-in default URL in this repo). Resolves the Linux relocatable tarball (*.tar.gz)
+# from an HTTPS index root ending in /rvs (with or without trailing slash), or accepts a
+# direct tarball / .deb URL (see rvs_pr_test.sh resolve-package-url).
+# Then copy to a configurable target over SSH, extract or dpkg install, run RVS level 4, report.
+# Scheduled runs poll the CDN root from secrets on a cron; if the resolved artifact
+# key (build/pr/tgz) changed since the last successful test, install + level 4 run.
+# Manual workflow_dispatch always runs tests. See README_PR_TESTS.md.
 #
-# Orchestration lives in this workflow; install/test/report steps run via
-# rvs_nightly_test.sh (same pattern as build-relocatable-packages.yml +
-# build_packages_local.sh).
-#
-# Required repo configuration: see README_NIGHTLY_TESTS.md
-#
-# Tarball index resolution, tarball download, and scp to the GPU target all run on
-# the self-hosted orchestrator job below — the target never curls the index or CDN.
-#
-# Triggers
-# --------
-# - schedule: daily poll of tarball index (repo secret RVS_TARBALL_INDEX_URL, or workflow_dispatch tarball_url)
-# - workflow_dispatch: manual run with optional overrides
-# - workflow_run: after Build Relocatable Packages completes successfully
+# Required repo configuration: see README_PR_TESTS.md (same secrets/vars as nightly
+# for SSH and ROCm path).
 
 on:
   schedule:
-    - cron: '0 15 * * *'
-  workflow_run:
-    workflows: ["Build Relocatable Packages"]
-    types:
-      - completed
+    # Poll hourly (UTC) for a new PR package on the CDN root configured in secrets.
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
-      tarball_url:
-        description: 'Override tarball URL (default: latest from index — secrets.RVS_TARBALL_INDEX_URL)'
+      package_url:
+        description: 'Optional override: HTTPS …/rvs/ index root (e.g. https://host/rvs/), direct *-Linux.tar.gz URL, or .deb URL (empty → secrets RVS_PR_DEB_PACKAGE_URL / RVS_PR_PACKAGE_URL; required for schedule if unset)'
         required: false
         default: ''
       target_node:
@@ -42,7 +32,7 @@ on:
         required: false
         default: ''
       remote_work_dir:
-        description: 'Working dir on the target node (default: vars.RVS_REMOTE_WORK_DIR or /tmp/rvs-nightly-<run_id>)'
+        description: 'Working dir on the target node (default: vars.RVS_REMOTE_WORK_DIR or /tmp/rvs-pr-<run_id>)'
         required: false
         default: ''
       target_rocm_path:
@@ -54,17 +44,74 @@ permissions:
   contents: read
 
 concurrency:
-  group: rvs-nightly-${{ github.workflow }}
+  group: rvs-pr-${{ github.workflow }}
   cancel-in-progress: false
 
 env:
-  # HTTPS directory listing for nightly tarballs — set repo secret RVS_TARBALL_INDEX_URL (e.g. https://<cdn-host>/nightly/rvs/tar/).
-  TARBALL_INDEX_URL: ${{ secrets.RVS_TARBALL_INDEX_URL }}
+  # Set secrets to your HTTPS …/rvs listing root (no deeper path required), a direct *-Linux.tar.gz URL, or a .deb URL.
+  PR_DEB_PACKAGE_URL: ${{ secrets.RVS_PR_DEB_PACKAGE_URL || secrets.RVS_PR_PACKAGE_URL || '' }}
 
 jobs:
+  detect-new-artifact:
+    name: Detect new PR package on CDN
+    runs-on: ${{ vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    outputs:
+      proceed: ${{ steps.decide.outputs.proceed }}
+      artifact_key: ${{ steps.decide.outputs.artifact_key }}
+    env:
+      PR_PACKAGE_ROOT_URL: ${{ inputs.package_url || env.PR_DEB_PACKAGE_URL }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Restore last artifact key (scheduled poll only)
+        if: github.event_name == 'schedule'
+        id: restore_marker
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: rvs_pr_last_artifact_key.txt
+          key: rvs-pr-artifact-${{ github.run_id }}
+          restore-keys: |
+            rvs-pr-artifact-
+
+      - name: Decide whether to run tests
+        id: decide
+        run: |
+          chmod +x rvs_pr_test.sh
+          if [ -z "${PR_PACKAGE_ROOT_URL:-}" ]; then
+            echo "::error::PR_PACKAGE_ROOT_URL is empty. Set Actions secret RVS_PR_DEB_PACKAGE_URL (or RVS_PR_PACKAGE_URL) to your HTTPS …/rvs index root, a direct *-Linux.tar.gz URL, or a .deb URL, or pass workflow_dispatch input package_url."
+            exit 1
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "artifact_key<<RVS_PR_ARTIFACT_KEY"
+              printf 'manual-%s\n' "${{ github.run_id }}"
+              echo "RVS_PR_ARTIFACT_KEY"
+            } >> "$GITHUB_OUTPUT"
+            echo "::notice::Manual run — always executing tests."
+            exit 0
+          fi
+          NEW="$(./rvs_pr_test.sh peek-latest-artifact-key)"
+          OLD="$(tr -d '\n' < rvs_pr_last_artifact_key.txt 2>/dev/null || true)"
+          {
+            echo "artifact_key<<RVS_PR_ARTIFACT_KEY"
+            printf '%s\n' "$NEW"
+            echo "RVS_PR_ARTIFACT_KEY"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$NEW" = "$OLD" ] && [ -n "$OLD" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CDN artifact unchanged (${NEW}); skipping install and tests."
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::New or first-seen artifact key: ${NEW} (previous: ${OLD:-<none>})"
+          fi
+
   install-rvs-on-target:
     name: Install RVS on target node
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    needs: [detect-new-artifact]
+    if: needs.detect-new-artifact.outputs.proceed == 'true'
     runs-on: ${{ vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
     timeout-minutes: 120
     outputs:
@@ -78,107 +125,20 @@ jobs:
       TARGET_NODE:      ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
       TARGET_USER:      ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
       TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
+      PR_PACKAGE_ROOT_URL: ${{ inputs.package_url || env.PR_DEB_PACKAGE_URL }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Restore last-seen marker (cron path)
-        if: github.event_name == 'schedule'
-        uses: actions/cache@v4
-        with:
-          path: last_tarball_marker.txt
-          key: rvs-nightly-tarball-${{ github.run_id }}
-          restore-keys: |
-            rvs-nightly-tarball-
-
-      - name: Resolve latest tarball URL (orchestrator only)
+      - name: Resolve package URL (Linux tarball or .deb)
         id: resolve
-        env:
-          # Do not set INDEX_URL here from ${{ env.* }} — it can be empty on some runners and
-          # masks workflow env. Use inherited TARBALL_INDEX_URL inside the script.
-          INPUT_URL: ${{ inputs.tarball_url }}
-          EVENT_NAME: ${{ github.event_name }}
         run: |
-          set -euo pipefail
-
-          # Workflow-level env.TARBALL_INDEX_URL (from secret RVS_TARBALL_INDEX_URL).
-          INDEX_URL="${TARBALL_INDEX_URL:-}"
-
-          if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL}" ]; then
-            echo "::error::No tarball index URL (set Actions secret RVS_TARBALL_INDEX_URL) and no workflow_dispatch.tarball_url."
+          chmod +x rvs_pr_test.sh
+          if [ -z "${PR_PACKAGE_ROOT_URL:-}" ]; then
+            echo "::error::PR_PACKAGE_ROOT_URL is empty. Set Actions secret RVS_PR_DEB_PACKAGE_URL (or RVS_PR_PACKAGE_URL) to your HTTPS …/rvs index root, a direct *-Linux.tar.gz URL, or a .deb URL, or pass workflow_dispatch input package_url."
             exit 1
           fi
-
-          fetch_latest() {
-            local idx="$1"
-            local html raw name
-            html="$(curl -sSL --max-time 60 --retry 2 --retry-delay 2 "$idx" 2>/dev/null || true)"
-            if [ -z "$html" ]; then
-              echo "::error::curl returned empty body for index URL (check orchestrator HTTPS egress and URL): ${idx}" >&2
-              return 0
-            fi
-            # grep exits 1 when there are no matches — must not trip pipefail before we check results.
-            raw="$(printf '%s' "$html" | grep -oE 'amdrocm[0-9]*-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' 2>/dev/null || true)"
-            name="$(printf '%s\n' "$raw" | sort -uV | tail -n 1 || true)"
-            if [ -z "$name" ]; then
-              echo "::error::Index page contained no amdrocm*-rvs-*-Linux.tar.gz links (check listing format or regex). Index URL: ${idx}" >&2
-              echo "::notice::First 800 chars of response (for debugging):" >&2
-              printf '%.800s\n' "$html" >&2 || true
-              echo "" >&2
-              return 0
-            fi
-            printf '%s/%s\n' "${idx%/}" "$name"
-          }
-
-          if [ -n "${INPUT_URL:-}" ]; then
-            URL="$INPUT_URL"
-          else
-            URL="$(fetch_latest "$INDEX_URL")"
-          fi
-
-          if [ -z "${URL:-}" ]; then
-            echo "::error::Could not resolve a tarball URL from index: ${INDEX_URL}"
-            exit 1
-          fi
-
-          NAME="$(basename "$URL")"
-
-          if [ "$EVENT_NAME" = "schedule" ] && [ -f last_tarball_marker.txt ]; then
-            LAST="$(cat last_tarball_marker.txt)"
-            if [ "$LAST" = "$NAME" ]; then
-              echo "::notice::Latest tarball ($NAME) unchanged since last scheduled run — running tests anyway."
-            else
-              echo "::notice::New tarball (previous: $LAST, now: $NAME)."
-            fi
-          fi
-          echo "$NAME" > last_tarball_marker.txt
-
-          # Use heredoc delimiter syntax so URLs with %, &, query strings, etc. are not
-          # truncated or dropped when propagated to other jobs via job outputs.
-          {
-            echo "tarball_url<<RVS_NIGHTLY_TARBALL_URL"
-            printf '%s\n' "$URL"
-            echo "RVS_NIGHTLY_TARBALL_URL"
-            echo "tarball_name=$NAME"
-          } >> "$GITHUB_OUTPUT"
-
-          # Later steps in this job read TARBALL_URL / TARBALL_NAME (download-tarball, etc.)
-          {
-            echo "TARBALL_URL<<RVS_NIGHTLY_TARBALL_URL"
-            printf '%s\n' "$URL"
-            echo "RVS_NIGHTLY_TARBALL_URL"
-            echo "TARBALL_NAME=$NAME"
-          } >> "$GITHUB_ENV"
-
-          echo "Latest tarball : $NAME"
-          echo "URL            : $URL"
-
-      - name: Save last-seen marker (cron path)
-        if: github.event_name == 'schedule'
-        uses: actions/cache/save@v4
-        with:
-          path: last_tarball_marker.txt
-          key: rvs-nightly-tarball-${{ steps.resolve.outputs.tarball_name }}
+          ./rvs_pr_test.sh resolve-package-url
 
       - name: Validate configuration and derive paths
         id: prepare
@@ -188,8 +148,8 @@ jobs:
           VAR_REMOTE_WORK_DIR:   ${{ vars.RVS_REMOTE_WORK_DIR }}
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
-          chmod +x rvs_nightly_test.sh
-          ./rvs_nightly_test.sh validate-config
+          chmod +x rvs_pr_test.sh
+          ./rvs_pr_test.sh validate-config
 
       - name: Export paths for remaining steps
         run: |
@@ -204,27 +164,27 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.RVS_TARGET_SSH_KEY }}
         run: |
-          chmod +x rvs_nightly_test.sh
-          ./rvs_nightly_test.sh setup-ssh
+          chmod +x rvs_pr_test.sh
+          ./rvs_pr_test.sh setup-ssh
 
-      - name: Download tarball on orchestrator runner
-        run: ./rvs_nightly_test.sh download-tarball
+      - name: Download package on orchestrator runner
+        run: ./rvs_pr_test.sh download-tarball
 
-      - name: Copy tarball to target node
-        run: ./rvs_nightly_test.sh copy-to-target
+      - name: Copy package to target node
+        run: ./rvs_pr_test.sh copy-to-target
 
       - name: Verify ROCm prerequisites on target node
-        run: ./rvs_nightly_test.sh verify-rocm
+        run: ./rvs_pr_test.sh verify-rocm
 
       - name: Install RVS on target node
-        run: ./rvs_nightly_test.sh install-rvs
+        run: ./rvs_pr_test.sh install-rvs
 
       - name: Verify RVS binary library resolution on target node
-        run: ./rvs_nightly_test.sh verify-rvs-binary
+        run: ./rvs_pr_test.sh verify-rvs-binary
 
       - name: Cleanup local SSH state
         if: always()
-        run: ./rvs_nightly_test.sh cleanup-local-ssh
+        run: ./rvs_pr_test.sh cleanup-local-ssh
 
   run-rvs-level-4:
     name: Run RVS level 4 on target node
@@ -253,27 +213,27 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.RVS_TARGET_SSH_KEY }}
         run: |
-          chmod +x rvs_nightly_test.sh
-          ./rvs_nightly_test.sh setup-ssh
+          chmod +x rvs_pr_test.sh
+          ./rvs_pr_test.sh setup-ssh
 
       - name: Run RVS level 4 on target node
         id: level4
-        run: ./rvs_nightly_test.sh run-level4
+        run: ./rvs_pr_test.sh run-level4
 
       - name: Collect logs from target node
         if: always()
-        run: ./rvs_nightly_test.sh collect-logs
+        run: ./rvs_pr_test.sh collect-logs
 
       - name: Capture RVS and ROCm versions from target
         id: versions
         if: always()
-        run: ./rvs_nightly_test.sh capture-versions
+        run: ./rvs_pr_test.sh capture-versions
 
       - name: Upload test logs (intermediate)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rvs-nightly-logs-${{ github.run_id }}
+          name: rvs-pr-logs-${{ github.run_id }}
           path: ./reports/
           retention-days: 30
           if-no-files-found: warn
@@ -281,8 +241,8 @@ jobs:
       - name: Cleanup remote work dir and local SSH state
         if: always()
         run: |
-          ./rvs_nightly_test.sh cleanup-remote
-          ./rvs_nightly_test.sh cleanup-local-ssh
+          ./rvs_pr_test.sh cleanup-remote
+          ./rvs_pr_test.sh cleanup-local-ssh
 
   create-test-report:
     name: Create Test Report
@@ -296,7 +256,7 @@ jobs:
       - name: Download test logs
         uses: actions/download-artifact@v4
         with:
-          name: rvs-nightly-logs-${{ github.run_id }}
+          name: rvs-pr-logs-${{ github.run_id }}
           path: ./reports
         continue-on-error: true
 
@@ -318,15 +278,15 @@ jobs:
           GITHUB_REPOSITORY:    ${{ github.repository }}
           GITHUB_EVENT_NAME:    ${{ github.event_name }}
         run: |
-          chmod +x rvs_nightly_test.sh
+          chmod +x rvs_pr_test.sh
           mkdir -p ./reports
-          ./rvs_nightly_test.sh build-report
+          ./rvs_pr_test.sh build-report
 
       - name: Upload report and logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rvs-nightly-report-${{ github.run_id }}
+          name: rvs-pr-report-${{ github.run_id }}
           path: ./reports/
           retention-days: 30
           if-no-files-found: warn
@@ -336,3 +296,23 @@ jobs:
         run: |
           echo "::error::RVS test failure — level4 rc=${{ needs.run-rvs-level-4.outputs.rc }}"
           exit 1
+
+  save-pr-artifact-marker:
+    name: Save PR artifact marker after successful level 4
+    needs: [detect-new-artifact, run-rvs-level-4]
+    if: github.event_name == 'schedule' && needs.detect-new-artifact.outputs.proceed == 'true' && needs.run-rvs-level-4.outputs.rc == '0'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write artifact key for next poll
+        env:
+          KEY: ${{ needs.detect-new-artifact.outputs.artifact_key }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$KEY" > rvs_pr_last_artifact_key.txt
+          test -s rvs_pr_last_artifact_key.txt
+
+      - name: Save artifact key to Actions cache
+        uses: actions/cache/save@v4
+        with:
+          path: rvs_pr_last_artifact_key.txt
+          key: rvs-pr-artifact-${{ github.run_id }}
