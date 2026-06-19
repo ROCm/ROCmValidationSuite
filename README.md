@@ -16,6 +16,14 @@ Ubuntu :
 sudo apt-get -y update && sudo apt-get install -y libpci3 libpci-dev doxygen unzip cmake git libyaml-cpp-dev libnuma-dev
 ```
 
+**Note:** RVS requires CMake >= 3.25. Ubuntu 22.04 and earlier ship with an older version (3.22). If you are on Ubuntu 22.04 or earlier, install a newer CMake from Kitware's official APT repository before proceeding:
+
+```
+wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc | sudo apt-key add -
+sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ jammy main'
+sudo apt-get update && sudo apt-get install cmake
+```
+
 CentOS :
 
 ```
