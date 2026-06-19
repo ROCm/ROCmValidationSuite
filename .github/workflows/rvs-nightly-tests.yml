@@ -153,14 +153,20 @@ jobs:
           fi
           echo "$NAME" > last_tarball_marker.txt
 
+          # Use heredoc delimiter syntax so URLs with %, &, query strings, etc. are not
+          # truncated or dropped when propagated to other jobs via job outputs.
           {
-            echo "tarball_url=$URL"
+            echo "tarball_url<<RVS_NIGHTLY_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_NIGHTLY_TARBALL_URL"
             echo "tarball_name=$NAME"
           } >> "$GITHUB_OUTPUT"
 
           # Later steps in this job read TARBALL_URL / TARBALL_NAME (download-tarball, etc.)
           {
-            echo "TARBALL_URL=$URL"
+            echo "TARBALL_URL<<RVS_NIGHTLY_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_NIGHTLY_TARBALL_URL"
             echo "TARBALL_NAME=$NAME"
           } >> "$GITHUB_ENV"
 

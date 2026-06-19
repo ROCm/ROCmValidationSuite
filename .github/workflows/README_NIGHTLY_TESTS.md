@@ -463,6 +463,7 @@ Watch the Actions tab for:
 | **Verify RVS binary library resolution on target node** fails with `not found` | A ROCm runtime library is missing or not in `RPATH` on the target. The step prints the `ldd` output; install the matching ROCm component (typically `rocm-llvm`, `rocm-core`, `hip-runtime-amd`). |
 | **Run RVS level 4 on target node** exits non-zero immediately (after both verify steps passed) | RVS plugin's own dependency missing on the target (e.g. `libpci3` on Debian). Check `rvs_level_4.log` in the artifact for the specific error. |
 | **Collect logs from target node** warns: `No log files retrieved from target node` | The level steps exited so early they didn't produce any output, or `$REMOTE_WORK_DIR` was wiped. Inspect the level-step logs in the run UI for the original error. |
+| **Create Test Report** / **Build test report**: `Required environment variable TARBALL_URL is not set` | The install job’s `tarball_url` output was empty when passed into the report job (often URLs with `%`, `&`, or other characters that break the old `echo "tarball_url=$URL"` → `GITHUB_OUTPUT` form). The workflow now writes that URL with delimiter syntax; upgrade to current `rvs-nightly-tests.yml`. The report step also tolerates a missing URL and still writes `SUMMARY.md` with the tarball filename. |
 | Cron skipped a day | GitHub may delay or drop schedules under high load. Run once manually via `workflow_dispatch` to validate. |
 
 ## Retargeting at a different node
