@@ -33,6 +33,88 @@ The workflow runs automatically on:
 
 - **Pull requests** and **pushes** to `master`, `main`, or `release/**` (including merges): **latest ROCm release** (**X.Y.Z**) from [repo.amd.com ROCm tarballs](https://repo.amd.com/rocm/tarball/).
 
+### Diagram: triggers, branch matrix, jobs, and S3 prefixes
+
+High-level flow: **what starts the workflow** → **how many matrix rows exist** → **both build jobs run per row** → **where packages land under the bucket** (when S3 is enabled and not skipped).
+
+```mermaid
+flowchart LR
+  subgraph triggers["Triggers"]
+    A1["push: master / main / release/**"]
+    A2["pull_request → master or main"]
+    A3["schedule (daily cron)"]
+    A4["workflow_dispatch"]
+  end
+
+  subgraph prep["Job: prepare-nightly-branches"]
+    B1["Non-schedule"]
+    B1a["One matrix row:<br/>branch = ref or PR head<br/>skip_upload = false"]
+    B1 --> B1a
+    B2["schedule"]
+    B2a["Default branch row<br/>is_default = true"]
+    B2b["Other ACTIVE_BRANCHES rows"]
+    B2c["release* rows:<br/>skip_upload = true"]
+    B2d["non-release* rows:<br/>skip_upload = false"]
+    B2 --> B2a
+    B2 --> B2b
+    B2b --> B2c
+    B2b --> B2d
+  end
+
+  A1 --> B1
+  A2 --> B1
+  A4 --> B1
+  A3 --> B2
+
+  subgraph build["Each matrix row: parallel jobs"]
+    C1["build-ubuntu"]
+    C2["build-centos"]
+  end
+
+  B1a --> C1
+  B1a --> C2
+  B2a --> C1
+  B2a --> C2
+  B2c --> C1
+  B2c --> C2
+  B2d --> C1
+  B2d --> C2
+
+  subgraph out["Per job: ./build"]
+    D1[".deb / .rpm / .tar.gz"]
+  end
+
+  C1 --> D1
+  C2 --> D1
+
+  D1 --> E["S3 via<br/>rvs-s3-upload-route.sh"]
+```
+
+Each `build-*` job checks out **`matrix.branch`** (the branch being built). S3 routing still uses **`GITHUB_REF`** for the **release vs nightly** branch test as described below.
+
+**S3 prefix resolution** (same order as [`.github/scripts/rvs-s3-upload-route.sh`](../scripts/rvs-s3-upload-route.sh); paths are under `s3://$AWS_S3_BUCKET/`). `GITHUB_REF` is the **workflow ref** (for **scheduled** runs GitHub sets this to the **default branch**, even when `actions/checkout` uses `matrix.branch`). `RVS_BUILD_REF_NAME`, `RVS_BRANCH_PREFIX`, `RVS_SKIP_UPLOAD`, and `RVS_IS_DEFAULT_BRANCH` are set from the matrix in the workflow.
+
+```mermaid
+flowchart TD
+  START([Upload: upload-deb / upload-rpm-tar])
+  Q0{RVS_SKIP_UPLOAD<br/>== true?}
+  Q1{schedule AND<br/>NOT default branch row?}
+  Q2{GITHUB_REF is<br/>refs/heads/release/*<br/>AND event is push<br/>or workflow_dispatch?}
+  Q3{schedule OR push<br/>OR workflow_dispatch?}
+
+  START --> Q0
+  Q0 -->|yes| SKIP["Route: skip — no objects<br/>scheduled release* rows"]
+  Q0 -->|no| Q1
+  Q1 -->|yes| BR["Route: scheduled_branch<br/>branch_prefix / branch / nightly / deb<br/>…/rpm, …/tar"]
+  Q1 -->|no| Q2
+  Q2 -->|yes| REL["Route: release<br/>release/rvs/deb<br/>release/rvs/rpm<br/>release/rvs/tar"]
+  Q2 -->|no| Q3
+  Q3 -->|yes| NIGHT["Route: nightly<br/>nightly/rvs/deb<br/>nightly/rvs/rpm<br/>nightly/rvs/tar"]
+  Q3 -->|no| PR["Route: pr<br/>rvs/ref/run/ubuntu-22.04 — DEB<br/>rvs/ref/run/manylinux_2_28 — RPM+TGZ"]
+```
+
+**APT / YUM repo metadata on S3** (DEB `Packages*` / RPM `repodata/`): generated only when upload steps run **and** either the event is not `schedule`, or it is `schedule` **and** `matrix.is_default == true`. The **create-release** summary job does **not** run on `schedule`.
+
 ### ROCm SDK: nightly vs release in CI
 
 The workflow runs [`.github/scripts/configure-rocm-sdk-channel.sh`](../scripts/configure-rocm-sdk-channel.sh) to set `ROCM_SDK_CHANNEL`, SDK URLs, and `ROCM_VERSION` (from `vars.ROCM_VERSION` on push/PR, or `workflow_dispatch` input) before calling `build_packages_local.sh`. Release-branch detection uses POSIX `case` (not bash `[[`), so it works in the Ubuntu `ubuntu:22.04` container where steps may run under `sh`.
