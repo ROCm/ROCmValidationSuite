@@ -342,10 +342,17 @@ REMOTE
 
 cmd_build_report() {
   require_env TARBALL_NAME
-  require_env TARBALL_URL
   require_env TARGET_ROCM_PATH
   require_env REMOTE_WORK_DIR
   require_env RVS_BIN
+
+  # TARBALL_URL is optional: the report job reads it from install-rvs-on-target outputs.
+  # If that output was empty (e.g. legacy echo-to-GITHUB_OUTPUT with special URL chars),
+  # still emit SUMMARY.md with the tarball filename.
+  local tarball_url_display="${TARBALL_URL:-}"
+  if [ -z "$tarball_url_display" ]; then
+    tarball_url_display="_(unavailable — check install job resolve step / use heredoc GITHUB_OUTPUT for URLs with special characters)_"
+  fi
 
   local rc4="${RVS_LEVEL4_RC:-0}"
   local start="${RVS_LEVEL4_START:-}"
@@ -378,7 +385,7 @@ cmd_build_report() {
     echo "| Target ROCm path | \`${TARGET_ROCM_PATH}\` (version \`${target_rocm_version}\`) |"
     echo "| Remote work dir | \`${REMOTE_WORK_DIR}\` |"
     echo "| Tarball | \`${TARBALL_NAME}\` |"
-    echo "| Source URL | ${TARBALL_URL} |"
+    echo "| Source URL | ${tarball_url_display} |"
     echo "| RVS version | \`${rvs_version}\` |"
     echo "| Overall result | **${overall}** |"
     echo ""
