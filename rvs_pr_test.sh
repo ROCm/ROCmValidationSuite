@@ -12,7 +12,7 @@ usage() {
 Usage: rvs_pr_test.sh <command>
 
 Commands (workflow order):
-  resolve-package-url Discover latest Linux .tar.gz from rvs/ root, or a direct .tar.gz / .deb URL;
+  resolve-package-url Discover latest Linux .tar.gz from rvs/ root, from a .../manylinux_*/ listing dir, or a direct .tar.gz / .deb URL;
                       writes tarball_url + tarball_name to GITHUB_OUTPUT / GITHUB_ENV when set
   peek-latest-artifact-key Print one-line artifact key (build/pr/tgz, tgz:basename, or deb:basename) for cache compare; stdout only
   validate-config     Fail fast; emit prepare job outputs to GITHUB_OUTPUT
@@ -130,6 +130,27 @@ cdn_resolve_latest_merge_tgz_metadata() {
   printf '%s\t%s\t%s\t%s' "$build" "$pr" "$tgz_name" "${tgz_url}${tgz_name}"
 }
 
+# HTTPS directory listing ending in .../manylinux_*/ (e.g. PR build upload path).
+# Prints: tarball_https_url<TAB>basename to stdout; errors to stderr; exit 1 on failure.
+cdn_resolve_tgz_from_manylinux_dir() {
+  local root="$1"
+  root="${root%/}"
+  local base="${root}/"
+  local html tgz_name
+
+  html="$(cdn_curl_listing "$base")"
+  if [ -z "$html" ]; then
+    echo "::error::Empty listing from ${base} (check URL and orchestrator HTTPS egress)." >&2
+    return 1
+  fi
+  tgz_name="$(printf '%s' "$html" | grep -oE 'amdrocm[0-9]+-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' 2>/dev/null | sort -uV | tail -n 1 || true)"
+  if [ -z "$tgz_name" ]; then
+    echo "::error::No amdrocm*-rvs-*-Linux.tar.gz link under ${base}" >&2
+    return 1
+  fi
+  printf '%s\t%s' "${base}${tgz_name}" "$tgz_name"
+}
+
 cmd_peek_latest_artifact_key() {
   local root="${PR_PACKAGE_ROOT_URL:-}"
   if [ -z "$root" ]; then
@@ -188,6 +209,18 @@ cmd_resolve_package_url() {
     echo "::notice::Using direct .deb URL (basename: ${NAME})"
     if ! curl -fsSIL --max-time 120 -A 'Mozilla/5.0 (compatible; RVS-PR-Tests/1.0)' -o /dev/null "$URL"; then
       echo "::error::Deb URL is not retrievable: ${URL}" >&2
+      exit 1
+    fi
+  elif printf '%s' "$root" | grep -qE '/manylinux[^/]*$'; then
+    local meta_ml
+    echo "::notice::Resolving Linux tarball under manylinux listing: ${root}/"
+    if ! meta_ml="$(cdn_resolve_tgz_from_manylinux_dir "$root")"; then
+      exit 1
+    fi
+    IFS=$'\t' read -r URL NAME <<<"$meta_ml"
+    echo "::notice::Resolved tarball: ${NAME}"
+    if ! curl -fsSIL --max-time 120 -A 'Mozilla/5.0 (compatible; RVS-PR-Tests/1.0)' -o /dev/null "$URL"; then
+      echo "::error::Resolved tarball URL is not retrievable: ${URL}" >&2
       exit 1
     fi
   else
