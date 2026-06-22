@@ -248,11 +248,17 @@ cmd_resolve_package_url() {
   fi
 
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
+    # Write each output in its own multiline block so GitHub never merges tarball_url
+    # body with the tarball_name line (which can leave tarball_name unset for job outputs).
     {
       echo "tarball_url<<RVS_PR_PACKAGE_URL"
       printf '%s\n' "$URL"
       echo "RVS_PR_PACKAGE_URL"
-      echo "tarball_name=$NAME"
+    } >> "$GITHUB_OUTPUT"
+    {
+      echo "tarball_name<<RVS_PR_PKG_NAME"
+      printf '%s\n' "$NAME"
+      echo "RVS_PR_PKG_NAME"
     } >> "$GITHUB_OUTPUT"
   fi
 
@@ -261,7 +267,11 @@ cmd_resolve_package_url() {
       echo "TARBALL_URL<<RVS_PR_PACKAGE_URL"
       printf '%s\n' "$URL"
       echo "RVS_PR_PACKAGE_URL"
-      echo "TARBALL_NAME=$NAME"
+    } >> "$GITHUB_ENV"
+    {
+      echo "TARBALL_NAME<<RVS_PR_PKG_NAME"
+      printf '%s\n' "$NAME"
+      echo "RVS_PR_PKG_NAME"
     } >> "$GITHUB_ENV"
   fi
 
@@ -585,6 +595,11 @@ REMOTE
 }
 
 cmd_build_report() {
+  # Job outputs sometimes drop tarball_name when tarball_url is multiline; recover from URL.
+  if [ -z "${TARBALL_NAME:-}" ] && [ -n "${TARBALL_URL:-}" ]; then
+    TARBALL_NAME="$(basename "${TARBALL_URL%%\?*}")"
+    export TARBALL_NAME
+  fi
   require_env TARBALL_NAME
   require_env TARGET_ROCM_PATH
   require_env REMOTE_WORK_DIR
