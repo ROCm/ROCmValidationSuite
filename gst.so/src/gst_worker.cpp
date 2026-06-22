@@ -235,7 +235,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     if (!ramp_single_shot) {
       gst_end_time = std::chrono::system_clock::now();
       if (time_diff(gst_end_time,  gst_start_time) >
-          ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE)
+          (ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE) * 1000u)
         return false;
     }
 
