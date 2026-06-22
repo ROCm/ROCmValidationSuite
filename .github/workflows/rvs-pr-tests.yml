@@ -192,6 +192,15 @@ jobs:
             echo "RVS_BIN=${{ steps.prepare.outputs.rvs_bin }}"
           } >> "$GITHUB_ENV"
 
+      # Job outputs can drop tarball_url/name when passed to create-test-report; artifact is reliable.
+      - name: Upload package metadata for report job
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-pr-pkg-meta-${{ github.run_id }}
+          path: ./pkg-meta/
+          retention-days: 1
+          if-no-files-found: error
+
       - name: Setup SSH for target node
         env:
           SSH_PRIVATE_KEY: ${{ secrets.RVS_TARGET_SSH_KEY }}
@@ -292,6 +301,12 @@ jobs:
           name: rvs-pr-logs-${{ github.run_id }}
           path: ./reports
         continue-on-error: true
+
+      - name: Download package metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: rvs-pr-pkg-meta-${{ github.run_id }}
+          path: ./pkg-meta
 
       - name: Build test report
         id: report

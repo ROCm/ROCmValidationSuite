@@ -248,17 +248,13 @@ cmd_resolve_package_url() {
   fi
 
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
-    # Write each output in its own multiline block so GitHub never merges tarball_url
-    # body with the tarball_name line (which can leave tarball_name unset for job outputs).
+    # Heredoc for tarball_url (URLs may contain %, &, etc.); plain assignment for tarball_name
+    # (safe filename) — same pattern as rvs-nightly-tests.yml / rvs_nightly_test.sh.
     {
       echo "tarball_url<<RVS_PR_PACKAGE_URL"
       printf '%s\n' "$URL"
       echo "RVS_PR_PACKAGE_URL"
-    } >> "$GITHUB_OUTPUT"
-    {
-      echo "tarball_name<<RVS_PR_PKG_NAME"
-      printf '%s\n' "$NAME"
-      echo "RVS_PR_PKG_NAME"
+      echo "tarball_name=$NAME"
     } >> "$GITHUB_OUTPUT"
   fi
 
@@ -267,13 +263,14 @@ cmd_resolve_package_url() {
       echo "TARBALL_URL<<RVS_PR_PACKAGE_URL"
       printf '%s\n' "$URL"
       echo "RVS_PR_PACKAGE_URL"
-    } >> "$GITHUB_ENV"
-    {
-      echo "TARBALL_NAME<<RVS_PR_PKG_NAME"
-      printf '%s\n' "$NAME"
-      echo "RVS_PR_PKG_NAME"
+      echo "TARBALL_NAME=$NAME"
     } >> "$GITHUB_ENV"
   fi
+
+  # Artifact fallback for create-test-report when job outputs drop URL/name between jobs.
+  mkdir -p ./pkg-meta
+  printf '%s\n' "$NAME" > ./pkg-meta/tarball_name
+  printf '%s\n' "$URL" > ./pkg-meta/tarball_url
 
   echo "Package file : $NAME"
   echo "URL          : $URL"
@@ -594,7 +591,19 @@ REMOTE
   fi
 }
 
+load_pkg_meta_from_artifact() {
+  if [ -f ./pkg-meta/tarball_name ] && [ -z "${TARBALL_NAME:-}" ]; then
+    TARBALL_NAME="$(tr -d '\r' < ./pkg-meta/tarball_name)"
+    export TARBALL_NAME
+  fi
+  if [ -f ./pkg-meta/tarball_url ] && [ -z "${TARBALL_URL:-}" ]; then
+    TARBALL_URL="$(tr -d '\r' < ./pkg-meta/tarball_url)"
+    export TARBALL_URL
+  fi
+}
+
 cmd_build_report() {
+  load_pkg_meta_from_artifact
   # Job outputs sometimes drop tarball_name when tarball_url is multiline; recover from URL.
   if [ -z "${TARBALL_NAME:-}" ] && [ -n "${TARBALL_URL:-}" ]; then
     TARBALL_NAME="$(basename "${TARBALL_URL%%\?*}")"
