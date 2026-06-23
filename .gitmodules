@@ -1,0 +1,3 @@
+[submodule "external/TransferBench"]
+	path = external/TransferBench
+	url = https://github.com/ROCm/TransferBench.git
