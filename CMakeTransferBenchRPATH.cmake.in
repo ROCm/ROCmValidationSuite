@@ -1,0 +1,10 @@
+# Initial cache fragment for the TransferBench ExternalProject sub-build.
+# Bracket literals keep $ORIGIN literal (CMake otherwise expands $ORIGIN as an
+# empty variable, producing a RUNPATH of only ':' separators).
+set(CMAKE_INSTALL_RPATH [[$ORIGIN;$ORIGIN/../lib;$ORIGIN/../lib/rvs;/opt/rocm/lib;/opt/rocm/lib/llvm/lib;/opt/rocm/core-@ROCM_MAJOR_VERSION@/lib;/opt/rocm/core-@ROCM_MAJOR_VERSION@/lib/llvm/lib]] CACHE STRING "RVS relocatable RPATH for TransferBench CLI" FORCE)
+set(CMAKE_BUILD_RPATH [[$ORIGIN;$ORIGIN/../lib;$ORIGIN/../lib/rvs;/opt/rocm/lib;/opt/rocm/lib/llvm/lib;/opt/rocm/core-@ROCM_MAJOR_VERSION@/lib;/opt/rocm/core-@ROCM_MAJOR_VERSION@/lib/llvm/lib]] CACHE STRING "" FORCE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE CACHE BOOL "" FORCE)
+set(CMAKE_SKIP_RPATH FALSE CACHE BOOL "" FORCE)
+set(CMAKE_SKIP_BUILD_RPATH FALSE CACHE BOOL "" FORCE)
+set(CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH TRUE CACHE BOOL "" FORCE)
+set(CMAKE_EXE_LINKER_FLAGS [[-Wl,--enable-new-dtags -Wl,-rpath,$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-@ROCM_MAJOR_VERSION@/lib:/opt/rocm/core-@ROCM_MAJOR_VERSION@/lib/llvm/lib]] CACHE STRING "" FORCE)
