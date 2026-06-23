@@ -51,7 +51,9 @@ the TransferBench *headers* from the submodule, not the CLI binary.
 
 When the CLI is built, it is installed next to `rvs` under the same prefix and
 uses the **same relocatable RUNPATH** as RVS (`$ORIGIN`, `/opt/rocm/core-<N>/lib`, etc.)
-via [`CMakeTransferBenchCLI.cmake`](../CMakeTransferBenchCLI.cmake).
+via [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in) (initial
+cache for the sub-build; `$ORIGIN` must use bracket literals so CMake does not expand it
+to empty).
 
 The set of GPU architectures the CLI is compiled for can be narrowed with:
 
