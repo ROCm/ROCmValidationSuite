@@ -49,10 +49,11 @@ cmake -DBUILD_TRANSFERBENCH_CLI=ON ...
 Skipping the CLI does not affect RVS's `pebb`/`pbqt` modules — they consume
 the TransferBench *headers* from the submodule, not the CLI binary.
 
-When the CLI is built, it is installed next to `rvs` under the same prefix with a
-relocatable **RUNPATH** so it can find ROCm libraries at install time and on
-target systems (`$ORIGIN`, `$ORIGIN/../lib`, `/opt/rocm/lib`,
-`/opt/rocm/core-<N>/lib`). See [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in).
+When the CLI is built, it is installed next to `rvs` under the same prefix. The
+`TransferBench` binary links `libnuma` and ROCm libraries; package metadata
+requires **`libnuma1`** (Debian/Ubuntu) or **`numactl-libs`** (RHEL-family RPM).
+RUNPATH entries point at the ROCm stack (`/opt/rocm/lib`, `/opt/rocm/core-<N>/lib`).
+See [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in).
 
 The set of GPU architectures the CLI is compiled for can be narrowed with:
 

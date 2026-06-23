@@ -70,16 +70,16 @@ if(DEFINED ROCM_MAJOR_VERSION)
 endif()
 
 # Relocatable RUNPATH for the CLI (copied from the child build tree via install(PROGRAMS)).
-# Do not pass CMAKE_INSTALL_RPATH=${CMAKE_INSTALL_RPATH} here: parent-side expansion
-# treats $ORIGIN as a cmake variable and yields an all-colon RUNPATH. Use a -C
-# initial-cache file with bracket literals instead (CMakeTransferBenchRPATH.cmake.in).
+# Parent ${CMAKE_INSTALL_RPATH} cannot be forwarded safely ($ORIGIN expands empty).
+# TransferBench ignores CMAKE_INSTALL_RPATH; use -C cache with -Wl,-rpath only
+# (see CMakeTransferBenchRPATH.cmake.in).
 set(_tb_rpath_cache "${CMAKE_BINARY_DIR}/TransferBenchRPATH.cmake")
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/CMakeTransferBenchRPATH.cmake.in"
   "${_tb_rpath_cache}"
   @ONLY
 )
-# Match parent RVS: on GitHub Actions skip build-tree RPATH (install RPATH still embeds at link).
+# On GitHub Actions skip build-tree RPATH additions (linker -rpath above is enough).
 if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
   file(APPEND "${_tb_rpath_cache}"
     "set(CMAKE_SKIP_BUILD_RPATH TRUE CACHE BOOL \"\" FORCE)\n")
