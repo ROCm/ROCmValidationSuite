@@ -604,7 +604,7 @@ if(NOT DEFINED TRANSFERBENCH_INC_DIR)
 endif()
 
 option(BUILD_TRANSFERBENCH_CLI
-       "Build and install the TransferBench CLI alongside rvs" ON)
+       "Build and install the TransferBench CLI alongside rvs" OFF)
 
 if(BUILD_TRANSFERBENCH_CLI)
   include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeTransferBenchCLI.cmake)
