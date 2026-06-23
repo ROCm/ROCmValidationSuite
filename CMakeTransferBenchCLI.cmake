@@ -79,6 +79,11 @@ configure_file(
   "${_tb_rpath_cache}"
   @ONLY
 )
+# Match parent RVS: on GitHub Actions skip build-tree RPATH (install RPATH still embeds at link).
+if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
+  file(APPEND "${_tb_rpath_cache}"
+    "set(CMAKE_SKIP_BUILD_RPATH TRUE CACHE BOOL \"\" FORCE)\n")
+endif()
 list(APPEND _tb_cmake_args "-C${_tb_rpath_cache}")
 
 # Build only -- never run TransferBench's own install rules (see header). The
