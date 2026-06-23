@@ -9,6 +9,7 @@ set -e  # Exit on error
 # Configuration
 GPU_FAMILY="${GPU_FAMILY:-gfx110X-all}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
+BUILD_TRANSFERBENCH_CLI="${BUILD_TRANSFERBENCH_CLI:-OFF}"
 BUILD_DIR="./build"
 ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
@@ -115,6 +116,14 @@ print_warning() {
 
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
+}
+
+# Map common truthy/falsey strings to CMake ON/OFF.
+normalize_on_off() {
+    case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+        1|on|true|yes) echo ON ;;
+        *) echo OFF ;;
+    esac
 }
 
 # Join base URL and filename without duplicate slashes
@@ -513,6 +522,8 @@ fi
 
 apply_sdk_tarball_base_for_version "$ROCM_VERSION"
 
+BUILD_TRANSFERBENCH_CLI="$(normalize_on_off "$BUILD_TRANSFERBENCH_CLI")"
+
 # Print configuration
 echo "================================================================================"
 echo "  ROCm Validation Suite - Local Package Build Script"
@@ -521,6 +532,7 @@ print_info "ROCm Version: $ROCM_VERSION"
 print_info "ROCm SDK channel: ${ROCM_SDK_CHANNEL:-auto}"
 print_info "GPU Family: $GPU_FAMILY"
 print_info "Build Type: $BUILD_TYPE"
+print_info "Build TransferBench CLI: $BUILD_TRANSFERBENCH_CLI"
 print_info "Build Directory: $BUILD_DIR"
 print_info "ROCm Install: $ROCM_INSTALL_DIR"
 print_info "SDK Source: $ROCM_SDK_BASE_URL"
@@ -775,6 +787,7 @@ CMAKE_ARGS=(
     -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}"
     -DCMAKE_VERBOSE_MAKEFILE=1
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
+    -DBUILD_TRANSFERBENCH_CLI="$BUILD_TRANSFERBENCH_CLI"
 )
 
 # Add CXX compiler if set

@@ -69,6 +69,29 @@ if(DEFINED ROCM_MAJOR_VERSION)
   list(APPEND _tb_cmake_args -DROCM_MAJOR_VERSION=${ROCM_MAJOR_VERSION})
 endif()
 
+# Relocatable RUNPATH: the CLI is copied from the child build tree via
+# install(PROGRAMS) in the parent — it is not re-linked here — so embed the
+# same RPATH settings RVS uses when the child links TransferBench.
+list(APPEND _tb_cmake_args
+  -DCMAKE_SKIP_RPATH=FALSE
+  -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE
+  "-DCMAKE_INSTALL_RPATH=${CMAKE_INSTALL_RPATH}"
+  "-DCMAKE_BUILD_RPATH=${CMAKE_BUILD_RPATH}"
+)
+if(CMAKE_EXE_LINKER_FLAGS)
+  list(APPEND _tb_cmake_args "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}")
+elseif(CMAKE_EXE_LINKER_FLAGS_INIT)
+  list(APPEND _tb_cmake_args "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS_INIT}")
+endif()
+if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
+    list(APPEND _tb_cmake_args -DCMAKE_SKIP_BUILD_RPATH=TRUE)
+  endif()
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+    list(APPEND _tb_cmake_args -DCMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH=TRUE)
+  endif()
+endif()
+
 # Build only -- never run TransferBench's own install rules (see header). The
 # binary is consumed directly from the build tree by the install(PROGRAMS)
 # below, so there is no separate child install directory to leak into packages.

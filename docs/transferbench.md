@@ -38,14 +38,20 @@ invocations or for ad-hoc one-off measurements outside an RVS run.
 
 ## Build options
 
-The CLI is built by default. To skip it, pass:
+The CLI is **off by default** in `build_packages_local.sh` and in CMake (`BUILD_TRANSFERBENCH_CLI=OFF`). CI enables it unless overridden. To build it locally:
 
 ```
-cmake -DBUILD_TRANSFERBENCH_CLI=OFF ...
+BUILD_TRANSFERBENCH_CLI=ON ./build_packages_local.sh
+# or
+cmake -DBUILD_TRANSFERBENCH_CLI=ON ...
 ```
 
 Skipping the CLI does not affect RVS's `pebb`/`pbqt` modules — they consume
 the TransferBench *headers* from the submodule, not the CLI binary.
+
+When the CLI is built, it is installed next to `rvs` under the same prefix and
+uses the **same relocatable RUNPATH** as RVS (`$ORIGIN`, `/opt/rocm/core-<N>/lib`, etc.)
+via [`CMakeTransferBenchCLI.cmake`](../CMakeTransferBenchCLI.cmake).
 
 The set of GPU architectures the CLI is compiled for can be narrowed with:
 
