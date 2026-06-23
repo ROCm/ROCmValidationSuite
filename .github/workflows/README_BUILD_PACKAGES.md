@@ -66,7 +66,7 @@ When manually triggering the workflow, you can specify:
    - `gfx120X-all` - AMD RX 9060/XT, 9070/XT
 
 3. **Build TransferBench CLI** (boolean, default **true** on manual runs):
-   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ with the same relocatable RUNPATH as `rvs`.
+   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ with a relocatable RUNPATH for ROCm (`$ORIGIN`, `/opt/rocm/lib`, `/opt/rocm/core-<N>/lib`).
    - On **push**, **PR**, and **schedule**, CI defaults to **ON** unless repository variable `BUILD_TRANSFERBENCH_CLI` is set to `OFF`.
 
 ## How It Works
@@ -135,7 +135,7 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/op
 
 **Dynamic ROCm Path Discovery**: `FETCH_ROCMPATH_FROM_ROCMCORE=ON` allows RVS to automatically detect ROCm installation location at runtime from ROCm core libraries.
 
-**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script. When **`BUILD_TRANSFERBENCH_CLI=ON`**, [`CMakeTransferBenchCLI.cmake`](../CMakeTransferBenchCLI.cmake) forwards the same RPATH settings into the TransferBench sub-build so the bundled CLI resolves ROCm libraries like `rvs`.
+**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script. When **`BUILD_TRANSFERBENCH_CLI=ON`**, [`CMakeTransferBenchCLI.cmake`](../CMakeTransferBenchCLI.cmake) applies TransferBench-specific relocatable RPATH via [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in).
 
 ### Workflow Steps
 
