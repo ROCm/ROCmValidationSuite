@@ -66,7 +66,7 @@ When manually triggering the workflow, you can specify:
    - `gfx120X-all` - AMD RX 9060/XT, 9070/XT
 
 3. **Build TransferBench CLI** (boolean, default **true** on manual runs):
-   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ with a relocatable RUNPATH for ROCm (`$ORIGIN`, `/opt/rocm/lib`, `/opt/rocm/core-<N>/lib`).
+   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` / `numactl-libs` at runtime).
    - On **push**, **PR**, and **schedule**, CI defaults to **ON** unless repository variable `BUILD_TRANSFERBENCH_CLI` is set to `OFF`.
 
 ## How It Works
@@ -404,23 +404,23 @@ Before you install the RVS TGZ, **ROCm must be installed, configured, and on you
 
 #### Install RVS run-time dependencies (on the target system)
 
-The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration:
+The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration and **NUMA** when using the bundled **TransferBench** CLI:
 
-| Family | Typical PCI package |
-|--------|---------------------|
-| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) |
-| **RHEL / Rocky / Alma 8+** | `pciutils-libs` |
-| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release |
+| Family | Typical PCI package | NUMA (TransferBench CLI) |
+|--------|---------------------|---------------------------|
+| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) | `libnuma1` |
+| **RHEL / Rocky / Alma 8+** | `pciutils-libs` | `numactl-libs` |
+| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release | `libnuma1` |
 
 ```bash
 # Ubuntu / Debian
-sudo apt update && sudo apt install -y libpci3
+sudo apt update && sudo apt install -y libpci3 libnuma1
 
 # RHEL / Rocky / Alma 8+
-sudo dnf install -y pciutils-libs
+sudo dnf install -y pciutils-libs numactl-libs
 
 # openSUSE / SUSE (adjust package names per release)
-sudo zypper install libpci3
+sudo zypper install libpci3 libnuma1
 ```
 
 User-facing install steps for TGZ (PATH / `LD_LIBRARY_PATH`, **`RPATH`** including **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`/opt/rocm/core-<major>/lib`**, and **`/opt/rocm/core-<major>/lib/llvm/lib`**) are in **[docs/INSTALL_TGZ.md](../../docs/INSTALL_TGZ.md)**.
