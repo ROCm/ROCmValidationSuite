@@ -30,6 +30,11 @@ on:
           - gfx1151
           - gfx120X-all
         default: 'gfx110X-all'
+      build_transferbench_cli:
+        description: 'Build and bundle TransferBench CLI in DEB/RPM/TGZ'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -41,6 +46,8 @@ env:
   ROCM_VERSION: ${{ vars.ROCM_VERSION }}
   GPU_FAMILY: ${{ vars.GPU_FAMILY || 'gfx110X-all' }}
   BUILD_TYPE: Release
+  # TransferBench CLI: OFF in build_packages_local.sh by default; ON in CI unless overridden.
+  BUILD_TRANSFERBENCH_CLI: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.build_transferbench_cli && 'ON' || 'OFF') || vars.BUILD_TRANSFERBENCH_CLI || 'ON' }}
   # Optional Step 6 in build_packages_local.sh: set repo Actions variable
   # RVS_AUTO_DETECT_LOCAL_UPLOAD to "1" to probe localhost:8080 when UPLOAD_TARGET is unset.
   # Leave the variable undefined for default (no probe; S3 uses workflow steps only).
