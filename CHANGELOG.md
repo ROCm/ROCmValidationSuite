@@ -6,6 +6,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Added
 
+- Test-level configurations for MI350P-450W and MI350P-600W .
 
 ## RVS 1.5.0
 

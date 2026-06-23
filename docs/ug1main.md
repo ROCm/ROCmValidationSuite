@@ -345,7 +345,9 @@ The configuration files in the top-level `conf/` folder are generic samples and 
 ### GPU-Specific Configurations
 
 RVS includes optimized test configurations for a range of GPU families, organized under `conf/<GPU>/`. 
-Level-based configurations (usable with `-r`) are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X.
+Level-based configurations (usable with `-r`) are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X, MI350P-450W, MI350P-600W.
+
+For MI350P, the 450W and 600W SKUs share a single PCI device ID (`0x75a8`); RVS disambiguates between them at runtime by reading the GPU's hardware power cap via amdsmi (~450 W → `MI350P-450W`, ~600 W → `MI350P-600W`). If the power cap cannot be read, RVS falls back to `MI350P-450W` and prints a warning; use `-c conf/MI350P-600W/levels/rvs_level_N.conf` explicitly if your card is the 600W SKU.
 
 **AMD Instinct Series:**
 - MI210, MI250X, MI300A, MI300X, MI308X, MI325X, MI350X, MI355X
