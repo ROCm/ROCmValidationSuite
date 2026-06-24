@@ -16,13 +16,11 @@ name: RVS Nightly Tests
 #
 # Triggers
 # --------
-# - schedule: daily poll of tarball index (repo secret RVS_TARBALL_INDEX_URL, or workflow_dispatch tarball_url)
-# - workflow_dispatch: manual run with optional overrides
 # - workflow_run: after Build Relocatable Packages completes successfully
+#   (push to main/master, or scheduled package build)
+# - workflow_dispatch: manual run with optional overrides
 
 on:
-  schedule:
-    - cron: '0 15 * * *'
   workflow_run:
     workflows: ["Build Relocatable Packages"]
     types:
@@ -62,9 +60,30 @@ env:
   TARBALL_INDEX_URL: ${{ secrets.RVS_TARBALL_INDEX_URL }}
 
 jobs:
+  gate-nightly-trigger:
+    name: Gate (eligible triggers only)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       (
+         (github.event.workflow_run.event == 'push' &&
+          (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'master')) ||
+         github.event.workflow_run.event == 'schedule'
+       ))
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    steps:
+      - name: Confirm nightly test run
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "Package build (${{ github.event.workflow_run.event }}) completed on branch: ${{ github.event.workflow_run.head_branch }}"
+          else
+            echo "Manual nightly test run (workflow_dispatch)"
+          fi
+
   install-rvs-on-target:
     name: Install RVS on target node
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    needs: gate-nightly-trigger
     runs-on: ${{ vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
     timeout-minutes: 120
     outputs:
@@ -82,8 +101,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Restore last-seen marker (cron path)
-        if: github.event_name == 'schedule'
+      - name: Restore last-seen marker (scheduled build path)
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'schedule'
         uses: actions/cache@v4
         with:
           path: last_tarball_marker.txt
@@ -98,6 +117,7 @@ jobs:
           # masks workflow env. Use inherited TARBALL_INDEX_URL inside the script.
           INPUT_URL: ${{ inputs.tarball_url }}
           EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_EVENT: ${{ github.event.workflow_run.event || '' }}
         run: |
           set -euo pipefail
 
@@ -143,10 +163,10 @@ jobs:
 
           NAME="$(basename "$URL")"
 
-          if [ "$EVENT_NAME" = "schedule" ] && [ -f last_tarball_marker.txt ]; then
+          if [ "$WORKFLOW_RUN_EVENT" = "schedule" ] && [ -f last_tarball_marker.txt ]; then
             LAST="$(cat last_tarball_marker.txt)"
             if [ "$LAST" = "$NAME" ]; then
-              echo "::notice::Latest tarball ($NAME) unchanged since last scheduled run — running tests anyway."
+              echo "::notice::Latest tarball ($NAME) unchanged since last scheduled package build — running tests anyway."
             else
               echo "::notice::New tarball (previous: $LAST, now: $NAME)."
             fi
@@ -173,8 +193,8 @@ jobs:
           echo "Latest tarball : $NAME"
           echo "URL            : $URL"
 
-      - name: Save last-seen marker (cron path)
-        if: github.event_name == 'schedule'
+      - name: Save last-seen marker (scheduled build path)
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'schedule'
         uses: actions/cache/save@v4
         with:
           path: last_tarball_marker.txt
