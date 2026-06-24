@@ -256,7 +256,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // run GEMM operation
-    if(!gpu_blas->run_blas_gemm(1)) {
+    if(!gpu_blas->run_blas_gemm(gst_warm_calls)) {
 
       *err_description = GST_BLAS_ERROR;
       *error = 1;
@@ -277,7 +277,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     //Converting microseconds to seconds
     timetakenforoneiteration = (end_time - start_time)/1e6;
 
-    gflops_interval = gpu_blas->gemm_gflop_count()/timetakenforoneiteration;
+    gflops_interval = gpu_blas->gemm_gflop_count() * gst_warm_calls / timetakenforoneiteration;
 
     gst_last_sgemm_end_time = std::chrono::system_clock::now();
     micros_last_sgemm =
@@ -291,8 +291,8 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     }
 
 
-    num_sgemm_ops++;
-    num_sgemm_ops_log_interval++;
+    num_sgemm_ops += gst_warm_calls;
+    num_sgemm_ops_log_interval += gst_warm_calls;
 
     gst_end_time = std::chrono::system_clock::now();
     micros_sgemm_ops =
@@ -340,7 +340,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     }
 
     if (ramp_single_shot)
-      return true;
+      return gflops_interval >= target_stress * (1.0 - tolerance);
   }
 
   return false;
