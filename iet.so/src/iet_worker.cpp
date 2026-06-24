@@ -133,7 +133,7 @@ void IETWorker::computeThread(void) {
   while ((duration < run_duration_ms) && (endtest == false)) {
 
     // run GEMM operation
-    if(!gpu_blas->run_blas_gemm(true)) {
+    if(!gpu_blas->run_blas_gemm(iet_hot_calls)) {
       endtest = true;
       break;
     }

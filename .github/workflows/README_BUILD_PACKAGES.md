@@ -65,6 +65,10 @@ When manually triggering the workflow, you can specify:
    - `gfx1151` - AMD Strix Halo iGPU
    - `gfx120X-all` - AMD RX 9060/XT, 9070/XT
 
+3. **Build TransferBench CLI** (boolean, default **true** on manual runs):
+   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` / `numactl-libs` at runtime).
+   - On **push**, **PR**, and **schedule**, CI defaults to **ON** unless repository variable `BUILD_TRANSFERBENCH_CLI` is set to `OFF`.
+
 ## How It Works
 
 The workflow leverages the `build_packages_local.sh` script for all build operations, ensuring consistency between local development and CI/CD environments.
@@ -131,7 +135,7 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/op
 
 **Dynamic ROCm Path Discovery**: `FETCH_ROCMPATH_FROM_ROCMCORE=ON` allows RVS to automatically detect ROCm installation location at runtime from ROCm core libraries.
 
-**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script.
+**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script. When **`BUILD_TRANSFERBENCH_CLI=ON`**, [`CMakeTransferBenchCLI.cmake`](../CMakeTransferBenchCLI.cmake) applies TransferBench-specific relocatable RPATH via [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in).
 
 ### Workflow Steps
 
@@ -141,12 +145,12 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 2. **Set Environment Variables** from workflow inputs or defaults
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
-5. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
+5. **Upload to S3** (when the repo is `ROCm/ROCmValidationSuite`, or when repository variable `RVS_S3_UPLOAD_ENABLED` is `true`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
 6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
-S3 upload runs **only when** the repository is **`ROCm/ROCmValidationSuite`** (the `if` guard prevents forks from attempting credential setup). The upload step itself is always reached, but exits gracefully if `AWS_S3_BUCKET` is not set. Uses **AWS OIDC**; no long-term access key or secret. The bash routing inside the upload step determines the S3 destination based on the event type and branch.
+S3 upload runs when the repository is **`ROCm/ROCmValidationSuite`** **or** when **`RVS_S3_UPLOAD_ENABLED`** is set to the literal string **`true`** (for forks, mirrors, or other org repositories that opt in after IAM trust is updated). Fork PRs from other repositories are still skipped (no OIDC for cross-repo PR heads). The upload step is reached when those guards pass, but exits gracefully if `AWS_S3_BUCKET` is not set. Uses **AWS OIDC**; no long-term access key or secret. The bash routing inside the upload step determines the S3 destination based on the event type and branch.
 
 **Where `vars` and `secrets` are defined**
 
@@ -165,6 +169,7 @@ The workflow uses GitHub repository variables to control which runners execute e
 | `RUNNER_LABEL` | `ubuntu-22.04` | Ubuntu build job |
 | `RUNNER_LABEL_CONTAINER` | `ubuntu-latest` | CentOS/manylinux build job (container) |
 | `RUNNER_LABEL_UTILITY` | `ubuntu-latest` | Release summary job |
+| `RVS_S3_UPLOAD_ENABLED` | _(unset)_ | Set to `true` to run S3/OIDC upload steps when the repo is not `ROCm/ROCmValidationSuite`. Requires `AWS_S3_BUCKET`, `AWS_ROLE_ARN`, and IAM trust for this repository. |
 
 To use a self-hosted runner, set the variable to your runner's label (e.g., `self-hosted` or a custom label) in **Settings** → **Secrets and variables** → **Actions** → **Variables**.
 
@@ -178,7 +183,11 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
    - Name: `AWS_S3_BUCKET`
    - Value: your S3 bucket name (e.g. `my-rocm-packages`).
 
-3. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
+3. **Repository variable** (only if the repo is **not** `ROCm/ROCmValidationSuite` and you want S3 upload from this repo):
+   - Name: `RVS_S3_UPLOAD_ENABLED`
+   - Value: `true` (must be this exact string). Upstream does not need this variable.
+
+4. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it for the **repository that runs the workflow** (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
 
 **S3 path layout** (resolved by [`.github/scripts/rvs-s3-upload-route.sh`](../scripts/rvs-s3-upload-route.sh), POSIX-safe for Ubuntu `sh`):
 
@@ -329,6 +338,7 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `ROCM_SDK_CHANNEL` | `auto` locally | **`nightly`** / **`release`** / **`auto`**. CI sets channel per trigger (see table above); manual with a pin uses **`auto`** so tarball follows version format. |
 | `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
+| `BUILD_TRANSFERBENCH_CLI` | `OFF` locally; `ON` in CI | Build and install the TransferBench CLI in packages (`-DBUILD_TRANSFERBENCH_CLI`). CI uses `vars.BUILD_TRANSFERBENCH_CLI` or defaults to `ON`; `workflow_dispatch` input **`build_transferbench_cli`** overrides manual runs. |
 | `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `8.0` → `0800`) - used for RVS version tagging |
 | `CPACK_DEBIAN_PACKAGE_RELEASE` | Auto-generated | **Default** (`schedule`, `push`, `workflow_dispatch`, local): `r<ROCM_LIBPATCH_VERSION>.<yyyymmdd>` (e.g. `r0711.20260423` where `0711` = ROCm 7.11 from `ROCM_VERSION`). **Pull requests**: `r<libpatch>.<yyyymmdd>.<source-branch>.<commit>`. **Release branches** (name starts with `rel`, non-PR): `GITHUB_RUN_NUMBER` (fallback: `1`). |
 | `CPACK_RPM_PACKAGE_RELEASE` | same as `CPACK_DEBIAN_PACKAGE_RELEASE` | Identical to DEB. |
@@ -399,23 +409,23 @@ Before you install the RVS TGZ, **ROCm must be installed, configured, and on you
 
 #### Install RVS run-time dependencies (on the target system)
 
-The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration:
+The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration and **NUMA** when using the bundled **TransferBench** CLI:
 
-| Family | Typical PCI package |
-|--------|---------------------|
-| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) |
-| **RHEL / Rocky / Alma 8+** | `pciutils-libs` |
-| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release |
+| Family | Typical PCI package | NUMA (TransferBench CLI) |
+|--------|---------------------|---------------------------|
+| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) | `libnuma1` |
+| **RHEL / Rocky / Alma 8+** | `pciutils-libs` | `numactl-libs` |
+| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release | `libnuma1` |
 
 ```bash
 # Ubuntu / Debian
-sudo apt update && sudo apt install -y libpci3
+sudo apt update && sudo apt install -y libpci3 libnuma1
 
 # RHEL / Rocky / Alma 8+
-sudo dnf install -y pciutils-libs
+sudo dnf install -y pciutils-libs numactl-libs
 
 # openSUSE / SUSE (adjust package names per release)
-sudo zypper install libpci3
+sudo zypper install libpci3 libnuma1
 ```
 
 User-facing install steps for TGZ (PATH / `LD_LIBRARY_PATH`, **`RPATH`** including **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`/opt/rocm/core-<major>/lib`**, and **`/opt/rocm/core-<major>/lib/llvm/lib`**) are in **[docs/INSTALL_TGZ.md](../../docs/INSTALL_TGZ.md)**.

@@ -1,0 +1,313 @@
+name: RVS Release Tests
+
+# Picks up the latest RVS release tarball from the release CDN index, copies it
+# to a configurable target node, installs it there, runs RVS level 5 on that node,
+# and uploads a Markdown report + logs.
+#
+# Orchestration lives in this workflow; install/test/report steps run via
+# rvs_release_test.sh (level 5; release tarball channel only).
+#
+# See README_RELEASE_TESTS.md for setup and prerequisites.
+#
+# Triggers
+# --------
+# - workflow_run: after Build Relocatable Packages completes successfully on release/*
+# - workflow_dispatch: manual run with optional overrides
+
+on:
+  workflow_run:
+    workflows: ["Build Relocatable Packages"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      tarball_url:
+        description: 'Override tarball URL (default: latest from release index)'
+        required: false
+        default: ''
+      target_node:
+        description: 'Hostname/IP of node to install RVS on and run tests (default: secrets.RVS_RELEASE_TARGET_NODE)'
+        required: false
+        default: ''
+      target_user:
+        description: 'SSH user on the target node (default: secrets.RVS_RELEASE_TARGET_USER)'
+        required: false
+        default: ''
+      remote_work_dir:
+        description: 'Working dir on the target node (default: /tmp/rvs-release-<run_id>)'
+        required: false
+        default: ''
+      target_rocm_path:
+        description: 'ROCm tarball install root on the target node (default: secrets.RVS_RELEASE_TARGET_ROCM_PATH)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rvs-release-${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  # HTTPS directory listing for release tarballs — set repo secret RVS_RELEASE_TARBALL_INDEX_URL.
+  TARBALL_INDEX_URL: ${{ secrets.RVS_RELEASE_TARBALL_INDEX_URL }}
+
+jobs:
+  gate-release-trigger:
+    name: Gate (release builds only)
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'release/'))
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    steps:
+      - name: Confirm release test run
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "Release build completed on branch: ${{ github.event.workflow_run.head_branch }}"
+          else
+            echo "Manual release test run (workflow_dispatch)"
+          fi
+
+  install-rvs-on-target:
+    name: Install RVS on target node
+    needs: gate-release-trigger
+    runs-on: ${{ vars.RVS_RELEASE_INDEX_RUNNER_LABEL || vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 120
+    outputs:
+      tarball_url:      ${{ steps.resolve.outputs.tarball_url }}
+      tarball_name:     ${{ steps.resolve.outputs.tarball_name }}
+      remote_work_dir:  ${{ steps.prepare.outputs.remote_work_dir }}
+      rocm_major:       ${{ steps.prepare.outputs.rocm_major }}
+      install_dir:      ${{ steps.prepare.outputs.install_dir }}
+      rvs_bin:          ${{ steps.prepare.outputs.rvs_bin }}
+    env:
+      TARGET_NODE:      ${{ inputs.target_node || secrets.RVS_RELEASE_TARGET_NODE }}
+      TARGET_USER:      ${{ inputs.target_user || secrets.RVS_RELEASE_TARGET_USER }}
+      TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || secrets.RVS_RELEASE_TARGET_ROCM_PATH }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Resolve latest release tarball URL (orchestrator only)
+        id: resolve
+        env:
+          INPUT_URL: ${{ inputs.tarball_url }}
+        run: |
+          set -euo pipefail
+
+          INDEX_URL="${TARBALL_INDEX_URL:-}"
+
+          if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL}" ]; then
+            echo "::error::No tarball index URL (set Actions secret RVS_RELEASE_TARBALL_INDEX_URL) and no workflow_dispatch.tarball_url."
+            exit 1
+          fi
+
+          fetch_latest() {
+            local idx="$1"
+            local html raw name
+            html="$(curl -sSL --max-time 60 --retry 2 --retry-delay 2 "$idx" 2>/dev/null || true)"
+            if [ -z "$html" ]; then
+              echo "::error::curl returned empty body for index URL (check orchestrator HTTPS egress and URL): ${idx}" >&2
+              return 0
+            fi
+            raw="$(printf '%s' "$html" | grep -oE 'amdrocm[0-9]*-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' 2>/dev/null || true)"
+            name="$(printf '%s\n' "$raw" | sort -uV | tail -n 1 || true)"
+            if [ -z "$name" ]; then
+              echo "::error::Index page contained no amdrocm*-rvs-*-Linux.tar.gz links (check listing format or regex). Index URL: ${idx}" >&2
+              echo "::notice::First 800 chars of response (for debugging):" >&2
+              printf '%.800s\n' "$html" >&2 || true
+              echo "" >&2
+              return 0
+            fi
+            printf '%s/%s\n' "${idx%/}" "$name"
+          }
+
+          if [ -n "${INPUT_URL:-}" ]; then
+            URL="$INPUT_URL"
+          else
+            URL="$(fetch_latest "$INDEX_URL")"
+          fi
+
+          if [ -z "${URL:-}" ]; then
+            echo "::error::Could not resolve a tarball URL from index: ${INDEX_URL}"
+            exit 1
+          fi
+
+          NAME="$(basename "$URL")"
+
+          {
+            echo "tarball_url<<RVS_RELEASE_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_RELEASE_TARBALL_URL"
+            echo "tarball_name=$NAME"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "TARBALL_URL<<RVS_RELEASE_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_RELEASE_TARBALL_URL"
+            echo "TARBALL_NAME=$NAME"
+          } >> "$GITHUB_ENV"
+
+          echo "Latest release tarball : $NAME"
+          echo "URL                    : $URL"
+
+      - name: Validate configuration and derive paths
+        id: prepare
+        env:
+          TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
+          INPUT_REMOTE_WORK_DIR: ${{ inputs.remote_work_dir }}
+          VAR_REMOTE_WORK_DIR:   ${{ vars.RVS_RELEASE_REMOTE_WORK_DIR }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          chmod +x rvs_release_test.sh
+          ./rvs_release_test.sh validate-config
+
+      - name: Export paths for remaining steps
+        run: |
+          {
+            echo "REMOTE_WORK_DIR=${{ steps.prepare.outputs.remote_work_dir }}"
+            echo "ROCM_MAJOR=${{ steps.prepare.outputs.rocm_major }}"
+            echo "INSTALL_DIR=${{ steps.prepare.outputs.install_dir }}"
+            echo "RVS_BIN=${{ steps.prepare.outputs.rvs_bin }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup SSH for target node
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.RVS_RELEASE_TARGET_SSH_KEY }}
+        run: |
+          chmod +x rvs_release_test.sh
+          ./rvs_release_test.sh setup-ssh
+
+      - name: Download tarball on orchestrator runner
+        run: ./rvs_release_test.sh download-tarball
+
+      - name: Copy tarball to target node
+        run: ./rvs_release_test.sh copy-to-target
+
+      - name: Verify ROCm prerequisites on target node
+        run: ./rvs_release_test.sh verify-rocm
+
+      - name: Install RVS on target node
+        run: ./rvs_release_test.sh install-rvs
+
+      - name: Verify RVS binary library resolution on target node
+        run: ./rvs_release_test.sh verify-rvs-binary
+
+      - name: Cleanup local SSH state
+        if: always()
+        run: ./rvs_release_test.sh cleanup-local-ssh
+
+  run-rvs-level-5:
+    name: Run RVS level 5 on target node
+    needs: [install-rvs-on-target]
+    runs-on: ${{ vars.RVS_RELEASE_TEST_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 480
+    outputs:
+      rc:                   ${{ steps.level5.outputs.rc }}
+      start:                ${{ steps.level5.outputs.start }}
+      end:                  ${{ steps.level5.outputs.end }}
+      rvs_version:          ${{ steps.versions.outputs.rvs_version }}
+      target_rocm_version:  ${{ steps.versions.outputs.target_rocm_version }}
+    env:
+      TARGET_NODE:      ${{ inputs.target_node || secrets.RVS_RELEASE_TARGET_NODE }}
+      TARGET_USER:      ${{ inputs.target_user || secrets.RVS_RELEASE_TARGET_USER }}
+      TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || secrets.RVS_RELEASE_TARGET_ROCM_PATH }}
+      REMOTE_WORK_DIR:  ${{ needs.install-rvs-on-target.outputs.remote_work_dir }}
+      ROCM_MAJOR:       ${{ needs.install-rvs-on-target.outputs.rocm_major }}
+      INSTALL_DIR:      ${{ needs.install-rvs-on-target.outputs.install_dir }}
+      RVS_BIN:          ${{ needs.install-rvs-on-target.outputs.rvs_bin }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup SSH for target node
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.RVS_RELEASE_TARGET_SSH_KEY }}
+        run: |
+          chmod +x rvs_release_test.sh
+          ./rvs_release_test.sh setup-ssh
+
+      - name: Run RVS level 5 on target node
+        id: level5
+        run: ./rvs_release_test.sh run-level5
+
+      - name: Collect logs from target node
+        if: always()
+        run: ./rvs_release_test.sh collect-logs
+
+      - name: Capture RVS and ROCm versions from target
+        id: versions
+        if: always()
+        run: ./rvs_release_test.sh capture-versions
+
+      - name: Upload test logs (intermediate)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-release-logs-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Cleanup remote work dir and local SSH state
+        if: always()
+        run: |
+          ./rvs_release_test.sh cleanup-remote
+          ./rvs_release_test.sh cleanup-local-ssh
+
+  create-test-report:
+    name: Create Test Report
+    needs: [install-rvs-on-target, run-rvs-level-5]
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    if: always() && !cancelled() && needs.install-rvs-on-target.result == 'success' && needs.run-rvs-level-5.result != 'skipped'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download test logs
+        uses: actions/download-artifact@v4
+        with:
+          name: rvs-release-logs-${{ github.run_id }}
+          path: ./reports
+        continue-on-error: true
+
+      - name: Build test report
+        id: report
+        env:
+          TARBALL_URL:          ${{ needs.install-rvs-on-target.outputs.tarball_url }}
+          TARBALL_NAME:         ${{ needs.install-rvs-on-target.outputs.tarball_name }}
+          TARGET_ROCM_PATH:     ${{ inputs.target_rocm_path || secrets.RVS_RELEASE_TARGET_ROCM_PATH }}
+          REMOTE_WORK_DIR:      ${{ needs.install-rvs-on-target.outputs.remote_work_dir }}
+          RVS_BIN:              ${{ needs.install-rvs-on-target.outputs.rvs_bin }}
+          RVS_LEVEL5_RC:        ${{ needs.run-rvs-level-5.outputs.rc }}
+          RVS_LEVEL5_START:     ${{ needs.run-rvs-level-5.outputs.start }}
+          RVS_LEVEL5_END:       ${{ needs.run-rvs-level-5.outputs.end }}
+          RVS_VERSION:          ${{ needs.run-rvs-level-5.outputs.rvs_version }}
+          TARGET_ROCM_VERSION:  ${{ needs.run-rvs-level-5.outputs.target_rocm_version }}
+          GITHUB_RUN_ID:        ${{ github.run_id }}
+          GITHUB_SERVER_URL:    ${{ github.server_url }}
+          GITHUB_REPOSITORY:    ${{ github.repository }}
+          GITHUB_EVENT_NAME:    ${{ github.event_name }}
+        run: |
+          chmod +x rvs_release_test.sh
+          mkdir -p ./reports
+          ./rvs_release_test.sh build-report
+
+      - name: Upload report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-release-report-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Fail the workflow if level 5 failed
+        if: steps.report.outputs.overall == 'FAIL' || needs.run-rvs-level-5.result == 'failure'
+        run: |
+          echo "::error::RVS release test failure — level5 rc=${{ needs.run-rvs-level-5.outputs.rc }}"
+          exit 1

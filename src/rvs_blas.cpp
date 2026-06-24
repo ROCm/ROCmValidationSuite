@@ -975,21 +975,13 @@ bool rvs_blas::is_gemm_op_complete(void) {
  * @brief performs the GEMM matrix multiplication operations
  * @return true if GPU was able to enqueue the GEMM operation, otherwise false
  */
-bool rvs_blas::run_blas_gemm(bool hot_call) {
-
-  int calls = 0;
+bool rvs_blas::run_blas_gemm(uint64_t num_calls) {
 
   if (is_error)
     return false;
 
-  /* Determine GEMM call iterations */
-  if(true == hot_call)
-    calls = hot_calls;
-  else
-    calls = 1;
-
   /* GEMM call iterations loop */
-  for(int i = 0; i < calls; i++) {
+  for(uint64_t i = 0; i < num_calls; i++) {
 
     if(blas_source == "rocblas") {
 
@@ -2514,7 +2506,7 @@ std::vector<float> rvs_blas::generateMXInput(hipDataType            dataType,
                                                                   isTranspose,
                                                                   isMatrixA);
     }
-    else if(static_cast<hipDataType>(dataType) == HIP_R_6F_E2M3_EXT)
+    else if(static_cast<hipDataType>(dataType) == HIP_R_6F_E2M3)
     {
         DGen::DataGenerator<DGen::ocp_e2m3_mxfp6> dgen;
         return generateData<decltype(dgen), DGen::ocp_e2m3_mxfp6>(dgen,
@@ -2528,7 +2520,7 @@ std::vector<float> rvs_blas::generateMXInput(hipDataType            dataType,
                                                                   isTranspose,
                                                                   isMatrixA);
     }
-    else if(static_cast<hipDataType>(dataType) == HIP_R_6F_E3M2_EXT)
+    else if(static_cast<hipDataType>(dataType) == HIP_R_6F_E3M2)
     {
         DGen::DataGenerator<DGen::ocp_e3m2_mxfp6> dgen;
         return generateData<decltype(dgen), DGen::ocp_e3m2_mxfp6>(dgen,
@@ -2542,7 +2534,7 @@ std::vector<float> rvs_blas::generateMXInput(hipDataType            dataType,
                                                                   isTranspose,
                                                                   isMatrixA);
     }
-    else if(static_cast<hipDataType>(dataType) == HIP_R_4F_E2M1_EXT)
+    else if(static_cast<hipDataType>(dataType) == HIP_R_4F_E2M1)
     {
         DGen::DataGenerator<DGen::ocp_e2m1_mxfp4> dgen;
         return generateData<decltype(dgen), DGen::ocp_e2m1_mxfp4>(dgen,
