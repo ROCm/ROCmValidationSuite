@@ -81,8 +81,14 @@ The sub-build also passes `-DHIP_PLATFORM=amd` and disables optional TransferBen
 features (NIC executor, MPI, DMA-BUF, local-GPU-only mode) to match upstream
 relocatable packaging and keep the bundled CLI dependency-light.
 
-CMake logs the forwarded args at configure time; detailed child configure/build
-output is under `build/TransferBenchCLI-prefix/` (ExternalProject stamp logs).
+`GPU_TARGETS` is injected via the ExternalProject initial cache (`-C` file), not
+`-DGPU_TARGETS=...` on the command line, because CMake `list(APPEND)` splits
+semicolon-separated values into separate list entries.
+
+CMake logs forwarded args at parent configure time. In **GitHub Actions**, the
+TransferBench sub-build runs `cmake --build ... --verbose` with `LOG_BUILD=OFF` so
+compile/link lines appear in the workflow log. Local builds keep stamp logs under
+`build/TransferBenchCLI-prefix/src/TransferBenchCLI-stamp/`.
 
 ## Submodule layout
 
