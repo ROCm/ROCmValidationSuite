@@ -221,7 +221,7 @@ platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>
 </td></tr>
 
 <tr><td>-t</td><td>--duration</td><td>Specify the test duration (in seconds) for each action.
-Overrides the <b>duration</b> value in all actions of the configuration file.
+Overrides the <b>duration</b> value set in all actions of the configuration file.
 </td></tr>
 
 <tr><td></td><td>--listTests</td><td>List the test modules present in RVS.
@@ -281,6 +281,11 @@ Print version information and exit:
 List all available test modules:
 ```bash
 ./rvs --listTests
+```
+
+Override the duration for all actions to 30 seconds:
+```bash
+./rvs -c conf/gst_single.conf -t 30
 ```
 List all GPUs visible to RVS:
 ```bash
@@ -424,6 +429,11 @@ file.</td></tr>
 <tr><td>deviceid</td><td>Integer</td><td>This is an optional parameter, but if
 specified it restricts the action to a specific device type
 corresponding to the deviceid.</td></tr>
+
+<tr><td>device_index</td><td>Integer</td><td>This is an optional parameter that
+restricts the action to a GPU identified by its SMI index. Can also be
+overridden via the <b>-i</b> CLI option.</td></tr>
+
 <tr><td>parallel</td><td>Bool</td><td>If this key is false, actions will be run
 on one device at a time, in the order specified in the device list, or the
 natural ordering if the device value is “all”. If this parameter is true,
@@ -436,14 +446,13 @@ isn’t specified the default is 1. Some modules will ignore this
 parameter.</td></tr>
 
 <tr><td>wait</td><td>Integer</td><td>This indicates how long the test should
-wait between executions, in milliseconds. Some
-modules will ignore this parameter. If the
-count key is not specified, this key is ignored.</td></tr>
+wait between executions, in milliseconds. The default value is 500 ms.
+Some modules will ignore this parameter.</td></tr>
 
-<tr><td>duration</td><td>Integer</td><td>This parameter overrides the count key, if
-specified. This indicates how long the test
-should run, given in milliseconds. Some
-modules will ignore this parameter.</td></tr>
+<tr><td>duration</td><td>Integer</td><td>This indicates how long the test
+should run, given in milliseconds. When specified, it takes precedence
+over the <b>count</b> key for modules that support it. Some modules will
+ignore this parameter.</td></tr>
 
 
 <tr><td>module</td><td>String</td><td>This parameter specifies the module that
@@ -466,8 +475,11 @@ for the kfd, with the following path:
     /sys/class/kfd/kfd/topology/nodes/<node id>
 
 Each of the GPU nodes in the directory is identified with a number,
-indicating the device index of the GPU. This module will ignore count, duration
-or wait key values.
+indicating the device index of the GPU. Use the `device_index` common key to
+target specific GPUs by their topology node index.
+
+Note: GPUP ignores the `count`, `duration`, `wait`, `parallel`, and
+`log_interval` common keys — each action performs a single-pass property dump.
 
 ### Module specific keys
 
@@ -711,7 +723,7 @@ Consider this action:
 Action lists deviceid 267 which is not present in the system.
 Output for such configuration is:
 
-    RVS-GPUP: action: action_1  invalid 'deviceid' key value
+    RVS-ERROR [GPUP] [action_1] invalid 'deviceid' key value
 
 
 ## GM module
@@ -776,7 +788,7 @@ message will be printed to stdout while the bounding value is still exceeded.
       <td>Integer</td>
       <td>
         If this key is specified metrics will be sampled at the given rate. The units for
-        the sample_interval are milliseconds. The default value is 1000.
+        the sample_interval are milliseconds. The default value is 500.
       </td>
     </tr>
     <tr>
@@ -785,8 +797,8 @@ message will be printed to stdout while the bounding value is still exceeded.
       <td>
         If this key is specified informational messages will be emitted at the given
         interval, providing the current values of all parameters specified. This parameter
-        must be equal to or greater than the sample rate. If this value is not specified,
-        no logging will occur.
+        must be equal to or greater than the sample_interval. The default value is 1000 ms
+        (logging is ON by default). Set to 0 to disable periodic logging.
       </td>
     </tr>
     <tr>
@@ -838,9 +850,9 @@ being monitored:
     [INFO ][<timestamp>][<action name>] gm <gpu id> monitoring <metric> bounds min:<min_metric> max: <max_metric>
 
 During the monitoring informational output regarding the metrics of the GPU will
-be sampled at every interval specified by the sample_rate key. If a bounding box
-violation is discovered during a sampling interval, a warning message is
-logged with the following format:
+be sampled at every interval specified by the `sample_interval` key. If a
+bounding box violation is discovered during a sampling interval, a warning
+message is logged with the following format:
 
     [INFO ][<timestamp>][<action name>] gm <gpu id> <metric> bounds violation <metric value>
 
@@ -852,7 +864,7 @@ logged at every interval using the following format:
 When monitoring is stopped for a target GPU, a result message is logged
 with the following format:
 
-    [RESULT][<timestamp>][<action name>] gm <gpu id> gm stopped
+    [RESULT][<timestamp>][<action name>] gm <gpu id> stopped
 
 The following messages, reporting the number of metric violations that were
 sampled over the duration of the monitoring and the average metric value is
@@ -957,7 +969,7 @@ Consider action with syntax error ('temp' key is missing lower value):
 
 Output for such configuration is:
 
-    RVS-GM: action: action_1 Wrong number of metric parameters
+    RVS-ERROR [GM] [action_1] Invalid 'metrics.temp' key.
 
 **Example 4:**
 
@@ -978,7 +990,7 @@ Consider action with logical error:
 
 Output for such configuration is:
 
-    RVS-GM: action: action_1 Log interval has the lower value than the sample interval
+    RVS-ERROR [GM] [action_1] Log interval has the lower value than the sample interval
 
 
 ## PESM module
@@ -996,8 +1008,8 @@ after testing has completed. For information on GPU power state monitoring,
 see PCI Power Management Capability Structure, Gen 3 spec, device states D0-D3. 
 For information on link status changes see Status Register (Offset 12h), Gen 3 spec.
 
-Monitoring is performed by polling respective PCIe registers roughly every 1ms
-(one millisecond).
+Monitoring is performed by polling respective PCIe registers approximately every
+1 second.
 
 ### Module Specific Keys
 
@@ -1016,31 +1028,21 @@ The default value is 0 (no wait).</td></tr>
 
 ### Output
 
-Module specific output keys are described in the table below:
+When monitoring starts, an informational message is logged:
 
-<div class="pst-scrollable-table-container">
-<table class="table table--middle-left">
-<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
-<tr><td>state</td><td>String</td><td>A string detailing the current power state
-of the GPU or the speed of the PCIe link.</td></tr>
-</table>
-</div>
+    [<action name>] PCIe link speed and power monitoring started ...
 
-When monitoring is started for a target GPU, a result message is logged
-with the following format:
+When a PCIe link speed or power state change is detected, an informational
+message is logged per GPU:
 
-    [RESULT][<timestamp>][<action name>] pesm <gpu id> started
+    [<action name>] <gpu id> PCIe link speed changed <state>
+    [<action name>] <gpu id> PCIe power state changed <state>
 
-When monitoring is stopped for a target GPU, a result message is logged
-with the following format:
+When monitoring stops (triggered by a `monitor: false` action), a summary is
+logged:
 
-    [RESULT][<timestamp>][<action name>] pesm all stopped
-
-When monitoring is enabled, any detected state changes in link speed or GPU
-power state will generate the following informational messages:
-
-    [INFO ][<timestamp>][<action name>] pesm <gpu id> power state change <state>
-    [INFO ][<timestamp>][<action name>] pesm <gpu id> link speed change <state>
+    [<stop action name>] PCIe monitoring ended after wait duration.
+    [<stop action name>] GPU <id> PCIe speed change true/false
 
 ### Examples
 
@@ -1082,29 +1084,23 @@ If executed like this:
 
 output similar to this one can be produced:
 
-    [RESULT] [497544.637462] [action_1] pesm all started
-    [INFO  ] [497544.648299] [action_1] pesm 33367 link speed change 8 GT/s
-    [INFO  ] [497544.648299] [action_1] pesm 33367 power state change D0
-    [INFO  ] [497544.648733] [action_1] pesm 3254 link speed change 8 GT/s
-    [INFO  ] [497544.648733] [action_1] pesm 3254 power state change D0
-    [INFO  ] [497544.650413] [action_1] pesm 50599 link speed change 8 GT/s
-    [INFO  ] [497544.650413] [action_1] pesm 50599 power state change D0
-    [INFO  ] [497545.170392] [action_2] gst 33367 start 5000.000000 copy matrix:false
-    [INFO  ] [497547.36602 ] [action_2] gst 33367 Gflops 6478.066983
-    [INFO  ] [497548.69221 ] [action_2] gst 33367 target achieved 5000.000000
-    [INFO  ] [497549.101219] [action_2] gst 33367 Gflops 5189.993529
-    [INFO  ] [497550.132376] [action_2] gst 33367 Gflops 5189.993529
+    [action_1] PCIe link speed and power monitoring started ...
+    [action_1] 33367 PCIe link speed changed 8 GT/s
+    [action_1] 33367 PCIe power state changed D0
+    [action_1] 3254 PCIe link speed changed 8 GT/s
+    [action_1] 3254 PCIe power state changed D0
+    [action_1] 50599 PCIe link speed changed 8 GT/s
+    [action_1] 50599 PCIe power state changed D0
+    [action_2] [GPU:: 33367] GFLOPS 6478.066983
+    [action_2] [GPU:: 33367] GFLOPS 5189.993529
+    [action_2] [GPU:: 33367] GFLOPS 5189.993529
     ...
-    [INFO  ] [497563.569370] [action_2] gst 33367 Gflops 5174.935520
-    [RESULT] [497564.86904 ] [action_2] gst 33367 Gflop: 6478.066983 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE
-    [INFO  ] [497564.220311] [action_2] gst 33367 start 5000.000000 copy matrix:false
-    [INFO  ] [497566.70585 ] [action_2] gst 33367 Gflops 6521.049418
-    [INFO  ] [497567.99929 ] [action_2] gst 33367 target achieved 5000.000000
-    [INFO  ] [497568.143096] [action_2] gst 33367 Gflops 5130.281235
-    ...
-    [INFO  ] [497582.683893] [action_2] gst 33367 Gflops 5135.204729
-    [RESULT] [497583.130945] [action_2] gst 33367 Gflop: 6521.049418 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass: TRUE
-    [RESULT] [497583.155470] [action_3] pesm all stopped
+    [action_2] [GPU:: 33367] GFLOPS 5174.935520
+    [action_2] [GPU:: 33367] GFLOPS 6478.066983 Target GFLOPS: 5000.000000 met: TRUE
+    [action_3] PCIe monitoring ended after wait duration.
+    [action_3] GPU 33367 PCIe speed change true
+    [action_3] GPU 3254 PCIe speed change false
+    [action_3] GPU 50599 PCIe speed change true
 
 **Example 2:**
 
@@ -1121,7 +1117,7 @@ Consider this file:
 This file has an invalid entry in `deviceid` key.
 If execute, an error will be reported:
 
-    RVS-PESM: action: act1  invalide 'deviceid' key value: xxx
+    RVS-ERROR [PESM] [act1] invalid 'deviceid' key value: xxx
 
 
 ## RCQT module
@@ -1137,15 +1133,17 @@ independent and scriptable interface capable for performing the configuration
 checks required for ROCm support. The checks in this module do not target a
 specific device.
 \n\n
-Two types of actions are performed by RCQT.
-1) Metapackage Check
-metapackage-validation: This will check the installation of the mentioned 
-metapackages and their dependencies and their respective versions as required
-by metapackage. List of metapackages are provided with key `package`
+Two types of actions are performed by RCQT, selected by which configuration
+key is present — not by the action name:
 
-2) Packages installation check
-packagelist-install-validation: This action checks if the package is installed.
-  Packages are provided against key `rpmpackagelist` and `debpackagelist`
+1) **Metapackage Check** — triggered when the `package` key is present.
+Checks the installation of the named metapackages and their dependencies,
+verifying the installed versions.
+
+2) **Packages installation check** — triggered when `rpmpackagelist` or
+`debpackagelist` is present. Checks whether the listed packages are installed.
+
+Note: the `device` key is ignored by RCQT; checks are platform-wide.
 
 This feature is used to check installed packages on the system. It provides
 checks for installed packages and the currently available package versions, if
@@ -1259,7 +1257,7 @@ Output keys are described in the table below:
 <tr><td>Package</td><td>String</td>
 <td>Name of checked package
 </td></tr>
-<tr><td>version</td><td>Floating Number</td>
+<tr><td>version</td><td>String</td>
 <td>Installed version of the package
 </td></tr>
 <tr><td>Missing packages</td><td>Integer</td>
@@ -1279,7 +1277,6 @@ In this example, all given packages are installed.
 
     actions:
     - name: packagelist-install-validation
-      device: all
       module: rcqt
       rpmpackagelist: rocm-hip-libraries rocm-core
 
@@ -1347,8 +1344,6 @@ Module specific output keys are described in the table below:
           <li>atomic_op_routing</li>
           <li>dev_serial_num</li>
           <li>kernel_driver</li>
-          <li>pwr_base_pwr</li>
-          <li>pwr_rail_type</li>
           <li>device_id</li>
           <li>vendor_id</li>
         </ul>
@@ -1420,7 +1415,7 @@ A regular PEQT configuration file looks like this:
 
 ```{note}
 - When setting the `device` configuration key to `all`, the RVS will detect all the AMD compatible GPUs and run the test on all of them
-- There are no regular expression for this `.conf` file, therefore RVS will report `TRUE` if at least one AMD compatible GPU is registered within the system. Otherwise it will report `FALSE`.
+- There are no regular expression for this `.conf` file, therefore RVS will report `true` if at least one AMD compatible GPU is registered within the system. Otherwise it will report `false`.
 ```
 
 The Power Budgeting capability is a dynamic one, having the following form:
@@ -1478,7 +1473,7 @@ The output for such a configuration file may look like this:
     [INFO ] [177628.401806] pcie_act_1 peqt slot_physical_num #0
     [INFO ] [177628.401814] pcie_act_1 peqt slot_pwr_limit_value 0.000W
     [INFO ] [177628.401819] pcie_act_1 peqt vendor_id 4098
-    [RESULT] [177628.403781] pcie_act_1 peqt TRUE
+    [RESULT] [177628.403781] pcie_act_1 peqt true
 
 **Example 2:**
 
@@ -1512,9 +1507,9 @@ error will be logged out.
 **Example 3:**
 
 Another example with even more regular expressions is given below. The expected
-PEQT check result is TRUE if at least one AMD compatible GPU having the ID 3254
-or 33367 is registered within the system and all the PCIe capabilities values
-match their corresponding regular expressions.
+PEQT check result is `true` if at least one AMD compatible GPU matching
+`deviceid: 26720` from the device list is found and all the PCIe capability
+values match their corresponding regular expressions.
 
     actions:
     - name: pcie_act_1
@@ -1629,9 +1624,11 @@ memory.</td></tr>
 <tr><td>bar4_size</td><td>Integer</td><td>The actual size of BAR4.</td></tr>
 <tr><td>bar4_base_addr</td><td>Integer</td><td>The actual base address of BAR4
 memory.</td></tr>
-<tr><td>bar5_size</td><td>Integer</td><td>The actual size of BAR5.</td></tr>
-<tr><td>pass</td><td>String</td> <td>'true' if all of the properties match the
-values given, 'false' otherwise.</td></tr>
+<tr><td>bar5_size</td><td>Integer</td><td>The actual size of BAR5. Note: due to a
+source bug, the JSON output for <b>bar5_size</b> is populated from the BAR4
+size instead of BAR5; the text log value is correct.</td></tr>
+<tr><td>pass</td><td>Bool</td> <td>'true' if all of the BAR properties satisfy
+the constraints, 'false' otherwise.</td></tr>
 </table>
 </div>
 
@@ -1640,14 +1637,14 @@ they satisfy the give parameters. The pass output key will be true and the test
 will pass if all of the BAR properties satisfy the constraints. After the check
 is finished, the following informational messages will be generated:
 
-    [INFO  ][<timestamp>][<action name>] smqt bar1_size <bar1_size>
-    [INFO  ][<timestamp>][<action name>] smqt bar1_base_addr <bar1_base_addr>
-    [INFO  ][<timestamp>][<action name>] smqt bar2_size <bar2_size>
-    [INFO  ][<timestamp>][<action name>] smqt bar2_base_addr <bar2_base_addr>
-    [INFO  ][<timestamp>][<action name>] smqt bar4_size <bar4_size>
-    [INFO  ][<timestamp>][<action name>] smqt bar4_base_addr <bar4_base_addr>
-    [INFO  ][<timestamp>][<action name>] smqt bar5_size <bar5_size>
-    [RESULT][<timestamp>][<action name>] smqt <pass>
+    [INFO  ][<timestamp>][<action name>] smqt <gpu_id> bar1_size <bar1_size>
+    [INFO  ][<timestamp>][<action name>] smqt <gpu_id> bar1_base_addr <bar1_base_addr>
+    [INFO  ][<timestamp>][<action name>] smqt <gpu_id> bar2_size <bar2_size>
+    [INFO  ][<timestamp>][<action name>] smqt <gpu_id> bar2_base_addr <bar2_base_addr>
+    [INFO  ][<timestamp>][<action name>] smqt <gpu_id> bar4_size <bar4_size>
+    [INFO  ][<timestamp>][<action name>] smqt <gpu_id> bar4_base_addr <bar4_base_addr>
+    [INFO  ][<timestamp>][<action name>] smqt <gpu_id> bar5_size <bar5_size>
+    [RESULT][<timestamp>][<action name>] smqt <gpu_id> pass: <true|false>
 
 
 ### Examples
@@ -1673,30 +1670,30 @@ Consider this file (sizes are in bytes):
 
 Results for three GPUs are:
 
-    [INFO  ] [257936.568768] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
-    [INFO  ] [257936.568768] [action_1]  smqt bar1_base_addr 13C0000000C
-    [INFO  ] [257936.568768] [action_1]  smqt bar2_size      2097152 (2.00 MB)
-    [INFO  ] [257936.568768] [action_1]  smqt bar2_base_addr 13B0000000C
-    [INFO  ] [257936.568768] [action_1]  smqt bar4_size      524288 (512.00 KB)
-    [INFO  ] [257936.568768] [action_1]  smqt bar4_base_addr E4B00000
-    [INFO  ] [257936.568768] [action_1]  smqt bar5_size      0 (0.00 B)
-    [RESULT] [257936.568920] [action_1]  smqt fail
-    [INFO  ] [257936.569234] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
-    [INFO  ] [257936.569234] [action_1]  smqt bar1_base_addr 1A00000000C
-    [INFO  ] [257936.569234] [action_1]  smqt bar2_size      2097152 (2.00 MB)
-    [INFO  ] [257936.569234] [action_1]  smqt bar2_base_addr 19F0000000C
-    [INFO  ] [257936.569234] [action_1]  smqt bar4_size      524288 (512.00 KB)
-    [INFO  ] [257936.569234] [action_1]  smqt bar4_base_addr E9900000
-    [INFO  ] [257936.569234] [action_1]  smqt bar5_size      0 (0.00 B)
-    [RESULT] [257936.569281] [action_1]  smqt fail
-    [INFO  ] [257936.570798] [action_1]  smqt bar1_size      17179869184 (16.00 GB)
-    [INFO  ] [257936.570798] [action_1]  smqt bar1_base_addr 16C0000000C
-    [INFO  ] [257936.570798] [action_1]  smqt bar2_size      2097152 (2.00 MB)
-    [INFO  ] [257936.570798] [action_1]  smqt bar2_base_addr 1710000000C
-    [INFO  ] [257936.570798] [action_1]  smqt bar4_size      524288 (512.00 KB)
-    [INFO  ] [257936.570798] [action_1]  smqt bar4_base_addr E7300000
-    [INFO  ] [257936.570798] [action_1]  smqt bar5_size      0 (0.00 B)
-    [RESULT] [257936.570837] [action_1]  smqt fail
+    [INFO  ] [257936.568768] [action_1]  smqt 3254 bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.568768] [action_1]  smqt 3254 bar1_base_addr 13C0000000C
+    [INFO  ] [257936.568768] [action_1]  smqt 3254 bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.568768] [action_1]  smqt 3254 bar2_base_addr 13B0000000C
+    [INFO  ] [257936.568768] [action_1]  smqt 3254 bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.568768] [action_1]  smqt 3254 bar4_base_addr E4B00000
+    [INFO  ] [257936.568768] [action_1]  smqt 3254 bar5_size      0 (0.00 B)
+    [RESULT] [257936.568920] [action_1]  smqt 3254 pass: false
+    [INFO  ] [257936.569234] [action_1]  smqt 50599 bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.569234] [action_1]  smqt 50599 bar1_base_addr 1A00000000C
+    [INFO  ] [257936.569234] [action_1]  smqt 50599 bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.569234] [action_1]  smqt 50599 bar2_base_addr 19F0000000C
+    [INFO  ] [257936.569234] [action_1]  smqt 50599 bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.569234] [action_1]  smqt 50599 bar4_base_addr E9900000
+    [INFO  ] [257936.569234] [action_1]  smqt 50599 bar5_size      0 (0.00 B)
+    [RESULT] [257936.569281] [action_1]  smqt 50599 pass: false
+    [INFO  ] [257936.570798] [action_1]  smqt 33367 bar1_size      17179869184 (16.00 GB)
+    [INFO  ] [257936.570798] [action_1]  smqt 33367 bar1_base_addr 16C0000000C
+    [INFO  ] [257936.570798] [action_1]  smqt 33367 bar2_size      2097152 (2.00 MB)
+    [INFO  ] [257936.570798] [action_1]  smqt 33367 bar2_base_addr 1710000000C
+    [INFO  ] [257936.570798] [action_1]  smqt 33367 bar4_size      524288 (512.00 KB)
+    [INFO  ] [257936.570798] [action_1]  smqt 33367 bar4_base_addr E7300000
+    [INFO  ] [257936.570798] [action_1]  smqt 33367 bar5_size      0 (0.00 B)
+    [RESULT] [257936.570837] [action_1]  smqt 33367 pass: false
 
 In this example, BAR sizes reported by GPUs match those listed in configuration
 key except for the BAR5, hence the test fails.
@@ -1725,7 +1722,9 @@ specified in the list will be considered.</td></tr>
 to a specific device type corresponding to the deviceid.</td></tr>
 <tr><td>test_bandwidth</td><td>Bool</td>
 <td>If this key is set to true the P2P bandwidth benchmark will run if a pair of
-devices pass the P2P check.</td></tr>
+devices pass the P2P check. Note: setting this to false currently causes the
+module to exit with an error in the current implementation; bandwidth testing
+must be enabled for a successful run.</td></tr>
 <tr><td>bidirectional</td><td>Bool</td>
 <td>This option is only used if test_bandwidth key is true. This specifies the
 type of transfer to run:\n
@@ -1934,29 +1933,30 @@ peers. You may need to increase test duration.
 </table>
 </div>
 
-If the value of test_bandwidth key is false, the tool will only try to determine
-if the GPU(s) in the peers key are P2P to the action’s GPU. In this case the
-bidirectional and log_interval values will be ignored, if they are specified. If
-a gpu is a P2P peer to the device the test will pass, otherwise it will fail. A
-message indicating the result will be provided for each GPUs specified. It will
-have the following format:
+The P2P capability check logs a result message for each device-peer pair.
+Self-pairs (same GPU) are not logged. The message format is:
 
-    [RESULT][<timestamp>][<action name>] p2p <gpu id> <peer gpu id> peers:<p2p_result> distance:<distance> <hop_type>:<hop_dist>[ <hop_type>:<hop_dist>]
+    [<action name>] p2p [GPU:: <src_node> - <src_id> - <src_bdf>] [GPU:: <dst_node> - <dst_id> - <dst_bdf>] peers:<p2p_result> distance:<distance> <hop_type>:<hop_dist>
 
-If the value of test_bandwidth is true bandwidth testing between the device and
-each of its peers will take place in parallel or in sequence, depending on the
-value of the parallel flag. During the duration of bandwidth benchmarking,
-informational output providing the moving average of the transfer’s bandwidth
-will be calculated and logged at every time increment specified by the
-`log_interval` parameter. The messages will have the following output:
+If `test_bandwidth` is true, bandwidth testing between the device and each of
+its peers will take place in parallel or in sequence, depending on the value of
+the `parallel` flag. During bandwidth benchmarking, informational output
+providing the moving average of the transfer's bandwidth is logged at every
+`log_interval`:
 
-    [INFO  ][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <interval_bandwidth>
+    [<action name>] p2p-bandwidth[<transfer_id>] [GPU:: <src_node> - <src_id> - <src_bdf>] [GPU:: <dst_node> - <dst_id> - <dst_bdf>] bidirectional: <bidirectional> <interval_bandwidth> GBps
 
-At the end of the test the average bytes/second will be calculated over the
-entire test duration, and will be logged as a result:
+At the end of the test, the average bandwidth over the entire test duration is
+logged as a result:
 
-    [RESULT][<timestamp>][<action name>] p2p-bandwidth [<transfer_id>] <gpu id> <peer gpu id> bidirectional: <bidirectional> <bandwidth> <duration>
+    [<action name>] p2p-bandwidth[<transfer_id>] [GPU:: <src_node> - <src_id> - <src_bdf>] [GPU:: <dst_node> - <dst_id> - <dst_bdf>] bidirectional: <bidirectional> <bandwidth> GBps duration: <duration> secs
 
+When `transferbench_test: alltoall` is used, additional aggregate output lines
+are emitted:
+
+    [<action name>] a2a-p2p-bandwidth[<transfer_id>] ...
+    [<action name>] a2a-gpu-bandwidth ... Aggregate peer bandwidth: <value> GBps
+    [<action name>] a2a-bandwidth [<N> GPUs][<M> p2p transfers] Aggregate bandwidth: <value> GBps
 
 ### Examples
 
@@ -1973,21 +1973,21 @@ tested for p2p capability with no bandwidth testing (test_bandwidth: false).
       peers: all
       test_bandwidth: false
 
+Note: setting `test_bandwidth: false` causes the module to exit with an error
+in the current implementation. The P2P check result format shown below is
+emitted before the exit when bandwidth testing is enabled.
 
-Possible result is:
+Possible result (with `test_bandwidth: true`) is:
 
-    [RESULT] [1656631.262875] [action_1] p2p 3254 3254 peers:false distance:-1
-    [RESULT] [1656631.262968] [action_1] p2p 3254 50599 peers:true distance:56 HyperTransport:56
-    [RESULT] [1656631.263039] [action_1] p2p 3254 33367 peers:true distance:56 HyperTransport:56
-    [RESULT] [1656631.263103] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
-    [RESULT] [1656631.263151] [action_1] p2p 50599 50599 peers:false distance:-1
-    [RESULT] [1656631.263203] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
-    [RESULT] [1656631.263265] [action_1] p2p 33367 3254 peers:true distance:56 HyperTransport:56
-    [RESULT] [1656631.263321] [action_1] p2p 33367 50599 peers:true distance:56 HyperTransport:56
-    [RESULT] [1656631.263360] [action_1] p2p 33367 33367 peers:false distance:-1
+    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
 
-From the first line of result, we can see that GPU (ID 3254) can't access itself.
-From the second line of result, we can see that source GPU (ID 3254) can access destination GPU (ID 50599).
+From the output we can see the P2P topology between three GPUs.
+
 
 **Example 2:**
 
@@ -2007,40 +2007,26 @@ for each completed transfer (log_interval: 0)
       bidirectional: true
 
 When run with "-d 3" switch, possible result is:
+When run with "-d 3" switch, possible result is:
 
-    [RESULT] [1657122.364752] [action_1] p2p 3254 3254 peers:false distance:-1
-    [RESULT] [1657122.364845] [action_1] p2p 3254 50599 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657122.364917] [action_1] p2p 3254 33367 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657122.364985] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657122.365037] [action_1] p2p 50599 50599 peers:false distance:-1
-    [RESULT] [1657122.365094] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657122.365157] [action_1] p2p 33367 3254 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657122.365221] [action_1] p2p 33367 50599 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657122.365270] [action_1] p2p 33367 33367 peers:false distance:-1
-    [INFO  ] [1657123.644203] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  7.013 GBps
-    [INFO  ] [1657123.644376] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  6.615 GBps
-    [INFO  ] [1657123.644453] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  2.367 GBps
-    [INFO  ] [1657123.644522] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  7.504 GBps
-    [INFO  ] [1657123.644590] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  8.207 GBps
-    [INFO  ] [1657123.644673] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  7.680 GBps
-    [INFO  ] [1657124.926221] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  6.646 GBps
-    [INFO  ] [1657124.926368] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.418 GBps
-    [INFO  ] [1657124.926438] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  7.402 GBps
-    [INFO  ] [1657124.926506] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  6.161 GBps
-    [INFO  ] [1657124.926573] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  9.024 GBps
-    [INFO  ] [1657124.926640] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  8.740 GBps
-    [INFO  ] [1657126.208742] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  5.680 GBps
-    [INFO  ] [1657126.208905] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.011 GBps
-    [INFO  ] [1657126.208990] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  3.918 GBps
-    [INFO  ] [1657126.209066] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  6.058 GBps
-    [INFO  ] [1657126.209140] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  6.650 GBps
-    [INFO  ] [1657126.209213] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  0.000 GBps
-    [RESULT] [1657126.742128] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  5.767 GBps  duration: 0.368453 sec
-    [RESULT] [1657126.743287] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  6.013 GBps  duration: 0.498944 sec
-    [RESULT] [1657126.744411] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  5.278 GBps  duration: 0.380393 sec
-    [RESULT] [1657126.745534] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  4.160 GBps  duration: 0.484577 sec
-    [RESULT] [1657126.746684] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  5.219 GBps  duration: 0.407190 sec
-    [RESULT] [1657126.747827] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  4.001 GBps  duration: 0.562350 sec
+    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p-bandwidth[1/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 7.013 GBps
+    [action_1] p2p-bandwidth[2/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 6.615 GBps
+    [action_1] p2p-bandwidth[3/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 2.367 GBps
+    [action_1] p2p-bandwidth[4/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 7.504 GBps
+    [action_1] p2p-bandwidth[5/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 8.207 GBps
+    [action_1] p2p-bandwidth[6/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 7.680 GBps
+    [action_1] p2p-bandwidth[1/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 5.767 GBps duration: 0.368453 secs
+    [action_1] p2p-bandwidth[2/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 6.013 GBps duration: 0.498944 secs
+    [action_1] p2p-bandwidth[3/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 5.278 GBps duration: 0.380393 secs
+    [action_1] p2p-bandwidth[4/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 4.160 GBps duration: 0.484577 secs
+    [action_1] p2p-bandwidth[5/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 5.219 GBps duration: 0.407190 secs
+    [action_1] p2p-bandwidth[6/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 4.001 GBps duration: 0.562350 secs
 
 We can see that on this particular machine there are three GPUs and six
 possible device-to-peer transfers.
@@ -2066,22 +2052,19 @@ false).
       parallel: false
 
 Possible output is:
+Possible output is:
 
-    [RESULT] [1657218.801555] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657218.801655] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
-    [INFO  ] [1657219.871532] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.517 GBps
-    [INFO  ] [1657219.871717] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.475 GBps
-    [INFO  ] [1657220.940263] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.476 GBps
-    [INFO  ] [1657220.940461] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.601 GBps
-    [INFO  ] [1657222.7589  ] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.488 GBps
-    [INFO  ] [1657222.7760  ] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.470 GBps
-    [INFO  ] [1657223.74647 ] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.666 GBps
-    [INFO  ] [1657223.74810 ] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.576 GBps
-    [RESULT] [1657224.181106] [action_1] p2p-bandwidth  [1/2] 50599 3254  bidirectional: false  4.539 GBps  duration: 1.321909 sec
-    [RESULT] [1657224.182255] [action_1] p2p-bandwidth  [2/2] 50599 33367  bidirectional: false  4.551 GBps  duration: 1.318517 sec
+    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p-bandwidth[1/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: false 4.517 GBps
+    [action_1] p2p-bandwidth[2/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: false 4.475 GBps
+    [action_1] p2p-bandwidth[1/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: false 4.476 GBps
+    [action_1] p2p-bandwidth[2/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: false 4.601 GBps
+    [action_1] p2p-bandwidth[1/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: false 4.539 GBps duration: 1.321909 secs
+    [action_1] p2p-bandwidth[2/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: false 4.551 GBps duration: 1.318517 secs
 
 From the last line of result, we can see that source GPU (ID 50599) can access
-destination GPU (ID 33367) and that the bandwidth is 4.495 GBps.
+destination GPU (ID 33367) and that the bandwidth is approximately 4.5 GBps.
 
 **Example 4:**
 
@@ -2100,44 +2083,26 @@ of tests:
       parallel: true
 
 Possible output is:
+Possible output is:
 
-    [RESULT] [1657295.937184] [action_1] p2p 3254 3254 peers:false distance:-1
-    [RESULT] [1657295.937267] [action_1] p2p 3254 50599 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657295.937324] [action_1] p2p 3254 33367 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657295.937379] [action_1] p2p 50599 3254 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657295.937429] [action_1] p2p 50599 50599 peers:false distance:-1
-    [RESULT] [1657295.937482] [action_1] p2p 50599 33367 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657295.937543] [action_1] p2p 33367 3254 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657295.937607] [action_1] p2p 33367 50599 peers:true distance:56 HyperTransport:56
-    [RESULT] [1657295.937655] [action_1] p2p 33367 33367 peers:false distance:-1
-    [INFO  ] [1657297.216212] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  4.972 GBps
-    [INFO  ] [1657297.216351] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  8.183 GBps
-    [INFO  ] [1657297.216423] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  8.911 GBps
-    [INFO  ] [1657297.216490] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  7.690 GBps
-    [INFO  ] [1657297.216558] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  7.768 GBps
-    [INFO  ] [1657297.216642] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  4.589 GBps
-    [INFO  ] [1657298.487427] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  8.778 GBps
-    [INFO  ] [1657298.487593] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  7.921 GBps
-    [INFO  ] [1657298.487730] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  8.164 GBps
-    [INFO  ] [1657298.487807] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  8.921 GBps
-    [INFO  ] [1657298.487878] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  8.487 GBps
-    [INFO  ] [1657298.487956] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  7.648 GBps
-    [INFO  ] [1657299.760175] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  7.210 GBps
-    [INFO  ] [1657299.760249] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  4.274 GBps
-    [INFO  ] [1657299.760284] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  0.000 GBps
-    [INFO  ] [1657299.760318] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  5.942 GBps
-    [INFO  ] [1657299.760349] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  0.001 GBps
-    [INFO  ] [1657299.760381] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  5.490 GBps
-    [RESULT] [1657300.293126] [action_1] p2p-bandwidth  [1/6] 3254 50599  bidirectional: true  6.964 GBps  duration: 0.287248 sec
-    [RESULT] [1657300.294334] [action_1] p2p-bandwidth  [2/6] 3254 33367  bidirectional: true  3.960 GBps  duration: 0.536554 sec
-    [RESULT] [1657300.295528] [action_1] p2p-bandwidth  [3/6] 50599 3254  bidirectional: true  5.442 GBps  duration: 0.368977 sec
-    [RESULT] [1657300.296691] [action_1] p2p-bandwidth  [4/6] 50599 33367  bidirectional: true  4.187 GBps  duration: 0.477756 sec
-    [RESULT] [1657300.297840] [action_1] p2p-bandwidth  [5/6] 33367 3254  bidirectional: true  4.942 GBps  duration: 0.607009 sec
-    [RESULT] [1657300.299016] [action_1] p2p-bandwidth  [6/6] 33367 50599  bidirectional: true  3.828 GBps  duration: 0.523495 sec
-
-It can be seen that transfers [2/6] and [5/6] did not take place in the second
-log interval so average from the previous cycle is displayed instead and
-marked with "(*)"
+    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
+    [action_1] p2p-bandwidth[1/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 4.972 GBps
+    [action_1] p2p-bandwidth[2/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 8.183 GBps
+    [action_1] p2p-bandwidth[3/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 8.911 GBps
+    [action_1] p2p-bandwidth[4/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 7.690 GBps
+    [action_1] p2p-bandwidth[5/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 7.768 GBps
+    [action_1] p2p-bandwidth[6/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 4.589 GBps
+    [action_1] p2p-bandwidth[1/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 6.964 GBps duration: 0.287248 secs
+    [action_1] p2p-bandwidth[2/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 3.960 GBps duration: 0.536554 secs
+    [action_1] p2p-bandwidth[3/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 5.442 GBps duration: 0.368977 secs
+    [action_1] p2p-bandwidth[4/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 4.187 GBps duration: 0.477756 secs
+    [action_1] p2p-bandwidth[5/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 4.942 GBps duration: 0.607009 secs
+    [action_1] p2p-bandwidth[6/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 3.828 GBps duration: 0.523495 secs
 
 ## PEBB module
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
@@ -2158,23 +2123,22 @@ will be considered. The default value is true.</td></tr>
 will be considered. The default value is true.
 </td></tr>
 <tr><td>parallel</td><td>Bool</td>
-<td>This option is only used if the test_bandwidth
-key is true.\n
+<td>Controls whether transfers run in parallel across all CPU–GPU paths or one
+by one.\n
 - true – Run all test transfers in parallel.\n
 - false – Run test transfers one by one.
 
 </td></tr>
 <tr><td>duration</td><td>Integer</td>
-<td>This option is only used if test_bandwidth is true. This key specifies the
-duration a transfer test should run, given in milliseconds. If this key is not
-specified, the default value is 10000 (10 seconds).
+<td>This key specifies the duration a transfer test should run, given in
+milliseconds. If this key is not specified, the default value is 10000 (10
+seconds).
 </td></tr>
 <tr><td>log_interval</td><td>Integer</td>
-<td>This option is only used if test_bandwidth is true. This is a positive
-integer, given in milliseconds, that specifies an interval over which the moving
-average of the bandwidth will be calculated and logged. The default value is
-1000 (1 second). It must be smaller than the duration key.\n
-if this key is 0 (zero), results are displayed as soon as the test transfer
+<td>This is a positive integer, given in milliseconds, that specifies an interval
+over which the moving average of the bandwidth will be calculated and logged. The
+default value is 1000 (1 second). It must be smaller than the duration key.\n
+If this key is 0 (zero), results are displayed as soon as the test transfer
 is completed.</td></tr>
 <tr><td>block_size</td><td>Collection of Integers</td>
 <td>Optional. Defines list of block sizes to be used in transfer tests.\n
@@ -2344,19 +2308,18 @@ peers. You may need to increase test duration.
 
 At the beginning, the test will display link info for every CPU/GPU pair:
 
-    [RESULT][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu node> <gpu id> distance:<distance> <hop_type>:<hop_dist>[ <hop_type>:<hop_dist>]
+    [<action name>] pcie-bandwidth [CPU:: <cpu_node>] [GPU:: <gpu_node> - <gpu_id> - <bdf>] distance:<distance> <hop_type>:<hop_dist>
 
 During the execution of the benchmark, informational output providing the moving
-average of the bandwidth of the transfer will be calculated and logged. This
-interval is provided by the log_interval parameter and will have the following
-output format:
+average of the bandwidth of the transfer will be calculated and logged at every
+`log_interval`:
 
-    [INFO ][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> <interval_bandwidth>
+    [<action name>] pcie-bandwidth [<transfer_id>] [CPU:: <cpu_node>] [GPU:: <gpu_node> - <gpu_id> - <bdf>] h2d::<host_to_device> d2h::<device_to_host> <interval_bandwidth> GBps
 
-At the end of test, the average bytes/second will be calculated over the
-entire test duration, and will be logged as a result:
+At the end of test, the average bandwidth over the entire test duration is
+logged as a result:
 
-    [RESULT][<timestamp>][<action name>] pcie-bandwidth [<transfer_id>] <cpu node> <gpu id> h2d: <host_to_device> d2h: <device_to_host> <bandwidth> <duration>
+    [<action name>] pcie-bandwidth [<transfer_id>] [CPU:: <cpu_node>] [GPU:: <gpu_node> - <gpu_id> - <bdf>] h2d::<host_to_device> d2h::<device_to_host> <bandwidth> GBps duration: <duration> secs
 
 
 
@@ -2381,42 +2344,30 @@ This will initiate host to device transfer to all GPUs with immediate output
 
 Output from this action might look like:
 
-    [RESULT] [1658774.978614] [action_1] pcie-bandwidth 0 4 3254  distance:36 HyperTransport:36
-    [RESULT] [1658774.978664] [action_1] pcie-bandwidth 1 4 3254  distance:20 PCIe:20
-    [RESULT] [1658774.978695] [action_1] pcie-bandwidth 2 4 3254  distance:36 HyperTransport:36
-    [RESULT] [1658774.978728] [action_1] pcie-bandwidth 3 4 3254  distance:36 HyperTransport:36
-    [RESULT] [1658774.978763] [action_1] pcie-bandwidth 0 5 50599  distance:36 HyperTransport:36
-    [RESULT] [1658774.978795] [action_1] pcie-bandwidth 1 5 50599  distance:36 HyperTransport:36
-    [RESULT] [1658774.978825] [action_1] pcie-bandwidth 2 5 50599  distance:20 PCIe:20
-    [RESULT] [1658774.978856] [action_1] pcie-bandwidth 3 5 50599  distance:36 HyperTransport:36
-    [RESULT] [1658774.978889] [action_1] pcie-bandwidth 0 6 33367  distance:36 HyperTransport:36
-    [RESULT] [1658774.978922] [action_1] pcie-bandwidth 1 6 33367  distance:36 HyperTransport:36
-    [RESULT] [1658774.978952] [action_1] pcie-bandwidth 2 6 33367  distance:36 HyperTransport:36
-    [RESULT] [1658774.978982] [action_1] pcie-bandwidth 3 6 33367  distance:20 PCIe:20
-    [INFO  ] [1658774.983743] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: false  12.233 GBps
-    [INFO  ] [1658774.988272] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: false  12.227 GBps
-    [INFO  ] [1658774.993197] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: false  11.770 GBps
-    [INFO  ] [1658774.998105] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: false  11.313 GBps
-    [INFO  ] [1658775.4457  ] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: false  12.218 GBps
-    [INFO  ] [1658775.9589  ] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: false  10.292 GBps
-    [INFO  ] [1658775.14627 ] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: false  10.456 GBps
-    [INFO  ] [1658775.19664 ] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: false  10.614 GBps
-    [INFO  ] [1658775.26210 ] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: false  12.222 GBps
-    [INFO  ] [1658775.31188 ] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: false  12.215 GBps
-    [INFO  ] [1658775.36137 ] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: false  12.219 GBps
-    [INFO  ] [1658775.41117 ] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: false  12.219 GBps
-    [RESULT] [1658775.42219 ] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: false  12.233 GBps  duration: 0.000780 sec
-    [RESULT] [1658775.42235 ] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: false  12.227 GBps  duration: 0.000780 sec
-    [RESULT] [1658775.42246 ] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: false  11.770 GBps  duration: 0.000810 sec
-    [RESULT] [1658775.42256 ] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: false  11.313 GBps  duration: 0.000843 sec
-    [RESULT] [1658775.42271 ] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: false  12.218 GBps  duration: 0.000781 sec
-    [RESULT] [1658775.42286 ] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: false  10.292 GBps  duration: 0.000927 sec
-    [RESULT] [1658775.42297 ] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: false  10.456 GBps  duration: 0.000912 sec
-    [RESULT] [1658775.42309 ] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: false  10.614 GBps  duration: 0.000898 sec
-    [RESULT] [1658775.42321 ] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: false  12.222 GBps  duration: 0.000780 sec
-    [RESULT] [1658775.42332 ] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: false  12.215 GBps  duration: 0.000781 sec
-    [RESULT] [1658775.42344 ] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: false  12.219 GBps  duration: 0.000780 sec
-    [RESULT] [1658775.42355 ] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: false  12.219 GBps  duration: 0.000780 sec
+    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] distance:20 PCIe:20
+    [action_1] pcie-bandwidth [CPU:: 2] [GPU:: 4 - 3254 - 0000:04:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 3] [GPU:: 4 - 3254 - 0000:04:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 2] [GPU:: 5 - 50599 - 0000:08:00.0] distance:20 PCIe:20
+    [action_1] pcie-bandwidth [CPU:: 3] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 2] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 3] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:20 PCIe:20
+    [action_1] pcie-bandwidth [1/12] [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::false 12.233 GBps
+    [action_1] pcie-bandwidth [2/12] [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::false 12.227 GBps
+    [action_1] pcie-bandwidth [3/12] [CPU:: 2] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::false 11.770 GBps
+    [action_1] pcie-bandwidth [4/12] [CPU:: 3] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::false 11.313 GBps
+    [action_1] pcie-bandwidth [5/12] [CPU:: 0] [GPU:: 5 - 50599 - 0000:08:00.0] h2d::true d2h::false 12.218 GBps
+    [action_1] pcie-bandwidth [6/12] [CPU:: 1] [GPU:: 5 - 50599 - 0000:08:00.0] h2d::true d2h::false 10.292 GBps
+    [action_1] pcie-bandwidth [7/12] [CPU:: 2] [GPU:: 5 - 50599 - 0000:08:00.0] h2d::true d2h::false 10.456 GBps
+    [action_1] pcie-bandwidth [8/12] [CPU:: 3] [GPU:: 5 - 50599 - 0000:08:00.0] h2d::true d2h::false 10.614 GBps
+    [action_1] pcie-bandwidth [9/12] [CPU:: 0] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::false 12.222 GBps
+    [action_1] pcie-bandwidth [10/12] [CPU:: 1] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::false 12.215 GBps
+    [action_1] pcie-bandwidth [11/12] [CPU:: 2] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::false 12.219 GBps
+    [action_1] pcie-bandwidth [12/12] [CPU:: 3] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::false 12.219 GBps duration: 0.000780 secs
 
 **Example 2:**
 
@@ -2435,45 +2386,23 @@ Consider action:
 Here, although parallel execution of transfers is requested, log_interval is to
 short for some transfers to complete. For them, cumulative average is displayed
 and marked with (*):
-
-    [RESULT] [1659672.517170] [action_1] pcie-bandwidth 0 4 3254  distance:36 HyperTransport:36
-    [RESULT] [1659672.517222] [action_1] pcie-bandwidth 1 4 3254  distance:20 PCIe:20
-    [RESULT] [1659672.517257] [action_1] pcie-bandwidth 2 4 3254  distance:36 HyperTransport:36
-    [RESULT] [1659672.517290] [action_1] pcie-bandwidth 3 4 3254  distance:36 HyperTransport:36
-    [RESULT] [1659672.517324] [action_1] pcie-bandwidth 0 5 50599  distance:36 HyperTransport:36
-    [RESULT] [1659672.517357] [action_1] pcie-bandwidth 1 5 50599  distance:36 HyperTransport:36
-    [RESULT] [1659672.517388] [action_1] pcie-bandwidth 2 5 50599  distance:20 PCIe:20
-    [RESULT] [1659672.517419] [action_1] pcie-bandwidth 3 5 50599  distance:36 HyperTransport:36
-    [RESULT] [1659672.517452] [action_1] pcie-bandwidth 0 6 33367  distance:36 HyperTransport:36
-    [RESULT] [1659672.517483] [action_1] pcie-bandwidth 1 6 33367  distance:36 HyperTransport:36
-    [RESULT] [1659672.517515] [action_1] pcie-bandwidth 2 6 33367  distance:36 HyperTransport:36
-    [RESULT] [1659672.517546] [action_1] pcie-bandwidth 3 6 33367  distance:20 PCIe:20
-    [INFO  ] [1659673.49782 ] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  1.489 GBps
-    [INFO  ] [1659673.49814 ] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  2.701 GBps
+    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] distance:20 PCIe:20
+    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
+    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:36 HyperTransport:36
     ...
-    [INFO  ] [1659673.582639] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  1.489 GBps (*)
-    [INFO  ] [1659673.582686] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.367 GBps
-    [INFO  ] [1659673.582700] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  17.300 GBps
+    [action_1] pcie-bandwidth [1/12] [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 1.489 GBps
+    [action_1] pcie-bandwidth [2/12] [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 2.701 GBps
     ...
-    [INFO  ] [1659677.851697] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  16.793 GBps
-    [INFO  ] [1659677.851727] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.872 GBps (*)
-    [INFO  ] [1659677.851741] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  14.796 GBps (*)
-    [INFO  ] [1659677.851754] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: true  20.358 GBps
-    [INFO  ] [1659677.851770] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: true  15.632 GBps (*)
-    [INFO  ] [1659677.851828] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: true  14.541 GBps (*)
+    [action_1] pcie-bandwidth [1/12] [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 16.793 GBps
+    [action_1] pcie-bandwidth [2/12] [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 16.872 GBps (*)
     ...
-    [RESULT] [1659678.148280] [action_1] pcie-bandwidth  [1/12] 0 3254  h2d: true  d2h: true  16.309 GBps  duration: 0.061316 sec
-    [RESULT] [1659678.148318] [action_1] pcie-bandwidth  [2/12] 1 3254  h2d: true  d2h: true  16.871 GBps  duration: 0.118547 sec
-    [RESULT] [1659678.148332] [action_1] pcie-bandwidth  [3/12] 2 3254  h2d: true  d2h: true  13.360 GBps  duration: 0.149705 sec
-    [RESULT] [1659678.148349] [action_1] pcie-bandwidth  [4/12] 3 3254  h2d: true  d2h: true  15.371 GBps  duration: 0.130115 sec
-    [RESULT] [1659678.148363] [action_1] pcie-bandwidth  [5/12] 0 50599  h2d: true  d2h: true  15.631 GBps  duration: 0.127954 sec
-    [RESULT] [1659678.148377] [action_1] pcie-bandwidth  [6/12] 1 50599  h2d: true  d2h: true  14.185 GBps  duration: 0.140989 sec
-    [RESULT] [1659678.148390] [action_1] pcie-bandwidth  [7/12] 2 50599  h2d: true  d2h: true  15.242 GBps  duration: 0.131245 sec
-    [RESULT] [1659678.148404] [action_1] pcie-bandwidth  [8/12] 3 50599  h2d: true  d2h: true  16.071 GBps  duration: 0.124452 sec
-    [RESULT] [1659678.148418] [action_1] pcie-bandwidth  [9/12] 0 33367  h2d: true  d2h: true  16.505 GBps  duration: 0.121178 sec
-    [RESULT] [1659678.148432] [action_1] pcie-bandwidth  [10/12] 1 33367  h2d: true  d2h: true  16.720 GBps  duration: 0.059807 sec
-    [RESULT] [1659678.148445] [action_1] pcie-bandwidth  [11/12] 2 33367  h2d: true  d2h: true  15.604 GBps  duration: 0.128168 sec
-    [RESULT] [1659678.148458] [action_1] pcie-bandwidth  [12/12] 3 33367  h2d: true  d2h: true  16.193 GBps  duration: 0.123525 sec
+    [action_1] pcie-bandwidth [1/12] [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 16.309 GBps duration: 0.061316 secs
+    [action_1] pcie-bandwidth [2/12] [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 16.871 GBps duration: 0.118547 secs
+    [action_1] pcie-bandwidth [3/12] [CPU:: 2] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 13.360 GBps duration: 0.149705 secs
+    ...
+    [action_1] pcie-bandwidth [12/12] [CPU:: 3] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::true 16.193 GBps duration: 0.123525 secs
 
 Please note that in link information results, some records could be marked with
 (R). This means, that communication is possible if initiated by the destination
@@ -2526,25 +2455,20 @@ time.</td></tr>
 period for the test to succeed. The default value is 0.05 (5%).</td></tr>
 <tr><td>max_violations</td><td>Integer</td>
 <td>The number of tolerance violations that can occur after the ramp_interval
-for the test to still pass. The default value is 0.</td></tr>
+for the test to still pass. The default value is 0. Note: this key is parsed
+but violation counting is not active in the current implementation; pass/fail
+is determined solely by whether the peak GFLOPS meets the target.</td></tr>
 <tr><td>log_interval</td><td>Integer</td>
 <td>This is a positive integer, given in milliseconds, that specifies an
-interval over which the moving average of the bandwidth will be calculated and
+interval over which the moving average of GFLOPS will be calculated and
 logged.</td></tr>
-<tr><td>matrix_size</td><td>Integer</td>
-<td>Sets all three matrix dimensions (M, N, and K) to the same value. Equivalent
-to setting <b>matrix_size_a</b>, <b>matrix_size_b</b>, and <b>matrix_size_c</b>
-to the same value. The default value is 5760.</td></tr>
 <tr><td>matrix_size_a</td><td>Integer</td>
-<td>Number of rows of matrix A (the M dimension in GEMM). Overrides
-<b>matrix_size</b> for this dimension. The default value is 5760.</td></tr>
+<td>Number of rows of matrix A (the M dimension in GEMM). The default value is 5760.</td></tr>
 <tr><td>matrix_size_b</td><td>Integer</td>
-<td>Number of columns of matrix B (the N dimension in GEMM). Overrides
-<b>matrix_size</b> for this dimension. The default value is 5760.</td></tr>
+<td>Number of columns of matrix B (the N dimension in GEMM). The default value is 5760.</td></tr>
 <tr><td>matrix_size_c</td><td>Integer</td>
 <td>Inner (shared) dimension K of the GEMM operation (columns of A / rows of B).
-Overrides <b>matrix_size</b> for this dimension. The default value is
-5760.</td></tr>
+The default value is 5760.</td></tr>
 
 <tr><td>ops_type</td><td>String</td>
 <td>GEMM operation type. Accepted values: <b>sgemm</b>, <b>dgemm</b>,
@@ -2554,7 +2478,7 @@ module defaults to <b>sgemm</b>. Mutually exclusive with <b>data_type</b>.</td><
 <tr><td>data_type</td><td>String</td>
 <td>Data type for the GEMM computation. Accepted values include:
 <b>fp4_r</b>, <b>fp6_r</b>, <b>fp8_r</b>, <b>bf16_r</b>, <b>fp16_r</b>,
-<b>fp32_r</b>, <b>tf32_r</b> (<b>xf32_r</b>), <b>i8_r</b>. If not specified
+<b>fp32_r</b>, <b>i8_r</b>. If not specified
 the module falls back to the type implied by <b>ops_type</b>.</td></tr>
 
 <tr><td>out_data_type</td><td>String</td>
@@ -2563,8 +2487,9 @@ applicable when using hipBLASLt. If not specified the default matches the
 compute type.</td></tr>
 
 <tr><td>compute_type</td><td>String</td>
-<td>Accumulation/compute type used internally by the BLAS library. If not
-specified the default is <b>fp32_r</b>.</td></tr>
+<td>Accumulation/compute type used internally by the BLAS library. Accepted
+values include <b>fp32_r</b> (default) and <b>xf32_r</b> (TF32 fast
+compute).</td></tr>
 
 <tr><td>blas_source</td><td>String</td>
 <td>BLAS library backend to use. Accepted values:
@@ -2578,7 +2503,7 @@ launch overhead. The default value is 1.</td></tr>
 <td>Matrix initialization method. Accepted values:
 <b>default</b> – Initialize with default pattern (default).
 <b>trig</b> – Initialize with trigonometric (sine/cosine) values.
-<b>random</b> – Initialize with random values.</td></tr>
+<b>rand</b> – Initialize with random values.</td></tr>
 
 <tr><td>transa</td><td>Integer</td>
 <td>Transpose operation applied to matrix A before the GEMM call.
@@ -2682,70 +2607,17 @@ default value is 0.</td></tr>
 
 ### Output
 
-Module specific output keys are described in the table below:
+During the execution of the test, a result message reporting the GFLOPS
+achieved by the GPU is logged at each `log_interval`:
 
-<div class="pst-scrollable-table-container">
-<table class="table table--middle-left">
-<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
-<tr><td>target_stress</td><td>Time Series Floats</td>
-<td>The average gflops over the last log interval.</td></tr>
-<tr><td>max_gflops</td><td>Float</td>
-<td>The maximum sustained performance obtained by the GPU during the
-test.</td></tr>
-<tr><td>stress_violations</td><td>Integer</td>
-<td>The number of gflops readings that violated the tolerance of the test after
-the ramp interval.</td></tr>
-<tr><td>flops_per_op</td><td>Integer</td>
-<td>Flops (floating point operations) per operation queued to the GPU queue.
-One operation is one call to SGEMM/DGEMM.</td></tr>
-<tr><td>bytes_copied_per_op</td><td>Integer</td>
-<td>Number of bytes copied to the GPU per GEMM operation when
-<b>copy_matrix</b> is true.</td></tr>
-<tr><td>try_ops_per_sec</td><td>Float</td>
-<td>Calculated number of ops/second necessary to achieve target
-gigaflops.</td></tr>
-<tr><td>pass</td><td>Bool</td>
-<td>'true' if the GPU achieves its desired sustained performance
-level.</td></tr>
-</table>
-</div>
+    [<action name>] [GPU:: <gpu id>] GFLOPS <interval_gflops>
 
-An informational message will be emitted when the test starts
-execution:
+When the test completes, the final result message is printed:
 
-    [INFO ][<timestamp>][<action name>] gst <gpu id> start <target_stress> copy matrix: <copy_matrix>
+    [<action name>] [GPU:: <gpu id>] GFLOPS <max_gflops> Target GFLOPS: <target_stress> met: TRUE
 
-
-During the execution of the test, informational output providing the moving
-average the GPU(s) gflops will be logged at each `log_interval`:
-
-    [INFO ][<timestamp>][<action name>] gst Gflops: <interval_gflops>
-
-When the target gflops is achieved, the following message will be logged:
-
-    [INFO ][<timestamp>][<action name>] gst <gpu id> target achieved <target_stress>
-
-If the target gflops, or stress, is not achieved in the `ramp_interval`
-provided, the test will terminate and the following message will be logged:
-
-    [INFO ][<timestamp>][<action name>] gst <gpu id> ramp time exceeded <ramp_time>
-
-In this case the test will fail.\n
-
-If the target stress (gflops) is achieved the test will attempt to run for the
-rest of the duration specified by the action, sustaining the stress load during
-that time. If the stress level violates the bounds set by the tolerance level
-during that time a violation message will be logged:
-
-    [INFO ][<timestamp>][<action name>] gst <gpu id> stress violation <interval_gflops>
-
-When the test completes, the following result message will be printed:
-
-    [RESULT][<timestamp>][<action name>] gst <gpu id> Gflop: <max_gflops> flops_per_op:<flops_per_op> bytes_copied_per_op: <bytes_copied_per_op> try_ops_per_sec: <try_ops_per_sec> pass: <pass>
-
-The test will pass if the target_stress is reached before the end of the
-`ramp_interval` and the `stress_violations` value is less than the given
-`max_violations` value. Otherwise, the test will fail.
+The test passes if `max_gflops >= target_stress * (1 - tolerance)` at the end
+of the run. Otherwise the result is `met: FALSE`.
 
 ### Examples
 
@@ -2762,7 +2634,7 @@ value (gigaflops). Thus, the most basic configuration file looks like this:
 
 For the above configuration file, all the missing configuration keys will have
 their default
-values (for example: `copy_matrix=true`, `matrix_size=5760`). For more
+values (for example: `copy_matrix=true`, `matrix_size_a/b/c=5760`). For more
 information about the default
 values, see Common configuration keys
 and Configuration keys.
@@ -2771,55 +2643,23 @@ When the RVS tool runs against such a configuration file, it will do the
 following:
   - run the stress test on all available (and compatible) AMD GPUs, one after
 the other
-  - log a start message containing the GPU ID, the `target_stress` and the
-value of the `copy_matrix`:
+  - emit, each `log_interval` (for example: 1000 ms), a result message
+containing the GFLOPS value achieved by the current GPU:
 
     ```
-    [INFO  ] [164337.932824] action_gst_1 gst 50599 start 3500.000000 copy matrix:true
+    [action_gst_1] [GPU:: 33367] GFLOPS 3535.670231
     ```
 
-  - emit, each `log_interval` (for example: 1000ms), a message containing the
-gigaflops value that the current GPU achieved:
+  - log the final result when the stress test completes:
 
     ```
-    [INFO  ] [164355.111207] action_gst_1 gst 33367 Gflops 3535.670231
-    ```
-
-  - log a message as soon as the current GPU reaches the given `target_stress`:
-
-    ```
-    [INFO  ] [164350.804843] action_gst_1 gst 33367 target achieved 500.000000
-    ```
-
-  - log a ramp time exceeded message if the GPU was not able to reach the
-`target_stress` in the `ramp_interval` time frame (for example: 5000). In such a
-case, the test will also terminate:
-
-    ```
-    [INFO  ] [164013.788870] action_gst_1 gst 3254 ramp time exceeded 5000
-    ```
-
-  - log the test result, when the stress test completes. The message contains
-the test's overall result and some other statistics according in Output
-keys:
-
-    ```
-    [RESULT] [164355.647523] action_gst_1 gst 33367 Gflop: 4066.020766 flops_per_op: 382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 9.157367 pass: TRUE
-    ```
-
-  - log a stress violation message when the current gigaflops (for the last
-`log_interval`, for example: 1000ms) violates the bounds set by the `tolerance`
-configuration key (for example: 0.1). Note that this message is not logged
-during the `ramp_interval` time frame:
-
-    ```
-    [INFO  ] [164013.788870] action_gst_1 gst 3254 stress violation 2500
+    [action_gst_1] [GPU:: 33367] GFLOPS 4066.020766 Target GFLOPS: 3500.000000 met: TRUE
     ```
 
 If a mandatory configuration key is missing, the RVS tool will log an error
 message and terminate the execution of the current module. For example, the
 following configuration file will cause the RVS to terminate with the
-following error message: `RVS-GST: action: action_gst_1  key 'target_stress' was not found`
+following error message: `RVS-ERROR [GST] [action_gst_1] key 'target_stress' was not found`
 
     actions:
     - name: action_gst_1
@@ -2843,7 +2683,9 @@ A more complex configuration file looks like this:
       copy_matrix: false
       target_stress: 5000
       tolerance: 0.07
-      matrix_size: 5760
+      matrix_size_a: 5760
+      matrix_size_b: 5760
+      matrix_size_c: 5760
 
 For this configuration file, the RVS tool will:
   - run the stress test only for the GPUs having the ID 50599 or 33367. To
@@ -2863,56 +2705,36 @@ example)
 `max_violations` will not terminate the test, but RVS will mark the
 test result as "fail".
 
-The output for such a configuration key may look like this:
+The output for such a configuration may look like this:
 
-    [INFO  ] [172061.758830] action_1 gst 50599 start 5000.000000 copy
-    matrix:false
-    [INFO  ] [172063.547668] action_1 gst 50599 Gflops 6471.614725
-    [INFO  ] [172064.577715] action_1 gst 50599 target achieved 5000.000000
-    [INFO  ] [172065.609224] action_1 gst 50599 Gflops 5189.993529
-    [INFO  ] [172066.634360] action_1 gst 50599 Gflops 5220.373979
-    [INFO  ] [172067.659262] action_1 gst 50599 Gflops 5225.472000
-    [INFO  ] [172068.694305] action_1 gst 50599 Gflops 5169.935583
-    [RESULT] [172069.573967] action_1 gst 50599 Gflop: 6471.614725 flops_per_op:
-    382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
-    TRUE
-    [INFO  ] [172069.574369] action_1 gst 33367 start 5000.000000 copy
-    matrix:false
-    [INFO  ] [172071.409483] action_1 gst 33367 Gflops 6558.348080
-    [INFO  ] [172072.438104] action_1 gst 33367 target achieved 5000.000000
-    [INFO  ] [172073.465033] action_1 gst 33367 Gflops 5215.285895
-    [INFO  ] [172074.501571] action_1 gst 33367 Gflops 5164.945297
-    [INFO  ] [172075.529468] action_1 gst 33367 Gflops 5210.207720
-    [INFO  ] [172076.558102] action_1 gst 33367 Gflops 5205.139424
-    [RESULT] [172077.448182] action_1 gst 33367 Gflop: 6558.348080 flops_per_op:
-    382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
-    TRUE
+    [action_1] [GPU:: 50599] GFLOPS 6471.614725
+    [action_1] [GPU:: 50599] GFLOPS 5189.993529
+    [action_1] [GPU:: 50599] GFLOPS 5220.373979
+    [action_1] [GPU:: 50599] GFLOPS 5225.472000
+    [action_1] [GPU:: 50599] GFLOPS 5169.935583
+    [action_1] [GPU:: 50599] GFLOPS 6471.614725 Target GFLOPS: 5000.000000 met: TRUE
+    [action_1] [GPU:: 33367] GFLOPS 6558.348080
+    [action_1] [GPU:: 33367] GFLOPS 5215.285895
+    [action_1] [GPU:: 33367] GFLOPS 5164.945297
+    [action_1] [GPU:: 33367] GFLOPS 5210.207720
+    [action_1] [GPU:: 33367] GFLOPS 5205.139424
+    [action_1] [GPU:: 33367] GFLOPS 6558.348080 Target GFLOPS: 5000.000000 met: TRUE
 
 When setting the parallel to true, RVS will run the stress tests on
 all selected GPUs in parallel and the output may look like this:
 
-    [INFO  ] [173381.407428] action_1 gst 50599 start 5000.000000 copy
-    matrix:false
-    [INFO  ] [173381.407744] action_1 gst 33367 start 5000.000000 copy
-    matrix:false
-    [INFO  ] [173383.245771] action_1 gst 33367 Gflops 6558.348080
-    [INFO  ] [173383.256935] action_1 gst 50599 Gflops 6484.532120
-    [INFO  ] [173384.274202] action_1 gst 33367 target achieved 5000.000000
-    [INFO  ] [173384.286014] action_1 gst 50599 target achieved 5000.000000
-    [INFO  ] [173385.301038] action_1 gst 33367 Gflops 5215.285895
-    [INFO  ] [173385.315794] action_1 gst 50599 Gflops 5200.080980
-    [INFO  ] [173386.337638] action_1 gst 33367 Gflops 5164.945297
-    [INFO  ] [173386.353274] action_1 gst 50599 Gflops 5159.964636
-    [INFO  ] [173387.365494] action_1 gst 33367 Gflops 5210.207720
-    [INFO  ] [173387.383437] action_1 gst 50599 Gflops 5195.032357
-    [INFO  ] [173388.401250] action_1 gst 33367 Gflops 5169.935583
-    [INFO  ] [173388.421599] action_1 gst 50599 Gflops 5154.993572
-    [RESULT] [173389.282710] action_1 gst 33367 Gflop: 6558.348080 flops_per_op:
-    382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
-    TRUE
-    [RESULT] [173389.305479] action_1 gst 50599 Gflop: 6484.532120 flops_per_op:
-    382.205952x1e9 bytes_copied_per_op: 398131200 try_ops_per_sec: 13.081952 pass:
-    TRUE
+    [action_1] [GPU:: 33367] GFLOPS 6558.348080
+    [action_1] [GPU:: 50599] GFLOPS 6484.532120
+    [action_1] [GPU:: 33367] GFLOPS 5215.285895
+    [action_1] [GPU:: 50599] GFLOPS 5200.080980
+    [action_1] [GPU:: 33367] GFLOPS 5164.945297
+    [action_1] [GPU:: 50599] GFLOPS 5159.964636
+    [action_1] [GPU:: 33367] GFLOPS 5210.207720
+    [action_1] [GPU:: 50599] GFLOPS 5195.032357
+    [action_1] [GPU:: 33367] GFLOPS 5169.935583
+    [action_1] [GPU:: 50599] GFLOPS 5154.993572
+    [action_1] [GPU:: 33367] GFLOPS 6558.348080 Target GFLOPS: 5000.000000 met: TRUE
+    [action_1] [GPU:: 50599] GFLOPS 6484.532120 Target GFLOPS: 5000.000000 met: TRUE
 
 It is important that all the configuration keys will be adjusted/fine-tuned
 according to the actual GPUs and HW platform capabilities. For example, a matrix
@@ -2950,24 +2772,25 @@ for the test.</td></tr>
 <tr><td>ramp_interval</td><td>Integer</td>
 <td>This is a time interval, specified in milliseconds, given to the test to
 determine the compute load that will sustain the target power. The default value
-is 5000 (5 seconds). This time is counted against the duration of the test.
+is 5000 (5 seconds). Note: this key is parsed but not used by the worker in the
+current implementation.
 </td></tr>
 <tr><td>tolerance</td><td>Float</td>
-<td>A value indicating how much the target_power can fluctuate after the ramp
-period for the test to succeed. The default value is 0 (any violation
-immediately fails the test).
+<td>A value indicating how much the target_power can fluctuate for the test to
+succeed. The default value is 0 (any violation immediately fails the test).
 </td></tr>
 <tr><td>max_violations</td><td>Integer</td>
-<td>The number of tolerance violations that can occur after the ramp_interval
-for the test to still pass. The default value is 0.</td></tr>
+<td>The number of tolerance violations that can occur for the test to still
+pass. The default value is 0. Note: this key is parsed but not used by the
+worker in the current implementation.</td></tr>
 <tr><td>sample_interval</td><td>Integer</td>
-<td>The sampling rate for target_power values given in milliseconds. The default
-value is 1000 (1 second).
+<td>The interval between power samples, specified in seconds. The default
+value is 1 (1 second). If a value less than 1 is specified it is raised to 1.
 </td></tr>
 <tr><td>log_interval</td><td>Integer</td>
-<td>This is a positive integer, given in milliseconds, that specifies an
-interval over which the moving average of the bandwidth will be calculated and
-logged.</td></tr>
+<td>This is a positive integer, given in milliseconds, that specifies a logging
+interval. Note: this key is parsed but not used by the worker in the current
+implementation.</td></tr>
 
 <tr><td>cp_workload</td><td>Bool</td>
 <td>If true, enables the GEMM compute workload to drive GPU power. This is the
@@ -3016,7 +2839,7 @@ module defaults to <b>sgemm</b>. Mutually exclusive with
 <tr><td>data_type</td><td>String</td>
 <td>Data type for the GEMM computation. Accepted values include:
 <b>fp4_r</b>, <b>fp6_r</b>, <b>fp8_r</b>, <b>bf16_r</b>, <b>fp16_r</b>,
-<b>fp32_r</b>, <b>tf32_r</b> (<b>xf32_r</b>), <b>i8_r</b>. If not specified
+<b>fp32_r</b>, <b>i8_r</b>. If not specified
 the module falls back to the type implied by <b>ops_type</b>.</td></tr>
 
 <tr><td>out_data_type</td><td>String</td>
@@ -3025,8 +2848,9 @@ applicable when using hipBLASLt. If not specified the default matches the
 compute type.</td></tr>
 
 <tr><td>compute_type</td><td>String</td>
-<td>Accumulation/compute type used internally by the BLAS library. If not
-specified the default is <b>fp32_r</b>.</td></tr>
+<td>Accumulation/compute type used internally by the BLAS library. Accepted
+values include <b>fp32_r</b> (default) and <b>xf32_r</b> (TF32 fast
+compute).</td></tr>
 
 <tr><td>blas_source</td><td>String</td>
 <td>BLAS library backend to use. Accepted values:
@@ -3040,7 +2864,7 @@ launch overhead. The default value is 1.</td></tr>
 <td>Matrix initialization method. Accepted values:
 <b>default</b> – Initialize with default pattern (default).
 <b>trig</b> – Initialize with trigonometric (sine/cosine) values.
-<b>random</b> – Initialize with random values.</td></tr>
+<b>rand</b> – Initialize with random values.</td></tr>
 
 <tr><td>transa</td><td>Integer</td>
 <td>Transpose operation applied to matrix A before the GEMM call.
@@ -3104,22 +2928,18 @@ strided-batched GEMM. The default value is 0.</td></tr>
 
 ### Output
 
-Module specific output keys are described in the table below:
+During the execution of the test, a result message reporting the measured GPU
+power is logged at each `sample_interval`:
 
-<div class="pst-scrollable-table-container">
-<table class="table table--middle-left">
-<tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
-<tr><td>current_power</td><td>Time Series Floats</td>
-<td>The current measured power of the GPU.</td></tr>
-<tr><td>power_violations</td><td>Integer</td>
-<td>The number of power readings that violated the tolerance of the test after
-the ramp interval.
-</td></tr>
-<tr><td>pass</td><td>Bool</td>
-<td>'true' if the GPU achieves its desired sustained power level in the ramp
-interval.</td></tr>
-</table>
-</div>
+    [<action name>] [GPU:: <gpu id>] Power(W) <current_power>
+
+When the test completes, the pass/fail result is printed:
+
+    [<action name>] [GPU:: <gpu id>] pass: TRUE
+
+The test passes if the peak power measured during the run meets or exceeds
+`target_power * (1 - tolerance)`. When JSON output is enabled (`-j`), an
+`average power` field is also included in the result record.
 
 ### Examples
 
@@ -3135,10 +2955,7 @@ A regular IET configuration file looks like this:
       count: 2
       wait: 100
       duration: 10000
-      ramp_interval: 5000
-      sample_interval: 500
-      log_interval: 500
-      max_violations: 1
+      sample_interval: 1
       target_power: 135
       tolerance: 0.1
       matrix_size: 5760
@@ -3146,79 +2963,49 @@ A regular IET configuration file looks like this:
 ```{note}
 - when setting the `device` configuration key to `all`, the RVS will detect all the AMD compatible GPUs and run the test on all of them
 - the test will run 2 times on each GPU (count = 2)
-- only one power violation is allowed. If the total number of violations is bigger than 1 the IET test result will be marked as `failed`
+- `sample_interval` is in seconds; values below 1 are raised to 1
 ```
 
 When the RVS tool runs against such a configuration file, it will do the following:
 
 - run the test on all AMD compatible GPUs
 
-- log a start message containing the GPU ID and the `target_power`, for example:
+- emit, each `sample_interval` (1 second), a result message containing the
+measured power for the current GPU:
 
     ```
-    [INFO ] [167316.308057] action_1 iet 50599 start 135.000000
+    [action_1] [GPU:: 50599] Power(W) 136.878342
     ```
 
-- emit, each log_interval (for example: 500ms), a message containing the power for the current GPU
+- log the test result when the test completes:
 
     ```
-    [INFO ] [167319.266707] action_1 iet 50599 current power 136.878342
-    ```
-
-- log a message as soon as the current GPU reaches the given `target_power`
-
-    ```
-    [INFO ] [167318.793062] action_1 iet 50599 target achieved 135.000000
-    ```
-
-- log a 'ramp time exceeded' message if the GPU was not able to reach the `target_power` in the `ramp_interval` time frame (for example: 5000ms). In such a case, the test will also terminate
-
-    ```
-    [INFO ] [167648.832413] action_1 iet 50599 ramp time exceeded 5000
-    ```
-
-- log a 'power violation message' when the current power (for the last `sample_interval`, for example: 500ms) violates the bounds set by the tolerance configuration key (for example: 0.1). Please note that this message is never logged during the `ramp_interval` time frame
-
-    ```
-    [INFO ] [161251.971277] action_1 iet 3254 power violation 73.783211
-    ```
-
-- log the test result, when the stress test completes.
-
-    ```
-    [RESULT] [167305.260051] action_1 iet 33367 pass: TRUE
+    [action_1] [GPU:: 50599] pass: TRUE
     ```
 
 The output for such a configuration file may look like this:
 
-    [INFO ] [167261.27161 ] action_1 iet 33367 start 135.000000
-    [INFO ] [167263.516803] action_1 iet 33367 current power 136.934479
-    [INFO ] [167263.521355] action_1 iet 33367 target achieved 135.000000
-    [INFO ] [167264.16925 ] action_1 iet 33367 current power 138.421844
-    [INFO ] [167264.517018] action_1 iet 33367 current power 138.394608
+    [action_1] [GPU:: 33367] Power(W) 136.934479
+    [action_1] [GPU:: 33367] Power(W) 138.421844
+    [action_1] [GPU:: 33367] Power(W) 138.394608
     ...
-    [INFO ] [167271.518402] action_1 iet 33367 current power 139.231918
-    [RESULT] [167272.67686 ] action_1 iet 33367 pass: TRUE
-    [INFO ] [167272.68029 ] action_1 iet 3254 start 135.000000
-    [INFO ] [167274.552026] action_1 iet 3254 current power 139.363525
-    [INFO ] [167274.552059] action_1 iet 3254 target achieved 135.000000
-    [INFO ] [167275.52168 ] action_1 iet 3254 current power 138.661453
-    [INFO ] [167275.552241] action_1 iet 3254 current power 138.857635
+    [action_1] [GPU:: 33367] Power(W) 139.231918
+    [action_1] [GPU:: 33367] pass: TRUE
+    [action_1] [GPU:: 3254] Power(W) 139.363525
+    [action_1] [GPU:: 3254] Power(W) 138.661453
     ...
-    [INFO ] [167282.553983] action_1 iet 3254 current power 140.069687
-    [RESULT] [167283.95763 ] action_1 iet 3254 pass: TRUE
-    [INFO ] [167283.96158 ] action_1 iet 50599 start 135.000000
-    [INFO ] [167285.532999] action_1 iet 50599 current power 137.205032
-    [INFO ] [167285.543084] action_1 iet 50599 target achieved 135.000000
-    [INFO ] [167286.33050 ] action_1 iet 50599 current power 136.137115
+    [action_1] [GPU:: 3254] Power(W) 140.069687
+    [action_1] [GPU:: 3254] pass: TRUE
+    [action_1] [GPU:: 50599] Power(W) 137.205032
+    [action_1] [GPU:: 50599] Power(W) 136.137115
     ...
-    [INFO ] [167293.534672] action_1 iet 50599 current power 139.753464
-    [RESULT] [167294.131420] action_1 iet 50599 pass: TRUE
+    [action_1] [GPU:: 50599] Power(W) 139.753464
+    [action_1] [GPU:: 50599] pass: TRUE
 
 
 **Example 2:**
 
-Another configuration file, which may raise some 'power violation' messages (due to the small tolerance value) looks like this
+Another configuration file with a tighter tolerance:
 
     - name: action_1
       device: all
@@ -3227,46 +3014,31 @@ Another configuration file, which may raise some 'power violation' messages (due
       count: 1
       wait: 100
       duration: 8000
-      ramp_interval: 5000
-      sample_interval: 700
-      log_interval: 700
-      max_violations: 1
+      sample_interval: 1
       target_power: 80
       tolerance: 0.06
       matrix_size: 5760
 
 The output for such a configuration file may look like this:
 
-    [INFO ] [161236.677785] action_1 iet 33367 start 80.000000
-    [INFO ] [161239.350055] action_1 iet 33367 current power 84.186142
-    [INFO ] [161239.354542] action_1 iet 33367 target achieved 80.000000
+    [action_1] [GPU:: 33367] Power(W) 84.186142
+    [action_1] [GPU:: 33367] Power(W) 77.001945
+    [action_1] [GPU:: 33367] Power(W) 82.063576
+    [action_1] [GPU:: 33367] pass: TRUE
+    [action_1] [GPU:: 3254] Power(W) 78.842796
+    [action_1] [GPU:: 3254] Power(W) 79.938454
     ...
-    [INFO ] [161241.450517] action_1 iet 33367 current power 77.001945
-    [INFO ] [161241.459600] action_1 iet 33367 power violation 75.163689
-    [INFO ] [161242.150642] action_1 iet 33367 current power 82.063576
-    [RESULT] [161245.698113] action_1 iet 33367 pass: TRUE
-    [INFO ] [161245.698525] action_1 iet 3254 start 80.000000
-    [INFO ] [161248.394003] action_1 iet 3254 current power 78.842796
-    [INFO ] [161248.418631] action_1 iet 3254 target achieved 80.000000
-    [INFO ] [161249.94149 ] action_1 iet 3254 current power 79.938454
+    [action_1] [GPU:: 3254] Power(W) 74.615120
+    [action_1] [GPU:: 3254] pass: FALSE
+    [action_1] [GPU:: 50599] Power(W) 81.560165
+    [action_1] [GPU:: 50599] Power(W) 75.057304
     ...
-    [INFO ] [161249.794201] action_1 iet 3254 current power 76.511711
-    [INFO ] [161249.818803] action_1 iet 3254 power violation 74.279594
-    [INFO ] [161250.494263] action_1 iet 3254 current power 74.615120
-    ...
-    [INFO ] [161254.117386] action_1 iet 3254 power violation 73.682312
-    [RESULT] [161254.738939] action_1 iet 3254 pass: FALSE
-    [INFO ] [161254.739387] action_1 iet 50599 start 80.000000
-    [INFO ] [161257.374079] action_1 iet 50599 current power 81.560165
-    [INFO ] [161257.392085] action_1 iet 50599 target achieved 80.000000
-    [INFO ] [161258.774304] action_1 iet 50599 current power 75.057304
-    ...
-    [INFO ] [161262.974833] action_1 iet 50599 current power 80.200668
-    [RESULT] [161263.771631] action_1 iet 50599 pass: TRUE
+    [action_1] [GPU:: 50599] Power(W) 80.200668
+    [action_1] [GPU:: 50599] pass: TRUE
 
 
 - All the missing configuration keys (if any) will have their default values. For more information about the default values please consult the dedicated sections (3.3 Common Configuration Keys and 13.1 Module specific keys).
-- If a mandatory configuration key is missing, the RVS tool will log an error message and terminate the execution of the current module. For example, if the target_power is missing, the RVS to terminate with the following error message: "RVS-IET: action: action_1 key 'target_power' was not found"
+- If a mandatory configuration key is missing, the RVS tool will log an error message and terminate the execution of the current module. For example, if the target_power is missing, the RVS tool will terminate with the following error message: `RVS-ERROR [IET] [action_1] key 'target_power' was not found`
 - All the configuration keys will be adjusted/fine-tuned according to the actual GPUs and HW platform capabilities.
     - For example, a matrix size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20 GPUs
     - For small` target_power` values (for example: 30-40W), the `sample_interval` should be increased, otherwise the IET may fail either to achieve the given `target_power` or to sustain it (for example: `ramp_interval = 1500` for `target_power = 40`). In case there are problems reaching/sustaining the given `target_power`: 
@@ -3330,7 +3102,7 @@ Keys below are in addition to common keys (`name`, `module`, `device`, `duration
 <tr><td>halt_on_error</td><td>Bool</td><td>If true, stop the GPU thread on first BLAS or thermal error. Default <b>false</b>.</td></tr>
 <tr><td>hot_calls</td><td>Integer</td><td>BLAS “hot call” / warmup-related parameter forwarded to **rvs_blas**. Default <b>1</b>.</td></tr>
 <tr><td>gpu_sync_wait</td><td>Integer</td><td>Default <b>10000</b>. Parsed from configuration; **not** referenced by the current barrier implementation (placeholder for future timeout behavior).</td></tr>
-<tr><td>max_temp_c</td><td>Float</td><td>Junction temperature ceiling in degrees Celsius. If the GPU junction temperature exceeds this threshold during the run, the worker logs a thermal-violation error and, when <b>halt_on_error</b> is true, terminates that GPU thread. Default <b>105.0</b>.</td></tr>
+<tr><td>max_temp_c</td><td>Float</td><td>Junction temperature ceiling in degrees Celsius. If the GPU junction temperature exceeds this threshold during the run, the worker logs a thermal-violation error and, when <b>halt_on_error</b> is true, terminates that GPU thread. Default <b>105.0</b>. A value of <b>0</b> disables thermal checking entirely.</td></tr>
 </table>
 </div>
 
@@ -3343,10 +3115,10 @@ Log lines use the action name, module tag pulse, and GPU ID.
 <tr><th class="head">Output / log</th> <th class="head">Description</th></tr>
 <tr><td>Start</td><td><code>[INFO] ... pulse &lt;gpu_id&gt; start pulse_rate=&lt;hz&gt;</code></td></tr>
 <tr><td>Parameters</td><td><code>[INFO] ... pulse_rate=... Hz period=...ms high=...ms low=...ms</code></td></tr>
-<tr><td>Thermal error</td><td><code>[ERROR] ... thermal violation: &lt;temp&gt;C</code> (junction &gt; 105°C)</td></tr>
+<tr><td>Thermal error</td><td><code>[ERROR] ... thermal violation: &lt;temp&gt;C (limit &lt;max_temp_c&gt;C)</code> (emitted only when <b>max_temp_c</b> is &gt; 0)</td></tr>
 <tr><td>Periodic summary</td><td>At each <b>log_interval</b>, moving averages and extrema: <code>pulse #N avg_high=...W avg_low=...W max_high=...W min_low=...W delta=...W</code></td></tr>
 <tr><td>Completion</td><td>Summary over the run: pulse count, average high/low power, delta, max high, min low.</td></tr>
-<tr><td>pass</td><td><code>[RESULT] ... pass: TRUE</code> or <code>FALSE</code> per GPU.</td></tr>
+<tr><td>pass</td><td><code>[RESULT] ... pass: true</code> or <code>false</code> per GPU.</td></tr>
 </table>
 </div>
 
@@ -3422,17 +3194,20 @@ The following tests are available (referenced by index in `exclude`):
 <td>Number of HIP threads per block launched for each test kernel. The default
 value is 128.</td></tr>
 <tr><td>stress</td><td>Bool</td>
-<td>If true, enables the memory stress test (Test 10) in addition to the
-standard tests. The default value is false.</td></tr>
+<td>If true, intended to enable the memory stress test (Test 10) in addition to
+the standard tests. The default value is false. Note: this key is parsed but
+does not affect which tests run in the current implementation; all tests are
+always executed.</td></tr>
 <tr><td>mapped_memory</td><td>Bool</td>
 <td>If true, uses host-mapped (pinned) memory instead of device memory for the
 test buffers. The default value is false.</td></tr>
 <tr><td>num_iter</td><td>Integer</td>
 <td>Number of iterations to run per test. The default value is 1.</td></tr>
 <tr><td>exclude</td><td>Collection of Integers</td>
-<td>Space-separated list of test indices (0–10) to skip. All tests not listed
-here will be executed. For example, <b>exclude: 9 10</b> skips the bit fade
-and memory stress tests.</td></tr>
+<td>Space-separated list of test indices (0–10) to skip. For example,
+<b>exclude: 9 10</b> is intended to skip the bit fade and memory stress tests.
+Note: this key is parsed but does not affect which tests run in the current
+implementation; all tests are always executed.</td></tr>
 </table>
 </div>
 
@@ -3478,11 +3253,15 @@ Run with:
 
     ./rvs -c conf/mem.conf -d 3
 
-The test passes if no memory errors are detected on any GPU. A typical result
-message looks like:
+The test passes if no memory errors are detected on any GPU. The module logs
+a result line per test at INFO level using 1-based test numbering:
 
-    [RESULT][<timestamp>][action_1] mem <gpu_id> Test 1  [Walking 1 bit] : pass: true  errors: 0 Time Taken: 0.652 s
-    [RESULT][<timestamp>][action_1] mem <gpu_id> Test 2  [Own address test] : pass: true  errors: 0 Time Taken: 0.423 s
+    [INFO ][<timestamp>][action_1] mem <gpu_id> Test 1 : PASS
+    [INFO ][<timestamp>][action_1] mem <gpu_id> Test 2 : PASS
+    ...
+
+A summary JSON record with `errors` and `pass` fields is also emitted when
+JSON output is enabled (`-j`).
 
 
 ## BABEL module
@@ -3500,8 +3279,9 @@ and detecting bandwidth regressions.
 <table class="table table--middle-left">
 <tr><th class="head">Config Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
 <tr><td>array_size</td><td>Integer</td>
-<td>Size of the test buffer in bytes (or in mebibytes if <b>mibibytes: true</b>).
-The default value is 33554432 (32 MB).</td></tr>
+<td>Number of elements in the test array (element count, not bytes). The actual
+memory size depends on the data type selected by <b>test_type</b>. The default
+value is 33554432 (32 M elements).</td></tr>
 <tr><td>test_type</td><td>Integer</td>
 <td>Data precision used for the benchmark. Accepted values:
 <b>1</b> – Float (32-bit, default).
@@ -3516,9 +3296,9 @@ default value is 100.</td></tr>
 for this time instead of a fixed number of iterations. A value of 0 means use
 <b>num_iter</b>. The default value is 0.</td></tr>
 <tr><td>mibibytes</td><td>Bool</td>
-<td>If true, <b>array_size</b> is interpreted in mebibytes (MiB) and bandwidth
-is reported in GiB/s. If false, bytes and GB/s are used. The default value is
-false.</td></tr>
+<td>If true, bandwidth is reported in GiB/s. If false, GB/s are used. This
+key affects the reporting unit only; it does not change how <b>array_size</b>
+is interpreted. The default value is false.</td></tr>
 <tr><td>o/p_csv</td><td>Bool</td>
 <td>If true, outputs results in CSV format in addition to the standard log.
 The default value is false.</td></tr>
@@ -3546,7 +3326,9 @@ default value is false.</td></tr>
 <tr><td>data_init</td><td>String</td>
 <td>Data initialization method for the test arrays. Accepted values:
 <b>default</b> – Initialize with default constant values (default).
-Other values may be supported depending on the build.</td></tr>
+<b>gpu_norm_dist</b> – Initialize on GPU with a normal distribution.
+<b>cpu_norm_dist</b> – Initialize on CPU with a normal distribution.
+<b>zero_init</b> – Initialize all elements to zero.</td></tr>
 <tr><td>nontemporal</td><td>String</td>
 <td>Non-temporal (streaming) memory access mode for the kernels. Non-temporal
 stores bypass the cache and can be useful for measuring true memory bandwidth.
@@ -3572,15 +3354,15 @@ is 2.</td></tr>
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
 <tr><th class="head">Output Key</th> <th class="head">Type</th><th class="head"> Description</th></tr>
-<tr><td>Array size</td><td>Integer</td>
-<td>Size of the test array used for the measurement, in bytes or MiB depending
-on the <b>mibibytes</b> setting.</td></tr>
 <tr><td>Function</td><td>String</td>
 <td>Name of the BabelStream kernel executed (e.g., Copy, Mul, Add, Triad,
 Dot, Read, Write).</td></tr>
-<tr><td>bandwidth</td><td>Float</td>
-<td>Measured memory bandwidth for this kernel in GB/s (or GiB/s if
+<tr><td>MBytes/sec</td><td>Float</td>
+<td>Measured memory bandwidth for this kernel in MB/s (or MiB/s if
 <b>mibibytes: true</b>).</td></tr>
+<tr><td>Max_MBytes/sec</td><td>Float</td>
+<td>Maximum memory bandwidth observed across all iterations for this
+kernel.</td></tr>
 <tr><td>pass</td><td>Bool</td>
 <td>True if the kernel completed successfully.</td></tr>
 </table>
