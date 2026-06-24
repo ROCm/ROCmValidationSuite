@@ -65,6 +65,11 @@ When manually triggering the workflow, you can specify:
    - `gfx1151` - AMD Strix Halo iGPU
    - `gfx120X-all` - AMD RX 9060/XT, 9070/XT
 
+   **`GPU_FAMILY` selects the ROCm SDK tarball only.** TransferBench CLI offload
+   archs come from `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` (13-arch default
+   matching upstream TransferBench `build_packages_local.sh`), not from
+   `gpu_family`.
+
 3. **Build TransferBench CLI** (boolean, default **true** on manual runs):
    - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` / `numactl-libs` at runtime).
    - On **push**, **PR**, and **schedule**, CI defaults to **ON** unless repository variable `BUILD_TRANSFERBENCH_CLI` is set to `OFF`.
@@ -135,7 +140,7 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/op
 
 **Dynamic ROCm Path Discovery**: `FETCH_ROCMPATH_FROM_ROCMCORE=ON` allows RVS to automatically detect ROCm installation location at runtime from ROCm core libraries.
 
-**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script. When **`BUILD_TRANSFERBENCH_CLI=ON`**, [`CMakeTransferBenchCLI.cmake`](../CMakeTransferBenchCLI.cmake) applies TransferBench-specific relocatable RPATH via [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in).
+**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script. When **`BUILD_TRANSFERBENCH_CLI=ON`**, [`CMakeTransferBenchCLI.cmake`](../CMakeTransferBenchCLI.cmake) applies TransferBench-specific relocatable RPATH via [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in), forwards **`GPU_TARGETS`** / **`HIP_PLATFORM=amd`**, and prints **`message(STATUS)`** lines for the sub-build. Child configure/build logs: `build/TransferBenchCLI-prefix/src/TransferBenchCLI-stamp/`.
 
 ### Workflow Steps
 
@@ -331,7 +336,8 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `ROCM_SDK_NIGHTLY_BASE_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch` | Tarball base for **nightly** builds (`x.y.za…` versions). |
 | `ROCM_SDK_NIGHTLY_INDEX_URL` | _(same as index default)_ | Optional override for nightly listing URL. |
 | `ROCM_SDK_CHANNEL` | `auto` locally | **`nightly`** / **`release`** / **`auto`**. CI sets channel per trigger (see table above); manual with a pin uses **`auto`** so tarball follows version format. |
-| `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
+| `GPU_FAMILY` | `gfx110X-all` | ROCm SDK **tarball** family (`therock-dist-linux-<GPU_FAMILY>-…`); does not set TransferBench offload archs |
+| `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` | 13-arch default (see [`docs/transferbench.md`](../../docs/transferbench.md)) | HIP offload archs for the bundled TransferBench CLI when `BUILD_TRANSFERBENCH_CLI=ON` |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
 | `BUILD_TRANSFERBENCH_CLI` | `OFF` locally; `ON` in CI | Build and install the TransferBench CLI in packages (`-DBUILD_TRANSFERBENCH_CLI`). CI uses `vars.BUILD_TRANSFERBENCH_CLI` or defaults to `ON`; `workflow_dispatch` input **`build_transferbench_cli`** overrides manual runs. |
 | `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `8.0` → `0800`) - used for RVS version tagging |

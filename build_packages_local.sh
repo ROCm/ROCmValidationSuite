@@ -10,6 +10,10 @@ set -e  # Exit on error
 GPU_FAMILY="${GPU_FAMILY:-gfx110X-all}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
 BUILD_TRANSFERBENCH_CLI="${BUILD_TRANSFERBENCH_CLI:-OFF}"
+# TransferBench offload archs (independent of GPU_FAMILY SDK tarball selection).
+# Source of truth: TransferBench build_packages_local.sh DEFAULT_GPU_TARGETS.
+DEFAULT_GPU_TARGETS="gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201"
+TRANSFERBENCH_GPU_TARGETS="${TRANSFERBENCH_GPU_TARGETS:-${GPU_TARGETS:-$DEFAULT_GPU_TARGETS}}"
 BUILD_DIR="./build"
 ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
@@ -533,6 +537,9 @@ print_info "ROCm SDK channel: ${ROCM_SDK_CHANNEL:-auto}"
 print_info "GPU Family: $GPU_FAMILY"
 print_info "Build Type: $BUILD_TYPE"
 print_info "Build TransferBench CLI: $BUILD_TRANSFERBENCH_CLI"
+if [ "$BUILD_TRANSFERBENCH_CLI" = "ON" ]; then
+    print_info "TransferBench GPU targets: $TRANSFERBENCH_GPU_TARGETS"
+fi
 print_info "Build Directory: $BUILD_DIR"
 print_info "ROCm Install: $ROCM_INSTALL_DIR"
 print_info "SDK Source: $ROCM_SDK_BASE_URL"
@@ -789,6 +796,10 @@ CMAKE_ARGS=(
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
     -DBUILD_TRANSFERBENCH_CLI="$BUILD_TRANSFERBENCH_CLI"
 )
+
+if [ "$BUILD_TRANSFERBENCH_CLI" = "ON" ]; then
+    CMAKE_ARGS+=(-DTRANSFERBENCH_GPU_TARGETS="$TRANSFERBENCH_GPU_TARGETS")
+fi
 
 # Add CXX compiler if set
 if [ -n "$CMAKE_CXX_COMPILER" ]; then

@@ -55,13 +55,34 @@ requires **`libnuma1`** (Debian/Ubuntu) or **`numactl-libs`** (RHEL-family RPM).
 RUNPATH entries point at the ROCm stack (`/opt/rocm/lib`, `/opt/rocm/core-<N>/lib`).
 See [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in).
 
-The set of GPU architectures the CLI is compiled for can be narrowed with:
+### GPU targets vs SDK tarball family
+
+`GPU_FAMILY` (for example `gfx110X-all`, `gfx1151`) selects which **ROCm SDK
+tarball** `build_packages_local.sh` downloads. It does **not** control which GPU
+architectures the `TransferBench` binary is compiled for.
+
+Offload architectures are set by `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS`.
+By default RVS uses the same list as upstream TransferBench packaging
+(`external/TransferBench/build_packages_local.sh`):
 
 ```
-cmake -DTRANSFERBENCH_GPU_TARGETS="gfx90a;gfx942;gfx950" ...
+gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201
 ```
 
-By default RVS builds the CLI for the same arch set RVS itself ships on.
+Override when building:
+
+```
+GPU_TARGETS="gfx90a;gfx942" BUILD_TRANSFERBENCH_CLI=ON ./build_packages_local.sh
+# or
+cmake -DBUILD_TRANSFERBENCH_CLI=ON -DTRANSFERBENCH_GPU_TARGETS="gfx90a;gfx942" ...
+```
+
+The sub-build also passes `-DHIP_PLATFORM=amd` and disables optional TransferBench
+features (NIC executor, MPI, DMA-BUF, local-GPU-only mode) to match upstream
+relocatable packaging and keep the bundled CLI dependency-light.
+
+CMake logs the forwarded args at configure time; detailed child configure/build
+output is under `build/TransferBenchCLI-prefix/` (ExternalProject stamp logs).
 
 ## Submodule layout
 
