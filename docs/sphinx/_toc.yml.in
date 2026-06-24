@@ -12,6 +12,8 @@ subtrees:
         title: User guide
       - file: features.md
         title: ROCm Validation Suite modules
+      - file: transferbench.md
+        title: TransferBench in RVS
   - caption: About
     entries:
       - file: license.md

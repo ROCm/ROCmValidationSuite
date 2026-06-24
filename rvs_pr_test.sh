@@ -1,22 +1,26 @@
 #!/bin/bash
 ################################################################################
-# Remote RVS nightly install + test driver (used by rvs-nightly-tests.yml).
-# Mirrors build_packages_local.sh: workflow orchestrates, this script executes.
+# Remote RVS PR-package install + test driver (used by rvs-pr-tests.yml).
+# Like rvs_nightly_test.sh but defaults to /tmp/rvs-pr-* staging; primary artifact
+# is the amdrocm*-rvs-*-Linux.tar.gz relocatable tarball (optional .deb still supported).
 ################################################################################
 
 set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: rvs_nightly_test.sh <command>
+Usage: rvs_pr_test.sh <command>
 
 Commands (workflow order):
+  resolve-package-url Discover latest Linux .tar.gz from rvs/ root, from a .../manylinux_*/ listing dir, or a direct .tar.gz / .deb URL;
+                      writes tarball_url + tarball_name to GITHUB_OUTPUT / GITHUB_ENV when set
+  peek-latest-artifact-key Print one-line artifact key (build/pr/tgz, tgz:basename, or deb:basename) for cache compare; stdout only
   validate-config     Fail fast; emit prepare job outputs to GITHUB_OUTPUT
   setup-ssh           Write SSH key/config under RUNNER_TEMP and verify connectivity
   verify-rocm         Remote rocminfo + amd-smi on TARGET_ROCM_PATH
-  download-tarball    curl tarball to ./pkg/ on the orchestrator runner only (never on SSH target)
-  copy-to-target      scp tarball to REMOTE_WORK_DIR/pkg on target
-  install-rvs         Extract tarball on target under INSTALL_DIR
+  download-tarball    curl package (.deb or .tar.gz) to ./pkg/ on the orchestrator only
+  copy-to-target      scp package to REMOTE_WORK_DIR/pkg on target
+  install-rvs         Install .deb via dpkg on target, or extract .tar.gz under INSTALL_DIR
   verify-rvs-binary   Remote ldd check on RVS_BIN
   run-level4          Run rvs -r 4; write rc/start/end to GITHUB_OUTPUT if set
   collect-logs        scp remote logs to ./reports/
@@ -39,6 +43,239 @@ ld_path_export() {
   echo "${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib"
 }
 
+# --- CDN rvs/ root → latest Linux tarball (orchestrator only; curl never on GPU target) ---
+
+cdn_curl_listing() {
+  local url="$1"
+  curl -sSL --max-time 120 --retry 2 --retry-delay 2 \
+    -A 'Mozilla/5.0 (compatible; RVS-PR-Tests/1.0)' "$url" 2>/dev/null || true
+}
+
+# Largest purely-numeric directory name from an S3/CF HTML index (href="1234/").
+cdn_latest_numeric_dir() {
+  local html="$1"
+  printf '%s' "$html" | grep -oE 'href="[0-9]+/"' | sed 's/href="//;s/\/"//' | sort -n | tail -n 1 || true
+}
+
+# First subdirectory (non-parent) containing an amdrocm*-rvs-*-Linux.tar.gz link; prefer manylinux_*.
+cdn_find_tgz_listing_url() {
+  local pr_page_html="$1"
+  local pr_base="$2"
+  local line dir html pick
+  pick=""
+  while IFS= read -r line; do
+    dir="${line%/}"
+    [[ -z "$dir" || "$dir" == '..' ]] && continue
+    html="$(cdn_curl_listing "${pr_base}${dir}/")"
+    if ! printf '%s' "$html" | grep -qE 'amdrocm[0-9]+-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz'; then
+      continue
+    fi
+    if [[ "$dir" == manylinux* ]]; then
+      pick="$dir"
+      break
+    fi
+    if [ -z "$pick" ]; then
+      pick="$dir"
+    fi
+  done < <(printf '%s' "$pr_page_html" | grep -oE 'href="[^./][^"]*/"' | sed 's/href="//;s/"$//' | grep -v '^\.\./$' || true)
+
+  if [ -z "$pick" ]; then
+    echo ""
+    return 0
+  fi
+  printf '%s' "${pr_base}${pick}/"
+}
+
+# Args: internal rvs root URL without trailing slash (not a direct .tar.gz / .deb file).
+# Prints: build<TAB>pr<TAB>tgz_name<TAB>tgz_https_url to stdout; errors to stderr; exit 1 on failure.
+cdn_resolve_latest_merge_tgz_metadata() {
+  local root="$1"
+  local base="${root}/"
+  local idx html build merge_base merge_html pr pr_page tgz_url tgz_dir_html tgz_name
+
+  idx="$(cdn_curl_listing "$base")"
+  if [ -z "$idx" ]; then
+    echo "::error::Empty listing from ${base} (check URL and orchestrator HTTPS egress)." >&2
+    return 1
+  fi
+  build="$(cdn_latest_numeric_dir "$idx")"
+  if [ -z "$build" ]; then
+    echo "::error::No numeric build directory under ${base}" >&2
+    return 1
+  fi
+  html="$(cdn_curl_listing "${base}${build}/")"
+  if ! printf '%s' "$html" | grep -q 'href="merge/"'; then
+    echo "::error::Build ${build} has no merge/ directory (expected rvs/<id>/merge/...)." >&2
+    return 1
+  fi
+  merge_base="${base}${build}/merge/"
+  merge_html="$(cdn_curl_listing "$merge_base")"
+  pr="$(cdn_latest_numeric_dir "$merge_html")"
+  if [ -z "$pr" ]; then
+    echo "::error::No numeric PR directory under ${merge_base}" >&2
+    return 1
+  fi
+  pr_page="$(cdn_curl_listing "${merge_base}${pr}/")"
+  tgz_url="$(cdn_find_tgz_listing_url "$pr_page" "${merge_base}${pr}/")"
+  if [ -z "$tgz_url" ]; then
+    echo "::error::No subdirectory under ${merge_base}${pr}/ listing amdrocm*-rvs-*-Linux.tar.gz." >&2
+    return 1
+  fi
+  tgz_dir_html="$(cdn_curl_listing "$tgz_url")"
+  tgz_name="$(printf '%s' "$tgz_dir_html" | grep -oE 'amdrocm[0-9]+-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' 2>/dev/null | sort -uV | tail -n 1 || true)"
+  if [ -z "$tgz_name" ]; then
+    echo "::error::Could not parse tarball filename under ${tgz_url}" >&2
+    return 1
+  fi
+  printf '%s\t%s\t%s\t%s' "$build" "$pr" "$tgz_name" "${tgz_url}${tgz_name}"
+}
+
+# HTTPS directory listing ending in .../manylinux_*/ (e.g. PR build upload path).
+# Prints: tarball_https_url<TAB>basename to stdout; errors to stderr; exit 1 on failure.
+cdn_resolve_tgz_from_manylinux_dir() {
+  local root="$1"
+  root="${root%/}"
+  local base="${root}/"
+  local html tgz_name
+
+  html="$(cdn_curl_listing "$base")"
+  if [ -z "$html" ]; then
+    echo "::error::Empty listing from ${base} (check URL and orchestrator HTTPS egress)." >&2
+    return 1
+  fi
+  tgz_name="$(printf '%s' "$html" | grep -oE 'amdrocm[0-9]+-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' 2>/dev/null | sort -uV | tail -n 1 || true)"
+  if [ -z "$tgz_name" ]; then
+    echo "::error::No amdrocm*-rvs-*-Linux.tar.gz link under ${base}" >&2
+    return 1
+  fi
+  printf '%s\t%s' "${base}${tgz_name}" "$tgz_name"
+}
+
+cmd_peek_latest_artifact_key() {
+  local root="${PR_PACKAGE_ROOT_URL:-}"
+  if [ -z "$root" ]; then
+    root="${1:-}"
+  fi
+  if [ -z "${root:-}" ]; then
+    echo "::error::Set PR_PACKAGE_ROOT_URL (HTTPS …/rvs index root or direct .tar.gz / .deb URL)." >&2
+    exit 1
+  fi
+  root="${root%/}"
+
+  if [[ "$root" == *.deb ]]; then
+    printf 'deb:%s\n' "$(basename "${root%%\?*}")"
+    return 0
+  fi
+
+  if [[ "$root" == *-Linux.tar.gz ]] || [[ "$root" == *.tar.gz ]]; then
+    printf 'tgz:%s\n' "$(basename "${root%%\?*}")"
+    return 0
+  fi
+
+  local meta
+  if ! meta="$(cdn_resolve_latest_merge_tgz_metadata "$root")"; then
+    exit 1
+  fi
+  local build pr tgz_name _url
+  IFS=$'\t' read -r build pr tgz_name _url <<<"$meta"
+  printf '%s/%s/%s\n' "$build" "$pr" "$tgz_name"
+}
+
+cmd_resolve_package_url() {
+  local root="${PR_PACKAGE_ROOT_URL:-}"
+  if [ -z "$root" ]; then
+    root="${1:-}"
+  fi
+  if [ -z "${root:-}" ]; then
+    echo "::error::Set PR_PACKAGE_ROOT_URL (HTTPS …/rvs index root or direct .tar.gz / .deb URL)." >&2
+    exit 1
+  fi
+
+  root="${root%/}"
+  local URL NAME
+
+  # Direct HTTPS URL to relocatable Linux tarball (same artifact as nightly).
+  if [[ "$root" == *-Linux.tar.gz ]] || [[ "$root" == *.tar.gz ]]; then
+    URL="$root"
+    NAME="$(basename "${URL%%\?*}")"
+    echo "::notice::Using direct Linux tarball URL (basename: ${NAME})"
+    if ! curl -fsSIL --max-time 120 -A 'Mozilla/5.0 (compatible; RVS-PR-Tests/1.0)' -o /dev/null "$URL"; then
+      echo "::error::Tarball URL is not retrievable: ${URL}" >&2
+      exit 1
+    fi
+  elif [[ "$root" == *.deb ]]; then
+    URL="$root"
+    NAME="$(basename "${URL%%\?*}")"
+    echo "::notice::Using direct .deb URL (basename: ${NAME})"
+    if ! curl -fsSIL --max-time 120 -A 'Mozilla/5.0 (compatible; RVS-PR-Tests/1.0)' -o /dev/null "$URL"; then
+      echo "::error::Deb URL is not retrievable: ${URL}" >&2
+      exit 1
+    fi
+  elif printf '%s' "$root" | grep -qE '/manylinux[^/]*$'; then
+    local meta_ml
+    echo "::notice::Resolving Linux tarball under manylinux listing: ${root}/"
+    if ! meta_ml="$(cdn_resolve_tgz_from_manylinux_dir "$root")"; then
+      exit 1
+    fi
+    IFS=$'\t' read -r URL NAME <<<"$meta_ml"
+    echo "::notice::Resolved tarball: ${NAME}"
+    if ! curl -fsSIL --max-time 120 -A 'Mozilla/5.0 (compatible; RVS-PR-Tests/1.0)' -o /dev/null "$URL"; then
+      echo "::error::Resolved tarball URL is not retrievable: ${URL}" >&2
+      exit 1
+    fi
+  else
+    local base="${root}/"
+    echo "::notice::Resolving latest Linux tarball under CDN root: ${base}"
+    local meta build pr tgz_name tgz_url
+    if ! meta="$(cdn_resolve_latest_merge_tgz_metadata "$root")"; then
+      exit 1
+    fi
+    IFS=$'\t' read -r build pr tgz_name tgz_url <<<"$meta"
+    echo "::notice::Latest build id: ${build}"
+    echo "::notice::Latest merge PR directory: ${pr}"
+    URL="$tgz_url"
+    NAME="$tgz_name"
+    echo "::notice::Resolved tarball: ${NAME}"
+    if ! curl -fsSIL --max-time 120 -A 'Mozilla/5.0 (compatible; RVS-PR-Tests/1.0)' -o /dev/null "$URL"; then
+      echo "::error::Resolved tarball URL is not retrievable: ${URL}" >&2
+      exit 1
+    fi
+  fi
+
+  if [[ "$NAME" != *.deb ]] && [[ "$NAME" != *-Linux.tar.gz ]]; then
+    echo "::error::RVS PR Tests expected a *-Linux.tar.gz relocatable tarball or a .deb; got: ${NAME}" >&2
+    exit 1
+  fi
+
+  if [ -n "${GITHUB_OUTPUT:-}" ]; then
+    # Heredoc for tarball_url (URLs may contain %, &, etc.); plain assignment for tarball_name
+    # (safe filename) — same pattern as rvs-nightly-tests.yml / rvs_nightly_test.sh.
+    {
+      echo "tarball_url<<RVS_PR_PACKAGE_URL"
+      printf '%s\n' "$URL"
+      echo "RVS_PR_PACKAGE_URL"
+      echo "tarball_name=$NAME"
+    } >> "$GITHUB_OUTPUT"
+  fi
+
+  if [ -n "${GITHUB_ENV:-}" ]; then
+    {
+      echo "TARBALL_URL<<RVS_PR_PACKAGE_URL"
+      printf '%s\n' "$URL"
+      echo "RVS_PR_PACKAGE_URL"
+      echo "TARBALL_NAME=$NAME"
+    } >> "$GITHUB_ENV"
+  fi
+
+  # Artifact fallback for create-test-report when job outputs drop URL/name between jobs.
+  mkdir -p ./pkg-meta
+  printf '%s\n' "$NAME" > ./pkg-meta/tarball_name
+  printf '%s\n' "$URL" > ./pkg-meta/tarball_url
+
+  echo "Package file : $NAME"
+  echo "URL          : $URL"
+}
+
 cmd_validate_config() {
   require_env TARBALL_NAME
   require_env TARGET_NODE
@@ -53,13 +290,14 @@ cmd_validate_config() {
   elif [ -n "$var_remote" ]; then
     REMOTE_WORK_DIR="$var_remote"
   else
-    REMOTE_WORK_DIR="/tmp/rvs-nightly-${run_id}"
+    REMOTE_WORK_DIR="/tmp/rvs-pr-${run_id}"
   fi
 
+  # amdrocm7-rvs-…-Linux.tar.gz or amdrocm7-rvs_….deb
   if [[ "$TARBALL_NAME" =~ ^amdrocm([0-9]+)- ]]; then
     ROCM_MAJOR="${BASH_REMATCH[1]}"
   else
-    echo "::error::Cannot parse ROCm major version from tarball name: $TARBALL_NAME" >&2
+    echo "::error::Cannot parse ROCm major version from package name: $TARBALL_NAME" >&2
     exit 1
   fi
 
@@ -177,7 +415,7 @@ cmd_download_tarball() {
   require_env TARBALL_URL
   require_env TARBALL_NAME
   mkdir -p ./pkg
-  echo "Downloading tarball on orchestrator runner (target node is not used for this fetch):"
+  echo "Downloading RVS package on orchestrator runner (target node is not used for this fetch):"
   echo "  $TARBALL_URL"
   curl -fL --max-time 600 -o "./pkg/${TARBALL_NAME}" "${TARBALL_URL}"
   ls -la ./pkg/
@@ -212,19 +450,32 @@ echo "Detected ROCm major version : ${ROCM_MAJOR}"
 echo "Install target              : ${INSTALL_DIR}"
 echo "Expected RVS binary         : ${RVS_BIN}"
 if [ ! -f "$PKG" ]; then
-  echo "::error::Tarball not found on target node at $PKG"
+  echo "::error::Package file not found on target node at $PKG"
   exit 1
 fi
-probe="$INSTALL_DIR"
-while [ ! -d "$probe" ] && [ "$probe" != "/" ]; do probe=$(dirname "$probe"); done
-if [ -w "$probe" ]; then
-  echo "Installing into $INSTALL_DIR without sudo (writable path)"
-  mkdir -p "$INSTALL_DIR"
-  tar -xzf "$PKG" -C "$INSTALL_DIR"
+if [[ "$TARBALL_NAME" == *.deb ]]; then
+  echo "Installing .deb with dpkg (non-interactive)..."
+  export DEBIAN_FRONTEND=noninteractive
+  if sudo -n dpkg -i "$PKG"; then
+    :
+  else
+    echo "::warning::dpkg -i had a non-zero exit; trying apt-get -f install then dpkg again"
+    sudo -n apt-get update -qq || true
+    sudo -n apt-get install -f -y -qq || true
+    sudo -n dpkg -i "$PKG"
+  fi
 else
-  echo "Installing into $INSTALL_DIR via sudo -n (path not user-writable)"
-  sudo -n mkdir -p "$INSTALL_DIR"
-  sudo -n tar -xzf "$PKG" -C "$INSTALL_DIR"
+  probe="$INSTALL_DIR"
+  while [ ! -d "$probe" ] && [ "$probe" != "/" ]; do probe=$(dirname "$probe"); done
+  if [ -w "$probe" ]; then
+    echo "Installing into $INSTALL_DIR without sudo (writable path)"
+    mkdir -p "$INSTALL_DIR"
+    tar -xzf "$PKG" -C "$INSTALL_DIR"
+  else
+    echo "Installing into $INSTALL_DIR via sudo -n (path not user-writable)"
+    sudo -n mkdir -p "$INSTALL_DIR"
+    sudo -n tar -xzf "$PKG" -C "$INSTALL_DIR"
+  fi
 fi
 if [ ! -x "$RVS_BIN" ]; then
   echo "::error::rvs binary not found or not executable at $RVS_BIN after install"
@@ -248,7 +499,7 @@ cmd_verify_rvs_binary() {
     "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
 set -euo pipefail
 if [ ! -x "$RVS_BIN" ]; then
-  echo "::error::$RVS_BIN was not produced by tarball extraction on target."
+  echo "::error::$RVS_BIN was not produced by install on target."
   exit 1
 fi
 export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
@@ -340,7 +591,24 @@ REMOTE
   fi
 }
 
+load_pkg_meta_from_artifact() {
+  if [ -f ./pkg-meta/tarball_name ] && [ -z "${TARBALL_NAME:-}" ]; then
+    TARBALL_NAME="$(tr -d '\r' < ./pkg-meta/tarball_name)"
+    export TARBALL_NAME
+  fi
+  if [ -f ./pkg-meta/tarball_url ] && [ -z "${TARBALL_URL:-}" ]; then
+    TARBALL_URL="$(tr -d '\r' < ./pkg-meta/tarball_url)"
+    export TARBALL_URL
+  fi
+}
+
 cmd_build_report() {
+  load_pkg_meta_from_artifact
+  # Job outputs sometimes drop tarball_name when tarball_url is multiline; recover from URL.
+  if [ -z "${TARBALL_NAME:-}" ] && [ -n "${TARBALL_URL:-}" ]; then
+    TARBALL_NAME="$(basename "${TARBALL_URL%%\?*}")"
+    export TARBALL_NAME
+  fi
   require_env TARBALL_NAME
   require_env TARGET_ROCM_PATH
   require_env REMOTE_WORK_DIR
@@ -374,9 +642,16 @@ cmd_build_report() {
     overall=FAIL
   fi
 
+  local report_title="${REPORT_TITLE:-# RVS PR Tests Report}"
+  local pkg_label="Linux tarball"
+  if [[ "${TARBALL_NAME}" == *.deb ]]; then
+    pkg_label="Deb package"
+  fi
+  local artifact_hint="${REPORT_ARTIFACT_HINT:-rvs-pr-report-${run_id}}"
+
   local report=./reports/SUMMARY.md
   {
-    echo "# RVS Nightly Test Report"
+    echo "${report_title}"
     echo ""
     echo "| Field | Value |"
     echo "|---|---|"
@@ -384,7 +659,7 @@ cmd_build_report() {
     echo "| Trigger | \`${event_name}\` |"
     echo "| Target ROCm path | \`${TARGET_ROCM_PATH}\` (version \`${target_rocm_version}\`) |"
     echo "| Remote work dir | \`${REMOTE_WORK_DIR}\` |"
-    echo "| Tarball | \`${TARBALL_NAME}\` |"
+    echo "| ${pkg_label} | \`${TARBALL_NAME}\` |"
     echo "| Source URL | ${tarball_url_display} |"
     echo "| RVS version | \`${rvs_version}\` |"
     echo "| Overall result | **${overall}** |"
@@ -398,7 +673,7 @@ cmd_build_report() {
     echo "## Logs"
     echo ""
     echo "Full stdout/stderr from the level-4 run is attached to the artifact"
-    echo "\`rvs-nightly-report-${run_id}\`:"
+    echo "\`${artifact_hint}\`:"
     echo ""
     echo "- \`rvs_level_4.log\`"
     echo "- \`SUMMARY.md\` (this file)"
@@ -440,6 +715,8 @@ main() {
     exit 1
   fi
   case "$1" in
+    resolve-package-url) cmd_resolve_package_url "${2:-}" ;;
+    peek-latest-artifact-key) cmd_peek_latest_artifact_key "${2:-}" ;;
     validate-config)     cmd_validate_config ;;
     setup-ssh)           cmd_setup_ssh ;;
     verify-rocm)         cmd_verify_rocm ;;

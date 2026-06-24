@@ -30,6 +30,11 @@ on:
           - gfx1151
           - gfx120X-all
         default: 'gfx110X-all'
+      build_transferbench_cli:
+        description: 'Build and bundle TransferBench CLI in DEB/RPM/TGZ'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -41,6 +46,8 @@ env:
   ROCM_VERSION: ${{ vars.ROCM_VERSION }}
   GPU_FAMILY: ${{ vars.GPU_FAMILY || 'gfx110X-all' }}
   BUILD_TYPE: Release
+  # TransferBench CLI: OFF in build_packages_local.sh by default; ON in CI unless overridden.
+  BUILD_TRANSFERBENCH_CLI: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.build_transferbench_cli && 'ON' || 'OFF') || vars.BUILD_TRANSFERBENCH_CLI || 'ON' }}
   # Optional Step 6 in build_packages_local.sh: set repo Actions variable
   # RVS_AUTO_DETECT_LOCAL_UPLOAD to "1" to probe localhost:8080 when UPLOAD_TARGET is unset.
   # Leave the variable undefined for default (no probe; S3 uses workflow steps only).
@@ -48,6 +55,8 @@ env:
   # Optional local package server upload (Step 6 of build_packages_local.sh).
   # Disabled by default. To enable, set repo Actions variable
   # LOCAL_PACKAGE_SERVER_URL to a reachable HTTP server that accepts PUT.
+  # S3 upload steps also run when repository variable RVS_S3_UPLOAD_ENABLED is the string 'true'
+  # (in addition to the upstream ROCm/ROCmValidationSuite repo). See README_BUILD_PACKAGES.md.
 
 jobs:
   prepare-nightly-branches:
@@ -280,13 +289,13 @@ jobs:
             echo "Package filename: $DEB_FILE"
           fi
 
-      # S3 upload for ROCm/ROCmValidationSuite only (skip fork PRs: OIDC token response is empty → JSON parse fails)
+      # S3 upload: upstream repo, or any repo with vars.RVS_S3_UPLOAD_ENABLED == 'true' (skip fork PRs: OIDC empty → JSON parse fails)
       - name: Install AWS CLI
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
         run: apt-get update && apt-get install -y awscli
 
       - name: Configure AWS credentials
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
         run: |
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
@@ -307,7 +316,7 @@ jobs:
       # S3 routing: POSIX script (ubuntu:22.04 container uses sh — no bash [[).
       - name: Upload Ubuntu packages to S3
         id: upload-s3-ubuntu
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
         run: sh .github/scripts/rvs-s3-upload-route.sh upload-deb
         env:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
@@ -315,9 +324,9 @@ jobs:
 
       # Generate APT repo metadata (Packages, Packages.gz, Release) so the S3 path
       # can be consumed directly as a DEB repository by apt.
-      # Only runs when the repository is ROCm/ROCmValidationSuite and the event is schedule, push, or manual.
+      # Only runs when S3 upload is allowed (upstream or RVS_S3_UPLOAD_ENABLED) and the event is schedule, push, or manual.
       - name: Generate and upload DEB repo metadata to S3
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch') && matrix.skip_upload != true && (github.event_name != 'schedule' || matrix.is_default == true)
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch') && matrix.skip_upload != true && (github.event_name != 'schedule' || matrix.is_default == true)
         run: |
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           [ -z "$BUCKET" ] && exit 0
@@ -448,14 +457,14 @@ jobs:
             echo "Package filename: $RPM_FILE"
           fi
 
-      # S3 upload for ROCm/ROCmValidationSuite only (skip fork PRs — OIDC not usable)
+      # S3 upload: upstream repo, or RVS_S3_UPLOAD_ENABLED (skip fork PRs — OIDC not usable)
       - name: Install AWS CLI
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
         run: |
           python3 -m pip install --break-system-packages awscli || (yum install -y python3-pip && pip3 install awscli)
 
       - name: Configure AWS credentials
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
         run: |
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
@@ -475,7 +484,7 @@ jobs:
 
       - name: Upload CentOS/RHEL packages to S3
         id: upload-s3-centos
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true
         run: sh .github/scripts/rvs-s3-upload-route.sh upload-rpm-tar
         env:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
@@ -483,9 +492,9 @@ jobs:
 
       # Generate YUM/DNF repo metadata (repodata/) so the S3 path can be consumed
       # directly as an RPM repository by yum/dnf.
-      # Only runs when the repository is ROCm/ROCmValidationSuite and the event is schedule, push, or manual.
+      # Only runs when S3 upload is allowed (upstream or RVS_S3_UPLOAD_ENABLED) and the event is schedule, push, or manual.
       - name: Generate and upload RPM repodata to S3
-        if: github.repository == 'ROCm/ROCmValidationSuite' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch') && matrix.skip_upload != true && (github.event_name != 'schedule' || matrix.is_default == true)
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch') && matrix.skip_upload != true && (github.event_name != 'schedule' || matrix.is_default == true)
         run: |
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           [ -z "$BUCKET" ] && exit 0

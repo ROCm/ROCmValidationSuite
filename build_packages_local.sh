@@ -9,6 +9,7 @@ set -e  # Exit on error
 # Configuration
 GPU_FAMILY="${GPU_FAMILY:-gfx110X-all}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
+BUILD_TRANSFERBENCH_CLI="${BUILD_TRANSFERBENCH_CLI:-OFF}"
 BUILD_DIR="./build"
 ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
@@ -115,6 +116,14 @@ print_warning() {
 
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
+}
+
+# Map common truthy/falsey strings to CMake ON/OFF.
+normalize_on_off() {
+    case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+        1|on|true|yes) echo ON ;;
+        *) echo OFF ;;
+    esac
 }
 
 # Join base URL and filename without duplicate slashes
@@ -513,6 +522,8 @@ fi
 
 apply_sdk_tarball_base_for_version "$ROCM_VERSION"
 
+BUILD_TRANSFERBENCH_CLI="$(normalize_on_off "$BUILD_TRANSFERBENCH_CLI")"
+
 # Print configuration
 echo "================================================================================"
 echo "  ROCm Validation Suite - Local Package Build Script"
@@ -521,6 +532,7 @@ print_info "ROCm Version: $ROCM_VERSION"
 print_info "ROCm SDK channel: ${ROCM_SDK_CHANNEL:-auto}"
 print_info "GPU Family: $GPU_FAMILY"
 print_info "Build Type: $BUILD_TYPE"
+print_info "Build TransferBench CLI: $BUILD_TRANSFERBENCH_CLI"
 print_info "Build Directory: $BUILD_DIR"
 print_info "ROCm Install: $ROCM_INSTALL_DIR"
 print_info "SDK Source: $ROCM_SDK_BASE_URL"
@@ -775,6 +787,7 @@ CMAKE_ARGS=(
     -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}"
     -DCMAKE_VERBOSE_MAKEFILE=1
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
+    -DBUILD_TRANSFERBENCH_CLI="$BUILD_TRANSFERBENCH_CLI"
 )
 
 # Add CXX compiler if set
@@ -864,13 +877,51 @@ if command -v rpm >/dev/null 2>&1; then
 fi
 
 # Create TGZ package
+#
+# TGZ uses a different layout than DEB/RPM: CPACK_PACKAGING_INSTALL_PREFIX is
+# emptied so files land at the tarball root (bin/, lib/, share/) rather than
+# under /opt/rocm/extras-<major>/. RVS bakes CPACK_PACKAGING_INSTALL_PREFIX into
+# each install() DESTINATION at configure time, so we must RE-configure (not
+# just re-cpack) for the destinations to flip.
+#
+# Two extra steps are needed for a clean tarball:
+#  - Re-build after the re-configure so ExternalProject sub-builds (the bundled
+#    TransferBench CLI) are rebuilt against the new state; otherwise cpack would
+#    copy from a stale sub-build tree and silently miss files.
+#  - Prune empty directories from the tarball afterwards. With
+#    CPACK_SET_DESTDIR=ON, CPack materialises CMAKE_INSTALL_PREFIX
+#    (/opt/rocm/extras-<major>) under DESTDIR even though every real install()
+#    destination keys off the emptied CPACK_PACKAGING_INSTALL_PREFIX, leaving an
+#    empty opt/rocm/extras-<major>/ tree. We must NOT fix this by setting
+#    CMAKE_INSTALL_PREFIX=/ : GNUInstallDirs' FHS special case then rewrites
+#    bin->usr/bin, lib->usr/lib, ... (and -DCMAKE_INSTALL_BINDIR=bin does not
+#    override it), nesting the whole package under usr/. Instead keep the root
+#    layout and strip empty dirs from the tarball after cpack. RVS never ships
+#    intentionally-empty directories.
 print_info "Creating TGZ package..."
 CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON "-DCPACK_PACKAGING_INSTALL_PREFIX:PATH=" -DCPACK_INCLUDE_TOPLEVEL_DIRECTORY=OFF)
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"
+$CMAKE_COMMAND --build "$BUILD_DIR" -- -j"$(nproc 2>/dev/null || echo 4)" || print_warning "Re-build before TGZ packaging reported errors; proceeding with cpack"
 cd "$BUILD_DIR"
 cpack -G TGZ --verbose
+cpack_tgz_status=$?
 
-if [ $? -eq 0 ]; then
+# Strip empty directories left in the tarball by CPack DESTDIR staging
+# (notably opt/rocm/extras-<major>/). See the comment above the TGZ configure.
+if [ $cpack_tgz_status -eq 0 ]; then
+    for _tgz in amdrocm*-rvs*.tar.gz; do
+        [ -e "$_tgz" ] || continue
+        _staged=$(mktemp -d)
+        if tar xzf "$_tgz" -C "$_staged"; then
+            find "$_staged" -depth -mindepth 1 -type d -empty -delete
+            ( cd "$_staged" && tar czf "$OLDPWD/$_tgz" -- * )
+            print_info "Pruned empty staging directories from $_tgz"
+        fi
+        rm -rf "$_staged"
+    done
+fi
+
+if [ $cpack_tgz_status -eq 0 ]; then
     TGZ_FILE=$(ls amdrocm*-rvs*.tar.gz 2>/dev/null | head -1)
     if [ -n "$TGZ_FILE" ]; then
         print_success "Created TGZ package: $TGZ_FILE"
