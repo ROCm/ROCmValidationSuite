@@ -17,7 +17,7 @@ name: RVS Nightly Tests
 # Triggers
 # --------
 # - schedule: daily poll of tarball index (repo secret RVS_TARBALL_INDEX_URL)
-# - push: master, main, and release/* merges
+# - push: master and main merges
 # - workflow_dispatch: manual run with optional overrides
 
 on:
@@ -27,7 +27,6 @@ on:
     branches:
       - master
       - main
-      - 'release/**'
   workflow_dispatch:
     inputs:
       tarball_url:

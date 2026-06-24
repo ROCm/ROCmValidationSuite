@@ -40,7 +40,7 @@ at the repo root — the same split as `build-relocatable-packages.yml` +
 | Trigger | Cadence | What fires |
 |---|---|---|
 | `schedule` | `0 15 * * *` UTC daily (08:00 PST / 07:00 PDT) | Polls the tarball index and always runs install + level 4, even when the latest tarball filename matches the previous run (a notice is logged when unchanged). |
-| `push` | Commits to `master`, `main`, or `release/**` | Runs install + level 4 using the latest tarball from the index (same as schedule). |
+| `push` | Commits to `master` or `main` | Runs install + level 4 using the latest tarball from the index (same as schedule). |
 | `workflow_dispatch` | Manual | Always runs. Supports overriding the tarball URL and **retargeting at any node** without editing the workflow. |
 
 The cron deliberately runs after AMD's typical nightly publish window;
