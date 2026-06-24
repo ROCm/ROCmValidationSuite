@@ -31,7 +31,9 @@
 # TRANSFERBENCH_GPU_TARGETS defaults to TransferBench build_packages_local.sh
 # DEFAULT_GPU_TARGETS. Override with -DTRANSFERBENCH_GPU_TARGETS="..." or set
 # GPU_TARGETS / TRANSFERBENCH_GPU_TARGETS in build_packages_local.sh. Set to
-# empty to take TransferBench's own CMake default.
+# empty to take TransferBench's own CMake default. GPU_TARGETS is written into
+# the -C initial cache file (not -D on CMAKE_ARGS) because CMake list(APPEND)
+# splits semicolon-separated strings.
 #
 # Feature flags match upstream TransferBench build_packages_local.sh (NIC/MPI/
 # DMA-BUF off, multi-arch not local-GPU-only). Upstream passes -DDISABLE_DMABUF
@@ -70,10 +72,6 @@ if(CMAKE_CXX_FLAGS)
   list(APPEND _tb_cmake_args "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
 endif()
 
-if(TRANSFERBENCH_GPU_TARGETS)
-  list(APPEND _tb_cmake_args "-DGPU_TARGETS=${TRANSFERBENCH_GPU_TARGETS}")
-endif()
-
 if(DEFINED ROCM_MAJOR_VERSION)
   list(APPEND _tb_cmake_args -DROCM_MAJOR_VERSION=${ROCM_MAJOR_VERSION})
 endif()
@@ -81,7 +79,7 @@ endif()
 # Relocatable RUNPATH for the CLI (copied from the child build tree via install(PROGRAMS)).
 # Parent ${CMAKE_INSTALL_RPATH} cannot be forwarded safely ($ORIGIN expands empty).
 # TransferBench ignores CMAKE_INSTALL_RPATH; use -C cache with -Wl,-rpath only
-# (see CMakeTransferBenchRPATH.cmake.in).
+# (see CMakeTransferBenchRPATH.cmake.in). GPU_TARGETS is also set in this file.
 set(_tb_rpath_cache "${CMAKE_BINARY_DIR}/TransferBenchRPATH.cmake")
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/CMakeTransferBenchRPATH.cmake.in"
@@ -93,7 +91,26 @@ if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
   file(APPEND "${_tb_rpath_cache}"
     "set(CMAKE_SKIP_BUILD_RPATH TRUE CACHE BOOL \"\" FORCE)\n")
 endif()
+if(TRANSFERBENCH_GPU_TARGETS)
+  file(APPEND "${_tb_rpath_cache}"
+    "set(GPU_TARGETS [[${TRANSFERBENCH_GPU_TARGETS}]] CACHE STRING \"\" FORCE)\n")
+endif()
 list(APPEND _tb_cmake_args "-C${_tb_rpath_cache}")
+
+# Verbose child build: --verbose on cmake --build; stream to workflow log in CI.
+set(_tb_build_command
+  ${CMAKE_COMMAND} --build ${TRANSFERBENCH_BUILD_DIR} --verbose)
+if(CMAKE_BUILD_PARALLEL_LEVEL)
+  list(APPEND _tb_build_command --parallel ${CMAKE_BUILD_PARALLEL_LEVEL})
+endif()
+
+if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
+  set(_tb_log_configure OFF)
+  set(_tb_log_build OFF)
+else()
+  set(_tb_log_configure ON)
+  set(_tb_log_build ON)
+endif()
 
 message(STATUS "TransferBench CLI sub-build:")
 message(STATUS "  SOURCE_DIR=${TRANSFERBENCH_SOURCE_DIR}")
@@ -101,7 +118,12 @@ message(STATUS "  BINARY_DIR=${TRANSFERBENCH_BUILD_DIR}")
 message(STATUS "  ROCM_PATH=${ROCM_PATH}")
 message(STATUS "  HIP_PLATFORM=amd")
 message(STATUS "  GPU_TARGETS=${TRANSFERBENCH_GPU_TARGETS}")
+if(TRANSFERBENCH_GPU_TARGETS)
+  message(STATUS "  GPU_TARGETS via: -C${_tb_rpath_cache}")
+endif()
 message(STATUS "  CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+message(STATUS "  BUILD_COMMAND: ${CMAKE_COMMAND} --build ${TRANSFERBENCH_BUILD_DIR} --verbose")
+message(STATUS "  LOG_CONFIGURE=${_tb_log_configure} LOG_BUILD=${_tb_log_build}")
 foreach(_tb_arg IN LISTS _tb_cmake_args)
   message(STATUS "  CMAKE_ARGS: ${_tb_arg}")
 endforeach()
@@ -113,11 +135,12 @@ ExternalProject_Add(TransferBenchCLI
   SOURCE_DIR        "${TRANSFERBENCH_SOURCE_DIR}"
   BINARY_DIR        "${TRANSFERBENCH_BUILD_DIR}"
   CMAKE_ARGS        ${_tb_cmake_args}
+  BUILD_COMMAND     ${_tb_build_command}
   BUILD_ALWAYS      OFF
   INSTALL_COMMAND   ""
   TEST_COMMAND      ""
-  LOG_CONFIGURE     ON
-  LOG_BUILD         ON
+  LOG_CONFIGURE     ${_tb_log_configure}
+  LOG_BUILD         ${_tb_log_build}
   LOG_OUTPUT_ON_FAILURE ON
 )
 
