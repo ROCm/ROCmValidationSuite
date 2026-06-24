@@ -16,17 +16,18 @@ name: RVS Nightly Tests
 #
 # Triggers
 # --------
-# - schedule: daily poll of tarball index (repo secret RVS_TARBALL_INDEX_URL, or workflow_dispatch tarball_url)
+# - schedule: daily poll of tarball index (repo secret RVS_TARBALL_INDEX_URL)
+# - push: master, main, and release/* merges
 # - workflow_dispatch: manual run with optional overrides
-# - workflow_run: after Build Relocatable Packages completes successfully
 
 on:
   schedule:
     - cron: '0 15 * * *'
-  workflow_run:
-    workflows: ["Build Relocatable Packages"]
-    types:
-      - completed
+  push:
+    branches:
+      - master
+      - main
+      - 'release/**'
   workflow_dispatch:
     inputs:
       tarball_url:
@@ -64,7 +65,6 @@ env:
 jobs:
   install-rvs-on-target:
     name: Install RVS on target node
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ${{ vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
     timeout-minutes: 120
     outputs:

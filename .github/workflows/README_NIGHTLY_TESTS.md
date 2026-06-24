@@ -13,7 +13,7 @@ at any GPU host without code changes.
 ## What it does
 
 ```
-schedule / workflow_run / manual
+schedule / push / manual
     │
     ▼
 install-rvs-on-target       [self-hosted orchestrator]  ──ssh──▶  [target GPU node]
@@ -40,7 +40,7 @@ at the repo root — the same split as `build-relocatable-packages.yml` +
 | Trigger | Cadence | What fires |
 |---|---|---|
 | `schedule` | `0 15 * * *` UTC daily (08:00 PST / 07:00 PDT) | Polls the tarball index and always runs install + level 4, even when the latest tarball filename matches the previous run (a notice is logged when unchanged). |
-| `workflow_run` | After **Build Relocatable Packages** completes | Runs only when that workflow's overall conclusion is **success**. No changes to the build workflow are required. |
+| `push` | Commits to `master`, `main`, or `release/**` | Runs install + level 4 using the latest tarball from the index (same as schedule). |
 | `workflow_dispatch` | Manual | Always runs. Supports overriding the tarball URL and **retargeting at any node** without editing the workflow. |
 
 The cron deliberately runs after AMD's typical nightly publish window;
@@ -97,8 +97,8 @@ gh workflow run rvs-nightly-tests.yml \
 
 | Name | Required? | Purpose |
 |---|---|---|
-| `RVS_TARBALL_INDEX_URL` | **Required** *(unless every run that needs an index provides `workflow_dispatch` `tarball_url`; `schedule` and `workflow_run` need this secret)* | HTTPS directory listing URL scraped for the latest `amdrocm*-rvs-*-Linux.tar.gz` (e.g. `https://<cdn-host>/nightly/rvs/tar/`). Copied into workflow `env.TARBALL_INDEX_URL`. GitHub masks secret values in logs when printed. If this name was previously an Actions **Variable**, copy the value to this secret and remove the variable. |
-| `RVS_TARGET_NODE` | **Required** *(unless every run sets `target_node` input)* | Hostname or IP of the node where RVS is installed and tests run. Stored as a secret so the lab node identity isn't visible in repo Variables or in run logs — GitHub Actions automatically masks secret values as `***` wherever they appear in step output. Workflow fails fast on `schedule` if neither this secret nor `target_node` input is set. |
+| `RVS_TARBALL_INDEX_URL` | **Required** *(unless every run that needs an index provides `workflow_dispatch` `tarball_url`; `schedule` and `push` need this secret)* | HTTPS directory listing URL scraped for the latest `amdrocm*-rvs-*-Linux.tar.gz` (e.g. `https://<cdn-host>/nightly/rvs/tar/`). Copied into workflow `env.TARBALL_INDEX_URL`. GitHub masks secret values in logs when printed. If this name was previously an Actions **Variable**, copy the value to this secret and remove the variable. |
+| `RVS_TARGET_NODE` | **Required** *(unless every run sets `target_node` input)* | Hostname or IP of the node where RVS is installed and tests run. Stored as a secret so the lab node identity isn't visible in repo Variables or in run logs — GitHub Actions automatically masks secret values as `***` wherever they appear in step output. Workflow fails fast if neither this secret nor `target_node` input is set. |
 | `RVS_TARGET_USER` | optional (no hard-coded default) | SSH user on the target node. If unset and `target_user` input is empty, the SSH client falls back to the orchestrator runner's local user — set this secret explicitly to avoid surprises. Stored as a secret so the lab account name isn't visible in repo settings or run logs (auto-masked as `***`). |
 | `RVS_TARGET_SSH_KEY` | **Required** | Private SSH key (OpenSSH or PEM format) authorized on the target node for `RVS_TARGET_USER`. Written to `$RUNNER_TEMP/rvs_target_key` for the duration of the job and scrubbed in the cleanup step. |
 
@@ -477,7 +477,7 @@ There are three ways to point the workflow at a different node, in increasing or
      -f target_node="<host-or-ip>" \
      -f target_rocm_path="<ROCM_INSTALL_PATH>"
    ```
-3. **Permanent change:** update repo secrets `RVS_TARGET_NODE` / `RVS_TARGET_USER` (and optionally `RVS_TARBALL_INDEX_URL`) and repo variable `RVS_TARGET_ROCM_PATH` (and optionally repo variable `RVS_REMOTE_WORK_DIR`). All subsequent scheduled and manual runs will pick these up unless an input overrides them.
+3. **Permanent change:** update repo secrets `RVS_TARGET_NODE` / `RVS_TARGET_USER` (and optionally `RVS_TARBALL_INDEX_URL`) and repo variable `RVS_TARGET_ROCM_PATH` (and optionally repo variable `RVS_REMOTE_WORK_DIR`). All subsequent scheduled, push, and manual runs will pick these up unless an input overrides them.
 
 The same `RVS_TARGET_SSH_KEY` secret is reused across nodes — make sure the
 public counterpart of that key is added to `$TARGET_USER`'s `~/.ssh/authorized_keys`
