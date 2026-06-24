@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -182,7 +182,7 @@ bool PERFWorker::do_perf_stress_test(int *error, std::string *err_description) {
     start_time = gpu_blas->get_time_us();
 
     // run GEMM & wait for completion
-    gpu_blas->run_blas_gemm(true);
+    gpu_blas->run_blas_gemm(perf_hot_calls);
 
     //End the timer
     end_time = gpu_blas->get_time_us();
