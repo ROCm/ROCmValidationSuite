@@ -56,6 +56,7 @@ int   rvs::lp::Initialize(const T_MODULE_INIT* pMi) {
   mi.cbStopping                   = pMi->cbStopping;
   mi.cbErr                        = pMi->cbErr;
   mi.cbJsonNamedListCreate         = pMi->cbJsonNamedListCreate;
+  mi.cbJsonNestedListCreate        = pMi->cbJsonNestedListCreate;
 
   return 0;
 }
@@ -340,5 +341,9 @@ int rvs::lp::Err(const std::string &Message
  */
 void* rvs::lp::JsonNamedListCreate(const char* name, const int LogLevel) {
   return (*mi.cbJsonNamedListCreate)(name, LogLevel);
+}
+
+void* rvs::lp::JsonNestedListCreate(const char* name, const int LogLevel) {
+  return (*mi.cbJsonNestedListCreate)(name, LogLevel);
 }
 

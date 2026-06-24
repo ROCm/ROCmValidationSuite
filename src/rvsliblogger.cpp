@@ -427,7 +427,11 @@ int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Actio
 void* rvs::logger::JsonNamedListCreate(const char* name,const int LogLevel){
     rvs::LogListNode* rec = new rvs::LogListNode(name, LogLevel);
     return static_cast<void*>(rec);
+}
 
+void* rvs::logger::JsonNestedListCreate(const char* name, const int LogLevel){
+    rvs::LogListNode* rec = new rvs::LogListNode(name, LogLevel, true);
+    return static_cast<void*>(rec);
 }	
 int rvs::logger::JsonActionEndNodeCreate() {
   std::string row{RVSINDENT};
