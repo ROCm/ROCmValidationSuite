@@ -306,7 +306,7 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
     return oss.str();
   };
 
-  // Build single JSON node per GPU: metadata + nested "results" object
+  // Build single JSON node per GPU: metadata + nested "results" array
   void* json_root = nullptr;
   void* json_results = nullptr;
   if (json) {
@@ -322,7 +322,7 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       rvs::lp::AddString(json_root, "array_size", std::to_string(arr_size));
       rvs::lp::AddString(json_root, "total_size", std::to_string(total_size));
       rvs::lp::AddString(json_root, iter_key, iter_val);
-      json_results = rvs::lp::CreateNode(json_root, "results");
+      json_results = rvs::lp::JsonNestedListCreate("results", rvs::logresults);
     }
   }
 
@@ -368,8 +368,10 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
         const char *peak_key = mibibytes ? "max_mibytes_per_sec" : "max_mbytes_per_sec";
         const char *worst_key = mibibytes ? "min_mibytes_per_sec" : "min_mbytes_per_sec";
         const char *avg_key = mibibytes ? "avg_mibytes_per_sec" : "avg_mbytes_per_sec";
-        void* subtest_node = rvs::lp::CreateNode(json_results, labels[i].c_str());
+        void* subtest_node = rvs::lp::LogRecordCreate(module_name.c_str(),
+            labels[i].c_str(), rvs::logresults, 0, 0, true);
         if (subtest_node) {
+          rvs::lp::AddString(subtest_node, "subtest", labels[i]);
           rvs::lp::AddString(subtest_node, key,
               format_bw(bw_scale * sizes[i] / (*minmax.first)));
           rvs::lp::AddString(subtest_node, peak_key,
