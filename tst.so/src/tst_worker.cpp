@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -154,7 +154,7 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
     //Hit the GPU with load to increase temperature
     while ( (duration < run_duration_ms) && (endtest == false) ){
         //call the gemm blas
-        gpu_blas->run_blas_gemm(true);
+        gpu_blas->run_blas_gemm(1);
 
         /* Set callback to be called upon completion of blas gemm operations */
         gpu_blas->set_callback(blas_callback, (void *)this);

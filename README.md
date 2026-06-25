@@ -117,8 +117,25 @@ This section explains how to get and compile current development stream of RVS.
 ### Clone repository
 
 ```
-git clone https://github.com/ROCm/ROCmValidationSuite.git
+git clone --recurse-submodules https://github.com/ROCm/ROCmValidationSuite.git
 ```
+
+If the repository was already cloned without `--recurse-submodules`, initialise the TransferBench submodule from inside the clone:
+
+```
+git submodule update --init --recursive
+```
+
+### Bundled TransferBench
+
+[TransferBench](https://github.com/ROCm/TransferBench) is vendored under `external/TransferBench` as a git submodule. The standalone CLI is **off by default** in [`build_packages_local.sh`](build_packages_local.sh) (`BUILD_TRANSFERBENCH_CLI=OFF`); **CI builds enable it by default** so DEB/RPM/TGZ ship `TransferBench` alongside `rvs` unless disabled via repository variable or workflow input.
+
+The bundled CLI is provided **for compatibility** with existing workflows that invoke `TransferBench` directly. For new work, prefer either:
+
+- **RVS**, which exposes TransferBench functionality through the `pebb` and `pbqt` modules with config-driven test definitions, or
+- The **TransferBench API** (headers under `external/TransferBench/src/header`) for programmatic use.
+
+Enable the CLI locally with `BUILD_TRANSFERBENCH_CLI=ON ./build_packages_local.sh` or `-DBUILD_TRANSFERBENCH_CLI=ON` when invoking cmake directly.
 
 **Note:**
 The above command clones the master branch. If you're using a specific ROCm release, it's recommended to use the corresponding RVS version from the same release branch to ensure compatibility.

@@ -484,23 +484,23 @@ endif()
 if (YAML_CPP_STATIC_FOUND)
   # Static linking - no runtime yaml-cpp dependency needed
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libpci3")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libpci3, libnuma1")
   elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libpci3")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libpci3, libnuma1")
   else ()
     # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, pciutils-libs")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, pciutils-libs, numactl-libs")
   endif()
   message(STATUS "Package dependencies: yaml-cpp statically linked, no runtime dependency")
 else()
   # Dynamic linking - yaml-cpp runtime dependency required
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libpci3, libyaml-cpp-dev")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libpci3, libyaml-cpp-dev, libnuma1")
   elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libpci3, libyaml-cpp0_6")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libpci3, libyaml-cpp0_6, libnuma1")
   else ()
     # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, pciutils-libs, yaml-cpp")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, pciutils-libs, yaml-cpp, numactl-libs")
   endif()
   message(STATUS "Package dependencies: yaml-cpp dynamically linked, runtime dependency included")
 endif()
@@ -583,27 +583,32 @@ endif ()
 ################################################################################
 
 ################################################################################
-# TransferBench Download
-configure_file(CMakeTransferBenchDownload.cmake TransferBench-download/CMakeLists.txt)
+# TransferBench (vendored as a git submodule under external/TransferBench)
+#
+# Headers are consumed directly from the submodule by the PEBB and PBQT modules.
+# The TransferBench CLI binary is built as an isolated sub-build and installed
+# alongside rvs when BUILD_TRANSFERBENCH_CLI is ON (default).
+################################################################################
+set(TRANSFERBENCH_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/TransferBench")
 
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-      RESULT_VARIABLE result
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
-if(result)
-  message(FATAL_ERROR "CMake step for TransferBench failed: ${result}")
+if(NOT EXISTS "${TRANSFERBENCH_SOURCE_DIR}/CMakeLists.txt")
+  message(FATAL_ERROR
+    "TransferBench submodule not initialised. Run:\n"
+    "  git submodule update --init --recursive\n"
+    "from the repository root and re-run cmake.")
 endif()
 
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-      RESULT_VARIABLE result
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
-if(result)
-  message(FATAL_ERROR "Build step for TransferBench failed: ${result}")
+if(NOT DEFINED TRANSFERBENCH_INC_DIR)
+  set(TRANSFERBENCH_INC_DIR "${TRANSFERBENCH_SOURCE_DIR}/src/header")
+  message(STATUS "TRANSFERBENCH_INC_DIR ${TRANSFERBENCH_INC_DIR}")
 endif()
 
-if (NOT DEFINED TRANSFERBENCH_INC_DIR)
-  set (TRANSFERBENCH_INC_DIR "${CMAKE_BINARY_DIR}/TransferBench-src/src/header")
-  message ("TRANSFERBENCH_INC_DIR ${TRANSFERBENCH_INC_DIR}")
-endif ()
+option(BUILD_TRANSFERBENCH_CLI
+       "Build and install the TransferBench CLI alongside rvs" OFF)
+
+if(BUILD_TRANSFERBENCH_CLI)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeTransferBenchCLI.cmake)
+endif()
 ################################################################################
 
 ## rocBLAS

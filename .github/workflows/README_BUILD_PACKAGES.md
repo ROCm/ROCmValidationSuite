@@ -65,6 +65,15 @@ When manually triggering the workflow, you can specify:
    - `gfx1151` - AMD Strix Halo iGPU
    - `gfx120X-all` - AMD RX 9060/XT, 9070/XT
 
+   **`GPU_FAMILY` selects the ROCm SDK tarball only.** TransferBench CLI offload
+   archs come from `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` (13-arch default
+   matching upstream TransferBench `build_packages_local.sh`), not from
+   `gpu_family`.
+
+3. **Build TransferBench CLI** (boolean, default **true** on manual runs):
+   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` / `numactl-libs` at runtime).
+   - On **push**, **PR**, and **schedule**, CI defaults to **ON** unless repository variable `BUILD_TRANSFERBENCH_CLI` is set to `OFF`.
+
 ## How It Works
 
 The workflow leverages the `build_packages_local.sh` script for all build operations, ensuring consistency between local development and CI/CD environments.
@@ -131,7 +140,7 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/op
 
 **Dynamic ROCm Path Discovery**: `FETCH_ROCMPATH_FROM_ROCMCORE=ON` allows RVS to automatically detect ROCm installation location at runtime from ROCm core libraries.
 
-**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script.
+**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script. When **`BUILD_TRANSFERBENCH_CLI=ON`**, [`CMakeTransferBenchCLI.cmake`](../CMakeTransferBenchCLI.cmake) applies TransferBench-specific relocatable RPATH via [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in), forwards **`GPU_TARGETS`** (via `-C` initial cache) / **`HIP_PLATFORM=amd`**, and prints **`message(STATUS)`** lines for the sub-build. **CI** streams verbose TransferBench `cmake --build --verbose` output in the job log (`LOG_BUILD=OFF`); local builds keep stamp logs under `build/TransferBenchCLI-prefix/src/TransferBenchCLI-stamp/`.
 
 ### Workflow Steps
 
@@ -332,8 +341,10 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `ROCM_SDK_NIGHTLY_BASE_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch` | Tarball base for **nightly** builds (`x.y.za…` versions). |
 | `ROCM_SDK_NIGHTLY_INDEX_URL` | _(same as index default)_ | Optional override for nightly listing URL. |
 | `ROCM_SDK_CHANNEL` | `auto` locally | **`nightly`** / **`release`** / **`auto`**. CI sets channel per trigger (see table above); manual with a pin uses **`auto`** so tarball follows version format. |
-| `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
+| `GPU_FAMILY` | `gfx110X-all` | ROCm SDK **tarball** family (`therock-dist-linux-<GPU_FAMILY>-…`); does not set TransferBench offload archs |
+| `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` | 13-arch default (see [`docs/transferbench.md`](../../docs/transferbench.md)) | HIP offload archs for the bundled TransferBench CLI when `BUILD_TRANSFERBENCH_CLI=ON` |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
+| `BUILD_TRANSFERBENCH_CLI` | `OFF` locally; `ON` in CI | Build and install the TransferBench CLI in packages (`-DBUILD_TRANSFERBENCH_CLI`). CI uses `vars.BUILD_TRANSFERBENCH_CLI` or defaults to `ON`; `workflow_dispatch` input **`build_transferbench_cli`** overrides manual runs. |
 | `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `8.0` → `0800`) - used for RVS version tagging |
 | `CPACK_DEBIAN_PACKAGE_RELEASE` | Auto-generated | **Default** (`schedule`, `push`, `workflow_dispatch`, local): `r<ROCM_LIBPATCH_VERSION>.<yyyymmdd>` (e.g. `r0711.20260423` where `0711` = ROCm 7.11 from `ROCM_VERSION`). **Pull requests**: `r<libpatch>.<yyyymmdd>.<source-branch>.<commit>`. **Release branches** (name starts with `rel`, non-PR): `GITHUB_RUN_NUMBER` (fallback: `1`). |
 | `CPACK_RPM_PACKAGE_RELEASE` | same as `CPACK_DEBIAN_PACKAGE_RELEASE` | Identical to DEB. |
@@ -404,23 +415,23 @@ Before you install the RVS TGZ, **ROCm must be installed, configured, and on you
 
 #### Install RVS run-time dependencies (on the target system)
 
-The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration:
+The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration and **NUMA** when using the bundled **TransferBench** CLI:
 
-| Family | Typical PCI package |
-|--------|---------------------|
-| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) |
-| **RHEL / Rocky / Alma 8+** | `pciutils-libs` |
-| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release |
+| Family | Typical PCI package | NUMA (TransferBench CLI) |
+|--------|---------------------|---------------------------|
+| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) | `libnuma1` |
+| **RHEL / Rocky / Alma 8+** | `pciutils-libs` | `numactl-libs` |
+| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release | `libnuma1` |
 
 ```bash
 # Ubuntu / Debian
-sudo apt update && sudo apt install -y libpci3
+sudo apt update && sudo apt install -y libpci3 libnuma1
 
 # RHEL / Rocky / Alma 8+
-sudo dnf install -y pciutils-libs
+sudo dnf install -y pciutils-libs numactl-libs
 
 # openSUSE / SUSE (adjust package names per release)
-sudo zypper install libpci3
+sudo zypper install libpci3 libnuma1
 ```
 
 User-facing install steps for TGZ (PATH / `LD_LIBRARY_PATH`, **`RPATH`** including **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`/opt/rocm/core-<major>/lib`**, and **`/opt/rocm/core-<major>/lib/llvm/lib`**) are in **[docs/INSTALL_TGZ.md](../../docs/INSTALL_TGZ.md)**.

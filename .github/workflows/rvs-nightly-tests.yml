@@ -1,7 +1,7 @@
 name: RVS Nightly Tests
 
 # Picks up the latest RVS tarball from the tarball index (secrets.RVS_TARBALL_INDEX_URL
-# if set, otherwise the fallback URL in env.TARBALL_INDEX_URL below), copies it
+# into env.TARBALL_INDEX_URL below — no baked-in default URL), copies it
 # to a configurable target node, installs it there, runs RVS level 4 on that node,
 # and uploads a Markdown report + logs.
 #
@@ -16,13 +16,11 @@ name: RVS Nightly Tests
 #
 # Triggers
 # --------
-# - schedule: daily poll of tarball index (repo secret or workflow fallback URL)
-# - workflow_dispatch: manual run with optional overrides
 # - workflow_run: after Build Relocatable Packages completes successfully
+#   (push to main/master, or scheduled package build)
+# - workflow_dispatch: manual run with optional overrides
 
 on:
-  schedule:
-    - cron: '0 15 * * *'
   workflow_run:
     workflows: ["Build Relocatable Packages"]
     types:
@@ -30,7 +28,7 @@ on:
   workflow_dispatch:
     inputs:
       tarball_url:
-        description: 'Override tarball URL (default: latest from index — secrets.RVS_TARBALL_INDEX_URL or workflow fallback)'
+        description: 'Override tarball URL (default: latest from index — secrets.RVS_TARBALL_INDEX_URL)'
         required: false
         default: ''
       target_node:
@@ -58,13 +56,34 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Fallback index URL when secrets.RVS_TARBALL_INDEX_URL is unset (override via that secret).
-  TARBALL_INDEX_URL: ${{ secrets.RVS_TARBALL_INDEX_URL || 'https://d22tya8uodfbu6.cloudfront.net/nightly/rvs/tar/' }}
+  # HTTPS directory listing for nightly tarballs — set repo secret RVS_TARBALL_INDEX_URL (e.g. https://<cdn-host>/nightly/rvs/tar/).
+  TARBALL_INDEX_URL: ${{ secrets.RVS_TARBALL_INDEX_URL }}
 
 jobs:
+  gate-nightly-trigger:
+    name: Gate (eligible triggers only)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       (
+         (github.event.workflow_run.event == 'push' &&
+          (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'master')) ||
+         github.event.workflow_run.event == 'schedule'
+       ))
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    steps:
+      - name: Confirm nightly test run
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "Package build (${{ github.event.workflow_run.event }}) completed on branch: ${{ github.event.workflow_run.head_branch }}"
+          else
+            echo "Manual nightly test run (workflow_dispatch)"
+          fi
+
   install-rvs-on-target:
     name: Install RVS on target node
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    needs: gate-nightly-trigger
     runs-on: ${{ vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
     timeout-minutes: 120
     outputs:
@@ -82,8 +101,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Restore last-seen marker (cron path)
-        if: github.event_name == 'schedule'
+      - name: Restore last-seen marker (scheduled build path)
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'schedule'
         uses: actions/cache@v4
         with:
           path: last_tarball_marker.txt
@@ -98,14 +117,15 @@ jobs:
           # masks workflow env. Use inherited TARBALL_INDEX_URL inside the script.
           INPUT_URL: ${{ inputs.tarball_url }}
           EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_EVENT: ${{ github.event.workflow_run.event || '' }}
         run: |
           set -euo pipefail
 
-          # Workflow-level env.TARBALL_INDEX_URL (secret override or YAML fallback).
+          # Workflow-level env.TARBALL_INDEX_URL (from secret RVS_TARBALL_INDEX_URL).
           INDEX_URL="${TARBALL_INDEX_URL:-}"
 
           if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL}" ]; then
-            echo "::error::No tarball index URL (set secret RVS_TARBALL_INDEX_URL or workflow env TARBALL_INDEX_URL) and no workflow_dispatch.tarball_url."
+            echo "::error::No tarball index URL (set Actions secret RVS_TARBALL_INDEX_URL) and no workflow_dispatch.tarball_url."
             exit 1
           fi
 
@@ -143,32 +163,38 @@ jobs:
 
           NAME="$(basename "$URL")"
 
-          if [ "$EVENT_NAME" = "schedule" ] && [ -f last_tarball_marker.txt ]; then
+          if [ "$WORKFLOW_RUN_EVENT" = "schedule" ] && [ -f last_tarball_marker.txt ]; then
             LAST="$(cat last_tarball_marker.txt)"
             if [ "$LAST" = "$NAME" ]; then
-              echo "::notice::Latest tarball ($NAME) unchanged since last scheduled run — running tests anyway."
+              echo "::notice::Latest tarball ($NAME) unchanged since last scheduled package build — running tests anyway."
             else
               echo "::notice::New tarball (previous: $LAST, now: $NAME)."
             fi
           fi
           echo "$NAME" > last_tarball_marker.txt
 
+          # Use heredoc delimiter syntax so URLs with %, &, query strings, etc. are not
+          # truncated or dropped when propagated to other jobs via job outputs.
           {
-            echo "tarball_url=$URL"
+            echo "tarball_url<<RVS_NIGHTLY_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_NIGHTLY_TARBALL_URL"
             echo "tarball_name=$NAME"
           } >> "$GITHUB_OUTPUT"
 
           # Later steps in this job read TARBALL_URL / TARBALL_NAME (download-tarball, etc.)
           {
-            echo "TARBALL_URL=$URL"
+            echo "TARBALL_URL<<RVS_NIGHTLY_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_NIGHTLY_TARBALL_URL"
             echo "TARBALL_NAME=$NAME"
           } >> "$GITHUB_ENV"
 
           echo "Latest tarball : $NAME"
           echo "URL            : $URL"
 
-      - name: Save last-seen marker (cron path)
-        if: github.event_name == 'schedule'
+      - name: Save last-seen marker (scheduled build path)
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'schedule'
         uses: actions/cache/save@v4
         with:
           path: last_tarball_marker.txt
@@ -242,6 +268,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup SSH for target node
         env:
@@ -286,6 +314,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Download test logs
         uses: actions/download-artifact@v4

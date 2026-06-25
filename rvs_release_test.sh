@@ -1,14 +1,14 @@
 #!/bin/bash
 ################################################################################
-# Remote RVS nightly install + test driver (used by rvs-nightly-tests.yml).
-# Mirrors build_packages_local.sh: workflow orchestrates, this script executes.
+# Remote RVS release-tarball install + test driver (rvs-release-tests.yml only).
+# Independent from rvs_nightly_test.sh (nightly) and rvs_pr_test.sh (PR).
 ################################################################################
 
 set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: rvs_nightly_test.sh <command>
+Usage: rvs_release_test.sh <command>
 
 Commands (workflow order):
   validate-config     Fail fast; emit prepare job outputs to GITHUB_OUTPUT
@@ -18,7 +18,7 @@ Commands (workflow order):
   copy-to-target      scp tarball to REMOTE_WORK_DIR/pkg on target
   install-rvs         Extract tarball on target under INSTALL_DIR
   verify-rvs-binary   Remote ldd check on RVS_BIN
-  run-level4          Run rvs -r 4; write rc/start/end to GITHUB_OUTPUT if set
+  run-level5          Run rvs -r 5; write rc/start/end to GITHUB_OUTPUT if set
   collect-logs        scp remote logs to ./reports/
   capture-versions    Write rvs_version and target_rocm_version to GITHUB_OUTPUT
   build-report        Write ./reports/SUMMARY.md from env + prior outputs
@@ -35,10 +35,6 @@ require_env() {
   fi
 }
 
-ld_path_export() {
-  echo "${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib"
-}
-
 cmd_validate_config() {
   require_env TARBALL_NAME
   require_env TARGET_NODE
@@ -53,7 +49,7 @@ cmd_validate_config() {
   elif [ -n "$var_remote" ]; then
     REMOTE_WORK_DIR="$var_remote"
   else
-    REMOTE_WORK_DIR="/tmp/rvs-nightly-${run_id}"
+    REMOTE_WORK_DIR="/tmp/rvs-release-${run_id}"
   fi
 
   if [[ "$TARBALL_NAME" =~ ^amdrocm([0-9]+)- ]]; then
@@ -66,10 +62,7 @@ cmd_validate_config() {
   INSTALL_DIR="/opt/rocm/extras-${ROCM_MAJOR}"
   RVS_BIN="${INSTALL_DIR}/bin/rvs"
 
-  # Do not print orchestrator or target host identity here (hostname/IP may be
-  # workflow inputs and must not appear in CI logs). GitHub may still log runner
-  # metadata in the job "Set up job" phase.
-  echo "SSH target          : (omitted — use secrets RVS_TARGET_* / workflow inputs)"
+  echo "SSH target          : (omitted — use secrets RVS_RELEASE_TARGET_* / workflow inputs)"
   echo "Target ROCm path    : $TARGET_ROCM_PATH"
   echo "Remote work dir     : $REMOTE_WORK_DIR"
   echo "ROCm major          : $ROCM_MAJOR"
@@ -89,8 +82,8 @@ cmd_validate_config() {
 
 ssh_state_paths() {
   local base="${RUNNER_TEMP:-/tmp}"
-  SSH_KEY_FILE="${base}/rvs_target_key"
-  SSH_CONFIG_FILE="${base}/rvs_target_ssh_config"
+  SSH_KEY_FILE="${base}/rvs_release_target_key"
+  SSH_CONFIG_FILE="${base}/rvs_release_target_ssh_config"
   mkdir -p "$base"
 }
 
@@ -138,7 +131,7 @@ EOF
 
   echo "Verifying SSH connectivity to target node..."
   if ! ssh -q -F "$SSH_CONFIG_FILE" rvs-target 'true'; then
-    echo "::error::SSH connectivity check failed. Verify secrets RVS_TARGET_NODE, RVS_TARGET_USER, RVS_TARGET_SSH_KEY and network access from this runner." >&2
+    echo "::error::SSH connectivity check failed. Verify secrets RVS_RELEASE_TARGET_NODE, RVS_RELEASE_TARGET_USER, RVS_RELEASE_TARGET_SSH_KEY and network access from this runner." >&2
     exit 1
   fi
   echo "::notice::SSH connectivity OK."
@@ -155,7 +148,6 @@ cmd_verify_rocm() {
     "TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
 set -euo pipefail
 echo "=== System ==="
-# Omit nodename (uname -a prints hostname); -srvmo keeps kernel/OS/arch only.
 uname -srvmo
 echo
 echo "=== Target ROCm path: ${TARGET_ROCM_PATH} ==="
@@ -177,7 +169,7 @@ cmd_download_tarball() {
   require_env TARBALL_URL
   require_env TARBALL_NAME
   mkdir -p ./pkg
-  echo "Downloading tarball on orchestrator runner (target node is not used for this fetch):"
+  echo "Downloading release tarball on orchestrator runner (target node is not used for this fetch):"
   echo "  $TARBALL_URL"
   curl -fL --max-time 600 -o "./pkg/${TARBALL_NAME}" "${TARBALL_URL}"
   ls -la ./pkg/
@@ -263,7 +255,7 @@ echo "::notice::RVS binary's library dependencies resolved OK on target."
 REMOTE
 }
 
-cmd_run_level4() {
+cmd_run_level5() {
   require_env SSH_CONFIG_FILE
   require_env RVS_BIN
   require_env INSTALL_DIR
@@ -273,13 +265,13 @@ cmd_run_level4() {
   set +e
   local start end rc
   start=$(date -u +%FT%TZ)
-  echo "::group::RVS level 4 (${RVS_BIN} -r 4) against ${TARGET_ROCM_PATH}"
+  echo "::group::RVS level 5 (${RVS_BIN} -r 5) against ${TARGET_ROCM_PATH}"
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
     "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
 set +e
 export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
 mkdir -p "${REMOTE_WORK_DIR}/reports"
-"$RVS_BIN" -r 4 2>&1 | tee "${REMOTE_WORK_DIR}/reports/rvs_level_4.log"
+"$RVS_BIN" -r 5 2>&1 | tee "${REMOTE_WORK_DIR}/reports/rvs_level_5.log"
 RC=${PIPESTATUS[0]}
 echo "remote_rc=$RC"
 exit $RC
@@ -293,7 +285,6 @@ REMOTE
     echo "start=$start" >> "$GITHUB_OUTPUT"
     echo "end=$end" >> "$GITHUB_OUTPUT"
   fi
-  # Caller workflow decides whether to fail the job on non-zero rc.
   return 0
 }
 
@@ -346,17 +337,14 @@ cmd_build_report() {
   require_env REMOTE_WORK_DIR
   require_env RVS_BIN
 
-  # TARBALL_URL is optional: the report job reads it from install-rvs-on-target outputs.
-  # If that output was empty (e.g. legacy echo-to-GITHUB_OUTPUT with special URL chars),
-  # still emit SUMMARY.md with the tarball filename.
   local tarball_url_display="${TARBALL_URL:-}"
   if [ -z "$tarball_url_display" ]; then
     tarball_url_display="_(unavailable — check install job resolve step / use heredoc GITHUB_OUTPUT for URLs with special characters)_"
   fi
 
-  local rc4="${RVS_LEVEL4_RC:-0}"
-  local start="${RVS_LEVEL4_START:-}"
-  local end="${RVS_LEVEL4_END:-}"
+  local rc5="${RVS_LEVEL5_RC:-0}"
+  local start="${RVS_LEVEL5_START:-}"
+  local end="${RVS_LEVEL5_END:-}"
   local rvs_version="${RVS_VERSION:-unknown}"
   local target_rocm_version="${TARGET_ROCM_VERSION:-unknown}"
   local run_id="${GITHUB_RUN_ID:-local}"
@@ -365,18 +353,18 @@ cmd_build_report() {
   local event_name="${GITHUB_EVENT_NAME:-local}"
 
   mkdir -p ./reports
-  local s4 overall
-  if [ "$rc4" -eq 0 ]; then
-    s4=PASS
+  local s5 overall
+  if [ "$rc5" -eq 0 ]; then
+    s5=PASS
     overall=PASS
   else
-    s4=FAIL
+    s5=FAIL
     overall=FAIL
   fi
 
   local report=./reports/SUMMARY.md
   {
-    echo "# RVS Nightly Test Report"
+    echo "# RVS Release Test Report"
     echo ""
     echo "| Field | Value |"
     echo "|---|---|"
@@ -393,14 +381,14 @@ cmd_build_report() {
     echo ""
     echo "| Test | Command | Result | Exit | Started (UTC) | Ended (UTC) |"
     echo "|---|---|:--:|---:|---|---|"
-    echo "| Level 4 | \`${RVS_BIN} -r 4\` | ${s4} | ${rc4} | ${start} | ${end} |"
+    echo "| Level 5 | \`${RVS_BIN} -r 5\` | ${s5} | ${rc5} | ${start} | ${end} |"
     echo ""
     echo "## Logs"
     echo ""
-    echo "Full stdout/stderr from the level-4 run is attached to the artifact"
-    echo "\`rvs-nightly-report-${run_id}\`:"
+    echo "Full stdout/stderr from the level-5 run is attached to the artifact"
+    echo "\`rvs-release-report-${run_id}\`:"
     echo ""
-    echo "- \`rvs_level_4.log\`"
+    echo "- \`rvs_level_5.log\`"
     echo "- \`SUMMARY.md\` (this file)"
   } > "$report"
 
@@ -411,7 +399,7 @@ cmd_build_report() {
 
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
     echo "overall=$overall" >> "$GITHUB_OUTPUT"
-    echo "rc4=$rc4" >> "$GITHUB_OUTPUT"
+    echo "rc5=$rc5" >> "$GITHUB_OUTPUT"
   fi
 }
 
@@ -447,7 +435,7 @@ main() {
     copy-to-target)      cmd_copy_to_target ;;
     install-rvs)         cmd_install_rvs ;;
     verify-rvs-binary)   cmd_verify_rvs_binary ;;
-    run-level4)          cmd_run_level4 ;;
+    run-level5)          cmd_run_level5 ;;
     collect-logs)        cmd_collect_logs ;;
     capture-versions)    cmd_capture_versions ;;
     build-report)        cmd_build_report ;;
