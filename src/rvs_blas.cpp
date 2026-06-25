@@ -1235,9 +1235,31 @@ bool rvs_blas::run_blas_gemm(bool hot_call) {
       void * dc_p = (uint8_t *)dc + (i % block_count) * size_c * get_hipdatatype_size(hbl_out_datatype);
       void * dd_p = (uint8_t *)dd + (i % block_count) * size_d * get_hipdatatype_size(hbl_out_datatype);
 
+      double alpha_d, beta_d;
+      int32_t alpha_i, beta_i;
+      float alpha_f, beta_f;
+      const void *alpha_p, *beta_p;
+
+      if (hbl_computetype == HIPBLAS_COMPUTE_64F) {
+        alpha_d = blas_alpha_val;
+        beta_d = blas_beta_val;
+        alpha_p = &alpha_d;
+        beta_p = &beta_d;
+      } else if (hbl_computetype == HIPBLAS_COMPUTE_32I) {
+        alpha_i = (int32_t)blas_alpha_val;
+        beta_i = (int32_t)blas_beta_val;
+        alpha_p = &alpha_i;
+        beta_p = &beta_i;
+      } else {
+        alpha_f = blas_alpha_val;
+        beta_f = blas_beta_val;
+        alpha_p = &alpha_f;
+        beta_p = &beta_f;
+      }
+
       if (hipblasLtMatmul(hbl_handle, hbl_matmul[i % block_count],
-            &blas_alpha_val, da_p, hbl_layout_a,
-            db_p, hbl_layout_b, &blas_beta_val,
+            alpha_p, da_p, hbl_layout_a,
+            db_p, hbl_layout_b, beta_p,
             dc_p, hbl_layout_c,
             dd_p, hbl_layout_d,
             &hbl_heuristic_result.algo, hbl_workspace, hbl_heuristic_result.workspaceSize,
