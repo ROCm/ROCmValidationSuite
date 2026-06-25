@@ -582,9 +582,14 @@ fi
 
 if [ -z "$goto_step2" ]; then
     print_info "Downloading from: $TARBALL_URL"
-    if wget --spider "$TARBALL_URL" 2>/dev/null; then
-        wget --show-progress -O "$TARBALL_FILE" "$TARBALL_URL"
-        print_success "Download complete"
+    if wget -q --spider "$TARBALL_URL" 2>/dev/null; then
+        print_info "Downloading ROCm SDK tarball (progress suppressed; large file)..."
+        if wget -q -O "$TARBALL_FILE" "$TARBALL_URL"; then
+            print_success "Download complete ($(du -h "$TARBALL_FILE" 2>/dev/null | awk '{print $1}'))"
+        else
+            print_error "wget failed while downloading ROCm SDK tarball"
+            exit 1
+        fi
     else
         print_error "Failed to download ROCm SDK tarball"
         print_error "URL: $TARBALL_URL"
