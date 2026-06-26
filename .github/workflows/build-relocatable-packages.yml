@@ -542,13 +542,29 @@ jobs:
           script: |
             const ref = context.payload.pull_request?.base?.ref
               ?? context.ref.replace('refs/heads/', '');
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'rvs-nightly-tests.yml',
-              ref,
-              inputs: { trigger_event: context.eventName },
-            });
+            const inputs = { trigger_event: context.eventName };
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'rvs-nightly-tests.yml',
+                ref,
+                inputs,
+              });
+            } catch (error) {
+              if (error.status === 422 && String(error.message).includes('Unexpected inputs')) {
+                core.warning('rvs-nightly-tests.yml on ref does not define trigger_event — dispatching without it.');
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'rvs-nightly-tests.yml',
+                  ref,
+                  inputs: {},
+                });
+              } else {
+                throw error;
+              }
+            }
             core.info(`Dispatched RVS Nightly Tests (trigger_event=${context.eventName}) on ref ${ref}`);
 
       - name: Dispatch RVS Release Tests
@@ -570,23 +586,56 @@ jobs:
         if: >-
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PKG_BASE: ${{ secrets.RVS_PR_DEB_PACKAGE_URL || secrets.RVS_PR_PACKAGE_URL }}
         uses: actions/github-script@v7
         with:
           script: |
+            const base = (process.env.PKG_BASE || '').trim().replace(/\/$/, '');
+            if (!base) {
+              core.setFailed('RVS_PR_DEB_PACKAGE_URL (or RVS_PR_PACKAGE_URL) is not set — cannot dispatch PR tests.');
+              return;
+            }
+            const low = base.toLowerCase();
+            if (low.endsWith('.deb') || low.endsWith('.tar.gz')) {
+              core.setFailed('PR package secret must be the …/rvs HTTPS base, not a direct .deb or .tar.gz URL.');
+              return;
+            }
+            const pr = context.payload.pull_request.number;
+            const runNumber = context.runNumber;
+            const candidates = [
+              `${base}/${pr}/merge/${runNumber}/manylinux_2_28`,
+              `${base}/${runNumber}/merge/${pr}/manylinux_2_28`,
+            ];
+            let listing = '';
+            for (const cand of candidates) {
+              const res = await fetch(`${cand}/`, {
+                headers: { 'User-Agent': 'RVS-PR-Dispatch/1.0' },
+                redirect: 'follow',
+              });
+              if (res.ok) {
+                listing = cand;
+                break;
+              }
+            }
+            if (!listing) {
+              core.setFailed(
+                `Could not reach a manylinux_2_28 listing for PR #${pr} build ${runNumber}. Tried:\n  `
+                  + candidates.map((c) => `  ${c}/`).join('\n'),
+              );
+              return;
+            }
             const ref = context.payload.pull_request.base.ref;
-            const prNumber = String(context.payload.pull_request.number);
-            const buildRunNumber = String(context.runNumber);
+            // Pass package_url only — works with the workflow definition on the base branch
+            // (master may not yet define pr_number / build_run_number inputs).
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'rvs-pr-tests.yml',
               ref,
-              inputs: {
-                pr_number: prNumber,
-                build_run_number: buildRunNumber,
-              },
+              inputs: { package_url: listing },
             });
-            core.info(`Dispatched RVS PR Tests for PR #${prNumber} (build run ${buildRunNumber}) on ref ${ref}`);
+            core.info(`Dispatched RVS PR Tests for PR #${pr} (build run ${runNumber}) with package_url=${listing}/ on ref ${ref}`);
 
   create-release:
     name: Create Release Summary

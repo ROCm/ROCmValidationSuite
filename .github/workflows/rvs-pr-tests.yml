@@ -1,11 +1,11 @@
 name: RVS PR Tests
 
 # Runs after a successful "Build Relocatable Packages" run on pull_request (dispatched
-# from that workflow), or on workflow_dispatch. Package URL: for post-build dispatch,
-# derived from secrets.RVS_PR_DEB_PACKAGE_URL (HTTPS …/rvs base) + pr_number +
-# build_run_number inputs + manylinux path (same layout as
-# .github/scripts/rvs-s3-upload-route.sh). For manual runs, use package_url or secret.
-# See README_PR_TESTS.md.
+# from that workflow with a resolved package_url), or on workflow_dispatch. Package URL:
+# for post-build dispatch, the build workflow resolves the manylinux_2_28 listing and
+# passes package_url. For manual runs, use package_url or secret (…/rvs base, listing,
+# direct .tar.gz, or .deb). Optional pr_number + build_run_number inputs resolve the
+# listing inside this workflow when package_url is unset. See README_PR_TESTS.md.
 #
 # Required repo configuration: README_PR_TESTS.md (same secrets/vars as nightly for SSH/ROCm).
 
@@ -71,7 +71,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set package URL (manual)
+      - name: Set package URL (manual or post-build dispatch)
         if: inputs.pr_number == '' || inputs.build_run_number == ''
         env:
           PACKAGE_INPUT: ${{ inputs.package_url }}
