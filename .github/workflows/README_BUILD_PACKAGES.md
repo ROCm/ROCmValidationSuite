@@ -96,7 +96,7 @@ GitHub Actions Workflow
     │   ├── export PATH="$ROCM_PATH/bin:$PATH"
     │   ├── export LD_LIBRARY_PATH="$ROCM_PATH/lib:$LD_LIBRARY_PATH"
     │   ├── export CMAKE_PREFIX_PATH="$ROCM_PATH:$CMAKE_PREFIX_PATH"
-    │   ├── export HIP_DEVICE_LIB_PATH (auto-detected amdgcn/bitcode path)
+    │   ├── export HIP_DEVICE_LIB_PATH (ordered candidate paths + amdclang++ resource-dir fallback)
     │   ├── export ROCM_LIBPATCH_VERSION (major.minor in xxyy format, e.g., 0711)
     │   ├── export CPACK_DEBIAN_PACKAGE_RELEASE (see env table: r<libpatch>.date, PRs add .branch.commit)
     │   ├── export CPACK_RPM_PACKAGE_RELEASE (same as DEB)
@@ -130,7 +130,7 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/op
 
 **Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically. The **patch version** is auto-computed at CMake configure time: `git describe --tags --match "v<major>.<minor>.*"` counts commits since the last matching `v` tag. For example, if the tag is `v1.3.0` and there have been 15 commits since, the package version becomes `1.3.15`. If no matching tag exists or git is unavailable, the patch defaults to `0` from `CMakeLists.txt`. This works for both CI builds and direct local `cmake` invocations.
 
-**HIP Device Libraries**: Automatically located and exported as `HIP_DEVICE_LIB_PATH` for clang device library discovery.
+**HIP Device Libraries**: Probes known TheRock layouts (`lib/llvm/amdgcn/bitcode`, legacy `amdgcn/bitcode`, Clang resource-dir `lib/llvm/lib/clang/*/lib/amdgcn/bitcode`) and falls back to `amdclang++ -print-resource-dir`; exports `HIP_DEVICE_LIB_PATH` for clang device library discovery.
 
 **Compiler Selection**: `CMAKE_CXX_COMPILER` is set to ROCm's `hipcc` on both AlmaLinux (manylinux_2_28) and Ubuntu/Debian. Because hipcc is Clang-based and does not bundle libstdc++, the system GCC tree is plumbed in via `--gcc-toolchain=$GCC_TOOLCHAIN`: on AlmaLinux this points at the discovered `gcc-toolset-<N>`; on Ubuntu/Debian it is `/usr` (set when `/usr/include/c++/*/barrier` exists).
 
@@ -298,7 +298,7 @@ The workflow uses `build_packages_local.sh` as the core build engine. This scrip
 - **Dependency Management**: Installs all required build tools and libraries
   - Enables PowerTools/CRB repository on AlmaLinux for doxygen and yaml-cpp
 - **ROCm SDK Setup**: Auto-fetches latest version or downloads specified version from TheRock tarballs
-- **HIP Device Libraries**: Auto-locates amdgcn/bitcode directory and exports HIP_DEVICE_LIB_PATH
+- **HIP Device Libraries**: Ordered candidate-path probe (no full-tree `find`); exports `HIP_DEVICE_LIB_PATH`
 - **CMake Configuration**: Sets up relocatable RPATHs and all build parameters
   - Uses cmake3 on AlmaLinux, cmake on Ubuntu
   - Sets CMAKE_CXX_COMPILER to hipcc on AlmaLinux and Ubuntu/Debian (Ubuntu also gets `--gcc-toolchain=/usr` for C++20 libstdc++ headers)

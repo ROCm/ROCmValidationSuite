@@ -130,6 +130,71 @@ normalize_on_off() {
     esac
 }
 
+# Locate HIP device bitcode (amdgcn/bitcode) under a TheRock/ROCm SDK root.
+# Probes known layouts in priority order — no find|head pipeline (fragile with set -e).
+# Prints the path on stdout; returns 0 on success, 1 if not found.
+resolve_hip_device_lib_path() {
+    local root="$1"
+    local cand resource_dir
+
+    if [ -z "$root" ] || [ ! -d "$root" ]; then
+        return 1
+    fi
+
+    for cand in \
+        "${root}/lib/llvm/amdgcn/bitcode" \
+        "${root}/amdgcn/bitcode" \
+        "${root}/lib/clang/amdgcn/bitcode"
+    do
+        if [ -d "$cand" ]; then
+            echo "$cand"
+            return 0
+        fi
+    done
+
+    # ROCm 7.2+ Clang resource-dir layout: lib/llvm/lib/clang/<ver>/lib/amdgcn/bitcode
+    for cand in "${root}"/lib/llvm/lib/clang/*/lib/amdgcn/bitcode; do
+        if [ -d "$cand" ]; then
+            echo "$cand"
+            return 0
+        fi
+    done
+
+    # Derive from amdclang++ resource dir when present.
+    if [ -x "${root}/bin/amdclang++" ]; then
+        resource_dir="$("${root}/bin/amdclang++" -print-resource-dir 2>/dev/null)" || true
+        if [ -n "$resource_dir" ] && [ -d "${resource_dir}/lib/amdgcn/bitcode" ]; then
+            echo "${resource_dir}/lib/amdgcn/bitcode"
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# Print diagnostics when resolve_hip_device_lib_path fails.
+report_hip_device_lib_path_failure() {
+    local root="$1"
+    print_error "Could not find amdgcn/bitcode under ROCM_PATH=$root"
+    print_error "HIP device libraries are required for GPU code compilation"
+    print_error "Tried:"
+    print_error "  ${root}/lib/llvm/amdgcn/bitcode"
+    print_error "  ${root}/amdgcn/bitcode"
+    print_error "  ${root}/lib/clang/amdgcn/bitcode"
+    print_error "  ${root}/lib/llvm/lib/clang/*/lib/amdgcn/bitcode"
+    print_error "  amdclang++ -print-resource-dir .../lib/amdgcn/bitcode"
+    if [ -d "$root" ]; then
+        print_error "Top-level contents of $root:"
+        ls -la "$root" 2>&1 | while read -r line; do print_error "  $line"; done
+        if [ -d "${root}/lib/llvm" ]; then
+            print_error "Contents of ${root}/lib/llvm:"
+            ls -la "${root}/lib/llvm" 2>&1 | while read -r line; do print_error "  $line"; done
+        fi
+    fi
+    print_error "If the SDK is missing amdgcn/bitcode, this may be a known TheRock symlink issue;"
+    print_error "see https://github.com/ROCm/TheRock/issues/74"
+}
+
 # Join base URL and filename without duplicate slashes
 join_base_and_file() {
     local base="$1"
@@ -608,14 +673,12 @@ print_info "Step 2: Setting up ROCm environment..."
 
 # Find HIP device library path (amdgcn/bitcode) first
 print_info "Locating HIP device libraries (amdgcn/bitcode)..."
-HIP_DEVICE_LIB_PATH=$(find "$ROCM_PATH" -type d -path "*/amdgcn/bitcode" 2>/dev/null | head -1)
-
-if [ -z "$HIP_DEVICE_LIB_PATH" ]; then
-    print_error "Could not find amdgcn/bitcode directory in $ROCM_PATH"
-    print_error "HIP device libraries are required for GPU code compilation"
-    print_error "Please verify your ROCm SDK installation"
+HIP_DEVICE_LIB_PATH=""
+if ! HIP_DEVICE_LIB_PATH="$(resolve_hip_device_lib_path "$ROCM_PATH")"; then
+    report_hip_device_lib_path_failure "$ROCM_PATH"
     exit 1
 fi
+print_success "HIP_DEVICE_LIB_PATH=$HIP_DEVICE_LIB_PATH"
 
 # Export all environment variables
 export PATH="$ROCM_PATH/bin:$PATH"
@@ -626,7 +689,7 @@ export HIP_DEVICE_LIB_PATH="$HIP_DEVICE_LIB_PATH"
 # Extract major.minor version from ROCM_VERSION for ROCM_LIBPATCH_VERSION
 # Convert to xxyy format with zero padding
 # Example: "7.11.0a20260121" -> "0711", "8.0.0" -> "0800", "10.2.0" -> "1002"
-ROCM_VERSION_MAJOR_MINOR=$(echo "$ROCM_VERSION" | grep -oP '^\d+\.\d+')
+ROCM_VERSION_MAJOR_MINOR=$(echo "$ROCM_VERSION" | sed -nE 's/^([0-9]+\.[0-9]+).*/\1/p')
 if [ -z "$ROCM_VERSION_MAJOR_MINOR" ]; then
     print_error "Could not extract major.minor version from ROCM_VERSION: $ROCM_VERSION"
     exit 1
