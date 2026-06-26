@@ -1,11 +1,10 @@
 name: RVS PR Tests
 
 # Runs after a successful "Build Relocatable Packages" run on pull_request (dispatched
-# from that workflow with a resolved package_url), or on workflow_dispatch. Package URL:
-# for post-build dispatch, the build workflow resolves the manylinux_2_28 listing and
-# passes package_url. For manual runs, use package_url or secret (…/rvs base, listing,
-# direct .tar.gz, or .deb). Optional pr_number + build_run_number inputs resolve the
-# listing inside this workflow when package_url is unset. See README_PR_TESTS.md.
+# from that workflow with pr_number + build_run_number), or on workflow_dispatch.
+# Post-build dispatch does not resolve the package URL — the install job on the
+# self-hosted runner probes the manylinux_2_28 listing (curl, lab CDN egress).
+# Manual runs: package_url or secret. See README_PR_TESTS.md.
 #
 # Required repo configuration: README_PR_TESTS.md (same secrets/vars as nightly for SSH/ROCm).
 
@@ -18,6 +17,10 @@ on:
         default: ''
       build_run_number:
         description: 'Build workflow run number (post-build dispatch)'
+        required: false
+        default: ''
+      build_ref_name:
+        description: 'GITHUB_REF_NAME from the package build (<pr>/merge); set by post-build dispatch'
         required: false
         default: ''
       package_url:
@@ -71,7 +74,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set package URL (manual or post-build dispatch)
+      - name: Set package URL (manual)
         if: inputs.pr_number == '' || inputs.build_run_number == ''
         env:
           PACKAGE_INPUT: ${{ inputs.package_url }}
@@ -92,12 +95,13 @@ jobs:
             echo "RVS_PR_PKG_URL"
           } >> "$GITHUB_ENV"
 
-      - name: Set package URL (after successful PR build)
+      - name: Resolve manylinux listing (post-build dispatch, self-hosted)
         if: inputs.pr_number != '' && inputs.build_run_number != ''
         env:
           SECRET_PKG: ${{ secrets.RVS_PR_DEB_PACKAGE_URL || secrets.RVS_PR_PACKAGE_URL }}
           PR_NUMBER: ${{ inputs.pr_number }}
           RUN_NUMBER: ${{ inputs.build_run_number }}
+          BUILD_REF_NAME: ${{ inputs.build_ref_name }}
         run: |
           set -euo pipefail
           python3 <<'PY'
@@ -116,12 +120,15 @@ jobs:
 
           pr = int(os.environ["PR_NUMBER"])
           run_number = int(os.environ["RUN_NUMBER"])
-          # Primary: matches .github/scripts/rvs-s3-upload-route.sh — rvs/<pr>/merge/<GITHUB_RUN_NUMBER>/manylinux_2_28
-          # Fallback: some mirrors use rvs/<run_number>/merge/<pr>/manylinux_2_28
-          candidates = [
+          ref_name = (os.environ.get("BUILD_REF_NAME") or "").strip()
+          # Primary: exact rvs-s3-upload-route.sh layout (rvs/${GITHUB_REF_NAME}/${GITHUB_RUN_NUMBER}/manylinux_2_28)
+          candidates = []
+          if ref_name:
+              candidates.append(f"{base}/{ref_name}/{run_number}/manylinux_2_28")
+          candidates.extend([
               f"{base}/{pr}/merge/{run_number}/manylinux_2_28",
               f"{base}/{run_number}/merge/{pr}/manylinux_2_28",
-          ]
+          ])
 
           def listing_reachable(url: str) -> bool:
               p = subprocess.run(
