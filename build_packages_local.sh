@@ -216,6 +216,31 @@ apply_sdk_tarball_base_for_version() {
     fi
 }
 
+# Validate ROCM_VERSION after parsing an SDK listing (not -tests- or other variants).
+# mode: nightly (x.y.za<digits>) or release (X.Y.Z)
+validate_rocm_version_string() {
+    local v="$1"
+    local mode="$2"
+    case "$mode" in
+        nightly)
+            if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+$'; then
+                return 0
+            fi
+            ;;
+        release)
+            if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+                return 0
+            fi
+            ;;
+        *)
+            print_error "validate_rocm_version_string: unknown mode $mode"
+            return 1
+            ;;
+    esac
+    print_error "Invalid ROCm $mode version string from listing: $v"
+    return 1
+}
+
 # Function to fetch latest ROCm version for specified GPU family
 # Sets the global ROCM_VERSION variable directly
 fetch_latest_rocm_version() {
@@ -224,14 +249,21 @@ fetch_latest_rocm_version() {
     print_info "Fetching latest ROCm version for $gpu_family..."
     print_info "Index URL: $ROCM_SDK_INDEX_URL"
 
-    # Download index page and parse for latest tarball matching GPU family
-    # Pattern: therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz
-    local latest_version=$(wget -qO- "$ROCM_SDK_INDEX_URL" 2>/dev/null | \
-        grep -oP "therock-dist-linux-${gpu_family}-\K[^<\"]+(?=\.tar\.gz)" | \
+    # SDK only: therock-dist-linux-<GPU_FAMILY>-<x.y.zaYYYYMMDD>.tar.gz
+    # Excludes -tests- tarballs (e.g. ...-gfx110X-all-tests-7.15.0a...)
+    local latest_version
+    latest_version=$(wget -qO- "$ROCM_SDK_INDEX_URL" 2>/dev/null | \
+        grep -v -- '-tests-' | \
+        grep -oE "therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+a[0-9]+" | \
+        sed "s|^therock-dist-linux-${gpu_family}-||" | \
         sort -V | tail -1)
 
     if [ -z "$latest_version" ]; then
         print_error "Could not fetch latest ROCm nightly version for $gpu_family from $ROCM_SDK_INDEX_URL"
+        return 1
+    fi
+
+    if ! validate_rocm_version_string "$latest_version" nightly; then
         return 1
     fi
 
@@ -251,11 +283,17 @@ fetch_latest_rocm_release_version() {
 
     local latest_version
     latest_version=$(wget -qO- "$list_url" 2>/dev/null | \
-        grep -oP "therock-dist-linux-${gpu_family}-\K[0-9]+\.[0-9]+\.[0-9]+(?=\.tar\.gz)" | \
+        grep -v -- '-tests-' | \
+        grep -oE "therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+" | \
+        sed "s|^therock-dist-linux-${gpu_family}-||" | \
         sort -V | uniq | tail -1)
 
     if [ -z "$latest_version" ]; then
         print_error "No therock-dist-linux-${gpu_family}-X.Y.Z.tar.gz found under release listing (expected forms like 7.11.0)"
+        return 1
+    fi
+
+    if ! validate_rocm_version_string "$latest_version" release; then
         return 1
     fi
 
@@ -648,8 +686,17 @@ fi
 if [ -z "$goto_step2" ]; then
     print_info "Downloading from: $TARBALL_URL"
     if wget --spider "$TARBALL_URL" 2>/dev/null; then
-        wget --show-progress -O "$TARBALL_FILE" "$TARBALL_URL"
-        print_success "Download complete"
+        # Avoid flooding CI logs with per-chunk progress on multi-GB SDK tarballs.
+        if [ -t 1 ]; then
+            wget --show-progress -O "$TARBALL_FILE" "$TARBALL_URL"
+        else
+            wget -q -O "$TARBALL_FILE" "$TARBALL_URL"
+        fi
+        if [ -f "$TARBALL_FILE" ]; then
+            print_success "Download complete ($(du -h "$TARBALL_FILE" | awk '{print $1}'))"
+        else
+            print_success "Download complete"
+        fi
     else
         print_error "Failed to download ROCm SDK tarball"
         print_error "URL: $TARBALL_URL"
