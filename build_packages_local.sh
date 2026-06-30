@@ -241,25 +241,102 @@ validate_rocm_version_string() {
     return 1
 }
 
+# Parse SDK tarball versions from a listing on stdin (HTML/JSON).
+# Per-match only — do not grep -v '-tests-' on the whole page (nightly index is one JSON line).
+# Prints one version string per matching SDK tarball.
+parse_sdk_tarball_versions_from_listing() {
+    local gpu_family="$1"
+    local mode="$2"
+    local pattern
+
+    case "$mode" in
+        nightly)
+            # Digit after gpu_family- excludes ...-gfx110X-all-tests-...
+            pattern="therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+a[0-9]+"
+            ;;
+        release)
+            pattern="therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+"
+            ;;
+        *)
+            print_error "parse_sdk_tarball_versions_from_listing: unknown mode $mode"
+            return 1
+            ;;
+    esac
+
+    grep -oE "$pattern" | sed "s|^therock-dist-linux-${gpu_family}-||"
+}
+
+# Collect SDK version strings from a listing file; python3 fallback when grep finds nothing.
+collect_sdk_versions_from_listing_file() {
+    local listing_file="$1"
+    local gpu_family="$2"
+    local mode="$3"
+    local versions
+
+    versions=$(parse_sdk_tarball_versions_from_listing "$gpu_family" "$mode" < "$listing_file")
+
+    if [ -z "$versions" ] && [ -s "$listing_file" ] && command -v python3 >/dev/null 2>&1; then
+        versions=$(python3 - "$gpu_family" "$mode" "$listing_file" <<'PY'
+import re
+import sys
+
+gpu_family = sys.argv[1]
+mode = sys.argv[2]
+with open(sys.argv[3], encoding="utf-8", errors="replace") as f:
+    text = f.read()
+prefix = "therock-dist-linux-" + re.escape(gpu_family) + "-"
+if mode == "nightly":
+    pat = re.compile(prefix + r"([0-9]+\.[0-9]+\.[0-9]+a[0-9]+)\.tar\.gz")
+else:
+    pat = re.compile(prefix + r"([0-9]+\.[0-9]+\.[0-9]+)\.tar\.gz")
+seen = set()
+for m in pat.finditer(text):
+    if "-tests-" in m.group(0):
+        continue
+    v = m.group(1)
+    if v not in seen:
+        seen.add(v)
+        print(v)
+PY
+)
+        if [ -n "$versions" ]; then
+            print_info "Parsed SDK versions via python3 fallback"
+        fi
+    fi
+
+    printf '%s\n' "$versions"
+}
+
 # Function to fetch latest ROCm version for specified GPU family
 # Sets the global ROCM_VERSION variable directly
 fetch_latest_rocm_version() {
     local gpu_family="$1"
+    local listing_tmp latest_version listing_bytes
 
     print_info "Fetching latest ROCm version for $gpu_family..."
     print_info "Index URL: $ROCM_SDK_INDEX_URL"
 
-    # SDK only: therock-dist-linux-<GPU_FAMILY>-<x.y.zaYYYYMMDD>.tar.gz
-    # Excludes -tests- tarballs (e.g. ...-gfx110X-all-tests-7.15.0a...)
-    local latest_version
-    latest_version=$(wget -qO- "$ROCM_SDK_INDEX_URL" 2>/dev/null | \
-        grep -v -- '-tests-' | \
-        grep -oE "therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+a[0-9]+" | \
-        sed "s|^therock-dist-linux-${gpu_family}-||" | \
-        sort -V | tail -1)
+    listing_tmp="$(mktemp)"
+    if ! wget -q -O "$listing_tmp" "$ROCM_SDK_INDEX_URL"; then
+        print_error "wget failed for $ROCM_SDK_INDEX_URL"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+    if [ ! -s "$listing_tmp" ]; then
+        print_error "Empty listing from $ROCM_SDK_INDEX_URL"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+
+    listing_bytes=$(wc -c < "$listing_tmp" | tr -d ' ')
+    latest_version=$(collect_sdk_versions_from_listing_file "$listing_tmp" "$gpu_family" nightly \
+        | sort -V | tail -1)
+    rm -f "$listing_tmp"
 
     if [ -z "$latest_version" ]; then
         print_error "Could not fetch latest ROCm nightly version for $gpu_family from $ROCM_SDK_INDEX_URL"
+        print_error "Listing was ${listing_bytes} bytes but no SDK tarballs matched therock-dist-linux-${gpu_family}-<x.y.za...>"
+        print_error "(-tests- tarballs are excluded; do not filter the listing with grep -v on whole lines)"
         return 1
     fi
 
@@ -277,19 +354,31 @@ fetch_latest_rocm_version() {
 fetch_latest_rocm_release_version() {
     local gpu_family="$1"
     local list_url="${ROCM_SDK_RELEASE_URL:-$_ROCM_RELEASE_LIST_DEFAULT}"
+    local listing_tmp latest_version listing_bytes
 
     print_info "Fetching latest ROCm release version (X.Y.Z) for $gpu_family..."
     print_info "Release listing URL: $list_url"
 
-    local latest_version
-    latest_version=$(wget -qO- "$list_url" 2>/dev/null | \
-        grep -v -- '-tests-' | \
-        grep -oE "therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+" | \
-        sed "s|^therock-dist-linux-${gpu_family}-||" | \
-        sort -V | uniq | tail -1)
+    listing_tmp="$(mktemp)"
+    if ! wget -q -O "$listing_tmp" "$list_url"; then
+        print_error "wget failed for $list_url"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+    if [ ! -s "$listing_tmp" ]; then
+        print_error "Empty listing from $list_url"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+
+    listing_bytes=$(wc -c < "$listing_tmp" | tr -d ' ')
+    latest_version=$(collect_sdk_versions_from_listing_file "$listing_tmp" "$gpu_family" release \
+        | sort -V | uniq | tail -1)
+    rm -f "$listing_tmp"
 
     if [ -z "$latest_version" ]; then
         print_error "No therock-dist-linux-${gpu_family}-X.Y.Z.tar.gz found under release listing (expected forms like 7.11.0)"
+        print_error "Listing was ${listing_bytes} bytes but no SDK tarballs matched for $gpu_family"
         return 1
     fi
 
