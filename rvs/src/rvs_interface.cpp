@@ -27,6 +27,7 @@
 #include <include/rvs.h>
 #include <include/rvsinternal.h>
 #include <include/rvsexec.h>
+#include <include/rvsmodule.h>
 #include <map>
 #include <mutex>
 
@@ -291,6 +292,10 @@ rvs_status_t rvs_terminate(void) {
     return RVS_STATUS_INVALID_STATE;
   }
   rvs_state = RVS_STATE_UNINITIALIZED;
+
+  /* Ensure AMD SMI and loaded modules are torn down if the client skipped
+   * session destroy or exited without running module::terminate via exec. */
+  rvs::module::terminate();
 
   return RVS_STATUS_SUCCESS;
 }

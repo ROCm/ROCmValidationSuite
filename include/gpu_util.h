@@ -62,6 +62,29 @@ namespace rvs {
 class gpulist {
  public:
   static int Initialize();
+  /** Shut down AMD SMI once per process (paired with Initialize). */
+  static void Terminate();
+
+  /**
+   * RAII guard for rvs::exec::run() (CLI and API).
+   *
+   * Calls Terminate() when exec::run() returns by any path. Terminate() is
+   * idempotent, so this is a no-op on the normal -c / API path where
+   * module::terminate() already shut AMD SMI down.
+   *
+   * Required for -r and -m: those options call get_gpu_name() ->
+   * gpulist::Initialize() (amdsmi_init) while resolving the platform conf
+   * file, before module::initialize(). If conf lookup fails, exec returns
+   * early and never reaches module::terminate() — without this guard AMD SMI
+   * would stay initialized.
+   */
+  class RunGuard {
+   public:
+    RunGuard() = default;
+    ~RunGuard() { Terminate(); }
+    RunGuard(const RunGuard&) = delete;
+    RunGuard& operator=(const RunGuard&) = delete;
+  };
 
   static int location2gpu(const uint16_t LocationID, uint16_t* pGpuID);
   static int gpu2location(const uint16_t GpuID, uint16_t* pLocationID);

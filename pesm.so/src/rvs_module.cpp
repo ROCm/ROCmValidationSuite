@@ -92,7 +92,6 @@ extern "C" int   rvs_module_terminate(void) {
       "[module_terminate] pesm rvs_module_terminate() - monitoring stopped",
                  rvs::logtrace);
   }
-  amdsmi_shut_down();
   return 0;
 }
 
