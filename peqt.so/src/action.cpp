@@ -426,7 +426,7 @@ int peqt_action::run(void) {
           action_result.output = msg;
           action_callback(&action_result);
 
-          return false;
+          return -1;
         }
 
       // fill in the info
@@ -512,12 +512,14 @@ int peqt_action::run(void) {
     }
 
     action_result.state = rvs::actionstate::ACTION_COMPLETED;
-    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.status = pci_infra_qual_result
+        ? rvs::actionstatus::ACTION_SUCCESS
+        : rvs::actionstatus::ACTION_FAILED;
     action_result.output = "PEQT Module action " + action_name + " completed";
     action_callback(&action_result);
 
     RVSTRACE_
-    return 0;
+    return pci_infra_qual_result ? 0 : -1;
 }
 
 
