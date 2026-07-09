@@ -12,7 +12,7 @@ with open('../CMakeLists.txt', encoding='utf-8') as f:
         raise ValueError("VERSION not found!")
     version_number = match[1]
 
-left_nav_title = f"ROCm RVS 1.4.21 Documentation"
+left_nav_title = f"ROCm RVS 1.5.0 Documentation"
 
 exclude_patterns = [
     'conceptual/**',
