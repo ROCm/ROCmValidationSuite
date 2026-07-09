@@ -27,10 +27,10 @@ For instructions, see `Install AMD ROCm
 selector panel on that page to view instructions appropriate for your system
 environment.
 
-Install RVS
------------
+Install RVS using tarball
+-------------------------
 
-Use the following steps to install RVS on top of the ROCm Core SDK.
+Use the following steps to install RVS using tarball on top of the ROCm Core SDK.
 
 1. Install system dependencies using your Linux distribution's package manager.
 
@@ -104,10 +104,9 @@ Use the following steps to install RVS on top of the ROCm Core SDK.
       rvs -h
 
 Install RVS using native packages
-==================================
+---------------------------------
 
-RVS can also be installed using native DEB or RPM packages without requiring
-a full ROCm installation.
+Use the following steps to install RVS using native DEB or RPM packages.
 
 1. Create a working directory and download the package.
 
