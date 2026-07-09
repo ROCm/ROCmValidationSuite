@@ -8,7 +8,7 @@ Install ROCm Validation Suite
 
 ROCm Validation Suite (RVS) is supported on AMD Instinct and Radeon GPUs
 supported by ROCm. See the `ROCm compatibilty matrix
-<https://rocm.docs.amd.com/en/7.13.0-preview/compatibility/compatibility-matrix.html>`__ for support information.
+<https://rocm.docs.amd.com/en/docs-7.14.0/compatibility/compatibility-matrix.html>`__ for support information.
 
 For advanced workflows, source builds, or custom configurations, see
 `<https://github.com/ROCm/ROCmValidationSuite#rocmvalidationsuite>`__.
@@ -23,7 +23,7 @@ Install the ROCm Core SDK
 -------------------------
 
 For instructions, see `Install AMD ROCm
-<https://rocm.docs.amd.com/en/7.13.0-preview/install/rocm.html?fam=all&i=pkgman>`__. Use the
+<https://rocm.docs.amd.com/en/docs-7.14.0/install/rocm.html?fam=all&i=pkgman>`__. Use the
 selector panel on that page to view instructions appropriate for your system
 environment.
 
@@ -102,3 +102,59 @@ Use the following steps to install RVS on top of the ROCm Core SDK.
    .. code-block:: bash
 
       rvs -h
+
+Install RVS using native packages
+==================================
+
+RVS can also be installed using native DEB or RPM packages without requiring
+a full ROCm installation.
+
+1. Create a working directory and download the package.
+
+   .. tab-set::
+
+      .. tab-item:: Ubuntu (DEB)
+
+         .. code-block:: bash
+
+            mkdir -p ~/RVS && cd ~/RVS
+            wget https://d22tya8uodfbu6.cloudfront.net/release/rvs/deb/amdrocm7-rvs_1.5.118-548_amd64.deb
+
+      .. tab-item:: RHEL (RPM)
+
+         .. code-block:: bash
+
+            mkdir -p ~/rpm_rel && cd ~/rpm_rel
+            wget https://d22tya8uodfbu6.cloudfront.net/release/rvs/rpm/amdrocm7-rvs-1.5.118-548.el8.x86_64.rpm
+
+2. Install the package.
+
+   .. tab-set::
+
+      .. tab-item:: Ubuntu (DEB)
+
+         .. code-block:: bash
+
+            sudo dpkg -i amdrocm7-rvs_1.5.118-548_amd64.deb
+
+      .. tab-item:: RHEL (RPM)
+
+         .. code-block:: bash
+
+            sudo rpm -ivh amdrocm7-rvs-1.5.118-548.el8.x86_64.rpm
+
+3. Set up the environment variables.
+
+   .. code-block:: bash
+
+      export RVS_PATH=/opt/rocm/extras-7
+      export ROCM_PATH=/opt/rocm/core-7.14
+      export PATH=$RVS_PATH/bin:$ROCM_PATH/bin:$PATH
+      export LD_LIBRARY_PATH=$RVS_PATH/lib:/opt/rocm/lib:$ROCM_PATH/lib:$ROCM_PATH/llvm/lib
+
+4. Verify your installation and run a test configuration.
+
+   .. code-block:: bash
+
+      $RVS_PATH/bin/rvs -g
+      $RVS_PATH/bin/rvs -c $RVS_PATH/share/rocm-validation-suite/conf/gfx1201/iet_single.conf -d 3
