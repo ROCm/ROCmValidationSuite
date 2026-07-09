@@ -32,9 +32,9 @@ extensions = ["rocm_docs"]
 html_theme = "rocm_docs_theme"
 html_theme_options = {
     "flavor": "generic",
-    "header_title": f"ROCm™ RVS 1.4.21",
-    "header_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.4.21/",
-    "version_list_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.4.21/versions.html",
+    "header_title": f"ROCm™ RVS 1.5.0",
+    "header_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.5.0/",
+    "version_list_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.5.0/versions.html",
     "nav_secondary_items": {
         "GitHub": "https://github.com/ROCm/ROCmValidationSuite",
         "Community": "https://github.com/ROCm/ROCm/discussions",

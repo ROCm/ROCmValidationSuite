@@ -10,6 +10,7 @@
 
 | Version | Release date |
 | ------- | ------------ |
+| [1.5.0](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.5.0/) | July 15, 2026 |
 | [1.4.21](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.4.21/) | May 15, 2026 |
 
 ```{note}
