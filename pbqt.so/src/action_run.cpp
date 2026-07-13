@@ -147,7 +147,7 @@ int pbqt_action::run() {
     if(bjson){
     rvs::lp::JsonActionEndNodeCreate();
   }
-    return 0;
+    return -1;
   }
 
   RVSTRACE_
