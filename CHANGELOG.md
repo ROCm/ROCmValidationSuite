@@ -2,6 +2,26 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.6.0
+
+### Added
+
+- Test-level configurations for MI350P-450W and MI350P-600W .
+
+## RVS 1.5.0
+
+### Added
+
+- Bundled TransferBench as a git submodule under `external/TransferBench` and ship the TransferBench CLI in the same DEB/RPM as `rvs`. The CLI is provided for compatibility with existing TransferBench-based workflows; new work should use RVS (via the `pebb`/`pbqt` modules) or the TransferBench API directly. Opt out of the CLI build with `-DBUILD_TRANSFERBENCH_CLI=OFF`.
+- Added the pulse stressor module (`pulse.so`) for GPU power pulse stress testing. **(Beta — not intended for production use.)**
+- Added support for MI350X QPX mode.
+- Added support for the MXFP8 data type.
+- Added iterations-based GST hot run support.
+
+### Changed
+
+- Updated Babel output to report throughput instead of execution time.
+  
 ## RVS 1.4.0
 
 ### Added

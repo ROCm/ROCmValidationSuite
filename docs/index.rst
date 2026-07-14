@@ -26,6 +26,7 @@ For more information, refer to `GitHub. <https://github.com/ROCm/ROCmValidationS
   .. grid-item-card:: Conceptual
 
      * :doc:`ROCm Validation Suite modules <features>`
+     * :doc:`TransferBench in RVS <transferbench>`
 
 To contribute to the documentation, refer to
 `Contributing to ROCm <https://rocm.docs.amd.com/en/latest/contribute/contributing.html>`_.

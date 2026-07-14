@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -60,6 +60,7 @@ using std::regex;
 #define RVS_CONF_TARGET_STRESS_KEY      "target_stress"
 #define RVS_CONF_TOLERANCE_KEY          "tolerance"
 #define RVS_CONF_HOT_CALLS              "hot_calls"
+#define RVS_CONF_WARM_CALLS             "warm_calls"
 #define RVS_CONF_MATRIX_SIZE_KEYA       "matrix_size_a"
 #define RVS_CONF_MATRIX_SIZE_KEYB       "matrix_size_b"
 #define RVS_CONF_MATRIX_SIZE_KEYC       "matrix_size_c"
@@ -94,7 +95,7 @@ using std::regex;
 
 #define TARGET_KEY                      "target"
 #define DTYPE_KEY                       "dtype"
-#define GST_DEFAULT_RAMP_INTERVAL       5000
+#define GST_DEFAULT_RAMP_INTERVAL       0
 #define GST_DEFAULT_LOG_INTERVAL        1000
 #define GST_DEFAULT_MAX_VIOLATIONS      0
 #define GST_DEFAULT_TOLERANCE           0.05
@@ -102,6 +103,7 @@ using std::regex;
 #define GST_DEFAULT_MATRIX_SIZE         5760
 #define GST_DEFAULT_MATRIX_INIT         "default"
 #define GST_DEFAULT_HOT_CALLS           1
+#define GST_DEFAULT_WARM_CALLS          1
 #define GST_DEFAULT_TRANS_A             0
 #define GST_DEFAULT_TRANS_B             1
 #define GST_DEFAULT_ALPHA_VAL           1
@@ -123,9 +125,7 @@ using std::regex;
 #define GST_DEFAULT_STRIDE_D            0
 #define GST_DEFAULT_BLAS_SOURCE         "rocblas"
 #define GST_DEFAULT_COMPUTE_TYPE        "fp32_r"
-
-#define RVS_DEFAULT_PARALLEL            false
-#define RVS_DEFAULT_DURATION            0
+#define GST_DEFAULT_DURATION            0
 
 #define GST_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 
@@ -192,6 +192,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_target_stress(gst_target_stress);
       workers[i].set_tolerance(gst_tolerance);
       workers[i].set_gst_hot_calls(gst_hot_calls);
+      workers[i].set_gst_warm_calls(gst_warm_calls);
       workers[i].set_matrix_size_a(gst_matrix_size_a);
       workers[i].set_matrix_size_b(gst_matrix_size_b);
       workers[i].set_matrix_size_c(gst_matrix_size_c);
@@ -358,6 +359,14 @@ bool gst_action::get_all_gst_config_keys(void) {
   if (error == 1) {
     msg = "invalid '" +
       std::string(RVS_CONF_HOT_CALLS) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get_int<uint64_t>(RVS_CONF_WARM_CALLS, &gst_warm_calls, GST_DEFAULT_WARM_CALLS);
+  if (error == 1) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_WARM_CALLS) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
@@ -579,6 +588,13 @@ bool gst_action::get_all_gst_config_keys(void) {
     msg = "invalid '" +
       std::string(RVS_CONF_ROTATING) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get_int<uint64_t>(RVS_CONF_DURATION_KEY, &property_duration, GST_DEFAULT_DURATION)) {
+    msg = "Invalid '" + std::string(RVS_CONF_DURATION_KEY) +
+      "' key";
+    rvs::lp::Err(msg, module_name, action_name);
     bsts = false;
   }
 

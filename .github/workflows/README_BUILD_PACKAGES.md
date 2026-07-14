@@ -16,16 +16,47 @@ All packages are built with relocatable RPATH settings, meaning they can be inst
 The workflow runs automatically on:
 - Push to `master`, `main`, or `release/**` branches
 - Pull requests to `master` or `main` branches
-- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); uses **latest ROCm version** (auto-fetched from TheRock)
-- Manual trigger via GitHub Actions UI (workflow_dispatch)
+- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); **latest ROCm nightly** from [ROCm SDK nightly tarballs](https://rocm.nightlies.amd.com/tarball-multi-arch/) (or repo variable overrides). The cron fans out to the **default branch** plus every branch matched by the repository variable **`ACTIVE_BRANCHES`** (comma-separated literals/globs, e.g. `npi/**,release/**` — do not list the default branch there).
+- **Manual** (`workflow_dispatch`): if **`ROCM_VERSION`** is pinned (**workflow input** and/or **`vars.ROCM_VERSION`**), the tarball is chosen by **version format** (nightly `x.y.za…` vs release `X.Y.Z`). If no version is pinned, the job uses **latest nightly** (same as schedule).
+
+### Scheduled multi-branch nightly (`ACTIVE_BRANCHES`)
+
+| Branch source | Built on schedule? | S3 upload on schedule? | S3 path (under bucket) |
+|---------------|-------------------|------------------------|-------------------------|
+| **Default branch** (`master` / `main`) | Always | Yes | Unchanged: `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` (+ APT/YUM metadata) |
+| **`ACTIVE_BRANCHES`** matches (non-default) | Yes | Yes (except `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` |
+| **`release*`** matches from `ACTIVE_BRANCHES` | Yes | **No** | Packages are built and verified only |
+
+- **`branch_prefix`**: first path segment of the branch name (`npi` for `npi/foo`; for a branch with no `/`, the full branch name).
+- **`push` / `pull_request` / `workflow_dispatch`**: single-branch matrix; S3 routing is unchanged from the table below.
+- Set **`ACTIVE_BRANCHES`** under **Settings → Secrets and variables → Actions → Variables** (example: `npi/**,release/**`).
+
+- **Pull requests** and **pushes** to `master`, `main`, or `release/**` (including merges): **latest ROCm release** (**X.Y.Z**) from [repo.amd.com ROCm tarballs](https://repo.amd.com/rocm/tarball/).
+
+### ROCm SDK: nightly vs release in CI
+
+The workflow runs [`.github/scripts/configure-rocm-sdk-channel.sh`](../scripts/configure-rocm-sdk-channel.sh) to set `ROCM_SDK_CHANNEL`, SDK URLs, and `ROCM_VERSION` (from `vars.ROCM_VERSION` on push/PR, or `workflow_dispatch` input) before calling `build_packages_local.sh`. Release-branch detection uses POSIX `case` (not bash `[[`), so it works in the Ubuntu `ubuntu:22.04` container where steps may run under `sh`.
+
+**ROCm pin vs S3 layout:** A nightly SDK pin (e.g. `7.14.0a20260528`) only affects **which tarball is downloaded**. **`workflow_dispatch` or `push` on a `release/**` branch** still uploads packages to **`release/rvs/`** (see S3 table below).
+
+| Trigger | SDK source |
+|---------|------------|
+| **`schedule`** | **Nightly** — latest nightly tarball from the nightly listing |
+| **`pull_request`** (to `master` / `main`) | **Release** — latest **X.Y.Z** from the release listing |
+| **`push`** to `master`, `main`, or `release/**` | **Release** — same (covers merge-after-PR) |
+| **`push`** to other branches | **Nightly** |
+| **`workflow_dispatch`** | **Format-based** when `rocm_version` input or `vars.ROCM_VERSION` is set; otherwise **latest nightly** |
+
+Local builds (no CI): default is **latest nightly** if `ROCM_VERSION` is unset; if set, tarball location follows the same **format** rules as in `build_packages_local.sh`.
 
 ### Manual Trigger Parameters
 
 When manually triggering the workflow, you can specify:
 
-1. **ROCm Version** (e.g., `7.11.0a20260121`)
-   - Default: empty (auto-fetches latest from TheRock)
-   - Or specify an explicit version string
+1. **ROCm Version**
+   - Empty — **latest nightly** (unless `vars.ROCM_VERSION` is set in the repo, which pins a version and triggers format-based selection).
+   - **`X.Y.Z`** — release tarball at [repo.amd.com](https://repo.amd.com/rocm/tarball/).
+   - **`x.y.za…`** — nightly tarball at [nightlies](https://rocm.nightlies.amd.com/tarball-multi-arch/).
    
 2. **GPU Family Target**:
    - `gfx94X-dcgpu` - MI300A/MI300X
@@ -33,6 +64,15 @@ When manually triggering the workflow, you can specify:
    - `gfx110X-all` - AMD RX 7900 XTX, 7800 XT, 7700S, Radeon 780M (default)
    - `gfx1151` - AMD Strix Halo iGPU
    - `gfx120X-all` - AMD RX 9060/XT, 9070/XT
+
+   **`GPU_FAMILY` selects the ROCm SDK tarball only.** TransferBench CLI offload
+   archs come from `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` (13-arch default
+   matching upstream TransferBench `build_packages_local.sh`), not from
+   `gpu_family`.
+
+3. **Build TransferBench CLI** (boolean, default **true** on manual runs):
+   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` / `numactl-libs` at runtime).
+   - On **push**, **PR**, and **schedule**, CI defaults to **ON** unless repository variable `BUILD_TRANSFERBENCH_CLI` is set to `OFF`.
 
 ## How It Works
 
@@ -56,11 +96,11 @@ GitHub Actions Workflow
     │   ├── export PATH="$ROCM_PATH/bin:$PATH"
     │   ├── export LD_LIBRARY_PATH="$ROCM_PATH/lib:$LD_LIBRARY_PATH"
     │   ├── export CMAKE_PREFIX_PATH="$ROCM_PATH:$CMAKE_PREFIX_PATH"
-    │   ├── export HIP_DEVICE_LIB_PATH (auto-detected amdgcn/bitcode path)
+    │   ├── export HIP_DEVICE_LIB_PATH (ordered candidate paths + amdclang++ resource-dir fallback)
     │   ├── export ROCM_LIBPATCH_VERSION (major.minor in xxyy format, e.g., 0711)
     │   ├── export CPACK_DEBIAN_PACKAGE_RELEASE (see env table: r<libpatch>.date, PRs add .branch.commit)
     │   ├── export CPACK_RPM_PACKAGE_RELEASE (same as DEB)
-    │   ├── export CMAKE_CXX_COMPILER=hipcc (AlmaLinux only)
+    │   ├── export CMAKE_CXX_COMPILER=hipcc (AlmaLinux and Ubuntu/Debian)
     │   └── export CMAKE_COMMAND=cmake3 (AlmaLinux) or cmake (Ubuntu)
     ├── 4. Configure CMake (install RPATH defaults live in CMakeLists.txt)
     │   └── $CMAKE_COMMAND -B ./build \
@@ -90,9 +130,9 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/op
 
 **Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically. The **patch version** is auto-computed at CMake configure time: `git describe --tags --match "v<major>.<minor>.*"` counts commits since the last matching `v` tag. For example, if the tag is `v1.3.0` and there have been 15 commits since, the package version becomes `1.3.15`. If no matching tag exists or git is unavailable, the patch defaults to `0` from `CMakeLists.txt`. This works for both CI builds and direct local `cmake` invocations.
 
-**HIP Device Libraries**: Automatically located and exported as `HIP_DEVICE_LIB_PATH` for clang device library discovery.
+**HIP Device Libraries**: Probes known TheRock layouts (`lib/llvm/amdgcn/bitcode`, legacy `amdgcn/bitcode`, Clang resource-dir `lib/llvm/lib/clang/*/lib/amdgcn/bitcode`) and falls back to `amdclang++ -print-resource-dir`; exports `HIP_DEVICE_LIB_PATH` for clang device library discovery.
 
-**Compiler Selection**: For AlmaLinux (manylinux_2_28), `CMAKE_CXX_COMPILER` is set to ROCm's `hipcc`. Ubuntu uses system default compiler.
+**Compiler Selection**: `CMAKE_CXX_COMPILER` is set to ROCm's `hipcc` on both AlmaLinux (manylinux_2_28) and Ubuntu/Debian. Because hipcc is Clang-based and does not bundle libstdc++, the system GCC tree is plumbed in via `--gcc-toolchain=$GCC_TOOLCHAIN`: on AlmaLinux this points at the discovered `gcc-toolset-<N>`; on Ubuntu/Debian it is `/usr` (set when `/usr/include/c++/*/barrier` exists).
 
 **CMake Command**: Uses `cmake3` on AlmaLinux (manylinux_2_28) and `cmake` on Ubuntu.
 
@@ -100,7 +140,7 @@ CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/op
 
 **Dynamic ROCm Path Discovery**: `FETCH_ROCMPATH_FROM_ROCMCORE=ON` allows RVS to automatically detect ROCm installation location at runtime from ROCm core libraries.
 
-**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script.
+**Single Source of Truth**: `build_packages_local.sh` drives configure/build/package for CI and local use; **RPATH defaults** live in **`CMakeLists.txt`** so a plain **`cmake`** invocation gets the same install **`RPATH`** without copying flags into the shell script. When **`BUILD_TRANSFERBENCH_CLI=ON`**, [`CMakeTransferBenchCLI.cmake`](../CMakeTransferBenchCLI.cmake) applies TransferBench-specific relocatable RPATH via [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in), forwards **`GPU_TARGETS`** (via `-C` initial cache) / **`HIP_PLATFORM=amd`**, and prints **`message(STATUS)`** lines for the sub-build. **CI** streams verbose TransferBench `cmake --build --verbose` output in the job log (`LOG_BUILD=OFF`); local builds keep stamp logs under `build/TransferBenchCLI-prefix/src/TransferBenchCLI-stamp/`.
 
 ### Workflow Steps
 
@@ -110,12 +150,12 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 2. **Set Environment Variables** from workflow inputs or defaults
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
-5. **Upload to S3** (when repo is `ROCm/ROCmValidationSuite`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
+5. **Upload to S3** (when the repo is `ROCm/ROCmValidationSuite`, or when repository variable `RVS_S3_UPLOAD_ENABLED` is `true`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
 6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
-S3 upload runs **only when** the repository is **`ROCm/ROCmValidationSuite`** (the `if` guard prevents forks from attempting credential setup). The upload step itself is always reached, but exits gracefully if `AWS_S3_BUCKET` is not set. Uses **AWS OIDC**; no long-term access key or secret. The bash routing inside the upload step determines the S3 destination based on the event type and branch.
+S3 upload runs when the repository is **`ROCm/ROCmValidationSuite`** **or** when **`RVS_S3_UPLOAD_ENABLED`** is set to the literal string **`true`** (for forks, mirrors, or other org repositories that opt in after IAM trust is updated). Fork PRs from other repositories are still skipped (no OIDC for cross-repo PR heads). The upload step is reached when those guards pass, but exits gracefully if `AWS_S3_BUCKET` is not set. Uses **AWS OIDC**; no long-term access key or secret. The bash routing inside the upload step determines the S3 destination based on the event type and branch.
 
 **Where `vars` and `secrets` are defined**
 
@@ -130,9 +170,11 @@ The workflow uses GitHub repository variables to control which runners execute e
 
 | Variable | Default | Used by |
 |----------|---------|---------|
+| `ACTIVE_BRANCHES` | _(unset)_ | **Scheduled** nightly only: comma-separated branch literals/globs (`npi/**`, `release/**`). Default branch is always built; do not list it here. `release*` matches build but do not upload on schedule. |
 | `RUNNER_LABEL` | `ubuntu-22.04` | Ubuntu build job |
 | `RUNNER_LABEL_CONTAINER` | `ubuntu-latest` | CentOS/manylinux build job (container) |
 | `RUNNER_LABEL_UTILITY` | `ubuntu-latest` | Release summary job |
+| `RVS_S3_UPLOAD_ENABLED` | _(unset)_ | Set to `true` to run S3/OIDC upload steps when the repo is not `ROCm/ROCmValidationSuite`. Requires `AWS_S3_BUCKET`, `AWS_ROLE_ARN`, and IAM trust for this repository. |
 
 To use a self-hosted runner, set the variable to your runner's label (e.g., `self-hosted` or a custom label) in **Settings** → **Secrets and variables** → **Actions** → **Variables**.
 
@@ -146,14 +188,21 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
    - Name: `AWS_S3_BUCKET`
    - Value: your S3 bucket name (e.g. `my-rocm-packages`).
 
-3. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
+3. **Repository variable** (only if the repo is **not** `ROCm/ROCmValidationSuite` and you want S3 upload from this repo):
+   - Name: `RVS_S3_UPLOAD_ENABLED`
+   - Value: `true` (must be this exact string). Upstream does not need this variable.
 
-**S3 path layout:**
+4. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it for the **repository that runs the workflow** (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
+
+**S3 path layout** (resolved by [`.github/scripts/rvs-s3-upload-route.sh`](../scripts/rvs-s3-upload-route.sh), POSIX-safe for Ubuntu `sh`):
 
 | Trigger | Path | Contents |
 |--------|------|----------|
 | **`release/*` branch** (`push` or `workflow_dispatch`) | `release/rvs/deb/`, `release/rvs/rpm/`, `release/rvs/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). Only PR merges into release branches or manual dispatch on release branches write here. |
-| **Scheduled**, **push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same split by type. All non-release builds go to nightly. |
+| **Scheduled** (default branch only) | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same as before; APT/YUM metadata generated here. |
+| **Scheduled** (`ACTIVE_BRANCHES`, non-default, not `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` | No shared `rvs/` segment; no repo metadata on these paths. |
+| **Scheduled** (`release*` from `ACTIVE_BRANCHES`) | _(none)_ | Build only; upload skipped. |
+| **Push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same split by type. |
 | **Pull request** (same-repo) | `rvs/<ref_name>/<run_number>/ubuntu-22.04/` or `.../manylinux_2_28/` | DEB only (Ubuntu job); RPM+TGZ (manylinux job). One-off path, no repo metadata generated. |
 
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
@@ -249,10 +298,10 @@ The workflow uses `build_packages_local.sh` as the core build engine. This scrip
 - **Dependency Management**: Installs all required build tools and libraries
   - Enables PowerTools/CRB repository on AlmaLinux for doxygen and yaml-cpp
 - **ROCm SDK Setup**: Auto-fetches latest version or downloads specified version from TheRock tarballs
-- **HIP Device Libraries**: Auto-locates amdgcn/bitcode directory and exports HIP_DEVICE_LIB_PATH
+- **HIP Device Libraries**: Ordered candidate-path probe (no full-tree `find`); exports `HIP_DEVICE_LIB_PATH`
 - **CMake Configuration**: Sets up relocatable RPATHs and all build parameters
   - Uses cmake3 on AlmaLinux, cmake on Ubuntu
-  - Sets CMAKE_CXX_COMPILER to hipcc on AlmaLinux
+  - Sets CMAKE_CXX_COMPILER to hipcc on AlmaLinux and Ubuntu/Debian (Ubuntu also gets `--gcc-toolchain=/usr` for C++20 libstdc++ headers)
 - **Building**: Compiles RVS with parallel builds
 - **Packaging**: Creates DEB, RPM, and TGZ packages using CPack
 - **Color Output**: Clear, colored progress indicators
@@ -276,17 +325,26 @@ sudo -E ./build_packages_local.sh
 sudo BUILD_TYPE=Debug ./build_packages_local.sh
 ```
 
-**Important**: The script requires root privileges to install system dependencies. Use `sudo` when running locally. In GitHub Actions:
-- **Ubuntu runners**: Use `sudo` (runner has sudo access but not root by default)
-- **Container builds** (Rocky/CentOS): No sudo needed (containers run as root)
+**Important**: The script requires root privileges to install system dependencies. Use `sudo` when running locally on a bare-metal host. In GitHub Actions every build job runs inside a container as root, so the workflow invokes `./build_packages_local.sh` directly without `sudo`:
+- **Ubuntu job**: runs in the `ubuntu:22.04` container
+- **CentOS/manylinux job**: runs in the `manylinux_2_28_x86_64` container
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ROCM_VERSION` | Auto-fetched (fallback: `7.11.0a20260121`) | ROCm SDK version from TheRock. If not set, script fetches latest version automatically. |
-| `GPU_FAMILY` | `gfx110X-all` | Target GPU architecture |
+| `ROCM_VERSION` | _(unset)_ | If set, selects tarball by **format** (see below). If unset locally: **latest nightly**. If unset in CI: channel selects latest **nightly** vs **release X.Y.Z**. |
+| `ROCM_SDK_RELEASE_URL` | `https://repo.amd.com/rocm/tarball/` | HTML listing for **release** tarballs (`therock-dist-linux-<GPU_FAMILY>-X.Y.Z.tar.gz`). Used when `ROCM_SDK_CHANNEL=release` or `auto` with this URL set. |
+| `ROCM_SDK_RELEASE_BASE_URL` | `https://repo.amd.com/rocm/tarball` | Directory URL for downloading **X.Y.Z** tarballs; overridden when version string is nightly-shaped. |
+| `ROCM_SDK_BASE_URL` | See script | Effective tarball base after channel + version-shape resolution. |
+| `ROCM_SDK_INDEX_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch/` | **Nightly** listing for latest nightly SDK discovery. Auto-fetch matches **SDK tarballs only** (`therock-dist-linux-<GPU_FAMILY>-<version>.tar.gz`); `-tests-` entries are excluded **per filename** (version must follow `GPU_FAMILY-` immediately), not by filtering whole HTML lines. |
+| `ROCM_SDK_NIGHTLY_BASE_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch` | Tarball base for **nightly** builds (`x.y.za…` versions). |
+| `ROCM_SDK_NIGHTLY_INDEX_URL` | _(same as index default)_ | Optional override for nightly listing URL. |
+| `ROCM_SDK_CHANNEL` | `auto` locally | **`nightly`** / **`release`** / **`auto`**. CI sets channel per trigger (see table above); manual with a pin uses **`auto`** so tarball follows version format. |
+| `GPU_FAMILY` | `gfx110X-all` | ROCm SDK **tarball** family (`therock-dist-linux-<GPU_FAMILY>-…`); does not set TransferBench offload archs |
+| `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` | 13-arch default (see [`docs/transferbench.md`](../../docs/transferbench.md)) | HIP offload archs for the bundled TransferBench CLI when `BUILD_TRANSFERBENCH_CLI=ON` |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
+| `BUILD_TRANSFERBENCH_CLI` | `OFF` locally; `ON` in CI | Build and install the TransferBench CLI in packages (`-DBUILD_TRANSFERBENCH_CLI`). CI uses `vars.BUILD_TRANSFERBENCH_CLI` or defaults to `ON`; `workflow_dispatch` input **`build_transferbench_cli`** overrides manual runs. |
 | `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `8.0` → `0800`) - used for RVS version tagging |
 | `CPACK_DEBIAN_PACKAGE_RELEASE` | Auto-generated | **Default** (`schedule`, `push`, `workflow_dispatch`, local): `r<ROCM_LIBPATCH_VERSION>.<yyyymmdd>` (e.g. `r0711.20260423` where `0711` = ROCm 7.11 from `ROCM_VERSION`). **Pull requests**: `r<libpatch>.<yyyymmdd>.<source-branch>.<commit>`. **Release branches** (name starts with `rel`, non-PR): `GITHUB_RUN_NUMBER` (fallback: `1`). |
 | `CPACK_RPM_PACKAGE_RELEASE` | same as `CPACK_DEBIAN_PACKAGE_RELEASE` | Identical to DEB. |
@@ -298,8 +356,8 @@ The workflow builds packages for:
 
 | Platform | Container/Runner | Package Types | Script Mode |
 |----------|------------------|---------------|-------------|
-| Ubuntu 22.04 | ubuntu-22.04 | DEB, TGZ | Auto-detects Ubuntu |
-| Manylinux 2.28 (AlmaLinux 8) | manylinux_2_28_x86_64 | RPM, TGZ | Auto-detects AlmaLinux |
+| Ubuntu 22.04 | `ubuntu:22.04` container on `ubuntu-22.04` host | DEB, TGZ | Auto-detects Ubuntu |
+| Manylinux 2.28 (AlmaLinux 8) | `manylinux_2_28_x86_64` container | RPM, TGZ | Auto-detects AlmaLinux |
 
 ## Package Naming Convention
 
@@ -357,23 +415,23 @@ Before you install the RVS TGZ, **ROCm must be installed, configured, and on you
 
 #### Install RVS run-time dependencies (on the target system)
 
-The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration:
+The TGZ is built against ROCm; on the target host you still need **PCI** for GPU enumeration and **NUMA** when using the bundled **TransferBench** CLI:
 
-| Family | Typical PCI package |
-|--------|---------------------|
-| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) |
-| **RHEL / Rocky / Alma 8+** | `pciutils-libs` |
-| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release |
+| Family | Typical PCI package | NUMA (TransferBench CLI) |
+|--------|---------------------|---------------------------|
+| **Debian / Ubuntu** | `libpci3` (or `libpci-3-0-0` on some releases) | `libnuma1` |
+| **RHEL / Rocky / Alma 8+** | `pciutils-libs` | `numactl-libs` |
+| **SUSE / openSUSE** | `libpci3` / `pciutils` as appropriate for the release | `libnuma1` |
 
 ```bash
 # Ubuntu / Debian
-sudo apt update && sudo apt install -y libpci3
+sudo apt update && sudo apt install -y libpci3 libnuma1
 
 # RHEL / Rocky / Alma 8+
-sudo dnf install -y pciutils-libs
+sudo dnf install -y pciutils-libs numactl-libs
 
 # openSUSE / SUSE (adjust package names per release)
-sudo zypper install libpci3
+sudo zypper install libpci3 libnuma1
 ```
 
 User-facing install steps for TGZ (PATH / `LD_LIBRARY_PATH`, **`RPATH`** including **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`/opt/rocm/core-<major>/lib`**, and **`/opt/rocm/core-<major>/lib/llvm/lib`**) are in **[docs/INSTALL_TGZ.md](../../docs/INSTALL_TGZ.md)**.

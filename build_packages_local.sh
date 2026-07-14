@@ -9,17 +9,70 @@ set -e  # Exit on error
 # Configuration
 GPU_FAMILY="${GPU_FAMILY:-gfx110X-all}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
+BUILD_TRANSFERBENCH_CLI="${BUILD_TRANSFERBENCH_CLI:-OFF}"
+# TransferBench offload archs (independent of GPU_FAMILY SDK tarball selection).
+# Source of truth: TransferBench build_packages_local.sh DEFAULT_GPU_TARGETS.
+DEFAULT_GPU_TARGETS="gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201"
+TRANSFERBENCH_GPU_TARGETS="${TRANSFERBENCH_GPU_TARGETS:-${GPU_TARGETS:-$DEFAULT_GPU_TARGETS}}"
 BUILD_DIR="./build"
 ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
 # SDK Source Configuration
-# Default: TheRock public S3 nightly bucket (works from any network).
-# Override via environment variables or GitHub Actions repository variables (vars.*).
+# Defaults point at AMD-hosted listings (override via env or GitHub vars).
+# - Nightly index: https://rocm.nightlies.amd.com/tarball-multi-arch/
+# - Release listing: https://repo.amd.com/rocm/tarball/
 #
-# If your SDK server has no index page for auto-detection, set ROCM_SDK_INDEX_URL=""
-# and provide ROCM_VERSION explicitly.
-ROCM_SDK_BASE_URL="${ROCM_SDK_BASE_URL:-https://therock-nightly-tarball.s3.us-east-2.amazonaws.com}"
-ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL:-https://therock-nightly-tarball.s3.amazonaws.com/index.html}"
+# Local builds: if ROCM_VERSION is unset (channel auto, no release listing env), latest *nightly* is fetched.
+# If ROCM_VERSION is set, tarball base follows format:
+# - Nightly: x.y.za<date> (e.g. 7.11.0a20260121) → nightly base URL
+# - Release: X.Y.Z (e.g. 7.11.0) → release base URL
+#
+# ROCM_SDK_CHANNEL: nightly | release | auto (default auto).
+# - nightly: latest SDK from nightly listing (ROCM_SDK_INDEX_URL).
+# - release: latest X.Y.Z from release listing (ROCM_SDK_RELEASE_URL).
+# - auto: release listing URL set → release discovery; else nightly index.
+#
+# Optional: ROCM_SDK_NIGHTLY_BASE_URL, ROCM_SDK_NIGHTLY_INDEX_URL, ROCM_SDK_RELEASE_URL (listing),
+# ROCM_SDK_RELEASE_BASE_URL (tarball directory for X.Y.Z downloads).
+_ROCM_NIGHTLY_INDEX_DEFAULT="https://rocm.nightlies.amd.com/tarball-multi-arch/"
+_ROCM_NIGHTLY_BASE_DEFAULT="https://rocm.nightlies.amd.com/tarball-multi-arch"
+_ROCM_RELEASE_LIST_DEFAULT="https://repo.amd.com/rocm/tarball/"
+_ROCM_RELEASE_BASE_DEFAULT="https://repo.amd.com/rocm/tarball"
+
+ROCM_SDK_CHANNEL="${ROCM_SDK_CHANNEL:-auto}"
+ROCM_SDK_RELEASE_URL="${ROCM_SDK_RELEASE_URL:-}"
+
+if [ "$ROCM_SDK_CHANNEL" = "nightly" ]; then
+    ROCM_SDK_RELEASE_URL=""
+    ROCM_SDK_BASE_URL="${ROCM_SDK_NIGHTLY_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_NIGHTLY_BASE_DEFAULT}}"
+    ROCM_SDK_INDEX_URL="${ROCM_SDK_NIGHTLY_INDEX_URL:-${ROCM_SDK_INDEX_URL:-$_ROCM_NIGHTLY_INDEX_DEFAULT}}"
+elif [ "$ROCM_SDK_CHANNEL" = "release" ]; then
+    ROCM_SDK_RELEASE_URL="${ROCM_SDK_RELEASE_URL:-$_ROCM_RELEASE_LIST_DEFAULT}"
+    if [ -z "${ROCM_SDK_BASE_URL:-}" ]; then
+        if [ -n "${ROCM_SDK_RELEASE_BASE_URL:-}" ]; then
+            ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_BASE_URL}"
+        else
+            # Same directory as listing: strip trailing / only (not %/* — that drops /tarball when URL has no trailing slash).
+            ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_URL%/}"
+        fi
+    fi
+    ROCM_SDK_INDEX_URL="${ROCM_SDK_INDEX_URL:-}"
+else
+    # auto (local: no release URL → nightly latest; CI sets channel explicitly)
+    if [ -n "${ROCM_SDK_RELEASE_URL}" ]; then
+        if [ -z "${ROCM_SDK_BASE_URL:-}" ]; then
+            if [ -n "${ROCM_SDK_RELEASE_BASE_URL:-}" ]; then
+                ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_BASE_URL}"
+            else
+                # Listing URL and tarball base share the same path; normalize trailing slash only.
+                ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_URL%/}"
+            fi
+        fi
+    else
+        ROCM_SDK_BASE_URL="${ROCM_SDK_NIGHTLY_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_NIGHTLY_BASE_DEFAULT}}"
+    fi
+    ROCM_SDK_INDEX_URL="${ROCM_SDK_NIGHTLY_INDEX_URL:-${ROCM_SDK_INDEX_URL:-$_ROCM_NIGHTLY_INDEX_DEFAULT}}"
+fi
 
 # Post-build upload configuration
 # Set UPLOAD_TARGET to enable automatic upload of built packages after the build.
@@ -69,36 +122,354 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
+# Map common truthy/falsey strings to CMake ON/OFF.
+normalize_on_off() {
+    case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+        1|on|true|yes) echo ON ;;
+        *) echo OFF ;;
+    esac
+}
+
+# Locate HIP device bitcode (amdgcn/bitcode) under a TheRock/ROCm SDK root.
+# Probes known layouts in priority order — no find|head pipeline (fragile with set -e).
+# Prints the path on stdout; returns 0 on success, 1 if not found.
+resolve_hip_device_lib_path() {
+    local root="$1"
+    local cand resource_dir
+
+    if [ -z "$root" ] || [ ! -d "$root" ]; then
+        return 1
+    fi
+
+    for cand in \
+        "${root}/lib/llvm/amdgcn/bitcode" \
+        "${root}/amdgcn/bitcode" \
+        "${root}/lib/clang/amdgcn/bitcode"
+    do
+        if [ -d "$cand" ]; then
+            echo "$cand"
+            return 0
+        fi
+    done
+
+    # ROCm 7.2+ Clang resource-dir layout: lib/llvm/lib/clang/<ver>/lib/amdgcn/bitcode
+    for cand in "${root}"/lib/llvm/lib/clang/*/lib/amdgcn/bitcode; do
+        if [ -d "$cand" ]; then
+            echo "$cand"
+            return 0
+        fi
+    done
+
+    # Derive from amdclang++ resource dir when present.
+    if [ -x "${root}/bin/amdclang++" ]; then
+        resource_dir="$("${root}/bin/amdclang++" -print-resource-dir 2>/dev/null)" || true
+        if [ -n "$resource_dir" ] && [ -d "${resource_dir}/lib/amdgcn/bitcode" ]; then
+            echo "${resource_dir}/lib/amdgcn/bitcode"
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# Print diagnostics when resolve_hip_device_lib_path fails.
+report_hip_device_lib_path_failure() {
+    local root="$1"
+    print_error "Could not find amdgcn/bitcode under ROCM_PATH=$root"
+    print_error "HIP device libraries are required for GPU code compilation"
+    print_error "Tried:"
+    print_error "  ${root}/lib/llvm/amdgcn/bitcode"
+    print_error "  ${root}/amdgcn/bitcode"
+    print_error "  ${root}/lib/clang/amdgcn/bitcode"
+    print_error "  ${root}/lib/llvm/lib/clang/*/lib/amdgcn/bitcode"
+    print_error "  amdclang++ -print-resource-dir .../lib/amdgcn/bitcode"
+    if [ -d "$root" ]; then
+        print_error "Top-level contents of $root:"
+        ls -la "$root" 2>&1 | while read -r line; do print_error "  $line"; done
+        if [ -d "${root}/lib/llvm" ]; then
+            print_error "Contents of ${root}/lib/llvm:"
+            ls -la "${root}/lib/llvm" 2>&1 | while read -r line; do print_error "  $line"; done
+        fi
+    fi
+    print_error "If the SDK is missing amdgcn/bitcode, this may be a known TheRock symlink issue;"
+    print_error "see https://github.com/ROCm/TheRock/issues/74"
+}
+
+# Join base URL and filename without duplicate slashes
+join_base_and_file() {
+    local base="$1"
+    local path="$2"
+    base="${base%/}"
+    printf '%s/%s' "$base" "$path"
+}
+
+# After ROCM_VERSION is known: pick tarball host directory from version shape (overrides channel defaults).
+# Nightly: x.y.za<digits>  Release: X.Y.Z (three-part semver only)
+apply_sdk_tarball_base_for_version() {
+    local v="$1"
+    if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+'; then
+        ROCM_SDK_BASE_URL="${ROCM_SDK_NIGHTLY_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_NIGHTLY_BASE_DEFAULT}}"
+        print_info "Version matches ROCm nightly format (x.y.za…) → tarball base: $ROCM_SDK_BASE_URL"
+    elif echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_RELEASE_BASE_DEFAULT}}"
+        print_info "Version matches ROCm release format (X.Y.Z) → tarball base: $ROCM_SDK_BASE_URL"
+    fi
+}
+
+# Validate ROCM_VERSION after parsing an SDK listing (not -tests- or other variants).
+# mode: nightly (x.y.za<digits>) or release (X.Y.Z)
+validate_rocm_version_string() {
+    local v="$1"
+    local mode="$2"
+    case "$mode" in
+        nightly)
+            if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+$'; then
+                return 0
+            fi
+            ;;
+        release)
+            if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+                return 0
+            fi
+            ;;
+        *)
+            print_error "validate_rocm_version_string: unknown mode $mode"
+            return 1
+            ;;
+    esac
+    print_error "Invalid ROCm $mode version string from listing: $v"
+    return 1
+}
+
+# Parse SDK tarball versions from a listing on stdin (HTML/JSON).
+# Per-match only — do not grep -v '-tests-' on the whole page (nightly index is one JSON line).
+# Prints one version string per matching SDK tarball.
+parse_sdk_tarball_versions_from_listing() {
+    local gpu_family="$1"
+    local mode="$2"
+    local pattern
+
+    case "$mode" in
+        nightly)
+            # Digit after gpu_family- excludes ...-gfx110X-all-tests-...
+            pattern="therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+a[0-9]+"
+            ;;
+        release)
+            pattern="therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+"
+            ;;
+        *)
+            print_error "parse_sdk_tarball_versions_from_listing: unknown mode $mode"
+            return 1
+            ;;
+    esac
+
+    grep -oE "$pattern" | sed "s|^therock-dist-linux-${gpu_family}-||"
+}
+
+# Collect SDK version strings from a listing file; python3 fallback when grep finds nothing.
+collect_sdk_versions_from_listing_file() {
+    local listing_file="$1"
+    local gpu_family="$2"
+    local mode="$3"
+    local versions
+
+    versions=$(parse_sdk_tarball_versions_from_listing "$gpu_family" "$mode" < "$listing_file")
+
+    if [ -z "$versions" ] && [ -s "$listing_file" ] && command -v python3 >/dev/null 2>&1; then
+        versions=$(python3 - "$gpu_family" "$mode" "$listing_file" <<'PY'
+import re
+import sys
+
+gpu_family = sys.argv[1]
+mode = sys.argv[2]
+with open(sys.argv[3], encoding="utf-8", errors="replace") as f:
+    text = f.read()
+prefix = "therock-dist-linux-" + re.escape(gpu_family) + "-"
+if mode == "nightly":
+    pat = re.compile(prefix + r"([0-9]+\.[0-9]+\.[0-9]+a[0-9]+)\.tar\.gz")
+else:
+    pat = re.compile(prefix + r"([0-9]+\.[0-9]+\.[0-9]+)\.tar\.gz")
+seen = set()
+for m in pat.finditer(text):
+    if "-tests-" in m.group(0):
+        continue
+    v = m.group(1)
+    if v not in seen:
+        seen.add(v)
+        print(v)
+PY
+)
+        if [ -n "$versions" ]; then
+            print_info "Parsed SDK versions via python3 fallback"
+        fi
+    fi
+
+    printf '%s\n' "$versions"
+}
+
 # Function to fetch latest ROCm version for specified GPU family
 # Sets the global ROCM_VERSION variable directly
 fetch_latest_rocm_version() {
     local gpu_family="$1"
+    local listing_tmp latest_version listing_bytes
 
     print_info "Fetching latest ROCm version for $gpu_family..."
     print_info "Index URL: $ROCM_SDK_INDEX_URL"
 
-    # Download index page and parse for latest tarball matching GPU family
-    # Pattern: therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz
-    local latest_version=$(wget -qO- "$ROCM_SDK_INDEX_URL" 2>/dev/null | \
-        grep -oP "therock-dist-linux-${gpu_family}-\K[^<\"]+(?=\.tar\.gz)" | \
-        sort -V | tail -1)
-    
-    if [ -z "$latest_version" ]; then
-        print_error "Could not fetch latest ROCm version for $gpu_family"
-        print_info "Falling back to default version: 7.11.0a20260121"
-        ROCM_VERSION="7.11.0a20260121"
+    listing_tmp="$(mktemp)"
+    if ! wget -q -O "$listing_tmp" "$ROCM_SDK_INDEX_URL"; then
+        print_error "wget failed for $ROCM_SDK_INDEX_URL"
+        rm -f "$listing_tmp"
         return 1
     fi
-    
+    if [ ! -s "$listing_tmp" ]; then
+        print_error "Empty listing from $ROCM_SDK_INDEX_URL"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+
+    listing_bytes=$(wc -c < "$listing_tmp" | tr -d ' ')
+    latest_version=$(collect_sdk_versions_from_listing_file "$listing_tmp" "$gpu_family" nightly \
+        | sort -V | tail -1)
+    rm -f "$listing_tmp"
+
+    if [ -z "$latest_version" ]; then
+        print_error "Could not fetch latest ROCm nightly version for $gpu_family from $ROCM_SDK_INDEX_URL"
+        print_error "Listing was ${listing_bytes} bytes but no SDK tarballs matched therock-dist-linux-${gpu_family}-<x.y.za...>"
+        print_error "(-tests- tarballs are excluded; do not filter the listing with grep -v on whole lines)"
+        return 1
+    fi
+
+    if ! validate_rocm_version_string "$latest_version" nightly; then
+        return 1
+    fi
+
     print_success "Found latest ROCm version: $latest_version"
     ROCM_VERSION="$latest_version"
     return 0
 }
 
+# Fetch latest ROCm *release* tarball version (semantic X.Y.Z only; excludes nightly builds like 7.11.0a20260121).
+# Parses ROCM_SDK_RELEASE_URL (HTML listing / index). Sets ROCM_VERSION.
+fetch_latest_rocm_release_version() {
+    local gpu_family="$1"
+    local list_url="${ROCM_SDK_RELEASE_URL:-$_ROCM_RELEASE_LIST_DEFAULT}"
+    local listing_tmp latest_version listing_bytes
+
+    print_info "Fetching latest ROCm release version (X.Y.Z) for $gpu_family..."
+    print_info "Release listing URL: $list_url"
+
+    listing_tmp="$(mktemp)"
+    if ! wget -q -O "$listing_tmp" "$list_url"; then
+        print_error "wget failed for $list_url"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+    if [ ! -s "$listing_tmp" ]; then
+        print_error "Empty listing from $list_url"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+
+    listing_bytes=$(wc -c < "$listing_tmp" | tr -d ' ')
+    latest_version=$(collect_sdk_versions_from_listing_file "$listing_tmp" "$gpu_family" release \
+        | sort -V | uniq | tail -1)
+    rm -f "$listing_tmp"
+
+    if [ -z "$latest_version" ]; then
+        print_error "No therock-dist-linux-${gpu_family}-X.Y.Z.tar.gz found under release listing (expected forms like 7.11.0)"
+        print_error "Listing was ${listing_bytes} bytes but no SDK tarballs matched for $gpu_family"
+        return 1
+    fi
+
+    if ! validate_rocm_version_string "$latest_version" release; then
+        return 1
+    fi
+
+    print_success "Found latest ROCm release version: $latest_version"
+    ROCM_VERSION="$latest_version"
+    return 0
+}
+
+# ROCm SDK CMake configs (e.g. hipblaslt-config.cmake) call block(), which was added
+# in CMake 3.25. Ubuntu 22.04 ships cmake 3.22 — too old.
+# Try Kitware's APT repo first (clean apt integration); fall back to pip for restricted
+# networks. Set RVS_SKIP_KITWARE_REPO=1 to skip the Kitware step (e.g. air-gapped runners).
+ensure_recent_cmake_ubuntu() {
+    [ -f /etc/os-release ] || return 0
+    # shellcheck source=/dev/null
+    . /etc/os-release
+    case "${ID:-}" in
+        ubuntu|debian) ;;
+        *) return 0 ;;
+    esac
+    command -v apt-get >/dev/null 2>&1 || return 0
+
+    local need_major=3 need_minor=25
+    local cur_major=0 cur_minor=0 v=""
+    if command -v cmake >/dev/null 2>&1; then
+        v="$(cmake --version 2>/dev/null | head -1 | awk '{print $3}')"
+        cur_major="${v%%.*}"
+        local _rest="${v#*.}"
+        cur_minor="${_rest%%.*}"
+        cur_major="${cur_major:-0}"
+        cur_minor="${cur_minor:-0}"
+        if { [ "$cur_major" -gt "$need_major" ] 2>/dev/null; } \
+           || { [ "$cur_major" -eq "$need_major" ] 2>/dev/null && [ "$cur_minor" -ge "$need_minor" ] 2>/dev/null; }; then
+            print_success "cmake $v is recent enough (>= ${need_major}.${need_minor})"
+            return 0
+        fi
+        print_info "cmake $v is older than ${need_major}.${need_minor}; upgrading (ROCm hipblaslt-config uses block())"
+    else
+        print_info "cmake not installed; installing recent version (>= ${need_major}.${need_minor})"
+    fi
+
+    # Try Kitware APT repo first
+    if [ -n "${VERSION_CODENAME:-}" ] && [ "${RVS_SKIP_KITWARE_REPO:-}" != "1" ]; then
+        print_info "Trying Kitware APT repo for cmake (codename: ${VERSION_CODENAME})..."
+        apt-get install -y --no-install-recommends ca-certificates gnupg wget >/dev/null 2>&1 || true
+        if wget -qO - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null \
+            | gpg --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg 2>/dev/null \
+            && [ -s /usr/share/keyrings/kitware-archive-keyring.gpg ]; then
+            echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ ${VERSION_CODENAME} main" \
+                > /etc/apt/sources.list.d/kitware.list
+            if apt-get update >/dev/null 2>&1 && apt-get install -y --no-install-recommends cmake; then
+                hash -r
+                local v_new
+                v_new="$(cmake --version 2>/dev/null | head -1 | awk '{print $3}')"
+                print_success "Installed cmake $v_new from Kitware APT repo"
+                return 0
+            fi
+            print_warning "Kitware APT install failed; falling back to pip"
+        else
+            print_warning "Could not reach apt.kitware.com; falling back to pip (set RVS_SKIP_KITWARE_REPO=1 to silence this)"
+        fi
+    fi
+
+    # pip fallback: works regardless of distro repo state, needs PyPI access.
+    if ! command -v pip3 >/dev/null 2>&1; then
+        apt-get install -y --no-install-recommends python3-pip >/dev/null 2>&1 || true
+    fi
+    if command -v pip3 >/dev/null 2>&1; then
+        if pip3 install --break-system-packages --upgrade cmake 2>/dev/null \
+           || pip3 install --upgrade cmake; then
+            hash -r
+            local v_new
+            v_new="$(cmake --version 2>/dev/null | head -1 | awk '{print $3}')"
+            print_success "Installed cmake $v_new via pip"
+            return 0
+        fi
+    fi
+
+    print_error "Could not install cmake >= ${need_major}.${need_minor}; ROCm hipblaslt configure will fail."
+    print_error "Either expose apt.kitware.com / PyPI to this runner, or pre-install cmake>=3.25 in the image."
+    return 1
+}
+
 # Function to check and install dependencies
 check_and_install_dependencies() {
     print_info "Checking for required build dependencies..."
-    
+
     # Detect OS
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -107,7 +478,7 @@ check_and_install_dependencies() {
         print_error "Cannot detect OS. Please install dependencies manually."
         exit 1
     fi
-    
+
     # Check for command-line tools
     MISSING_TOOLS=()
     command -v cmake >/dev/null 2>&1 || MISSING_TOOLS+=("cmake")
@@ -119,7 +490,7 @@ check_and_install_dependencies() {
     command -v tar >/dev/null 2>&1 || MISSING_TOOLS+=("tar")
     command -v doxygen >/dev/null 2>&1 || MISSING_TOOLS+=("doxygen")
     command -v python3 >/dev/null 2>&1 || MISSING_TOOLS+=("python3")
-    
+
     # Check for library dependencies (platform-specific)
     MISSING_LIBS=()
     if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
@@ -136,16 +507,16 @@ check_and_install_dependencies() {
         [ -f /usr/include/numa.h ] || MISSING_LIBS+=("numactl-devel")
         command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm-build")
     fi
-    
+
     # Combine missing tools and libraries
     MISSING_DEPS=()
     [ ${#MISSING_TOOLS[@]} -ne 0 ] && MISSING_DEPS+=("${MISSING_TOOLS[@]}")
     [ ${#MISSING_LIBS[@]} -ne 0 ] && MISSING_DEPS+=("${MISSING_LIBS[@]}")
-    
+
     if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
         print_warning "Missing dependencies: ${MISSING_DEPS[*]}"
         echo ""
-        
+
         if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
             print_info "Installing dependencies for Ubuntu/Debian..."
             apt-get update
@@ -164,12 +535,12 @@ check_and_install_dependencies() {
                 libnuma-dev
         elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|amzn)$ ]]; then
             print_info "Installing dependencies for CentOS/RHEL/Rocky/AlmaLinux..."
-            
+
             # Check if running in manylinux container (has /opt/python)
             if [ -d /opt/python ]; then
                 print_info "Detected manylinux environment - some tools may be pre-installed"
             fi
-            
+
             # Enable PowerTools/CRB repository (contains doxygen and yaml-cpp)
             print_info "Enabling PowerTools/CRB repository..."
             if command -v dnf >/dev/null 2>&1; then
@@ -187,11 +558,11 @@ check_and_install_dependencies() {
                 yum-config-manager --enable devel 2>/dev/null || \
                 print_warning "Could not enable PowerTools/devel repo (may already be enabled)"
             fi
-            
+
             # Install EPEL repository (may already be present in manylinux)
             print_info "Installing EPEL repository..."
             yum install -y epel-release 2>/dev/null || print_warning "EPEL may already be installed"
-            
+
             print_info "Installing build dependencies..."
             # Note: manylinux typically has gcc, g++, make pre-installed
             yum install -y \
@@ -207,7 +578,7 @@ check_and_install_dependencies() {
                 python3 \
                 numactl-devel \
                 || print_warning "Some packages may already be installed"
-            
+
             # Install a gcc-toolset with C++20 <barrier> support (requires GCC >= 11)
             # Try highest available first for best C++20/C++23 support, fall back to minimum viable
             # RHEL/AlmaLinux/Rocky 8+ use gcc-toolset-{ver}, CentOS 7 uses devtoolset-{ver}
@@ -237,11 +608,11 @@ check_and_install_dependencies() {
                     print_warning "No gcc-toolset (11-14) or devtoolset-11 available - C++20 headers like <barrier> may be missing"
                 fi
             fi
-            
+
             # Install cmake and yaml-cpp separately as they may need special handling
             print_info "Installing cmake..."
             yum install -y cmake3 || yum install -y cmake || print_warning "cmake installation may have failed"
-            
+
             print_info "Installing yaml-cpp..."
             yum install -y yaml-cpp-devel yaml-cpp-static 2>/dev/null || \
             print_warning "yaml-cpp may not be available - will try to continue"
@@ -266,10 +637,10 @@ check_and_install_dependencies() {
             echo "  - rpm-build tools"
             exit 1
         fi
-        
+
         print_success "Dependencies installed successfully"
         echo ""
-        
+
         # Verify installation by re-checking
         print_info "Verifying installation..."
         VERIFY_FAILED=()
@@ -278,7 +649,7 @@ check_and_install_dependencies() {
                 VERIFY_FAILED+=("$tool")
             fi
         done
-        
+
         if [ ${#VERIFY_FAILED[@]} -ne 0 ]; then
             print_error "Failed to install: ${VERIFY_FAILED[*]}"
             exit 1
@@ -292,13 +663,42 @@ check_and_install_dependencies() {
 
 # Check and install dependencies (installs wget, etc. - required before fetch_latest_rocm_version)
 check_and_install_dependencies
+ensure_recent_cmake_ubuntu
 
-# Determine ROCm version: use environment variable or fetch latest (wget is now available)
+# Determine ROCm version: explicit env > channel-specific listing
 if [ -n "$ROCM_VERSION" ]; then
     print_info "Using specified ROCm version: $ROCM_VERSION"
+elif [ "$ROCM_SDK_CHANNEL" = "nightly" ]; then
+    print_info "No ROCm version specified; fetching latest from ROCm nightly index (channel=nightly)..."
+    if [ -z "$ROCM_SDK_INDEX_URL" ]; then
+        print_error "ROCM_SDK_CHANNEL=nightly requires ROCM_SDK_INDEX_URL"
+        exit 1
+    fi
+    fetch_latest_rocm_version "$GPU_FAMILY"
+    if [ -z "$ROCM_VERSION" ]; then
+        print_error "Failed to determine ROCm nightly version"
+        exit 1
+    fi
+elif [ "$ROCM_SDK_CHANNEL" = "release" ]; then
+    print_info "No ROCm version specified; fetching latest release X.Y.Z from ROCM_SDK_RELEASE_URL..."
+    if [ -z "$ROCM_SDK_RELEASE_URL" ]; then
+        print_error "ROCM_SDK_CHANNEL=release requires ROCM_SDK_RELEASE_URL when ROCM_VERSION is unset"
+        exit 1
+    fi
+    fetch_latest_rocm_release_version "$GPU_FAMILY"
+    if [ -z "$ROCM_VERSION" ]; then
+        print_error "Failed to determine ROCm release version"
+        exit 1
+    fi
+elif [ -n "$ROCM_SDK_RELEASE_URL" ]; then
+    print_info "No ROCm version specified; resolving latest release from ROCM_SDK_RELEASE_URL (channel=auto)..."
+    fetch_latest_rocm_release_version "$GPU_FAMILY"
+    if [ -z "$ROCM_VERSION" ]; then
+        print_error "Failed to determine ROCm release version"
+        exit 1
+    fi
 elif [ -n "$ROCM_SDK_INDEX_URL" ]; then
-    # Auto-detection only works when an index URL is available (e.g. S3 bucket)
-    print_info "No ROCm version specified, fetching latest from index..."
+    print_info "No ROCm version specified, fetching latest from nightly index (channel=auto)..."
     fetch_latest_rocm_version "$GPU_FAMILY"
 
     if [ -z "$ROCM_VERSION" ]; then
@@ -307,27 +707,31 @@ elif [ -n "$ROCM_SDK_INDEX_URL" ]; then
     fi
 else
     print_error "ROCM_VERSION is required"
-    print_info "The configured SDK server does not provide an index page for auto-detection."
-    print_info "Set it via environment variable, e.g.:"
+    print_info "Set ROCM_VERSION, or configure ROCM_SDK_RELEASE_URL (release X.Y.Z tarballs) or ROCM_SDK_INDEX_URL (nightly listing)."
+    print_info "Example:"
     echo ""
-    echo "  export ROCM_VERSION=\"7.11.0a20260121\""
+    echo "  export ROCM_VERSION=\"7.11.0\""
     echo "  ./build_packages_local.sh"
-    echo ""
-    print_info "Or in GitHub Actions workflow:"
-    echo ""
-    echo "  env:"
-    echo "    ROCM_VERSION: \"7.11.0a20260121\""
     echo ""
     exit 1
 fi
+
+apply_sdk_tarball_base_for_version "$ROCM_VERSION"
+
+BUILD_TRANSFERBENCH_CLI="$(normalize_on_off "$BUILD_TRANSFERBENCH_CLI")"
 
 # Print configuration
 echo "================================================================================"
 echo "  ROCm Validation Suite - Local Package Build Script"
 echo "================================================================================"
 print_info "ROCm Version: $ROCM_VERSION"
+print_info "ROCm SDK channel: ${ROCM_SDK_CHANNEL:-auto}"
 print_info "GPU Family: $GPU_FAMILY"
 print_info "Build Type: $BUILD_TYPE"
+print_info "Build TransferBench CLI: $BUILD_TRANSFERBENCH_CLI"
+if [ "$BUILD_TRANSFERBENCH_CLI" = "ON" ]; then
+    print_info "TransferBench GPU targets: $TRANSFERBENCH_GPU_TARGETS"
+fi
 print_info "Build Directory: $BUILD_DIR"
 print_info "ROCm Install: $ROCM_INSTALL_DIR"
 print_info "SDK Source: $ROCM_SDK_BASE_URL"
@@ -340,7 +744,7 @@ echo ""
 
 # Step 1: Download ROCm SDK
 print_info "Step 1: Downloading ROCm SDK tarball..."
-TARBALL_URL="${ROCM_SDK_BASE_URL}/therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz"
+TARBALL_URL=$(join_base_and_file "$ROCM_SDK_BASE_URL" "therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz")
 TARBALL_FILE="$ROCM_INSTALL_DIR/rocm-sdk.tar.gz"
 
 mkdir -p "$ROCM_INSTALL_DIR"
@@ -371,21 +775,30 @@ fi
 if [ -z "$goto_step2" ]; then
     print_info "Downloading from: $TARBALL_URL"
     if wget --spider "$TARBALL_URL" 2>/dev/null; then
-        wget --show-progress -O "$TARBALL_FILE" "$TARBALL_URL"
-        print_success "Download complete"
+        # Avoid flooding CI logs with per-chunk progress on multi-GB SDK tarballs.
+        if [ -t 1 ]; then
+            wget --show-progress -O "$TARBALL_FILE" "$TARBALL_URL"
+        else
+            wget -q -O "$TARBALL_FILE" "$TARBALL_URL"
+        fi
+        if [ -f "$TARBALL_FILE" ]; then
+            print_success "Download complete ($(du -h "$TARBALL_FILE" | awk '{print $1}'))"
+        else
+            print_success "Download complete"
+        fi
     else
         print_error "Failed to download ROCm SDK tarball"
         print_error "URL: $TARBALL_URL"
         print_info "Please check if the ROCm version and GPU family are correct"
         exit 1
     fi
-    
+
     # Extract tarball
     print_info "Extracting ROCm SDK..."
     mkdir -p "$ROCM_INSTALL_DIR/install"
     tar -xzf "$TARBALL_FILE" -C "$ROCM_INSTALL_DIR/install" --strip-components=1
     print_success "Extraction complete"
-    
+
     export ROCM_PATH="$ROCM_INSTALL_DIR/install"
     print_success "ROCm SDK installed to: $ROCM_PATH"
 fi
@@ -396,14 +809,12 @@ print_info "Step 2: Setting up ROCm environment..."
 
 # Find HIP device library path (amdgcn/bitcode) first
 print_info "Locating HIP device libraries (amdgcn/bitcode)..."
-HIP_DEVICE_LIB_PATH=$(find "$ROCM_PATH" -type d -path "*/amdgcn/bitcode" 2>/dev/null | head -1)
-
-if [ -z "$HIP_DEVICE_LIB_PATH" ]; then
-    print_error "Could not find amdgcn/bitcode directory in $ROCM_PATH"
-    print_error "HIP device libraries are required for GPU code compilation"
-    print_error "Please verify your ROCm SDK installation"
+HIP_DEVICE_LIB_PATH=""
+if ! HIP_DEVICE_LIB_PATH="$(resolve_hip_device_lib_path "$ROCM_PATH")"; then
+    report_hip_device_lib_path_failure "$ROCM_PATH"
     exit 1
 fi
+print_success "HIP_DEVICE_LIB_PATH=$HIP_DEVICE_LIB_PATH"
 
 # Export all environment variables
 export PATH="$ROCM_PATH/bin:$PATH"
@@ -414,7 +825,7 @@ export HIP_DEVICE_LIB_PATH="$HIP_DEVICE_LIB_PATH"
 # Extract major.minor version from ROCM_VERSION for ROCM_LIBPATCH_VERSION
 # Convert to xxyy format with zero padding
 # Example: "7.11.0a20260121" -> "0711", "8.0.0" -> "0800", "10.2.0" -> "1002"
-ROCM_VERSION_MAJOR_MINOR=$(echo "$ROCM_VERSION" | grep -oP '^\d+\.\d+')
+ROCM_VERSION_MAJOR_MINOR=$(echo "$ROCM_VERSION" | sed -nE 's/^([0-9]+\.[0-9]+).*/\1/p')
 if [ -z "$ROCM_VERSION_MAJOR_MINOR" ]; then
     print_error "Could not extract major.minor version from ROCM_VERSION: $ROCM_VERSION"
     exit 1
@@ -429,6 +840,13 @@ export ROCM_LIBPATCH_VERSION
 export ROCM_MAJOR
 print_success "Set ROCM_LIBPATCH_VERSION=$ROCM_LIBPATCH_VERSION, ROCM_MAJOR=$ROCM_MAJOR (from $ROCM_VERSION_MAJOR_MINOR)"
 
+# Git 2.35+ refuses commands in container workspaces owned by a different UID than the
+# checkout (Actions mounts ${{ github.workspace }} into the container as root). Mark the
+# workspace as safe so subsequent git rev-parse calls below don't return "0000000".
+if [ -n "${GITHUB_WORKSPACE:-}" ] && command -v git >/dev/null 2>&1; then
+    git config --global --add safe.directory "$GITHUB_WORKSPACE" 2>/dev/null || true
+fi
+
 # Set CPACK package release based on event/branch type
 # - Base (schedule, push, workflow_dispatch, local): r<ROCM_LIBPATCH_VERSION>.yyyymmdd
 #   (ROCM_LIBPATCH_VERSION is major+minor as xxyy, e.g. 0711 for ROCm 7.11)
@@ -441,7 +859,7 @@ BASE_PACKAGE_RELEASE="r${ROCM_LIBPATCH_VERSION}.${RELEASE_DATE}"
 if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -n "${GITHUB_HEAD_REF:-}" ]; then
     GIT_BRANCH="${GITHUB_HEAD_REF}"
 else
-    GIT_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}"
+    GIT_BRANCH="${RVS_BUILD_REF_NAME:-${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}}"
 fi
 if [ -n "$GITHUB_SHA" ]; then
     GIT_COMMIT_SHORT="${GITHUB_SHA:0:7}"
@@ -491,14 +909,31 @@ if [[ "$OS" =~ ^(centos|rhel|almalinux|rocky)$ ]]; then
     else
         print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using system default compiler"
     fi
-    
+
     # Use cmake3 for RHEL-based distros
     export CMAKE_COMMAND="cmake3"
     print_info "Using cmake3 (CentOS/RHEL/AlmaLinux/Rocky)"
 else
-    # Ubuntu and others: use defaults (system compiler and cmake)
+    # Ubuntu/Debian: modules (pebb/pbqt) compile with hipcc, which is Clang-based and does not
+    # bundle libstdc++ C++20 headers such as <barrier>. Pass the system GCC tree to hipcc via
+    # CMAKE_CXX_FLAGS --gcc-toolchain (same mechanism as GCC_TOOLCHAIN on RHEL).
     export CMAKE_COMMAND="cmake"
-    print_info "Using cmake (Ubuntu/other)"
+    print_info "Using cmake (Ubuntu/Debian/other)"
+
+    if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+        if [ -x "$ROCM_PATH/bin/hipcc" ]; then
+            export CMAKE_CXX_COMPILER="$ROCM_PATH/bin/hipcc"
+            print_success "Set CMAKE_CXX_COMPILER to hipcc (Ubuntu/Debian)"
+        else
+            print_warning "hipcc not found at $ROCM_PATH/bin/hipcc - using CMake default C++ compiler"
+        fi
+        if compgen -G "/usr/include/c++/*/barrier" >/dev/null 2>&1; then
+            export GCC_TOOLCHAIN="/usr"
+            print_success "Set GCC_TOOLCHAIN=/usr so hipcc finds system libstdc++ (C++20 <barrier>)"
+        else
+            print_warning "No /usr/include/c++/.../barrier found; install g++ 11+ (e.g. apt install g++-11 build-essential)"
+        fi
+    fi
 fi
 
 print_info "Environment variables set:"
@@ -558,7 +993,12 @@ CMAKE_ARGS=(
     -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}"
     -DCMAKE_VERBOSE_MAKEFILE=1
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
+    -DBUILD_TRANSFERBENCH_CLI="$BUILD_TRANSFERBENCH_CLI"
 )
+
+if [ "$BUILD_TRANSFERBENCH_CLI" = "ON" ]; then
+    CMAKE_ARGS+=(-DTRANSFERBENCH_GPU_TARGETS="$TRANSFERBENCH_GPU_TARGETS")
+fi
 
 # Add CXX compiler if set
 if [ -n "$CMAKE_CXX_COMPILER" ]; then
@@ -604,14 +1044,14 @@ if command -v dpkg >/dev/null 2>&1; then
     print_info "Creating DEB package..."
     cd "$BUILD_DIR"
     cpack -G DEB --verbose
-    
+
     if [ $? -eq 0 ]; then
         DEB_FILE=$(ls amdrocm*-rvs*.deb 2>/dev/null | head -1)
         if [ -n "$DEB_FILE" ]; then
             print_success "Created DEB package: $DEB_FILE"
             DEB_SIZE=$(du -h "$DEB_FILE" | cut -f1)
             print_info "Package size: $DEB_SIZE"
-            
+
             # Verify DEB package
             print_info "Verifying DEB package..."
             dpkg-deb -I "$DEB_FILE" | head -20
@@ -628,14 +1068,14 @@ if command -v rpm >/dev/null 2>&1; then
     cd "$BUILD_DIR"
     cpack -G RPM --verbose
 
-    
+
     if [ $? -eq 0 ]; then
         RPM_FILE=$(ls amdrocm*-rvs*.rpm 2>/dev/null | head -1)
         if [ -n "$RPM_FILE" ]; then
             print_success "Created RPM package: $RPM_FILE"
             RPM_SIZE=$(du -h "$RPM_FILE" | cut -f1)
             print_info "Package size: $RPM_SIZE"
-            
+
             # Verify RPM package
             print_info "Verifying RPM package..."
             rpm -qip "$RPM_FILE" | head -20
@@ -647,13 +1087,51 @@ if command -v rpm >/dev/null 2>&1; then
 fi
 
 # Create TGZ package
+#
+# TGZ uses a different layout than DEB/RPM: CPACK_PACKAGING_INSTALL_PREFIX is
+# emptied so files land at the tarball root (bin/, lib/, share/) rather than
+# under /opt/rocm/extras-<major>/. RVS bakes CPACK_PACKAGING_INSTALL_PREFIX into
+# each install() DESTINATION at configure time, so we must RE-configure (not
+# just re-cpack) for the destinations to flip.
+#
+# Two extra steps are needed for a clean tarball:
+#  - Re-build after the re-configure so ExternalProject sub-builds (the bundled
+#    TransferBench CLI) are rebuilt against the new state; otherwise cpack would
+#    copy from a stale sub-build tree and silently miss files.
+#  - Prune empty directories from the tarball afterwards. With
+#    CPACK_SET_DESTDIR=ON, CPack materialises CMAKE_INSTALL_PREFIX
+#    (/opt/rocm/extras-<major>) under DESTDIR even though every real install()
+#    destination keys off the emptied CPACK_PACKAGING_INSTALL_PREFIX, leaving an
+#    empty opt/rocm/extras-<major>/ tree. We must NOT fix this by setting
+#    CMAKE_INSTALL_PREFIX=/ : GNUInstallDirs' FHS special case then rewrites
+#    bin->usr/bin, lib->usr/lib, ... (and -DCMAKE_INSTALL_BINDIR=bin does not
+#    override it), nesting the whole package under usr/. Instead keep the root
+#    layout and strip empty dirs from the tarball after cpack. RVS never ships
+#    intentionally-empty directories.
 print_info "Creating TGZ package..."
 CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON "-DCPACK_PACKAGING_INSTALL_PREFIX:PATH=" -DCPACK_INCLUDE_TOPLEVEL_DIRECTORY=OFF)
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"
+$CMAKE_COMMAND --build "$BUILD_DIR" -- -j"$(nproc 2>/dev/null || echo 4)" || print_warning "Re-build before TGZ packaging reported errors; proceeding with cpack"
 cd "$BUILD_DIR"
 cpack -G TGZ --verbose
+cpack_tgz_status=$?
 
-if [ $? -eq 0 ]; then
+# Strip empty directories left in the tarball by CPack DESTDIR staging
+# (notably opt/rocm/extras-<major>/). See the comment above the TGZ configure.
+if [ $cpack_tgz_status -eq 0 ]; then
+    for _tgz in amdrocm*-rvs*.tar.gz; do
+        [ -e "$_tgz" ] || continue
+        _staged=$(mktemp -d)
+        if tar xzf "$_tgz" -C "$_staged"; then
+            find "$_staged" -depth -mindepth 1 -type d -empty -delete
+            ( cd "$_staged" && tar czf "$OLDPWD/$_tgz" -- * )
+            print_info "Pruned empty staging directories from $_tgz"
+        fi
+        rm -rf "$_staged"
+    done
+fi
+
+if [ $cpack_tgz_status -eq 0 ]; then
     TGZ_FILE=$(ls amdrocm*-rvs*.tar.gz 2>/dev/null | head -1)
     if [ -n "$TGZ_FILE" ]; then
         print_success "Created TGZ package: $TGZ_FILE"
@@ -678,8 +1156,8 @@ if [ -n "$UPLOAD_TARGET" ]; then
         [ -z "$UPLOAD_REPO" ] && UPLOAD_REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null)
         [ -z "$UPLOAD_REPO" ] && UPLOAD_REPO="unknown"
     fi
-    UPLOAD_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}"
-    UPLOAD_BRANCH=$(echo "$UPLOAD_BRANCH" | sed 's|[^a-zA-Z0-9._-]|-|g')
+    UPLOAD_BRANCH="${RVS_BUILD_REF_NAME:-${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")}}"
+    UPLOAD_BRANCH=$(echo "$UPLOAD_BRANCH" | sed 's|[^a-zA-Z0-9._/-]|-|g')
     UPLOAD_DATE=$(date +%Y-%m-%d)
     UPLOAD_SUBPATH="${UPLOAD_REPO}/${UPLOAD_BRANCH}/${UPLOAD_DATE}"
 

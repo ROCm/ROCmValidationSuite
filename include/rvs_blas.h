@@ -107,7 +107,7 @@ class rvs_blas {
     void generate_random_matrix_data(void);
     bool copy_data_to_gpu(void);
     template <typename Ti, typename To> bool copy_data_to_gpu(void);
-    bool run_blas_gemm(bool hot_call);
+    bool run_blas_gemm(uint64_t num_calls);
     bool is_gemm_op_complete(void);
     bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
     void set_gemm_error(uint64_t _error_freq, uint64_t _error_count);
@@ -339,8 +339,8 @@ class rvs_blas {
         (datatype == "fp6_e2m3_r") ? HIP_R_6F_E2M3 :
         (datatype == "i8_r")       ? HIP_R_8I  :
         (datatype == "fp8_r")      ? HIP_R_8F_E4M3_FNUZ : // FP8-FNUZ
-        (datatype == "fp8_e4m3_r") ? HIP_R_8F_E4M3  : // FP8-OCP E4M3
-        (datatype == "fp8_e5m2_r") ? HIP_R_8F_E5M2  : // FP8-OCP E5M2
+        (datatype == "fp8_e4m3_r" || datatype == "mxfp8_e4m3_r") ? HIP_R_8F_E4M3  : // FP8-OCP E4M3
+        (datatype == "fp8_e5m2_r" || datatype == "mxfp8_e5m2_r") ? HIP_R_8F_E5M2  : // FP8-OCP E5M2
         (datatype == "bf16_r")     ? HIP_R_16BF :
         (datatype == "fp16_r")     ? HIP_R_16F  :
         (datatype == "fp32_r")     ? HIP_R_32F  :

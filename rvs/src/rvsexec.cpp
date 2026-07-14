@@ -290,6 +290,24 @@ int rvs::exec::run() {
     }
   }
 
+  // check -t option
+  if (rvs::options::has_option("-t", &val)) {
+    try {
+      int64_t dur = std::stoll(val);
+      if (dur <= 0) {
+        rvs::logger::Err("duration must be greater than 0", MODULE_NAME_CAPS);
+        return -1;
+      }
+    }
+    catch(...) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "duration value not a valid integer: %s", val.c_str());
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+  }
+
   // construct modules configuration file relative path
   val = path + "../share/rocm-validation-suite/conf/.rvsmodules.config";
   // Check if config file exists if not check the old file location for backward compatibility
@@ -303,7 +321,7 @@ int rvs::exec::run() {
     return 1;
   }
 
-  if (rvs::options::has_option("-t", &val)) {
+  if (rvs::options::has_option("--listTests", &val)) {
         cout << endl << "ROCm Validation Suite (version " <<
         RVS_VERSION_STRING << ")" << endl << endl;
         cout << "Modules available:" << endl;
@@ -570,7 +588,10 @@ void rvs::exec::do_help() {
   cout << "                   (MI-series GPUs) module configuration file. Valid modules: babel, gpup, gst, iet,\n";
   cout << "                   mem, pebb, peqt, pbqt, rcqt.\n\n";
 
-  cout << "-t --listTests     List the test modules present in RVS.\n\n";
+  cout << "-t --duration      Specify the test duration (in seconds) for each action.\n";
+  cout << "                   Overrides the duration value in all actions of the configuration file.\n\n";
+
+  cout << "   --listTests     List the test modules present in RVS.\n\n";
 
   cout << "-v --verbose       Enable detailed logging. Equivalent to specifying -d 5 option.\n\n";
 

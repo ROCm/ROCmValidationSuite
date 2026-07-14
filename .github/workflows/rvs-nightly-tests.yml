@@ -1,0 +1,340 @@
+name: RVS Nightly Tests
+
+# Picks up the latest RVS tarball from the tarball index (secrets.RVS_TARBALL_INDEX_URL
+# into env.TARBALL_INDEX_URL below — no baked-in default URL), copies it
+# to a configurable target node, installs it there, runs RVS level 4 on that node,
+# and uploads a Markdown report + logs.
+#
+# Orchestration lives in this workflow; install/test/report steps run via
+# rvs_nightly_test.sh (same pattern as build-relocatable-packages.yml +
+# build_packages_local.sh).
+#
+# Required repo configuration: see README_NIGHTLY_TESTS.md
+#
+# Tarball index resolution, tarball download, and scp to the GPU target all run on
+# the self-hosted orchestrator job below — the target never curls the index or CDN.
+#
+# Triggers
+# --------
+# - workflow_dispatch: manual run, or dispatched by Build Relocatable Packages
+#   after a successful push to main/master or scheduled package build
+# - trigger_event input (schedule|push) is set by the package-build dispatch step
+
+on:
+  workflow_dispatch:
+    inputs:
+      trigger_event:
+        description: 'Package-build event that triggered this run (schedule or push); empty for manual runs'
+        required: false
+        default: ''
+      tarball_url:
+        description: 'Override tarball URL (default: latest from index — secrets.RVS_TARBALL_INDEX_URL)'
+        required: false
+        default: ''
+      target_node:
+        description: 'Hostname/IP of node to install RVS on and run tests (default: secrets.RVS_TARGET_NODE)'
+        required: false
+        default: ''
+      target_user:
+        description: 'SSH user on the target node (default: secrets.RVS_TARGET_USER)'
+        required: false
+        default: ''
+      remote_work_dir:
+        description: 'Working dir on the target node (default: vars.RVS_REMOTE_WORK_DIR or /tmp/rvs-nightly-<run_id>)'
+        required: false
+        default: ''
+      target_rocm_path:
+        description: 'ROCm tarball install root on the target node (default: vars.RVS_TARGET_ROCM_PATH)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rvs-nightly-${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  # HTTPS directory listing for nightly tarballs — set repo secret RVS_TARBALL_INDEX_URL (e.g. https://<cdn-host>/nightly/rvs/tar/).
+  TARBALL_INDEX_URL: ${{ secrets.RVS_TARBALL_INDEX_URL }}
+
+jobs:
+  install-rvs-on-target:
+    name: Install RVS on target node
+    runs-on: ${{ vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 120
+    outputs:
+      tarball_url:      ${{ steps.resolve.outputs.tarball_url }}
+      tarball_name:     ${{ steps.resolve.outputs.tarball_name }}
+      remote_work_dir:  ${{ steps.prepare.outputs.remote_work_dir }}
+      rocm_major:       ${{ steps.prepare.outputs.rocm_major }}
+      install_dir:      ${{ steps.prepare.outputs.install_dir }}
+      rvs_bin:          ${{ steps.prepare.outputs.rvs_bin }}
+    env:
+      TARGET_NODE:      ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
+      TARGET_USER:      ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
+      TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Restore last-seen marker (scheduled build path)
+        if: inputs.trigger_event == 'schedule'
+        uses: actions/cache@v4
+        with:
+          path: last_tarball_marker.txt
+          key: rvs-nightly-tarball-${{ github.run_id }}
+          restore-keys: |
+            rvs-nightly-tarball-
+
+      - name: Resolve latest tarball URL (orchestrator only)
+        id: resolve
+        env:
+          # Do not set INDEX_URL here from ${{ env.* }} — it can be empty on some runners and
+          # masks workflow env. Use inherited TARBALL_INDEX_URL inside the script.
+          INPUT_URL: ${{ inputs.tarball_url }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_EVENT: ${{ inputs.trigger_event }}
+        run: |
+          set -euo pipefail
+
+          # Workflow-level env.TARBALL_INDEX_URL (from secret RVS_TARBALL_INDEX_URL).
+          INDEX_URL="${TARBALL_INDEX_URL:-}"
+
+          if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL}" ]; then
+            echo "::error::No tarball index URL (set Actions secret RVS_TARBALL_INDEX_URL) and no workflow_dispatch.tarball_url."
+            exit 1
+          fi
+
+          fetch_latest() {
+            local idx="$1"
+            local html raw name
+            html="$(curl -sSL --max-time 60 --retry 2 --retry-delay 2 "$idx" 2>/dev/null || true)"
+            if [ -z "$html" ]; then
+              echo "::error::curl returned empty body for index URL (check orchestrator HTTPS egress and URL): ${idx}" >&2
+              return 0
+            fi
+            # grep exits 1 when there are no matches — must not trip pipefail before we check results.
+            raw="$(printf '%s' "$html" | grep -oE 'amdrocm[0-9]*-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' 2>/dev/null || true)"
+            name="$(printf '%s\n' "$raw" | sort -uV | tail -n 1 || true)"
+            if [ -z "$name" ]; then
+              echo "::error::Index page contained no amdrocm*-rvs-*-Linux.tar.gz links (check listing format or regex). Index URL: ${idx}" >&2
+              echo "::notice::First 800 chars of response (for debugging):" >&2
+              printf '%.800s\n' "$html" >&2 || true
+              echo "" >&2
+              return 0
+            fi
+            printf '%s/%s\n' "${idx%/}" "$name"
+          }
+
+          if [ -n "${INPUT_URL:-}" ]; then
+            URL="$INPUT_URL"
+          else
+            URL="$(fetch_latest "$INDEX_URL")"
+          fi
+
+          if [ -z "${URL:-}" ]; then
+            echo "::error::Could not resolve a tarball URL from index: ${INDEX_URL}"
+            exit 1
+          fi
+
+          NAME="$(basename "$URL")"
+
+          if [ "$WORKFLOW_RUN_EVENT" = "schedule" ] && [ -f last_tarball_marker.txt ]; then
+            LAST="$(cat last_tarball_marker.txt)"
+            if [ "$LAST" = "$NAME" ]; then
+              echo "::notice::Latest tarball ($NAME) unchanged since last scheduled package build — running tests anyway."
+            else
+              echo "::notice::New tarball (previous: $LAST, now: $NAME)."
+            fi
+          fi
+          echo "$NAME" > last_tarball_marker.txt
+
+          # Use heredoc delimiter syntax so URLs with %, &, query strings, etc. are not
+          # truncated or dropped when propagated to other jobs via job outputs.
+          {
+            echo "tarball_url<<RVS_NIGHTLY_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_NIGHTLY_TARBALL_URL"
+            echo "tarball_name=$NAME"
+          } >> "$GITHUB_OUTPUT"
+
+          # Later steps in this job read TARBALL_URL / TARBALL_NAME (download-tarball, etc.)
+          {
+            echo "TARBALL_URL<<RVS_NIGHTLY_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_NIGHTLY_TARBALL_URL"
+            echo "TARBALL_NAME=$NAME"
+          } >> "$GITHUB_ENV"
+
+          echo "Latest tarball : $NAME"
+          echo "URL            : $URL"
+
+      - name: Save last-seen marker (scheduled build path)
+        if: inputs.trigger_event == 'schedule'
+        uses: actions/cache/save@v4
+        with:
+          path: last_tarball_marker.txt
+          key: rvs-nightly-tarball-${{ steps.resolve.outputs.tarball_name }}
+
+      - name: Validate configuration and derive paths
+        id: prepare
+        env:
+          TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
+          INPUT_REMOTE_WORK_DIR: ${{ inputs.remote_work_dir }}
+          VAR_REMOTE_WORK_DIR:   ${{ vars.RVS_REMOTE_WORK_DIR }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          chmod +x rvs_nightly_test.sh
+          ./rvs_nightly_test.sh validate-config
+
+      - name: Export paths for remaining steps
+        run: |
+          {
+            echo "REMOTE_WORK_DIR=${{ steps.prepare.outputs.remote_work_dir }}"
+            echo "ROCM_MAJOR=${{ steps.prepare.outputs.rocm_major }}"
+            echo "INSTALL_DIR=${{ steps.prepare.outputs.install_dir }}"
+            echo "RVS_BIN=${{ steps.prepare.outputs.rvs_bin }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup SSH for target node
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.RVS_TARGET_SSH_KEY }}
+        run: |
+          chmod +x rvs_nightly_test.sh
+          ./rvs_nightly_test.sh setup-ssh
+
+      - name: Download tarball on orchestrator runner
+        run: ./rvs_nightly_test.sh download-tarball
+
+      - name: Copy tarball to target node
+        run: ./rvs_nightly_test.sh copy-to-target
+
+      - name: Verify ROCm prerequisites on target node
+        run: ./rvs_nightly_test.sh verify-rocm
+
+      - name: Install RVS on target node
+        run: ./rvs_nightly_test.sh install-rvs
+
+      - name: Verify RVS binary library resolution on target node
+        run: ./rvs_nightly_test.sh verify-rvs-binary
+
+      - name: Cleanup local SSH state
+        if: always()
+        run: ./rvs_nightly_test.sh cleanup-local-ssh
+
+  run-rvs-level-4:
+    name: Run RVS level 4 on target node
+    needs: [install-rvs-on-target]
+    runs-on: ${{ vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 180
+    outputs:
+      rc:                   ${{ steps.level4.outputs.rc }}
+      start:                ${{ steps.level4.outputs.start }}
+      end:                  ${{ steps.level4.outputs.end }}
+      rvs_version:          ${{ steps.versions.outputs.rvs_version }}
+      target_rocm_version:  ${{ steps.versions.outputs.target_rocm_version }}
+    env:
+      TARGET_NODE:      ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
+      TARGET_USER:      ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
+      TARGET_ROCM_PATH: ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
+      REMOTE_WORK_DIR:  ${{ needs.install-rvs-on-target.outputs.remote_work_dir }}
+      ROCM_MAJOR:       ${{ needs.install-rvs-on-target.outputs.rocm_major }}
+      INSTALL_DIR:      ${{ needs.install-rvs-on-target.outputs.install_dir }}
+      RVS_BIN:          ${{ needs.install-rvs-on-target.outputs.rvs_bin }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup SSH for target node
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.RVS_TARGET_SSH_KEY }}
+        run: |
+          chmod +x rvs_nightly_test.sh
+          ./rvs_nightly_test.sh setup-ssh
+
+      - name: Run RVS level 4 on target node
+        id: level4
+        run: ./rvs_nightly_test.sh run-level4
+
+      - name: Collect logs from target node
+        if: always()
+        run: ./rvs_nightly_test.sh collect-logs
+
+      - name: Capture RVS and ROCm versions from target
+        id: versions
+        if: always()
+        run: ./rvs_nightly_test.sh capture-versions
+
+      - name: Upload test logs (intermediate)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-nightly-logs-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Cleanup remote work dir and local SSH state
+        if: always()
+        run: |
+          ./rvs_nightly_test.sh cleanup-remote
+          ./rvs_nightly_test.sh cleanup-local-ssh
+
+  create-test-report:
+    name: Create Test Report
+    needs: [install-rvs-on-target, run-rvs-level-4]
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    if: always() && !cancelled() && needs.install-rvs-on-target.result == 'success' && needs.run-rvs-level-4.result != 'skipped'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download test logs
+        uses: actions/download-artifact@v4
+        with:
+          name: rvs-nightly-logs-${{ github.run_id }}
+          path: ./reports
+        continue-on-error: true
+
+      - name: Build test report
+        id: report
+        env:
+          TARBALL_URL:          ${{ needs.install-rvs-on-target.outputs.tarball_url }}
+          TARBALL_NAME:         ${{ needs.install-rvs-on-target.outputs.tarball_name }}
+          TARGET_ROCM_PATH:     ${{ inputs.target_rocm_path || vars.RVS_TARGET_ROCM_PATH }}
+          REMOTE_WORK_DIR:      ${{ needs.install-rvs-on-target.outputs.remote_work_dir }}
+          RVS_BIN:              ${{ needs.install-rvs-on-target.outputs.rvs_bin }}
+          RVS_LEVEL4_RC:        ${{ needs.run-rvs-level-4.outputs.rc }}
+          RVS_LEVEL4_START:     ${{ needs.run-rvs-level-4.outputs.start }}
+          RVS_LEVEL4_END:       ${{ needs.run-rvs-level-4.outputs.end }}
+          RVS_VERSION:          ${{ needs.run-rvs-level-4.outputs.rvs_version }}
+          TARGET_ROCM_VERSION:  ${{ needs.run-rvs-level-4.outputs.target_rocm_version }}
+          GITHUB_RUN_ID:        ${{ github.run_id }}
+          GITHUB_SERVER_URL:    ${{ github.server_url }}
+          GITHUB_REPOSITORY:    ${{ github.repository }}
+          GITHUB_EVENT_NAME:    ${{ inputs.trigger_event || github.event_name }}
+        run: |
+          chmod +x rvs_nightly_test.sh
+          mkdir -p ./reports
+          ./rvs_nightly_test.sh build-report
+
+      - name: Upload report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-nightly-report-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Fail the workflow if level 4 failed
+        if: steps.report.outputs.overall == 'FAIL' || needs.run-rvs-level-4.result == 'failure'
+        run: |
+          echo "::error::RVS test failure — level4 rc=${{ needs.run-rvs-level-4.outputs.rc }}"
+          exit 1
