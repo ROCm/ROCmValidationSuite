@@ -99,6 +99,9 @@ Use the following steps to install RVS using package manager on top of the ROCm 
 
       rvs -h
 
+.. note::
+   The ROCm repositories must be setup as part of RVS package manager installation. This repository setup is part of the ROCm Core SDK installation.
+
 Install RVS using tarball
 --------------------------
 
