@@ -1301,6 +1301,10 @@ control, status and capabilities registers. These registers are specified in the
 PCI Express Base Specification, Revision 3. Iteration keys, i.e. count, wait and
 duration will be ignored for actions using the PEQT module.
 
+```{note}
+The PEQT module requires elevated privileges. Run RVS with `sudo` when using this module.
+```
+
 ### Module specific keys
 Module specific output keys are described in the table below:
 
