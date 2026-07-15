@@ -13,6 +13,10 @@ supported by ROCm. See the `ROCm compatibilty matrix
 For advanced workflows, source builds, or custom configurations, see
 `<https://github.com/ROCm/ROCmValidationSuite#rocmvalidationsuite>`__.
 
+.. note::
+   TransferBench is now a part of the ROCm Validation Suite and is installed with it.
+   See :doc:`TransferBench in RVS </transferbench>` for more information.
+
 Prerequisites
 =============
 
