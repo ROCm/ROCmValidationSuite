@@ -31,10 +31,6 @@ Package manager installation
 Use the following steps to install RVS using your distribution's package manager
 on top of the ROCm Core SDK.
 
-.. note::
-   The ROCm repositories must be set up before installing RVS. This repository
-   setup is part of the ROCm Core SDK installation.
-
 1. Register the RVS repository.
 
    .. tab-set::
@@ -86,7 +82,7 @@ on top of the ROCm Core SDK.
 
             sudo dnf install amdrocm7-rvs
 
-3. Set up your environment. Set ``ROCM_PATH`` to your ROCm Core SDK location.
+3. Complete the following post-installation step to set up your environment. Set ``ROCM_PATH`` to your ROCm Core SDK location.
 
    .. tab-set::
 
@@ -121,6 +117,10 @@ on top of the ROCm Core SDK.
 
       rvs -h
 
+.. note::
+   The ROCm repositories must be set up before installing RVS. This repository
+   setup is part of the ROCm Core SDK installation.
+
 Tarball installation
 ====================
 
@@ -152,12 +152,14 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
 3. Extract the tarball to the ROCm Extras location.
 
+   Set ``ROCM_PATH`` to your ROCm Core SDK location, which varies depending on how you installed it. For example, if you installed the ROCm Core SDK using your Linux distribution's package manager:
+
    .. code-block:: bash
 
       sudo mkdir -p /opt/rocm/extras-7
       sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C /opt/rocm/extras-7
 
-4. Set up your environment. Set ``ROCM_PATH`` to your ROCm Core SDK location.
+4. Complete the following post-installation step to set up your environment. Set ``ROCM_PATH`` to your ROCm Core SDK location.
 
    .. tab-set::
 
