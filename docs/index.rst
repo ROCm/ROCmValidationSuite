@@ -14,7 +14,7 @@ For more information, refer to `GitHub. <https://github.com/ROCm/ROCmValidationS
 
 .. note::
    TransferBench is now a part of the ROCm Validation Suite and is installed with it.
-   See :doc:`TransferBench in RVS <transferbench>` for more information.
+   See the `TransferBench documentation <https://rocm.docs.amd.com/projects/TransferBench/en/latest/>`__ for more information.
 
 
 .. grid:: 2
