@@ -115,7 +115,7 @@ on top of the ROCm Core SDK.
 
    .. code-block:: bash
 
-      rvs -h
+      rvs -g
 
 .. note::
    The ROCm repositories must be set up before installing RVS. This repository
@@ -192,4 +192,4 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
    .. code-block:: bash
 
-      rvs -h
+      rvs -g
