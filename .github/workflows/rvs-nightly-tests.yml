@@ -16,17 +16,17 @@ name: RVS Nightly Tests
 #
 # Triggers
 # --------
-# - workflow_run: after Build Relocatable Packages completes successfully
-#   (push to main/master, or scheduled package build)
-# - workflow_dispatch: manual run with optional overrides
+# - workflow_dispatch: manual run, or dispatched by Build Relocatable Packages
+#   after a successful push to main/master or scheduled package build
+# - trigger_event input (schedule|push) is set by the package-build dispatch step
 
 on:
-  workflow_run:
-    workflows: ["Build Relocatable Packages"]
-    types:
-      - completed
   workflow_dispatch:
     inputs:
+      trigger_event:
+        description: 'Package-build event that triggered this run (schedule or push); empty for manual runs'
+        required: false
+        default: ''
       tarball_url:
         description: 'Override tarball URL (default: latest from index — secrets.RVS_TARBALL_INDEX_URL)'
         required: false
@@ -60,30 +60,8 @@ env:
   TARBALL_INDEX_URL: ${{ secrets.RVS_TARBALL_INDEX_URL }}
 
 jobs:
-  gate-nightly-trigger:
-    name: Gate (eligible triggers only)
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       (
-         (github.event.workflow_run.event == 'push' &&
-          (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'master')) ||
-         github.event.workflow_run.event == 'schedule'
-       ))
-    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
-    steps:
-      - name: Confirm nightly test run
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            echo "Package build (${{ github.event.workflow_run.event }}) completed on branch: ${{ github.event.workflow_run.head_branch }}"
-          else
-            echo "Manual nightly test run (workflow_dispatch)"
-          fi
-
   install-rvs-on-target:
     name: Install RVS on target node
-    needs: gate-nightly-trigger
     runs-on: ${{ vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
     timeout-minutes: 120
     outputs:
@@ -102,7 +80,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Restore last-seen marker (scheduled build path)
-        if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'schedule'
+        if: inputs.trigger_event == 'schedule'
         uses: actions/cache@v4
         with:
           path: last_tarball_marker.txt
@@ -117,7 +95,7 @@ jobs:
           # masks workflow env. Use inherited TARBALL_INDEX_URL inside the script.
           INPUT_URL: ${{ inputs.tarball_url }}
           EVENT_NAME: ${{ github.event_name }}
-          WORKFLOW_RUN_EVENT: ${{ github.event.workflow_run.event || '' }}
+          WORKFLOW_RUN_EVENT: ${{ inputs.trigger_event }}
         run: |
           set -euo pipefail
 
@@ -194,7 +172,7 @@ jobs:
           echo "URL            : $URL"
 
       - name: Save last-seen marker (scheduled build path)
-        if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'schedule'
+        if: inputs.trigger_event == 'schedule'
         uses: actions/cache/save@v4
         with:
           path: last_tarball_marker.txt
@@ -340,7 +318,7 @@ jobs:
           GITHUB_RUN_ID:        ${{ github.run_id }}
           GITHUB_SERVER_URL:    ${{ github.server_url }}
           GITHUB_REPOSITORY:    ${{ github.repository }}
-          GITHUB_EVENT_NAME:    ${{ github.event_name }}
+          GITHUB_EVENT_NAME:    ${{ inputs.trigger_event || github.event_name }}
         run: |
           chmod +x rvs_nightly_test.sh
           mkdir -p ./reports

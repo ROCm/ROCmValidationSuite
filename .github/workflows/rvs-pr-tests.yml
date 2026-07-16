@@ -1,22 +1,30 @@
 name: RVS PR Tests
 
-# Runs after a successful "Build Relocatable Packages" run on pull_request, or on
-# workflow_dispatch. Package URL: for workflow_run, derived from secrets.RVS_PR_DEB_PACKAGE_URL
-# (HTTPS …/rvs base) + PR number + triggering run number + manylinux path (same layout as
-# .github/scripts/rvs-s3-upload-route.sh). For manual runs, use package_url or secret (rvs/
-# root, …/manylinux_*/ listing, direct .tar.gz, or .deb). See README_PR_TESTS.md.
+# Runs after a successful "Build Relocatable Packages" run on pull_request (dispatched
+# from that workflow with pr_number + build_run_number), or on workflow_dispatch.
+# Post-build dispatch does not resolve the package URL — the install job on the
+# self-hosted runner probes the manylinux_2_28 listing (curl, lab CDN egress).
+# Manual runs: package_url or secret. See README_PR_TESTS.md.
 #
 # Required repo configuration: README_PR_TESTS.md (same secrets/vars as nightly for SSH/ROCm).
 
 on:
-  workflow_run:
-    workflows: ['Build Relocatable Packages']
-    types:
-      - completed
   workflow_dispatch:
     inputs:
+      pr_number:
+        description: 'PR number (set by Build Relocatable Packages post-build dispatch)'
+        required: false
+        default: ''
+      build_run_number:
+        description: 'Build workflow run number (post-build dispatch)'
+        required: false
+        default: ''
+      build_ref_name:
+        description: 'GITHUB_REF_NAME from the package build (<pr>/merge); set by post-build dispatch'
+        required: false
+        default: ''
       package_url:
-        description: 'HTTPS …/rvs/ root, …/manylinux_*/ listing, direct *-Linux.tar.gz, or .deb (empty → secrets; not used for workflow_run — secret must be /rvs/ base)'
+        description: 'HTTPS …/rvs/ root, …/manylinux_*/ listing, direct *-Linux.tar.gz, or .deb (empty → secrets; not used when pr_number + build_run_number are set)'
         required: false
         default: ''
       target_node:
@@ -49,7 +57,6 @@ env:
 jobs:
   install-rvs-on-target:
     name: Install RVS on target node
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request')
     runs-on: ${{ vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
     timeout-minutes: 120
     outputs:
@@ -68,7 +75,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set package URL (manual)
-        if: github.event_name == 'workflow_dispatch'
+        if: inputs.pr_number == '' || inputs.build_run_number == ''
         env:
           PACKAGE_INPUT: ${{ inputs.package_url }}
           SECRET_PKG: ${{ secrets.RVS_PR_DEB_PACKAGE_URL || secrets.RVS_PR_PACKAGE_URL }}
@@ -88,16 +95,16 @@ jobs:
             echo "RVS_PR_PKG_URL"
           } >> "$GITHUB_ENV"
 
-      - name: Set package URL (after successful PR build)
-        if: github.event_name == 'workflow_run'
+      - name: Resolve manylinux listing (post-build dispatch, self-hosted)
+        if: inputs.pr_number != '' && inputs.build_run_number != ''
         env:
           SECRET_PKG: ${{ secrets.RVS_PR_DEB_PACKAGE_URL || secrets.RVS_PR_PACKAGE_URL }}
-          PR_JSON: ${{ toJSON(github.event.workflow_run.pull_requests) }}
-          RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          RUN_NUMBER: ${{ inputs.build_run_number }}
+          BUILD_REF_NAME: ${{ inputs.build_ref_name }}
         run: |
           set -euo pipefail
           python3 <<'PY'
-          import json
           import os
           import subprocess
           import sys
@@ -108,21 +115,20 @@ jobs:
               sys.exit(1)
           low = base.lower()
           if low.endswith(".deb") or low.endswith(".tar.gz"):
-              print("::error::For Build workflow triggers, set the secret to the /rvs HTTPS base only, not a direct .deb or .tar.gz URL.", file=sys.stderr)
+              print("::error::For post-build dispatch, set the secret to the /rvs HTTPS base only, not a direct .deb or .tar.gz URL.", file=sys.stderr)
               sys.exit(1)
 
-          prs = json.loads(os.environ.get("PR_JSON") or "[]")
-          if not prs:
-              print("::error::workflow_run has no pull_requests in the payload (e.g. fork PR). Cannot infer rvs/…/manylinux_2_28 path.", file=sys.stderr)
-              sys.exit(1)
-          pr = int(prs[0]["number"])
+          pr = int(os.environ["PR_NUMBER"])
           run_number = int(os.environ["RUN_NUMBER"])
-          # Primary: matches .github/scripts/rvs-s3-upload-route.sh — rvs/<pr>/merge/<GITHUB_RUN_NUMBER>/manylinux_2_28
-          # Fallback: some mirrors use rvs/<run_number>/merge/<pr>/manylinux_2_28
-          candidates = [
+          ref_name = (os.environ.get("BUILD_REF_NAME") or "").strip()
+          # Primary: exact rvs-s3-upload-route.sh layout (rvs/${GITHUB_REF_NAME}/${GITHUB_RUN_NUMBER}/manylinux_2_28)
+          candidates = []
+          if ref_name:
+              candidates.append(f"{base}/{ref_name}/{run_number}/manylinux_2_28")
+          candidates.extend([
               f"{base}/{pr}/merge/{run_number}/manylinux_2_28",
               f"{base}/{run_number}/merge/{pr}/manylinux_2_28",
-          ]
+          ])
 
           def listing_reachable(url: str) -> bool:
               p = subprocess.run(
