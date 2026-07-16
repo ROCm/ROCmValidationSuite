@@ -115,6 +115,13 @@ so a given RVS tag always bundles a known-good TransferBench revision. To
 move to a newer TransferBench, update the submodule pointer in a normal pull
 request against RVS.
 
+TransferBench v1.69+ adds `third-party/ibverbs/` headers (`IbvDynLoad.hpp`).
+RVS auto-detects that directory at configure time and adds it to the PEBB/PBQT
+include path (`TRANSFERBENCH_IBVERBS_INC_DIR` in the root `CMakeLists.txt`).
+When the folder is absent (older submodule pins), no extra includes or `libdl`
+link are applied. Runtime `libibverbs` is loaded dynamically only if present;
+PEBB/PBQT gfx/dma tests do not require it.
+
 ## Further reading
 
 - [TransferBench project](https://github.com/ROCm/TransferBench)
