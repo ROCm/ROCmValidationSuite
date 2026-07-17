@@ -44,7 +44,7 @@ namespace rvs {
  */
 class LogListNode : virtual public LogNode {
  public:
-  explicit LogListNode(const char* Name, int LogLevel, const LogNodeBase* Parent = nullptr);
+  explicit LogListNode(const char* Name, int LogLevel, bool nested = false, const LogNodeBase* Parent = nullptr);
   virtual ~LogListNode();
 
   virtual std::string ToJson(const std::string& Lead = "");
@@ -58,6 +58,7 @@ class LogListNode : virtual public LogNode {
 
  protected:
   int Level;
+  bool IsNested;
 };
 
 }  // namespace rvs

@@ -50,6 +50,7 @@ typedef void  (*t_cbAddNode)(void* Parent, void* Child);
 typedef void  (*t_cbStop)(uint16_t flags);
 typedef bool  (*t_cbStopping)(void);
 typedef void*   (*t_cbJsonNamedListCreate)( const char* name, const int LogLevel);
+typedef void*   (*t_cbJsonNestedListCreate)( const char* name, const int LogLevel);
 typedef int   (*t_rvs_module_err)(const char*, const char*, const char*);
 
 
@@ -88,6 +89,7 @@ typedef struct tag_module_init {
   //! pointer to rvs::logger::Err() function
   t_rvs_module_err     cbErr;
   t_cbJsonNamedListCreate  cbJsonNamedListCreate;
+  t_cbJsonNestedListCreate cbJsonNestedListCreate;
 } T_MODULE_INIT;
 
 #ifdef __cplusplus
