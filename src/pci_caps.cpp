@@ -320,48 +320,33 @@ void get_vendor_id(struct pci_dev *dev, char *buff) {
  * @return 
  */
 void get_kernel_driver(struct pci_dev *dev, char *buff) {
-    char name[1024], *drv, *base;
+    char name[1024], *drv;
     int n;
 
-    buff[0] = '\0';
-
-    //returning from here as there are other ways, this is
-    //not supported any longer
-    //the more simpler way is sudo dkms status
-    snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
-
-    if (dev->access == NULL) {
+    if (dev == NULL) {
+        snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
         return;
     }
 
-    if (dev->access->method != PCI_ACCESS_SYS_BUS_PCI) {
-        return;
-    }
-
-    base = pci_get_param(dev->access, const_cast<char *>("sysfs.path"));
-    if (!base || !base[0]) {
-        return;
-    }
-
-    n = snprintf(name, sizeof(name), "%s/devices/%04x:%02x:%02x.%d/driver",
-            base, dev->domain, dev->bus, dev->dev, dev->func);
+    n = snprintf(name, sizeof(name),
+            "/sys/bus/pci/devices/%04x:%02x:%02x.%d/driver",
+            dev->domain, dev->bus, dev->dev, dev->func);
     if (n < 0 || n >= static_cast<int>(sizeof(name))) {
+        snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
         return;
     }
 
-    n = readlink(name, buff, PCI_CAP_DATA_MAX_BUF_SIZE);
+    n = readlink(name, buff, PCI_CAP_DATA_MAX_BUF_SIZE - 1);
     if (n < 0) {
+        snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
         return;
     }
 
-    if (n >= PCI_CAP_DATA_MAX_BUF_SIZE) {
-        return;
-    }
+    buff[n] = '\0';
 
-    buff[n] = 0;
-
-    if ((drv = strrchr(buff, '/')) != NULL)
+    if ((drv = strrchr(buff, '/')) != NULL) {
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", drv + 1);
+    }
 }
 
 /**
