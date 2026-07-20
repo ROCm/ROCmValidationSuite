@@ -25,13 +25,6 @@
 #ifndef PULSE_SO_INCLUDE_ACTION_H_
 #define PULSE_SO_INCLUDE_ACTION_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <pci/pci.h>
-#ifdef __cplusplus
-}
-#endif
 
 #include <vector>
 #include <string>
