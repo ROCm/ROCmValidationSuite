@@ -587,12 +587,16 @@ format will be returned:
 
 ### Examples
 
-**Example 1:**
+**Example:**
 
-Consider action:
+Run:
+
+    ./rvs -c conf/gpup_single.conf
+
+Configuration (`conf/gpup_single.conf`, first action):
 
     actions:
-    - name: action_1
+    - name: RVS-GPUP-TC1
       device: all
       module: gpup
       properties:
@@ -600,130 +604,57 @@ Consider action:
       io_links-properties:
         all:
 
-Action will display all properties for all compatible GPUs present in the
-system. Output for such configuration may be like this:
+Sample output (first action, abridged):
 
-    [RESULT] [597737.498442] action_1 gpup 3254 cpu_cores_count 0
-    [RESULT] [597737.498517] action_1 gpup 3254 simd_count 256
-    [RESULT] [597737.498558] action_1 gpup 3254 mem_banks_count 1
-    [RESULT] [597737.498598] action_1 gpup 3254 caches_count 96
-    [RESULT] [597737.498637] action_1 gpup 3254 io_links_count 1
-    [RESULT] [597737.498680] action_1 gpup 3254 cpu_core_id_base 0
-    [RESULT] [597737.498725] action_1 gpup 3254 simd_id_base 2147487744
-    [RESULT] [597737.498768] action_1 gpup 3254 max_waves_per_simd 10
-    [RESULT] [597737.498812] action_1 gpup 3254 lds_size_in_kb 64
-    [RESULT] [597737.498856] action_1 gpup 3254 gds_size_in_kb 0
-    [RESULT] [597737.498901] action_1 gpup 3254 wave_front_size 64
-    [RESULT] [597737.498945] action_1 gpup 3254 array_count 4
-    [RESULT] [597737.498990] action_1 gpup 3254 simd_arrays_per_engine 1
-    [RESULT] [597737.499035] action_1 gpup 3254 cu_per_simd_array 16
-    [RESULT] [597737.499081] action_1 gpup 3254 simd_per_cu 4
-    [RESULT] [597737.499128] action_1 gpup 3254 max_slots_scratch_cu 32
-    [RESULT] [597737.499175] action_1 gpup 3254 vendor_id 4098
-    [RESULT] [597737.499222] action_1 gpup 3254 device_id 26720
-    [RESULT] [597737.499270] action_1 gpup 3254 location_id 8960
-    [RESULT] [597737.499318] action_1 gpup 3254 drm_render_minor 128
-    [RESULT] [597737.499369] action_1 gpup 3254 max_engine_clk_ccompute 2200
-    [RESULT] [597737.499419] action_1 gpup 3254 local_mem_size 17163091968
-    [RESULT] [597737.499468] action_1 gpup 3254 fw_version 405
-    [RESULT] [597737.499518] action_1 gpup 3254 capability 8832
-    [RESULT] [597737.499569] action_1 gpup 3254 max_engine_clk_ccompute 2200
-    [RESULT] [597737.499633] action_1 gpup 3254 0 count 1
-    [RESULT] [597737.499675] action_1 gpup 3254 0 type 2
-    [RESULT] [597737.499695] action_1 gpup 3254 0 version_major 0
-    [RESULT] [597737.499716] action_1 gpup 3254 0 version_minor 0
-    [RESULT] [597737.499736] action_1 gpup 3254 0 node_from 4
-    [RESULT] [597737.499763] action_1 gpup 3254 0 node_to 1
-    [RESULT] [597737.499783] action_1 gpup 3254 0 weight 20
-    [RESULT] [597737.499808] action_1 gpup 3254 0 min_latency 0
-    [RESULT] [597737.499830] action_1 gpup 3254 0 max_latency 0
-    [RESULT] [597737.499853] action_1 gpup 3254 0 min_bandwidth 0
-    [RESULT] [597737.499878] action_1 gpup 3254 0 max_bandwidth 0
-    [RESULT] [597737.499902] action_1 gpup 3254 0 recommended_transfer_size 0
-    [RESULT] [597737.499927] action_1 gpup 3254 0 flags 1
-    [RESULT] [597737.500208] action_1 gpup 50599 cpu_cores_count 0
-    [RESULT] [597737.500254] action_1 gpup 50599 simd_count 256
+    [RESULT] [302733.913494] Action name :RVS-GPUP-TC1
+    [RESULT] [302733.975662] Module name :gpup
+    [RESULT] [302733.975835] [RVS-GPUP-TC1] gpup 42583 cpu_cores_count 0
+    [RESULT] [302733.975836] [RVS-GPUP-TC1] gpup 42583 simd_count 1024
+    [RESULT] [302733.975836] [RVS-GPUP-TC1] gpup 42583 mem_banks_count 1
+    [RESULT] [302733.975836] [RVS-GPUP-TC1] gpup 42583 caches_count 550
+    [RESULT] [302733.975837] [RVS-GPUP-TC1] gpup 42583 io_links_count 8
+    [RESULT] [302733.975837] [RVS-GPUP-TC1] gpup 42583 p2p_links_count 1
+    [RESULT] [302733.975837] [RVS-GPUP-TC1] gpup 42583 cpu_core_id_base 0
+    [RESULT] [302733.975838] [RVS-GPUP-TC1] gpup 42583 simd_id_base 2147487744
     ...
-    [RESULT] [597737.501603] action_1 gpup 50599 0 recommended_transfer_size 0
-    [RESULT] [597737.501626] action_1 gpup 50599 0 flags 1
-    [RESULT] [597737.501877] action_1 gpup 33367 cpu_cores_count 0
-    [RESULT] [597737.501921] action_1 gpup 33367 simd_count 256
-    ...
-    [RESULT] [597737.503258] action_1 gpup 33367 0 recommended_transfer_size 0
-    [RESULT] [597737.503282] action_1 gpup 33367 0 flags 1
-    ...
+    [RESULT] [302733.976401] [RVS-GPUP-TC1] gpup 57875 7 version_major 0
+    [RESULT] [302733.976401] [RVS-GPUP-TC1] gpup 57875 7 version_minor 0
+    [RESULT] [302733.976402] [RVS-GPUP-TC1] gpup 57875 7 node_from 9
+    [RESULT] [302733.976402] [RVS-GPUP-TC1] gpup 57875 7 node_to 8
+    [RESULT] [302733.976402] [RVS-GPUP-TC1] gpup 57875 7 weight 15
+    [RESULT] [302733.976403] [RVS-GPUP-TC1] gpup 57875 7 min_latency 0
+    [RESULT] [302733.976403] [RVS-GPUP-TC1] gpup 57875 7 max_latency 0
+    [RESULT] [302733.976403] [RVS-GPUP-TC1] gpup 57875 7 min_bandwidth 0
+    [RESULT] [302733.976403] [RVS-GPUP-TC1] gpup 57875 7 recommended_transfer_size 0
+    [RESULT] [302733.976404] [RVS-GPUP-TC1] gpup 57875 7 flags 1
 
-**Example 2:**
-
-Consider action:
-
-    actions:
-    - name: action_1
-      device: all
-      module: gpup
-      properties:
-        simd_count:
-        mem_banks_count:
-        io_links_count:
-        vendor_id:
-        device_id:
-        location_id:
-        max_engine_clk_ccompute:
-      io_links-properties:
-        version_major:
-        type:
-        version_major:
-        version_minor:
-        node_from:
-        node_to:
-        recommended_transfer_size:
-        flags:
-
-This action explicitly lists some of the properties.
-Output for such configuration may be:
-
-    [RESULT] [597868.690637] action_1 gpup 3254 device_id 26720
-    [RESULT] [597868.690713] action_1 gpup 3254 io_links_count 1
-    [RESULT] [597868.690766] action_1 gpup 3254 location_id 8960
-    [RESULT] [597868.690819] action_1 gpup 3254 max_engine_clk_ccompute 2200
-    [RESULT] [597868.690862] action_1 gpup 3254 mem_banks_count 1
-    [RESULT] [597868.690903] action_1 gpup 3254 simd_count 256
-    [RESULT] [597868.690950] action_1 gpup 3254 vendor_id 4098
-    [RESULT] [597868.691029] action_1 gpup 3254 0 flags 1
-    [RESULT] [597868.691053] action_1 gpup 3254 0 node_from 4
-    [RESULT] [597868.691075] action_1 gpup 3254 0 node_to 1
-    [RESULT] [597868.691099] action_1 gpup 3254 0 recommended_transfer_size 0
-    [RESULT] [597868.691119] action_1 gpup 3254 0 type 2
-    [RESULT] [597868.691138] action_1 gpup 3254 0 version_major 0
-    [RESULT] [597868.691158] action_1 gpup 3254 0 version_minor 0
-    [RESULT] [597868.691425] action_1 gpup 50599 device_id 26720
-    [RESULT] [597868.691469] action_1 gpup 50599 io_links_count 1
-    [RESULT] [597868.691517] action_1 gpup 50599 location_id 17152
-    ...
-    [RESULT] [597868.692159] action_1 gpup 33367 device_id 26720
-    [RESULT] [597868.692204] action_1 gpup 33367 io_links_count 1
-    [RESULT] [597868.692252] action_1 gpup 33367 location_id 25344
-    ...
-    [RESULT] [597868.692619] action_1 gpup 33367 0 version_minor 0
-
-**Example 3:**
-
-Consider this action:
-
-    actions:
-    - name: action_1
-      device: all
-      module: gpup
-      deviceid: 267
-      properties:
-        all:
-      io_links-properties:
-        all:
-
-Action lists deviceid 267 which is not present in the system.
-Output for such configuration is:
-
-    RVS-ERROR [GPUP] [action_1] invalid 'deviceid' key value
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | RVS-GPUP-TC1                     | GPUP           | PASS            |
+    +---------------------------------------------------------------------+
 
 
 ## GM module
@@ -875,122 +806,79 @@ reported:
 
 ### Examples
 
-**Example 1:**
+**Example:**
 
-Consider action:
+Run:
+
+    ./rvs -c conf/gm_single.conf
+
+Configuration (`conf/gm_single.conf`, first action):
 
     actions:
-    - name: action_1
+    - name: metrics_monitor
       module: gm
       device: all
       monitor: true
       metrics:
-        temp: true 20 0
-        fan: true 10 0
-      duration: 5000
-    - name: another_action
+        temp: true 100 0
+        fan: true 100 0
+        mem_clock: true 1000 0
+        clock: true 1000 0
+        power: true 750 0
+      duration: 10000
+
+Sample output (first action, abridged):
+
+    [RESULT] [302734.420713] Action name :metrics_monitor
+    [RESULT] [302734.503180] Module name :gm
+    [RESULT] [302734.503340] [metrics_monitor] gm 1590 started
+    [RESULT] [302734.503340] [metrics_monitor] gm 11806 started
+    [RESULT] [302734.503340] [metrics_monitor] gm 17010 started
+    [RESULT] [302734.503340] [metrics_monitor] gm 27226 started
+    [RESULT] [302734.503340] [metrics_monitor] gm 36479 started
+    [RESULT] [302734.503340] [metrics_monitor] gm 42583 started
+    [RESULT] [302734.503340] [metrics_monitor] gm 51771 started
+    [RESULT] [302734.503340] [metrics_monitor] gm 57875 started
     ...
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 temp violations 0
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 temp average 0C
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 clock violations 0
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 clock average 128MHz
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 mem_clock violations 0
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 mem_clock average 128MHz
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 fan violations 0
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 fan average 0%
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 power violations 0
+    [RESULT] [302744.940440] [metrics_monitor] gm 57875 power average 139992336Watts
+    [RESULT] [302745.228794] [metrics_monitor] gm 57875 stopped
 
-This action will monitor temperature and fan speed for 5 seconds and then continue
-with the next action. Output for such configuration may be:
-
-    [RESULT] [694381.521373] [action_1] gm 33367 started
-    [INFO  ] [694381.531803] action_1 gm 33367  monitoring temp bounds min:0 max:20
-    [INFO  ] [694381.531817] action_1 gm 33367  monitoring temp bounds min:0 max:20
-    [INFO  ] [694381.531828] action_1 gm 33367  monitoring fan bounds min:0 max:10
-    [RESULT] [694381.521373] [action_1] gm 3254 started
-    [INFO  ] [694381.532257] action_1 gm 3254  monitoring temp bounds min:0 max:20
-    [INFO  ] [694381.532276] action_1 gm 3254  monitoring temp bounds min:0 max:20
-    [INFO  ] [694381.532293] action_1 gm 3254  monitoring fan bounds min:0 max:10
-    [RESULT] [694381.521373] [action_1] gm 50599 started
-    [INFO  ] [694381.534471] action_1 gm 50599  monitoring temp bounds min:0 max:20
-    [INFO  ] [694381.534487] action_1 gm 50599  monitoring temp bounds min:0 max:20
-    [INFO  ] [694381.534502] action_1 gm 50599  monitoring fan bounds min:0 max:10
-    [INFO  ] [694381.534623] action_1 gm 33367 temp  bounds violation 22C
-    [INFO  ] [694381.534822] action_1 gm 3254 temp  bounds violation 22C
-    [INFO  ] [694381.534946] action_1 gm 50599 temp  bounds violation 22C
-    [INFO  ] [694382.535329] action_1 gm 33367 temp  bounds violation 22C
-    ...
-    [INFO  ] [694385.537777] action_1 gm 50599 temp  bounds violation 21C
-    [RESULT] [694386.538037] [action_1] gm 3254 stopped
-    [RESULT] [694386.538037] [action_1] gm 50599 stopped
-    [RESULT] [694386.538037] [action_1] gm 33367 stopped
-    [RESULT] [694386.521449] [action_1] gm 3254 temp violations 1
-    [RESULT] [694386.521449] [action_1] gm 3254 temp average 19C
-    [RESULT] [694386.521449] [action_1] gm 3254 fan violations 0
-    [RESULT] [694386.521449] [action_1] gm 3254 fan average 0%
-    [RESULT] [694386.521449] [action_1] gm 50599 temp violations 5
-    [RESULT] [694386.521449] [action_1] gm 50599 temp average 21C
-    [RESULT] [694386.521449] [action_1] gm 50599 fan violations 0
-    [RESULT] [694386.521449] [action_1] gm 50599 fan average 0%
-    [RESULT] [694386.521449] [action_1] gm 33367 temp violations 5
-    [RESULT] [694386.521449] [action_1] gm 33367 temp average 22C
-    [RESULT] [694386.521449] [action_1] gm 33367 fan violations 0
-    [RESULT] [694386.521449] [action_1] gm 33367 fan average 0%
-
-**Example 2:**
-
-Consider action:
-
-    actions:
-    - name: action_1
-      module: gm
-      device: all
-      monitor: true
-      metrics:
-        temp: true 20 0
-        fan: true 10 0
-        power: true 100 0
-      sample_interval: 1000
-      log_interval: 1200
-      terminate: false
-      duration: 5000
-
-This configuration is similar to that in *Example 1* but has explicitly
-given values for *sample_interval* and *log_interval*. Output is similar to
-the previous one but averaging and the printout are performed at a different
-rate.
-
-**Example 3:**
-
-Consider action with syntax error ('temp' key is missing lower value):
-
-    actions:
-    - name: action_1
-      module: gm
-      device: 33367 50599
-      monitor: true
-      metrics:
-        temp: true 20
-        fan: true 10 0
-        power: true 100 0
-      sample_interval: 1000
-      log_interval: 1200
-
-Output for such configuration is:
-
-    RVS-ERROR [GM] [action_1] Invalid 'metrics.temp' key.
-
-**Example 4:**
-
-Consider action with logical error:
-
-    actions:
-    - name: action_1
-      module: gm
-      device: all
-      monitor: true
-      metrics:
-        temp: false 20 0
-        clock: true 1500 852
-        power: true 100 0
-      sample_interval: 5000
-      log_interval: 4000
-      duration: 8000
-
-Output for such configuration is:
-
-    RVS-ERROR [GM] [action_1] Log interval has the lower value than the sample interval
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | metrics_monitor                  | GM             | PASS            |
+    +---------------------------------------------------------------------+
 
 
 ## PESM module
@@ -1198,34 +1086,95 @@ The check will emit a result message with the following format:
 
 #### Examples
 
-**Example 1:**
+**Example:**
 
-In this example, given package has all dependencies installed.
+Run:
+
+    ./rvs -c conf/rcqt_single.conf
+
+Configuration (`conf/rcqt_single.conf`, first action):
 
     actions:
     - name: metapackage-validation
+      device: all
       module: rcqt
-      package: rocm-ml-sdk
+      package: rocm rocm-developer-tools rocm-openmp rocm-opencl-sdk rocm-hip
 
-The output for such configuration is:
+Sample output (first action, abridged):
 
-    [RESULT] [3648664.1164  ] Action name :metapackage-validation
-    [RESULT] [3648664.1363  ] Module name :rcqt
-
-    Meta package rocm-ml-sdk :
-    Package miopen-hip-dev installed version is 3.3.0.60300
-    Package rocm-core installed version is 6.3.0.60300
-    Package rocm-hip-sdk installed version is 6.3.0.60300
-    Package rocm-ml-libraries installed version is 6.3.0.60300
+    [RESULT] [302695.777282] Action name :metapackage-validation
+    [RESULT] [302695.777442] Module name :rcqt
+    Meta package rocm :
+    json log file is /var/tmp/rvs_1784325458865.json
+    Package half installed version is 1.12.0.70201
+    Package migraphx installed version is 2.15.0.70201
+    Package migraphx-dev installed version is 2.15.0.70201
+    Package miopen-hip installed version is 3.5.1.70201
+    Package miopen-hip-dev installed version is 3.5.1.70201
+    Package mivisionx installed version is 3.5.0.70201
+    Package mivisionx-dev installed version is 3.5.0.70201
+    Package rocm-cmake installed version is 0.14.0.70201
+    Package rocm-core installed version is 7.2.1.70201
+    Package rocm-developer-tools installed version is 7.2.1.70201
+    Package rocm-hip installed version is 7.2.1.70201
+    Package rocm-llvm installed version is 22.0.0.26084.70201
+    Package rocm-opencl-sdk installed version is 7.2.1.70201
+    Package rocm-openmp installed version is 7.2.1.70201
+    Package rocminfo installed version is 1.0.0.70201
+    Package rpp installed version is 2.2.1.70201
+    Package rpp-dev installed version is 2.2.1.70201
     Meta package validation complete :
-        Total packages validated     : 4
-        Installed packages           : 4
+        Total packages validated     : 17
+        Installed packages           : 17
+        Missing packages             : 0
+        Version mismatch packages    : 0
+    ...
+    Package rocm-smi-lib installed version is 7.8.0.70201
+    Package rocminfo installed version is 1.0.0.70201
+    Package rocprim-dev installed version is 4.2.0.70201
+    Package rocrand installed version is 4.2.0.70201
+    Package rocrand-dev installed version is 4.2.0.70201
+    Package rocsolver installed version is 3.32.0.70201
+    Package rocsolver-dev installed version is 3.32.0.70201
+    Package rocsparse installed version is 4.2.0.70201
+    Package rocsparse-dev installed version is 4.2.0.70201
+    Package rocthrust-dev installed version is 4.2.0.70201
+    Package rocwmma-dev installed version is 2.2.0.70201
+    Meta package validation complete :
+        Total packages validated     : 52
+        Installed packages           : 52
         Missing packages             : 0
         Version mismatch packages    : 0
 
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | metapackage-validation           | RCQT           | PASS            |
+    +---------------------------------------------------------------------+
 
-For other cases, we will see mismatched/missing packages printed
-with respective count
+For other cases, mismatched or missing packages are printed with respective counts.
 
 ### Packages installation check
 
@@ -1389,12 +1338,17 @@ chapters in the PCI Express Base Specification, Revision 3.
 
 ### Examples
 
-**Example 1:**
+**Example:**
 
-A regular PEQT configuration file looks like this:
+Run:
+
+    ./rvs -c conf/peqt_single.conf
+
+Configuration (`conf/peqt_single.conf`, first action):
 
     actions:
     - name: pcie_act_1
+      device: all
       module: peqt
       capability:
         link_cap_max_speed:
@@ -1403,7 +1357,7 @@ A regular PEQT configuration file looks like this:
         link_stat_neg_width:
         slot_pwr_limit_value:
         slot_physical_num:
-        device_id:
+        deviceid:
         vendor_id:
         kernel_driver:
         dev_serial_num:
@@ -1415,121 +1369,45 @@ A regular PEQT configuration file looks like this:
         atomic_op_32_completer:
         atomic_op_64_completer:
         atomic_op_128_CAS_completer:
-      device: all
 
 ```{note}
-- When setting the `device` configuration key to `all`, the RVS will detect all the AMD compatible GPUs and run the test on all of them
-- There are no regular expression for this `.conf` file, therefore RVS will report `true` if at least one AMD compatible GPU is registered within the system. Otherwise it will report `false`.
+- When setting the `device` configuration key to `all`, the RVS will detect all the AMD compatible GPUs and run the test on all of them.
+- With no regular expressions specified, RVS reports `TRUE` if at least one AMD compatible GPU is registered within the system. Otherwise it reports `FALSE`.
 ```
 
-The Power Budgeting capability is a dynamic one, having the following form:
+Sample output (first action, abridged):
 
-    <PM_State>_<Type>_<Power rail>
+    [RESULT] [302695.130515] Action name :pcie_act_1
+    [RESULT] [302695.251177] Module name :peqt
+    [RESULT] [302695.289685] [pcie_act_1] peqt true
 
-Where:
-
-    PM_State = D0/D1/D2/D3
-    Type=PMEAux/Auxiliary/Idle/Sustained/Maximum
-    PowerRail = Power_12V/Power_3_3V/Power_1_5V_1_8V/Thermal
-
-When the RVS tool runs against such a configuration file, it will query for the
-all the PCIe capabilities specified under the capability list (and log the
-corresponding values) for all the AMD compatible GPUs. For those PCIe
-capabilities that are not supported by the HW platform were the RVS is running,
-a "NOT SUPPORTED" message will be logged.
-
-The output for such a configuration file may look like this:
-
-
-    [INFO ] [177628.401176] pcie_act_1 peqt D0_Maximum_Power_12V NOT SUPPORTED
-    [INFO ] [177628.401229] pcie_act_1 peqt D0_Maximum_Power_3_3V NOT SUPPORTED
-    [INFO ] [177628.401248] pcie_act_1 peqt D0_Sustained_Power_12V NOT SUPPORTED
-    [INFO ] [177628.401269] pcie_act_1 peqt D0_Sustained_Power_3_3V NOT SUPPORTED
-    [INFO ] [177628.401282] pcie_act_1 peqt atomic_op_128_CAS_completer FALSE
-    [INFO ] [177628.401291] pcie_act_1 peqt atomic_op_32_completer FALSE
-    [INFO ] [177628.401303] pcie_act_1 peqt atomic_op_64_completer FALSE
-    [INFO ] [177628.401311] pcie_act_1 peqt atomic_op_routing TRUE
-    [INFO ] [177628.401317] pcie_act_1 peqt dev_serial_num NOT SUPPORTED
-    [INFO ] [177628.401323] pcie_act_1 peqt device_id 26720
-    [INFO ] [177628.401334] pcie_act_1 peqt kernel_driver amdgpu
-    [INFO ] [177628.401342] pcie_act_1 peqt link_cap_max_speed 8 GT/s
-    [INFO ] [177628.401352] pcie_act_1 peqt link_cap_max_width x16
-    [INFO ] [177628.401359] pcie_act_1 peqt link_stat_cur_speed 8 GT/s
-    [INFO ] [177628.401367] pcie_act_1 peqt link_stat_neg_width x16
-    [INFO ] [177628.401375] pcie_act_1 peqt slot_physical_num #0
-    [INFO ] [177628.401396] pcie_act_1 peqt slot_pwr_limit_value 0.000W
-    [INFO ] [177628.401402] pcie_act_1 peqt vendor_id 4098
-    [INFO ] [177628.401656] pcie_act_1 peqt D0_Maximum_Power_12V NOT SUPPORTED
-    [INFO ] [177628.401675] pcie_act_1 peqt D0_Maximum_Power_3_3V NOT SUPPORTED
-    [INFO ] [177628.401692] pcie_act_1 peqt D0_Sustained_Power_12V NOT SUPPORTED
-    [INFO ] [177628.401709] pcie_act_1 peqt D0_Sustained_Power_3_3V NOT SUPPORTED
-    [INFO ] [177628.401719] pcie_act_1 peqt atomic_op_128_CAS_completer FALSE
-    [INFO ] [177628.401728] pcie_act_1 peqt atomic_op_32_completer FALSE
-    [INFO ] [177628.401736] pcie_act_1 peqt atomic_op_64_completer FALSE
-    [INFO ] [177628.401745] pcie_act_1 peqt atomic_op_routing TRUE
-    [INFO ] [177628.401750] pcie_act_1 peqt dev_serial_num NOT SUPPORTED
-    [INFO ] [177628.401757] pcie_act_1 peqt device_id 26720
-    [INFO ] [177628.401771] pcie_act_1 peqt kernel_driver amdgpu
-    [INFO ] [177628.401781] pcie_act_1 peqt link_cap_max_speed 8 GT/s
-    [INFO ] [177628.401788] pcie_act_1 peqt link_cap_max_width x16
-    [INFO ] [177628.401794] pcie_act_1 peqt link_stat_cur_speed 8 GT/s
-    [INFO ] [177628.401800] pcie_act_1 peqt link_stat_neg_width x16
-    [INFO ] [177628.401806] pcie_act_1 peqt slot_physical_num #0
-    [INFO ] [177628.401814] pcie_act_1 peqt slot_pwr_limit_value 0.000W
-    [INFO ] [177628.401819] pcie_act_1 peqt vendor_id 4098
-    [RESULT] [177628.403781] pcie_act_1 peqt true
-
-**Example 2:**
-
-Another example of a configuration file, which queries for a smaller subset of PCIe capabilities but adds regular expressions check, is given below
-
-    actions:
-    - name: pcie_act_1
-      module: peqt
-      capability:
-        link_cap_max_speed: '^(2\.5 GT\/s|5 GT\/s|8 GT\/s)$'
-        link_cap_max_width:
-        link_stat_cur_speed: '^(2\.5 GT\/s|5 GT\/s|8 GT\/s)$'
-        link_stat_neg_width:
-        slot_pwr_limit_value: '[a-b][d-'
-        slot_physical_num:
-        device_id:
-        vendor_id:
-        kernel_driver:
-      device: all
-
-For this example, the expected PEQT check result is `TRUE` if:
-
-- At least one AMD compatible GPU is registered within the system and:
-- All `<link_cap_max_speed>` values for all AMD compatible GPUs match the given regular expression and
-- All `<link_stat_cur_speed>` values for all AMD compatible GPUs match the given regular expression
-
-Please note that the `<slot_pwr_limit_value>` regular expression is not valid and
-will be skipped without affecting the PEQT module's check result, however, an
-error will be logged out.
-
-**Example 3:**
-
-Another example with even more regular expressions is given below. The expected
-PEQT check result is `true` if at least one AMD compatible GPU matching
-`deviceid: 26720` from the device list is found and all the PCIe capability
-values match their corresponding regular expressions.
-
-    actions:
-    - name: pcie_act_1
-      module: peqt
-      deviceid: 26720
-      capability:
-        link_cap_max_speed: '^(2\.5 GT\/s|5 GT\/s|8 GT\/s)$'
-        link_cap_max_width: ^(x8|x16)$
-        link_stat_cur_speed: '^(8 GT\/s)$'
-        link_stat_neg_width: ^(x8|x16)$
-        kernel_driver: ^amdgpu$
-        atomic_op_routing: ^((TRUE|FALSE){1})$
-        atomic_op_32_completer: ^((TRUE|FALSE){1})$
-        atomic_op_64_completer: ^((TRUE|FALSE){1})$
-        atomic_op_128_CAS_completer: ^((TRUE|FALSE){1})$
-      device: 3254 33367
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | pcie_act_1                       | PEQT           | PASS            |
+    +---------------------------------------------------------------------+
 
 ## SMQT module
 The GPU SBIOS mapping qualification tool is designed to verify that a platform’s
@@ -1964,149 +1842,76 @@ are emitted:
 
 ### Examples
 
+**Example:**
 
-**Example 1:**
+Run:
 
-Here all source GPUs (device: all) with all destination GPUs (peers: all) are
-tested for p2p capability with no bandwidth testing (test_bandwidth: false).
+    ./rvs -c conf/pbqt_single.conf
+
+Configuration (`conf/pbqt_single.conf`, first action):
 
     actions:
-    - name: action_1
+    - name: xgmi_d2d_unidir_bandwidth
       device: all
       module: pbqt
+      log_interval: 5000
+      duration: 30000
       peers: all
-      test_bandwidth: false
-
-Note: setting `test_bandwidth: false` causes the module to exit with an error
-in the current implementation. The P2P check result format shown below is
-emitted before the exit when bandwidth testing is enabled.
-
-Possible result (with `test_bandwidth: true`) is:
-
-    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
-
-From the output we can see the P2P topology between three GPUs.
-
-
-**Example 2:**
-
-Here all source GPUs (device: all) with all destination GPUs (peers: all) are
-tested for p2p capability including bandwidth testing (test_bandwidth: true)
-with bidirectional transfers (bidirectional: true) and with immediate output
-for each completed transfer (log_interval: 0)
-
-    actions:
-    - name: action_1
-      device: all
-      module: pbqt
-      log_interval: 0
-      duration: 0
-      peers: all
-      test_bandwidth: true
-      bidirectional: true
-
-When run with "-d 3" switch, possible result is:
-When run with "-d 3" switch, possible result is:
-
-    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p-bandwidth[1/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 7.013 GBps
-    [action_1] p2p-bandwidth[2/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 6.615 GBps
-    [action_1] p2p-bandwidth[3/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 2.367 GBps
-    [action_1] p2p-bandwidth[4/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 7.504 GBps
-    [action_1] p2p-bandwidth[5/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 8.207 GBps
-    [action_1] p2p-bandwidth[6/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 7.680 GBps
-    [action_1] p2p-bandwidth[1/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 5.767 GBps duration: 0.368453 secs
-    [action_1] p2p-bandwidth[2/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 6.013 GBps duration: 0.498944 secs
-    [action_1] p2p-bandwidth[3/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 5.278 GBps duration: 0.380393 secs
-    [action_1] p2p-bandwidth[4/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 4.160 GBps duration: 0.484577 secs
-    [action_1] p2p-bandwidth[5/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 5.219 GBps duration: 0.407190 secs
-    [action_1] p2p-bandwidth[6/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 4.001 GBps duration: 0.562350 secs
-
-We can see that on this particular machine there are three GPUs and six
-possible device-to-peer transfers.
-
-**Example 3:**
-
-Here some source GPUs (device: 50599) are targeting some destination GPUs
-(peers: 33367 3254) with specified log interval (log_interval: 1000) and duration
-(duration: 5000). Bandwidth is tested (test_bandwidth: true) but only
-unidirectional (bidirectional: false) without parallel execution (parallel:
-false).
-
-    actions:
-    - name: action_1
-      device: 50599
-      module: pbqt
-      log_interval: 1000
-      duration: 5000
-      count: 0
-      peers: 33367 3254
       test_bandwidth: true
       bidirectional: false
       parallel: false
+      block_size: 1073741824
+      device_id: all
 
-Possible output is:
-Possible output is:
+Sample output (first action, abridged):
 
-    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p-bandwidth[1/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: false 4.517 GBps
-    [action_1] p2p-bandwidth[2/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: false 4.475 GBps
-    [action_1] p2p-bandwidth[1/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: false 4.476 GBps
-    [action_1] p2p-bandwidth[2/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: false 4.601 GBps
-    [action_1] p2p-bandwidth[1/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: false 4.539 GBps duration: 1.321909 secs
-    [action_1] p2p-bandwidth[2/2] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: false 4.551 GBps duration: 1.318517 secs
+    [RESULT] [302380.159634] Action name :xgmi_d2d_unidir_bandwidth
+    [RESULT] [302380.356991] Module name :pbqt
+    [RESULT] [302380.357340] [xgmi_d2d_unidir_bandwidth] p2p [GPU:: 2 - 42583 - 0000:05:00.0] [GPU:: 3 - 27226 - 0000:15:00.0] peers:true distance:15 xGMI:15
+    [RESULT] [302380.357342] [xgmi_d2d_unidir_bandwidth] p2p [GPU:: 2 - 42583 - 0000:05:00.0] [GPU:: 4 - 36479 - 0000:65:00.0] peers:true distance:15 xGMI:15
+    [RESULT] [302380.357344] [xgmi_d2d_unidir_bandwidth] p2p [GPU:: 2 - 42583 - 0000:05:00.0] [GPU:: 5 - 17010 - 0000:75:00.0] peers:true distance:15 xGMI:15
+    [RESULT] [302380.357345] [xgmi_d2d_unidir_bandwidth] p2p [GPU:: 2 - 42583 - 0000:05:00.0] [GPU:: 6 -  1590 - 0000:85:00.0] peers:true distance:15 xGMI:15
+    [RESULT] [302380.357346] [xgmi_d2d_unidir_bandwidth] p2p [GPU:: 2 - 42583 - 0000:05:00.0] [GPU:: 7 - 51771 - 0000:95:00.0] peers:true distance:15 xGMI:15
+    [RESULT] [302380.357347] [xgmi_d2d_unidir_bandwidth] p2p [GPU:: 2 - 42583 - 0000:05:00.0] [GPU:: 8 - 11806 - 0000:e5:00.0] peers:true distance:15 xGMI:15
+    [RESULT] [302380.357348] [xgmi_d2d_unidir_bandwidth] p2p [GPU:: 2 - 42583 - 0000:05:00.0] [GPU:: 9 - 57875 - 0000:f5:00.0] peers:true distance:15 xGMI:15
+    ...
+    [RESULT] [302410.443673] [xgmi_d2d_unidir_bandwidth] p2p-bandwidth[48/56] [GPU:: 8 - 11806 - 0000:e5:00.0] [GPU:: 7 - 51771 - 0000:95:00.0] bidirectional: false 61.370 GBps duration: 0.227452 secs
+    [RESULT] [302410.444726] [xgmi_d2d_unidir_bandwidth] p2p-bandwidth[49/56] [GPU:: 8 - 11806 - 0000:e5:00.0] [GPU:: 9 - 57875 - 0000:f5:00.0] bidirectional: false 61.369 GBps duration: 0.227453 secs
+    [RESULT] [302410.445779] [xgmi_d2d_unidir_bandwidth] p2p-bandwidth[50/56] [GPU:: 9 - 57875 - 0000:f5:00.0] [GPU:: 2 - 42583 - 0000:05:00.0] bidirectional: false 61.368 GBps duration: 0.227456 secs
+    [RESULT] [302410.446832] [xgmi_d2d_unidir_bandwidth] p2p-bandwidth[51/56] [GPU:: 9 - 57875 - 0000:f5:00.0] [GPU:: 3 - 27226 - 0000:15:00.0] bidirectional: false 61.373 GBps duration: 0.227441 secs
+    [RESULT] [302410.447885] [xgmi_d2d_unidir_bandwidth] p2p-bandwidth[52/56] [GPU:: 9 - 57875 - 0000:f5:00.0] [GPU:: 4 - 36479 - 0000:65:00.0] bidirectional: false 59.704 GBps duration: 0.233798 secs
+    [RESULT] [302410.448939] [xgmi_d2d_unidir_bandwidth] p2p-bandwidth[53/56] [GPU:: 9 - 57875 - 0000:f5:00.0] [GPU:: 5 - 17010 - 0000:75:00.0] bidirectional: false 61.371 GBps duration: 0.227448 secs
+    [RESULT] [302410.449991] [xgmi_d2d_unidir_bandwidth] p2p-bandwidth[54/56] [GPU:: 9 - 57875 - 0000:f5:00.0] [GPU:: 6 -  1590 - 0000:85:00.0] bidirectional: false 61.367 GBps duration: 0.227463 secs
+    [RESULT] [302410.451044] [xgmi_d2d_unidir_bandwidth] p2p-bandwidth[55/56] [GPU:: 9 - 57875 - 0000:f5:00.0] [GPU:: 7 - 51771 - 0000:95:00.0] bidirectional: false 61.378 GBps duration: 0.227422 secs
+    [RESULT] [302410.452097] [xgmi_d2d_unidir_bandwidth] p2p-bandwidth[56/56] [GPU:: 9 - 57875 - 0000:f5:00.0] [GPU:: 8 - 11806 - 0000:e5:00.0] bidirectional: false 61.368 GBps duration: 0.227458 secs
 
-From the last line of result, we can see that source GPU (ID 50599) can access
-destination GPU (ID 33367) and that the bandwidth is approximately 4.5 GBps.
-
-**Example 4:**
-
-Here, all GPUs are targeted with bidirectional transfers and parallel execution
-of tests:
-
-    actions:
-    - name: action_1
-      device: all
-      module: pbqt
-      log_interval: 1200
-      duration: 4000
-      peers: all
-      test_bandwidth: true
-      bidirectional: true
-      parallel: true
-
-Possible output is:
-Possible output is:
-
-    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] peers:true distance:56 HyperTransport:56
-    [action_1] p2p-bandwidth[1/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 4.972 GBps
-    [action_1] p2p-bandwidth[2/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 8.183 GBps
-    [action_1] p2p-bandwidth[3/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 8.911 GBps
-    [action_1] p2p-bandwidth[4/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 7.690 GBps
-    [action_1] p2p-bandwidth[5/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 7.768 GBps
-    [action_1] p2p-bandwidth[6/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 4.589 GBps
-    [action_1] p2p-bandwidth[1/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 6.964 GBps duration: 0.287248 secs
-    [action_1] p2p-bandwidth[2/6] [GPU:: 4 - 3254 - 0000:04:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 3.960 GBps duration: 0.536554 secs
-    [action_1] p2p-bandwidth[3/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 5.442 GBps duration: 0.368977 secs
-    [action_1] p2p-bandwidth[4/6] [GPU:: 8 - 50599 - 0000:08:00.0] [GPU:: 12 - 33367 - 0000:0c:00.0] bidirectional: true 4.187 GBps duration: 0.477756 secs
-    [action_1] p2p-bandwidth[5/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 4 - 3254 - 0000:04:00.0] bidirectional: true 4.942 GBps duration: 0.607009 secs
-    [action_1] p2p-bandwidth[6/6] [GPU:: 12 - 33367 - 0000:0c:00.0] [GPU:: 8 - 50599 - 0000:08:00.0] bidirectional: true 3.828 GBps duration: 0.523495 secs
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | xgmi_d2d_unidir_bandwidth        | PBQT           | PASS            |
+    +---------------------------------------------------------------------+
 
 ## PEBB module
 The PCIe Bandwidth Benchmark attempts to saturate the PCIe bus with DMA
@@ -2329,88 +2134,84 @@ logged as a result:
 
 ### Examples
 
-**Example 1:**
+**Example:**
 
-Consider action:
+Run:
+
+    ./rvs -c conf/pebb_single.conf
+
+Configuration (`conf/pebb_single.conf`, first action):
 
     actions:
-    - name: action_1
+    - name: pcie_h2d_bandwidth
       device: all
       module: pebb
-      log_interval: 0
-      duration: 0
+      log_interval: 5000
+      duration: 30000
       device_to_host: false
       host_to_device: true
       parallel: false
+      block_size: 1073741824
 
-This will initiate host to device transfer to all GPUs with immediate output
-(`parallel: false`, `log_interval: 0`)
+Sample output (first action, abridged):
 
-Output from this action might look like:
-
-    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] distance:20 PCIe:20
-    [action_1] pcie-bandwidth [CPU:: 2] [GPU:: 4 - 3254 - 0000:04:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 3] [GPU:: 4 - 3254 - 0000:04:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 2] [GPU:: 5 - 50599 - 0000:08:00.0] distance:20 PCIe:20
-    [action_1] pcie-bandwidth [CPU:: 3] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 2] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 3] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:20 PCIe:20
-    [action_1] pcie-bandwidth [1/12] [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::false 12.233 GBps
-    [action_1] pcie-bandwidth [2/12] [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::false 12.227 GBps
-    [action_1] pcie-bandwidth [3/12] [CPU:: 2] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::false 11.770 GBps
-    [action_1] pcie-bandwidth [4/12] [CPU:: 3] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::false 11.313 GBps
-    [action_1] pcie-bandwidth [5/12] [CPU:: 0] [GPU:: 5 - 50599 - 0000:08:00.0] h2d::true d2h::false 12.218 GBps
-    [action_1] pcie-bandwidth [6/12] [CPU:: 1] [GPU:: 5 - 50599 - 0000:08:00.0] h2d::true d2h::false 10.292 GBps
-    [action_1] pcie-bandwidth [7/12] [CPU:: 2] [GPU:: 5 - 50599 - 0000:08:00.0] h2d::true d2h::false 10.456 GBps
-    [action_1] pcie-bandwidth [8/12] [CPU:: 3] [GPU:: 5 - 50599 - 0000:08:00.0] h2d::true d2h::false 10.614 GBps
-    [action_1] pcie-bandwidth [9/12] [CPU:: 0] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::false 12.222 GBps
-    [action_1] pcie-bandwidth [10/12] [CPU:: 1] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::false 12.215 GBps
-    [action_1] pcie-bandwidth [11/12] [CPU:: 2] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::false 12.219 GBps
-    [action_1] pcie-bandwidth [12/12] [CPU:: 3] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::false 12.219 GBps duration: 0.000780 secs
-
-**Example 2:**
-
-Consider action:
-
-    actions:
-    - name: action_1
-      device: all
-      module: pebb
-      log_interval: 500
-      duration: 5000
-      device_to_host: true
-      host_to_device: true
-      parallel: true
-
-Here, although parallel execution of transfers is requested, log_interval is to
-short for some transfers to complete. For them, cumulative average is displayed
-and marked with (*):
-    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] distance:20 PCIe:20
-    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 1] [GPU:: 5 - 50599 - 0000:08:00.0] distance:36 HyperTransport:36
-    [action_1] pcie-bandwidth [CPU:: 0] [GPU:: 6 - 33367 - 0000:0c:00.0] distance:36 HyperTransport:36
+    [RESULT] [302349.492047] Action name :pcie_h2d_bandwidth
+    [RESULT] [302349.671479] Module name :pebb
+    [RESULT] [302349.671823] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 0] [GPU:: 2 - 42583 - 0000:05:00.0] distance:20 PCIe:20
+    [RESULT] [302349.671837] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 1] [GPU:: 2 - 42583 - 0000:05:00.0] distance:52 PCIe:52
+    [RESULT] [302349.671839] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 0] [GPU:: 3 - 27226 - 0000:15:00.0] distance:20 PCIe:20
+    [RESULT] [302349.671840] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 1] [GPU:: 3 - 27226 - 0000:15:00.0] distance:52 PCIe:52
+    [RESULT] [302349.671841] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 0] [GPU:: 4 - 36479 - 0000:65:00.0] distance:20 PCIe:20
+    [RESULT] [302349.671842] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 1] [GPU:: 4 - 36479 - 0000:65:00.0] distance:52 PCIe:52
+    [RESULT] [302349.671843] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 0] [GPU:: 5 - 17010 - 0000:75:00.0] distance:20 PCIe:20
+    [RESULT] [302349.671844] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 1] [GPU:: 5 - 17010 - 0000:75:00.0] distance:52 PCIe:52
+    [RESULT] [302349.671846] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 0] [GPU:: 6 -  1590 - 0000:85:00.0] distance:52 PCIe:52
+    [RESULT] [302349.671847] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 1] [GPU:: 6 -  1590 - 0000:85:00.0] distance:20 PCIe:20
+    [RESULT] [302349.671848] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 0] [GPU:: 7 - 51771 - 0000:95:00.0] distance:52 PCIe:52
+    [RESULT] [302349.671849] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 1] [GPU:: 7 - 51771 - 0000:95:00.0] distance:20 PCIe:20
+    [RESULT] [302349.671850] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 0] [GPU:: 8 - 11806 - 0000:e5:00.0] distance:52 PCIe:52
+    [RESULT] [302349.671851] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 1] [GPU:: 8 - 11806 - 0000:e5:00.0] distance:20 PCIe:20
+    [RESULT] [302349.671852] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 0] [GPU:: 9 - 57875 - 0000:f5:00.0] distance:52 PCIe:52
+    [RESULT] [302349.671853] [pcie_h2d_bandwidth] pcie-bandwidth [CPU:: 1] [GPU:: 9 - 57875 - 0000:f5:00.0] distance:20 PCIe:20
+    [RESULT] [302379.847423] [pcie_h2d_bandwidth] pcie-bandwidth [ 1/16] [CPU:: 0] [GPU:: 2 - 42583 - 0000:05:00.0] h2d::true d2h::false 57.678 GBps duration: 0.223392 secs
+    [RESULT] [302379.847438] [pcie_h2d_bandwidth] pcie-bandwidth [ 2/16] [CPU:: 1] [GPU:: 2 - 42583 - 0000:05:00.0] h2d::true d2h::false 54.034 GBps duration: 0.238461 secs
     ...
-    [action_1] pcie-bandwidth [1/12] [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 1.489 GBps
-    [action_1] pcie-bandwidth [2/12] [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 2.701 GBps
-    ...
-    [action_1] pcie-bandwidth [1/12] [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 16.793 GBps
-    [action_1] pcie-bandwidth [2/12] [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 16.872 GBps (*)
-    ...
-    [action_1] pcie-bandwidth [1/12] [CPU:: 0] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 16.309 GBps duration: 0.061316 secs
-    [action_1] pcie-bandwidth [2/12] [CPU:: 1] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 16.871 GBps duration: 0.118547 secs
-    [action_1] pcie-bandwidth [3/12] [CPU:: 2] [GPU:: 4 - 3254 - 0000:04:00.0] h2d::true d2h::true 13.360 GBps duration: 0.149705 secs
-    ...
-    [action_1] pcie-bandwidth [12/12] [CPU:: 3] [GPU:: 6 - 33367 - 0000:0c:00.0] h2d::true d2h::true 16.193 GBps duration: 0.123525 secs
+    [RESULT] [302379.847449] [pcie_h2d_bandwidth] pcie-bandwidth [ 9/16] [CPU:: 0] [GPU:: 6 -  1590 - 0000:85:00.0] h2d::true d2h::false 57.708 GBps duration: 0.204669 secs
+    [RESULT] [302379.847451] [pcie_h2d_bandwidth] pcie-bandwidth [10/16] [CPU:: 1] [GPU:: 6 -  1590 - 0000:85:00.0] h2d::true d2h::false 55.223 GBps duration: 0.213882 secs
+    [RESULT] [302379.847453] [pcie_h2d_bandwidth] pcie-bandwidth [11/16] [CPU:: 0] [GPU:: 7 - 51771 - 0000:95:00.0] h2d::true d2h::false 57.708 GBps duration: 0.204671 secs
+    [RESULT] [302379.847454] [pcie_h2d_bandwidth] pcie-bandwidth [12/16] [CPU:: 1] [GPU:: 7 - 51771 - 0000:95:00.0] h2d::true d2h::false 57.708 GBps duration: 0.204671 secs
+    [RESULT] [302379.847472] [pcie_h2d_bandwidth] pcie-bandwidth [13/16] [CPU:: 0] [GPU:: 8 - 11806 - 0000:e5:00.0] h2d::true d2h::false 57.708 GBps duration: 0.204672 secs
+    [RESULT] [302379.847474] [pcie_h2d_bandwidth] pcie-bandwidth [14/16] [CPU:: 1] [GPU:: 8 - 11806 - 0000:e5:00.0] h2d::true d2h::false 57.708 GBps duration: 0.204670 secs
+    [RESULT] [302379.847475] [pcie_h2d_bandwidth] pcie-bandwidth [15/16] [CPU:: 0] [GPU:: 9 - 57875 - 0000:f5:00.0] h2d::true d2h::false 57.709 GBps duration: 0.204668 secs
+    [RESULT] [302379.847476] [pcie_h2d_bandwidth] pcie-bandwidth [16/16] [CPU:: 1] [GPU:: 9 - 57875 - 0000:f5:00.0] h2d::true d2h::false 57.710 GBps duration: 0.204666 secs
 
-Please note that in link information results, some records could be marked with
-(R). This means, that communication is possible if initiated by the destination
-NUMA node HSA agent.
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | pcie_h2d_bandwidth               | PEBB           | PASS            |
+    +---------------------------------------------------------------------+
 
 ## GST module
 
@@ -2625,125 +2426,92 @@ of the run. Otherwise the result is `met: FALSE`.
 
 ### Examples
 
-When running the GST module, users should provide at least an action name,
-the module name (gst), a list of GPU IDs, the test duration and a target stress
-value (gigaflops). Thus, the most basic configuration file looks like this:
+**Example:**
+
+Run:
+
+    ./rvs -c conf/gst_single.conf
+
+Configuration (`conf/gst_single.conf`, first action):
 
     actions:
-    - name: action_gst_1
-      module: gst
+    - name: gst-Tflops-2K2K2K-trig-fp4
       device: all
-      target_stress: 3500
-      duration: 8000
-
-For the above configuration file, all the missing configuration keys will have
-their default
-values (for example: `copy_matrix=true`, `matrix_size_a/b/c=5760`). For more
-information about the default
-values, see Common configuration keys
-and Configuration keys.
-
-When the RVS tool runs against such a configuration file, it will do the
-following:
-  - run the stress test on all available (and compatible) AMD GPUs, one after
-the other
-  - emit, each `log_interval` (for example: 1000 ms), a result message
-containing the GFLOPS value achieved by the current GPU:
-
-    ```
-    [action_gst_1] [GPU:: 33367] GFLOPS 3535.670231
-    ```
-
-  - log the final result when the stress test completes:
-
-    ```
-    [action_gst_1] [GPU:: 33367] GFLOPS 4066.020766 Target GFLOPS: 3500.000000 met: TRUE
-    ```
-
-If a mandatory configuration key is missing, the RVS tool will log an error
-message and terminate the execution of the current module. For example, the
-following configuration file will cause the RVS to terminate with the
-following error message: `RVS-ERROR [GST] [action_gst_1] key 'target_stress' was not found`
-
-    actions:
-    - name: action_gst_1
-      module: gst
-      device: all
-      duration: 8000
-
-A more complex configuration file looks like this:
-
-    actions:
-    - name: action_1
-      device: 50599 33367
       module: gst
       parallel: false
-      count: 12
-      wait: 100
-      duration: 7000
-      ramp_interval: 3000
-      log_interval: 1000
-      max_violations: 2
+      duration: 10000
+      ramp_interval: 5000
+      log_interval: 3000
+      max_violations: 5
       copy_matrix: false
-      target_stress: 5000
-      tolerance: 0.07
-      matrix_size_a: 5760
-      matrix_size_b: 5760
-      matrix_size_c: 5760
+      target_stress: 0
+      tolerance: 0.1
+      matrix_size_a: 2048
+      matrix_size_b: 2048
+      matrix_size_c: 2048
+      data_type: fp4
 
-For this configuration file, the RVS tool will:
-  - run the stress test only for the GPUs having the ID 50599 or 33367. To
-get all the available GPU IDs, run __RVS__ tool with __-g__ option
-  - run the test on the selected GPUs, one after the other
-  - run each test, 12 times
-  - only copy the matrices to the GPUs at the beginning of the test
-  - wait 100ms before each test execution
-  - try to reach 5000 gflops in maximum 3000ms
-  - if `target_stress` (5000) is achieved in the `ramp_interval` (3000 ms)
-it will attempt to run the test for the rest of the duration, sustaining the
-stress load during that time
-  - allow a 7% `target_stress` tolerance (each `target_stress`
-violation will generate a stress violation message as shown in the first
-example)
-  - allow only 2 `target_stress` violations. Exceeding the
-`max_violations` will not terminate the test, but RVS will mark the
-test result as "fail".
+Sample output (first action, abridged):
 
-The output for such a configuration may look like this:
+    [RESULT] [301995.91241 ] Action name :gst-Tflops-2K2K2K-trig-fp4
+    [RESULT] [301995.175394] Module name :gst
+    [RESULT] [301995.794012] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 42583] Start of GPU ramp up
+    [RESULT] [302001.161732] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 42583] GFLOPS 536870
+    [RESULT] [302002.161726] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 42583] End of GPU ramp up
+    [RESULT] [302005.176647] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 42583] GFLOPS 1059931
+    [RESULT] [302008.187367] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 42583] GFLOPS 1055687
+    [RESULT] [302011.194700] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 42583] GFLOPS 1056873
+    [RESULT] [302014.199261] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 42583] GFLOPS 1063560
+    [RESULT] [302017.167195] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 42583] GFLOPS 1063560 Target GFLOPS: 0 met: TRUE
+    [RESULT] [302017.168168] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 27226] Start of GPU ramp up
+    [RESULT] [302022.421856] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 27226] GFLOPS 536870
+    [RESULT] [302023.421863] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 27226] End of GPU ramp up
+    [RESULT] [302026.422111] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 27226] GFLOPS 1065100
+    [RESULT] [302029.437823] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 27226] GFLOPS 1065326
+    [RESULT] [302032.447003] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 27226] GFLOPS 1067645
+    [RESULT] [302035.454318] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 27226] GFLOPS 1068301
+    [RESULT] [302038.430577] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 27226] GFLOPS 1068301 Target GFLOPS: 0 met: TRUE
+    [RESULT] [302038.431686] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 36479] Start of GPU ramp up
+    [RESULT] [302043.682076] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 36479] GFLOPS 554189
+    ...
+    [RESULT] [302141.857878] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 11806] GFLOPS 1072748
+    [RESULT] [302144.843455] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 11806] GFLOPS 1073132 Target GFLOPS: 0 met: TRUE
+    [RESULT] [302144.844774] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 57875] Start of GPU ramp up
+    [RESULT] [302150.131420] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 57875] GFLOPS 554189
+    [RESULT] [302151.131405] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 57875] End of GPU ramp up
+    [RESULT] [302154.146042] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 57875] GFLOPS 1060026
+    [RESULT] [302157.154100] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 57875] GFLOPS 1056631
+    [RESULT] [302160.164765] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 57875] GFLOPS 1061420
+    [RESULT] [302163.173056] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 57875] GFLOPS 1056547
+    [RESULT] [302166.136604] [gst-Tflops-2K2K2K-trig-fp4] [GPU:: 57875] GFLOPS 1061420 Target GFLOPS: 0 met: TRUE
 
-    [action_1] [GPU:: 50599] GFLOPS 6471.614725
-    [action_1] [GPU:: 50599] GFLOPS 5189.993529
-    [action_1] [GPU:: 50599] GFLOPS 5220.373979
-    [action_1] [GPU:: 50599] GFLOPS 5225.472000
-    [action_1] [GPU:: 50599] GFLOPS 5169.935583
-    [action_1] [GPU:: 50599] GFLOPS 6471.614725 Target GFLOPS: 5000.000000 met: TRUE
-    [action_1] [GPU:: 33367] GFLOPS 6558.348080
-    [action_1] [GPU:: 33367] GFLOPS 5215.285895
-    [action_1] [GPU:: 33367] GFLOPS 5164.945297
-    [action_1] [GPU:: 33367] GFLOPS 5210.207720
-    [action_1] [GPU:: 33367] GFLOPS 5205.139424
-    [action_1] [GPU:: 33367] GFLOPS 6558.348080 Target GFLOPS: 5000.000000 met: TRUE
-
-When setting the parallel to true, RVS will run the stress tests on
-all selected GPUs in parallel and the output may look like this:
-
-    [action_1] [GPU:: 33367] GFLOPS 6558.348080
-    [action_1] [GPU:: 50599] GFLOPS 6484.532120
-    [action_1] [GPU:: 33367] GFLOPS 5215.285895
-    [action_1] [GPU:: 50599] GFLOPS 5200.080980
-    [action_1] [GPU:: 33367] GFLOPS 5164.945297
-    [action_1] [GPU:: 50599] GFLOPS 5159.964636
-    [action_1] [GPU:: 33367] GFLOPS 5210.207720
-    [action_1] [GPU:: 50599] GFLOPS 5195.032357
-    [action_1] [GPU:: 33367] GFLOPS 5169.935583
-    [action_1] [GPU:: 50599] GFLOPS 5154.993572
-    [action_1] [GPU:: 33367] GFLOPS 6558.348080 Target GFLOPS: 5000.000000 met: TRUE
-    [action_1] [GPU:: 50599] GFLOPS 6484.532120 Target GFLOPS: 5000.000000 met: TRUE
-
-It is important that all the configuration keys will be adjusted/fine-tuned
-according to the actual GPUs and HW platform capabilities. For example, a matrix
-size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20
-GPUs.
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | gst-Tflops-2K2K2K-trig-fp4       | GST            | PASS            |
+    +---------------------------------------------------------------------+
 
 ## IET module
 
@@ -2947,107 +2715,99 @@ The test passes if the peak power measured during the run meets or exceeds
 
 ### Examples
 
-**Example 1:**
+**Example:**
 
-A regular IET configuration file looks like this:
+Run:
+
+    ./rvs -c conf/iet_stress.conf
+
+Configuration (`conf/iet_stress.conf`, first action):
 
     actions:
-    - name: action_1
+    - name: iet-stress-1400W-true
       device: all
       module: iet
-      parallel: false
-      count: 2
-      wait: 100
-      duration: 10000
-      sample_interval: 1
-      target_power: 135
+      parallel: true
+      duration: 180000
+      sample_interval: 5000
+      target_power: 1400
       tolerance: 0.1
-      matrix_size: 5760
+      matrix_size_a: 8640
+      matrix_size_b: 8640
+      matrix_size_c: 8640
+      data_type: fp16_r
+      out_data_type: fp32_r
+      compute_type: f32_r
+      lda: 8640
+      ldb: 8640
+      ldc: 8640
 
-```{note}
-- when setting the `device` configuration key to `all`, the RVS will detect all the AMD compatible GPUs and run the test on all of them
-- the test will run 2 times on each GPU (count = 2)
-- `sample_interval` is in seconds; values below 1 are raised to 1
-```
+Sample output (first action, abridged):
 
-When the RVS tool runs against such a configuration file, it will do the following:
-
-- run the test on all AMD compatible GPUs
-
-- emit, each `sample_interval` (1 second), a result message containing the
-measured power for the current GPU:
-
-    ```
-    [action_1] [GPU:: 50599] Power(W) 136.878342
-    ```
-
-- log the test result when the test completes:
-
-    ```
-    [action_1] [GPU:: 50599] pass: TRUE
-    ```
-
-The output for such a configuration file may look like this:
-
-    [action_1] [GPU:: 33367] Power(W) 136.934479
-    [action_1] [GPU:: 33367] Power(W) 138.421844
-    [action_1] [GPU:: 33367] Power(W) 138.394608
+    [RESULT] [302166.984877] Action name :iet-stress-1400W-true
+    [RESULT] [302167.47707 ] Module name :iet
+    [RESULT] [302167.678963] [iet-stress-1400W-true] [GPU:: 42583] Power(W) 241.000000
+    [RESULT] [302167.679266] [iet-stress-1400W-true] [GPU:: 36479] Power(W) 238.000000
+    [RESULT] [302167.679363] [iet-stress-1400W-true] [GPU:: 17010] Power(W) 242.000000
+    [RESULT] [302167.679366] [iet-stress-1400W-true] [GPU:: 27226] Power(W) 251.000000
+    [RESULT] [302167.686277] [iet-stress-1400W-true] [GPU::  1590] Power(W) 244.000000
+    [RESULT] [302167.686419] [iet-stress-1400W-true] [GPU:: 57875] Power(W) 247.000000
+    [RESULT] [302167.686591] [iet-stress-1400W-true] [GPU:: 11806] Power(W) 243.000000
+    [RESULT] [302167.686605] [iet-stress-1400W-true] [GPU:: 51771] Power(W) 239.000000
+    [RESULT] [302172.680300] [iet-stress-1400W-true] [GPU:: 36479] Power(W) 1398.000000
+    [RESULT] [302172.680303] [iet-stress-1400W-true] [GPU:: 42583] Power(W) 1398.000000
+    [RESULT] [302172.680570] [iet-stress-1400W-true] [GPU:: 27226] Power(W) 1398.000000
+    [RESULT] [302172.680606] [iet-stress-1400W-true] [GPU:: 17010] Power(W) 1398.000000
+    [RESULT] [302172.687273] [iet-stress-1400W-true] [GPU:: 57875] Power(W) 1399.000000
+    [RESULT] [302172.687390] [iet-stress-1400W-true] [GPU::  1590] Power(W) 1399.000000
+    [RESULT] [302172.687638] [iet-stress-1400W-true] [GPU:: 11806] Power(W) 1400.000000
+    [RESULT] [302172.687845] [iet-stress-1400W-true] [GPU:: 51771] Power(W) 1399.000000
+    [RESULT] [302177.681560] [iet-stress-1400W-true] [GPU:: 36479] Power(W) 1395.000000
+    [RESULT] [302177.681561] [iet-stress-1400W-true] [GPU:: 42583] Power(W) 1393.000000
+    [RESULT] [302177.681698] [iet-stress-1400W-true] [GPU:: 27226] Power(W) 1394.000000
+    [RESULT] [302177.681724] [iet-stress-1400W-true] [GPU:: 17010] Power(W) 1395.000000
     ...
-    [action_1] [GPU:: 33367] Power(W) 139.231918
-    [action_1] [GPU:: 33367] pass: TRUE
-    [action_1] [GPU:: 3254] Power(W) 139.363525
-    [action_1] [GPU:: 3254] Power(W) 138.661453
-    ...
-    [action_1] [GPU:: 3254] Power(W) 140.069687
-    [action_1] [GPU:: 3254] pass: TRUE
-    [action_1] [GPU:: 50599] Power(W) 137.205032
-    [action_1] [GPU:: 50599] Power(W) 136.137115
-    ...
-    [action_1] [GPU:: 50599] Power(W) 139.753464
-    [action_1] [GPU:: 50599] pass: TRUE
+    [RESULT] [302347.724033] [iet-stress-1400W-true] [GPU:: 42583] Power(W) 1399.000000
+    [RESULT] [302347.724905] [iet-stress-1400W-true] [GPU:: 27226] pass: TRUE
+    [RESULT] [302347.727817] [iet-stress-1400W-true] [GPU:: 17010] pass: TRUE
+    [RESULT] [302347.729796] [iet-stress-1400W-true] [GPU:: 42583] pass: TRUE
+    [RESULT] [302347.730984] [iet-stress-1400W-true] [GPU:: 11806] Power(W) 1400.000000
+    [RESULT] [302347.730984] [iet-stress-1400W-true] [GPU::  1590] Power(W) 1401.000000
+    [RESULT] [302347.730997] [iet-stress-1400W-true] [GPU:: 57875] Power(W) 1400.000000
+    [RESULT] [302347.731021] [iet-stress-1400W-true] [GPU:: 51771] Power(W) 1399.000000
+    [RESULT] [302347.732052] [iet-stress-1400W-true] [GPU:: 36479] pass: TRUE
+    [RESULT] [302347.737108] [iet-stress-1400W-true] [GPU::  1590] pass: TRUE
+    [RESULT] [302347.739075] [iet-stress-1400W-true] [GPU:: 11806] pass: TRUE
+    [RESULT] [302347.740868] [iet-stress-1400W-true] [GPU:: 51771] pass: TRUE
+    [RESULT] [302347.742768] [iet-stress-1400W-true] [GPU:: 57875] pass: TRUE
 
-
-**Example 2:**
-
-Another configuration file with a tighter tolerance:
-
-    - name: action_1
-      device: all
-      module: iet
-      parallel: false
-      count: 1
-      wait: 100
-      duration: 8000
-      sample_interval: 1
-      target_power: 80
-      tolerance: 0.06
-      matrix_size: 5760
-
-The output for such a configuration file may look like this:
-
-    [action_1] [GPU:: 33367] Power(W) 84.186142
-    [action_1] [GPU:: 33367] Power(W) 77.001945
-    [action_1] [GPU:: 33367] Power(W) 82.063576
-    [action_1] [GPU:: 33367] pass: TRUE
-    [action_1] [GPU:: 3254] Power(W) 78.842796
-    [action_1] [GPU:: 3254] Power(W) 79.938454
-    ...
-    [action_1] [GPU:: 3254] Power(W) 74.615120
-    [action_1] [GPU:: 3254] pass: FALSE
-    [action_1] [GPU:: 50599] Power(W) 81.560165
-    [action_1] [GPU:: 50599] Power(W) 75.057304
-    ...
-    [action_1] [GPU:: 50599] Power(W) 80.200668
-    [action_1] [GPU:: 50599] pass: TRUE
-
-
-- All the missing configuration keys (if any) will have their default values. For more information about the default values please consult the dedicated sections (3.3 Common Configuration Keys and 13.1 Module specific keys).
-- If a mandatory configuration key is missing, the RVS tool will log an error message and terminate the execution of the current module. For example, if the target_power is missing, the RVS tool will terminate with the following error message: `RVS-ERROR [IET] [action_1] key 'target_power' was not found`
-- All the configuration keys will be adjusted/fine-tuned according to the actual GPUs and HW platform capabilities.
-    - For example, a matrix size of 5760 should fit the VEGA 10 GPUs while 8640 should work with the VEGA 20 GPUs
-    - For small` target_power` values (for example: 30-40W), the `sample_interval` should be increased, otherwise the IET may fail either to achieve the given `target_power` or to sustain it (for example: `ramp_interval = 1500` for `target_power = 40`). In case there are problems reaching/sustaining the given `target_power`: 
-        - Increase the `ramp_interval` and/or the tolerance value(s) and try again (in case of a 'ramp time exceeded' message)
-        - Increase the tolerance value (in case too many 'power violation message' are logged out)
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | iet-stress-1400W-true            | IET            | PASS            |
+    +---------------------------------------------------------------------+
 
 
 ## Pulse Module
@@ -3234,9 +2994,13 @@ no errors.</td></tr>
 
 ### Examples
 
-**Example 1:**
+**Example:**
 
-Run all tests in parallel on all GPUs, excluding bit fade (9) and stress (10):
+Run:
+
+    ./rvs -c conf/mem.conf
+
+Configuration (`conf/mem.conf`, first action):
 
     actions:
     - name: action_1
@@ -3251,21 +3015,70 @@ Run all tests in parallel on all GPUs, excluding bit fade (9) and stress (10):
       thrds_per_blk: 64
       stress: true
       num_iter: 50000
-      exclude: 9 10
 
-Run with:
+Sample output (first action, abridged):
 
-    ./rvs -c conf/mem.conf -d 3
-
-The test passes if no memory errors are detected on any GPU. The module logs
-a result line per test at INFO level using 1-based test numbering:
-
-    [INFO ][<timestamp>][action_1] mem <gpu_id> Test 1 : PASS
-    [INFO ][<timestamp>][action_1] mem <gpu_id> Test 2 : PASS
+    [RESULT] [302697.357999] Action name :action_1
+    [RESULT] [302697.415572] Module name :mem
+    [RESULT] [302697.637264] [action_1] mem   The following memory tests will run
+    [RESULT] [302697.637269] =============== Test 1  [Walking 1 bit]
+    [RESULT] [302697.637270] =============== Test 2  [Own address test]
+    [RESULT] [302697.637270] =============== Test 3  [Moving inversions, ones&zeros]
+    [RESULT] [302697.637271] =============== Test 4  [Moving inversions, 8 bit pat]
+    [RESULT] [302697.637271] =============== Test 5  [Moving inversions, random pattern]
+    [RESULT] [302697.637271] =============== Test 6  [Block move, 64 moves]
+    [RESULT] [302697.637271] =============== Test 7  [Moving inversions, 32 bit pat]
+    [RESULT] [302697.637272] =============== Test 8  [Random number sequence]
+    [RESULT] [302697.637272] =============== Test 9  [Modulo 20, random pattern]
+    [RESULT] [302697.869004] [action_1] mem Test 1: Change one bit memory addresss
+    [RESULT] [302697.872232] [action_1] mem Test 1: Change one bit memory addresss
+    [RESULT] [302697.890031] [action_1] mem Test 1: Change one bit memory addresss
+    [RESULT] [302697.893155] [action_1] mem Test 1: Change one bit memory addresss
+    [RESULT] [302697.895754] [action_1] mem Test 1 : PASS
+    [RESULT] [302697.895771] [action_1] mem Test 2: Each Memory location is filled with its own address
+    [RESULT] [302697.896227] [action_1] mem Test 1: Change one bit memory addresss
+    [RESULT] [302697.900155] [action_1] mem Test 1 : PASS
+    [RESULT] [302697.900173] [action_1] mem Test 2: Each Memory location is filled with its own address
+    [RESULT] [302697.903915] [action_1] mem Test 1: Change one bit memory addresss
     ...
+    [RESULT] [302732.976817] [action_1] mem Test 11: elapsedtime = 1986.538940 bandwidth = 6443.431641GB/s
+    [RESULT] [302732.978980] [action_1] mem Test 11 : PASS
+    [RESULT] [302733.171129] [action_1] mem Test 11: elapsedtime = 1989.459717 bandwidth = 6433.972168GB/s
+    [RESULT] [302733.173334] [action_1] mem Test 11 : PASS
+    [RESULT] [302733.208421] [action_1] mem Test 11: elapsedtime = 1974.268921 bandwidth = 6483.477539GB/s
+    [RESULT] [302733.210793] [action_1] mem Test 11 : PASS
+    [RESULT] [302730.722708] [action_1] mem Test 11: elapsedtime = 1964.402588 bandwidth = 6516.041016GB/s
+    [RESULT] [302730.724818] [action_1] mem Test 11 : PASS
+    [RESULT] [302731.757998] [action_1] mem Test 11: elapsedtime = 2002.477539 bandwidth = 6392.145508GB/s
+    [RESULT] [302731.760200] [action_1] mem Test 11 : PASS
 
-A summary JSON record with `errors` and `pass` fields is also emitted when
-JSON output is enabled (`-j`).
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | action_1                         | MEM            | PASS            |
+    +---------------------------------------------------------------------+
 
 
 ## BABEL module
@@ -3374,30 +3187,83 @@ kernel.</td></tr>
 
 ### Examples
 
-**Example 1:**
+**Example:**
 
-Run all BABEL kernels with a 32 MB buffer, 5000 iterations, double precision:
+Run:
+
+    ./rvs -c conf/babel.conf -d 3
+
+Configuration (`conf/babel.conf`, first action):
 
     actions:
-    - name: action_1
+    - name: babel-double-825MiB
       device: all
       module: babel
-      parallel: true
+      parallel: false
       count: 1
-      num_iter: 5000
+      num_iter: 2000
       duration: 0
-      array_size: 33554432
+      array_size: 865075200
       test_type: 2
       mibibytes: false
       o/p_csv: false
-      copy: true
       read: true
       write: true
+      copy: true
       mul: true
       add: true
       dot: true
       triad: true
+      dwords_per_lane: 4
+      chunks_per_block: 1
+      tb_size: 512
 
-Run with:
+Sample output (first action, abridged):
 
-    ./rvs -c conf/babel.conf -d 3
+    [RESULT] [302411.15197 ] Action name :babel-double-825MiB
+    [RESULT] [302411.96856 ] Module name :babel
+    [RESULT] [302411.735270] [babel-double-825MiB] [GPU:: 42583] Starting the Babel memory stress test
+    [RESULT] [302411.735337] Running kernels 2000 times, Precision: double
+    [RESULT] [302411.735378] Array size: 6920.6 MB (=6.9 GB), Total size: 20761.8 MB (=20.8 GB)
+
+    [RESULT] [302446.903905]
+    ---------------------------------------------------------------------------------
+    GPU Id      Function    MBytes/sec     Max MB/s       Min MB/s       Avg MB/s
+    ---------------------------------------------------------------------------------
+    42583       Read        7090191.900    7090191.900    6638148.386    7019091.298
+    42583       Write       6645670.223    6645670.223    5618652.956    6106108.680
+    42583       Copy        6224488.986    6224488.986    6037686.546    6150313.849
+    42583       Mul         6238685.230    6238685.230    6056284.950    6152982.512
+    42583       Add         6008723.700    6008723.700    5485279.487    5919255.626
+    42583       Triad       6031416.066    6031416.066    5879289.313    5950804.403
+    42583       Dot         5844542.436    5844542.436    4912455.933    5806381.609
+    ---------------------------------------------------------------------------------
+    ...
+
+    +=====================================================================+
+    |                 ROCm Validation Suite (RVS) Summary                 |
+    +=====================================================================+
+    |                           System Overview                           |
+    +---------------------------------------------------------------------+
+    | Operating System                 | Ubuntu 22.04.5 LTS               |
+    | RVS version                      | 1.6.75                           |
+    | ROCm version                     | 7.2.1-81                         |
+    | amdgpu version                   | 6.16.13                          |
+    | GPUs                             | 8                                |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 42583      | AMD Instinct MI355X - 27226      |
+    | 0 - 2 - 0000:05:00.0             | 1 - 3 - 0000:15:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 36479      | AMD Instinct MI355X - 17010      |
+    | 2 - 4 - 0000:65:00.0             | 3 - 5 - 0000:75:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 1590       | AMD Instinct MI355X - 51771      |
+    | 4 - 6 - 0000:85:00.0             | 5 - 7 - 0000:95:00.0             |
+    +---------------------------------------------------------------------+
+    | AMD Instinct MI355X - 11806      | AMD Instinct MI355X - 57875      |
+    | 6 - 8 - 0000:e5:00.0             | 7 - 9 - 0000:f5:00.0             |
+    +=====================================================================+
+    | Action Name                      | Module         | Result          |
+    +=====================================================================+
+    | babel-double-825MiB              | BABEL          | PASS            |
+    +---------------------------------------------------------------------+
