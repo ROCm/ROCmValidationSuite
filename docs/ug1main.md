@@ -1846,9 +1846,9 @@ are emitted:
 
 Run:
 
-    ./rvs -c conf/pbqt_single.conf
+    ./rvs -c conf/MI355X/pbqt_single.conf
 
-Configuration (`conf/pbqt_single.conf`, first action):
+Configuration (`conf/MI355X/pbqt_single.conf`, first action):
 
     actions:
     - name: xgmi_d2d_unidir_bandwidth
@@ -2138,20 +2138,20 @@ logged as a result:
 
 Run:
 
-    ./rvs -c conf/pebb_single.conf
+    ./rvs -c conf/MI355X/pebb_single.conf
 
-Configuration (`conf/pebb_single.conf`, first action):
+Configuration (`conf/MI355X/pebb_single.conf`, first action):
 
     actions:
     - name: pcie_h2d_bandwidth
       device: all
       module: pebb
-      log_interval: 5000
       duration: 30000
       device_to_host: false
       host_to_device: true
       parallel: false
       block_size: 1073741824
+      link_type: 2
 
 Sample output (first action, abridged):
 
@@ -2430,26 +2430,34 @@ of the run. Otherwise the result is `met: FALSE`.
 
 Run:
 
-    ./rvs -c conf/gst_single.conf
+    ./rvs -c conf/MI355X/gst_single.conf
 
-Configuration (`conf/gst_single.conf`, first action):
+Configuration (`conf/MI355X/gst_single.conf`, first action):
 
     actions:
     - name: gst-Tflops-2K2K2K-trig-fp4
       device: all
       module: gst
-      parallel: false
-      duration: 10000
-      ramp_interval: 5000
       log_interval: 3000
-      max_violations: 5
+      ramp_interval: 5000
+      duration: 15000
+      hot_calls: 1000
       copy_matrix: false
       target_stress: 0
-      tolerance: 0.1
       matrix_size_a: 2048
       matrix_size_b: 2048
       matrix_size_c: 2048
-      data_type: fp4
+      scale_a: block
+      scale_b: block
+      matrix_init: trig
+      data_type: fp4_r
+      out_data_type: fp16_r
+      compute_type: fp32_r
+      transa: 1
+      transb: 0
+      alpha: 1.5
+      beta: 2
+      blas_source: hipblaslt
 
 Sample output (first action, abridged):
 
@@ -2719,28 +2727,25 @@ The test passes if the peak power measured during the run meets or exceeds
 
 Run:
 
-    ./rvs -c conf/iet_stress.conf
+    ./rvs -c conf/MI355X/iet_stress.conf
 
-Configuration (`conf/iet_stress.conf`, first action):
+Configuration (`conf/MI355X/iet_stress.conf`, first action):
 
     actions:
     - name: iet-stress-1400W-true
       device: all
       module: iet
       parallel: true
-      duration: 180000
+      duration: 600000
+      ramp_interval: 1000
       sample_interval: 5000
+      log_interval: 5000
       target_power: 1400
-      tolerance: 0.1
-      matrix_size_a: 8640
-      matrix_size_b: 8640
-      matrix_size_c: 8640
-      data_type: fp16_r
-      out_data_type: fp32_r
-      compute_type: f32_r
-      lda: 8640
-      ldb: 8640
-      ldc: 8640
+      tolerance: 0.01
+      bw_workload: true
+      cp_workload: false
+      wg_count: 256
+      nt_loads: true
 
 Sample output (first action, abridged):
 
@@ -3191,9 +3196,9 @@ kernel.</td></tr>
 
 Run:
 
-    ./rvs -c conf/babel.conf -d 3
+    ./rvs -c conf/MI355X/babel.conf
 
-Configuration (`conf/babel.conf`, first action):
+Configuration (`conf/MI355X/babel.conf`, first action):
 
     actions:
     - name: babel-double-825MiB
