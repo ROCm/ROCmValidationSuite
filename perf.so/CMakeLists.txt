@@ -146,7 +146,7 @@ include_directories(./ ../ ${ROCR_INC_DIR} ${ROCBLAS_INC_DIR} ${HIP_INC_DIR} ${H
 # Add directories to look for library files to link
 link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH} ${HIP_LIB_DIR} ${AMD_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR})
 ## additional libraries
-set (PROJECT_LINK_LIBS rvslib libpthread.so libpci.so libm.so)
+set (PROJECT_LINK_LIBS rvslib libpthread.so libm.so)
 
 ## define source files
 set(SOURCES src/rvs_module.cpp src/action.cpp src/perf_worker.cpp)

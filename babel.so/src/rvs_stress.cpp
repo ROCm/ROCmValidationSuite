@@ -93,7 +93,6 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   std::string   msg;
   std::streamsize ss = std::cout.precision();
   std::stringstream sstr;
-  auto desc = action_descriptor{action, module_name, device.second};
   bool time_based = (duration > 0);
 
   if (!output_as_csv)
@@ -133,22 +132,6 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 
   }
 
-  //json
-  if (json){
-    std::string scale = mibibytes ? "MiB" : "MB";
-    auto arr_size = mibibytes ? ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
-	    ARRAY_SIZE*sizeof(T)*1.0E-6;
-    auto total_size = mibibytes ? 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
-	    3.0*ARRAY_SIZE*sizeof(T)*1.0E-6;
-    if (time_based)
-      log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
-	        "Total size", std::to_string(total_size),
-	        "Duration(ms)", std::to_string(duration) );
-    else
-      log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
-	        "Total size", std::to_string(total_size),
-	        "Iterations", std::to_string(num_times) );
-  }
 
   // Create host vectors
   std::vector<T> a(ARRAY_SIZE);
@@ -292,6 +275,11 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       << std::fixed;
   }
 
+  uint64_t arr_size   = (uint64_t)ARRAY_SIZE * sizeof(T);
+  uint64_t total_size = 3ULL * ARRAY_SIZE * sizeof(T);
+  std::string iter_key = time_based ? "duration_ms" : "iterations";
+  std::string iter_val = time_based ? std::to_string(duration) : std::to_string(num_times);
+
   std::string labels[total_babel_subtests] = {"Read","Write","Copy", "Mul", "Add", "Triad", "Dot"};
   size_t sizes[total_babel_subtests] = {
     1 * sizeof(T) * ARRAY_SIZE,
@@ -311,6 +299,32 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
     test->add,
     test->triad,
     test->dot};
+
+  auto format_bw = [](double val) -> std::string {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(3) << val;
+    return oss.str();
+  };
+
+  // Build single JSON node per GPU: metadata + nested "results" array
+  void* json_root = nullptr;
+  void* json_results = nullptr;
+  if (json) {
+    unsigned int sec, usec;
+    rvs::lp::get_ticks(&sec, &usec);
+    json_root = rvs::lp::LogRecordCreate(module_name.c_str(), action.c_str(),
+        rvs::logresults, sec, usec, true);
+    if (json_root) {
+      rvs::lp::AddString(json_root, "gpu_id", std::to_string(device.second));
+      uint16_t gpu_index = 0;
+      rvs::gpulist::gpu2gpuindex(device.second, &gpu_index);
+      rvs::lp::AddString(json_root, "gpu_index", std::to_string(gpu_index));
+      rvs::lp::AddString(json_root, "array_size", std::to_string(arr_size));
+      rvs::lp::AddString(json_root, "total_size", std::to_string(total_size));
+      rvs::lp::AddString(json_root, iter_key, iter_val);
+      json_results = rvs::lp::JsonNestedListCreate("results", rvs::logresults);
+    }
+  }
 
   // Display babel subtest results
   for (int i = 0; i < total_babel_subtests; i++)
@@ -343,27 +357,32 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
         sstr
           << std::left << std::setw(12) << device.second
           << std::left << std::setw(12) << labels[i]
-          << std::left << std::setw(15) << std::setprecision(3) <<
-          bw_scale * sizes[i] / (*minmax.first)
-          << std::left << std::setw(15) << std::setprecision(3) <<
-          bw_scale * sizes[i] / (*minmax.first)
-          << std::left << std::setw(15) << std::setprecision(3) <<
-          bw_scale * sizes[i] / (*minmax.second)
-          << std::left << std::setw(15) << std::setprecision(3) <<
-          bw_scale * sizes[i] / average
+          << std::left << std::setw(15) << format_bw(bw_scale * sizes[i] / (*minmax.first))
+          << std::left << std::setw(15) << format_bw(bw_scale * sizes[i] / (*minmax.first))
+          << std::left << std::setw(15) << format_bw(bw_scale * sizes[i] / (*minmax.second))
+          << std::left << std::setw(15) << format_bw(bw_scale * sizes[i] / average)
           << std::endl;
       }
-      if (json){
-        const char *key = mibibytes ? "MiBytes/sec" : "MBytes/sec";
-        const char *peak_key = mibibytes ? "Max_MiBytes/sec" : "Max_MBytes/sec";
-        const char *worst_key = mibibytes ? "Min_MiBytes/sec" : "Min_MBytes/sec";
-        const char *avg_key = mibibytes ? "Avg_MiBytes/sec" : "Avg_MBytes/sec";
-        log_to_json(desc, rvs::logresults, "Function",std::string(labels[i]),
-            key, std::to_string(bw_scale * sizes[i] / (*minmax.first)),
-            peak_key, std::to_string(bw_scale * sizes[i] / (*minmax.first)),
-            worst_key, std::to_string(bw_scale * sizes[i] / (*minmax.second)),
-            avg_key, std::to_string(bw_scale * sizes[i] / average),
-            "pass", "true");
+      if (json && json_results) {
+        const char *key = mibibytes ? "mibytes_per_sec" : "mbytes_per_sec";
+        const char *peak_key = mibibytes ? "max_mibytes_per_sec" : "max_mbytes_per_sec";
+        const char *worst_key = mibibytes ? "min_mibytes_per_sec" : "min_mbytes_per_sec";
+        const char *avg_key = mibibytes ? "avg_mibytes_per_sec" : "avg_mbytes_per_sec";
+        void* subtest_node = rvs::lp::LogRecordCreate(module_name.c_str(),
+            labels[i].c_str(), rvs::logresults, 0, 0, true);
+        if (subtest_node) {
+          rvs::lp::AddString(subtest_node, "subtest", labels[i]);
+          rvs::lp::AddString(subtest_node, key,
+              format_bw(bw_scale * sizes[i] / (*minmax.first)));
+          rvs::lp::AddString(subtest_node, peak_key,
+              format_bw(bw_scale * sizes[i] / (*minmax.first)));
+          rvs::lp::AddString(subtest_node, worst_key,
+              format_bw(bw_scale * sizes[i] / (*minmax.second)));
+          rvs::lp::AddString(subtest_node, avg_key,
+              format_bw(bw_scale * sizes[i] / average));
+          rvs::lp::AddString(subtest_node, "pass", "true");
+          rvs::lp::AddNode(json_results, subtest_node);
+        }
       }
     }
   }
@@ -371,6 +390,12 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   sstr
     << "---------------------------------------------------------------------------------" << std::endl;
   rvs::lp::Log(sstr.str(), rvs::logresults);
+
+  if (json && json_root && json_results) {
+    rvs::lp::AddNode(json_root, json_results);
+    rvs::lp::LogRecordFlush(json_root, true);
+  }
+
   delete stream;
 
   return true;
@@ -382,10 +407,13 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
     const std::string& data_init, const std::string& nontemporal, uint64_t duration)
 {
   std::string msg;
-  auto desc = action_descriptor{action, module_name, device.second};
   triad_only = true;
   bool time_based = (duration > 0);
   std::stringstream sstr;
+  uint64_t arr_size   = (uint64_t)ARRAY_SIZE * sizeof(T);
+  uint64_t total_size = 3ULL * ARRAY_SIZE * sizeof(T);
+  std::string iter_key = time_based ? "duration_ms" : "iterations";
+  std::string iter_val = time_based ? std::to_string(duration) : std::to_string(num_times);
   if (!output_as_csv)
   {
     if (time_based)
@@ -418,21 +446,6 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
         << " (=" << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB)" << std::endl;
     }
     rvs::lp::Log(sstr.str(), rvs::logresults);
-    if (json){
-      std::string scale = mibibytes ? "MiB" : "MB";
-      auto arr_size = mibibytes ? ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
-	      ARRAY_SIZE*sizeof(T)*1.0E-6;
-     auto total_size = mibibytes  ? 3.0*ARRAY_SIZE*sizeof(T)*pow(2.0, -20.0) :
-	     3.0*ARRAY_SIZE*sizeof(T)*1.0E-6;
-     if (time_based)
-       log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
-                "Total size", std::to_string(total_size),
-                "Duration(ms)", std::to_string(duration) );
-     else
-       log_to_json(desc, rvs::logresults,"Array size", std::to_string(arr_size),
-                "Total size", std::to_string(total_size),
-                "Iterations", std::to_string(num_times) );
-    }
     std::cout.precision(ss);
   }
   sstr.str( std::string() );
@@ -530,15 +543,25 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
       << bandwidth << std::endl;
   }
    rvs::lp::Log(sstr.str(), rvs::logresults);
-   if (json){
-     std::string bw_field{"Bandwidth ("};
-     bw_field +=(mibibytes) ? "GiB/s" : "GB/s";
-     bw_field += ")";
-     log_to_json(desc, rvs::logresults,
-		     "GPU Id", std::to_string(device.second),
-		     "Runtime (seconds)", std::to_string(runtime),
-		     bw_field, std::to_string(bandwidth),
-		     "pass", "true");
+   if (json) {
+     unsigned int sec, usec;
+     rvs::lp::get_ticks(&sec, &usec);
+     void* json_root = rvs::lp::LogRecordCreate(module_name.c_str(), action.c_str(),
+         rvs::logresults, sec, usec, true);
+     if (json_root) {
+       rvs::lp::AddString(json_root, "gpu_id", std::to_string(device.second));
+       uint16_t gpu_index = 0;
+       rvs::gpulist::gpu2gpuindex(device.second, &gpu_index);
+       rvs::lp::AddString(json_root, "gpu_index", std::to_string(gpu_index));
+       rvs::lp::AddString(json_root, "array_size", std::to_string(arr_size));
+       rvs::lp::AddString(json_root, "total_size", std::to_string(total_size));
+       rvs::lp::AddString(json_root, iter_key, iter_val);
+       const char *bw_key = mibibytes ? "bandwidth_gib_per_sec" : "bandwidth_gb_per_sec";
+       rvs::lp::AddString(json_root, "runtime_sec", std::to_string(runtime));
+       rvs::lp::AddString(json_root, bw_key, std::to_string(bandwidth));
+       rvs::lp::AddString(json_root, "pass", "true");
+       rvs::lp::LogRecordFlush(json_root, true);
+     }
    }
   delete stream;
 
