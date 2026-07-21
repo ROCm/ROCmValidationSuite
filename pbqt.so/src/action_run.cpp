@@ -25,7 +25,6 @@
 #include "include/action.h"
 
 extern "C" {
-#include <pci/pci.h>
 #include <linux/pci.h>
 }
 #include <stdio.h>
@@ -147,7 +146,7 @@ int pbqt_action::run() {
     if(bjson){
     rvs::lp::JsonActionEndNodeCreate();
   }
-    return 0;
+    return -1;
   }
 
   RVSTRACE_

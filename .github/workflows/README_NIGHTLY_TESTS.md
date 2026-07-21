@@ -1,7 +1,7 @@
 # RVS Nightly Tests Workflow
 
 This document describes [`.github/workflows/rvs-nightly-tests.yml`](./rvs-nightly-tests.yml),
-which picks up the **latest RVS tarball** from the tarball index (`secrets.RVS_TARBALL_INDEX_URL` if set, otherwise the **built-in default index URL** in [`rvs-nightly-tests.yml`](./rvs-nightly-tests.yml) — see `env.TARBALL_INDEX_URL`), once per day, copies it to a **configurable remote target node** over SSH,
+which picks up the **latest RVS tarball** from the tarball index (`secrets.RVS_TARBALL_INDEX_URL`, passed through workflow `env.TARBALL_INDEX_URL` — **no default URL in the repo**), after a successful **Build Relocatable Packages** run (or on manual dispatch), copies it to a **configurable remote target node** over SSH,
 installs it there, and runs RVS level 4 on that node.
 
 The GitHub Actions runner ("RVS Runner") is only an **orchestrator** — it
@@ -13,7 +13,7 @@ at any GPU host without code changes.
 ## What it does
 
 ```
-schedule / workflow_run / manual
+workflow_run (push main|master or scheduled build) / manual
     │
     ▼
 install-rvs-on-target       [self-hosted orchestrator]  ──ssh──▶  [target GPU node]
@@ -39,12 +39,10 @@ at the repo root — the same split as `build-relocatable-packages.yml` +
 
 | Trigger | Cadence | What fires |
 |---|---|---|
-| `schedule` | `0 15 * * *` UTC daily (08:00 PST / 07:00 PDT) | Polls the tarball index and always runs install + level 4, even when the latest tarball filename matches the previous run (a notice is logged when unchanged). |
-| `workflow_run` | After **Build Relocatable Packages** completes | Runs only when that workflow's overall conclusion is **success**. No changes to the build workflow are required. |
+| `workflow_run` | After **Build Relocatable Packages** completes | Runs only when that workflow's overall conclusion is **success** and the triggering event was either **`push`** to **`main`** / **`master`**, or the package workflow's own **`schedule`** (daily build). PR builds, release-branch builds, failed builds, and manual package builds do **not** start nightly tests. |
 | `workflow_dispatch` | Manual | Always runs. Supports overriding the tarball URL and **retargeting at any node** without editing the workflow. |
 
-The cron deliberately runs after AMD's typical nightly publish window;
-adjust the cron string in the workflow if your publish cadence is different.
+Nightly tests no longer have their own cron — they follow successful **Build Relocatable Packages** runs (see that workflow's `0 13 * * *` UTC schedule for the daily package build cadence).
 
 ## Manual dispatch inputs
 
@@ -68,7 +66,7 @@ gh workflow run rvs-nightly-tests.yml \
   -f target_user="<USER>"
 ```
 
-Example — keep the default tarball but run on a different host today:
+Example — resolve from your index secret (typical manual run; ensure `RVS_TARBALL_INDEX_URL` is set for post-build runs):
 
 ```bash
 gh workflow run rvs-nightly-tests.yml -f target_node="<HOST_OR_IP>"
@@ -97,14 +95,14 @@ gh workflow run rvs-nightly-tests.yml \
 
 | Name | Required? | Purpose |
 |---|---|---|
-| `RVS_TARBALL_INDEX_URL` | optional | Directory listing URL scraped for the latest tarball (same `curl` + `grep` logic as before). When unset, the workflow uses the **default index URL** baked into `rvs-nightly-tests.yml` (`env.TARBALL_INDEX_URL`). Set this secret to point at another listing (for example your organization’s internal index). GitHub masks secret values in logs when printed. If this name was previously an Actions **Variable**, copy the value to this secret and remove the variable. |
-| `RVS_TARGET_NODE` | **Required** *(unless every run sets `target_node` input)* | Hostname or IP of the node where RVS is installed and tests run. Stored as a secret so the lab node identity isn't visible in repo Variables or in run logs — GitHub Actions automatically masks secret values as `***` wherever they appear in step output. Workflow fails fast on `schedule` if neither this secret nor `target_node` input is set. |
+| `RVS_TARBALL_INDEX_URL` | **Required** *(unless every run that needs an index provides `workflow_dispatch` `tarball_url`; `workflow_run` needs this secret)* | HTTPS directory listing URL scraped for the latest `amdrocm*-rvs-*-Linux.tar.gz` (e.g. `https://<cdn-host>/nightly/rvs/tar/`). Copied into workflow `env.TARBALL_INDEX_URL`. GitHub masks secret values in logs when printed. If this name was previously an Actions **Variable**, copy the value to this secret and remove the variable. |
+| `RVS_TARGET_NODE` | **Required** *(unless every run sets `target_node` input)* | Hostname or IP of the node where RVS is installed and tests run. Stored as a secret so the lab node identity isn't visible in repo Variables or in run logs — GitHub Actions automatically masks secret values as `***` wherever they appear in step output. Workflow fails fast if neither this secret nor `target_node` input is set. |
 | `RVS_TARGET_USER` | optional (no hard-coded default) | SSH user on the target node. If unset and `target_user` input is empty, the SSH client falls back to the orchestrator runner's local user — set this secret explicitly to avoid surprises. Stored as a secret so the lab account name isn't visible in repo settings or run logs (auto-masked as `***`). |
 | `RVS_TARGET_SSH_KEY` | **Required** | Private SSH key (OpenSSH or PEM format) authorized on the target node for `RVS_TARGET_USER`. Written to `$RUNNER_TEMP/rvs_target_key` for the duration of the job and scrubbed in the cleanup step. |
 
 ## How the latest tarball is picked
 
-The **Resolve latest tarball URL** step at the start of **install-rvs-on-target** runs on the orchestrator (with `$INDEX_URL` = `secrets.RVS_TARBALL_INDEX_URL` if set, else the default from the workflow `env.TARBALL_INDEX_URL` expression):
+The **Resolve latest tarball URL** step at the start of **install-rvs-on-target** runs on the orchestrator with `$INDEX_URL` = `TARBALL_INDEX_URL` from the workflow env (set from `secrets.RVS_TARBALL_INDEX_URL`), unless `workflow_dispatch.tarball_url` is set:
 
 ```bash
 curl -sL "$INDEX_URL" \
@@ -261,7 +259,7 @@ if `$RVS_BIN` isn't executable after extraction.
 - `ssh`, `scp`, `ssh-keyscan`, and `curl` on `PATH`.
 - **install-rvs-on-target** runs on `vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL` or `vars.RVS_TEST_RUNNER_LABEL` (see Variables). On that runner only: `curl` resolves the latest tarball from the index, `curl` downloads the `.tar.gz` to `./pkg/`, then `scp` pushes it to the target. The GPU target never curls the index or CDN.
 - Network egress from that orchestrator to:
-  - the tarball index and tarball file hosts (HTTPS port 443; from `secrets.RVS_TARBALL_INDEX_URL` / workflow default unless `workflow_dispatch.tarball_url` is set),
+  - the tarball index and tarball file hosts (HTTPS port 443; from `secrets.RVS_TARBALL_INDEX_URL` via workflow `env.TARBALL_INDEX_URL` unless `workflow_dispatch.tarball_url` is set),
   - the target node (SSH, typically port 22).
 - The runner does **not** need a GPU, ROCm, or `sudo`.
 
@@ -354,11 +352,11 @@ e.g.:
 | Field | Value |
 |---|---|
 | Run | `1234567890` |
-| Trigger | `schedule` |
+| Trigger | `workflow_run` (scheduled package build) |
 | Target ROCm path | `<ROCM_INSTALL_PATH>` (version `<ROCM_VERSION>`) |
 | Remote work dir | `/tmp/rvs-nightly-1234567890` |
 | Tarball | `amdrocm7-rvs-1.4.21-288-Linux.tar.gz` |
-| Source URL | resolved tarball URL (default index comes from the workflow unless secret `RVS_TARBALL_INDEX_URL` overrides) |
+| Source URL | resolved tarball URL (from `workflow_dispatch.tarball_url` or index at `secrets.RVS_TARBALL_INDEX_URL`) |
 | RVS version | `RVS 1.4.21.0-...` |
 | Overall result | **PASS** |
 
@@ -443,8 +441,8 @@ Watch the Actions tab for:
 
 | Symptom | Likely cause |
 |---|---|
-| **install-rvs-on-target** exits with "No tarball index URL…" (should not occur) | Report as a workflow bug; the YAML supplies a default index when the secret is unset. |
-| **Resolve latest tarball URL** fails with "Could not resolve a tarball URL" | The index page returned no matches. Confirm network access from the orchestrator to the index host, inspect the HTML listing for `amdrocm*-rvs-*-Linux.tar.gz` links, and/or set secret `RVS_TARBALL_INDEX_URL` to a valid listing URL. Compare with the fallback string in `env.TARBALL_INDEX_URL` in [`rvs-nightly-tests.yml`](./rvs-nightly-tests.yml) if you rely on the built-in default. |
+| **install-rvs-on-target** exits with "No tarball index URL…" | `RVS_TARBALL_INDEX_URL` is unset and `workflow_dispatch.tarball_url` was not provided. Set the secret to your HTTPS directory index (e.g. `https://<cdn-host>/nightly/rvs/tar/`) or pass `tarball_url` for that run. |
+| **Resolve latest tarball URL** fails with "Could not resolve a tarball URL" | The index page returned no matches. Confirm network access from the orchestrator to the index host, inspect the HTML listing for `amdrocm*-rvs-*-Linux.tar.gz` links, and/or set secret `RVS_TARBALL_INDEX_URL` to a valid listing URL. |
 | **install-rvs-on-target** stuck "Queued" | No runner online for `vars.RVS_NIGHTLY_INDEX_RUNNER_LABEL` or `vars.RVS_TEST_RUNNER_LABEL` (see Actions → Runners). That job performs index `curl`, tarball download, and `scp` to the target. |
 | **run-rvs-level-4** stuck "Queued" | No orchestrator runner online with the label in `vars.RVS_TEST_RUNNER_LABEL`. |
 | **Validate target node configuration** fails: `No target node configured` | Neither `inputs.target_node` nor `secrets.RVS_TARGET_NODE` is set. Add the secret in Settings → Secrets and variables → Actions → Secrets, or pass `target_node` via `workflow_dispatch`. |
@@ -464,7 +462,7 @@ Watch the Actions tab for:
 | **Run RVS level 4 on target node** exits non-zero immediately (after both verify steps passed) | RVS plugin's own dependency missing on the target (e.g. `libpci3` on Debian). Check `rvs_level_4.log` in the artifact for the specific error. |
 | **Collect logs from target node** warns: `No log files retrieved from target node` | The level steps exited so early they didn't produce any output, or `$REMOTE_WORK_DIR` was wiped. Inspect the level-step logs in the run UI for the original error. |
 | **Create Test Report** / **Build test report**: `Required environment variable TARBALL_URL is not set` | The install job’s `tarball_url` output was empty when passed into the report job (often URLs with `%`, `&`, or other characters that break the old `echo "tarball_url=$URL"` → `GITHUB_OUTPUT` form). The workflow now writes that URL with delimiter syntax; upgrade to current `rvs-nightly-tests.yml`. The report step also tolerates a missing URL and still writes `SUMMARY.md` with the tarball filename. |
-| Cron skipped a day | GitHub may delay or drop schedules under high load. Run once manually via `workflow_dispatch` to validate. |
+| Daily package build skipped or failed | Nightly tests only start after a **successful** **Build Relocatable Packages** run. If the scheduled package build failed or was skipped, nightly tests will not run until the next successful build (or trigger manually via `workflow_dispatch`). |
 
 ## Retargeting at a different node
 
@@ -477,7 +475,7 @@ There are three ways to point the workflow at a different node, in increasing or
      -f target_node="<host-or-ip>" \
      -f target_rocm_path="<ROCM_INSTALL_PATH>"
    ```
-3. **Permanent change:** update repo secrets `RVS_TARGET_NODE` / `RVS_TARGET_USER` (and optionally `RVS_TARBALL_INDEX_URL`) and repo variable `RVS_TARGET_ROCM_PATH` (and optionally repo variable `RVS_REMOTE_WORK_DIR`). All subsequent scheduled and manual runs will pick these up unless an input overrides them.
+3. **Permanent change:** update repo secrets `RVS_TARGET_NODE` / `RVS_TARGET_USER` (and optionally `RVS_TARBALL_INDEX_URL`) and repo variable `RVS_TARGET_ROCM_PATH` (and optionally repo variable `RVS_REMOTE_WORK_DIR`). All subsequent post-build (`workflow_run`) and manual runs will pick these up unless an input overrides them.
 
 The same `RVS_TARGET_SSH_KEY` secret is reused across nodes — make sure the
 public counterpart of that key is added to `$TARGET_USER`'s `~/.ssh/authorized_keys`

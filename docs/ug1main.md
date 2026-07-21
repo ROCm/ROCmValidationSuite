@@ -220,7 +220,11 @@ platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>
 <b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>.
 </td></tr>
 
-<tr><td>-t</td><td>--listTests</td><td>List the test modules present in RVS.
+<tr><td>-t</td><td>--duration</td><td>Specify the test duration (in seconds) for each action.
+Overrides the <b>duration</b> value in all actions of the configuration file.
+</td></tr>
+
+<tr><td></td><td>--listTests</td><td>List the test modules present in RVS.
 </td></tr>
 
 <tr><td>-v</td><td>--verbose</td><td>Enable detailed logging. Equivalent to specifying <b>-d 5</b> option.
@@ -238,7 +242,7 @@ If no value is provided for the option, it defaults to <b>true</b>.
 Use this option in conjunction with <b>-c</b> option.
 </td></tr>
 
-<tr><td></td><td>--quiet</td><td>No console output given. See logs and return
+<tr><td>-q</td><td>--quiet</td><td>No console output given. See logs and return
 code for errors.</td></tr>
 
 <tr><td></td><td>--version</td><td>Displays the version information and exits.
@@ -276,7 +280,7 @@ Print version information and exit:
 
 List all available test modules:
 ```bash
-./rvs -t
+./rvs --listTests
 ```
 List all GPUs visible to RVS:
 ```bash
@@ -345,7 +349,9 @@ The configuration files in the top-level `conf/` folder are generic samples and 
 ### GPU-Specific Configurations
 
 RVS includes optimized test configurations for a range of GPU families, organized under `conf/<GPU>/`. 
-Level-based configurations (usable with `-r`) are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X.
+Level-based configurations (usable with `-r`) are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X, MI350P-450W, MI350P-600W.
+
+For MI350P, the 450W and 600W SKUs share a single PCI device ID (`0x75a8`); RVS disambiguates between them at runtime by reading the GPU's hardware power cap via amdsmi (~450 W → `MI350P-450W`, ~600 W → `MI350P-600W`). If the power cap cannot be read, RVS falls back to `MI350P-450W` and prints a warning; use `-c conf/MI350P-600W/levels/rvs_level_N.conf` explicitly if your card is the 600W SKU.
 
 **AMD Instinct Series:**
 - MI210, MI250X, MI300A, MI300X, MI308X, MI325X, MI350X, MI355X
@@ -1300,6 +1306,10 @@ using the PCIe development libraries to extract values from various PCIe
 control, status and capabilities registers. These registers are specified in the
 PCI Express Base Specification, Revision 3. Iteration keys, i.e. count, wait and
 duration will be ignored for actions using the PEQT module.
+
+```{note}
+The PEQT module requires elevated privileges. Run RVS with `sudo` when using this module.
+```
 
 ### Module specific keys
 Module specific output keys are described in the table below:

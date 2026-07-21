@@ -1004,6 +1004,12 @@ int rvs::exec::do_yaml_properties(const YAML::Node& node,
     }
   }
 
+  string duration;
+  if (rvs::options::has_option("-t", &duration)) {
+    uint64_t dur_ms = std::stoull(duration) * 1000;
+    sts += pif1->property_set("duration", std::to_string(dur_ms));
+  }
+
   return sts;
 }
 

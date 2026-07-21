@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2026 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,14 +25,14 @@
 
 cmake_minimum_required(VERSION 3.5.0)
 
-project(TransferBench-download NONE)
+project(pciutils-download NONE)
 
 include(ExternalProject)
-ExternalProject_Add(TransferBench
-  GIT_REPOSITORY    https://github.com/ROCm/TransferBench.git
-  GIT_TAG           c78c4aec95e5e8317ddecdf6e224443f63473312 #TransferBench v1.66.02
-  SOURCE_DIR        "${CMAKE_BINARY_DIR}/TransferBench-src"
-  BINARY_DIR        ""
+ExternalProject_Add(pciutils
+  GIT_REPOSITORY    https://github.com/pciutils/pciutils.git
+  GIT_TAG           v3.7.0
+  SOURCE_DIR        "${CMAKE_BINARY_DIR}/pciutils-src"
+  BINARY_DIR        "${CMAKE_BINARY_DIR}/pciutils-build"
   CONFIGURE_COMMAND ""
   BUILD_COMMAND     ""
   INSTALL_COMMAND   ""

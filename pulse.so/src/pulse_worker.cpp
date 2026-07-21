@@ -557,7 +557,7 @@ bool PulseWorker::do_pulse_stress(void) {
 
       for (int iter = 0; iter < workload_iterations && !rvs::lp::Stopping();
            ++iter) {
-        if (!gpu_blas->run_blas_gemm(true)) {
+        if (!gpu_blas->run_blas_gemm(1)) {
           test_passed = false;
           if (halt_on_error) goto done;
           break;

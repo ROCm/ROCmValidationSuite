@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,13 +25,6 @@
 #ifndef GST_SO_INCLUDE_ACTION_H_
 #define GST_SO_INCLUDE_ACTION_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <pci/pci.h>
-#ifdef __cplusplus
-}
-#endif
 
 #include <vector>
 #include <string>
@@ -90,6 +83,8 @@ class gst_action: public rvs::actionbase {
 
     //Parameter to heat up
     uint64_t gst_hot_calls;
+    //Parameter for warm-up calls before ramp
+    uint64_t gst_warm_calls;
 
     //Tranpose set to none or enabled
     int      gst_trans_a;

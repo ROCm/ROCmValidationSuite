@@ -12,6 +12,11 @@ RVS is a collection of tests, benchmarks, and qualification tools, each targetin
 
 For more information, refer to `GitHub. <https://github.com/ROCm/ROCmValidationSuite>`_
 
+.. note::
+   TransferBench is now a part of the ROCm Validation Suite and is installed with it.
+   See the `TransferBench documentation <https://rocm.docs.amd.com/projects/TransferBench/en/latest/>`__ for more information.
+
+
 .. grid:: 2
   :gutter: 3
 
@@ -26,6 +31,7 @@ For more information, refer to `GitHub. <https://github.com/ROCm/ROCmValidationS
   .. grid-item-card:: Conceptual
 
      * :doc:`ROCm Validation Suite modules <features>`
+     * :doc:`TransferBench in RVS <transferbench>`
 
 To contribute to the documentation, refer to
 `Contributing to ROCm <https://rocm.docs.amd.com/en/latest/contribute/contributing.html>`_.

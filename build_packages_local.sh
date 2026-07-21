@@ -9,6 +9,11 @@ set -e  # Exit on error
 # Configuration
 GPU_FAMILY="${GPU_FAMILY:-gfx110X-all}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
+BUILD_TRANSFERBENCH_CLI="${BUILD_TRANSFERBENCH_CLI:-OFF}"
+# TransferBench offload archs (independent of GPU_FAMILY SDK tarball selection).
+# Source of truth: TransferBench build_packages_local.sh DEFAULT_GPU_TARGETS.
+DEFAULT_GPU_TARGETS="gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201"
+TRANSFERBENCH_GPU_TARGETS="${TRANSFERBENCH_GPU_TARGETS:-${GPU_TARGETS:-$DEFAULT_GPU_TARGETS}}"
 BUILD_DIR="./build"
 ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
@@ -117,6 +122,79 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
+# Map common truthy/falsey strings to CMake ON/OFF.
+normalize_on_off() {
+    case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+        1|on|true|yes) echo ON ;;
+        *) echo OFF ;;
+    esac
+}
+
+# Locate HIP device bitcode (amdgcn/bitcode) under a TheRock/ROCm SDK root.
+# Probes known layouts in priority order — no find|head pipeline (fragile with set -e).
+# Prints the path on stdout; returns 0 on success, 1 if not found.
+resolve_hip_device_lib_path() {
+    local root="$1"
+    local cand resource_dir
+
+    if [ -z "$root" ] || [ ! -d "$root" ]; then
+        return 1
+    fi
+
+    for cand in \
+        "${root}/lib/llvm/amdgcn/bitcode" \
+        "${root}/amdgcn/bitcode" \
+        "${root}/lib/clang/amdgcn/bitcode"
+    do
+        if [ -d "$cand" ]; then
+            echo "$cand"
+            return 0
+        fi
+    done
+
+    # ROCm 7.2+ Clang resource-dir layout: lib/llvm/lib/clang/<ver>/lib/amdgcn/bitcode
+    for cand in "${root}"/lib/llvm/lib/clang/*/lib/amdgcn/bitcode; do
+        if [ -d "$cand" ]; then
+            echo "$cand"
+            return 0
+        fi
+    done
+
+    # Derive from amdclang++ resource dir when present.
+    if [ -x "${root}/bin/amdclang++" ]; then
+        resource_dir="$("${root}/bin/amdclang++" -print-resource-dir 2>/dev/null)" || true
+        if [ -n "$resource_dir" ] && [ -d "${resource_dir}/lib/amdgcn/bitcode" ]; then
+            echo "${resource_dir}/lib/amdgcn/bitcode"
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# Print diagnostics when resolve_hip_device_lib_path fails.
+report_hip_device_lib_path_failure() {
+    local root="$1"
+    print_error "Could not find amdgcn/bitcode under ROCM_PATH=$root"
+    print_error "HIP device libraries are required for GPU code compilation"
+    print_error "Tried:"
+    print_error "  ${root}/lib/llvm/amdgcn/bitcode"
+    print_error "  ${root}/amdgcn/bitcode"
+    print_error "  ${root}/lib/clang/amdgcn/bitcode"
+    print_error "  ${root}/lib/llvm/lib/clang/*/lib/amdgcn/bitcode"
+    print_error "  amdclang++ -print-resource-dir .../lib/amdgcn/bitcode"
+    if [ -d "$root" ]; then
+        print_error "Top-level contents of $root:"
+        ls -la "$root" 2>&1 | while read -r line; do print_error "  $line"; done
+        if [ -d "${root}/lib/llvm" ]; then
+            print_error "Contents of ${root}/lib/llvm:"
+            ls -la "${root}/lib/llvm" 2>&1 | while read -r line; do print_error "  $line"; done
+        fi
+    fi
+    print_error "If the SDK is missing amdgcn/bitcode, this may be a known TheRock symlink issue;"
+    print_error "see https://github.com/ROCm/TheRock/issues/74"
+}
+
 # Join base URL and filename without duplicate slashes
 join_base_and_file() {
     local base="$1"
@@ -138,22 +216,131 @@ apply_sdk_tarball_base_for_version() {
     fi
 }
 
+# Validate ROCM_VERSION after parsing an SDK listing (not -tests- or other variants).
+# mode: nightly (x.y.za<digits>) or release (X.Y.Z)
+validate_rocm_version_string() {
+    local v="$1"
+    local mode="$2"
+    case "$mode" in
+        nightly)
+            if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+$'; then
+                return 0
+            fi
+            ;;
+        release)
+            if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+                return 0
+            fi
+            ;;
+        *)
+            print_error "validate_rocm_version_string: unknown mode $mode"
+            return 1
+            ;;
+    esac
+    print_error "Invalid ROCm $mode version string from listing: $v"
+    return 1
+}
+
+# Parse SDK tarball versions from a listing on stdin (HTML/JSON).
+# Per-match only — do not grep -v '-tests-' on the whole page (nightly index is one JSON line).
+# Prints one version string per matching SDK tarball.
+parse_sdk_tarball_versions_from_listing() {
+    local gpu_family="$1"
+    local mode="$2"
+    local pattern
+
+    case "$mode" in
+        nightly)
+            # Digit after gpu_family- excludes ...-gfx110X-all-tests-...
+            pattern="therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+a[0-9]+"
+            ;;
+        release)
+            pattern="therock-dist-linux-${gpu_family}-[0-9]+\.[0-9]+\.[0-9]+"
+            ;;
+        *)
+            print_error "parse_sdk_tarball_versions_from_listing: unknown mode $mode"
+            return 1
+            ;;
+    esac
+
+    grep -oE "$pattern" | sed "s|^therock-dist-linux-${gpu_family}-||"
+}
+
+# Collect SDK version strings from a listing file; python3 fallback when grep finds nothing.
+collect_sdk_versions_from_listing_file() {
+    local listing_file="$1"
+    local gpu_family="$2"
+    local mode="$3"
+    local versions
+
+    versions=$(parse_sdk_tarball_versions_from_listing "$gpu_family" "$mode" < "$listing_file")
+
+    if [ -z "$versions" ] && [ -s "$listing_file" ] && command -v python3 >/dev/null 2>&1; then
+        versions=$(python3 - "$gpu_family" "$mode" "$listing_file" <<'PY'
+import re
+import sys
+
+gpu_family = sys.argv[1]
+mode = sys.argv[2]
+with open(sys.argv[3], encoding="utf-8", errors="replace") as f:
+    text = f.read()
+prefix = "therock-dist-linux-" + re.escape(gpu_family) + "-"
+if mode == "nightly":
+    pat = re.compile(prefix + r"([0-9]+\.[0-9]+\.[0-9]+a[0-9]+)\.tar\.gz")
+else:
+    pat = re.compile(prefix + r"([0-9]+\.[0-9]+\.[0-9]+)\.tar\.gz")
+seen = set()
+for m in pat.finditer(text):
+    if "-tests-" in m.group(0):
+        continue
+    v = m.group(1)
+    if v not in seen:
+        seen.add(v)
+        print(v)
+PY
+)
+        if [ -n "$versions" ]; then
+            print_info "Parsed SDK versions via python3 fallback"
+        fi
+    fi
+
+    printf '%s\n' "$versions"
+}
+
 # Function to fetch latest ROCm version for specified GPU family
 # Sets the global ROCM_VERSION variable directly
 fetch_latest_rocm_version() {
     local gpu_family="$1"
+    local listing_tmp latest_version listing_bytes
 
     print_info "Fetching latest ROCm version for $gpu_family..."
     print_info "Index URL: $ROCM_SDK_INDEX_URL"
 
-    # Download index page and parse for latest tarball matching GPU family
-    # Pattern: therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz
-    local latest_version=$(wget -qO- "$ROCM_SDK_INDEX_URL" 2>/dev/null | \
-        grep -oP "therock-dist-linux-${gpu_family}-\K[^<\"]+(?=\.tar\.gz)" | \
-        sort -V | tail -1)
+    listing_tmp="$(mktemp)"
+    if ! wget -q -O "$listing_tmp" "$ROCM_SDK_INDEX_URL"; then
+        print_error "wget failed for $ROCM_SDK_INDEX_URL"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+    if [ ! -s "$listing_tmp" ]; then
+        print_error "Empty listing from $ROCM_SDK_INDEX_URL"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+
+    listing_bytes=$(wc -c < "$listing_tmp" | tr -d ' ')
+    latest_version=$(collect_sdk_versions_from_listing_file "$listing_tmp" "$gpu_family" nightly \
+        | sort -V | tail -1)
+    rm -f "$listing_tmp"
 
     if [ -z "$latest_version" ]; then
         print_error "Could not fetch latest ROCm nightly version for $gpu_family from $ROCM_SDK_INDEX_URL"
+        print_error "Listing was ${listing_bytes} bytes but no SDK tarballs matched therock-dist-linux-${gpu_family}-<x.y.za...>"
+        print_error "(-tests- tarballs are excluded; do not filter the listing with grep -v on whole lines)"
+        return 1
+    fi
+
+    if ! validate_rocm_version_string "$latest_version" nightly; then
         return 1
     fi
 
@@ -167,17 +354,35 @@ fetch_latest_rocm_version() {
 fetch_latest_rocm_release_version() {
     local gpu_family="$1"
     local list_url="${ROCM_SDK_RELEASE_URL:-$_ROCM_RELEASE_LIST_DEFAULT}"
+    local listing_tmp latest_version listing_bytes
 
     print_info "Fetching latest ROCm release version (X.Y.Z) for $gpu_family..."
     print_info "Release listing URL: $list_url"
 
-    local latest_version
-    latest_version=$(wget -qO- "$list_url" 2>/dev/null | \
-        grep -oP "therock-dist-linux-${gpu_family}-\K[0-9]+\.[0-9]+\.[0-9]+(?=\.tar\.gz)" | \
-        sort -V | uniq | tail -1)
+    listing_tmp="$(mktemp)"
+    if ! wget -q -O "$listing_tmp" "$list_url"; then
+        print_error "wget failed for $list_url"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+    if [ ! -s "$listing_tmp" ]; then
+        print_error "Empty listing from $list_url"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+
+    listing_bytes=$(wc -c < "$listing_tmp" | tr -d ' ')
+    latest_version=$(collect_sdk_versions_from_listing_file "$listing_tmp" "$gpu_family" release \
+        | sort -V | uniq | tail -1)
+    rm -f "$listing_tmp"
 
     if [ -z "$latest_version" ]; then
         print_error "No therock-dist-linux-${gpu_family}-X.Y.Z.tar.gz found under release listing (expected forms like 7.11.0)"
+        print_error "Listing was ${listing_bytes} bytes but no SDK tarballs matched for $gpu_family"
+        return 1
+    fi
+
+    if ! validate_rocm_version_string "$latest_version" release; then
         return 1
     fi
 
@@ -513,6 +718,8 @@ fi
 
 apply_sdk_tarball_base_for_version "$ROCM_VERSION"
 
+BUILD_TRANSFERBENCH_CLI="$(normalize_on_off "$BUILD_TRANSFERBENCH_CLI")"
+
 # Print configuration
 echo "================================================================================"
 echo "  ROCm Validation Suite - Local Package Build Script"
@@ -521,6 +728,10 @@ print_info "ROCm Version: $ROCM_VERSION"
 print_info "ROCm SDK channel: ${ROCM_SDK_CHANNEL:-auto}"
 print_info "GPU Family: $GPU_FAMILY"
 print_info "Build Type: $BUILD_TYPE"
+print_info "Build TransferBench CLI: $BUILD_TRANSFERBENCH_CLI"
+if [ "$BUILD_TRANSFERBENCH_CLI" = "ON" ]; then
+    print_info "TransferBench GPU targets: $TRANSFERBENCH_GPU_TARGETS"
+fi
 print_info "Build Directory: $BUILD_DIR"
 print_info "ROCm Install: $ROCM_INSTALL_DIR"
 print_info "SDK Source: $ROCM_SDK_BASE_URL"
@@ -564,8 +775,17 @@ fi
 if [ -z "$goto_step2" ]; then
     print_info "Downloading from: $TARBALL_URL"
     if wget --spider "$TARBALL_URL" 2>/dev/null; then
-        wget --show-progress -O "$TARBALL_FILE" "$TARBALL_URL"
-        print_success "Download complete"
+        # Avoid flooding CI logs with per-chunk progress on multi-GB SDK tarballs.
+        if [ -t 1 ]; then
+            wget --show-progress -O "$TARBALL_FILE" "$TARBALL_URL"
+        else
+            wget -q -O "$TARBALL_FILE" "$TARBALL_URL"
+        fi
+        if [ -f "$TARBALL_FILE" ]; then
+            print_success "Download complete ($(du -h "$TARBALL_FILE" | awk '{print $1}'))"
+        else
+            print_success "Download complete"
+        fi
     else
         print_error "Failed to download ROCm SDK tarball"
         print_error "URL: $TARBALL_URL"
@@ -589,14 +809,12 @@ print_info "Step 2: Setting up ROCm environment..."
 
 # Find HIP device library path (amdgcn/bitcode) first
 print_info "Locating HIP device libraries (amdgcn/bitcode)..."
-HIP_DEVICE_LIB_PATH=$(find "$ROCM_PATH" -type d -path "*/amdgcn/bitcode" 2>/dev/null | head -1)
-
-if [ -z "$HIP_DEVICE_LIB_PATH" ]; then
-    print_error "Could not find amdgcn/bitcode directory in $ROCM_PATH"
-    print_error "HIP device libraries are required for GPU code compilation"
-    print_error "Please verify your ROCm SDK installation"
+HIP_DEVICE_LIB_PATH=""
+if ! HIP_DEVICE_LIB_PATH="$(resolve_hip_device_lib_path "$ROCM_PATH")"; then
+    report_hip_device_lib_path_failure "$ROCM_PATH"
     exit 1
 fi
+print_success "HIP_DEVICE_LIB_PATH=$HIP_DEVICE_LIB_PATH"
 
 # Export all environment variables
 export PATH="$ROCM_PATH/bin:$PATH"
@@ -607,7 +825,7 @@ export HIP_DEVICE_LIB_PATH="$HIP_DEVICE_LIB_PATH"
 # Extract major.minor version from ROCM_VERSION for ROCM_LIBPATCH_VERSION
 # Convert to xxyy format with zero padding
 # Example: "7.11.0a20260121" -> "0711", "8.0.0" -> "0800", "10.2.0" -> "1002"
-ROCM_VERSION_MAJOR_MINOR=$(echo "$ROCM_VERSION" | grep -oP '^\d+\.\d+')
+ROCM_VERSION_MAJOR_MINOR=$(echo "$ROCM_VERSION" | sed -nE 's/^([0-9]+\.[0-9]+).*/\1/p')
 if [ -z "$ROCM_VERSION_MAJOR_MINOR" ]; then
     print_error "Could not extract major.minor version from ROCM_VERSION: $ROCM_VERSION"
     exit 1
@@ -775,7 +993,12 @@ CMAKE_ARGS=(
     -DCPACK_PACKAGING_INSTALL_PREFIX="/opt/rocm/extras-${ROCM_MAJOR}"
     -DCMAKE_VERBOSE_MAKEFILE=1
     -DFETCH_ROCMPATH_FROM_ROCMCORE=ON
+    -DBUILD_TRANSFERBENCH_CLI="$BUILD_TRANSFERBENCH_CLI"
 )
+
+if [ "$BUILD_TRANSFERBENCH_CLI" = "ON" ]; then
+    CMAKE_ARGS+=(-DTRANSFERBENCH_GPU_TARGETS="$TRANSFERBENCH_GPU_TARGETS")
+fi
 
 # Add CXX compiler if set
 if [ -n "$CMAKE_CXX_COMPILER" ]; then
@@ -864,13 +1087,51 @@ if command -v rpm >/dev/null 2>&1; then
 fi
 
 # Create TGZ package
+#
+# TGZ uses a different layout than DEB/RPM: CPACK_PACKAGING_INSTALL_PREFIX is
+# emptied so files land at the tarball root (bin/, lib/, share/) rather than
+# under /opt/rocm/extras-<major>/. RVS bakes CPACK_PACKAGING_INSTALL_PREFIX into
+# each install() DESTINATION at configure time, so we must RE-configure (not
+# just re-cpack) for the destinations to flip.
+#
+# Two extra steps are needed for a clean tarball:
+#  - Re-build after the re-configure so ExternalProject sub-builds (the bundled
+#    TransferBench CLI) are rebuilt against the new state; otherwise cpack would
+#    copy from a stale sub-build tree and silently miss files.
+#  - Prune empty directories from the tarball afterwards. With
+#    CPACK_SET_DESTDIR=ON, CPack materialises CMAKE_INSTALL_PREFIX
+#    (/opt/rocm/extras-<major>) under DESTDIR even though every real install()
+#    destination keys off the emptied CPACK_PACKAGING_INSTALL_PREFIX, leaving an
+#    empty opt/rocm/extras-<major>/ tree. We must NOT fix this by setting
+#    CMAKE_INSTALL_PREFIX=/ : GNUInstallDirs' FHS special case then rewrites
+#    bin->usr/bin, lib->usr/lib, ... (and -DCMAKE_INSTALL_BINDIR=bin does not
+#    override it), nesting the whole package under usr/. Instead keep the root
+#    layout and strip empty dirs from the tarball after cpack. RVS never ships
+#    intentionally-empty directories.
 print_info "Creating TGZ package..."
 CMAKE_ARGS+=(-DCPACK_SET_DESTDIR=ON -DCPACK_MONOLITHIC_INSTALL=ON "-DCPACK_PACKAGING_INSTALL_PREFIX:PATH=" -DCPACK_INCLUDE_TOPLEVEL_DIRECTORY=OFF)
 $CMAKE_COMMAND "${CMAKE_ARGS[@]}"
+$CMAKE_COMMAND --build "$BUILD_DIR" -- -j"$(nproc 2>/dev/null || echo 4)" || print_warning "Re-build before TGZ packaging reported errors; proceeding with cpack"
 cd "$BUILD_DIR"
 cpack -G TGZ --verbose
+cpack_tgz_status=$?
 
-if [ $? -eq 0 ]; then
+# Strip empty directories left in the tarball by CPack DESTDIR staging
+# (notably opt/rocm/extras-<major>/). See the comment above the TGZ configure.
+if [ $cpack_tgz_status -eq 0 ]; then
+    for _tgz in amdrocm*-rvs*.tar.gz; do
+        [ -e "$_tgz" ] || continue
+        _staged=$(mktemp -d)
+        if tar xzf "$_tgz" -C "$_staged"; then
+            find "$_staged" -depth -mindepth 1 -type d -empty -delete
+            ( cd "$_staged" && tar czf "$OLDPWD/$_tgz" -- * )
+            print_info "Pruned empty staging directories from $_tgz"
+        fi
+        rm -rf "$_staged"
+    done
+fi
+
+if [ $cpack_tgz_status -eq 0 ]; then
     TGZ_FILE=$(ls amdrocm*-rvs*.tar.gz 2>/dev/null | head -1)
     if [ -n "$TGZ_FILE" ]; then
         print_success "Created TGZ package: $TGZ_FILE"

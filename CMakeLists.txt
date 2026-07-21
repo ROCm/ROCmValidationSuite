@@ -480,27 +480,28 @@ elseif (YAML_CPP_SHARED_FOUND)
 endif()
 
 
-# Package dependencies - yaml-cpp is conditionally required based on linking type
+# Package dependencies - libpci3 is no longer a runtime dep (statically linked);
+# yaml-cpp is conditionally required based on linking type
 if (YAML_CPP_STATIC_FOUND)
   # Static linking - no runtime yaml-cpp dependency needed
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libpci3")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libnuma1")
   elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libpci3")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libnuma1")
   else ()
     # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, pciutils-libs")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, numactl-libs")
   endif()
   message(STATUS "Package dependencies: yaml-cpp statically linked, no runtime dependency")
 else()
   # Dynamic linking - yaml-cpp runtime dependency required
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libpci3, libyaml-cpp-dev")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libyaml-cpp-dev, libnuma1")
   elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libpci3, libyaml-cpp0_6")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libyaml-cpp0_6, libnuma1")
   else ()
     # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, pciutils-libs, yaml-cpp")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, yaml-cpp, numactl-libs")
   endif()
   message(STATUS "Package dependencies: yaml-cpp dynamically linked, runtime dependency included")
 endif()
@@ -583,27 +584,79 @@ endif ()
 ################################################################################
 
 ################################################################################
-# TransferBench Download
-configure_file(CMakeTransferBenchDownload.cmake TransferBench-download/CMakeLists.txt)
-
+# pciutils - build libpci.a from source to ensure ABI consistency across distros
+# (pci_dev struct layout changed between libpci 3.7.0/Ubuntu-22.04 and
+#  3.10.0/Ubuntu-24.04; pinning to v3.7.0 and static linking eliminates the
+#  runtime ABI mismatch and guarantees a clean build on Ubuntu 22.04 kernel headers)
+configure_file(CMakePciutilsDownload.cmake pciutils-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-      RESULT_VARIABLE result
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pciutils-download )
 if(result)
-  message(FATAL_ERROR "CMake step for TransferBench failed: ${result}")
+  message(FATAL_ERROR "CMake step for pciutils failed: ${result}")
 endif()
-
 execute_process(COMMAND ${CMAKE_COMMAND} --build .
-      RESULT_VARIABLE result
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/TransferBench-download )
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pciutils-download )
 if(result)
-  message(FATAL_ERROR "Build step for TransferBench failed: ${result}")
+  message(FATAL_ERROR "Clone step for pciutils failed: ${result}")
 endif()
 
-if (NOT DEFINED TRANSFERBENCH_INC_DIR)
-  set (TRANSFERBENCH_INC_DIR "${CMAKE_BINARY_DIR}/TransferBench-src/src/header")
-  message ("TRANSFERBENCH_INC_DIR ${TRANSFERBENCH_INC_DIR}")
-endif ()
+# pciutils uses a Makefile; SHARED=no produces libpci.a (static archive only).
+# CFLAGS=-fPIC is required because libpci.a is linked into .so modules.
+# ZLIB=no disables gzip ID-database support (gzopen/gzgets) - not needed by RVS.
+# HWDB=no disables udev hardware-DB lookups (udev_new etc.) - not needed by RVS.
+execute_process(
+  COMMAND make lib/libpci.a SHARED=no ZLIB=no HWDB=no CFLAGS=-fPIC
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pciutils-src
+)
+if(result)
+  message(FATAL_ERROR "Build step for pciutils (libpci.a) failed: ${result}")
+endif()
+
+# Arrange headers into include/pci/ so #include <pci/pci.h> resolves correctly
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/pciutils-install/include/pci)
+file(GLOB PCIUTILS_HEADERS "${CMAKE_BINARY_DIR}/pciutils-src/lib/*.h")
+file(COPY ${PCIUTILS_HEADERS} DESTINATION "${CMAKE_BINARY_DIR}/pciutils-install/include/pci/")
+
+# Imported target used by all modules via ${LIBPCI_TARGET}
+add_library(pci-static STATIC IMPORTED GLOBAL)
+set_target_properties(pci-static PROPERTIES
+  IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/pciutils-src/lib/libpci.a"
+  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/pciutils-install/include"
+)
+set(LIBPCI_TARGET pci-static)
+message(STATUS "pciutils: statically linking libpci.a built from v3.7.0")
+################################################################################
+
+################################################################################
+# TransferBench (vendored as a git submodule under external/TransferBench)
+#
+# Headers are consumed directly from the submodule by the PEBB and PBQT modules.
+# The TransferBench CLI binary is built as an isolated sub-build and installed
+# alongside rvs when BUILD_TRANSFERBENCH_CLI is ON (default).
+################################################################################
+set(TRANSFERBENCH_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/TransferBench")
+
+if(NOT EXISTS "${TRANSFERBENCH_SOURCE_DIR}/CMakeLists.txt")
+  message(FATAL_ERROR
+    "TransferBench submodule not initialised. Run:\n"
+    "  git submodule update --init --recursive\n"
+    "from the repository root and re-run cmake.")
+endif()
+
+if(NOT DEFINED TRANSFERBENCH_INC_DIR)
+  set(TRANSFERBENCH_INC_DIR "${TRANSFERBENCH_SOURCE_DIR}/src/header")
+  message(STATUS "TRANSFERBENCH_INC_DIR ${TRANSFERBENCH_INC_DIR}")
+endif()
+
+option(BUILD_TRANSFERBENCH_CLI
+       "Build and install the TransferBench CLI alongside rvs" OFF)
+
+if(BUILD_TRANSFERBENCH_CLI)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeTransferBenchCLI.cmake)
+endif()
 ################################################################################
 
 ## rocBLAS

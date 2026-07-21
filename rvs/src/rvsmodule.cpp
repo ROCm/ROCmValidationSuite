@@ -249,6 +249,7 @@ int rvs::module::initialize() {
   d.cbLogExt                    = rvs::logger::LogExt;
   d.cbLogRecordCreate           = rvs::logger::LogRecordCreate;
   d.cbJsonNamedListCreate       = rvs::logger::JsonNamedListCreate;
+  d.cbJsonNestedListCreate      = rvs::logger::JsonNestedListCreate;
   d.cbJsonStartNodeCreate       = rvs::logger::JsonStartNodeCreate;
   d.cbJsonActionStartNodeCreate = rvs::logger::JsonActionStartNodeCreate;
   d.cbJsonEndNodeCreate         = rvs::logger::JsonEndNodeCreate;

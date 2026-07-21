@@ -27,7 +27,6 @@
 #ifdef __cplusplus
 extern "C" {
   #endif
-  #include <pci/pci.h>
   #include <linux/pci.h>
   #ifdef __cplusplus
 }

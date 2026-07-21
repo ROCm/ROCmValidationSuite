@@ -30,6 +30,11 @@ on:
           - gfx1151
           - gfx120X-all
         default: 'gfx110X-all'
+      build_transferbench_cli:
+        description: 'Build and bundle TransferBench CLI in DEB/RPM/TGZ'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -41,6 +46,8 @@ env:
   ROCM_VERSION: ${{ vars.ROCM_VERSION }}
   GPU_FAMILY: ${{ vars.GPU_FAMILY || 'gfx110X-all' }}
   BUILD_TYPE: Release
+  # TransferBench CLI: OFF in build_packages_local.sh by default; ON in CI unless overridden.
+  BUILD_TRANSFERBENCH_CLI: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.build_transferbench_cli && 'ON' || 'OFF') || vars.BUILD_TRANSFERBENCH_CLI || 'ON' }}
   # Optional Step 6 in build_packages_local.sh: set repo Actions variable
   # RVS_AUTO_DETECT_LOCAL_UPLOAD to "1" to probe localhost:8080 when UPLOAD_TARGET is unset.
   # Leave the variable undefined for default (no probe; S3 uses workflow steps only).
@@ -173,9 +180,36 @@ jobs:
               out.write(f"branches_json={payload}\n")
           PY
 
+  # Runs on the host (no job container) so we can reclaim runner disk before Docker
+  # image pulls and ROCm SDK extracts. Failures here are often "No space left on device".
+  runner-disk-prep:
+    name: Free runner disk space
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
+    steps:
+      - name: Free disk space (GitHub-hosted runners)
+        if: runner.environment == 'github-hosted'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+
+      - name: Prune Docker and report disk usage
+        run: |
+          echo "=== Disk before prune ==="
+          df -h / || df -h
+          if command -v docker >/dev/null 2>&1; then
+            docker system prune -af --volumes || true
+          fi
+          echo "=== Disk after prune ==="
+          df -h / || df -h
+
   build-ubuntu:
     name: Build Ubuntu Packages (${{ matrix.branch }})
-    needs: prepare-nightly-branches
+    needs: [prepare-nightly-branches, runner-disk-prep]
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
     container:
       image: ubuntu:22.04
@@ -210,6 +244,7 @@ jobs:
             apt-utils \
             python3 \
             python3-pip
+          rm -rf /var/lib/apt/lists/*
 
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -249,6 +284,7 @@ jobs:
           # Container runs as root; ROCM_SDK_* come from "Configure ROCm SDK channel" via GITHUB_ENV.
           ./build_packages_local.sh
 
+
       # Print the resulting download URL in the step log and run Summary.
       - name: Print local package download URL
         if: vars.LOCAL_PACKAGE_SERVER_URL != ''
@@ -267,6 +303,13 @@ jobs:
             echo ""
             echo "[$URL]($URL)"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove ROCm SDK tree after build
+        if: always()
+        run: |
+          rm -rf "$HOME/rocm-sdk" 2>/dev/null || true
+          df -h / || df -h
+
 
       - name: Verify DEB Package
         run: |
@@ -361,7 +404,7 @@ jobs:
 
   build-centos:
     name: Build CentOS/RHEL Packages (${{ matrix.branch }})
-    needs: prepare-nightly-branches
+    needs: [prepare-nightly-branches, runner-disk-prep]
     runs-on: ${{ vars.RUNNER_LABEL_CONTAINER || 'ubuntu-latest' }}
     container:
       image: quay.io/pypa/manylinux_2_28_x86_64
@@ -513,6 +556,98 @@ jobs:
         env:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
           RVS_RUNNER_SUFFIX: manylinux_2_28
+
+  dispatch-post-build-tests:
+    name: Dispatch post-build test workflows
+    needs: [build-ubuntu, build-centos]
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    if: >-
+      always() && !cancelled() &&
+      needs.build-ubuntu.result == 'success' &&
+      needs.build-centos.result == 'success'
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch RVS Nightly Tests
+        if: >-
+          github.event_name == 'schedule' ||
+          (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master'))
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = context.payload.pull_request?.base?.ref
+              ?? context.ref.replace('refs/heads/', '');
+            const inputs = { trigger_event: context.eventName };
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'rvs-nightly-tests.yml',
+                ref,
+                inputs,
+              });
+            } catch (error) {
+              if (error.status === 422 && String(error.message).includes('Unexpected inputs')) {
+                core.warning('rvs-nightly-tests.yml on ref does not define trigger_event — dispatching without it.');
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'rvs-nightly-tests.yml',
+                  ref,
+                  inputs: {},
+                });
+              } else {
+                throw error;
+              }
+            }
+            core.info(`Dispatched RVS Nightly Tests (trigger_event=${context.eventName}) on ref ${ref}`);
+
+      - name: Dispatch RVS Release Tests
+        if: startsWith(github.ref_name, 'release/')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = context.ref.replace('refs/heads/', '');
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'rvs-release-tests.yml',
+              ref,
+              inputs: {},
+            });
+            core.info(`Dispatched RVS Release Tests on ref ${ref}`);
+
+      - name: Dispatch RVS PR Tests
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = String(context.payload.pull_request.number);
+            const buildRunNumber = String(context.runNumber);
+            // Pass identifiers only — manylinux listing probe runs on the self-hosted
+            // runner in rvs-pr-tests.yml (lab CDN egress). Use PR head ref so the
+            // dispatched workflow includes pr_number / build_run_number inputs.
+            const ref = context.payload.pull_request.head.ref;
+            const buildRefName = process.env.GITHUB_REF_NAME || '';
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'rvs-pr-tests.yml',
+              ref,
+              inputs: {
+                pr_number: prNumber,
+                build_run_number: buildRunNumber,
+                build_ref_name: buildRefName,
+              },
+            });
+            core.info(
+              `Dispatched RVS PR Tests for PR #${prNumber} (build run ${buildRunNumber}) on ref ${ref}`,
+            );
 
   create-release:
     name: Create Release Summary
