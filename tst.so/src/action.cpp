@@ -34,13 +34,6 @@
 #include <memory>
 #include <map>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <pci/pci.h>
-#ifdef __cplusplus
-}
-#endif
 #include <dirent.h>
 
 #define __HIP_PLATFORM_HCC__

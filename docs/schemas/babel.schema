@@ -19,40 +19,54 @@
               "gpu_index": {
                 "type": "string"
               },
-              "Array size": {
+              "array_size": {
                 "type": "string"
               },
-              "Total size": {
+              "total_size": {
                 "type": "string"
               },
-              "Iterations": {
+              "duration_ms": {
                 "type": "string"
               },
-              "Function": {
-                "type": "string"
-              },
-              "MBytes/sec": {
-                "type": "string"
-              },
-              "Min(s)": {
-                "type": "string"
-              },
-              "Max(s)": {
-                "type": "string"
-              },
-              "Average(s)": {
-                "type": "string"
-              },
-              "pass": {
-                "type": "string"
+              "results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "subtest": {
+                      "type": "string",
+                      "enum": ["Read", "Write", "Copy", "Mul", "Add", "Triad", "Dot"]
+                    },
+                    "mbytes_per_sec": {
+                      "type": "string"
+                    },
+                    "max_mbytes_per_sec": {
+                      "type": "string"
+                    },
+                    "min_mbytes_per_sec": {
+                      "type": "string"
+                    },
+                    "avg_mbytes_per_sec": {
+                      "type": "string"
+                    },
+                    "pass": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["subtest", "mbytes_per_sec", "max_mbytes_per_sec",
+                               "min_mbytes_per_sec", "avg_mbytes_per_sec", "pass"]
+                },
+                "minItems": 1
               }
-            }
+            },
+            "required": ["gpu_id", "gpu_index", "array_size", "total_size", "duration_ms", "results"]
           },
          "minItems": 1
       }
     }
   },
   "required": [
+    "version",
     "babel"
   ]
 }

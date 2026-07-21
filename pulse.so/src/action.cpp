@@ -31,13 +31,6 @@
 #include <barrier>
 #include <atomic>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <pci/pci.h>
-#ifdef __cplusplus
-}
-#endif
 
 #define __HIP_PLATFORM_HCC__
 #include "hip/hip_runtime.h"

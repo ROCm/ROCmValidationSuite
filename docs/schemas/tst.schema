@@ -16,6 +16,9 @@
               "target_temp": {
                 "type": "string"
               },
+              "throttle_temp": {
+                "type": "string"
+              },
               "dtype": {
                 "type": "string"
               },
@@ -26,6 +29,9 @@
                 "type": "string"
               },
               "average edge temperature": {
+                "type": "string"
+              },
+              "average junction temperature": {
                 "type": "string"
               },
               "pass": {

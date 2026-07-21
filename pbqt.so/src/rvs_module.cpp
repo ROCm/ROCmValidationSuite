@@ -24,7 +24,6 @@
  *******************************************************************************/
 #include "include/rvs_module.h"
 
-#include <pci/pci.h>
 #include <iostream>
 
 #include "include/rvsloglp.h"

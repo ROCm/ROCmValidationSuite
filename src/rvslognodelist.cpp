@@ -37,10 +37,11 @@ using std::string;
  * @param Parent Pointer to parent node
  *
  */
-rvs::LogListNode::LogListNode(const char* Name, int LogLevel, const rvs::LogNodeBase* Parent)
+rvs::LogListNode::LogListNode(const char* Name, int LogLevel, bool nested, const rvs::LogNodeBase* Parent)
 :
 LogNode(Name, Parent),
-Level(LogLevel){
+Level(LogLevel),
+IsNested(nested){
   Type = eLN::Record;
 }
 
@@ -84,7 +85,9 @@ void rvs::LogListNode::Add(rvs::LogNodeBase* pChild) {
 std::string rvs::LogListNode::ToJson(const std::string& Lead) {
   DTRACE_
   string result(RVSENDL);
-  result += "{";
+  if (!IsNested) {
+    result += "{";
+  }
   result += Lead + "\"" + Name + "\"" + " : [";
 
   int  size = Child.size();
@@ -95,6 +98,8 @@ std::string rvs::LogListNode::ToJson(const std::string& Lead) {
     }
   }
   result += RVSENDL + Lead + "]";
-  result += "}";
+  if (!IsNested) {
+    result += "}";
+  }
   return result;
 }

@@ -109,7 +109,7 @@ include_directories(./ ../ pci)
 # Add directories to look for library files to link
 link_directories(${RVS_LIB_DIR} ${ASAN_LIB_PATH} ${ROCR_LIB_DIR})
 ## additional libraries
-set (PROJECT_LINK_LIBS rvslib libpci.so libm.so)
+set (PROJECT_LINK_LIBS rvslib ${LIBPCI_TARGET} libm.so)
 
 ## define source files
 set(SOURCES src/rvs_module.cpp src/action.cpp)

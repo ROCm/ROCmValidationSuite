@@ -110,7 +110,7 @@ include_directories(./ ../ pci)
 # Add directories to look for library files to link
 link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ROCBLAS_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_DIR} ${ROCRAND_DIR})
 ## additional libraries
-set (PROJECT_LINK_LIBS libpthread.so libpci.so libm.so)
+set (PROJECT_LINK_LIBS libpthread.so ${LIBPCI_TARGET} libm.so)
 
 ## define source files
 set(SOURCES  src/rvs_module.cpp src/action.cpp src/worker.cpp)

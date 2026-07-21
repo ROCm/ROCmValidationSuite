@@ -44,7 +44,6 @@
 #include "include/rvsloglp.h"
 
 extern "C" {
-  #include <pci/pci.h>
   #include <linux/pci.h>
 }
 
