@@ -478,8 +478,6 @@ Each of the GPU nodes in the directory is identified with a number,
 indicating the device index of the GPU. Use the `device_index` common key to
 target specific GPUs by their topology node index.
 
-Note: GPUP ignores the `count`, `duration`, `wait`, `parallel`, and
-`log_interval` common keys — each action performs a single-pass property dump.
 
 ### Module specific keys
 
@@ -1020,7 +1018,6 @@ The purpose of the RCQT is to provide an extensible, OS
 independent and scriptable interface capable for performing the configuration
 checks required for ROCm support. The checks in this module do not target a
 specific device.
-\n\n
 Two types of actions are performed by RCQT, selected by which configuration
 key is present — not by the action name:
 
@@ -1031,7 +1028,6 @@ verifying the installed versions.
 2) **Packages installation check** — triggered when `rpmpackagelist` or
 `debpackagelist` is present. Checks whether the listed packages are installed.
 
-Note: the `device` key is ignored by RCQT; checks are platform-wide.
 
 This feature is used to check installed packages on the system. It provides
 checks for installed packages and the currently available package versions, if
@@ -1933,9 +1929,9 @@ will be considered. The default value is true.
 </td></tr>
 <tr><td>parallel</td><td>Bool</td>
 <td>Controls whether transfers run in parallel across all CPU–GPU paths or one
-by one.\n
-- true – Run all test transfers in parallel.\n
-- false – Run test transfers one by one.
+by one.
+`true` – Run all test transfers in parallel.
+`false` – Run test transfers one by one.
 
 </td></tr>
 <tr><td>duration</td><td>Integer</td>
@@ -1946,11 +1942,11 @@ seconds).
 <tr><td>log_interval</td><td>Integer</td>
 <td>This is a positive integer, given in milliseconds, that specifies an interval
 over which the moving average of the bandwidth will be calculated and logged. The
-default value is 1000 (1 second). It must be smaller than the duration key.\n
+default value is 1000 (1 second). It must be smaller than the duration key.
 If this key is 0 (zero), results are displayed as soon as the test transfer
 is completed.</td></tr>
 <tr><td>block_size</td><td>Collection of Integers</td>
-<td>Optional. Defines list of block sizes to be used in transfer tests.\n
+<td>Optional. Defines list of block sizes to be used in transfer tests.
 If "all" or missing list of block sizes used in rocm_bandwidth_test is used:
 - 1 * 1024
 - 2 * 1024
@@ -2565,7 +2561,7 @@ pass. The default value is 0. Note: this key is parsed but not used by the
 worker in the current implementation.</td></tr>
 <tr><td>sample_interval</td><td>Integer</td>
 <td>The interval between power samples, specified in seconds. The default
-value is 1 (1 second). If a value less than 1 is specified it is raised to 1.
+value is 1 (1 second). If a value less than 1 is specified, it is raised to 1.
 </td></tr>
 <tr><td>log_interval</td><td>Integer</td>
 <td>This is a positive integer, given in milliseconds, that specifies a logging
