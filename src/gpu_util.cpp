@@ -56,7 +56,8 @@ const std::map<uint16_t, std::string> gpu_dev_map = {
   {0x74a5, "MI325X"},    // MI325X
   {0x75a0, "MI350X"},    // MI350X AC
   {0x75a3, "MI355X"},    // MI355X LC
-  {0x75a8, "MI350P"}     // MI350P workstation (450W / 600W disambiguated by power cap)
+  {0x75a8, "MI350P"},     // MI350P workstation (450W / 600W disambiguated by power cap)
+  {0x75c1, "MI450X"}     // MI450X
 };
 
 using std::vector;
