@@ -651,6 +651,14 @@ if(NOT DEFINED TRANSFERBENCH_INC_DIR)
   message(STATUS "TRANSFERBENCH_INC_DIR ${TRANSFERBENCH_INC_DIR}")
 endif()
 
+# TransferBench v1.69+: TransferBench.hpp includes IbvDynLoad.hpp from third-party/ibverbs.
+# Omit when folder absent so older submodule pins remain buildable.
+set(TRANSFERBENCH_IBVERBS_INC_DIR "")
+if(EXISTS "${TRANSFERBENCH_SOURCE_DIR}/third-party/ibverbs")
+  set(TRANSFERBENCH_IBVERBS_INC_DIR "${TRANSFERBENCH_SOURCE_DIR}/third-party/ibverbs")
+  message(STATUS "TRANSFERBENCH_IBVERBS_INC_DIR ${TRANSFERBENCH_IBVERBS_INC_DIR}")
+endif()
+
 option(BUILD_TRANSFERBENCH_CLI
        "Build and install the TransferBench CLI alongside rvs" OFF)
 
