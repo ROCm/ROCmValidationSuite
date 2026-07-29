@@ -31,6 +31,12 @@ require_env() {
   fi
 }
 
+host_rvs_install_dir() {
+  require_env REMOTE_WORK_DIR
+  require_env ROCM_MAJOR
+  printf '%s/extras-%s' "${REMOTE_WORK_DIR%/}" "$ROCM_MAJOR"
+}
+
 docker_gpu_opts() {
   echo --ipc=host --network=host \
     --device=/dev/kfd \
@@ -50,9 +56,17 @@ cmd_pull_image() {
 }
 
 docker_run() {
+  local -a install_mount=()
+  if [ -n "${INSTALL_DIR:-}" ] && [ -n "${REMOTE_WORK_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
+    local host_install
+    host_install="$(host_rvs_install_dir)"
+    mkdir -p "$host_install"
+    install_mount=(-v "${host_install}:${INSTALL_DIR}")
+  fi
   # shellcheck disable=SC2046
   docker run --rm \
     $(docker_gpu_opts) \
+    "${install_mount[@]}" \
     -v "${REPO_ROOT}:/workspace" \
     -v "${REPO_ROOT}/pkg:/pkg:ro" \
     -v "${REPO_ROOT}/reports:/reports" \
@@ -109,6 +123,14 @@ cmd_run_level4() {
   require_env INSTALL_DIR
   require_env RVS_BIN
   require_env REMOTE_WORK_DIR
+  require_env ROCM_MAJOR
+
+  local host_install
+  host_install="$(host_rvs_install_dir)"
+  if [ ! -x "${host_install}/bin/rvs" ]; then
+    echo "::error::RVS not installed at ${host_install}/bin/rvs — run install-rvs first (same REMOTE_WORK_DIR=${REMOTE_WORK_DIR})" >&2
+    exit 1
+  fi
 
   mkdir -p "${REPO_ROOT}/reports"
   local start end rc
@@ -138,6 +160,8 @@ cmd_run_level4() {
 cmd_capture_versions() {
   require_env RVS_BIN
   require_env INSTALL_DIR
+  require_env REMOTE_WORK_DIR
+  require_env ROCM_MAJOR
 
   local rvs_version target_rocm_version
   rvs_version=$(docker_run "
@@ -158,6 +182,7 @@ cmd_capture_versions() {
 }
 
 cmd_run_pipeline() {
+  require_env REMOTE_WORK_DIR
   cmd_verify_rocm
   cmd_install_rvs
   cmd_run_level4
