@@ -229,10 +229,11 @@ int smqt_action::run(void) {
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
               | ((uint16_t)  (dev->dev)) << 3 | ((uint16_t)  (dev->func)) );
+    uint16_t dev_domain = static_cast<uint16_t>(dev->domain);
 
     uint16_t gpu_id;
     // if not and AMD GPU just continue
-    if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+    if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id))
       continue;
 
 #ifdef  RVS_UNIT_TEST
