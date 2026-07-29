@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -201,7 +201,7 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
     if (bjson){
       json_pcaps_node = json_node_create(MODULE_NAME,
         action_name.c_str(), rvs::logresults);
-    
+
       if (json_pcaps_node != NULL) {
         rvs::lp::AddString(json_pcaps_node, RVS_JSON_LOG_GPU_ID_KEY, std::to_string(gpu_id));
 
@@ -215,7 +215,7 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
         string prop_name = it->first.substr(it->first.find_last_of(".") + 1);
         bool prop_found = false;
         for (i = 0; i < PCI_DEV_NUM_CAPABILITIES; i++) {
-            if ((prop_name == pcie_cap_names[i]) && 
+            if ((prop_name == pcie_cap_names[i]) &&
                 ( dev != NULL )){
                 prop_found = true;
                 // call the capability's corresponding function
@@ -264,6 +264,9 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                 map<string, uint8_t>::iterator it_pb_pm_state =
                                 pb_op_pm_states_encodings_map.find
                                     (prop_name.substr(0, pos_pb_pm_state));
+                if (it_pb_pm_state == pb_op_pm_states_encodings_map.end()) {
+                    continue;
+                }
                 uint8_t pb_op_pm_state = it_pb_pm_state->second;
 
                 std::size_t pos_pb_type =
@@ -273,11 +276,17 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                                 pb_op_pm_types_encodings_map.find
                                     (prop_name.substr(pos_pb_pm_state + 1,
                                         pos_pb_type - pos_pb_pm_state - 1));
+                if (it_pb_type == pb_op_pm_types_encodings_map.end()) {
+                    continue;
+                }
                 uint8_t pb_op_pm_type = it_pb_type->second;
 
                 map<string, uint8_t>::iterator it_pb_power_rail =
                                 pb_op_pm_power_rails_encodings_map.find
                                         (prop_name.substr(pos_pb_type + 1));
+                if (it_pb_power_rail == pb_op_pm_power_rails_encodings_map.end()) {
+                    continue;
+                }
                 uint8_t pb_op_power_rail = it_pb_power_rail->second;
                 // query for power budgeting capabilities
                 get_pwr_budgeting(dev, pb_op_pm_state, pb_op_pm_type,
@@ -358,7 +367,7 @@ int peqt_action::run(void) {
       return -1;
     }
     if (bjson){
-	json_add_primary_fields(std::string(MODULE_NAME), action_name);
+        json_add_primary_fields(std::string(MODULE_NAME), action_name);
     }
     // get the pci_access structure
     pacc = pci_alloc();
@@ -437,11 +446,12 @@ int peqt_action::run(void) {
       // computes the actual dev's location_id (sysfs entry)
       uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
               | ((uint16_t)  (dev->dev)) << 3 | ((uint16_t)  (dev->func)) );
+      uint16_t dev_domain = static_cast<uint16_t>(dev->domain);
 
         // check if this pci_dev corresponds to one of the AMD GPUs
       uint16_t gpu_id;
-      // if not and AMD GPU just continue
-      if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id)) {
+      // if not an AMD GPU just continue
+      if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
         RVSTRACE_
         continue;
       }
@@ -508,7 +518,7 @@ int peqt_action::run(void) {
     rvs::lp::Log(msg, rvs::logresults);
 
     if (bjson) {
-	    rvs::lp::JsonActionEndNodeCreate();
+            rvs::lp::JsonActionEndNodeCreate();
     }
 
     action_result.state = rvs::actionstate::ACTION_COMPLETED;
@@ -521,5 +531,3 @@ int peqt_action::run(void) {
     RVSTRACE_
     return pci_infra_qual_result ? 0 : -1;
 }
-
-
