@@ -31,18 +31,11 @@ html_title = left_nav_title
 extensions = ["rocm_docs"]
 html_theme = "rocm_docs_theme"
 html_theme_options = {
-    "flavor": "generic",
+    "flavor": "rocm-extras",
     "header_title": f"ROCm™ RVS 1.5.122",
     "header_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.5.122/",
     "version_list_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.5.122/versions.html",
-    "nav_secondary_items": {
-        "GitHub": "https://github.com/ROCm/ROCmValidationSuite",
-        "Community": "https://github.com/ROCm/ROCm/discussions",
-        "Blogs": "https://rocm.blogs.amd.com/",
-        "System and Infra Docs": "https://instinct.docs.amd.com/",
-        "Support": "https://github.com/ROCm/ROCmValidationSuite/issues/new/choose",
-    },
-    "link_main_doc": False,
+"link_main_doc": True,
 }
 
 external_projects_current_project = "rocmvalidationsuite"
