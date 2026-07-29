@@ -393,7 +393,7 @@ void get_pwr_budgeting(struct pci_dev *dev, uint8_t pb_pm_state,
 
     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
 
-    if (cap_offset_pwbgd == 0 || dev->no_config_access || dev->access == NULL) {
+    if (cap_offset_pwbgd == 0 || dev->access == NULL) {
         return;
     }
 
