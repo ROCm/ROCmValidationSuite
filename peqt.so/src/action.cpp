@@ -264,6 +264,9 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                 map<string, uint8_t>::iterator it_pb_pm_state =
                                 pb_op_pm_states_encodings_map.find
                                     (prop_name.substr(0, pos_pb_pm_state));
+				if (it_pb_pm_state == pb_op_pm_states_encodings_map.end()) {
+					continue;
+				}
                 uint8_t pb_op_pm_state = it_pb_pm_state->second;
 
                 std::size_t pos_pb_type =
@@ -273,11 +276,17 @@ bool peqt_action::get_gpu_all_pcie_capabilities(struct pci_dev *dev,
                                 pb_op_pm_types_encodings_map.find
                                     (prop_name.substr(pos_pb_pm_state + 1,
                                         pos_pb_type - pos_pb_pm_state - 1));
+				if (it_pb_type == pb_op_pm_types_encodings_map.end()) {
+					continue;
+				}
                 uint8_t pb_op_pm_type = it_pb_type->second;
 
                 map<string, uint8_t>::iterator it_pb_power_rail =
                                 pb_op_pm_power_rails_encodings_map.find
                                         (prop_name.substr(pos_pb_type + 1));
+				if (it_pb_power_rail == pb_op_pm_power_rails_encodings_map.end()) {
+					continue;
+				}
                 uint8_t pb_op_power_rail = it_pb_power_rail->second;
                 // query for power budgeting capabilities
                 get_pwr_budgeting(dev, pb_op_pm_state, pb_op_pm_type,
@@ -437,11 +446,11 @@ int peqt_action::run(void) {
       // computes the actual dev's location_id (sysfs entry)
       uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
               | ((uint16_t)  (dev->dev)) << 3 | ((uint16_t)  (dev->func)) );
-
+      uint16_t dev_domain = static_cast<uint16_t>(dev->domain); 
         // check if this pci_dev corresponds to one of the AMD GPUs
       uint16_t gpu_id;
-      // if not and AMD GPU just continue
-      if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id)) {
+      // if not an AMD GPU just continue
+		if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id)) {
         RVSTRACE_
         continue;
       }

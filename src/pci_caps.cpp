@@ -320,48 +320,36 @@ void get_vendor_id(struct pci_dev *dev, char *buff) {
  * @return 
  */
 void get_kernel_driver(struct pci_dev *dev, char *buff) {
-    char name[1024], *drv, *base;
+    char name[256];
+    char link_target[PCI_CAP_DATA_MAX_BUF_SIZE];
+    char *drv;
     int n;
 
-    buff[0] = '\0';
-
-    //returning from here as there are other ways, this is
-    //not supported any longer
-    //the more simpler way is sudo dkms status
     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
 
-    if (dev->access == NULL) {
+    if (dev == NULL) {
         return;
     }
 
-    if (dev->access->method != PCI_ACCESS_SYS_BUS_PCI) {
-        return;
-    }
-
-    base = pci_get_param(dev->access, const_cast<char *>("sysfs.path"));
-    if (!base || !base[0]) {
-        return;
-    }
-
-    n = snprintf(name, sizeof(name), "%s/devices/%04x:%02x:%02x.%d/driver",
-            base, dev->domain, dev->bus, dev->dev, dev->func);
+    n = snprintf(name, sizeof(name),
+            "/sys/bus/pci/devices/%04x:%02x:%02x.%d/driver",
+            dev->domain, dev->bus, dev->dev, dev->func);
     if (n < 0 || n >= static_cast<int>(sizeof(name))) {
         return;
     }
 
-    n = readlink(name, buff, PCI_CAP_DATA_MAX_BUF_SIZE);
+    n = readlink(name, link_target, PCI_CAP_DATA_MAX_BUF_SIZE - 1);
     if (n < 0) {
         return;
     }
 
-    if (n >= PCI_CAP_DATA_MAX_BUF_SIZE) {
-        return;
-    }
+    link_target[n] = '\0';
 
-    buff[n] = 0;
-
-    if ((drv = strrchr(buff, '/')) != NULL)
+    if ((drv = strrchr(link_target, '/')) != NULL) {
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", drv + 1);
+    } else {
+        snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", link_target);
+    }
 }
 
 /**
@@ -405,39 +393,43 @@ void get_pwr_budgeting(struct pci_dev *dev, uint8_t pb_pm_state,
 
     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
 
-    if (cap_offset_pwbgd != 0) {
-        i = 0;
-
-        do {
-            // Data select register size is 1 byte, it will select the DWORD(4 bytes)
-	    // from budgeting data register corresponding to state.
-	    // dont proceed if write to register fails
-            int rt = pci_write_byte(dev, cap_offset_pwbgd + PCI_PWR_DSR, i);
-	    if(!rt){// 0 indicates error in writing
-		++i;
-		continue;
-	    }
-            w = pci_read_word(dev, cap_offset_pwbgd + PCI_PWR_DATA);
-
-            if (!w)
-                return;
-
-            pb_act_pm_state = PCI_PWR_DATA_PM_STATE(w);
-            pb_act_type = PCI_PWR_DATA_TYPE(w);
-            pb_act_power_rail = PCI_PWR_DATA_RAIL(w);
-
-            if (pb_act_pm_state == pb_pm_state && pb_act_type == pb_type &&
-                                        pb_act_power_rail == pb_power_rail) {
-                base = PCI_PWR_DATA_BASE(w);
-                scale = PCI_PWR_DATA_SCALE(w);
-                snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%.3fW",
-                        base * pow(10, -scale));
-                return;
-            }
-
-            i++;
-        } while (i <= DSR_MAX_VAL); // DSR size is 1 byte, no need to run forever
+    if (cap_offset_pwbgd == 0 || dev->access == NULL) {
+        return;
     }
+
+    i = 0;
+	do {
+        // Data select register size is 1 byte, it will select the DWORD(4 bytes)
+        // from budgeting data register corresponding to state.
+        // dont proceed if write to register fails
+        int rt = pci_write_byte(dev, cap_offset_pwbgd + PCI_PWR_DSR, i);
+        if (!rt) {  // 0 indicates error in writing
+            ++i;
+            continue;
+        }
+        w = pci_read_word(dev, cap_offset_pwbgd + PCI_PWR_DATA);
+
+        if (!w) {
+            ++i;
+            continue;
+        }
+
+        pb_act_pm_state = PCI_PWR_DATA_PM_STATE(w);
+        pb_act_type = PCI_PWR_DATA_TYPE(w);
+        pb_act_power_rail = PCI_PWR_DATA_RAIL(w);
+
+
+        if (pb_act_pm_state == pb_pm_state && pb_act_type == pb_type &&
+                                    pb_act_power_rail == pb_power_rail) {
+            base = PCI_PWR_DATA_BASE(w);
+            scale = PCI_PWR_DATA_SCALE(w);
+            snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%.3fW",
+                    base * pow(10, -scale));
+            return;
+        }
+
+        i++;
+    } while (i <= DSR_MAX_VAL); // DSR size is 1 byte, no need to run forever
 }
 
 /**
