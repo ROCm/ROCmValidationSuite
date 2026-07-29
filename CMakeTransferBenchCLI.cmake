@@ -52,7 +52,7 @@ set(TRANSFERBENCH_BUILD_DIR "${CMAKE_BINARY_DIR}/TransferBench-cli-build")
 
 # Source of truth: TransferBench build_packages_local.sh DEFAULT_GPU_TARGETS
 set(TRANSFERBENCH_GPU_TARGETS
-    "gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201"
+    "gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201;gfx1250"
     CACHE STRING "GPU targets to build TransferBench for")
 
 set(_tb_cmake_args
