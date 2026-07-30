@@ -247,30 +247,69 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
          .. tab-item:: User setup
 
-            .. code-block:: bash
+            .. tab-set::
 
-               tee --append ~/.bashrc << EOF
-               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
-               export ROCM_PATH=$ROCM_INSTALL_PATH
-               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
-               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-               EOF
+               .. tab-item:: Ubuntu
+                  :sync: ubuntu
 
-               source ~/.bashrc
+                  .. code-block:: bash
+
+                     tee --append ~/.bashrc << EOF
+                     export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     source ~/.bashrc
+
+               .. tab-item:: RHEL
+                  :sync: rhel
+
+                  .. code-block:: bash
+
+                     tee --append ~/.bashrc << EOF
+                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     source ~/.bashrc
 
          .. tab-item:: System-wide setup
 
-            .. code-block:: bash
+            .. tab-set::
 
-               sudo tee /etc/profile.d/set-rocm-env.sh << EOF
-               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
-               export ROCM_PATH=$ROCM_INSTALL_PATH
-               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
-               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-               EOF
+               .. tab-item:: Ubuntu
+                  :sync: ubuntu
 
-               sudo chmod +x /etc/profile.d/set-rocm-env.sh
-               source /etc/profile.d/set-rocm-env.sh
+                  .. code-block:: bash
+
+                     sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+                     export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     sudo chmod +x /etc/profile.d/set-rocm-env.sh
+                     source /etc/profile.d/set-rocm-env.sh
+
+               .. tab-item:: RHEL
+                  :sync: rhel
+
+                  .. code-block:: bash
+
+                     sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     sudo chmod +x /etc/profile.d/set-rocm-env.sh
+                     source /etc/profile.d/set-rocm-env.sh
 
 5. Verify your installation.
 
