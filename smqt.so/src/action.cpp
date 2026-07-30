@@ -1,5 +1,5 @@
 /********************************************************************************
- * 
+ *
  * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
@@ -176,7 +176,7 @@ bool smqt_action::get_all_smqt_config_keys() {
  * @brief Implements action functionality
  * Check if the sizes and addresses of BARs match the given ones
  * @return 0 - success, non-zero otherwise
- * */ 
+ * */
 
 int smqt_action::run(void) {
   bool global_pass = true;
@@ -229,10 +229,11 @@ int smqt_action::run(void) {
     // computes the actual dev's location_id (sysfs entry)
     uint16_t dev_location_id = ((((uint16_t) (dev->bus)) << 8)
               | ((uint16_t)  (dev->dev)) << 3 | ((uint16_t)  (dev->func)) );
+    uint16_t dev_domain = static_cast<uint16_t>(dev->domain);
 
     uint16_t gpu_id;
-    // if not and AMD GPU just continue
-    if (rvs::gpulist::location2gpu(dev_location_id, &gpu_id))
+    // if not an AMD GPU just continue
+    if (rvs::gpulist::domlocation2gpu(dev_domain, dev_location_id, &gpu_id))
       continue;
 
 #ifdef  RVS_UNIT_TEST
@@ -379,4 +380,3 @@ int smqt_action::run(void) {
 
   return global_pass ? 0 : -1;
 }
-
