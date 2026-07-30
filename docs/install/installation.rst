@@ -20,10 +20,50 @@ For advanced workflows, source builds, or custom configurations, see
 Prerequisites
 =============
 
-Install the ROCm Core SDK before installing RVS. For instructions, see `Install AMD ROCm
-<https://rocm.docs.amd.com/en/docs-7.14.0/install/rocm.html?fam=all&i=pkgman>`__. Use the
+Install the ROCm Core SDK before installing RVS.
+
+For instructions, see `Install AMD ROCm <https://rocm.docs.amd.com/>`__. Use the
 selector panel on that page to view instructions appropriate for your system
 environment.
+
+ROCm installation path
+======================
+
+The ROCm installation path depends on what installation method was selected during
+ROCm installation. After installation, the ROCm Core SDK will be deployed to this
+location and contains all the core ROCm directories such as ``bin``, ``include``,
+``lib``, etc. When configuring the environment for RVS, you must set the
+``ROCM_INSTALL_PATH`` variable to the ROCm core installation directory
+``<rocm-core-path>`` based on the installation method used:
+
+.. tab-set::
+
+   .. tab-item:: Package manager
+
+      .. code-block:: bash
+
+         ROCM_INSTALL_PATH=/opt/rocm/core-7.14             # <rocm-core-path> = /opt/rocm/core-7.14
+
+   .. tab-item:: pip
+
+      Use within active python virtual environment:
+
+      .. code-block:: bash
+
+         ROCM_INSTALL_PATH=$(rocm-sdk path --root)         # <rocm-core-path> = rocm-sdk path of core installation
+
+   .. tab-item:: Tarball
+
+      .. code-block:: bash
+
+         ROCM_INSTALL_PATH=<path>/therock-tarball/install  # <rocm-core-path> = <path> to default "therock-tarball" installation
+
+   .. tab-item:: Runfile
+
+      .. code-block:: bash
+
+         ROCM_INSTALL_PATH=/opt/rocm/core-7.14             # <rocm-core-path> = default /opt/rocm/core-7.14 installation (no target=)
+         ROCM_INSTALL_PATH=<path>/rocm/core-7.14           # <rocm-core-path> = target=<path>
 
 Package manager installation
 =============================
@@ -31,12 +71,12 @@ Package manager installation
 Use the following steps to install RVS using your distribution's package manager
 on top of the ROCm Core SDK.
 
-1. Register the RVS repository.
+.. tab-set::
 
-   .. tab-set::
+   .. tab-item:: Ubuntu
+      :sync: ubuntu
 
-      .. tab-item:: Ubuntu
-         :sync: ubuntu
+      1. Register the RVS repository.
 
          .. code-block:: bash
 
@@ -48,8 +88,65 @@ on top of the ROCm Core SDK.
 
             sudo apt update
 
-      .. tab-item:: RHEL
-         :sync: rhel
+      2. Install the RVS package.
+
+         .. code-block:: bash
+
+            sudo apt install amdrocm7-rvs
+
+      3. Complete the following post-installation steps.
+
+         Use the following commands to update your shell configuration file
+         (``~/.bashrc`` or ``~/.profile``) and add ROCm to your PATH.
+
+         a. Set the ROCm installation path based on the ROCm installation method
+            and ``<rocm-core-path>``:
+
+            .. code-block:: bash
+
+               ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-7.14
+
+         b. Configure your environment.
+
+            .. tab-set::
+
+               .. tab-item:: User setup
+
+                  .. code-block:: bash
+
+                     tee --append ~/.bashrc << EOF
+                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     source ~/.bashrc
+
+               .. tab-item:: System-wide setup
+
+                  .. code-block:: bash
+
+                     sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     sudo chmod +x /etc/profile.d/set-rocm-env.sh
+                     source /etc/profile.d/set-rocm-env.sh
+
+      4. Verify your installation.
+
+         .. code-block:: bash
+
+            rvs -g
+
+   .. tab-item:: RHEL
+      :sync: rhel
+
+      1. Register the RVS repository.
 
          .. code-block:: bash
 
@@ -64,58 +161,60 @@ on top of the ROCm Core SDK.
             EOF
             sudo dnf clean all
 
-2. Install the RVS package.
-
-   .. tab-set::
-
-      .. tab-item:: Ubuntu
-         :sync: ubuntu
-
-         .. code-block:: bash
-
-            sudo apt install amdrocm7-rvs
-
-      .. tab-item:: RHEL
-         :sync: rhel
+      2. Install the RVS package.
 
          .. code-block:: bash
 
             sudo dnf install amdrocm7-rvs
 
-3. Complete the following post-installation step to set up your environment. Set ``ROCM_PATH`` to your ROCm Core SDK location.
+      3. Complete the following post-installation steps.
 
-   .. tab-set::
+         Use the following commands to update your shell configuration file
+         (``~/.bashrc`` or ``~/.profile``) and add ROCm to your PATH.
 
-      .. tab-item:: User setup
+         a. Set the ROCm installation path based on the ROCm installation method
+            and ``<rocm-core-path>``:
+
+            .. code-block:: bash
+
+               ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-7.14
+
+         b. Configure your environment.
+
+            .. tab-set::
+
+               .. tab-item:: User setup
+
+                  .. code-block:: bash
+
+                     tee --append ~/.bashrc << EOF
+                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     source ~/.bashrc
+
+               .. tab-item:: System-wide setup
+
+                  .. code-block:: bash
+
+                     sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     sudo chmod +x /etc/profile.d/set-rocm-env.sh
+                     source /etc/profile.d/set-rocm-env.sh
+
+      4. Verify your installation.
 
          .. code-block:: bash
 
-            tee -a ~/.bashrc << EOF
-            export ROCM_PATH=/opt/rocm
-            export PATH=\$ROCM_PATH/extras-7/bin:\$ROCM_PATH/bin:\$PATH
-            export LD_LIBRARY_PATH=\$ROCM_PATH/extras-7/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-            EOF
-
-            source ~/.bashrc
-
-      .. tab-item:: System-wide setup
-
-         .. code-block:: bash
-
-            sudo tee /etc/profile.d/set-rocm-env.sh << EOF
-            export ROCM_PATH=/opt/rocm
-            export PATH=\$ROCM_PATH/extras-7/bin:\$ROCM_PATH/bin:\$PATH
-            export LD_LIBRARY_PATH=\$ROCM_PATH/extras-7/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-            EOF
-
-            sudo chmod +x /etc/profile.d/set-rocm-env.sh
-            source /etc/profile.d/set-rocm-env.sh
-
-4. Verify your installation.
-
-   .. code-block:: bash
-
-      rvs -g
+            rvs -g
 
 .. note::
    The ROCm repositories must be set up before installing RVS. This repository
@@ -126,70 +225,182 @@ Tarball installation
 
 Use the following steps to install RVS using a tarball on top of the ROCm Core SDK.
 
-1. Install system dependencies.
+.. tab-set::
 
-   .. tab-set::
+   .. tab-item:: Ubuntu
+      :sync: ubuntu
 
-      .. tab-item:: Ubuntu
-         :sync: ubuntu
+      1. Install system dependencies.
 
          .. code-block:: bash
 
             sudo apt install libpci3 libnuma1
 
-      .. tab-item:: RHEL
-         :sync: rhel
+      2. Download the RVS tarball.
+
+         .. code-block:: bash
+
+            wget https://repo.amd.com/rocm/rvs/tarball/amdrocm7-rvs-1.5.122-579-Linux.tar.gz
+
+      3. Extract the tarball to the ROCm Extras location.
+
+         RVS is part of the ROCm Extras set of tools that work with the ROCm Core SDK.
+         The ROCm Extras location (``EXTRAS_INSTALL_PATH``) can be set to a custom
+         location ``<extras-path>``, but is typically set based on the ROCm installation
+         method used.
+
+         .. code-block:: bash
+
+            EXTRAS_INSTALL_PATH=<extras-path>  # ie. <extras-path> = path to ROCm extras for RVS extract
+
+            sudo mkdir -p $EXTRAS_INSTALL_PATH
+            sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
+
+         **Recommended:** Set ``EXTRAS_INSTALL_PATH`` to a location within the root
+         install directory for the ROCm Core SDK.
+
+         For example, if you installed the ROCm Core SDK using your Linux
+         distribution's package manager:
+
+         .. code-block:: bash
+
+            sudo mkdir -p /opt/rocm/extras-7
+            sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C /opt/rocm/extras-7
+
+      4. Complete the following post-installation steps.
+
+         Use the following commands to update your shell configuration file
+         (``~/.bashrc`` or ``~/.profile``) and add Extras and ROCm to your PATH.
+
+         a. Set the ROCm installation path based on the ROCm installation method
+            and ``<rocm-core-path>``:
+
+            .. code-block:: bash
+
+               ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-7.14
+
+         b. Configure your environment.
+
+            .. tab-set::
+
+               .. tab-item:: User setup
+
+                  .. code-block:: bash
+
+                     tee --append ~/.bashrc << EOF
+                     export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     source ~/.bashrc
+
+               .. tab-item:: System-wide setup
+
+                  .. code-block:: bash
+
+                     sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+                     export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     sudo chmod +x /etc/profile.d/set-rocm-env.sh
+                     source /etc/profile.d/set-rocm-env.sh
+
+      5. Verify your installation.
+
+         .. code-block:: bash
+
+            rvs -g
+
+   .. tab-item:: RHEL
+      :sync: rhel
+
+      1. Install system dependencies.
 
          .. code-block:: bash
 
             sudo dnf install pciutils-libs numactl-libs
 
-2. Download the RVS tarball.
-
-   .. code-block:: bash
-
-      wget https://repo.amd.com/rocm/rvs/tarball/amdrocm7-rvs-1.5.122-579-Linux.tar.gz
-
-3. Extract the tarball to the ROCm Extras location.
-
-   Set ``ROCM_PATH`` to your ROCm Core SDK location, which varies depending on how you installed it. For example, if you installed the ROCm Core SDK using your Linux distribution's package manager:
-
-   .. code-block:: bash
-
-      sudo mkdir -p /opt/rocm/extras-7
-      sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C /opt/rocm/extras-7
-
-4. Complete the following post-installation step to set up your environment. Set ``ROCM_PATH`` to your ROCm Core SDK location.
-
-   .. tab-set::
-
-      .. tab-item:: User setup
+      2. Download the RVS tarball.
 
          .. code-block:: bash
 
-            tee -a ~/.bashrc << EOF
-            export ROCM_PATH=/opt/rocm
-            export PATH=\$ROCM_PATH/extras-7/bin:\$ROCM_PATH/bin:\$PATH
-            export LD_LIBRARY_PATH=\$ROCM_PATH/extras-7/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-            EOF
+            wget https://repo.amd.com/rocm/rvs/tarball/amdrocm7-rvs-1.5.122-579-Linux.tar.gz
 
-            source ~/.bashrc
+      3. Extract the tarball to the ROCm Extras location.
 
-      .. tab-item:: System-wide setup
+         RVS is part of the ROCm Extras set of tools that work with the ROCm Core SDK.
+         The ROCm Extras location (``EXTRAS_INSTALL_PATH``) can be set to a custom
+         location ``<extras-path>``, but is typically set based on the ROCm installation
+         method used.
 
          .. code-block:: bash
 
-            sudo tee /etc/profile.d/set-rocm-env.sh << EOF
-            export ROCM_PATH=/opt/rocm
-            export PATH=\$ROCM_PATH/extras-7/bin:\$ROCM_PATH/bin:\$PATH
-            export LD_LIBRARY_PATH=\$ROCM_PATH/extras-7/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-            EOF
+            EXTRAS_INSTALL_PATH=<extras-path>  # ie. <extras-path> = path to ROCm extras for RVS extract
 
-            sudo chmod +x /etc/profile.d/set-rocm-env.sh
-            source /etc/profile.d/set-rocm-env.sh
+            sudo mkdir -p $EXTRAS_INSTALL_PATH
+            sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
 
-5. Verify your installation.
+         **Recommended:** Set ``EXTRAS_INSTALL_PATH`` to a location within the root
+         install directory for the ROCm Core SDK.
 
-   .. code-block:: bash
+         For example, if you installed the ROCm Core SDK using your Linux
+         distribution's package manager:
 
-      rvs -g
+         .. code-block:: bash
+
+            sudo mkdir -p /opt/rocm/extras-7
+            sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C /opt/rocm/extras-7
+
+      4. Complete the following post-installation steps.
+
+         Use the following commands to update your shell configuration file
+         (``~/.bashrc`` or ``~/.profile``) and add Extras and ROCm to your PATH.
+
+         a. Set the ROCm installation path based on the ROCm installation method
+            and ``<rocm-core-path>``:
+
+            .. code-block:: bash
+
+               ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-7.14
+
+         b. Configure your environment.
+
+            .. tab-set::
+
+               .. tab-item:: User setup
+
+                  .. code-block:: bash
+
+                     tee --append ~/.bashrc << EOF
+                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     source ~/.bashrc
+
+               .. tab-item:: System-wide setup
+
+                  .. code-block:: bash
+
+                     sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     sudo chmod +x /etc/profile.d/set-rocm-env.sh
+                     source /etc/profile.d/set-rocm-env.sh
+
+      5. Verify your installation.
+
+         .. code-block:: bash
+
+            rvs -g
