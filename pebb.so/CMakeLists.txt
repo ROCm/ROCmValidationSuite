@@ -135,6 +135,9 @@ endif()
 
 ## define include directories
 include_directories(./ ../ pci ${ROCR_INC_DIR} ${HIPRAND_INC_DIR} ${ROCRAND_INC_DIR} ${TRANSFERBENCH_INC_DIR})
+if(TRANSFERBENCH_IBVERBS_INC_DIR)
+  include_directories(${TRANSFERBENCH_IBVERBS_INC_DIR})
+endif()
 # Add directories to look for library files to link
 link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ASAN_LIB_PATH} ${AMD_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR})
 ## additional libraries
@@ -150,6 +153,9 @@ set_target_properties(${RVS_TARGET} PROPERTIES
         SUFFIX .so.${LIB_VERSION_STRING}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${CORE_RUNTIME_TARGET})
+if(TRANSFERBENCH_IBVERBS_INC_DIR)
+  target_link_libraries(${RVS_TARGET} ${CMAKE_DL_LIBS})
+endif()
 add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD
