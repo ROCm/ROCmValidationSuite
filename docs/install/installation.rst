@@ -178,18 +178,30 @@ on top of the ROCm Core SDK.
 Package manager uninstalling
 =============================
 
-.. tab-set::
+1. Remove installed packages.
 
-   .. tab-item:: Ubuntu
-      :sync: ubuntu
+   .. tab-set::
 
-      1. Remove installed packages.
+      .. tab-item:: Ubuntu
+         :sync: ubuntu
 
          .. code-block:: bash
 
             sudo apt autoremove amdrocm7-rvs
 
-      2. Remove RVS repositories.
+      .. tab-item:: RHEL
+         :sync: rhel
+
+         .. code-block:: bash
+
+            sudo dnf remove amdrocm7-rvs
+
+2. Remove RVS repositories.
+
+   .. tab-set::
+
+      .. tab-item:: Ubuntu
+         :sync: ubuntu
 
          .. code-block:: bash
 
@@ -201,16 +213,8 @@ Package manager uninstalling
             sudo apt clean all
             sudo apt update
 
-   .. tab-item:: RHEL
-      :sync: rhel
-
-      1. Remove installed packages.
-
-         .. code-block:: bash
-
-            sudo dnf remove amdrocm7-rvs
-
-      2. Remove RVS repositories.
+      .. tab-item:: RHEL
+         :sync: rhel
 
          .. code-block:: bash
 
@@ -221,24 +225,24 @@ Package manager uninstalling
             sudo rm -rf /var/cache/dnf
             sudo dnf clean all
 
-      3. Remove RVS environment configuration.
+3. Remove RVS environment configuration.
 
-         .. tab-set::
+   .. tab-set::
 
-            .. tab-item:: System-wide
+      .. tab-item:: System-wide
 
-               If you opted for a system-wide setup during the installation
-               process, remove the RVS environment variables.
+         If you opted for a system-wide setup during the installation
+         process, remove the RVS environment variables.
 
-               .. code-block:: bash
+         .. code-block:: bash
 
-                  sudo rm -f /etc/profile.d/set-rvs-env.sh
+            sudo rm -f /etc/profile.d/set-rvs-env.sh
 
-            .. tab-item:: User
+      .. tab-item:: User
 
-               If you opted for a user-specific setup during the installation
-               process, remove the RVS environment configuration block from
-               your shell configuration file (``~/.bashrc`` or ``~/.profile``).
+         If you opted for a user-specific setup during the installation
+         process, remove the RVS environment configuration block from
+         your shell configuration file (``~/.bashrc`` or ``~/.profile``).
 
 Tarball installation
 ====================
