@@ -387,8 +387,6 @@ Tarball uninstalling
 
 1. Remove the installation directory.
 
-   To uninstall RVS, remove your installation directory.
-
    .. important::
       The following command assumes you're working with the
       ``EXTRAS_INSTALL_PATH`` directory set to ``/opt/rocm/extras-7``. If you
