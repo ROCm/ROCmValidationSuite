@@ -138,21 +138,21 @@ on top of the ROCm Core SDK.
 
       .. tab-set::
 
-         .. tab-item:: System-wide setup
+         .. tab-item:: System-wide
 
             .. code-block:: bash
 
-               sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+               sudo tee /etc/profile.d/set-rvs-env.sh << EOF
                export EXTRAS_PATH=/opt/rocm/extras-7
                export ROCM_PATH=$ROCM_INSTALL_PATH
                export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
                export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
                EOF
 
-               sudo chmod +x /etc/profile.d/set-rocm-env.sh
-               source /etc/profile.d/set-rocm-env.sh
+               sudo chmod +x /etc/profile.d/set-rvs-env.sh
+               source /etc/profile.d/set-rvs-env.sh
 
-         .. tab-item:: User setup
+         .. tab-item:: User
 
             .. code-block:: bash
 
@@ -245,7 +245,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
       .. tab-set::
 
-         .. tab-item:: System-wide setup
+         .. tab-item:: System-wide
 
             .. tab-set::
 
@@ -254,32 +254,32 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
                   .. code-block:: bash
 
-                     sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+                     sudo tee /etc/profile.d/set-rvs-env.sh << EOF
                      export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
                      export ROCM_PATH=$ROCM_INSTALL_PATH
                      export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
                      export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
                      EOF
 
-                     sudo chmod +x /etc/profile.d/set-rocm-env.sh
-                     source /etc/profile.d/set-rocm-env.sh
+                     sudo chmod +x /etc/profile.d/set-rvs-env.sh
+                     source /etc/profile.d/set-rvs-env.sh
 
                .. tab-item:: RHEL
                   :sync: rhel
 
                   .. code-block:: bash
 
-                     sudo tee /etc/profile.d/set-rocm-env.sh << EOF
+                     sudo tee /etc/profile.d/set-rvs-env.sh << EOF
                      export EXTRAS_PATH=/opt/rocm/extras-7
                      export ROCM_PATH=$ROCM_INSTALL_PATH
                      export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
                      export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
                      EOF
 
-                     sudo chmod +x /etc/profile.d/set-rocm-env.sh
-                     source /etc/profile.d/set-rocm-env.sh
+                     sudo chmod +x /etc/profile.d/set-rvs-env.sh
+                     source /etc/profile.d/set-rvs-env.sh
 
-         .. tab-item:: User setup
+         .. tab-item:: User
 
             .. tab-set::
 
@@ -316,3 +316,104 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
    .. code-block:: bash
 
       rvs -g
+
+Package manager uninstalling
+=============================
+
+.. tab-set::
+
+   .. tab-item:: Ubuntu
+      :sync: ubuntu
+
+      1. Remove installed packages.
+
+         .. code-block:: bash
+
+            sudo apt autoremove amdrocm7-rvs
+
+      2. Remove RVS repositories.
+
+         .. code-block:: bash
+
+            # Remove RVS repositories
+            sudo rm /etc/apt/sources.list.d/rvs.list
+
+            # Clear the cache and clean the system
+            sudo rm -rf /var/cache/apt/*
+            sudo apt clean all
+            sudo apt update
+
+   .. tab-item:: RHEL
+      :sync: rhel
+
+      1. Remove installed packages.
+
+         .. code-block:: bash
+
+            sudo dnf remove amdrocm7-rvs
+
+      2. Remove RVS repositories.
+
+         .. code-block:: bash
+
+            # Remove RVS repositories
+            sudo rm /etc/yum.repos.d/rvs.repo
+
+            # Clear the cache and clean the system
+            sudo rm -rf /var/cache/dnf
+            sudo dnf clean all
+
+      3. Remove RVS environment configuration.
+
+         .. tab-set::
+
+            .. tab-item:: System-wide
+
+               If you opted for a system-wide setup during the installation
+               process, remove the RVS environment variables.
+
+               .. code-block:: bash
+
+                  sudo rm -f /etc/profile.d/set-rvs-env.sh
+
+            .. tab-item:: User
+
+               If you opted for a user-specific setup during the installation
+               process, remove the RVS environment configuration block from
+               your shell configuration file (``~/.bashrc`` or ``~/.profile``).
+
+Tarball uninstalling
+====================
+
+1. Remove the installation directory.
+
+   To uninstall RVS, remove your installation directory.
+
+   .. important::
+      The following command assumes you're working with the
+      ``EXTRAS_INSTALL_PATH`` directory set to ``/opt/rocm/extras-7``. If you
+      chose a different directory name when installing RVS, adjust the command
+      accordingly.
+
+   .. code-block:: bash
+
+      sudo rm -rf /opt/rocm/extras-7
+
+2. Remove RVS environment configuration.
+
+   .. tab-set::
+
+      .. tab-item:: System-wide setup
+
+         If you opted for a system-wide setup during the installation process,
+         remove the RVS environment variables.
+
+         .. code-block:: bash
+
+            sudo rm -f /etc/profile.d/set-rvs-env.sh
+
+      .. tab-item:: User setup
+
+         If you opted for a user-specific setup during the installation
+         process, remove the RVS environment configuration block from your
+         shell configuration file (``~/.bashrc`` or ``~/.profile``).
