@@ -138,19 +138,6 @@ on top of the ROCm Core SDK.
 
       .. tab-set::
 
-         .. tab-item:: User setup
-
-            .. code-block:: bash
-
-               tee --append ~/.bashrc << EOF
-               export EXTRAS_PATH=/opt/rocm/extras-7
-               export ROCM_PATH=$ROCM_INSTALL_PATH
-               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
-               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-               EOF
-
-               source ~/.bashrc
-
          .. tab-item:: System-wide setup
 
             .. code-block:: bash
@@ -164,6 +151,19 @@ on top of the ROCm Core SDK.
 
                sudo chmod +x /etc/profile.d/set-rocm-env.sh
                source /etc/profile.d/set-rocm-env.sh
+
+         .. tab-item:: User setup
+
+            .. code-block:: bash
+
+               tee --append ~/.bashrc << EOF
+               export EXTRAS_PATH=/opt/rocm/extras-7
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+               EOF
+
+               source ~/.bashrc
 
 4. Verify your installation.
 
@@ -245,38 +245,6 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
       .. tab-set::
 
-         .. tab-item:: User setup
-
-            .. tab-set::
-
-               .. tab-item:: Ubuntu
-                  :sync: ubuntu
-
-                  .. code-block:: bash
-
-                     tee --append ~/.bashrc << EOF
-                     export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
-                     export ROCM_PATH=$ROCM_INSTALL_PATH
-                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
-                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-                     EOF
-
-                     source ~/.bashrc
-
-               .. tab-item:: RHEL
-                  :sync: rhel
-
-                  .. code-block:: bash
-
-                     tee --append ~/.bashrc << EOF
-                     export EXTRAS_PATH=/opt/rocm/extras-7
-                     export ROCM_PATH=$ROCM_INSTALL_PATH
-                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
-                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-                     EOF
-
-                     source ~/.bashrc
-
          .. tab-item:: System-wide setup
 
             .. tab-set::
@@ -310,6 +278,38 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
                      sudo chmod +x /etc/profile.d/set-rocm-env.sh
                      source /etc/profile.d/set-rocm-env.sh
+
+         .. tab-item:: User setup
+
+            .. tab-set::
+
+               .. tab-item:: Ubuntu
+                  :sync: ubuntu
+
+                  .. code-block:: bash
+
+                     tee --append ~/.bashrc << EOF
+                     export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     source ~/.bashrc
+
+               .. tab-item:: RHEL
+                  :sync: rhel
+
+                  .. code-block:: bash
+
+                     tee --append ~/.bashrc << EOF
+                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export ROCM_PATH=$ROCM_INSTALL_PATH
+                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+                     EOF
+
+                     source ~/.bashrc
 
 5. Verify your installation.
 
