@@ -134,18 +134,30 @@ int pbqt_action::run() {
       return sts;
   }
 
-  if (!prop_test_bandwidth || test_array.size() < 1) {
+  if (!prop_test_bandwidth) {
     RVSTRACE_
-      // do cleanup
+    if (bjson) {
+      rvs::lp::JsonActionEndNodeCreate();
+    }
+
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_SUCCESS;
+    action_result.output = "PBQT Module action " + action_name + " completed";
+    action_callback(&action_result);
+    return 0;
+  }
+
+  if (test_array.size() < 1) {
+    RVSTRACE_
       destroy_threads();
 
     action_result.state = rvs::actionstate::ACTION_COMPLETED;
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = "Parameters not valid. Nothing to execute !!!";
     action_callback(&action_result);
-    if(bjson){
-    rvs::lp::JsonActionEndNodeCreate();
-  }
+    if (bjson) {
+      rvs::lp::JsonActionEndNodeCreate();
+    }
     return -1;
   }
 
