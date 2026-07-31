@@ -175,6 +175,71 @@ on top of the ROCm Core SDK.
    The ROCm repositories must be set up before installing RVS. This repository
    setup is part of the ROCm Core SDK installation.
 
+Package manager uninstalling
+=============================
+
+.. tab-set::
+
+   .. tab-item:: Ubuntu
+      :sync: ubuntu
+
+      1. Remove installed packages.
+
+         .. code-block:: bash
+
+            sudo apt autoremove amdrocm7-rvs
+
+      2. Remove RVS repositories.
+
+         .. code-block:: bash
+
+            # Remove RVS repositories
+            sudo rm /etc/apt/sources.list.d/rvs.list
+
+            # Clear the cache and clean the system
+            sudo rm -rf /var/cache/apt/*
+            sudo apt clean all
+            sudo apt update
+
+   .. tab-item:: RHEL
+      :sync: rhel
+
+      1. Remove installed packages.
+
+         .. code-block:: bash
+
+            sudo dnf remove amdrocm7-rvs
+
+      2. Remove RVS repositories.
+
+         .. code-block:: bash
+
+            # Remove RVS repositories
+            sudo rm /etc/yum.repos.d/rvs.repo
+
+            # Clear the cache and clean the system
+            sudo rm -rf /var/cache/dnf
+            sudo dnf clean all
+
+      3. Remove RVS environment configuration.
+
+         .. tab-set::
+
+            .. tab-item:: System-wide
+
+               If you opted for a system-wide setup during the installation
+               process, remove the RVS environment variables.
+
+               .. code-block:: bash
+
+                  sudo rm -f /etc/profile.d/set-rvs-env.sh
+
+            .. tab-item:: User
+
+               If you opted for a user-specific setup during the installation
+               process, remove the RVS environment configuration block from
+               your shell configuration file (``~/.bashrc`` or ``~/.profile``).
+
 Tarball installation
 ====================
 
