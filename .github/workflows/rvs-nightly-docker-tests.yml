@@ -7,6 +7,7 @@ name: RVS Nightly Tests (Docker)
 # Prerequisites:
 # - Build the image on the runner: .github/docker/rvs-nightly-rocm/build-rocm-image.sh
 # - Set vars.RVS_NIGHTLY_DOCKER_IMAGE (default rvs-nightly-rocm:latest)
+# - Runner service user must be in the docker group (not just your SSH user)
 # - Runner must have docker, /dev/kfd, /dev/dri, and GPU access
 #
 # See README_NIGHTLY_TESTS.md for tarball index / secrets (RVS_TARBALL_INDEX_URL).
@@ -144,7 +145,7 @@ jobs:
           chmod +x .github/docker/rvs-nightly-rocm/build-rocm-image.sh
           ./.github/docker/rvs-nightly-rocm/build-rocm-image.sh --from-tarball "$TARBALL_NAME"
 
-      - name: Pull ROCm docker image
+      - name: Verify ROCm docker image is present locally
         run: |
           chmod +x rvs_nightly_docker.sh
           ./rvs_nightly_docker.sh pull-image
