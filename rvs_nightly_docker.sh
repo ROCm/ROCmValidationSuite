@@ -14,7 +14,7 @@ usage() {
 Usage: rvs_nightly_docker.sh <command>
 
 Commands:
-  pull-image          Ensure docker image is present locally
+  pull-image          Verify docker access and that the image exists locally
   verify-rocm         rocminfo + amd-smi inside container
   install-rvs         Extract RVS tarball under /opt/rocm/extras-<N> in container
   run-level4          rvs -r 4 inside container
@@ -46,16 +46,28 @@ docker_gpu_opts() {
     --security-opt seccomp=unconfined
 }
 
+check_docker() {
+  if docker info >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "::error::Cannot access Docker (/var/run/docker.sock). The GitHub Actions runner service user must be in the 'docker' group (sudo usermod -aG docker <runner-user>; restart the runner). Note: your SSH login user may differ from the runner service account." >&2
+  exit 1
+}
+
 cmd_pull_image() {
+  check_docker
   if docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
     echo "::notice::Image ${DOCKER_IMAGE} already present locally."
     return 0
   fi
-  echo "Pulling ${DOCKER_IMAGE} ..."
-  docker pull "$DOCKER_IMAGE"
+  echo "::error::Docker image ${DOCKER_IMAGE} not found locally. Build on the runner host:" >&2
+  echo "  ./.github/docker/rvs-nightly-rocm/setup-on-runner.sh --from-tarball <tarball-name>" >&2
+  echo "Or re-run the workflow with build_docker_image=true (requires docker group access for the runner user)." >&2
+  exit 1
 }
 
 docker_run() {
+  check_docker
   local -a install_mount=()
   if [ -n "${INSTALL_DIR:-}" ] && [ -n "${REMOTE_WORK_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
     local host_install
