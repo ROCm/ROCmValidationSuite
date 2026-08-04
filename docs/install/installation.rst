@@ -22,7 +22,7 @@ Prerequisites
 
 Install the ROCm Core SDK before installing RVS.
 
-For instructions, see `Install AMD ROCm <https://rocm.docs.amd.com/>`__. Use the
+For instructions, see :doc:`Install AMD ROCm <rocm:install/rocm>`. Use the
 selector panel on that page to view instructions appropriate for your system
 environment.
 
