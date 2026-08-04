@@ -31,7 +31,7 @@ ROCm installation path
 
 The ROCm installation path depends on what installation method was selected during
 ROCm installation. After installation, the ROCm Core SDK will be deployed to this
-location and contains all the core ROCm directories such as ``bin``, ``include``,
+path location and contains all the core ROCm directories such as ``bin``, ``include``,
 ``lib``, etc. When configuring the environment for RVS, you must set the
 ``ROCM_INSTALL_PATH`` variable to the ROCm core installation directory
 ``<rocm-core-path>`` based on the installation method used:
