@@ -28,6 +28,9 @@
               "duration_ms": {
                 "type": "string"
               },
+              "iterations": {
+                "type": "string"
+              },
               "results": {
                 "type": "array",
                 "items": {
@@ -59,7 +62,7 @@
                 "minItems": 1
               }
             },
-            "required": ["gpu_id", "gpu_index", "array_size", "total_size", "duration_ms", "results"]
+            "required": ["gpu_id", "gpu_index", "array_size", "total_size", "results"]
           },
          "minItems": 1
       }
