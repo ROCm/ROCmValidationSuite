@@ -93,12 +93,12 @@ jobs:
             URL="$(fetch_latest "$INDEX_URL")"
           fi
           [ -n "${URL:-}" ] || { echo "::error::Could not resolve tarball URL"; exit 1; }
-          NAME="$(basename "$URL")"
+          NAME="$(basename "$URL" | tr -d '\r\n')"
           if [[ "$NAME" != *-Linux.tar.gz ]]; then
             echo "::error::Docker nightly tests require a *-Linux.tar.gz relocatable tarball; got: ${NAME}" >&2
             exit 1
           fi
-          if [[ "$NAME" != *-r[0-9][0-9][0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9]-Linux.tar.gz ]]; then
+          if [[ ! "$NAME" =~ -r[0-9]{4}\.[0-9]{8}-Linux\.tar\.gz$ ]]; then
             echo "::error::Tar tarball must include -rMMmm.yyyymmdd- (e.g. -r0715.20260724-Linux.tar.gz); got: ${NAME}" >&2
             exit 1
           fi

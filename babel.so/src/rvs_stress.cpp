@@ -41,40 +41,40 @@ void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>
 template <typename T>
 bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal, uint64_t duration);
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration, bool sustained);
 
 template <typename T>
 bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal, uint64_t duration);
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration, bool sustained);
 
 void parseArguments(int argc, char *argv[]);
 
 bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, bool output_csv, bool mibibytes, int test_type,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal, uint64_t duration) {
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration, bool sustained) {
 
   bool result = false;
 
   switch(test_type) {
     case FLOAT_TEST:
       result = run_stress<float>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test, data_init, nontemporal, duration);
+          json, action, test, data_init, nontemporal, duration, sustained);
       break;
 
     case DOUBLE_TEST:
       result = run_stress<double>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test, data_init, nontemporal, duration);
+          json, action, test, data_init, nontemporal, duration, sustained);
       break;
 
     case TRAID_FLOAT:
       result = run_triad<float>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test, data_init, nontemporal, duration);
+          json, action, test, data_init, nontemporal, duration, sustained);
       break;
 
     case TRIAD_DOUBLE:
       result = run_triad<double>(device, num_times, array_size, output_csv, mibibytes, dwords_per_lane, chunks_per_block, tb_size,
-          json, action, test, data_init, nontemporal, duration);
+          json, action, test, data_init, nontemporal, duration, sustained);
       break;
 
     default:
@@ -88,7 +88,7 @@ bool run_babel(std::pair<int, uint16_t> device, int num_times, int array_size, b
 template <typename T>
 bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal, uint64_t duration)
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration, bool sustained)
 {
   std::string   msg;
   std::streamsize ss = std::cout.precision();
@@ -153,6 +153,169 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   } else {
     stream->init_arrays(startA, startB, startC);
   }
+
+  // shared by both sustained and normal paths
+  std::string labels[total_babel_subtests] = {"Read","Write","Copy","Mul","Add","Triad","Dot"};
+  size_t sizes[total_babel_subtests] = {
+    1 * sizeof(T) * ARRAY_SIZE,
+    1 * sizeof(T) * ARRAY_SIZE,
+    2 * sizeof(T) * ARRAY_SIZE,
+    2 * sizeof(T) * ARRAY_SIZE,
+    3 * sizeof(T) * ARRAY_SIZE,
+    3 * sizeof(T) * ARRAY_SIZE,
+    2 * sizeof(T) * ARRAY_SIZE
+  };
+  bool test_enable[total_babel_subtests] = {
+    test->read, test->write, test->copy, test->mul, test->add, test->triad, test->dot
+  };
+  const double bw_scale = mibibytes ? pow(2.0, -20.0) : 1.0E-6;
+  uint64_t arr_size   = (uint64_t)ARRAY_SIZE * sizeof(T);
+  uint64_t total_size = 3ULL * ARRAY_SIZE * sizeof(T);
+  auto format_bw = [](double val) -> std::string {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(3) << val;
+    return oss.str();
+  };
+  std::string iter_key = time_based ? "duration_ms" : "iterations";
+  std::string iter_val = time_based ? std::to_string(duration) : std::to_string(num_times);
+
+  // ---- Sustained mode: back-to-back launches, single sync per kernel ----
+  if (sustained)
+  {
+    stream->set_sustained_mode(true);
+
+    std::chrono::high_resolution_clock::time_point t1, t2;
+
+    if (output_as_csv)
+    {
+      sstr << "gpu_id" << csv_separator
+           << "function" << csv_separator
+           << "num_times" << csv_separator
+           << "n_elements" << csv_separator
+           << "sizeof" << csv_separator
+           << ((mibibytes) ? "max_mibytes_per_sec" : "max_mbytes_per_sec") << csv_separator
+           << ((mibibytes) ? "mibps_at_min_t" : "mbps_at_min_t") << csv_separator
+           << ((mibibytes) ? "mibps_at_max_t" : "mbps_at_max_t") << csv_separator
+           << ((mibibytes) ? "mibps_at_avg_t" : "mbps_at_avg_t") << std::endl;
+    }
+    else
+    {
+      sstr << "\n---------------------------------------------------------------------------------" << std::endl
+           << std::left << std::setw(12) << "GPU Id"
+           << std::left << std::setw(12) << "Function"
+           << std::left << std::setw(15) << ((mibibytes) ? "MiBytes/sec" : "MBytes/sec")
+           << std::left << std::setw(15) << ((mibibytes) ? "Max MiB/s" : "Max MB/s")
+           << std::left << std::setw(15) << ((mibibytes) ? "Min MiB/s" : "Min MB/s")
+           << std::left << std::setw(15) << ((mibibytes) ? "Avg MiB/s" : "Avg MB/s")
+           << std::endl
+           << "---------------------------------------------------------------------------------" << std::endl
+           << std::fixed;
+    }
+
+    void* json_root    = nullptr;
+    void* json_results = nullptr;
+    if (json) {
+      unsigned int sec, usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      json_root = rvs::lp::LogRecordCreate(module_name.c_str(), action.c_str(),
+          rvs::logresults, sec, usec, true);
+      if (json_root) {
+        rvs::lp::AddString(json_root, "gpu_id", std::to_string(device.second));
+        uint16_t gpu_index = 0;
+        rvs::gpulist::gpu2gpuindex(device.second, &gpu_index);
+        rvs::lp::AddString(json_root, "gpu_index", std::to_string(gpu_index));
+        rvs::lp::AddString(json_root, "array_size", std::to_string(arr_size));
+        rvs::lp::AddString(json_root, "total_size", std::to_string(total_size));
+        rvs::lp::AddString(json_root, iter_key, iter_val);
+        json_results = rvs::lp::JsonNestedListCreate("results", rvs::logresults);
+      }
+    }
+
+    for (int i = 0; i < total_babel_subtests; ++i)
+    {
+      if (!test_enable[i]) continue;
+
+      uint64_t actual_k = 0;
+      t1 = std::chrono::high_resolution_clock::now();
+      auto duration_limit = std::chrono::milliseconds(duration);
+      for (uint64_t k = 0; !time_based ? (k < (uint64_t)num_times) : true; k++) {
+        if (time_based) {
+          if (std::chrono::high_resolution_clock::now() - t1 >= duration_limit) break;
+        }
+        switch (i) {
+          case 0: stream->read();   break;
+          case 1: stream->write();  break;
+          case 2: stream->copy();   break;
+          case 3: stream->mul();    break;
+          case 4: stream->add();    break;
+          case 5: stream->triad();  break;
+          case 6: stream->dot();    break;
+        }
+        actual_k++;
+      }
+      // dot() always syncs internally; for all others, issue the single batch sync
+      if (i != 6) stream->sustained_sync();
+      t2 = std::chrono::high_resolution_clock::now();
+
+      double total_s = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
+      double avg_s   = total_s / actual_k;
+      double avg_bw  = (bw_scale * sizes[i]) / avg_s;
+
+      if (output_as_csv)
+      {
+        sstr << device.second << csv_separator
+             << labels[i] << csv_separator
+             << actual_k << csv_separator
+             << ARRAY_SIZE << csv_separator
+             << sizeof(T) << csv_separator
+             << avg_bw << csv_separator
+             << avg_bw << csv_separator
+             << avg_bw << csv_separator
+             << avg_bw << std::endl;
+      }
+      else
+      {
+        sstr << std::left << std::setw(12) << device.second
+             << std::left << std::setw(12) << labels[i]
+             << std::left << std::setw(15) << format_bw(avg_bw)
+             << std::left << std::setw(15) << format_bw(avg_bw)
+             << std::left << std::setw(15) << format_bw(avg_bw)
+             << std::left << std::setw(15) << format_bw(avg_bw)
+             << std::endl;
+      }
+
+      if (json && json_results) {
+        const char* key       = mibibytes ? "mibytes_per_sec"     : "mbytes_per_sec";
+        const char* peak_key  = mibibytes ? "max_mibytes_per_sec" : "max_mbytes_per_sec";
+        const char* worst_key = mibibytes ? "min_mibytes_per_sec" : "min_mbytes_per_sec";
+        const char* avg_key   = mibibytes ? "avg_mibytes_per_sec" : "avg_mbytes_per_sec";
+        void* subtest_node = rvs::lp::LogRecordCreate(module_name.c_str(),
+            labels[i].c_str(), rvs::logresults, 0, 0, true);
+        if (subtest_node) {
+          rvs::lp::AddString(subtest_node, "subtest",   labels[i]);
+          rvs::lp::AddString(subtest_node, key,         format_bw(avg_bw));
+          rvs::lp::AddString(subtest_node, peak_key,    format_bw(avg_bw));
+          rvs::lp::AddString(subtest_node, worst_key,   format_bw(avg_bw));
+          rvs::lp::AddString(subtest_node, avg_key,     format_bw(avg_bw));
+          rvs::lp::AddString(subtest_node, "pass",      "true");
+          rvs::lp::AddNode(json_results, subtest_node);
+        }
+      }
+    }
+
+    sstr << "---------------------------------------------------------------------------------" << std::endl;
+    rvs::lp::Log(sstr.str(), rvs::logresults);
+
+    if (json && json_root && json_results) {
+      rvs::lp::AddNode(json_root, json_results);
+      rvs::lp::LogRecordFlush(json_root, true);
+    }
+
+    stream->set_sustained_mode(false);
+    delete stream;
+    return true;
+  }
+  // ---- End sustained mode ----
 
   // List of times
   std::vector<std::vector<double>> timings(total_babel_subtests);
@@ -275,37 +438,6 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
       << std::fixed;
   }
 
-  uint64_t arr_size   = (uint64_t)ARRAY_SIZE * sizeof(T);
-  uint64_t total_size = 3ULL * ARRAY_SIZE * sizeof(T);
-  std::string iter_key = time_based ? "duration_ms" : "iterations";
-  std::string iter_val = time_based ? std::to_string(duration) : std::to_string(num_times);
-
-  std::string labels[total_babel_subtests] = {"Read","Write","Copy", "Mul", "Add", "Triad", "Dot"};
-  size_t sizes[total_babel_subtests] = {
-    1 * sizeof(T) * ARRAY_SIZE,
-    1 * sizeof(T) * ARRAY_SIZE,
-    2 * sizeof(T) * ARRAY_SIZE,
-    2 * sizeof(T) * ARRAY_SIZE,
-    3 * sizeof(T) * ARRAY_SIZE,
-    3 * sizeof(T) * ARRAY_SIZE,
-    2 * sizeof(T) * ARRAY_SIZE
-  };
-
-  bool test_enable[total_babel_subtests] = {
-    test->read,
-    test->write,
-    test->copy,
-    test->mul,
-    test->add,
-    test->triad,
-    test->dot};
-
-  auto format_bw = [](double val) -> std::string {
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(3) << val;
-    return oss.str();
-  };
-
   // Build single JSON node per GPU: metadata + nested "results" array
   void* json_root = nullptr;
   void* json_results = nullptr;
@@ -336,7 +468,6 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 
       // Calculate average; ignore the first result
       double average = std::accumulate(timings[i].begin()+1, timings[i].end(), 0.0) / (double)(effective_num_times - 1);
-      const double bw_scale = (mibibytes) ? pow(2.0, -20.0) : 1.0E-6;
       // Display results
       if (output_as_csv)
       {
@@ -404,7 +535,7 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
 template <typename T>
 bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, bool output_as_csv, bool mibibytes,
     uint16_t dwords_per_lane, uint16_t chunks_per_block, uint16_t tb_size, bool json, std::string action, subtest *test,
-    const std::string& data_init, const std::string& nontemporal, uint64_t duration)
+    const std::string& data_init, const std::string& nontemporal, uint64_t duration, bool sustained)
 {
   std::string msg;
   triad_only = true;
@@ -467,6 +598,89 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   } else {
     stream->init_arrays(startA, startB, startC);
   }
+
+  // ---- Sustained mode: back-to-back triad launches, single sync ----
+  if (sustained)
+  {
+    stream->set_sustained_mode(true);
+
+    std::chrono::high_resolution_clock::time_point t1, t2;
+    uint64_t actual_k = 0;
+    t1 = std::chrono::high_resolution_clock::now();
+    auto duration_limit = std::chrono::milliseconds(duration);
+    for (uint64_t k = 0; !time_based ? (k < (uint64_t)num_times) : true; k++) {
+      if (time_based) {
+        if (std::chrono::high_resolution_clock::now() - t1 >= duration_limit) break;
+      }
+      stream->triad();
+      actual_k++;
+    }
+    stream->sustained_sync();
+    t2 = std::chrono::high_resolution_clock::now();
+
+    double runtime = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
+    double total_bytes = 3.0 * sizeof(T) * ARRAY_SIZE * actual_k;
+    double bandwidth = ((mibibytes) ? pow(2.0, -30.0) : 1.0E-9) * (total_bytes / runtime);
+
+    std::stringstream sstr2;
+    if (output_as_csv)
+    {
+      sstr2 << "gpu_id" << csv_separator
+            << "function" << csv_separator
+            << "num_times" << csv_separator
+            << "n_elements" << csv_separator
+            << "sizeof" << csv_separator
+            << ((mibibytes) ? "gibytes_per_sec" : "gbytes_per_sec") << csv_separator
+            << "runtime"
+            << std::endl
+            << device.second << csv_separator
+            << "Triad" << csv_separator
+            << actual_k << csv_separator
+            << ARRAY_SIZE << csv_separator
+            << sizeof(T) << csv_separator
+            << bandwidth << csv_separator
+            << runtime
+            << std::endl;
+    }
+    else
+    {
+      sstr2 << "--------------------------------"
+            << std::endl << std::fixed
+            << "GPU Id: " << std::left << device.second << std::endl
+            << "Runtime (seconds): " << std::left << std::setprecision(5)
+            << runtime << std::endl
+            << "Bandwidth (" << ((mibibytes) ? "GiB/s" : "GB/s") << "):  "
+            << std::left << std::setprecision(3)
+            << bandwidth << std::endl;
+    }
+    rvs::lp::Log(sstr2.str(), rvs::logresults);
+
+    if (json) {
+      unsigned int sec, usec;
+      rvs::lp::get_ticks(&sec, &usec);
+      void* json_root = rvs::lp::LogRecordCreate(module_name.c_str(), action.c_str(),
+          rvs::logresults, sec, usec, true);
+      if (json_root) {
+        rvs::lp::AddString(json_root, "gpu_id", std::to_string(device.second));
+        uint16_t gpu_index = 0;
+        rvs::gpulist::gpu2gpuindex(device.second, &gpu_index);
+        rvs::lp::AddString(json_root, "gpu_index", std::to_string(gpu_index));
+        rvs::lp::AddString(json_root, "array_size", std::to_string(arr_size));
+        rvs::lp::AddString(json_root, "total_size", std::to_string(total_size));
+        rvs::lp::AddString(json_root, iter_key, iter_val);
+        const char* bw_key = mibibytes ? "bandwidth_gib_per_sec" : "bandwidth_gb_per_sec";
+        rvs::lp::AddString(json_root, "runtime_sec", std::to_string(runtime));
+        rvs::lp::AddString(json_root, bw_key, std::to_string(bandwidth));
+        rvs::lp::AddString(json_root, "pass", "true");
+        rvs::lp::LogRecordFlush(json_root, true);
+      }
+    }
+
+    stream->set_sustained_mode(false);
+    delete stream;
+    return true;
+  }
+  // ---- End sustained mode ----
 
   // Declare timers
   std::chrono::high_resolution_clock::time_point t1, t2;

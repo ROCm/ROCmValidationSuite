@@ -93,6 +93,18 @@ enum NTMode { NT_NONE = 0, NT_ALL = 1, NT_READ = 2, NT_WRITE = 3 };
         grid, block, smem, stop, __VA_ARGS__); break;                          \
   }
 
+#define NT_KERNEL_LAUNCH_ASYNC(kernel, epl, cpb, T, grid, block, ...) \
+  switch (nt_mode) {                                                   \
+    case NT_NONE:  hipLaunchKernelGGL((kernel<NT_NONE,  epl, cpb, T>),\
+        grid, block, 0, nullptr, __VA_ARGS__); break;                  \
+    case NT_READ:  hipLaunchKernelGGL((kernel<NT_READ,  epl, cpb, T>),\
+        grid, block, 0, nullptr, __VA_ARGS__); break;                  \
+    case NT_WRITE: hipLaunchKernelGGL((kernel<NT_WRITE, epl, cpb, T>),\
+        grid, block, 0, nullptr, __VA_ARGS__); break;                  \
+    default:       hipLaunchKernelGGL((kernel<NT_ALL,   epl, cpb, T>),\
+        grid, block, 0, nullptr, __VA_ARGS__); break;                  \
+  }
+
 #define NT_KERNEL_LAUNCH_DOT_SYNC(kernel, epl, cpb, T, tbs, grid, block, smem, stop, ...) \
   switch (nt_mode) {                                                           \
     case NT_NONE:  hipLaunchKernelSynchronous((kernel<NT_NONE, epl, cpb, T, tbs>),  \
@@ -142,7 +154,8 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
     const int device_index, const unsigned int _dwords_per_lane, const unsigned int _chunks_per_block,
     const unsigned int _threads_per_block, const std::string& nontemporal)
   : array_size{ARRAY_SIZE}, evt_timing(event_timing),
-  dwords_per_lane(_dwords_per_lane), chunks_per_block(_chunks_per_block), tb_size(_threads_per_block)
+  dwords_per_lane(_dwords_per_lane), chunks_per_block(_chunks_per_block), tb_size(_threads_per_block),
+  sustained_mode(false)
 {
 
   std::string msg;
@@ -229,6 +242,12 @@ HIPStream<T>::~HIPStream()
   check_error(hipEventDestroy(start_ev));
   check_error(hipEventDestroy(stop_ev));
   check_error(hipEventDestroy(coherent_ev));
+}
+
+template <class T>
+void HIPStream<T>::sustained_sync()
+{
+  check_error(hipDeviceSynchronize());
 }
 
 
@@ -396,6 +415,24 @@ template <class T>
 float HIPStream<T>::read()
 {
   float kernel_time = 0.;
+  if (sustained_mode)
+  {
+    if(elements_per_lane == 4 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(read_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(read_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(read_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(read_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(read_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(read_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else
+      NT_KERNEL_LAUNCH_ASYNC(read_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    return 0.f;
+  }
   if (evt_timing)
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
@@ -457,6 +494,24 @@ template <class T>
 float HIPStream<T>::write()
 {
   float kernel_time = 0.;
+  if (sustained_mode)
+  {
+    if(elements_per_lane == 4 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(write_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(write_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(write_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(write_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(write_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(write_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), d_c)
+    else
+      NT_KERNEL_LAUNCH_ASYNC(write_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_c)
+    return 0.f;
+  }
   if (evt_timing)
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
@@ -518,6 +573,24 @@ template <class T>
 float HIPStream<T>::copy()
 {
   float kernel_time = 0.;
+  if (sustained_mode)
+  {
+    if(elements_per_lane == 4 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(copy_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(copy_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(copy_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(copy_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(copy_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(copy_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    else
+      NT_KERNEL_LAUNCH_ASYNC(copy_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_c)
+    return 0.f;
+  }
   if (evt_timing)
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
@@ -579,6 +652,24 @@ template <class T>
 float HIPStream<T>::mul()
 {
   float kernel_time = 0.;
+  if (sustained_mode)
+  {
+    if(elements_per_lane == 4 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(mul_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), d_b, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(mul_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), d_b, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(mul_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_b, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(mul_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), d_b, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(mul_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), d_b, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(mul_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), d_b, d_c)
+    else
+      NT_KERNEL_LAUNCH_ASYNC(mul_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_b, d_c)
+    return 0.f;
+  }
   if (evt_timing)
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
@@ -641,6 +732,24 @@ template <class T>
 float HIPStream<T>::add()
 {
   float kernel_time = 0.;
+  if (sustained_mode)
+  {
+    if(elements_per_lane == 4 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(add_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(add_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(add_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(add_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(add_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(add_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else
+      NT_KERNEL_LAUNCH_ASYNC(add_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    return 0.f;
+  }
   if (evt_timing)
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
@@ -704,6 +813,24 @@ template <class T>
 float HIPStream<T>::triad()
 {
   float kernel_time = 0.;
+  if (sustained_mode)
+  {
+    if(elements_per_lane == 4 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(triad_kernel, 4, 1, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 1)
+      NT_KERNEL_LAUNCH_ASYNC(triad_kernel, 2, 1, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(triad_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 2)
+      NT_KERNEL_LAUNCH_ASYNC(triad_kernel, 2, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 4 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(triad_kernel, 4, 4, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else if(elements_per_lane == 2 && chunks_per_block == 4)
+      NT_KERNEL_LAUNCH_ASYNC(triad_kernel, 2, 4, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    else
+      NT_KERNEL_LAUNCH_ASYNC(triad_kernel, 4, 2, T, dim3(block_cnt), dim3(tb_size), d_a, d_b, d_c)
+    return 0.f;
+  }
   if (evt_timing)
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
