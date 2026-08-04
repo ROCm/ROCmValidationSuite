@@ -401,7 +401,7 @@ Tarball uninstallation
 
       sudo rm -rf /opt/rocm/extras-7
 
-2. Remove RVS environment configuration.
+2. Remove the RVS environment configuration.
 
    .. tab-set::
 
