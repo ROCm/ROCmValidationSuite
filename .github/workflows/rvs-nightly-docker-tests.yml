@@ -1,0 +1,263 @@
+name: RVS Nightly Tests (Docker)
+
+# Same RVS *-Linux.tar.gz flow as rvs-nightly-tests.yml, but install + level 4 run inside a
+# ROCm-matched docker container on the self-hosted GPU runner (no SSH target node).
+# ROCm SDK version is derived from the tar tarball name (-rMMmm.yyyymmdd-Linux.tar.gz).
+#
+# Prerequisites:
+# - Build the image on the runner: .github/docker/rvs-nightly-rocm/build-rocm-image.sh
+# - Set vars.RVS_NIGHTLY_DOCKER_IMAGE (default rvs-nightly-rocm:latest)
+# - Runner must have docker, /dev/kfd, /dev/dri, and GPU access
+#
+# See README_NIGHTLY_TESTS.md for tarball index / secrets (RVS_TARBALL_INDEX_URL).
+
+on:
+  workflow_dispatch:
+    inputs:
+      trigger_event:
+        description: 'Label for report only (e.g. schedule or push); optional'
+        required: false
+        default: ''
+      tarball_url:
+        description: 'Override tarball URL (default: latest from index — secrets.RVS_TARBALL_INDEX_URL)'
+        required: false
+        default: ''
+      docker_image:
+        description: 'ROCm runtime image (default: vars.RVS_NIGHTLY_DOCKER_IMAGE or rvs-nightly-rocm:latest)'
+        required: false
+        default: ''
+      build_docker_image:
+        description: 'Build rvs-nightly-rocm image from RVS tarball ROCm version before tests (slow; usually pre-built on runner)'
+        required: false
+        type: boolean
+        default: false
+      remote_work_dir:
+        description: 'Logical work dir label for reports (default: /tmp/rvs-nightly-docker-<run_id>)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rvs-nightly-docker-${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  TARBALL_INDEX_URL: ${{ secrets.RVS_TARBALL_INDEX_URL }}
+  RVS_NIGHTLY_DOCKER_IMAGE: ${{ inputs.docker_image || vars.RVS_NIGHTLY_DOCKER_IMAGE || 'rvs-nightly-rocm:latest' }}
+  TARGET_ROCM_PATH: /opt/rocm/install
+
+jobs:
+  install-rvs-in-docker:
+    name: Install RVS in docker
+    runs-on: ${{ vars.RVS_NIGHTLY_DOCKER_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 120
+    outputs:
+      tarball_url:      ${{ steps.resolve.outputs.tarball_url }}
+      tarball_name:     ${{ steps.resolve.outputs.tarball_name }}
+      remote_work_dir:  ${{ steps.prepare.outputs.remote_work_dir }}
+      rocm_major:       ${{ steps.prepare.outputs.rocm_major }}
+      install_dir:      ${{ steps.prepare.outputs.install_dir }}
+      rvs_bin:          ${{ steps.prepare.outputs.rvs_bin }}
+    env:
+      TARGET_ROCM_PATH: /opt/rocm/install
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Resolve latest tarball URL
+        id: resolve
+        env:
+          INPUT_URL: ${{ inputs.tarball_url }}
+          WORKFLOW_RUN_EVENT: ${{ inputs.trigger_event }}
+        run: |
+          set -euo pipefail
+          INDEX_URL="${TARBALL_INDEX_URL:-}"
+          if [ -z "${INPUT_URL:-}" ] && [ -z "${INDEX_URL}" ]; then
+            echo "::error::No tarball index URL (set RVS_TARBALL_INDEX_URL) and no tarball_url input."
+            exit 1
+          fi
+          fetch_latest() {
+            local idx="$1"
+            local html raw name
+            html="$(curl -sSL --max-time 60 --retry 2 --retry-delay 2 "$idx" 2>/dev/null || true)"
+            raw="$(printf '%s' "$html" | grep -oE 'amdrocm[0-9]*-rvs-[0-9A-Za-z._\-]+-Linux\.tar\.gz' 2>/dev/null || true)"
+            name="$(printf '%s\n' "$raw" | sort -uV | tail -n 1 || true)"
+            [ -n "$name" ] || return 1
+            printf '%s/%s\n' "${idx%/}" "$name"
+          }
+          if [ -n "${INPUT_URL:-}" ]; then
+            URL="$INPUT_URL"
+          else
+            URL="$(fetch_latest "$INDEX_URL")"
+          fi
+          [ -n "${URL:-}" ] || { echo "::error::Could not resolve tarball URL"; exit 1; }
+          NAME="$(basename "$URL" | tr -d '\r\n')"
+          if [[ "$NAME" != *-Linux.tar.gz ]]; then
+            echo "::error::Docker nightly tests require a *-Linux.tar.gz relocatable tarball; got: ${NAME}" >&2
+            exit 1
+          fi
+          if [[ ! "$NAME" =~ -r[0-9]{4}\.[0-9]{8}-Linux\.tar\.gz$ ]]; then
+            echo "::error::Tar tarball must include -rMMmm.yyyymmdd- (e.g. -r0715.20260724-Linux.tar.gz); got: ${NAME}" >&2
+            exit 1
+          fi
+          {
+            echo "tarball_url<<RVS_NIGHTLY_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_NIGHTLY_TARBALL_URL"
+            echo "tarball_name=$NAME"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "TARBALL_URL<<RVS_NIGHTLY_TARBALL_URL"
+            printf '%s\n' "$URL"
+            echo "RVS_NIGHTLY_TARBALL_URL"
+            echo "TARBALL_NAME=$NAME"
+          } >> "$GITHUB_ENV"
+          echo "Latest tarball : $NAME"
+
+      - name: Validate configuration and derive paths
+        id: prepare
+        env:
+          TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
+          INPUT_REMOTE_WORK_DIR: ${{ inputs.remote_work_dir }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          TARGET_NODE: localhost
+        run: |
+          chmod +x rvs_nightly_test.sh
+          ./rvs_nightly_test.sh validate-config
+
+      - name: Export paths for remaining steps
+        run: |
+          {
+            echo "REMOTE_WORK_DIR=${{ steps.prepare.outputs.remote_work_dir }}"
+            echo "ROCM_MAJOR=${{ steps.prepare.outputs.rocm_major }}"
+            echo "INSTALL_DIR=${{ steps.prepare.outputs.install_dir }}"
+            echo "RVS_BIN=${{ steps.prepare.outputs.rvs_bin }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Build ROCm docker image matching RVS tarball
+        if: inputs.build_docker_image
+        env:
+          TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
+        run: |
+          chmod +x .github/docker/rvs-nightly-rocm/build-rocm-image.sh
+          ./.github/docker/rvs-nightly-rocm/build-rocm-image.sh --from-tarball "$TARBALL_NAME"
+
+      - name: Pull ROCm docker image
+        run: |
+          chmod +x rvs_nightly_docker.sh
+          ./rvs_nightly_docker.sh pull-image
+
+      - name: Download RVS tarball
+        run: ./rvs_nightly_test.sh download-tarball
+
+      - name: Verify ROCm in docker
+        run: ./rvs_nightly_docker.sh verify-rocm
+
+      - name: Install RVS in docker
+        run: ./rvs_nightly_docker.sh install-rvs
+
+  run-rvs-level-4-in-docker:
+    name: Run RVS level 4 in docker
+    needs: [install-rvs-in-docker]
+    runs-on: ${{ vars.RVS_NIGHTLY_DOCKER_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 180
+    outputs:
+      rc:                   ${{ steps.level4.outputs.rc }}
+      start:                ${{ steps.level4.outputs.start }}
+      end:                  ${{ steps.level4.outputs.end }}
+      rvs_version:          ${{ steps.versions.outputs.rvs_version }}
+      target_rocm_version:  ${{ steps.versions.outputs.target_rocm_version }}
+    env:
+      TARGET_ROCM_PATH: /opt/rocm/install
+      REMOTE_WORK_DIR:  ${{ needs.install-rvs-in-docker.outputs.remote_work_dir }}
+      ROCM_MAJOR:       ${{ needs.install-rvs-in-docker.outputs.rocm_major }}
+      INSTALL_DIR:      ${{ needs.install-rvs-in-docker.outputs.install_dir }}
+      RVS_BIN:          ${{ needs.install-rvs-in-docker.outputs.rvs_bin }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download RVS tarball for docker mount
+        env:
+          TARBALL_URL: ${{ needs.install-rvs-in-docker.outputs.tarball_url }}
+          TARBALL_NAME: ${{ needs.install-rvs-in-docker.outputs.tarball_name }}
+        run: |
+          chmod +x rvs_nightly_test.sh rvs_nightly_docker.sh
+          ./rvs_nightly_test.sh download-tarball
+
+      - name: Run RVS level 4 in docker
+        id: level4
+        run: ./rvs_nightly_docker.sh run-level4
+
+      - name: Capture RVS and ROCm versions from docker
+        id: versions
+        if: always()
+        run: ./rvs_nightly_docker.sh capture-versions
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-nightly-docker-logs-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  create-test-report:
+    name: Create Test Report
+    needs: [install-rvs-in-docker, run-rvs-level-4-in-docker]
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    if: always() && !cancelled() && needs.install-rvs-in-docker.result == 'success' && needs.run-rvs-level-4-in-docker.result != 'skipped'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download test logs
+        uses: actions/download-artifact@v4
+        with:
+          name: rvs-nightly-docker-logs-${{ github.run_id }}
+          path: ./reports
+        continue-on-error: true
+
+      - name: Build test report
+        id: report
+        env:
+          TARBALL_URL:          ${{ needs.install-rvs-in-docker.outputs.tarball_url }}
+          TARBALL_NAME:         ${{ needs.install-rvs-in-docker.outputs.tarball_name }}
+          TARGET_ROCM_PATH:     /opt/rocm/install
+          REMOTE_WORK_DIR:      ${{ needs.install-rvs-in-docker.outputs.remote_work_dir }}
+          RVS_BIN:              ${{ needs.install-rvs-in-docker.outputs.rvs_bin }}
+          RVS_LEVEL4_RC:        ${{ needs.run-rvs-level-4-in-docker.outputs.rc }}
+          RVS_LEVEL4_START:     ${{ needs.run-rvs-level-4-in-docker.outputs.start }}
+          RVS_LEVEL4_END:       ${{ needs.run-rvs-level-4-in-docker.outputs.end }}
+          RVS_VERSION:          ${{ needs.run-rvs-level-4-in-docker.outputs.rvs_version }}
+          TARGET_ROCM_VERSION:  ${{ needs.run-rvs-level-4-in-docker.outputs.target_rocm_version }}
+          GITHUB_RUN_ID:        ${{ github.run_id }}
+          GITHUB_SERVER_URL:    ${{ github.server_url }}
+          GITHUB_REPOSITORY:    ${{ github.repository }}
+          GITHUB_EVENT_NAME:    ${{ inputs.trigger_event || github.event_name }}
+        run: |
+          chmod +x rvs_nightly_test.sh
+          mkdir -p ./reports
+          ./rvs_nightly_test.sh build-report
+
+      - name: Upload report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-nightly-docker-report-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Fail the workflow if level 4 failed
+        if: steps.report.outputs.overall == 'FAIL' || needs.run-rvs-level-4-in-docker.result == 'failure'
+        run: |
+          echo "::error::RVS docker test failure — level4 rc=${{ needs.run-rvs-level-4-in-docker.outputs.rc }}"
+          exit 1
