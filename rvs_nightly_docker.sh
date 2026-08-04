@@ -2,7 +2,7 @@
 ################################################################################
 # RVS nightly tests inside a ROCm-matched docker container.
 #
-# Default (RVS_DOCKER_ON_TARGET=true): build host (l003) saves the image,
+# Default (RVS_DOCKER_ON_TARGET=true): build host saves the image,
 # scp + docker load on the GPU target, then docker run on the target via SSH.
 # Set RVS_DOCKER_ON_TARGET=false to run docker locally on the build host instead.
 ################################################################################
@@ -17,7 +17,7 @@ usage() {
   cat <<'EOF'
 Usage: rvs_nightly_docker.sh <command>
 
-Image transfer (build host l003 → target via scp + docker load):
+Image transfer (build host → target via scp + docker load):
   transfer-image-to-target   docker save | gzip, scp, docker load on target
   verify-image-on-target     Confirm image exists on target after load
 

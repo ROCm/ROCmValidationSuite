@@ -1,14 +1,14 @@
 name: RVS Nightly Tests (Docker)
 
-# Build ROCm docker image on l003 (self-hosted runner), transfer to GPU target via
+# Build ROCm docker image on the self-hosted runner, transfer to GPU target via
 # scp + docker load, then install RVS and run level 4 inside docker on the target.
 # ROCm SDK version is derived from the tar tarball name (-rMMmm.yyyymmdd-Linux.tar.gz).
 #
-# Flow: l003 docker build → docker save | scp → target docker load → target docker run
+# Flow: build host docker build → docker save | scp → target docker load → target docker run
 # RVS tarball is wget'd inside the container on the target (no scp of RVS tar).
 #
 # Prerequisites:
-# - Build host (l003): docker build user in docker group
+# - Build host (self-hosted runner): docker build user in docker group
 # - Target GPU node: docker, /dev/kfd, /dev/dri, SSH user in docker group
 # - Secrets: RVS_TARGET_NODE, RVS_TARGET_SSH_KEY (optional RVS_TARGET_USER)
 # - Secret: RVS_TARBALL_INDEX_URL
@@ -39,7 +39,7 @@ on:
         required: false
         default: ''
       build_docker_image:
-        description: 'Build rvs-nightly-rocm image on l003 from RVS tarball ROCm version before transfer'
+        description: 'Build rvs-nightly-rocm image on the build host from RVS tarball ROCm version before transfer'
         required: false
         type: boolean
         default: false
@@ -66,7 +66,7 @@ env:
 
 jobs:
   install-rvs-in-docker:
-    name: Build image on l003 and install RVS in docker on target
+    name: Build image on runner and install RVS in docker on target
     runs-on: ${{ vars.RVS_NIGHTLY_DOCKER_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
     timeout-minutes: 180
     outputs:
@@ -158,7 +158,7 @@ jobs:
             echo "RVS_BIN=${{ steps.prepare.outputs.rvs_bin }}"
           } >> "$GITHUB_ENV"
 
-      - name: Build ROCm docker image on l003
+      - name: Build ROCm docker image on build host
         if: inputs.build_docker_image
         env:
           TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
@@ -166,7 +166,7 @@ jobs:
           chmod +x .github/docker/rvs-nightly-rocm/build-rocm-image.sh
           ./.github/docker/rvs-nightly-rocm/build-rocm-image.sh --from-tarball "$TARBALL_NAME"
 
-      - name: Verify ROCm docker image on l003
+      - name: Verify ROCm docker image on build host
         run: |
           chmod +x rvs_nightly_docker.sh
           ./rvs_nightly_docker.sh pull-image
