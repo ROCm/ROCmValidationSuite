@@ -147,6 +147,8 @@ jobs:
           ./rvs_nightly_test.sh validate-config
 
       - name: Setup SSH to target node
+        env:
+          REMOTE_WORK_DIR: ${{ steps.prepare.outputs.remote_work_dir }}
         run: ./rvs_nightly_test.sh setup-ssh
 
       - name: Export paths for remaining steps
@@ -207,6 +209,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup SSH to target node
+        env:
+          REMOTE_WORK_DIR: ${{ needs.install-rvs-in-docker.outputs.remote_work_dir }}
         run: |
           chmod +x rvs_nightly_test.sh rvs_nightly_docker.sh
           ./rvs_nightly_test.sh setup-ssh
