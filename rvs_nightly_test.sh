@@ -107,6 +107,14 @@ cmd_setup_ssh() {
     } >> "$GITHUB_ENV"
   fi
 
+  # Persist for manual runs: rvs_nightly_docker.sh sources this if SSH_CONFIG_FILE is unset.
+  local ssh_env_file="${RUNNER_TEMP:-/tmp}/rvs_ssh_env.sh"
+  cat > "$ssh_env_file" <<EOF
+SSH_KEY_FILE=$SSH_KEY_FILE
+SSH_CONFIG_FILE=$SSH_CONFIG_FILE
+EOF
+  chmod 600 "$ssh_env_file"
+
   if [ -z "${SSH_PRIVATE_KEY:-}" ]; then
     echo "::error::SSH_PRIVATE_KEY is not set; cannot SSH to target node." >&2
     exit 1
@@ -144,7 +152,7 @@ EOF
   echo "::notice::SSH connectivity OK."
 
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-    "mkdir -p '${REMOTE_WORK_DIR}/pkg' '${REMOTE_WORK_DIR}/reports'"
+    "mkdir -p '${REMOTE_WORK_DIR}/pkg' '${REMOTE_WORK_DIR}/reports' '${REMOTE_WORK_DIR}/docker'"
 }
 
 cmd_verify_rocm() {
