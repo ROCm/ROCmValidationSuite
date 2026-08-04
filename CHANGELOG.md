@@ -6,7 +6,17 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Added
 
-- Test-level configurations for MI350P-450W and MI350P-600W .
+- Test-level configurations for MI350P-450W and MI350P-600W.
+- Support for new platform: MI450X.
+- Support for Babel sustained bandwidth mode.
+- Support for test duration selection using the `-t` option.
+- Added iterations-based GST ramp-up support.
+
+### Changed
+
+- Updated and improved user-guide.
+- Updated Babel JSON schema.
+- Updated TransferBench to v1.69.00.
 
 ## RVS 1.5.0
 
