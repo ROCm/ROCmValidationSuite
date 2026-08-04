@@ -41,6 +41,7 @@
 #include "include/rvsliblog.h"
 #include "include/rvsoptions.h"
 #include "include/rvs_util.h"
+#include "include/gpu_util.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -379,6 +380,8 @@ int rvs::module::terminate() {
   }
 
   modulemap.clear();
+
+  rvs::gpulist::Terminate();
 
   return 0;
 }
