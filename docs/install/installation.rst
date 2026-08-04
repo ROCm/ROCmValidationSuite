@@ -176,7 +176,7 @@ on top of the ROCm Core SDK.
    setup is part of the ROCm Core SDK installation.
 
 Package manager uninstallation
-=============================
+===================================
 
 1. Remove installed packages.
 
