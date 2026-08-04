@@ -386,7 +386,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
       rvs -g
 
-Tarball uninstalling
+Tarball uninstallation
 ====================
 
 1. Remove the installation directory.
