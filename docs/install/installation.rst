@@ -175,7 +175,7 @@ on top of the ROCm Core SDK.
    The ROCm repositories must be set up before installing RVS. This repository
    setup is part of the ROCm Core SDK installation.
 
-Package manager uninstalling
+Package manager uninstallation
 =============================
 
 1. Remove installed packages.
