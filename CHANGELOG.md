@@ -2,6 +2,14 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.7.0
+
+### Added
+
+
+
+### Changed
+
 ## RVS 1.6.0
 
 ### Added
@@ -31,7 +39,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Changed
 
 - Updated Babel output to report throughput instead of execution time.
-  
+
 ## RVS 1.4.0
 
 ### Added
@@ -50,7 +58,6 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Added
 
 - Babel subtest configurability
-
 
 ## RVS 1.3.0 for ROCm 7.1.1
 
@@ -71,15 +78,18 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ## RVS 1.2.0 for ROCm 7.0.2
 
 ### Added
+
 - Support for Amazon Linux.
 
 ### Changed
+
 - Update gst conf. files for MI350X and MI355X.
 - Change GEMM execution method during ramp-up.
 
 ## RVS 1.2.0 for ROCm 7.0.1
 
 ### Added
+
 - Support for new platform: RX9060
 
 ## RVS 1.2.0 for ROCm 7.0.0
@@ -180,3 +190,4 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Optimized
 
 - In GST and IET modules, use of callback mechanism instead of polling for HIP stream reduced the CPU utilization %.
+
