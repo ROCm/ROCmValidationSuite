@@ -141,11 +141,14 @@ echo "  ROCm version : ${ROCM_VERSION}"
 echo "  GPU family   : ${GPU_FAMILY}"
 echo "  SDK base URL : ${ROCM_SDK_BASE_URL}"
 
+ROCM_INSTALL_PATH="${ROCM_INSTALL_PATH:-/opt/rocm/install}"
+
 docker build \
   -f "${SCRIPT_DIR}/Dockerfile" \
   --build-arg "ROCM_VERSION=${ROCM_VERSION}" \
   --build-arg "GPU_FAMILY=${GPU_FAMILY}" \
   --build-arg "ROCM_SDK_BASE_URL=${ROCM_SDK_BASE_URL}" \
+  --build-arg "ROCM_INSTALL_PATH=${ROCM_INSTALL_PATH}" \
   -t "${IMAGE_TAG}" \
   "${SCRIPT_DIR}"
 
