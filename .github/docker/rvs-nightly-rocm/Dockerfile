@@ -17,6 +17,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     tar \
     pciutils \
     kmod \
+    python3 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN test -n "${ROCM_VERSION}" && test -n "${ROCM_SDK_BASE_URL}"
@@ -26,7 +27,8 @@ RUN mkdir -p /opt/rocm/install \
          "${ROCM_SDK_BASE_URL%/}/therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz" \
     && tar -xzf /tmp/rocm-sdk.tar.gz -C /opt/rocm/install --strip-components=1 \
     && rm -f /tmp/rocm-sdk.tar.gz \
-    && test -x /opt/rocm/install/bin/rocminfo
+    && test -x /opt/rocm/install/bin/rocminfo \
+    && /opt/rocm/install/bin/amd-smi version
 
 COPY env-rocm.sh /etc/profile.d/rocm-env.sh
 
