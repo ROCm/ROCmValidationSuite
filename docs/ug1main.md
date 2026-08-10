@@ -3164,6 +3164,13 @@ is 2.</td></tr>
 <tr><td>tb_size</td><td>Integer</td>
 <td>Thread block size (number of threads per block). The default value is
 1024.</td></tr>
+<tr><td>sustained</td><td>Bool</td>
+<td>If true, enables sustained mode: all kernels are launched back-to-back without
+per-iteration synchronization, and a single synchronization is issued
+after all iterations complete. Bandwidth is reported as the average across all
+iterations in all four output columns (MBytes/sec, Max, Min, Avg). This mode
+measures steady-state memory bandwidth under continuous load. The default value
+is false.</td></tr>
 </table>
 </div>
 

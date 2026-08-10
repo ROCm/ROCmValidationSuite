@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -81,7 +81,7 @@ unsigned int pci_dev_find_cap_offset(struct pci_dev *dev, unsigned char cap,
  * gets the max link speed
  * @param dev a pci_dev structure containing the PCI device information
  * @param buff pre-allocated char buffer
- * @return 
+ * @return
  */
 void get_link_cap_max_speed(struct pci_dev *dev, char *buff) {
     const char *link_max_speed;
@@ -129,7 +129,7 @@ void get_link_cap_max_speed(struct pci_dev *dev, char *buff) {
  * gets the PCI dev max link width
  * @param dev a pci_dev structure containing the PCI device information
  * @param buff pre-allocated char buffer
- * @return 
+ * @return
  */
 void get_link_cap_max_width(struct pci_dev *dev, char *buff) {
     // get pci dev capabilities offset
@@ -150,7 +150,7 @@ void get_link_cap_max_width(struct pci_dev *dev, char *buff) {
  * gets the current link speed
  * @param dev a pci_dev structure containing the PCI device information
  * @param buff pre-allocated char buffer
- * @return 
+ * @return
  */
 void get_link_stat_cur_speed(struct pci_dev *dev, char *buff) {
     const char *link_cur_speed;
@@ -198,7 +198,7 @@ void get_link_stat_cur_speed(struct pci_dev *dev, char *buff) {
  * gets the negotiated link width
  * @param dev a pci_dev structure containing the PCI device information
  * @param buff pre-allocated char buffer
- * @return 
+ * @return
  */
 void get_link_stat_neg_width(struct pci_dev *dev, char *buff) {
     // get pci dev capabilities offset
@@ -219,7 +219,7 @@ void get_link_stat_neg_width(struct pci_dev *dev, char *buff) {
  * gets the power limit value
  * @param dev a pci_dev structure containing the PCI device information
  * @param buff pre-allocated char buffer
- * @return 
+ * @return
  */
 void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff) {
     // get pci dev capabilities offset
@@ -266,8 +266,8 @@ void get_slot_pwr_limit_value(struct pci_dev *dev, char *buff) {
 /**
  * gets PCI dev physical slot number
  * @param dev a pci_dev structure containing the PCI device information
- * @param buff pre-allocated char buffer 
- * @return 
+ * @param buff pre-allocated char buffer
+ * @return
  */
 void get_slot_physical_num(struct pci_dev *dev, char *buff) {
     // get pci dev capabilities offset
@@ -286,8 +286,8 @@ void get_slot_physical_num(struct pci_dev *dev, char *buff) {
 /**
  * gets PCI dev bus id
  * @param dev a pci_dev structure containing the PCI device information
- * @param buff pre-allocated char buffer 
- * @return 
+ * @param buff pre-allocated char buffer
+ * @return
  */
 void get_pci_bus_id(struct pci_dev *dev, char *buff) {
   snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%0X", dev->bus);
@@ -296,8 +296,8 @@ void get_pci_bus_id(struct pci_dev *dev, char *buff) {
 /**
  * gets PCI device id (it appears as a function just to keep compatibility with the array of pointer to function)
  * @param dev a pci_dev structure containing the PCI device information
- * @param buff pre-allocated char buffer 
- * @return 
+ * @param buff pre-allocated char buffer
+ * @return
  */
 void get_device_id(struct pci_dev *dev, char *buff) {
     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%u", dev->device_id);
@@ -306,8 +306,8 @@ void get_device_id(struct pci_dev *dev, char *buff) {
 /**
  * gets PCI device's vendor id (it appears as a function just to keep compatibility with the array of pointer to function)
  * @param dev a pci_dev structure containing the PCI device information
- * @param buff pre-allocated char buffer 
- * @return 
+ * @param buff pre-allocated char buffer
+ * @return
  */
 void get_vendor_id(struct pci_dev *dev, char *buff) {
     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%u", dev->vendor_id);
@@ -317,51 +317,39 @@ void get_vendor_id(struct pci_dev *dev, char *buff) {
  * gets the PCI dev driver name
  * @param dev a pci_dev structure containing the PCI device information
  * @param buf pre-allocated char buffer
- * @return 
+ * @return
  */
 void get_kernel_driver(struct pci_dev *dev, char *buff) {
-    char name[1024], *drv, *base;
+    char name[256];
+    char link_target[PCI_CAP_DATA_MAX_BUF_SIZE];
+    char *drv;
     int n;
 
-    buff[0] = '\0';
-
-    //returning from here as there are other ways, this is
-    //not supported any longer
-    //the more simpler way is sudo dkms status
     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
 
-    if (dev->access == NULL) {
+    if (dev == NULL) {
         return;
     }
 
-    if (dev->access->method != PCI_ACCESS_SYS_BUS_PCI) {
-        return;
-    }
-
-    base = pci_get_param(dev->access, const_cast<char *>("sysfs.path"));
-    if (!base || !base[0]) {
-        return;
-    }
-
-    n = snprintf(name, sizeof(name), "%s/devices/%04x:%02x:%02x.%d/driver",
-            base, dev->domain, dev->bus, dev->dev, dev->func);
+    n = snprintf(name, sizeof(name),
+            "/sys/bus/pci/devices/%04x:%02x:%02x.%d/driver",
+            dev->domain, dev->bus, dev->dev, dev->func);
     if (n < 0 || n >= static_cast<int>(sizeof(name))) {
         return;
     }
 
-    n = readlink(name, buff, PCI_CAP_DATA_MAX_BUF_SIZE);
+    n = readlink(name, link_target, PCI_CAP_DATA_MAX_BUF_SIZE - 1);
     if (n < 0) {
         return;
     }
 
-    if (n >= PCI_CAP_DATA_MAX_BUF_SIZE) {
-        return;
-    }
+    link_target[n] = '\0';
 
-    buff[n] = 0;
-
-    if ((drv = strrchr(buff, '/')) != NULL)
+    if ((drv = strrchr(link_target, '/')) != NULL) {
         snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", drv + 1);
+    } else {
+        snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", link_target);
+    }
 }
 
 /**
@@ -405,39 +393,43 @@ void get_pwr_budgeting(struct pci_dev *dev, uint8_t pb_pm_state,
 
     snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%s", PCI_CAP_NOT_SUPPORTED);
 
-    if (cap_offset_pwbgd != 0) {
-        i = 0;
-
-        do {
-            // Data select register size is 1 byte, it will select the DWORD(4 bytes)
-	    // from budgeting data register corresponding to state.
-	    // dont proceed if write to register fails
-            int rt = pci_write_byte(dev, cap_offset_pwbgd + PCI_PWR_DSR, i);
-	    if(!rt){// 0 indicates error in writing
-		++i;
-		continue;
-	    }
-            w = pci_read_word(dev, cap_offset_pwbgd + PCI_PWR_DATA);
-
-            if (!w)
-                return;
-
-            pb_act_pm_state = PCI_PWR_DATA_PM_STATE(w);
-            pb_act_type = PCI_PWR_DATA_TYPE(w);
-            pb_act_power_rail = PCI_PWR_DATA_RAIL(w);
-
-            if (pb_act_pm_state == pb_pm_state && pb_act_type == pb_type &&
-                                        pb_act_power_rail == pb_power_rail) {
-                base = PCI_PWR_DATA_BASE(w);
-                scale = PCI_PWR_DATA_SCALE(w);
-                snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%.3fW",
-                        base * pow(10, -scale));
-                return;
-            }
-
-            i++;
-        } while (i <= DSR_MAX_VAL); // DSR size is 1 byte, no need to run forever
+    if (cap_offset_pwbgd == 0 || dev->access == NULL) {
+        return;
     }
+
+    i = 0;
+
+    do {
+        // Data select register size is 1 byte, it will select the DWORD(4 bytes)
+        // from budgeting data register corresponding to state.
+        // dont proceed if write to register fails
+        int rt = pci_write_byte(dev, cap_offset_pwbgd + PCI_PWR_DSR, i);
+        if (!rt) {  // 0 indicates error in writing
+            ++i;
+            continue;
+        }
+        w = pci_read_word(dev, cap_offset_pwbgd + PCI_PWR_DATA);
+
+        if (!w) {
+            ++i;
+            continue;
+        }
+
+        pb_act_pm_state = PCI_PWR_DATA_PM_STATE(w);
+        pb_act_type = PCI_PWR_DATA_TYPE(w);
+        pb_act_power_rail = PCI_PWR_DATA_RAIL(w);
+
+        if (pb_act_pm_state == pb_pm_state && pb_act_type == pb_type &&
+                                    pb_act_power_rail == pb_power_rail) {
+            base = PCI_PWR_DATA_BASE(w);
+            scale = PCI_PWR_DATA_SCALE(w);
+            snprintf(buff, PCI_CAP_DATA_MAX_BUF_SIZE, "%.3fW",
+                    base * pow(10, -scale));
+            return;
+        }
+
+        i++;
+    } while (i <= DSR_MAX_VAL); // DSR size is 1 byte, no need to run forever
 }
 
 /**

@@ -114,6 +114,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
       workers[i].set_tb_size(tb_size);
       workers[i].set_data_init(data_init);
       workers[i].set_nontemporal(nontemporal);
+      workers[i].set_sustained(sustained);
 
       i++;
     }
@@ -338,6 +339,12 @@ bool mem_action::get_all_mem_config_keys(void) {
   if (num_iterations  < 2) {
     msg = "invalid '" +
       std::string(RVS_CONF_NUM_ITER) + "' key value" + " - expected value greater than 1" ;
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get<bool>(RVS_CONF_SUSTAINED, &sustained, MEM_DEFAULT_SUSTAINED)) {
+    msg = "invalid '" + std::string(RVS_CONF_SUSTAINED) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
