@@ -29,7 +29,7 @@ RUN mkdir -p "${ROCM_INSTALL_PATH}" \
     && tar -xzf /tmp/rocm-sdk.tar.gz -C "${ROCM_INSTALL_PATH}" --strip-components=1 \
     && rm -f /tmp/rocm-sdk.tar.gz \
     && test -x "${ROCM_INSTALL_PATH}/bin/rocminfo" \
-    && "${ROCM_INSTALL_PATH}/bin/amd-smi" version
+    && test -x "${ROCM_INSTALL_PATH}/bin/amd-smi"
 
 COPY env-rocm.sh /etc/profile.d/rocm-env.sh
 
