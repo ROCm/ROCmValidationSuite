@@ -30,7 +30,7 @@ Usage: rvs_nightly_docker.sh <command>
 Image delivery (build host → target):
   ensure-image-on-target     Skip, registry pull, scp load, or build on target (preferred)
   transfer-image-to-target   Alias for ensure-image-on-target
-  build-image-on-target      Build rvs-nightly-rocm on the GPU target via SSH
+  build-image-on-target      git fetch on GPU target + docker build (no scp of build context)
   verify-image-on-target     Confirm image exists on target
 
 In-container steps (on target when RVS_DOCKER_ON_TARGET=true):
@@ -351,19 +351,54 @@ cmd_build_image_on_target() {
   check_docker_on_target
 
   local remote_build_dir="${REMOTE_WORK_DIR}/docker-build"
-  phase_start "Sync docker build context to target"
-  ssh -q -F "$SSH_CONFIG_FILE" rvs-target "mkdir -p '${remote_build_dir}'"
-  scp -q -F "$SSH_CONFIG_FILE" -r "${DOCKER_BUILD_DIR}/." \
-    "rvs-target:${remote_build_dir}/"
-  phase_end "Sync docker build context to target"
+  local clone_dir="${remote_build_dir}/repo"
+  local build_script=".github/docker/rvs-nightly-rocm/build-rocm-image.sh"
 
-  phase_start "docker build on GPU target"
-  ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
+  if [ -n "${GITHUB_REPOSITORY:-}" ] && [ -n "${GITHUB_SHA:-}" ]; then
+    local host repo_url sha
+    host="${GITHUB_SERVER_URL:-https://github.com}"
+    host="${host#https://}"
+    host="${host#http://}"
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+      repo_url="https://x-access-token:${GITHUB_TOKEN}@${host}/${GITHUB_REPOSITORY}.git"
+    else
+      repo_url="https://${host}/${GITHUB_REPOSITORY}.git"
+    fi
+    sha="${GITHUB_SHA}"
+
+    phase_start "Checkout repo and docker build on GPU target"
+    ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
+set -euo pipefail
+if ! command -v git >/dev/null 2>&1; then
+  echo "::error::git is required on the target node for build-on-target" >&2
+  exit 1
+fi
+rm -rf '${clone_dir}'
+mkdir -p '${clone_dir}'
+git -C '${clone_dir}' init -q
+git -C '${clone_dir}' remote add origin '${repo_url}'
+git -C '${clone_dir}' fetch --depth 1 origin '${sha}'
+git -C '${clone_dir}' checkout -q FETCH_HEAD
+chmod +x '${clone_dir}/${build_script}'
+'${clone_dir}/${build_script}' --from-tarball '${TARBALL_NAME}'
+REMOTE
+    phase_end "Checkout repo and docker build on GPU target"
+  else
+    phase_start "Sync docker build context to target"
+    ssh -q -F "$SSH_CONFIG_FILE" rvs-target "mkdir -p '${remote_build_dir}'"
+    tar -C "${DOCKER_BUILD_DIR}" -cf - . \
+      | ssh -q -F "$SSH_CONFIG_FILE" rvs-target "tar -C '${remote_build_dir}' -xf -"
+    phase_end "Sync docker build context to target"
+
+    phase_start "docker build on GPU target"
+    ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
 set -euo pipefail
 chmod +x '${remote_build_dir}/build-rocm-image.sh'
 '${remote_build_dir}/build-rocm-image.sh' --from-tarball '${TARBALL_NAME}'
 REMOTE
-  phase_end "docker build on GPU target"
+    phase_end "docker build on GPU target"
+  fi
+
   cmd_verify_image_on_target
 }
 
