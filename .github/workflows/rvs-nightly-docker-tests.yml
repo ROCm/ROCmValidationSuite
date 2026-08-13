@@ -16,7 +16,7 @@ name: RVS Nightly Tests (Docker)
 # RVS tarball: downloaded on the orchestrator runner and scp'd to the target (not wget in container).
 #
 # Prerequisites:
-# - Build host (self-hosted runner): curl/scp/ssh; HTTPS egress to tarball index (docker optional)
+# - Build host (self-hosted runner): curl/scp/ssh; HTTPS egress to tarball index; checkout supplies docker build context
 # - Target GPU node: docker, HTTPS to rocm.nightlies.amd.com, /dev/kfd, /dev/dri, SSH user in docker group
 # - Secrets: RVS_TARGET_NODE, RVS_TARGET_SSH_KEY (optional RVS_TARGET_USER, RVS_TARBALL_INDEX_URL)
 # - Optional: vars.RVS_DOCKER_REGISTRY + secrets RVS_DOCKER_REGISTRY_USER/PASSWORD for registry mode
@@ -82,10 +82,6 @@ env:
   RVS_DOCKER_REGISTRY_USER: ${{ secrets.RVS_DOCKER_REGISTRY_USER }}
   RVS_DOCKER_REGISTRY_PASSWORD: ${{ secrets.RVS_DOCKER_REGISTRY_PASSWORD }}
   RVS_DOCKER_SKIP_IF_PRESENT: 'true'
-  GITHUB_REPOSITORY: ${{ github.repository }}
-  GITHUB_SHA: ${{ github.sha }}
-  GITHUB_SERVER_URL: ${{ github.server_url }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   TARGET_ROCM_PATH: /opt/rocm/install
   TARGET_NODE: ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
   TARGET_USER: ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
