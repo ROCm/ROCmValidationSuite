@@ -25,7 +25,7 @@ For instructions, see `Install AMD ROCm <https://rocm.docs.amd.com/en/docs-7.14.
 selector panel on that page to view instructions appropriate for your system environment.
 
 ROCm installation path
-======================
+----------------------
 
 The ROCm installation path depends on what installation method was selected during
 ROCm installation. After installation, the ROCm Core SDK will be deployed to this
