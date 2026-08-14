@@ -111,6 +111,13 @@ class gst_action: public rvs::actionbase {
     // gemm output accuracy-check
     bool gst_accu_check;
 
+    // CRC-32-based SDC detection: compare output checksum across iterations
+    bool gst_crc_check;
+
+    // Cross-GPU CRC comparison: after each round compare every GPU's CRC
+    // against GPU 0's.  Requires crc_check: true to have any effect.
+    bool gst_crc_cross_gpu_check;
+
     // Inject error in gemm output
     // Note : This is just for testing purpose. Shouldn't be enabled otherwise.
     bool     gst_error_inject;

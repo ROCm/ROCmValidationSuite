@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -24,6 +24,7 @@
  *******************************************************************************/
 #include "include/gst_worker.h"
 
+#include <chrono>
 #include <unistd.h>
 #include <string>
 #include <memory>
@@ -47,6 +48,7 @@
 
 #define GST_LOG_SELF_CHECK_ERROR_KEY            "self-check error"
 #define GST_LOG_ACCU_CHECK_ERROR_KEY            "accu-check error"
+#define GST_LOG_CRC_CHECK_ERROR_KEY             "crc-check error"
 #define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
 #define GST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 
@@ -69,7 +71,67 @@ using std::string;
 
 bool GSTWorker::bjson = false;
 
-GSTWorker::GSTWorker() {}
+// ---------------------------------------------------------------------------
+// GstCrcSync — per-iteration cross-GPU CRC barrier
+// ---------------------------------------------------------------------------
+
+void GstCrcSync::sync_and_compare(size_t slot, uint16_t gpu_id, uint32_t crc) {
+  std::unique_lock<std::mutex> lock(mtx);
+
+  crcs[slot]    = crc;
+  gpu_ids[slot] = gpu_id;
+  ++arrived;
+  uint64_t my_gen = generation;
+
+  if (arrived == total_workers) {
+    // Last worker to arrive: collect mismatches, then release all waiters.
+    std::vector<std::string> msgs;
+    for (size_t i = 1; i < total_workers; ++i) {
+      if (crcs[i] != crcs[0]) {
+        std::ostringstream oss;
+        oss << "[" << action_name << "] "
+            << "cross-GPU crc-check error: "
+            << "GPU " << gpu_ids[i]
+            << " CRC 0x" << std::hex << std::setw(8) << std::setfill('0') << crcs[i]
+            << " != GPU " << std::dec << gpu_ids[0]
+            << " CRC 0x" << std::hex << std::setw(8) << std::setfill('0') << crcs[0]
+            << " (SDC candidate)";
+        msgs.push_back(oss.str());
+      }
+    }
+    arrived = 0;
+    ++generation;
+    cv.notify_all();
+    lock.unlock();
+    for (const auto& m : msgs)
+      rvs::lp::Log(m, rvs::logresults);
+  } else {
+    // Wait until the last worker releases this round (or the barrier aborts).
+    cv.wait(lock, [this, my_gen]() {
+      return generation != my_gen || aborted;
+    });
+  }
+}
+
+void GstCrcSync::detach() {
+  std::unique_lock<std::mutex> lock(mtx);
+  if (total_workers == 0)
+    return;
+  --total_workers;
+  // If the remaining workers already arrived, act as if this was the last one.
+  if (total_workers > 0 && arrived >= total_workers) {
+    arrived = 0;
+    ++generation;
+    cv.notify_all();
+  } else if (total_workers == 0) {
+    aborted = true;
+    cv.notify_all();
+  }
+}
+
+GSTWorker::GSTWorker()
+  : crc_check(false), crc_computed(false), crc_matrix_seed(0)
+  , crc_sync(nullptr), crc_sync_slot(0) {}
 GSTWorker::~GSTWorker() {}
 
 /**
@@ -102,8 +164,56 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
     return;
   }
 
+  // Apply shared seed before matrix generation so all GPU workers receive
+  // identical inputs (prerequisite for a valid cross-GPU CRC comparison).
+  if (crc_matrix_seed != 0)
+    gpu_blas->set_matrix_seed(crc_matrix_seed);
+
   // generate random matrix & copy it to the GPU
-  gpu_blas->generate_random_matrix_data();
+  if (shared_matrices) {
+    std::unique_lock<std::mutex> lk(shared_matrices->mtx);
+    if (!shared_matrices->ready) {
+      // First worker: generate and snapshot into the shared pool.
+      gpu_blas->generate_random_matrix_data();
+      gpu_blas->get_host_matrix_bytes(shared_matrices->a,
+                                      shared_matrices->b,
+                                      shared_matrices->c);
+      gpu_blas->get_host_scale_bytes(shared_matrices->sa,
+                                     shared_matrices->sb);
+      shared_matrices->ready = true;
+    } else {
+      // Subsequent workers: copy from shared pool — bytes are identical by
+      // construction (s_host_matrix_byte_sizes mirrors allocate_host_matrix_mem).
+      gpu_blas->inject_host_matrix_data(shared_matrices->a,
+                                        shared_matrices->b,
+                                        shared_matrices->c);
+      gpu_blas->inject_host_scale_data(shared_matrices->sa,
+                                       shared_matrices->sb);
+    }
+  } else {
+    gpu_blas->generate_random_matrix_data();
+  }
+
+  // Log per-GPU input matrix CRCs so the caller can verify all GPUs received
+  // byte-identical data.  Only emitted when cross-GPU CRC checking is active.
+  if (shared_matrices) {
+    uint32_t crc_a, crc_b, crc_c;
+    gpu_blas->get_host_matrix_input_crcs(crc_a, crc_b, crc_c);
+
+    char gpuid_buff[12];
+    snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
+
+    std::ostringstream oss;
+    oss << "[" << action_name << "] "
+        << "[GPU:: " << gpuid_buff << "] "
+        << "input-matrix crc32 "
+        << "A=0x" << std::hex << std::setw(8) << std::setfill('0') << crc_a
+        << " B=0x" << std::setw(8) << std::setfill('0') << crc_b
+        << " C=0x" << std::setw(8) << std::setfill('0') << crc_c;
+    rvs::lp::Log(oss.str(), rvs::logresults);
+
+  }
+
   if (!copy_matrix) {
     // copy matrix only once
     if (!gpu_blas->copy_data_to_gpu()) {
@@ -227,6 +337,8 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
   gst_log_interval_time = std::chrono::system_clock::now();
   gst_start_gflops_time = std::chrono::system_clock::now();
 
+  uint64_t ramp_iter_count = 0;
+
   for (;;) {
     // check if stop signal was received
     if (rvs::lp::Stopping())
@@ -235,8 +347,14 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     if (!ramp_single_shot) {
       gst_end_time = std::chrono::system_clock::now();
       if (time_diff(gst_end_time,  gst_start_time) >
-          (ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE) * 1000u)
+          (ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE) * 1000u) {
+        std::ostringstream _oss;
+        _oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
+             << "ramp iterations: " << ramp_iter_count
+             << " (warm_calls: " << gst_warm_calls << ") [timeout]";
+        rvs::lp::Log(_oss.str(), rvs::logresults);
         return false;
+      }
     }
 
     gst_last_sgemm_start_time = std::chrono::system_clock::now();
@@ -293,6 +411,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 
     num_sgemm_ops += gst_warm_calls;
     num_sgemm_ops_log_interval += gst_warm_calls;
+    ++ramp_iter_count;
 
     gst_end_time = std::chrono::system_clock::now();
     micros_sgemm_ops =
@@ -311,6 +430,13 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
             time_diff(gst_end_time,  gst_start_time) +
             NMAX_MS_GPU_RUN_PEAK_PERFORMANCE * 1000u;
           delay_target_stress /= num_sgemm_ops;
+          {
+            std::ostringstream _oss;
+            _oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
+                 << "ramp iterations: " << ramp_iter_count
+                 << " (warm_calls: " << gst_warm_calls << ") [target reached]";
+            rvs::lp::Log(_oss.str(), rvs::logresults);
+          }
           return true;
         }
       }
@@ -339,8 +465,16 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
       gst_log_interval_time = std::chrono::system_clock::now();
     }
 
-    if (ramp_single_shot)
-      return gflops_interval >= target_stress * (1.0 - tolerance);
+    if (ramp_single_shot) {
+      bool _passed = gflops_interval >= target_stress * (1.0 - tolerance);
+      std::ostringstream _oss;
+      _oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
+           << "ramp iterations: " << ramp_iter_count
+           << " (warm_calls: " << gst_warm_calls << ") [single-shot "
+           << (_passed ? "passed" : "failed") << "]";
+      rvs::lp::Log(_oss.str(), rvs::logresults);
+      return _passed;
+    }
   }
 
   return false;
@@ -455,6 +589,52 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
   start_time = 0;
   end_time = 0;
 
+  // RAII guard: calls crc_sync->detach() on any exit path (normal or early)
+  // so peer workers are never left blocking at the barrier.
+  struct CrcSyncGuard {
+    GstCrcSync* s;
+    ~CrcSyncGuard() { if (s) s->detach(); }
+  } crc_guard{crc_sync};
+
+  // Warn when crc_check is enabled with a configuration that produces
+  // non-repeatable outputs:
+  //   sgemm / dgemm + copy_matrix:false + beta != 0
+  // In this case the C matrix is the GEMM output buffer and gets overwritten
+  // each iteration, so inputs change and CRC mismatches are expected even on
+  // a healthy GPU (false positives).
+  if (crc_check &&
+      !copy_matrix &&
+      (gst_ops_type == "sgemm" || gst_ops_type == "dgemm" || gst_ops_type == "hgemm") &&
+      gst_beta_val != 0.0f) {
+    msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+      "WARNING: crc_check with copy_matrix:false and beta != 0 on " + gst_ops_type +
+      " will produce false-positive CRC errors (C matrix changes each iteration)."
+      " Set beta:0 or copy_matrix:true for reliable CRC detection.";
+    rvs::lp::Log(msg, rvs::logresults);
+  }
+
+  // Warn when crc_check is enabled for fp4/fp6/mxfp8 without out_data_type
+  // set to fp32_r.  These types output float32 from the GEMM, but if
+  // out_data_type is left empty the output layout defaults to the sub-byte
+  // input type, making the CRC byte-count wrong.  compute_output_crc() will
+  // return -1 in that case; raise a clear message here so users don't have
+  // to hunt for the cause.
+  if (crc_check &&
+      (gst_data_type == "fp4_r"        ||
+       gst_data_type == "fp6_e3m2_r"   ||
+       gst_data_type == "fp6_e2m3_r"   ||
+       gst_data_type == "mxfp8_e4m3_r" ||
+       gst_data_type == "mxfp8_e5m2_r") &&
+      gst_out_data_type != "fp16_r" &&
+      gst_out_data_type != "bf16_r" &&
+      gst_out_data_type != "fp32_r") {
+    msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+      "WARNING: crc_check on " + gst_data_type +
+      " requires out_data_type: fp16_r (or bf16_r/fp32_r) — CRC will be skipped "
+      "each iteration. Add 'out_data_type: fp16_r' to the config.";
+    rvs::lp::Log(msg, rvs::logresults);
+  }
+
   gst_start_time = std::chrono::system_clock::now();
   gst_log_interval_time = std::chrono::system_clock::now();
 
@@ -560,6 +740,65 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
       }
     }
 
+    if (crc_check) {
+      int crc_result = gpu_blas->compute_output_crc();
+      if (crc_result >= 0) {
+        crc_computed = true;   // at least one CRC value is now available
+
+        // Log the CRC value at trace level so it is visible with -d 5 or
+        // equivalent verbose logging, without flooding normal output.
+        std::ostringstream crc_oss;
+        crc_oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
+                << "crc-check: 0x"
+                << std::hex << std::setw(8) << std::setfill('0')
+                << gpu_blas->get_last_output_crc()
+                << (crc_result == 1 ? " [MISMATCH]" : " [OK]");
+        rvs::lp::Log(crc_oss.str(), rvs::logresults);
+      }
+
+      if (crc_result == 1) {
+        msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+          GST_LOG_CRC_CHECK_ERROR_KEY + " CRC-32 mismatch detected (SDC candidate)";
+        rvs::lp::Log(msg, rvs::logresults);
+
+        uint32_t damaged_bytes   = 0;
+        uint32_t total_bytes_out = 0;
+        double   fnorm           = -1.0;
+        gpu_blas->compute_mismatch_magnitude(damaged_bytes, total_bytes_out, fnorm);
+
+        std::ostringstream mag_oss;
+        mag_oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
+                << GST_LOG_CRC_CHECK_ERROR_KEY
+                << " mismatch magnitude:"
+                << " damaged_bytes=" << damaged_bytes
+                << "/" << total_bytes_out;
+        if (fnorm >= 0.0)
+          mag_oss << " frobenius_norm=" << std::scientific << std::setprecision(6) << fnorm;
+        else
+          mag_oss << " frobenius_norm=n/a";
+        rvs::lp::Log(mag_oss.str(), rvs::logresults);
+      } else if (crc_result == -1) {
+        msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
+          GST_LOG_CRC_CHECK_ERROR_KEY + " internal error (unsupported type or copy failed)";
+        rvs::lp::Log(msg, rvs::logresults);
+        // Remove this worker from the cross-GPU barrier immediately so peers
+        // are not left waiting for the remainder of the stress-test duration.
+        // CrcSyncGuard will see crc_sync == nullptr and skip the redundant
+        // detach() call on function exit.
+        if (crc_sync) {
+          crc_sync->detach();
+          crc_sync        = nullptr;
+          crc_guard.s     = nullptr;
+        }
+      }
+
+      // Per-iteration cross-GPU barrier: all workers rendezvous here,
+      // the last arrival compares all CRCs and logs any mismatch.
+      if (crc_sync && crc_result >= 0)
+        crc_sync->sync_and_compare(crc_sync_slot, gpu_id,
+                                   gpu_blas->get_last_output_crc());
+    }
+
     msg = "[" + action_name + "] " + MODULE_NAME + " " +
       std::to_string(gpu_id) + " " + GST_START_MSG + " " +
       " Execution time in microseconds :" + std::to_string(total_microseconds) +
@@ -569,7 +808,19 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     if (0 == run_duration_ms || total_microseconds >= run_duration_ms * 1000u)
       break;
   }
-  
+
+  // Log the final run-level CRC digest for this GPU.  The digest is a single
+  // CRC-32 value built by chaining every per-iteration output CRC, so it
+  // reflects the entire run history — not just the last iteration.
+  if (crc_check && crc_computed) {
+    std::ostringstream oss;
+    oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
+        << "crc-check run-digest: 0x"
+        << std::hex << std::setw(8) << std::setfill('0')
+        << gpu_blas->get_run_crc_digest();
+    rvs::lp::Log(oss.str(), rvs::loginfo);
+  }
+
   return true;
 }
 
@@ -586,6 +837,17 @@ void GSTWorker::run() {
   max_gflops = 0;
 
   snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
+
+  // Guard covering ramp-failure early-exit paths.  If the GPU fails ramp and
+  // run() returns before do_gst_stress_test() is entered, this ensures
+  // crc_sync->detach() is called so peer workers are not left deadlocked at
+  // the per-iteration CRC barrier.  Disarmed (s = nullptr) just before
+  // do_gst_stress_test() is called because that function has its own
+  // CrcSyncGuard and must not be double-detached.
+  struct CrcSyncGuard {
+    GstCrcSync* s;
+    ~CrcSyncGuard() { if (s) s->detach(); }
+  } ramp_guard{crc_sync};
 
   // log GST stress test - start message
   msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -619,8 +881,12 @@ void GSTWorker::run() {
     action_result.output = msg.c_str();
     action.action_callback(&action_result);
 
-    return;
+    return;   // ramp_guard destructs here → detach() called
   }
+
+  // Ramp succeeded — do_gst_stress_test() has its own CrcSyncGuard.
+  // Disarm the ramp guard to prevent a double-detach.
+  ramp_guard.s = nullptr;
 
   // the GPU succeeded to achieve the target_stress GFLOPS
   // continue with the same workload for the rest of the test duration

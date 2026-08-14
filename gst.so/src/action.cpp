@@ -27,6 +27,9 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <iomanip>
+#include <memory>
+#include <sstream>
 #include <regex>
 #include <utility>
 #include <algorithm>
@@ -77,6 +80,8 @@ using std::regex;
 #define RVS_CONF_LDD_OFFSET             "ldd"
 #define RVS_CONF_SELF_CHECK_KEY         "self_check"
 #define RVS_CONF_ACCU_CHECK_KEY         "accuracy_check"
+#define RVS_CONF_CRC_CHECK_KEY          "crc_check"
+#define RVS_CONF_CRC_CROSS_GPU_KEY      "crc_cross_gpu_check"
 #define RVS_CONF_ERROR_INJECT_KEY       "error_inject"
 #define RVS_CONF_ERROR_FREQUENCY_KEY    "error_freq"
 #define RVS_CONF_ERROR_COUNT_KEY        "error_count"
@@ -114,6 +119,8 @@ using std::regex;
 #define GST_DEFAULT_LDD_OFFSET          0
 #define GST_DEFAULT_SELF_CHECK          false
 #define GST_DEFAULT_ACCU_CHECK          false
+#define GST_DEFAULT_CRC_CHECK           false
+#define GST_DEFAULT_CRC_CROSS_GPU_CHECK false
 #define GST_DEFAULT_ERROR_INJECT        false
 #define GST_DEFAULT_ERROR_FREQUENCY     0
 #define GST_DEFAULT_ERROR_COUNT         0
@@ -166,6 +173,21 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
   uint64_t k = 0;
   vector<GSTWorker> workers(gst_gpus_device_index.size());
 
+  // Warn once if cross-GPU CRC is enabled: GEMM floating-point results are
+  // NOT bit-reproducible across different GPU architectures or models because
+  // different tiling/reduction strategies produce different rounding.
+  // Cross-GPU CRC comparison is only meaningful on homogeneous systems
+  // (all GPUs are the same model and firmware).  On heterogeneous systems
+  // mismatches will be reported even without any real data corruption.
+  if (gst_crc_check && gst_crc_cross_gpu_check &&
+      gst_gpus_device_index.size() > 1) {
+    rvs::lp::Log("[" + action_name + "] WARNING: crc_cross_gpu_check is enabled. "
+      "Cross-GPU CRC comparison is only valid on homogeneous GPU systems "
+      "(same model and firmware). On heterogeneous systems, false-positive "
+      "SDC reports are expected due to FP non-associativity across "
+      "different GPU architectures.", rvs::logresults);
+  }
+
   for (;;) {
     if (property_wait != 0)  // delay gst execution
       sleep(property_wait);
@@ -209,6 +231,20 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_ldd_offset(gst_ldd_offset);
       workers[i].set_self_check(gst_self_check);
       workers[i].set_accu_check(gst_accu_check);
+      workers[i].set_crc_check(gst_crc_check);
+      // Give every worker the same matrix seed so their input matrices are
+      // identical — prerequisite for a valid cross-GPU CRC comparison.
+      // The seed is derived from the action name for reproducibility.
+      if (gst_crc_cross_gpu_check) {
+        // FNV-1a 64-bit hash — much lower collision rate than the previous
+        // polynomial (seed * 31 + c) which shares a seed for any two names
+        // whose characters sum to the same weighted value.
+        uint64_t seed = 14695981039346656037ULL; // FNV offset basis
+        for (unsigned char c : action_name)
+          seed = (seed ^ c) * 1099511628211ULL;  // FNV prime
+        if (seed == 0) seed = 0xDEADBEEFCAFEBABEULL;
+        workers[i].set_crc_matrix_seed(seed);
+      }
       workers[i].set_error_inject(gst_error_inject);
       workers[i].set_error_frequency(gst_error_freq);
       workers[i].set_error_count(gst_error_count);
@@ -228,7 +264,27 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       i++;
     }
 
+    // Shared host matrix pool — generated once by the first worker to call
+    // setup_blas(), then copied into every subsequent worker's buffers.
+    // Only needed when cross-GPU CRC checking is active (more than one GPU).
+    if (gst_crc_check && gst_crc_cross_gpu_check &&
+        gst_gpus_device_index.size() > 1) {
+      auto shared_mats = std::make_shared<GstSharedMatrices>();
+      for (i = 0; i < gst_gpus_device_index.size(); i++)
+        workers[i].set_shared_matrices(shared_mats);
+    }
+
     if (property_parallel) {
+      // Per-iteration cross-GPU CRC barrier — one shared instance per round.
+      std::unique_ptr<GstCrcSync> crc_sync;
+      if (gst_crc_check && gst_crc_cross_gpu_check &&
+          gst_gpus_device_index.size() > 1) {
+        crc_sync = std::make_unique<GstCrcSync>(
+            gst_gpus_device_index.size(), action_name);
+        for (i = 0; i < gst_gpus_device_index.size(); i++)
+          workers[i].set_crc_sync(crc_sync.get(), i);
+      }
+
       for (i = 0; i < gst_gpus_device_index.size(); i++)
         workers[i].start();
 
@@ -249,6 +305,75 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     // check if stop signal was received
     if (rvs::lp::Stopping())
       return false;
+
+    // Post-run cross-GPU CRC comparison.
+    // Parallel mode uses the per-iteration GstCrcSync barrier above, so this
+    // block is only needed for sequential mode (workers run one at a time and
+    // cannot share a barrier).
+    if (!property_parallel &&
+        gst_crc_check && gst_crc_cross_gpu_check && gst_gpus_device_index.size() > 1) {
+      // Find the first worker with a valid CRC to use as reference.
+      size_t ref_idx = SIZE_MAX;
+      for (size_t wi = 0; wi < workers.size(); ++wi) {
+        if (workers[wi].has_valid_crc()) {
+          ref_idx = wi;
+          break;
+        }
+      }
+
+      if (ref_idx != SIZE_MAX) {
+        // Normalize iteration count: compare only the first min_iters iterations
+        // across all workers.  In sequential mode each GPU runs for a fixed
+        // wall-clock duration so faster or cooler GPUs complete more iterations.
+        // The run digest encodes iteration count, so comparing full digests when
+        // counts differ always mismatches even on healthy hardware.
+        size_t min_iters = workers[ref_idx].get_crc_iter_count();
+        for (size_t wi = ref_idx + 1; wi < workers.size(); ++wi) {
+          if (!workers[wi].has_valid_crc())
+            continue;
+          min_iters = std::min(min_iters, workers[wi].get_crc_iter_count());
+        }
+
+        if (min_iters == 0) {
+          rvs::lp::Log("[" + action_name + "] WARNING: cross-GPU run-digest skipped"
+                       " — no common iterations recorded across GPUs.", rvs::logresults);
+        } else {
+          uint32_t ref_digest = workers[ref_idx].get_crc_digest_for_n_iters(min_iters);
+          uint16_t ref_gpu_id = workers[ref_idx].get_gpu_id();
+          size_t   ref_iters  = workers[ref_idx].get_crc_iter_count();
+
+          for (size_t wi = ref_idx + 1; wi < workers.size(); ++wi) {
+            if (!workers[wi].has_valid_crc())
+              continue;
+
+            uint32_t peer_digest = workers[wi].get_crc_digest_for_n_iters(min_iters);
+            uint16_t peer_gpu_id = workers[wi].get_gpu_id();
+            size_t   peer_iters  = workers[wi].get_crc_iter_count();
+
+            std::ostringstream oss;
+            if (peer_digest != ref_digest) {
+              oss << "[" << action_name << "] "
+                  << "cross-GPU run-digest mismatch (SDC candidate): "
+                  << "GPU " << peer_gpu_id
+                  << " digest 0x" << std::hex << std::setw(8) << std::setfill('0') << peer_digest
+                  << " != GPU " << std::dec << ref_gpu_id
+                  << " digest 0x" << std::hex << std::setw(8) << std::setfill('0') << ref_digest
+                  << " (compared first " << std::dec << min_iters << " of "
+                  << ref_iters << "/" << peer_iters << " iterations)";
+              rvs::lp::Log(oss.str(), rvs::logresults);
+            } else {
+              oss << "[" << action_name << "] "
+                  << "cross-GPU run-digest OK: GPU " << peer_gpu_id
+                  << " and GPU " << ref_gpu_id
+                  << " digest 0x" << std::hex << std::setw(8) << std::setfill('0') << ref_digest
+                  << " (compared first " << std::dec << min_iters << " of "
+                  << ref_iters << "/" << peer_iters << " iterations)";
+              rvs::lp::Log(oss.str(), rvs::loginfo);
+            }
+          }
+        }
+      }
+    }
 
     if (property_count != 0) {
       k++;
@@ -479,6 +604,31 @@ bool gst_action::get_all_gst_config_keys(void) {
       std::string(RVS_CONF_ACCU_CHECK_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
+  }
+
+  if (property_get(RVS_CONF_CRC_CHECK_KEY, &gst_crc_check, GST_DEFAULT_CRC_CHECK)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_CRC_CHECK_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get(RVS_CONF_CRC_CROSS_GPU_KEY, &gst_crc_cross_gpu_check,
+        GST_DEFAULT_CRC_CROSS_GPU_CHECK)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_CRC_CROSS_GPU_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  // crc_cross_gpu_check requires crc_check to be enabled — the cross-GPU
+  // comparison is driven by the per-iteration CRC values that are only
+  // computed when crc_check is true.
+  if (gst_crc_cross_gpu_check && !gst_crc_check) {
+    rvs::lp::Log("[" + action_name + "] WARNING: crc_cross_gpu_check: true has no effect "
+      "without crc_check: true — no CRC will be computed. "
+      "Set crc_check: true to enable cross-GPU comparison.",
+      rvs::logresults);
   }
 
   if (property_get(RVS_CONF_ERROR_INJECT_KEY, &gst_error_inject, GST_DEFAULT_ERROR_INJECT)) {

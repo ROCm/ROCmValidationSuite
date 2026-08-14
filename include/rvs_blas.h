@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -44,6 +44,7 @@
 
 #include <hipblaslt/hipblaslt.h>
 #include <map>
+#include <vector>
 using std::map;
 
 #define RVS_BLAS_HIP_DATATYPE_INVALID static_cast<hipDataType>(0XFFFF)
@@ -111,6 +112,116 @@ class rvs_blas {
     bool is_gemm_op_complete(void);
     bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
     void set_gemm_error(uint64_t _error_freq, uint64_t _error_count);
+
+    /**
+     * @brief Override the matrix generation seed so that multiple rvs_blas
+     *        instances (one per GPU) produce identical input matrices.
+     *
+     * Must be called BEFORE generate_random_matrix_data().
+     *
+     * For hiprand mode this calls hiprandSetPseudoRandomGeneratorSeed().
+     * For CPU-side modes this replaces the time(NULL) seed used in
+     * generate_random_matrix_data().
+     *
+     * @param seed  Deterministic seed value shared across all workers.
+     */
+    void set_matrix_seed(uint64_t seed);
+
+    /**
+     * @brief Compute CRC-32 over the GEMM output buffer and compare against
+     *        the stored reference.  On the first call the CRC is saved as the
+     *        reference and 0 (no mismatch) is returned.  On every subsequent
+     *        call a non-zero value is returned when the CRC differs from the
+     *        reference, signalling a potential silent data corruption event.
+     * @return 0  – output matches reference (or this is the first call)
+     *         1  – CRC mismatch detected (SDC candidate)
+     *        -1  – internal error (e.g. GPU→host copy failed)
+     */
+    int compute_output_crc();
+
+    //! Returns the CRC-32 value computed during the most recent
+    //! compute_output_crc() call.  Valid only when compute_output_crc()
+    //! has been called at least once (i.e. crc_ref_valid is true).
+    uint32_t get_last_output_crc() const { return last_crc; }
+
+    //! Returns a single 32-bit digest that represents the ordered sequence of
+    //! every per-iteration CRC produced so far.  Each call to
+    //! compute_output_crc() chains the iteration's CRC-32 value into this
+    //! accumulator, so the digest is sensitive to both the value and the
+    //! position of any individual iteration's output.  Compare this across
+    //! GPUs after a full run to detect any transient or sustained SDC event.
+    uint32_t get_run_crc_digest() const {
+      return accumulated_crc ^ 0xFFFFFFFFu;
+    }
+
+    //! Number of per-iteration CRC values recorded so far.
+    size_t get_crc_iter_count() const { return crc_per_iter.size(); }
+
+    //! Compute the run digest over only the first @p n iterations.
+    //! Used to normalize cross-GPU digest comparison when GPUs complete
+    //! different numbers of iterations (sequential mode, time-based duration).
+    uint32_t compute_digest_for_n_iters(size_t n) const;
+
+    //! Called only when compute_output_crc() returns 1 (mismatch).
+    //! Fills:
+    //!   damaged_bytes  – number of raw bytes that differ from the reference
+    //!   total_bytes    – total bytes in the compared buffer
+    //!   fnorm          – relative Frobenius norm ||current-ref||_F / ||ref||_F,
+    //!                    or -1.0 when the element type is not supported for norm.
+    //! Both hcrc_buf (current) and ref_buf (reference snapshot from iteration 1)
+    //! must be valid — only safe to call after at least two compute_output_crc() calls.
+    void compute_mismatch_magnitude(uint32_t &damaged_bytes,
+                                    uint32_t &total_bytes_out,
+                                    double   &fnorm) const;
+
+    /**
+     * @brief Copy the current host matrix bytes into caller-owned vectors.
+     *
+     * Must be called after generate_random_matrix_data() so that ha/hb/hc
+     * are populated.  Used by the first GSTWorker to snapshot the shared
+     * matrix pool for all subsequent workers.
+     */
+    void get_host_matrix_bytes(std::vector<uint8_t> &a,
+                               std::vector<uint8_t> &b,
+                               std::vector<uint8_t> &c) const;
+
+    /**
+     * @brief Overwrite ha/hb/hc from caller-provided byte vectors.
+     *
+     * Used by subsequent GSTWorkers instead of generate_random_matrix_data()
+     * to ensure byte-identical input matrices across all GPUs.
+    /**
+     * Inject previously-snapshotted matrix bytes into this instance's host
+     * buffers.  Sizes must match what was allocated for this instance — ensured
+     * by s_host_matrix_byte_sizes() mirroring allocate_host_matrix_mem().
+     */
+    void inject_host_matrix_data(const std::vector<uint8_t> &a,
+                                 const std::vector<uint8_t> &b,
+                                 const std::vector<uint8_t> &c);
+
+    /**
+     * @brief Compute CRC-32 over each of the three host input matrices.
+     *
+     * Uses the same CRC-32/ISO-HDLC polynomial as compute_output_crc().
+     * Returns zeros when host buffers are not allocated (e.g. hiprand mode).
+     * Intended for diagnostic logging to confirm all GPUs received identical
+     * input data.
+     */
+    void get_host_matrix_input_crcs(uint32_t &crc_a,
+                                    uint32_t &crc_b,
+                                    uint32_t &crc_c) const;
+
+    //! CRC-32 over the scale matrices hsa and hsb.
+    //! Returns zero for each when the corresponding buffer is null.
+    void get_host_scale_crcs(uint32_t &crc_sa, uint32_t &crc_sb) const;
+
+    //! Copy hsa/hsb into caller-owned vectors (empty when not allocated).
+    void get_host_scale_bytes(std::vector<uint8_t> &sa,
+                              std::vector<uint8_t> &sb) const;
+
+    //! Overwrite hsa/hsb from caller-provided byte vectors.
+    void inject_host_scale_data(const std::vector<uint8_t> &sa,
+                                const std::vector<uint8_t> &sb);
 
     bool set_callback(rvsBlasCallback_t callback, void *user_data);
 
@@ -215,6 +326,36 @@ class rvs_blas {
     uint64_t error_count;
     // gemm check counter
     uint64_t check_count;
+
+    // Matrix generation seed (0 = use time(NULL) / library default)
+    uint64_t matrix_seed;
+
+    // CRC-based SDC detection state
+    //! Reference CRC-32 captured from the first GEMM output
+    uint32_t crc_ref;
+    //! CRC-32 from the most recent compute_output_crc() call
+    uint32_t last_crc;
+    //! Running CRC-32 accumulator (pre-finalized state) built by chaining every
+    //! per-iteration CRC into it.  Finalized value is exposed via
+    //! get_run_crc_digest().  Initialized to 0xFFFFFFFFu (standard pre-condition).
+    uint32_t accumulated_crc;
+    //! True once the reference CRC has been stored
+    bool     crc_ref_valid;
+    //! Per-iteration CRC history: crc_per_iter[i] is the raw CRC-32 of iteration i.
+    //! Used by compute_digest_for_n_iters() to normalize cross-GPU comparisons.
+    std::vector<uint32_t> crc_per_iter;
+    //! Scratch host buffer used to copy GPU output for CRC computation
+    void    *hcrc_buf;
+    //! Byte length of hcrc_buf (tracks reallocation need)
+    size_t   hcrc_buf_bytes;
+    //! Host-pinned snapshot of the iteration-1 output (the reference output).
+    //! Allocated and filled on the first compute_output_crc() call, then frozen.
+    //! Used by compute_mismatch_magnitude() for byte-diff and Frobenius norm.
+    void    *ref_buf;
+    size_t   ref_buf_bytes;
+    //! Byte size of the last CRC computation region — set in compute_output_crc(),
+    //! read by compute_mismatch_magnitude() for the byte-diff loop.
+    size_t   crc_total_bytes;
 
     //! gemm mode : basic (single), batched or strided batched
     std::string gemm_mode;

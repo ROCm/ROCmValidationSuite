@@ -29,6 +29,9 @@
 #include <memory>
 #include <mutex>
 #include <condition_variable>
+#include <vector>
+#include <sstream>
+#include <iomanip>
 #include "include/rvsthreadbase.h"
 #include "include/rvs_blas.h"
 #include "include/rvs_util.h"
@@ -38,6 +41,85 @@
 #define GST_RESULT_PASS_MESSAGE         "true"
 #define GST_RESULT_FAIL_MESSAGE         "false"
 
+/**
+ * @struct GstCrcSync
+ * @ingroup GST
+ *
+ * @brief Per-iteration cross-GPU CRC synchronization barrier.
+ *
+ * One instance is shared by all parallel GSTWorker threads.  After each
+ * GEMM iteration every worker calls sync_and_compare() with its freshly
+ * computed CRC-32.  The last worker to arrive compares all CRCs, logs any
+ * mismatch, then releases the others so every GPU advances in lock-step.
+ *
+ * When a worker exits early (error or stop signal) it calls detach() so the
+ * remaining workers are not left waiting.
+ */
+struct GstCrcSync {
+  std::mutex              mtx;
+  std::condition_variable cv;
+
+  //! incremented after every comparison round; used as a generation counter
+  uint64_t  generation{0};
+  //! number of workers still active (decremented by detach())
+  size_t    total_workers;
+  //! workers that have checked in for the current round
+  size_t    arrived{0};
+  //! set when total_workers drops to zero mid-wait
+  bool      aborted{false};
+
+  //! CRC-32 written by each worker (indexed by slot)
+  std::vector<uint32_t>  crcs;
+  //! GPU IDs written by each worker (indexed by slot)
+  std::vector<uint16_t>  gpu_ids;
+
+  std::string action_name;
+
+  GstCrcSync(size_t n_workers, const std::string& name)
+    : total_workers(n_workers)
+    , crcs(n_workers, 0)
+    , gpu_ids(n_workers, 0)
+    , action_name(name)
+  {}
+
+  /**
+   * @brief Called by worker[slot] after computing its CRC for the current
+   *        iteration.  Blocks until all active workers have checked in, then
+   *        the last arrival compares every CRC against slot-0's value and
+   *        logs any mismatch before releasing all waiters.
+   */
+  void sync_and_compare(size_t slot, uint16_t gpu_id, uint32_t crc);
+
+  /**
+   * @brief Called when a worker exits before the end of its normal run
+   *        (error, stop signal, or natural completion after the last
+   *        iteration).  Decrements total_workers and wakes any workers
+   *        that are waiting at the barrier so they are not left deadlocked.
+   */
+  void detach();
+};
+
+/**
+ * @struct GstSharedMatrices
+ * @ingroup GST
+ *
+ * @brief Shared host matrix pool for cross-GPU CRC consistency.
+ *
+ * Generated once by the first GSTWorker to call setup_blas(), then
+ * reused by all subsequent workers.  Each worker copies the shared bytes
+ * into its own rvs_blas host buffers before uploading to its GPU, ensuring
+ * all GPUs run GEMM on byte-identical input matrices.
+ *
+ * Protected by its own mutex so parallel workers don't race on the
+ * first-fill path.
+ */
+struct GstSharedMatrices {
+  std::mutex           mtx;
+  bool                 ready{false};
+  std::vector<uint8_t> a, b, c;
+  // Scale matrices for MX fp4/fp6/mxfp8 types (empty for all other types).
+  std::vector<uint8_t> sa, sb;
+};
 
 /**
  * @class GSTWorker
@@ -234,6 +316,72 @@ class GSTWorker : public rvs::ThreadBase {
     //! returns the accuracy check value
     bool get_accu_check(void) { return accu_check; }
 
+    //! sets the shared host matrix pool for cross-GPU CRC consistency.
+    //! When set, the first worker to call setup_blas() generates the matrices
+    //! and populates the pool; all subsequent workers copy from it.
+    void set_shared_matrices(std::shared_ptr<GstSharedMatrices> m) {
+      shared_matrices = m;
+    }
+
+    //! sets the shared per-iteration CRC sync barrier (parallel mode only).
+    //! slot is this worker's index in the barrier's crc/gpu_id arrays.
+    void set_crc_sync(GstCrcSync* sync, size_t slot) {
+      crc_sync      = sync;
+      crc_sync_slot = slot;
+    }
+
+    //! sets the shared matrix seed used when crc_cross_gpu_check is enabled.
+    //! All workers must receive the same value so their input matrices are
+    //! identical.  0 means "use default (time-based) seeding".
+    void set_crc_matrix_seed(uint64_t seed) { crc_matrix_seed = seed; }
+
+    //! returns the matrix seed
+    uint64_t get_crc_matrix_seed(void) { return crc_matrix_seed; }
+
+    //! enables/disables CRC-32-based SDC detection
+    void set_crc_check(bool _crc_check) {
+      crc_check = _crc_check;
+      // Reset per-round validity flag so stale data from the previous round
+      // is not visible via has_valid_crc() between rounds.
+      crc_computed = false;
+    }
+
+    //! returns the CRC check flag
+    bool get_crc_check(void) { return crc_check; }
+
+    //! returns the CRC-32 of the last GEMM output checked by this worker.
+    //! Valid only when crc_check is true and the worker has completed at
+    //! least one GEMM iteration.
+    uint32_t get_last_crc(void) {
+      return gpu_blas ? gpu_blas->get_last_output_crc() : 0;
+    }
+
+    //! Returns the ordered-sequence digest: a single CRC-32 value built by
+    //! chaining every per-iteration output CRC across the full run.  Use this
+    //! for post-run cross-GPU comparison so that any transient corruption in
+    //! any iteration (not just the last one) is captured.
+    //! Valid only when has_valid_crc() is true.
+    uint32_t get_run_crc_digest(void) {
+      return gpu_blas ? gpu_blas->get_run_crc_digest() : 0;
+    }
+
+    //! Number of iterations for which a CRC was recorded.
+    //! Used to find the minimum across workers before a normalized comparison.
+    size_t get_crc_iter_count(void) {
+      return gpu_blas ? gpu_blas->get_crc_iter_count() : 0;
+    }
+
+    //! Digest over only the first @p n recorded iterations.
+    //! Allows a fair cross-GPU comparison when workers completed different
+    //! iteration counts (sequential mode, time-based duration).
+    uint32_t get_crc_digest_for_n_iters(size_t n) {
+      return gpu_blas ? gpu_blas->compute_digest_for_n_iters(n) : 0;
+    }
+
+    //! returns true when the worker has computed at least one CRC
+    //! (i.e. get_last_crc() holds a meaningful value).
+    bool has_valid_crc(void) { return crc_check && crc_computed; }
+
     //! sets gemm output error inject enable/disable
     void set_error_inject(bool _error_inject) { error_inject = _error_inject; }
 
@@ -391,6 +539,18 @@ class GSTWorker : public rvs::ThreadBase {
     bool self_check;
     //! gemm output accuracy-check
     bool accu_check;
+    //! CRC-32-based SDC detection across GEMM iterations
+    bool crc_check;
+    //! set to true once the worker has computed at least one CRC value
+    bool crc_computed;
+    //! shared matrix seed injected by the action for cross-GPU CRC validity
+    uint64_t crc_matrix_seed;
+    //! shared host matrix pool — non-null when crc_cross_gpu_check is enabled
+    std::shared_ptr<GstSharedMatrices> shared_matrices;
+    //! shared per-iteration barrier (nullptr when not in parallel mode)
+    GstCrcSync* crc_sync;
+    //! this worker's slot index in the GstCrcSync arrays
+    size_t crc_sync_slot;
     //! Inject error in gemm output
     bool error_inject;
     //! error injection frequency (number of gemm calls per error injection)

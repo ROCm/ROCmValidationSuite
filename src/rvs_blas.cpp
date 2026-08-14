@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -23,12 +23,16 @@
  *
  *******************************************************************************/
 #include "include/rvs_blas.h"
+#include "include/rvsloglp.h"
 
 #include <time.h>
+#include <cassert>
+#include <cstring>
 #include <iostream>
 #include <cmath>
 #include <random>
 #include <thread>
+#include <atomic>
 #include <algorithm>
 
 #if(defined(RVS_ROCBLAS_VERSION_FLAT) && (RVS_ROCBLAS_VERSION_FLAT >= 3001000 && RVS_ROCBLAS_VERSION_FLAT < 5000000))
@@ -127,6 +131,16 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , hbl_scale_b_size(0)
   , hot_calls(_hot_calls)
   , block_count(1)
+  , matrix_seed(0)
+  , crc_ref(0)
+  , last_crc(0)
+  , accumulated_crc(0xFFFFFFFFu)
+  , crc_ref_valid(false)
+  , hcrc_buf(nullptr)
+  , hcrc_buf_bytes(0)
+  , ref_buf(nullptr)
+  , ref_buf_bytes(0)
+  , crc_total_bytes(0)
 {
 
   if (blas_source == "rocblas") {
@@ -736,6 +750,33 @@ double rvs_blas::get_time_us(void) {
 }
 
 /**
+ * Override the matrix generation seed so all GPU workers receive identical
+ * input matrices (required for a valid cross-GPU CRC comparison).
+ * Call this after construction but before generate_random_matrix_data().
+ */
+void rvs_blas::set_matrix_seed(uint64_t seed) {
+  matrix_seed = seed;
+
+  // hiprand path: re-seed the on-device generator.
+  if (matrix_seed != 0 && hiprand_generator != nullptr) {
+    if (hiprandSetPseudoRandomGeneratorSeed(hiprand_generator, matrix_seed)
+        != HIPRAND_STATUS_SUCCESS) {
+      std::cout << "\n hiprandSetPseudoRandomGeneratorSeed() failed !!!" << "\n";
+    }
+  }
+
+  // "rand" path: rvsblas_t_rng is thread_local and seeded by thread-ID hash,
+  // which differs across GPU worker threads.  Re-seed it here with the shared
+  // matrix_seed so that every GPU generates an identical random matrix when
+  // matrix_init == "rand".  Also clear the pre-filled cache used by
+  // rvsblas_uniform_int_1_10() so it is rebuilt from the new seed.
+  if (matrix_seed != 0) {
+    rvsblas_t_rng.seed(static_cast<rvsblas_rng_t::result_type>(matrix_seed));
+    rvsblas_t_rand_init = 0;   // force cache refill from the new seed
+  }
+}
+
+/**
  * @brief releases GPU mem & destroys the rocBlas handle
  */
 void rvs_blas::release_gpu_matrix_mem(void) {
@@ -952,6 +993,10 @@ void rvs_blas::release_host_matrix_mem(void) {
     hipHostFree(hout);
   if(hdout)
     hipHostFree(hdout);
+  if(hcrc_buf)
+    hipHostFree(hcrc_buf);
+  if(ref_buf)
+    hipHostFree(ref_buf);
 }
 
 /**
@@ -1336,7 +1381,10 @@ void rvs_blas::generate_random_matrix_data(void) {
     else {
 
       size_t i;
-      uint64_t nextr = (uint64_t) time(NULL);
+      // Use the explicitly set seed when available (ensures identical matrices
+      // across all GPU workers for cross-GPU CRC comparison); fall back to
+      // time(NULL) for the original random-per-run behaviour.
+      uint64_t nextr = (matrix_seed != 0) ? matrix_seed : (uint64_t) time(NULL);
 
       //SGEMM (float fp32_r)
       if((ops_type == "sgemm") || (data_type == "fp32_r")) {
@@ -2198,6 +2246,326 @@ bool rvs_blas::validate_gemm(bool self_check, bool accu_check, double &self_erro
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// CRC-32/ISO-HDLC (polynomial 0xEDB88320, same as zlib/Ethernet/zip).
+// Table is generated once and reused for all subsequent calls.
+// ---------------------------------------------------------------------------
+static uint32_t crc32_table[256];
+static std::atomic<bool> crc32_table_ready{false};
+
+static void crc32_init_table() {
+  for (uint32_t i = 0; i < 256; ++i) {
+    uint32_t crc = i;
+    for (int j = 0; j < 8; ++j)
+      crc = (crc >> 1) ^ (0xEDB88320u & -(crc & 1u));
+    crc32_table[i] = crc;
+  }
+  // Release store: table entries are visible to all threads that
+  // subsequently observe crc32_table_ready == true via an acquire load.
+  crc32_table_ready.store(true, std::memory_order_release);
+}
+
+static uint32_t crc32_bytes(const void *buf, size_t len) {
+  if (!crc32_table_ready.load(std::memory_order_acquire))
+    crc32_init_table();
+  const uint8_t *p = reinterpret_cast<const uint8_t *>(buf);
+  uint32_t crc = 0xFFFFFFFFu;
+  for (size_t i = 0; i < len; ++i)
+    crc = (crc >> 8) ^ crc32_table[(crc ^ p[i]) & 0xFFu];
+  return crc ^ 0xFFFFFFFFu;
+}
+
+/**
+ * Compute CRC-32 over the GEMM output buffer and compare against the stored
+ * reference.
+ *
+ * On the first call the CRC is captured as the reference and 0 is returned.
+ * On every subsequent call:
+ *   0  – CRC matches reference (output is consistent)
+ *   1  – CRC mismatch (potential silent data corruption)
+ *  -1  – internal error (GPU→host copy failed, or unsupported data type)
+ */
+int rvs_blas::compute_output_crc() {
+
+  void  *dout       = nullptr;
+  size_t elem_bytes = 0;
+  size_t n_elems    = 0;
+
+  // Select output buffer and per-element byte width.
+  //
+  // Rule:
+  //   ops_type set (sgemm/dgemm/hgemm) → rocblas classic path, output→dc,
+  //   Ti==To.
+  //
+  //   data_type set → output→dd (size_d > 0 because data_type is non-empty
+  //   in both the rocblas and hipblaslt constructor paths).  The "To" type
+  //   (which determines element width in dd) depends on the backend:
+  //     • rocblas :  To == Ti  (same type as input)
+  //     • hipblaslt: To == float for fp8* / fp4* / fp6* / mxfp8*;
+  //                  To == Ti  for fp16_r, bf16_r, fp32_r, fp64_r, i8_r
+  //
+  // Batched-mode note:
+  //   strided_batched: size_d already covers all batches (adjusted in ctor).
+  //   hipblaslt "batched" (pointer-array): size_d covers only one slice — the
+  //   CRC will cover the first batch's output only.  This is a known
+  //   limitation; use strided_batched for full-buffer CRC coverage.
+  if (ops_type == "sgemm") {
+    dout       = dc;
+    elem_bytes = sizeof(float);      // Ti=To=float
+    n_elems    = size_c;
+  } else if (ops_type == "dgemm") {
+    dout       = dc;
+    elem_bytes = sizeof(double);     // Ti=To=double
+    n_elems    = size_c;
+  } else if (ops_type == "hgemm") {
+    dout       = dc;
+    elem_bytes = 2;                  // Ti=To=rocblas_half (16-bit)
+    n_elems    = size_c;
+  } else if (data_type == "fp16_r" || data_type == "bf16_r") {
+    dout = dd;
+    // hipblaslt allows promoting fp16/bf16 output to fp32 via out_data_type.
+    // Use the actual output datatype size so the CRC covers the full buffer.
+    if (hbl_out_datatype == HIP_R_32F) {
+      elem_bytes = sizeof(float);
+    } else {
+      elem_bytes = 2;               // native fp16 / bf16 output (HIP_R_16F or HIP_R_16BF)
+    }
+    n_elems = size_d;
+  } else if (data_type == "fp8_r") {
+    dout       = dd;
+    // rocblas: To=rocblas_f8 (1 byte); hipblaslt: To=float (4 bytes)
+    elem_bytes = (blas_source == "rocblas") ? 1u : sizeof(float);
+    n_elems    = size_d;
+  } else if (data_type == "fp8_e4m3_r" || data_type == "fp8_e5m2_r") {
+    dout       = dd;
+    elem_bytes = sizeof(float);      // hipblaslt: Ti=fp8/bf8, To=float
+    n_elems    = size_d;
+  } else if (data_type == "fp4_r"       ||
+             data_type == "fp6_e3m2_r"  ||
+             data_type == "fp6_e2m3_r"  ||
+             data_type == "mxfp8_e4m3_r"||
+             data_type == "mxfp8_e5m2_r") {
+    // For fp4/fp6/mxfp8 hipblaslt GEMM the supported output types are
+    // fp16_r (HIP_R_16F) or fp32_r (HIP_R_32F) depending on the hardware.
+    // If out_data_type is left empty, hbl_out_datatype falls back to the
+    // sub-byte input type, making the CRC byte-count wrong.
+    // Guard: only proceed when the output type is a known full-byte format.
+    if (hbl_out_datatype == HIP_R_16F || hbl_out_datatype == HIP_R_16BF) {
+      elem_bytes = 2;               // fp16 / bf16 output
+    } else if (hbl_out_datatype == HIP_R_32F) {
+      elem_bytes = sizeof(float);   // fp32 output
+    } else {
+      rvs::lp::Log("[crc] fp4/fp6/mxfp8 CRC requires out_data_type fp16_r, "
+                   "bf16_r, or fp32_r — skipping CRC (set out_data_type in config)",
+                   rvs::logresults);
+      return -1;
+    }
+    dout    = dd;
+    n_elems = size_d;
+  } else if (data_type == "i8_r") {
+    // hipblaslt i8_r GEMM accumulates to int32 (4 bytes/element), not int8.
+    // Use hbl_out_datatype to get the real output element size; if it is
+    // HIP_R_8I (int8, 1 byte) the allocation would be under-sized and the
+    // CRC would cover only a fraction of the actual output.
+    dout       = dd;
+    elem_bytes = (hbl_out_datatype == HIP_R_32I) ? sizeof(int32_t)
+               : (hbl_out_datatype == HIP_R_32F) ? sizeof(float)
+               : 1u;                 // rocblas i8_r: Ti=To=int8_t
+    n_elems    = size_d;
+  } else if (data_type == "fp32_r") {
+    dout       = dd;
+    elem_bytes = sizeof(float);      // Ti=To=float
+    n_elems    = size_d;
+  } else if (data_type == "fp64_r") {
+    dout       = dd;
+    elem_bytes = sizeof(double);     // Ti=To=double
+    n_elems    = size_d;
+  } else {
+    return -1;
+  }
+
+  size_t total_bytes = n_elems * elem_bytes;
+  if (total_bytes == 0 || dout == nullptr)
+    return -1;
+
+  // For rotating workloads (block_count > 1) the hipblaslt hot-call loop
+  // cycles through block_count output slices using index (i % block_count).
+  // After hot_calls iterations the last slice written is at index:
+  //   (hot_calls - 1) % block_count
+  // Advance dout to that slice so we CRC the actual output, not stale slice 0.
+  // This only applies to dd-based paths; the rocblas classic path (dc) does
+  // not rotate its output pointer and always writes to slice 0.
+  if (block_count > 1 && dout == dd) {
+    size_t last_block = (hot_calls > 0) ? (hot_calls - 1) % block_count : 0;
+    dout = static_cast<uint8_t *>(dout) + last_block * total_bytes;
+  }
+
+  // (Re-)allocate the host scratch buffer when the output size changes.
+  if (hcrc_buf == nullptr || hcrc_buf_bytes < total_bytes) {
+    if (hcrc_buf)
+      hipHostFree(hcrc_buf);
+    hcrc_buf       = nullptr;
+    hcrc_buf_bytes = 0;
+
+    if (hipHostMalloc(&hcrc_buf, total_bytes, 0) != hipSuccess)
+      return -1;
+    hcrc_buf_bytes = total_bytes;
+  }
+
+  // Copy the GPU output buffer to host.
+  if (hipMemcpy(hcrc_buf, dout, total_bytes, hipMemcpyDeviceToHost) != hipSuccess)
+    return -1;
+
+  crc_total_bytes = total_bytes;
+
+  uint32_t crc = crc32_bytes(hcrc_buf, total_bytes);
+  last_crc = crc;   // always expose the latest value for cross-GPU comparison
+  crc_per_iter.push_back(crc);  // record for normalized cross-GPU comparison
+
+  // Chain this iteration's CRC into the run-level digest.
+  // crc32_bytes() above performed an acquire load of crc32_table_ready, so
+  // crc32_table entries are visible here without an additional fence.
+  {
+    const uint8_t *p = reinterpret_cast<const uint8_t *>(&crc);
+    for (int j = 0; j < 4; ++j)
+      accumulated_crc = (accumulated_crc >> 8) ^
+                        crc32_table[(accumulated_crc ^ p[j]) & 0xFFu];
+  }
+
+  if (!crc_ref_valid) {
+    // First call — store reference CRC and snapshot the output bytes for
+    // magnitude analysis on future mismatches.
+    crc_ref       = crc;
+    crc_ref_valid = true;
+
+    if (ref_buf == nullptr || ref_buf_bytes < total_bytes) {
+      if (ref_buf)
+        hipHostFree(ref_buf);
+      ref_buf       = nullptr;
+      ref_buf_bytes = 0;
+      if (hipHostMalloc(&ref_buf, total_bytes, 0) == hipSuccess)
+        ref_buf_bytes = total_bytes;
+    }
+    if (ref_buf)
+      std::memcpy(ref_buf, hcrc_buf, total_bytes);
+
+    return 0;
+  }
+
+  return (crc != crc_ref) ? 1 : 0;
+}
+
+/**
+ * Compute the run digest over only the first @p n recorded iterations.
+ * Replicates the same CRC-of-CRCs chaining used by compute_output_crc() so
+ * the result is comparable to get_run_crc_digest() when n == crc_per_iter.size().
+ * Returns 0 when n == 0 or crc_per_iter is empty.
+ */
+uint32_t rvs_blas::compute_digest_for_n_iters(size_t n) const {
+  if (n == 0 || crc_per_iter.empty())
+    return 0;
+  size_t count = std::min(n, crc_per_iter.size());
+  uint32_t acc = 0xFFFFFFFFu;
+  for (size_t i = 0; i < count; ++i) {
+    const uint8_t *p = reinterpret_cast<const uint8_t *>(&crc_per_iter[i]);
+    for (int j = 0; j < 4; ++j)
+      acc = (acc >> 8) ^ crc32_table[(acc ^ p[j]) & 0xFFu];
+  }
+  return acc ^ 0xFFFFFFFFu;
+}
+
+/**
+ * Compute the magnitude of a CRC mismatch between the current output
+ * (hcrc_buf) and the iteration-1 reference snapshot (ref_buf).
+ *
+ * Both byte-level difference count and a relative Frobenius norm are returned
+ * so callers can quickly triage whether a detected SDC event is a single
+ * flipped bit or a large-scale computation error.
+ *
+ * Must only be called after compute_output_crc() has returned 1 (mismatch).
+ */
+void rvs_blas::compute_mismatch_magnitude(uint32_t &damaged_bytes,
+                                           uint32_t &total_bytes_out,
+                                           double   &fnorm) const {
+  damaged_bytes    = 0;
+  total_bytes_out  = 0;
+  fnorm            = -1.0;
+
+  if (!ref_buf || !hcrc_buf || crc_total_bytes == 0)
+    return;
+
+  const size_t nb = std::min(ref_buf_bytes, crc_total_bytes);
+
+  // Byte-level difference count.
+  const uint8_t *cur = reinterpret_cast<const uint8_t *>(hcrc_buf);
+  const uint8_t *ref = reinterpret_cast<const uint8_t *>(ref_buf);
+  uint32_t diff_count = 0;
+  for (size_t i = 0; i < nb; ++i)
+    if (cur[i] != ref[i])
+      ++diff_count;
+
+  damaged_bytes   = diff_count;
+  total_bytes_out = static_cast<uint32_t>(nb);
+
+  // Frobenius norm: ||current - ref||_F / ||ref||_F
+  // Use the same element type as the output buffer.
+  const int64_t M    = static_cast<int64_t>(m);
+  const int64_t N    = static_cast<int64_t>(n);
+  const int64_t lda  = static_cast<int64_t>(blas_ldc_offset);
+  const size_t  n_elems = M * N;
+
+  if (ops_type == "sgemm") {
+    if (nb >= n_elems * sizeof(float))
+      fnorm = std::abs(check_norm_error('F', M, N, lda,
+                reinterpret_cast<float *>(ref_buf),
+                reinterpret_cast<float *>(hcrc_buf)));
+  } else if (ops_type == "dgemm") {
+    if (nb >= n_elems * sizeof(double))
+      fnorm = std::abs(check_norm_error('F', M, N, lda,
+                reinterpret_cast<double *>(ref_buf),
+                reinterpret_cast<double *>(hcrc_buf)));
+  } else if (data_type == "fp32_r") {
+    if (nb >= n_elems * sizeof(float))
+      fnorm = std::abs(check_norm_error('F', M, N, lda,
+                reinterpret_cast<float *>(ref_buf),
+                reinterpret_cast<float *>(hcrc_buf)));
+  } else if (data_type == "fp64_r") {
+    if (nb >= n_elems * sizeof(double))
+      fnorm = std::abs(check_norm_error('F', M, N, lda,
+                reinterpret_cast<double *>(ref_buf),
+                reinterpret_cast<double *>(hcrc_buf)));
+  } else if (data_type == "fp16_r") {
+    if (nb >= n_elems * 2u)
+      fnorm = std::abs(check_norm_error('F', M, N, lda,
+                reinterpret_cast<rocblas_half *>(ref_buf),
+                reinterpret_cast<rocblas_half *>(hcrc_buf)));
+  } else if (data_type == "bf16_r") {
+    if (nb >= n_elems * 2u)
+      fnorm = std::abs(check_norm_error('F', M, N, lda,
+                reinterpret_cast<rocblas_bfloat16 *>(ref_buf),
+                reinterpret_cast<rocblas_bfloat16 *>(hcrc_buf)));
+  }
+  // For fp8, fp4, fp6, i8, mxfp8 the output is already upcast to float/fp32
+  // by hipblaslt; elem_bytes == sizeof(float) for those paths so we can
+  // treat them as float32 for the norm as well.
+  else if (data_type == "fp8_r"        || data_type == "fp8_e4m3_r" ||
+           data_type == "fp8_e5m2_r"   || data_type == "fp4_r"      ||
+           data_type == "fp6_e3m2_r"   || data_type == "fp6_e2m3_r" ||
+           data_type == "mxfp8_e4m3_r" || data_type == "mxfp8_e5m2_r") {
+    if (nb >= n_elems * sizeof(float))
+      fnorm = std::abs(check_norm_error('F', M, N, lda,
+                reinterpret_cast<float *>(ref_buf),
+                reinterpret_cast<float *>(hcrc_buf)));
+  }
+  // hgemm: rocblas_half (2-byte) output on the dc path.
+  else if (ops_type == "hgemm") {
+    if (nb >= n_elems * 2u)
+      fnorm = std::abs(check_norm_error('F', M, N, lda,
+                reinterpret_cast<rocblas_half *>(ref_buf),
+                reinterpret_cast<rocblas_half *>(hcrc_buf)));
+  }
+}
+
 /**
  * Set gemm error stimulation parameters.
  * Note: This function is meant only for test purpose !!!
@@ -2208,6 +2576,202 @@ void rvs_blas::set_gemm_error(uint64_t _error_freq, uint64_t _error_count) {
 
   error_freq = _error_freq;
   error_count = _error_count;
+}
+
+/**
+ * @brief Compute the byte sizes of the ha, hb, hc host buffers as allocated
+ *        by allocate_host_matrix_mem().  Mirrors that function's logic so the
+ *        counts are always consistent.  Returns zeros for the "hiprand" path
+ *        (host buffers are not allocated in that mode).
+ */
+static void s_host_matrix_byte_sizes(const std::string &ops_type,
+                                     const std::string &data_type,
+                                     const std::string &blas_source,
+                                     const std::string &matrix_init,
+                                     size_t size_a, size_t size_b, size_t size_c,
+                                     uint64_t block_count,
+                                     size_t &out_a, size_t &out_b, size_t &out_c)
+{
+  out_a = out_b = out_c = 0;
+
+  if (matrix_init == "hiprand")
+    return;
+
+  if (ops_type == "sgemm") {
+    out_a = sizeof(float) * size_a;
+    out_b = sizeof(float) * size_b;
+    out_c = sizeof(float) * size_c;
+    return;
+  }
+  if (ops_type == "dgemm") {
+    out_a = sizeof(double) * size_a;
+    out_b = sizeof(double) * size_b;
+    out_c = sizeof(double) * size_c;
+    return;
+  }
+  if (ops_type == "hgemm") {
+    out_a = sizeof(rocblas_half) * size_a;
+    out_b = sizeof(rocblas_half) * size_b;
+    out_c = sizeof(rocblas_half) * size_c;
+    return;
+  }
+  if (data_type == "fp4_r"       || data_type == "fp6_e3m2_r"  ||
+      data_type == "fp6_e2m3_r"  || data_type == "mxfp8_e4m3_r" ||
+      data_type == "mxfp8_e5m2_r") {
+    if (blas_source == "hipblaslt") {
+      out_a = sizeof(uint8_t) * size_a * block_count;
+      out_b = sizeof(uint8_t) * size_b * block_count;
+      out_c = sizeof(float)   * size_c * block_count;
+    }
+    return;
+  }
+  if (data_type == "fp8_r") {
+    if (blas_source == "rocblas") {
+      // rocblas_f8 and unsigned char are both 1 byte.
+      out_a = size_a;
+      out_b = size_b;
+      out_c = size_c;
+    } else if (blas_source == "hipblaslt") {
+      out_a = sizeof(hipblaslt_f8) * size_a * block_count;
+      out_b = sizeof(hipblaslt_f8) * size_b * block_count;
+      out_c = sizeof(float)        * size_c * block_count;
+    }
+    return;
+  }
+  if (data_type == "fp8_e4m3_r") {
+    out_a = sizeof(hipblaslt_f8)  * size_a * block_count;
+    out_b = sizeof(hipblaslt_f8)  * size_b * block_count;
+    out_c = sizeof(float)         * size_c * block_count;
+    return;
+  }
+  if (data_type == "fp8_e5m2_r") {
+    out_a = sizeof(hipblaslt_bf8) * size_a * block_count;
+    out_b = sizeof(hipblaslt_bf8) * size_b * block_count;
+    out_c = sizeof(float)         * size_c * block_count;
+    return;
+  }
+  if (data_type == "fp16_r") {
+    if (blas_source == "rocblas") {
+      out_a = sizeof(rocblas_half) * size_a;
+      out_b = sizeof(rocblas_half) * size_b;
+      out_c = sizeof(rocblas_half) * size_c;
+    } else if (blas_source == "hipblaslt") {
+      out_a = sizeof(hipblasLtHalf) * size_a * block_count;
+      out_b = sizeof(hipblasLtHalf) * size_b * block_count;
+      out_c = sizeof(hipblasLtHalf) * size_c * block_count;
+    }
+    return;
+  }
+  if (data_type == "bf16_r") {
+    if (blas_source == "rocblas") {
+      out_a = sizeof(rocblas_bfloat16) * size_a;
+      out_b = sizeof(rocblas_bfloat16) * size_b;
+      out_c = sizeof(rocblas_bfloat16) * size_c;
+    } else if (blas_source == "hipblaslt") {
+      out_a = sizeof(hipblasLtBfloat16) * size_a * block_count;
+      out_b = sizeof(hipblasLtBfloat16) * size_b * block_count;
+      out_c = sizeof(hipblasLtBfloat16) * size_c * block_count;
+    }
+    return;
+  }
+  if (data_type == "i8_r") {
+    out_a = sizeof(int8_t) * size_a * block_count;
+    out_b = sizeof(int8_t) * size_b * block_count;
+    out_c = sizeof(int8_t) * size_c * block_count;
+    return;
+  }
+  if (data_type == "fp32_r") {
+    out_a = sizeof(float) * size_a * block_count;
+    out_b = sizeof(float) * size_b * block_count;
+    out_c = sizeof(float) * size_c * block_count;
+    return;
+  }
+  if (data_type == "fp64_r") {
+    out_a = sizeof(double) * size_a * block_count;
+    out_b = sizeof(double) * size_b * block_count;
+    out_c = sizeof(double) * size_c * block_count;
+    return;
+  }
+}
+
+void rvs_blas::get_host_matrix_bytes(std::vector<uint8_t> &a,
+                                     std::vector<uint8_t> &b,
+                                     std::vector<uint8_t> &c) const
+{
+  size_t bytes_a, bytes_b, bytes_c;
+  s_host_matrix_byte_sizes(ops_type, data_type, blas_source, matrix_init,
+                            size_a, size_b, size_c, block_count,
+                            bytes_a, bytes_b, bytes_c);
+
+  a.resize(bytes_a);
+  b.resize(bytes_b);
+  c.resize(bytes_c);
+
+  if (bytes_a && ha) std::memcpy(a.data(), ha, bytes_a);
+  if (bytes_b && hb) std::memcpy(b.data(), hb, bytes_b);
+  if (bytes_c && hc) std::memcpy(c.data(), hc, bytes_c);
+}
+
+void rvs_blas::inject_host_matrix_data(const std::vector<uint8_t> &a,
+                                       const std::vector<uint8_t> &b,
+                                       const std::vector<uint8_t> &c)
+{
+  size_t bytes_a, bytes_b, bytes_c;
+  s_host_matrix_byte_sizes(ops_type, data_type, blas_source, matrix_init,
+                            size_a, size_b, size_c, block_count,
+                            bytes_a, bytes_b, bytes_c);
+
+  assert(a.size() == bytes_a && "inject_host_matrix_data: size_a mismatch");
+  assert(b.size() == bytes_b && "inject_host_matrix_data: size_b mismatch");
+  assert(c.size() == bytes_c && "inject_host_matrix_data: size_c mismatch");
+
+  if (bytes_a && ha) std::memcpy(ha, a.data(), bytes_a);
+  if (bytes_b && hb) std::memcpy(hb, b.data(), bytes_b);
+  if (bytes_c && hc) std::memcpy(hc, c.data(), bytes_c);
+}
+
+void rvs_blas::get_host_matrix_input_crcs(uint32_t &crc_a,
+                                          uint32_t &crc_b,
+                                          uint32_t &crc_c) const
+{
+  size_t bytes_a, bytes_b, bytes_c;
+  s_host_matrix_byte_sizes(ops_type, data_type, blas_source, matrix_init,
+                            size_a, size_b, size_c, block_count,
+                            bytes_a, bytes_b, bytes_c);
+
+  crc_a = (bytes_a && ha) ? crc32_bytes(ha, bytes_a) : 0u;
+  crc_b = (bytes_b && hb) ? crc32_bytes(hb, bytes_b) : 0u;
+  crc_c = (bytes_c && hc) ? crc32_bytes(hc, bytes_c) : 0u;
+}
+
+void rvs_blas::get_host_scale_crcs(uint32_t &crc_sa, uint32_t &crc_sb) const
+{
+  size_t bytes_sa = hsa ? sizeof(uint8_t) * hbl_scale_a_size * block_count : 0u;
+  size_t bytes_sb = hsb ? sizeof(uint8_t) * hbl_scale_b_size * block_count : 0u;
+  crc_sa = (bytes_sa && hsa) ? crc32_bytes(hsa, bytes_sa) : 0u;
+  crc_sb = (bytes_sb && hsb) ? crc32_bytes(hsb, bytes_sb) : 0u;
+}
+
+void rvs_blas::get_host_scale_bytes(std::vector<uint8_t> &sa,
+                                    std::vector<uint8_t> &sb) const
+{
+  size_t bytes_sa = hsa ? sizeof(uint8_t) * hbl_scale_a_size * block_count : 0u;
+  size_t bytes_sb = hsb ? sizeof(uint8_t) * hbl_scale_b_size * block_count : 0u;
+  sa.resize(bytes_sa);
+  sb.resize(bytes_sb);
+  if (bytes_sa && hsa) std::memcpy(sa.data(), hsa, bytes_sa);
+  if (bytes_sb && hsb) std::memcpy(sb.data(), hsb, bytes_sb);
+}
+
+void rvs_blas::inject_host_scale_data(const std::vector<uint8_t> &sa,
+                                      const std::vector<uint8_t> &sb)
+{
+  size_t bytes_sa = hsa ? sizeof(uint8_t) * hbl_scale_a_size * block_count : 0u;
+  size_t bytes_sb = hsb ? sizeof(uint8_t) * hbl_scale_b_size * block_count : 0u;
+  assert(sa.size() == bytes_sa && "inject_host_scale_data: scale_a size mismatch");
+  assert(sb.size() == bytes_sb && "inject_host_scale_data: scale_b size mismatch");
+  if (bytes_sa && hsa) std::memcpy(hsa, sa.data(), bytes_sa);
+  if (bytes_sb && hsb) std::memcpy(hsb, sb.data(), bytes_sb);
 }
 
 #include <DataGenerator.hpp>
