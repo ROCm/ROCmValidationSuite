@@ -297,23 +297,35 @@ target_docker_run() {
   require_env REMOTE_WORK_DIR
   check_docker_on_target
   local inner_cmd="$1"
-  local gpu_opts install_vol pkg_vol escaped
+  local gpu_opts install_vol pkg_path pkg_mount remote_dirs escaped
   gpu_opts=$(docker_gpu_opts)
   install_vol=""
-  pkg_vol=""
+  pkg_path=""
+  pkg_mount=""
+  remote_dirs="'${REMOTE_WORK_DIR}/reports' '${REMOTE_WORK_DIR}/workspace' '${REMOTE_WORK_DIR}/pkg'"
   if [ -n "${INSTALL_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
     install_vol="-v ${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}:${INSTALL_DIR}"
+    # Pre-create so docker does not make a root-owned extras dir.
+    remote_dirs="${remote_dirs} '${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}'"
   fi
   if [ -n "${TARBALL_NAME:-}" ]; then
-    pkg_vol="-v ${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}:/pkg/${TARBALL_NAME}:ro"
+    pkg_path="${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
+    pkg_mount="-v ${pkg_path}:/pkg/${TARBALL_NAME}:ro"
   fi
   escaped=$(printf '%q' "$inner_cmd")
+  # Only bind-mount the tarball when the file already exists on the target.
+  # If the path is missing, docker would create a root-owned *directory* there,
+  # and a later scp to that path fails with Permission denied.
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
 set -euo pipefail
-mkdir -p '${REMOTE_WORK_DIR}/reports' '${REMOTE_WORK_DIR}/workspace' '${REMOTE_WORK_DIR}/pkg'
+mkdir -p ${remote_dirs}
+pkg_vol=""
+if [ -n '${pkg_path}' ] && [ -f '${pkg_path}' ]; then
+  pkg_vol='${pkg_mount}'
+fi
 docker run --rm ${gpu_opts} \
   ${install_vol} \
-  ${pkg_vol} \
+  \${pkg_vol} \
   -v '${REMOTE_WORK_DIR}/reports:/reports' \
   -v '${REMOTE_WORK_DIR}/workspace:/workspace' \
   -w /workspace \
@@ -450,7 +462,19 @@ cmd_download_rvs_tarball() {
   phase_end "Download RVS tarball on orchestrator"
 
   phase_start "scp RVS tarball to target"
-  ssh -q -F "$SSH_CONFIG_FILE" rvs-target "mkdir -p '${REMOTE_WORK_DIR}/pkg'"
+  echo "  local_pkg=${local_pkg}"
+  echo "  REMOTE_WORK_DIR=${REMOTE_WORK_DIR}"
+  echo "  remote_dest=${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
+  # Clear a leftover root-owned dir/file from a prior docker bind-mount miss,
+  # then stage the tarball as a normal user-owned file.
+  ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
+set -euo pipefail
+mkdir -p '${REMOTE_WORK_DIR}/pkg'
+dest='${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}'
+if [ -e "\$dest" ] && [ ! -f "\$dest" ]; then
+  rm -rf "\$dest" 2>/dev/null || sudo -n rm -rf "\$dest"
+fi
+REMOTE
   scp -q -F "$SSH_CONFIG_FILE" "${local_pkg}" \
     "rvs-target:${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
   phase_end "scp RVS tarball to target"
