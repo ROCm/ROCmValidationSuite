@@ -3,12 +3,12 @@
 #
 # Build on any docker host (typically the self-hosted runner):
 #   ./.github/docker/rvs-nightly-rocm/build-rocm-image.sh \
-#     --rocm-version 7.14.0a20260528 --gpu-family gfx110X-all
+#     --rocm-version 10.1.0a20260819 --gpu-family multiarch
 
 FROM ubuntu:24.04
 
 ARG ROCM_VERSION
-ARG GPU_FAMILY=gfx110X-all
+ARG GPU_FAMILY=multiarch
 ARG ROCM_SDK_BASE_URL
 ARG ROCM_INSTALL_PATH=/opt/rocm/install
 

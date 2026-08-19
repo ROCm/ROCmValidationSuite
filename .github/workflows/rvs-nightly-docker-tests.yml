@@ -82,6 +82,9 @@ env:
   RVS_DOCKER_REGISTRY_USER: ${{ secrets.RVS_DOCKER_REGISTRY_USER }}
   RVS_DOCKER_REGISTRY_PASSWORD: ${{ secrets.RVS_DOCKER_REGISTRY_PASSWORD }}
   RVS_DOCKER_SKIP_IF_PRESENT: 'true'
+  # Nightly SDK tarball family: therock-dist-linux-<GPU_FAMILY>-<ROCM_VERSION>.tar.gz
+  # Default multiarch (e.g. therock-dist-linux-multiarch-10.1.0a20260819.tar.gz).
+  GPU_FAMILY: ${{ vars.RVS_DOCKER_GPU_FAMILY || 'multiarch' }}
   TARGET_ROCM_PATH: /opt/rocm/install
   TARGET_NODE: ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
   TARGET_USER: ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
@@ -194,7 +197,7 @@ jobs:
           TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
         run: |
           chmod +x .github/docker/rvs-nightly-rocm/build-rocm-image.sh
-          ./.github/docker/rvs-nightly-rocm/build-rocm-image.sh --from-tarball "$TARBALL_NAME"
+          ./.github/docker/rvs-nightly-rocm/build-rocm-image.sh --from-tarball "$TARBALL_NAME" --gpu-family "${GPU_FAMILY:-multiarch}"
 
       - name: Verify ROCm docker image on build host
         if: inputs.build_docker_image && inputs.build_on_target == false

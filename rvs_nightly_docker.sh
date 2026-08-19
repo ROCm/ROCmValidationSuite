@@ -142,11 +142,20 @@ expected_rocm_version() {
   return 1
 }
 
-image_rocm_version_on_target() {
+image_env_on_target() {
+  local key="$1"
   require_ssh_config
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
     "docker image inspect '${DOCKER_IMAGE}' --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null" \
-    | sed -n 's/^ROCM_VERSION=//p' | head -1
+    | sed -n "s/^${key}=//p" | head -1
+}
+
+image_rocm_version_on_target() {
+  image_env_on_target ROCM_VERSION
+}
+
+image_gpu_family_on_target() {
+  image_env_on_target GPU_FAMILY
 }
 
 resolve_transfer_mode() {
@@ -222,18 +231,21 @@ image_ready_on_target() {
   if ! ssh -q -F "$SSH_CONFIG_FILE" rvs-target "docker image inspect '${DOCKER_IMAGE}' >/dev/null 2>&1"; then
     return 1
   fi
-  local expected actual
+  local expected actual expected_family actual_family
   expected="$(expected_rocm_version 2>/dev/null || true)"
-  if [ -z "$expected" ]; then
-    return 0
-  fi
+  expected_family="${GPU_FAMILY:-multiarch}"
   actual="$(image_rocm_version_on_target || true)"
-  if [ "$actual" = "$expected" ]; then
-    echo "::notice::Target already has ${DOCKER_IMAGE} (ROCM_VERSION=${expected}) — skipping delivery"
-    return 0
+  actual_family="$(image_gpu_family_on_target || true)"
+  if [ -n "$expected" ] && [ "$actual" != "$expected" ]; then
+    echo "Target image ROCM_VERSION=${actual:-unknown}; need ${expected} — delivery required"
+    return 1
   fi
-  echo "Target image ROCM_VERSION=${actual:-unknown}; need ${expected} — delivery required"
-  return 1
+  if [ "$actual_family" != "$expected_family" ]; then
+    echo "Target image GPU_FAMILY=${actual_family:-unknown}; need ${expected_family} — delivery required"
+    return 1
+  fi
+  echo "::notice::Target already has ${DOCKER_IMAGE} (ROCM_VERSION=${actual:-unknown} GPU_FAMILY=${actual_family}) — skipping delivery"
+  return 0
 }
 
 target_rvs_install_dir() {
@@ -383,7 +395,7 @@ cmd_build_image_on_target() {
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
 set -euo pipefail
 chmod +x '${remote_build_dir}/build-rocm-image.sh'
-'${remote_build_dir}/build-rocm-image.sh' --from-tarball '${TARBALL_NAME}'
+'${remote_build_dir}/build-rocm-image.sh' --from-tarball '${TARBALL_NAME}' --gpu-family '${GPU_FAMILY:-multiarch}'
 REMOTE
   phase_end "docker build on GPU target"
   cmd_verify_image_on_target
