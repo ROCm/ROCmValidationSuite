@@ -464,7 +464,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
       config = "conf/" + module_config_file[module_index];
       std::ifstream file(path + config);
       if (!file.good()) {
-        // RVS data dir: from rvs binary, $RVS_PREFIX, or build-time RVS_DATA_ROOT
+        // RVS data dir: from rvs binary path or build-time RVS_DATA_ROOT
         path = rvs_get_rvs_data_root_string();
         config = "/conf/" + module_config_file[module_index];
       }

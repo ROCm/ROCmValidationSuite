@@ -178,7 +178,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
       psolib = dlopen(sofullname.c_str(), RTLD_NOW);
       // error?
       if (!psolib) {
-        // RVS module lib dir: from rvs binary, $RVS_PREFIX, or build-time RVS_LIB_PATH
+        // RVS module lib dir: from rvs binary path or build-time RVS_LIB_PATH
         libpath = rvs_get_rvs_modules_lib_dir_string();
         libpath += "/";
         string sofullname(libpath + it->second);
