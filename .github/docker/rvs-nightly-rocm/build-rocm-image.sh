@@ -3,8 +3,8 @@
 # Uses the same multiarch / release tarball URLs as build_packages_local.sh.
 #
 # Examples:
-#   ./build-rocm-image.sh --channel nightly --gpu-family gfx110X-all
-#   ./build-rocm-image.sh --rocm-version 7.14.0a20260528 --gpu-family gfx110X-all
+#   ./build-rocm-image.sh --channel nightly --gpu-family multiarch
+#   ./build-rocm-image.sh --rocm-version 10.1.0a20260819 --gpu-family multiarch
 #   ./build-rocm-image.sh --from-tarball amdrocm7-rvs-1.4.21-r0714.20260724-Linux.tar.gz
 #       (requires *-Linux.tar.gz with -rMMmm.yyyymmdd-; nightly pins exact 7.14.0a20260724 SDK)
 #   ./build-rocm-image.sh --channel nightly --tag rvs-nightly-rocm:latest
@@ -14,7 +14,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 ROCM_VERSION=""
-GPU_FAMILY="${GPU_FAMILY:-gfx110X-all}"
+GPU_FAMILY="${GPU_FAMILY:-multiarch}"
 CHANNEL="nightly"
 IMAGE_TAG=""
 ROCM_SDK_BASE_URL=""
