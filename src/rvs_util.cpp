@@ -430,11 +430,6 @@ std::string rvs_linux_resolved_exe_path() {
 #endif
 
 std::string rvs_rvs_prefix_from_rvs_process() {
-  if (const char* pfx = std::getenv("RVS_PREFIX")) {
-    if (pfx[0] != '\0') {
-      return rvs_strip_trailing_slashes(std::string(pfx));
-    }
-  }
 #if defined(__linux__)
   const std::string exe = rvs_linux_resolved_exe_path();
   if (exe.empty() || rvs_path_basename(exe) != "rvs") {

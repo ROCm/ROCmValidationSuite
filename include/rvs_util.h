@@ -69,12 +69,12 @@ extern std::vector<std::string> str_split(const std::string& str_val,
 std::string rvs_get_rocm_install_path_string(void);
 
 /**
- * RVS data root .../share/.../rocm-validation-suite: RVS_PREFIX env, else path
- * derived from the running rvs process (e.g. prefix/bin/rvs) on Linux,
- * else the build-time RVS_DATA_ROOT macro. Install prefix is the parent of bin/.
+ * RVS data root .../share/.../rocm-validation-suite: path derived from the
+ * running rvs process (e.g. prefix/bin/rvs) on Linux, else build-time
+ * RVS_DATA_ROOT. Use -c to load a config from an arbitrary path.
  */
 std::string rvs_get_rvs_data_root_string(void);
-/** RVS module lib directory .../lib/rvs — same resolution order. */
+/** RVS module lib directory .../lib/rvs — same resolution order as data root. */
 std::string rvs_get_rvs_modules_lib_dir_string(void);
 
 /**
