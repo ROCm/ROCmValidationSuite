@@ -18,6 +18,7 @@ name: RVS Nightly Tests (Docker)
 # Prerequisites:
 # - Build host (self-hosted runner): curl/scp/ssh; HTTPS egress to tarball index; checkout supplies docker build context
 # - Target GPU node: docker, HTTPS to rocm.nightlies.amd.com, /dev/kfd, /dev/dri, SSH user in docker group
+# - ROCm SDK in docker image: therock-dist-linux-multiarch-<version>.tar.gz (default GPU_FAMILY=multiarch)
 # - Secrets: RVS_TARGET_NODE, RVS_TARGET_SSH_KEY (optional RVS_TARGET_USER, RVS_TARBALL_INDEX_URL)
 # - Optional: vars.RVS_DOCKER_REGISTRY + secrets RVS_DOCKER_REGISTRY_USER/PASSWORD for registry mode
 #
