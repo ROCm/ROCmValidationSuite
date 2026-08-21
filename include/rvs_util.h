@@ -69,13 +69,35 @@ extern std::vector<std::string> str_split(const std::string& str_val,
 std::string rvs_get_rocm_install_path_string(void);
 
 /**
- * RVS data root .../share/.../rocm-validation-suite: RVS_PREFIX env, else path
- * derived from the running rvs process (e.g. prefix/bin/rvs) on Linux,
- * else the build-time RVS_DATA_ROOT macro. Install prefix is the parent of bin/.
+ * @brief RVS data root (share/.../rocm-validation-suite).
+ *
+ * Path derived from the running rvs binary on Linux, else build-time
+ * RVS_DATA_ROOT. Use -c to load a config from an arbitrary location.
  */
 std::string rvs_get_rvs_data_root_string(void);
-/** RVS module lib directory .../lib/rvs — same resolution order. */
+/**
+ * @brief RVS module library directory (.../lib/rvs).
+ *
+ * Same prefix resolution as rvs_get_rvs_data_root_string(). Final fallback
+ * when relative module search paths in rvsmodule.cpp do not find the .so.
+ */
 std::string rvs_get_rvs_modules_lib_dir_string(void);
+
+/**
+ * @brief Validate a module .so before dlopen().
+ *
+ * On Linux: regular file, not group/world writable. Ownership is checked only
+ * for non-root callers (must be owned by the effective user or root). When
+ * euid is 0 (root or sudo), any owner is allowed if permissions pass.
+ *
+ * @param path            Candidate .so path.
+ * @param err_msg         Optional failure reason.
+ * @param canonical_path  Optional canonical path on success.
+ * @return true if checks pass, false otherwise.
+ */
+bool rvs_verify_module_so_for_dlopen(const std::string& path,
+                                     std::string* err_msg,
+                                     std::string* canonical_path = nullptr);
 
 /**
  * Convert array of strings into array of signed integers of type T

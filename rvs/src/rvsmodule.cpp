@@ -44,6 +44,39 @@
 
 #define MODULE_NAME_CAPS "CLI"
 
+namespace {
+
+/**
+ * @brief dlopen a module .so after rvs_verify_module_so_for_dlopen().
+ *
+ * Runs verification first; on success opens the canonical path with RTLD_NOW.
+ * Returns nullptr and sets err_msg when verification or dlopen fails. Used for
+ * all three module search paths in find_create_module().
+ *
+ * @param so_path  Candidate .so path.
+ * @param err_msg  Optional; verification or dlopen failure reason.
+ * @return dlopen handle, or nullptr on failure.
+ */
+void* rvs_dlopen_verified_module(const std::string& so_path,
+                                 std::string* err_msg) {
+  std::string canonical;
+  std::string verify_err;
+  if (!rvs_verify_module_so_for_dlopen(so_path, &verify_err, &canonical)) {
+    if (err_msg) {
+      *err_msg = verify_err;
+    }
+    return nullptr;
+  }
+  void* handle = dlopen(canonical.c_str(), RTLD_NOW);
+  if (!handle && err_msg) {
+    const char* dl_err = dlerror();
+    *err_msg = dl_err ? dl_err : "dlopen failed";
+  }
+  return handle;
+}
+
+}  // namespace
+
 std::map<std::string, rvs::module*> rvs::module::modulemap;
 std::map<std::string, std::string>  rvs::module::filemap;
 YAML::Node rvs::module::config;
@@ -166,7 +199,8 @@ rvs::module* rvs::module::find_create_module(const char* name) {
     libpath += "../lib/rvs/";
 
     string sofullname(libpath + it->second);
-    void* psolib = dlopen(sofullname.c_str(), RTLD_NOW);
+    std::string load_err;
+    void* psolib = rvs_dlopen_verified_module(sofullname, &load_err);
     // error?
     if (!psolib) {
       //Search libraries in current path set in pwd option for backward compatibility
@@ -174,22 +208,22 @@ rvs::module* rvs::module::find_create_module(const char* name) {
         //Search libraries in current path if pwd option not set
         libpath = "./";
       } // has ending forward slash too
-      string sofullname(libpath + it->second);
-      psolib = dlopen(sofullname.c_str(), RTLD_NOW);
+      sofullname = libpath + it->second;
+      psolib = rvs_dlopen_verified_module(sofullname, &load_err);
       // error?
       if (!psolib) {
-        // RVS module lib dir: from rvs binary, $RVS_PREFIX, or build-time RVS_LIB_PATH
+        // RVS module lib dir: from rvs binary path or build-time RVS_LIB_PATH
         libpath = rvs_get_rvs_modules_lib_dir_string();
         libpath += "/";
-        string sofullname(libpath + it->second);
-        psolib = dlopen(sofullname.c_str(), RTLD_NOW);
+        sofullname = libpath + it->second;
+        psolib = rvs_dlopen_verified_module(sofullname, &load_err);
         if (!psolib) {
           char buff[1024];
           snprintf(buff, sizeof(buff),
               "could not load .so '%s'", sofullname.c_str());
           rvs::logger::Err(buff, MODULE_NAME_CAPS);
           snprintf(buff, sizeof(buff),
-              "reason: '%s'", dlerror());
+              "reason: '%s'", load_err.c_str());
           rvs::logger::Err(buff, MODULE_NAME_CAPS);
           return NULL;  // fail
         }
