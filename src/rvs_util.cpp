@@ -30,6 +30,7 @@
 #include <regex>
 #if defined(__linux__)
 #include <unistd.h>
+#include <sys/stat.h>
 #endif
 #include <iomanip>
 #include <algorithm>
@@ -414,6 +415,12 @@ std::string rvs_path_basename(const std::string& path) {
 }
 
 #if defined(__linux__)
+/**
+ * @brief Absolute path of the running rvs executable.
+ *
+ * Reads /proc/self/exe and resolves symlinks via realpath(). Returns empty
+ * string on failure.
+ */
 std::string rvs_linux_resolved_exe_path() {
   char linkbuf[4096] = {0};
   const ssize_t n = readlink("/proc/self/exe", linkbuf, sizeof(linkbuf) - 1);
@@ -429,6 +436,14 @@ std::string rvs_linux_resolved_exe_path() {
 }
 #endif
 
+/**
+ * @brief RVS install prefix derived from the running process.
+ *
+ * On Linux, if the executable is prefix/bin/rvs (or prefix/sbin/rvs),
+ * returns prefix. Does not consult RVS_PREFIX or other environment variables.
+ * Returns empty when the prefix cannot be inferred; callers fall back to
+ * build-time RVS_DATA_ROOT / RVS_LIB_PATH.
+ */
 std::string rvs_rvs_prefix_from_rvs_process() {
 #if defined(__linux__)
   const std::string exe = rvs_linux_resolved_exe_path();
@@ -446,6 +461,13 @@ std::string rvs_rvs_prefix_from_rvs_process() {
 
 }  // namespace
 
+/**
+ * @brief Directory containing RVS shared data (conf files, etc.).
+ *
+ * Resolution: install prefix from rvs_rvs_prefix_from_rvs_process() plus
+ * RVS_RELPATH_DATA_DIR, else compile-time RVS_DATA_ROOT. For configs outside
+ * this tree, use the -c command-line option.
+ */
 std::string rvs_get_rvs_data_root_string(void) {
   const std::string pfx = rvs_rvs_prefix_from_rvs_process();
   if (!pfx.empty()) {
@@ -454,11 +476,116 @@ std::string rvs_get_rvs_data_root_string(void) {
   return std::string(RVS_DATA_ROOT);
 }
 
+/**
+ * @brief Directory containing RVS module shared libraries (*.so).
+ *
+ * Resolution: install prefix from rvs_rvs_prefix_from_rvs_process() plus
+ * RVS_RELPATH_MODULE_LIB_DIR, else compile-time RVS_LIB_PATH. Used as the
+ * final fallback in rvsmodule.cpp after relative search paths fail.
+ */
 std::string rvs_get_rvs_modules_lib_dir_string(void) {
   const std::string pfx = rvs_rvs_prefix_from_rvs_process();
   if (!pfx.empty()) {
     return pfx + std::string("/") + RVS_RELPATH_MODULE_LIB_DIR;
   }
   return std::string(RVS_LIB_PATH);
+}
+
+#if defined(__linux__)
+/**
+ * @brief Resolve path to an absolute, symlink-free form.
+ *
+ * Wrapper around realpath(3). Used before stat/dlopen so module paths cannot
+ * be redirected through symlinks.
+ *
+ * @param path Input path (may be relative).
+ * @param out  Receives the canonical absolute path on success.
+ * @return true if resolution succeeded, false otherwise.
+ */
+bool rvs_canonical_path(const std::string& path, std::string* out) {
+  if (!out) {
+    return false;
+  }
+  char resolved[4096] = {0};
+  if (realpath(path.c_str(), resolved) == nullptr) {
+    return false;
+  }
+  *out = std::string(resolved);
+  return true;
+}
+#endif
+
+/**
+ * @brief Validate a module .so before dlopen().
+ *
+ * Security gate applied to every module load attempt. On Linux, checks that
+ * the target is a regular file, is not group- or world-writable, and passes
+ * ownership checks for non-root callers only (see implementation). Returns the
+ * canonical path so dlopen uses a stable, resolved location.
+ *
+ * @param path            Candidate .so path (relative or absolute).
+ * @param err_msg         Optional; receives a short reason on failure.
+ * @param canonical_path  Optional; receives realpath result on success.
+ * @return true if the file passes all checks, false otherwise.
+ */
+bool rvs_verify_module_so_for_dlopen(const std::string& path,
+                                     std::string* err_msg,
+                                     std::string* canonical_path) {
+#if defined(__linux__)
+  std::string canonical;
+  if (!rvs_canonical_path(path, &canonical)) {
+    if (err_msg) {
+      *err_msg = "could not resolve module path";
+    }
+    return false;
+  }
+
+  struct stat st;
+  if (stat(canonical.c_str(), &st) != 0) {
+    if (err_msg) {
+      *err_msg = "stat failed";
+    }
+    return false;
+  }
+
+  if (!S_ISREG(st.st_mode)) {
+    if (err_msg) {
+      *err_msg = "not a regular file";
+    }
+    return false;
+  }
+
+  if (st.st_mode & S_IWGRP) {
+    if (err_msg) {
+      *err_msg = "module is group-writable";
+    }
+    return false;
+  }
+
+  if (st.st_mode & S_IWOTH) {
+    if (err_msg) {
+      *err_msg = "module is world-writable";
+    }
+    return false;
+  }
+
+  const uid_t euid = geteuid();
+  if (euid != 0 && st.st_uid != euid && st.st_uid != 0) {
+    if (err_msg) {
+      *err_msg = "module owner mismatch";
+    }
+    return false;
+  }
+
+  if (canonical_path) {
+    *canonical_path = canonical;
+  }
+  return true;
+#else
+  if (canonical_path) {
+    *canonical_path = path;
+  }
+  return true;
+#endif
 }
 
