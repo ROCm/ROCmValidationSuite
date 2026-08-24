@@ -40,7 +40,7 @@ and ``lib``. When configuring the environment for RVS, you must set the
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=/opt/rocm/core-7.14             # <rocm-core-path> = /opt/rocm/core-7.14
+         ROCM_INSTALL_PATH=/opt/rocm/core-10.0             # <rocm-core-path> = /opt/rocm/core-10.0
 
    .. tab-item:: pip
 
@@ -60,8 +60,8 @@ and ``lib``. When configuring the environment for RVS, you must set the
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=/opt/rocm/core-7.14             # <rocm-core-path> = default /opt/rocm/core-7.14 installation (no target=)
-         ROCM_INSTALL_PATH=<path>/rocm/core-7.14           # <rocm-core-path> = target=<path>
+         ROCM_INSTALL_PATH=/opt/rocm/core-10.0             # <rocm-core-path> = default /opt/rocm/core-10.0 installation (no target=)
+         ROCM_INSTALL_PATH=<path>/rocm/core-10.0           # <rocm-core-path> = target=<path>
 
 Package manager installation
 =============================
@@ -130,7 +130,7 @@ on top of the ROCm Core SDK.
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-7.14
+         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.0
 
    b. Configure your environment.
 
@@ -306,7 +306,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-7.14
+         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.0
 
    b. Configure your environment.
 
