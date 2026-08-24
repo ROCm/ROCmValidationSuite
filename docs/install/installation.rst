@@ -111,14 +111,14 @@ on top of the ROCm Core SDK.
 
          .. code-block:: bash
 
-            sudo apt install amdrocm7-rvs
+            sudo apt install amdrocm10-rvs
 
       .. tab-item:: RHEL
          :sync: rhel
 
          .. code-block:: bash
 
-            sudo dnf install amdrocm7-rvs
+            sudo dnf install amdrocm10-rvs
 
 3. Complete the following post-installation steps.
 
@@ -185,14 +185,14 @@ Package manager uninstallation
 
          .. code-block:: bash
 
-            sudo apt autoremove amdrocm7-rvs
+            sudo apt autoremove amdrocm10-rvs
 
       .. tab-item:: RHEL
          :sync: rhel
 
          .. code-block:: bash
 
-            sudo dnf remove amdrocm7-rvs
+            sudo dnf remove amdrocm10-rvs
 
 2. Remove RVS repositories.
 
@@ -269,7 +269,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
    .. code-block:: bash
 
-      wget https://repo.amd.com/rocm/rvs/tarball/amdrocm7-rvs-1.5.122-579-Linux.tar.gz
+      wget https://repo.amd.com/rocm/rvs/tarball/amdrocm10-rvs-1.6.122-708-Linux.tar.gz
 
 3. Extract the tarball to the ROCm Extras location.
 
@@ -283,7 +283,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
       EXTRAS_INSTALL_PATH=<extras-path>  # ie. <extras-path> = path to ROCm extras for RVS extract
 
       sudo mkdir -p $EXTRAS_INSTALL_PATH
-      sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
+      sudo tar -xzf amdrocm10-rvs-1.6.122-708-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
 
    **Recommended:** Set ``EXTRAS_INSTALL_PATH`` to a location within the root
    install directory for the ROCm Core SDK.
@@ -294,7 +294,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
    .. code-block:: bash
 
       sudo mkdir -p /opt/rocm/extras-7
-      sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C /opt/rocm/extras-7
+      sudo tar -xzf amdrocm10-rvs-1.6.122-708-Linux.tar.gz -C /opt/rocm/extras-7
 
 4. Complete the following post-installation steps.
 
