@@ -83,6 +83,10 @@ env:
   RVS_DOCKER_REGISTRY_USER: ${{ secrets.RVS_DOCKER_REGISTRY_USER }}
   RVS_DOCKER_REGISTRY_PASSWORD: ${{ secrets.RVS_DOCKER_REGISTRY_PASSWORD }}
   RVS_DOCKER_SKIP_IF_PRESENT: 'true'
+  GITHUB_REPOSITORY: ${{ github.repository }}
+  GITHUB_SHA: ${{ github.sha }}
+  GITHUB_SERVER_URL: ${{ github.server_url }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   TARGET_ROCM_PATH: /opt/rocm/install
   TARGET_NODE: ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
   TARGET_USER: ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
