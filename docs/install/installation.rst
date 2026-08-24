@@ -141,7 +141,7 @@ on top of the ROCm Core SDK.
             .. code-block:: bash
 
                sudo tee /etc/profile.d/set-rvs-env.sh << EOF
-               export EXTRAS_PATH=/opt/rocm/extras-7
+               export EXTRAS_PATH=/opt/rocm/extras-10
                export ROCM_PATH=$ROCM_INSTALL_PATH
                export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
                export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
@@ -155,7 +155,7 @@ on top of the ROCm Core SDK.
             .. code-block:: bash
 
                tee --append ~/.bashrc << EOF
-               export EXTRAS_PATH=/opt/rocm/extras-7
+               export EXTRAS_PATH=/opt/rocm/extras-10
                export ROCM_PATH=$ROCM_INSTALL_PATH
                export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
                export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
@@ -293,8 +293,8 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
    .. code-block:: bash
 
-      sudo mkdir -p /opt/rocm/extras-7
-      sudo tar -xzf amdrocm10-rvs-1.6.122-708-Linux.tar.gz -C /opt/rocm/extras-7
+      sudo mkdir -p /opt/rocm/extras-10
+      sudo tar -xzf amdrocm10-rvs-1.6.122-708-Linux.tar.gz -C /opt/rocm/extras-10
 
 4. Complete the following post-installation steps.
 
@@ -337,7 +337,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
                   .. code-block:: bash
 
                      sudo tee /etc/profile.d/set-rvs-env.sh << EOF
-                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export EXTRAS_PATH=/opt/rocm/extras-10
                      export ROCM_PATH=$ROCM_INSTALL_PATH
                      export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
                      export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
@@ -370,7 +370,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
                   .. code-block:: bash
 
                      tee --append ~/.bashrc << EOF
-                     export EXTRAS_PATH=/opt/rocm/extras-7
+                     export EXTRAS_PATH=/opt/rocm/extras-10
                      export ROCM_PATH=$ROCM_INSTALL_PATH
                      export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
                      export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
@@ -391,13 +391,13 @@ Tarball uninstallation
 
    .. important::
       The following command assumes you're working with the
-      ``EXTRAS_INSTALL_PATH`` directory set to ``/opt/rocm/extras-7``. If you
+      ``EXTRAS_INSTALL_PATH`` directory set to ``/opt/rocm/extras-10``. If you
       chose a different directory name when installing RVS, adjust the command
       accordingly.
 
    .. code-block:: bash
 
-      sudo rm -rf /opt/rocm/extras-7
+      sudo rm -rf /opt/rocm/extras-10
 
 2. Remove the RVS environment configuration.
 
