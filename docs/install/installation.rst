@@ -74,10 +74,12 @@ on top of the ROCm Core SDK.
    .. tab-set::
 
       .. tab-item:: Ubuntu
+         :sync: ubuntu
 
          .. tab-set::
 
             .. tab-item:: 26.04
+               :sync: ubuntu-2604
 
                .. code-block:: bash
 
@@ -90,6 +92,7 @@ on top of the ROCm Core SDK.
                   sudo apt update
 
             .. tab-item:: 24.04
+               :sync: ubuntu-2404
 
                .. code-block:: bash
 
@@ -102,6 +105,7 @@ on top of the ROCm Core SDK.
                   sudo apt update
 
             .. tab-item:: 22.04
+               :sync: ubuntu-2204
 
                .. code-block:: bash
 
@@ -114,10 +118,12 @@ on top of the ROCm Core SDK.
                   sudo apt update
 
       .. tab-item:: Debian
+         :sync: debian
 
          .. tab-set::
 
             .. tab-item:: 13
+               :sync: debian-13
 
                .. code-block:: bash
 
@@ -130,6 +136,7 @@ on top of the ROCm Core SDK.
                   sudo apt update
 
             .. tab-item:: 12
+               :sync: debian-12
 
                .. code-block:: bash
 
@@ -142,10 +149,12 @@ on top of the ROCm Core SDK.
                   sudo apt update
 
       .. tab-item:: RHEL
+         :sync: rhel
 
          .. tab-set::
 
             .. tab-item:: 10
+               :sync: rhel-10
 
                .. code-block:: bash
 
@@ -161,6 +170,7 @@ on top of the ROCm Core SDK.
                   sudo dnf clean all
 
             .. tab-item:: 9
+               :sync: rhel-9
 
                .. code-block:: bash
 
@@ -176,6 +186,7 @@ on top of the ROCm Core SDK.
                   sudo dnf clean all
 
             .. tab-item:: 8
+               :sync: rhel-8
 
                .. code-block:: bash
 
@@ -287,10 +298,12 @@ Package manager uninstalling
    .. tab-set::
 
       .. tab-item:: Ubuntu
+         :sync: ubuntu
 
          .. tab-set::
 
             .. tab-item:: 26.04
+               :sync: ubuntu-2604
 
                .. code-block:: bash
 
@@ -303,6 +316,7 @@ Package manager uninstalling
                   sudo apt update
 
             .. tab-item:: 24.04
+               :sync: ubuntu-2404
 
                .. code-block:: bash
 
@@ -315,6 +329,7 @@ Package manager uninstalling
                   sudo apt update
 
             .. tab-item:: 22.04
+               :sync: ubuntu-2204
 
                .. code-block:: bash
 
@@ -327,10 +342,12 @@ Package manager uninstalling
                   sudo apt update
 
       .. tab-item:: Debian
+         :sync: debian
 
          .. tab-set::
 
             .. tab-item:: 13
+               :sync: debian-13
 
                .. code-block:: bash
 
@@ -343,6 +360,7 @@ Package manager uninstalling
                   sudo apt update
 
             .. tab-item:: 12
+               :sync: debian-12
 
                .. code-block:: bash
 
@@ -355,10 +373,12 @@ Package manager uninstalling
                   sudo apt update
 
       .. tab-item:: RHEL
+         :sync: rhel
 
          .. tab-set::
 
             .. tab-item:: 10
+               :sync: rhel-10
 
                .. code-block:: bash
 
@@ -370,6 +390,7 @@ Package manager uninstalling
                   sudo dnf clean all
 
             .. tab-item:: 9
+               :sync: rhel-9
 
                .. code-block:: bash
 
@@ -381,6 +402,7 @@ Package manager uninstalling
                   sudo dnf clean all
 
             .. tab-item:: 8
+               :sync: rhel-8
 
                .. code-block:: bash
 
