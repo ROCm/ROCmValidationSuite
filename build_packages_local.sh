@@ -506,6 +506,12 @@ check_and_install_dependencies() {
         [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("yaml-cpp-devel")
         [ -f /usr/include/numa.h ] || MISSING_LIBS+=("numactl-devel")
         command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm-build")
+    elif [[ "$OS" =~ ^(sles|opensuse-leap|opensuse-tumbleweed)$ ]]; then
+        # Check for SUSE library headers (libnuma-devel on SLES 15/16, not numactl-devel)
+        [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("pciutils-devel")
+        [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("yaml-cpp-devel")
+        [ -f /usr/include/numa.h ] || MISSING_LIBS+=("libnuma-devel")
+        command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm-build")
     fi
 
     # Combine missing tools and libraries
@@ -616,6 +622,26 @@ check_and_install_dependencies() {
             print_info "Installing yaml-cpp..."
             yum install -y yaml-cpp-devel yaml-cpp-static 2>/dev/null || \
             print_warning "yaml-cpp may not be available - will try to continue"
+        elif [[ "$OS" =~ ^(sles|opensuse-leap|opensuse-tumbleweed)$ ]]; then
+            print_info "Installing dependencies for SUSE/SLES..."
+            zypper --non-interactive refresh || print_warning "zypper refresh reported errors; continuing"
+            zypper --non-interactive install -y \
+                gcc \
+                gcc-c++ \
+                make \
+                git \
+                wget \
+                tar \
+                cmake \
+                doxygen \
+                python3 \
+                pciutils-devel \
+                libpci3 \
+                yaml-cpp-devel \
+                libnuma-devel \
+                rpm \
+                rpm-build \
+                || print_warning "Some packages may already be installed"
         else
             print_error "Unsupported OS: $OS"
             echo ""
@@ -633,7 +659,7 @@ check_and_install_dependencies() {
             echo "Development Libraries:"
             echo "  - libpci-dev (or pciutils-devel)"
             echo "  - libyaml-cpp-dev (or yaml-cpp-devel)"
-            echo "  - libnuma-dev (or numactl-devel)"
+            echo "  - libnuma-dev (Ubuntu), numactl-devel (RHEL/CentOS), or libnuma-devel (SLES)"
             echo "  - rpm-build tools"
             exit 1
         fi

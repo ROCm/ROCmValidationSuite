@@ -39,8 +39,10 @@ sudo yum install -y cmake3 doxygen rpm rpm-build git gcc-c++ yaml-cpp-devel yaml
 SLES :
 
 ```
-sudo zypper install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel numactl-devel
+sudo zypper install -y cmake doxygen pciutils-devel libpci3 rpm git rpm-build gcc-c++ yaml-cpp-devel libnuma-devel
 ```
+
+**NUMA libraries:** build headers are `libnuma-dev` (Ubuntu), `numactl-devel` (RHEL/CentOS), and `libnuma-devel` (SLES 15/16). Packaged DEB/RPM runtime deps use `libnuma1` on Ubuntu and SLES, and `numactl-libs` on RHEL/CentOS; RPM metadata uses `(numactl-libs or libnuma1)` so one manylinux-built RPM works on both families.
 
 ## Install ROCm stack, rocBLAS, and SMI library
 
@@ -200,6 +202,8 @@ CentOS & RHEL & SUSE :
 ```
 sudo rpm -i --replacefiles --nodeps rocm-validation-suite*.rpm
 ```
+
+If the package manager reports missing NUMA libraries, install the runtime package for your OS before retrying: `libnuma1` on Ubuntu/SLES, or `numactl-libs` on RHEL/CentOS (`zypper install libnuma1` / `dnf install numactl-libs`).
 
 **Note:**
 RVS is getting packaged as part of ROCm release starting from 3.0. You can install the pre-compiled package as below.
