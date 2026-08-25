@@ -265,6 +265,13 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
             sudo dnf install pciutils-libs numactl-libs
 
+      .. tab-item:: SLES
+         :sync: sles
+
+         .. code-block:: bash
+
+            sudo zypper install libpci3 libnuma1
+
 2. Download the RVS tarball.
 
    .. code-block:: bash

@@ -71,7 +71,7 @@ When manually triggering the workflow, you can specify:
    `gpu_family`.
 
 3. **Build TransferBench CLI** (boolean, default **true** on manual runs):
-   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` / `numactl-libs` at runtime).
+   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` on Ubuntu/SLES or `numactl-libs` on RHEL/CentOS at runtime; RPM metadata uses `(numactl-libs or libnuma1)`).
    - On **push**, **PR**, and **schedule**, CI defaults to **ON** unless repository variable `BUILD_TRANSFERBENCH_CLI` is set to `OFF`.
 
 ## How It Works
