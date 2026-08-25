@@ -82,7 +82,7 @@ on top of the ROCm Core SDK.
                .. code-block:: bash
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
-                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
                   sudo tee /etc/apt/sources.list.d/rvs.list << EOF
                   deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2604/ stable main
                   EOF
@@ -94,7 +94,7 @@ on top of the ROCm Core SDK.
                .. code-block:: bash
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
-                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
                   sudo tee /etc/apt/sources.list.d/rvs.list << EOF
                   deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2404/ stable main
                   EOF
@@ -106,7 +106,7 @@ on top of the ROCm Core SDK.
                .. code-block:: bash
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
-                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
                   sudo tee /etc/apt/sources.list.d/rvs.list << EOF
                   deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2204/ stable main
                   EOF
@@ -122,7 +122,7 @@ on top of the ROCm Core SDK.
                .. code-block:: bash
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
-                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
                   sudo tee /etc/apt/sources.list.d/rvs.list << EOF
                   deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/debian13/ stable main
                   EOF
@@ -134,7 +134,7 @@ on top of the ROCm Core SDK.
                .. code-block:: bash
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
-                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
                   sudo tee /etc/apt/sources.list.d/rvs.list << EOF
                   deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/debian12/ stable main
                   EOF
@@ -155,7 +155,7 @@ on top of the ROCm Core SDK.
                   baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel10/x86_64
                   enabled=1
                   gpgcheck=1
-                  gpgkey=https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg
+                  gpgkey=https://stable.repo.amd.com/rocm/gpg/packages.gpg
                   priority=50
                   EOF
                   sudo dnf clean all
@@ -170,7 +170,7 @@ on top of the ROCm Core SDK.
                   baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel9/x86_64
                   enabled=1
                   gpgcheck=1
-                  gpgkey=https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg
+                  gpgkey=https://stable.repo.amd.com/rocm/gpg/packages.gpg
                   priority=50
                   EOF
                   sudo dnf clean all
@@ -185,7 +185,7 @@ on top of the ROCm Core SDK.
                   baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel8/x86_64
                   enabled=1
                   gpgcheck=1
-                  gpgkey=https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg
+                  gpgkey=https://stable.repo.amd.com/rocm/gpg/packages.gpg
                   priority=50
                   EOF
                   sudo dnf clean all
