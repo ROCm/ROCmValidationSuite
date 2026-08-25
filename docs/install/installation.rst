@@ -74,33 +74,121 @@ on top of the ROCm Core SDK.
    .. tab-set::
 
       .. tab-item:: Ubuntu
-         :sync: ubuntu
 
-         .. code-block:: bash
+         .. tab-set::
 
-            sudo mkdir --parents --mode=0755 /etc/apt/keyrings
-            wget https://repo.amd.com/rocm/packages-multi-arch/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
-            sudo tee /etc/apt/sources.list.d/rvs.list << EOF
-            deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://repo.amd.com/rocm/rvs/packages/deb/ stable main
-            EOF
+            .. tab-item:: 26.04
 
-            sudo apt update
+               .. code-block:: bash
+
+                  sudo mkdir --parents --mode=0755 /etc/apt/keyrings
+                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
+                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2604/ stable main
+                  EOF
+
+                  sudo apt update
+
+            .. tab-item:: 24.04
+
+               .. code-block:: bash
+
+                  sudo mkdir --parents --mode=0755 /etc/apt/keyrings
+                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
+                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2404/ stable main
+                  EOF
+
+                  sudo apt update
+
+            .. tab-item:: 22.04
+
+               .. code-block:: bash
+
+                  sudo mkdir --parents --mode=0755 /etc/apt/keyrings
+                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
+                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2204/ stable main
+                  EOF
+
+                  sudo apt update
+
+      .. tab-item:: Debian
+
+         .. tab-set::
+
+            .. tab-item:: 13
+
+               .. code-block:: bash
+
+                  sudo mkdir --parents --mode=0755 /etc/apt/keyrings
+                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
+                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/debian13/ stable main
+                  EOF
+
+                  sudo apt update
+
+            .. tab-item:: 12
+
+               .. code-block:: bash
+
+                  sudo mkdir --parents --mode=0755 /etc/apt/keyrings
+                  wget https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
+                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
+                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/debian12/ stable main
+                  EOF
+
+                  sudo apt update
 
       .. tab-item:: RHEL
-         :sync: rhel
 
-         .. code-block:: bash
+         .. tab-set::
 
-            sudo tee /etc/yum.repos.d/rvs.repo <<EOF
-            [rvs]
-            name=ROCm Validation Suite
-            baseurl=https://repo.amd.com/rocm/rvs/packages/rpm/x86_64/
-            enabled=1
-            gpgcheck=1
-            gpgkey=https://repo.amd.com/rocm/packages-multi-arch/gpg/rocm.gpg
-            priority=50
-            EOF
-            sudo dnf clean all
+            .. tab-item:: 10
+
+               .. code-block:: bash
+
+                  sudo tee /etc/yum.repos.d/rvs.repo <<EOF
+                  [rvs]
+                  name=ROCm Validation Suite
+                  baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel10/x86_64
+                  enabled=1
+                  gpgcheck=1
+                  gpgkey=https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg
+                  priority=50
+                  EOF
+                  sudo dnf clean all
+
+            .. tab-item:: 9
+
+               .. code-block:: bash
+
+                  sudo tee /etc/yum.repos.d/rvs.repo <<EOF
+                  [rvs]
+                  name=ROCm Validation Suite
+                  baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel9/x86_64
+                  enabled=1
+                  gpgcheck=1
+                  gpgkey=https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg
+                  priority=50
+                  EOF
+                  sudo dnf clean all
+
+            .. tab-item:: 8
+
+               .. code-block:: bash
+
+                  sudo tee /etc/yum.repos.d/rvs.repo <<EOF
+                  [rvs]
+                  name=ROCm Validation Suite
+                  baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel8/x86_64
+                  enabled=1
+                  gpgcheck=1
+                  gpgkey=https://stable.repo.amd.com/rocm/core/packages/gpg/rocm.gpg
+                  priority=50
+                  EOF
+                  sudo dnf clean all
 
 2. Install the RVS package.
 
@@ -173,10 +261,10 @@ on top of the ROCm Core SDK.
    The ROCm repositories must be set up before installing RVS. This repository
    setup is part of the ROCm Core SDK installation.
 
-Package manager uninstallation
-===================================
+Package manager uninstalling
+============================
 
-1. Remove installed packages.
+1. Use your package manager to remove the installed packages.
 
    .. tab-set::
 
@@ -199,31 +287,111 @@ Package manager uninstallation
    .. tab-set::
 
       .. tab-item:: Ubuntu
-         :sync: ubuntu
 
-         .. code-block:: bash
+         .. tab-set::
 
-            # Remove RVS repositories
-            sudo rm /etc/apt/sources.list.d/rvs.list
+            .. tab-item:: 26.04
 
-            # Clear the cache and clean the system
-            sudo rm -rf /var/cache/apt/*
-            sudo apt clean all
-            sudo apt update
+               .. code-block:: bash
+
+                  # Remove RVS repositories
+                  sudo rm /etc/apt/sources.list.d/rvs.list
+
+                  # Clear the cache and clean the system
+                  sudo rm -rf /var/cache/apt/*
+                  sudo apt clean all
+                  sudo apt update
+
+            .. tab-item:: 24.04
+
+               .. code-block:: bash
+
+                  # Remove RVS repositories
+                  sudo rm /etc/apt/sources.list.d/rvs.list
+
+                  # Clear the cache and clean the system
+                  sudo rm -rf /var/cache/apt/*
+                  sudo apt clean all
+                  sudo apt update
+
+            .. tab-item:: 22.04
+
+               .. code-block:: bash
+
+                  # Remove RVS repositories
+                  sudo rm /etc/apt/sources.list.d/rvs.list
+
+                  # Clear the cache and clean the system
+                  sudo rm -rf /var/cache/apt/*
+                  sudo apt clean all
+                  sudo apt update
+
+      .. tab-item:: Debian
+
+         .. tab-set::
+
+            .. tab-item:: 13
+
+               .. code-block:: bash
+
+                  # Remove RVS repositories
+                  sudo rm /etc/apt/sources.list.d/rvs.list
+
+                  # Clear the cache and clean the system
+                  sudo rm -rf /var/cache/apt/*
+                  sudo apt clean all
+                  sudo apt update
+
+            .. tab-item:: 12
+
+               .. code-block:: bash
+
+                  # Remove RVS repositories
+                  sudo rm /etc/apt/sources.list.d/rvs.list
+
+                  # Clear the cache and clean the system
+                  sudo rm -rf /var/cache/apt/*
+                  sudo apt clean all
+                  sudo apt update
 
       .. tab-item:: RHEL
-         :sync: rhel
 
-         .. code-block:: bash
+         .. tab-set::
 
-            # Remove RVS repositories
-            sudo rm /etc/yum.repos.d/rvs.repo
+            .. tab-item:: 10
 
-            # Clear the cache and clean the system
-            sudo rm -rf /var/cache/dnf
-            sudo dnf clean all
+               .. code-block:: bash
 
-3. Remove RVS environment configuration.
+                  # Remove RVS repositories
+                  sudo rm /etc/yum.repos.d/rvs.repo
+
+                  # Clear the cache and clean the system
+                  sudo rm -rf /var/cache/dnf
+                  sudo dnf clean all
+
+            .. tab-item:: 9
+
+               .. code-block:: bash
+
+                  # Remove RVS repositories
+                  sudo rm /etc/yum.repos.d/rvs.repo
+
+                  # Clear the cache and clean the system
+                  sudo rm -rf /var/cache/dnf
+                  sudo dnf clean all
+
+            .. tab-item:: 8
+
+               .. code-block:: bash
+
+                  # Remove RVS repositories
+                  sudo rm /etc/yum.repos.d/rvs.repo
+
+                  # Clear the cache and clean the system
+                  sudo rm -rf /var/cache/dnf
+                  sudo dnf clean all
+
+3. Remove your RVS environment configuration from your system.
 
    .. tab-set::
 
@@ -314,69 +482,30 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
          .. tab-item:: System-wide
 
-            .. tab-set::
+            .. code-block:: bash
 
-               .. tab-item:: Ubuntu
-                  :sync: ubuntu
+               sudo tee /etc/profile.d/set-rvs-env.sh << EOF
+               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+               EOF
 
-                  .. code-block:: bash
-
-                     sudo tee /etc/profile.d/set-rvs-env.sh << EOF
-                     export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
-                     export ROCM_PATH=$ROCM_INSTALL_PATH
-                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
-                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-                     EOF
-
-                     sudo chmod +x /etc/profile.d/set-rvs-env.sh
-                     source /etc/profile.d/set-rvs-env.sh
-
-               .. tab-item:: RHEL
-                  :sync: rhel
-
-                  .. code-block:: bash
-
-                     sudo tee /etc/profile.d/set-rvs-env.sh << EOF
-                     export EXTRAS_PATH=/opt/rocm/extras-10
-                     export ROCM_PATH=$ROCM_INSTALL_PATH
-                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
-                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-                     EOF
-
-                     sudo chmod +x /etc/profile.d/set-rvs-env.sh
-                     source /etc/profile.d/set-rvs-env.sh
+               sudo chmod +x /etc/profile.d/set-rvs-env.sh
+               source /etc/profile.d/set-rvs-env.sh
 
          .. tab-item:: User
 
-            .. tab-set::
+            .. code-block:: bash
 
-               .. tab-item:: Ubuntu
-                  :sync: ubuntu
+               tee --append ~/.bashrc << EOF
+               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+               EOF
 
-                  .. code-block:: bash
-
-                     tee --append ~/.bashrc << EOF
-                     export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
-                     export ROCM_PATH=$ROCM_INSTALL_PATH
-                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
-                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-                     EOF
-
-                     source ~/.bashrc
-
-               .. tab-item:: RHEL
-                  :sync: rhel
-
-                  .. code-block:: bash
-
-                     tee --append ~/.bashrc << EOF
-                     export EXTRAS_PATH=/opt/rocm/extras-10
-                     export ROCM_PATH=$ROCM_INSTALL_PATH
-                     export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
-                     export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
-                     EOF
-
-                     source ~/.bashrc
+               source ~/.bashrc
 
 5. Verify your installation.
 
@@ -384,8 +513,8 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
       rvs -g
 
-Tarball uninstallation
-=========================
+Tarball uninstalling
+====================
 
 1. Remove the installation directory.
 
@@ -399,7 +528,7 @@ Tarball uninstallation
 
       sudo rm -rf /opt/rocm/extras-10
 
-2. Remove the RVS environment configuration.
+2. Remove the RVS environment configuration from your system.
 
    .. tab-set::
 
