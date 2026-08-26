@@ -39,24 +39,30 @@ require_env() {
 # Per-target libomp dir: ${ROCM}/lib/llvm/lib/$(clang --print-target-triple)
 rvs_llvm_host_runtime_dir() {
   require_env TARGET_ROCM_PATH
-  local clang="${TARGET_ROCM_PATH}/bin/amdclang++"
-  if [ ! -x "$clang" ]; then
-    clang="${TARGET_ROCM_PATH}/lib/llvm/bin/amdclang++"
-  fi
-  if [ ! -x "$clang" ]; then
-    echo "::warning::No ROCm clang under ${TARGET_ROCM_PATH}; skipping per-target libomp path" >&2
-    return 0
-  fi
-  local triple dir
-  triple=$("$clang" --print-target-triple 2>/dev/null) || return 0
-  dir="${TARGET_ROCM_PATH}/lib/llvm/lib/${triple}"
-  if [ ! -d "$dir" ]; then
-    echo "::warning::llvm runtime triple dir not found under ${dir}" >&2
-    return 0
-  else
-    echo "::notice::llvm runtime triple found at: ${dir}" >&2
-  fi
-  printf '%s\n' "$dir"
+  require_env SSH_CONFIG_FILE
+  ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
+    "TARGET_ROCM_PATH='${TARGET_ROCM_PATH}' bash -s" <<'REMOTE'
+set -euo pipefail
+clang=""
+for candidate in \
+  "${TARGET_ROCM_PATH}/bin/amdclang++" \
+  "${TARGET_ROCM_PATH}/lib/llvm/bin/amdclang++" \
+  "${TARGET_ROCM_PATH}/lib/llvm/bin/clang++"; do
+  [ -x "$candidate" ] && clang="$candidate" && break
+done
+[ -n "$clang" ] || {
+  echo "::warning::No ROCm clang under ${TARGET_ROCM_PATH}; skipping per-target libomp path" >&2
+  exit 0
+}
+triple=$("$clang" --print-target-triple 2>/dev/null) || exit 0
+dir="${TARGET_ROCM_PATH}/lib/llvm/lib/${triple}"
+[ -d "$dir" ] || {
+  echo "::warning::llvm runtime triple dir not found under ${dir}" >&2
+  exit 0
+}
+echo "::notice::llvm runtime triple dir found under ${dir}" >&2
+printf '%s\n' "$dir"
+REMOTE
 }
 
 ld_path_export() {
