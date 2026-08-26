@@ -1,0 +1,43 @@
+# ROCm nightly-test runtime image on Ubuntu 26.04 — same SDK tarball layout as build_packages_local.sh
+# (therock-dist-linux-<GPU_FAMILY>-<ROCM_VERSION>.tar.gz from multiarch or release listing).
+#
+# Build on any docker host (typically the self-hosted runner):
+#   ./.github/docker/rvs-nightly-rocm-ubuntu26.04/build-rocm-image.sh \
+#     --rocm-version 10.1.0a20260819 --gpu-family multiarch
+
+FROM ubuntu:26.04
+
+ARG ROCM_VERSION
+ARG GPU_FAMILY=multiarch
+ARG ROCM_SDK_BASE_URL
+ARG ROCM_INSTALL_PATH=/opt/rocm/install
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    tar \
+    pciutils \
+    kmod \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN test -n "${ROCM_VERSION}" && test -n "${ROCM_SDK_BASE_URL}"
+
+RUN mkdir -p "${ROCM_INSTALL_PATH}" \
+    && wget -q -O /tmp/rocm-sdk.tar.gz \
+         "${ROCM_SDK_BASE_URL%/}/therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz" \
+    && tar -xzf /tmp/rocm-sdk.tar.gz -C "${ROCM_INSTALL_PATH}" --strip-components=1 \
+    && rm -f /tmp/rocm-sdk.tar.gz \
+    && test -x "${ROCM_INSTALL_PATH}/bin/rocminfo" \
+    && test -x "${ROCM_INSTALL_PATH}/bin/amd-smi"
+
+COPY env-rocm.sh /etc/profile.d/rocm-env.sh
+
+ENV ROCM_PATH=${ROCM_INSTALL_PATH}
+ENV TARGET_ROCM_PATH=${ROCM_INSTALL_PATH}
+ENV ROCM_VERSION=${ROCM_VERSION}
+ENV GPU_FAMILY=${GPU_FAMILY}
+ENV UBUNTU_VERSION=26.04
+ENV LD_LIBRARY_PATH=${ROCM_INSTALL_PATH}/lib/rocm_sysdeps/lib:${ROCM_INSTALL_PATH}/lib/llvm/lib:${ROCM_INSTALL_PATH}/lib
+
+WORKDIR /workspace
