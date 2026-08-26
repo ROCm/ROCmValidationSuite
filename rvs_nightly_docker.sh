@@ -21,7 +21,10 @@ set -euo pipefail
 DOCKER_IMAGE="${RVS_NIGHTLY_DOCKER_IMAGE:-rvs-nightly-rocm:latest}"
 DOCKER_IMAGE_ARCHIVE="${RVS_DOCKER_IMAGE_ARCHIVE:-rvs-nightly-rocm-image.tar.gz}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOCKER_BUILD_DIR="${REPO_ROOT}/.github/docker/rvs-nightly-rocm"
+DOCKER_BUILD_DIR="${RVS_DOCKER_BUILD_DIR:-${REPO_ROOT}/.github/docker/rvs-nightly-rocm}"
+if [[ "$DOCKER_BUILD_DIR" != /* ]]; then
+  DOCKER_BUILD_DIR="${REPO_ROOT}/${DOCKER_BUILD_DIR#./}"
+fi
 
 usage() {
   cat <<'EOF'
@@ -49,6 +52,7 @@ Environment:
   RVS_DOCKER_REGISTRY_PASSWORD optional registry login password
   RVS_DOCKER_ROCM_VERSION    expected ROCm SDK version (for skip-if-present matching)
   RVS_DOCKER_SKIP_IF_PRESENT true (default) skips transfer when target already has image
+  RVS_DOCKER_BUILD_DIR         docker build context (default: .github/docker/rvs-nightly-rocm)
 EOF
 }
 
