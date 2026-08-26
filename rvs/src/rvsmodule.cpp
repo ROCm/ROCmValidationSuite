@@ -46,6 +46,17 @@
 
 namespace {
 
+void rvs_prefer_load_err(std::string* keep, const std::string& next) {
+  if (next.empty()) {
+    return;
+  }
+  if (keep->empty() ||
+      (keep->find("could not resolve module path") != std::string::npos &&
+       next.find("could not resolve module path") == std::string::npos)) {
+    *keep = next;
+  }
+}
+
 /**
  * @brief dlopen a module .so after rvs_verify_module_so_for_dlopen().
  *
@@ -195,29 +206,47 @@ rvs::module* rvs::module::find_create_module(const char* name) {
 
     // open module .so library
     string libpath;
-    rvs::options::has_option("pwd", &libpath); // has ending forward slash too
-    libpath += "../lib/rvs/";
-
-    string sofullname(libpath + it->second);
     std::string load_err;
-    void* psolib = rvs_dlopen_verified_module(sofullname, &load_err);
-    // error?
-    if (!psolib) {
-      //Search libraries in current path set in pwd option for backward compatibility
-      if(false == rvs::options::has_option("pwd", &libpath)) {
-        //Search libraries in current path if pwd option not set
-        libpath = "./";
-      } // has ending forward slash too
-      sofullname = libpath + it->second;
+    void* psolib = nullptr;
+
+    // Dev build layout: modules live next to rvs in build/bin/
+    if (rvs::options::has_option("pwd", &libpath)) {
+      string sofullname(libpath + it->second);
       psolib = rvs_dlopen_verified_module(sofullname, &load_err);
-      // error?
+    }
+    if (!psolib) {
+      // Install layout: prefix/lib/rvs/
+      if (rvs::options::has_option("pwd", &libpath)) {
+        libpath += "../lib/rvs/";
+      } else {
+        libpath = "../lib/rvs/";
+      }
+      string sofullname(libpath + it->second);
+      std::string try_err;
+      psolib = rvs_dlopen_verified_module(sofullname, &try_err);
+      rvs_prefer_load_err(&load_err, try_err);
+    }
+    if (!psolib) {
+      // pwd-relative fallback for backward compatibility
+      if (rvs::options::has_option("pwd", &libpath)) {
+        // libpath reset to pwd by has_option
+      } else {
+        libpath = "./";
+      }
+      string sofullname(libpath + it->second);
+      std::string try_err;
+      psolib = rvs_dlopen_verified_module(sofullname, &try_err);
+      rvs_prefer_load_err(&load_err, try_err);
+    }
+    if (!psolib) {
+      // Final fallback: install prefix lib dir from rvs binary path or RVS_LIB_PATH
+      libpath = rvs_get_rvs_modules_lib_dir_string();
+      libpath += "/";
+      string sofullname(libpath + it->second);
+      std::string try_err;
+      psolib = rvs_dlopen_verified_module(sofullname, &try_err);
+      rvs_prefer_load_err(&load_err, try_err);
       if (!psolib) {
-        // RVS module lib dir: from rvs binary path or build-time RVS_LIB_PATH
-        libpath = rvs_get_rvs_modules_lib_dir_string();
-        libpath += "/";
-        sofullname = libpath + it->second;
-        psolib = rvs_dlopen_verified_module(sofullname, &load_err);
-        if (!psolib) {
           char buff[1024];
           snprintf(buff, sizeof(buff),
               "could not load .so '%s'", sofullname.c_str());
@@ -227,7 +256,6 @@ rvs::module* rvs::module::find_create_module(const char* name) {
           rvs::logger::Err(buff, MODULE_NAME_CAPS);
           return NULL;  // fail
         }
-      }
     }
     // create module object
     m = new rvs::module(name, psolib);

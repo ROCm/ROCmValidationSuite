@@ -555,13 +555,6 @@ bool rvs_verify_module_so_for_dlopen(const std::string& path,
     return false;
   }
 
-  if (st.st_mode & S_IWGRP) {
-    if (err_msg) {
-      *err_msg = "module is group-writable";
-    }
-    return false;
-  }
-
   if (st.st_mode & S_IWOTH) {
     if (err_msg) {
       *err_msg = "module is world-writable";
@@ -570,11 +563,33 @@ bool rvs_verify_module_so_for_dlopen(const std::string& path,
   }
 
   const uid_t euid = geteuid();
-  if (euid != 0 && st.st_uid != euid && st.st_uid != 0) {
-    if (err_msg) {
-      *err_msg = "module owner mismatch";
+  if (euid == 0) {
+    if (st.st_mode & S_IWGRP) {
+      if (err_msg) {
+        *err_msg = "module is group-writable";
+      }
+      return false;
     }
-    return false;
+    if (st.st_uid != 0) {
+      if (err_msg) {
+        *err_msg = "module is not owned by root";
+      }
+      return false;
+    }
+  } else {
+    if (st.st_uid != euid && st.st_uid != 0) {
+      if (err_msg) {
+        *err_msg = "module owner mismatch";
+      }
+      return false;
+    }
+    // Allow group-writable modules owned by the caller (typical for local builds).
+    if ((st.st_mode & S_IWGRP) && st.st_uid != euid) {
+      if (err_msg) {
+        *err_msg = "module is group-writable";
+      }
+      return false;
+    }
   }
 
   if (canonical_path) {
