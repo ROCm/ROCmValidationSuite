@@ -529,6 +529,34 @@ int rvs::hsa::FindAgent(const uint32_t Node) {
   return -1;
 }
 
+//! max re-reads of async copy profiling data before giving up
+static const int MAX_COPY_TIME_READS = 128;
+
+/**
+ * @brief Read async copy profiling timestamps for a completed transfer
+ *
+ * The timestamps are not always visible at the moment the completion signal
+ * is observed - the call then succeeds but yields an all-zero record. Re-read
+ * until the record is populated.
+ *
+ * @param signal signal used for the transfer
+ * @param pTime [out] profiling timestamps
+ * @return HSA status of the last read
+ *
+ * */
+static hsa_status_t get_async_copy_time(hsa_signal_t signal,
+                            hsa_amd_profiling_async_copy_time_t* pTime) {
+  hsa_status_t status = HSA_STATUS_SUCCESS;
+
+  for (int i = 0; i < MAX_COPY_TIME_READS; i++) {
+    status = hsa_amd_profiling_get_async_copy_time(signal, pTime);
+    if (status != HSA_STATUS_SUCCESS || pTime->end > pTime->start) {
+      break;
+    }
+  }
+  return status;
+}
+
 /**
  * @brief Fetch time needed to copy data between two memory pools
  *
@@ -546,8 +574,7 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
   // Obtain time taken for forward copy
   hsa_amd_profiling_async_copy_time_t async_time_fwd {0};
   if (HSA_STATUS_SUCCESS !=
-     (status =
-       hsa_amd_profiling_get_async_copy_time(signal_fwd, &async_time_fwd)))
+     (status = get_async_copy_time(signal_fwd, &async_time_fwd)))
     print_hsa_status(__FILE__, __LINE__, __func__,
                    "hsa_amd_profiling_get_async_copy_time(forward)",
                    status);
@@ -559,8 +586,7 @@ double rvs::hsa::GetCopyTime(bool bidirectional,
 
   hsa_amd_profiling_async_copy_time_t async_time_rev {0};
   if (HSA_STATUS_SUCCESS !=
-     (status =
-        hsa_amd_profiling_get_async_copy_time(signal_rev, &async_time_rev)))
+     (status = get_async_copy_time(signal_rev, &async_time_rev)))
     print_hsa_status(__FILE__, __LINE__, __func__,
                    "hsa_amd_profiling_get_async_copy_time(backward)",
                    status);
@@ -744,7 +770,7 @@ int rvs::hsa::Allocate(int SrcAgent, int DstAgent, size_t Size,
 int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
                           size_t Size, bool bidirectional, bool b2b,
                           uint32_t warm_calls, uint32_t hot_calls,
-                          double* Duration) {
+                          double* Duration, uint32_t* NumTimed) {
   hsa_status_t status;
   int sts;
 
@@ -780,6 +806,9 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
   }
 
   *Duration = 0;
+
+  // number of hot calls for which a valid duration could be obtained
+  uint32_t num_timed = 0;
 
   // Total transfer iterations
   for (uint32_t i = 0; i < (warm_calls + hot_calls); i++) {
@@ -880,8 +909,15 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
       // Per transfer duration
       duration = GetCopyTime(bidirectional, signal_fwd, signal_rev)/1000000000;
 
-      // Total cumulative duration of all the hot call transfers
-      *Duration += duration;
+      // The profiling record is occasionally still unpopulated when the
+      // completion signal is observed, yielding a zero duration. Such a
+      // transfer must not contribute to the byte count either, otherwise the
+      // reported bandwidth is inflated by the untimed bytes.
+      if (duration > 0) {
+        // Total cumulative duration of all the hot call transfers
+        *Duration += duration;
+        num_timed++;
+      }
     }
 
     if (!b2b) {
@@ -910,6 +946,10 @@ int rvs::hsa::SendTraffic(uint32_t SrcNode, uint32_t DstNode,
       hsa_amd_memory_pool_free(dst_ptr_rev);
       hsa_signal_destroy(signal_rev);
     }
+  }
+
+  if (NumTimed) {
+    *NumTimed = num_timed;
   }
 
   RVSHSATRACE_

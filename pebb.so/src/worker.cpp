@@ -54,6 +54,23 @@ using std::string;
 using std::vector;
 using std::map;
 
+/**
+ * @brief Convert HSA/KFD node index into the HIP device ordinal used by
+ * TransferBench to index GPU executors and GPU memory.
+ * @return HIP device index, or -1 if no GPU maps to the given node
+ */
+static int node_to_hip_index(uint16_t node) {
+  int num_gpus = TransferBench::GetNumExecutors(TransferBench::EXE_GPU_GFX);
+  for (int i = 0; i < num_gpus; i++) {
+    int hip_node = -1;
+    if (gpu_hip_to_node(i, &hip_node) == 0 &&
+        hip_node == static_cast<int>(node)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 extern uint64_t time_diff(
                 std::chrono::time_point<std::chrono::system_clock> t_end,
                 std::chrono::time_point<std::chrono::system_clock> t_start);
@@ -218,18 +235,25 @@ int pebbworker::do_transfer() {
       _dst_node = dst_node;
     }
 
+    int gpu_exe_index = node_to_hip_index(dst_node);
+    if (gpu_exe_index < 0) {
+      msg = "no HIP device found for GPU node " + std::to_string(dst_node);
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+      return -1;
+    }
+
     if(src_mem != TransferBench::MEM_NULL) {
       transfers[0].srcs.push_back({src_mem,
-          src_mem == TransferBench::MEM_GPU ? _src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _src_node});
+          src_mem == TransferBench::MEM_GPU ? node_to_hip_index(_src_node) : _src_node});
     }
 
     if(dst_mem != TransferBench::MEM_NULL) {
       transfers[0].dsts.push_back({dst_mem,
-          dst_mem == TransferBench::MEM_GPU ? _dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _dst_node});
+          dst_mem == TransferBench::MEM_GPU ? node_to_hip_index(_dst_node) : _dst_node});
     }
 
     transfers[0].exeDevice = {executor == "gfx" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
-      dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU)};
+      gpu_exe_index};
 
     transfers[0].exeSubIndex = -1;
     transfers[0].numSubExecs = subexecutor;
@@ -239,16 +263,16 @@ int pebbworker::do_transfer() {
 
       if(dst_mem != TransferBench::MEM_NULL) {
         transfers[1].srcs.push_back({dst_mem,
-            dst_mem == TransferBench::MEM_GPU ? _dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _dst_node});
+            dst_mem == TransferBench::MEM_GPU ? node_to_hip_index(_dst_node) : _dst_node});
       }
 
       if(src_mem != TransferBench::MEM_NULL) {
         transfers[1].dsts.push_back({src_mem,
-            src_mem == TransferBench::MEM_GPU ? _src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : _src_node});
+            src_mem == TransferBench::MEM_GPU ? node_to_hip_index(_src_node) : _src_node});
       }
 
       transfers[1].exeDevice = {executor == "gfx" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
-        dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU)};
+        gpu_exe_index};
 
       transfers[1].exeSubIndex = -1;
       transfers[1].numSubExecs = subexecutor;
@@ -292,14 +316,15 @@ int pebbworker::do_transfer() {
 
       // Check if unidirectional device(GPU) to host (CPU)
       // if so, swap source and destination node
+      uint32_t num_timed = 0;
       if (!prop_h2d && prop_d2h) {
         RVSTRACE_
           sts = pHsa->SendTraffic(dst_node, src_node, current_size,
-              bidirect, b2b, warm_calls, hot_calls, &duration);
+              bidirect, b2b, warm_calls, hot_calls, &duration, &num_timed);
       } else {
         RVSTRACE_
           sts = pHsa->SendTraffic(src_node, dst_node, current_size,
-              bidirect, b2b, warm_calls, hot_calls, &duration);
+              bidirect, b2b, warm_calls, hot_calls, &duration, &num_timed);
       }
       if (sts) {
         std::string msg = "internal error, src: " + std::to_string(src_node)
@@ -313,7 +338,7 @@ int pebbworker::do_transfer() {
       {
         RVSTRACE_
           std::lock_guard<std::mutex> lk(cntmutex);
-        running_size += current_size * hot_calls;
+        running_size += current_size * num_timed;
         running_duration += duration;
       }
     }
