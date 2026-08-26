@@ -603,6 +603,40 @@ jobs:
             }
             core.info(`Dispatched RVS Nightly Tests (trigger_event=${context.eventName}) on ref ${ref}`);
 
+      - name: Dispatch RVS Nightly Docker Tests (Ubuntu 24.04)
+        if: >-
+          github.event_name == 'push' &&
+          (github.ref_name == 'main' || github.ref_name == 'master')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = context.payload.pull_request?.base?.ref
+              ?? context.ref.replace('refs/heads/', '');
+            const inputs = { trigger_event: context.eventName };
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'rvs-nightly-docker-ubuntu24.04-tests.yml',
+                ref,
+                inputs,
+              });
+            } catch (error) {
+              if (error.status === 422 && String(error.message).includes('Unexpected inputs')) {
+                core.warning('rvs-nightly-docker-ubuntu24.04-tests.yml on ref does not define trigger_event — dispatching without it.');
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'rvs-nightly-docker-ubuntu24.04-tests.yml',
+                  ref,
+                  inputs: {},
+                });
+              } else {
+                throw error;
+              }
+            }
+            core.info(`Dispatched RVS Nightly Docker Tests Ubuntu 24.04 (trigger_event=${context.eventName}) on ref ${ref}`);
+
       - name: Dispatch RVS Release Tests
         if: startsWith(github.ref_name, 'release/')
         uses: actions/github-script@v7
