@@ -157,7 +157,7 @@ class hsa {
   int SendTraffic(uint32_t SrcNode, uint32_t DstNode,
       size_t Size, bool bidirectional, bool b2b,
       uint32_t warm_calls, uint32_t hot_calls,
-      double* Duration);
+      double* Duration, uint32_t* NumTimed = nullptr);
 
   int GetPeerStatus(uint32_t SrcNode, uint32_t DstNode);
   int GetPeerStatusAgent(const AgentInformation& SrcAgent,
