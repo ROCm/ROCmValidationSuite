@@ -62,7 +62,7 @@ void rvs_prefer_load_err(std::string* keep, const std::string& next) {
  *
  * Runs verification first; on success opens the canonical path with RTLD_NOW.
  * Returns nullptr and sets err_msg when verification or dlopen fails. Used for
- * all three module search paths in find_create_module().
+ * all four module search paths in find_create_module().
  *
  * @param so_path  Candidate .so path.
  * @param err_msg  Optional; verification or dlopen failure reason.
