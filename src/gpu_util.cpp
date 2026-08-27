@@ -591,17 +591,34 @@ int gpu_hip_to_node(int hip_index, int* node) {
 }
 
 /**
- * @brief Initialize gpulist helper class
+ * @brief Initialize gpulist helper class (idempotent).
+ *
+ * First call inits AMD SMI and fills the GPU index tables. Later calls are
+ * a no-op until Terminate(). Returns -1 if amdsmi_init() fails.
+ *
  * @return 0 if successful, -1 otherwise
  **/
 int rvs::gpulist::Initialize() {
-  {
-    std::lock_guard<std::mutex> lk(smi_lifecycle_mutex);
-    if (!smi_initialized) {
-      amdsmi_init(AMDSMI_INIT_AMD_GPUS);
-      smi_initialized = true;
-    }
+  std::lock_guard<std::mutex> lk(smi_lifecycle_mutex);
+  if (smi_initialized) {
+    return 0;
   }
+
+  amdsmi_status_t status = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+  if (status != AMDSMI_STATUS_SUCCESS) {
+    return -1;
+  }
+  smi_initialized = true;
+
+  location_id.clear();
+  gpu_id.clear();
+  gpu_idx.clear();
+  device_id.clear();
+  node_id.clear();
+  domain_id.clear();
+  domain_loc_map.clear();
+  pci_bdf.clear();
+
   gpu_get_all_location_id(&location_id);
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
@@ -620,6 +637,15 @@ void rvs::gpulist::Terminate() {
   }
   amdsmi_shut_down();
   smi_initialized = false;
+
+  location_id.clear();
+  gpu_id.clear();
+  gpu_idx.clear();
+  device_id.clear();
+  node_id.clear();
+  domain_id.clear();
+  domain_loc_map.clear();
+  pci_bdf.clear();
 }
 
 
