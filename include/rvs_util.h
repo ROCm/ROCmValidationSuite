@@ -86,9 +86,9 @@ std::string rvs_get_rvs_modules_lib_dir_string(void);
 /**
  * @brief Validate a module .so before dlopen().
  *
- * On Linux: regular file, not group/world writable. Ownership is checked only
- * for non-root callers (must be owned by the effective user or root). When
- * euid is 0 (root or sudo), any owner is allowed if permissions pass.
+ * On Linux: regular file, not world-writable; group-writable only when owned by
+ * the caller (local builds). When euid is 0, reject group/world writable and
+ * require root ownership.
  *
  * @param path            Candidate .so path.
  * @param err_msg         Optional failure reason.

@@ -519,9 +519,11 @@ bool rvs_canonical_path(const std::string& path, std::string* out) {
  * @brief Validate a module .so before dlopen().
  *
  * Security gate applied to every module load attempt. On Linux, checks that
- * the target is a regular file, is not group- or world-writable, and passes
- * ownership checks for non-root callers only (see implementation). Returns the
- * canonical path so dlopen uses a stable, resolved location.
+ * the target is a regular file, is not world-writable, and passes ownership
+ * and permission rules: group-writable is allowed only when the caller owns
+ * the file (typical local builds); when euid is 0, group/world writable
+ * modules are rejected and root ownership is required. Returns the canonical
+ * path so dlopen uses a stable, resolved location.
  *
  * @param path            Candidate .so path (relative or absolute).
  * @param err_msg         Optional; receives a short reason on failure.
@@ -555,13 +557,6 @@ bool rvs_verify_module_so_for_dlopen(const std::string& path,
     return false;
   }
 
-  if (st.st_mode & S_IWGRP) {
-    if (err_msg) {
-      *err_msg = "module is group-writable";
-    }
-    return false;
-  }
-
   if (st.st_mode & S_IWOTH) {
     if (err_msg) {
       *err_msg = "module is world-writable";
@@ -570,11 +565,34 @@ bool rvs_verify_module_so_for_dlopen(const std::string& path,
   }
 
   const uid_t euid = geteuid();
-  if (euid != 0 && st.st_uid != euid && st.st_uid != 0) {
-    if (err_msg) {
-      *err_msg = "module owner mismatch";
+  if (euid == 0) {
+    if (st.st_mode & S_IWGRP) {
+      if (err_msg) {
+        *err_msg = "module is group-writable";
+      }
+      return false;
     }
-    return false;
+    if (st.st_uid != 0) {
+      if (err_msg) {
+        *err_msg = "module is not owned by root";
+      }
+      return false;
+    }
+  } else {
+    if (st.st_uid != euid && st.st_uid != 0) {
+      if (err_msg) {
+        *err_msg = "module owner mismatch";
+      }
+      return false;
+    }
+    // Allow group-writable modules owned by the caller (typical for local builds).
+    // st_uid is euid or 0 here; reject root-owned, group-writable system modules.
+    if ((st.st_mode & S_IWGRP) && st.st_uid == 0) {
+      if (err_msg) {
+        *err_msg = "root-owned module is group-writable";
+      }
+      return false;
+    }
   }
 
   if (canonical_path) {
