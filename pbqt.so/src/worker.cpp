@@ -47,6 +47,22 @@ extern "C" {
 #include "TransferBench.hpp"
 #define MODULE_NAME "PBQT"
 
+/**
+ * @brief Convert HSA/KFD node index into the HIP device ordinal used by
+ * TransferBench to index GPU executors and GPU memory.
+ * @return HIP device index, or -1 if no GPU maps to the given node
+ */
+static int node_to_hip_index(uint16_t node) {
+  int num_gpus = TransferBench::GetNumExecutors(TransferBench::EXE_GPU_GFX);
+  for (int i = 0; i < num_gpus; i++) {
+    int hip_node = -1;
+    if (gpu_hip_to_node(i, &hip_node) == 0 &&
+        hip_node == static_cast<int>(node)) {
+      return i;
+    }
+  }
+  return -1;
+}
 
 pbqtworker::pbqtworker() {
   // set to 'true' so that do_transfer() will also work
@@ -191,13 +207,22 @@ int pbqtworker::do_transfer() {
 
       transfers[0].numBytes = transfer_block_size;
 
+      int src_hip_index = node_to_hip_index(src_node);
+      int dst_hip_index = node_to_hip_index(dst_node);
+      if (src_hip_index < 0 || dst_hip_index < 0) {
+        msg = "no HIP device found for GPU node " +
+            std::to_string(src_hip_index < 0 ? src_node : dst_node);
+        rvs::lp::Err(msg, MODULE_NAME, action_name);
+        return -1;
+      }
+
       transfers[0].srcs.push_back({src_mem,
-          src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
+          src_mem == TransferBench::MEM_GPU ? src_hip_index : src_node});
       transfers[0].dsts.push_back({dst_mem,
-          dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
+          dst_mem == TransferBench::MEM_GPU ? dst_hip_index : dst_node});
 
       transfers[0].exeDevice = {executor == "gfx" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
-        src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node};
+        src_mem == TransferBench::MEM_GPU ? src_hip_index : src_node};
 
       transfers[0].exeSubIndex = -1;
 
@@ -207,12 +232,12 @@ int pbqtworker::do_transfer() {
         transfers[1].numBytes = transfer_block_size;
 
         transfers[1].srcs.push_back({dst_mem,
-            dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node});
+            dst_mem == TransferBench::MEM_GPU ? dst_hip_index : dst_node});
         transfers[1].dsts.push_back({src_mem,
-            src_mem == TransferBench::MEM_GPU ? src_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : src_node});
+            src_mem == TransferBench::MEM_GPU ? src_hip_index : src_node});
 
         transfers[1].exeDevice = {executor == "gfx" ? TransferBench::EXE_GPU_GFX : TransferBench::EXE_GPU_DMA,
-          dst_mem == TransferBench::MEM_GPU ? dst_node - TransferBench::GetNumExecutors(TransferBench::EXE_CPU) : dst_node};
+          dst_mem == TransferBench::MEM_GPU ? dst_hip_index : dst_node};
 
         transfers[1].exeSubIndex = -1;
 
