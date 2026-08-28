@@ -7,6 +7,8 @@
 #   ./build-rocm-image.sh --rocm-version 10.1.0a20260819 --gpu-family multiarch
 #   ./build-rocm-image.sh --from-tarball amdrocm7-rvs-1.4.21-r0714.20260724-Linux.tar.gz
 #       (requires *-Linux.tar.gz with -rMMmm.yyyymmdd-; nightly pins exact 7.14.0a20260724 SDK)
+#   ./build-rocm-image.sh --from-tarball ... --fallback-latest-sdk
+#       (if exact SDK date missing on CDN, use latest 7.14.0a* for same ROCm line)
 #   ./build-rocm-image.sh --channel nightly --tag rvs-nightly-rocm:latest
 
 set -euo pipefail
@@ -19,6 +21,7 @@ CHANNEL="nightly"
 IMAGE_TAG=""
 ROCM_SDK_BASE_URL=""
 FROM_TARBALL=""
+FALLBACK_LATEST_SDK="${RVS_DOCKER_SDK_FALLBACK_LATEST:-false}"
 
 NIGHTLY_INDEX="${ROCM_SDK_NIGHTLY_INDEX_URL:-https://rocm.nightlies.amd.com/tarball-multi-arch/}"
 NIGHTLY_BASE="${ROCM_SDK_NIGHTLY_BASE_URL:-https://rocm.nightlies.amd.com/tarball-multi-arch}"
@@ -40,6 +43,22 @@ resolve_sdk_base() {
     echo "::error::Unrecognized ROCm version format: $ver" >&2
     exit 1
   fi
+}
+
+fallback_latest_sdk_enabled() {
+  case "${FALLBACK_LATEST_SDK}" in
+    true|1|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+fetch_latest_nightly_sdk_for_line() {
+  local listing="$1"
+  local major="$2"
+  local minor="$3"
+  local prefix="${major}.${minor}.0a"
+  grep -oE "therock-dist-linux-${GPU_FAMILY}-${prefix}[0-9]+" "$listing" \
+    | sed "s|^therock-dist-linux-${GPU_FAMILY}-||" | sort -V | tail -1
 }
 
 fetch_latest_version() {
@@ -98,14 +117,24 @@ resolve_rocm_from_tarball() {
     sdk_file="therock-dist-linux-${GPU_FAMILY}-${exact}.tar.gz"
     listing_tmp="$(mktemp)"
     wget -q -O "$listing_tmp" "$NIGHTLY_INDEX"
-    if ! grep -qF "$sdk_file" "$listing_tmp"; then
+    if grep -qF "$sdk_file" "$listing_tmp"; then
+      ROCM_VERSION="$exact"
+      ROCM_SDK_BASE_URL="$NIGHTLY_BASE"
+    elif fallback_latest_sdk_enabled; then
+      ROCM_VERSION="$(fetch_latest_nightly_sdk_for_line "$listing_tmp" "$major" "$minor")"
+      if [ -z "$ROCM_VERSION" ]; then
+        rm -f "$listing_tmp"
+        echo "::error::No multiarch SDK ${exact} for tar ${base} (missing ${sdk_file} on ${NIGHTLY_INDEX}) and no ${major}.${minor}.0a* fallback on listing" >&2
+        exit 1
+      fi
+      echo "::warning::Exact SDK ${exact} missing for ${base}; using latest available ${ROCM_VERSION} (--fallback-latest-sdk)" >&2
+      ROCM_SDK_BASE_URL="$NIGHTLY_BASE"
+    else
       rm -f "$listing_tmp"
-      echo "::error::No multiarch SDK ${exact} for tar ${base} (missing ${sdk_file} on ${NIGHTLY_INDEX})" >&2
+      echo "::error::No multiarch SDK ${exact} for tar ${base} (missing ${sdk_file} on ${NIGHTLY_INDEX}). Pass --fallback-latest-sdk or set RVS_DOCKER_SDK_FALLBACK_LATEST=true to use the latest ${major}.${minor}.0a* build." >&2
       exit 1
     fi
     rm -f "$listing_tmp"
-    ROCM_VERSION="$exact"
-    ROCM_SDK_BASE_URL="$NIGHTLY_BASE"
   fi
 
   if [ -z "$ROCM_VERSION" ]; then
@@ -122,6 +151,7 @@ while [ $# -gt 0 ]; do
     --gpu-family)   GPU_FAMILY="$2"; shift 2 ;;
     --channel)      CHANNEL="$2"; shift 2 ;;
     --tag)          IMAGE_TAG="$2"; shift 2 ;;
+    --fallback-latest-sdk) FALLBACK_LATEST_SDK=true; shift ;;
     -h|--help)      usage ;;
     *) echo "Unknown arg: $1" >&2; usage ;;
   esac

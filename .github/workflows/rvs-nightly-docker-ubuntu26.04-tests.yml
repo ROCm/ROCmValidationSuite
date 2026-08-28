@@ -65,6 +65,11 @@ on:
         description: 'Work dir on target (default: /tmp/rvs-nightly-docker-ubuntu26.04-<run_id>)'
         required: false
         default: ''
+      fallback_latest_sdk:
+        description: 'If exact multiarch SDK date is missing on CDN, use latest same ROCm line (10.x.0a*)'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -85,6 +90,7 @@ env:
   RVS_DOCKER_REGISTRY_USER: ${{ secrets.RVS_DOCKER_REGISTRY_USER }}
   RVS_DOCKER_REGISTRY_PASSWORD: ${{ secrets.RVS_DOCKER_REGISTRY_PASSWORD }}
   RVS_DOCKER_SKIP_IF_PRESENT: 'true'
+  RVS_DOCKER_SDK_FALLBACK_LATEST: ${{ (inputs.fallback_latest_sdk == false || vars.RVS_DOCKER_SDK_FALLBACK_LATEST == 'false') && 'false' || 'true' }}
   TARGET_ROCM_PATH: /opt/rocm/install
   TARGET_NODE: ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
   TARGET_USER: ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
@@ -197,7 +203,11 @@ jobs:
           TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
         run: |
           chmod +x .github/docker/rvs-nightly-rocm-ubuntu26.04/build-rocm-image.sh
-          ./.github/docker/rvs-nightly-rocm-ubuntu26.04/build-rocm-image.sh --from-tarball "$TARBALL_NAME"
+          fallback_args=()
+          if [ "${RVS_DOCKER_SDK_FALLBACK_LATEST}" = true ]; then
+            fallback_args=(--fallback-latest-sdk)
+          fi
+          ./.github/docker/rvs-nightly-rocm-ubuntu26.04/build-rocm-image.sh --from-tarball "$TARBALL_NAME" "${fallback_args[@]}"
 
       - name: Verify ROCm docker image on build host
         if: inputs.build_docker_image && inputs.build_on_target == false
