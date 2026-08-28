@@ -53,7 +53,15 @@ Environment:
   RVS_DOCKER_ROCM_VERSION    expected ROCm SDK version (for skip-if-present matching)
   RVS_DOCKER_SKIP_IF_PRESENT true (default) skips transfer when target already has image
   RVS_DOCKER_BUILD_DIR         docker build context (default: .github/docker/rvs-nightly-rocm)
+  RVS_DOCKER_SDK_FALLBACK_LATEST  when true, use latest same-line SDK if exact date missing on CDN
 EOF
+}
+
+docker_build_fallback_args() {
+  case "${RVS_DOCKER_SDK_FALLBACK_LATEST:-false}" in
+    true|1|yes|YES) printf '%s' ' --fallback-latest-sdk' ;;
+    *) printf '%s' '' ;;
+  esac
 }
 
 require_env() {
@@ -384,10 +392,12 @@ cmd_build_image_on_target() {
   phase_end "Sync docker build context to target"
 
   phase_start "docker build on GPU target"
+  local fallback_args
+  fallback_args="$(docker_build_fallback_args)"
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
 set -euo pipefail
 chmod +x '${remote_build_dir}/build-rocm-image.sh'
-'${remote_build_dir}/build-rocm-image.sh' --from-tarball '${TARBALL_NAME}'
+'${remote_build_dir}/build-rocm-image.sh' --from-tarball '${TARBALL_NAME}'${fallback_args}
 REMOTE
   phase_end "docker build on GPU target"
   cmd_verify_image_on_target
