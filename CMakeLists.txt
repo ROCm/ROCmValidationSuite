@@ -529,26 +529,25 @@ endif()
 
 # Package dependencies - libpci3 is no longer a runtime dep (statically linked);
 # yaml-cpp is conditionally required based on linking type
+# RPM NUMA/yaml-cpp names differ by distro:
+#   RHEL/CentOS/Mariner: numactl-libs (runtime), yaml-cpp (dynamic)
+#   SLES 15/16: libnuma1 (runtime), libyaml-cpp0_6 (dynamic)
+set(RVS_RPM_NUMA_DEPS "(numactl-libs or libnuma1)")
 if (YAML_CPP_STATIC_FOUND)
   # Static linking - no runtime yaml-cpp dependency needed
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libnuma1")
-  elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libnuma1")
   else ()
-    # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, numactl-libs")
+    # RPM distros - RHEL, CentOS, SLES, Mariner (manylinux-built RPM)
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, ${RVS_RPM_NUMA_DEPS}")
   endif()
   message(STATUS "Package dependencies: yaml-cpp statically linked, no runtime dependency")
 else()
   # Dynamic linking - yaml-cpp runtime dependency required
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libyaml-cpp-dev, libnuma1")
-  elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libyaml-cpp0_6, libnuma1")
   else ()
-    # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, yaml-cpp, numactl-libs")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, (yaml-cpp or libyaml-cpp0_6), ${RVS_RPM_NUMA_DEPS}")
   endif()
   message(STATUS "Package dependencies: yaml-cpp dynamically linked, runtime dependency included")
 endif()
