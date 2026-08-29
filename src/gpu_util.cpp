@@ -31,6 +31,7 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include <mutex>
 
 #include "amd_smi/amdsmi.h"
 #include "include/gpu_util.h"
@@ -47,6 +48,13 @@ std::vector<uint16_t> rvs::gpulist::node_id;
 std::vector<uint16_t> rvs::gpulist::domain_id;
 std::map<std::pair<uint16_t, uint16_t> , uint16_t> rvs::gpulist::domain_loc_map;
 std::vector<std::string> rvs::gpulist::pci_bdf;
+
+namespace {
+
+std::mutex smi_lifecycle_mutex;
+bool smi_initialized = false;
+
+}  // namespace
 
 const std::map<uint16_t, std::string> gpu_dev_map = {
   {0x74a1, "MI300X"},    // MI300X
@@ -584,11 +592,34 @@ int gpu_hip_to_node(int hip_index, int* node) {
 }
 
 /**
- * @brief Initialize gpulist helper class
+ * @brief Initialize gpulist helper class (idempotent).
+ *
+ * First call inits AMD SMI and fills the GPU index tables. Later calls are
+ * a no-op until Terminate(). Returns -1 if amdsmi_init() fails.
+ *
  * @return 0 if successful, -1 otherwise
  **/
 int rvs::gpulist::Initialize() {
-  amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+  std::lock_guard<std::mutex> lk(smi_lifecycle_mutex);
+  if (smi_initialized) {
+    return 0;
+  }
+
+  amdsmi_status_t status = amdsmi_init(AMDSMI_INIT_AMD_GPUS);
+  if (status != AMDSMI_STATUS_SUCCESS) {
+    return -1;
+  }
+  smi_initialized = true;
+
+  location_id.clear();
+  gpu_id.clear();
+  gpu_idx.clear();
+  device_id.clear();
+  node_id.clear();
+  domain_id.clear();
+  domain_loc_map.clear();
+  pci_bdf.clear();
+
   gpu_get_all_location_id(&location_id);
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
@@ -598,6 +629,24 @@ int rvs::gpulist::Initialize() {
   gpu_get_all_pci_bdf(pci_bdf);
 
   return 0;
+}
+
+void rvs::gpulist::Terminate() {
+  std::lock_guard<std::mutex> lk(smi_lifecycle_mutex);
+  if (!smi_initialized) {
+    return;
+  }
+  amdsmi_shut_down();
+  smi_initialized = false;
+
+  location_id.clear();
+  gpu_id.clear();
+  gpu_idx.clear();
+  device_id.clear();
+  node_id.clear();
+  domain_id.clear();
+  domain_loc_map.clear();
+  pci_bdf.clear();
 }
 
 

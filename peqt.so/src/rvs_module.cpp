@@ -67,7 +67,6 @@ extern "C" int rvs_module_init(void* pMi) {
 }
 
 extern "C" int rvs_module_terminate(void) {
-  amdsmi_shut_down();
   return 0;
 }
 

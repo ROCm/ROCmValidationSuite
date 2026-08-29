@@ -39,6 +39,7 @@
 #include "include/rvsoptions.h"
 #include "include/rvstrace.h"
 #include "include/rvs_util.h"
+#include "include/gpu_util.h"
 
 #define MODULE_NAME_CAPS "CLI"
 
@@ -62,6 +63,8 @@ rvs::exec::~exec() {
  *
  */
 int rvs::exec::run() {
+  // Pairs with get_gpu_name() on -r/-m early exits; no-op after module::terminate on -c.
+  rvs::gpulist::RunGuard smi_guard;
   int     sts = 0;
   string  val;
   string  path;
@@ -408,6 +411,8 @@ int rvs::exec::set_callback(void (*callback)(const rvs_results_t * results, int 
  */
 int rvs::exec::run(std::map<std::string, std::string>& opt) {
 
+  // Same AMD SMI cleanup guarantee as CLI run(); no-op after module::terminate.
+  rvs::gpulist::RunGuard smi_guard;
   int     sts = 0;
   string  path;
   string  module;
