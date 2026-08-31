@@ -161,6 +161,88 @@ image_rocm_version_on_target() {
     | sed -n 's/^ROCM_VERSION=//p' | head -1
 }
 
+image_rocm_version_local() {
+  docker image inspect "${DOCKER_IMAGE}" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+    | sed -n 's/^ROCM_VERSION=//p' | head -1
+}
+
+build_host_image_matches_expected() {
+  local expected actual
+  expected="$(expected_rocm_version 2>/dev/null || true)"
+  if [ -z "$expected" ]; then
+    return 0
+  fi
+  actual="$(image_rocm_version_local 2>/dev/null || true)"
+  [ "$actual" = "$expected" ]
+}
+
+verify_gzip_archive() {
+  local archive="$1"
+  local label="${2:-archive}"
+  if [ ! -s "$archive" ]; then
+    echo "::error::${label} is empty: ${archive}" >&2
+    exit 1
+  fi
+  if command -v pigz >/dev/null 2>&1; then
+    pigz -t "$archive"
+  else
+    gzip -t "$archive"
+  fi
+  echo "::notice::${label} integrity OK ($(stat -c%s "$archive" 2>/dev/null || stat -f%z "$archive") bytes)"
+}
+
+verify_remote_file_size() {
+  local local_path="$1"
+  local remote_path="$2"
+  local local_size remote_size
+  local_size="$(stat -c%s "$local_path" 2>/dev/null || stat -f%z "$local_path")"
+  remote_size="$(ssh -q -F "$SSH_CONFIG_FILE" rvs-target "stat -c%s '${remote_path}' 2>/dev/null || stat -f%z '${remote_path}'")"
+  if [ "$local_size" != "$remote_size" ]; then
+    echo "::error::Remote file size mismatch for ${remote_path}: local=${local_size} remote=${remote_size}" >&2
+    exit 1
+  fi
+  echo "::notice::Remote file size matches local (${local_size} bytes)"
+}
+
+cmd_build_image_on_build_host() {
+  require_env TARBALL_NAME
+  check_docker_local
+  local build_script="${DOCKER_BUILD_DIR}/build-rocm-image.sh"
+  if [ ! -f "$build_script" ]; then
+    echo "::error::Docker build script not found: ${build_script}" >&2
+    exit 1
+  fi
+  chmod +x "$build_script"
+  local fallback_args=()
+  case "${RVS_DOCKER_SDK_FALLBACK_LATEST:-false}" in
+    true|1|yes|YES) fallback_args=(--fallback-latest-sdk) ;;
+  esac
+  phase_start "docker build on build host"
+  RVS_NIGHTLY_DOCKER_IMAGE="${DOCKER_IMAGE}" "$build_script" --from-tarball "${TARBALL_NAME}" "${fallback_args[@]}"
+  phase_end "docker build on build host"
+  if ! build_host_image_matches_expected; then
+    echo "::warning::Build host image ROCM_VERSION=$(image_rocm_version_local || echo unknown) may differ from expected $(expected_rocm_version 2>/dev/null || echo unknown) (SDK fallback in use?)"
+  fi
+}
+
+ensure_build_host_image() {
+  check_docker_local
+  if docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1 && build_host_image_matches_expected; then
+    echo "::notice::Build host has ${DOCKER_IMAGE} with matching ROCM_VERSION"
+    return 0
+  fi
+  if [ -z "${TARBALL_NAME:-}" ]; then
+    echo "::error::Build host image is missing or stale and TARBALL_NAME is unset — cannot rebuild." >&2
+    echo "Re-run with build_docker_image=true, build_on_target=true, or set TARBALL_NAME." >&2
+    exit 1
+  fi
+  local expected actual
+  expected="$(expected_rocm_version 2>/dev/null || true)"
+  actual="$(image_rocm_version_local 2>/dev/null || true)"
+  echo "::notice::Build host image ROCM_VERSION=${actual:-missing}; need ${expected:-unknown} — rebuilding on build host"
+  cmd_build_image_on_build_host
+}
+
 resolve_transfer_mode() {
   case "${RVS_DOCKER_TRANSFER_MODE:-auto}" in
     scp|registry|build-on-target)
@@ -171,6 +253,10 @@ resolve_transfer_mode() {
         0|false|False|no|NO)
           if [ -n "${RVS_DOCKER_REGISTRY:-}" ]; then
             printf '%s\n' registry
+          elif [ -n "${TARBALL_NAME:-}" ]; then
+            # Prefer build-on-target over scp when the tarball is known — scp of
+            # multi-GB images is slow and fragile; build-on-target sends only context.
+            printf '%s\n' build-on-target
           else
             printf '%s\n' scp
           fi
@@ -357,15 +443,7 @@ docker_run() {
 }
 
 cmd_pull_image() {
-  check_docker_local
-  if docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
-    echo "::notice::Image ${DOCKER_IMAGE} present on build host."
-    return 0
-  fi
-  echo "::error::Docker image ${DOCKER_IMAGE} not found on build host. Run:" >&2
-  echo "  ./.github/docker/rvs-nightly-rocm/setup-on-runner.sh --from-tarball <tarball-name>" >&2
-  echo "Or re-run the workflow with build_docker_image=true (or build-on-target mode)." >&2
-  exit 1
+  ensure_build_host_image
 }
 
 cmd_build_image_on_target() {
@@ -412,7 +490,7 @@ cmd_transfer_via_registry() {
   version="$(expected_rocm_version 2>/dev/null || true)"
   ref="$(registry_image_ref "$version")"
 
-  cmd_pull_image
+  ensure_build_host_image
   docker_registry_login local
 
   phase_start "docker tag + push (${ref})"
@@ -434,27 +512,41 @@ cmd_transfer_via_registry() {
 cmd_transfer_via_scp() {
   require_ssh_config
   require_env REMOTE_WORK_DIR
-  cmd_pull_image
+  ensure_build_host_image
 
   local archive="${REPO_ROOT}/pkg/${DOCKER_IMAGE_ARCHIVE}"
+  local remote_archive="${REMOTE_WORK_DIR}/docker/${DOCKER_IMAGE_ARCHIVE}"
   mkdir -p "${REPO_ROOT}/pkg"
 
   phase_start "docker save + compress (${DOCKER_IMAGE})"
+  rm -f "${archive}"
   docker save "${DOCKER_IMAGE}" | compress_pipe > "${archive}"
   ls -lh "${archive}"
+  verify_gzip_archive "${archive}" "local image archive"
   phase_end "docker save + compress (${DOCKER_IMAGE})"
 
   phase_start "scp image archive to target"
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target "mkdir -p '${REMOTE_WORK_DIR}/docker'"
+  ssh -q -F "$SSH_CONFIG_FILE" rvs-target "rm -f '${remote_archive}' '${remote_archive}.partial'"
   scp -q -F "$SSH_CONFIG_FILE" "${archive}" \
-    "rvs-target:${REMOTE_WORK_DIR}/docker/${DOCKER_IMAGE_ARCHIVE}"
+    "rvs-target:${remote_archive}.partial"
+  ssh -q -F "$SSH_CONFIG_FILE" rvs-target "mv -f '${remote_archive}.partial' '${remote_archive}'"
+  verify_remote_file_size "${archive}" "${remote_archive}"
+  ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
+set -euo pipefail
+if command -v pigz >/dev/null 2>&1; then
+  pigz -t '${remote_archive}'
+else
+  gzip -t '${remote_archive}'
+fi
+REMOTE
   phase_end "scp image archive to target"
 
   phase_start "docker load on target"
   local decompress
   decompress="$(decompress_cmd)"
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-    "${decompress} '${REMOTE_WORK_DIR}/docker/${DOCKER_IMAGE_ARCHIVE}' | docker load"
+    "${decompress} '${remote_archive}' | docker load"
   phase_end "docker load on target"
   cmd_verify_image_on_target
 }
@@ -498,8 +590,13 @@ cmd_ensure_image_on_target() {
   require_ssh_config
   require_env REMOTE_WORK_DIR
 
-  local mode
+  local mode requested
+  requested="${RVS_DOCKER_TRANSFER_MODE:-auto}"
   mode="$(resolve_transfer_mode)"
+  if [ "$requested" = "auto" ] && [ "$mode" = "build-on-target" ] && \
+     case "${RVS_DOCKER_BUILD_ON_TARGET:-true}" in 0|false|False|no|NO) true ;; *) false ;; esac; then
+    echo "::notice::auto mode: using build-on-target (TARBALL_NAME set; avoids fragile multi-GB scp). Set RVS_DOCKER_TRANSFER_MODE=scp to force scp."
+  fi
   echo "Image delivery mode: ${mode}"
 
   if skip_if_present_enabled && image_ready_on_target; then
@@ -526,12 +623,17 @@ cmd_ensure_image_on_target() {
 cmd_verify_image_on_target() {
   require_ssh_config
   check_docker_on_target
-  if ssh -q -F "$SSH_CONFIG_FILE" rvs-target "docker image inspect '${DOCKER_IMAGE}' >/dev/null 2>&1"; then
-    echo "::notice::Image ${DOCKER_IMAGE} present on target node."
-    return 0
+  if ! ssh -q -F "$SSH_CONFIG_FILE" rvs-target "docker image inspect '${DOCKER_IMAGE}' >/dev/null 2>&1"; then
+    echo "::error::Image ${DOCKER_IMAGE} not found on target after delivery." >&2
+    exit 1
   fi
-  echo "::error::Image ${DOCKER_IMAGE} not found on target after delivery." >&2
-  exit 1
+  local expected actual
+  expected="$(expected_rocm_version 2>/dev/null || true)"
+  actual="$(image_rocm_version_on_target || true)"
+  if [ -n "$expected" ] && [ -n "$actual" ] && [ "$actual" != "$expected" ]; then
+    echo "::warning::Target image ROCM_VERSION=${actual} (expected ${expected}) — SDK fallback or stale image may apply"
+  fi
+  echo "::notice::Image ${DOCKER_IMAGE} present on target node (ROCM_VERSION=${actual:-unknown})."
 }
 
 cmd_verify_rocm() {
