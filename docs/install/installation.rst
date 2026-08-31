@@ -7,7 +7,7 @@ Install ROCm Validation Suite
 *****************************
 
 ROCm Validation Suite (RVS) is supported on AMD Instinct and Radeon GPUs
-supported by ROCm. See the `ROCm compatibility matrix <https://rocm.docs.amd.com/en/docs-7.14.0/compatibility/compatibility-matrix.html>`__ for support information.
+supported by ROCm. See the `ROCm compatibility matrix <https://rocm.docs.amd.com/en/docs-7.14.1/compatibility/compatibility-matrix.html>`__ for support information.
 
 For advanced workflows, source builds, or custom configurations, see
 `<https://github.com/ROCm/ROCmValidationSuite#rocmvalidationsuite>`__.
@@ -21,7 +21,7 @@ Prerequisites
 
 Install the ROCm Core SDK before installing RVS.
 
-For instructions, see `Install AMD ROCm <https://rocm.docs.amd.com/en/docs-7.14.0/install/rocm.html?fam=all&i=pkgman>`__. Use the
+For instructions, see `Install AMD ROCm <https://rocm.docs.amd.com/en/docs-7.14.1/install/rocm.html?fam=all&i=pkgman>`__. Use the
 selector panel on that page to view instructions appropriate for your system environment.
 
 ROCm installation path
@@ -269,7 +269,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
    .. code-block:: bash
 
-      wget https://repo.amd.com/rocm/rvs/tarball/amdrocm7-rvs-1.5.122-579-Linux.tar.gz
+      wget https://repo.amd.com/rocm/rvs/tarball/amdrocm7-rvs-1.5.125-620-Linux.tar.gz
 
 3. Extract the tarball to the ROCm Extras location.
 
@@ -283,7 +283,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
       EXTRAS_INSTALL_PATH=<extras-path>  # ie. <extras-path> = path to ROCm extras for RVS extract
 
       sudo mkdir -p $EXTRAS_INSTALL_PATH
-      sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
+      sudo tar -xzf amdrocm7-rvs-1.5.125-620-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
 
    **Recommended:** Set ``EXTRAS_INSTALL_PATH`` to a location within the root
    install directory for the ROCm Core SDK.
@@ -294,7 +294,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
    .. code-block:: bash
 
       sudo mkdir -p /opt/rocm/extras-7
-      sudo tar -xzf amdrocm7-rvs-1.5.122-579-Linux.tar.gz -C /opt/rocm/extras-7
+      sudo tar -xzf amdrocm7-rvs-1.5.125-620-Linux.tar.gz -C /opt/rocm/extras-7
 
 4. Complete the following post-installation steps.
 
