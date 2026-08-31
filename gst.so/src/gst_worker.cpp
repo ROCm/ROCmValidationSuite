@@ -85,16 +85,31 @@ void GstCrcSync::sync_and_compare(size_t slot, uint16_t gpu_id, uint32_t crc) {
 
   if (arrived == total_workers) {
     // Last worker to arrive: collect mismatches, then release all waiters.
+    //
+    // Iterate slot indices and skip detached slots.  total_workers is a
+    // running count, not a slot bound: using it here would skip live
+    // high-numbered slots and treat a detached slot 0 as the reference.
     std::vector<std::string> msgs;
-    for (size_t i = 1; i < total_workers; ++i) {
-      if (crcs[i] != crcs[0]) {
+    size_t ref = active.size();          // sentinel: no active slot found
+    for (size_t i = 0; i < active.size(); ++i) {
+      if (active[i]) {
+        ref = i;
+        break;
+      }
+    }
+
+    // When ref is the sentinel this loop starts past the end and does nothing.
+    for (size_t i = ref + 1; i < active.size(); ++i) {
+      if (!active[i])
+        continue;
+      if (crcs[i] != crcs[ref]) {
         std::ostringstream oss;
         oss << "[" << action_name << "] "
             << "cross-GPU crc-check error: "
             << "GPU " << gpu_ids[i]
             << " CRC 0x" << std::hex << std::setw(8) << std::setfill('0') << crcs[i]
-            << " != GPU " << std::dec << gpu_ids[0]
-            << " CRC 0x" << std::hex << std::setw(8) << std::setfill('0') << crcs[0]
+            << " != GPU " << std::dec << gpu_ids[ref]
+            << " CRC 0x" << std::hex << std::setw(8) << std::setfill('0') << crcs[ref]
             << " (SDC candidate)";
         msgs.push_back(oss.str());
       }
@@ -113,10 +128,13 @@ void GstCrcSync::sync_and_compare(size_t slot, uint16_t gpu_id, uint32_t crc) {
   }
 }
 
-void GstCrcSync::detach() {
+void GstCrcSync::detach(size_t slot) {
   std::unique_lock<std::mutex> lock(mtx);
-  if (total_workers == 0)
+  // Idempotent per slot: a worker may reach both the explicit detach on the
+  // compute_output_crc() error path and its RAII guard on function exit.
+  if (slot >= active.size() || !active[slot])
     return;
+  active[slot] = false;
   --total_workers;
   // If the remaining workers already arrived, act as if this was the last one.
   if (total_workers > 0 && arrived >= total_workers) {
@@ -210,7 +228,7 @@ void GSTWorker::setup_blas(int *error, string *err_description) {
         << "A=0x" << std::hex << std::setw(8) << std::setfill('0') << crc_a
         << " B=0x" << std::setw(8) << std::setfill('0') << crc_b
         << " C=0x" << std::setw(8) << std::setfill('0') << crc_c;
-    rvs::lp::Log(oss.str(), rvs::logresults);
+    rvs::lp::Log(oss.str(), rvs::loginfo);
 
   }
 
@@ -337,8 +355,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
   gst_log_interval_time = std::chrono::system_clock::now();
   gst_start_gflops_time = std::chrono::system_clock::now();
 
-  uint64_t ramp_iter_count = 0;
-
   for (;;) {
     // check if stop signal was received
     if (rvs::lp::Stopping())
@@ -348,11 +364,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
       gst_end_time = std::chrono::system_clock::now();
       if (time_diff(gst_end_time,  gst_start_time) >
           (ramp_interval - NMAX_MS_GPU_RUN_PEAK_PERFORMANCE) * 1000u) {
-        std::ostringstream _oss;
-        _oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
-             << "ramp iterations: " << ramp_iter_count
-             << " (warm_calls: " << gst_warm_calls << ") [timeout]";
-        rvs::lp::Log(_oss.str(), rvs::logresults);
         return false;
       }
     }
@@ -411,7 +422,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 
     num_sgemm_ops += gst_warm_calls;
     num_sgemm_ops_log_interval += gst_warm_calls;
-    ++ramp_iter_count;
 
     gst_end_time = std::chrono::system_clock::now();
     micros_sgemm_ops =
@@ -430,13 +440,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
             time_diff(gst_end_time,  gst_start_time) +
             NMAX_MS_GPU_RUN_PEAK_PERFORMANCE * 1000u;
           delay_target_stress /= num_sgemm_ops;
-          {
-            std::ostringstream _oss;
-            _oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
-                 << "ramp iterations: " << ramp_iter_count
-                 << " (warm_calls: " << gst_warm_calls << ") [target reached]";
-            rvs::lp::Log(_oss.str(), rvs::logresults);
-          }
           return true;
         }
       }
@@ -466,14 +469,7 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
     }
 
     if (ramp_single_shot) {
-      bool _passed = gflops_interval >= target_stress * (1.0 - tolerance);
-      std::ostringstream _oss;
-      _oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
-           << "ramp iterations: " << ramp_iter_count
-           << " (warm_calls: " << gst_warm_calls << ") [single-shot "
-           << (_passed ? "passed" : "failed") << "]";
-      rvs::lp::Log(_oss.str(), rvs::logresults);
-      return _passed;
+      return gflops_interval >= target_stress * (1.0 - tolerance);
     }
   }
 
@@ -593,8 +589,9 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
   // so peer workers are never left blocking at the barrier.
   struct CrcSyncGuard {
     GstCrcSync* s;
-    ~CrcSyncGuard() { if (s) s->detach(); }
-  } crc_guard{crc_sync};
+    size_t      slot;
+    ~CrcSyncGuard() { if (s) s->detach(slot); }
+  } crc_guard{crc_sync, crc_sync_slot};
 
   // Warn when crc_check is enabled with a configuration that produces
   // non-repeatable outputs:
@@ -753,7 +750,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
                 << std::hex << std::setw(8) << std::setfill('0')
                 << gpu_blas->get_last_output_crc()
                 << (crc_result == 1 ? " [MISMATCH]" : " [OK]");
-        rvs::lp::Log(crc_oss.str(), rvs::logresults);
+        rvs::lp::Log(crc_oss.str(), crc_result == 1 ? rvs::logresults : rvs::loginfo);
       }
 
       if (crc_result == 1) {
@@ -786,7 +783,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         // CrcSyncGuard will see crc_sync == nullptr and skip the redundant
         // detach() call on function exit.
         if (crc_sync) {
-          crc_sync->detach();
+          crc_sync->detach(crc_sync_slot);
           crc_sync        = nullptr;
           crc_guard.s     = nullptr;
         }
@@ -846,8 +843,9 @@ void GSTWorker::run() {
   // CrcSyncGuard and must not be double-detached.
   struct CrcSyncGuard {
     GstCrcSync* s;
-    ~CrcSyncGuard() { if (s) s->detach(); }
-  } ramp_guard{crc_sync};
+    size_t      slot;
+    ~CrcSyncGuard() { if (s) s->detach(slot); }
+  } ramp_guard{crc_sync, crc_sync_slot};
 
   // log GST stress test - start message
   msg = "[" + action_name + "] " + MODULE_NAME + " " +

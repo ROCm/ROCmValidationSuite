@@ -72,6 +72,12 @@ struct GstCrcSync {
   std::vector<uint32_t>  crcs;
   //! GPU IDs written by each worker (indexed by slot)
   std::vector<uint16_t>  gpu_ids;
+  //! Per-slot liveness (indexed by slot).  All true at construction; cleared
+  //! by detach(slot).  Required because total_workers is a running count and
+  //! must never be used to bound an iteration over slot indices — once any
+  //! worker detaches the two diverge, which would both skip live high-numbered
+  //! slots and keep comparing against a dead slot's stale CRC.
+  std::vector<bool>      active;
 
   std::string action_name;
 
@@ -79,24 +85,28 @@ struct GstCrcSync {
     : total_workers(n_workers)
     , crcs(n_workers, 0)
     , gpu_ids(n_workers, 0)
+    , active(n_workers, true)
     , action_name(name)
   {}
 
   /**
    * @brief Called by worker[slot] after computing its CRC for the current
    *        iteration.  Blocks until all active workers have checked in, then
-   *        the last arrival compares every CRC against slot-0's value and
-   *        logs any mismatch before releasing all waiters.
+   *        the last arrival compares the CRCs of all still-active slots
+   *        against the lowest active slot's value and logs any mismatch
+   *        before releasing all waiters.
    */
   void sync_and_compare(size_t slot, uint16_t gpu_id, uint32_t crc);
 
   /**
-   * @brief Called when a worker exits before the end of its normal run
+   * @brief Called when worker[slot] exits before the end of its normal run
    *        (error, stop signal, or natural completion after the last
-   *        iteration).  Decrements total_workers and wakes any workers
-   *        that are waiting at the barrier so they are not left deadlocked.
+   *        iteration).  Marks the slot inactive, decrements total_workers and
+   *        wakes any workers that are waiting at the barrier so they are not
+   *        left deadlocked.  Idempotent: repeated calls for the same slot are
+   *        ignored.
    */
-  void detach();
+  void detach(size_t slot);
 };
 
 /**

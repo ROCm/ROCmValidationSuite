@@ -185,7 +185,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       "Cross-GPU CRC comparison is only valid on homogeneous GPU systems "
       "(same model and firmware). On heterogeneous systems, false-positive "
       "SDC reports are expected due to FP non-associativity across "
-      "different GPU architectures.", rvs::logresults);
+      "different GPU architectures.", rvs::loginfo);
   }
 
   for (;;) {
