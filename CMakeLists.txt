@@ -202,7 +202,7 @@ list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 # built with LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.
 find_program(RVS_ROCM_CLANG
   NAMES amdclang++ clang++
-  HINTS "${ROCM_PATH}/bin" "${ROCM_PATH}/lib/llvm/bin"
+  HINTS "${ROCM_PATH}/bin" "${ROCM_PATH}/lib/llvm/bin" "/opt/rocm" "/opt/rocm/core-${ROCM_MAJOR_VERSION}"
   PATH_SUFFIXES bin llvm/bin
   NO_CACHE)
 set(RVS_LLVM_HOST_RUNTIME_DIR "")
@@ -215,10 +215,11 @@ if(RVS_ROCM_CLANG)
     RESULT_VARIABLE _rvs_triple_rc
     ERROR_QUIET)
   if(_rvs_triple_rc EQUAL 0 AND RVS_HOST_TARGET_TRIPLE)
+    #FIXME Hardcoding /opt/rocm and /opt/rocm/core for now
     set(RVS_LLVM_HOST_RUNTIME_DIR
-        "${ROCM_PATH}/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}")
+        "/opt/rocm/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}")
     set(RVS_LLVM_HOST_RUNTIME_CORE_DIR
-        "${ROCM_PATH}/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}")
+        "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}")
     message(STATUS "RVS LLVM host runtime dir (libomp): ${RVS_LLVM_HOST_RUNTIME_DIR}")
   else()
     message(WARNING
@@ -238,10 +239,10 @@ set(_RVS_INSTALL_RPATH
   "\$ORIGIN"
   "\$ORIGIN/../lib"
   "\$ORIGIN/../lib/rvs"
-  "${ROCM_PATH}/lib"
-  "${ROCM_PATH}/lib/llvm/lib"
-  "${ROCM_PATH}/core-${ROCM_MAJOR_VERSION}/lib"
-  "${ROCM_PATH}/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib")
+  "/opt/rocm/lib"
+  "/opt/rocm/lib/llvm/lib"
+  "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib"
+  "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib")
 if(RVS_LLVM_HOST_RUNTIME_DIR)
   if(EXISTS RVS_LLVM_HOST_RUNTIME_DIR)
     list(APPEND _RVS_INSTALL_RPATH "${RVS_LLVM_HOST_RUNTIME_DIR}")
