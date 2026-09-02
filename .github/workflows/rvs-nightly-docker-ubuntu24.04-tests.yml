@@ -100,7 +100,9 @@ env:
   RVS_DOCKER_REGISTRY_USER: ${{ secrets.RVS_DOCKER_REGISTRY_USER }}
   RVS_DOCKER_REGISTRY_PASSWORD: ${{ secrets.RVS_DOCKER_REGISTRY_PASSWORD }}
   RVS_DOCKER_SKIP_IF_PRESENT: 'true'
-  RVS_DOCKER_SDK_FALLBACK_LATEST: ${{ (inputs.fallback_latest_sdk == false || vars.RVS_DOCKER_SDK_FALLBACK_LATEST == 'false') && 'false' || 'true' }}
+  # Default true on schedule (inputs unset). github.event.inputs is a string; empty != 'false'.
+  # Opt out: uncheck workflow_dispatch fallback_latest_sdk, or set vars.RVS_DOCKER_SDK_FALLBACK_LATEST=false
+  RVS_DOCKER_SDK_FALLBACK_LATEST: ${{ (github.event.inputs.fallback_latest_sdk != 'false' && vars.RVS_DOCKER_SDK_FALLBACK_LATEST != 'false') && 'true' || 'false' }}
   TARGET_ROCM_PATH: /opt/rocm/install
   TARGET_NODE: ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
   TARGET_USER: ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
