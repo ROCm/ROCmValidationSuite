@@ -21,7 +21,7 @@ CHANNEL="nightly"
 IMAGE_TAG=""
 ROCM_SDK_BASE_URL=""
 FROM_TARBALL=""
-FALLBACK_LATEST_SDK="${RVS_DOCKER_SDK_FALLBACK_LATEST:-false}"
+FALLBACK_LATEST_SDK="${RVS_DOCKER_SDK_FALLBACK_LATEST:-true}"
 
 NIGHTLY_INDEX="${ROCM_SDK_NIGHTLY_INDEX_URL:-https://rocm.nightlies.amd.com/tarball-multi-arch/}"
 NIGHTLY_BASE="${ROCM_SDK_NIGHTLY_BASE_URL:-https://rocm.nightlies.amd.com/tarball-multi-arch}"

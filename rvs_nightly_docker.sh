@@ -53,12 +53,12 @@ Environment:
   RVS_DOCKER_ROCM_VERSION    expected ROCm SDK version (for skip-if-present matching)
   RVS_DOCKER_SKIP_IF_PRESENT true (default) skips transfer when target already has image
   RVS_DOCKER_BUILD_DIR         docker build context (default: .github/docker/rvs-nightly-rocm)
-  RVS_DOCKER_SDK_FALLBACK_LATEST  when true, use latest same-line SDK if exact date missing on CDN
+  RVS_DOCKER_SDK_FALLBACK_LATEST  when true (default), use latest same-line SDK if exact date missing on CDN
 EOF
 }
 
 docker_build_fallback_args() {
-  case "${RVS_DOCKER_SDK_FALLBACK_LATEST:-false}" in
+  case "${RVS_DOCKER_SDK_FALLBACK_LATEST:-true}" in
     true|1|yes|YES) printf '%s' ' --fallback-latest-sdk' ;;
     *) printf '%s' '' ;;
   esac
@@ -214,7 +214,7 @@ cmd_build_image_on_build_host() {
   fi
   chmod +x "$build_script"
   local fallback_args=()
-  case "${RVS_DOCKER_SDK_FALLBACK_LATEST:-false}" in
+  case "${RVS_DOCKER_SDK_FALLBACK_LATEST:-true}" in
     true|1|yes|YES) fallback_args=(--fallback-latest-sdk) ;;
   esac
   phase_start "docker build on build host"
