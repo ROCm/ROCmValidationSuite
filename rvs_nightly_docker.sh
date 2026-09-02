@@ -88,6 +88,17 @@ use_target_docker() {
   return 1
 }
 
+rvs_in_image() {
+  case "${RVS_DOCKER_RVS_IN_IMAGE:-false}" in
+    1|true|True|yes|YES) return 0 ;;
+  esac
+  return 1
+}
+
+container_rocm_path() {
+  printf '%s\n' "${TARGET_ROCM_PATH:-/opt/rocm/install}"
+}
+
 require_ssh_config() {
   if [ -z "${SSH_CONFIG_FILE:-}" ]; then
     local ssh_env_file="${RUNNER_TEMP:-/tmp}/rvs_ssh_env.sh"
@@ -205,7 +216,9 @@ verify_remote_file_size() {
 }
 
 cmd_build_image_on_build_host() {
-  require_env TARBALL_NAME
+  if ! rvs_in_image; then
+    require_env TARBALL_NAME
+  fi
   check_docker_local
   local build_script="${DOCKER_BUILD_DIR}/build-rocm-image.sh"
   if [ ! -f "$build_script" ]; then
@@ -218,7 +231,11 @@ cmd_build_image_on_build_host() {
     true|1|yes|YES) fallback_args=(--fallback-latest-sdk) ;;
   esac
   phase_start "docker build on build host"
-  RVS_NIGHTLY_DOCKER_IMAGE="${DOCKER_IMAGE}" "$build_script" --from-tarball "${TARBALL_NAME}" "${fallback_args[@]}"
+  if [ -n "${TARBALL_NAME:-}" ]; then
+    RVS_NIGHTLY_DOCKER_IMAGE="${DOCKER_IMAGE}" "$build_script" --from-tarball "${TARBALL_NAME}" "${fallback_args[@]}"
+  else
+    RVS_NIGHTLY_DOCKER_IMAGE="${DOCKER_IMAGE}" "$build_script" --channel nightly "${fallback_args[@]}"
+  fi
   phase_end "docker build on build host"
   if ! build_host_image_matches_expected; then
     echo "::warning::Build host image ROCM_VERSION=$(image_rocm_version_local || echo unknown) may differ from expected $(expected_rocm_version 2>/dev/null || echo unknown) (SDK fallback in use?)"
@@ -231,7 +248,7 @@ ensure_build_host_image() {
     echo "::notice::Build host has ${DOCKER_IMAGE} with matching ROCM_VERSION"
     return 0
   fi
-  if [ -z "${TARBALL_NAME:-}" ]; then
+  if [ -z "${TARBALL_NAME:-}" ] && ! rvs_in_image; then
     echo "::error::Build host image is missing or stale and TARBALL_NAME is unset — cannot rebuild." >&2
     echo "Re-run with build_docker_image=true, build_on_target=true, or set TARBALL_NAME." >&2
     exit 1
@@ -369,13 +386,15 @@ check_docker_on_target() {
 docker_run_local() {
   check_docker_local
   local -a install_mount=()
-  if [ -n "${INSTALL_DIR:-}" ] && [ -n "${REMOTE_WORK_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
+  local rocm_path
+  rocm_path="$(container_rocm_path)"
+  if ! rvs_in_image && [ -n "${INSTALL_DIR:-}" ] && [ -n "${REMOTE_WORK_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
     local host_install
     host_install="$(target_rvs_install_dir)"
     mkdir -p "$host_install"
     install_mount=(-v "${host_install}:${INSTALL_DIR}")
   fi
-  if [ -n "${TARBALL_NAME:-}" ] && [ -f "${REPO_ROOT}/pkg/${TARBALL_NAME}" ]; then
+  if ! rvs_in_image && [ -n "${TARBALL_NAME:-}" ] && [ -f "${REPO_ROOT}/pkg/${TARBALL_NAME}" ]; then
     install_mount+=(-v "${REPO_ROOT}/pkg/${TARBALL_NAME}:/pkg/${TARBALL_NAME}:ro")
   fi
   # shellcheck disable=SC2046
@@ -384,8 +403,8 @@ docker_run_local() {
     "${install_mount[@]}" \
     -v "${REPO_ROOT}/reports:/reports" \
     -w /workspace \
-    -e ROCM_PATH=/opt/rocm/install \
-    -e TARGET_ROCM_PATH=/opt/rocm/install \
+    -e "ROCM_PATH=${rocm_path}" \
+    -e "TARGET_ROCM_PATH=${rocm_path}" \
     "$DOCKER_IMAGE" \
     bash -lc "$1"
 }
@@ -401,12 +420,14 @@ target_docker_run() {
   pkg_path=""
   pkg_mount=""
   remote_dirs="'${REMOTE_WORK_DIR}/reports' '${REMOTE_WORK_DIR}/workspace' '${REMOTE_WORK_DIR}/pkg'"
-  if [ -n "${INSTALL_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
+  local rocm_path
+  rocm_path="$(container_rocm_path)"
+  if ! rvs_in_image && [ -n "${INSTALL_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
     install_vol="-v ${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}:${INSTALL_DIR}"
     # Pre-create so docker does not make a root-owned extras dir.
     remote_dirs="${remote_dirs} '${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}'"
   fi
-  if [ -n "${TARBALL_NAME:-}" ]; then
+  if ! rvs_in_image && [ -n "${TARBALL_NAME:-}" ]; then
     pkg_path="${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
     pkg_mount="-v ${pkg_path}:/pkg/${TARBALL_NAME}:ro"
   fi
@@ -427,8 +448,8 @@ docker run --rm ${gpu_opts} \
   -v '${REMOTE_WORK_DIR}/reports:/reports' \
   -v '${REMOTE_WORK_DIR}/workspace:/workspace' \
   -w /workspace \
-  -e ROCM_PATH=/opt/rocm/install \
-  -e TARGET_ROCM_PATH=/opt/rocm/install \
+  -e ROCM_PATH='${rocm_path}' \
+  -e TARGET_ROCM_PATH='${rocm_path}' \
   '${DOCKER_IMAGE}' \
   bash -lc ${escaped}
 REMOTE
@@ -449,7 +470,9 @@ cmd_pull_image() {
 cmd_build_image_on_target() {
   require_ssh_config
   require_env REMOTE_WORK_DIR
-  require_env TARBALL_NAME
+  if ! rvs_in_image; then
+    require_env TARBALL_NAME
+  fi
   check_docker_on_target
 
   local remote_build_dir="${REMOTE_WORK_DIR}/docker-build"
@@ -470,12 +493,24 @@ cmd_build_image_on_target() {
   phase_end "Sync docker build context to target"
 
   phase_start "docker build on GPU target"
-  local fallback_args
+  local fallback_args build_args=""
   fallback_args="$(docker_build_fallback_args)"
+  if [ -n "${TARBALL_NAME:-}" ]; then
+    build_args="--from-tarball '${TARBALL_NAME}'${fallback_args}"
+  else
+    build_args="--channel nightly${fallback_args}"
+  fi
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
 set -euo pipefail
 chmod +x '${remote_build_dir}/build-rocm-image.sh'
-'${remote_build_dir}/build-rocm-image.sh' --from-tarball '${TARBALL_NAME}'${fallback_args}
+RVS_NIGHTLY_DOCKER_IMAGE='${DOCKER_IMAGE}' \
+ROCM_REPO_BASEURL='${ROCM_REPO_BASEURL:-}' \
+RVS_REPO_BASEURL='${RVS_REPO_BASEURL:-}' \
+ROCM_PACKAGE='${ROCM_PACKAGE:-}' \
+RVS_PACKAGE='${RVS_PACKAGE:-}' \
+GPU_TARGET='${GPU_TARGET:-gfx942}' \
+ROCM_VERSION='${RVS_DOCKER_ROCM_VERSION:-}' \
+'${remote_build_dir}/build-rocm-image.sh' ${build_args}
 REMOTE
   phase_end "docker build on GPU target"
   cmd_verify_image_on_target
@@ -605,7 +640,7 @@ cmd_ensure_image_on_target() {
 
   case "$mode" in
     build-on-target)
-      if [ -z "${TARBALL_NAME:-}" ]; then
+      if [ -z "${TARBALL_NAME:-}" ] && ! rvs_in_image; then
         echo "::error::build-on-target requires TARBALL_NAME" >&2
         exit 1
       fi
@@ -642,17 +677,34 @@ cmd_verify_rocm() {
     echo "=== rocminfo ==="
     rocminfo
     echo "=== amd-smi version ==="
-    amd-smi version
+    amd-smi version 2>/dev/null || amdsmi version 2>/dev/null || echo "amd-smi not present"
   '
 }
 
 cmd_install_rvs() {
-  require_env TARBALL_NAME
-  require_env TARBALL_URL
   require_env ROCM_MAJOR
   require_env INSTALL_DIR
   require_env RVS_BIN
   require_env REMOTE_WORK_DIR
+  if rvs_in_image; then
+    docker_run "
+      source /etc/profile.d/rocm-env.sh
+      set -euo pipefail
+      RVS_BIN=${RVS_BIN}
+      if [ ! -x \"\${RVS_BIN}\" ]; then
+        RVS_BIN=\$(command -v rvs || true)
+      fi
+      if [ -z \"\${RVS_BIN}\" ] || [ ! -x \"\${RVS_BIN}\" ]; then
+        echo \"::error::rvs binary missing in image (expected ${RVS_BIN})\" >&2
+        exit 1
+      fi
+      echo \"::notice::RVS already installed in image at \${RVS_BIN}\"
+      \"\${RVS_BIN}\" --version || true
+    "
+    return 0
+  fi
+  require_env TARBALL_NAME
+  require_env TARBALL_URL
 
   if use_target_docker; then
     cmd_download_rvs_tarball
@@ -696,13 +748,13 @@ cmd_run_level4() {
   require_env REMOTE_WORK_DIR
   require_env ROCM_MAJOR
 
-  if use_target_docker; then
+  if use_target_docker && ! rvs_in_image; then
     require_ssh_config
     if ! ssh -q -F "$SSH_CONFIG_FILE" rvs-target "test -x '${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}/bin/rvs'"; then
       echo "::error::RVS not installed on target at ${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}/bin/rvs — run install-rvs first." >&2
       exit 1
     fi
-  else
+  elif ! rvs_in_image; then
     local host_install
     host_install="$(target_rvs_install_dir)"
     if [ ! -x "${host_install}/bin/rvs" ]; then
@@ -719,9 +771,13 @@ cmd_run_level4() {
   docker_run "
     source /etc/profile.d/rocm-env.sh
     set -euo pipefail
-    export LD_LIBRARY_PATH=\"${INSTALL_DIR}/lib:\${LD_LIBRARY_PATH}\"
+    RVS_BIN=${RVS_BIN}
+    if [ ! -x \"\${RVS_BIN}\" ]; then
+      RVS_BIN=\$(command -v rvs)
+    fi
+    export LD_LIBRARY_PATH=\"${INSTALL_DIR}/lib:\${LD_LIBRARY_PATH:-}\"
     mkdir -p /reports
-    ${RVS_BIN} -r 4 2>&1 | tee /reports/rvs_level_4.log
+    \"\${RVS_BIN}\" -r 4 2>&1 | tee /reports/rvs_level_4.log
     exit \${PIPESTATUS[0]}
   "
   rc=$?
@@ -755,8 +811,11 @@ cmd_capture_versions() {
     ${RVS_BIN} --version 2>/dev/null | head -1
   " | tail -1)
   target_rocm_version=$(docker_run "
-    cat /opt/rocm/install/.info/version 2>/dev/null \
-      || cat /opt/rocm/install/share/doc/rocm-core/version 2>/dev/null \
+    source /etc/profile.d/rocm-env.sh
+    cat \"\${TARGET_ROCM_PATH}/.info/version\" 2>/dev/null \
+      || cat \"\${TARGET_ROCM_PATH}/share/doc/rocm-core/version\" 2>/dev/null \
+      || cat /opt/rocm/install/.info/version 2>/dev/null \
+      || cat /opt/rocm/.info/version 2>/dev/null \
       || echo unknown
   " | tail -1)
 

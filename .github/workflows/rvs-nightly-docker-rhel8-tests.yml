@@ -1,0 +1,317 @@
+name: RVS Nightly Tests (Docker RHEL 8)
+
+# Same orchestration as rvs-nightly-docker-ubuntu22.04-tests.yml, but the runtime
+# image is rockylinux:8 and ROCm + RVS are installed from AMD nightly yum repos
+# (dnf), not from relocatable tarballs. The stable 10.0.0 repo URLs / package
+# names are examples only — this workflow always tracks nightly.
+#
+# Install sequence inside the image:
+#   dnf update → dnf install sudo wget → nightly ROCm yum (amdrocm*-gfx942) →
+#   extras yum for RVS (nightly if published, else stable extras) via rpm --nodeps
+#   so the unversioned amdrocm-* metas do not pull every GPU ISA.
+#
+# Default image delivery: build-on-target (docker build on the GPU node).
+# Set workflow input build_on_target=false to fall back to scp/registry delivery.
+#
+# Prerequisites:
+# - Build host (self-hosted runner): curl/scp/ssh; HTTPS to nightly.repo.amd.com
+# - Target GPU node: docker, /dev/kfd, /dev/dri, SSH user in docker group
+# - Secrets: RVS_TARGET_NODE, RVS_TARGET_SSH_KEY (optional RVS_TARGET_USER)
+# - Optional vars: RVS_NIGHTLY_RHEL8_ROCM_REPO_INDEX, RVS_NIGHTLY_RHEL8_RVS_REPO_BASEURL,
+#                  RVS_NIGHTLY_DOCKER_RHEL8_IMAGE, RVS_NIGHTLY_RHEL8_GPU_TARGET
+
+on:
+  workflow_dispatch:
+    inputs:
+      trigger_event:
+        description: 'Label for report only (e.g. schedule or push); optional'
+        required: false
+        default: ''
+      target_node:
+        description: 'GPU target hostname/IP (default: secrets.RVS_TARGET_NODE)'
+        required: false
+        default: ''
+      target_user:
+        description: 'SSH user on target (default: secrets.RVS_TARGET_USER)'
+        required: false
+        default: ''
+      docker_image:
+        description: 'ROCm runtime image (default: vars.RVS_NIGHTLY_DOCKER_RHEL8_IMAGE or rvs-nightly-rocm-rhel8:latest)'
+        required: false
+        default: ''
+      gpu_target:
+        description: 'GPU ISA package suffix (default: vars.RVS_NIGHTLY_RHEL8_GPU_TARGET or gfx942)'
+        required: false
+        default: ''
+      rocm_repo_baseurl:
+        description: 'Override nightly ROCm yum baseurl (default: latest snapshot under nightly.repo.amd.com .../rhel8/<date-id>/x86_64)'
+        required: false
+        default: ''
+      rvs_repo_baseurl:
+        description: 'Override RVS yum baseurl (default: nightly extras if published, else stable extras rhel8 x86_64)'
+        required: false
+        default: ''
+      build_docker_image:
+        description: 'Build rvs-nightly-rocm-rhel8 on the build host before scp/registry delivery (only when build_on_target is false)'
+        required: false
+        type: boolean
+        default: false
+      build_on_target:
+        description: 'Build the ROCm docker image on the GPU target (default; skips cross-host image transfer)'
+        required: false
+        type: boolean
+        default: true
+      docker_transfer_mode:
+        description: 'Image delivery — auto, scp, registry, or build-on-target (default auto)'
+        required: false
+        default: 'auto'
+      remote_work_dir:
+        description: 'Work dir on target (default: /tmp/rvs-nightly-docker-rhel8-<run_id>)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rvs-nightly-docker-rhel8-${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  RVS_NIGHTLY_DOCKER_IMAGE: ${{ inputs.docker_image || vars.RVS_NIGHTLY_DOCKER_RHEL8_IMAGE || 'rvs-nightly-rocm-rhel8:latest' }}
+  RVS_DOCKER_BUILD_DIR: .github/docker/rvs-nightly-rocm-rhel8
+  RVS_DOCKER_IMAGE_ARCHIVE: rvs-nightly-rocm-rhel8-image.tar.gz
+  RVS_DOCKER_ON_TARGET: 'true'
+  RVS_DOCKER_TRANSFER_MODE: ${{ inputs.docker_transfer_mode || vars.RVS_DOCKER_TRANSFER_MODE || 'auto' }}
+  RVS_DOCKER_BUILD_ON_TARGET: ${{ (inputs.build_on_target != false) && (vars.RVS_DOCKER_BUILD_ON_TARGET != 'false') && 'true' || 'false' }}
+  RVS_DOCKER_REGISTRY: ${{ vars.RVS_DOCKER_REGISTRY || '' }}
+  RVS_DOCKER_REGISTRY_USER: ${{ secrets.RVS_DOCKER_REGISTRY_USER }}
+  RVS_DOCKER_REGISTRY_PASSWORD: ${{ secrets.RVS_DOCKER_REGISTRY_PASSWORD }}
+  RVS_DOCKER_SKIP_IF_PRESENT: 'true'
+  RVS_DOCKER_RVS_IN_IMAGE: 'true'
+  GPU_TARGET: ${{ inputs.gpu_target || vars.RVS_NIGHTLY_RHEL8_GPU_TARGET || 'gfx942' }}
+  TARGET_ROCM_PATH: /opt/rocm
+  TARGET_NODE: ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
+  TARGET_USER: ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
+  SSH_PRIVATE_KEY: ${{ secrets.RVS_TARGET_SSH_KEY }}
+
+jobs:
+  install-rvs-in-docker:
+    name: Ensure ROCm image (RHEL 8) on target and install RVS in docker
+    runs-on: ${{ vars.RVS_NIGHTLY_DOCKER_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 180
+    outputs:
+      tarball_url:      ${{ steps.resolve.outputs.tarball_url }}
+      tarball_name:     ${{ steps.resolve.outputs.tarball_name }}
+      remote_work_dir:  ${{ steps.prepare.outputs.remote_work_dir }}
+      rocm_major:       ${{ steps.prepare.outputs.rocm_major }}
+      install_dir:      ${{ steps.prepare.outputs.install_dir }}
+      rvs_bin:          ${{ steps.prepare.outputs.rvs_bin }}
+    env:
+      TARGET_ROCM_PATH: /opt/rocm
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Resolve latest nightly ROCm and RVS yum repos
+        id: resolve
+        env:
+          INPUT_ROCM_REPO: ${{ inputs.rocm_repo_baseurl }}
+          INPUT_RVS_REPO: ${{ inputs.rvs_repo_baseurl || vars.RVS_NIGHTLY_RHEL8_RVS_REPO_BASEURL }}
+          RVS_NIGHTLY_RHEL8_ROCM_REPO_INDEX: ${{ vars.RVS_NIGHTLY_RHEL8_ROCM_REPO_INDEX }}
+        run: |
+          set -euo pipefail
+          chmod +x .github/docker/rvs-nightly-rocm-rhel8/build-rocm-image.sh
+          resolve_args=(--resolve-only --channel nightly --gpu-target "${GPU_TARGET}")
+          if [ -n "${INPUT_ROCM_REPO:-}" ]; then
+            resolve_args+=(--rocm-repo "${INPUT_ROCM_REPO}")
+          fi
+          if [ -n "${INPUT_RVS_REPO:-}" ]; then
+            resolve_args+=(--rvs-repo "${INPUT_RVS_REPO}")
+          fi
+          ./.github/docker/rvs-nightly-rocm-rhel8/build-rocm-image.sh "${resolve_args[@]}"
+
+      - name: Export resolved repo paths
+        env:
+          TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
+          TARBALL_URL: ${{ steps.resolve.outputs.tarball_url }}
+        run: |
+          {
+            echo "TARBALL_NAME=${TARBALL_NAME}"
+            echo "TARBALL_URL=${TARBALL_URL}"
+            echo "ROCM_REPO_BASEURL=${{ steps.resolve.outputs.rocm_repo_baseurl }}"
+            echo "RVS_REPO_BASEURL=${{ steps.resolve.outputs.rvs_repo_baseurl }}"
+            echo "ROCM_PACKAGE=${{ steps.resolve.outputs.rocm_package }}"
+            echo "RVS_PACKAGE=${{ steps.resolve.outputs.rvs_package }}"
+            echo "RVS_DOCKER_ROCM_VERSION=${{ steps.resolve.outputs.rocm_version }}"
+            echo "ROCM_MAJOR=${{ steps.resolve.outputs.rocm_major }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate configuration and derive paths
+        id: prepare
+        env:
+          TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
+          INPUT_REMOTE_WORK_DIR: ${{ inputs.remote_work_dir || format('/tmp/rvs-nightly-docker-rhel8-{0}', github.run_id) }}
+          VAR_REMOTE_WORK_DIR: ${{ vars.RVS_REMOTE_WORK_DIR }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          chmod +x rvs_nightly_test.sh
+          if [ -z "${TARGET_NODE:-}" ]; then
+            echo "::error::No target node (set secrets.RVS_TARGET_NODE or workflow input target_node)." >&2
+            exit 1
+          fi
+          ./rvs_nightly_test.sh validate-config
+
+      - name: Setup SSH to target node
+        env:
+          REMOTE_WORK_DIR: ${{ steps.prepare.outputs.remote_work_dir }}
+        run: ./rvs_nightly_test.sh setup-ssh
+
+      - name: Export paths for remaining steps
+        run: |
+          {
+            echo "REMOTE_WORK_DIR=${{ steps.prepare.outputs.remote_work_dir }}"
+            echo "ROCM_MAJOR=${{ steps.prepare.outputs.rocm_major }}"
+            echo "INSTALL_DIR=${{ steps.prepare.outputs.install_dir }}"
+            echo "RVS_BIN=${{ steps.prepare.outputs.rvs_bin }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Build ROCm docker image on build host
+        if: inputs.build_docker_image && inputs.build_on_target == false
+        run: |
+          chmod +x .github/docker/rvs-nightly-rocm-rhel8/build-rocm-image.sh
+          ./.github/docker/rvs-nightly-rocm-rhel8/build-rocm-image.sh \
+            --channel nightly \
+            --gpu-target "${GPU_TARGET}" \
+            --rocm-repo "${ROCM_REPO_BASEURL}" \
+            --rvs-repo "${RVS_REPO_BASEURL}" \
+            --rocm-package "${ROCM_PACKAGE}" \
+            --rvs-package "${RVS_PACKAGE}"
+
+      - name: Verify ROCm docker image on build host
+        if: inputs.build_docker_image && inputs.build_on_target == false
+        run: |
+          chmod +x rvs_nightly_docker.sh
+          ./rvs_nightly_docker.sh pull-image
+
+      - name: Ensure ROCm docker image on GPU target
+        run: |
+          chmod +x rvs_nightly_docker.sh
+          ./rvs_nightly_docker.sh ensure-image-on-target
+
+      - name: Verify ROCm in docker on target (rocminfo)
+        run: ./rvs_nightly_docker.sh verify-rocm
+
+      - name: Verify RVS in docker on target
+        run: ./rvs_nightly_docker.sh install-rvs
+
+  run-rvs-level-4-in-docker:
+    name: Run RVS level 4 in docker (RHEL 8) on target
+    needs: [install-rvs-in-docker]
+    runs-on: ${{ vars.RVS_NIGHTLY_DOCKER_RUNNER_LABEL || vars.RVS_TEST_RUNNER_LABEL || 'self-hosted' }}
+    timeout-minutes: 180
+    outputs:
+      rc:                   ${{ steps.level4.outputs.rc }}
+      start:                ${{ steps.level4.outputs.start }}
+      end:                  ${{ steps.level4.outputs.end }}
+      rvs_version:          ${{ steps.versions.outputs.rvs_version }}
+      target_rocm_version:  ${{ steps.versions.outputs.target_rocm_version }}
+    env:
+      TARGET_ROCM_PATH: /opt/rocm
+      TARGET_NODE:      ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
+      TARGET_USER:      ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
+      SSH_PRIVATE_KEY:  ${{ secrets.RVS_TARGET_SSH_KEY }}
+      RVS_DOCKER_ON_TARGET: 'true'
+      RVS_DOCKER_RVS_IN_IMAGE: 'true'
+      RVS_DOCKER_BUILD_DIR: .github/docker/rvs-nightly-rocm-rhel8
+      RVS_DOCKER_IMAGE_ARCHIVE: rvs-nightly-rocm-rhel8-image.tar.gz
+      REMOTE_WORK_DIR:  ${{ needs.install-rvs-in-docker.outputs.remote_work_dir }}
+      ROCM_MAJOR:       ${{ needs.install-rvs-in-docker.outputs.rocm_major }}
+      INSTALL_DIR:      ${{ needs.install-rvs-in-docker.outputs.install_dir }}
+      RVS_BIN:          ${{ needs.install-rvs-in-docker.outputs.rvs_bin }}
+      RVS_NIGHTLY_DOCKER_IMAGE: ${{ inputs.docker_image || vars.RVS_NIGHTLY_DOCKER_RHEL8_IMAGE || 'rvs-nightly-rocm-rhel8:latest' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH to target node
+        env:
+          REMOTE_WORK_DIR: ${{ needs.install-rvs-in-docker.outputs.remote_work_dir }}
+        run: |
+          chmod +x rvs_nightly_test.sh rvs_nightly_docker.sh
+          ./rvs_nightly_test.sh setup-ssh
+
+      - name: Run RVS level 4 in docker on target
+        id: level4
+        run: ./rvs_nightly_docker.sh run-level4
+
+      - name: Capture RVS and ROCm versions from docker on target
+        id: versions
+        if: always()
+        run: ./rvs_nightly_docker.sh capture-versions
+
+      - name: Collect logs from target
+        if: always()
+        run: ./rvs_nightly_test.sh collect-logs
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-nightly-docker-rhel8-logs-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  create-test-report:
+    name: Create Test Report
+    needs: [install-rvs-in-docker, run-rvs-level-4-in-docker]
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    if: always() && !cancelled() && needs.install-rvs-in-docker.result == 'success' && needs.run-rvs-level-4-in-docker.result != 'skipped'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download test logs
+        uses: actions/download-artifact@v4
+        with:
+          name: rvs-nightly-docker-rhel8-logs-${{ github.run_id }}
+          path: ./reports
+        continue-on-error: true
+
+      - name: Build test report
+        id: report
+        env:
+          TARBALL_URL:          ${{ needs.install-rvs-in-docker.outputs.tarball_url }}
+          TARBALL_NAME:         ${{ needs.install-rvs-in-docker.outputs.tarball_name }}
+          TARGET_ROCM_PATH:     /opt/rocm
+          REMOTE_WORK_DIR:      ${{ needs.install-rvs-in-docker.outputs.remote_work_dir }}
+          RVS_BIN:              ${{ needs.install-rvs-in-docker.outputs.rvs_bin }}
+          RVS_LEVEL4_RC:        ${{ needs.run-rvs-level-4-in-docker.outputs.rc }}
+          RVS_LEVEL4_START:     ${{ needs.run-rvs-level-4-in-docker.outputs.start }}
+          RVS_LEVEL4_END:       ${{ needs.run-rvs-level-4-in-docker.outputs.end }}
+          RVS_VERSION:          ${{ needs.run-rvs-level-4-in-docker.outputs.rvs_version }}
+          TARGET_ROCM_VERSION:  ${{ needs.run-rvs-level-4-in-docker.outputs.target_rocm_version }}
+          GITHUB_RUN_ID:        ${{ github.run_id }}
+          GITHUB_SERVER_URL:    ${{ github.server_url }}
+          GITHUB_REPOSITORY:    ${{ github.repository }}
+          GITHUB_EVENT_NAME:    ${{ inputs.trigger_event || github.event_name }}
+        run: |
+          chmod +x rvs_nightly_test.sh
+          mkdir -p ./reports
+          ./rvs_nightly_test.sh build-report
+
+      - name: Upload report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-nightly-docker-rhel8-report-${{ github.run_id }}
+          path: ./reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Fail the workflow if level 4 failed
+        if: steps.report.outputs.overall == 'FAIL' || needs.run-rvs-level-4-in-docker.result == 'failure'
+        run: |
+          echo "::error::RVS docker (RHEL 8) test failure — level4 rc=${{ needs.run-rvs-level-4-in-docker.outputs.rc }}"
+          exit 1
