@@ -35,6 +35,36 @@ require_env() {
   fi
 }
 
+
+# Per-target libomp dir: ${ROCM}/lib/llvm/lib/$(clang --print-target-triple)
+rvs_llvm_host_runtime_dir() {
+  require_env TARGET_ROCM_PATH
+  require_env SSH_CONFIG_FILE
+  ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
+    "TARGET_ROCM_PATH='${TARGET_ROCM_PATH}' bash -s" <<'REMOTE'
+set -euo pipefail
+clang=""
+for candidate in \
+  "${TARGET_ROCM_PATH}/bin/amdclang++" \
+  "${TARGET_ROCM_PATH}/lib/llvm/bin/amdclang++" \
+  "${TARGET_ROCM_PATH}/lib/llvm/bin/clang++"; do
+  [ -x "$candidate" ] && clang="$candidate" && break
+done
+[ -n "$clang" ] || {
+  echo "::warning::No ROCm clang under ${TARGET_ROCM_PATH}; skipping per-target libomp path" >&2
+  exit 0
+}
+triple=$("$clang" --print-target-triple 2>/dev/null) || exit 0
+dir="${TARGET_ROCM_PATH}/lib/llvm/lib/${triple}"
+[ -d "$dir" ] || {
+  echo "::warning::llvm runtime triple dir not found under ${dir}" >&2
+  exit 0
+}
+echo "::notice::llvm runtime triple dir found under ${dir}" >&2
+printf '%s\n' "$dir"
+REMOTE
+}
+
 ld_path_export() {
   echo "${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib"
 }
@@ -211,8 +241,10 @@ cmd_install_rvs() {
   require_env RVS_BIN
   require_env TARGET_ROCM_PATH
 
+  local llvm_host_rt
+  llvm_host_rt=$(rvs_llvm_host_runtime_dir)
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-    "TARBALL_NAME='$TARBALL_NAME' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' ROCM_MAJOR='$ROCM_MAJOR' INSTALL_DIR='$INSTALL_DIR' RVS_BIN='$RVS_BIN' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
+    "TARBALL_NAME='$TARBALL_NAME' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' ROCM_MAJOR='$ROCM_MAJOR' INSTALL_DIR='$INSTALL_DIR' RVS_BIN='$RVS_BIN' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' RVS_LLVM_HOST_RUNTIME_DIR='$llvm_host_rt' bash -s" <<'REMOTE'
 set -euo pipefail
 PKG="${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
 echo "Target ROCm path            : ${TARGET_ROCM_PATH}"
@@ -240,7 +272,7 @@ if [ ! -x "$RVS_BIN" ]; then
   ls -la "$INSTALL_DIR/bin/" || true
   exit 1
 fi
-export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
+export LD_LIBRARY_PATH="${RVS_LLVM_HOST_RUNTIME_DIR:+$RVS_LLVM_HOST_RUNTIME_DIR:}${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
 echo "Installed RVS at: $RVS_BIN"
 "$RVS_BIN" --version || true
 REMOTE
@@ -252,14 +284,16 @@ cmd_verify_rvs_binary() {
   require_env INSTALL_DIR
   require_env TARGET_ROCM_PATH
 
+  local llvm_host_rt
+  llvm_host_rt=$(rvs_llvm_host_runtime_dir)
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-    "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
+    "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' RVS_LLVM_HOST_RUNTIME_DIR='$llvm_host_rt' bash -s" <<'REMOTE'
 set -euo pipefail
 if [ ! -x "$RVS_BIN" ]; then
   echo "::error::$RVS_BIN was not produced by tarball extraction on target."
   exit 1
 fi
-export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
+export LD_LIBRARY_PATH="${RVS_LLVM_HOST_RUNTIME_DIR:+$RVS_LLVM_HOST_RUNTIME_DIR:}${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
 echo "=== ldd $RVS_BIN ==="
 LDD_OUTPUT=$(ldd "$RVS_BIN" 2>&1 || true)
 echo "$LDD_OUTPUT"
@@ -282,10 +316,12 @@ cmd_run_level4() {
   local start end rc
   start=$(date -u +%FT%TZ)
   echo "::group::RVS level 4 (${RVS_BIN} -r 4) against ${TARGET_ROCM_PATH}"
+  local llvm_host_rt
+  llvm_host_rt=$(rvs_llvm_host_runtime_dir)
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-    "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE'
+    "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' REMOTE_WORK_DIR='$REMOTE_WORK_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' RVS_LLVM_HOST_RUNTIME_DIR='$llvm_host_rt' bash -s" <<'REMOTE'
 set +e
-export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
+export LD_LIBRARY_PATH="${RVS_LLVM_HOST_RUNTIME_DIR:+$RVS_LLVM_HOST_RUNTIME_DIR:}${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
 mkdir -p "${REMOTE_WORK_DIR}/reports"
 "$RVS_BIN" -r 4 2>&1 | tee "${REMOTE_WORK_DIR}/reports/rvs_level_4.log"
 RC=${PIPESTATUS[0]}
@@ -325,11 +361,13 @@ cmd_capture_versions() {
   require_env INSTALL_DIR
   require_env TARGET_ROCM_PATH
 
+  local llvm_host_rt
+  llvm_host_rt=$(rvs_llvm_host_runtime_dir)
   local rvs_version target_rocm_version
   rvs_version=$(
     ssh -q -F "$SSH_CONFIG_FILE" rvs-target \
-      "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' bash -s" <<'REMOTE' 2>/dev/null | head -1 || echo "unknown"
-export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
+      "RVS_BIN='$RVS_BIN' INSTALL_DIR='$INSTALL_DIR' TARGET_ROCM_PATH='$TARGET_ROCM_PATH' RVS_LLVM_HOST_RUNTIME_DIR='$llvm_host_rt' bash -s" <<'REMOTE' 2>/dev/null | head -1 || echo "unknown"
+export LD_LIBRARY_PATH="${RVS_LLVM_HOST_RUNTIME_DIR:+$RVS_LLVM_HOST_RUNTIME_DIR:}${INSTALL_DIR}/lib:${TARGET_ROCM_PATH}/lib/rocm_sysdeps/lib:${TARGET_ROCM_PATH}/lib/llvm/lib:${TARGET_ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
 "$RVS_BIN" --version 2>/dev/null
 REMOTE
   )
