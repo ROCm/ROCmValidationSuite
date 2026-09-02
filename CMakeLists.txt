@@ -198,12 +198,60 @@ set(CMAKE_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "CM
 set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 
+# libomp.so is installed under lib/llvm/lib/<host-triple>/ when ROCm LLVM is
+# built with LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.
+find_program(RVS_ROCM_CLANG
+  NAMES amdclang++ clang++
+  HINTS "${ROCM_PATH}/bin" "${ROCM_PATH}/lib/llvm/bin" "/opt/rocm" "/opt/rocm/core-${ROCM_MAJOR_VERSION}"
+  PATH_SUFFIXES bin llvm/bin
+  NO_CACHE)
+set(RVS_LLVM_HOST_RUNTIME_DIR "")
+set(RVS_LLVM_HOST_RUNTIME_CORE_DIR "")
+if(RVS_ROCM_CLANG)
+  execute_process(
+    COMMAND "${RVS_ROCM_CLANG}" --print-target-triple
+    OUTPUT_VARIABLE RVS_HOST_TARGET_TRIPLE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _rvs_triple_rc
+    ERROR_QUIET)
+  if(_rvs_triple_rc EQUAL 0 AND RVS_HOST_TARGET_TRIPLE)
+    #FIXME Hardcoding /opt/rocm and /opt/rocm/core for now
+    set(RVS_LLVM_HOST_RUNTIME_DIR
+        "/opt/rocm/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}")
+    set(RVS_LLVM_HOST_RUNTIME_CORE_DIR
+        "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}")
+    message(STATUS "RVS LLVM host runtime dir (libomp): ${RVS_LLVM_HOST_RUNTIME_DIR}")
+  else()
+    message(WARNING
+      "Could not query --print-target-triple from ${RVS_ROCM_CLANG}; "
+      "libomp may not be found at runtime.")
+  endif()
+else()
+  message(WARNING
+    "No ROCm clang found under ${ROCM_PATH}; libomp per-target RPATH omitted.")
+endif()
+
 # RPATH (build tree + install): one list — avoids duplicating $ORIGIN paths that previously
 # appeared in both CMAKE_*_LINKER_FLAGS_INIT and CMAKE_INSTALL_RPATH.
 set(CMAKE_SKIP_RPATH FALSE CACHE BOOL "Skip RPATH for build targets")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE CACHE BOOL "Append link paths to install RPATH")
-set(CMAKE_INSTALL_RPATH
-  "\$ORIGIN;\$ORIGIN/../lib;\$ORIGIN/../lib/rvs;/opt/rocm/lib;/opt/rocm/lib/llvm/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib"
+set(_RVS_INSTALL_RPATH
+  "\$ORIGIN"
+  "\$ORIGIN/../lib"
+  "\$ORIGIN/../lib/rvs"
+  "/opt/rocm/lib"
+  "/opt/rocm/lib/llvm/lib"
+  "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib"
+  "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib")
+if(RVS_LLVM_HOST_RUNTIME_DIR)
+  if(EXISTS RVS_LLVM_HOST_RUNTIME_DIR)
+    list(APPEND _RVS_INSTALL_RPATH "${RVS_LLVM_HOST_RUNTIME_DIR}")
+  endif()
+  if(EXISTS RVS_LLVM_HOST_RUNTIME_CORE_DIR)
+    list(APPEND _RVS_INSTALL_RPATH "${RVS_LLVM_HOST_RUNTIME_CORE_DIR}")
+  endif()
+endif()
+set(CMAKE_INSTALL_RPATH "${_RVS_INSTALL_RPATH}"
   CACHE STRING "RPATH for installed RVS binaries and modules")
 set(CMAKE_BUILD_RPATH "${CMAKE_INSTALL_RPATH}")
 
