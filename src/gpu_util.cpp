@@ -57,7 +57,22 @@ const std::map<uint16_t, std::string> gpu_dev_map = {
   {0x75a0, "MI350X"},    // MI350X AC
   {0x75a3, "MI355X"},    // MI355X LC
   {0x75a8, "MI350P"},     // MI350P workstation (450W / 600W disambiguated by power cap)
-  {0x75c1, "MI450X"}     // MI450X
+  {0x75c1, "MI450X"},    // MI450X
+  /* Navi 21 (RDNA2) - DID from internal PCI table */
+  {0x73a3, "nv21"}, {0x73ae, "nv21"}, {0x73a5, "nv21"}, {0x73ab, "nv21"},
+  {0x73af, "nv21"}, {0x73bf, "nv21"}, {0x73df, "nv21"}, {0x73e1, "nv21"},
+  {0x73e3, "nv21"},
+  /* Navi 31 (RDNA3) */
+  {0x7448, "nv31"}, {0x7449, "nv31"}, {0x744a, "nv31"}, {0x744c, "nv31"},
+  {0x7459, "nv31"}, {0x745e, "nv31"},
+  /* Navi 32 (RDNA3) */
+  {0x7460, "nv32"}, {0x7461, "nv32"}, {0x7470, "nv32"}, {0x7471, "nv32"},
+  {0x7472, "nv32"}, {0x7478, "nv32"}, {0x747e, "nv32"}, {0x7480, "nv32"},
+  {0x7481, "nv32"}, {0x7483, "nv32"},
+  /* Navi 44 / gfx1200 (RDNA4) */
+  {0x7590, "RX9060"},
+  /* Navi 48 / gfx1201 (RDNA4) - default to RX9070; use -c for GRE/R9600D/gfx1201 */
+  {0x7550, "RX9070"}, {0x7551, "RX9070"},
 };
 
 using std::vector;
