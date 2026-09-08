@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build (and tag) the RHEL 8 ROCm+RVS runtime image from AMD nightly yum repos.
+# Build (and tag) the RHEL 9 ROCm+RVS runtime image from AMD nightly yum repos.
 #
 # Examples:
 #   ./build-rocm-image.sh --channel nightly
@@ -9,12 +9,12 @@
 #   ./build-rocm-image.sh --from-tarball <ignored>   # accepted for rvs_nightly_docker.sh
 #
 # Nightly ROCm core listings are date-stamped:
-#   https://nightly.repo.amd.com/rocm/core/packages/rhel8/<YYYYMMDD-id>/x86_64
+#   https://nightly.repo.amd.com/rocm/core/packages/rhel9/<YYYYMMDD-id>/x86_64
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IMAGE_REPO="${RVS_NIGHTLY_DOCKER_IMAGE:-rvs-nightly-rocm-rhel8:latest}"
+IMAGE_REPO="${RVS_NIGHTLY_DOCKER_IMAGE:-rvs-nightly-rocm-rhel9:latest}"
 IMAGE_REPO="${IMAGE_REPO%%:*}"
 
 CHANNEL="nightly"
@@ -24,11 +24,11 @@ FROM_TARBALL=""
 RESOLVE_ONLY=false
 ROCM_VERSION="${ROCM_VERSION:-}"
 ROCM_REPO_BASEURL="${ROCM_REPO_BASEURL:-}"
-RVS_REPO_BASEURL="${RVS_REPO_BASEURL:-${RVS_NIGHTLY_RHEL8_RVS_REPO_BASEURL:-}}"
-ROCM_GPG_KEY="${ROCM_GPG_KEY:-${RVS_NIGHTLY_RHEL8_GPG_KEY:-https://stable.repo.amd.com/rocm/gpg/packages.gpg}}"
-ROCM_NIGHTLY_INDEX="${ROCM_NIGHTLY_INDEX:-${RVS_NIGHTLY_RHEL8_ROCM_REPO_INDEX:-https://nightly.repo.amd.com/rocm/core/packages/rhel8/}}"
-RVS_NIGHTLY_REPO_DEFAULT="https://nightly.repo.amd.com/rocm/extras/rvs/packages/rhel8/x86_64"
-RVS_STABLE_REPO_DEFAULT="https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel8/x86_64"
+RVS_REPO_BASEURL="${RVS_REPO_BASEURL:-${RVS_NIGHTLY_RHEL9_RVS_REPO_BASEURL:-}}"
+ROCM_GPG_KEY="${ROCM_GPG_KEY:-${RVS_NIGHTLY_RHEL9_GPG_KEY:-https://stable.repo.amd.com/rocm/gpg/packages.gpg}}"
+ROCM_NIGHTLY_INDEX="${ROCM_NIGHTLY_INDEX:-${RVS_NIGHTLY_RHEL9_ROCM_REPO_INDEX:-https://nightly.repo.amd.com/rocm/core/packages/rhel9/}}"
+RVS_NIGHTLY_REPO_DEFAULT="https://nightly.repo.amd.com/rocm/extras/rvs/packages/rhel9/x86_64"
+RVS_STABLE_REPO_DEFAULT="https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel9/x86_64"
 ROCM_PACKAGE="${ROCM_PACKAGE:-}"
 RVS_PACKAGE="${RVS_PACKAGE:-}"
 ROCM_MAJOR=""
@@ -121,14 +121,14 @@ emit_github() {
     echo "rvs_package=${RVS_PACKAGE}"
     echo "gpu_target=${GPU_TARGET}"
     echo "rocm_install_path=${ROCM_INSTALL_PATH:-/opt/rocm}"
-    echo "tarball_name=amdrocm${ROCM_MAJOR}-rvs-nightly-rhel8"
+    echo "tarball_name=amdrocm${ROCM_MAJOR}-rvs-nightly-rhel9"
     echo "tarball_url=${ROCM_REPO_BASEURL}"
   } >> "$GITHUB_OUTPUT"
 }
 
 resolve_nightly_repos() {
   if [ "$CHANNEL" != "nightly" ]; then
-    echo "::error::RHEL 8 docker tests only support --channel nightly (got ${CHANNEL})" >&2
+    echo "::error::RHEL 9 docker tests only support --channel nightly (got ${CHANNEL})" >&2
     exit 1
   fi
 
@@ -173,7 +173,7 @@ resolve_nightly_repos() {
     ROCM_INSTALL_PATH="${ROCM_INSTALL_PATH:-/opt/rocm}"
   fi
 
-  echo "Resolved RHEL 8 nightly repos"
+  echo "Resolved RHEL 9 nightly repos"
   echo "  ROCm snapshot : ${ROCM_SNAPSHOT:-n/a}"
   echo "  ROCm repo     : ${ROCM_REPO_BASEURL}"
   echo "  ROCm package  : ${ROCM_PACKAGE:-amdrocm*-${GPU_TARGET}}"
@@ -204,7 +204,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -n "$FROM_TARBALL" ]; then
-  echo "::notice::--from-tarball ${FROM_TARBALL} ignored; RHEL 8 image uses nightly dnf repos"
+  echo "::notice::--from-tarball ${FROM_TARBALL} ignored; RHEL 9 image uses nightly dnf repos"
 fi
 
 resolve_nightly_repos
@@ -216,7 +216,7 @@ fi
 IMAGE_TAG="${IMAGE_TAG:-${IMAGE_REPO}:${ROCM_VERSION}}"
 
 echo "Building docker image ${IMAGE_TAG}"
-echo "  Base OS       : RHEL 8 (rockylinux:8)"
+echo "  Base OS       : RHEL 9 (redhat/ubi9)"
 echo "  ROCm version  : ${ROCM_VERSION}"
 
 ROCM_INSTALL_PATH="${ROCM_INSTALL_PATH:-/opt/rocm}"
