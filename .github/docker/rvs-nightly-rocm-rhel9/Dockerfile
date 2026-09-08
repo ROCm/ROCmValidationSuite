@@ -1,10 +1,10 @@
-# ROCm + RVS runtime image on RHEL 8 (Rocky Linux 8).
+# ROCm + RVS runtime image on RHEL 9 (redhat/ubi9).
 # ROCm comes from nightly yum; RVS from extras yum (nightly if published, else stable).
 #
 # Build:
-#   ./.github/docker/rvs-nightly-rocm-rhel8/build-rocm-image.sh --channel nightly
+#   ./.github/docker/rvs-nightly-rocm-rhel9/build-rocm-image.sh --channel nightly
 
-FROM rockylinux:8
+FROM redhat/ubi9
 
 ARG ROCM_VERSION
 ARG ROCM_REPO_BASEURL
@@ -65,7 +65,7 @@ ENV ROCM_PATH=${ROCM_INSTALL_PATH}
 ENV TARGET_ROCM_PATH=${ROCM_INSTALL_PATH}
 ENV ROCM_VERSION=${ROCM_VERSION}
 ENV GPU_TARGET=${GPU_TARGET}
-ENV RHEL_VERSION=8
+ENV RHEL_VERSION=9
 ENV PATH=${ROCM_INSTALL_PATH}/bin:${PATH}
 
 WORKDIR /workspace
