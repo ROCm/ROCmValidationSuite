@@ -490,6 +490,7 @@ check_and_install_dependencies() {
     command -v tar >/dev/null 2>&1 || MISSING_TOOLS+=("tar")
     command -v doxygen >/dev/null 2>&1 || MISSING_TOOLS+=("doxygen")
     command -v python3 >/dev/null 2>&1 || MISSING_TOOLS+=("python3")
+    command -v patchelf >/dev/null 2>&1 || MISSING_TOOLS+=("patchelf")
 
     # Check for library dependencies (platform-specific)
     MISSING_LIBS=()
@@ -532,7 +533,8 @@ check_and_install_dependencies() {
                 libyaml-cpp-dev \
                 rpm \
                 python3 \
-                libnuma-dev
+                libnuma-dev \
+                patchelf
         elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|amzn)$ ]]; then
             print_info "Installing dependencies for CentOS/RHEL/Rocky/AlmaLinux..."
 
@@ -577,6 +579,7 @@ check_and_install_dependencies() {
                 rpm-build \
                 python3 \
                 numactl-devel \
+                patchelf \
                 || print_warning "Some packages may already be installed"
 
             # Install a gcc-toolset with C++20 <barrier> support (requires GCC >= 11)
@@ -616,6 +619,27 @@ check_and_install_dependencies() {
             print_info "Installing yaml-cpp..."
             yum install -y yaml-cpp-devel yaml-cpp-static 2>/dev/null || \
             print_warning "yaml-cpp may not be available - will try to continue"
+        elif [[ "$OS" =~ ^(sles|opensuse-leap|opensuse-tumbleweed)$ ]]; then
+            print_info "Installing dependencies for SUSE/SLES..."
+            zypper --non-interactive refresh || print_warning "zypper refresh reported errors; continuing"
+            zypper --non-interactive install -y \
+                gcc \
+                gcc-c++ \
+                make \
+                git \
+                wget \
+                tar \
+                cmake \
+                doxygen \
+                python3 \
+                pciutils-devel \
+                libpci3 \
+                yaml-cpp-devel \
+                libnuma-devel \
+                rpm \
+                rpm-build \
+                patchelf \
+                || print_warning "Some packages may already be installed"
         else
             print_error "Unsupported OS: $OS"
             echo ""
@@ -633,6 +657,8 @@ check_and_install_dependencies() {
             echo "Development Libraries:"
             echo "  - libpci-dev (or pciutils-devel)"
             echo "  - libyaml-cpp-dev (or yaml-cpp-devel)"
+            echo "  - libnuma-dev (Ubuntu), numactl-devel (RHEL/CentOS), or libnuma-devel (SLES)"
+            echo "  - patchelf (CPack RUNPATH normalization for DEB/RPM/TGZ)"
             echo "  - libnuma-dev (or numactl-devel)"
             echo "  - rpm-build tools"
             exit 1
