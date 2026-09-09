@@ -37,14 +37,14 @@ function(rvs_get_packaged_rpath_list out_var)
     "\$ORIGIN"
     "\$ORIGIN/../lib"
     "\$ORIGIN/../lib/rvs"
-    "/opt/rocm/lib"
-    "/opt/rocm/lib/llvm/lib"
     "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib"
-    "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib")
+    "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib"
+    "/opt/rocm/lib"
+    "/opt/rocm/lib/llvm/lib")
   if(RVS_HOST_TARGET_TRIPLE)
     list(APPEND _rpath
-      "/opt/rocm/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}"
-      "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}")
+      "/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}"
+      "/opt/rocm/lib/llvm/lib/${RVS_HOST_TARGET_TRIPLE}")
   endif()
   set(${out_var} ${_rpath} PARENT_SCOPE)
 endfunction()
