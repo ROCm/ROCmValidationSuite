@@ -18,10 +18,12 @@ foreach(_candidate IN LISTS _candidates)
   if(NOT EXISTS "${_candidate}")
     continue()
   endif()
+  # Patch versioned ELF .so files only; skip symlinks (libfoo.so -> libfoo.so.0).
+  # get_filename_component REALPATH needs CMake 3.20+; symlinks inherit the target RUNPATH.
   if(IS_SYMLINK "${_candidate}")
-    get_filename_component(_candidate REALPATH "${_candidate}")
+    continue()
   endif()
-  if(NOT EXISTS "${_candidate}" OR IS_DIRECTORY "${_candidate}")
+  if(IS_DIRECTORY "${_candidate}")
     continue()
   endif()
 
