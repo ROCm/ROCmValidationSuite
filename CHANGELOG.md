@@ -11,6 +11,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 - Support for Babel sustained bandwidth mode.
 - Support for test duration selection using the `-t` option.
 - Added iterations-based GST ramp-up support.
+- Support for new platform: RX9050.
 
 ### Changed
 
