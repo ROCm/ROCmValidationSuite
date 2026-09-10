@@ -122,14 +122,15 @@ GitHub Actions Workflow
 
 ### Key Technical Details
 
-**Relocatable RPATH**: The canonical list lives in **[`cmake_modules/RVSPackagedRpath.cmake`](../cmake_modules/RVSPackagedRpath.cmake)** (host triple detection via `amdclang++ --print-target-triple` is done there) and is applied via **`CMAKE_INSTALL_RPATH`** / **`CMAKE_BUILD_RPATH`** in **`CMakeLists.txt`**. **`CMAKE_*_LINKER_FLAGS_INIT`** only adds **`--enable-new-dtags`** (RUNPATH behavior). **Local dev builds** may also retain implicit **`$ROCM_PATH`** link-dir RUNPATH entries ( **`CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH`** is set only when **`GITHUB_ACTIONS=true`** ).
+**Relocatable RPATH**: The canonical list lives in **[`cmake_modules/RVSPackagedRpath.cmake`](../../cmake_modules/RVSPackagedRpath.cmake)** (host triple detection via `amdclang++ --print-target-triple` is done there) and is applied via **`CMAKE_INSTALL_RPATH`** / **`CMAKE_BUILD_RPATH`** in **`CMakeLists.txt`**. **`CMAKE_*_LINKER_FLAGS_INIT`** only adds **`--enable-new-dtags`** (RUNPATH behavior). **Local dev builds** may also retain implicit **`$ROCM_PATH`** link-dir RUNPATH entries ( **`CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH`** is set only when **`GITHUB_ACTIONS=true`** ).
 
-**Packaged artifacts** (DEB/RPM/TGZ): **`CPACK_PRE_BUILD_SCRIPTS`** runs **[`cmake_modules/cpack-patch-rpath.cmake.in`](../cmake_modules/cpack-patch-rpath.cmake.in)** before CPack seals the package. It uses **`patchelf`** to replace RUNPATH on every staged ELF with the canonical list (no build-machine SDK paths). Requires **`patchelf`** on the packaging host (`build_packages_local.sh` installs it).
+**Packaged artifacts** (DEB/RPM/TGZ): **`CPACK_PRE_BUILD_SCRIPTS`** runs **[`cmake_modules/cpack-patch-rpath.cmake.in`](../../cmake_modules/cpack-patch-rpath.cmake.in)** before CPack seals the package. It uses **`patchelf`** to replace RUNPATH on every staged ELF with the canonical list (no build-machine SDK paths). Requires **`patchelf`** on the packaging host (`build_packages_local.sh` installs it).
 
 The **`$ORIGIN`** relative entries resolve to the install prefix (`.../extras-<N>/bin` → `.../extras-<N>/lib`). Absolute paths add **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`/opt/rocm/core-<ROCM_MAJOR>/lib`**, **`/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib`**, and per-host-triple **`libomp`** dirs when the triple is known — equivalent to:
 
 ```bash
-$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-<ROCM_MAJOR>/lib:/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib
+# Example for ROCm major 10 (per-triple libomp dirs omitted)
+CMAKE_INSTALL_RPATH='$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-10/lib:/opt/rocm/core-10/lib/llvm/lib'
 ```
 
 **Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically. The **patch version** is auto-computed at CMake configure time: `git describe --tags --match "v<major>.<minor>.*"` counts commits since the last matching `v` tag. For example, if the tag is `v1.3.0` and there have been 15 commits since, the package version becomes `1.3.15`. If no matching tag exists or git is unavailable, the patch defaults to `0` from `CMakeLists.txt`. This works for both CI builds and direct local `cmake` invocations.
