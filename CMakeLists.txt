@@ -983,6 +983,6 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/cpack-patch-rpath.cmake.in
   ${CMAKE_BINARY_DIR}/cpack-patch-rpath.cmake
   @ONLY)
-set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cpack-patch-rpath.cmake)
+set(CPACK_PRE_BUILD_SCRIPTS "${CMAKE_BINARY_DIR}/cpack-patch-rpath.cmake")
 
 include (CPack)
