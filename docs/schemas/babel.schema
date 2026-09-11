@@ -52,12 +52,33 @@
                     "avg_mbytes_per_sec": {
                       "type": "string"
                     },
+                    "mibytes_per_sec": {
+                      "type": "string"
+                    },
+                    "max_mibytes_per_sec": {
+                      "type": "string"
+                    },
+                    "min_mibytes_per_sec": {
+                      "type": "string"
+                    },
+                    "avg_mibytes_per_sec": {
+                      "type": "string"
+                    },
                     "pass": {
                       "type": "string"
                     }
                   },
-                  "required": ["subtest", "mbytes_per_sec", "max_mbytes_per_sec",
-                               "min_mbytes_per_sec", "avg_mbytes_per_sec", "pass"]
+                  "required": ["subtest", "pass"],
+                  "oneOf": [
+                    {
+                      "required": ["mbytes_per_sec", "max_mbytes_per_sec",
+                                   "min_mbytes_per_sec", "avg_mbytes_per_sec"]
+                    },
+                    {
+                      "required": ["mibytes_per_sec", "max_mibytes_per_sec",
+                                   "min_mibytes_per_sec", "avg_mibytes_per_sec"]
+                    }
+                  ]
                 },
                 "minItems": 1
               }
