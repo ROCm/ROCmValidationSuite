@@ -54,6 +54,8 @@ Environment:
   RVS_DOCKER_SKIP_IF_PRESENT true (default) skips transfer when target already has image
   RVS_DOCKER_BUILD_DIR         docker build context (default: .github/docker/rvs-nightly-rocm)
   RVS_DOCKER_SDK_FALLBACK_LATEST  when true (default), use latest same-line SDK if exact date missing on CDN
+  ROCM_SDK_NIGHTLY_BASE_URL       optional ROCm SDK nightly download host (vars.ROCM_SDK_NIGHTLY_BASE_URL)
+  ROCM_SDK_NIGHTLY_INDEX_URL      optional listing URL (defaults to BASE_URL/ when unset)
 EOF
 }
 
@@ -510,6 +512,8 @@ ROCM_PACKAGE='${ROCM_PACKAGE:-}' \
 RVS_PACKAGE='${RVS_PACKAGE:-}' \
 GPU_TARGET='${GPU_TARGET:-gfx942}' \
 ROCM_VERSION='${RVS_DOCKER_ROCM_VERSION:-}' \
+ROCM_SDK_NIGHTLY_INDEX_URL='${ROCM_SDK_NIGHTLY_INDEX_URL:-}' \
+ROCM_SDK_NIGHTLY_BASE_URL='${ROCM_SDK_NIGHTLY_BASE_URL:-}' \
 '${remote_build_dir}/build-rocm-image.sh' ${build_args}
 REMOTE
   phase_end "docker build on GPU target"

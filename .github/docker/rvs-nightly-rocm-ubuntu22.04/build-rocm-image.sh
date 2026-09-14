@@ -23,8 +23,17 @@ ROCM_SDK_BASE_URL=""
 FROM_TARBALL=""
 FALLBACK_LATEST_SDK="${RVS_DOCKER_SDK_FALLBACK_LATEST:-true}"
 
-NIGHTLY_INDEX="${ROCM_SDK_NIGHTLY_INDEX_URL:-https://rocm.nightlies.amd.com/tarball-multi-arch/}"
-NIGHTLY_BASE="${ROCM_SDK_NIGHTLY_BASE_URL:-https://rocm.nightlies.amd.com/tarball-multi-arch}"
+# Override with ROCM_SDK_NIGHTLY_BASE_URL (and optional ROCM_SDK_NIGHTLY_INDEX_URL).
+if [ -n "${ROCM_SDK_NIGHTLY_BASE_URL:-}" ]; then
+  NIGHTLY_BASE="${ROCM_SDK_NIGHTLY_BASE_URL%/}"
+  NIGHTLY_INDEX="${ROCM_SDK_NIGHTLY_INDEX_URL:-${NIGHTLY_BASE}/}"
+elif [ -n "${ROCM_SDK_NIGHTLY_INDEX_URL:-}" ]; then
+  NIGHTLY_INDEX="${ROCM_SDK_NIGHTLY_INDEX_URL}"
+  NIGHTLY_BASE="${NIGHTLY_INDEX%/}"
+else
+  NIGHTLY_INDEX="https://rocm.nightlies.amd.com/tarball-multi-arch/"
+  NIGHTLY_BASE="https://rocm.nightlies.amd.com/tarball-multi-arch"
+fi
 RELEASE_LIST="${ROCM_SDK_RELEASE_URL:-https://repo.amd.com/rocm/tarball/}"
 RELEASE_BASE="${ROCM_SDK_RELEASE_BASE_URL:-https://repo.amd.com/rocm/tarball}"
 
