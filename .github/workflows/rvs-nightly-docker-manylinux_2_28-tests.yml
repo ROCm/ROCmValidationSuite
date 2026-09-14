@@ -14,7 +14,7 @@ name: RVS Nightly Tests (Docker manylinux_2_28)
 # - Target GPU node: docker, HTTPS to rocm.nightlies.amd.com, /dev/kfd, /dev/dri, SSH user in docker group
 # - ROCm SDK in docker image: therock-dist-linux-multiarch-<version>.tar.gz on manylinux_2_28
 # - Secrets: RVS_TARGET_NODE, RVS_TARGET_SSH_KEY (optional RVS_TARGET_USER, RVS_TARBALL_INDEX_URL)
-# - Optional: vars.RVS_NIGHTLY_DOCKER_MANYLINUX_IMAGE, vars.RVS_DOCKER_REGISTRY
+# - Optional: vars.RVS_NIGHTLY_DOCKER_MANYLINUX_IMAGE, vars.RVS_DOCKER_REGISTRY, vars.ROCM_SDK_NIGHTLY_BASE_URL
 
 on:
   workflow_dispatch:
@@ -83,6 +83,10 @@ env:
   RVS_DOCKER_REGISTRY_PASSWORD: ${{ secrets.RVS_DOCKER_REGISTRY_PASSWORD }}
   RVS_DOCKER_SKIP_IF_PRESENT: 'true'
   RVS_DOCKER_SDK_FALLBACK_LATEST: ${{ (github.event.inputs.fallback_latest_sdk != 'false' && vars.RVS_DOCKER_SDK_FALLBACK_LATEST != 'false') && 'true' || 'false' }}
+  # ROCm SDK nightly host. Set vars.ROCM_SDK_NIGHTLY_BASE_URL (e.g. https://nightly.repo.amd.com/rocm/core/tarball).
+  # Optional vars.ROCM_SDK_NIGHTLY_INDEX_URL; if unset, BASE_URL is used for both listing and download.
+  ROCM_SDK_NIGHTLY_BASE_URL: ${{ vars.ROCM_SDK_NIGHTLY_BASE_URL || '' }}
+  ROCM_SDK_NIGHTLY_INDEX_URL: ${{ vars.ROCM_SDK_NIGHTLY_INDEX_URL || vars.ROCM_SDK_NIGHTLY_BASE_URL || '' }}
   TARGET_ROCM_PATH: /opt/rocm/install
   TARGET_NODE: ${{ inputs.target_node || secrets.RVS_TARGET_NODE }}
   TARGET_USER: ${{ inputs.target_user || secrets.RVS_TARGET_USER }}
