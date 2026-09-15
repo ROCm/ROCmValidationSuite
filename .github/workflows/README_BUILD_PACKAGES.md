@@ -16,7 +16,7 @@ All packages are built with relocatable RPATH settings, meaning they can be inst
 The workflow runs automatically on:
 - Push to `master`, `main`, or `release/**` branches
 - Pull requests to `master` or `main` branches
-- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); **latest ROCm nightly** from [ROCm SDK nightly tarballs](https://rocm.nightlies.amd.com/tarball-multi-arch/) (or repo variable overrides). The cron fans out to the **default branch** plus every branch matched by the repository variable **`ACTIVE_BRANCHES`** (comma-separated literals/globs, e.g. `npi/**,release/**` — do not list the default branch there).
+- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); **latest ROCm nightly** from [ROCm SDK nightly tarballs](https://nightly.repo.amd.com/rocm/core/tarball/) (or repo variable overrides). The cron fans out to the **default branch** plus every branch matched by the repository variable **`ACTIVE_BRANCHES`** (comma-separated literals/globs, e.g. `npi/**,release/**` — do not list the default branch there).
 - **Manual** (`workflow_dispatch`): if **`ROCM_VERSION`** is pinned (**workflow input** and/or **`vars.ROCM_VERSION`**), the tarball is chosen by **version format** (nightly `x.y.za…` vs release `X.Y.Z`). If no version is pinned, the job uses **latest nightly** (same as schedule).
 
 ### Scheduled multi-branch nightly (`ACTIVE_BRANCHES`)
@@ -56,7 +56,7 @@ When manually triggering the workflow, you can specify:
 1. **ROCm Version**
    - Empty — **latest nightly** (unless `vars.ROCM_VERSION` is set in the repo, which pins a version and triggers format-based selection).
    - **`X.Y.Z`** — release tarball at [repo.amd.com](https://repo.amd.com/rocm/tarball/).
-   - **`x.y.za…`** — nightly tarball at [nightlies](https://rocm.nightlies.amd.com/tarball-multi-arch/).
+   - **`x.y.za…`** — nightly tarball at [ROCm SDK nightly tarballs](https://nightly.repo.amd.com/rocm/core/tarball/).
    
 2. **GPU Family Target**:
    - `gfx94X-dcgpu` - MI300A/MI300X
@@ -342,8 +342,8 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `ROCM_SDK_RELEASE_URL` | `https://repo.amd.com/rocm/tarball/` | HTML listing for **release** tarballs (`therock-dist-linux-<GPU_FAMILY>-X.Y.Z.tar.gz`). Used when `ROCM_SDK_CHANNEL=release` or `auto` with this URL set. |
 | `ROCM_SDK_RELEASE_BASE_URL` | `https://repo.amd.com/rocm/tarball` | Directory URL for downloading **X.Y.Z** tarballs; overridden when version string is nightly-shaped. |
 | `ROCM_SDK_BASE_URL` | See script | Effective tarball base after channel + version-shape resolution. |
-| `ROCM_SDK_INDEX_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch/` | **Nightly** listing for latest nightly SDK discovery. Auto-fetch matches **SDK tarballs only** (`therock-dist-linux-<GPU_FAMILY>-<version>.tar.gz`); `-tests-` entries are excluded **per filename** (version must follow `GPU_FAMILY-` immediately), not by filtering whole HTML lines. |
-| `ROCM_SDK_NIGHTLY_BASE_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch` | Tarball base for **nightly** builds (`x.y.za…` versions). |
+| `ROCM_SDK_INDEX_URL` | `https://nightly.repo.amd.com/rocm/core/tarball/` | **Nightly** listing for latest nightly SDK discovery. Auto-fetch matches **SDK tarballs only** (`therock-dist-linux-<GPU_FAMILY>-<version>.tar.gz`); `-tests-` entries are excluded **per filename** (version must follow `GPU_FAMILY-` immediately), not by filtering whole HTML lines. |
+| `ROCM_SDK_NIGHTLY_BASE_URL` | `https://nightly.repo.amd.com/rocm/core/tarball` | Tarball base for **nightly** builds (`x.y.za…` versions). |
 | `ROCM_SDK_NIGHTLY_INDEX_URL` | _(same as index default)_ | Optional override for nightly listing URL. |
 | `ROCM_SDK_CHANNEL` | `auto` locally | **`nightly`** / **`release`** / **`auto`**. CI sets channel per trigger (see table above); manual with a pin uses **`auto`** so tarball follows version format. |
 | `GPU_FAMILY` | `gfx110X-all` | ROCm SDK **tarball** family (`therock-dist-linux-<GPU_FAMILY>-…`); does not set TransferBench offload archs |

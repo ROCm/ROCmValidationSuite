@@ -7,8 +7,8 @@ GITHUB_ENV="${GITHUB_ENV:-/dev/null}"
 
 NIGHTLY_BASE="${ROCM_SDK_NIGHTLY_BASE_URL:-}"
 NIGHTLY_IDX="${ROCM_SDK_NIGHTLY_INDEX_URL:-}"
-[ -z "$NIGHTLY_BASE" ] && NIGHTLY_BASE='https://rocm.nightlies.amd.com/tarball-multi-arch'
-[ -z "$NIGHTLY_IDX" ] && NIGHTLY_IDX='https://rocm.nightlies.amd.com/tarball-multi-arch/'
+[ -z "$NIGHTLY_BASE" ] && NIGHTLY_BASE='https://nightly.repo.amd.com/rocm/core/tarball'
+[ -z "$NIGHTLY_IDX" ] && NIGHTLY_IDX='https://nightly.repo.amd.com/rocm/core/tarball/'
 
 REL_URL="${ROCM_SDK_RELEASE_URL:-}"
 [ -z "$REL_URL" ] && REL_URL='https://repo.amd.com/rocm/tarball/'

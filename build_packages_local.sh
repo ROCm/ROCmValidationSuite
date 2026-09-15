@@ -19,7 +19,7 @@ ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
 # SDK Source Configuration
 # Defaults point at AMD-hosted listings (override via env or GitHub vars).
-# - Nightly index: https://rocm.nightlies.amd.com/tarball-multi-arch/
+# - Nightly index: https://nightly.repo.amd.com/rocm/core/tarball/
 # - Release listing: https://repo.amd.com/rocm/tarball/
 #
 # Local builds: if ROCM_VERSION is unset (channel auto, no release listing env), latest *nightly* is fetched.
@@ -34,8 +34,8 @@ ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 #
 # Optional: ROCM_SDK_NIGHTLY_BASE_URL, ROCM_SDK_NIGHTLY_INDEX_URL, ROCM_SDK_RELEASE_URL (listing),
 # ROCM_SDK_RELEASE_BASE_URL (tarball directory for X.Y.Z downloads).
-_ROCM_NIGHTLY_INDEX_DEFAULT="https://rocm.nightlies.amd.com/tarball-multi-arch/"
-_ROCM_NIGHTLY_BASE_DEFAULT="https://rocm.nightlies.amd.com/tarball-multi-arch"
+_ROCM_NIGHTLY_INDEX_DEFAULT="https://nightly.repo.amd.com/rocm/core/tarball/"
+_ROCM_NIGHTLY_BASE_DEFAULT="https://nightly.repo.amd.com/rocm/core/tarball"
 _ROCM_RELEASE_LIST_DEFAULT="https://repo.amd.com/rocm/tarball/"
 _ROCM_RELEASE_BASE_DEFAULT="https://repo.amd.com/rocm/tarball"
 
