@@ -242,6 +242,7 @@ jobs:
             git \
             dpkg-dev \
             apt-utils \
+            reprepro \
             python3 \
             python3-pip
           rm -rf /var/lib/apt/lists/*
@@ -402,6 +403,18 @@ jobs:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
           RVS_RUNNER_SUFFIX: ubuntu-22.04
 
+      # Scheduled default-branch only: unsigned DEB archive (dists/ + pool/) for signing CI.
+      - name: Generate and upload unsigned DEB archive to S3
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          [ -z "$BUCKET" ] && exit 0
+          chmod +x .github/scripts/rvs-deb-unsigned-repo.sh
+          sh .github/scripts/rvs-deb-unsigned-repo.sh ./build
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          RVS_RUNNER_SUFFIX: ubuntu-22.04
+
   build-centos:
     name: Build CentOS/RHEL Packages (${{ matrix.branch }})
     needs: [prepare-nightly-branches, runner-disk-prep]
@@ -526,6 +539,23 @@ jobs:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
           RVS_RUNNER_SUFFIX: manylinux_2_28
 
+      - name: Generate SHA-256 sidecars for TGZ packages
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
+        run: |
+          cd ./build
+          for tar in amdrocm*-rvs*.tar.gz; do
+            [ -f "$tar" ] || continue
+            sha256sum "$tar" > "${tar}.sha256"
+            echo "Wrote ${tar}.sha256"
+          done
+
+      - name: Upload unsigned CentOS/RHEL packages to S3
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
+        run: sh .github/scripts/rvs-s3-upload-route.sh upload-rpm-tar-unsigned
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          RVS_RUNNER_SUFFIX: manylinux_2_28
+
       # Generate YUM/DNF repo metadata (repodata/) so the S3 path can be consumed
       # directly as an RPM repository by yum/dnf.
       # Only runs when S3 upload is allowed (upstream or RVS_S3_UPLOAD_ENABLED) and the event is schedule, push, or manual.
@@ -552,6 +582,34 @@ jobs:
           aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
 
           echo "=== RPM repodata uploaded to s3://${BUCKET}/${RPM_PREFIX}/repodata/ ==="
+          aws s3 ls "s3://${BUCKET}/${RPM_PREFIX}/repodata/" --human-readable || true
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          RVS_RUNNER_SUFFIX: manylinux_2_28
+
+      - name: Generate and upload unsigned RPM repodata to S3
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          [ -z "$BUCKET" ] && exit 0
+
+          yum install -y createrepo_c || yum install -y createrepo
+
+          RPM_PREFIX=$(sh .github/scripts/rvs-s3-upload-route.sh unsigned-rpm-prefix)
+
+          STAGING=$(mktemp -d)
+
+          echo "Downloading existing unsigned RPMs from s3://${BUCKET}/${RPM_PREFIX}/ ..."
+          aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
+            --exclude "repodata/*" --no-progress || true
+
+          cp ./build/amdrocm*-rvs*.rpm "$STAGING/" 2>/dev/null || true
+
+          createrepo_c "$STAGING" || createrepo "$STAGING"
+
+          aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
+
+          echo "=== Unsigned RPM repodata uploaded to s3://${BUCKET}/${RPM_PREFIX}/repodata/ ==="
           aws s3 ls "s3://${BUCKET}/${RPM_PREFIX}/repodata/" --human-readable || true
         env:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}

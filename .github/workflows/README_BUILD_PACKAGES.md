@@ -23,7 +23,7 @@ The workflow runs automatically on:
 
 | Branch source | Built on schedule? | S3 upload on schedule? | S3 path (under bucket) |
 |---------------|-------------------|------------------------|-------------------------|
-| **Default branch** (`master` / `main`) | Always | Yes | Unchanged: `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` (+ APT/YUM metadata) |
+| **Default branch** (`master` / `main`) | Always | Yes | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` (+ flat APT/YUM metadata) **and** `nightly/unsigned/deb/`, `nightly/unsigned/rpm/`, `nightly/unsigned/tar/` (unsigned archive for signing CI) |
 | **`ACTIVE_BRANCHES`** matches (non-default) | Yes | Yes (except `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` |
 | **`release*`** matches from `ACTIVE_BRANCHES` | Yes | **No** | Packages are built and verified only |
 
@@ -156,7 +156,8 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload to S3** (when the repo is `ROCm/ROCmValidationSuite`, or when repository variable `RVS_S3_UPLOAD_ENABLED` is `true`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
-6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
+6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM under `nightly/rvs/` (or `release/rvs/`), then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
+7. **Unsigned nightly publish** (**scheduled default branch only**) – Also updates `nightly/unsigned/deb/` (`dists/` + `pool/`, suite **`stable main`**) via [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh), `nightly/unsigned/rpm/` (`createrepo_c`), and `nightly/unsigned/tar/` (`.tar.gz` plus `.tar.gz.sha256` sidecars). This runs in parallel with the existing `nightly/rvs/*` upload (Phase 1 dual-write) for signing CI input.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
@@ -197,14 +198,14 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
    - Name: `RVS_S3_UPLOAD_ENABLED`
    - Value: `true` (must be this exact string). Upstream does not need this variable.
 
-4. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it for the **repository that runs the workflow** (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
+4. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it for the **repository that runs the workflow** (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject`, `s3:GetObject`, and `s3:ListBucket` on the bucket, including prefix **`nightly/unsigned/`**.
 
 **S3 path layout** (resolved by [`.github/scripts/rvs-s3-upload-route.sh`](../scripts/rvs-s3-upload-route.sh), POSIX-safe for Ubuntu `sh`):
 
 | Trigger | Path | Contents |
 |--------|------|----------|
 | **`release/*` branch** (`push` or `workflow_dispatch`) | `release/rvs/deb/`, `release/rvs/rpm/`, `release/rvs/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). Only PR merges into release branches or manual dispatch on release branches write here. |
-| **Scheduled** (default branch only) | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same as before; APT/YUM metadata generated here. |
+| **Scheduled** (default branch only) | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Flat APT/YUM metadata (legacy consumer paths). **Also** `nightly/unsigned/deb/`, `nightly/unsigned/rpm/`, `nightly/unsigned/tar/` for signing CI (see below). |
 | **Scheduled** (`ACTIVE_BRANCHES`, non-default, not `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` | No shared `rvs/` segment; no repo metadata on these paths. |
 | **Scheduled** (`release*` from `ACTIVE_BRANCHES`) | _(none)_ | Build only; upload skipped. |
 | **Push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same split by type. |
@@ -213,6 +214,63 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
 If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the workflow still succeeds).
 
 When packages are uploaded to S3, the **build report** artifact includes an **S3 Upload Locations** section with clickable links to each S3 prefix (AWS Console). This makes it easy to open the bucket and browse the uploaded DEB, RPM, and TGZ files from the report.
+
+### Unsigned nightly (`nightly/unsigned/`) — scheduled default branch
+
+Separate signing CI consumes **unsigned** packages from this prefix. The build workflow does **not** write a run manifest file; signing jobs discover `.deb`/`.rpm` from the repo tree or S3 listing.
+
+**Rollout:** Phase 1 (current) **dual-writes** on schedule: legacy `nightly/rvs/*` plus `nightly/unsigned/*`. Phase 2 (future): scheduled builds write only `nightly/unsigned/*`; signed packages are published to consumer paths by signing CI.
+
+**S3 layout** (AMD-style DEB archive, same shape as [stable.repo.amd.com/rocm/core/packages/ubuntu2204/](https://stable.repo.amd.com/rocm/core/packages/ubuntu2204/) but under a single `deb/` prefix):
+
+```
+s3://<bucket>/nightly/unsigned/
+├── deb/
+│   ├── conf/          # reprepro state (internal; not for apt clients)
+│   ├── pool/main/…/amdrocm*-rvs_*.deb
+│   └── dists/stable/
+│       ├── Release
+│       └── main/binary-amd64/Packages(.gz)
+├── rpm/
+│   ├── amdrocm*-rvs*.rpm
+│   └── repodata/
+└── tar/
+    ├── amdrocm*-rvs*-Linux.tar.gz
+    └── amdrocm*-rvs*-Linux.tar.gz.sha256
+```
+
+**Scripts:** [rvs-s3-upload-route.sh](../scripts/rvs-s3-upload-route.sh) (`upload-rpm-tar-unsigned`, `unsigned-*-prefix`); [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh) (`reprepro` + S3 sync).
+
+**apt (unsigned staging, internal testing):**
+
+```bash
+echo "deb [trusted=yes arch=amd64] https://<bucket>.s3.amazonaws.com/nightly/unsigned/deb/ stable main" \
+  | sudo tee /etc/apt/sources.list.d/rvs-unsigned-nightly.list
+sudo apt update
+```
+
+**yum/dnf (unsigned RPM):**
+
+```bash
+cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-unsigned-nightly.repo
+[rvs-unsigned-nightly]
+name=RVS Unsigned Nightly RPM
+baseurl=https://<bucket>.s3.amazonaws.com/nightly/unsigned/rpm/
+enabled=1
+gpgcheck=0
+EOF
+```
+
+**Tarball integrity:** Tarballs are not signed by signing CI. Each `.tar.gz` under `nightly/unsigned/tar/` has a GNU **`sha256sum`** sidecar (`.tar.gz.sha256`). After download:
+
+```bash
+cd /path/to/download
+sha256sum -c amdrocm*-rvs*.tar.gz.sha256
+```
+
+Checksums detect corruption or wrong files; they do not authenticate the publisher (use HTTPS and bucket IAM for that).
+
+**Signing CI handoff (out of this repo):** Input prefixes `nightly/unsigned/deb/` and `nightly/unsigned/rpm/`; trigger via `workflow_run`, S3 events, or manual dispatch. Signed `.deb`/`.rpm` are promoted to consumer repos (for example `nightly/rvs/` or AMD CDN) with appropriate signed metadata.
 
 ### Repository Metadata (repodata)
 
