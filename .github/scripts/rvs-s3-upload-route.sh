@@ -5,6 +5,11 @@
 #   rvs-s3-upload-route.sh upload-rpm-tar
 #   rvs-s3-upload-route.sh deb-repo-prefix
 #   rvs-s3-upload-route.sh rpm-repo-prefix
+#   rvs-s3-upload-route.sh unsigned-deb-prefix
+#   rvs-s3-upload-route.sh unsigned-rpm-prefix
+#   rvs-s3-upload-route.sh unsigned-tar-prefix
+#   rvs-s3-upload-route.sh upload-rpm-tar-unsigned
+#   rvs-s3-upload-route.sh unsigned-upload-enabled
 set -eu
 
 BASE="rvs"
@@ -28,11 +33,18 @@ rvs_is_release_ref() {
   return 1
 }
 
+rvs_unsigned_upload_enabled() {
+  [ "$EVENT" = "schedule" ] && [ "$RVS_IS_DEFAULT_BRANCH" = "true" ]
+}
+
 rvs_resolve_route() {
   RVS_S3_ROUTE="pr"
   RVS_S3_DEB_PREFIX=""
   RVS_S3_RPM_PREFIX=""
   RVS_S3_TAR_PREFIX=""
+  RVS_S3_UNSIGNED_DEB_PREFIX=""
+  RVS_S3_UNSIGNED_RPM_PREFIX=""
+  RVS_S3_UNSIGNED_TAR_PREFIX=""
   RVS_APT_SUITE="rvs-nightly"
   RVS_S3_OUTPUT_PATHS=""
 
@@ -67,6 +79,12 @@ rvs_resolve_route() {
     RVS_S3_TAR_PREFIX="nightly/${BASE}/tar"
     RVS_APT_SUITE="rvs-nightly"
     RVS_S3_OUTPUT_PATHS="Ubuntu DEB|nightly/${BASE}/deb||CentOS/RHEL RPM|nightly/${BASE}/rpm||CentOS/RHEL TGZ|nightly/${BASE}/tar"
+    if rvs_unsigned_upload_enabled; then
+      RVS_S3_UNSIGNED_DEB_PREFIX="nightly/unsigned/deb"
+      RVS_S3_UNSIGNED_RPM_PREFIX="nightly/unsigned/rpm"
+      RVS_S3_UNSIGNED_TAR_PREFIX="nightly/unsigned/tar"
+      RVS_S3_OUTPUT_PATHS="${RVS_S3_OUTPUT_PATHS}||Unsigned DEB|nightly/unsigned/deb||Unsigned RPM|nightly/unsigned/rpm||Unsigned TGZ|nightly/unsigned/tar"
+    fi
     return 0
   fi
 
@@ -163,8 +181,56 @@ case "$cmd" in
   rpm-repo-prefix)
     echo "$RVS_S3_RPM_PREFIX"
     ;;
+  unsigned-upload-enabled)
+    if rvs_unsigned_upload_enabled; then
+      echo "true"
+    else
+      echo "false"
+    fi
+    ;;
+  unsigned-deb-prefix)
+    if [ -z "$RVS_S3_UNSIGNED_DEB_PREFIX" ]; then
+      echo "::error::Unsigned DEB upload is only enabled for scheduled default-branch builds." >&2
+      exit 1
+    fi
+    echo "$RVS_S3_UNSIGNED_DEB_PREFIX"
+    ;;
+  unsigned-rpm-prefix)
+    if [ -z "$RVS_S3_UNSIGNED_RPM_PREFIX" ]; then
+      echo "::error::Unsigned RPM upload is only enabled for scheduled default-branch builds." >&2
+      exit 1
+    fi
+    echo "$RVS_S3_UNSIGNED_RPM_PREFIX"
+    ;;
+  unsigned-tar-prefix)
+    if [ -z "$RVS_S3_UNSIGNED_TAR_PREFIX" ]; then
+      echo "::error::Unsigned TAR upload is only enabled for scheduled default-branch builds." >&2
+      exit 1
+    fi
+    echo "$RVS_S3_UNSIGNED_TAR_PREFIX"
+    ;;
+  upload-rpm-tar-unsigned)
+    if [ -z "$BUCKET" ]; then
+      echo "::warning::AWS_S3_BUCKET not set. Skipping unsigned S3 upload."
+      exit 0
+    fi
+    if [ -z "$RVS_S3_UNSIGNED_RPM_PREFIX" ] || [ -z "$RVS_S3_UNSIGNED_TAR_PREFIX" ]; then
+      echo "Skipping unsigned S3 upload (not a scheduled default-branch build)."
+      exit 0
+    fi
+    echo "Scheduled unsigned build: uploading to ${RVS_S3_UNSIGNED_RPM_PREFIX} and ${RVS_S3_UNSIGNED_TAR_PREFIX}"
+    aws s3 cp ./build "s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/" \
+      --recursive --exclude "*" --include "amdrocm*-rvs*.rpm" --no-progress
+    aws s3 cp ./build "s3://${BUCKET}/${RVS_S3_UNSIGNED_TAR_PREFIX}/" \
+      --recursive --exclude "*" --include "amdrocm*-rvs*.tar.gz" --include "amdrocm*-rvs*.tar.gz.sha256" --no-progress
+    echo "Listing s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/"
+    aws s3 ls "s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/" --human-readable || true
+    echo "Listing s3://${BUCKET}/${RVS_S3_UNSIGNED_TAR_PREFIX}/"
+    aws s3 ls "s3://${BUCKET}/${RVS_S3_UNSIGNED_TAR_PREFIX}/" --human-readable || true
+    echo "Done."
+    ;;
   *)
-    echo "Usage: $0 upload-deb|upload-rpm-tar|deb-repo-prefix|rpm-repo-prefix" >&2
+    echo "Usage: $0 upload-deb|upload-rpm-tar|deb-repo-prefix|rpm-repo-prefix|unsigned-deb-prefix|unsigned-rpm-prefix|unsigned-tar-prefix|upload-rpm-tar-unsigned|unsigned-upload-enabled" >&2
     exit 1
     ;;
 esac
