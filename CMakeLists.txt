@@ -283,10 +283,11 @@ else()
 endif()
 message(STATUS "RVS_OS_TYPE_NUM: ${RVS_OS_TYPE_NUM}")
 
-## Set default module path if not already set
-if ( NOT DEFINED CMAKE_MODULE_PATH )
-    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/" )
-endif()
+## Always make our cmake_modules/ searchable: the find_package() calls above may have
+## already populated CMAKE_MODULE_PATH (ROCm/TheRock configs do), which would otherwise
+## leave include(utils) unresolved. Prepend so our modules win over same-named ones.
+set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/" ${CMAKE_MODULE_PATH} )
+list ( REMOVE_DUPLICATES CMAKE_MODULE_PATH )
 
 ## Include common cmake modules
 include ( utils )
