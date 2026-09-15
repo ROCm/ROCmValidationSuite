@@ -70,6 +70,43 @@ fetch_latest_nightly_sdk_for_line() {
     | sed "s|^therock-dist-linux-${GPU_FAMILY}-||" | sort -V | tail -1
 }
 
+fetch_latest_nightly_sdk_for_major() {
+  local listing="$1"
+  local major="$2"
+  grep -oE "therock-dist-linux-${GPU_FAMILY}-${major}\.[0-9]+\.[0-9]+a[0-9]+" "$listing" \
+    | sed "s|^therock-dist-linux-${GPU_FAMILY}-||" | sort -V | tail -1
+}
+
+fetch_latest_nightly_sdk_any() {
+  local listing="$1"
+  grep -oE "therock-dist-linux-${GPU_FAMILY}-[0-9]+\.[0-9]+\.[0-9]+a[0-9]+" "$listing" \
+    | sed "s|^therock-dist-linux-${GPU_FAMILY}-||" | sort -V | tail -1
+}
+
+# Same major.minor, else same major (10.0 missing -> newest 10.x), else newest nightly on the listing.
+pick_fallback_nightly_sdk() {
+  local listing="$1" major="$2" minor="$3" exact="$4" ver
+  ver="$(fetch_latest_nightly_sdk_for_line "$listing" "$major" "$minor")"
+  if [ -n "$ver" ]; then
+    echo "::warning::SDK ${exact} missing on ${NIGHTLY_INDEX}; using latest ${major}.${minor}.0a* ${ver}" >&2
+    printf '%s\n' "$ver"
+    return 0
+  fi
+  ver="$(fetch_latest_nightly_sdk_for_major "$listing" "$major")"
+  if [ -n "$ver" ]; then
+    echo "::warning::No ${major}.${minor}.0a* SDK for ${exact}; using latest ROCm ${major}.x ${ver}" >&2
+    printf '%s\n' "$ver"
+    return 0
+  fi
+  ver="$(fetch_latest_nightly_sdk_any "$listing")"
+  if [ -n "$ver" ]; then
+    echo "::warning::No ROCm ${major}.x SDK for ${exact}; using latest nightly ${ver}" >&2
+    printf '%s\n' "$ver"
+    return 0
+  fi
+  return 1
+}
+
 fetch_latest_version() {
   local mode="$1"
   local listing_tmp versions
@@ -128,17 +165,15 @@ resolve_rocm_from_tarball() {
       ROCM_VERSION="$exact"
       ROCM_SDK_BASE_URL="$NIGHTLY_BASE"
     elif fallback_latest_sdk_enabled; then
-      ROCM_VERSION="$(fetch_latest_nightly_sdk_for_line "$listing_tmp" "$major" "$minor")"
-      if [ -z "$ROCM_VERSION" ]; then
+      if ! ROCM_VERSION="$(pick_fallback_nightly_sdk "$listing_tmp" "$major" "$minor" "$exact")"; then
         rm -f "$listing_tmp"
-        echo "::error::No multiarch SDK ${exact} for tar ${base} (missing ${sdk_file} on ${NIGHTLY_INDEX}) and no ${major}.${minor}.0a* fallback on listing" >&2
+        echo "::error::No ${GPU_FAMILY} SDK ${exact} for tar ${base} (missing ${sdk_file} on ${NIGHTLY_INDEX}) and no nightly build on that listing" >&2
         exit 1
       fi
-      echo "::warning::Exact SDK ${exact} missing for ${base}; using latest available ${ROCM_VERSION} (--fallback-latest-sdk)" >&2
       ROCM_SDK_BASE_URL="$NIGHTLY_BASE"
     else
       rm -f "$listing_tmp"
-      echo "::error::No multiarch SDK ${exact} for tar ${base} (missing ${sdk_file} on ${NIGHTLY_INDEX}). Pass --fallback-latest-sdk or set RVS_DOCKER_SDK_FALLBACK_LATEST=true to use the latest ${major}.${minor}.0a* build." >&2
+      echo "::error::No ${GPU_FAMILY} SDK ${exact} for tar ${base} (missing ${sdk_file} on ${NIGHTLY_INDEX}). Pass --fallback-latest-sdk or set RVS_DOCKER_SDK_FALLBACK_LATEST=true to use the latest nightly build." >&2
       exit 1
     fi
     rm -f "$listing_tmp"

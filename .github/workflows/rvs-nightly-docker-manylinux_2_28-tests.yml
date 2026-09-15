@@ -58,7 +58,7 @@ on:
         required: false
         default: ''
       fallback_latest_sdk:
-        description: 'If exact multiarch SDK date is missing on CDN, use latest same ROCm line (10.x.0a*)'
+        description: 'If the exact SDK date is missing, fall back to latest same line, then same major, then newest nightly'
         required: false
         type: boolean
         default: true
