@@ -31,8 +31,8 @@ elif [ -n "${ROCM_SDK_NIGHTLY_INDEX_URL:-}" ]; then
   NIGHTLY_INDEX="${ROCM_SDK_NIGHTLY_INDEX_URL}"
   NIGHTLY_BASE="${NIGHTLY_INDEX%/}"
 else
-  NIGHTLY_INDEX="https://rocm.nightlies.amd.com/tarball-multi-arch/"
-  NIGHTLY_BASE="https://rocm.nightlies.amd.com/tarball-multi-arch"
+  NIGHTLY_INDEX="https://nightly.repo.amd.com/rocm/core/tarball/"
+  NIGHTLY_BASE="https://nightly.repo.amd.com/rocm/core/tarball"
 fi
 RELEASE_LIST="${ROCM_SDK_RELEASE_URL:-https://repo.amd.com/rocm/tarball/}"
 RELEASE_BASE="${ROCM_SDK_RELEASE_BASE_URL:-https://repo.amd.com/rocm/tarball}"
