@@ -409,10 +409,12 @@ jobs:
         run: |
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           [ -z "$BUCKET" ] && exit 0
+          export DEBIAN_FRONTEND=noninteractive
           chmod +x .github/scripts/rvs-deb-unsigned-repo.sh
           sh .github/scripts/rvs-deb-unsigned-repo.sh ./build
         env:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           RVS_RUNNER_SUFFIX: ubuntu-22.04
 
   build-centos:
@@ -596,24 +598,123 @@ jobs:
           yum install -y createrepo_c || yum install -y createrepo
 
           RPM_PREFIX=$(sh .github/scripts/rvs-s3-upload-route.sh unsigned-rpm-prefix)
+          TAR_PREFIX=$(sh .github/scripts/rvs-s3-upload-route.sh unsigned-tar-prefix)
+          export RPM_PREFIX TAR_PREFIX
 
           STAGING=$(mktemp -d)
 
-          echo "Downloading existing unsigned RPMs from s3://${BUCKET}/${RPM_PREFIX}/ ..."
-          aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
-            --exclude "repodata/*" --no-progress || true
-
+          echo "Building unsigned RPM repodata from this run only (no historical merge) ..."
           cp ./build/amdrocm*-rvs*.rpm "$STAGING/" 2>/dev/null || true
 
           createrepo_c "$STAGING" || createrepo "$STAGING"
 
-          aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
+          aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --delete --no-progress
 
           echo "=== Unsigned RPM repodata uploaded to s3://${BUCKET}/${RPM_PREFIX}/repodata/ ==="
           aws s3 ls "s3://${BUCKET}/${RPM_PREFIX}/repodata/" --human-readable || true
+
+          python3 <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          build = Path("build")
+          rpm_prefix = os.environ["RPM_PREFIX"]
+          tar_prefix = os.environ["TAR_PREFIX"]
+          run_id = os.environ["GITHUB_RUN_ID"]
+
+          def sha256_file(path: Path) -> str:
+              h = hashlib.sha256()
+              with path.open("rb") as f:
+                  for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          rpms = sorted(build.glob("amdrocm*-rvs*.rpm"))
+          tars = sorted(build.glob("amdrocm*-rvs*.tar.gz"))
+          payload = {"github_run_id": run_id}
+          if rpms:
+              rpm = rpms[0]
+              payload["rpm"] = {
+                  "filename": rpm.name,
+                  "s3_key": f"{rpm_prefix}/{rpm.name}",
+                  "sha256": sha256_file(rpm),
+              }
+          if tars:
+              tar = tars[0]
+              entry = {
+                  "filename": tar.name,
+                  "s3_key": f"{tar_prefix}/{tar.name}",
+                  "sha256": sha256_file(tar),
+              }
+              sidecar = Path(str(tar) + ".sha256")
+              if sidecar.is_file():
+                  entry["sha256_sidecar_key"] = f"{tar_prefix}/{sidecar.name}"
+              payload["tar"] = entry
+
+          meta = Path("build/unsigned-rpm-tar-meta.json")
+          meta.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+          print(meta.read_text(encoding="utf-8"))
+          PY
+
+          aws s3 cp build/unsigned-rpm-tar-meta.json \
+            "s3://${BUCKET}/nightly/unsigned/runs/${GITHUB_RUN_ID}/rpm-tar.json" --no-progress
         env:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           RVS_RUNNER_SUFFIX: manylinux_2_28
+
+  publish-unsigned-latest:
+    name: Publish unsigned latest.json (signing CI)
+    needs: [build-ubuntu, build-centos]
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    if: >-
+      github.event_name == 'schedule' &&
+      needs.build-ubuntu.result == 'success' &&
+      needs.build-centos.result == 'success'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install AWS CLI
+        if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
+        run: |
+          if command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y awscli
+          else
+            python3 -m pip install awscli
+          fi
+
+      - name: Configure AWS credentials
+        if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
+          CREDS=$(aws sts assume-role-with-web-identity \
+            --role-arn "${{ secrets.AWS_ROLE_ARN }}" \
+            --role-session-name "github-actions-${{ github.run_id }}" \
+            --web-identity-token "$TOKEN" \
+            --query 'Credentials' --output json)
+          echo "AWS_ACCESS_KEY_ID=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['AccessKeyId'])")" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SecretAccessKey'])")" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SessionToken'])")" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+
+      - name: Publish nightly/unsigned/latest.json
+        if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          [ -z "$BUCKET" ] && exit 0
+          chmod +x .github/scripts/rvs-unsigned-publish-latest.sh
+          sh .github/scripts/rvs-unsigned-publish-latest.sh
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
+          ROCM_VERSION: ${{ vars.ROCM_VERSION }}
 
   dispatch-post-build-tests:
     name: Dispatch post-build test workflows
