@@ -222,7 +222,7 @@ cmd_build_image_on_build_host() {
     require_env TARBALL_NAME
   fi
   check_docker_local
-  local build_script="${DOCKER_BUILD_DIR}/build-rocm-image.sh"
+  local build_script="${REPO_ROOT}/.github/docker/build-rocm-sdk-image.sh"
   if [ ! -f "$build_script" ]; then
     echo "::error::Docker build script not found: ${build_script}" >&2
     exit 1
@@ -234,9 +234,9 @@ cmd_build_image_on_build_host() {
   esac
   phase_start "docker build on build host"
   if [ -n "${TARBALL_NAME:-}" ]; then
-    RVS_NIGHTLY_DOCKER_IMAGE="${DOCKER_IMAGE}" "$build_script" --from-tarball "${TARBALL_NAME}" "${fallback_args[@]}"
+    RVS_NIGHTLY_DOCKER_IMAGE="${DOCKER_IMAGE}" "$build_script" --context "${DOCKER_BUILD_DIR}" --from-tarball "${TARBALL_NAME}" "${fallback_args[@]}"
   else
-    RVS_NIGHTLY_DOCKER_IMAGE="${DOCKER_IMAGE}" "$build_script" --channel nightly "${fallback_args[@]}"
+    RVS_NIGHTLY_DOCKER_IMAGE="${DOCKER_IMAGE}" "$build_script" --context "${DOCKER_BUILD_DIR}" --channel nightly "${fallback_args[@]}"
   fi
   phase_end "docker build on build host"
   if ! build_host_image_matches_expected; then
@@ -485,7 +485,20 @@ cmd_build_image_on_target() {
   mkdir -p "${REPO_ROOT}/pkg"
 
   phase_start "Sync docker build context to target"
-  tar -C "${DOCKER_BUILD_DIR}" -czf "${local_archive}" .
+  local pack_dir shared_builder
+  pack_dir="$(mktemp -d)"
+  shared_builder="${REPO_ROOT}/.github/docker/build-rocm-sdk-image.sh"
+  cp -a "${DOCKER_BUILD_DIR}/." "${pack_dir}/"
+  # Shared builder used by every flavor wrapper; include it in the remote context.
+  if [ -f "${shared_builder}" ]; then
+    cp "${shared_builder}" "${pack_dir}/build-rocm-sdk-image.sh"
+  else
+    echo "::error::Shared builder missing: ${shared_builder}" >&2
+    rm -rf "${pack_dir}"
+    exit 1
+  fi
+  tar -C "${pack_dir}" -czf "${local_archive}" .
+  rm -rf "${pack_dir}"
   ls -lh "${local_archive}"
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target "mkdir -p '${remote_build_dir}'"
   scp -q -F "$SSH_CONFIG_FILE" "${local_archive}" \
@@ -504,7 +517,7 @@ cmd_build_image_on_target() {
   fi
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
 set -euo pipefail
-chmod +x '${remote_build_dir}/build-rocm-image.sh'
+chmod +x '${remote_build_dir}/build-rocm-sdk-image.sh'
 RVS_NIGHTLY_DOCKER_IMAGE='${DOCKER_IMAGE}' \
 ROCM_REPO_BASEURL='${ROCM_REPO_BASEURL:-}' \
 RVS_REPO_BASEURL='${RVS_REPO_BASEURL:-}' \
@@ -514,7 +527,7 @@ GPU_TARGET='${GPU_TARGET:-gfx942}' \
 ROCM_VERSION='${RVS_DOCKER_ROCM_VERSION:-}' \
 ROCM_SDK_NIGHTLY_INDEX_URL='${ROCM_SDK_NIGHTLY_INDEX_URL:-}' \
 ROCM_SDK_NIGHTLY_BASE_URL='${ROCM_SDK_NIGHTLY_BASE_URL:-}' \
-'${remote_build_dir}/build-rocm-image.sh' ${build_args}
+'${remote_build_dir}/build-rocm-sdk-image.sh' --context '${remote_build_dir}' ${build_args}
 REMOTE
   phase_end "docker build on GPU target"
   cmd_verify_image_on_target

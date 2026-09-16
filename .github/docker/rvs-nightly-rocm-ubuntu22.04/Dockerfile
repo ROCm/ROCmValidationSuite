@@ -2,8 +2,8 @@
 # (therock-dist-linux-<GPU_FAMILY>-<ROCM_VERSION>.tar.gz from multiarch or release listing).
 #
 # Build on any docker host (typically the self-hosted runner):
-#   ./.github/docker/rvs-nightly-rocm-ubuntu22.04/build-rocm-image.sh \
-#     --rocm-version 10.1.0a20260819 --gpu-family multiarch
+#   ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-ubuntu22.04 \
+#     --from-tarball amdrocm10-rvs-...-Linux.tar.gz
 
 FROM ubuntu:22.04
 

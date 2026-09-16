@@ -7,5 +7,5 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$ROOT"
-chmod +x .github/docker/rvs-nightly-rocm-manylinux_2_28/build-rocm-image.sh
-exec .github/docker/rvs-nightly-rocm-manylinux_2_28/build-rocm-image.sh "$@"
+chmod +x .github/docker/build-rocm-sdk-image.sh
+exec .github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-manylinux_2_28 "$@"

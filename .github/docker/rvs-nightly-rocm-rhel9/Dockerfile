@@ -2,7 +2,7 @@
 # ROCm comes from nightly yum; RVS from extras yum (nightly if published, else stable).
 #
 # Build:
-#   ./.github/docker/rvs-nightly-rocm-rhel9/build-rocm-image.sh --channel nightly
+#   ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-rhel9 --channel nightly
 
 FROM redhat/ubi9
 
