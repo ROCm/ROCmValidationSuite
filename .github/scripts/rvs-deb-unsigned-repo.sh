@@ -31,8 +31,8 @@ fi
 
 DEBS=$(find "$BUILD_DIR" -maxdepth 1 -name 'amdrocm*-rvs*.deb' 2>/dev/null | sort)
 if [ -z "$DEBS" ]; then
-  echo "::warning::No amdrocm*-rvs*.deb in ${BUILD_DIR}; skipping unsigned DEB repo."
-  exit 0
+  echo "::error::No amdrocm*-rvs*.deb in ${BUILD_DIR}; unsigned DEB publish requires a package." >&2
+  exit 1
 fi
 
 STAGING=$(mktemp -d)
@@ -50,13 +50,14 @@ Description: RVS unsigned nightly
 EOF
 
 for deb in $DEBS; do
-  pkg=$(dpkg-deb -f "$deb" Package)
-  ver=$(dpkg-deb -f "$deb" Version)
-  echo "Replacing ${pkg} ${ver} in suite stable (if present) ..."
-  reprepro -b "$STAGING" remove stable "${pkg}" "${ver}" 2>/dev/null || true
   echo "Including $(basename "$deb") ..."
   reprepro -b "$STAGING" includedeb stable "$deb"
 done
+
+if ! find "$STAGING/pool" -name '*.deb' 2>/dev/null | grep -q .; then
+  echo "::error::reprepro produced no packages under pool/; aborting before S3 sync." >&2
+  exit 1
+fi
 
 echo "Uploading conf/, pool/, and dists/ to s3://${BUCKET}/${DEB_PREFIX}/ (--delete stale objects) ..."
 aws s3 sync "$STAGING/conf/" "s3://${BUCKET}/${DEB_PREFIX}/conf/" --delete --no-progress
@@ -92,6 +93,11 @@ for deb_path in sorted(staging.glob("pool/**/*.deb")):
             "sha256": h.hexdigest(),
         }
     )
+
+if not packages:
+    import sys
+    print("::error::No .deb files in pool/ after reprepro; aborting deb.json upload.", file=sys.stderr)
+    sys.exit(1)
 
 payload = {
     "github_run_id": run_id,

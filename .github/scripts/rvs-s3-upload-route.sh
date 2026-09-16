@@ -218,6 +218,29 @@ case "$cmd" in
       echo "Skipping unsigned S3 upload (not a scheduled default-branch build)."
       exit 0
     fi
+    rpm_count=0
+    for f in ./build/amdrocm*-rvs*.rpm; do
+      [ -f "$f" ] || continue
+      rpm_count=$((rpm_count + 1))
+    done
+    tar_count=0
+    for f in ./build/amdrocm*-rvs*.tar.gz; do
+      [ -f "$f" ] || continue
+      tar_count=$((tar_count + 1))
+      if [ ! -f "${f}.sha256" ]; then
+        echo "::error::Missing SHA-256 sidecar for $(basename "$f"); run sha256sum before unsigned upload." >&2
+        exit 1
+      fi
+    done
+    if [ "$rpm_count" -lt 1 ]; then
+      echo "::error::No amdrocm*-rvs*.rpm in ./build; refusing unsigned RPM sync --delete." >&2
+      exit 1
+    fi
+    if [ "$tar_count" -lt 1 ]; then
+      echo "::error::No amdrocm*-rvs*.tar.gz in ./build; refusing unsigned TAR sync --delete." >&2
+      exit 1
+    fi
+
     echo "Scheduled unsigned build: replacing ${RVS_S3_UNSIGNED_RPM_PREFIX} and ${RVS_S3_UNSIGNED_TAR_PREFIX}"
     RPM_STAGING=$(mktemp -d)
     TAR_STAGING=$(mktemp -d)

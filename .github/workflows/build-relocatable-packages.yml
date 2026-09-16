@@ -595,6 +595,25 @@ jobs:
           BUCKET="${{ vars.AWS_S3_BUCKET }}"
           [ -z "$BUCKET" ] && exit 0
 
+          rpm_n=0
+          for f in ./build/amdrocm*-rvs*.rpm; do
+            [ -f "$f" ] || continue
+            rpm_n=$((rpm_n + 1))
+          done
+          tar_n=0
+          for f in ./build/amdrocm*-rvs*.tar.gz; do
+            [ -f "$f" ] || continue
+            tar_n=$((tar_n + 1))
+            if [ ! -f "${f}.sha256" ]; then
+              echo "::error::Missing SHA-256 sidecar for $(basename "$f")." >&2
+              exit 1
+            fi
+          done
+          if [ "$rpm_n" -lt 1 ] || [ "$tar_n" -lt 1 ]; then
+            echo "::error::Unsigned repodata requires amdrocm*-rvs*.rpm and amdrocm*-rvs*.tar.gz in ./build." >&2
+            exit 1
+          fi
+
           yum install -y createrepo_c || yum install -y createrepo
 
           RPM_PREFIX=$(sh .github/scripts/rvs-s3-upload-route.sh unsigned-rpm-prefix)
@@ -604,7 +623,7 @@ jobs:
           STAGING=$(mktemp -d)
 
           echo "Building unsigned RPM repodata from this run only (no historical merge) ..."
-          cp ./build/amdrocm*-rvs*.rpm "$STAGING/" 2>/dev/null || true
+          cp ./build/amdrocm*-rvs*.rpm "$STAGING/"
 
           createrepo_c "$STAGING" || createrepo "$STAGING"
 
@@ -631,27 +650,35 @@ jobs:
                       h.update(chunk)
               return h.hexdigest()
 
+          import sys
+
           rpms = sorted(build.glob("amdrocm*-rvs*.rpm"))
           tars = sorted(build.glob("amdrocm*-rvs*.tar.gz"))
-          payload = {"github_run_id": run_id}
-          if rpms:
-              rpm = rpms[0]
-              payload["rpm"] = {
+          if not rpms or not tars:
+              print("::error::Missing RPM or TGZ for unsigned rpm-tar.json", file=sys.stderr)
+              sys.exit(1)
+
+          rpm = rpms[0]
+          tar = tars[0]
+          sidecar = Path(str(tar) + ".sha256")
+          if not sidecar.is_file():
+              print(f"::error::Missing SHA-256 sidecar for {tar.name}", file=sys.stderr)
+              sys.exit(1)
+
+          payload = {
+              "github_run_id": run_id,
+              "rpm": {
                   "filename": rpm.name,
                   "s3_key": f"{rpm_prefix}/{rpm.name}",
                   "sha256": sha256_file(rpm),
-              }
-          if tars:
-              tar = tars[0]
-              entry = {
+              },
+              "tar": {
                   "filename": tar.name,
                   "s3_key": f"{tar_prefix}/{tar.name}",
                   "sha256": sha256_file(tar),
-              }
-              sidecar = Path(str(tar) + ".sha256")
-              if sidecar.is_file():
-                  entry["sha256_sidecar_key"] = f"{tar_prefix}/{sidecar.name}"
-              payload["tar"] = entry
+                  "sha256_sidecar_key": f"{tar_prefix}/{sidecar.name}",
+              },
+          }
 
           meta = Path("build/unsigned-rpm-tar-meta.json")
           meta.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -672,7 +699,9 @@ jobs:
     if: >-
       github.event_name == 'schedule' &&
       needs.build-ubuntu.result == 'success' &&
-      needs.build-centos.result == 'success'
+      needs.build-centos.result == 'success' &&
+      (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') &&
+      vars.AWS_S3_BUCKET != ''
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -700,6 +729,8 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SecretAccessKey'])")" >> $GITHUB_ENV
           echo "AWS_SESSION_TOKEN=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SessionToken'])")" >> $GITHUB_ENV
           echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+          echo "::add-mask::$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SecretAccessKey'])")"
+          echo "::add-mask::$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SessionToken'])")"
         env:
           AWS_DEFAULT_REGION: us-east-1
 
