@@ -121,7 +121,7 @@ jobs:
           RVS_NIGHTLY_RHEL8_ROCM_REPO_INDEX: ${{ vars.RVS_NIGHTLY_RHEL8_ROCM_REPO_INDEX }}
         run: |
           set -euo pipefail
-          chmod +x .github/docker/rvs-nightly-rocm-rhel8/build-rocm-image.sh
+          chmod +x .github/docker/build-rocm-sdk-image.sh
           resolve_args=(--resolve-only --channel nightly --gpu-target "${GPU_TARGET}")
           if [ -n "${INPUT_ROCM_REPO:-}" ]; then
             resolve_args+=(--rocm-repo "${INPUT_ROCM_REPO}")
@@ -129,7 +129,7 @@ jobs:
           if [ -n "${INPUT_RVS_REPO:-}" ]; then
             resolve_args+=(--rvs-repo "${INPUT_RVS_REPO}")
           fi
-          ./.github/docker/rvs-nightly-rocm-rhel8/build-rocm-image.sh "${resolve_args[@]}"
+          ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-rhel8 "${resolve_args[@]}"
 
       - name: Export resolved repo paths
         env:
@@ -179,8 +179,8 @@ jobs:
       - name: Build ROCm docker image on build host
         if: inputs.build_docker_image && inputs.build_on_target == false
         run: |
-          chmod +x .github/docker/rvs-nightly-rocm-rhel8/build-rocm-image.sh
-          ./.github/docker/rvs-nightly-rocm-rhel8/build-rocm-image.sh \
+          chmod +x .github/docker/build-rocm-sdk-image.sh
+          ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-rhel8 \
             --channel nightly \
             --gpu-target "${GPU_TARGET}" \
             --rocm-repo "${ROCM_REPO_BASEURL}" \

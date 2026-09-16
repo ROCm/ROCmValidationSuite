@@ -3,7 +3,7 @@
 # (therock-dist-linux-<GPU_FAMILY>-<ROCM_VERSION>.tar.gz from multiarch or release listing).
 #
 # Build on any docker host (typically the self-hosted runner):
-#   ./.github/docker/rvs-nightly-rocm-manylinux_2_28/build-rocm-image.sh \
+#   ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-manylinux_2_28 \
 #     --rocm-version 10.1.0a20260819 --gpu-family multiarch
 
 FROM quay.io/pypa/manylinux_2_28_x86_64
