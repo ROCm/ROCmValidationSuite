@@ -219,6 +219,8 @@ When packages are uploaded to S3, the **build report** artifact includes an **S3
 
 Separate signing CI consumes **unsigned** packages from this prefix. Each scheduled default-branch run **replaces** the unsigned `deb/` (`pool/` + `dists/` with `aws s3 sync --delete`), `rpm/`, and `tar/` trees with **this run’s artifacts only** (no historical merge). A **`nightly/unsigned/latest.json`** pointer is published after both package jobs succeed; signing CI should read that file for exact `s3_key` / `sha256` values. Per-run fragments live under `nightly/unsigned/runs/<github_run_id>/deb.json` and `rpm-tar.json`.
 
+**Strict contract (scheduled default branch):** Unsigned steps **fail the workflow** if a required `.deb`, `.rpm`, or `.tar.gz` (and `.tar.gz.sha256` sidecar) is missing, if run metadata fragments are missing, or if `latest.json` validation fails. They do not silently skip after an S3 `--delete` sync. A green **`publish-unsigned-latest`** job means `latest.json` matches the objects under `nightly/unsigned/` for that run. Exit 0 without publishing only when S3 upload is disabled (`AWS_S3_BUCKET` unset) or unsigned routing does not apply.
+
 **Rollout:** Phase 1 (current) **dual-writes** on schedule: legacy `nightly/rvs/*` plus `nightly/unsigned/*`. Phase 2 (future): scheduled builds write only `nightly/unsigned/*`; signed packages are published to consumer paths by signing CI.
 
 **S3 layout** (AMD-style DEB archive, same shape as [stable.repo.amd.com/rocm/core/packages/ubuntu2204/](https://stable.repo.amd.com/rocm/core/packages/ubuntu2204/) but under a single `deb/` prefix):
@@ -243,7 +245,7 @@ s3://<bucket>/nightly/unsigned/
     └── rpm-tar.json
 ```
 
-**Scripts:** [rvs-s3-upload-route.sh](../scripts/rvs-s3-upload-route.sh) (`upload-rpm-tar-unsigned`, `unsigned-*-prefix`); [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh) (`reprepro`, replace same package version, S3 sync `--delete`); [rvs-unsigned-publish-latest.sh](../scripts/rvs-unsigned-publish-latest.sh) (merge run metadata → `latest.json`).
+**Scripts:** [rvs-s3-upload-route.sh](../scripts/rvs-s3-upload-route.sh) (`upload-rpm-tar-unsigned` validates RPM+TGZ+sidecar before `--delete`); [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh) (fresh `reprepro` archive per run, S3 sync `--delete`); [rvs-unsigned-publish-latest.sh](../scripts/rvs-unsigned-publish-latest.sh) (merge run metadata → `latest.json`, fail on missing/invalid input).
 
 **apt (unsigned staging, internal testing):**
 
@@ -276,7 +278,7 @@ Checksums detect corruption or wrong files; they do not authenticate the publish
 
 **Signing CI handoff (out of this repo):** Read **`s3://<bucket>/nightly/unsigned/latest.json`** (updated by the `publish-unsigned-latest` job after a successful scheduled build). It lists `deb.packages[].s3_key`, `rpm.s3_key`, and SHA-256 digests. Trigger via `workflow_run`, S3 event on `latest.json`, or manual dispatch with `github_run_id`. Signed `.deb`/`.rpm` are promoted to consumer repos (for example `nightly/rvs/` or AMD CDN) with appropriate signed metadata.
 
-**reprepro / same DEB version:** Unsigned DEB uses a fresh archive each run; `reprepro remove` + `includedeb` replaces an existing **same package name and version** (typical when CPack version tracks the git tag).
+**Unsigned DEB replace semantics:** Each run builds a **new** `pool/` and `dists/` in a clean staging directory (`reprepro includedeb` only). Prior-night objects are dropped when the tree is uploaded with **`aws s3 sync --delete`**, not by removing packages from last night’s pool inside reprepro.
 
 ### Repository Metadata (repodata)
 

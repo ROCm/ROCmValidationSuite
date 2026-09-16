@@ -8,9 +8,14 @@ RUN_ID="${GITHUB_RUN_ID:-}"
 SHA="${GITHUB_SHA:-}"
 ROCM_VERSION="${ROCM_VERSION:-}"
 
-if [ -z "$BUCKET" ] || [ -z "$RUN_ID" ]; then
-  echo "::warning::AWS_S3_BUCKET or GITHUB_RUN_ID unset; skipping latest.json publish."
+if [ -z "$BUCKET" ]; then
+  echo "::warning::AWS_S3_BUCKET unset; skipping latest.json publish."
   exit 0
+fi
+
+if [ -z "$RUN_ID" ]; then
+  echo "::error::GITHUB_RUN_ID unset; cannot publish latest.json." >&2
+  exit 1
 fi
 
 WORKDIR=$(mktemp -d)
@@ -19,24 +24,42 @@ trap 'rm -rf "$WORKDIR"' EXIT
 DEB_JSON="$WORKDIR/deb.json"
 RPM_JSON="$WORKDIR/rpm-tar.json"
 
-if ! aws s3 cp "s3://${BUCKET}/nightly/unsigned/runs/${RUN_ID}/deb.json" "$DEB_JSON" --no-progress 2>/dev/null; then
-  echo "::notice::No unsigned DEB metadata for run ${RUN_ID}; skipping latest.json (expected when unsigned steps did not run)."
-  exit 0
+if ! aws s3 cp "s3://${BUCKET}/nightly/unsigned/runs/${RUN_ID}/deb.json" "$DEB_JSON" --no-progress; then
+  echo "::error::Missing s3://${BUCKET}/nightly/unsigned/runs/${RUN_ID}/deb.json (unsigned DEB step)." >&2
+  exit 1
 fi
 
-if ! aws s3 cp "s3://${BUCKET}/nightly/unsigned/runs/${RUN_ID}/rpm-tar.json" "$RPM_JSON" --no-progress 2>/dev/null; then
-  echo "::notice::No unsigned RPM/TAR metadata for run ${RUN_ID}; skipping latest.json."
-  exit 0
+if ! aws s3 cp "s3://${BUCKET}/nightly/unsigned/runs/${RUN_ID}/rpm-tar.json" "$RPM_JSON" --no-progress; then
+  echo "::error::Missing s3://${BUCKET}/nightly/unsigned/runs/${RUN_ID}/rpm-tar.json (unsigned RPM/TAR step)." >&2
+  exit 1
 fi
 
 python3 <<PY
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 deb = json.loads(Path("${DEB_JSON}").read_text(encoding="utf-8"))
 rpm_tar = json.loads(Path("${RPM_JSON}").read_text(encoding="utf-8"))
+
+packages = deb.get("packages") or []
+if not packages:
+    print("::error::deb.json has no packages", file=sys.stderr)
+    sys.exit(1)
+
+rpm = rpm_tar.get("rpm")
+tar = rpm_tar.get("tar")
+if not rpm or not rpm.get("s3_key") or not rpm.get("sha256"):
+    print("::error::rpm-tar.json missing rpm.s3_key or rpm.sha256", file=sys.stderr)
+    sys.exit(1)
+if not tar or not tar.get("s3_key") or not tar.get("sha256"):
+    print("::error::rpm-tar.json missing tar.s3_key or tar.sha256", file=sys.stderr)
+    sys.exit(1)
+if not tar.get("sha256_sidecar_key"):
+    print("::error::rpm-tar.json missing tar.sha256_sidecar_key", file=sys.stderr)
+    sys.exit(1)
 
 latest = {
     "github_run_id": "${RUN_ID}",
@@ -44,8 +67,8 @@ latest = {
     "rocm_version": os.environ.get("ROCM_VERSION") or None,
     "published_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "deb": deb,
-    "rpm": rpm_tar.get("rpm"),
-    "tar": rpm_tar.get("tar"),
+    "rpm": rpm,
+    "tar": tar,
 }
 out = Path("${WORKDIR}/latest.json")
 out.write_text(json.dumps(latest, indent=2) + "\n", encoding="utf-8")
