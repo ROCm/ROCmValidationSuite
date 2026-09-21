@@ -40,9 +40,9 @@ trap 'rm -rf "$STAGING"' EXIT
 
 mkdir -p "$STAGING/conf"
 echo "Downloading existing unsigned DEB archive from s3://${BUCKET}/${DEB_PREFIX}/ ..."
-aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/conf/" "$STAGING/conf/" --no-progress 2>/dev/null || true
-aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/pool/" "$STAGING/pool/" --no-progress 2>/dev/null || true
-aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/dists/" "$STAGING/dists/" --no-progress 2>/dev/null || true
+aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/conf/" "$STAGING/conf/" --no-progress
+aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/pool/" "$STAGING/pool/" --no-progress
+aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/dists/" "$STAGING/dists/" --no-progress
 
 if [ ! -f "$STAGING/conf/distributions" ]; then
   cat >"$STAGING/conf/distributions" <<'EOF'
@@ -61,7 +61,9 @@ NEW_META=$(mktemp)
 trap 'rm -rf "$STAGING" "$NEW_META"' EXIT
 : >"$NEW_META"
 
+deb_count=0
 for deb in $DEBS; do
+  deb_count=$((deb_count + 1))
   pkg=$(dpkg-deb -f "$deb" Package)
   ver=$(dpkg-deb -f "$deb" Version)
   # Same Package+Version already in the archive: drop that version from the local
@@ -69,21 +71,28 @@ for deb in $DEBS; do
   # Does not require s3:DeleteObject (orphan keys with other filenames may remain).
   if reprepro -b "$STAGING" listfilter stable "Package (== ${pkg}), Version (== ${ver})" 2>/dev/null | grep -q .; then
     echo "Package ${pkg} ${ver} already in suite stable; removing that version from local archive before re-include ..."
-    reprepro -b "$STAGING" -T deb removefilter stable "Package (== ${pkg}), Version (== ${ver})" || true
+    reprepro -b "$STAGING" -T deb removefilter stable "Package (== ${pkg}), Version (== ${ver})"
   fi
   echo "Including $(basename "$deb") ..."
   reprepro -b "$STAGING" includedeb stable "$deb"
 
-  # Resolve pool path for this package after include (for this-run metadata).
-  pool_rel=$(find "$STAGING/pool" -name "$(basename "$deb")" 2>/dev/null | head -1 || true)
+  # Resolve the pool path reprepro recorded for this exact Package+Version from
+  # its own Packages index. Using find is non-deterministic (undefined order) and
+  # a glob fallback on ${pkg}_*.deb would match every historical version in pool/.
+  PACKAGES_FILE="$STAGING/dists/stable/main/binary-amd64/Packages"
+  pool_rel=$(awk -v pkg="$pkg" -v ver="$ver" '
+    /^Package:/  { cur_pkg=$2; cur_ver=""; cur_fn="" }
+    /^Version:/  { cur_ver=$2 }
+    /^Filename:/ { cur_fn=$2 }
+    /^$/         { if (cur_pkg==pkg && cur_ver==ver && cur_fn!="") { print cur_fn; cur_pkg=""; cur_ver=""; cur_fn="" } }
+    END          { if (cur_pkg==pkg && cur_ver==ver && cur_fn!="") print cur_fn }
+  ' "$PACKAGES_FILE")
+
   if [ -z "$pool_rel" ]; then
-    # Fallback: any .deb matching package name under pool
-    pool_rel=$(find "$STAGING/pool" -name "${pkg}_*.deb" 2>/dev/null | head -1 || true)
+    echo "::error::Cannot resolve pool path for ${pkg} ${ver} from reprepro Packages index." >&2
+    exit 1
   fi
-  if [ -n "$pool_rel" ]; then
-    rel=${pool_rel#"$STAGING/"}
-    echo "$rel" >>"$NEW_META"
-  fi
+  echo "$pool_rel" >>"$NEW_META"
 done
 
 if ! find "$STAGING/pool" -name '*.deb' 2>/dev/null | grep -q .; then
@@ -91,8 +100,9 @@ if ! find "$STAGING/pool" -name '*.deb' 2>/dev/null | grep -q .; then
   exit 1
 fi
 
-if [ ! -s "$NEW_META" ]; then
-  echo "::error::Could not resolve pool paths for this run's .deb files." >&2
+meta_count=$(wc -l < "$NEW_META")
+if [ "$meta_count" -ne "$deb_count" ]; then
+  echo "::error::Resolved ${meta_count} pool path(s) for ${deb_count} .deb file(s); counts must match." >&2
   exit 1
 fi
 

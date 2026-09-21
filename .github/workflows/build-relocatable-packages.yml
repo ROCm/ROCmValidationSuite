@@ -378,7 +378,7 @@ jobs:
           echo "Downloading existing DEBs from s3://${BUCKET}/${DEB_PREFIX}/ ..."
           aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/" "$STAGING/" \
             --exclude "Packages*" --exclude "Release*" --exclude "InRelease" \
-            --no-progress || true
+            --no-progress
 
           cp ./build/amdrocm*-rvs*.deb "$STAGING/" 2>/dev/null || true
 
@@ -575,7 +575,7 @@ jobs:
 
           echo "Downloading existing RPMs from s3://${BUCKET}/${RPM_PREFIX}/ ..."
           aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
-            --exclude "repodata/*" --no-progress || true
+            --exclude "repodata/*" --no-progress
 
           cp ./build/amdrocm*-rvs*.rpm "$STAGING/" 2>/dev/null || true
 
@@ -624,7 +624,7 @@ jobs:
 
           echo "Downloading existing unsigned RPMs from s3://${BUCKET}/${RPM_PREFIX}/ (accumulate) ..."
           aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
-            --exclude "repodata/*" --no-progress || true
+            --exclude "repodata/*" --no-progress
 
           cp ./build/amdrocm*-rvs*.rpm "$STAGING/"
 
@@ -720,6 +720,8 @@ jobs:
           python3 -m pip install --user --break-system-packages awscli \
             || python3 -m pip install --user awscli
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # GITHUB_PATH only applies to later steps; export for this step's verify.
+          export PATH="$HOME/.local/bin:$PATH"
           aws --version
 
       - name: Configure AWS credentials
