@@ -157,7 +157,7 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload to S3** (when the repo is `ROCm/ROCmValidationSuite`, or when repository variable `RVS_S3_UPLOAD_ENABLED` is `true`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
 6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM under `nightly/rvs/` (or `release/rvs/`), then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
-7. **Unsigned nightly publish** (**scheduled default branch only**) – Replaces `nightly/unsigned/deb/` (`dists/` + `pool/`, suite **`stable main`**) via [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh), `nightly/unsigned/rpm/` (`createrepo_c`, this run only), and `nightly/unsigned/tar/` (`.tar.gz` plus `.tar.gz.sha256` sidecars), then **`publish-unsigned-latest`** writes `nightly/unsigned/latest.json`. Phase 1 dual-write with `nightly/rvs/*` continues for legacy consumers.
+7. **Unsigned nightly publish** (**scheduled default branch only**) – Accumulates into `nightly/unsigned/deb/` (`dists/` + `pool/`, suite **`stable main`**) via [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh), `nightly/unsigned/rpm/` (`createrepo_c`, merge existing RPMs), and `nightly/unsigned/tar/` (`.tar.gz` plus `.tar.gz.sha256` sidecars), then **`publish-unsigned-latest`** writes `nightly/unsigned/latest.json`. Phase 1 dual-write with `nightly/rvs/*` continues for legacy consumers.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
@@ -198,7 +198,7 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
    - Name: `RVS_S3_UPLOAD_ENABLED`
    - Value: `true` (must be this exact string). Upstream does not need this variable.
 
-4. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it for the **repository that runs the workflow** (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject`, and `s3:ListBucket` on the bucket, including prefix **`nightly/unsigned/`** (unsigned publishes use `aws s3 sync --delete`).
+4. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it for the **repository that runs the workflow** (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject`, `s3:GetObject`, and `s3:ListBucket` on the bucket, including prefix **`nightly/unsigned/`**. Unsigned publish **accumulates** objects and does **not** require `s3:DeleteObject`.
 
 **S3 path layout** (resolved by [`.github/scripts/rvs-s3-upload-route.sh`](../scripts/rvs-s3-upload-route.sh), POSIX-safe for Ubuntu `sh`):
 
@@ -217,9 +217,9 @@ When packages are uploaded to S3, the **build report** artifact includes an **S3
 
 ### Unsigned nightly (`nightly/unsigned/`) — scheduled default branch
 
-Separate signing CI consumes **unsigned** packages from this prefix. Each scheduled default-branch run **replaces** the unsigned `deb/` (`pool/` + `dists/` with `aws s3 sync --delete`), `rpm/`, and `tar/` trees with **this run’s artifacts only** (no historical merge). A **`nightly/unsigned/latest.json`** pointer is published after both package jobs succeed; signing CI should read that file for exact `s3_key` / `sha256` values. Per-run fragments live under `nightly/unsigned/runs/<github_run_id>/deb.json` and `rpm-tar.json`.
+Separate signing CI consumes **unsigned** packages from this prefix. Each scheduled default-branch run **accumulates** new `.deb`/`.rpm`/`.tar.gz` under `nightly/unsigned/` and regenerates APT/YUM metadata (merge existing objects + this run’s packages). Historical packages remain in the prefix (the OIDC role does **not** use `s3:DeleteObject`). A **`nightly/unsigned/latest.json`** pointer is published after both package jobs succeed; signing CI should read that file for exact `s3_key` / `sha256` values for **this run only**. Per-run fragments live under `nightly/unsigned/runs/<github_run_id>/deb.json` and `rpm-tar.json`.
 
-**Strict contract (scheduled default branch):** Unsigned steps **fail the workflow** if a required `.deb`, `.rpm`, or `.tar.gz` (and `.tar.gz.sha256` sidecar) is missing, if run metadata fragments are missing, or if `latest.json` validation fails. They do not silently skip after an S3 `--delete` sync. A green **`publish-unsigned-latest`** job means `latest.json` matches the objects under `nightly/unsigned/` for that run. Exit 0 without publishing only when S3 upload is disabled (`AWS_S3_BUCKET` unset) or unsigned routing does not apply.
+**Strict contract (scheduled default branch):** Unsigned steps **fail the workflow** if a required `.deb`, `.rpm`, or `.tar.gz` (and `.tar.gz.sha256` sidecar) is missing, if run metadata fragments are missing, or if `latest.json` validation fails. Exit 0 without publishing only when S3 upload is disabled (`AWS_S3_BUCKET` unset) or unsigned routing does not apply. A green **`publish-unsigned-latest`** job means `latest.json` points at this run’s objects under the accumulated `nightly/unsigned/` tree.
 
 **Rollout:** Phase 1 (current) **dual-writes** on schedule: legacy `nightly/rvs/*` plus `nightly/unsigned/*`. Phase 2 (future): scheduled builds write only `nightly/unsigned/*`; signed packages are published to consumer paths by signing CI.
 
@@ -245,7 +245,7 @@ s3://<bucket>/nightly/unsigned/
     └── rpm-tar.json
 ```
 
-**Scripts:** [rvs-s3-upload-route.sh](../scripts/rvs-s3-upload-route.sh) (`upload-rpm-tar-unsigned` validates RPM+TGZ+sidecar before `--delete`); [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh) (fresh `reprepro` archive per run, S3 sync `--delete`); [rvs-unsigned-publish-latest.sh](../scripts/rvs-unsigned-publish-latest.sh) (merge run metadata → `latest.json`, fail on missing/invalid input).
+**Scripts:** [rvs-s3-upload-route.sh](../scripts/rvs-s3-upload-route.sh) (`upload-rpm-tar-unsigned` validates RPM+TGZ+sidecar then `aws s3 cp`); [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh) (merge into existing `reprepro` archive, sync without `--delete`); [rvs-unsigned-publish-latest.sh](../scripts/rvs-unsigned-publish-latest.sh) (merge run metadata → `latest.json`, fail on missing/invalid input).
 
 **apt (unsigned staging, internal testing):**
 
@@ -278,7 +278,7 @@ Checksums detect corruption or wrong files; they do not authenticate the publish
 
 **Signing CI handoff (out of this repo):** Read **`s3://<bucket>/nightly/unsigned/latest.json`** (updated by the `publish-unsigned-latest` job after a successful scheduled build). It lists `deb.packages[].s3_key`, `rpm.s3_key`, and SHA-256 digests. Trigger via `workflow_run`, S3 event on `latest.json`, or manual dispatch with `github_run_id`. Signed `.deb`/`.rpm` are promoted to consumer repos (for example `nightly/rvs/` or AMD CDN) with appropriate signed metadata.
 
-**Unsigned DEB replace semantics:** Each run builds a **new** `pool/` and `dists/` in a clean staging directory (`reprepro includedeb` only). Prior-night objects are dropped when the tree is uploaded with **`aws s3 sync --delete`**, not by removing packages from last night’s pool inside reprepro.
+**Unsigned DEB accumulate semantics:** Each run syncs existing `conf/` + `pool/` + `dists/` from S3, runs `reprepro includedeb` for this night’s `.deb` (if the same Package+Version is already present locally, it is removed from the **local** archive first so the pool object can be overwritten via PutObject), then syncs back **without** `--delete`. Older differently versioned packages remain in the bucket. Signing CI must use **`latest.json`**, not “newest object in the prefix.”
 
 ### Repository Metadata (repodata)
 

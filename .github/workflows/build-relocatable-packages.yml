@@ -622,12 +622,15 @@ jobs:
 
           STAGING=$(mktemp -d)
 
-          echo "Building unsigned RPM repodata from this run only (no historical merge) ..."
+          echo "Downloading existing unsigned RPMs from s3://${BUCKET}/${RPM_PREFIX}/ (accumulate) ..."
+          aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
+            --exclude "repodata/*" --no-progress || true
+
           cp ./build/amdrocm*-rvs*.rpm "$STAGING/"
 
           createrepo_c "$STAGING" || createrepo "$STAGING"
 
-          aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --delete --no-progress
+          aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
 
           echo "=== Unsigned RPM repodata uploaded to s3://${BUCKET}/${RPM_PREFIX}/repodata/ ==="
           aws s3 ls "s3://${BUCKET}/${RPM_PREFIX}/repodata/" --human-readable || true
@@ -709,11 +712,15 @@ jobs:
       - name: Install AWS CLI
         if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
         run: |
-          if command -v apt-get >/dev/null 2>&1; then
-            sudo apt-get update && sudo apt-get install -y awscli
-          else
-            python3 -m pip install awscli
+          # ubuntu-latest (24.04+) no longer ships awscli in apt; use pip like the CentOS job.
+          if command -v aws >/dev/null 2>&1; then
+            aws --version
+            exit 0
           fi
+          python3 -m pip install --user --break-system-packages awscli \
+            || python3 -m pip install --user awscli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          aws --version
 
       - name: Configure AWS credentials
         if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
