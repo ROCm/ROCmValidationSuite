@@ -233,30 +233,19 @@ case "$cmd" in
       fi
     done
     if [ "$rpm_count" -lt 1 ]; then
-      echo "::error::No amdrocm*-rvs*.rpm in ./build; refusing unsigned RPM sync --delete." >&2
+      echo "::error::No amdrocm*-rvs*.rpm in ./build; refusing unsigned RPM upload." >&2
       exit 1
     fi
     if [ "$tar_count" -lt 1 ]; then
-      echo "::error::No amdrocm*-rvs*.tar.gz in ./build; refusing unsigned TAR sync --delete." >&2
+      echo "::error::No amdrocm*-rvs*.tar.gz in ./build; refusing unsigned TAR upload." >&2
       exit 1
     fi
 
-    echo "Scheduled unsigned build: replacing ${RVS_S3_UNSIGNED_RPM_PREFIX} and ${RVS_S3_UNSIGNED_TAR_PREFIX}"
-    RPM_STAGING=$(mktemp -d)
-    TAR_STAGING=$(mktemp -d)
-    for f in ./build/amdrocm*-rvs*.rpm; do
-      [ -f "$f" ] || continue
-      cp "$f" "$RPM_STAGING/"
-    done
-    for f in ./build/amdrocm*-rvs*.tar.gz ./build/amdrocm*-rvs*.tar.gz.sha256; do
-      [ -f "$f" ] || continue
-      cp "$f" "$TAR_STAGING/"
-    done
-    aws s3 sync "$RPM_STAGING/" "s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/" \
-      --delete --no-progress
-    aws s3 sync "$TAR_STAGING/" "s3://${BUCKET}/${RVS_S3_UNSIGNED_TAR_PREFIX}/" \
-      --delete --no-progress
-    rm -rf "$RPM_STAGING" "$TAR_STAGING"
+    echo "Scheduled unsigned build: accumulating into ${RVS_S3_UNSIGNED_RPM_PREFIX} and ${RVS_S3_UNSIGNED_TAR_PREFIX}"
+    aws s3 cp ./build "s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/" \
+      --recursive --exclude "*" --include "amdrocm*-rvs*.rpm" --no-progress
+    aws s3 cp ./build "s3://${BUCKET}/${RVS_S3_UNSIGNED_TAR_PREFIX}/" \
+      --recursive --exclude "*" --include "amdrocm*-rvs*.tar.gz" --include "amdrocm*-rvs*.tar.gz.sha256" --no-progress
     echo "Listing s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/"
     aws s3 ls "s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/" --human-readable || true
     echo "Listing s3://${BUCKET}/${RVS_S3_UNSIGNED_TAR_PREFIX}/"
