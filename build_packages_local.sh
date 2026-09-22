@@ -749,6 +749,13 @@ fi
 
 apply_sdk_tarball_base_for_version "$ROCM_VERSION"
 
+# Publish the resolved version to GITHUB_ENV so downstream jobs (e.g.
+# publish-unsigned-latest) can read the actual nightly version rather than
+# the static vars.ROCM_VERSION repository variable.
+if [ -n "${GITHUB_ENV:-}" ]; then
+    echo "ROCM_VERSION=${ROCM_VERSION}" >> "$GITHUB_ENV"
+fi
+
 BUILD_TRANSFERBENCH_CLI="$(normalize_on_off "$BUILD_TRANSFERBENCH_CLI")"
 
 # Print configuration

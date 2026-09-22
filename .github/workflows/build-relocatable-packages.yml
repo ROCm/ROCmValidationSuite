@@ -228,6 +228,7 @@ jobs:
     outputs:
       s3_bucket_ubuntu: ${{ steps.upload-s3-ubuntu.outputs.bucket }}
       s3_paths_ubuntu: ${{ steps.upload-s3-ubuntu.outputs.paths }}
+      rocm_version: ${{ steps.capture-rocm-version.outputs.rocm_version }}
 
     steps:
       # Bootstrap the bare ubuntu:* image so actions/checkout and downstream steps
@@ -285,6 +286,10 @@ jobs:
           # Container runs as root; ROCM_SDK_* come from "Configure ROCm SDK channel" via GITHUB_ENV.
           ./build_packages_local.sh
 
+      - name: Capture resolved ROCm version
+        id: capture-rocm-version
+        run: |
+          echo "rocm_version=${ROCM_VERSION}" >> "$GITHUB_OUTPUT"
 
       # Print the resulting download URL in the step log and run Summary.
       - name: Print local package download URL
@@ -754,7 +759,7 @@ jobs:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_SHA: ${{ github.sha }}
-          ROCM_VERSION: ${{ vars.ROCM_VERSION }}
+          ROCM_VERSION: ${{ needs.build-ubuntu.outputs.rocm_version }}
 
   dispatch-post-build-tests:
     name: Dispatch post-build test workflows
