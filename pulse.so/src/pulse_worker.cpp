@@ -169,7 +169,7 @@ float PulseWorker::read_power(void) {
 }
 
 // amdsmi_get_temp_metric: some stacks return millidegree Celsius (e.g. 43000
-// for 43 °C, as in gm.so); others return whole degrees in the int64 (as in
+// for 43 °C); others return whole degrees in the int64 (as in
 // tst_worker). Values with magnitude above 1000 are treated as millidegrees.
 static float amdsmi_temperature_to_celsius(int64_t raw) {
   const int64_t mag = raw >= 0 ? raw : -raw;
