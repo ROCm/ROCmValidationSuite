@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -1052,16 +1052,9 @@ bool rvs::exec::is_yaml_properties_collection(
 
     if (property_name == "io_links-properties")
       return true;
-  } else {
-    if (module_name == "peqt") {
-      if (property_name == "capability") {
-        return true;
-      }
-    } else {
-      if (module_name == "gm") {
-        if (property_name == "metrics")
-          return true;
-      }
+  } else if (module_name == "peqt") {
+    if (property_name == "capability") {
+      return true;
     }
   }
 

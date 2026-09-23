@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -195,10 +195,8 @@ rvs_status_t rvs_session_execute(rvs_session_id_t session_id) {
           "mem",
           "pebb",
           "peqt",
-          "pesm",
           "pbqt",
-          "rcqt",
-          "smqt"};
+          "rcqt"};
 
         opt.insert({"module", module[rvs_session[session_idx].property.default_conf.module]});
 

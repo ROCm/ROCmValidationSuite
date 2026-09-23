@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -421,7 +421,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   }
   else if (rvs::options::has_option(opt, "module", &module)) {
 
-#define RVS_MODULE_MAX 11
+#define RVS_SESSION_MODULE_MAX 9
     std::map <std::string, int> module_map = {
       {"babel", 0},
       {"gpup", 1},
@@ -430,12 +430,10 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
       {"mem", 4},
       {"pebb", 5},
       {"peqt", 6},
-      {"pesm", 7},
-      {"pbqt", 8},
-      {"rcqt", 9},
-      {"smqt", 10}};
+      {"pbqt", 7},
+      {"rcqt", 8}};
 
-    string module_config_file[RVS_MODULE_MAX] =
+    string module_config_file[RVS_SESSION_MODULE_MAX] =
     {
       "babel.conf",
       "gpup_single.conf",
@@ -444,16 +442,17 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
       "mem.conf",
       "pebb_single.conf",
       "peqt_single.conf",
-      "pesm_1.conf",
       "pbqt_single.conf",
-      "rcqt_single.conf",
-      "smqt_single.conf"
+      "rcqt_single.conf"
     };
 
     auto itr = module_map.find(module);
+    if (itr == module_map.end()) {
+      return -1;
+    }
     int module_index = itr->second;
 
-    if(RVS_MODULE_MAX <= module_index) {
+    if (RVS_SESSION_MODULE_MAX <= module_index) {
       return -1;
     }
 
@@ -616,41 +615,8 @@ void rvs::exec::do_help() {
 int rvs::exec::do_gpu_list() {
   cout << "\nROCm Validation Suite (version " << RVS_VERSION_STRING << ")\n\n";
 
-  // create action excutor in .so
-  rvs::action* pa = module::action_create("pesm");
-  if (!pa) {
-    rvs::logger::Err("could not list GPUs.", MODULE_NAME_CAPS);
-    return 1;
-  }
-
-  // obtain interface to set parameters and execute action
-  if1* pif1 = static_cast<if1*>(pa->get_interface(1));
-  if (!pif1) {
-    rvs::logger::Err("could not obtain interface if1.", MODULE_NAME_CAPS);
-    module::action_destroy(pa);
-    return 1;
-  }
-
-  pif1->property_set("name", "(launcher)");
-
-  // specify "list GPUs" action
-  pif1->property_set("do_gpu_list", "");
-
-  // set command line options:
-  for (auto clit = rvs::options::get().begin();
-       clit != rvs::options::get().end(); ++clit) {
-    string p(clit->first);
-    p = "cli." + p;
-    pif1->property_set(p, clit->second);
-  }
-
-  // execute action
-  int sts = pif1->run();
-
-  // procssing finished, release action object
-  module::action_destroy(pa);
-
-  return sts;
+  rvs::gpulist::Initialize();
+  return display_gpu_info(get_gpu_info());
 }
 
 void rvs::exec::action_callback(const action_result_t * result, void * user_param) {
