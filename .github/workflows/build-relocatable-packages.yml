@@ -12,7 +12,7 @@ on:
       - main
   schedule:
     # Run daily at 5:00 AM PST (13:00 UTC; PST is UTC-8)
-    - cron: '0 13 * * *'
+    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       rocm_version:
