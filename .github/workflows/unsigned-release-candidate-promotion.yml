@@ -176,9 +176,13 @@ jobs:
           STAGING=$(mktemp -d)
           trap 'rm -rf "$STAGING"' EXIT
 
+          # Packages live under an x86_64/ subdirectory so signing CI and
+          # yum/dnf clients can use release/unsigned/rpm/x86_64/ as the baseurl.
+          mkdir -p "${STAGING}/x86_64"
+
           # Download existing unsigned RPMs (no repodata — will regenerate)
-          echo "Syncing existing ${DST_RPM} RPMs ..."
-          aws s3 sync "s3://${BUCKET}/${DST_RPM}/" "${STAGING}/" \
+          echo "Syncing existing ${DST_RPM}/x86_64/ RPMs ..."
+          aws s3 sync "s3://${BUCKET}/${DST_RPM}/x86_64/" "${STAGING}/x86_64/" \
             --exclude "repodata/*" --no-progress || true
 
           RPM_COPIED=0
@@ -187,7 +191,7 @@ jobs:
             case "$fname" in amdrocm*-rvs*.rpm) : ;; *) continue ;; esac
             case "$fname" in *"${BUILD_NUMBER}"*) : ;; *) continue ;; esac
             echo "  Downloading ${fname} ..."
-            aws s3 cp "s3://${BUCKET}/${key}" "${STAGING}/${fname}" --no-progress
+            aws s3 cp "s3://${BUCKET}/${key}" "${STAGING}/x86_64/${fname}" --no-progress
             RPM_COPIED=$((RPM_COPIED + 1))
           done < <(aws s3 ls "s3://${BUCKET}/${SRC_RPM}/" --recursive --no-progress 2>/dev/null | awk '{print $NF}' || true)
 
@@ -198,13 +202,13 @@ jobs:
             exit 0
           fi
 
-          echo "Rebuilding RPM repodata ..."
-          createrepo_c "${STAGING}" || createrepo "${STAGING}"
+          echo "Rebuilding RPM repodata under x86_64/ ..."
+          createrepo_c "${STAGING}/x86_64" || createrepo "${STAGING}/x86_64"
 
-          echo "Syncing updated RPM repo to s3://${BUCKET}/${DST_RPM}/ ..."
-          aws s3 sync "${STAGING}/" "s3://${BUCKET}/${DST_RPM}/" --no-progress
-          echo "=== RPM repo updated at s3://${BUCKET}/${DST_RPM}/ ==="
-          aws s3 ls "s3://${BUCKET}/${DST_RPM}/repodata/" --human-readable 2>/dev/null || true
+          echo "Syncing updated RPM repo to s3://${BUCKET}/${DST_RPM}/x86_64/ ..."
+          aws s3 sync "${STAGING}/x86_64/" "s3://${BUCKET}/${DST_RPM}/x86_64/" --no-progress
+          echo "=== RPM repo updated at s3://${BUCKET}/${DST_RPM}/x86_64/ ==="
+          aws s3 ls "s3://${BUCKET}/${DST_RPM}/x86_64/repodata/" --human-readable 2>/dev/null || true
 
       # ── TAR: copy matching files + generate missing .sha256 sidecars ─────────
       - name: Copy TAR packages
@@ -287,7 +291,7 @@ jobs:
             "${DEB_STAGE}/Packages" --no-progress 2>/dev/null || true
 
           echo "Listing RPMs for metadata ..."
-          aws s3 ls "s3://${BUCKET}/${DST_RPM}/" --no-progress 2>/dev/null \
+          aws s3 ls "s3://${BUCKET}/${DST_RPM}/x86_64/" --no-progress 2>/dev/null \
             | awk '{print $NF}' \
             | grep -E "amdrocm.*-rvs.*${BUILD_NUM}.*\.rpm$" \
             > "${RPM_STAGE}/rpm_list.txt" || true
@@ -339,7 +343,7 @@ jobs:
           rpm_meta = None
           if rpm_list:
               fname = rpm_list[0]
-              rpm_meta = {"filename": fname, "s3_key": f"{DST_RPM}/{fname}"}
+              rpm_meta = {"filename": fname, "s3_key": f"{DST_RPM}/x86_64/{fname}"}
 
           # --- TAR ---
           tar_list = (workdir / "tar" / "tar_list.txt").read_text(encoding="utf-8").splitlines()
