@@ -2,16 +2,25 @@ name: Unsigned Release Candidate Promotion
 
 # Copies packages from release/rvs/{deb,rpm,tar}/ to release/unsigned/{deb,rpm,tar}/
 # mirroring the layout and repodata structure used by nightly/unsigned/.
-# Only packages whose filenames contain the given build number are copied.
+#
+# Release packages are named with the GitHub run number of the build job as the
+# release segment, e.g.:
+#   amdrocm7-rvs_1.3.15-12345_amd64.deb
+#   amdrocm7-rvs-1.3.15-12345.x86_64.rpm
+#   amdrocm7-rvs-1.3.15-12345-Linux.tar.gz
+#
+# The run_number input selects exactly those three files.
 
 on:
   workflow_dispatch:
     inputs:
-      build_number:
+      run_number:
         description: >
-          Build number to promote (encoded in package filenames, e.g. "r0711" matches
-          amdrocm7-rvs-1.3.15-r0711.20260423.x86_64.rpm). All .deb, .rpm, and .tar.gz
-          files whose name contains this string are copied.
+          GitHub Actions run number of the build-relocatable-packages workflow run that
+          produced the release packages to promote (e.g. "12345"). This number is
+          embedded as the release segment in every package filename:
+          amdrocm7-rvs-1.3.15-12345.x86_64.rpm. Exactly one .deb, one .rpm, and one
+          .tar.gz must match; the step fails if zero or more than one file is found.
         required: true
         type: string
 
@@ -21,11 +30,11 @@ permissions:
 
 jobs:
   promote-release-unsigned:
-    name: Promote release/rvs → release/unsigned (${{ github.event.inputs.build_number }})
+    name: Promote release/rvs → release/unsigned (run ${{ github.event.inputs.run_number }})
     runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
 
     env:
-      BUILD_NUMBER: ${{ github.event.inputs.build_number }}
+      RUN_NUMBER: ${{ github.event.inputs.run_number }}
       AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
 
     steps:
@@ -67,15 +76,15 @@ jobs:
       # ── Validate input ───────────────────────────────────────────────────────
       - name: Validate inputs
         run: |
-          if [ -z "${BUILD_NUMBER}" ]; then
-            echo "::error::build_number input is required." >&2
+          if [ -z "${RUN_NUMBER}" ]; then
+            echo "::error::run_number input is required." >&2
             exit 1
           fi
           if [ -z "${AWS_S3_BUCKET}" ]; then
             echo "::error::AWS_S3_BUCKET repository variable is not set." >&2
             exit 1
           fi
-          echo "Promoting packages matching build number: ${BUILD_NUMBER}"
+          echo "Promoting packages for build run number: ${RUN_NUMBER}"
           echo "Source: s3://${AWS_S3_BUCKET}/release/rvs/{deb,rpm,tar}/"
           echo "Destination: s3://${AWS_S3_BUCKET}/release/unsigned/{deb,rpm,tar}/"
 
@@ -104,11 +113,13 @@ jobs:
           STAGING=$(mktemp -d)
           trap 'rm -rf "$STAGING"' EXIT
 
-          # Download existing unsigned DEB archive (accumulate mode — no --delete)
+          # Download existing unsigned DEB archive (accumulate mode — no --delete).
+          # aws s3 sync exits 0 for a nonexistent prefix; || true is not needed
+          # and would mask real errors such as permission failures.
           echo "Syncing existing ${DST_DEB} archive ..."
-          aws s3 sync "s3://${BUCKET}/${DST_DEB}/conf/"  "${STAGING}/conf/"  --no-progress || true
-          aws s3 sync "s3://${BUCKET}/${DST_DEB}/pool/"  "${STAGING}/pool/"  --no-progress || true
-          aws s3 sync "s3://${BUCKET}/${DST_DEB}/dists/" "${STAGING}/dists/" --no-progress || true
+          aws s3 sync "s3://${BUCKET}/${DST_DEB}/conf/"  "${STAGING}/conf/"  --no-progress
+          aws s3 sync "s3://${BUCKET}/${DST_DEB}/pool/"  "${STAGING}/pool/"  --no-progress
+          aws s3 sync "s3://${BUCKET}/${DST_DEB}/dists/" "${STAGING}/dists/" --no-progress
 
           # Bootstrap reprepro distributions config if absent
           if [ ! -f "${STAGING}/conf/distributions" ]; then
@@ -124,23 +135,29 @@ jobs:
           DISTEOF
           fi
 
-          # List source DEBs and download those matching the build number
+          # List source DEBs and download the one matching the run number.
+          # Release DEBs are named amdrocm<N>-rvs_<ver>-<run_number>_amd64.deb.
+          # Match on the "-<run_number>_" delimiter so run 123 cannot match 1234.
+          # Write to a temp file so a non-zero exit from aws is not hidden inside
+          # a process substitution and propagates correctly under set -euo pipefail.
           INCOMING=$(mktemp -d)
+          aws s3 ls "s3://${BUCKET}/${SRC_DEB}/" --recursive \
+            | awk '{print $NF}' > "${STAGING}/src_deb_keys.txt"
           DEB_COPIED=0
           while IFS= read -r key; do
             fname=$(basename "$key")
             case "$fname" in amdrocm*-rvs*.deb) : ;; *) continue ;; esac
-            case "$fname" in *"${BUILD_NUMBER}"*) : ;; *) continue ;; esac
+            case "$fname" in *"-${RUN_NUMBER}_"*) : ;; *) continue ;; esac
             echo "  Downloading ${fname} ..."
             aws s3 cp "s3://${BUCKET}/${key}" "${INCOMING}/${fname}" --no-progress
             DEB_COPIED=$((DEB_COPIED + 1))
-          done < <(aws s3 ls "s3://${BUCKET}/${SRC_DEB}/" --recursive --no-progress 2>/dev/null | awk '{print $NF}' || true)
+          done < "${STAGING}/src_deb_keys.txt"
 
           echo "deb_copied=${DEB_COPIED}" >> "$GITHUB_OUTPUT"
 
           if [ "${DEB_COPIED}" -eq 0 ]; then
-            echo "::warning::No .deb files matching '${BUILD_NUMBER}' in s3://${BUCKET}/${SRC_DEB}/. Skipping DEB promotion."
-            exit 0
+            echo "::error::No .deb files for run number '${RUN_NUMBER}' in s3://${BUCKET}/${SRC_DEB}/." >&2
+            exit 1
           fi
 
           echo "Including ${DEB_COPIED} DEB(s) into reprepro archive ..."
@@ -162,7 +179,7 @@ jobs:
           aws s3 sync "${STAGING}/pool/"  "s3://${BUCKET}/${DST_DEB}/pool/"  --no-progress
           aws s3 sync "${STAGING}/dists/" "s3://${BUCKET}/${DST_DEB}/dists/" --no-progress
           echo "=== DEB archive updated at s3://${BUCKET}/${DST_DEB}/ ==="
-          aws s3 ls "s3://${BUCKET}/${DST_DEB}/dists/stable/" --human-readable 2>/dev/null || true
+          aws s3 ls "s3://${BUCKET}/${DST_DEB}/dists/stable/" --human-readable
 
       # ── RPM: copy matching files + rebuild YUM repodata ─────────────────────
       - name: Copy RPM packages and rebuild YUM repodata
@@ -180,27 +197,46 @@ jobs:
           # yum/dnf clients can use release/unsigned/rpm/x86_64/ as the baseurl.
           mkdir -p "${STAGING}/x86_64"
 
-          # Download existing unsigned RPMs (no repodata — will regenerate)
+          # Download existing unsigned RPMs (no repodata — will regenerate).
+          # aws s3 sync exits 0 for a nonexistent prefix; || true is not needed.
           echo "Syncing existing ${DST_RPM}/x86_64/ RPMs ..."
           aws s3 sync "s3://${BUCKET}/${DST_RPM}/x86_64/" "${STAGING}/x86_64/" \
-            --exclude "repodata/*" --no-progress || true
+            --exclude "repodata/*" --no-progress
 
+          # List source RPMs into a temp file so aws exit status is not swallowed
+          # by a process substitution.
+          # Release RPMs are named amdrocm<N>-rvs-<ver>-<run_number>.el8.x86_64.rpm.
+          # Match on "-<run_number>." so run 123 cannot match 1234
+          # (the "." matches the start of ".el8.x86_64").
+          aws s3 ls "s3://${BUCKET}/${SRC_RPM}/" --recursive \
+            | awk '{print $NF}' > "${STAGING}/src_rpm_keys.txt"
           RPM_COPIED=0
           while IFS= read -r key; do
             fname=$(basename "$key")
             case "$fname" in amdrocm*-rvs*.rpm) : ;; *) continue ;; esac
-            case "$fname" in *"${BUILD_NUMBER}"*) : ;; *) continue ;; esac
+            case "$fname" in *"-${RUN_NUMBER}."*) : ;; *) continue ;; esac
             echo "  Downloading ${fname} ..."
             aws s3 cp "s3://${BUCKET}/${key}" "${STAGING}/x86_64/${fname}" --no-progress
             RPM_COPIED=$((RPM_COPIED + 1))
-          done < <(aws s3 ls "s3://${BUCKET}/${SRC_RPM}/" --recursive --no-progress 2>/dev/null | awk '{print $NF}' || true)
+          done < "${STAGING}/src_rpm_keys.txt"
 
           echo "rpm_copied=${RPM_COPIED}" >> "$GITHUB_OUTPUT"
 
           if [ "${RPM_COPIED}" -eq 0 ]; then
-            echo "::warning::No .rpm files matching '${BUILD_NUMBER}' in s3://${BUCKET}/${SRC_RPM}/. Skipping RPM promotion."
-            exit 0
+            echo "::error::No .rpm files for run number '${RUN_NUMBER}' in s3://${BUCKET}/${SRC_RPM}/." >&2
+            exit 1
           fi
+          if [ "${RPM_COPIED}" -gt 1 ]; then
+            echo "::error::${RPM_COPIED} .rpm files match run number '${RUN_NUMBER}'; expected exactly one." >&2
+            exit 1
+          fi
+
+          # Compute SHA-256 of the promoted RPM and expose as a step output so
+          # the latest.json step can include it without re-downloading the file.
+          RPM_BASENAME=$(basename "${STAGING}/x86_64/"amdrocm*-rvs*.rpm)
+          RPM_SHA256=$(sha256sum "${STAGING}/x86_64/${RPM_BASENAME}" | awk '{print $1}')
+          echo "rpm_fname=${RPM_BASENAME}" >> "$GITHUB_OUTPUT"
+          echo "rpm_sha256=${RPM_SHA256}" >> "$GITHUB_OUTPUT"
 
           echo "Rebuilding RPM repodata under x86_64/ ..."
           createrepo_c "${STAGING}/x86_64" || createrepo "${STAGING}/x86_64"
@@ -208,7 +244,7 @@ jobs:
           echo "Syncing updated RPM repo to s3://${BUCKET}/${DST_RPM}/x86_64/ ..."
           aws s3 sync "${STAGING}/x86_64/" "s3://${BUCKET}/${DST_RPM}/x86_64/" --no-progress
           echo "=== RPM repo updated at s3://${BUCKET}/${DST_RPM}/x86_64/ ==="
-          aws s3 ls "s3://${BUCKET}/${DST_RPM}/x86_64/repodata/" --human-readable 2>/dev/null || true
+          aws s3 ls "s3://${BUCKET}/${DST_RPM}/x86_64/repodata/" --human-readable
 
       # ── TAR: copy matching files + generate missing .sha256 sidecars ─────────
       - name: Copy TAR packages
@@ -222,37 +258,51 @@ jobs:
           STAGING=$(mktemp -d)
           trap 'rm -rf "$STAGING"' EXIT
 
+          # List source TARs into a temp file so aws exit status is not swallowed
+          # by a process substitution.
+          # Release TARs are named amdrocm<N>-rvs-<ver>-<run_number>-Linux.tar.gz.
+          # Match on "-<run_number>-Linux" so run 123 cannot match 1234.
+          # The same delimiter also matches the .sha256 sidecar.
+          aws s3 ls "s3://${BUCKET}/${SRC_TAR}/" --recursive \
+            | awk '{print $NF}' > "${STAGING}/src_tar_keys.txt"
           TAR_COPIED=0
           while IFS= read -r key; do
             fname=$(basename "$key")
-            # Copy both .tar.gz and existing .sha256 sidecars
+            # Copy both .tar.gz and any existing .sha256 sidecars
             case "$fname" in
               amdrocm*-rvs*.tar.gz | amdrocm*-rvs*.tar.gz.sha256) : ;;
               *) continue ;;
             esac
-            case "$fname" in *"${BUILD_NUMBER}"*) : ;; *) continue ;; esac
+            case "$fname" in *"-${RUN_NUMBER}-Linux"*) : ;; *) continue ;; esac
             echo "  Downloading ${fname} ..."
             aws s3 cp "s3://${BUCKET}/${key}" "${STAGING}/${fname}" --no-progress
             case "$fname" in *.tar.gz) TAR_COPIED=$((TAR_COPIED + 1)) ;; esac
-          done < <(aws s3 ls "s3://${BUCKET}/${SRC_TAR}/" --recursive --no-progress 2>/dev/null | awk '{print $NF}' || true)
+          done < "${STAGING}/src_tar_keys.txt"
 
           echo "tar_copied=${TAR_COPIED}" >> "$GITHUB_OUTPUT"
 
           if [ "${TAR_COPIED}" -eq 0 ]; then
-            echo "::warning::No .tar.gz files matching '${BUILD_NUMBER}' in s3://${BUCKET}/${SRC_TAR}/. Skipping TAR promotion."
-            exit 0
+            echo "::error::No .tar.gz files for run number '${RUN_NUMBER}' in s3://${BUCKET}/${SRC_TAR}/." >&2
+            exit 1
+          fi
+          if [ "${TAR_COPIED}" -gt 1 ]; then
+            echo "::error::${TAR_COPIED} .tar.gz files match run number '${RUN_NUMBER}'; expected exactly one." >&2
+            exit 1
           fi
 
-          # Generate .sha256 sidecar for any tar that is missing one (e.g., release/rvs/tar
-          # may not have had sidecars; nightly/unsigned always does)
-          for tar_file in "${STAGING}"/amdrocm*-rvs*.tar.gz; do
-            [ -f "$tar_file" ] || continue
-            sidecar="${tar_file}.sha256"
-            if [ ! -f "$sidecar" ]; then
-              echo "  Generating SHA-256 sidecar for $(basename "$tar_file") ..."
-              sha256sum "$tar_file" > "$sidecar"
-            fi
-          done
+          # Generate .sha256 sidecar if the source did not include one.
+          # Run sha256sum from within STAGING so the path recorded in the sidecar
+          # is the bare filename, not the runner temp path (/tmp/…/file → file).
+          # This matches what sha256sum -c expects on the signing host.
+          TAR_BASENAME=$(basename "${STAGING}/"amdrocm*-rvs*.tar.gz)
+          SIDECAR="${STAGING}/${TAR_BASENAME}.sha256"
+          if [ ! -f "${SIDECAR}" ]; then
+            echo "  Generating SHA-256 sidecar for ${TAR_BASENAME} ..."
+            (cd "${STAGING}" && sha256sum "${TAR_BASENAME}") > "${SIDECAR}"
+          fi
+          TAR_SHA256=$(awk '{print $1}' "${SIDECAR}")
+          echo "tar_fname=${TAR_BASENAME}" >> "$GITHUB_OUTPUT"
+          echo "tar_sha256=${TAR_SHA256}" >> "$GITHUB_OUTPUT"
 
           echo "Copying TARs to s3://${BUCKET}/${DST_TAR}/ ..."
           aws s3 cp "${STAGING}/" "s3://${BUCKET}/${DST_TAR}/" \
@@ -262,127 +312,124 @@ jobs:
             --include "amdrocm*-rvs*.tar.gz.sha256" \
             --no-progress
           echo "=== TAR packages updated at s3://${BUCKET}/${DST_TAR}/ ==="
-          aws s3 ls "s3://${BUCKET}/${DST_TAR}/" --human-readable 2>/dev/null || true
+          aws s3 ls "s3://${BUCKET}/${DST_TAR}/" --human-readable
 
       # ── Publish release/unsigned/latest.json ─────────────────────────────────
       - name: Publish release/unsigned/latest.json
         run: |
           set -euo pipefail
           BUCKET="${AWS_S3_BUCKET}"
-          BUILD_NUM="${BUILD_NUMBER}"
           DST_DEB="release/unsigned/deb"
           DST_RPM="release/unsigned/rpm"
           DST_TAR="release/unsigned/tar"
+
+          # All three formats are required. The individual promote steps already
+          # fail on 0 or >1 matches and compute the SHA-256 there; expose them
+          # here via :? so a missing output is caught immediately.
+          : "${RPM_FNAME:?promote-rpm step output rpm_fname is missing}"
+          : "${RPM_SHA256:?promote-rpm step output rpm_sha256 is missing}"
+          : "${TAR_FNAME:?promote-tar step output tar_fname is missing}"
+          : "${TAR_SHA256:?promote-tar step output tar_sha256 is missing}"
 
           # Export WORKDIR so the embedded Python script inherits it
           WORKDIR=$(mktemp -d)
           export WORKDIR
           trap 'rm -rf "$WORKDIR"' EXIT
 
-          # Pull down the current state of the unsigned repo to extract metadata
+          # Fetch the reprepro Packages index to extract DEB pool paths.
+          # This is a hard requirement — the DEB promote step must have succeeded.
           DEB_STAGE="${WORKDIR}/deb"
-          RPM_STAGE="${WORKDIR}/rpm"
-          TAR_STAGE="${WORKDIR}/tar"
-          mkdir -p "${DEB_STAGE}" "${RPM_STAGE}" "${TAR_STAGE}"
-
+          mkdir -p "${DEB_STAGE}"
           echo "Fetching Packages index for DEB metadata ..."
           aws s3 cp \
             "s3://${BUCKET}/${DST_DEB}/dists/stable/main/binary-amd64/Packages" \
-            "${DEB_STAGE}/Packages" --no-progress 2>/dev/null || true
-
-          echo "Listing RPMs for metadata ..."
-          aws s3 ls "s3://${BUCKET}/${DST_RPM}/x86_64/" --no-progress 2>/dev/null \
-            | awk '{print $NF}' \
-            | grep -E "amdrocm.*-rvs.*${BUILD_NUM}.*\.rpm$" \
-            > "${RPM_STAGE}/rpm_list.txt" || true
-
-          echo "Listing TARs for metadata ..."
-          aws s3 ls "s3://${BUCKET}/${DST_TAR}/" --no-progress 2>/dev/null \
-            | awk '{print $NF}' \
-            | grep -E "amdrocm.*-rvs.*${BUILD_NUM}.*\.tar\.gz$" \
-            > "${TAR_STAGE}/tar_list.txt" || true
+            "${DEB_STAGE}/Packages" --no-progress
 
           python3 - <<PY
           import json, os, sys
           from datetime import datetime, timezone
           from pathlib import Path
 
-          build_num = os.environ["BUILD_NUM"]
-          run_id    = os.environ["GITHUB_RUN_ID"]
-          sha       = os.environ.get("GITHUB_SHA", "")
-          workdir   = Path(os.environ["WORKDIR"])
+          run_num    = os.environ["RUN_NUM"]
+          run_id     = os.environ["GITHUB_RUN_ID"]
+          sha        = os.environ.get("GITHUB_SHA", "")
+          workdir    = Path(os.environ["WORKDIR"])
+          rpm_fname  = os.environ["RPM_FNAME"]
+          rpm_sha256 = os.environ["RPM_SHA256"]
+          tar_fname  = os.environ["TAR_FNAME"]
+          tar_sha256 = os.environ["TAR_SHA256"]
 
           DST_DEB = "release/unsigned/deb"
           DST_RPM = "release/unsigned/rpm"
           DST_TAR = "release/unsigned/tar"
 
           # --- DEB: parse reprepro Packages index ---
+          # Match the DEB pool filename with the same delimiter logic used in the
+          # shell loop: run number sits between "-" and "_amd64" in the filename.
           packages_file = workdir / "deb" / "Packages"
+          if not packages_file.is_file():
+              print("::error::Packages index not found; DEB promotion must have failed.", file=sys.stderr)
+              sys.exit(1)
           deb_packages = []
-          if packages_file.is_file():
-              cur = {}
-              for raw in packages_file.read_text(encoding="utf-8").splitlines():
-                  if raw.startswith("Package:"):  cur = {"Package": raw.split(None,1)[1]}
-                  elif raw.startswith("Version:"): cur["Version"] = raw.split(None,1)[1]
-                  elif raw.startswith("Filename:"): cur["Filename"] = raw.split(None,1)[1]
-                  elif raw == "" and "Filename" in cur:
-                      fn = cur["Filename"]
-                      if build_num in Path(fn).name:
-                          deb_packages.append({
-                              "filename": Path(fn).name,
-                              "pool_key": fn,
-                              "s3_key": f"{DST_DEB}/{fn}",
-                          })
-                      cur = {}
-          deb_meta = {"github_run_id": run_id, "deb_prefix": DST_DEB, "packages": deb_packages} \
-                     if deb_packages else None
+          cur = {}
+          for raw in packages_file.read_text(encoding="utf-8").splitlines():
+              if raw.startswith("Package:"):    cur = {"Package": raw.split(None, 1)[1]}
+              elif raw.startswith("Version:"):  cur["Version"]  = raw.split(None, 1)[1]
+              elif raw.startswith("Filename:"): cur["Filename"] = raw.split(None, 1)[1]
+              elif raw == "" and "Filename" in cur:
+                  fn = cur["Filename"]
+                  if f"-{run_num}_" in Path(fn).name:
+                      deb_packages.append({
+                          "filename": Path(fn).name,
+                          "pool_key": fn,
+                          "s3_key":   f"{DST_DEB}/{fn}",
+                      })
+                  cur = {}
+          if not deb_packages:
+              print(f"::error::No DEB packages for run number '{run_num}' found in the Packages index.", file=sys.stderr)
+              sys.exit(1)
 
-          # --- RPM ---
-          rpm_list = (workdir / "rpm" / "rpm_list.txt").read_text(encoding="utf-8").splitlines()
-          rpm_list = [l.strip() for l in rpm_list if l.strip()]
-          rpm_meta = None
-          if rpm_list:
-              fname = rpm_list[0]
-              rpm_meta = {"filename": fname, "s3_key": f"{DST_RPM}/x86_64/{fname}"}
+          deb_meta = {"github_run_id": run_id, "deb_prefix": DST_DEB, "packages": deb_packages}
 
-          # --- TAR ---
-          tar_list = (workdir / "tar" / "tar_list.txt").read_text(encoding="utf-8").splitlines()
-          tar_list = [l.strip() for l in tar_list if l.strip()]
-          tar_meta = None
-          if tar_list:
-              fname = tar_list[0]
-              tar_meta = {
-                  "filename": fname,
-                  "s3_key": f"{DST_TAR}/{fname}",
-                  "sha256_sidecar_key": f"{DST_TAR}/{fname}.sha256",
-              }
-
-          if not deb_meta and not rpm_meta and not tar_meta:
-              print("::warning::No promoted packages found in release/unsigned/; skipping latest.json.")
-              sys.exit(0)
+          # --- RPM and TAR: sha256 and filenames come from step outputs ---
+          # (computed during the promote steps, so no re-download is needed).
+          rpm_meta = {
+              "filename": rpm_fname,
+              "s3_key":   f"{DST_RPM}/x86_64/{rpm_fname}",
+              "sha256":   rpm_sha256,
+          }
+          tar_meta = {
+              "filename":           tar_fname,
+              "s3_key":             f"{DST_TAR}/{tar_fname}",
+              "sha256":             tar_sha256,
+              "sha256_sidecar_key": f"{DST_TAR}/{tar_fname}.sha256",
+          }
 
           latest = {
               "github_run_id": run_id,
-              "github_sha": sha,
-              "build_number": build_num,
-              "published_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "github_sha":    sha,
+              "rocm_version":  None,
+              "run_number":    run_num,
+              "published_at":  datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "deb": deb_meta,
+              "rpm": rpm_meta,
+              "tar": tar_meta,
           }
-          if deb_meta: latest["deb"] = deb_meta
-          if rpm_meta: latest["rpm"] = rpm_meta
-          if tar_meta: latest["tar"] = tar_meta
 
           out = workdir / "latest.json"
           out.write_text(json.dumps(latest, indent=2) + "\n", encoding="utf-8")
           print(out.read_text(encoding="utf-8"))
           PY
 
-          if [ -f "${WORKDIR}/latest.json" ]; then
-            aws s3 cp "${WORKDIR}/latest.json" \
-              "s3://${BUCKET}/release/unsigned/latest.json" --no-progress
-            echo "Published s3://${BUCKET}/release/unsigned/latest.json"
-          fi
+          aws s3 cp "${WORKDIR}/latest.json" \
+            "s3://${BUCKET}/release/unsigned/latest.json" --no-progress
+          echo "Published s3://${BUCKET}/release/unsigned/latest.json"
         env:
-          BUILD_NUM: ${{ github.event.inputs.build_number }}
+          RUN_NUM: ${{ github.event.inputs.run_number }}
+          RPM_FNAME: ${{ steps.promote-rpm.outputs.rpm_fname }}
+          RPM_SHA256: ${{ steps.promote-rpm.outputs.rpm_sha256 }}
+          TAR_FNAME: ${{ steps.promote-tar.outputs.tar_fname }}
+          TAR_SHA256: ${{ steps.promote-tar.outputs.tar_sha256 }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_SHA: ${{ github.sha }}
 
@@ -398,7 +445,7 @@ jobs:
             echo ""
             echo "| Item | Value |"
             echo "|------|-------|"
-            echo "| Build number | \`${BUILD_NUMBER}\` |"
+            echo "| Build run number | \`${RUN_NUMBER}\` |"
             echo "| DEB packages promoted | ${DEB_COPIED} |"
             echo "| RPM packages promoted | ${RPM_COPIED} |"
             echo "| TAR packages promoted | ${TAR_COPIED} |"
