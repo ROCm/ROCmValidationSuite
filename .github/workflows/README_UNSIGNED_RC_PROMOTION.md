@@ -14,14 +14,14 @@ The workflow runs only on **manual dispatch** (`workflow_dispatch`). There is no
 
 | Input | Required | Description |
 |-------|----------|-------------|
-| `run_number` | **Yes** | GitHub Actions run number of the `build-relocatable-packages` workflow run that produced the release packages (e.g. `12345`). Release packages are named with this number as their release segment: `amdrocm7-rvs_1.3.15-12345_amd64.deb`, `amdrocm7-rvs-1.3.15-12345.x86_64.rpm`, `amdrocm7-rvs-1.3.15-12345-Linux.tar.gz`. |
+| `run_number` | **Yes** | GitHub Actions run number of the `build-relocatable-packages` workflow run that produced the release packages (e.g. `12345`). Release packages are named with this number as their release segment: `amdrocm7-rvs_1.3.15-12345_amd64.deb`, `amdrocm7-rvs-1.3.15-12345.<dist>.x86_64.rpm`, `amdrocm7-rvs-1.3.15-12345-Linux.tar.gz`. |
 
 **Matching uses format-specific delimiters, not a plain substring.** Each format step looks for the run number bracketed by the characters that surround it in the filename:
 
 | Format | Pattern used | Example filename |
 |--------|-------------|-----------------|
 | DEB | `*"-<run_number>_"*` | `amdrocm7-rvs_1.3.15-12345_amd64.deb` |
-| RPM | `*"-<run_number>."*` | `amdrocm10-rvs-1.6.131-12345.el8.x86_64.rpm` |
+| RPM | `*"-<run_number>."*` | `amdrocm10-rvs-1.6.131-12345.<dist>.x86_64.rpm` |
 | TAR | `*"-<run_number>-Linux"*` | `amdrocm7-rvs-1.3.15-12345-Linux.tar.gz` |
 
 This prevents run number `123` from false-matching a file built by run `1234`. Exactly one file per format must match; the step fails on zero or more than one match.
