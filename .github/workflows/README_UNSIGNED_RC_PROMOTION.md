@@ -14,9 +14,17 @@ The workflow runs only on **manual dispatch** (`workflow_dispatch`). There is no
 
 | Input | Required | Description |
 |-------|----------|-------------|
-| `build_number` | **Yes** | Substring to match against package filenames. Every `.deb`, `.rpm`, and `.tar.gz` whose filename contains this string is promoted. The build number is embedded in the release string (e.g. `r0711` in `amdrocm7-rvs-1.3.15-r0711.20260423.x86_64.rpm`). |
+| `run_number` | **Yes** | GitHub Actions run number of the `build-relocatable-packages` workflow run that produced the release packages (e.g. `12345`). Release packages are named with this number as their release segment: `amdrocm7-rvs_1.3.15-12345_amd64.deb`, `amdrocm7-rvs-1.3.15-12345.x86_64.rpm`, `amdrocm7-rvs-1.3.15-12345-Linux.tar.gz`. |
 
-**Matching is simple substring:** if the filename contains the exact string you enter, it is included. For maximum precision use the full release segment (e.g. `r0711.20260423`). For a broader match, use just the numeric part (e.g. `0711`).
+**Matching uses format-specific delimiters, not a plain substring.** Each format step looks for the run number bracketed by the characters that surround it in the filename:
+
+| Format | Pattern used | Example filename |
+|--------|-------------|-----------------|
+| DEB | `*"-<run_number>_"*` | `amdrocm7-rvs_1.3.15-12345_amd64.deb` |
+| RPM | `*"-<run_number>."*` | `amdrocm10-rvs-1.6.131-12345.el8.x86_64.rpm` |
+| TAR | `*"-<run_number>-Linux"*` | `amdrocm7-rvs-1.3.15-12345-Linux.tar.gz` |
+
+This prevents run number `123` from false-matching a file built by run `1234`. Exactly one file per format must match; the step fails on zero or more than one match.
 
 ## S3 layout
 
@@ -83,27 +91,31 @@ Installs `reprepro`, `dpkg-dev`, and `createrepo-c` (or `createrepo`) via `apt-g
 
 ### 6. Copy RPM packages and rebuild YUM repodata
 
-- Downloads existing `release/unsigned/rpm/x86_64/` RPM files from S3, excluding `repodata/` (which will be fully regenerated)
-- Downloads matching `.rpm` files from `release/rvs/rpm/` into a local `x86_64/` subdirectory
-- Runs `createrepo_c` (fallback: `createrepo`) on that `x86_64/` directory to regenerate `repodata/` inside it
+- Downloads existing `release/unsigned/rpm/x86_64/` RPM files from S3, excluding `repodata/` (which will be fully regenerated). `aws s3 sync` exits 0 for a nonexistent prefix (first promotion), so no error-suppression is needed.
+- Lists `release/rvs/rpm/` by writing to a temp file (not a process substitution) so a non-zero exit from the `aws` CLI propagates under `set -euo pipefail`
+- Downloads the one matching `.rpm` into a local `x86_64/` subdirectory — fails if zero or more than one file matches
+- Computes the SHA-256 of the downloaded RPM and saves it as a step output (`rpm_fname`, `rpm_sha256`)
+- Runs `createrepo_c` (fallback: `createrepo`) on the `x86_64/` directory
 - Syncs `x86_64/` back to `s3://<bucket>/release/unsigned/rpm/x86_64/`
 
 RPMs are placed under `x86_64/` so that the signing CI and yum/dnf clients can use `release/unsigned/rpm/x86_64/` as the `baseurl` directly.
 
 ### 7. Copy TAR packages
 
-- Downloads matching `.tar.gz` files and any existing `.sha256` sidecars from `release/rvs/tar/`
-- Generates a SHA-256 sidecar (`sha256sum`) for any `.tar.gz` that does not already have one — `release/rvs/tar/` does not always include sidecars, but `release/unsigned/tar/` requires them for signing CI
-- Copies both `.tar.gz` and `.tar.gz.sha256` files to `release/unsigned/tar/`
+- Lists `release/rvs/tar/` by writing to a temp file so aws errors propagate
+- Downloads the one matching `.tar.gz` and its `.sha256` sidecar if present — fails if zero or more than one tarball matches
+- Generates a SHA-256 sidecar if the source did not include one. `sha256sum` is run with `cd "${STAGING}" && sha256sum "${basename}"` so the path recorded in the sidecar file is the bare filename (e.g. `abc123  amdrocm7-rvs-….tar.gz`), not the runner temp path (`/tmp/…/amdrocm7-rvs-….tar.gz`). This matches what `sha256sum -c` expects on the signing host.
+- Saves the SHA-256 as a step output (`tar_fname`, `tar_sha256`)
+- Copies both `.tar.gz` and `.tar.gz.sha256` to `release/unsigned/tar/`
 
 ### 8. Publish `release/unsigned/latest.json`
 
-Reads back the current state of `release/unsigned/` to extract metadata for the promoted build number:
+Assembles and uploads `release/unsigned/latest.json`. All three formats are required — the step fails immediately if any step output from the promote steps is missing. No partial writes: either all three are present or the file is not written.
 
-- Fetches `release/unsigned/deb/dists/stable/main/binary-amd64/Packages` and parses it to find DEB pool paths whose filename contains `build_number`
-- Lists `release/unsigned/rpm/` and filters for RPM filenames containing `build_number`
-- Lists `release/unsigned/tar/` and filters for TAR filenames containing `build_number`
-- Writes and uploads `release/unsigned/latest.json` with the same schema used by `nightly/unsigned/latest.json`
+- Fetches `release/unsigned/deb/dists/stable/main/binary-amd64/Packages` (hard failure if absent) and parses it to find DEB pool paths matching `build_number`
+- Takes RPM filename and SHA-256 directly from the `promote-rpm` step output — no re-download
+- Takes TAR filename and SHA-256 directly from the `promote-tar` step output — no re-download
+- Writes and uploads `release/unsigned/latest.json`, matching the schema that `rvs-unsigned-publish-latest.sh` validates (`rpm.sha256`, `tar.sha256`, `tar.sha256_sidecar_key` are all present)
 
 The `latest.json` schema:
 
@@ -111,7 +123,8 @@ The `latest.json` schema:
 {
   "github_run_id": "12345678",
   "github_sha": "abc123...",
-  "build_number": "r0711.20260423",
+  "rocm_version": null,
+  "run_number": "12345",
   "published_at": "2026-04-23T12:34:56Z",
   "deb": {
     "github_run_id": "12345678",
@@ -126,11 +139,13 @@ The `latest.json` schema:
   },
   "rpm": {
     "filename": "amdrocm7-rvs-1.3.15-r0711.20260423.x86_64.rpm",
-    "s3_key": "release/unsigned/rpm/x86_64/amdrocm7-rvs-1.3.15-r0711.20260423.x86_64.rpm"
+    "s3_key": "release/unsigned/rpm/x86_64/amdrocm7-rvs-1.3.15-r0711.20260423.x86_64.rpm",
+    "sha256": "abc123def456..."
   },
   "tar": {
     "filename": "amdrocm7-rvs-1.3.15-r0711.20260423-Linux.tar.gz",
     "s3_key": "release/unsigned/tar/amdrocm7-rvs-1.3.15-r0711.20260423-Linux.tar.gz",
+    "sha256": "789abc012def...",
     "sha256_sidecar_key": "release/unsigned/tar/amdrocm7-rvs-1.3.15-r0711.20260423-Linux.tar.gz.sha256"
   }
 }
@@ -146,9 +161,14 @@ All S3 writes use **accumulate mode** (no `--delete`). Packages from previous pr
 
 Signing CI should always read `release/unsigned/latest.json` to find the exact `s3_key` values for a specific promotion — not list the prefix directly.
 
-## Partial promotion
+## All three formats are required
 
-If no packages match the given `build_number` for a given format (DEB, RPM, or TAR), that format step emits a warning and exits successfully without modifying S3. The other format steps still proceed. `latest.json` is published with only the formats that had matching packages.
+All of DEB, RPM, and TAR must have exactly one matching package. Any of the following causes the relevant step to fail hard (non-zero exit):
+
+- Zero files match the `run_number` for that format (the build may not have uploaded to `release/rvs/`, or the wrong run number was entered)
+- More than one file matches (should not normally occur since each GitHub run number is unique, but would indicate duplicate files in the bucket)
+
+`latest.json` is never written with a subset of formats. It is only published when all three promote steps succeed.
 
 ## Required configuration
 
@@ -187,22 +207,17 @@ If no packages match the given `build_number` for a given format (DEB, RPM, or T
 
 1. Go to **Actions** → **Unsigned Release Candidate Promotion**
 2. Click **Run workflow**
-3. Enter the `build_number` (e.g. `r0711.20260423`)
+3. Enter the `run_number` — the run number of the `build-relocatable-packages` run that produced the release packages (e.g. `12345`)
 4. Click **Run workflow**
 
 **From the `gh` CLI:**
 
 ```bash
 gh workflow run unsigned-release-candidate-promotion.yml \
-  -f build_number="r0711.20260423"
+  -f run_number="12345"
 ```
 
-To promote a broader range (e.g. all builds for ROCm 7.11 libpatch):
-
-```bash
-gh workflow run unsigned-release-candidate-promotion.yml \
-  -f build_number="r0711"
-```
+The `run_number` is the GitHub Actions run number shown on the `build-relocatable-packages` workflow run page (the integer in the URL and the run number column in the Actions tab). Because each run number is unique within the repository, it unambiguously identifies exactly one set of release packages.
 
 ## Signing CI handoff
 
@@ -267,10 +282,12 @@ sudo yum install amdrocm7-rvs
 |---------|-------------|
 | `AWS_S3_BUCKET repository variable is not set` | The `AWS_S3_BUCKET` Actions variable is missing. Add it in Settings → Secrets and variables → Actions → Variables. |
 | `Credentials could not be loaded` | The OIDC trust policy for `AWS_ROLE_ARN` does not cover this repository, or `AWS_ROLE_ARN` is not set as a repository secret. |
-| `No .deb files matching '<build_number>'` | No DEB filename in `release/rvs/deb/` contains the given build number. Verify the exact release string in the filename with `aws s3 ls s3://<bucket>/release/rvs/deb/`. |
-| `No .rpm files matching '<build_number>'` | Same as above for RPMs. Check `release/rvs/rpm/`. |
-| `No .tar.gz files matching '<build_number>'` | Same for tarballs. Check `release/rvs/tar/`. |
-| `latest.json` has empty `deb`/`rpm`/`tar` | The Packages index or S3 listing for the destination did not find filenames containing `build_number`. This can happen if the promotion step was skipped (warning, no files) but previous versions exist in the prefix. Re-run with a build number that matches at least one file. |
+| `No .deb files for run number '<N>'` | No DEB in `release/rvs/deb/` has `-<N>_` in its filename. Confirm that the `build-relocatable-packages` run with that number ran against a `release/**` branch and uploaded packages. Verify with `aws s3 ls s3://<bucket>/release/rvs/deb/ --recursive`. |
+| `No .rpm files for run number '<N>'` | Same for RPMs. Check `release/rvs/rpm/`. |
+| `No .tar.gz files for run number '<N>'` | Same for tarballs. Check `release/rvs/tar/`. |
+| `N .rpm files match run number '<N>'; expected exactly one` | Duplicate files in the bucket share the same run number. Inspect `release/rvs/rpm/` directly to identify and remove the duplicate. |
+| `promote-rpm step output rpm_fname is missing` | The `promote-rpm` step either did not run or failed before writing its outputs. Check that step's logs. |
+| `Packages index not found` in latest.json step | The DEB promote step succeeded (uploaded packages) but the Packages index was not found at `dists/stable/main/binary-amd64/Packages`. This indicates a reprepro or S3 sync failure in the DEB step. |
 | `reprepro` fails on `includedeb` | The `.deb` control fields may have unexpected characters, or the `conf/distributions` file is corrupted. Delete `s3://<bucket>/release/unsigned/deb/conf/` to force a fresh archive on next run. |
 | RPM repodata not updated | `createrepo_c` may not be available on the runner. The step falls back to `createrepo`; if neither is found, the step fails. The runner label in `RUNNER_LABEL_UTILITY` must resolve to a runner where at least one of those tools can be installed via `apt-get`. |
 
