@@ -6,7 +6,7 @@ name: Unsigned Release Candidate Promotion
 # Release packages are named with the GitHub run number of the build job as the
 # release segment, e.g.:
 #   amdrocm7-rvs_1.3.15-12345_amd64.deb
-#   amdrocm7-rvs-1.3.15-12345.x86_64.rpm
+#   amdrocm7-rvs-1.3.15-12345.<dist>.x86_64.rpm
 #   amdrocm7-rvs-1.3.15-12345-Linux.tar.gz
 #
 # The run_number input selects exactly those three files.
@@ -19,7 +19,7 @@ on:
           GitHub Actions run number of the build-relocatable-packages workflow run that
           produced the release packages to promote (e.g. "12345"). This number is
           embedded as the release segment in every package filename:
-          amdrocm7-rvs-1.3.15-12345.x86_64.rpm. Exactly one .deb, one .rpm, and one
+          amdrocm7-rvs-1.3.15-12345.<dist>.x86_64.rpm. Exactly one .deb, one .rpm, and one
           .tar.gz must match; the step fails if zero or more than one file is found.
         required: true
         type: string
@@ -205,9 +205,10 @@ jobs:
 
           # List source RPMs into a temp file so aws exit status is not swallowed
           # by a process substitution.
-          # Release RPMs are named amdrocm<N>-rvs-<ver>-<run_number>.el8.x86_64.rpm.
+          # Release RPMs are named amdrocm<N>-rvs-<ver>-<run_number>.<dist>.x86_64.rpm
+          # where <dist> is the RPM dist tag (e.g. el8 for manylinux_2_28).
           # Match on "-<run_number>." so run 123 cannot match 1234
-          # (the "." matches the start of ".el8.x86_64").
+          # (the "." matches the start of ".<dist>.x86_64").
           aws s3 ls "s3://${BUCKET}/${SRC_RPM}/" --recursive \
             | awk '{print $NF}' > "${STAGING}/src_rpm_keys.txt"
           RPM_COPIED=0
