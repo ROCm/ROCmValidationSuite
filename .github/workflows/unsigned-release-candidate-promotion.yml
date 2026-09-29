@@ -1,7 +1,8 @@
 name: Unsigned Release Candidate Promotion
 
-# Copies packages from release/rvs/{deb,rpm,tar}/ to release/unsigned/{deb,rpm,tar}/
-# mirroring the layout and repodata structure used by nightly/unsigned/.
+# Copies packages from release/rvs/{deb,rpm,tar}/ to release/unsigned/packages/{deb,rpm}/
+# and release/unsigned/tarball/, mirroring the layout and repodata structure used by
+# nightly/unsigned/.
 #
 # Release packages are named with the GitHub run number of the build job as the
 # release segment, e.g.:
@@ -86,7 +87,7 @@ jobs:
           fi
           echo "Promoting packages for build run number: ${RUN_NUMBER}"
           echo "Source: s3://${AWS_S3_BUCKET}/release/rvs/{deb,rpm,tar}/"
-          echo "Destination: s3://${AWS_S3_BUCKET}/release/unsigned/{deb,rpm,tar}/"
+          echo "Destination: s3://${AWS_S3_BUCKET}/release/unsigned/{packages/deb,packages/rpm,tarball}/"
 
       # ── Install packaging tools ──────────────────────────────────────────────
       - name: Install packaging tools (reprepro, createrepo_c)
@@ -108,7 +109,7 @@ jobs:
           set -euo pipefail
           BUCKET="${AWS_S3_BUCKET}"
           SRC_DEB="release/rvs/deb"
-          DST_DEB="release/unsigned/deb"
+          DST_DEB="release/unsigned/packages/deb"
 
           STAGING=$(mktemp -d)
           trap 'rm -rf "$STAGING"' EXIT
@@ -188,13 +189,13 @@ jobs:
           set -euo pipefail
           BUCKET="${AWS_S3_BUCKET}"
           SRC_RPM="release/rvs/rpm"
-          DST_RPM="release/unsigned/rpm"
+          DST_RPM="release/unsigned/packages/rpm"
 
           STAGING=$(mktemp -d)
           trap 'rm -rf "$STAGING"' EXIT
 
           # Packages live under an x86_64/ subdirectory so signing CI and
-          # yum/dnf clients can use release/unsigned/rpm/x86_64/ as the baseurl.
+          # yum/dnf clients can use release/unsigned/packages/rpm/x86_64/ as the baseurl.
           mkdir -p "${STAGING}/x86_64"
 
           # Download existing unsigned RPMs (no repodata — will regenerate).
@@ -254,7 +255,7 @@ jobs:
           set -euo pipefail
           BUCKET="${AWS_S3_BUCKET}"
           SRC_TAR="release/rvs/tar"
-          DST_TAR="release/unsigned/tar"
+          DST_TAR="release/unsigned/tarball"
 
           STAGING=$(mktemp -d)
           trap 'rm -rf "$STAGING"' EXIT
@@ -320,9 +321,9 @@ jobs:
         run: |
           set -euo pipefail
           BUCKET="${AWS_S3_BUCKET}"
-          DST_DEB="release/unsigned/deb"
-          DST_RPM="release/unsigned/rpm"
-          DST_TAR="release/unsigned/tar"
+          DST_DEB="release/unsigned/packages/deb"
+          DST_RPM="release/unsigned/packages/rpm"
+          DST_TAR="release/unsigned/tarball"
 
           # All three formats are required. The individual promote steps already
           # fail on 0 or >1 matches and compute the SHA-256 there; expose them
@@ -360,9 +361,9 @@ jobs:
           tar_fname  = os.environ["TAR_FNAME"]
           tar_sha256 = os.environ["TAR_SHA256"]
 
-          DST_DEB = "release/unsigned/deb"
-          DST_RPM = "release/unsigned/rpm"
-          DST_TAR = "release/unsigned/tar"
+          DST_DEB = "release/unsigned/packages/deb"
+          DST_RPM = "release/unsigned/packages/rpm"
+          DST_TAR = "release/unsigned/tarball"
 
           # --- DEB: parse reprepro Packages index ---
           # Match the DEB pool filename with the same delimiter logic used in the
