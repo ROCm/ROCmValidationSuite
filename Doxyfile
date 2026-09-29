@@ -781,7 +781,7 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = rvs src include gpup.so gm.so pesm.so rcqt.so peqt.so smqt.so \
+INPUT                  = rvs src include gpup.so rcqt.so peqt.so \
                          pbqt.so pebb.so gst.so iet.so
 
 

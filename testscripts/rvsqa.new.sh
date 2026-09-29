@@ -1,6 +1,6 @@
 # ################################################################################
 # #
-# # Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+# # Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
 # #
 # # MIT LICENSE:
 # # Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -36,8 +36,6 @@ echo "===========================pebb========================="
 sudo ./pebb.new.sh  2>&1 | tee pebb.txt
 echo "===========================peqt========================="
 sudo ./peqt.new.sh  2>&1 | tee peqt.txt
-echo "==========================pesm========================="
-sudo  ./pesm.new.sh  2>&1 | tee pesm.txt
 echo "===========================pbqt========================="
 sudo ./pbqt.new.sh  2>&1 | tee pbqt.txt
 echo "===========================memory========================="
