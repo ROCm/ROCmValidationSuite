@@ -241,7 +241,8 @@ jobs:
           echo "rpm_sha256=${RPM_SHA256}" >> "$GITHUB_OUTPUT"
 
           echo "Rebuilding RPM repodata under x86_64/ ..."
-          createrepo_c "${STAGING}/x86_64" || createrepo "${STAGING}/x86_64"
+          createrepo_c --simple-md-filenames --no-database --compress-type gz "${STAGING}/x86_64" \
+            || createrepo "${STAGING}/x86_64"
 
           echo "Syncing updated RPM repo to s3://${BUCKET}/${DST_RPM}/x86_64/ ..."
           aws s3 sync "${STAGING}/x86_64/" "s3://${BUCKET}/${DST_RPM}/x86_64/" --no-progress

@@ -287,9 +287,9 @@ Checksums detect corruption or wrong files; they do not authenticate the publish
 For **scheduled**, **push**, and **manual** (`workflow_dispatch`) builds, the workflow generates package repository metadata so that the S3 paths can be used directly as `apt` (DEB) and `yum`/`dnf` (RPM) repositories. This runs after the package upload step in each job. PR builds are excluded since their packages go to one-off ref-specific paths.
 
 **RPM repodata** (CentOS/RHEL job):
-- Tool: `createrepo_c` (falls back to `createrepo`)
+- Tool: `createrepo_c --simple-md-filenames --no-database --compress-type gz` (falls back to `createrepo`, which already uses short gzip names)
 - Downloads existing RPMs from S3, merges in the newly built RPM, regenerates the `repodata/` directory, and syncs everything back
-- Result: `repodata/repomd.xml`, `repodata/primary.xml.gz`, `repodata/filelists.xml.gz`, `repodata/other.xml.gz`
+- Result matches [stable extras repodata](https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel8/x86_64/repodata/) except the signature: `repodata/repomd.xml`, `repodata/primary.xml.gz`, `repodata/filelists.xml.gz`, `repodata/other.xml.gz`. No checksum-prefixed names, sqlite, or zstd. `repomd.xml.asc` is added later by the signing job.
 
 **DEB repo metadata** (Ubuntu job):
 - Tools: `dpkg-scanpackages`, `apt-ftparchive`

@@ -584,7 +584,8 @@ jobs:
 
           cp ./build/amdrocm*-rvs*.rpm "$STAGING/" 2>/dev/null || true
 
-          createrepo_c "$STAGING" || createrepo "$STAGING"
+          createrepo_c --simple-md-filenames --no-database --compress-type gz "$STAGING" \
+            || createrepo "$STAGING"
 
           aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
 
@@ -633,7 +634,8 @@ jobs:
 
           cp ./build/amdrocm*-rvs*.rpm "$STAGING/"
 
-          createrepo_c "$STAGING" || createrepo "$STAGING"
+          createrepo_c --simple-md-filenames --no-database --compress-type gz "$STAGING" \
+            || createrepo "$STAGING"
 
           aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
 
