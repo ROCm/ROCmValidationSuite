@@ -14,6 +14,8 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Removed
 
 - Deprecated modules **GM**, **SMQT**, and **PESM** (deprecated since Nov 2024). GPU listing (`-g` / `--listGpus`) no longer depends on PESM.
+- Unused **PERF** module (`perf.so`).
+- Residual **EDP** sources (`edp.so`; product path removed earlier). 
 
 ## RVS 1.6.0
 
