@@ -1,5 +1,5 @@
 #!/bin/sh
-# Accumulate nightly/unsigned/deb APT archive (dists/ + pool/) via reprepro.
+# Accumulate nightly/unsigned/packages/deb APT archive (dists/ + pool/) via reprepro.
 # Merges this run's .deb into the existing S3 archive (no s3:DeleteObject / --delete).
 # Usage: rvs-deb-unsigned-repo.sh [path-to-build-dir]
 # Env: AWS_S3_BUCKET (required), optional RVS_UNSIGNED_DEB_PREFIX, GITHUB_RUN_ID

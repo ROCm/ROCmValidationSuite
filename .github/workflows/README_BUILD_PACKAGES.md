@@ -23,7 +23,7 @@ The workflow runs automatically on:
 
 | Branch source | Built on schedule? | S3 upload on schedule? | S3 path (under bucket) |
 |---------------|-------------------|------------------------|-------------------------|
-| **Default branch** (`master` / `main`) | Always | Yes | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` (+ flat APT/YUM metadata) **and** `nightly/unsigned/deb/`, `nightly/unsigned/rpm/x86_64/`, `nightly/unsigned/tar/` (unsigned archive for signing CI) |
+| **Default branch** (`master` / `main`) | Always | Yes | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` (+ flat APT/YUM metadata) **and** `nightly/unsigned/packages/deb/`, `nightly/unsigned/packages/rpm/x86_64/`, `nightly/unsigned/tarball/` (unsigned archive for signing CI) |
 | **`ACTIVE_BRANCHES`** matches (non-default) | Yes | Yes (except `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` |
 | **`release*`** matches from `ACTIVE_BRANCHES` | Yes | **No** | Packages are built and verified only |
 
@@ -157,7 +157,7 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload to S3** (when the repo is `ROCm/ROCmValidationSuite`, or when repository variable `RVS_S3_UPLOAD_ENABLED` is `true`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
 6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM under `nightly/rvs/` (or `release/rvs/`), then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
-7. **Unsigned nightly publish** (**scheduled default branch only**) – Accumulates into `nightly/unsigned/deb/` (`dists/` + `pool/`, suite **`stable main`**) via [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh), `nightly/unsigned/rpm/x86_64/` (`createrepo_c`, merge existing RPMs), and `nightly/unsigned/tar/` (`.tar.gz` plus `.tar.gz.sha256` sidecars), then **`publish-unsigned-latest`** writes `nightly/unsigned/latest.json`. Phase 1 dual-write with `nightly/rvs/*` continues for legacy consumers.
+7. **Unsigned nightly publish** (**scheduled default branch only**) – Accumulates into `nightly/unsigned/packages/deb/` (`dists/` + `pool/`, suite **`stable main`**) via [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh), `nightly/unsigned/packages/rpm/x86_64/` (`createrepo_c`, merge existing RPMs), and `nightly/unsigned/tarball/` (`.tar.gz` plus `.tar.gz.sha256` sidecars), then **`publish-unsigned-latest`** writes `nightly/unsigned/latest.json`. Phase 1 dual-write with `nightly/rvs/*` continues for legacy consumers.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
@@ -205,7 +205,7 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
 | Trigger | Path | Contents |
 |--------|------|----------|
 | **`release/*` branch** (`push` or `workflow_dispatch`) | `release/rvs/deb/`, `release/rvs/rpm/`, `release/rvs/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). Only PR merges into release branches or manual dispatch on release branches write here. |
-| **Scheduled** (default branch only) | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Flat APT/YUM metadata (legacy consumer paths). **Also** `nightly/unsigned/deb/`, `nightly/unsigned/rpm/x86_64/`, `nightly/unsigned/tar/` for signing CI (see below). |
+| **Scheduled** (default branch only) | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Flat APT/YUM metadata (legacy consumer paths). **Also** `nightly/unsigned/packages/deb/`, `nightly/unsigned/packages/rpm/x86_64/`, `nightly/unsigned/tarball/` for signing CI (see below). |
 | **Scheduled** (`ACTIVE_BRANCHES`, non-default, not `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` | No shared `rvs/` segment; no repo metadata on these paths. |
 | **Scheduled** (`release*` from `ACTIVE_BRANCHES`) | _(none)_ | Build only; upload skipped. |
 | **Push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same split by type. |
@@ -227,17 +227,18 @@ Separate signing CI consumes **unsigned** packages from this prefix. Each schedu
 
 ```
 s3://<bucket>/nightly/unsigned/
-├── deb/
-│   ├── conf/          # reprepro state (internal; not for apt clients)
-│   ├── pool/main/…/amdrocm*-rvs_*.deb
-│   └── dists/stable/
-│       ├── Release
-│       └── main/binary-amd64/Packages(.gz)
-├── rpm/
-│   └── x86_64/
-│       ├── amdrocm*-rvs*.rpm
-│       └── repodata/
-├── tar/
+├── packages/
+│   ├── deb/
+│   │   ├── conf/      # reprepro state (internal; not for apt clients)
+│   │   ├── pool/main/…/amdrocm*-rvs_*.deb
+│   │   └── dists/stable/
+│   │       ├── Release
+│   │       └── main/binary-amd64/Packages(.gz)
+│   └── rpm/
+│       └── x86_64/
+│           ├── amdrocm*-rvs*.rpm
+│           └── repodata/
+├── tarball/
 │   ├── amdrocm*-rvs*-Linux.tar.gz
 │   └── amdrocm*-rvs*-Linux.tar.gz.sha256
 ├── latest.json                      # signing CI: exact keys + digests for this nightly run
@@ -251,7 +252,7 @@ s3://<bucket>/nightly/unsigned/
 **apt (unsigned staging, internal testing):**
 
 ```bash
-echo "deb [trusted=yes arch=amd64] https://<bucket>.s3.amazonaws.com/nightly/unsigned/deb/ stable main" \
+echo "deb [trusted=yes arch=amd64] https://<bucket>.s3.amazonaws.com/nightly/unsigned/packages/deb/ stable main" \
   | sudo tee /etc/apt/sources.list.d/rvs-unsigned-nightly.list
 sudo apt update
 ```
@@ -262,13 +263,13 @@ sudo apt update
 cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-unsigned-nightly.repo
 [rvs-unsigned-nightly]
 name=RVS Unsigned Nightly RPM
-baseurl=https://<bucket>.s3.amazonaws.com/nightly/unsigned/rpm/x86_64/
+baseurl=https://<bucket>.s3.amazonaws.com/nightly/unsigned/packages/rpm/x86_64/
 enabled=1
 gpgcheck=0
 EOF
 ```
 
-**Tarball integrity:** Tarballs are not signed by signing CI. Each `.tar.gz` under `nightly/unsigned/tar/` has a GNU **`sha256sum`** sidecar (`.tar.gz.sha256`). After download:
+**Tarball integrity:** Tarballs are not signed by signing CI. Each `.tar.gz` under `nightly/unsigned/tarball/` has a GNU **`sha256sum`** sidecar (`.tar.gz.sha256`). After download:
 
 ```bash
 cd /path/to/download
