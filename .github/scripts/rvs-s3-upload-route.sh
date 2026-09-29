@@ -80,10 +80,10 @@ rvs_resolve_route() {
     RVS_APT_SUITE="rvs-nightly"
     RVS_S3_OUTPUT_PATHS="Ubuntu DEB|nightly/${BASE}/deb||CentOS/RHEL RPM|nightly/${BASE}/rpm||CentOS/RHEL TGZ|nightly/${BASE}/tar"
     if rvs_unsigned_upload_enabled; then
-      RVS_S3_UNSIGNED_DEB_PREFIX="nightly/unsigned/deb"
-      RVS_S3_UNSIGNED_RPM_PREFIX="nightly/unsigned/rpm/x86_64"
-      RVS_S3_UNSIGNED_TAR_PREFIX="nightly/unsigned/tar"
-      RVS_S3_OUTPUT_PATHS="${RVS_S3_OUTPUT_PATHS}||Unsigned DEB|nightly/unsigned/deb||Unsigned RPM|nightly/unsigned/rpm/x86_64||Unsigned TGZ|nightly/unsigned/tar"
+      RVS_S3_UNSIGNED_DEB_PREFIX="nightly/unsigned/packages/deb"
+      RVS_S3_UNSIGNED_RPM_PREFIX="nightly/unsigned/packages/rpm/x86_64"
+      RVS_S3_UNSIGNED_TAR_PREFIX="nightly/unsigned/tarball"
+      RVS_S3_OUTPUT_PATHS="${RVS_S3_OUTPUT_PATHS}||Unsigned DEB|nightly/unsigned/packages/deb||Unsigned RPM|nightly/unsigned/packages/rpm/x86_64||Unsigned TGZ|nightly/unsigned/tarball"
     fi
     return 0
   fi
