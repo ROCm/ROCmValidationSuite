@@ -7,7 +7,7 @@ Install ROCm Validation Suite
 *****************************
 
 ROCm Validation Suite (RVS) is supported on AMD Instinct and Radeon GPUs
-supported by ROCm. See the `ROCm compatibility matrix <https://rocm.docs.amd.com/en/docs-7.14.0/compatibility/compatibility-matrix.html>`__ for support information.
+supported by ROCm. See the `ROCm compatibility matrix <https://rocm.docs.amd.com/en/latest/compatibility/compatibility-matrix.html>`__ for support information.
 
 For advanced workflows, source builds, or custom configurations, see
 `<https://github.com/ROCm/ROCmValidationSuite#rocmvalidationsuite>`__.
@@ -21,7 +21,7 @@ Prerequisites
 
 Install the ROCm Core SDK before installing RVS.
 
-For instructions, see `Install AMD ROCm <https://rocm.docs.amd.com/en/docs-7.14.0/install/rocm.html?fam=all&i=pkgman>`__. Use the
+For instructions, see `Install AMD ROCm <https://rocm.docs.amd.com/en/latest/install/rocm.html>`__. Use the
 selector panel on that page to view instructions appropriate for your system environment.
 
 ROCm installation path
