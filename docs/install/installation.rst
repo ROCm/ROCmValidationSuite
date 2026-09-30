@@ -496,7 +496,13 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
    .. code-block:: bash
 
-      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.6.122-708-Linux.tar.gz
+      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.6.131-844-Linux.tar.gz
+
+   The tarball file may be verified against the following SHA256:
+
+   .. code-block:: bash
+
+      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.6.131-844-Linux.tar.gz.sha256
 
 3. Extract the tarball to the ROCm Extras location.
 
@@ -510,7 +516,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
       EXTRAS_INSTALL_PATH=<extras-path>  # ie. <extras-path> = path to ROCm extras for RVS extract
 
       sudo mkdir -p $EXTRAS_INSTALL_PATH
-      sudo tar -xzf amdrocm10-rvs-1.6.122-708-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
+      sudo tar -xzf amdrocm10-rvs-1.6.131-844-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
 
    **Recommended:** Set ``EXTRAS_INSTALL_PATH`` to a location within the root
    install directory for the ROCm Core SDK.
@@ -521,7 +527,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
    .. code-block:: bash
 
       sudo mkdir -p /opt/rocm/extras-10
-      sudo tar -xzf amdrocm10-rvs-1.6.122-708-Linux.tar.gz -C /opt/rocm/extras-10
+      sudo tar -xzf amdrocm10-rvs-1.6.131-844-Linux.tar.gz -C /opt/rocm/extras-10
 
 4. Complete the following post-installation steps.
 
