@@ -2298,11 +2298,12 @@ int rvs_blas::compute_output_crc() {
   //   Ti==To.
   //
   //   data_type set → output→dd (size_d > 0 because data_type is non-empty
-  //   in both the rocblas and hipblaslt constructor paths).  The "To" type
-  //   (which determines element width in dd) depends on the backend:
+  //   in both the rocblas and hipblaslt constructor paths).  The CRC element
+  //   width is the type hipblaslt actually writes (hbl_out_datatype), which
+  //   can be narrower than the float buffer those paths allocate:
   //     • rocblas :  To == Ti  (same type as input)
-  //     • hipblaslt: To == float for fp8* / fp4* / fp6* / mxfp8*;
-  //                  To == Ti  for fp16_r, bf16_r, fp32_r, fp64_r, i8_r
+  //     • hipblaslt: width comes from out_data_type (fp8=1, fp16/bf16=2,
+  //                  fp32=4). fp16/bf16/fp32/fp64/i8 default to Ti.
   //
   // Batched-mode note:
   //   strided_batched: size_d already covers all batches (adjusted in ctor).
@@ -2332,14 +2333,45 @@ int rvs_blas::compute_output_crc() {
     }
     n_elems = size_d;
   } else if (data_type == "fp8_r") {
-    dout       = dd;
-    // rocblas: To=rocblas_f8 (1 byte); hipblaslt: To=float (4 bytes)
-    elem_bytes = (blas_source == "rocblas") ? 1u : sizeof(float);
-    n_elems    = size_d;
+    // rocblas writes rocblas_f8 (1 byte). hipblaslt writes whatever
+    // out_data_type selected — fp8_r is 1 byte, not the float width of the
+    // allocated buffer.
+    dout = dd;
+    if (blas_source == "rocblas") {
+      elem_bytes = 1u;
+    } else if (hbl_out_datatype == HIP_R_8F_E4M3_FNUZ ||
+               hbl_out_datatype == HIP_R_8F_E5M2_FNUZ ||
+               hbl_out_datatype == HIP_R_8F_E4M3 ||
+               hbl_out_datatype == HIP_R_8F_E5M2) {
+      elem_bytes = 1u;
+    } else if (hbl_out_datatype == HIP_R_16F || hbl_out_datatype == HIP_R_16BF) {
+      elem_bytes = 2;
+    } else if (hbl_out_datatype == HIP_R_32F) {
+      elem_bytes = sizeof(float);
+    } else {
+      rvs::lp::Log("[crc] fp8_r CRC requires out_data_type fp8_r, fp16_r, "
+                   "bf16_r, or fp32_r — skipping CRC (set out_data_type in config)",
+                   rvs::logresults);
+      return -1;
+    }
+    n_elems = size_d;
   } else if (data_type == "fp8_e4m3_r" || data_type == "fp8_e5m2_r") {
-    dout       = dd;
-    elem_bytes = sizeof(float);      // hipblaslt: Ti=fp8/bf8, To=float
-    n_elems    = size_d;
+    // hipblaslt output width comes from out_data_type (bf16_r or fp32_r on
+    // these configs). The device buffer is allocated as float, so assuming
+    // 4 bytes here both over-reads and, with rotating block_count > 1,
+    // lands the CRC past the bf16 slice the GEMM actually wrote.
+    dout = dd;
+    if (hbl_out_datatype == HIP_R_16F || hbl_out_datatype == HIP_R_16BF) {
+      elem_bytes = 2;
+    } else if (hbl_out_datatype == HIP_R_32F) {
+      elem_bytes = sizeof(float);
+    } else {
+      rvs::lp::Log("[crc] fp8_e4m3/fp8_e5m2 CRC requires out_data_type fp16_r, "
+                   "bf16_r, or fp32_r — skipping CRC (set out_data_type in config)",
+                   rvs::logresults);
+      return -1;
+    }
+    n_elems = size_d;
   } else if (data_type == "fp4_r"       ||
              data_type == "fp6_e3m2_r"  ||
              data_type == "fp6_e2m3_r"  ||
