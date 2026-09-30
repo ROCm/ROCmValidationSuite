@@ -828,7 +828,6 @@ add_subdirectory(pbqt.so)
 add_subdirectory(rcqt.so)
 add_subdirectory(mem.so)
 add_subdirectory(babel.so)
-add_subdirectory(perf.so)
 add_subdirectory(tst.so)
 add_subdirectory(pulse.so)
 
