@@ -186,16 +186,14 @@ jobs:
     name: Free runner disk space
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
     steps:
-      - name: Free disk space (GitHub-hosted runners)
-        if: runner.environment == 'github-hosted'
-        uses: jlumbroso/free-disk-space@main
+      # In-repo disk cleanup. No third-party action.
+      - name: Checkout disk-cleanup script
+        uses: actions/checkout@v4
         with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
+          fetch-depth: 1
+
+      - name: Free disk space
+        run: bash .github/scripts/free-runner-disk-space.sh
 
       - name: Prune Docker and report disk usage
         run: |
