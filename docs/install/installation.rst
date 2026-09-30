@@ -459,7 +459,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
    .. code-block:: bash
 
-      wget https://repo.amd.com/rocm/rvs/tarball/amdrocm10-rvs-1.6.122-708-Linux.tar.gz
+      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.6.122-708-Linux.tar.gz
 
 3. Extract the tarball to the ROCm Extras location.
 
