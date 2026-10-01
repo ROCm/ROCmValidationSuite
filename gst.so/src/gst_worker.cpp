@@ -48,7 +48,7 @@
 
 #define GST_LOG_SELF_CHECK_ERROR_KEY            "self-check error"
 #define GST_LOG_ACCU_CHECK_ERROR_KEY            "accu-check error"
-#define GST_LOG_CRC_CHECK_ERROR_KEY             "crc-check error"
+#define GST_LOG_CONSISTENCY_CHECK_ERROR_KEY     "consistency-check error"
 #define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
 #define GST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 
@@ -105,7 +105,7 @@ void GstCrcSync::sync_and_compare(size_t slot, uint16_t gpu_id, uint32_t crc) {
       if (crcs[i] != crcs[ref]) {
         std::ostringstream oss;
         oss << "[" << action_name << "] "
-            << "cross-GPU crc-check error: "
+            << "cross-GPU consistency-check error: "
             << "GPU " << gpu_ids[i]
             << " CRC 0x" << std::hex << std::setw(8) << std::setfill('0') << crcs[i]
             << " != GPU " << std::dec << gpu_ids[ref]
@@ -148,7 +148,7 @@ void GstCrcSync::detach(size_t slot) {
 }
 
 GSTWorker::GSTWorker()
-  : crc_check(false), crc_computed(false), crc_matrix_seed(0)
+  : consistency_check(false), crc_computed(false), crc_matrix_seed(0)
   , crc_sync(nullptr), crc_sync_slot(0) {}
 GSTWorker::~GSTWorker() {}
 
@@ -593,30 +593,30 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
     ~CrcSyncGuard() { if (s) s->detach(slot); }
   } crc_guard{crc_sync, crc_sync_slot};
 
-  // Warn when crc_check is enabled with a configuration that produces
+  // Warn when consistency_check is enabled with a configuration that produces
   // non-repeatable outputs:
   //   sgemm / dgemm + copy_matrix:false + beta != 0
   // In this case the C matrix is the GEMM output buffer and gets overwritten
   // each iteration, so inputs change and CRC mismatches are expected even on
   // a healthy GPU (false positives).
-  if (crc_check &&
+  if (consistency_check &&
       !copy_matrix &&
       (gst_ops_type == "sgemm" || gst_ops_type == "dgemm" || gst_ops_type == "hgemm") &&
       gst_beta_val != 0.0f) {
     msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
-      "WARNING: crc_check with copy_matrix:false and beta != 0 on " + gst_ops_type +
+      "WARNING: consistency_check with copy_matrix:false and beta != 0 on " + gst_ops_type +
       " will produce false-positive CRC errors (C matrix changes each iteration)."
       " Set beta:0 or copy_matrix:true for reliable CRC detection.";
     rvs::lp::Log(msg, rvs::logresults);
   }
 
-  // Warn when crc_check is enabled for fp4/fp6/mxfp8 without out_data_type
+  // Warn when consistency_check is enabled for fp4/fp6/mxfp8 without out_data_type
   // set to fp32_r.  These types output float32 from the GEMM, but if
   // out_data_type is left empty the output layout defaults to the sub-byte
   // input type, making the CRC byte-count wrong.  compute_output_crc() will
   // return -1 in that case; raise a clear message here so users don't have
   // to hunt for the cause.
-  if (crc_check &&
+  if (consistency_check &&
       (gst_data_type == "fp4_r"        ||
        gst_data_type == "fp6_e3m2_r"   ||
        gst_data_type == "fp6_e2m3_r"   ||
@@ -626,7 +626,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
       gst_out_data_type != "bf16_r" &&
       gst_out_data_type != "fp32_r") {
     msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
-      "WARNING: crc_check on " + gst_data_type +
+      "WARNING: consistency_check on " + gst_data_type +
       " requires out_data_type: fp16_r (or bf16_r/fp32_r) — CRC will be skipped "
       "each iteration. Add 'out_data_type: fp16_r' to the config.";
     rvs::lp::Log(msg, rvs::logresults);
@@ -737,7 +737,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
       }
     }
 
-    if (crc_check) {
+    if (consistency_check) {
       int crc_result = gpu_blas->compute_output_crc();
       if (crc_result >= 0) {
         crc_computed = true;   // at least one CRC value is now available
@@ -746,7 +746,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         // equivalent verbose logging, without flooding normal output.
         std::ostringstream crc_oss;
         crc_oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
-                << "crc-check: 0x"
+                << "consistency-check: 0x"
                 << std::hex << std::setw(8) << std::setfill('0')
                 << gpu_blas->get_last_output_crc()
                 << (crc_result == 1 ? " [MISMATCH]" : " [OK]");
@@ -755,7 +755,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
       if (crc_result == 1) {
         msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
-          GST_LOG_CRC_CHECK_ERROR_KEY + " CRC-32 mismatch detected (SDC candidate)";
+          GST_LOG_CONSISTENCY_CHECK_ERROR_KEY + " CRC-32 mismatch detected (SDC candidate)";
         rvs::lp::Log(msg, rvs::logresults);
 
         uint32_t damaged_bytes   = 0;
@@ -765,7 +765,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 
         std::ostringstream mag_oss;
         mag_oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
-                << GST_LOG_CRC_CHECK_ERROR_KEY
+                << GST_LOG_CONSISTENCY_CHECK_ERROR_KEY
                 << " mismatch magnitude:"
                 << " damaged_bytes=" << damaged_bytes
                 << "/" << total_bytes_out;
@@ -776,7 +776,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
         rvs::lp::Log(mag_oss.str(), rvs::logresults);
       } else if (crc_result == -1) {
         msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
-          GST_LOG_CRC_CHECK_ERROR_KEY + " internal error (unsupported type or copy failed)";
+          GST_LOG_CONSISTENCY_CHECK_ERROR_KEY + " internal error (unsupported type or copy failed)";
         rvs::lp::Log(msg, rvs::logresults);
         // Remove this worker from the cross-GPU barrier immediately so peers
         // are not left waiting for the remainder of the stress-test duration.
@@ -809,10 +809,10 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
   // Log the final run-level CRC digest for this GPU.  The digest is a single
   // CRC-32 value built by chaining every per-iteration output CRC, so it
   // reflects the entire run history — not just the last iteration.
-  if (crc_check && crc_computed) {
+  if (consistency_check && crc_computed) {
     std::ostringstream oss;
     oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
-        << "crc-check run-digest: 0x"
+        << "consistency-check run-digest: 0x"
         << std::hex << std::setw(8) << std::setfill('0')
         << gpu_blas->get_run_crc_digest();
     rvs::lp::Log(oss.str(), rvs::loginfo);

@@ -80,8 +80,8 @@ using std::regex;
 #define RVS_CONF_LDD_OFFSET             "ldd"
 #define RVS_CONF_SELF_CHECK_KEY         "self_check"
 #define RVS_CONF_ACCU_CHECK_KEY         "accuracy_check"
-#define RVS_CONF_CRC_CHECK_KEY          "crc_check"
-#define RVS_CONF_CRC_CROSS_GPU_KEY      "crc_cross_gpu_check"
+#define RVS_CONF_CONSISTENCY_CHECK_KEY  "consistency_check"
+#define RVS_CONF_CROSS_GPU_CONSISTENCY_KEY "cross_gpu_consistency_check"
 #define RVS_CONF_ERROR_INJECT_KEY       "error_inject"
 #define RVS_CONF_ERROR_FREQUENCY_KEY    "error_freq"
 #define RVS_CONF_ERROR_COUNT_KEY        "error_count"
@@ -119,8 +119,8 @@ using std::regex;
 #define GST_DEFAULT_LDD_OFFSET          0
 #define GST_DEFAULT_SELF_CHECK          false
 #define GST_DEFAULT_ACCU_CHECK          false
-#define GST_DEFAULT_CRC_CHECK           false
-#define GST_DEFAULT_CRC_CROSS_GPU_CHECK false
+#define GST_DEFAULT_CONSISTENCY_CHECK   false
+#define GST_DEFAULT_CROSS_GPU_CONSISTENCY_CHECK false
 #define GST_DEFAULT_ERROR_INJECT        false
 #define GST_DEFAULT_ERROR_FREQUENCY     0
 #define GST_DEFAULT_ERROR_COUNT         0
@@ -179,9 +179,9 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
   // Cross-GPU CRC comparison is only meaningful on homogeneous systems
   // (all GPUs are the same model and firmware).  On heterogeneous systems
   // mismatches will be reported even without any real data corruption.
-  if (gst_crc_check && gst_crc_cross_gpu_check &&
+  if (gst_consistency_check && gst_cross_gpu_consistency_check &&
       gst_gpus_device_index.size() > 1) {
-    rvs::lp::Log("[" + action_name + "] WARNING: crc_cross_gpu_check is enabled. "
+    rvs::lp::Log("[" + action_name + "] WARNING: cross_gpu_consistency_check is enabled. "
       "Cross-GPU CRC comparison is only valid on homogeneous GPU systems "
       "(same model and firmware). On heterogeneous systems, false-positive "
       "SDC reports are expected due to FP non-associativity across "
@@ -231,11 +231,11 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_ldd_offset(gst_ldd_offset);
       workers[i].set_self_check(gst_self_check);
       workers[i].set_accu_check(gst_accu_check);
-      workers[i].set_crc_check(gst_crc_check);
+      workers[i].set_consistency_check(gst_consistency_check);
       // Give every worker the same matrix seed so their input matrices are
       // identical — prerequisite for a valid cross-GPU CRC comparison.
       // The seed is derived from the action name for reproducibility.
-      if (gst_crc_cross_gpu_check) {
+      if (gst_cross_gpu_consistency_check) {
         // FNV-1a 64-bit hash — much lower collision rate than the previous
         // polynomial (seed * 31 + c) which shares a seed for any two names
         // whose characters sum to the same weighted value.
@@ -267,7 +267,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     // Shared host matrix pool — generated once by the first worker to call
     // setup_blas(), then copied into every subsequent worker's buffers.
     // Only needed when cross-GPU CRC checking is active (more than one GPU).
-    if (gst_crc_check && gst_crc_cross_gpu_check &&
+    if (gst_consistency_check && gst_cross_gpu_consistency_check &&
         gst_gpus_device_index.size() > 1) {
       auto shared_mats = std::make_shared<GstSharedMatrices>();
       for (i = 0; i < gst_gpus_device_index.size(); i++)
@@ -277,7 +277,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     if (property_parallel) {
       // Per-iteration cross-GPU CRC barrier — one shared instance per round.
       std::unique_ptr<GstCrcSync> crc_sync;
-      if (gst_crc_check && gst_crc_cross_gpu_check &&
+      if (gst_consistency_check && gst_cross_gpu_consistency_check &&
           gst_gpus_device_index.size() > 1) {
         crc_sync = std::make_unique<GstCrcSync>(
             gst_gpus_device_index.size(), action_name);
@@ -311,7 +311,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
     // block is only needed for sequential mode (workers run one at a time and
     // cannot share a barrier).
     if (!property_parallel &&
-        gst_crc_check && gst_crc_cross_gpu_check && gst_gpus_device_index.size() > 1) {
+        gst_consistency_check && gst_cross_gpu_consistency_check && gst_gpus_device_index.size() > 1) {
       // Find the first worker with a valid CRC to use as reference.
       size_t ref_idx = SIZE_MAX;
       for (size_t wi = 0; wi < workers.size(); ++wi) {
@@ -606,28 +606,28 @@ bool gst_action::get_all_gst_config_keys(void) {
     bsts = false;
   }
 
-  if (property_get(RVS_CONF_CRC_CHECK_KEY, &gst_crc_check, GST_DEFAULT_CRC_CHECK)) {
+  if (property_get(RVS_CONF_CONSISTENCY_CHECK_KEY, &gst_consistency_check, GST_DEFAULT_CONSISTENCY_CHECK)) {
     msg = "invalid '" +
-      std::string(RVS_CONF_CRC_CHECK_KEY) + "' key value";
+      std::string(RVS_CONF_CONSISTENCY_CHECK_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
 
-  if (property_get(RVS_CONF_CRC_CROSS_GPU_KEY, &gst_crc_cross_gpu_check,
-        GST_DEFAULT_CRC_CROSS_GPU_CHECK)) {
+  if (property_get(RVS_CONF_CROSS_GPU_CONSISTENCY_KEY, &gst_cross_gpu_consistency_check,
+        GST_DEFAULT_CROSS_GPU_CONSISTENCY_CHECK)) {
     msg = "invalid '" +
-      std::string(RVS_CONF_CRC_CROSS_GPU_KEY) + "' key value";
+      std::string(RVS_CONF_CROSS_GPU_CONSISTENCY_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }
 
-  // crc_cross_gpu_check requires crc_check to be enabled — the cross-GPU
+  // cross_gpu_consistency_check requires consistency_check to be enabled — the cross-GPU
   // comparison is driven by the per-iteration CRC values that are only
-  // computed when crc_check is true.
-  if (gst_crc_cross_gpu_check && !gst_crc_check) {
-    rvs::lp::Log("[" + action_name + "] WARNING: crc_cross_gpu_check: true has no effect "
-      "without crc_check: true — no CRC will be computed. "
-      "Set crc_check: true to enable cross-GPU comparison.",
+  // computed when consistency_check is true.
+  if (gst_cross_gpu_consistency_check && !gst_consistency_check) {
+    rvs::lp::Log("[" + action_name + "] WARNING: cross_gpu_consistency_check: true has no effect "
+      "without consistency_check: true — no CRC will be computed. "
+      "Set consistency_check: true to enable cross-GPU comparison.",
       rvs::logresults);
   }
 

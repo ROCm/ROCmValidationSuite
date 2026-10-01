@@ -340,7 +340,7 @@ class GSTWorker : public rvs::ThreadBase {
       crc_sync_slot = slot;
     }
 
-    //! sets the shared matrix seed used when crc_cross_gpu_check is enabled.
+    //! sets the shared matrix seed used when cross_gpu_consistency_check is enabled.
     //! All workers must receive the same value so their input matrices are
     //! identical.  0 means "use default (time-based) seeding".
     void set_crc_matrix_seed(uint64_t seed) { crc_matrix_seed = seed; }
@@ -349,18 +349,18 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t get_crc_matrix_seed(void) { return crc_matrix_seed; }
 
     //! enables/disables CRC-32-based SDC detection
-    void set_crc_check(bool _crc_check) {
-      crc_check = _crc_check;
+    void set_consistency_check(bool _consistency_check) {
+      consistency_check = _consistency_check;
       // Reset per-round validity flag so stale data from the previous round
       // is not visible via has_valid_crc() between rounds.
       crc_computed = false;
     }
 
     //! returns the CRC check flag
-    bool get_crc_check(void) { return crc_check; }
+    bool get_consistency_check(void) { return consistency_check; }
 
     //! returns the CRC-32 of the last GEMM output checked by this worker.
-    //! Valid only when crc_check is true and the worker has completed at
+    //! Valid only when consistency_check is true and the worker has completed at
     //! least one GEMM iteration.
     uint32_t get_last_crc(void) {
       return gpu_blas ? gpu_blas->get_last_output_crc() : 0;
@@ -390,7 +390,7 @@ class GSTWorker : public rvs::ThreadBase {
 
     //! returns true when the worker has computed at least one CRC
     //! (i.e. get_last_crc() holds a meaningful value).
-    bool has_valid_crc(void) { return crc_check && crc_computed; }
+    bool has_valid_crc(void) { return consistency_check && crc_computed; }
 
     //! sets gemm output error inject enable/disable
     void set_error_inject(bool _error_inject) { error_inject = _error_inject; }
@@ -550,12 +550,12 @@ class GSTWorker : public rvs::ThreadBase {
     //! gemm output accuracy-check
     bool accu_check;
     //! CRC-32-based SDC detection across GEMM iterations
-    bool crc_check;
+    bool consistency_check;
     //! set to true once the worker has computed at least one CRC value
     bool crc_computed;
     //! shared matrix seed injected by the action for cross-GPU CRC validity
     uint64_t crc_matrix_seed;
-    //! shared host matrix pool — non-null when crc_cross_gpu_check is enabled
+    //! shared host matrix pool — non-null when cross_gpu_consistency_check is enabled
     std::shared_ptr<GstSharedMatrices> shared_matrices;
     //! shared per-iteration barrier (nullptr when not in parallel mode)
     GstCrcSync* crc_sync;
