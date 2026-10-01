@@ -30,7 +30,8 @@ project(googletest-download NONE)
 include(ExternalProject)
 ExternalProject_Add(googletest
   GIT_REPOSITORY    https://github.com/google/googletest.git
-  GIT_TAG           v1.16.0
+  GIT_TAG           "6910c9d9165801d8827d628cb72eb7ea9dd538c5" #v1.16.0
+  GIT_CONFIG        "http.sslVerify=true" # Forces certificate validation
   SOURCE_DIR        "${CMAKE_BINARY_DIR}/googletest-src"
   BINARY_DIR        "${CMAKE_BINARY_DIR}/googletest-build"
   CONFIGURE_COMMAND ""

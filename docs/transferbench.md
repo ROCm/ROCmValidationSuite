@@ -51,7 +51,8 @@ the TransferBench *headers* from the submodule, not the CLI binary.
 
 When the CLI is built, it is installed next to `rvs` under the same prefix. The
 `TransferBench` binary links `libnuma` and ROCm libraries; package metadata
-requires **`libnuma1`** (Debian/Ubuntu) or **`numactl-libs`** (RHEL-family RPM).
+requires **`libnuma1`** (Debian/Ubuntu and SLES) or **`numactl-libs`** (RHEL/CentOS).
+RPM packages declare `(numactl-libs or libnuma1)`.
 RUNPATH entries point at the ROCm stack (`/opt/rocm/lib`, `/opt/rocm/core-<N>/lib`).
 See [`CMakeTransferBenchRPATH.cmake.in`](../CMakeTransferBenchRPATH.cmake.in).
 

@@ -16,14 +16,14 @@ All packages are built with relocatable RPATH settings, meaning they can be inst
 The workflow runs automatically on:
 - Push to `master`, `main`, or `release/**` branches
 - Pull requests to `master` or `main` branches
-- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); **latest ROCm nightly** from [ROCm SDK nightly tarballs](https://rocm.nightlies.amd.com/tarball-multi-arch/) (or repo variable overrides). The cron fans out to the **default branch** plus every branch matched by the repository variable **`ACTIVE_BRANCHES`** (comma-separated literals/globs, e.g. `npi/**,release/**` — do not list the default branch there).
+- **Scheduled**: Daily at **5:00 AM PST** (13:00 UTC); **latest ROCm nightly** from [ROCm SDK nightly tarballs](https://nightly.repo.amd.com/rocm/core/tarball/) (or repo variable overrides). The cron fans out to the **default branch** plus every branch matched by the repository variable **`ACTIVE_BRANCHES`** (comma-separated literals/globs, e.g. `npi/**,release/**` — do not list the default branch there).
 - **Manual** (`workflow_dispatch`): if **`ROCM_VERSION`** is pinned (**workflow input** and/or **`vars.ROCM_VERSION`**), the tarball is chosen by **version format** (nightly `x.y.za…` vs release `X.Y.Z`). If no version is pinned, the job uses **latest nightly** (same as schedule).
 
 ### Scheduled multi-branch nightly (`ACTIVE_BRANCHES`)
 
 | Branch source | Built on schedule? | S3 upload on schedule? | S3 path (under bucket) |
 |---------------|-------------------|------------------------|-------------------------|
-| **Default branch** (`master` / `main`) | Always | Yes | Unchanged: `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` (+ APT/YUM metadata) |
+| **Default branch** (`master` / `main`) | Always | Yes | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` (+ flat APT/YUM metadata) **and** `nightly/unsigned/packages/deb/`, `nightly/unsigned/packages/rpm/x86_64/`, `nightly/unsigned/tarball/` (unsigned archive for signing CI) |
 | **`ACTIVE_BRANCHES`** matches (non-default) | Yes | Yes (except `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` |
 | **`release*`** matches from `ACTIVE_BRANCHES` | Yes | **No** | Packages are built and verified only |
 
@@ -56,7 +56,7 @@ When manually triggering the workflow, you can specify:
 1. **ROCm Version**
    - Empty — **latest nightly** (unless `vars.ROCM_VERSION` is set in the repo, which pins a version and triggers format-based selection).
    - **`X.Y.Z`** — release tarball at [repo.amd.com](https://repo.amd.com/rocm/tarball/).
-   - **`x.y.za…`** — nightly tarball at [nightlies](https://rocm.nightlies.amd.com/tarball-multi-arch/).
+   - **`x.y.za…`** — nightly tarball at [ROCm SDK nightly tarballs](https://nightly.repo.amd.com/rocm/core/tarball/).
    
 2. **GPU Family Target**:
    - `gfx94X-dcgpu` - MI300A/MI300X
@@ -71,7 +71,7 @@ When manually triggering the workflow, you can specify:
    `gpu_family`.
 
 3. **Build TransferBench CLI** (boolean, default **true** on manual runs):
-   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` / `numactl-libs` at runtime).
+   - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` on Ubuntu/SLES or `numactl-libs` on RHEL/CentOS at runtime; RPM metadata uses `(numactl-libs or libnuma1)`).
    - On **push**, **PR**, and **schedule**, CI defaults to **ON** unless repository variable `BUILD_TRANSFERBENCH_CLI` is set to `OFF`.
 
 ## How It Works
@@ -122,10 +122,15 @@ GitHub Actions Workflow
 
 ### Key Technical Details
 
-**Relocatable RPATH**: Defaults are set in **`CMakeLists.txt`** (`CMAKE_INSTALL_RPATH`, **`CMAKE_BUILD_RPATH`** (same list for the build tree), `CMAKE_SKIP_RPATH`, `CMAKE_INSTALL_RPATH_USE_LINK_PATH`). **`CMAKE_*_LINKER_FLAGS_INIT`** only adds **`--enable-new-dtags`** (RUNPATH behavior), not a second copy of **`$ORIGIN`**. On **GitHub Actions** (`GITHUB_ACTIONS=true`), **`CMAKE_SKIP_BUILD_RPATH`** applies when using **CMake 3.9+**, and **`CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH`** (strip implicit SDK paths on install) when using **CMake 3.16+**. The **`$ORIGIN`** relative entries resolve to the install prefix (`.../extras-<N>/bin` → `.../extras-<N>/lib`), so **`/opt/rocm/extras-<N>/lib` is not duplicated** in the list. Absolute paths add **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`** (older ROCm layouts), **`/opt/rocm/core-<ROCM_MAJOR>/lib`**, and **`/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib`** — equivalent to:
+**Relocatable RPATH**: The canonical list lives in **[`cmake_modules/RVSPackagedRpath.cmake`](../../cmake_modules/RVSPackagedRpath.cmake)** (host triple detection via `amdclang++ --print-target-triple` is done there) and is applied via **`CMAKE_INSTALL_RPATH`** / **`CMAKE_BUILD_RPATH`** in **`CMakeLists.txt`**. **`CMAKE_*_LINKER_FLAGS_INIT`** only adds **`--enable-new-dtags`** (RUNPATH behavior). **Local dev builds** may also retain implicit **`$ROCM_PATH`** link-dir RUNPATH entries ( **`CMAKE_INSTALL_REMOVE_ENVIRONMENT_RPATH`** is set only when **`GITHUB_ACTIONS=true`** ).
+
+**Packaged artifacts** (DEB/RPM/TGZ): **`CPACK_PRE_BUILD_SCRIPTS`** runs **[`cmake_modules/cpack-patch-rpath.cmake.in`](../../cmake_modules/cpack-patch-rpath.cmake.in)** before CPack seals the package. It uses **`patchelf`** to replace RUNPATH on every staged ELF with the canonical list (no build-machine SDK paths). Requires **`patchelf`** on the packaging host (`build_packages_local.sh` installs it).
+
+The **`$ORIGIN`** relative entries resolve to the install prefix (`.../extras-<N>/bin` → `.../extras-<N>/lib`). Absolute paths add **`/opt/rocm/lib`**, **`/opt/rocm/lib/llvm/lib`**, **`/opt/rocm/core-<ROCM_MAJOR>/lib`**, **`/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib`**, and per-host-triple **`libomp`** dirs when the triple is known — equivalent to:
 
 ```bash
-CMAKE_INSTALL_RPATH="$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-<ROCM_MAJOR>/lib:/opt/rocm/core-<ROCM_MAJOR>/lib/llvm/lib"
+# Example for ROCm major 10 (per-triple libomp dirs omitted)
+CMAKE_INSTALL_RPATH='$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-10/lib:/opt/rocm/core-10/lib/llvm/lib'
 ```
 
 **Automatic Version Management**: CMake reads the project version from `CMakeLists.txt` and CPack uses it for package naming automatically. The **patch version** is auto-computed at CMake configure time: `git describe --tags --match "v<major>.<minor>.*"` counts commits since the last matching `v` tag. For example, if the tag is `v1.3.0` and there have been 15 commits since, the package version becomes `1.3.15`. If no matching tag exists or git is unavailable, the patch defaults to `0` from `CMakeLists.txt`. This works for both CI builds and direct local `cmake` invocations.
@@ -151,7 +156,8 @@ The GitHub Actions workflow performs minimal platform-specific operations:
 3. **Execute Build Script** - `./build_packages_local.sh` handles everything
 4. **Verify Packages** - Platform-specific verification (dpkg-deb or rpm -q)
 5. **Upload to S3** (when the repo is `ROCm/ROCmValidationSuite`, or when repository variable `RVS_S3_UPLOAD_ENABLED` is `true`) – Each job uploads its packages to S3 using OIDC. The bash routing logic determines the S3 path: `release/*` branch builds (push or manual) go to `release/`, scheduled/push/manual builds go to `nightly/`, and PR builds go to a ref-specific path. Requires `AWS_S3_BUCKET` (variable) and `AWS_ROLE_ARN` (secret). Skipped gracefully if `AWS_S3_BUCKET` is not set.
-6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM, then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
+6. **Generate Repo Metadata** (schedule, push, and manual builds only) – Creates APT repo metadata (`Packages`, `Packages.gz`, `Release`) for DEB and YUM/DNF repodata (`repodata/`) for RPM under `nightly/rvs/` (or `release/rvs/`), then uploads to S3 so the paths can be used as native package repositories. Skipped for PR builds since their packages go to one-off ref-specific paths.
+7. **Unsigned nightly publish** (**scheduled default branch only**) – Accumulates into `nightly/unsigned/packages/deb/` (`dists/` + `pool/`, suite **`stable main`**) via [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh), `nightly/unsigned/packages/rpm/x86_64/` (`createrepo_c`, merge existing RPMs), and `nightly/unsigned/tarball/` (`.tar.gz` plus `.tar.gz.sha256` sidecars), then **`publish-unsigned-latest`** writes `nightly/unsigned/latest.json`. Phase 1 dual-write with `nightly/rvs/*` continues for legacy consumers.
 
 ### S3 Upload (OIDC – No Stored Credentials)
 
@@ -192,14 +198,14 @@ To use a self-hosted runner, set the variable to your runner's label (e.g., `sel
    - Name: `RVS_S3_UPLOAD_ENABLED`
    - Value: `true` (must be this exact string). Upstream does not need this variable.
 
-4. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it for the **repository that runs the workflow** (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject` (and related) on the bucket.
+4. **AWS IAM**: The role in `AWS_ROLE_ARN` must have a trust policy allowing GitHub OIDC to assume it for the **repository that runs the workflow** (identity provider `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and permissions to `s3:PutObject`, `s3:GetObject`, and `s3:ListBucket` on the bucket, including prefix **`nightly/unsigned/`**. Unsigned publish **accumulates** objects and does **not** require `s3:DeleteObject`.
 
 **S3 path layout** (resolved by [`.github/scripts/rvs-s3-upload-route.sh`](../scripts/rvs-s3-upload-route.sh), POSIX-safe for Ubuntu `sh`):
 
 | Trigger | Path | Contents |
 |--------|------|----------|
 | **`release/*` branch** (`push` or `workflow_dispatch`) | `release/rvs/deb/`, `release/rvs/rpm/`, `release/rvs/tar/` | DEB → `.../deb` (Ubuntu job); RPM and TGZ → `.../rpm` and `.../tar` (manylinux job). Only PR merges into release branches or manual dispatch on release branches write here. |
-| **Scheduled** (default branch only) | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same as before; APT/YUM metadata generated here. |
+| **Scheduled** (default branch only) | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Flat APT/YUM metadata (legacy consumer paths). **Also** `nightly/unsigned/packages/deb/`, `nightly/unsigned/packages/rpm/x86_64/`, `nightly/unsigned/tarball/` for signing CI (see below). |
 | **Scheduled** (`ACTIVE_BRANCHES`, non-default, not `release*`) | `{branch_prefix}/{branch}/nightly/deb/`, `…/rpm/`, `…/tar/` | No shared `rvs/` segment; no repo metadata on these paths. |
 | **Scheduled** (`release*` from `ACTIVE_BRANCHES`) | _(none)_ | Build only; upload skipped. |
 | **Push to `master`/`main`**, or **`workflow_dispatch` on non-release branch** | `nightly/rvs/deb/`, `nightly/rvs/rpm/`, `nightly/rvs/tar/` | Same split by type. |
@@ -209,14 +215,81 @@ If `AWS_S3_BUCKET` is not set, the upload step is skipped with a warning (the wo
 
 When packages are uploaded to S3, the **build report** artifact includes an **S3 Upload Locations** section with clickable links to each S3 prefix (AWS Console). This makes it easy to open the bucket and browse the uploaded DEB, RPM, and TGZ files from the report.
 
+### Unsigned nightly (`nightly/unsigned/`) — scheduled default branch
+
+Separate signing CI consumes **unsigned** packages from this prefix. Each scheduled default-branch run **accumulates** new `.deb`/`.rpm`/`.tar.gz` under `nightly/unsigned/` and regenerates APT/YUM metadata (merge existing objects + this run’s packages). Historical packages remain in the prefix (the OIDC role does **not** use `s3:DeleteObject`). A **`nightly/unsigned/latest.json`** pointer is published after both package jobs succeed; signing CI should read that file for exact `s3_key` / `sha256` values for **this run only**. Per-run fragments live under `nightly/unsigned/runs/<github_run_id>/deb.json` and `rpm-tar.json`.
+
+**Strict contract (scheduled default branch):** Unsigned steps **fail the workflow** if a required `.deb`, `.rpm`, or `.tar.gz` (and `.tar.gz.sha256` sidecar) is missing, if run metadata fragments are missing, or if `latest.json` validation fails. Exit 0 without publishing only when S3 upload is disabled (`AWS_S3_BUCKET` unset) or unsigned routing does not apply. A green **`publish-unsigned-latest`** job means `latest.json` points at this run’s objects under the accumulated `nightly/unsigned/` tree.
+
+**Rollout:** Phase 1 (current) **dual-writes** on schedule: legacy `nightly/rvs/*` plus `nightly/unsigned/*`. Phase 2 (future): scheduled builds write only `nightly/unsigned/*`; signed packages are published to consumer paths by signing CI.
+
+**S3 layout** (AMD-style DEB archive, same shape as [stable.repo.amd.com/rocm/core/packages/ubuntu2204/](https://stable.repo.amd.com/rocm/core/packages/ubuntu2204/) but under a single `deb/` prefix):
+
+```
+s3://<bucket>/nightly/unsigned/
+├── packages/
+│   ├── deb/
+│   │   ├── conf/      # reprepro state (internal; not for apt clients)
+│   │   ├── pool/main/…/amdrocm*-rvs_*.deb
+│   │   └── dists/stable/
+│   │       ├── Release
+│   │       └── main/binary-amd64/Packages(.gz)
+│   └── rpm/
+│       └── x86_64/
+│           ├── amdrocm*-rvs*.rpm
+│           └── repodata/
+├── tarball/
+│   ├── amdrocm*-rvs*-Linux.tar.gz
+│   └── amdrocm*-rvs*-Linux.tar.gz.sha256
+├── latest.json                      # signing CI: exact keys + digests for this nightly run
+└── runs/<github_run_id>/
+    ├── deb.json
+    └── rpm-tar.json
+```
+
+**Scripts:** [rvs-s3-upload-route.sh](../scripts/rvs-s3-upload-route.sh) (`upload-rpm-tar-unsigned` validates RPM+TGZ+sidecar then `aws s3 cp`); [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh) (merge into existing `reprepro` archive, sync without `--delete`); [rvs-unsigned-publish-latest.sh](../scripts/rvs-unsigned-publish-latest.sh) (merge run metadata → `latest.json`, fail on missing/invalid input).
+
+**apt (unsigned staging, internal testing):**
+
+```bash
+echo "deb [trusted=yes arch=amd64] https://<bucket>.s3.amazonaws.com/nightly/unsigned/packages/deb/ stable main" \
+  | sudo tee /etc/apt/sources.list.d/rvs-unsigned-nightly.list
+sudo apt update
+```
+
+**yum/dnf (unsigned RPM):**
+
+```bash
+cat <<'EOF' | sudo tee /etc/yum.repos.d/rvs-unsigned-nightly.repo
+[rvs-unsigned-nightly]
+name=RVS Unsigned Nightly RPM
+baseurl=https://<bucket>.s3.amazonaws.com/nightly/unsigned/packages/rpm/x86_64/
+enabled=1
+gpgcheck=0
+EOF
+```
+
+**Tarball integrity:** Tarballs are not signed by signing CI. Each `.tar.gz` under `nightly/unsigned/tarball/` has a GNU **`sha256sum`** sidecar (`.tar.gz.sha256`). After download:
+
+```bash
+cd /path/to/download
+sha256sum -c amdrocm*-rvs*.tar.gz.sha256
+```
+
+Checksums detect corruption or wrong files; they do not authenticate the publisher (use HTTPS and bucket IAM for that).
+
+**Signing CI handoff (out of this repo):** Read **`s3://<bucket>/nightly/unsigned/latest.json`** (updated by the `publish-unsigned-latest` job after a successful scheduled build). It lists `deb.packages[].s3_key`, `rpm.s3_key`, and SHA-256 digests. Trigger via `workflow_run`, S3 event on `latest.json`, or manual dispatch with `github_run_id`. Signed `.deb`/`.rpm` are promoted to consumer repos (for example `nightly/rvs/` or AMD CDN) with appropriate signed metadata.
+
+**Unsigned DEB accumulate semantics:** Each run syncs existing `conf/` + `pool/` + `dists/` from S3, runs `reprepro includedeb` for this night’s `.deb` (if the same Package+Version is already present locally, it is removed from the **local** archive first so the pool object can be overwritten via PutObject), then syncs back **without** `--delete`. Older differently versioned packages remain in the bucket. Signing CI must use **`latest.json`**, not “newest object in the prefix.”
+
 ### Repository Metadata (repodata)
 
 For **scheduled**, **push**, and **manual** (`workflow_dispatch`) builds, the workflow generates package repository metadata so that the S3 paths can be used directly as `apt` (DEB) and `yum`/`dnf` (RPM) repositories. This runs after the package upload step in each job. PR builds are excluded since their packages go to one-off ref-specific paths.
 
 **RPM repodata** (CentOS/RHEL job):
-- Tool: `createrepo_c` (falls back to `createrepo`)
+- Tool: `createrepo_c --simple-md-filenames --no-database --compress-type gz` (falls back to `createrepo`, which already uses short gzip names)
 - Downloads existing RPMs from S3, merges in the newly built RPM, regenerates the `repodata/` directory, and syncs everything back
-- Result: `repodata/repomd.xml`, `repodata/primary.xml.gz`, `repodata/filelists.xml.gz`, `repodata/other.xml.gz`
+- Result matches [stable extras repodata](https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel8/x86_64/repodata/) except the signature: `repodata/repomd.xml`, `repodata/primary.xml.gz`, `repodata/filelists.xml.gz`, `repodata/other.xml.gz`. No checksum-prefixed names, sqlite, or zstd. `repomd.xml.asc` is added later by the signing job.
 
 **DEB repo metadata** (Ubuntu job):
 - Tools: `dpkg-scanpackages`, `apt-ftparchive`
@@ -337,8 +410,8 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `ROCM_SDK_RELEASE_URL` | `https://repo.amd.com/rocm/tarball/` | HTML listing for **release** tarballs (`therock-dist-linux-<GPU_FAMILY>-X.Y.Z.tar.gz`). Used when `ROCM_SDK_CHANNEL=release` or `auto` with this URL set. |
 | `ROCM_SDK_RELEASE_BASE_URL` | `https://repo.amd.com/rocm/tarball` | Directory URL for downloading **X.Y.Z** tarballs; overridden when version string is nightly-shaped. |
 | `ROCM_SDK_BASE_URL` | See script | Effective tarball base after channel + version-shape resolution. |
-| `ROCM_SDK_INDEX_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch/` | **Nightly** listing for latest nightly SDK discovery. Auto-fetch matches **SDK tarballs only** (`therock-dist-linux-<GPU_FAMILY>-<version>.tar.gz`); `-tests-` entries are excluded **per filename** (version must follow `GPU_FAMILY-` immediately), not by filtering whole HTML lines. |
-| `ROCM_SDK_NIGHTLY_BASE_URL` | `https://rocm.nightlies.amd.com/tarball-multi-arch` | Tarball base for **nightly** builds (`x.y.za…` versions). |
+| `ROCM_SDK_INDEX_URL` | `https://nightly.repo.amd.com/rocm/core/tarball/` | **Nightly** listing for latest nightly SDK discovery. Auto-fetch matches **SDK tarballs only** (`therock-dist-linux-<GPU_FAMILY>-<version>.tar.gz`); `-tests-` entries are excluded **per filename** (version must follow `GPU_FAMILY-` immediately), not by filtering whole HTML lines. |
+| `ROCM_SDK_NIGHTLY_BASE_URL` | `https://nightly.repo.amd.com/rocm/core/tarball` | Tarball base for **nightly** builds (`x.y.za…` versions). |
 | `ROCM_SDK_NIGHTLY_INDEX_URL` | _(same as index default)_ | Optional override for nightly listing URL. |
 | `ROCM_SDK_CHANNEL` | `auto` locally | **`nightly`** / **`release`** / **`auto`**. CI sets channel per trigger (see table above); manual with a pin uses **`auto`** so tarball follows version format. |
 | `GPU_FAMILY` | `gfx110X-all` | ROCm SDK **tarball** family (`therock-dist-linux-<GPU_FAMILY>-…`); does not set TransferBench offload archs |
@@ -608,10 +681,12 @@ cmake -B "$BUILD_DIR" \
 If binaries can't find libraries:
 
 ```bash
-# Check RPATH settings (replace 7 with your ROCm major version)
-readelf -d /opt/rocm/extras-7/bin/rvs | grep RPATH
+# Check RUNPATH on an installed package binary (replace 7 with your ROCm major version)
+readelf -d /opt/rocm/extras-7/bin/rvs | grep -E 'RUNPATH|RPATH'
+patchelf --print-rpath /opt/rocm/extras-7/bin/rvs
 
-# Should include: $ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib/rvs:/opt/rocm/lib:/opt/rocm/lib/llvm/lib:/opt/rocm/core-7/lib:/opt/rocm/core-7/lib/llvm/lib
+# Packaged binaries should only use $ORIGIN* and /opt/rocm/* entries (no build SDK paths).
+# Local build-tree binaries may still list $ROCM_PATH from the build host — that is expected.
 ```
 
 ### Missing Dependencies

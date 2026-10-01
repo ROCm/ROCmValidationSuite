@@ -12,7 +12,7 @@ on:
       - main
   schedule:
     # Run daily at 5:00 AM PST (13:00 UTC; PST is UTC-8)
-    - cron: '0 13 * * *'
+    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       rocm_version:
@@ -186,16 +186,41 @@ jobs:
     name: Free runner disk space
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
     steps:
-      - name: Free disk space (GitHub-hosted runners)
-        if: runner.environment == 'github-hosted'
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
+      # No checkout. Container jobs leave root-owned files in the persistent
+      # workspace, and this host step cannot lock or delete them.
+      - name: Free disk space
+        run: |
+          set -u
+          as_root() {
+            if [ "$(id -u)" -eq 0 ]; then
+              "$@"
+            elif command -v sudo >/dev/null 2>&1; then
+              sudo -n "$@"
+            else
+              echo "::warning::not root and sudo is unavailable; skipped: $*"
+              return 0
+            fi
+          }
+          echo "=== Disk before cleanup ==="
+          df -h / || df -h || true
+          if command -v apt-get >/dev/null 2>&1; then
+            echo "apt-get clean"
+            as_root apt-get clean || echo "::warning::apt-get clean did not succeed"
+          else
+            echo "skip: apt-get not available"
+          fi
+          if command -v docker >/dev/null 2>&1; then
+            echo "pruning unused Docker images"
+            if ! docker image prune --all --force; then
+              as_root docker image prune --all --force \
+                || echo "::warning::docker image prune did not succeed"
+            fi
+          else
+            echo "skip: docker not installed"
+          fi
+          echo "=== Disk after cleanup ==="
+          df -h / || df -h || true
+          exit 0
 
       - name: Prune Docker and report disk usage
         run: |
@@ -228,6 +253,7 @@ jobs:
     outputs:
       s3_bucket_ubuntu: ${{ steps.upload-s3-ubuntu.outputs.bucket }}
       s3_paths_ubuntu: ${{ steps.upload-s3-ubuntu.outputs.paths }}
+      rocm_version: ${{ steps.capture-rocm-version.outputs.rocm_version }}
 
     steps:
       # Bootstrap the bare ubuntu:* image so actions/checkout and downstream steps
@@ -242,6 +268,7 @@ jobs:
             git \
             dpkg-dev \
             apt-utils \
+            reprepro \
             python3 \
             python3-pip
           rm -rf /var/lib/apt/lists/*
@@ -284,6 +311,10 @@ jobs:
           # Container runs as root; ROCM_SDK_* come from "Configure ROCm SDK channel" via GITHUB_ENV.
           ./build_packages_local.sh
 
+      - name: Capture resolved ROCm version
+        id: capture-rocm-version
+        run: |
+          echo "rocm_version=${ROCM_VERSION}" >> "$GITHUB_OUTPUT"
 
       # Print the resulting download URL in the step log and run Summary.
       - name: Print local package download URL
@@ -377,7 +408,7 @@ jobs:
           echo "Downloading existing DEBs from s3://${BUCKET}/${DEB_PREFIX}/ ..."
           aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/" "$STAGING/" \
             --exclude "Packages*" --exclude "Release*" --exclude "InRelease" \
-            --no-progress || true
+            --no-progress
 
           cp ./build/amdrocm*-rvs*.deb "$STAGING/" 2>/dev/null || true
 
@@ -400,6 +431,20 @@ jobs:
           aws s3 ls "s3://${BUCKET}/${DEB_PREFIX}/" --human-readable || true
         env:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          RVS_RUNNER_SUFFIX: ubuntu-22.04
+
+      # Scheduled default-branch only: unsigned DEB archive (dists/ + pool/) for signing CI.
+      - name: Generate and upload unsigned DEB archive to S3
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          [ -z "$BUCKET" ] && exit 0
+          export DEBIAN_FRONTEND=noninteractive
+          chmod +x .github/scripts/rvs-deb-unsigned-repo.sh
+          sh .github/scripts/rvs-deb-unsigned-repo.sh ./build
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           RVS_RUNNER_SUFFIX: ubuntu-22.04
 
   build-centos:
@@ -526,6 +571,23 @@ jobs:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
           RVS_RUNNER_SUFFIX: manylinux_2_28
 
+      - name: Generate SHA-256 sidecars for TGZ packages
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
+        run: |
+          cd ./build
+          for tar in amdrocm*-rvs*.tar.gz; do
+            [ -f "$tar" ] || continue
+            sha256sum "$tar" > "${tar}.sha256"
+            echo "Wrote ${tar}.sha256"
+          done
+
+      - name: Upload unsigned CentOS/RHEL packages to S3
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
+        run: sh .github/scripts/rvs-s3-upload-route.sh upload-rpm-tar-unsigned
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          RVS_RUNNER_SUFFIX: manylinux_2_28
+
       # Generate YUM/DNF repo metadata (repodata/) so the S3 path can be consumed
       # directly as an RPM repository by yum/dnf.
       # Only runs when S3 upload is allowed (upstream or RVS_S3_UPLOAD_ENABLED) and the event is schedule, push, or manual.
@@ -543,11 +605,12 @@ jobs:
 
           echo "Downloading existing RPMs from s3://${BUCKET}/${RPM_PREFIX}/ ..."
           aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
-            --exclude "repodata/*" --no-progress || true
+            --exclude "repodata/*" --no-progress
 
           cp ./build/amdrocm*-rvs*.rpm "$STAGING/" 2>/dev/null || true
 
-          createrepo_c "$STAGING" || createrepo "$STAGING"
+          createrepo_c --simple-md-filenames --no-database --compress-type gz "$STAGING" \
+            || createrepo "$STAGING"
 
           aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
 
@@ -556,6 +619,174 @@ jobs:
         env:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
           RVS_RUNNER_SUFFIX: manylinux_2_28
+
+      - name: Generate and upload unsigned RPM repodata to S3
+        if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          [ -z "$BUCKET" ] && exit 0
+
+          rpm_n=0
+          for f in ./build/amdrocm*-rvs*.rpm; do
+            [ -f "$f" ] || continue
+            rpm_n=$((rpm_n + 1))
+          done
+          tar_n=0
+          for f in ./build/amdrocm*-rvs*.tar.gz; do
+            [ -f "$f" ] || continue
+            tar_n=$((tar_n + 1))
+            if [ ! -f "${f}.sha256" ]; then
+              echo "::error::Missing SHA-256 sidecar for $(basename "$f")." >&2
+              exit 1
+            fi
+          done
+          if [ "$rpm_n" -lt 1 ] || [ "$tar_n" -lt 1 ]; then
+            echo "::error::Unsigned repodata requires amdrocm*-rvs*.rpm and amdrocm*-rvs*.tar.gz in ./build." >&2
+            exit 1
+          fi
+
+          yum install -y createrepo_c || yum install -y createrepo
+
+          RPM_PREFIX=$(sh .github/scripts/rvs-s3-upload-route.sh unsigned-rpm-prefix)
+          TAR_PREFIX=$(sh .github/scripts/rvs-s3-upload-route.sh unsigned-tar-prefix)
+          export RPM_PREFIX TAR_PREFIX
+
+          STAGING=$(mktemp -d)
+
+          echo "Downloading existing unsigned RPMs from s3://${BUCKET}/${RPM_PREFIX}/ (accumulate) ..."
+          aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
+            --exclude "repodata/*" --no-progress
+
+          cp ./build/amdrocm*-rvs*.rpm "$STAGING/"
+
+          createrepo_c --simple-md-filenames --no-database --compress-type gz "$STAGING" \
+            || createrepo "$STAGING"
+
+          aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
+
+          echo "=== Unsigned RPM repodata uploaded to s3://${BUCKET}/${RPM_PREFIX}/repodata/ ==="
+          aws s3 ls "s3://${BUCKET}/${RPM_PREFIX}/repodata/" --human-readable || true
+
+          python3 <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          build = Path("build")
+          rpm_prefix = os.environ["RPM_PREFIX"]
+          tar_prefix = os.environ["TAR_PREFIX"]
+          run_id = os.environ["GITHUB_RUN_ID"]
+
+          def sha256_file(path: Path) -> str:
+              h = hashlib.sha256()
+              with path.open("rb") as f:
+                  for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          import sys
+
+          rpms = sorted(build.glob("amdrocm*-rvs*.rpm"))
+          tars = sorted(build.glob("amdrocm*-rvs*.tar.gz"))
+          if not rpms or not tars:
+              print("::error::Missing RPM or TGZ for unsigned rpm-tar.json", file=sys.stderr)
+              sys.exit(1)
+
+          rpm = rpms[0]
+          tar = tars[0]
+          sidecar = Path(str(tar) + ".sha256")
+          if not sidecar.is_file():
+              print(f"::error::Missing SHA-256 sidecar for {tar.name}", file=sys.stderr)
+              sys.exit(1)
+
+          payload = {
+              "github_run_id": run_id,
+              "rpm": {
+                  "filename": rpm.name,
+                  "s3_key": f"{rpm_prefix}/{rpm.name}",
+                  "sha256": sha256_file(rpm),
+              },
+              "tar": {
+                  "filename": tar.name,
+                  "s3_key": f"{tar_prefix}/{tar.name}",
+                  "sha256": sha256_file(tar),
+                  "sha256_sidecar_key": f"{tar_prefix}/{sidecar.name}",
+              },
+          }
+
+          meta = Path("build/unsigned-rpm-tar-meta.json")
+          meta.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+          print(meta.read_text(encoding="utf-8"))
+          PY
+
+          aws s3 cp build/unsigned-rpm-tar-meta.json \
+            "s3://${BUCKET}/nightly/unsigned/runs/${GITHUB_RUN_ID}/rpm-tar.json" --no-progress
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          RVS_RUNNER_SUFFIX: manylinux_2_28
+
+  publish-unsigned-latest:
+    name: Publish unsigned latest.json (signing CI)
+    needs: [build-ubuntu, build-centos]
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    if: >-
+      github.event_name == 'schedule' &&
+      needs.build-ubuntu.result == 'success' &&
+      needs.build-centos.result == 'success' &&
+      (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') &&
+      vars.AWS_S3_BUCKET != ''
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install AWS CLI
+        if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
+        run: |
+          # ubuntu-latest (24.04+) no longer ships awscli in apt; use pip like the CentOS job.
+          if command -v aws >/dev/null 2>&1; then
+            aws --version
+            exit 0
+          fi
+          python3 -m pip install --user --break-system-packages awscli \
+            || python3 -m pip install --user awscli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # GITHUB_PATH only applies to later steps; export for this step's verify.
+          export PATH="$HOME/.local/bin:$PATH"
+          aws --version
+
+      - name: Configure AWS credentials
+        if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
+          CREDS=$(aws sts assume-role-with-web-identity \
+            --role-arn "${{ secrets.AWS_ROLE_ARN }}" \
+            --role-session-name "github-actions-${{ github.run_id }}" \
+            --web-identity-token "$TOKEN" \
+            --query 'Credentials' --output json)
+          echo "AWS_ACCESS_KEY_ID=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['AccessKeyId'])")" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SecretAccessKey'])")" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SessionToken'])")" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+          echo "::add-mask::$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SecretAccessKey'])")"
+          echo "::add-mask::$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SessionToken'])")"
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+
+      - name: Publish nightly/unsigned/latest.json
+        if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          [ -z "$BUCKET" ] && exit 0
+          chmod +x .github/scripts/rvs-unsigned-publish-latest.sh
+          sh .github/scripts/rvs-unsigned-publish-latest.sh
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
+          ROCM_VERSION: ${{ needs.build-ubuntu.outputs.rocm_version }}
 
   dispatch-post-build-tests:
     name: Dispatch post-build test workflows
@@ -602,6 +833,40 @@ jobs:
               }
             }
             core.info(`Dispatched RVS Nightly Tests (trigger_event=${context.eventName}) on ref ${ref}`);
+
+      - name: Dispatch RVS Nightly Docker Tests (Ubuntu 24.04)
+        if: >-
+          github.event_name == 'push' &&
+          (github.ref_name == 'main' || github.ref_name == 'master')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = context.payload.pull_request?.base?.ref
+              ?? context.ref.replace('refs/heads/', '');
+            const inputs = { trigger_event: context.eventName };
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'rvs-nightly-docker-ubuntu24.04-tests.yml',
+                ref,
+                inputs,
+              });
+            } catch (error) {
+              if (error.status === 422 && String(error.message).includes('Unexpected inputs')) {
+                core.warning('rvs-nightly-docker-ubuntu24.04-tests.yml on ref does not define trigger_event — dispatching without it.');
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'rvs-nightly-docker-ubuntu24.04-tests.yml',
+                  ref,
+                  inputs: {},
+                });
+              } else {
+                throw error;
+              }
+            }
+            core.info(`Dispatched RVS Nightly Docker Tests Ubuntu 24.04 (trigger_event=${context.eventName}) on ref ${ref}`);
 
       - name: Dispatch RVS Release Tests
         if: startsWith(github.ref_name, 'release/')

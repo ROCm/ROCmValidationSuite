@@ -51,7 +51,12 @@ class HIPStream : public Stream<T>
 
     int nt_mode = 1; // NT_ALL
 
+    // sustained mode: skip per-iteration sync, single sync after all iterations.
+    bool sustained_mode = false;
+
   public:
+    void set_sustained_mode(bool mode) { sustained_mode = mode; }
+    void sustained_sync();
     HIPStream(const unsigned int, const bool, const int,
         const unsigned int, const unsigned int, const unsigned int,
         const std::string& nontemporal = "all");

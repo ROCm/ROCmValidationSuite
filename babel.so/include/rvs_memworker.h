@@ -276,6 +276,11 @@ class MemWorker : public rvs::ThreadBase {
     //! returns non-temporal access mode
     const std::string& get_nontemporal(void) { return nontemporal; }
 
+    //! sets sustained mode
+    void set_sustained(bool _sustained) { sustained = _sustained; }
+    //! returns sustained mode
+    bool get_sustained(void) { return sustained; }
+
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
@@ -322,6 +327,8 @@ class MemWorker : public rvs::ThreadBase {
     std::string data_init;
     //! non-temporal access mode
     std::string nontemporal;
+    //! sustained mode: back-to-back launches, single sync, average BW only
+    bool sustained;
 
     //! TRUE if JSON output is required
     static bool bjson;

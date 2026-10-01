@@ -32,7 +32,7 @@ set( COMP_TYPE "applications" )
 set( BUILD_ENABLE_LINTIAN_OVERRIDES ON CACHE BOOL "Enable/Disable Lintian Overrides" )
 set( BUILD_DEBIAN_PKGING_FLAG ON CACHE BOOL "Internal Status Flag to indicate Debian Packaging Build" )
 project ("rocm-validation-suite"
-          VERSION 1.6.0)
+          VERSION 1.7.0)
 
 # Default libdir to "lib", this skips GNUInstallDirs from trying to take a guess if it's unset:
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
@@ -198,12 +198,13 @@ set(CMAKE_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "CM
 set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/extras-${ROCM_MAJOR_VERSION}" CACHE PATH "Prefix used in built packages")
 list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
 
-# RPATH (build tree + install): one list — avoids duplicating $ORIGIN paths that previously
-# appeared in both CMAKE_*_LINKER_FLAGS_INIT and CMAKE_INSTALL_RPATH.
+# RPATH (build tree + install): canonical list in cmake_modules/RVSPackagedRpath.cmake.
+# Packaged DEB/RPM/TGZ artifacts are normalized again via CPACK_PRE_BUILD_SCRIPTS.
 set(CMAKE_SKIP_RPATH FALSE CACHE BOOL "Skip RPATH for build targets")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE CACHE BOOL "Append link paths to install RPATH")
-set(CMAKE_INSTALL_RPATH
-  "\$ORIGIN;\$ORIGIN/../lib;\$ORIGIN/../lib/rvs;/opt/rocm/lib;/opt/rocm/lib/llvm/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib;/opt/rocm/core-${ROCM_MAJOR_VERSION}/lib/llvm/lib"
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/RVSPackagedRpath.cmake)
+rvs_get_packaged_rpath_list(_RVS_INSTALL_RPATH)
+set(CMAKE_INSTALL_RPATH "${_RVS_INSTALL_RPATH}"
   CACHE STRING "RPATH for installed RVS binaries and modules")
 set(CMAKE_BUILD_RPATH "${CMAKE_INSTALL_RPATH}")
 
@@ -282,10 +283,12 @@ else()
 endif()
 message(STATUS "RVS_OS_TYPE_NUM: ${RVS_OS_TYPE_NUM}")
 
-## Set default module path if not already set
-if ( NOT DEFINED CMAKE_MODULE_PATH )
-    set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/" )
-endif()
+## Always make our cmake_modules/ searchable: the find_package() calls above may have
+## already populated CMAKE_MODULE_PATH (ROCm/TheRock configs do), which would otherwise
+## leave include(utils) unresolved. Prepend so our modules win over same-named ones.
+set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/" ${CMAKE_MODULE_PATH} )
+list ( REMOVE_DUPLICATES CMAKE_MODULE_PATH )
+
 
 ## Include common cmake modules
 include ( utils )
@@ -482,26 +485,25 @@ endif()
 
 # Package dependencies - libpci3 is no longer a runtime dep (statically linked);
 # yaml-cpp is conditionally required based on linking type
+# RPM NUMA/yaml-cpp names differ by distro:
+#   RHEL/CentOS/Mariner: numactl-libs (runtime), yaml-cpp (dynamic)
+#   SLES 15/16: libnuma1 (runtime), libyaml-cpp0_6 (dynamic)
+set(RVS_RPM_NUMA_DEPS "(numactl-libs or libnuma1)")
 if (YAML_CPP_STATIC_FOUND)
   # Static linking - no runtime yaml-cpp dependency needed
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libnuma1")
-  elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libnuma1")
   else ()
-    # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, numactl-libs")
+    # RPM distros - RHEL, CentOS, SLES, Mariner (manylinux-built RPM)
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, ${RVS_RPM_NUMA_DEPS}")
   endif()
   message(STATUS "Package dependencies: yaml-cpp statically linked, no runtime dependency")
 else()
   # Dynamic linking - yaml-cpp runtime dependency required
   if (${RVS_OS_TYPE} STREQUAL "ubuntu")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${ROCM_DEB_DEPS}, libyaml-cpp-dev, libnuma1")
-  elseif (${RVS_OS_TYPE} STREQUAL "sles")
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, libyaml-cpp0_6, libnuma1")
   else ()
-    # other supported rpm distros - RHEL, CentOS
-    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, yaml-cpp, numactl-libs")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${ROCM_RPM_DEPS}, (yaml-cpp or libyaml-cpp0_6), ${RVS_RPM_NUMA_DEPS}")
   endif()
   message(STATUS "Package dependencies: yaml-cpp dynamically linked, runtime dependency included")
 endif()
@@ -817,19 +819,15 @@ set(HCC_CXX_FLAGS "-fno-gpu-rdc --offload-arch=gfx90a --offload-arch=gfx1030 --o
 
 add_subdirectory(rvslib)
 add_subdirectory(rvs)
-add_subdirectory(gm.so)
 add_subdirectory(gpup.so)
 add_subdirectory(gst.so)
 add_subdirectory(iet.so)
 add_subdirectory(pebb.so)
 add_subdirectory(peqt.so)
-add_subdirectory(pesm.so)
 add_subdirectory(pbqt.so)
 add_subdirectory(rcqt.so)
-add_subdirectory(smqt.so)
 add_subdirectory(mem.so)
 add_subdirectory(babel.so)
-add_subdirectory(perf.so)
 add_subdirectory(tst.so)
 add_subdirectory(pulse.so)
 
@@ -837,9 +835,7 @@ if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
 endif()
 
-add_dependencies(pesm rvslib)
 if(RVS_ROCMSMI EQUAL 1)
-  add_dependencies(gm rvs_smi_target)
   add_dependencies(iet rvs_smi_target)
   add_dependencies(pulse rvs_smi_target)
 endif()
@@ -976,5 +972,13 @@ install(FILES
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
 configure_pkg( ${CPACK_PACKAGE_NAME} ${COMP_TYPE} ${CPACK_PACKAGE_VERSION} ${PKG_MAINTAINER_NM} ${PKG_MAINTAINER_EMAIL} )
+
+# Normalize RUNPATH on staged ELF before DEB/RPM/TGZ (strips build-machine SDK paths).
+rvs_get_packaged_rpath_colon(RVS_PACKAGED_RPATH_COLON)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/cpack-patch-rpath.cmake.in
+  ${CMAKE_BINARY_DIR}/cpack-patch-rpath.cmake
+  @ONLY)
+set(CPACK_PRE_BUILD_SCRIPTS "${CMAKE_BINARY_DIR}/cpack-patch-rpath.cmake")
 
 include (CPack)

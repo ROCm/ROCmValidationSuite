@@ -30,7 +30,8 @@ project(pciutils-download NONE)
 include(ExternalProject)
 ExternalProject_Add(pciutils
   GIT_REPOSITORY    https://github.com/pciutils/pciutils.git
-  GIT_TAG           v3.7.0
+  GIT_TAG           "864aecdea9c7db626856d8d452f6c784316a878c" #Verion 3.7.0
+  GIT_CONFIG        "http.sslVerify=true" # Forces certificate validation
   SOURCE_DIR        "${CMAKE_BINARY_DIR}/pciutils-src"
   BINARY_DIR        "${CMAKE_BINARY_DIR}/pciutils-build"
   CONFIGURE_COMMAND ""

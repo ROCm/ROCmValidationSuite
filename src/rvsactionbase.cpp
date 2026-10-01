@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -41,7 +41,7 @@
 
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
 // only thse modules have a target and duration based test approach
-static const std::set<std::string> duration_mods {"gst", "iet", "tst", "pebb", "pbqt", "gm", "pulse"};
+static const std::set<std::string> duration_mods {"gst", "iet", "tst", "pebb", "pbqt", "pulse"};
 using std::cout;
 using std::endl;
 using std::string;

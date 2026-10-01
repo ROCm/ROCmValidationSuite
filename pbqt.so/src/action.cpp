@@ -540,7 +540,7 @@ int pbqt_action::create_threads() {
           if (prop_test_bandwidth) {
             valid_pairs.push_back({srcnode, dstnode, pbconn});
           } else {
-            log_json_data(std::to_string(gpu_id[srcnode]), std::to_string(gpu_id[j]), rvs::logresults,
+            log_json_data(std::to_string(gpu_id[i]), std::to_string(gpu_id[j]), rvs::logresults,
                 pbconn, "NA" );
           }
 

@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -79,14 +79,12 @@ typedef enum {
   RVS_MODULE_BABEL = 0, /*!< Memory stress Test */
   RVS_MODULE_GPUP, /*!< GPU Properties */
   RVS_MODULE_GST, /*!< GPU Stress Test */
-  RVS_MODULE_IET, /*!< Input EDPp Test */ 
+  RVS_MODULE_IET, /*!< Input EDPp Test */
   RVS_MODULE_MEM, /*!< Memory Test */
   RVS_MODULE_PEBB, /*!< PCI Express Bandwidth Benchmark */
   RVS_MODULE_PEQT, /*!< PCI Express Qualification Tool */
-  RVS_MODULE_PESM, /*!< PCI Express State Monitor */
   RVS_MODULE_PBQT, /*!< P2P Benchmark and Qualification Tool */
   RVS_MODULE_RCQT, /*!< ROCm Configuration Qualification Tool */
-  RVS_MODULE_SMQT, /*!< SBIOS Mapping Qualifications Tool */
   RVS_MODULE_MAX /*!< No. of RVS modules */
 } rvs_module_t;
 

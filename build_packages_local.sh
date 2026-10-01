@@ -19,7 +19,7 @@ ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 
 # SDK Source Configuration
 # Defaults point at AMD-hosted listings (override via env or GitHub vars).
-# - Nightly index: https://rocm.nightlies.amd.com/tarball-multi-arch/
+# - Nightly index: https://nightly.repo.amd.com/rocm/core/tarball/
 # - Release listing: https://repo.amd.com/rocm/tarball/
 #
 # Local builds: if ROCM_VERSION is unset (channel auto, no release listing env), latest *nightly* is fetched.
@@ -34,8 +34,8 @@ ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 #
 # Optional: ROCM_SDK_NIGHTLY_BASE_URL, ROCM_SDK_NIGHTLY_INDEX_URL, ROCM_SDK_RELEASE_URL (listing),
 # ROCM_SDK_RELEASE_BASE_URL (tarball directory for X.Y.Z downloads).
-_ROCM_NIGHTLY_INDEX_DEFAULT="https://rocm.nightlies.amd.com/tarball-multi-arch/"
-_ROCM_NIGHTLY_BASE_DEFAULT="https://rocm.nightlies.amd.com/tarball-multi-arch"
+_ROCM_NIGHTLY_INDEX_DEFAULT="https://nightly.repo.amd.com/rocm/core/tarball/"
+_ROCM_NIGHTLY_BASE_DEFAULT="https://nightly.repo.amd.com/rocm/core/tarball"
 _ROCM_RELEASE_LIST_DEFAULT="https://repo.amd.com/rocm/tarball/"
 _ROCM_RELEASE_BASE_DEFAULT="https://repo.amd.com/rocm/tarball"
 
@@ -490,6 +490,7 @@ check_and_install_dependencies() {
     command -v tar >/dev/null 2>&1 || MISSING_TOOLS+=("tar")
     command -v doxygen >/dev/null 2>&1 || MISSING_TOOLS+=("doxygen")
     command -v python3 >/dev/null 2>&1 || MISSING_TOOLS+=("python3")
+    command -v patchelf >/dev/null 2>&1 || MISSING_TOOLS+=("patchelf")
 
     # Check for library dependencies (platform-specific)
     MISSING_LIBS=()
@@ -505,6 +506,12 @@ check_and_install_dependencies() {
         [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("pciutils-devel")
         [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("yaml-cpp-devel")
         [ -f /usr/include/numa.h ] || MISSING_LIBS+=("numactl-devel")
+        command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm-build")
+    elif [[ "$OS" =~ ^(sles|opensuse-leap|opensuse-tumbleweed)$ ]]; then
+        # Check for SUSE library headers (libnuma-devel on SLES 15/16, not numactl-devel)
+        [ -f /usr/include/pci/pci.h ] || MISSING_LIBS+=("pciutils-devel")
+        [ -f /usr/include/yaml-cpp/yaml.h ] || MISSING_LIBS+=("yaml-cpp-devel")
+        [ -f /usr/include/numa.h ] || MISSING_LIBS+=("libnuma-devel")
         command -v rpmbuild >/dev/null 2>&1 || MISSING_LIBS+=("rpm-build")
     fi
 
@@ -532,7 +539,8 @@ check_and_install_dependencies() {
                 libyaml-cpp-dev \
                 rpm \
                 python3 \
-                libnuma-dev
+                libnuma-dev \
+                patchelf
         elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|amzn)$ ]]; then
             print_info "Installing dependencies for CentOS/RHEL/Rocky/AlmaLinux..."
 
@@ -577,6 +585,7 @@ check_and_install_dependencies() {
                 rpm-build \
                 python3 \
                 numactl-devel \
+                patchelf \
                 || print_warning "Some packages may already be installed"
 
             # Install a gcc-toolset with C++20 <barrier> support (requires GCC >= 11)
@@ -616,6 +625,27 @@ check_and_install_dependencies() {
             print_info "Installing yaml-cpp..."
             yum install -y yaml-cpp-devel yaml-cpp-static 2>/dev/null || \
             print_warning "yaml-cpp may not be available - will try to continue"
+        elif [[ "$OS" =~ ^(sles|opensuse-leap|opensuse-tumbleweed)$ ]]; then
+            print_info "Installing dependencies for SUSE/SLES..."
+            zypper --non-interactive refresh || print_warning "zypper refresh reported errors; continuing"
+            zypper --non-interactive install -y \
+                gcc \
+                gcc-c++ \
+                make \
+                git \
+                wget \
+                tar \
+                cmake \
+                doxygen \
+                python3 \
+                pciutils-devel \
+                libpci3 \
+                yaml-cpp-devel \
+                libnuma-devel \
+                rpm \
+                rpm-build \
+                patchelf \
+                || print_warning "Some packages may already be installed"
         else
             print_error "Unsupported OS: $OS"
             echo ""
@@ -633,7 +663,8 @@ check_and_install_dependencies() {
             echo "Development Libraries:"
             echo "  - libpci-dev (or pciutils-devel)"
             echo "  - libyaml-cpp-dev (or yaml-cpp-devel)"
-            echo "  - libnuma-dev (or numactl-devel)"
+            echo "  - libnuma-dev (Ubuntu), numactl-devel (RHEL/CentOS), or libnuma-devel (SLES)"
+            echo "  - patchelf (CPack RUNPATH normalization for DEB/RPM/TGZ)"
             echo "  - rpm-build tools"
             exit 1
         fi
@@ -717,6 +748,13 @@ else
 fi
 
 apply_sdk_tarball_base_for_version "$ROCM_VERSION"
+
+# Publish the resolved version to GITHUB_ENV so downstream jobs (e.g.
+# publish-unsigned-latest) can read the actual nightly version rather than
+# the static vars.ROCM_VERSION repository variable.
+if [ -n "${GITHUB_ENV:-}" ]; then
+    echo "ROCM_VERSION=${ROCM_VERSION}" >> "$GITHUB_ENV"
+fi
 
 BUILD_TRANSFERBENCH_CLI="$(normalize_on_off "$BUILD_TRANSFERBENCH_CLI")"
 
