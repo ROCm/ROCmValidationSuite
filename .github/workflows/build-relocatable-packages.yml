@@ -186,16 +186,41 @@ jobs:
     name: Free runner disk space
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-22.04' }}
     steps:
-      - name: Free disk space (GitHub-hosted runners)
-        if: runner.environment == 'github-hosted'
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
+      # No checkout. Container jobs leave root-owned files in the persistent
+      # workspace, and this host step cannot lock or delete them.
+      - name: Free disk space
+        run: |
+          set -u
+          as_root() {
+            if [ "$(id -u)" -eq 0 ]; then
+              "$@"
+            elif command -v sudo >/dev/null 2>&1; then
+              sudo -n "$@"
+            else
+              echo "::warning::not root and sudo is unavailable; skipped: $*"
+              return 0
+            fi
+          }
+          echo "=== Disk before cleanup ==="
+          df -h / || df -h || true
+          if command -v apt-get >/dev/null 2>&1; then
+            echo "apt-get clean"
+            as_root apt-get clean || echo "::warning::apt-get clean did not succeed"
+          else
+            echo "skip: apt-get not available"
+          fi
+          if command -v docker >/dev/null 2>&1; then
+            echo "pruning unused Docker images"
+            if ! docker image prune --all --force; then
+              as_root docker image prune --all --force \
+                || echo "::warning::docker image prune did not succeed"
+            fi
+          else
+            echo "skip: docker not installed"
+          fi
+          echo "=== Disk after cleanup ==="
+          df -h / || df -h || true
+          exit 0
 
       - name: Prune Docker and report disk usage
         run: |
