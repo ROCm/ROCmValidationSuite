@@ -7,7 +7,7 @@ Install ROCm Validation Suite
 *****************************
 
 ROCm Validation Suite (RVS) is supported on AMD Instinct and Radeon GPUs
-supported by ROCm. See the `ROCm compatibility matrix <https://rocm.docs.amd.com/en/docs-7.14.0/compatibility/compatibility-matrix.html>`__ for support information.
+supported by ROCm. See the `ROCm compatibility matrix <https://rocm.docs.amd.com/en/latest/compatibility/compatibility-matrix.html>`__ for support information.
 
 For advanced workflows, source builds, or custom configurations, see
 `<https://github.com/ROCm/ROCmValidationSuite#rocmvalidationsuite>`__.
@@ -21,7 +21,7 @@ Prerequisites
 
 Install the ROCm Core SDK before installing RVS.
 
-For instructions, see `Install AMD ROCm <https://rocm.docs.amd.com/en/docs-7.14.0/install/rocm.html?fam=all&i=pkgman>`__. Use the
+For instructions, see `Install AMD ROCm <https://rocm.docs.amd.com/en/latest/install/rocm.html>`__. Use the
 selector panel on that page to view instructions appropriate for your system environment.
 
 ROCm installation path
@@ -40,7 +40,7 @@ and ``lib``. When configuring the environment for RVS, you must set the
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=/opt/rocm/core-10.0             # <rocm-core-path> = /opt/rocm/core-10.0
+         ROCM_INSTALL_PATH=/opt/rocm/core-10.1             # <rocm-core-path> = /opt/rocm/core-10.1
 
    .. tab-item:: pip
 
@@ -60,8 +60,8 @@ and ``lib``. When configuring the environment for RVS, you must set the
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=/opt/rocm/core-10.0             # <rocm-core-path> = default /opt/rocm/core-10.0 installation (no target=)
-         ROCM_INSTALL_PATH=<path>/rocm/core-10.0           # <rocm-core-path> = target=<path>
+         ROCM_INSTALL_PATH=/opt/rocm/core-10.1             # <rocm-core-path> = default /opt/rocm/core-10.1 installation (no target=)
+         ROCM_INSTALL_PATH=<path>/rocm/core-10.1           # <rocm-core-path> = target=<path>
 
 Package manager installation
 =============================
@@ -85,8 +85,15 @@ on top of the ROCm Core SDK.
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
                   wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
-                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
-                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2604/ stable main
+                  sudo tee /etc/apt/sources.list.d/amdrocm-rvs.sources << 'EOF'
+                  X-Repo-Id: amdrocm-rvs
+                  Types: deb
+                  URIs: https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2604/
+                  Suites: stable
+                  Components: main
+                  Architectures: amd64
+                  Signed-By: /etc/apt/keyrings/amdrocm.gpg
+                  Enabled: yes
                   EOF
 
                   sudo apt update
@@ -98,8 +105,15 @@ on top of the ROCm Core SDK.
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
                   wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
-                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
-                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2404/ stable main
+                  sudo tee /etc/apt/sources.list.d/amdrocm-rvs.sources << 'EOF'
+                  X-Repo-Id: amdrocm-rvs
+                  Types: deb
+                  URIs: https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2404/
+                  Suites: stable
+                  Components: main
+                  Architectures: amd64
+                  Signed-By: /etc/apt/keyrings/amdrocm.gpg
+                  Enabled: yes
                   EOF
 
                   sudo apt update
@@ -111,8 +125,15 @@ on top of the ROCm Core SDK.
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
                   wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
-                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
-                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2204/ stable main
+                  sudo tee /etc/apt/sources.list.d/amdrocm-rvs.sources << 'EOF'
+                  X-Repo-Id: amdrocm-rvs
+                  Types: deb
+                  URIs: https://stable.repo.amd.com/rocm/extras/rvs/packages/ubuntu2204/
+                  Suites: stable
+                  Components: main
+                  Architectures: amd64
+                  Signed-By: /etc/apt/keyrings/amdrocm.gpg
+                  Enabled: yes
                   EOF
 
                   sudo apt update
@@ -129,8 +150,15 @@ on top of the ROCm Core SDK.
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
                   wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
-                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
-                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/debian13/ stable main
+                  sudo tee /etc/apt/sources.list.d/amdrocm-rvs.sources << 'EOF'
+                  X-Repo-Id: amdrocm-rvs
+                  Types: deb
+                  URIs: https://stable.repo.amd.com/rocm/extras/rvs/packages/debian13/
+                  Suites: stable
+                  Components: main
+                  Architectures: amd64
+                  Signed-By: /etc/apt/keyrings/amdrocm.gpg
+                  Enabled: yes
                   EOF
 
                   sudo apt update
@@ -142,8 +170,15 @@ on top of the ROCm Core SDK.
 
                   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
                   wget https://stable.repo.amd.com/rocm/gpg/packages.gpg -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/amdrocm.gpg > /dev/null
-                  sudo tee /etc/apt/sources.list.d/rvs.list << EOF
-                  deb [arch=amd64 signed-by=/etc/apt/keyrings/amdrocm.gpg] https://stable.repo.amd.com/rocm/extras/rvs/packages/debian12/ stable main
+                  sudo tee /etc/apt/sources.list.d/amdrocm-rvs.sources << 'EOF'
+                  X-Repo-Id: amdrocm-rvs
+                  Types: deb
+                  URIs: https://stable.repo.amd.com/rocm/extras/rvs/packages/debian12/
+                  Suites: stable
+                  Components: main
+                  Architectures: amd64
+                  Signed-By: /etc/apt/keyrings/amdrocm.gpg
+                  Enabled: yes
                   EOF
 
                   sudo apt update
@@ -158,8 +193,8 @@ on top of the ROCm Core SDK.
 
                .. code-block:: bash
 
-                  sudo tee /etc/yum.repos.d/rvs.repo <<EOF
-                  [rvs]
+                  sudo tee /etc/yum.repos.d/amdrocm-rvs.repo <<EOF
+                  [amdrocm-rvs]
                   name=ROCm Validation Suite
                   baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel10/x86_64
                   enabled=1
@@ -174,8 +209,8 @@ on top of the ROCm Core SDK.
 
                .. code-block:: bash
 
-                  sudo tee /etc/yum.repos.d/rvs.repo <<EOF
-                  [rvs]
+                  sudo tee /etc/yum.repos.d/amdrocm-rvs.repo <<EOF
+                  [amdrocm-rvs]
                   name=ROCm Validation Suite
                   baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel9/x86_64
                   enabled=1
@@ -190,8 +225,8 @@ on top of the ROCm Core SDK.
 
                .. code-block:: bash
 
-                  sudo tee /etc/yum.repos.d/rvs.repo <<EOF
-                  [rvs]
+                  sudo tee /etc/yum.repos.d/amdrocm-rvs.repo <<EOF
+                  [amdrocm-rvs]
                   name=ROCm Validation Suite
                   baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/rhel8/x86_64
                   enabled=1
@@ -229,7 +264,7 @@ on top of the ROCm Core SDK.
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.0
+         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.1
 
    b. Configure your environment.
 
@@ -254,10 +289,12 @@ on top of the ROCm Core SDK.
             .. code-block:: bash
 
                tee --append ~/.bashrc << EOF
+               # BEGIN RVS environment configuration
                export EXTRAS_PATH=/opt/rocm/extras-10
                export ROCM_PATH=$ROCM_INSTALL_PATH
                export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
                export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+               # END RVS environment configuration
                EOF
 
                source ~/.bashrc
@@ -308,7 +345,7 @@ Package manager uninstalling
                .. code-block:: bash
 
                   # Remove RVS repositories
-                  sudo rm /etc/apt/sources.list.d/rvs.list
+                  sudo rm /etc/apt/sources.list.d/amdrocm-rvs.sources
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
@@ -321,7 +358,7 @@ Package manager uninstalling
                .. code-block:: bash
 
                   # Remove RVS repositories
-                  sudo rm /etc/apt/sources.list.d/rvs.list
+                  sudo rm /etc/apt/sources.list.d/amdrocm-rvs.sources
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
@@ -334,7 +371,7 @@ Package manager uninstalling
                .. code-block:: bash
 
                   # Remove RVS repositories
-                  sudo rm /etc/apt/sources.list.d/rvs.list
+                  sudo rm /etc/apt/sources.list.d/amdrocm-rvs.sources
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
@@ -352,7 +389,7 @@ Package manager uninstalling
                .. code-block:: bash
 
                   # Remove RVS repositories
-                  sudo rm /etc/apt/sources.list.d/rvs.list
+                  sudo rm /etc/apt/sources.list.d/amdrocm-rvs.sources
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
@@ -365,7 +402,7 @@ Package manager uninstalling
                .. code-block:: bash
 
                   # Remove RVS repositories
-                  sudo rm /etc/apt/sources.list.d/rvs.list
+                  sudo rm /etc/apt/sources.list.d/amdrocm-rvs.sources
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
@@ -383,7 +420,7 @@ Package manager uninstalling
                .. code-block:: bash
 
                   # Remove RVS repositories
-                  sudo rm /etc/yum.repos.d/rvs.repo
+                  sudo rm /etc/yum.repos.d/amdrocm-rvs.repo
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/dnf
@@ -395,7 +432,7 @@ Package manager uninstalling
                .. code-block:: bash
 
                   # Remove RVS repositories
-                  sudo rm /etc/yum.repos.d/rvs.repo
+                  sudo rm /etc/yum.repos.d/amdrocm-rvs.repo
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/dnf
@@ -407,7 +444,7 @@ Package manager uninstalling
                .. code-block:: bash
 
                   # Remove RVS repositories
-                  sudo rm /etc/yum.repos.d/rvs.repo
+                  sudo rm /etc/yum.repos.d/amdrocm-rvs.repo
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/dnf
@@ -455,18 +492,17 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
             sudo dnf install pciutils-libs numactl-libs
 
-      .. tab-item:: SLES
-         :sync: sles
-
-         .. code-block:: bash
-
-            sudo zypper install libpci3 libnuma1
-
 2. Download the RVS tarball.
 
    .. code-block:: bash
 
-      wget https://repo.amd.com/rocm/rvs/tarball/amdrocm10-rvs-1.6.122-708-Linux.tar.gz
+      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.6.131-844-Linux.tar.gz
+
+   The tarball file may be verified against the following SHA256:
+
+   .. code-block:: bash
+
+      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.6.131-844-Linux.tar.gz.sha256
 
 3. Extract the tarball to the ROCm Extras location.
 
@@ -480,7 +516,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
       EXTRAS_INSTALL_PATH=<extras-path>  # ie. <extras-path> = path to ROCm extras for RVS extract
 
       sudo mkdir -p $EXTRAS_INSTALL_PATH
-      sudo tar -xzf amdrocm10-rvs-1.6.122-708-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
+      sudo tar -xzf amdrocm10-rvs-1.6.131-844-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
 
    **Recommended:** Set ``EXTRAS_INSTALL_PATH`` to a location within the root
    install directory for the ROCm Core SDK.
@@ -491,7 +527,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
    .. code-block:: bash
 
       sudo mkdir -p /opt/rocm/extras-10
-      sudo tar -xzf amdrocm10-rvs-1.6.122-708-Linux.tar.gz -C /opt/rocm/extras-10
+      sudo tar -xzf amdrocm10-rvs-1.6.131-844-Linux.tar.gz -C /opt/rocm/extras-10
 
 4. Complete the following post-installation steps.
 
@@ -503,7 +539,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.0
+         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.1
 
    b. Configure your environment.
 
@@ -528,10 +564,12 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
             .. code-block:: bash
 
                tee --append ~/.bashrc << EOF
+               # BEGIN RVS environment configuration
                export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
                export ROCM_PATH=$ROCM_INSTALL_PATH
                export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
                export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+               # END RVS environment configuration
                EOF
 
                source ~/.bashrc
