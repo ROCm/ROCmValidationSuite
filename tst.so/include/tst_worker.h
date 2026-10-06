@@ -218,6 +218,8 @@ class TSTWorker : public rvs::ThreadBase {
 
     //! BLAS callback
     static void blas_callback (bool status, void *user_data);
+    //! get worker job result
+    bool get_result(void) { return result; }
 
  protected:
     virtual void run(void);
@@ -305,6 +307,8 @@ class TSTWorker : public rvs::ThreadBase {
     std::condition_variable cv;
     //! blas gemm operations status
     bool blas_status;
+    //! Worker job result
+    bool result = false;
 };
 
 #endif  // TST_SO_INCLUDE_TST_WORKER_H_
