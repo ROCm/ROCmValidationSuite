@@ -7,6 +7,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Added
 
 - Added int8 GST config for MI3XX products.
+- Support for gfx1151 (Strix Halo APU, Radeon 8060S): `conf/gfx1151/` GST, IET and level configurations, HIP kernels built for gfx1151.
 
 ### Changed
 
