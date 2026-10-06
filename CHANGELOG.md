@@ -6,6 +6,8 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Added
 
+- Support for gfx1151 (Strix Halo APU, Radeon 8060S): `conf/gfx1151/` GST, IET and level configurations, HIP kernels built for gfx1151.
+
 ### Changed
 
 ## RVS 1.7.0
