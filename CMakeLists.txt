@@ -815,7 +815,7 @@ if(BUILD_ADDRESS_SANITIZER)
   set(ASAN_LD_FLAGS "-fuse-ld=lld")
 endif()
 
-set(HCC_CXX_FLAGS "-fno-gpu-rdc --offload-arch=gfx90a --offload-arch=gfx1030 --offload-arch=gfx803 --offload-arch=gfx900 --offload-arch=gfx906 --offload-arch=gfx908 --offload-arch=gfx1101 --offload-arch=gfx942 --offload-arch=gfx1200 --offload-arch=gfx1201 --offload-arch=gfx1100 --offload-arch=gfx950 --offload-arch=gfx1250")
+set(HCC_CXX_FLAGS "-fno-gpu-rdc --offload-arch=gfx90a --offload-arch=gfx1030 --offload-arch=gfx803 --offload-arch=gfx900 --offload-arch=gfx906 --offload-arch=gfx908 --offload-arch=gfx1101 --offload-arch=gfx942 --offload-arch=gfx1200 --offload-arch=gfx1201 --offload-arch=gfx1151 --offload-arch=gfx1100 --offload-arch=gfx950 --offload-arch=gfx1250")
 
 add_subdirectory(rvslib)
 add_subdirectory(rvs)
