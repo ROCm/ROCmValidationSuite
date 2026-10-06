@@ -340,11 +340,13 @@ The configuration files in the top-level `conf/` folder are generic samples and 
 ### GPU-Specific Configurations
 
 RVS includes optimized test configurations for a range of GPU families, organized under `conf/<GPU>/`. 
-Level-based configurations (usable with `-r`) are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X, MI350P-450W, MI350P-600W, MI450X, nv21, nv31, nv32, gfx1200, gfx1201, RX9060, RX9070, RX9070GRE, R9600D.
+Level-based configurations (usable with `-r`) are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X, MI350P-450W, MI350P-600W, MI450X, nv21, nv31, nv32, gfx1200, gfx1201, gfx1151, RX9060, RX9070, RX9070GRE, R9600D.
 
 Radeon level suites omit HBM (babel) and XGMI (pbqt) tests that do not apply to consumer GPUs. GST `target_stress` and IET `target_power` values are sourced from each platform's `gst_single.conf` and `iet_single.conf`.
 
 Navi 48 SKUs (RX9070, RX9070GRE, R9600D, gfx1201) share PCI device IDs `0x7550`/`0x7551`; RVS defaults to `RX9070`. Use `-c conf/<platform>/levels/rvs_level_N.conf` explicitly for other Navi 48 SKUs if auto-detection selects the wrong folder.
+
+gfx1151 (Strix Halo APU) shares PCI device ID `0x1586` across Radeon 8060S (40 CU) and 8050S (32 CU) parts; `conf/gfx1151/` targets were calibrated on an 8060S on the `balanced` platform profile. Its level suite also omits the PCIe link check (peqt), and IET `target_power` is package power (PPT), which includes the CPU.
 
 For MI350P, the 450W and 600W SKUs share a single PCI device ID (`0x75a8`); RVS disambiguates between them at runtime by reading the GPU's hardware power cap via amdsmi (~450 W → `MI350P-450W`, ~600 W → `MI350P-600W`). If the power cap cannot be read, RVS falls back to `MI350P-450W` and prints a warning; use `-c conf/MI350P-600W/levels/rvs_level_N.conf` explicitly if your card is the 600W SKU.
 
@@ -353,7 +355,7 @@ For MI350P, the 450W and 600W SKUs share a single PCI device ID (`0x75a8`); RVS 
 - High-frequency variants: MI300X-HF, MI308X-HF
 
 **AMD Radeon Series:**
-- nv21, nv31, nv32, gfx1200, gfx1201
+- nv21, nv31, nv32, gfx1200, gfx1201, gfx1151
 - RX9060, RX9070, RX9070GRE, R9600D
 
 ### Configuration files

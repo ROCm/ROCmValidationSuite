@@ -73,6 +73,8 @@ const std::map<uint16_t, std::string> gpu_dev_map = {
   {0x7590, "RX9060"},
   /* Navi 48 / gfx1201 (RDNA4) - default to RX9070; use -c for GRE/R9600D/gfx1201 */
   {0x7550, "RX9070"}, {0x7551, "RX9070"},
+  /* Strix Halo / gfx1151 (RDNA3.5 APU) - targets calibrated on Radeon 8060S (40 CU) */
+  {0x1586, "gfx1151"},
 };
 
 using std::vector;

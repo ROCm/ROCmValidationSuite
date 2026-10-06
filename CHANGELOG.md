@@ -8,6 +8,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 - Level-based test configurations (`-r` 1–5) for Radeon platforms: nv21, nv31, nv32, gfx1200, gfx1201, RX9060, RX9070, RX9070GRE, R9600D.
 - PCI device ID auto-detection for Radeon GPUs in `gpu_get_platform_name()`.
+- Support for gfx1151 (Strix Halo APU, Radeon 8060S): `conf/gfx1151/` GST, IET and level configurations, HIP kernels built for gfx1151.
 
 ### Changed
 
