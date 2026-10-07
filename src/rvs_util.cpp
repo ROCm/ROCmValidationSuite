@@ -346,6 +346,11 @@ std::string get_gpu_name (void) {
   return rvs::gpulist::gpu_get_platform_name () ;
 }
 
+std::string get_gpu_name_error (void) {
+
+  return rvs::gpulist::gpu_get_platform_error () ;
+}
+
 std::string rvs_get_rocm_install_path_string(void) {
 #ifdef FETCH_ROCMPATH_FROM_ROCMCORE
   char* installPath = nullptr;
