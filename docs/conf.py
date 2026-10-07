@@ -40,8 +40,8 @@ html_theme_options = {
 
 html_theme_options.update(
     {
-        "repository_url": "https://github.com/ROCm/rocm-systems",
-        "path_to_docs": "projects/rocshmem/docs",
+        "repository_url": "https://github.com/ROCm/ROCmValidationSuite",
+        "path_to_docs": "docs",
         "use_repository_button": True,
         "use_issues_button": True,
         "use_download_button": True,
