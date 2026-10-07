@@ -851,6 +851,32 @@ bool gpu_check_if_gpu_indexes (const std::vector <uint16_t> &index) {
 }
 
 /**
+ * @brief Explain why gpu_get_platform_name() returned no platform
+ * @param void
+ * @return error message for the -m and -r paths
+ **/
+std::string rvs::gpulist::gpu_get_platform_error (void) {
+
+  if (rvs::gpulist::device_id.empty()) {
+    return "No AMD GPU detected !";
+  }
+
+  uint16_t dev_id = rvs::gpulist::device_id[0];
+  for (auto id : rvs::gpulist::device_id) {
+    if (id != dev_id) {
+      return "GPUs with different device IDs detected; -m and -r need identical GPUs. "
+             "Use -c with a configuration file instead.";
+    }
+  }
+
+  char buff[256];
+  snprintf(buff, sizeof(buff),
+      "No platform configuration for the detected GPU (device ID 0x%04x). "
+      "Use -c with a configuration file for this GPU.", dev_id);
+  return buff;
+}
+
+/**
  * @brief Get GPU platform name
  * @param void
  * @return GPU plaform name if found, else null
