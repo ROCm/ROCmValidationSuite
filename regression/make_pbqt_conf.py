@@ -2,9 +2,8 @@
 
 import os
 import itertools
+import random
 import sys
-
-from random import sample
 
 # global variables
 module_name = "pbqt"
@@ -16,10 +15,19 @@ device_id = set()
 for root, dirs, files in os.walk('/sys/class/kfd/kfd/topology/nodes'):
     for name in files:
         if name == 'gpu_id':
-            gpuid = os.popen('cat {}'.format(os.path.join(root, name))).read().rstrip()
+            with open(os.path.join(root, name)) as gpu_file:
+                gpuid = gpu_file.read().rstrip()
             if gpuid not in ['0', '']:
-                devid = os.popen("grep 'device_id' {} | cut -f 2 -d ' '".format(os.path.join(root, 'properties'))).read().rstrip()
-                device_id.add(int(devid))
+                devid = ''
+                with open(os.path.join(root, 'properties')) as props_file:
+                    for line in props_file:
+                        if 'device_id' not in line:
+                            continue
+                        # Match: grep 'device_id' | cut -f 2 -d ' '
+                        fields = line.rstrip('\n').split(' ')
+                        devid = fields[1] if len(fields) > 1 else fields[0]
+                        break
+                device_id.add(int(devid.rstrip()))
                 gpu_ids.add(int(gpuid))
 
 log_interval   = [1000]
@@ -126,7 +134,7 @@ for test_bandwidth_f, log_interval_f, duration_f, bidirectional_f, parallel_f, d
         f.write('  duration: {}\n'.format(duration_f))
 
         if sample_size:
-            sample_gpus = sample(gpu_ids, sample_size)
+            sample_gpus = random.SystemRandom().sample(list(gpu_ids), sample_size)
             f.write('  peers:')
             for p in sample_gpus:
                 f.write(' {}'.format(p))

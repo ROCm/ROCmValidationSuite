@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import subprocess
+import subprocess  # nosec B404 # argument lists only; no shell
 import os
 import mmap
 import sys
@@ -31,7 +31,7 @@ conf_name      = sys.argv[3]
 console_usage  = sys.argv[4] # only true / false
 log_usage      = sys.argv[5] # only true / false
 json_usage     = sys.argv[6] # only true / false
-test_pass_fail = sys.argv[7] # only ttp / ttf
+expected_result = sys.argv[7] # only ttp / ttf
 debug_level    = sys.argv[8] # only 0,1,2,3,4,5
 
 # check input values
@@ -47,8 +47,8 @@ if not json_usage in ['true', 'false']:
    print("json_usage (argument 6) should be inside true /false")
    sys.exit(1)
 
-if not test_pass_fail in ['ttp', 'ttf']:
-   print("test_pass_fail (argument 7) should be inside true /false")
+if not expected_result in ['ttp', 'ttf']:
+   print("expected_result (argument 7) should be inside true /false")
    sys.exit(1)
 
 if not debug_level in ['0', '1', '2', '3', '4', '5']:
@@ -61,31 +61,36 @@ if not debug_level in ['0', '1', '2', '3', '4', '5']:
 # ./run_single_test /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pbqt0.conf 3 tmp_output_file.txt true tmp_console_file.txt
 
 # get current location
-curr_location = subprocess.check_output(["pwd"])
-curr_location_size = len(curr_location)
-curr_location = curr_location[0:curr_location_size-1]
+curr_location = os.getcwd()
 print(curr_location)
 
 # run test command
 if log_usage == 'true':
-   pass_log = bin_path + "/" + test_output_file_name
+   log_path = bin_path + "/" + test_output_file_name
 else:
-   pass_log = "no_log"
-
-test_cmd = "./run_single_test %s %s %s %s %s %s" % (bin_path, conf_name, debug_level, pass_log, json_usage, bin_path + "/" + test_console_file_name)
+   log_path = "no_log"
 
 os.chdir(rvs_path + "/regression")
-tst_result = os.system(test_cmd)
+run_single_test = os.path.join(rvs_path, "regression", "run_single_test")
+tst_result = subprocess.call([  # nosec B603
+   run_single_test,
+   bin_path,
+   conf_name,
+   debug_level,
+   log_path,
+   json_usage,
+   bin_path + "/" + test_console_file_name,
+])
 print("Test result is : %s" % (tst_result))
 os.chdir(curr_location)
 
 # check test to pass/fail first
-if test_pass_fail == 'ttp' and tst_result > 0:
+if expected_result == 'ttp' and tst_result > 0:
    print("Test is expected to pass with value 0, but return value is %s" %(tst_result))
    print(conf_name + " - FAIL")
    sys.exit(1)
 
-if test_pass_fail == 'ttf':
+if expected_result == 'ttf':
    if tst_result == 0:
       print("Test is expected to fail with value different than 0, but return value is %s" %(tst_result))
       print(conf_name + " - FAIL")
@@ -122,7 +127,8 @@ if json_usage == 'true' and log_usage == 'true':
    print("json_usage is True and log_usage is True")
    result_json = bin_path + "/" + test_output_file_name
 
-   json_result = os.system("./check_json_file.py " + result_json)
+   json_checker = os.path.join(curr_location, "check_json_file.py")
+   json_result = subprocess.call([json_checker, result_json])  # nosec B603
    if json_result == 1:
       print("Json file is invalid")
       test_result = False
