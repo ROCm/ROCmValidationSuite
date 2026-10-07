@@ -59,7 +59,7 @@ for i in range(0, num_runs):
       tst_result = subprocess.call(rvs_cmd_append)  # nosec B603
    # also check test result
    print("Test result is : %s" % (tst_result))
-   if tst_result > 0:
+   if tst_result != 0:
       print("Test is expected to pass with value 0, but return value is %s" %(tst_result))
       print(conf_name + " - FAIL")
       sys.exit(1)

@@ -85,7 +85,7 @@ print("Test result is : %s" % (tst_result))
 os.chdir(curr_location)
 
 # check test to pass/fail first
-if expected_result == 'ttp' and tst_result > 0:
+if expected_result == 'ttp' and tst_result != 0:
    print("Test is expected to pass with value 0, but return value is %s" %(tst_result))
    print(conf_name + " - FAIL")
    sys.exit(1)
