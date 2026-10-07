@@ -35,8 +35,18 @@ html_theme_options = {
     "header_title": f"ROCm™ RVS 1.6",
     "header_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.6/",
     "version_list_link": f"https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.6/versions.html",
-"link_main_doc": True,
+    "link_main_doc": True,
 }
+
+html_theme_options.update(
+    {
+        "repository_url": "https://github.com/ROCm/rocm-systems",
+        "path_to_docs": "projects/rocshmem/docs",
+        "use_repository_button": True,
+        "use_issues_button": True,
+        "use_download_button": True,
+    }
+)
 
 external_projects_current_project = "rocmvalidationsuite"
 external_toc_path = "./sphinx/_toc.yml"
