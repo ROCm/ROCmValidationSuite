@@ -2,6 +2,9 @@ defaults:
   numbered: False
 root: index
 subtrees:
+  - entries:
+      - file: release-notes.rst
+        title: Release notes
   - caption: Install
     entries:
       - file: install/installation.rst
