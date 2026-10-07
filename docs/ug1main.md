@@ -342,7 +342,7 @@ The configuration files in the top-level `conf/` folder are generic samples and 
 RVS includes optimized test configurations for a range of GPU families, organized under `conf/<GPU>/`. 
 Level-based configurations (usable with `-r`) are available for: MI300X, MI300X-HF, MI308X, MI308X-HF, MI325X, MI350X, MI355X, MI350P-450W, MI350P-600W, MI450X, nv21, nv31, nv32, gfx1200, gfx1201, RX9060, RX9070, RX9070GRE, R9600D.
 
-Radeon level suites omit HBM (babel) and XGMI (pbqt) tests that do not apply to consumer GPUs. GST `target_stress` and IET `target_power` values are sourced from each platform's `gst_single.conf` and `iet_single.conf`.
+Radeon level suites omit HBM (babel) and XGMI (pbqt) tests that do not apply to consumer GPUs. GST `target_stress` and IET `target_power` values are sourced from each platform's `gst_single.conf` and its IET config (`iet_stress.conf` where present, otherwise `iet_single.conf`).
 
 Navi 48 SKUs (RX9070, RX9070GRE, R9600D, gfx1201) share PCI device IDs `0x7550`/`0x7551`; RVS defaults to `RX9070`. Use `-c conf/<platform>/levels/rvs_level_N.conf` explicitly for other Navi 48 SKUs if auto-detection selects the wrong folder.
 
