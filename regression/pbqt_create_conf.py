@@ -3,10 +3,7 @@
 # This script only creates valid combinations, invalid ones will be created as special cases
 
 import os
-
-from random import seed
-from random import random
-from random import sample
+import random
 
 # global variables
 module_name = "demofile"
@@ -63,7 +60,7 @@ for test_bandwidth_f in test_bandwidth:
                             if sample_size == 0:
                                 f.write("  peers: all" + "\n")
                             else:
-                                sample_gpus = sample(gpu_ids, sample_size)
+                                sample_gpus = random.SystemRandom().sample(gpu_ids, sample_size)
                                 f.write("  peers:")
                                 for p in sample_gpus:
                                     f.write(" " + str(p))

@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
-import subprocess
+import subprocess  # nosec B404 # argument lists only; no shell
 import os
 import mmap
 import sys
 
 from shutil import copyfile
 
-curr_location = subprocess.check_output(["pwd"])
-curr_location_size = len(curr_location)
-curr_location = curr_location[0:curr_location_size-1]
+curr_location = os.getcwd()
 print('curr_location',curr_location)
 
 # set paths to build and ROCmValidationSuite folders
@@ -39,9 +37,9 @@ for conf in single_conf:
 print('conf_files',conf_files)
 
 # make them executable
-os.chdir(build_location)
-subprocess.call(["chmod", "+x", "build"])
-subprocess.call(["chmod", "+x", "run"])
+for script_name in ("build", "run"):
+    script_path = os.path.join(build_location, script_name)
+    os.chmod(script_path, os.stat(script_path).st_mode | 0o111)
 
 if not os.path.exists(regression_directory):
     os.makedirs(regression_directory)
@@ -62,7 +60,11 @@ while True:
     print('build_location',build_location)
     # run test
     os.chdir(build_location)
-    os.system("./run %s %s" % (conf_location + confname , regression_directory + "/log_" + confname + ".txt"))
+    subprocess.call([  # nosec B603
+        os.path.join(build_location, "run"),
+        conf_location + confname,
+        regression_directory + "/log_" + confname + ".txt",
+    ])
     
     # check json output
     result_json = regression_directory + "/log_" + confname + ".txt"

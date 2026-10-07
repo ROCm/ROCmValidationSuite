@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import subprocess
+import subprocess  # nosec B404 # argument lists only; no shell
 import os
 import mmap
 import sys
@@ -39,16 +39,14 @@ if not debug_level in ['0', '1', '2', '3', '4', '5']:
 # ./multi_run_and_check_json.py /work/igorhdl/ROCm2/build/bin /work/igorhdl/ROCm2/ROCmValidationSuite  /work/igorhdl/ROCm2/ROCmValidationSuite/rvs/conf/rand_pbqt0.conf 5 3
 
 # get current location
-curr_location = subprocess.check_output(["pwd"])
-curr_location_size = len(curr_location)
-curr_location = curr_location[0:curr_location_size-1]
+curr_location = os.getcwd()
 print(curr_location)
 
 # run test commands
 result_json = bin_path + "/" + test_output_file_name
 
-test_cmd_init = bin_path + "/rvs -d %s -c %s -l %s -j" % (debug_level, conf_name, result_json)
-test_cmd = test_cmd_init + " -a"
+rvs_cmd = [os.path.abspath(os.path.join(bin_path, "rvs")), "-d", debug_level, "-c", conf_name, "-l", result_json, "-j"]
+rvs_cmd_append = rvs_cmd + ["-a"]
 
 # start running tests
 os.chdir(rvs_path + "/regression")
@@ -56,9 +54,9 @@ os.chdir(rvs_path + "/regression")
 for i in range(0, num_runs):
    print("Iteration %d" % (i))
    if i == 0:
-      tst_result = os.system(test_cmd_init)
+      tst_result = subprocess.call(rvs_cmd)  # nosec B603
    else:
-      tst_result = os.system(test_cmd)
+      tst_result = subprocess.call(rvs_cmd_append)  # nosec B603
    # also check test result
    print("Test result is : %s" % (tst_result))
    if tst_result > 0:
@@ -71,7 +69,8 @@ os.chdir(curr_location)
 # result test pass/fail
 test_result = True
 
-json_result = os.system("./check_json_file.py " + result_json)
+json_checker = os.path.join(curr_location, "check_json_file.py")
+json_result = subprocess.call([json_checker, result_json])  # nosec B603
 if json_result == 1:
    print("Json file is invalid")
    test_result = False
