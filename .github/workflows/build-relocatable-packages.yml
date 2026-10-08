@@ -278,7 +278,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ matrix.branch }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || matrix.branch }}
           submodules: recursive
           fetch-depth: 0
 
@@ -476,7 +476,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ matrix.branch }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || matrix.branch }}
           submodules: recursive
           fetch-depth: 0
 
