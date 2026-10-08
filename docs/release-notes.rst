@@ -2,16 +2,9 @@
    :description: ROCm Validation Suite release notes
    :keywords: ROCm Validation Suite, RVS, release notes, ROCm
 
-.. _release-notes:
-
-*************
-Release notes
-*************
-
-.. _rvs-1.6.0:
-
-ROCm Validation Suite 1.6.0 release notes
-==========================================
+***********************************************
+ROCm Validation Suite (RVS) 1.6.0 release notes
+***********************************************
 
 These release notes describe notable changes since the previous RVS release.
 
