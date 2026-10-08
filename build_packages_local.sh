@@ -24,7 +24,7 @@ ROCM_INSTALL_DIR="$HOME/rocm-sdk"
 #
 # Local builds: if ROCM_VERSION is unset (channel auto, no release listing env), latest *nightly* is fetched.
 # If ROCM_VERSION is set, tarball base follows format:
-# - Nightly: x.y.za<date> (e.g. 7.11.0a20260121) → nightly base URL
+# - Nightly: x.y.za<date> (e.g. 7.11.0a20260121) or X.Y.Z.dev0+<sha> → nightly base URL
 # - Release: X.Y.Z (e.g. 7.11.0) → release base URL
 #
 # ROCM_SDK_CHANNEL: nightly | release | auto (default auto).
@@ -85,10 +85,10 @@ fi
 #   HTTP PUT:    UPLOAD_TARGET="http://localhost:8080"
 #                (use with packages_server/ nginx setup for auto directory creation)
 #
-# Internal-only convenience: if UPLOAD_TARGET is unset, set RVS_AUTO_DETECT_LOCAL_UPLOAD=1
-# (e.g. in workflow env or shell) to probe http://localhost:8080/ once and use it when
-# something responds. Default is off so external/CI builds never curl localhost; GitHub
-# uploads use the workflow S3 steps, not Step 6 of this script.
+# Optional convenience: if UPLOAD_TARGET is unset, set
+# RVS_AUTO_DETECT_LOCAL_UPLOAD=1 to probe http://localhost:8080/ once and use
+# it when something responds. The default is off to avoid unexpected probes.
+# GitHub uploads use workflow upload steps, not Step 6 of this script.
 #
 # UPLOAD_REPO overrides the repo name in the upload path (auto-detected from git remote).
 if [ -z "${UPLOAD_TARGET:-}" ] && [ -n "${RVS_AUTO_DETECT_LOCAL_UPLOAD:-}" ]; then
@@ -195,11 +195,13 @@ report_hip_device_lib_path_failure() {
     print_error "see https://github.com/ROCm/TheRock/issues/74"
 }
 
-# Join base URL and filename without duplicate slashes
+# Join base URL and filename without duplicate slashes.
+# Percent-encode '+' so versioned filenames address the exact object.
 join_base_and_file() {
     local base="$1"
     local path="$2"
     base="${base%/}"
+    path="${path//+/%2B}"
     printf '%s/%s' "$base" "$path"
 }
 
@@ -207,9 +209,9 @@ join_base_and_file() {
 # Nightly: x.y.za<digits>  Release: X.Y.Z (three-part semver only)
 apply_sdk_tarball_base_for_version() {
     local v="$1"
-    if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+'; then
+    if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|\.dev0\+[0-9a-f]+)'; then
         ROCM_SDK_BASE_URL="${ROCM_SDK_NIGHTLY_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_NIGHTLY_BASE_DEFAULT}}"
-        print_info "Version matches ROCm nightly format (x.y.za…) → tarball base: $ROCM_SDK_BASE_URL"
+        print_info "Version matches ROCm nightly format → tarball base: $ROCM_SDK_BASE_URL"
     elif echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
         ROCM_SDK_BASE_URL="${ROCM_SDK_RELEASE_BASE_URL:-${ROCM_SDK_BASE_URL:-$_ROCM_RELEASE_BASE_DEFAULT}}"
         print_info "Version matches ROCm release format (X.Y.Z) → tarball base: $ROCM_SDK_BASE_URL"
@@ -217,13 +219,13 @@ apply_sdk_tarball_base_for_version() {
 }
 
 # Validate ROCM_VERSION after parsing an SDK listing (not -tests- or other variants).
-# mode: nightly (x.y.za<digits>) or release (X.Y.Z)
+# mode: nightly (x.y.za<digits> or X.Y.Z.dev0+<sha>) or release (X.Y.Z)
 validate_rocm_version_string() {
     local v="$1"
     local mode="$2"
     case "$mode" in
         nightly)
-            if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+$'; then
+            if echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|\.dev0\+[0-9a-f]+)$'; then
                 return 0
             fi
             ;;
@@ -307,11 +309,76 @@ PY
     printf '%s\n' "$versions"
 }
 
+# Support the family aliases and version formats used by SDK listings.
+sdk_tarball_family_candidates() {
+    local fam="$1"
+    printf '%s\n' "$fam"
+    case "$fam" in
+        gfx950-dcgpu) printf '%s\n' gfx950 ;;
+        gfx94X-dcgpu) printf '%s\n' gfx942 ;;
+    esac
+}
+
+# Pick the newest nightly SDK. Prints "family<TAB>version".
+# Uses mtime when the index provides it; otherwise highest x.y.za<date>.
+pick_latest_nightly_sdk() {
+    local listing_file="$1"
+    shift
+    python3 - "$listing_file" "$@" <<'PY'
+import re
+import sys
+
+listing_path = sys.argv[1]
+families = sys.argv[2:]
+ver = r"[0-9]+\.[0-9]+\.[0-9]+(?:a[0-9]+|\.dev0\+[0-9a-f]+)"
+text = open(listing_path, encoding="utf-8", errors="replace").read()
+
+def rows_for(fam):
+    timed = re.findall(
+        r'"name"\s*:\s*"therock-dist-linux-'
+        + re.escape(fam)
+        + r"-("
+        + ver
+        + r')\.tar\.gz"\s*,\s*"mtime"\s*:\s*([0-9]+(?:\.[0-9]+)?)',
+        text,
+    )
+    if timed:
+        return [(float(mt), version) for version, mt in timed]
+    plain = re.findall(
+        r"therock-dist-linux-" + re.escape(fam) + r"-(" + ver + r")\.tar\.gz",
+        text,
+    )
+    return [(None, version) for version in plain]
+
+def version_key(version):
+    match = re.match(
+        r"(\d+)\.(\d+)\.(\d+)(?:a(\d+)|\.dev0\+[0-9a-f]+)$",
+        version,
+    )
+    if not match:
+        return (0, 0, 0, 0)
+    major, minor, patch, date = match.groups()
+    return (int(major), int(minor), int(patch), int(date or 0))
+
+for fam in families:
+    rows = rows_for(fam)
+    if not rows:
+        continue
+    dated = [row for row in rows if row[0] is not None]
+    if dated:
+        _mtime, version = max(dated, key=lambda row: row[0])
+    else:
+        version = max((row[1] for row in rows), key=version_key)
+    print(f"{fam}\t{version}")
+    break
+PY
+}
+
 # Function to fetch latest ROCm version for specified GPU family
-# Sets the global ROCM_VERSION variable directly
+# Sets the global ROCM_VERSION and SDK_TARBALL_FAMILY variables directly
 fetch_latest_rocm_version() {
     local gpu_family="$1"
-    local listing_tmp latest_version listing_bytes
+    local listing_tmp latest_version listing_bytes resolved picked_family
 
     print_info "Fetching latest ROCm version for $gpu_family..."
     print_info "Index URL: $ROCM_SDK_INDEX_URL"
@@ -329,15 +396,26 @@ fetch_latest_rocm_version() {
     fi
 
     listing_bytes=$(wc -c < "$listing_tmp" | tr -d ' ')
-    latest_version=$(collect_sdk_versions_from_listing_file "$listing_tmp" "$gpu_family" nightly \
-        | sort -V | tail -1)
+    if ! command -v python3 >/dev/null 2>&1; then
+        print_error "python3 is required to choose a nightly SDK tarball"
+        rm -f "$listing_tmp"
+        return 1
+    fi
+    # shellcheck disable=SC2046
+    resolved=$(pick_latest_nightly_sdk "$listing_tmp" $(sdk_tarball_family_candidates "$gpu_family"))
     rm -f "$listing_tmp"
 
-    if [ -z "$latest_version" ]; then
+    if [ -z "$resolved" ]; then
         print_error "Could not fetch latest ROCm nightly version for $gpu_family from $ROCM_SDK_INDEX_URL"
-        print_error "Listing was ${listing_bytes} bytes but no SDK tarballs matched therock-dist-linux-${gpu_family}-<x.y.za...>"
+        print_error "Listing was ${listing_bytes} bytes but no SDK tarballs matched therock-dist-linux-${gpu_family}-<x.y.za...> or <X.Y.Z.dev0+sha>"
         print_error "(-tests- tarballs are excluded; do not filter the listing with grep -v on whole lines)"
         return 1
+    fi
+
+    picked_family="${resolved%%$'\t'*}"
+    latest_version="${resolved#*$'\t'}"
+    if [ "$picked_family" != "$gpu_family" ]; then
+        print_info "Nightly index has no ${gpu_family} SDK tarball; using ${picked_family}"
     fi
 
     if ! validate_rocm_version_string "$latest_version" nightly; then
@@ -346,6 +424,7 @@ fetch_latest_rocm_version() {
 
     print_success "Found latest ROCm version: $latest_version"
     ROCM_VERSION="$latest_version"
+    SDK_TARBALL_FAMILY="$picked_family"
     return 0
 }
 
@@ -782,7 +861,8 @@ echo ""
 
 # Step 1: Download ROCm SDK
 print_info "Step 1: Downloading ROCm SDK tarball..."
-TARBALL_URL=$(join_base_and_file "$ROCM_SDK_BASE_URL" "therock-dist-linux-${GPU_FAMILY}-${ROCM_VERSION}.tar.gz")
+SDK_TARBALL_FAMILY="${SDK_TARBALL_FAMILY:-$GPU_FAMILY}"
+TARBALL_URL=$(join_base_and_file "$ROCM_SDK_BASE_URL" "therock-dist-linux-${SDK_TARBALL_FAMILY}-${ROCM_VERSION}.tar.gz")
 TARBALL_FILE="$ROCM_INSTALL_DIR/rocm-sdk.tar.gz"
 
 mkdir -p "$ROCM_INSTALL_DIR"
