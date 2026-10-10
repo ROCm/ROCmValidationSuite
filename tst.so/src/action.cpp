@@ -460,6 +460,12 @@ bool tst_action::do_thermal_test(map<int, uint16_t> tst_gpus_device_index) {
 
     sleep(1000);
 
+    for (size_t i = 0; i < tst_gpus_device_index.size(); i++) {
+        if (false == workers[i].get_result())
+            return false;
+    }
+
+    /* TST action passed */
     return true;
 }
 
