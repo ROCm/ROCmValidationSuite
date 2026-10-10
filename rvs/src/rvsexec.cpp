@@ -377,6 +377,13 @@ int rvs::exec::run() {
     return -1;
   }
 
+  // a failed action makes the run fail (see Exit Status in docs/cli.md)
+  for (const auto& action : action_details) {
+    if (!action.result) {
+      return 1;
+    }
+  }
+
   DTRACE_
   return 0;
 }
