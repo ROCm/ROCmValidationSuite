@@ -139,7 +139,7 @@ int rvs::exec::run() {
     }
 
     if(plaftorm_name.empty()) {
-      rvs::logger::Err("No test levels support for the detected GPU or no GPU detected !", MODULE_NAME_CAPS);
+      rvs::logger::Err(get_gpu_name_error().c_str(), MODULE_NAME_CAPS);
       return -1;
     }
 
@@ -194,7 +194,7 @@ int rvs::exec::run() {
 
     std::string platform_name = get_gpu_name();
     if (platform_name.empty()) {
-      rvs::logger::Err("No platform support for the detected GPU or no GPU detected !", MODULE_NAME_CAPS);
+      rvs::logger::Err(get_gpu_name_error().c_str(), MODULE_NAME_CAPS);
       return -1;
     }
 
