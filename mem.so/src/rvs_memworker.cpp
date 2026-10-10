@@ -29,6 +29,7 @@
 #include <iostream>
 #include <sys/time.h>
 #include <mutex>
+#include <algorithm>
 
 #include "hip/hip_runtime.h"
 #include "include/rvs_memworker.h"
@@ -60,8 +61,10 @@ rvs_memtest_t rvs_memtests[]={
 };
 
 void MemWorker::init_tests(const std::vector<uint32_t>& exclude_list){
-	for(const auto& testidx : exclude_list){
-		rvs_memtests[testidx].enabled = 0;
+	// Reset every entry: the table is global and shared by all mem actions in a run.
+	for (unsigned int i = 0; i < DIM(rvs_memtests); i++) {
+		rvs_memtests[i].enabled =
+			std::find(exclude_list.begin(), exclude_list.end(), i) == exclude_list.end();
 	}
 }
 #if 0
@@ -122,6 +125,8 @@ void MemWorker::run_tests(char* ptr, unsigned int tot_num_blocks)
     Initialization();
 
     for (i = 0; i < DIM(rvs_memtests); i++){
+          if (!rvs_memtests[i].enabled)
+            continue;
           gettimeofday(&t0, NULL);
 	  err = 0;
           rvs_memtests[i].func(ptr, tot_num_blocks, &err);
