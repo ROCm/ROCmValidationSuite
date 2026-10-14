@@ -5,6 +5,7 @@
 #   ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-ubuntu22.04 \
 #     --from-tarball amdrocm10-rvs-...-Linux.tar.gz
 
+# Already tagged, so DS-0001 did not flag this image. Not a digest.
 FROM ubuntu:22.04
 
 ARG ROCM_VERSION

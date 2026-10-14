@@ -3,13 +3,20 @@
 #
 # Build:
 #   ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-rhel8 --channel nightly
+#
+# rockylinux:8 already had a tag, so DS-0001 did not flag it. It still floats
+# within 8.x and is not a digest, matching ubi9:9.
 
 FROM rockylinux:8
 
 ARG ROCM_VERSION
 ARG ROCM_REPO_BASEURL
 ARG RVS_REPO_BASEURL
-ARG ROCM_GPG_KEY=https://stable.repo.amd.com/rocm/gpg/packages.gpg
+# Public key URL, not a secret. gpgcheck stays 0: nightly ROCm RPMs are
+# unsigned, so this rename does not enable signature verification.
+# ROCM_GPG_KEY is the previous build-arg. ROCM_GPG_URL wins when both are set.
+ARG ROCM_GPG_KEY
+ARG ROCM_GPG_URL
 ARG GPU_TARGET=multiarch
 ARG ROCM_PACKAGE
 ARG RVS_PACKAGE
@@ -21,7 +28,8 @@ RUN dnf -y update \
 
 RUN test -n "${ROCM_REPO_BASEURL}" && test -n "${RVS_REPO_BASEURL}"
 
-# Nightly ROCm RPMs are unsigned; gpgcheck=0 is required.
+# Nightly ROCm RPMs are unsigned; gpgcheck=0 is required. The GPG URL is only
+# written into the repo file. It is not used to verify packages.
 # Default GPU_TARGET=multiarch installs the ISA-less meta (e.g. amdrocm10.1).
 # Set GPU_TARGET=gfx942 (etc.) for a single-ISA package.
 RUN printf '%s\n' \
@@ -30,7 +38,7 @@ RUN printf '%s\n' \
       "baseurl=${ROCM_REPO_BASEURL}" \
       'enabled=1' \
       'gpgcheck=0' \
-      "gpgkey=${ROCM_GPG_KEY}" \
+      "gpgkey=${ROCM_GPG_URL:-${ROCM_GPG_KEY:-https://stable.repo.amd.com/rocm/gpg/packages.gpg}}" \
     | tee /etc/yum.repos.d/amdrocm-nightly.repo \
     && dnf clean all \
     && if [ -n "${ROCM_PACKAGE}" ]; then \
@@ -50,7 +58,7 @@ COPY install-rvs.sh /tmp/install-rvs.sh
 RUN chmod +x /tmp/install-rvs.sh \
     && RVS_REPO_BASEURL="${RVS_REPO_BASEURL}" \
        RVS_PACKAGE="${RVS_PACKAGE}" \
-       ROCM_GPG_KEY="${ROCM_GPG_KEY}" \
+       ROCM_GPG_URL="${ROCM_GPG_URL:-${ROCM_GPG_KEY:-https://stable.repo.amd.com/rocm/gpg/packages.gpg}}" \
        /tmp/install-rvs.sh \
     && rm -f /tmp/install-rvs.sh
 
