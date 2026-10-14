@@ -5,6 +5,7 @@
 #   ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm \
 #     --rocm-version 10.1.0a20260819 --gpu-family multiarch
 
+# Already tagged, so DS-0001 did not flag this image. Not a digest.
 FROM ubuntu:24.04
 
 ARG ROCM_VERSION

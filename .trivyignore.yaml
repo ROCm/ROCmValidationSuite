@@ -21,3 +21,8 @@ misconfigurations:
       - ".github/docker/rvs-nightly-rocm-rhel9/Dockerfile"
       - ".github/docker/rvs-nightly-rocm-manylinux_2_28/Dockerfile"
     statement: These images are short-lived GPU test containers, not services that need a health check.
+  - id: DS-0031
+    paths:
+      - ".github/docker/rvs-nightly-rocm-rhel8/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-rhel9/Dockerfile"
+    statement: ARG ROCM_GPG_KEY is the old name for a public GPG key URL, kept so direct docker build --build-arg still works. gpgcheck stays 0 because nightly RPMs are unsigned. This is not a secret and not signature verification.

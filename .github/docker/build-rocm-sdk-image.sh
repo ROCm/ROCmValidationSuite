@@ -29,7 +29,8 @@ GPU_TARGET="${GPU_TARGET:-multiarch}"
 RESOLVE_ONLY=false
 ROCM_REPO_BASEURL="${ROCM_REPO_BASEURL:-}"
 RVS_REPO_BASEURL="${RVS_REPO_BASEURL:-}"
-# ROCM_GPG_KEY remains accepted so existing callers keep working.
+# ROCM_GPG_URL wins. ROCM_GPG_KEY is the previous env and build-arg name.
+# Both are a public key URL. The Dockerfiles still write gpgcheck=0.
 ROCM_GPG_URL="${ROCM_GPG_URL:-${ROCM_GPG_KEY:-}}"
 ROCM_PACKAGE="${ROCM_PACKAGE:-}"
 RVS_PACKAGE="${RVS_PACKAGE:-}"
