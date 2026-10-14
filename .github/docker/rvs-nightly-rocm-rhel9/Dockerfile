@@ -4,12 +4,12 @@
 # Build:
 #   ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-rhel9 --channel nightly
 
-FROM redhat/ubi9
+FROM redhat/ubi9:9
 
 ARG ROCM_VERSION
 ARG ROCM_REPO_BASEURL
 ARG RVS_REPO_BASEURL
-ARG ROCM_GPG_KEY=https://stable.repo.amd.com/rocm/gpg/packages.gpg
+ARG ROCM_GPG_URL=https://stable.repo.amd.com/rocm/gpg/packages.gpg
 ARG GPU_TARGET=multiarch
 ARG ROCM_PACKAGE
 ARG RVS_PACKAGE
@@ -30,7 +30,7 @@ RUN printf '%s\n' \
       "baseurl=${ROCM_REPO_BASEURL}" \
       'enabled=1' \
       'gpgcheck=0' \
-      "gpgkey=${ROCM_GPG_KEY}" \
+      "gpgkey=${ROCM_GPG_URL}" \
     | tee /etc/yum.repos.d/amdrocm-nightly.repo \
     && dnf clean all \
     && if [ -n "${ROCM_PACKAGE}" ]; then \
@@ -50,7 +50,7 @@ COPY install-rvs.sh /tmp/install-rvs.sh
 RUN chmod +x /tmp/install-rvs.sh \
     && RVS_REPO_BASEURL="${RVS_REPO_BASEURL}" \
        RVS_PACKAGE="${RVS_PACKAGE}" \
-       ROCM_GPG_KEY="${ROCM_GPG_KEY}" \
+       ROCM_GPG_URL="${ROCM_GPG_URL}" \
        /tmp/install-rvs.sh \
     && rm -f /tmp/install-rvs.sh
 

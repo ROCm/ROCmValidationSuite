@@ -5,7 +5,7 @@ set -euo pipefail
 
 RVS_REPO_BASEURL="${RVS_REPO_BASEURL:?}"
 RVS_PACKAGE="${RVS_PACKAGE:-amdrocm-rvs}"
-ROCM_GPG_KEY="${ROCM_GPG_KEY:-https://stable.repo.amd.com/rocm/gpg/packages.gpg}"
+ROCM_GPG_URL="${ROCM_GPG_URL:-https://stable.repo.amd.com/rocm/gpg/packages.gpg}"
 
 printf '%s\n' \
   '[rvs]' \
@@ -13,7 +13,7 @@ printf '%s\n' \
   "baseurl=${RVS_REPO_BASEURL}" \
   'enabled=1' \
   'gpgcheck=0' \
-  "gpgkey=${ROCM_GPG_KEY}" \
+  "gpgkey=${ROCM_GPG_URL}" \
   'priority=50' \
   | tee /etc/yum.repos.d/rvs.repo
 

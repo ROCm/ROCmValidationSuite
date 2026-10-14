@@ -1,0 +1,23 @@
+# Nightly GPU test images install packages with apt, yum, or dnf and run as
+# root so they can use /dev/kfd and /dev/dri. They are not long-running
+# services, so a non-root USER and a HEALTHCHECK do not belong here.
+# Trivy loads this file with: trivy --ignorefile .trivyignore.yaml
+misconfigurations:
+  - id: DS-0002
+    paths:
+      - ".github/docker/rvs-nightly-rocm/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-ubuntu22.04/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-ubuntu26.04/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-rhel8/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-rhel9/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-manylinux_2_28/Dockerfile"
+    statement: These images stay root so package installs and GPU device access keep working.
+  - id: DS-0026
+    paths:
+      - ".github/docker/rvs-nightly-rocm/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-ubuntu22.04/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-ubuntu26.04/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-rhel8/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-rhel9/Dockerfile"
+      - ".github/docker/rvs-nightly-rocm-manylinux_2_28/Dockerfile"
+    statement: These images are short-lived GPU test containers, not services that need a health check.
