@@ -363,9 +363,22 @@ docker_gpu_opts() {
   echo --ipc=host --network=host \
     --device=/dev/kfd \
     --device=/dev/dri \
-    --group-add video \
     --cap-add=SYS_PTRACE \
     --security-opt seccomp=unconfined
+}
+
+# Host GIDs of video and render. Passing the names would use the image GIDs,
+# which often do not own /dev/kfd and /dev/dri on the machine running docker.
+host_gpu_group_adds() {
+  local name gid
+  for name in video render; do
+    gid="$(getent group "$name" | cut -d: -f3)"
+    if [ -z "$gid" ]; then
+      echo "::error::Host group ${name} is required so the container user can open GPU devices." >&2
+      return 1
+    fi
+    printf -- '--group-add %s ' "$gid"
+  done
 }
 
 check_docker_local() {
@@ -388,20 +401,25 @@ check_docker_on_target() {
 docker_run_local() {
   check_docker_local
   local -a install_mount=()
-  local rocm_path
+  local rocm_path group_adds
   rocm_path="$(container_rocm_path)"
+  group_adds="$(host_gpu_group_adds)"
+  mkdir -p "${REPO_ROOT}/reports"
+  chmod a+rwx "${REPO_ROOT}/reports"
   if ! rvs_in_image && [ -n "${INSTALL_DIR:-}" ] && [ -n "${REMOTE_WORK_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
     local host_install
     host_install="$(target_rvs_install_dir)"
     mkdir -p "$host_install"
+    chmod a+rwx "$host_install"
     install_mount=(-v "${host_install}:${INSTALL_DIR}")
   fi
   if ! rvs_in_image && [ -n "${TARBALL_NAME:-}" ] && [ -f "${REPO_ROOT}/pkg/${TARBALL_NAME}" ]; then
     install_mount+=(-v "${REPO_ROOT}/pkg/${TARBALL_NAME}:/pkg/${TARBALL_NAME}:ro")
   fi
-  # shellcheck disable=SC2046
+  # shellcheck disable=SC2046,SC2086
   docker run --rm \
     $(docker_gpu_opts) \
+    ${group_adds} \
     "${install_mount[@]}" \
     -v "${REPO_ROOT}/reports:/reports" \
     -w /workspace \
@@ -416,18 +434,20 @@ target_docker_run() {
   require_env REMOTE_WORK_DIR
   check_docker_on_target
   local inner_cmd="$1"
-  local gpu_opts install_vol pkg_path pkg_mount remote_dirs escaped
+  local gpu_opts install_vol pkg_path pkg_mount remote_dirs writable_dirs escaped
   gpu_opts=$(docker_gpu_opts)
   install_vol=""
   pkg_path=""
   pkg_mount=""
   remote_dirs="'${REMOTE_WORK_DIR}/reports' '${REMOTE_WORK_DIR}/workspace' '${REMOTE_WORK_DIR}/pkg'"
+  writable_dirs="'${REMOTE_WORK_DIR}/reports' '${REMOTE_WORK_DIR}/workspace'"
   local rocm_path
   rocm_path="$(container_rocm_path)"
   if ! rvs_in_image && [ -n "${INSTALL_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
     install_vol="-v ${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}:${INSTALL_DIR}"
     # Pre-create so docker does not make a root-owned extras dir.
     remote_dirs="${remote_dirs} '${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}'"
+    writable_dirs="${writable_dirs} '${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}'"
   fi
   if ! rvs_in_image && [ -n "${TARBALL_NAME:-}" ]; then
     pkg_path="${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
@@ -440,11 +460,20 @@ target_docker_run() {
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
 set -euo pipefail
 mkdir -p ${remote_dirs}
+chmod a+rwx ${writable_dirs}
+video_gid="\$(getent group video | cut -d: -f3)"
+render_gid="\$(getent group render | cut -d: -f3)"
+if [ -z "\$video_gid" ] || [ -z "\$render_gid" ]; then
+  echo "::error::Target groups video and render are required so the container user can open GPU devices." >&2
+  exit 1
+fi
 pkg_vol=""
 if [ -n '${pkg_path}' ] && [ -f '${pkg_path}' ]; then
   pkg_vol='${pkg_mount}'
 fi
 docker run --rm ${gpu_opts} \
+  --group-add "\$video_gid" \
+  --group-add "\$render_gid" \
   ${install_vol} \
   \${pkg_vol} \
   -v '${REMOTE_WORK_DIR}/reports:/reports' \

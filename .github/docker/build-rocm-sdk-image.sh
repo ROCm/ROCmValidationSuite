@@ -29,7 +29,8 @@ GPU_TARGET="${GPU_TARGET:-multiarch}"
 RESOLVE_ONLY=false
 ROCM_REPO_BASEURL="${ROCM_REPO_BASEURL:-}"
 RVS_REPO_BASEURL="${RVS_REPO_BASEURL:-}"
-ROCM_GPG_KEY="${ROCM_GPG_KEY:-}"
+# Public key URL passed to the RHEL images as ROCM_GPG_URL.
+ROCM_GPG_URL="${ROCM_GPG_URL:-}"
 ROCM_PACKAGE="${ROCM_PACKAGE:-}"
 RVS_PACKAGE="${RVS_PACKAGE:-}"
 ROCM_MAJOR=""
@@ -226,8 +227,8 @@ init_rhel_dist() {
   if [ -z "$RVS_REPO_BASEURL" ]; then
     RVS_REPO_BASEURL="${!rvs_var:-}"
   fi
-  if [ -z "$ROCM_GPG_KEY" ]; then
-    ROCM_GPG_KEY="${!gpg_var:-https://stable.repo.amd.com/rocm/gpg/packages.gpg}"
+  if [ -z "$ROCM_GPG_URL" ]; then
+    ROCM_GPG_URL="${!gpg_var:-https://stable.repo.amd.com/rocm/gpg/packages.gpg}"
   fi
   RVS_NIGHTLY_REPO_DEFAULT="https://nightly.repo.amd.com/rocm/extras/rvs/packages/${RHEL_DIST}/x86_64"
   RVS_STABLE_REPO_DEFAULT="https://stable.repo.amd.com/rocm/extras/rvs/packages/${RHEL_DIST}/x86_64"
@@ -389,7 +390,7 @@ build_yum_image() {
     --build-arg "ROCM_VERSION=${ROCM_VERSION}"
     --build-arg "ROCM_REPO_BASEURL=${ROCM_REPO_BASEURL}"
     --build-arg "RVS_REPO_BASEURL=${RVS_REPO_BASEURL}"
-    --build-arg "ROCM_GPG_KEY=${ROCM_GPG_KEY}"
+    --build-arg "ROCM_GPG_URL=${ROCM_GPG_URL}"
     --build-arg "GPU_TARGET=${GPU_TARGET}"
     --build-arg "ROCM_INSTALL_PATH=${ROCM_INSTALL_PATH}"
   )
