@@ -372,7 +372,11 @@ docker_gpu_opts() {
 host_gpu_group_adds() {
   local name gid
   for name in video render; do
-    gid="$(getent group "$name" | cut -d: -f3)"
+    # pipefail would abort on getent's exit 2 before the error below.
+    if ! gid="$(getent group "$name" | cut -d: -f3)"; then
+      echo "::error::Host group ${name} is required so the container user can open GPU devices." >&2
+      return 1
+    fi
     if [ -z "$gid" ]; then
       echo "::error::Host group ${name} is required so the container user can open GPU devices." >&2
       return 1
@@ -405,12 +409,13 @@ docker_run_local() {
   rocm_path="$(container_rocm_path)"
   group_adds="$(host_gpu_group_adds)"
   mkdir -p "${REPO_ROOT}/reports"
-  chmod a+rwx "${REPO_ROOT}/reports"
+  # Directory mode only. Existing files are removed by the caller before tee or tar.
+  chmod 1777 "${REPO_ROOT}/reports"
   if ! rvs_in_image && [ -n "${INSTALL_DIR:-}" ] && [ -n "${REMOTE_WORK_DIR:-}" ] && [ -n "${ROCM_MAJOR:-}" ]; then
     local host_install
     host_install="$(target_rvs_install_dir)"
+    # Do not widen this directory. It holds the rvs binary after install.
     mkdir -p "$host_install"
-    chmod a+rwx "$host_install"
     install_mount=(-v "${host_install}:${INSTALL_DIR}")
   fi
   if ! rvs_in_image && [ -n "${TARBALL_NAME:-}" ] && [ -f "${REPO_ROOT}/pkg/${TARBALL_NAME}" ]; then
@@ -440,6 +445,7 @@ target_docker_run() {
   pkg_path=""
   pkg_mount=""
   remote_dirs="'${REMOTE_WORK_DIR}/reports' '${REMOTE_WORK_DIR}/workspace' '${REMOTE_WORK_DIR}/pkg'"
+  # reports and workspace are work dirs. The extras install tree is not.
   writable_dirs="'${REMOTE_WORK_DIR}/reports' '${REMOTE_WORK_DIR}/workspace'"
   local rocm_path
   rocm_path="$(container_rocm_path)"
@@ -447,7 +453,6 @@ target_docker_run() {
     install_vol="-v ${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}:${INSTALL_DIR}"
     # Pre-create so docker does not make a root-owned extras dir.
     remote_dirs="${remote_dirs} '${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}'"
-    writable_dirs="${writable_dirs} '${REMOTE_WORK_DIR}/extras-${ROCM_MAJOR}'"
   fi
   if ! rvs_in_image && [ -n "${TARBALL_NAME:-}" ]; then
     pkg_path="${REMOTE_WORK_DIR}/pkg/${TARBALL_NAME}"
@@ -460,11 +465,21 @@ target_docker_run() {
   ssh -q -F "$SSH_CONFIG_FILE" rvs-target bash -s <<REMOTE
 set -euo pipefail
 mkdir -p ${remote_dirs}
-chmod a+rwx ${writable_dirs}
-video_gid="\$(getent group video | cut -d: -f3)"
-render_gid="\$(getent group render | cut -d: -f3)"
-if [ -z "\$video_gid" ] || [ -z "\$render_gid" ]; then
-  echo "::error::Target groups video and render are required so the container user can open GPU devices." >&2
+chmod 1777 ${writable_dirs}
+if ! video_gid="\$(getent group video | cut -d: -f3)"; then
+  echo "::error::Target group video is required so the container user can open GPU devices." >&2
+  exit 1
+fi
+if [ -z "\$video_gid" ]; then
+  echo "::error::Target group video is required so the container user can open GPU devices." >&2
+  exit 1
+fi
+if ! render_gid="\$(getent group render | cut -d: -f3)"; then
+  echo "::error::Target group render is required so the container user can open GPU devices." >&2
+  exit 1
+fi
+if [ -z "\$render_gid" ]; then
+  echo "::error::Target group render is required so the container user can open GPU devices." >&2
   exit 1
 fi
 pkg_vol=""
@@ -764,6 +779,18 @@ cmd_install_rvs() {
     fi
   fi
 
+  # Drop a previous root-owned tree. chmod on the directory does not make those files writable.
+  local host_install
+  host_install="$(target_rvs_install_dir)"
+  if use_target_docker; then
+    require_ssh_config
+    ssh -q -F "$SSH_CONFIG_FILE" rvs-target "rm -rf '${host_install}' && mkdir -p '${host_install}' && chmod 1777 '${host_install}'"
+  else
+    rm -rf "$host_install"
+    mkdir -p "$host_install"
+    chmod 1777 "$host_install"
+  fi
+
   docker_run "
     source /etc/profile.d/rocm-env.sh
     set -euo pipefail
@@ -786,6 +813,12 @@ cmd_install_rvs() {
     ldd \"\${RVS_BIN}\" | grep 'not found' && exit 1 || true
     \"\${RVS_BIN}\" --version
   "
+  # The directory held the extract. The installed files stay as tar wrote them.
+  if use_target_docker; then
+    ssh -q -F "$SSH_CONFIG_FILE" rvs-target "chmod 755 '${host_install}'"
+  else
+    chmod 755 "$host_install"
+  fi
 }
 
 cmd_run_level4() {
@@ -810,6 +843,13 @@ cmd_run_level4() {
   fi
 
   mkdir -p "${REPO_ROOT}/reports"
+  # tee opens this path in place. A root-owned log from an earlier run is not writable by rvs.
+  if use_target_docker; then
+    require_ssh_config
+    ssh -q -F "$SSH_CONFIG_FILE" rvs-target "rm -f '${REMOTE_WORK_DIR}/reports/rvs_level_4.log'"
+  else
+    rm -f "${REPO_ROOT}/reports/rvs_level_4.log"
+  fi
   local start end rc
   start="$(date -u +%FT%TZ)"
 
