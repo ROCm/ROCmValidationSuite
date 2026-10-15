@@ -41,3 +41,16 @@ ENV UBUNTU_VERSION=22.04
 ENV LD_LIBRARY_PATH=${ROCM_INSTALL_PATH}/lib/rocm_sysdeps/lib:${ROCM_INSTALL_PATH}/lib/llvm/lib:${ROCM_INSTALL_PATH}/lib
 
 WORKDIR /workspace
+
+# Tests run as rvs. video and render are the device groups for /dev/kfd and /dev/dri.
+# The launch script adds the host GIDs, which often differ from these image GIDs.
+RUN groupadd -f video \
+    && groupadd -f render \
+    && useradd --create-home --shell /bin/bash --groups video,render rvs \
+    && mkdir -p /workspace \
+    && chown rvs:rvs /workspace
+
+USER rvs
+
+# $$ keeps ROCM_PATH for runtime. rocm-env.sh points it at rocminfo.
+HEALTHCHECK CMD bash -lc 'test -x "$${ROCM_PATH}/bin/rocminfo"'

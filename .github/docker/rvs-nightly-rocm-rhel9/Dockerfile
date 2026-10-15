@@ -1,15 +1,16 @@
-# ROCm + RVS runtime image on RHEL 9 (redhat/ubi9).
+# ROCm + RVS runtime image on RHEL 9 (redhat/ubi9:9).
 # ROCm comes from nightly yum; RVS from extras yum (nightly if published, else stable).
 #
 # Build:
 #   ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-rhel9 --channel nightly
 
-FROM redhat/ubi9
+FROM redhat/ubi9:9
 
 ARG ROCM_VERSION
 ARG ROCM_REPO_BASEURL
 ARG RVS_REPO_BASEURL
-ARG ROCM_GPG_KEY=https://stable.repo.amd.com/rocm/gpg/packages.gpg
+# Public key URL, not a secret. Nightly RPMs stay unsigned (gpgcheck=0).
+ARG ROCM_GPG_URL=https://stable.repo.amd.com/rocm/gpg/packages.gpg
 ARG GPU_TARGET=multiarch
 ARG ROCM_PACKAGE
 ARG RVS_PACKAGE
@@ -30,7 +31,7 @@ RUN printf '%s\n' \
       "baseurl=${ROCM_REPO_BASEURL}" \
       'enabled=1' \
       'gpgcheck=0' \
-      "gpgkey=${ROCM_GPG_KEY}" \
+      "gpgkey=${ROCM_GPG_URL}" \
     | tee /etc/yum.repos.d/amdrocm-nightly.repo \
     && dnf clean all \
     && if [ -n "${ROCM_PACKAGE}" ]; then \
@@ -50,7 +51,7 @@ COPY install-rvs.sh /tmp/install-rvs.sh
 RUN chmod +x /tmp/install-rvs.sh \
     && RVS_REPO_BASEURL="${RVS_REPO_BASEURL}" \
        RVS_PACKAGE="${RVS_PACKAGE}" \
-       ROCM_GPG_KEY="${ROCM_GPG_KEY}" \
+       ROCM_GPG_URL="${ROCM_GPG_URL}" \
        /tmp/install-rvs.sh \
     && rm -f /tmp/install-rvs.sh
 
@@ -69,3 +70,16 @@ ENV RHEL_VERSION=9
 ENV PATH=${ROCM_INSTALL_PATH}/bin:${PATH}
 
 WORKDIR /workspace
+
+# Tests run as rvs. video and render are the device groups for /dev/kfd and /dev/dri.
+# The launch script adds the host GIDs, which often differ from these image GIDs.
+RUN groupadd -f video \
+    && groupadd -f render \
+    && useradd --create-home --shell /bin/bash --groups video,render rvs \
+    && mkdir -p /workspace \
+    && chown rvs:rvs /workspace
+
+USER rvs
+
+# $$ keeps ROCM_PATH for runtime. rocm-env.sh points it at rocminfo.
+HEALTHCHECK CMD bash -lc 'test -x "$${ROCM_PATH}/bin/rocminfo"'
