@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -101,6 +101,17 @@ class rvs_blas {
       }
     }
 
+    //! returns bytes used by one GEMM call
+    uint64_t get_total_rotating_size(void) const { return total_rotating_size; }
+
+    //! returns GEMM bandwidth in GiB/s
+    double gemm_gbps(double time_us) const {
+      if (time_us <= 0.0 || total_rotating_size == 0)
+        return 0.0;
+      return (static_cast<double>(total_rotating_size) / (1024.0 * 1024.0 * 1024.0))
+          / time_us * 1e6;
+    }
+
     double get_time_us(void);
     //! returns TRUE if an error occured
     bool error(void) { return is_error; }
@@ -142,6 +153,8 @@ class rvs_blas {
     size_t size_c;
     //! amount of memory to allocate for the matrix d
     size_t size_d;
+    //! bytes used by one GEMM call
+    uint64_t total_rotating_size;
     //! matrix initialization
     std::string matrix_init;
     //! Transpose matrix A
