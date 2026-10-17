@@ -1711,6 +1711,12 @@ gigaflops. This parameter is required.</td></tr>
 <tr><td>copy_matrix</td><td>Bool</td>
 <td>This parameter indicates if each operation should copy the matrix data to
 the GPU before executing. The default value is true.</td></tr>
+<tr><td>log_gbps</td><td>Bool</td>
+<td>If enabled, GEMM bandwidth value is logged as <b>GiB/s</b>. It is an estimated rate in
+GiB/s (1024<sup>3</sup> bytes), computed as the GEMM buffer bytes (A, B, C only
+when beta is not 0, D and scale buffers) divided by the per-call GPU time. It
+is not a measured DRAM bandwidth. Pass/fail is unchanged and is still decided
+by the target GFLOPS only. The default value is false.</td></tr>
 <tr><td>ramp_interval</td><td>Integer</td>
 <td>This is a time interval, specified in milliseconds, given to the test to
 reach the given target_stress gigaflops. The default value is 5000 (5 seconds).
@@ -1887,6 +1893,16 @@ When the test completes, the final result message is printed:
 
 The test passes if `max_gflops >= target_stress * (1 - tolerance)` at the end
 of the run. Otherwise the result is `met: FALSE`.
+
+When `log_gbps: true` is set, the estimated bandwidth is added after the GFLOPS
+value in both messages:
+
+    [<action name>] [GPU:: <gpu id>] GFLOPS <interval_gflops> GiB/s <interval_gbps>
+    [<action name>] [GPU:: <gpu id>] GFLOPS <max_gflops> GiB/s <gbps> Target GFLOPS: <target_stress> met: TRUE
+
+`GiB/s` follows the hipblaslt-bench `hipblaslt-GB/s` calculation: GEMM buffer
+bytes divided by 1024<sup>3</sup>, divided by the per-call GPU time. Add
+`log_gbps: true` to an action to enable it.
 
 ### Examples
 

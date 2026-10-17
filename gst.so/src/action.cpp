@@ -57,6 +57,7 @@ using std::regex;
 #define RVS_CONF_LOG_INTERVAL_KEY       "log_interval"
 #define RVS_CONF_MAX_VIOLATIONS_KEY     "max_violations"
 #define RVS_CONF_COPY_MATRIX_KEY        "copy_matrix"
+#define RVS_CONF_LOG_GBPS_KEY           "log_gbps"
 #define RVS_CONF_TARGET_STRESS_KEY      "target_stress"
 #define RVS_CONF_TOLERANCE_KEY          "tolerance"
 #define RVS_CONF_HOT_CALLS              "hot_calls"
@@ -100,6 +101,7 @@ using std::regex;
 #define GST_DEFAULT_MAX_VIOLATIONS      0
 #define GST_DEFAULT_TOLERANCE           0.05
 #define GST_DEFAULT_COPY_MATRIX         true
+#define GST_DEFAULT_LOG_GBPS            false
 #define GST_DEFAULT_MATRIX_SIZE         5760
 #define GST_DEFAULT_MATRIX_INIT         "default"
 #define GST_DEFAULT_HOT_CALLS           1
@@ -189,6 +191,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       workers[i].set_log_interval(property_log_interval);
       workers[i].set_max_violations(gst_max_violations);
       workers[i].set_copy_matrix(gst_copy_matrix);
+      workers[i].set_log_gbps(gst_log_gbps);
       workers[i].set_target_stress(gst_target_stress);
       workers[i].set_tolerance(gst_tolerance);
       workers[i].set_gst_hot_calls(gst_hot_calls);
@@ -328,6 +331,14 @@ bool gst_action::get_all_gst_config_keys(void) {
         GST_DEFAULT_COPY_MATRIX)) {
     msg = "invalid '" +
       std::string(RVS_CONF_COPY_MATRIX_KEY) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get(RVS_CONF_LOG_GBPS_KEY, &gst_log_gbps,
+        GST_DEFAULT_LOG_GBPS)) {
+    msg = "invalid '" +
+      std::string(RVS_CONF_LOG_GBPS_KEY) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }

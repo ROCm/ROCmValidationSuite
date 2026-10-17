@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -59,7 +59,7 @@ extern "C" const char* rvs_module_get_config(void) {
   return "target_stress (float), copy_matrix (bool), "\
     "ramp_interval (int), tolerance (float), "\
     "max_violations (int), \n\tlog_interval (int), "\
-    "matrix_size (int)";
+    "matrix_size (int), log_gbps (bool)";
 }
 
 extern "C" const char* rvs_module_get_output(void) {

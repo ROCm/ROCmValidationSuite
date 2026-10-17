@@ -113,6 +113,9 @@ class GSTWorker : public rvs::ThreadBase {
     //! returns the copy_matrix value
     bool get_copy_matrix(void) { return copy_matrix; }
 
+    //! sets whether to log GEMM GiB/s
+    void set_log_gbps(bool _log_gbps) { log_gbps = _log_gbps; }
+
     //! sets the target stress (in GFlops) that the GPU will try to achieve
     void set_target_stress(float _target_stress) {
         target_stress = _target_stress;
@@ -352,6 +355,9 @@ class GSTWorker : public rvs::ThreadBase {
     uint64_t max_violations;
     //! specifies whether to copy the matrix to the GPU for each SGEMM operation
     bool copy_matrix;
+    //! If enabled, log estimated GiB/s
+    //! from GEMM buffer bytes over the per-call GPU time.
+    bool log_gbps;
     //! target stress (in GFlops) that the GPU will try to achieve
     float target_stress;
     //! GFlops tolerance (how much the GFlops can fluctuare after
