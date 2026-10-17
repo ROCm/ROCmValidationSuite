@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -101,6 +101,7 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , m(_m), n(_n), k(_k)
   , matrix_init (_matrix_init)
   , size_a(0), size_b(0), size_c(0), size_d(0)
+  , total_rotating_size(0)
   , da(nullptr), db(nullptr), dc(nullptr), dd(nullptr)
   , dsa(nullptr), dsb(nullptr)
   , ha(nullptr), hb(nullptr), hc(nullptr)
@@ -179,6 +180,31 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
         size_d = (batch_size == 0) ? size_d : size_d + stride_d * (batch_size - 1);
       }
     }
+
+    size_t in_bytes = sizeof(float);
+    size_t out_bytes = sizeof(float);
+    if (ops_type == "dgemm") {
+      in_bytes = out_bytes = sizeof(double);
+    } else if (ops_type == "hgemm") {
+      in_bytes = out_bytes = sizeof(rocblas_half);
+    } else if (ops_type != "sgemm" && !data_type.empty()) {
+      hipDataType in_type = datatype_to_hip_datatype(data_type);
+      if (in_type != RVS_BLAS_HIP_DATATYPE_INVALID)
+        in_bytes = get_hipdatatype_size(in_type);
+      if (!out_data_type.empty()) {
+        hipDataType out_type = datatype_to_hip_datatype(out_data_type);
+        if (out_type != RVS_BLAS_HIP_DATATYPE_INVALID)
+          out_bytes = get_hipdatatype_size(out_type);
+      } else {
+        out_bytes = in_bytes;
+      }
+    }
+
+    // C is the output when D is not a separate buffer.
+    size_t out_elems = (size_d != 0) ? size_d : size_c;
+    uint64_t size_c_bytes = (beta == 0) ? 0 : size_c * out_bytes;
+    total_rotating_size = size_a * in_bytes + size_b * in_bytes
+        + size_c_bytes + out_elems * out_bytes;
   }
   else if (blas_source == "hipblaslt") {
 
@@ -250,11 +276,11 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
       return;
     }
 
-      uint64_t sizeC = (beta == 0) ? 0 : size_c * get_hipdatatype_size(hbl_out_datatype);
+      uint64_t size_c_bytes = (beta == 0) ? 0 : size_c * get_hipdatatype_size(hbl_out_datatype);
 
-      uint64_t total_rotating_size
+      total_rotating_size
         = size_a * get_hipdatatype_size(hbl_datatype) + size_b * get_hipdatatype_size(hbl_datatype)
-        + sizeC + size_d * get_hipdatatype_size(hbl_out_datatype)
+        + size_c_bytes + size_d * get_hipdatatype_size(hbl_out_datatype)
         + hbl_scale_a_size * get_hipdatatype_size(HIP_R_8U)
         + hbl_scale_b_size * get_hipdatatype_size(HIP_R_8U);
 

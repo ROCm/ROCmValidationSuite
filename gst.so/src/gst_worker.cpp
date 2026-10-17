@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -48,6 +48,7 @@
 #define GST_LOG_SELF_CHECK_ERROR_KEY            "self-check error"
 #define GST_LOG_ACCU_CHECK_ERROR_KEY            "accu-check error"
 #define GST_LOG_GFLOPS_INTERVAL_KEY             "GFLOPS"
+#define GST_LOG_GBPS_INTERVAL_KEY               "GiB/s"
 #define GST_JSON_LOG_GPU_ID_KEY                 "gpu_id"
 
 #define PROC_DEC_INC_SGEMM_FREQ_DELAY           10
@@ -347,6 +348,25 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 }
 
 /**
+ * @brief GEMM bandwidth for a GFLOPS sample
+ *
+ * GFLOPS is gflop_count / time_us * 1e6, so the per-call time is recovered
+ * from that sample and passed to the same byte-count rate.
+ */
+static std::string format_gbps(rvs_blas* blas, double gflops_interval) {
+  double time_us = 0.0;
+  if (blas != nullptr && gflops_interval > 0.0) {
+    double gflop_count = blas->gemm_gflop_count();
+    if (gflop_count > 0.0)
+      time_us = gflop_count / gflops_interval * 1e6;
+  }
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(2)
+      << (blas != nullptr ? blas->gemm_gbps(time_us) : 0.0);
+  return oss.str();
+}
+
+/**
  * @brief logs the Gflops computed over the last log_interval period 
  * @param gflops_interval the Gflops that the GPU achieved
  */
@@ -364,8 +384,12 @@ void GSTWorker::check_target_stress(double gflops_interval) {
   }
 
   msg = "[" + action_name + "] " + "[GPU:: " + gpuid_buff + "] " +
-    GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(static_cast<uint64_t>(gflops_interval)) + " " +
-    "Target GFLOPS:" + " " + std::to_string(static_cast<uint64_t>(target_stress)) +
+    GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(static_cast<uint64_t>(gflops_interval));
+  if (log_gbps) {
+    msg += std::string(" ") + GST_LOG_GBPS_INTERVAL_KEY + " " +
+      format_gbps(gpu_blas.get(), gflops_interval);
+  }
+  msg += std::string(" Target GFLOPS: ") + std::to_string(static_cast<uint64_t>(target_stress)) +
     " met: " + (result ? "TRUE" : "FALSE");
   rvs::lp::Log(msg, rvs::logresults); 
 
@@ -373,12 +397,21 @@ void GSTWorker::check_target_stress(double gflops_interval) {
   action_result.status = (true == result) ? rvs::actionstatus::ACTION_SUCCESS : rvs::actionstatus::ACTION_FAILED;
   action_result.output = msg.c_str();
   action.action_callback(&action_result);
-  if (bjson)
+  if (bjson) {
+    if (log_gbps)
+      log_to_json(desc ,rvs::logresults,
+		      TARGET_KEY, std::to_string(static_cast<uint64_t>(target_stress)),
+		      DTYPE_KEY, !gst_data_type.empty() ? gst_data_type : gst_ops_type,
+		      "gflops", std::to_string(static_cast<uint64_t>(gflops_interval)),
+		      "gbps", format_gbps(gpu_blas.get(), gflops_interval),
+		      "pass", result ? "true" : "false");
+    else
       log_to_json(desc ,rvs::logresults,
 		      TARGET_KEY, std::to_string(static_cast<uint64_t>(target_stress)),
 		      DTYPE_KEY, !gst_data_type.empty() ? gst_data_type : gst_ops_type,
 		      "gflops", std::to_string(static_cast<uint64_t>(gflops_interval)),
 		      "pass", result ? "true" : "false");
+  }
 }
 
 /**
@@ -394,6 +427,9 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
 
   msg = "[" + action_name + "] " + "[GPU:: " + gpuid_buff + "] " +
     GST_LOG_GFLOPS_INTERVAL_KEY + " " + std::to_string(static_cast<uint64_t>(gflops_interval));
+  if (log_gbps)
+    msg += std::string(" ") + GST_LOG_GBPS_INTERVAL_KEY + " " +
+      format_gbps(gpu_blas.get(), gflops_interval);
   rvs::lp::Log(msg, rvs::logresults);
 
   action_result.state = rvs::actionstate::ACTION_RUNNING;

@@ -25,6 +25,9 @@
               "gflops": {
                 "type": "string"
               },
+              "gbps": {
+                "type": "string"
+              },
               "gpu_index": {
                 "type": "string"
               },

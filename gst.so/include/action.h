@@ -62,6 +62,9 @@ class gst_action: public rvs::actionbase {
     //! specifies whether to copy the matrices
     //! to the GPU before each GEMM operation
     bool gst_copy_matrix;
+    //! If enabled, log estimated GiB/s
+    //! from GEMM buffer bytes over the per-call GPU time.
+    bool gst_log_gbps;
     //! target stress (in GFlops) that the GPU will try to achieve
     float gst_target_stress;
     //! GFlops tolerance (how much the GFlops can fluctuare after
