@@ -457,7 +457,7 @@ jobs:
       contents: read
       id-token: write
     container:
-      image: quay.io/pypa/manylinux_2_28_x86_64:2026.10.16-1
+      image: quay.io/pypa/manylinux_2_28_x86_64@sha256:1e7b8460ad8fb3fb0fbe1cd818845159ac896b4fd17452d56e892c291f3b97a8 # 2026.10.16-1
       # Allow the build container to reach the runner host via host.docker.internal.
       options: --add-host=host.docker.internal:host-gateway
     strategy:
