@@ -6,7 +6,10 @@
 #   ./.github/docker/build-rocm-sdk-image.sh --context .github/docker/rvs-nightly-rocm-manylinux_2_28 \
 #     --rocm-version 10.1.0a20260819 --gpu-family multiarch
 
-FROM quay.io/pypa/manylinux_2_28_x86_64
+# DS-0001 flagged the untagged image name. This dated tag is the current
+# latest digest, not a content digest. Ubuntu and rockylinux bases already
+# had tags, so they were not pinned further.
+FROM quay.io/pypa/manylinux_2_28_x86_64:2026.10.10-1
 
 ARG ROCM_VERSION
 ARG GPU_FAMILY=multiarch
