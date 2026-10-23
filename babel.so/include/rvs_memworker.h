@@ -281,6 +281,16 @@ class MemWorker : public rvs::ThreadBase {
     //! returns sustained mode
     bool get_sustained(void) { return sustained; }
 
+    //! sets HBM load/store path
+    void set_load_store(const std::string& _load_store) { load_store = _load_store; }
+    //! returns HBM load/store path
+    const std::string& get_load_store(void) { return load_store; }
+
+    //! sets LDS staging bytes per block
+    void set_lds_bytes(uint32_t _lds_bytes) { lds_bytes = _lds_bytes; }
+    //! returns LDS staging bytes per block
+    uint32_t get_lds_bytes(void) { return lds_bytes; }
+
     static void set_use_json(bool _bjson) { bjson = _bjson; }
     //! returns the JSON flag
     static bool get_use_json(void) { return bjson; }
@@ -329,6 +339,10 @@ class MemWorker : public rvs::ThreadBase {
     std::string nontemporal;
     //! sustained mode: back-to-back launches, single sync, average BW only
     bool sustained;
+    //! HBM load/store path ("vector", "async" or "tdm")
+    std::string load_store;
+    //! LDS staging bytes per block for the async and tdm paths (0 = device maximum)
+    uint32_t lds_bytes;
 
     //! TRUE if JSON output is required
     static bool bjson;

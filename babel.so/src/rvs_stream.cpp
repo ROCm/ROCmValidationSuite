@@ -8,6 +8,7 @@
 #include "include/HIPStream.h"
 #include "hip/hip_runtime.h"
 #include "include/rvsloglp.h"
+#include "include/rvs_lds_stream.h"
 #include "hiprand/hiprand.hpp"
 
 #include <cfloat>
@@ -68,6 +69,33 @@ __device__ __forceinline__ constexpr T scalar(const T scalar) {
 //   NT_WRITE(3) : normal load + NT store
 //   NT_NONE (0) : normal load + normal store
 enum NTMode { NT_NONE = 0, NT_ALL = 1, NT_READ = 2, NT_WRITE = 3 };
+
+// HBM load/store path
+//   LS_VECTOR : vector loads/stores to registers (default)
+//   LS_ASYNC  : staged through LDS by async-to/from-LDS loads/stores
+//   LS_TDM    : staged through LDS by the Tensor Data Mover
+enum LoadStoreMode { LS_VECTOR = 0, LS_ASYNC = 1, LS_TDM = 2 };
+
+// The non-temporal mode becomes each leg's cache policy. Copy's round trip takes a
+// single policy for both legs, so it is non-temporal unless the mode is NT_NONE.
+template <lds_stream::Lib L, typename T>
+static lds_stream::Kernel<T> lds_kernel_for_nt(int nt_mode, int op) {
+  constexpr CachePolicy RT = createCachePolicy(TemporalHint::RT, MemScope::SYS);
+  constexpr CachePolicy NT = createCachePolicy(TemporalHint::NT, MemScope::SYS);
+  switch (nt_mode) {
+    case NT_NONE:  return lds_stream::kernel_for<L, RT, RT, RT, T>(op);
+    case NT_READ:  return lds_stream::kernel_for<L, NT, RT, NT, T>(op);
+    case NT_WRITE: return lds_stream::kernel_for<L, RT, NT, NT, T>(op);
+    default:       return lds_stream::kernel_for<L, NT, NT, NT, T>(op);
+  }
+}
+
+template <typename T>
+static lds_stream::Kernel<T> lds_kernel_for(int load_store_mode, int nt_mode, int op) {
+  if (load_store_mode == LS_ASYNC)
+    return lds_kernel_for_nt<lds_stream::Lib::Async, T>(nt_mode, op);
+  return lds_kernel_for_nt<lds_stream::Lib::Tdm, T>(nt_mode, op);
+}
 
 #define NT_KERNEL_LAUNCH_EVENTS(kernel, epl, cpb, T, grid, block, smem, start, stop, ...) \
   switch (nt_mode) {                                                                \
@@ -152,7 +180,8 @@ static void hipLaunchKernelSynchronous(F kernel, const dim3& numBlocks,
   template <class T>
 HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
     const int device_index, const unsigned int _dwords_per_lane, const unsigned int _chunks_per_block,
-    const unsigned int _threads_per_block, const std::string& nontemporal)
+    const unsigned int _threads_per_block, const std::string& nontemporal,
+    const std::string& load_store, const unsigned int _lds_bytes)
   : array_size{ARRAY_SIZE}, evt_timing(event_timing),
   dwords_per_lane(_dwords_per_lane), chunks_per_block(_chunks_per_block), tb_size(_threads_per_block),
   sustained_mode(false)
@@ -210,9 +239,53 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
   check_error(hipSetDevice(device_index));
   msg += "\nUsing HIP device " + getDeviceName(device_index) + ", " +
 	  "Driver: "  + getDeviceDriver(device_index) ;
-  
+
+  // Set load/store path
+  if (load_store == "async")    load_store_mode = LS_ASYNC;
+  else if (load_store == "tdm") load_store_mode = LS_TDM;
+  else                          load_store_mode = LS_VECTOR;
+
+  unsigned int sums_cnt = block_cnt;
+  if (load_store_mode != LS_VECTOR)
+  {
+    const bool supported = load_store_mode == LS_ASYNC ? async::IsTdmCopySupported(device_index)
+                                                       : tdm::IsTdmCopySupported(device_index);
+    if (!supported)
+      throw std::runtime_error("load_store '" + load_store + "' requires a gfx1250 device");
+
+    hipDeviceProp_t dev_props;
+    check_error(hipGetDeviceProperties(&dev_props, device_index));
+    int max_lds;
+    check_error(hipDeviceGetAttribute(&max_lds, hipDeviceAttributeSharedMemPerBlockOptin, device_index));
+    if (tb_size % dev_props.warpSize != 0)
+      throw std::runtime_error("tb_size must be a multiple of the warp size for load_store '" + load_store + "'");
+    const unsigned int min_lds = lds_stream::min_lds_bytes(tb_size / dev_props.warpSize);
+    lds_bytes = _lds_bytes ? _lds_bytes : static_cast<unsigned int>(max_lds);
+    if (lds_bytes < min_lds || lds_bytes > static_cast<unsigned int>(max_lds))
+    {
+      std::stringstream ss;
+      ss << "lds_bytes must be between " << min_lds << " and " << max_lds
+         << " for tb_size " << tb_size;
+      throw std::runtime_error(ss.str());
+    }
+
+    const unsigned int blocks_by_lds = dev_props.maxSharedMemoryPerMultiProcessor / lds_bytes;
+    const unsigned int blocks_by_threads = dev_props.maxThreadsPerMultiProcessor / tb_size;
+    lds_grid = dev_props.multiProcessorCount * std::max(1u, std::min(blocks_by_lds, blocks_by_threads));
+    sums_cnt = std::max(sums_cnt, lds_grid);
+
+    for (int op = 0; op < lds_stream::OP_COUNT; ++op)
+    {
+      lds_kernels[op] = lds_kernel_for<T>(load_store_mode, nt_mode, op);
+      check_error(hipFuncSetAttribute(reinterpret_cast<const void*>(lds_kernels[op]),
+                                      hipFuncAttributeMaxDynamicSharedMemorySize, lds_bytes));
+    }
+    msg += "\nload/store path " + load_store + ", LDS per block " + std::to_string(lds_bytes) +
+           ", block count " + std::to_string(lds_grid);
+  }
+
   // Allocate the host array for partial sums for dot kernels
-  check_error(hipHostMalloc(&sums, sizeof(T) * block_cnt, hipHostMallocNonCoherent));
+  check_error(hipHostMalloc(&sums, sizeof(T) * sums_cnt, hipHostMallocNonCoherent));
 
   // Check buffers fit on the device
   hipDeviceProp_t props;
@@ -248,6 +321,33 @@ template <class T>
 void HIPStream<T>::sustained_sync()
 {
   check_error(hipDeviceSynchronize());
+}
+
+template <class T>
+float HIPStream<T>::lds_run(int op, const T* in0, const T* in1, T* out)
+{
+  const dim3 grid(lds_grid), block(tb_size);
+  if (sustained_mode && op != lds_stream::OP_DOT)
+  {
+    hipLaunchKernelGGL(lds_kernels[op], grid, block, lds_bytes, nullptr,
+                       in0, in1, out, sums, array_size, lds_bytes);
+    check_error(hipGetLastError());
+    return 0.f;
+  }
+
+  float kernel_time = 0.;
+  if (evt_timing)
+    check_error(hipEventRecord(start_ev));
+  hipLaunchKernelGGL(lds_kernels[op], grid, block, lds_bytes, nullptr,
+                     in0, in1, out, sums, array_size, lds_bytes);
+  check_error(hipGetLastError());
+  // Dot's partial sums land in host memory, so it completes on the system-scope event.
+  hipEvent_t done = op == lds_stream::OP_DOT ? coherent_ev : stop_ev;
+  check_error(hipEventRecord(done));
+  check_error(hipEventSynchronize(done));
+  if (evt_timing)
+    check_error(hipEventElapsedTime(&kernel_time, start_ev, done));
+  return kernel_time;
 }
 
 
@@ -414,6 +514,8 @@ void read_kernel(const T * __restrict a, T * __restrict c)
 template <class T>
 float HIPStream<T>::read()
 {
+  if (load_store_mode != LS_VECTOR)
+    return lds_run(lds_stream::OP_READ, d_a, nullptr, d_c);
   float kernel_time = 0.;
   if (sustained_mode)
   {
@@ -493,6 +595,8 @@ void write_kernel(T * __restrict c)
 template <class T>
 float HIPStream<T>::write()
 {
+  if (load_store_mode != LS_VECTOR)
+    return lds_run(lds_stream::OP_WRITE, nullptr, nullptr, d_c);
   float kernel_time = 0.;
   if (sustained_mode)
   {
@@ -572,6 +676,8 @@ void copy_kernel(const T * __restrict a, T * __restrict c)
 template <class T>
 float HIPStream<T>::copy()
 {
+  if (load_store_mode != LS_VECTOR)
+    return lds_run(lds_stream::OP_COPY, d_a, nullptr, d_c);
   float kernel_time = 0.;
   if (sustained_mode)
   {
@@ -651,6 +757,8 @@ void mul_kernel(T * __restrict b, const T * __restrict c)
 template <class T>
 float HIPStream<T>::mul()
 {
+  if (load_store_mode != LS_VECTOR)
+    return lds_run(lds_stream::OP_MUL, d_c, nullptr, d_b);
   float kernel_time = 0.;
   if (sustained_mode)
   {
@@ -731,6 +839,8 @@ void add_kernel(const T * __restrict a, const T * __restrict b,
 template <class T>
 float HIPStream<T>::add()
 {
+  if (load_store_mode != LS_VECTOR)
+    return lds_run(lds_stream::OP_ADD, d_a, d_b, d_c);
   float kernel_time = 0.;
   if (sustained_mode)
   {
@@ -812,6 +922,8 @@ void triad_kernel(T * __restrict a, const T * __restrict b,
 template <class T>
 float HIPStream<T>::triad()
 {
+  if (load_store_mode != LS_VECTOR)
+    return lds_run(lds_stream::OP_TRIAD, d_b, d_c, d_a);
   float kernel_time = 0.;
   if (sustained_mode)
   {
@@ -938,6 +1050,17 @@ void dot_kernel(const T * __restrict a, const T * __restrict b,
 template <class T>
 T HIPStream<T>::dot()
 {
+  if (load_store_mode != LS_VECTOR)
+  {
+    lds_run(lds_stream::OP_DOT, d_a, d_b, nullptr);
+    T sum{0};
+    for (auto i = 0u; i != lds_grid; ++i)
+    {
+      sum += sums[i];
+    }
+    return sum;
+  }
+
   if(elements_per_lane == 4 && chunks_per_block == 1) {
     if(tb_size == 1024) {
       NT_KERNEL_LAUNCH_DOT_SYNC(dot_kernel, 4, 1, T, 1024, dim3(block_cnt), dim3(tb_size), nullptr, coherent_ev, d_a, d_b, sums)
