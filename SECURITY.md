@@ -46,5 +46,6 @@ git submodule and is scanned in its own repository.
 > software, report it through the AMD Product Security website above rather
 > than in a public issue or pull request.
 
-Each file under [`.github/scan_tools_configs/`](.github/scan_tools_configs/)
-includes a local-scan command that uses the same configuration CI uses.
+Contributors can run every scanner locally against the same configuration CI
+uses. See
+[the security scanners section in `CONTRIBUTING.md`](CONTRIBUTING.md#security-scanners).
