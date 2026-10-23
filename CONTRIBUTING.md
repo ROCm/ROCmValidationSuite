@@ -96,13 +96,9 @@ Long-lived branches use other patterns:
 
 If you want to contribute but don't have a specific problem in mind, the
 [issue tracker](https://github.com/ROCm/ROCmValidationSuite/issues) is the best
-place to start. These two labels mark work we hope someone outside the core
-team will pick up:
-
-| Label                                                                                                                                                  | What it means                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| [`help wanted`](https://github.com/ROCm/ROCmValidationSuite/issues?q=is%3Aissue+state%3Aopen+label%3A%22help+wanted%22)                               | Understood well enough for someone outside the core team to pick up, and no maintainer is working on it.      |
-| [`good first issue`](https://github.com/ROCm/ROCmValidationSuite/issues?q=is%3Aissue+state%3Aopen+label%3A%22good+first+issue%22)                     | Small in scope. Usually also carries `help wanted`.                                                           |
+place to start. Open issues that are understood well enough for someone outside
+the core team to pick up are the right place to begin. Smaller issues are a
+good first change.
 
 > [!TIP]
 > Don't have the hardware to reproduce an issue? A precise reproduction, a
