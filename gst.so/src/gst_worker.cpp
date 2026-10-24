@@ -99,9 +99,11 @@ void GstCrcSync::sync_and_compare(size_t slot, uint16_t gpu_id, uint32_t crc) {
     }
 
     // When ref is the sentinel this loop starts past the end and does nothing.
+    size_t compared = 0;
     for (size_t i = ref + 1; i < active.size(); ++i) {
       if (!active[i])
         continue;
+      ++compared;
       if (crcs[i] != crcs[ref]) {
         std::ostringstream oss;
         oss << "[" << action_name << "] "
@@ -113,6 +115,11 @@ void GstCrcSync::sync_and_compare(size_t slot, uint16_t gpu_id, uint32_t crc) {
             << " (SDC candidate)";
         msgs.push_back(oss.str());
       }
+    }
+    if (compared > 0) {
+      ++rounds_compared;
+      if (!msgs.empty())
+        ++rounds_mismatched;
     }
     arrived = 0;
     ++generation;
@@ -585,6 +592,10 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
   start_time = 0;
   end_time = 0;
 
+  // consistency_check outcome counters, reported in the end-of-run summary
+  uint64_t consistency_mismatches = 0;
+  uint64_t consistency_errors     = 0;
+
   // RAII guard: calls crc_sync->detach() on any exit path (normal or early)
   // so peer workers are never left blocking at the barrier.
   struct CrcSyncGuard {
@@ -754,6 +765,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
       }
 
       if (crc_result == 1) {
+        ++consistency_mismatches;
         msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
           GST_LOG_CONSISTENCY_CHECK_ERROR_KEY + " CRC-32 mismatch detected (SDC candidate)";
         rvs::lp::Log(msg, rvs::logresults);
@@ -775,6 +787,7 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
           mag_oss << " frobenius_norm=n/a";
         rvs::lp::Log(mag_oss.str(), rvs::logresults);
       } else if (crc_result == -1) {
+        ++consistency_errors;
         msg = "[" + action_name + "] " + "[GPU:: " + std::to_string(gpu_id) + "] " +
           GST_LOG_CONSISTENCY_CHECK_ERROR_KEY + " internal error (unsupported type or copy failed)";
         rvs::lp::Log(msg, rvs::logresults);
@@ -806,16 +819,37 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
       break;
   }
 
-  // Log the final run-level CRC digest for this GPU.  The digest is a single
-  // CRC-32 value built by chaining every per-iteration output CRC, so it
-  // reflects the entire run history — not just the last iteration.
-  if (consistency_check && crc_computed) {
+  // End-of-run consistency-check summary for this GPU.  Logged at logresults
+  // so a clean run is visibly distinguishable from a run where the check did
+  // not execute.  Iterations that hit an internal error are not counted as
+  // checked, so they are reported separately and only when non-zero.
+  // The run digest is a single CRC-32 value built by chaining every
+  // per-iteration output CRC, so it reflects the entire run history — not
+  // just the last iteration.  It is only useful for manual run-to-run
+  // comparison, so it goes to loginfo.
+  if (consistency_check) {
     std::ostringstream oss;
-    oss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
-        << "consistency-check run-digest: 0x"
-        << std::hex << std::setw(8) << std::setfill('0')
-        << gpu_blas->get_run_crc_digest();
-    rvs::lp::Log(oss.str(), rvs::loginfo);
+    oss << "[" << action_name << "] [GPU:: " << gpu_id << "] ";
+    if (crc_computed) {
+      oss << "consistency-check summary: "
+          << gpu_blas->get_crc_iter_count() << " iterations checked, "
+          << consistency_mismatches << " mismatches";
+      if (consistency_errors > 0)
+        oss << ", " << consistency_errors
+            << " iterations not checked (internal errors)";
+      rvs::lp::Log(oss.str(), rvs::logresults);
+
+      std::ostringstream dss;
+      dss << "[" << action_name << "] [GPU:: " << gpu_id << "] "
+          << "consistency-check run-digest: 0x"
+          << std::hex << std::setw(8) << std::setfill('0')
+          << gpu_blas->get_run_crc_digest();
+      rvs::lp::Log(dss.str(), rvs::loginfo);
+    } else {
+      oss << "consistency-check was enabled but no CRC was computed ("
+          << consistency_errors << " internal errors)";
+      rvs::lp::Log(oss.str(), rvs::logresults);
+    }
   }
 
   return true;

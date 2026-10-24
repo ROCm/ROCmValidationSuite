@@ -79,6 +79,11 @@ struct GstCrcSync {
   //! slots and keep comparing against a dead slot's stale CRC.
   std::vector<bool>      active;
 
+  //! rounds in which at least two active workers were compared
+  uint64_t rounds_compared{0};
+  //! rounds in which at least one mismatch was found
+  uint64_t rounds_mismatched{0};
+
   std::string action_name;
 
   GstCrcSync(size_t n_workers, const std::string& name)

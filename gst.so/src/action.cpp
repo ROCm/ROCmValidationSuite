@@ -291,6 +291,13 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
       // join threads
       for (i = 0; i < gst_gpus_device_index.size(); i++)
         workers[i].join();
+
+      if (crc_sync) {
+        rvs::lp::Log("[" + action_name + "] cross-GPU consistency summary: " +
+          std::to_string(crc_sync->rounds_compared) + " iterations checked, " +
+          std::to_string(crc_sync->rounds_mismatched) + " iteration mismatches",
+          rvs::logresults);
+      }
     } else {
       for (i = 0; i < gst_gpus_device_index.size(); i++) {
         workers[i].start();
@@ -341,6 +348,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
           uint32_t ref_digest = workers[ref_idx].get_crc_digest_for_n_iters(min_iters);
           uint16_t ref_gpu_id = workers[ref_idx].get_gpu_id();
           size_t   ref_iters  = workers[ref_idx].get_crc_iter_count();
+          size_t   pairs_mismatched = 0;
 
           for (size_t wi = ref_idx + 1; wi < workers.size(); ++wi) {
             if (!workers[wi].has_valid_crc())
@@ -352,6 +360,7 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
 
             std::ostringstream oss;
             if (peer_digest != ref_digest) {
+              ++pairs_mismatched;
               oss << "[" << action_name << "] "
                   << "cross-GPU run-digest mismatch (SDC candidate): "
                   << "GPU " << peer_gpu_id
@@ -371,7 +380,14 @@ bool gst_action::do_gpu_stress_test(map<int, uint16_t> gst_gpus_device_index) {
               rvs::lp::Log(oss.str(), rvs::loginfo);
             }
           }
+
+          rvs::lp::Log("[" + action_name + "] cross-GPU consistency summary: " +
+            std::to_string(min_iters) + " iterations checked, " +
+            std::to_string(pairs_mismatched) + " GPU mismatches", rvs::logresults);
         }
+      } else {
+        rvs::lp::Log("[" + action_name + "] cross-GPU consistency check was enabled "
+                     "but no GPU produced a valid CRC.", rvs::logresults);
       }
     }
 
