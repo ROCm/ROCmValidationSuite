@@ -67,8 +67,10 @@
 ## Exit Status
 
 ```
-0        - if OK
-non-zero - otherwise
+0        - all actions ran and passed
+1        - one or more actions failed
+non-zero - other errors (invalid options, missing or invalid configuration
+           file, module load failure, or the run was stopped)
 ```
 
 ## Examples
