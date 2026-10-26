@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include <utility>
+#include <new>
 #include <string>
 #include <map>
 #include <memory>
@@ -258,7 +259,7 @@ rvs::module* rvs::module::find_create_module(const char* name) {
         }
     }
     // create module object
-    m = new rvs::module(name, psolib);
+    m = new (std::nothrow) rvs::module(name, psolib);
     if (!m) {
       dlclose(psolib);
       return NULL;
@@ -358,7 +359,7 @@ rvs::action* rvs::module::action_create(const char* name) {
   }
 
   // create action proxy object
-  rvs::action* pa = new rvs::action(name, plibaction);
+  rvs::action* pa = new (std::nothrow) rvs::action(name, plibaction);
   if (!pa) {
     char buff[1024];
     snprintf(buff, sizeof(buff),
@@ -555,7 +556,7 @@ int rvs::module::init_interface_0(void) {
     return -1;
   }
 
-  rvs::if0* pif0 = new rvs::if0();
+  rvs::if0* pif0 = new (std::nothrow) rvs::if0();
   if (!pif0)
     return -1;
 
@@ -600,7 +601,7 @@ int rvs::module::init_interface_1(void) {
     return -1;
   }
 
-  rvs::if1* pif1 = new rvs::if1();
+  rvs::if1* pif1 = new (std::nothrow) rvs::if1();
   if (!pif1)
     return -1;
 

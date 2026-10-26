@@ -31,6 +31,7 @@ extern "C" {
 #include <stdlib.h>
 
 #include <iostream>
+#include <new>
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -318,7 +319,7 @@ int pebb_action::create_threads() {
               pebbworker* p = nullptr;
             if (property_parallel && b2b_block_size > 0) {
               RVSTRACE_
-                pebbworker_b2b* pb2b = new pebbworker_b2b;
+                pebbworker_b2b* pb2b = new (std::nothrow) pebbworker_b2b;
               if (pb2b == nullptr) {
                 RVSTRACE_
                   msg = "internal error";
@@ -330,7 +331,7 @@ int pebb_action::create_threads() {
               p = pb2b;
             } else {
               RVSTRACE_
-                p = new pebbworker;
+                p = new (std::nothrow) pebbworker;
               if (p == nullptr) {
                 RVSTRACE_
                   msg = "internal error";
