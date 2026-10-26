@@ -31,6 +31,7 @@ extern "C" {
 #include <stdlib.h>
 
 #include <iostream>
+#include <new>
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -618,7 +619,7 @@ int pbqt_action::create_threads() {
 
     transfer_ix += 1;
 
-    p = new pbqtworker;
+    p = new (std::nothrow) pbqtworker;
     if (p == nullptr) {
       RVSTRACE_
         msg = "internal error";
