@@ -9,8 +9,10 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 - Level-based test configurations (`-r` 1–5) for Radeon platforms: nv21, nv31, nv32, gfx1200, gfx1201, RX9060, RX9070, RX9070GRE, R9600D.
 - PCI device ID auto-detection for Radeon GPUs in `gpu_get_platform_name()`.
 - Support for GEMM bandwidth.
+- GEMM consistency check support.
 
 ### Changed
+- Update fp32 and fp64 targets for MI300X, MI300X-HF and MI325X.
 
 ### Removed
 
