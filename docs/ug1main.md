@@ -1857,8 +1857,24 @@ GEMM. The default value is 0.</td></tr>
 strided-batched GEMM. The default value is 0.</td></tr>
 
 <tr><td>self_check</td><td>Bool</td>
-<td>If true, validates the GEMM result for correctness after each operation.
-Adds overhead; intended for debugging. The default value is false.</td></tr>
+<td>If true, compares each GEMM output with the previous one (Frobenius norm)
+and reports a non-zero difference. Supported for sgemm, dgemm and the fp8_r,
+fp16_r and bf16_r data types only. The default value is false.</td></tr>
+
+<tr><td>consistency_check</td><td>Bool</td>
+<td>If true, compares the GEMM output after each iteration with the output of
+the first iteration. The comparison is bit-exact. A mismatch is logged as a
+<b>consistency-check error</b> and is a silent data corruption candidate; it
+does not change the test result. Use <b>copy_matrix: false</b> (and
+<b>beta: 0</b> for sgemm/dgemm) so a healthy GPU produces identical outputs.
+The default value is false.</td></tr>
+
+<tr><td>cross_gpu_consistency_check</td><td>Bool</td>
+<td>If true, also compares each GPU's output with the others in the action. All
+GPUs use identical input matrices, so they must be the same model. Requires
+<b>consistency_check: true</b>. With <b>parallel: true</b> the GPUs are
+compared after every iteration; otherwise the outputs are compared after the
+run. The default value is false.</td></tr>
 
 <tr><td>accuracy_check</td><td>Bool</td>
 <td>If true, runs a numerical accuracy check after each GEMM operation. The
@@ -1866,7 +1882,8 @@ default value is false.</td></tr>
 
 <tr><td>error_inject</td><td>Bool</td>
 <td>If true, enables error injection mode to deliberately introduce errors
-into the computation for testing error detection. The default value is
+into the computation for testing error detection. Applies to
+<b>self_check</b> and <b>accuracy_check</b> only. The default value is
 false.</td></tr>
 
 <tr><td>error_freq</td><td>Integer</td>
@@ -1903,6 +1920,39 @@ value in both messages:
 `GiB/s` follows the hipblaslt-bench `hipblaslt-GB/s` calculation: GEMM buffer
 bytes divided by 1024<sup>3</sup>, divided by the per-call GPU time. Add
 `log_gbps: true` to an action to enable it.
+
+When `consistency_check` is enabled, a mismatch is logged for the iteration
+where it occurs:
+
+    [<action name>] [GPU:: <gpu id>] consistency-check error output mismatch detected (potential SDC candidate)
+
+and a summary is printed for each GPU at the end of the run:
+
+    [<action name>] [GPU:: <gpu id>] consistency-check summary: <n> iterations checked, <m> mismatches
+
+If some iterations could not be checked, `iterations not checked
+(internal errors)` is appended. A checksum of each checked output, and one
+checksum for the whole run, are logged at the info log level.
+
+If the check could not run (for example, an unsupported data type), the summary
+reads `consistency-check was enabled but the output was not checked`. With
+`cross_gpu_consistency_check`, a mismatch between GPUs is logged as:
+
+    [<action name>] cross-GPU consistency-check error: GPU <gpu id> output differs from GPU <gpu id> (potential SDC candidate)
+
+With `parallel: false`, that line adds `over the first <n> of <a>/<b> iterations`.
+It is followed by:
+
+    [<action name>] cross-GPU consistency summary: <n> iterations checked, <k> iteration mismatches   (parallel: true)
+    [<action name>] cross-GPU consistency summary: <n> iterations checked, <k> GPU mismatches         (parallel: false)
+
+With `parallel: true`, `<n>` is the number of iterations whose output was
+compared across GPUs and `<k>` is how many of them differed. With
+`parallel: false`, `<n>` is the smallest iteration count of any GPU (only that
+many iterations are compared) and `<k>` is the number of GPUs whose output
+differs from that of the first GPU that could be checked.
+
+Detected mismatches are logged only; they do not change the pass/fail result.
 
 ### Examples
 
