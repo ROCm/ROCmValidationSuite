@@ -276,7 +276,7 @@ jobs:
           rm -rf /var/lib/apt/lists/*
 
       - name: Checkout Repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || matrix.branch }}
           persist-credentials: false
@@ -476,7 +476,7 @@ jobs:
           yum install -y git
 
       - name: Checkout Repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || matrix.branch }}
           persist-credentials: false
@@ -751,7 +751,7 @@ jobs:
       vars.AWS_S3_BUCKET != ''
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -818,7 +818,7 @@ jobs:
         if: >-
           github.event_name == 'schedule' ||
           (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master'))
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const ref = context.payload.pull_request?.base?.ref
@@ -852,7 +852,7 @@ jobs:
         if: >-
           github.event_name == 'push' &&
           (github.ref_name == 'main' || github.ref_name == 'master')
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const ref = context.payload.pull_request?.base?.ref
@@ -884,7 +884,7 @@ jobs:
 
       - name: Dispatch RVS Release Tests
         if: startsWith(github.ref_name, 'release/')
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const ref = context.ref.replace('refs/heads/', '');
@@ -904,7 +904,7 @@ jobs:
           github.actor != 'dependabot[bot]'
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const prNumber = String(context.payload.pull_request.number);
@@ -1009,7 +1009,7 @@ jobs:
           cat build-report.md
 
       - name: Upload Build Report
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: build-report
           path: build-report.md
