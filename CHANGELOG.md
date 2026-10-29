@@ -2,6 +2,12 @@
 
 Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://github.com/ROCm/ROCmValidationSuite).
 
+## RVS 1.8.0
+
+### Added
+
+### Changed
+
 ## RVS 1.7.0
 
 ### Added
