@@ -68,6 +68,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Resolve latest release tarball URL (orchestrator only)
         id: resolve
@@ -202,6 +204,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
 
       - name: Setup SSH for target node
@@ -248,6 +251,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
 
       - name: Download test logs

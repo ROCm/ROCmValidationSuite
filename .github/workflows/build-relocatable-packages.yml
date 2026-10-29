@@ -279,6 +279,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || matrix.branch }}
+          persist-credentials: false
           submodules: recursive
           fetch-depth: 0
 
@@ -478,6 +479,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || matrix.branch }}
+          persist-credentials: false
           submodules: recursive
           fetch-depth: 0
 
@@ -750,6 +752,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Install AWS CLI
         if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
