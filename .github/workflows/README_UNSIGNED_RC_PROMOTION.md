@@ -41,8 +41,7 @@ s3://<bucket>/
 └── release/unsigned/      ← destination (written by this workflow)
     ├── packages/
     │   ├── deb/
-    │   │   ├── conf/      # reprepro state (internal; not for apt clients)
-    │   │   ├── pool/main/…/amdrocm*-rvs*.deb
+    │   │   ├── pool/main/amdrocm*-rvs*.deb
     │   │   └── dists/stable/
     │   │       ├── Release
     │   │       └── main/binary-amd64/Packages(.gz)
@@ -80,15 +79,14 @@ Fails fast if `run_number` or `AWS_S3_BUCKET` are empty. Prints the source and d
 
 ### 4. Install packaging tools
 
-Installs `reprepro`, `dpkg-dev`, and `createrepo-c` (or `createrepo`) via `apt-get`. These are needed to maintain the APT archive structure and RPM repodata.
+Installs `apt-utils` (`apt-ftparchive`), `dpkg-dev` (`dpkg-scanpackages`), and `createrepo-c` (or `createrepo`) via `apt-get`. These are needed to maintain the APT archive structure and RPM repodata.
 
 ### 5. Copy DEB packages and rebuild APT archive
 
-- Downloads the existing `release/unsigned/packages/deb/{conf,pool,dists}/` from S3 into a staging directory (**accumulate mode** — no `--delete`)
-- Bootstraps a `reprepro` distributions config (`Suite: stable`, `Codename: stable`) if the archive does not yet exist
-- Lists all keys under `release/rvs/deb/` and downloads those matching `amdrocm*-rvs*.deb` and containing `build_number`
-- For each matching `.deb`, runs `reprepro includedeb stable` — idempotently removing the same Package+Version from the local archive first if it is already present, so S3 `PutObject` can overwrite the pool object without requiring `s3:DeleteObject`
-- Syncs `conf/`, `pool/`, and `dists/` back to S3 (no `--delete`)
+- Downloads the existing `release/unsigned/packages/deb/pool/` from S3 into a staging directory (**accumulate mode** — no `--delete`)
+- Moves any previously nested `pool/main/<letter>/<package>/*.deb` files up to `pool/main/` in that staging directory, then copies this run’s `.deb` there. The same filename overwrites, so promoting a build again replaces that object via `PutObject` and does not need `s3:DeleteObject`
+- Rebuilds `dists/stable/main/binary-amd64/Packages` (and `Packages.gz`) with `dpkg-scanpackages --multiversion`, and `dists/stable/Release` with `apt-ftparchive`. `Filename:` is `pool/main/<file>.deb`
+- Syncs `pool/` and `dists/` back to S3 (no `--delete`). Letter-folder keys already in the bucket are left in place and are no longer listed in `Packages`
 
 ### 6. Copy RPM packages and rebuild YUM repodata
 
@@ -133,8 +131,8 @@ The `latest.json` schema:
     "packages": [
       {
         "filename": "amdrocm7-rvs_1.3.15-12345_amd64.deb",
-        "pool_key": "pool/main/a/amdrocm7-rvs/amdrocm7-rvs_1.3.15-12345_amd64.deb",
-        "s3_key": "release/unsigned/packages/deb/pool/main/a/amdrocm7-rvs/amdrocm7-rvs_1.3.15-12345_amd64.deb"
+        "pool_key": "pool/main/amdrocm7-rvs_1.3.15-12345_amd64.deb",
+        "s3_key": "release/unsigned/packages/deb/pool/main/amdrocm7-rvs_1.3.15-12345_amd64.deb"
       }
     ]
   },
@@ -158,7 +156,7 @@ Writes a Markdown table to the GitHub Actions run summary listing the build numb
 
 ## Accumulation semantics
 
-All S3 writes use **accumulate mode** (no `--delete`). Packages from previous promotions remain in `release/unsigned/`. The `reprepro` DEB archive accumulates historically: older `.deb` versions remain in the pool (the reprepro db tracks each Package+Version). RPM repodata is fully regenerated from all RPMs present in the staging directory after the new ones are added.
+All S3 writes use **accumulate mode** (no `--delete`). Packages from previous promotions remain in `release/unsigned/`. The DEB index is rebuilt from every `.deb` staged in `pool/main/`, so older versions stay listed beside the one just promoted. Objects left under `pool/main/<letter>/` by earlier reprepro publishes are not deleted; the new index does not reference them. RPM repodata is fully regenerated from all RPMs present in the staging directory after the new ones are added.
 
 Signing CI should always read `release/unsigned/latest.json` to find the exact `s3_key` values for a specific promotion — not list the prefix directly.
 
@@ -290,14 +288,14 @@ sudo yum install amdrocm7-rvs
 | `No .tar.gz files for run number '<N>'` | Same for tarballs. Check `release/rvs/tar/`. |
 | `N .rpm files match run number '<N>'; expected exactly one` | Duplicate files in the bucket share the same run number. Inspect `release/rvs/rpm/` directly to identify and remove the duplicate. |
 | `promote-rpm step output rpm_fname is missing` | The `promote-rpm` step either did not run or failed before writing its outputs. Check that step's logs. |
-| `Packages index not found` in latest.json step | The DEB promote step succeeded (uploaded packages) but the Packages index was not found at `dists/stable/main/binary-amd64/Packages`. This indicates a reprepro or S3 sync failure in the DEB step. |
-| `reprepro` fails on `includedeb` | The `.deb` control fields may have unexpected characters, or the `conf/distributions` file is corrupted. Delete `s3://<bucket>/release/unsigned/packages/deb/conf/` to force a fresh archive on next run. |
+| `Packages index not found` in latest.json step | The DEB promote step succeeded (uploaded packages) but the Packages index was not found at `dists/stable/main/binary-amd64/Packages`. This indicates the DEB index was not written or the S3 sync failed. |
+| `Packages index Filename is not pool/main/<file>.deb` | `dpkg-scanpackages` recorded a nested path. The DEB step flattens `pool/main/` before scanning; a leftover subdirectory with a `.deb` still in it will fail this check. |
 | RPM repodata not updated | `createrepo_c` may not be available on the runner. The step falls back to `createrepo`; if neither is found, the step fails. The runner label in `RUNNER_LABEL_UTILITY` must resolve to a runner where at least one of those tools can be installed via `apt-get`. |
 
 ## References
 
 - [`build-relocatable-packages.yml`](./build-relocatable-packages.yml) — upstream pipeline that produces packages in `release/rvs/`
 - [`README_BUILD_PACKAGES.md`](./README_BUILD_PACKAGES.md) — detailed documentation for the build pipeline, including the nightly/unsigned layout it mirrors
-- [`rvs-deb-unsigned-repo.sh`](../scripts/rvs-deb-unsigned-repo.sh) — reprepro accumulate logic used by the nightly unsigned pipeline (same pattern as the DEB step here)
+- [`rvs-deb-unsigned-repo.sh`](../scripts/rvs-deb-unsigned-repo.sh) — flat `pool/main/` accumulate logic used by the nightly unsigned pipeline (same pattern as the DEB step here)
 - [`rvs-unsigned-publish-latest.sh`](../scripts/rvs-unsigned-publish-latest.sh) — latest.json publisher for nightly/unsigned (same schema as `release/unsigned/latest.json`)
 - [`rvs-s3-upload-route.sh`](../scripts/rvs-s3-upload-route.sh) — S3 path routing for build jobs

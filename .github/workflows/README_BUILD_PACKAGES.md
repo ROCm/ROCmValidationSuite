@@ -229,8 +229,7 @@ Separate signing CI consumes **unsigned** packages from this prefix. Each schedu
 s3://<bucket>/nightly/unsigned/
 ├── packages/
 │   ├── deb/
-│   │   ├── conf/      # reprepro state (internal; not for apt clients)
-│   │   ├── pool/main/…/amdrocm*-rvs_*.deb
+│   │   ├── pool/main/amdrocm*-rvs_*.deb
 │   │   └── dists/stable/
 │   │       ├── Release
 │   │       └── main/binary-amd64/Packages(.gz)
@@ -247,7 +246,7 @@ s3://<bucket>/nightly/unsigned/
     └── rpm-tar.json
 ```
 
-**Scripts:** [rvs-s3-upload-route.sh](../scripts/rvs-s3-upload-route.sh) (`upload-rpm-tar-unsigned` validates RPM+TGZ+sidecar then `aws s3 cp`); [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh) (merge into existing `reprepro` archive, sync without `--delete`); [rvs-unsigned-publish-latest.sh](../scripts/rvs-unsigned-publish-latest.sh) (merge run metadata → `latest.json`, fail on missing/invalid input).
+**Scripts:** [rvs-s3-upload-route.sh](../scripts/rvs-s3-upload-route.sh) (`upload-rpm-tar-unsigned` validates RPM+TGZ+sidecar then `aws s3 cp`); [rvs-deb-unsigned-repo.sh](../scripts/rvs-deb-unsigned-repo.sh) (merge `.deb` files directly into `pool/main/`, sync without `--delete`); [rvs-unsigned-publish-latest.sh](../scripts/rvs-unsigned-publish-latest.sh) (merge run metadata → `latest.json`, fail on missing/invalid input).
 
 **apt (unsigned staging, internal testing):**
 
@@ -280,7 +279,7 @@ Checksums detect corruption or wrong files; they do not authenticate the publish
 
 **Signing CI handoff (out of this repo):** Read **`s3://<bucket>/nightly/unsigned/latest.json`** (updated by the `publish-unsigned-latest` job after a successful scheduled build). It lists `deb.packages[].s3_key`, `rpm.s3_key`, and SHA-256 digests. Trigger via `workflow_run`, S3 event on `latest.json`, or manual dispatch with `github_run_id`. Signed `.deb`/`.rpm` are promoted to consumer repos (for example `nightly/rvs/` or AMD CDN) with appropriate signed metadata.
 
-**Unsigned DEB accumulate semantics:** Each run syncs existing `conf/` + `pool/` + `dists/` from S3, runs `reprepro includedeb` for this night’s `.deb` (if the same Package+Version is already present locally, it is removed from the **local** archive first so the pool object can be overwritten via PutObject), then syncs back **without** `--delete`. Older differently versioned packages remain in the bucket. Signing CI must use **`latest.json`**, not “newest object in the prefix.”
+**Unsigned DEB accumulate semantics:** Each run syncs the existing `pool/` from S3, moves any older `pool/main/<letter>/<package>/` files up to `pool/main/`, copies this night’s `.deb` there (the same filename overwrites via PutObject), rebuilds `dists/stable` with `dpkg-scanpackages` and `apt-ftparchive`, then syncs `pool/` and `dists/` back **without** `--delete`. Older differently versioned packages remain in the bucket. Letter-folder keys from earlier reprepro publishes are left in S3 and are not listed in the new index. Signing CI must use **`latest.json`**, not “newest object in the prefix.”
 
 ### Repository Metadata (repodata)
 
