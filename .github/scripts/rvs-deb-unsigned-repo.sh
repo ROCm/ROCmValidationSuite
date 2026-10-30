@@ -1,10 +1,10 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Accumulate nightly/unsigned/packages/deb APT archive.
 # .deb files sit directly in pool/main/ (no letter or package-name subdirectory).
 # Merges this run's .deb into the existing S3 archive (no s3:DeleteObject / --delete).
 # Usage: rvs-deb-unsigned-repo.sh [path-to-build-dir]
 # Env: AWS_S3_BUCKET (required), optional RVS_UNSIGNED_DEB_PREFIX, GITHUB_RUN_ID
-set -eu
+set -euo pipefail
 
 BUILD_DIR="${1:-./build}"
 BUCKET="${AWS_S3_BUCKET:-}"
@@ -44,9 +44,16 @@ mkdir -p "$STAGING/pool/main"
 echo "Downloading existing unsigned DEB pool from s3://${BUCKET}/${DEB_PREFIX}/pool/ ..."
 aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/pool/" "$STAGING/pool/" --no-progress
 
-# Older publishes nested files at pool/main/<letter>/<package>/. Move them up
-# in this staging directory. The same filename overwrites on copy below.
-find "$STAGING/pool/main" -mindepth 2 -type f -name '*.deb' -exec mv -t "$STAGING/pool/main/" {} +
+# Older publishes nested files at pool/main/<letter>/<package>/. Preserve an
+# existing flat file, which may be newer than its nested predecessor.
+while IFS= read -r -d '' deb; do
+  dest="$STAGING/pool/main/$(basename "$deb")"
+  if [ -e "$dest" ]; then
+    rm -f "$deb"
+  else
+    mv "$deb" "$dest"
+  fi
+done < <(find "$STAGING/pool/main" -mindepth 2 -type f -name '*.deb' -print0)
 find "$STAGING/pool/main" -mindepth 1 -type d -empty -delete
 
 for deb in $DEBS; do
@@ -61,9 +68,10 @@ mkdir -p "$(dirname "$PACKAGES_FILE")"
   dpkg-scanpackages --multiversion pool/main /dev/null > "$PACKAGES_FILE"
 )
 sed -i 's#^Filename: \./#Filename: #g' "$PACKAGES_FILE"
-if grep -E '^Filename: ' "$PACKAGES_FILE" | grep -qvE '^Filename: pool/main/[^/]+\.deb$'; then
+bad=$(grep -E '^Filename: ' "$PACKAGES_FILE" | grep -vE '^Filename: pool/main/[^/]+\.deb$' || true)
+if [ -n "$bad" ]; then
   echo "::error::Packages index Filename is not pool/main/<file>.deb." >&2
-  grep -E '^Filename: ' "$PACKAGES_FILE" >&2 || true
+  printf '%s\n' "$bad" >&2
   exit 1
 fi
 if ! grep -qE '^Filename: pool/main/[^/]+\.deb$' "$PACKAGES_FILE"; then
@@ -80,8 +88,7 @@ gzip -k -f "$PACKAGES_FILE"
     -o APT::FTPArchive::Release::Codename="stable" \
     -o APT::FTPArchive::Release::Architectures="amd64" \
     -o APT::FTPArchive::Release::Components="main" \
-    release . > Release.new
-  mv Release.new Release
+    release . > Release
 )
 
 # Track this run's pool keys for latest.json (not the entire historical pool).

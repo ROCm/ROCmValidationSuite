@@ -84,7 +84,7 @@ Installs `apt-utils` (`apt-ftparchive`), `dpkg-dev` (`dpkg-scanpackages`), and `
 ### 5. Copy DEB packages and rebuild APT archive
 
 - Downloads the existing `release/unsigned/packages/deb/pool/` from S3 into a staging directory (**accumulate mode** — no `--delete`)
-- Moves any previously nested `pool/main/<letter>/<package>/*.deb` files up to `pool/main/` in that staging directory, then copies this run’s `.deb` there. The same filename overwrites, so promoting a build again replaces that object via `PutObject` and does not need `s3:DeleteObject`
+- Moves any previously nested `pool/main/<letter>/<package>/*.deb` files up to `pool/main/` in that staging directory, unless a flat file with the same name already exists. In that case, the flat file is retained and the nested predecessor is discarded. This prevents an old nested object from overwriting a newer flat object on a later promotion.
 - Rebuilds `dists/stable/main/binary-amd64/Packages` (and `Packages.gz`) with `dpkg-scanpackages --multiversion`, and `dists/stable/Release` with `apt-ftparchive`. `Filename:` is `pool/main/<file>.deb`
 - Syncs `pool/` and `dists/` back to S3 (no `--delete`). Letter-folder keys already in the bucket are left in place and are no longer listed in `Packages`
 
@@ -156,7 +156,7 @@ Writes a Markdown table to the GitHub Actions run summary listing the build numb
 
 ## Accumulation semantics
 
-All S3 writes use **accumulate mode** (no `--delete`). Packages from previous promotions remain in `release/unsigned/`. The DEB index is rebuilt from every `.deb` staged in `pool/main/`, so older versions stay listed beside the one just promoted. Objects left under `pool/main/<letter>/` by earlier reprepro publishes are not deleted; the new index does not reference them. RPM repodata is fully regenerated from all RPMs present in the staging directory after the new ones are added.
+All S3 writes use **accumulate mode** (no `--delete`). Packages from previous promotions remain in `release/unsigned/`. The DEB index is rebuilt from every `.deb` staged in `pool/main/`, so it intentionally publishes all historical versions in that unsigned pool; apt selects the highest version by default, and callers can request an older version explicitly. Objects left under `pool/main/<letter>/` by earlier reprepro publishes are not deleted; the new index does not reference them. RPM repodata is fully regenerated from all RPMs present in the staging directory after the new ones are added.
 
 Signing CI should always read `release/unsigned/latest.json` to find the exact `s3_key` values for a specific promotion — not list the prefix directly.
 
