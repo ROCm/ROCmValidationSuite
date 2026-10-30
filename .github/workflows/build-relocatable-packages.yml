@@ -444,7 +444,7 @@ jobs:
           [ -z "$BUCKET" ] && exit 0
           export DEBIAN_FRONTEND=noninteractive
           chmod +x .github/scripts/rvs-deb-unsigned-repo.sh
-          sh .github/scripts/rvs-deb-unsigned-repo.sh ./build
+          bash .github/scripts/rvs-deb-unsigned-repo.sh ./build
         env:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
           GITHUB_RUN_ID: ${{ github.run_id }}

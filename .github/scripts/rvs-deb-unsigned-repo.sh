@@ -117,7 +117,7 @@ for deb in $DEBS; do
   echo "$pool_rel" >>"$NEW_META"
 done
 
-if ! find "$STAGING/pool" -name '*.deb' 2>/dev/null | grep -q .; then
+if [ -z "$(find "$STAGING/pool" -name '*.deb' -print -quit)" ]; then
   echo "::error::No packages under pool/; aborting before S3 sync." >&2
   exit 1
 fi
