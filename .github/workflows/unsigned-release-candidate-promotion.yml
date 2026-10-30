@@ -150,11 +150,17 @@ jobs:
             exit 1
           fi
 
-          # Lift previously nested pool files into pool/main/, then add this run.
-          # The same filename overwrites, so promoting a build again is idempotent.
+          # Lift previously nested pool files into pool/main/, preserving an
+          # existing flat file that may be newer than its nested predecessor.
           echo "Placing ${DEB_COPIED} DEB(s) in pool/main/ ..."
-          find "${STAGING}/pool/main" -mindepth 2 -type f -name '*.deb' \
-            -exec mv -t "${STAGING}/pool/main/" {} +
+          while IFS= read -r -d '' deb; do
+            dest="${STAGING}/pool/main/$(basename "$deb")"
+            if [ -e "$dest" ]; then
+              rm -f "$deb"
+            else
+              mv "$deb" "$dest"
+            fi
+          done < <(find "${STAGING}/pool/main" -mindepth 2 -type f -name '*.deb' -print0)
           find "${STAGING}/pool/main" -mindepth 1 -type d -empty -delete
           cp -f "${INCOMING}"/amdrocm*-rvs*.deb "${STAGING}/pool/main/"
 
@@ -165,10 +171,11 @@ jobs:
             dpkg-scanpackages --multiversion pool/main /dev/null > "${PACKAGES_DIR}/Packages"
           )
           sed -i 's#^Filename: \./#Filename: #g' "${PACKAGES_DIR}/Packages"
-          if grep -E '^Filename: ' "${PACKAGES_DIR}/Packages" \
-              | grep -qvE '^Filename: pool/main/[^/]+\.deb$'; then
+          bad=$(grep -E '^Filename: ' "${PACKAGES_DIR}/Packages" \
+            | grep -vE '^Filename: pool/main/[^/]+\.deb$' || true)
+          if [ -n "$bad" ]; then
             echo "::error::Packages index Filename is not pool/main/<file>.deb." >&2
-            grep -E '^Filename: ' "${PACKAGES_DIR}/Packages" >&2 || true
+            printf '%s\n' "$bad" >&2
             exit 1
           fi
           if ! grep -qE '^Filename: pool/main/[^/]+\.deb$' "${PACKAGES_DIR}/Packages"; then
@@ -185,8 +192,7 @@ jobs:
               -o APT::FTPArchive::Release::Codename="stable" \
               -o APT::FTPArchive::Release::Architectures="amd64" \
               -o APT::FTPArchive::Release::Components="main" \
-              release . > Release.new
-            mv Release.new Release
+              release . > Release
           )
 
           echo "Syncing updated DEB archive to s3://${BUCKET}/${DST_DEB}/ ..."
@@ -226,12 +232,14 @@ jobs:
           aws s3 ls "s3://${BUCKET}/${SRC_RPM}/" --recursive \
             | awk '{print $NF}' > "${STAGING}/src_rpm_keys.txt"
           RPM_COPIED=0
+          RPM_BASENAME=""
           while IFS= read -r key; do
             fname=$(basename "$key")
             case "$fname" in amdrocm*-rvs*.rpm) : ;; *) continue ;; esac
             case "$fname" in *"-${RUN_NUMBER}."*) : ;; *) continue ;; esac
             echo "  Downloading ${fname} ..."
             aws s3 cp "s3://${BUCKET}/${key}" "${STAGING}/x86_64/${fname}" --no-progress
+            RPM_BASENAME="$fname"
             RPM_COPIED=$((RPM_COPIED + 1))
           done < "${STAGING}/src_rpm_keys.txt"
 
@@ -246,9 +254,9 @@ jobs:
             exit 1
           fi
 
-          # Compute SHA-256 of the promoted RPM and expose as a step output so
-          # the latest.json step can include it without re-downloading the file.
-          RPM_BASENAME=$(basename "${STAGING}/x86_64/"amdrocm*-rvs*.rpm)
+          # Hash the RPM downloaded for this run number. The staging directory
+          # also contains older unsigned RPMs, so a glob would select the
+          # lexicographically first historical file instead of this promotion.
           RPM_SHA256=$(sha256sum "${STAGING}/x86_64/${RPM_BASENAME}" | awk '{print $1}')
           echo "rpm_fname=${RPM_BASENAME}" >> "$GITHUB_OUTPUT"
           echo "rpm_sha256=${RPM_SHA256}" >> "$GITHUB_OUTPUT"
