@@ -92,16 +92,16 @@ jobs:
           echo "Destination: s3://${AWS_S3_BUCKET}/release/unsigned/{packages/deb,packages/rpm,tarball}/"
 
       # ── Install packaging tools ──────────────────────────────────────────────
-      - name: Install packaging tools (reprepro, createrepo_c)
+      - name: Install packaging tools (apt-utils, createrepo_c)
         run: |
           export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            reprepro \
+            apt-utils \
             dpkg-dev \
             createrepo-c || \
           sudo apt-get install -y --no-install-recommends \
-            reprepro \
+            apt-utils \
             dpkg-dev
 
       # ── DEB: copy matching files + rebuild APT archive ───────────────────────
@@ -116,27 +116,14 @@ jobs:
           STAGING=$(mktemp -d)
           trap 'rm -rf "$STAGING"' EXIT
 
-          # Download existing unsigned DEB archive (accumulate mode — no --delete).
+          # Download the existing pool (accumulate mode — no --delete).
           # aws s3 sync exits 0 for a nonexistent prefix; || true is not needed
           # and would mask real errors such as permission failures.
-          echo "Syncing existing ${DST_DEB} archive ..."
-          aws s3 sync "s3://${BUCKET}/${DST_DEB}/conf/"  "${STAGING}/conf/"  --no-progress
-          aws s3 sync "s3://${BUCKET}/${DST_DEB}/pool/"  "${STAGING}/pool/"  --no-progress
-          aws s3 sync "s3://${BUCKET}/${DST_DEB}/dists/" "${STAGING}/dists/" --no-progress
-
-          # Bootstrap reprepro distributions config if absent
-          if [ ! -f "${STAGING}/conf/distributions" ]; then
-            mkdir -p "${STAGING}/conf"
-            cat > "${STAGING}/conf/distributions" <<'DISTEOF'
-          Origin: ROCm Validation Suite
-          Label: stable
-          Suite: stable
-          Codename: stable
-          Architectures: amd64
-          Components: main
-          Description: RVS unsigned release
-          DISTEOF
-          fi
+          # Older publishes nested files at pool/main/<letter>/<package>/. Those
+          # objects stay in S3; this step republishes the bytes at pool/main/.
+          echo "Syncing existing ${DST_DEB}/pool/ ..."
+          mkdir -p "${STAGING}/pool/main"
+          aws s3 sync "s3://${BUCKET}/${DST_DEB}/pool/" "${STAGING}/pool/" --no-progress
 
           # List source DEBs and download the one matching the run number.
           # Release DEBs are named amdrocm<N>-rvs_<ver>-<run_number>_amd64.deb.
@@ -163,22 +150,46 @@ jobs:
             exit 1
           fi
 
-          echo "Including ${DEB_COPIED} DEB(s) into reprepro archive ..."
-          for deb_file in "${INCOMING}"/amdrocm*-rvs*.deb; do
-            [ -f "$deb_file" ] || continue
-            pkg=$(dpkg-deb -f "$deb_file" Package)
-            ver=$(dpkg-deb -f "$deb_file" Version)
-            # Idempotent: remove same Package+Version before re-include
-            if reprepro -b "${STAGING}" listfilter stable \
-                "Package (== ${pkg}), Version (== ${ver})" 2>/dev/null | grep -q .; then
-              reprepro -b "${STAGING}" -T deb removefilter stable \
-                "Package (== ${pkg}), Version (== ${ver})"
-            fi
-            reprepro -b "${STAGING}" includedeb stable "$deb_file"
-          done
+          # Lift previously nested pool files into pool/main/, then add this run.
+          # The same filename overwrites, so promoting a build again is idempotent.
+          echo "Placing ${DEB_COPIED} DEB(s) in pool/main/ ..."
+          find "${STAGING}/pool/main" -mindepth 2 -type f -name '*.deb' \
+            -exec mv -t "${STAGING}/pool/main/" {} +
+          find "${STAGING}/pool/main" -mindepth 1 -type d -empty -delete
+          cp -f "${INCOMING}"/amdrocm*-rvs*.deb "${STAGING}/pool/main/"
+
+          PACKAGES_DIR="${STAGING}/dists/stable/main/binary-amd64"
+          mkdir -p "${PACKAGES_DIR}"
+          (
+            cd "${STAGING}"
+            dpkg-scanpackages --multiversion pool/main /dev/null > "${PACKAGES_DIR}/Packages"
+          )
+          sed -i 's#^Filename: \./#Filename: #g' "${PACKAGES_DIR}/Packages"
+          if grep -E '^Filename: ' "${PACKAGES_DIR}/Packages" \
+              | grep -qvE '^Filename: pool/main/[^/]+\.deb$'; then
+            echo "::error::Packages index Filename is not pool/main/<file>.deb." >&2
+            grep -E '^Filename: ' "${PACKAGES_DIR}/Packages" >&2 || true
+            exit 1
+          fi
+          if ! grep -qE '^Filename: pool/main/[^/]+\.deb$' "${PACKAGES_DIR}/Packages"; then
+            echo "::error::Packages index has no pool/main deb entries." >&2
+            exit 1
+          fi
+          gzip -k -f "${PACKAGES_DIR}/Packages"
+          (
+            cd "${STAGING}/dists/stable"
+            apt-ftparchive \
+              -o APT::FTPArchive::Release::Origin="ROCm Validation Suite" \
+              -o APT::FTPArchive::Release::Label="stable" \
+              -o APT::FTPArchive::Release::Suite="stable" \
+              -o APT::FTPArchive::Release::Codename="stable" \
+              -o APT::FTPArchive::Release::Architectures="amd64" \
+              -o APT::FTPArchive::Release::Components="main" \
+              release . > Release.new
+            mv Release.new Release
+          )
 
           echo "Syncing updated DEB archive to s3://${BUCKET}/${DST_DEB}/ ..."
-          aws s3 sync "${STAGING}/conf/"  "s3://${BUCKET}/${DST_DEB}/conf/"  --no-progress
           aws s3 sync "${STAGING}/pool/"  "s3://${BUCKET}/${DST_DEB}/pool/"  --no-progress
           aws s3 sync "${STAGING}/dists/" "s3://${BUCKET}/${DST_DEB}/dists/" --no-progress
           echo "=== DEB archive updated at s3://${BUCKET}/${DST_DEB}/ ==="
@@ -341,7 +352,7 @@ jobs:
           export WORKDIR
           trap 'rm -rf "$WORKDIR"' EXIT
 
-          # Fetch the reprepro Packages index to extract DEB pool paths.
+          # Fetch the Packages index to extract DEB pool paths.
           # This is a hard requirement — the DEB promote step must have succeeded.
           DEB_STAGE="${WORKDIR}/deb"
           mkdir -p "${DEB_STAGE}"
@@ -368,7 +379,7 @@ jobs:
           DST_RPM = "release/unsigned/packages/rpm"
           DST_TAR = "release/unsigned/tarball"
 
-          # --- DEB: parse reprepro Packages index ---
+          # --- DEB: parse Packages index ---
           # Match the DEB pool filename with the same delimiter logic used in the
           # shell loop: run number sits between "-" and "_amd64" in the filename.
           packages_file = workdir / "deb" / "Packages"

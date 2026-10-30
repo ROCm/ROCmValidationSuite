@@ -270,7 +270,6 @@ jobs:
             git \
             dpkg-dev \
             apt-utils \
-            reprepro \
             python3 \
             python3-pip
           rm -rf /var/lib/apt/lists/*

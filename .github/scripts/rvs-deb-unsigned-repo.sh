@@ -1,5 +1,6 @@
 #!/bin/sh
-# Accumulate nightly/unsigned/packages/deb APT archive (dists/ + pool/) via reprepro.
+# Accumulate nightly/unsigned/packages/deb APT archive.
+# .deb files sit directly in pool/main/ (no letter or package-name subdirectory).
 # Merges this run's .deb into the existing S3 archive (no s3:DeleteObject / --delete).
 # Usage: rvs-deb-unsigned-repo.sh [path-to-build-dir]
 # Env: AWS_S3_BUCKET (required), optional RVS_UNSIGNED_DEB_PREFIX, GITHUB_RUN_ID
@@ -22,11 +23,11 @@ if [ -z "$DEB_PREFIX" ]; then
   DEB_PREFIX=$(sh "${SCRIPT_DIR}/rvs-s3-upload-route.sh" unsigned-deb-prefix)
 fi
 
-if ! command -v reprepro >/dev/null 2>&1; then
-  echo "Installing reprepro ..."
+if ! command -v dpkg-scanpackages >/dev/null 2>&1 || ! command -v apt-ftparchive >/dev/null 2>&1; then
+  echo "Installing dpkg-dev and apt-utils ..."
   export DEBIAN_FRONTEND=noninteractive
   apt-get update
-  apt-get install -y --no-install-recommends reprepro
+  apt-get install -y --no-install-recommends dpkg-dev apt-utils
 fi
 
 DEBS=$(find "$BUILD_DIR" -maxdepth 1 -name 'amdrocm*-rvs*.deb' 2>/dev/null | sort)
@@ -36,29 +37,54 @@ if [ -z "$DEBS" ]; then
 fi
 
 STAGING=$(mktemp -d)
-trap 'rm -rf "$STAGING"' EXIT
-
-mkdir -p "$STAGING/conf"
-echo "Downloading existing unsigned DEB archive from s3://${BUCKET}/${DEB_PREFIX}/ ..."
-aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/conf/" "$STAGING/conf/" --no-progress
-aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/pool/" "$STAGING/pool/" --no-progress
-aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/dists/" "$STAGING/dists/" --no-progress
-
-if [ ! -f "$STAGING/conf/distributions" ]; then
-  cat >"$STAGING/conf/distributions" <<'EOF'
-Origin: ROCm Validation Suite
-Label: stable
-Suite: stable
-Codename: stable
-Architectures: amd64
-Components: main
-Description: RVS unsigned nightly
-EOF
-fi
-
-# Track this run's pool keys for latest.json (not the entire historical pool).
 NEW_META=$(mktemp)
 trap 'rm -rf "$STAGING" "$NEW_META"' EXIT
+
+mkdir -p "$STAGING/pool/main"
+echo "Downloading existing unsigned DEB pool from s3://${BUCKET}/${DEB_PREFIX}/pool/ ..."
+aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/pool/" "$STAGING/pool/" --no-progress
+
+# Older publishes nested files at pool/main/<letter>/<package>/. Move them up
+# in this staging directory. The same filename overwrites on copy below.
+find "$STAGING/pool/main" -mindepth 2 -type f -name '*.deb' -exec mv -t "$STAGING/pool/main/" {} +
+find "$STAGING/pool/main" -mindepth 1 -type d -empty -delete
+
+for deb in $DEBS; do
+  echo "Placing $(basename "$deb") in pool/main/ ..."
+  cp -f "$deb" "$STAGING/pool/main/"
+done
+
+PACKAGES_FILE="$STAGING/dists/stable/main/binary-amd64/Packages"
+mkdir -p "$(dirname "$PACKAGES_FILE")"
+(
+  cd "$STAGING"
+  dpkg-scanpackages --multiversion pool/main /dev/null > "$PACKAGES_FILE"
+)
+sed -i 's#^Filename: \./#Filename: #g' "$PACKAGES_FILE"
+if grep -E '^Filename: ' "$PACKAGES_FILE" | grep -qvE '^Filename: pool/main/[^/]+\.deb$'; then
+  echo "::error::Packages index Filename is not pool/main/<file>.deb." >&2
+  grep -E '^Filename: ' "$PACKAGES_FILE" >&2 || true
+  exit 1
+fi
+if ! grep -qE '^Filename: pool/main/[^/]+\.deb$' "$PACKAGES_FILE"; then
+  echo "::error::Packages index has no pool/main deb entries." >&2
+  exit 1
+fi
+gzip -k -f "$PACKAGES_FILE"
+(
+  cd "$STAGING/dists/stable"
+  apt-ftparchive \
+    -o APT::FTPArchive::Release::Origin="ROCm Validation Suite" \
+    -o APT::FTPArchive::Release::Label="stable" \
+    -o APT::FTPArchive::Release::Suite="stable" \
+    -o APT::FTPArchive::Release::Codename="stable" \
+    -o APT::FTPArchive::Release::Architectures="amd64" \
+    -o APT::FTPArchive::Release::Components="main" \
+    release . > Release.new
+  mv Release.new Release
+)
+
+# Track this run's pool keys for latest.json (not the entire historical pool).
 : >"$NEW_META"
 
 deb_count=0
@@ -66,20 +92,9 @@ for deb in $DEBS; do
   deb_count=$((deb_count + 1))
   pkg=$(dpkg-deb -f "$deb" Package)
   ver=$(dpkg-deb -f "$deb" Version)
-  # Same Package+Version already in the archive: drop that version from the local
-  # db/pool then re-include so PutObject can overwrite the pool object.
-  # Does not require s3:DeleteObject (orphan keys with other filenames may remain).
-  if reprepro -b "$STAGING" listfilter stable "Package (== ${pkg}), Version (== ${ver})" 2>/dev/null | grep -q .; then
-    echo "Package ${pkg} ${ver} already in suite stable; removing that version from local archive before re-include ..."
-    reprepro -b "$STAGING" -T deb removefilter stable "Package (== ${pkg}), Version (== ${ver})"
-  fi
-  echo "Including $(basename "$deb") ..."
-  reprepro -b "$STAGING" includedeb stable "$deb"
-
-  # Resolve the pool path reprepro recorded for this exact Package+Version from
-  # its own Packages index. Using find is non-deterministic (undefined order) and
-  # a glob fallback on ${pkg}_*.deb would match every historical version in pool/.
-  PACKAGES_FILE="$STAGING/dists/stable/main/binary-amd64/Packages"
+  # Resolve the pool path recorded for this exact Package+Version. Using find is
+  # non-deterministic (undefined order) and a glob fallback on ${pkg}_*.deb would
+  # match every historical version in pool/.
   pool_rel=$(awk -v pkg="$pkg" -v ver="$ver" '
     /^Package:/  { cur_pkg=$2; cur_ver=""; cur_fn="" }
     /^Version:/  { cur_ver=$2 }
@@ -89,14 +104,14 @@ for deb in $DEBS; do
   ' "$PACKAGES_FILE")
 
   if [ -z "$pool_rel" ]; then
-    echo "::error::Cannot resolve pool path for ${pkg} ${ver} from reprepro Packages index." >&2
+    echo "::error::Cannot resolve pool path for ${pkg} ${ver} from the Packages index." >&2
     exit 1
   fi
   echo "$pool_rel" >>"$NEW_META"
 done
 
 if ! find "$STAGING/pool" -name '*.deb' 2>/dev/null | grep -q .; then
-  echo "::error::reprepro produced no packages under pool/; aborting before S3 sync." >&2
+  echo "::error::No packages under pool/; aborting before S3 sync." >&2
   exit 1
 fi
 
@@ -106,8 +121,7 @@ if [ "$meta_count" -ne "$deb_count" ]; then
   exit 1
 fi
 
-echo "Uploading conf/, pool/, and dists/ to s3://${BUCKET}/${DEB_PREFIX}/ (accumulate; no --delete) ..."
-aws s3 sync "$STAGING/conf/" "s3://${BUCKET}/${DEB_PREFIX}/conf/" --no-progress
+echo "Uploading pool/ and dists/ to s3://${BUCKET}/${DEB_PREFIX}/ (accumulate; no --delete) ..."
 aws s3 sync "$STAGING/pool/" "s3://${BUCKET}/${DEB_PREFIX}/pool/" --no-progress
 aws s3 sync "$STAGING/dists/" "s3://${BUCKET}/${DEB_PREFIX}/dists/" --no-progress
 
