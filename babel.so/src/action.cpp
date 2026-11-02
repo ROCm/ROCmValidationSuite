@@ -115,6 +115,8 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
       workers[i].set_data_init(data_init);
       workers[i].set_nontemporal(nontemporal);
       workers[i].set_sustained(sustained);
+      workers[i].set_load_store(load_store);
+      workers[i].set_lds_bytes(lds_bytes);
 
       i++;
     }
@@ -345,6 +347,27 @@ bool mem_action::get_all_mem_config_keys(void) {
 
   if (property_get<bool>(RVS_CONF_SUSTAINED, &sustained, MEM_DEFAULT_SUSTAINED)) {
     msg = "invalid '" + std::string(RVS_CONF_SUSTAINED) + "' key value";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  it = property.find(RVS_CONF_LOAD_STORE);
+  if (it != property.end()) {
+    load_store = it->second;
+  } else {
+    load_store = MEM_DEFAULT_LOAD_STORE;
+  }
+
+  if (load_store != "vector" && load_store != "async" && load_store != "tdm") {
+    msg = "invalid '" + std::string(RVS_CONF_LOAD_STORE) +
+      "' key value '" + load_store +
+      "'. Must be 'vector', 'async' or 'tdm'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (property_get_int<uint32_t>(RVS_CONF_LDS_BYTES, &lds_bytes, MEM_DEFAULT_LDS_BYTES)) {
+    msg = "invalid '" + std::string(RVS_CONF_LDS_BYTES) + "' key value";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
   }

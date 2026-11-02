@@ -59,6 +59,8 @@ using std::map;
 #define RVS_CONF_NONTEMPORAL            "nontemporal"
 #define RVS_CONF_DURATION               "duration"
 #define RVS_CONF_SUSTAINED              "sustained"
+#define RVS_CONF_LOAD_STORE             "load_store"
+#define RVS_CONF_LDS_BYTES              "lds_bytes"
 
 #define MEM_DEFAULT_ARRAY_SIZE          33554432   // 32 MB
 #define MEM_DEFAULT_NUM_ITER            100
@@ -73,6 +75,8 @@ using std::map;
 #define MEM_DEFAULT_DATA_INIT           "default"
 #define MEM_DEFAULT_NONTEMPORAL         "all"
 #define MEM_DEFAULT_SUSTAINED           false
+#define MEM_DEFAULT_LOAD_STORE          "vector"
+#define MEM_DEFAULT_LDS_BYTES           0          // 0 means the device's per-block maximum
 
 #define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define FLOATING_POINT_REGEX            "^[0-9]*\\.?[0-9]+$"
@@ -137,6 +141,10 @@ class mem_action: public rvs::actionbase {
     std::string nontemporal;
     //! sustained mode: back-to-back launches, single sync, average BW only
     bool sustained;
+    //! HBM load/store path ("vector", "async" or "tdm")
+    std::string load_store;
+    //! LDS staging bytes per block for the async and tdm paths (0 = device maximum)
+    uint32_t lds_bytes;
 
     // configuration properties getters
     bool get_all_mem_config_keys(void);

@@ -2705,6 +2705,21 @@ after all iterations complete. Bandwidth is reported as the average across all
 iterations in all four output columns (MBytes/sec, Max, Min, Avg). This mode
 measures steady-state memory bandwidth under continuous load. The default value
 is false.</td></tr>
+<tr><td>load_store</td><td>String</td>
+<td>How the kernels move data between HBM and the compute units. Accepted values:
+<b>vector</b> – Vector loads and stores to registers (default).
+<b>async</b> – Stage every operand through LDS with the async-to/from-LDS
+load/store instructions.
+<b>tdm</b> – Stage every operand through LDS with the Tensor Data Mover.
+<b>async</b> and <b>tdm</b> require a gfx1250 GPU. With them, Copy is a single
+HBM-to-LDS-to-HBM round trip; the other kernels compute on the staged LDS data.
+<b>nontemporal</b> selects the cache policy of each load and store; Copy uses one
+policy for both legs, non-temporal unless <b>nontemporal</b> is <b>none</b>.
+<b>dwords_per_lane</b> and <b>chunks_per_block</b> do not change these kernels.</td></tr>
+<tr><td>lds_bytes</td><td>Integer</td>
+<td>LDS staging buffer per thread block, in bytes, for the <b>async</b> and
+<b>tdm</b> load/store paths. Each warp gets an equal share. The default value
+is 0, which uses the largest LDS allocation the device allows per block.</td></tr>
 </table>
 </div>
 

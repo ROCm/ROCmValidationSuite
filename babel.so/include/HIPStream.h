@@ -54,12 +54,21 @@ class HIPStream : public Stream<T>
     // sustained mode: skip per-iteration sync, single sync after all iterations.
     bool sustained_mode = false;
 
+    // LDS-staged load/store path (async-to/from-LDS or TDM); 0 = vector loads/stores.
+    using lds_kernel_t = void (*)(const T*, const T*, T*, T*, size_t, unsigned int);
+    int load_store_mode = 0;
+    unsigned int lds_bytes = 0;
+    unsigned int lds_grid = 0;
+    lds_kernel_t lds_kernels[7] = {};
+    float lds_run(int op, const T* in0, const T* in1, T* out);
+
   public:
     void set_sustained_mode(bool mode) { sustained_mode = mode; }
     void sustained_sync();
     HIPStream(const unsigned int, const bool, const int,
         const unsigned int, const unsigned int, const unsigned int,
-        const std::string& nontemporal = "all");
+        const std::string& nontemporal = "all",
+        const std::string& load_store = "vector", const unsigned int lds_bytes = 0);
     ~HIPStream();
 
     virtual float read() override;
