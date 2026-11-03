@@ -51,6 +51,9 @@ class HIPStream : public Stream<T>
 
     int nt_mode = 1; // NT_ALL
 
+    // read(): use the gfx1250 b128 non-temporal read kernel
+    bool read_b128_nt = false;
+
     // sustained mode: skip per-iteration sync, single sync after all iterations.
     bool sustained_mode = false;
 
@@ -59,7 +62,8 @@ class HIPStream : public Stream<T>
     void sustained_sync();
     HIPStream(const unsigned int, const bool, const int,
         const unsigned int, const unsigned int, const unsigned int,
-        const std::string& nontemporal = "all");
+        const std::string& nontemporal = "all",
+        const std::string& read_kernel = "default");
     ~HIPStream();
 
     virtual float read() override;

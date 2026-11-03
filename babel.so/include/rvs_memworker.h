@@ -276,6 +276,13 @@ class MemWorker : public rvs::ThreadBase {
     //! returns non-temporal access mode
     const std::string& get_nontemporal(void) { return nontemporal; }
 
+    //! sets read kernel selection
+    void set_read_kernel(const std::string& _read_kernel) {
+        read_kernel = _read_kernel;
+    }
+    //! returns read kernel selection
+    const std::string& get_read_kernel(void) { return read_kernel; }
+
     //! sets sustained mode
     void set_sustained(bool _sustained) { sustained = _sustained; }
     //! returns sustained mode
@@ -327,6 +334,8 @@ class MemWorker : public rvs::ThreadBase {
     std::string data_init;
     //! non-temporal access mode
     std::string nontemporal;
+    //! read kernel selection
+    std::string read_kernel;
     //! sustained mode: back-to-back launches, single sync, average BW only
     bool sustained;
 

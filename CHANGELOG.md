@@ -10,6 +10,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 - PCI device ID auto-detection for Radeon GPUs in `gpu_get_platform_name()`.
 - Support for GEMM bandwidth.
 - GEMM consistency check support.
+- New read kernel in Babel for gfx1250.
 
 ### Changed
 - Update fp32 and fp64 targets for MI300X, MI300X-HF and MI325X.

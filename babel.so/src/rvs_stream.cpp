@@ -152,7 +152,8 @@ static void hipLaunchKernelSynchronous(F kernel, const dim3& numBlocks,
   template <class T>
 HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
     const int device_index, const unsigned int _dwords_per_lane, const unsigned int _chunks_per_block,
-    const unsigned int _threads_per_block, const std::string& nontemporal)
+    const unsigned int _threads_per_block, const std::string& nontemporal,
+    const std::string& read_kernel)
   : array_size{ARRAY_SIZE}, evt_timing(event_timing),
   dwords_per_lane(_dwords_per_lane), chunks_per_block(_chunks_per_block), tb_size(_threads_per_block),
   sustained_mode(false)
@@ -165,6 +166,8 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
   else if (nontemporal == "read")  nt_mode = 2; // NT_READ
   else if (nontemporal == "write") nt_mode = 3; // NT_WRITE
   else                             nt_mode = 1; // NT_ALL
+
+  read_b128_nt = (read_kernel == "b128_nt");
 
   // make sure that either:
   //    DWORDS_PER_LANE is less than sizeof(T), in which case we default to 1 element
@@ -189,7 +192,8 @@ HIPStream<T>::HIPStream(const unsigned int ARRAY_SIZE, const bool event_timing,
   block_cnt = (array_size / (tb_size * elements_per_lane * chunks_per_block));
 
   msg = std::string("\nelements per lane ") + std::to_string(elements_per_lane) + "," +
-	 std::string("chunks per block ") + std::to_string(chunks_per_block);
+	 std::string("chunks per block ") + std::to_string(chunks_per_block) + "," +
+	 std::string("read kernel ") + read_kernel;
 
   // The array size must be divisible by total number of elements
   // moved per block for kernel launches
@@ -411,10 +415,54 @@ void read_kernel(const T * __restrict a, T * __restrict c)
   }
 }
 
+// Fixed 4 elements per lane x 4 chunks per block. Always non-temporal; the
+// loaded data is not consumed. Host side only launches it on gfx1250.
+template <typename T>
+__launch_bounds__(TBSIZE)
+__global__
+void read_kernel_b128_nt(const T * __restrict a)
+{
+#if defined(__gfx1250__)
+  const auto dx = grid_size() * 4;
+  const auto gidx = localid() * 4;
+
+  using b128_t = __attribute__((vector_size(16))) int;
+  b128_t v0, v1, v2, v3;
+  asm volatile(
+      "global_load_b128 %0, %4, off th:TH_LOAD_NT\n\t"
+      "global_load_b128 %1, %5, off th:TH_LOAD_NT\n\t"
+      "global_load_b128 %2, %6, off th:TH_LOAD_NT\n\t"
+      "global_load_b128 %3, %7, off th:TH_LOAD_NT\n\t"
+      : "=&v"(v0), "=&v"(v1), "=&v"(v2), "=&v"(v3)
+      : "v"(&a[gidx]), "v"(&a[gidx + dx]), "v"(&a[gidx + 2 * dx]), "v"(&a[gidx + 3 * dx]));
+#endif
+}
+
 template <class T>
 float HIPStream<T>::read()
 {
   float kernel_time = 0.;
+  if (read_b128_nt)
+  {
+    if (sustained_mode)
+    {
+      hipLaunchKernelGGL(read_kernel_b128_nt<T>, dim3(block_cnt), dim3(tb_size), 0, nullptr, d_a);
+      return 0.f;
+    }
+    if (evt_timing)
+    {
+      hipLaunchKernelWithEvents(read_kernel_b128_nt<T>, dim3(block_cnt), dim3(tb_size), nullptr,
+                                start_ev, stop_ev, d_a);
+      check_error(hipEventSynchronize(stop_ev));
+      check_error(hipEventElapsedTime(&kernel_time, start_ev, stop_ev));
+    }
+    else
+    {
+      hipLaunchKernelSynchronous(read_kernel_b128_nt<T>, dim3(block_cnt), dim3(tb_size), nullptr,
+                                 stop_ev, d_a);
+    }
+    return kernel_time;
+  }
   if (sustained_mode)
   {
     if(elements_per_lane == 4 && chunks_per_block == 1)
