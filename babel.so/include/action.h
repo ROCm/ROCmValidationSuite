@@ -57,6 +57,7 @@ using std::map;
 #define RVS_CONF_TRIAD                  "triad"
 #define RVS_CONF_DATA_INIT              "data_init"
 #define RVS_CONF_NONTEMPORAL            "nontemporal"
+#define RVS_CONF_READ_KERNEL            "read_kernel"
 #define RVS_CONF_DURATION               "duration"
 #define RVS_CONF_SUSTAINED              "sustained"
 
@@ -72,6 +73,7 @@ using std::map;
 #define MEM_DEFAULT_TEST_ENABLE         false
 #define MEM_DEFAULT_DATA_INIT           "default"
 #define MEM_DEFAULT_NONTEMPORAL         "all"
+#define MEM_DEFAULT_READ_KERNEL         "default"
 #define MEM_DEFAULT_SUSTAINED           false
 
 #define MEM_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
@@ -135,6 +137,8 @@ class mem_action: public rvs::actionbase {
     std::string data_init;
     //! non-temporal access mode ("none", "all", "read" or "write")
     std::string nontemporal;
+    //! read kernel selection ("default" or "b128_nt")
+    std::string read_kernel;
     //! sustained mode: back-to-back launches, single sync, average BW only
     bool sustained;
 
