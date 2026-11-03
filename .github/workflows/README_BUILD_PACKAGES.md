@@ -358,7 +358,24 @@ sudo yum install amdrocm7-rvs  # Replace 7 with your ROCm major version
 # or: sudo dnf install amdrocm7-rvs
 ```
 
-> **Note:** `[trusted=yes]` (apt) and `gpgcheck=0` (yum) disable GPG verification. For production use, sign the packages and metadata with a GPG key and distribute the public key to users. Repository metadata is generated for **scheduled**, **push**, and **manual** builds; PR builds upload raw packages to ref-specific paths without metadata.
+**Using the S3 repo with zypper (SLES):**
+
+SLES uses the same RPM repository as CentOS/RHEL/Rocky. `zypper` reads the `rpm-md` metadata written by `createrepo_c`.
+
+```bash
+# Add the nightly repo (replace <bucket> with the actual S3 bucket name)
+sudo zypper addrepo --refresh --no-gpgcheck \
+  https://<bucket>.s3.amazonaws.com/nightly/rvs/rpm/ rvs-nightly
+
+# Or the release repo
+sudo zypper addrepo --refresh --no-gpgcheck \
+  https://<bucket>.s3.amazonaws.com/release/rvs/rpm/ rvs-release
+
+sudo zypper refresh
+sudo zypper install amdrocm7-rvs  # Replace 7 with your ROCm major version
+```
+
+> **Note:** `[trusted=yes]` (apt), `gpgcheck=0` (yum/dnf), and `--no-gpgcheck` (zypper) disable GPG verification. For production use, sign the packages and metadata with a GPG key and distribute the public key to users. Repository metadata is generated for **scheduled**, **push**, and **manual** builds; PR builds upload raw packages to ref-specific paths without metadata.
 
 ## Build Script: build_packages_local.sh
 
@@ -469,6 +486,20 @@ sudo dpkg -i amdrocm7-rvs_*.deb
 ```bash
 # Download the package from S3 (or use the yum/dnf repo described above)
 sudo rpm -i --replacefiles --nodeps amdrocm7-rvs-*.rpm
+
+# Run RVS
+/opt/rocm/extras-7/bin/rvs --help
+```
+
+### SLES (RPM)
+
+SLES installs the same manylinux RPM as CentOS/RHEL/Rocky. Install the SUSE runtime packages first (`libpci3` for PCI access and `libnuma1` when the bundled TransferBench CLI is used), then install RVS from the zypper repo above or from a downloaded file.
+
+```bash
+sudo zypper install libpci3 libnuma1
+
+# Download the package from S3 (or use the zypper repo described above)
+sudo zypper install --allow-unsigned-rpm ./amdrocm7-rvs-*.rpm
 
 # Run RVS
 /opt/rocm/extras-7/bin/rvs --help
