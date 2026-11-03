@@ -304,8 +304,10 @@ jobs:
       # Forward LOCAL_PACKAGE_SERVER_URL to the build script as UPLOAD_TARGET.
       - name: Configure local package upload
         if: vars.LOCAL_PACKAGE_SERVER_URL != ''
+        env:
+          LOCAL_PACKAGE_SERVER_URL: ${{ vars.LOCAL_PACKAGE_SERVER_URL }}
         run: |
-          echo "UPLOAD_TARGET=${{ vars.LOCAL_PACKAGE_SERVER_URL }}" >> "$GITHUB_ENV"
+          echo "UPLOAD_TARGET=${LOCAL_PACKAGE_SERVER_URL}" >> "$GITHUB_ENV"
 
       - name: Build and Package RVS
         run: |
@@ -321,12 +323,14 @@ jobs:
       # Print the resulting download URL in the step log and run Summary.
       - name: Print local package download URL
         if: vars.LOCAL_PACKAGE_SERVER_URL != ''
+        env:
+          LOCAL_PACKAGE_SERVER_URL: ${{ vars.LOCAL_PACKAGE_SERVER_URL }}
         run: |
           REPO="${GITHUB_REPOSITORY##*/}"
           BRANCH="${RVS_BUILD_REF_NAME:-$GITHUB_REF_NAME}"
           SAFE_BRANCH=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9._/-]|-|g')
           DATE=$(date +%Y-%m-%d)
-          URL="${{ vars.LOCAL_PACKAGE_SERVER_URL }}/${REPO}/${SAFE_BRANCH}/${DATE}/"
+          URL="${LOCAL_PACKAGE_SERVER_URL}/${REPO}/${SAFE_BRANCH}/${DATE}/"
           echo "================================================================"
           echo "  Package downloads for this build (Ubuntu)"
           echo "  $URL"
@@ -398,7 +402,7 @@ jobs:
       - name: Generate and upload DEB repo metadata to S3
         if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch') && matrix.skip_upload != true && (github.event_name != 'schedule' || matrix.is_default == true)
         run: |
-          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          BUCKET="${AWS_S3_BUCKET}"
           [ -z "$BUCKET" ] && exit 0
 
           # dpkg-dev and apt-utils were installed in the Bootstrap container step.
@@ -440,7 +444,7 @@ jobs:
       - name: Generate and upload unsigned DEB archive to S3
         if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
         run: |
-          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          BUCKET="${AWS_S3_BUCKET}"
           [ -z "$BUCKET" ] && exit 0
           export DEBIAN_FRONTEND=noninteractive
           chmod +x .github/scripts/rvs-deb-unsigned-repo.sh
@@ -502,8 +506,10 @@ jobs:
 
       - name: Configure local package upload
         if: vars.LOCAL_PACKAGE_SERVER_URL != ''
+        env:
+          LOCAL_PACKAGE_SERVER_URL: ${{ vars.LOCAL_PACKAGE_SERVER_URL }}
         run: |
-          echo "UPLOAD_TARGET=${{ vars.LOCAL_PACKAGE_SERVER_URL }}" >> "$GITHUB_ENV"
+          echo "UPLOAD_TARGET=${LOCAL_PACKAGE_SERVER_URL}" >> "$GITHUB_ENV"
 
       - name: Build and Package RVS
         run: |
@@ -512,12 +518,14 @@ jobs:
 
       - name: Print local package download URL
         if: vars.LOCAL_PACKAGE_SERVER_URL != ''
+        env:
+          LOCAL_PACKAGE_SERVER_URL: ${{ vars.LOCAL_PACKAGE_SERVER_URL }}
         run: |
           REPO="${GITHUB_REPOSITORY##*/}"
           BRANCH="${RVS_BUILD_REF_NAME:-$GITHUB_REF_NAME}"
           SAFE_BRANCH=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9._/-]|-|g')
           DATE=$(date +%Y-%m-%d)
-          URL="${{ vars.LOCAL_PACKAGE_SERVER_URL }}/${REPO}/${SAFE_BRANCH}/${DATE}/"
+          URL="${LOCAL_PACKAGE_SERVER_URL}/${REPO}/${SAFE_BRANCH}/${DATE}/"
           echo "================================================================"
           echo "  Package downloads for this build (CentOS/RHEL)"
           echo "  $URL"
@@ -602,7 +610,7 @@ jobs:
       - name: Generate and upload RPM repodata to S3
         if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) && (github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch') && matrix.skip_upload != true && (github.event_name != 'schedule' || matrix.is_default == true)
         run: |
-          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          BUCKET="${AWS_S3_BUCKET}"
           [ -z "$BUCKET" ] && exit 0
 
           yum install -y createrepo_c || yum install -y createrepo
@@ -631,7 +639,7 @@ jobs:
       - name: Generate and upload unsigned RPM repodata to S3
         if: (github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true') && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) && matrix.skip_upload != true && github.event_name == 'schedule' && matrix.is_default == true
         run: |
-          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          BUCKET="${AWS_S3_BUCKET}"
           [ -z "$BUCKET" ] && exit 0
 
           rpm_n=0
@@ -791,7 +799,7 @@ jobs:
       - name: Publish nightly/unsigned/latest.json
         if: github.repository == 'ROCm/ROCmValidationSuite' || vars.RVS_S3_UPLOAD_ENABLED == 'true'
         run: |
-          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          BUCKET="${AWS_S3_BUCKET}"
           [ -z "$BUCKET" ] && exit 0
           chmod +x .github/scripts/rvs-unsigned-publish-latest.sh
           sh .github/scripts/rvs-unsigned-publish-latest.sh
@@ -976,10 +984,15 @@ jobs:
           python3 -c "from pathlib import Path; import os; p = Path('build-report.md'); p.write_text(p.read_text().replace('@@REF_NAME@@', os.environ['REF_NAME'], 1))"
 
       - name: Add S3 upload links to build report
+        env:
+          BUCKET_UBUNTU: ${{ needs.build-ubuntu.outputs.s3_bucket_ubuntu }}
+          BUCKET_CENTOS: ${{ needs.build-centos.outputs.s3_bucket_centos }}
+          PATHS_UBUNTU: ${{ needs.build-ubuntu.outputs.s3_paths_ubuntu }}
+          PATHS_CENTOS: ${{ needs.build-centos.outputs.s3_paths_centos }}
         run: |
-          BUCKET="${{ needs.build-ubuntu.outputs.s3_bucket_ubuntu }}"
+          BUCKET="${BUCKET_UBUNTU}"
           if [ -z "$BUCKET" ]; then
-            BUCKET="${{ needs.build-centos.outputs.s3_bucket_centos }}"
+            BUCKET="${BUCKET_CENTOS}"
           fi
           if [ -z "$BUCKET" ]; then
             echo "No S3 upload in this run, skipping S3 links section."
@@ -990,8 +1003,6 @@ jobs:
           echo "" >> build-report.md
           echo "Packages were uploaded to the following S3 locations (AWS Console links):" >> build-report.md
           echo "" >> build-report.md
-          PATHS_UBUNTU="${{ needs.build-ubuntu.outputs.s3_paths_ubuntu }}"
-          PATHS_CENTOS="${{ needs.build-centos.outputs.s3_paths_centos }}"
           echo "$PATHS_UBUNTU" | sed 's/||/\n/g' | while IFS= read -r part; do
             [ -z "$part" ] && continue
             label="${part%%|*}"; prefix="${part#*|}"

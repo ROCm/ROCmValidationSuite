@@ -137,16 +137,22 @@ jobs:
         env:
           TARBALL_NAME: ${{ steps.resolve.outputs.tarball_name }}
           TARBALL_URL: ${{ steps.resolve.outputs.tarball_url }}
+          ROCM_REPO_BASEURL: ${{ steps.resolve.outputs.rocm_repo_baseurl }}
+          RVS_REPO_BASEURL: ${{ steps.resolve.outputs.rvs_repo_baseurl }}
+          ROCM_PACKAGE: ${{ steps.resolve.outputs.rocm_package }}
+          RVS_PACKAGE: ${{ steps.resolve.outputs.rvs_package }}
+          RVS_DOCKER_ROCM_VERSION: ${{ steps.resolve.outputs.rocm_version }}
+          ROCM_MAJOR: ${{ steps.resolve.outputs.rocm_major }}
         run: |
           {
             echo "TARBALL_NAME=${TARBALL_NAME}"
             echo "TARBALL_URL=${TARBALL_URL}"
-            echo "ROCM_REPO_BASEURL=${{ steps.resolve.outputs.rocm_repo_baseurl }}"
-            echo "RVS_REPO_BASEURL=${{ steps.resolve.outputs.rvs_repo_baseurl }}"
-            echo "ROCM_PACKAGE=${{ steps.resolve.outputs.rocm_package }}"
-            echo "RVS_PACKAGE=${{ steps.resolve.outputs.rvs_package }}"
-            echo "RVS_DOCKER_ROCM_VERSION=${{ steps.resolve.outputs.rocm_version }}"
-            echo "ROCM_MAJOR=${{ steps.resolve.outputs.rocm_major }}"
+            echo "ROCM_REPO_BASEURL=${ROCM_REPO_BASEURL}"
+            echo "RVS_REPO_BASEURL=${RVS_REPO_BASEURL}"
+            echo "ROCM_PACKAGE=${ROCM_PACKAGE}"
+            echo "RVS_PACKAGE=${RVS_PACKAGE}"
+            echo "RVS_DOCKER_ROCM_VERSION=${RVS_DOCKER_ROCM_VERSION}"
+            echo "ROCM_MAJOR=${ROCM_MAJOR}"
           } >> "$GITHUB_ENV"
 
       - name: Validate configuration and derive paths
@@ -170,12 +176,17 @@ jobs:
         run: ./rvs_nightly_test.sh setup-ssh
 
       - name: Export paths for remaining steps
+        env:
+          REMOTE_WORK_DIR: ${{ steps.prepare.outputs.remote_work_dir }}
+          ROCM_MAJOR: ${{ steps.prepare.outputs.rocm_major }}
+          INSTALL_DIR: ${{ steps.prepare.outputs.install_dir }}
+          RVS_BIN: ${{ steps.prepare.outputs.rvs_bin }}
         run: |
           {
-            echo "REMOTE_WORK_DIR=${{ steps.prepare.outputs.remote_work_dir }}"
-            echo "ROCM_MAJOR=${{ steps.prepare.outputs.rocm_major }}"
-            echo "INSTALL_DIR=${{ steps.prepare.outputs.install_dir }}"
-            echo "RVS_BIN=${{ steps.prepare.outputs.rvs_bin }}"
+            echo "REMOTE_WORK_DIR=${REMOTE_WORK_DIR}"
+            echo "ROCM_MAJOR=${ROCM_MAJOR}"
+            echo "INSTALL_DIR=${INSTALL_DIR}"
+            echo "RVS_BIN=${RVS_BIN}"
           } >> "$GITHUB_ENV"
 
       - name: Build ROCm docker image on build host
@@ -318,6 +329,8 @@ jobs:
 
       - name: Fail the workflow if level 4 failed
         if: steps.report.outputs.overall == 'FAIL' || needs.run-rvs-level-4-in-docker.result == 'failure'
+        env:
+          RVS_LEVEL4_RC: ${{ needs.run-rvs-level-4-in-docker.outputs.rc }}
         run: |
-          echo "::error::RVS docker (RHEL 9) test failure — level4 rc=${{ needs.run-rvs-level-4-in-docker.outputs.rc }}"
+          echo "::error::RVS docker (RHEL 9) test failure — level4 rc=${RVS_LEVEL4_RC}"
           exit 1

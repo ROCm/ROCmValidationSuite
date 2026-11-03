@@ -192,12 +192,17 @@ jobs:
           ./rvs_pr_test.sh validate-config
 
       - name: Export paths for remaining steps
+        env:
+          REMOTE_WORK_DIR: ${{ steps.prepare.outputs.remote_work_dir }}
+          ROCM_MAJOR: ${{ steps.prepare.outputs.rocm_major }}
+          INSTALL_DIR: ${{ steps.prepare.outputs.install_dir }}
+          RVS_BIN: ${{ steps.prepare.outputs.rvs_bin }}
         run: |
           {
-            echo "REMOTE_WORK_DIR=${{ steps.prepare.outputs.remote_work_dir }}"
-            echo "ROCM_MAJOR=${{ steps.prepare.outputs.rocm_major }}"
-            echo "INSTALL_DIR=${{ steps.prepare.outputs.install_dir }}"
-            echo "RVS_BIN=${{ steps.prepare.outputs.rvs_bin }}"
+            echo "REMOTE_WORK_DIR=${REMOTE_WORK_DIR}"
+            echo "ROCM_MAJOR=${ROCM_MAJOR}"
+            echo "INSTALL_DIR=${INSTALL_DIR}"
+            echo "RVS_BIN=${RVS_BIN}"
           } >> "$GITHUB_ENV"
 
       # Job outputs can drop tarball_url/name when passed to create-test-report; artifact is reliable.
@@ -353,6 +358,8 @@ jobs:
 
       - name: Fail the workflow if level 4 failed
         if: steps.report.outputs.overall == 'FAIL' || needs.run-rvs-level-4.result == 'failure'
+        env:
+          RVS_LEVEL4_RC: ${{ needs.run-rvs-level-4.outputs.rc }}
         run: |
-          echo "::error::RVS test failure — level4 rc=${{ needs.run-rvs-level-4.outputs.rc }}"
+          echo "::error::RVS test failure — level4 rc=${RVS_LEVEL4_RC}"
           exit 1

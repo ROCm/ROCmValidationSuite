@@ -460,10 +460,11 @@ jobs:
       # ── Summary ──────────────────────────────────────────────────────────────
       - name: Write job summary
         if: always()
+        env:
+          DEB_COPIED: ${{ steps.promote-deb.outputs.deb_copied || '0' }}
+          RPM_COPIED: ${{ steps.promote-rpm.outputs.rpm_copied || '0' }}
+          TAR_COPIED: ${{ steps.promote-tar.outputs.tar_copied || '0' }}
         run: |
-          DEB_COPIED="${{ steps.promote-deb.outputs.deb_copied || '0' }}"
-          RPM_COPIED="${{ steps.promote-rpm.outputs.rpm_copied || '0' }}"
-          TAR_COPIED="${{ steps.promote-tar.outputs.tar_copied || '0' }}"
           {
             echo "## Release → Unsigned Promotion"
             echo ""
