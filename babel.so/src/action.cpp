@@ -73,6 +73,19 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
   string    msg;
   vector<MemWorker> workers(mem_gpus_device_index.size());
 
+  if (read_kernel == "b128_nt") {
+    for (auto& dev : mem_gpus_device_index) {
+      hipDeviceProp_t props{};
+      if (hipGetDeviceProperties(&props, dev.first) != hipSuccess ||
+          string(props.gcnArchName).rfind("gfx1250", 0) != 0) {
+        msg = "'" + std::string(RVS_CONF_READ_KERNEL) + "' value 'b128_nt' requires gfx1250, GPU " +
+          std::to_string(dev.second) + " is " + props.gcnArchName;
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return false;
+      }
+    }
+  }
+
   for (;;) {
     if (property_wait != 0)  // delay mem execution
       sleep(property_wait);
@@ -114,6 +127,7 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
       workers[i].set_tb_size(tb_size);
       workers[i].set_data_init(data_init);
       workers[i].set_nontemporal(nontemporal);
+      workers[i].set_read_kernel(read_kernel);
       workers[i].set_sustained(sustained);
 
       i++;
@@ -334,6 +348,42 @@ bool mem_action::get_all_mem_config_keys(void) {
       "'. Must be 'none', 'all', 'read' or 'write'";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
     bsts = false;
+  }
+
+  it = property.find(RVS_CONF_READ_KERNEL);
+  if (it != property.end()) {
+    read_kernel = it->second;
+  } else {
+    read_kernel = MEM_DEFAULT_READ_KERNEL;
+  }
+
+  if (read_kernel != "default" && read_kernel != "b128_nt") {
+    msg = "invalid '" + std::string(RVS_CONF_READ_KERNEL) +
+      "' key value '" + read_kernel +
+      "'. Must be 'default' or 'b128_nt'";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (read_kernel == "b128_nt") {
+    if (test_type != 1 && test_type != 3) {
+      msg = "'" + std::string(RVS_CONF_READ_KERNEL) +
+        "' value 'b128_nt' requires a float test_type (1 or 3)";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+    if (dwords_per_lane != 4) {
+      msg = "'" + std::string(RVS_CONF_READ_KERNEL) +
+        "' value 'b128_nt' requires '" + std::string(RVS_CONF_DWORDS_PER_LANE) + "' 4";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+    if (chunks_per_block != 4) {
+      msg = "'" + std::string(RVS_CONF_READ_KERNEL) +
+        "' value 'b128_nt' requires '" + std::string(RVS_CONF_CHUNKS_PER_BLOCK) + "' 4";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
   }
 
   if (num_iterations  < 2) {

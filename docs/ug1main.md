@@ -2689,6 +2689,13 @@ Accepted values:
 <b>none</b> – Disable non-temporal accesses.
 <b>read</b> – Apply only to read accesses.
 <b>write</b> – Apply only to write accesses.</td></tr>
+<tr><td>read_kernel</td><td>String</td>
+<td>Kernel used for the Read test. Accepted values:
+<b>default</b> – Standard BabelStream read kernel (default).
+<b>b128_nt</b> – Issues four 128-bit non-temporal loads per lane without
+consuming the data. Requires a gfx1250 GPU, a float test_type (1 or 3),
+dwords_per_lane 4 and chunks_per_block 4. Read loads are always non-temporal,
+regardless of the nontemporal setting.</td></tr>
 <tr><td>dwords_per_lane</td><td>Integer</td>
 <td>Number of 32-bit words processed per GPU lane per kernel invocation. The
 default value is 4.</td></tr>
