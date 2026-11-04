@@ -105,6 +105,9 @@ ProbeResult ROCmVersionProbe::execute() {
 
   result.passed = (rocm_ok && driver_ok && rocblas_ok);
   result.value = result.passed ? 1.0 : 0.0;
+  // Version identity is metadata. It is logged and is not a performance baseline.
+  add_metric(result, "rocm_version_ok", result.value, "pass",
+             MetricDirection::HIGHER_IS_BETTER, false);
 
   // Capture telemetry
   capture_telemetry(result);

@@ -23,23 +23,21 @@
  *
  *******************************************************************************/
 #include "include/action.h"
-#include "include/probes/kernel_launch_probe.h"
-#include "include/probes/gemm_probe.h"
-#include "include/probes/membw_probe.h"
-#include "include/probes/rocm_version_probe.h"
-#include "include/probes/driver_overhead_probe.h"
 #include "include/baseline_manager.h"
-#include "include/regression_detector.h"
 #include "include/diagnostic_engine.h"
+#include "include/probe_registry.h"
+#include "include/regression_detector.h"
+#include "include/telemetry_sampler.h"
 
 #include "include/rvsloglp.h"
 #include "include/gpu_util.h"
 #include "include/rvs_util.h"
 
 #include <hip/hip_runtime.h>
+
+#include <map>
 #include <memory>
 #include <sstream>
-#include <map>
 
 using std::string;
 using std::vector;
@@ -61,19 +59,20 @@ gpim_action::gpim_action() {
   fail_on_regression_ = false;
   total_probes_executed_ = 0;
   total_regressions_detected_ = 0;
+  check_samples_ = 5;
+  gemm_dtype_ = "bf16";
+  gemm_seconds_ = 2.0;
+  gemm_matrix_size_ = 0;
+  membw_array_size_mb_ = 0;
 
-  // Default thresholds
   regression_thresholds_["warning"] = 5.0;
   regression_thresholds_["minor"] = 10.0;
   regression_thresholds_["major"] = 20.0;
   regression_thresholds_["critical"] = 50.0;
 
-  // Default probes enabled
-  probes_enabled_["kernel_launch"] = true;
-  probes_enabled_["gemm"] = true;
-  probes_enabled_["memory_bandwidth"] = true;
-  probes_enabled_["rocm_version"] = true;
-  probes_enabled_["driver_overhead"] = true;
+  for (const auto& name : gpim::ProbeRegistry::names()) {
+    probes_enabled_[name] = true;
+  }
 }
 
 gpim_action::~gpim_action() {
@@ -200,12 +199,28 @@ int gpim_action::property_get_all() {
   // Reporting
   property_get("fail_on_regression", &fail_on_regression_);
 
-  // Probes
-  property_get("probe_kernel_launch_enabled", &probes_enabled_["kernel_launch"]);
-  property_get("probe_gemm_enabled", &probes_enabled_["gemm"]);
-  property_get("probe_memory_bandwidth_enabled", &probes_enabled_["memory_bandwidth"]);
-  property_get("probe_rocm_version_enabled", &probes_enabled_["rocm_version"]);
-  property_get("probe_driver_overhead_enabled", &probes_enabled_["driver_overhead"]);
+  property_get_int("check_samples", &check_samples_);
+  if (check_samples_ < 1) check_samples_ = 1;
+
+  std::string gemm_dtype;
+  if (property_get("gemm_dtype", &gemm_dtype) == 0 && !gemm_dtype.empty()) {
+    gemm_dtype_ = gemm_dtype;
+  }
+  float gemm_seconds = 0.0f;
+  if (property_get("gemm_seconds", &gemm_seconds) == 0 && gemm_seconds > 0.0f) {
+    gemm_seconds_ = gemm_seconds;
+  }
+  property_get_int("gemm_matrix_size", &gemm_matrix_size_);
+  property_get_int("membw_array_size_mb", &membw_array_size_mb_);
+
+  for (const auto& name : gpim::ProbeRegistry::names()) {
+    property_get("probe_" + name + "_enabled", &probes_enabled_[name]);
+  }
+  // Older confs used this name for runtime_api_latency.
+  bool legacy_driver = true;
+  if (property_get("probe_driver_overhead_enabled", &legacy_driver) == 0) {
+    probes_enabled_["runtime_api_latency"] = legacy_driver;
+  }
 
   return 0;
 }
@@ -215,150 +230,132 @@ int gpim_action::run_baseline_mode() {
 
   int baseline_runs = 25;
   property_get_int("baseline_runs", &baseline_runs);
+  if (baseline_runs < 2) baseline_runs = 2;
 
   std::ostringstream log_msg;
-  log_msg << "[GPIM] Processing " << gpim_gpus_device_index_.size() << " GPU(s)";
+  log_msg << "[GPIM] Processing " << gpim_gpus_device_index_.size()
+          << " GPU(s), " << baseline_runs << " samples each";
   rvs::lp::Log(log_msg.str(), rvs::loginfo);
 
   int baselines_created = 0;
+  int probe_failures = 0;
 
-  // Iterate over GPU device index map
-  for (auto it = gpim_gpus_device_index_.begin(); it != gpim_gpus_device_index_.end(); it++) {
+  for (auto it = gpim_gpus_device_index_.begin();
+       it != gpim_gpus_device_index_.end(); ++it) {
     int hip_device_index = it->first;
     uint16_t gpu_id = it->second;
 
-    std::ostringstream oss;
-    oss << "[GPIM] Creating baselines for GPU " << gpu_id
-        << " (HIP device " << hip_device_index << ", " << baseline_runs << " samples)";
-    rvs::lp::Log(oss.str(), rvs::loginfo);
+    for (const auto& probe_name : gpim::ProbeRegistry::names()) {
+      if (!probes_enabled_[probe_name]) continue;
 
-    // Kernel launch probe
-    if (probes_enabled_["kernel_launch"]) {
-      gpim::KernelLaunchProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        std::vector<gpim::ProbeResult> samples;
-        for (int i = 0; i < baseline_runs; i++) {
-          samples.push_back(probe.execute());
-        }
-        baseline_manager_->create_baseline(probe.name(), gpu_id, samples);
-        rvs::lp::Log("[GPIM] Created baseline for kernel_launch_latency", rvs::loginfo);
-        probe.cleanup();
-        baselines_created++;
-      } else {
-        rvs::lp::Err("Failed to initialize kernel_launch probe for GPU " + std::to_string(gpu_id),
-                     module_name, action_name);
-      }
-    }
+      std::unique_ptr<gpim::ProbeBase> probe = gpim::ProbeRegistry::create(probe_name);
+      if (!probe) continue;
+      probe->set_config("dtype", gemm_dtype_);
+      probe->set_config("seconds", std::to_string(gemm_seconds_));
+      probe->set_config("matrix_size", std::to_string(gemm_matrix_size_));
+      probe->set_config("array_size_mb", std::to_string(membw_array_size_mb_));
 
-    // GEMM probe
-    if (probes_enabled_["gemm"]) {
-      gpim::GEMMProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        std::vector<gpim::ProbeResult> samples;
-        for (int i = 0; i < baseline_runs; i++) {
-          samples.push_back(probe.execute());
-        }
-        baseline_manager_->create_baseline(probe.name(), gpu_id, samples);
-        rvs::lp::Log("[GPIM] Created baseline for gemm_throughput", rvs::loginfo);
-        probe.cleanup();
-        baselines_created++;
-      } else {
-        rvs::lp::Err("Failed to initialize GEMM probe for GPU " + std::to_string(gpu_id),
-                     module_name, action_name);
+      if (probe->initialize(hip_device_index) != 0) {
+        rvs::lp::Err("Failed to initialize " + probe_name + " for GPU " +
+                     std::to_string(gpu_id), module_name, action_name);
+        probe_failures++;
+        continue;
       }
-    }
 
-    // Memory bandwidth probe
-    if (probes_enabled_["memory_bandwidth"]) {
-      gpim::MemBandwidthProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        std::vector<gpim::ProbeResult> samples;
-        for (int i = 0; i < baseline_runs; i++) {
-          samples.push_back(probe.execute());
+      gpim::TelemetrySampler sampler;
+      sampler.start(probe->smi_handle());
+      std::map<std::string, std::vector<gpim::ProbeResult>> by_metric;
+      bool failed = false;
+      for (int i = 0; i < baseline_runs; i++) {
+        gpim::ProbeResult sample = probe->execute();
+        sample.gpu_id = gpu_id;
+        if (!sample.passed) {
+          failed = true;
+          break;
         }
-        baseline_manager_->create_baseline(probe.name(), gpu_id, samples);
-        rvs::lp::Log("[GPIM] Created baseline for memory_bandwidth", rvs::loginfo);
-        probe.cleanup();
-        baselines_created++;
-      } else {
-        rvs::lp::Err("Failed to initialize memory bandwidth probe for GPU " + std::to_string(gpu_id),
-                     module_name, action_name);
+        for (const auto& metric : sample.metrics) {
+          if (!metric.monitor) continue;
+          gpim::ProbeResult one = sample;
+          one.metrics.clear();
+          one.probe_name = metric.name;
+          one.value = metric.value;
+          one.unit = metric.unit;
+          one.direction = metric.direction;
+          by_metric[metric.name].push_back(one);
+        }
       }
-    }
-    // ROCM version probe
-    if (probes_enabled_["rocm_version"]) {
-      gpim::ROCmVersionProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        std::vector<gpim::ProbeResult> samples;
-        for (int i = 0; i < baseline_runs; i++) {
-          samples.push_back(probe.execute());
+      gpim::TelemetrySnapshot snap = sampler.stop();
+      probe->cleanup();
+
+      if (failed || by_metric.empty()) {
+        if (failed) {
+          rvs::lp::Err(probe_name + " failed on GPU " + std::to_string(gpu_id),
+                       module_name, action_name);
+          probe_failures++;
         }
-        baseline_manager_->create_baseline(probe.name(), gpu_id, samples);
-        rvs::lp::Log("[GPIM] Created baseline for ROCM version", rvs::loginfo);
-        probe.cleanup();
-        baselines_created++;
-      } else {
-        rvs::lp::Err("Failed to initialize ROCM version probe for GPU " + std::to_string(gpu_id),
-                     module_name, action_name);
+        continue;
       }
-    }
-    // Driver overhead probe
-    if (probes_enabled_["driver_overhead"]) {
-      gpim::DriverOverheadProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        std::vector<gpim::ProbeResult> samples;
-        for (int i = 0; i < baseline_runs; i++) {
-          samples.push_back(probe.execute());
+
+      for (auto& pair : by_metric) {
+        for (auto& sample : pair.second) {
+          if (!snap.valid) continue;
+          sample.telemetry = snap;
+          sample.secondary_metrics["telemetry_temp_c_avg"] = snap.temp_c_avg;
+          sample.secondary_metrics["telemetry_clock_mhz_avg"] = snap.clock_mhz_avg;
+          sample.secondary_metrics["telemetry_power_w_avg"] = snap.power_w_avg;
+          sample.secondary_metrics["telemetry_ppt_delta"] =
+              static_cast<double>(snap.ppt_residency_delta);
+          sample.secondary_metrics["telemetry_thermal_delta"] =
+              static_cast<double>(snap.thermal_residency_delta);
         }
-        baseline_manager_->create_baseline(probe.name(), gpu_id, samples);
-        rvs::lp::Log("[GPIM] Created baseline for driver overhead", rvs::loginfo);
-        probe.cleanup();
+        if (baseline_manager_->create_baseline(pair.first, gpu_id, pair.second) != 0) {
+          probe_failures++;
+          continue;
+        }
+        std::ostringstream msg;
+        msg << "[GPIM] GPU " << gpu_id << " baseline " << pair.first
+            << " = " << pair.second.front().value << " " << pair.second.front().unit
+            << " (" << pair.second.size() << " samples)";
+        rvs::lp::Log(msg.str(), rvs::loginfo);
         baselines_created++;
-      } else {
-        rvs::lp::Err("Failed to initialize driver overhead probe for GPU " + std::to_string(gpu_id),
-                     module_name, action_name);
       }
     }
   }
 
-  // Save baselines
   if (baseline_manager_->save() != 0) {
     rvs::lp::Err("Failed to save baselines to " + baseline_path_, module_name, action_name);
     return -1;
   }
 
-  rvs::lp::Log("[GPIM] Baselines saved to " + baseline_path_, rvs::logresults);
-
-  // Log baseline mode summary
   std::ostringstream summary;
   summary << "\n[GPIM] Baseline Creation Summary:\n"
           << "  GPUs Processed: " << gpim_gpus_device_index_.size() << "\n"
           << "  Baselines Created: " << baselines_created << "\n"
+          << "  Probe Failures: " << probe_failures << "\n"
           << "  Samples per Baseline: " << baseline_runs;
   rvs::lp::Log(summary.str(), rvs::logresults);
-
-  return 0;
+  rvs::lp::Log("[GPIM] Baselines saved to " + baseline_path_, rvs::logresults);
+  return probe_failures == 0 ? 0 : 1;
 }
 
 int gpim_action::run_single_mode() {
   rvs::lp::Log("[GPIM] Running in SINGLE validation mode", rvs::loginfo);
 
-  // Load baselines
   int rc = baseline_manager_->load();
   if (rc != 0) {
     if (baseline_auto_create_) {
       rvs::lp::Log("[GPIM] No baselines found, creating new ones", rvs::loginfo);
       return run_baseline_mode();
-    } else {
-      rvs::lp::Err("No baselines found at " + baseline_path_, module_name, action_name);
-      return -1;
     }
+    rvs::lp::Err("No baselines found at " + baseline_path_, module_name, action_name);
+    return -1;
   }
 
   bool any_regression = false;
+  int probe_failures = 0;
 
-  // Iterate over GPU device index map
-  for (auto it = gpim_gpus_device_index_.begin(); it != gpim_gpus_device_index_.end(); it++) {
+  for (auto it = gpim_gpus_device_index_.begin();
+       it != gpim_gpus_device_index_.end(); ++it) {
     int hip_device_index = it->first;
     uint16_t gpu_id = it->second;
 
@@ -366,149 +363,130 @@ int gpim_action::run_single_mode() {
     oss << "[GPIM] Validating GPU " << gpu_id << " (HIP device " << hip_device_index << ")";
     rvs::lp::Log(oss.str(), rvs::loginfo);
 
-    std::vector<gpim::ProbeResult> results;
+    for (const auto& probe_name : gpim::ProbeRegistry::names()) {
+      if (!probes_enabled_[probe_name]) continue;
 
-    // Run kernel launch probe
-    if (probes_enabled_["kernel_launch"]) {
-      gpim::KernelLaunchProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        gpim::ProbeResult result = probe.execute();
-        result.gpu_id = gpu_id;  // Store RVS GPU ID for baseline comparison
-        results.push_back(result);
-        total_probes_executed_++;
+      std::unique_ptr<gpim::ProbeBase> probe = gpim::ProbeRegistry::create(probe_name);
+      if (!probe) continue;
+      probe->set_config("dtype", gemm_dtype_);
+      probe->set_config("seconds", std::to_string(gemm_seconds_));
+      probe->set_config("matrix_size", std::to_string(gemm_matrix_size_));
+      probe->set_config("array_size_mb", std::to_string(membw_array_size_mb_));
 
-        std::ostringstream msg;
-        msg << "  kernel_launch_latency: " << result.value << " " << result.unit;
-        rvs::lp::Log(msg.str(), rvs::loginfo);
-
-        probe.cleanup();
+      if (probe->initialize(hip_device_index) != 0) {
+        rvs::lp::Err("Failed to initialize " + probe_name + " for GPU " +
+                     std::to_string(gpu_id), module_name, action_name);
+        probe_failures++;
+        continue;
       }
-    }
 
-    // Run GEMM probe
-    if (probes_enabled_["gemm"]) {
-      gpim::GEMMProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        gpim::ProbeResult result = probe.execute();
-        result.gpu_id = gpu_id;  // Store RVS GPU ID for baseline comparison
-        results.push_back(result);
-        total_probes_executed_++;
-
-        std::ostringstream msg;
-        msg << "  gemm_throughput: " << result.value << " " << result.unit;
-        rvs::lp::Log(msg.str(), rvs::loginfo);
-
-        probe.cleanup();
-      }
-    }
-
-    // Run memory bandwidth probe
-    if (probes_enabled_["memory_bandwidth"]) {
-      gpim::MemBandwidthProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        gpim::ProbeResult result = probe.execute();
-        result.gpu_id = gpu_id;  // Store RVS GPU ID for baseline comparison
-        results.push_back(result);
-        total_probes_executed_++;
-
-        std::ostringstream msg;
-        msg << "  memory_bandwidth: " << result.value << " " << result.unit;
-        rvs::lp::Log(msg.str(), rvs::loginfo);
-
-        probe.cleanup();
-      }
-    }
-    // Run ROCM version probe if enabled
-    if (probes_enabled_["rocm_version"]) {
-      gpim::ROCmVersionProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        gpim::ProbeResult result = probe.execute();
-        result.gpu_id = gpu_id;  // Store RVS GPU ID for baseline comparison
-        results.push_back(result);
-        total_probes_executed_++;
-
-        std::ostringstream msg;
-        msg << "  ROCM version: " << result.value;
-        rvs::lp::Log(msg.str(), rvs::loginfo);
-
-        probe.cleanup();  
-      }
-    }
-    // Run driver overhead probe if enabled
-    if (probes_enabled_["driver_overhead"]) {
-      gpim::DriverOverheadProbe probe;
-      if (probe.initialize(hip_device_index) == 0) {
-        gpim::ProbeResult result = probe.execute();
-        result.gpu_id = gpu_id;  // Store RVS GPU ID for baseline comparison
-        results.push_back(result);
-        total_probes_executed_++;
-
-        std::ostringstream msg;
-        msg << "  driver overhead: " << result.value << " " << result.unit;
-        rvs::lp::Log(msg.str(), rvs::loginfo);
-
-        probe.cleanup();
-      }
-    }
-    // Detect regressions
-    if (regression_detection_enabled_) {
-      for (const auto& result : results) {
-        gpim::RegressionReport regression = regression_detector_->detect(result);
-
-        if (regression.severity != gpim::RegressionSeverity::NONE) {
-          total_regressions_detected_++;
-          any_regression = true;
-
-          std::string severity_str = gpim::severity_to_string(regression.severity);
-          severity_counts_[severity_str]++;
-
-          std::ostringstream msg;
-          msg << "[" << severity_str << "] GPU " << gpu_id << ": "
-              << result.probe_name << " degraded by "
-              << regression.degradation_pct << "% ("
-              << regression.baseline_value << " -> "
-              << regression.current_value << " " << result.unit << ")";
-          rvs::lp::Log(msg.str(), rvs::logerror);
-
-          // Run diagnostics
-          if (diagnostics_enabled_) {
-            auto findings = diagnostic_engine_->diagnose(result, regression);
-
-            if (!findings.empty()) {
-              rvs::lp::Log("  Diagnostic findings (ranked by confidence):", rvs::loginfo);
-
-              for (size_t i = 0; i < findings.size() && i < 3; i++) {
-                const auto& finding = findings[i];
-                std::ostringstream diag_msg;
-                diag_msg << "  [" << finding.confidence << "%] "
-                        << finding.description << "\n"
-                        << "    Evidence: " << finding.evidence << "\n"
-                        << "    Recommendation:\n";
-
-                // Split recommendation into lines
-                std::string rec = finding.recommendation;
-                size_t pos = 0;
-                while ((pos = rec.find('\n')) != std::string::npos) {
-                  diag_msg << "      " << rec.substr(0, pos) << "\n";
-                  rec.erase(0, pos + 1);
-                }
-                if (!rec.empty()) {
-                  diag_msg << "      " << rec;
-                }
-
-                rvs::lp::Log(diag_msg.str(), rvs::loginfo);
-              }
-            }
+      gpim::TelemetrySampler sampler;
+      sampler.start(probe->smi_handle());
+      std::vector<gpim::ProbeResult> samples;
+      bool failed = false;
+      for (int i = 0; i < check_samples_; i++) {
+        gpim::ProbeResult sample = probe->execute();
+        sample.gpu_id = gpu_id;
+        if (!sample.passed) {
+          failed = true;
+          for (const auto& metric : sample.metrics) {
+            if (metric.monitor) continue;
+            std::ostringstream msg;
+            msg << "  " << metric.name << ": " << metric.value << " " << metric.unit
+                << " (failed)";
+            rvs::lp::Log(msg.str(), rvs::logerror);
           }
+          break;
+        }
+        samples.push_back(sample);
+      }
+      gpim::TelemetrySnapshot snap = sampler.stop();
+      probe->cleanup();
+
+      if (failed || samples.empty()) {
+        rvs::lp::Err(probe_name + " failed on GPU " + std::to_string(gpu_id),
+                     module_name, action_name);
+        probe_failures++;
+        continue;
+      }
+
+      if (!samples.front().metrics.empty()) {
+        for (const auto& metric : samples.front().metrics) {
+          if (metric.monitor) continue;
+          std::ostringstream msg;
+          msg << "  " << metric.name << ": " << metric.value << " " << metric.unit;
+          rvs::lp::Log(msg.str(), metric.value == 0.0 ? rvs::logerror : rvs::loginfo);
+        }
+      }
+
+      std::map<std::string, std::vector<double>> values;
+      std::map<std::string, gpim::ProbeResult> exemplar;
+      for (const auto& sample : samples) {
+        for (const auto& metric : sample.metrics) {
+          if (!metric.monitor) continue;
+          values[metric.name].push_back(metric.value);
+          if (!exemplar.count(metric.name)) {
+            gpim::ProbeResult one = sample;
+            one.metrics.clear();
+            one.probe_name = metric.name;
+            one.unit = metric.unit;
+            one.direction = metric.direction;
+            exemplar[metric.name] = one;
+          }
+        }
+      }
+
+      for (auto& pair : values) {
+        gpim::ProbeResult result = exemplar[pair.first];
+        std::vector<double> copy = pair.second;
+        result.value = gpim::ProbeBase::compute_median(copy);
+        result.gpu_id = gpu_id;
+        if (snap.valid) {
+          result.telemetry = snap;
+          result.secondary_metrics["telemetry_temp_c_avg"] = snap.temp_c_avg;
+          result.secondary_metrics["telemetry_clock_mhz_avg"] = snap.clock_mhz_avg;
+          result.secondary_metrics["telemetry_power_w_avg"] = snap.power_w_avg;
+        }
+        total_probes_executed_++;
+
+        std::ostringstream msg;
+        msg << "  " << result.probe_name << ": " << result.value << " " << result.unit
+            << " (" << pair.second.size() << " samples)";
+        rvs::lp::Log(msg.str(), rvs::loginfo);
+
+        if (!regression_detection_enabled_) continue;
+        gpim::RegressionReport regression = regression_detector_->detect(result);
+        if (regression.severity == gpim::RegressionSeverity::NONE) continue;
+
+        total_regressions_detected_++;
+        any_regression = true;
+        std::string severity_str = gpim::severity_to_string(regression.severity);
+        severity_counts_[severity_str]++;
+
+        std::ostringstream reg;
+        reg << "[" << severity_str << "] GPU " << gpu_id << ": "
+            << result.probe_name << " degraded by "
+            << regression.degradation_pct << "% ("
+            << regression.baseline_value << " -> "
+            << regression.current_value << " " << result.unit << ")";
+        rvs::lp::Log(reg.str(), rvs::logerror);
+
+        if (!diagnostics_enabled_) continue;
+        auto findings = diagnostic_engine_->diagnose(result, regression);
+        for (size_t i = 0; i < findings.size() && i < 3; i++) {
+          std::ostringstream diag;
+          diag << "  [" << findings[i].confidence << "%] "
+               << findings[i].description << "\n    Evidence: "
+               << findings[i].evidence << "\n    Recommendation: "
+               << findings[i].recommendation;
+          rvs::lp::Log(diag.str(), rvs::loginfo);
         }
       }
     }
   }
 
-  if (fail_on_regression_ && any_regression) {
-    return 1;  // Non-zero exit code for regression detected
-  }
-
+  if (probe_failures > 0) return 1;
+  if (fail_on_regression_ && any_regression) return 1;
   return 0;
 }
 

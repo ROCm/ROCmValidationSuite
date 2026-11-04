@@ -68,11 +68,6 @@ class KernelLaunchProbe : public ProbeBase {
   hipEvent_t start_event_;    //!< Event for timing start
   hipEvent_t stop_event_;     //!< Event for timing stop
   bool initialized_;          //!< Initialization state
-
-  /**
-   * @brief Warm up the GPU and runtime
-   */
-  void warmup();
 };
 
 }  // namespace gpim

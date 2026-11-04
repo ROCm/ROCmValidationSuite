@@ -239,7 +239,8 @@ void DiagnosticEngine::add_runtime_overhead_rule() {
 
   rule.condition = [](const ProbeResult& result,
                      const RegressionReport& regression) {
-    return (result.probe_name == "kernel_launch_latency" &&
+    return ((result.probe_name == "kernel_launch_latency" ||
+             result.probe_name == "runtime_api_latency") &&
             regression.degradation_pct > 30.0);
   };
 

@@ -24,8 +24,9 @@
  *******************************************************************************/
 #include "include/probes/membw_probe.h"
 #include "include/gpu_util.h"
+
 #include <hip/hip_runtime.h>
-#include <chrono>
+
 #include <vector>
 
 __global__ void triad_kernel(float* a, const float* b, const float* c,
@@ -38,12 +39,12 @@ __global__ void triad_kernel(float* a, const float* b, const float* c,
 
 namespace gpim {
 
-MemBandwidthProbe::MemBandwidthProbe() : array_size_mb_(512), initialized_(false) {
+MemBandwidthProbe::MemBandwidthProbe() : array_size_mb_(0), initialized_(false) {
   d_a_ = nullptr;
   d_b_ = nullptr;
   d_c_ = nullptr;
   stream_ = nullptr;
-  iterations_ = 50;  // Inherited from ProbeBase
+  iterations_ = 20;
   warmup_iterations_ = 5;
 }
 
@@ -51,38 +52,46 @@ MemBandwidthProbe::~MemBandwidthProbe() {
   cleanup();
 }
 
-std::string MemBandwidthProbe::name() const {
-  return "memory_bandwidth";
-}
+std::string MemBandwidthProbe::name() const { return "memory_bandwidth"; }
 
 std::string MemBandwidthProbe::description() const {
-  return "Measures GPU memory bandwidth (STREAM-like triad)";
+  return "STREAM triad GPU memory bandwidth, timed with hipEvents";
 }
 
-std::string MemBandwidthProbe::unit() const {
-  return "GB/s";
-}
+std::string MemBandwidthProbe::unit() const { return "GB/s"; }
 
 int MemBandwidthProbe::initialize(uint16_t gpu_id) {
   gpu_id_ = gpu_id;
+  if (hipSetDevice(gpu_id) != hipSuccess) return -1;
+  if (hipStreamCreate(&stream_) != hipSuccess) return -1;
 
-  hipError_t err = hipSetDevice(gpu_id);
-  if (err != hipSuccess) {
-    return -1;
-  }
+  auto it = config_.find("array_size_mb");
+  if (it != config_.end()) array_size_mb_ = static_cast<size_t>(std::stoul(it->second));
 
-  err = hipStreamCreate(&stream_);
-  if (err != hipSuccess) {
-    return -1;
+  if (array_size_mb_ == 0) {
+    hipDeviceProp_t prop;
+    if (hipGetDeviceProperties(&prop, gpu_id) != hipSuccess) return -1;
+    size_t l2 = prop.l2CacheSize;
+    size_t target = 512ull * 1024 * 1024;
+    if (l2 > 0 && 8ull * l2 > target) target = 8ull * l2;
+    size_t free_mem = 0, total_mem = 0;
+    if (hipMemGetInfo(&free_mem, &total_mem) != hipSuccess) return -1;
+    if (target > free_mem / 8) target = free_mem / 8;
+    array_size_mb_ = target / (1024 * 1024);
+    if (array_size_mb_ < 64) array_size_mb_ = 64;
   }
 
   allocate_arrays();
-
-  // Get AMD SMI handle for telemetry
-  if (gpu_hip_to_smi_hdl(gpu_id, &device_handle_) != 0) {
-    device_handle_ = nullptr;  // Telemetry will be unavailable
+  if (d_a_ == nullptr || d_b_ == nullptr || d_c_ == nullptr) {
+    free_arrays();
+    hipStreamDestroy(stream_);
+    stream_ = nullptr;
+    return -1;
   }
 
+  if (gpu_hip_to_smi_hdl(gpu_id, &device_handle_) != 0) {
+    device_handle_ = nullptr;
+  }
   initialized_ = true;
   return 0;
 }
@@ -90,17 +99,17 @@ int MemBandwidthProbe::initialize(uint16_t gpu_id) {
 void MemBandwidthProbe::allocate_arrays() {
   size_t n = (array_size_mb_ * 1024 * 1024) / sizeof(float);
   size_t bytes = n * sizeof(float);
+  if (hipMalloc(&d_a_, bytes) != hipSuccess) d_a_ = nullptr;
+  if (hipMalloc(&d_b_, bytes) != hipSuccess) d_b_ = nullptr;
+  if (hipMalloc(&d_c_, bytes) != hipSuccess) d_c_ = nullptr;
+  if (!d_a_ || !d_b_ || !d_c_) return;
 
-  hipMalloc(&d_a_, bytes);
-  hipMalloc(&d_b_, bytes);
-  hipMalloc(&d_c_, bytes);
-
-  // Initialize arrays
   std::vector<float> h_b(n, 1.0f);
   std::vector<float> h_c(n, 2.0f);
-
-  hipMemcpy(d_b_, h_b.data(), bytes, hipMemcpyHostToDevice);
-  hipMemcpy(d_c_, h_c.data(), bytes, hipMemcpyHostToDevice);
+  if (hipMemcpy(d_b_, h_b.data(), bytes, hipMemcpyHostToDevice) != hipSuccess ||
+      hipMemcpy(d_c_, h_c.data(), bytes, hipMemcpyHostToDevice) != hipSuccess) {
+    free_arrays();
+  }
 }
 
 void MemBandwidthProbe::free_arrays() {
@@ -112,77 +121,66 @@ void MemBandwidthProbe::free_arrays() {
 
 ProbeResult MemBandwidthProbe::execute() {
   ProbeResult result;
-  result.probe_name = name();
   result.gpu_id = gpu_id_;
-  result.unit = unit();
-  result.direction = direction();
   result.timestamp_us = get_timestamp_us();
   result.passed = false;
-
-  if (!initialized_) {
-    return result;
-  }
+  if (!initialized_) return result;
+  if (hipSetDevice(gpu_id_) != hipSuccess) return result;
 
   size_t n = (array_size_mb_ * 1024 * 1024) / sizeof(float);
-  size_t bytes = n * sizeof(float) * 3;  // Read 2 arrays, write 1
-
+  size_t bytes = n * sizeof(float) * 3;
   dim3 block_size(256);
   dim3 grid_size((n + block_size.x - 1) / block_size.x);
 
-  std::vector<double> bandwidths;
-  bandwidths.reserve(iterations_);
+  hipEvent_t start, stop;
+  if (hipEventCreate(&start) != hipSuccess || hipEventCreate(&stop) != hipSuccess) {
+    return result;
+  }
 
-  // Warmup
   for (uint32_t i = 0; i < warmup_iterations_; i++) {
     hipLaunchKernelGGL(triad_kernel, grid_size, block_size, 0, stream_,
                       d_a_, d_b_, d_c_, 3.0f, n);
   }
-  hipStreamSynchronize(stream_);
-
-  // Measurement
-  for (uint32_t i = 0; i < iterations_; i++) {
-    auto start = std::chrono::high_resolution_clock::now();
-
-    hipLaunchKernelGGL(triad_kernel, grid_size, block_size, 0, stream_,
-                      d_a_, d_b_, d_c_, 3.0f, n);
-    hipStreamSynchronize(stream_);
-
-    auto end = std::chrono::high_resolution_clock::now();
-
-    double seconds = std::chrono::duration<double>(end - start).count();
-    double gb_s = (static_cast<double>(bytes) / seconds) / 1e9;
-    bandwidths.push_back(gb_s);
+  if (hipStreamSynchronize(stream_) != hipSuccess) {
+    hipEventDestroy(start);
+    hipEventDestroy(stop);
+    return result;
   }
 
-  std::vector<double> bw_copy = bandwidths;
-  double median_bw = compute_median(bw_copy);
+  std::vector<double> bandwidths;
+  bandwidths.reserve(iterations_);
+  for (uint32_t i = 0; i < iterations_; i++) {
+    if (hipEventRecord(start, stream_) != hipSuccess) break;
+    hipLaunchKernelGGL(triad_kernel, grid_size, block_size, 0, stream_,
+                      d_a_, d_b_, d_c_, 3.0f, n);
+    if (hipEventRecord(stop, stream_) != hipSuccess ||
+        hipEventSynchronize(stop) != hipSuccess) break;
+    float ms = 0.0f;
+    if (hipEventElapsedTime(&ms, start, stop) != hipSuccess || ms <= 0.0f) break;
+    double seconds = static_cast<double>(ms) / 1000.0;
+    bandwidths.push_back((static_cast<double>(bytes) / seconds) / 1e9);
+  }
+  hipEventDestroy(start);
+  hipEventDestroy(stop);
 
-  double min_bw = *std::min_element(bandwidths.begin(), bandwidths.end());
-  double max_bw = *std::max_element(bandwidths.begin(), bandwidths.end());
+  if (bandwidths.size() != iterations_) return result;
 
-  double sum = 0.0;
-  for (double bw : bandwidths) sum += bw;
-  double mean_bw = sum / bandwidths.size();
-
-  result.value = median_bw;
-  result.secondary_metrics["mean"] = mean_bw;
-  result.secondary_metrics["min"] = min_bw;
-  result.secondary_metrics["max"] = max_bw;
+  std::vector<double> copy = bandwidths;
+  double median_bw = compute_median(copy);
+  add_metric(result, "memory_bandwidth", median_bw, "GB/s",
+             MetricDirection::HIGHER_IS_BETTER);
   result.secondary_metrics["array_size_mb"] = static_cast<double>(array_size_mb_);
   result.passed = true;
-
   capture_telemetry(result);
-
   return result;
 }
 
 void MemBandwidthProbe::cleanup() {
-  if (initialized_) {
-    free_arrays();
-    if (stream_) hipStreamDestroy(stream_);
-    stream_ = nullptr;
-    initialized_ = false;
-  }
+  if (!initialized_) return;
+  free_arrays();
+  if (stream_) hipStreamDestroy(stream_);
+  stream_ = nullptr;
+  initialized_ = false;
 }
 
 }  // namespace gpim

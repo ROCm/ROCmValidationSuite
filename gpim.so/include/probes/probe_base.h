@@ -44,6 +44,61 @@ enum class MetricDirection {
 };
 
 /**
+ * @struct Metric
+ * @brief One measured quantity from a probe
+ *
+ * A probe may report several. Regression detection uses only metrics with
+ * monitor set. Direction is declared here and is never inferred from the name.
+ */
+struct Metric {
+  std::string name;
+  double value;
+  std::string unit;
+  MetricDirection direction;
+  bool monitor;
+
+  Metric() : value(0.0), direction(MetricDirection::HIGHER_IS_BETTER),
+             monitor(true) {}
+};
+
+/**
+ * @struct TelemetrySnapshot
+ * @brief Clock, power, and temperature over the probe window
+ *
+ * The point fields (temp_junction_mc, gpu_clock_mhz, power_usage_uw) hold the
+ * window average so existing diagnostic rules keep working. min/avg/max and
+ * the residency deltas come from the sampler thread.
+ */
+struct TelemetrySnapshot {
+  bool valid;
+  int64_t temp_junction_mc;       //!< average junction/hotspot, millidegrees C
+  uint64_t gpu_clock_mhz;         //!< average gfx clock
+  uint64_t power_usage_uw;        //!< average socket power, microwatts
+  uint32_t gpu_utilization_pct;
+  double temp_c_min;
+  double temp_c_avg;
+  double temp_c_max;
+  double clock_mhz_min;
+  double clock_mhz_avg;
+  double clock_mhz_max;
+  double power_w_min;
+  double power_w_avg;
+  double power_w_max;
+  uint64_t ppt_residency_delta;      //!< power-throttle accumulator change
+  uint64_t thermal_residency_delta;  //!< thermal-throttle accumulator change
+  int sample_count;
+
+  TelemetrySnapshot()
+      : valid(false), temp_junction_mc(0), gpu_clock_mhz(0),
+        power_usage_uw(0), gpu_utilization_pct(0),
+        temp_c_min(0), temp_c_avg(0), temp_c_max(0),
+        clock_mhz_min(0), clock_mhz_avg(0), clock_mhz_max(0),
+        power_w_min(0), power_w_avg(0), power_w_max(0),
+        ppt_residency_delta(0), thermal_residency_delta(0),
+        sample_count(0) {}
+};
+
+/**
  * @struct ProbeResult
  * @brief Results from a single probe execution
  */
@@ -56,27 +111,38 @@ struct ProbeResult {
   MetricDirection direction;        //!< Improvement direction of value
   bool passed;                      //!< Did probe pass validation?
 
+  std::vector<Metric> metrics;      //!< All metrics from this execution
+
   // Secondary metrics (e.g., p95, min, max, std_dev)
   std::map<std::string, double> secondary_metrics;
 
-  // Telemetry snapshot during probe execution
-  struct {
-    bool valid;
-    int64_t temp_junction_mc;       // millidegrees Celsius
-    uint64_t gpu_clock_mhz;
-    uint64_t power_usage_uw;        // microwatts
-    uint32_t gpu_utilization_pct;
-  } telemetry;
+  TelemetrySnapshot telemetry;
 
   ProbeResult() : gpu_id(0), timestamp_us(0), value(0.0),
-                  direction(MetricDirection::HIGHER_IS_BETTER), passed(true) {
-    telemetry.valid = false;
-    telemetry.temp_junction_mc = 0;
-    telemetry.gpu_clock_mhz = 0;
-    telemetry.power_usage_uw = 0;
-    telemetry.gpu_utilization_pct = 0;
-  }
+                  direction(MetricDirection::HIGHER_IS_BETTER), passed(true) {}
 };
+
+/**
+ * @brief Append a metric. The first monitored metric also fills the primary
+ *        value fields so a single-metric probe still compares as before.
+ */
+inline void add_metric(ProbeResult& result, const std::string& name,
+                       double value, const std::string& unit,
+                       MetricDirection direction, bool monitor = true) {
+  Metric metric;
+  metric.name = name;
+  metric.value = value;
+  metric.unit = unit;
+  metric.direction = direction;
+  metric.monitor = monitor;
+  result.metrics.push_back(metric);
+  if (monitor && result.probe_name.empty()) {
+    result.probe_name = name;
+    result.value = value;
+    result.unit = unit;
+    result.direction = direction;
+  }
+}
 
 /**
  * @class ProbeBase
@@ -166,10 +232,21 @@ class ProbeBase {
     return gpu_id_;
   }
 
+  /**
+   * @brief AMD SMI handle for the GPU this probe was initialized on
+   */
+  amdsmi_processor_handle smi_handle() const {
+    return device_handle_;
+  }
+
   /** 
    *@brief Get current timestamp in microseconds (static utility)
    */
   static uint64_t get_timestamp_us();
+
+  static double compute_median(std::vector<double>& values);
+  static double compute_percentile(std::vector<double>& values, double percentile);
+  static double compute_stddev(const std::vector<double>& values, double mean);
 
  protected:
   uint16_t gpu_id_ = 0;                         //!< Target GPU device ID
@@ -184,23 +261,6 @@ class ProbeBase {
    * @param result ProbeResult to populate with telemetry data
    */
   void capture_telemetry(ProbeResult& result);
-
-  /**
-   * @brief Compute median from a vector of values
-   */
-  static double compute_median(std::vector<double>& values);
-
-  /**
-   * @brief Compute percentile from a vector of values
-   * @param values Vector of values (will be modified/sorted)
-   * @param percentile Percentile to compute (0.0 to 1.0)
-   */
-  static double compute_percentile(std::vector<double>& values, double percentile);
-
-  /**
-   * @brief Compute standard deviation
-   */
-  static double compute_stddev(const std::vector<double>& values, double mean);
 };
 
 }  // namespace gpim

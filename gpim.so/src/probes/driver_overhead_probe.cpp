@@ -44,11 +44,11 @@ DriverOverheadProbe::~DriverOverheadProbe() {
 }
 
 std::string DriverOverheadProbe::name() const {
-  return "driver_overhead";
+  return "runtime_api_latency";
 }
 
 std::string DriverOverheadProbe::description() const {
-  return "GPU driver and runtime overhead measurement";
+  return "HIP runtime API latency (stream create/destroy). Lower is better.";
 }
 
 std::string DriverOverheadProbe::unit() const {
@@ -80,24 +80,17 @@ ProbeResult DriverOverheadProbe::execute() {
     return result;
   }
 
-  hipSetDevice(gpu_id_);
+  if (hipSetDevice(gpu_id_) != hipSuccess) return result;
 
-  // Measure stream creation overhead
   double stream_creation_us = measure_stream_creation();
-
-  // Measure sync overhead
   double sync_overhead_us = measure_sync_overhead();
-
-  // Measure kernel launch overhead
   double kernel_launch_us = measure_kernel_launch_overhead();
+  if (stream_creation_us <= 0.0) return result;
 
-  // Primary metric: stream creation (most indicative of driver overhead)
-  result.value = stream_creation_us;
-
-  // Secondary metrics
+  add_metric(result, "runtime_api_latency", stream_creation_us, "us",
+             MetricDirection::LOWER_IS_BETTER);
   result.secondary_metrics["sync_overhead_us"] = sync_overhead_us;
   result.secondary_metrics["kernel_launch_overhead_us"] = kernel_launch_us;
-
   result.passed = true;
   return result;
 }
@@ -122,8 +115,8 @@ double DriverOverheadProbe::measure_stream_creation() {
     auto start = std::chrono::high_resolution_clock::now();
 
     hipStream_t stream;
-    hipStreamCreate(&stream);
-    hipStreamDestroy(stream);
+    if (hipStreamCreate(&stream) != hipSuccess) return 0.0;
+    if (hipStreamDestroy(stream) != hipSuccess) return 0.0;
 
     auto end = std::chrono::high_resolution_clock::now();
     double time_us = std::chrono::duration<double, std::micro>(end - start).count();

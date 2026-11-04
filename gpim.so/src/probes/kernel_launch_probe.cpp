@@ -24,15 +24,27 @@
  *******************************************************************************/
 #include "include/probes/kernel_launch_probe.h"
 #include "include/gpu_util.h"
+
 #include <hip/hip_runtime.h>
+
 #include <chrono>
 #include <vector>
 
 __global__ void gpim_null_kernel() {
-  // Empty kernel - measures pure dispatch overhead
 }
 
 namespace gpim {
+
+namespace {
+
+bool hip_ok(hipError_t err, ProbeResult& result) {
+  if (err == hipSuccess) return true;
+  result.passed = false;
+  result.secondary_metrics["hip_error"] = static_cast<double>(err);
+  return false;
+}
+
+}  // namespace
 
 KernelLaunchProbe::KernelLaunchProbe() : initialized_(false) {
   stream_ = nullptr;
@@ -45,11 +57,11 @@ KernelLaunchProbe::~KernelLaunchProbe() {
 }
 
 std::string KernelLaunchProbe::name() const {
-  return "kernel_launch_latency";
+  return "kernel_launch";
 }
 
 std::string KernelLaunchProbe::description() const {
-  return "Measures GPU kernel dispatch overhead";
+  return "Kernel launch round-trip latency and back-to-back launch rate";
 }
 
 std::string KernelLaunchProbe::unit() const {
@@ -60,18 +72,15 @@ int KernelLaunchProbe::initialize(uint16_t gpu_id) {
   gpu_id_ = gpu_id;
 
   hipError_t err = hipSetDevice(gpu_id);
-  if (err != hipSuccess) {
-    return -1;
-  }
+  if (err != hipSuccess) return -1;
 
   err = hipStreamCreate(&stream_);
-  if (err != hipSuccess) {
-    return -1;
-  }
+  if (err != hipSuccess) return -1;
 
   err = hipEventCreate(&start_event_);
   if (err != hipSuccess) {
     hipStreamDestroy(stream_);
+    stream_ = nullptr;
     return -1;
   }
 
@@ -79,89 +88,106 @@ int KernelLaunchProbe::initialize(uint16_t gpu_id) {
   if (err != hipSuccess) {
     hipEventDestroy(start_event_);
     hipStreamDestroy(stream_);
+    start_event_ = nullptr;
+    stream_ = nullptr;
     return -1;
   }
 
-  // Get AMD SMI handle for telemetry
   if (gpu_hip_to_smi_hdl(gpu_id, &device_handle_) != 0) {
-    device_handle_ = nullptr;  // Telemetry will be unavailable
+    device_handle_ = nullptr;
   }
 
-  warmup();
-  initialized_ = true;
-  return 0;
-}
-
-void KernelLaunchProbe::warmup() {
   for (uint32_t i = 0; i < warmup_iterations_; i++) {
     hipLaunchKernelGGL(gpim_null_kernel, dim3(1), dim3(1), 0, stream_);
   }
   hipStreamSynchronize(stream_);
+  hipGetLastError();
+
+  initialized_ = true;
+  return 0;
 }
 
 ProbeResult KernelLaunchProbe::execute() {
   ProbeResult result;
-  result.probe_name = name();
   result.gpu_id = gpu_id_;
-  result.unit = unit();
-  result.direction = direction();
   result.timestamp_us = get_timestamp_us();
   result.passed = false;
 
-  if (!initialized_) {
-    return result;
-  }
+  if (!initialized_) return result;
+
+  hipError_t err = hipSetDevice(gpu_id_);
+  if (!hip_ok(err, result)) return result;
 
   std::vector<double> latencies;
   latencies.reserve(iterations_);
 
   for (uint32_t i = 0; i < iterations_; i++) {
-    auto start = std::chrono::high_resolution_clock::now();
-
+    auto start = std::chrono::steady_clock::now();
     hipLaunchKernelGGL(gpim_null_kernel, dim3(1), dim3(1), 0, stream_);
-    hipStreamSynchronize(stream_);
-
-    auto end = std::chrono::high_resolution_clock::now();
-
-    double us = std::chrono::duration<double, std::micro>(end - start).count();
-    latencies.push_back(us);
+    err = hipGetLastError();
+    if (!hip_ok(err, result)) return result;
+    err = hipStreamSynchronize(stream_);
+    if (!hip_ok(err, result)) return result;
+    auto end = std::chrono::steady_clock::now();
+    latencies.push_back(
+        std::chrono::duration<double, std::micro>(end - start).count());
   }
 
-  // Calculate statistics
-  std::vector<double> latencies_copy = latencies;
-  double median = compute_median(latencies_copy);
-
-  latencies_copy = latencies;
-  double p95 = compute_percentile(latencies_copy, 0.95);
-
-  double min_lat = *std::min_element(latencies.begin(), latencies.end());
-  double max_lat = *std::max_element(latencies.begin(), latencies.end());
-
+  std::vector<double> copy = latencies;
+  double median_us = compute_median(copy);
   double sum = 0.0;
-  for (double lat : latencies) sum += lat;
+  for (double v : latencies) sum += v;
   double mean = sum / latencies.size();
-  double stddev = compute_stddev(latencies, mean);
 
-  result.value = median;
-  result.secondary_metrics["mean"] = mean;
-  result.secondary_metrics["p95"] = p95;
-  result.secondary_metrics["min"] = min_lat;
-  result.secondary_metrics["max"] = max_lat;
-  result.secondary_metrics["stddev"] = stddev;
+  // Back-to-back: queue every launch, then one sync. The host interval is
+  // the launch rate. hipEvents around the same burst record device time,
+  // which for an empty kernel is not the launch rate.
+  err = hipEventRecord(start_event_, stream_);
+  if (!hip_ok(err, result)) return result;
+  auto burst_start = std::chrono::steady_clock::now();
+  for (uint32_t i = 0; i < iterations_; i++) {
+    hipLaunchKernelGGL(gpim_null_kernel, dim3(1), dim3(1), 0, stream_);
+  }
+  err = hipGetLastError();
+  if (!hip_ok(err, result)) return result;
+  err = hipEventRecord(stop_event_, stream_);
+  if (!hip_ok(err, result)) return result;
+  err = hipEventSynchronize(stop_event_);
+  if (!hip_ok(err, result)) return result;
+  auto burst_end = std::chrono::steady_clock::now();
+
+  float device_ms = 0.0f;
+  err = hipEventElapsedTime(&device_ms, start_event_, stop_event_);
+  if (!hip_ok(err, result)) return result;
+
+  double host_s = std::chrono::duration<double>(burst_end - burst_start).count();
+  if (host_s <= 0.0) {
+    result.passed = false;
+    return result;
+  }
+  double launches_per_s = static_cast<double>(iterations_) / host_s;
+
+  add_metric(result, "kernel_launch_latency", median_us, "us",
+             MetricDirection::LOWER_IS_BETTER);
+  add_metric(result, "kernel_launch_throughput", launches_per_s, "launches/s",
+             MetricDirection::HIGHER_IS_BETTER);
+  result.secondary_metrics["latency_mean_us"] = mean;
+  result.secondary_metrics["latency_stddev_us"] = compute_stddev(latencies, mean);
+  result.secondary_metrics["burst_device_ms"] = device_ms;
   result.passed = true;
-
   capture_telemetry(result);
-
   return result;
 }
 
 void KernelLaunchProbe::cleanup() {
-  if (initialized_) {
-    if (stop_event_) hipEventDestroy(stop_event_);
-    if (start_event_) hipEventDestroy(start_event_);
-    if (stream_) hipStreamDestroy(stream_);
-    initialized_ = false;
-  }
+  if (!initialized_) return;
+  if (stop_event_) hipEventDestroy(stop_event_);
+  if (start_event_) hipEventDestroy(start_event_);
+  if (stream_) hipStreamDestroy(stream_);
+  stop_event_ = nullptr;
+  start_event_ = nullptr;
+  stream_ = nullptr;
+  initialized_ = false;
 }
 
 }  // namespace gpim

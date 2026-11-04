@@ -26,11 +26,24 @@
 #define GPIM_SO_INCLUDE_PROBES_GEMM_PROBE_H_
 
 #include "include/probes/probe_base.h"
+
 #include <hip/hip_runtime.h>
-#include <rocblas/rocblas.h>
+#include <hipblaslt/hipblaslt.h>
+
+#include <string>
 
 namespace gpim {
 
+/**
+ * @class GEMMProbe
+ * @brief Sustained hipBLASLt GEMM throughput
+ *
+ * Default data type is bf16 with fp32 accumulation. Input matrices are random,
+ * not constant, so the run draws power. One sample is a timed window
+ * (config "seconds", default 2) of back-to-back gemms, timed with hipEvents.
+ * Matrix size comes from config "matrix_size", or from MatrixOptimizer when
+ * that value is 0.
+ */
 class GEMMProbe : public ProbeBase {
  public:
   GEMMProbe();
@@ -47,17 +60,30 @@ class GEMMProbe : public ProbeBase {
   ProbeResult execute() override;
   void cleanup() override;
 
-  void set_matrix_size(int size) { matrix_size_ = size; }
-
  private:
-  int matrix_size_;
   bool initialized_;
-  rocblas_handle handle_;
-  float *d_A_, *d_B_, *d_C_;
+  std::string dtype_;
+  int matrix_size_;
+  double seconds_;
+  size_t elem_bytes_;
+  hipDataType data_type_;
   hipStream_t stream_;
+  hipblasLtHandle_t handle_;
+  hipblasLtMatrixLayout_t layout_a_;
+  hipblasLtMatrixLayout_t layout_b_;
+  hipblasLtMatrixLayout_t layout_c_;
+  hipblasLtMatrixLayout_t layout_d_;
+  hipblasLtMatmulDesc_t matmul_;
+  hipblasLtMatmulHeuristicResult_t heuristic_;
+  void* workspace_;
+  void* d_A_;
+  void* d_B_;
+  void* d_C_;
+  void* d_D_;
 
-  void allocate_matrices();
-  void free_matrices();
+  int choose_size(uint16_t gpu_id);
+  bool setup_hipblaslt(int n);
+  void release();
 };
 
 }  // namespace gpim

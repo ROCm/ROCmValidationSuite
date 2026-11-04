@@ -105,6 +105,11 @@ class gpim_action : public rvs::actionbase {
   std::map<std::string, bool> probes_enabled_;
   std::map<std::string, uint64_t> probe_intervals_;  // milliseconds
   std::map<std::string, std::map<std::string, std::string>> probe_configs_;
+  int check_samples_;          //!< repeated samples per probe in single mode
+  std::string gemm_dtype_;
+  double gemm_seconds_;
+  int gemm_matrix_size_;       //!< 0 selects a size from the GPU
+  int membw_array_size_mb_;    //!< 0 selects a size larger than last-level cache
 
   // Baseline configuration
   bool baseline_auto_create_;

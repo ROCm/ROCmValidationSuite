@@ -124,7 +124,7 @@ if(NOT EXISTS "${HIP_LIB_DIR}/lib${HIP_HCC_LIB}.so")
 endif()
 
 ## define include directories
-include_directories(./ ../ ${ROCR_INC_DIR} ${HIP_INC_DIR} ${AMD_SMI_INC_DIR})
+include_directories(./ ../ ${ROCR_INC_DIR} ${HIP_INC_DIR} ${AMD_SMI_INC_DIR} ${HIPBLASLT_INC_DIR})
 
 # Add directories to look for library files to link
 link_directories(${RVS_LIB_DIR} ${ROCR_LIB_DIR} ${ASAN_LIB_PATH} ${HIP_LIB_DIR} ${AMD_SMI_LIB_DIR})
@@ -142,6 +142,10 @@ set(SOURCES
     src/probes/membw_probe.cpp
     src/probes/rocm_version_probe.cpp
     src/probes/driver_overhead_probe.cpp
+    src/probes/host_device_probe.cpp
+    src/probes/platform_checks_probe.cpp
+    src/probe_registry.cpp
+    src/telemetry_sampler.cpp
     src/baseline_manager.cpp
     src/baseline_version_manager.cpp
     src/baseline_validator.cpp
@@ -165,7 +169,7 @@ set_target_properties(${RVS_TARGET} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 # Link with HIP runtime, rocBLAS, AMD SMI, and HSA runtime
-target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} rocblas amd_smi hsa-runtime64)
+target_link_libraries(${RVS_TARGET} ${PROJECT_LINK_LIBS} ${HIP_HCC_LIB} rocblas hipblaslt amd_smi hsa-runtime64)
 add_dependencies(${RVS_TARGET} rvslib)
 
 add_custom_command(TARGET ${RVS_TARGET} POST_BUILD

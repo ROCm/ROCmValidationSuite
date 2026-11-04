@@ -72,7 +72,14 @@ extern "C" const char* rvs_module_get_config(void) {
     "probe_gemm_enabled (bool), "\
     "probe_memory_bandwidth_enabled (bool), "\
     "probe_rocm_version_enabled (bool), "\
-    "probe_driver_overhead_enabled (bool), "\
+    "probe_runtime_api_latency_enabled (bool), "\
+    "probe_host_device_bandwidth_enabled (bool), "\
+    "probe_platform_checks_enabled (bool), "\
+    "check_samples (int), "\
+    "gemm_dtype (string), "\
+    "gemm_seconds (float), "\
+    "gemm_matrix_size (int), "\
+    "membw_array_size_mb (int), "\
     "regression_detection_enabled (bool), "\
     "regression_threshold_warning (float), "\
     "regression_threshold_minor (float), "\
