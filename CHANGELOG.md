@@ -6,6 +6,8 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Added
 
+- Added int8 GST config for MI3XX products.
+
 ### Changed
 
 ## RVS 1.7.0
