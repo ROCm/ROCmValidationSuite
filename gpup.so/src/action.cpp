@@ -358,7 +358,7 @@ int gpup_action::run(void) {
     action_result.output = msg;
     action_callback(&action_result);
 
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   // get <device> property value (a list of gpu id)
@@ -379,7 +379,7 @@ int gpup_action::run(void) {
     action_result.output = msg;
     action_callback(&action_result);
 
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   if (int sts = property_get_device_index()) {
@@ -413,7 +413,7 @@ int gpup_action::run(void) {
     action_result.output = msg;
     action_callback(&action_result);
 
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   // extract properties and io_links properties names
@@ -459,7 +459,7 @@ int gpup_action::run(void) {
         action_result.output = msg;
         action_callback(&action_result);
 
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
     }
 
@@ -522,7 +522,7 @@ int gpup_action::run(void) {
     action_result.output = msg;
     action_callback(&action_result);
 
-    return -1;
+    return rvs::ACTION_RESULT_SKIPPED;
   }
 
   // Action callback
@@ -531,7 +531,7 @@ int gpup_action::run(void) {
   action_result.output = "GPUP Module action " + action_name + " completed";
   action_callback(&action_result);
 
-  return sts;
+  return sts ? rvs::ACTION_RESULT_ERROR : rvs::ACTION_RESULT_PASS;
 }
 
 

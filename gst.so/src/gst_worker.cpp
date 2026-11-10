@@ -572,9 +572,6 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
   action_result.status = rvs::actionstatus::ACTION_SUCCESS;
   action_result.output = msg.c_str();
   action.action_callback(&action_result);
-
-  //log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(static_cast<uint64_t>(gflops_interval)),
-    //  rvs::loginfo);
 }
 
 /**

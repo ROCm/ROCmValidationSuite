@@ -96,7 +96,7 @@ int pebb_action::run() {
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = "Error in common configuration keys.";
     action_callback(&action_result);
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   if (!get_all_pebb_config_keys()) {
@@ -105,7 +105,7 @@ int pebb_action::run() {
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = "Error in PEBB configuration keys.";
     action_callback(&action_result);
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   // log_interval must be less than duration
@@ -119,7 +119,7 @@ int pebb_action::run() {
       action_result.status = rvs::actionstatus::ACTION_FAILED;
       action_result.output = msg;
       action_callback(&action_result);
-      return -1;
+      return rvs::ACTION_RESULT_ERROR;
     }
   }
 
@@ -198,7 +198,7 @@ int pebb_action::run() {
   } while (iter && !rvs::lp::Stopping());
 
   RVSTRACE_
-    sts = rvs::lp::Stopping() ? -1 : 0;
+    sts = rvs::lp::Stopping() ? rvs::ACTION_RESULT_ERROR : rvs::ACTION_RESULT_PASS;
 
   print_final_average();
 

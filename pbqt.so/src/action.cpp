@@ -467,7 +467,7 @@ int pbqt_action::create_threads() {
       if (rvs::gpulist::gpu2node(gpu_id[i], &srcnode)) {
         msg = "no node found for GPU ID " + std::to_string(gpu_id[i]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
 
       uint16_t dstnode;
@@ -475,7 +475,7 @@ int pbqt_action::create_threads() {
         RVSTRACE_
           msg = "no node found for GPU ID " + std::to_string(gpu_id[j]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
 
       std::string srcpcibdf;
@@ -484,7 +484,7 @@ int pbqt_action::create_threads() {
           std::string msg = "could not find PCI BDF for node " +
           std::to_string(srcnode);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
 
       std::string dstpcibdf;
@@ -493,7 +493,7 @@ int pbqt_action::create_threads() {
           std::string msg = "could not find PCI BDF for node " +
           std::to_string(dstnode);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
 
       RVSTRACE_
@@ -624,7 +624,7 @@ int pbqt_action::create_threads() {
       RVSTRACE_
         msg = "internal error";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      return rvs::ACTION_RESULT_ERROR;
     }
     p->initialize(pair.srcnode, pair.dstnode, prop_bidirectional);
     RVSTRACE_

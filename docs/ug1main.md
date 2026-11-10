@@ -337,6 +337,22 @@ Suppress console output and write results to a JSON file (useful in CI pipelines
 
 The configuration files in the top-level `conf/` folder are generic samples and may not reflect the correct thresholds or parameters for your hardware. For accurate results, use the platform-specific configuration files under `conf/<GPU>/` (for example, `conf/MI350X/`), or use the `-r` or `-m` option, which automatically selects the appropriate platform configuration.
 
+### Action results and exit status
+
+Each action in the summary table (and in the `--quiet` console output) reports one of four results:
+
+<table>
+<tr><th>Result</th><th>Meaning</th><th>Examples</th></tr>
+<tr><td>PASS</td><td>The action ran and the hardware met all criteria.</td><td>GEMM reached <code>target_stress</code>.</td></tr>
+<tr><td>FAIL</td><td>The action ran and the hardware missed a criterion.</td><td>Bandwidth or power below target, PCIe property mismatch.</td></tr>
+<tr><td>ERROR</td><td>The action could not run or complete, so nothing was measured.</td><td>Invalid configuration key, <code>duration</code> less than <code>ramp_interval</code>, resource allocation failure, no GPU visible to HIP (for example, driver not loaded), run stopped by the user.</td></tr>
+<tr><td>SKIPPED</td><td>The action does not apply to this system.</td><td>GPUs are present but none match the <code>device</code>/<code>device_index</code> filters, no P2P peers found, kernel not supported on this GPU.</td></tr>
+</table>
+
+The exit status is 1 if any action failed, otherwise 2 if any action reported
+an error, otherwise 3 if every action was skipped, and 0 otherwise (a mix of
+passed and skipped actions exits with 0). See the Exit Status section of the
+command line options for exit codes that are not tied to action results.
 ### GPU-Specific Configurations
 
 RVS includes optimized test configurations for a range of GPU families, organized under `conf/<GPU>/`. 
