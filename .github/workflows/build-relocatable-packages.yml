@@ -263,15 +263,22 @@ jobs:
       - name: Bootstrap container (git, curl, packaging tools)
         run: |
           export DEBIAN_FRONTEND=noninteractive
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            ca-certificates \
-            curl \
-            git \
-            dpkg-dev \
-            apt-utils \
-            python3 \
-            python3-pip
+          for attempt in 1 2 3; do
+            if apt-get update && apt-get install -y --no-install-recommends \
+              ca-certificates \
+              curl \
+              git \
+              dpkg-dev \
+              apt-utils \
+              python3 \
+              python3-pip; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            echo "APT update/install failed; refreshing package indexes and retrying ($attempt/3)"
+          done
           rm -rf /var/lib/apt/lists/*
 
       - name: Checkout Repository
