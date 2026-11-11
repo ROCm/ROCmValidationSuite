@@ -29,9 +29,24 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <atomic>
+#include <cstdint>
 
 #include "include/rvsactionbase.h"
 #include "amd_smi/amdsmi.h"
+
+// Shared by the GPU workers of one action. The host rendezvous can time out,
+// so one worker that never arrives cannot leave the others blocked.
+struct PulseSync {
+  std::atomic<int> arrival{0};
+  std::atomic<int> epoch{0};
+  std::atomic<bool> abort_flag{false};
+  int num_gpus{1};
+  int wait_ms{10000};
+  int32_t* gpu_arrival_count{nullptr};
+  int32_t* gpu_release_flag{nullptr};
+  int32_t* gpu_timeout_flag{nullptr};
+};
 
 using std::vector;
 using std::string;
@@ -64,8 +79,12 @@ class pulse_action: public rvs::actionbase {
     std::string pulse_data_type;
     //! GEMM output data type
     std::string pulse_out_data_type;
-    //! matrix size for GEMM K dimension
+    //! square GEMM dimension, used when M/N/K are omitted
     uint64_t pulse_matrix_size;
+    //! GEMM M, N, K. Each defaults to pulse_matrix_size.
+    uint64_t pulse_matrix_m;
+    uint64_t pulse_matrix_n;
+    uint64_t pulse_matrix_k;
     //! GEMM alpha scalar
     float pulse_alpha_val;
     //! GEMM beta scalar
@@ -81,17 +100,29 @@ class pulse_action: public rvs::actionbase {
     int pulse_ldd_offset;
     //! matrix initialization method
     std::string pulse_matrix_init;
-    //! power tolerance percentage
+    //! GEMM verify error limit (self-check or accuracy)
     float pulse_tolerance;
+    //! minimum average high-minus-low power, watts. 0 disables the check
+    float pulse_min_power_delta_w;
     //! sampling rate for power readings (ms)
     uint64_t pulse_sample_interval;
     //! kernel calls between health checks
     int pulse_workload_iterations;
     //! stop immediately on first error
     bool pulse_halt_on_error;
-    //! cross-GPU sync timeout (ms)
+    //! bound on a host rendezvous, a device barrier, and one GEMM wait (ms)
     int pulse_gpu_sync_wait;
-    //! compute verification mode: "crc" or "diff"
+    //! how long each selected pattern runs. 0 means split duration across patterns
+    uint64_t pulse_pattern_duration;
+    //! true when the conf set pattern_duration explicitly
+    bool pulse_pattern_duration_set;
+    //! selected built-in pattern indices. Empty when pulse_custom is set.
+    std::vector<int> pulse_patterns;
+    //! run the custom waveform from pulse_rate and high_phase_ratio
+    bool pulse_custom;
+    //! fail the run if the uncorrectable ECC count rises
+    bool pulse_ecc_check;
+    //! compute verification mode: "crc", "diff", "both", or "none"
     std::string pulse_verify_mode;
     //! hot calls for BLAS warmup
     uint64_t pulse_hot_calls;
@@ -107,6 +138,7 @@ class pulse_action: public rvs::actionbase {
     std::map<int, amdsmi_processor_handle> hip_to_smi_idxs;
     void hip_to_smi_indices();
     bool get_all_pulse_config_keys(void);
+    bool parse_patterns(const std::string& spec);
     int get_num_amd_gpu_devices(void);
     int get_all_selected_gpus(void);
     bool do_pulse_test(std::map<int, uint16_t> pulse_gpus_device_index,

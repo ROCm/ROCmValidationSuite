@@ -180,7 +180,8 @@ int rvs::exec::run() {
       {"peqt", "peqt_single.conf"},
       {"pbqt", "pbqt_single.conf"},
       {"rcqt", "rcqt_single.conf"},
-      {"tst", "tst_single.conf"}
+      {"tst", "tst_single.conf"},
+      {"pulse", "pulse_single.conf"}
     };
 
     auto itr = module_config_map.find(module);

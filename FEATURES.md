@@ -48,6 +48,6 @@ The Babel module executes BabelStream (synthetic GPU benchmark based on the orig
 The Thermal Stress Test (TST) measures/monitors the GPU edge and junction temperatures under various stressful workloads. Also checks whether GPU junction temperature reaches target and trottle temperatures.
 
 ## Pulse Stress Test- Pulse module
-The Pulse Stress Test creates power fluctuations by alternating between high-compute (GEMM) and idle phases at a configurable rate. Two-level barrier synchronizes all GPUs so they spike current simultaneously, maximizing stress on the PSU.
+The Pulse Stress Test creates power fluctuations by alternating between high-compute (GEMM) and idle phases. Six built-in patterns cover slow, mid, and fast square waves, short bursts, a frequency sweep, and a duty-cycle sweep. With `parallel: true` on more than one GPU, a timed host rendezvous and a GPU barrier line the current steps up. A worker that misses the rendezvous, or a GEMM that does not finish within `gpu_sync_wait`, fails that GPU and releases the others.
 
-**PS: Beta version — not intended for production use. Pass/fail criteria are still being tuned.**
+The run passes when every selected pattern finishes with no GEMM or HIP error, no GEMM data mismatch, temperature at or below `max_temp_c`, no rise in uncorrectable ECC count, and at least one power sample. `min_power_delta_w` greater than 0 also requires the average high-minus-low power to meet that value. A secondary die of an MCM GPU is reported as pass. Clock-control failure and a GPU that is not idle at the start are warnings.
