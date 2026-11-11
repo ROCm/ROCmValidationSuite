@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -188,7 +188,7 @@ add_test(NAME unit.ttf.rvs.config.noconfig
 )
 
 ## define include directories
-include_directories(${UT_INC})
+include_directories(SYSTEM ${UT_INC})
 ## define lib directories
 link_directories(${UT_LIB} ${ROCBLAS_LIB_DIR} ${ROCM_SMI_LIB_DIR})
 ## additional libraries for unit tests

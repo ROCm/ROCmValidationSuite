@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -482,10 +482,8 @@ bool iet_action::get_all_iet_config_keys(void) {
 void iet_action::hip_to_smi_indices(void) {
 
   int hip_num_gpu_devices;
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   // map this to smi as only these are visible
-  uint32_t smi_num_devices;
-  uint64_t val_ui64;
 
   std::map<uint64_t, amdsmi_processor_handle> smi_map;
 
@@ -520,9 +518,8 @@ bool iet_action::do_edp_test(map<int, uint16_t> iet_gpus_device_index,
   size_t       k = 0;
   unsigned int i = 0;
   int          gpuId;
-  bool gpu_masking = false;    // if HIP_VISIBLE_DEVICES is set, this will be true
   int hip_num_gpu_devices;
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   vector<IETWorker> workers(iet_gpus_device_index.size());
 
   for (;;) {
@@ -647,7 +644,7 @@ int iet_action::get_num_amd_gpu_devices(void) {
   int hip_num_gpu_devices;
   string msg;
 
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   return hip_num_gpu_devices;
 }
 
@@ -664,7 +661,7 @@ int iet_action::get_all_selected_gpus(void) {
   std::stringstream msg_stream;
   std::vector<mcm_type_t> mcm_type;
 
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   if (hip_num_gpu_devices < 1)
     return -1;
 

@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -44,7 +44,7 @@ public:
 
 	virtual ~PackageInfo(){
 		if(!m_filename.empty()){
-			auto res = std::remove(m_filename.c_str());
+			(void)std::remove(m_filename.c_str());
 		}
 	}
 
@@ -58,7 +58,7 @@ public:
 
   void setPkg(const std::string& pkgname){
 		if(!m_filename.empty()){
-      auto res = std::remove(m_filename.c_str());
+      (void)std::remove(m_filename.c_str());
 		}
 		  m_filename = pfilename(pkgname);
 	}

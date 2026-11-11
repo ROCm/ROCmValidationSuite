@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -405,6 +405,11 @@ hsa_status_t rvs::hsa::ProcessAgent(hsa_agent_t agent, void* data) {
     case HSA_DEVICE_TYPE_DSP : {
       agent_info.agent_device_type = "DSP";
       log_msg = log_msg + "DSP.";
+      break;
+    };
+    case HSA_DEVICE_TYPE_AIE : {
+      agent_info.agent_device_type = "AIE";
+      log_msg = log_msg + "AIE.";
       break;
     };
   }

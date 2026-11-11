@@ -130,7 +130,6 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
     double duration;
     uint64_t gem_ops;
     std::unique_ptr<rvs_blas> gpu_blas;
-    rvs_blas *free_gpublas;
     string msg;
     std::string blas_source = "rocblas";
     std::string compute_type = "fp32_r";
@@ -200,9 +199,8 @@ void TSTWorker::blasThread(int gpuIdx, uint64_t matrix_size, std::string tst_ops
  */
 bool TSTWorker::do_thermal_stress(void) {
 
-    std::chrono::time_point<std::chrono::system_clock> tst_start_time, 
-        end_time,
-        sampling_start_time;
+    std::chrono::time_point<std::chrono::system_clock> tst_start_time,
+        end_time;
     uint64_t  total_time_ms;
     int64_t   temperature = 0;
     float     cur_edge_temperature = 0;

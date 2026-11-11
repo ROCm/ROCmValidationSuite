@@ -324,13 +324,10 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
   std::chrono::time_point<std::chrono::system_clock> gst_start_time,
     gst_end_time,
     gst_log_interval_time,
-    gst_start_gflops_time,
-    gst_last_sgemm_start_time,
-    gst_last_sgemm_end_time;
-  double seconds_elapsed, curr_gflops, dyn_delay_target_stress;
+    gst_start_gflops_time;
+  double seconds_elapsed, curr_gflops;
   uint16_t num_sgemm_ops = 0, num_sgemm_ops_log_interval = 0;
-  uint64_t micros_sgemm_ops, micros_last_sgemm;
-  uint16_t proc_delay = 0;
+  uint64_t micros_sgemm_ops;
   uint64_t start_time, end_time;
   double timetakenforoneiteration, gflops_interval;
   string msg;
@@ -375,8 +372,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
       }
     }
 
-    gst_last_sgemm_start_time = std::chrono::system_clock::now();
-
     if (copy_matrix) {
       // Generate random matrix data
       gpu_blas->generate_random_matrix_data();
@@ -415,18 +410,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
 
     gflops_interval = gpu_blas->gemm_gflop_count() * gst_warm_calls / timetakenforoneiteration;
 
-    gst_last_sgemm_end_time = std::chrono::system_clock::now();
-    micros_last_sgemm =
-      time_diff(gst_last_sgemm_end_time, gst_last_sgemm_start_time);
-    if (static_cast<double>(
-          (1000000 * gpu_blas->gemm_gflop_count()) /
-          target_stress) <
-        micros_last_sgemm) {
-      // last SGEMM timed-out (it took more than it should)
-      dyn_delay_target_stress = 1;
-    }
-
-
     num_sgemm_ops += gst_warm_calls;
     num_sgemm_ops_log_interval += gst_warm_calls;
 
@@ -450,8 +433,6 @@ bool GSTWorker::do_gst_ramp(int *error, string *err_description) {
           return true;
         }
       }
-      proc_delay +=
-        (delay_target_stress * PROC_DEC_INC_SGEMM_FREQ_DELAY) / 100;
       num_sgemm_ops = 0;
       delay_target_stress = 0;
       gst_start_gflops_time = std::chrono::system_clock::now();
@@ -896,7 +877,6 @@ bool GSTWorker::do_gst_stress_test(int *error, std::string *err_description) {
 void GSTWorker::run() {
   string msg, err_description;
   int error = 0;
-  bool gst_test_passed = true;
   rvs::action_result_t action_result;
   char gpuid_buff[12];
   auto desc = action_descriptor{action_name, MODULE_NAME, gpu_id};
@@ -928,7 +908,7 @@ void GSTWorker::run() {
   rvs::lp::Log(msg, rvs::logresults);
 
   // let the GPU ramp-up and check the result
-  bool ramp_up_success = do_gst_ramp(&error, &err_description);
+  do_gst_ramp(&error, &err_description);
 
   // log GST ramp up - end message
   msg = "[" + action_name + "] " + "[GPU:: " + gpuid_buff + "] " +
@@ -962,7 +942,7 @@ void GSTWorker::run() {
     std::to_string(ramp_interval);
   rvs::lp::Log(msg, rvs::loginfo);
 
-  gst_test_passed = do_gst_stress_test(&error, &err_description);
+  do_gst_stress_test(&error, &err_description);
   // check if stop signal was received
   if (rvs::lp::Stopping())
     return;

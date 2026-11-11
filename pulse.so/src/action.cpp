@@ -393,7 +393,7 @@ bool pulse_action::get_all_pulse_config_keys(void) {
 
 void pulse_action::hip_to_smi_indices(void) {
   int hip_num_gpu_devices;
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
 
   std::map<uint64_t, amdsmi_processor_handle> smi_map;
   smi_map = rvs::get_smi_pci_map();
@@ -438,7 +438,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
           hipHostMallocCoherent) != hipSuccess) {
       msg = "Failed to allocate fine-grained memory for GPU sync barrier";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      hipHostFree(gpu_arrival_count);
+      (void)hipHostFree(gpu_arrival_count);
       return false;
     }
     *gpu_arrival_count = 0;
@@ -523,8 +523,8 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
         workers[i].start();
         workers[i].join();
         if (rvs::lp::Stopping()) {
-          if (gpu_arrival_count) hipHostFree(gpu_arrival_count);
-          if (gpu_release_flag) hipHostFree(gpu_release_flag);
+          if (gpu_arrival_count) (void)hipHostFree(gpu_arrival_count);
+          if (gpu_release_flag) (void)hipHostFree(gpu_release_flag);
           return false;
         }
       }
@@ -535,8 +535,8 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
     rvs::lp::Log(msg, rvs::loginfo);
 
     if (rvs::lp::Stopping()) {
-      if (gpu_arrival_count) hipHostFree(gpu_arrival_count);
-      if (gpu_release_flag) hipHostFree(gpu_release_flag);
+      if (gpu_arrival_count) (void)hipHostFree(gpu_arrival_count);
+      if (gpu_release_flag) (void)hipHostFree(gpu_release_flag);
       return false;
     }
 
@@ -544,8 +544,8 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
     break;
   }
 
-  if (gpu_arrival_count) hipHostFree(gpu_arrival_count);
-  if (gpu_release_flag) hipHostFree(gpu_release_flag);
+  if (gpu_arrival_count) (void)hipHostFree(gpu_arrival_count);
+  if (gpu_release_flag) (void)hipHostFree(gpu_release_flag);
 
   for (i = 0; i < pulse_gpus_device_index.size(); i++) {
     if(false == workers[i].get_result())
@@ -557,7 +557,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
 
 int pulse_action::get_num_amd_gpu_devices(void) {
   int hip_num_gpu_devices;
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   return hip_num_gpu_devices;
 }
 
@@ -568,7 +568,7 @@ int pulse_action::get_all_selected_gpus(void) {
   std::string msg;
   std::vector<mcm_type_t> mcm_type;
 
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   if (hip_num_gpu_devices < 1)
     return -1;
 

@@ -401,7 +401,7 @@ bool PulseWorker::gpu_barrier_sync(bool time_up, bool& test_passed) {
   cpu_barrier->arrive_and_wait();
 
   if (gpu_device_index >= 0)
-    hipSetDevice(gpu_device_index);
+    (void)hipSetDevice(gpu_device_index);
 
   // Default stream + device sync (same pattern as pre-stream refactor).
   gpu_sync_barrier_kernel<<<1, 1>>>(
@@ -433,7 +433,7 @@ bool PulseWorker::run_gemm_verify(bool& test_passed) {
   }
 
   if (gpu_device_index >= 0)
-    hipSetDevice(gpu_device_index);
+    (void)hipSetDevice(gpu_device_index);
 
   double self_error = 0.0;
   double accu_error = 0.0;
@@ -602,7 +602,7 @@ bool PulseWorker::do_pulse_stress(void) {
     // Drain the GPU pipeline so all GEMM work finishes before the
     // low phase — without this, kernels still in flight keep power
     // elevated and the "low" reading is indistinguishable from "high".
-    hipDeviceSynchronize();
+    (void)hipDeviceSynchronize();
     now = std::chrono::system_clock::now();
     double actual_high_ms = std::chrono::duration<double, std::milli>(
         now - phase_start).count();
@@ -684,8 +684,8 @@ bool PulseWorker::do_pulse_stress(void) {
 
 done:
   if (gpu_blas && gpu_device_index >= 0) {
-    hipSetDevice(gpu_device_index);
-    hipDeviceSynchronize();
+    (void)hipSetDevice(gpu_device_index);
+    (void)hipDeviceSynchronize();
     (void)run_gemm_verify(test_passed);
   }
   restore_clocks();
