@@ -103,14 +103,14 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , data_type(_data_type)
   , out_data_type(_out_data_type)
   , m(_m), n(_n), k(_k)
-  , matrix_init (_matrix_init)
   , size_a(0), size_b(0), size_c(0), size_d(0)
   , total_rotating_size(0)
+  , matrix_init(_matrix_init)
   , da(nullptr), db(nullptr), dc(nullptr), dd(nullptr)
-  , dsa(nullptr), dsb(nullptr)
   , ha(nullptr), hb(nullptr), hc(nullptr)
+  , dsa(nullptr), dsb(nullptr)
   , hsa(nullptr), hsb(nullptr)
-  , hpo(nullptr), hco(nullptr)
+  , hco(nullptr), hpo(nullptr)
   , hout(nullptr), hdout(nullptr)
   , hip_stream(nullptr)
   , hiprand_generator(nullptr)
@@ -118,20 +118,6 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , is_handle_init(false)
   , is_error(false)
   , check_count(1)
-  , gemm_mode(_gemm_mode)
-  , batch_size(_batch_size)
-  , stride_a(_stride_a), stride_b(_stride_b), stride_c(_stride_c), stride_d(_stride_d)
-  , blas_source(_blas_source)
-  , compute_type(_compute_type)
-  , hbl_handle(nullptr), hbl_workspace(nullptr)
-  , hbl_layout_a(nullptr), hbl_layout_b(nullptr)
-  , hbl_layout_c(nullptr), hbl_layout_d(nullptr)
-  , hbl_scale_a(_scale_a)
-  , hbl_scale_b(_scale_b)
-  , hbl_scale_a_size(0)
-  , hbl_scale_b_size(0)
-  , hot_calls(_hot_calls)
-  , block_count(1)
   , matrix_seed(0)
   , crc_ref(0)
   , last_crc(0)
@@ -142,6 +128,21 @@ rvs_blas::rvs_blas(int _gpu_device_index, int _m, int _n, int _k, std::string _m
   , ref_buf(nullptr)
   , ref_buf_bytes(0)
   , crc_total_bytes(0)
+  , gemm_mode(_gemm_mode)
+  , batch_size(_batch_size)
+  , stride_a(_stride_a), stride_b(_stride_b), stride_c(_stride_c), stride_d(_stride_d)
+  , blas_source(_blas_source)
+  , compute_type(_compute_type)
+  , hbl_handle(nullptr)
+  , hbl_layout_a(nullptr), hbl_layout_b(nullptr)
+  , hbl_layout_c(nullptr), hbl_layout_d(nullptr)
+  , block_count(1)
+  , hbl_scale_a(_scale_a)
+  , hbl_scale_b(_scale_b)
+  , hbl_scale_a_size(0)
+  , hbl_scale_b_size(0)
+  , hbl_workspace(nullptr)
+  , hot_calls(_hot_calls)
 {
 
   if (blas_source == "rocblas") {
@@ -487,7 +488,7 @@ bool rvs_blas::init_gpu_device(void) {
 
     if(hbl_heuristic_result.workspaceSize) {
       // Allocate workspace for matrix multiplication
-      hipMalloc(&hbl_workspace, hbl_heuristic_result.workspaceSize);
+      (void)hipMalloc(&hbl_workspace, hbl_heuristic_result.workspaceSize);
     }
   }
   else {
@@ -547,7 +548,7 @@ bool rvs_blas::copy_data_to_gpu(void) {
 
     if (dsa) {
       void * dsa_p = (uint8_t *)dsa + (i * sizeof(uint8_t) * hbl_scale_a_size);
-      if (hipMemcpy(dsa, hsa, sizeof(uint8_t) * hbl_scale_a_size, hipMemcpyHostToDevice)
+      if (hipMemcpy(dsa_p, hsa, sizeof(uint8_t) * hbl_scale_a_size, hipMemcpyHostToDevice)
           != hipSuccess) {
         is_error = true;
         return false;
@@ -808,18 +809,18 @@ void rvs_blas::set_matrix_seed(uint64_t seed) {
 void rvs_blas::release_gpu_matrix_mem(void) {
 
   if (da)
-    hipFree(da);
+    (void)hipFree(da);
   if (db)
-    hipFree(db);
+    (void)hipFree(db);
   if (dc)
-    hipFree(dc);
+    (void)hipFree(dc);
   if (dd)
-    hipFree(dd);
+    (void)hipFree(dd);
 
   if (dsa)
-    hipFree(dsa);
+    (void)hipFree(dsa);
   if (dsb)
-    hipFree(dsb);
+    (void)hipFree(dsb);
 
   if (is_handle_init) {
 
@@ -829,7 +830,7 @@ void rvs_blas::release_gpu_matrix_mem(void) {
     if(hiprand_generator)
       hiprandDestroyGenerator(hiprand_generator);
 
-    hipStreamDestroy(hip_stream);
+    (void)hipStreamDestroy(hip_stream);
 
     if(hbl_layout_a)
       hipblasLtMatrixLayoutDestroy(hbl_layout_a);
@@ -847,7 +848,7 @@ void rvs_blas::release_gpu_matrix_mem(void) {
     }
 
     if(hbl_workspace)
-      hipFree(hbl_workspace);
+      (void)hipFree(hbl_workspace);
 
     if(hbl_handle)
       hipblasLtDestroy(hbl_handle);
@@ -1000,29 +1001,29 @@ bool rvs_blas::allocate_host_matrix_mem(void) {
 void rvs_blas::release_host_matrix_mem(void) {
 
   if (ha)
-    delete []ha;
+    ::operator delete[](ha);
   if (hb)
-    delete []hb;
+    ::operator delete[](hb);
   if (hc)
-    delete []hc;
+    ::operator delete[](hc);
 
   if (hsa)
-    delete []hsa;
+    ::operator delete[](hsa);
   if (hsb)
-    delete []hsb;
+    ::operator delete[](hsb);
 
   if (hpo)
-    hipHostFree(hpo);
+    (void)hipHostFree(hpo);
   if (hco)
-    hipHostFree(hco);
+    (void)hipHostFree(hco);
   if(hout)
-    hipHostFree(hout);
+    (void)hipHostFree(hout);
   if(hdout)
-    hipHostFree(hdout);
+    (void)hipHostFree(hdout);
   if(hcrc_buf)
-    hipHostFree(hcrc_buf);
+    (void)hipHostFree(hcrc_buf);
   if(ref_buf)
-    hipHostFree(ref_buf);
+    (void)hipHostFree(ref_buf);
 }
 
 /**
@@ -2461,7 +2462,7 @@ int rvs_blas::compute_output_crc() {
   // (Re-)allocate the host scratch buffer when the output size changes.
   if (hcrc_buf == nullptr || hcrc_buf_bytes < total_bytes) {
     if (hcrc_buf)
-      hipHostFree(hcrc_buf);
+      (void)hipHostFree(hcrc_buf);
     hcrc_buf       = nullptr;
     hcrc_buf_bytes = 0;
 
@@ -2498,7 +2499,7 @@ int rvs_blas::compute_output_crc() {
 
     if (ref_buf == nullptr || ref_buf_bytes < total_bytes) {
       if (ref_buf)
-        hipHostFree(ref_buf);
+        (void)hipHostFree(ref_buf);
       ref_buf       = nullptr;
       ref_buf_bytes = 0;
       if (hipHostMalloc(&ref_buf, total_bytes, 0) == hipSuccess)

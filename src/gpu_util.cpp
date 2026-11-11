@@ -250,8 +250,6 @@ get_smi_processors(){
 void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
 
   std::map<uint64_t, uint16_t> smi_map;
-  //uint32_t smi_num_devices = 0;
-  uint64_t gpuid;
   amdsmi_status_t smi_ret;
   auto proc_handles = get_smi_processors();
   if (proc_handles.empty()){
@@ -269,7 +267,6 @@ void gpu_get_all_gpu_idx(std::vector<uint16_t>* pgpus_gpu_idx) {
 
   std::string prop_name;
   int gpu_id;
-  uint32_t prop_val;
 
   // Discover the number of nodes: Inside nodes folder there are only folders
   // that represent the node number
@@ -487,32 +484,29 @@ bool gpu_check_if_mcm_die (int idx) {
 int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_hdl) {
 
   int hip_num_gpu_devices = 0;
-  uint32_t smi_num_devices = 0;
-  uint64_t smi_bdf_id = 0;
 
   // map this to smi as only these are visible
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   if(hip_index >= hip_num_gpu_devices) {
     return -1;
   }
   auto smi_map = rvs::get_smi_pci_map();
   /* Fetch Domain, Bus, Device and Function numbers from HIP PCIe id */
-  uint64_t pDom = 0, pBus = 0, pDev = 0, pFun = 0;
+  unsigned int dom = 0, bus = 0, dev = 0, fun = 0;
   char pciString[256] = {0};
-  auto hipret = hipDeviceGetPCIBusId(pciString, 256, hip_index);
-  if (sscanf(pciString, "%04x:%02x:%02x.%01x", reinterpret_cast<uint64_t *>(&pDom),
-        reinterpret_cast<uint64_t *>(&pBus),
-        reinterpret_cast<uint64_t *>(&pDev),
-        reinterpret_cast<uint64_t *>(&pFun)) != 4) {
+  if (hipDeviceGetPCIBusId(pciString, 256, hip_index) != hipSuccess) {
+    return -1;
+  }
+  if (sscanf(pciString, "%04x:%02x:%02x.%01x", &dom, &bus, &dev, &fun) != 4) {
     std::cout << "parsing error in BDF:" << pciString << std::endl;
   }
 
   /* Form bdfid as per rsmi_dev_pci_id_get() logic */
   uint64_t hip_bdf_id =
-	  ((((pDom) & 0x00000000ffffffff) << 32) |
-	   (((pBus) & 0x00000000000000ff) << 8) |
-	   (((pDev) & 0x000000000000001f) << 3) |
-	    ((pFun) & 0x0000000000000007));
+	  ((((uint64_t)dom) & 0xffffffff) << 32) |
+	   ((((uint64_t)bus) & 0xff) << 8) |
+	   ((((uint64_t)dev) & 0x1f) << 3) |
+	    (((uint64_t)fun) & 0x7);
 
   /* Check for matching bdf id in smi list */
   if(smi_map.find(hip_bdf_id) != smi_map.end()) {
@@ -530,7 +524,7 @@ int gpu_hip_to_smi_hdl(int hip_index, amdsmi_processor_handle* smi_hdl) {
  **/
 int gpu_hip_to_node(int hip_index, int* node) {
   int hip_num_gpu_devices = 0;
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   if (hip_index >= hip_num_gpu_devices) {
     return -1;
   }
@@ -540,20 +534,16 @@ int gpu_hip_to_node(int hip_index, int* node) {
     return -1;
   }
 
-  uint64_t pDom = 0, pBus = 0, pDev = 0, pFun = 0;
-  if (sscanf(pciString, "%04x:%02x:%02x.%01x",
-        reinterpret_cast<uint64_t *>(&pDom),
-        reinterpret_cast<uint64_t *>(&pBus),
-        reinterpret_cast<uint64_t *>(&pDev),
-        reinterpret_cast<uint64_t *>(&pFun)) != 4) {
+  unsigned int dom = 0, bus = 0, dev = 0, fun = 0;
+  if (sscanf(pciString, "%04x:%02x:%02x.%01x", &dom, &bus, &dev, &fun) != 4) {
     return -1;
   }
 
   uint64_t hip_bdf_id =
-      ((((pDom) & 0x00000000ffffffff) << 32) |
-       (((pBus) & 0x00000000000000ff) << 8) |
-       (((pDev) & 0x000000000000001f) << 3) |
-        ((pFun) & 0x0000000000000007));
+      ((((uint64_t)dom) & 0xffffffff) << 32) |
+       ((((uint64_t)bus) & 0xff) << 8) |
+       ((((uint64_t)dev) & 0x1f) << 3) |
+        (((uint64_t)fun) & 0x7);
 
   ifstream f_id, f_prop;
   char path[KFD_PATH_MAX_LENGTH];

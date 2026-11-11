@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -195,7 +195,7 @@ void MemWorker::run() {
 
     HIP_CHECK(hipSetDevice(deviceId));
 
-    hipDeviceSynchronize();
+    (void)hipDeviceSynchronize();
 
     HIP_CHECK(hipMemGetInfo(&free, &total));
 
@@ -287,10 +287,10 @@ void MemWorker::run() {
     run_tests(ptr, tot_num_blocks);
 
     if (useMappedMemory) {
-        hipHostFree(mappedHostPtr);
+        (void)hipHostFree(mappedHostPtr);
         mappedHostPtr = nullptr;
     } else {
-        hipFree(ptr);
+        (void)hipFree(ptr);
         ptr = nullptr;
     }
 

@@ -201,6 +201,7 @@ class rvs_blas {
      *
      * Used by subsequent GSTWorkers instead of generate_random_matrix_data()
      * to ensure byte-identical input matrices across all GPUs.
+     */
     /**
      * Inject previously-snapshotted matrix bytes into this instance's host
      * buffers.  Sizes must match what was allocated for this instance — ensured

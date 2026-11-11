@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+## Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
 ##
 ## MIT LICENSE:
 ## Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,7 +25,7 @@
 
 
 ## define additional unit testing include directories
-include_directories(${UT_INC})
+include_directories(SYSTEM ${UT_INC})
 ## define additional unit testing lib directories
 link_directories(${UT_LIB} ${RVS_LIB_DIR} ${ROCM_SMI_LIB_DIR} ${HIPRAND_LIB_DIR} ${ROCRAND_LIB_DIR})
 
