@@ -28,7 +28,6 @@
 #include <string>
 #include <memory>
 #include <mutex>
-#include <barrier>
 #include <vector>
 #include <atomic>
 #include <cstdint>
@@ -100,8 +99,31 @@ class PulseWorker : public rvs::ThreadBase {
         max_temp_c = _c;
     }
 
-    void set_matrix_size(uint64_t _matrix_size) {
-        matrix_size = _matrix_size;
+    void set_min_power_delta_w(float watts) {
+        min_power_delta_w = watts;
+    }
+
+    void set_ecc_check(bool enabled) {
+        ecc_check = enabled;
+    }
+
+    void set_gpu_sync_wait(int wait_ms) {
+        gpu_sync_wait_ms = wait_ms;
+    }
+
+    void set_pattern_duration(uint64_t ms) {
+        pattern_duration_ms = ms;
+    }
+
+    void set_patterns(const std::vector<int>& ids, bool custom) {
+        pattern_ids = ids;
+        custom_pattern = custom;
+    }
+
+    void set_matrix_size(uint64_t m, uint64_t n, uint64_t k) {
+        matrix_m = m;
+        matrix_n = n;
+        matrix_k = k;
     }
 
     void set_ops_type(std::string _ops_type) {
@@ -165,14 +187,8 @@ class PulseWorker : public rvs::ThreadBase {
         worker_index = _idx;
     }
 
-    void set_sync_resources(std::barrier<>* _cpu_barrier,
-                            int32_t* _gpu_arrival_count,
-                            int32_t* _gpu_release_flag,
-                            std::atomic<bool>* _done_flag) {
-        cpu_barrier = _cpu_barrier;
-        gpu_arrival_count = _gpu_arrival_count;
-        gpu_release_flag = _gpu_release_flag;
-        done_flag = _done_flag;
+    void set_sync(PulseSync* sync) {
+        pulse_sync = sync;
     }
 
     static void set_use_json(bool _bjson) { bjson = _bjson; }
@@ -191,9 +207,21 @@ class PulseWorker : public rvs::ThreadBase {
     bool set_lowest_clocks(void);
     bool restore_clocks(void);
 
-    bool gpu_barrier_sync(bool time_up, bool& test_passed);
+    enum class SyncStatus { kGo, kAbort, kTimeout };
 
+    SyncStatus host_rendezvous(void);
+    bool gpu_barrier_sync(bool& test_passed);
+    bool wait_gemm(bool& test_passed);
+    bool wait_event(hipEvent_t ev, bool& test_passed, bool gemm_wait);
     bool run_gemm_verify(bool& test_passed);
+    void note_failure(bool& test_passed);
+    void log_msg(const std::string& msg, int level);
+    bool judge_results(void) const;
+    std::atomic<bool>& abort_flag(void);
+    void warn_clock_once(const char* what);
+    void calibrate_wall_clock(void);
+    bool read_uncorrectable_ecc(uint64_t& count);
+    void check_temperature(float temp, bool& test_passed);
 
   protected:
     std::unique_ptr<rvs_blas> gpu_blas;
@@ -211,7 +239,15 @@ class PulseWorker : public rvs::ThreadBase {
     float high_phase_ratio;
     float tolerance;
     float max_temp_c;
-    uint64_t matrix_size;
+    float min_power_delta_w;
+    bool ecc_check;
+    int gpu_sync_wait_ms;
+    uint64_t pattern_duration_ms;
+    std::vector<int> pattern_ids;
+    bool custom_pattern;
+    uint64_t matrix_m;
+    uint64_t matrix_n;
+    uint64_t matrix_k;
 
     std::string pulse_ops_type;
     std::string pulse_data_type;
@@ -237,10 +273,14 @@ class PulseWorker : public rvs::ThreadBase {
     int worker_index;
 
     //! Cross-GPU synchronization (set by action when parallel + multi-GPU)
-    std::barrier<>* cpu_barrier;
-    int32_t* gpu_arrival_count;
-    int32_t* gpu_release_flag;
-    std::atomic<bool>* done_flag;
+    PulseSync* pulse_sync;
+    int sync_epoch;
+    std::atomic<bool> local_abort;
+    hipEvent_t gemm_event;
+    bool gemm_event_ready;
+    bool device_busy;
+    bool clock_warned;
+    uint64_t wall_hz;
 
     //! Valid clock levels discovered via AMDSMI
     std::vector<uint32_t> valid_gfx_levels;

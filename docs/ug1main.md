@@ -129,11 +129,7 @@ The GPU Stress Test runs various GEMM computations as workloads to stress the GP
 The Input EDPp Test runs GEMM workloads to stress the GPU power (that is, TGP). This test is used to verify if the GPU is capable of handling max. power stress for a sustained period of time. Also checks whether GPU power reaches a set target power.
 
 #### GPU Power Pulse Test - PULSE module
-The Pulse test drives repeating **high-power** (GEMM compute) and **low-power** (idle, minimum clocks) phases at a configurable rate so that GPU power swings over time. That pattern stresses the power supply and voltage regulators with transients rather than a single sustained power level. With **parallel: true** on multiple GPUs, the module uses a CPU-side barrier and a GPU-side fine-grained barrier so that devices tend to enter the heavy phase together, increasing aggregate current steps. Power and temperature are read through **AMD SMI**. GEMM execution uses the same **rvs_blas** stack as GST/IET (**rocBLAS** or **hipBLASLt**).
-
-```{Warning}
-This is a beta feature and is not intended for production use. Pass/fail criteria are still being refined.
-```
+The Pulse test drives repeating **high-power** (GEMM compute) and **low-power** (idle, minimum clocks) phases so that GPU power swings over time. Six built-in patterns cover different transient shapes. With **parallel: true** on multiple GPUs, a timed host rendezvous and a GPU barrier line up the heavy phase. Power and temperature are read through **AMD SMI**. GEMM execution uses the same **rvs_blas** stack as IET.
 
 #### Memory Test - MEM module
 The Memory module tests the GPU memory for hardware errors and soft errors using HIP. It consists of various tests that use algorithms like Walking 1 bit, Moving inversion and Modulo 20. The module executes the following memory tests [Algorithm, data pattern]
@@ -2347,22 +2343,44 @@ Sample output (first action, abridged):
 
 ## Pulse Module
 
-```{warning}
-This module is in beta and is not intended for production use. Pass/fail criteria (especially around power-delta enforcement, clock-pinning verification, and throttle detection) are still being tuned and may change between releases.
-```
+The **Pulse** module is intended for **time-varying** GPU power stress: it alternates **high** phases (maximum clocks plus continuous GEMM) and **low** phases (minimum clocks plus idle/sleep). That produces periodic power swings useful for exercising PSU transient response and platform power delivery, complementing **IET** (which targets a sustained power level).
 
-The **Pulse** module is intended for **time-varying** GPU power stress: it alternates **high** phases (maximum clocks plus continuous GEMM) and **low** phases (minimum clocks plus idle/sleep), repeating for the action **duration**. That produces periodic power swings useful for exercising PSU transient response and platform power delivery, complementing **IET** (which targets a sustained power level).
+An action runs one or more **patterns** back to back. Each pattern is a waveform: how long the high phase and the low phase last, and how that changes over the pattern. `pattern_duration` is the length of each pattern. GEMM type and matrix size follow the same concepts as **IET**. Per-ASIC files live under `rvs/conf/<asic>/pulse_single.conf`. `rvs/conf/pulse_single.conf` is the generic fallback. `rvs -m pulse` selects the ASIC file when one exists.
 
-GEMM type, matrix size, and BLAS backend follow the same concepts as **GST** / **IET** (see those sections and `rvs_blas`). Sample reference configuration: `rvs/conf/pulse_single.conf`.
+### Patterns
+
+| Index | Name | Waveform |
+|---|---|---|
+| 0 | square_slow | 1 Hz, half the cycle under load |
+| 1 | square_mid | 5 Hz, half the cycle under load |
+| 2 | square_fast | 20 Hz, half the cycle under load |
+| 3 | burst | 2 Hz, 10% of the cycle under load |
+| 4 | freq_sweep | Rate rises from 1 Hz to 50 Hz over the pattern, half the cycle under load |
+| 5 | duty_sweep | 2 Hz, high fraction rises from 10% to 90% over the pattern |
+
+`patterns: all` selects 0 through 5. `patterns: 2,3,4` selects a subset. An index that is not in the table is skipped with a log line. If none of the requested indices are valid, the action fails at configuration time. `patterns: custom` ignores the table and uses `pulse_rate` and `high_phase_ratio`. Each phase is at least 10 ms.
 
 ### Behavior summary
 
-- Each **pulse cycle** is one high phase followed by one low phase. Phase lengths derive from `pulse_rate` (Hz) and `high_phase_ratio`; each phase is at least 10 ms after rounding.
-- **High phase:** sets GPU clocks high, runs GEMM in a loop (`workload_iterations` per inner batch) until the high-phase time budget elapses, samples power, checks junction temperature (**failure if above 105°C**).
-- After the high phase, the module calls `hipDeviceSynchronize` so work drains before the low phase (clearer separation of high vs. low power).
-- **Low phase:** sets clocks low, sleeps briefly between `sample_interval`-style sampling (5 ms sleep steps in the implementation), samples power.
-- With `parallel: true` and more than one GPU, threads coordinate with a `std::barrier` and a small GPU kernel using fine-grained coherent host memory so all GPUs synchronize across the pulse loop (avoids deadlock on shutdown via a shared done flag).
-- **Pass:** for primary MCM dies, the action passes if at least one pulse completed, there was **no** BLAS enqueue/sync failure (unless `halt_on_error` stops earlier), and no thermal violation; secondary MCM GPUs are treated as pass by default. Fail otherwise.
+- **High phase:** sets GPU clocks high and runs GEMM until the high-phase budget elapses. Power and temperature are sampled every `sample_interval`.
+- GEMM completion is polled on a HIP event for at most `gpu_sync_wait` milliseconds. The wait does not use a blocking stream synchronize.
+- **Low phase:** sets clocks low, sleeps, and samples power and temperature.
+- With `parallel: true` and more than one GPU, every cycle has a timed host rendezvous and a one-thread GPU barrier so the high phases start together. Either wait gives up after `gpu_sync_wait`. A miss sets a shared abort flag, fails that GPU, and lets the other workers leave instead of blocking the run.
+- `halt_on_error: true` stops the rest of the current pattern on the first GEMM or HIP error. `false` finishes that pattern's duration and keeps the failure. Later patterns are not started after a failure. The failing worker still enters the rendezvous so the others are not left waiting.
+
+### Pass and fail
+
+A primary GPU passes when every selected pattern completes all of the following:
+
+- At least one pulse cycle ran.
+- GEMM enqueue and the HIP event wait succeeded.
+- End-of-pattern GEMM verification (`verify_mode`, `tolerance`) found no data error. For a matrix dimension above 2048, accuracy checking falls back to a self-check.
+- Junction or edge temperature stayed at or below `max_temp_c`. `0` disables this check.
+- The uncorrectable ECC count did not rise. If the GPU does not report ECC, the check is skipped. `ecc_check: false` disables it.
+- At least one power sample was read.
+- When `min_power_delta_w` is greater than 0, average high power minus average low power is at least that many watts. `0` disables the swing check.
+
+A secondary die of an MCM GPU (the die whose energy counter reads 0) is reported as pass. Socket power is available on the primary die. Failure to pin clocks, and a GPU that is already busy at the start, are logged and do not fail the run. A pass means this workload did not observe instability. It is not a certification of the platform power supply.
 
 ### Prerequisites
 
@@ -2377,9 +2395,14 @@ Keys below are in addition to common keys (`name`, `module`, `device`, `duration
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
 <tr><th class="head">Config Key</th class="head"> <th class="head">Type</th><th class="head">Description</th></tr>
-<tr><td>pulse_rate</td><td>Integer</td><td>Pulse frequency in **Hertz** (cycles per second). Default <b>2</b>. Use roughly **1–5 Hz** if you want power readings to show clear high/low separation; very high rates shorten phases below typical GPU power-state and SMI averaging windows, so reported averages may converge.</td></tr>
-<tr><td>high_phase_ratio</td><td>Float</td><td>Fraction of each cycle spent in the **high** (GEMM) phase, **0.0–1.0**. Default <b>0.5</b>. Lower values spend more time in the low phase.</td></tr>
-<tr><td>matrix_size</td><td>Integer</td><td>Square GEMM dimension **M = N = K**. Default <b>4096</b>. Larger matrices increase compute and power draw during the high phase.</td></tr>
+<tr><td>patterns</td><td>String</td><td><b>all</b> (default), <b>custom</b>, or a comma-separated list of pattern indices such as <b>0,2,4</b>. See the pattern table.</td></tr>
+<tr><td>pattern_duration</td><td>Integer</td><td>Milliseconds each selected pattern runs. When omitted, <b>duration</b> is split evenly across the selected patterns. When <b>duration</b> is also 0, each pattern runs for <b>60000</b> ms.</td></tr>
+<tr><td>pulse_rate</td><td>Integer</td><td>Used only by <b>patterns: custom</b>. Frequency in hertz. Default <b>2</b>. Rates high enough that a phase is shorter than the power-sample window make the reported high and low readings converge.</td></tr>
+<tr><td>high_phase_ratio</td><td>Float</td><td>Used only by <b>patterns: custom</b>. Fraction of each cycle spent in the high phase, <b>0.0–1.0</b>. Default <b>0.5</b>.</td></tr>
+<tr><td>matrix_size</td><td>Integer</td><td>Square GEMM dimension <b>M = N = K</b> when the separate dimensions are omitted. Default <b>4096</b>.</td></tr>
+<tr><td>matrix_size_a</td><td>Integer</td><td>GEMM M. Defaults to <b>matrix_size</b>.</td></tr>
+<tr><td>matrix_size_b</td><td>Integer</td><td>GEMM N. Defaults to <b>matrix_size</b>.</td></tr>
+<tr><td>matrix_size_c</td><td>Integer</td><td>GEMM K. Defaults to <b>matrix_size</b>.</td></tr>
 <tr><td>ops_type</td><td>String</td><td>GEMM operation flavor (e.g. <b>sgemm</b>, <b>dgemm</b>, <b>hgemm</b>). Default <b>sgemm</b>. Must match **data_type** / **compute_type** when using hipBLASLt.</td></tr>
 <tr><td>data_type</td><td>String</td><td>Matrix data type string for hipBLASLt (e.g. <b>fp32_r</b>, <b>fp16_r</b>). Default empty (rocBLAS can infer from **ops_type** alone).</td></tr>
 <tr><td>out_data_type</td><td>String</td><td>Optional output type for GEMM; default empty (same as input type where applicable).</td></tr>
@@ -2394,14 +2417,16 @@ Keys below are in addition to common keys (`name`, `module`, `device`, `duration
 <tr><td>ldc</td><td>Integer</td><td>Leading dimension offset C. Default <b>0</b>.</td></tr>
 <tr><td>ldd</td><td>Integer</td><td>Leading dimension offset D. Default <b>0</b>.</td></tr>
 <tr><td>matrix_init</td><td>String</td><td>Host matrix initialization (e.g. <b>default</b>, <b>hiprand</b>). Default <b>default</b>.</td></tr>
-<tr><td>workload_iterations</td><td>Integer</td><td>GEMM calls per inner batch in the high phase before re-checking time and power. Default <b>128</b>. Increase for heavier per-iteration work; tune with **pulse_rate** and phase length.</td></tr>
-<tr><td>sample_interval</td><td>Integer</td><td>Reserved sampling interval (ms) for pulse-specific logic; values below **50** are raised to **50**. Default <b>100</b>.</td></tr>
-<tr><td>tolerance</td><td>Float</td><td>Default <b>10.0</b>. Parsed and passed to the worker; **not** currently used in pass/fail logic (reserved for future checks).</td></tr>
-<tr><td>verify_mode</td><td>String</td><td>e.g. <b>diff</b> / <b>crc</b>. Default <b>diff</b>. Parsed; **not** currently used in pass/fail logic (reserved for future GEMM verification).</td></tr>
-<tr><td>halt_on_error</td><td>Bool</td><td>If true, stop the GPU thread on first BLAS or thermal error. Default <b>false</b>.</td></tr>
-<tr><td>hot_calls</td><td>Integer</td><td>BLAS “hot call” / warmup-related parameter forwarded to **rvs_blas**. Default <b>1</b>.</td></tr>
-<tr><td>gpu_sync_wait</td><td>Integer</td><td>Default <b>10000</b>. Parsed from configuration; **not** referenced by the current barrier implementation (placeholder for future timeout behavior).</td></tr>
-<tr><td>max_temp_c</td><td>Float</td><td>Junction temperature ceiling in degrees Celsius. If the GPU junction temperature exceeds this threshold during the run, the worker logs a thermal-violation error and, when <b>halt_on_error</b> is true, terminates that GPU thread. Default <b>105.0</b>. A value of <b>0</b> disables thermal checking entirely.</td></tr>
+<tr><td>workload_iterations</td><td>Integer</td><td>GEMM calls per inner batch in the high phase before re-checking time and power. Default <b>128</b>.</td></tr>
+<tr><td>sample_interval</td><td>Integer</td><td>Power and temperature sample interval in milliseconds. Values below <b>50</b> are raised to <b>50</b>. Default <b>100</b>.</td></tr>
+<tr><td>tolerance</td><td>Float</td><td>GEMM verification error limit used with <b>verify_mode</b>. Default <b>10.0</b>.</td></tr>
+<tr><td>verify_mode</td><td>String</td><td><b>diff</b> (default), <b>crc</b>, <b>both</b>, or <b>none</b>. Checked at the end of each pattern.</td></tr>
+<tr><td>halt_on_error</td><td>Bool</td><td>If true, stop the current pattern on the first GEMM, HIP, or thermal error. Default <b>false</b>, which finishes the pattern and keeps the failure.</td></tr>
+<tr><td>hot_calls</td><td>Integer</td><td>BLAS warmup parameter forwarded to <b>rvs_blas</b>. Default <b>1</b>.</td></tr>
+<tr><td>gpu_sync_wait</td><td>Integer</td><td>Milliseconds allowed for one host rendezvous, one GPU barrier, and one GEMM completion wait. Default <b>10000</b>. Must be positive.</td></tr>
+<tr><td>max_temp_c</td><td>Float</td><td>Temperature ceiling in degrees Celsius, sampled in both phases. Default <b>105</b>. <b>0</b> disables the check.</td></tr>
+<tr><td>min_power_delta_w</td><td>Float</td><td>Minimum average high-minus-low power in watts. <b>0</b> (default) disables the check.</td></tr>
+<tr><td>ecc_check</td><td>Bool</td><td>Fail if the uncorrectable ECC count rises during a pattern. Default <b>true</b>.</td></tr>
 </table>
 </div>
 
@@ -2412,46 +2437,46 @@ Log lines use the action name, module tag pulse, and GPU ID.
 <div class="pst-scrollable-table-container">
 <table class="table table--middle-left">
 <tr><th class="head">Output / log</th> <th class="head">Description</th></tr>
-<tr><td>Start</td><td><code>[INFO] ... pulse &lt;gpu_id&gt; start pulse_rate=&lt;hz&gt;</code></td></tr>
-<tr><td>Parameters</td><td><code>[INFO] ... pulse_rate=... Hz period=...ms high=...ms low=...ms</code></td></tr>
-<tr><td>Thermal error</td><td><code>[ERROR] ... thermal violation: &lt;temp&gt;C (limit &lt;max_temp_c&gt;C)</code> (emitted only when <b>max_temp_c</b> is &gt; 0)</td></tr>
-<tr><td>Periodic summary</td><td>At each <b>log_interval</b>, moving averages and extrema: <code>pulse #N avg_high=...W avg_low=...W max_high=...W min_low=...W delta=...W</code></td></tr>
-<tr><td>Completion</td><td>Summary over the run: pulse count, average high/low power, delta, max high, min low.</td></tr>
-<tr><td>pass</td><td><code>[RESULT] ... pass: true</code> or <code>false</code> per GPU.</td></tr>
+<tr><td>Start</td><td><code>[INFO] ... pulse &lt;gpu_id&gt; start</code></td></tr>
+<tr><td>Pattern</td><td><code>[INFO] ... pattern &lt;index&gt; &lt;name&gt; duration_ms=&lt;ms&gt;</code></td></tr>
+<tr><td>Thermal error</td><td><code>[ERROR] ... thermal violation: &lt;temp&gt;C (limit &lt;max_temp_c&gt;C)</code> when <b>max_temp_c</b> is &gt; 0</td></tr>
+<tr><td>Periodic summary</td><td>At each <b>log_interval</b>: <code>&lt;pattern&gt; pulse #N avg_high=...W avg_low=...W delta=...W</code></td></tr>
+<tr><td>Pattern result</td><td>Cycles, average high and low power, and delta for that pattern.</td></tr>
+<tr><td>pass</td><td><code>[RESULT] ... pass: TRUE</code> or <code>FALSE</code> per GPU.</td></tr>
 </table>
 </div>
 
-With JSON logging enabled, per-pulse records can include `power_high_w`, `power_low_w`, `power_delta_w`, phase durations, `temp_c`, `gemm_count`, and a final summary with pass.
+With JSON logging enabled, each cycle can include `record_type` `pulse`. Each pattern adds `record_type` `pattern` with the pattern name, cycle count, average powers, swing, peak temperature, and pass. The final `record_type` `summary` lists the patterns that ran.
 
 ### Example
 
-Minimal illustration (see `pulse_single.conf` for full examples including hipblaslt + `fp16_r`):
-
     actions:
-    - name: pulse_stress_basic
+    - name: pulse-all-patterns
       device: all
       module: pulse
       parallel: true
-      duration: 60000
+      duration: 360000
+      pattern_duration: 60000
+      patterns: all
       log_interval: 5000
-      pulse_rate: 2
-      high_phase_ratio: 0.5
       ops_type: sgemm
       matrix_size: 8192
-      blas_source: hipblaslt
-      data_type: fp32_r
-      compute_type: fp32_r
-      workload_iterations: 128
-      halt_on_error: false
+      blas_source: rocblas
+      verify_mode: diff
+      tolerance: 10.0
+      max_temp_c: 105
+      min_power_delta_w: 0
+      ecc_check: true
+      gpu_sync_wait: 10000
 
 Run from the build or package `bin` directory, for example:
 
     ./rvs -c conf/pulse_single.conf -d 3
+    ./rvs -m pulse -d 3
 
 
 ```{note}
-- Tune `matrix_size`, `pulse_rate`, and `high_phase_ratio` to match GPU class and the transient behavior you want to stress.
-- hipBLASLt often delivers higher GEMM throughput than rocBLAS on supported GPUs; `fp16_r`/`hgemm` with `compute_type`: `fp32_r` is a common high-throughput choice (as in the `pulse_stress_fp16` action in `pulse_single.conf`).
+Use the ASIC `pulse_single.conf` for the GEMM operation and matrix size that matches that GPU's power workload. `min_power_delta_w` stays 0 until a swing limit has been measured for that platform.
 ```
 
 ## MEM module

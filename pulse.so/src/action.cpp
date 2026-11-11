@@ -28,8 +28,10 @@
 #include <vector>
 #include <map>
 #include <memory>
-#include <barrier>
 #include <atomic>
+#include <sstream>
+#include <cctype>
+#include <cstdlib>
 
 
 #define __HIP_PLATFORM_HCC__
@@ -38,6 +40,7 @@
 
 #include "include/rvs_key_def.h"
 #include "include/pulse_worker.h"
+#include "include/pulse_pattern.h"
 #include "include/gpu_util.h"
 #include "include/rvs_util.h"
 #include "include/rvs_module.h"
@@ -73,6 +76,13 @@ using std::map;
 #define RVS_CONF_BLAS_SOURCE_KEY          "blas_source"
 #define RVS_CONF_COMPUTE_TYPE_KEY         "compute_type"
 #define RVS_CONF_MAX_TEMP_C_KEY           "max_temp_c"
+#define RVS_CONF_PATTERNS_KEY             "patterns"
+#define RVS_CONF_PATTERN_DURATION_KEY     "pattern_duration"
+#define RVS_CONF_MATRIX_SIZE_A_KEY        "matrix_size_a"
+#define RVS_CONF_MATRIX_SIZE_B_KEY        "matrix_size_b"
+#define RVS_CONF_MATRIX_SIZE_C_KEY        "matrix_size_c"
+#define RVS_CONF_MIN_POWER_DELTA_KEY      "min_power_delta_w"
+#define RVS_CONF_ECC_CHECK_KEY            "ecc_check"
 
 #define PULSE_DEFAULT_RATE                2
 #define PULSE_DEFAULT_HIGH_PHASE_RATIO    0.5f
@@ -99,6 +109,9 @@ using std::map;
 #define PULSE_DEFAULT_BLAS_SOURCE         "rocblas"
 #define PULSE_DEFAULT_COMPUTE_TYPE        "fp32_r"
 #define PULSE_DEFAULT_MAX_TEMP_C          105.0f
+#define PULSE_DEFAULT_MIN_POWER_DELTA     0.0f
+#define PULSE_DEFAULT_ECC_CHECK           true
+#define PULSE_DEFAULT_PATTERNS            "all"
 
 #define PULSE_NO_COMPATIBLE_GPUS          "No AMD compatible GPU found!"
 #define JSON_CREATE_NODE_ERROR            "JSON cannot create node"
@@ -106,22 +119,17 @@ using std::map;
 static constexpr auto MODULE_NAME = "pulse";
 static constexpr auto MODULE_NAME_CAPS = "PULSE";
 
-// Beta banner shown once at the start of every pulse action invocation.
-// Plain ASCII so it survives non-UTF-8 terminals, log scrapers, and CI capture.
-static const char* kPulseBetaBanner =
-"\n"
-"##############################################################################\n"
-"#                                                                            #\n"
-"#                  *** PULSE STRESS TEST - BETA VERSION ***                  #\n"
-"#                                                                            #\n"
-"#   This pulse test is a BETA version and is NOT to be used in               #\n"
-"#   production environments. Pass/fail criteria are still being tuned.       #\n"
-"#                                                                            #\n"
-"##############################################################################\n";
-
 pulse_action::pulse_action() {
   module_name = MODULE_NAME;
   pulse_max_temp_c = PULSE_DEFAULT_MAX_TEMP_C;
+  pulse_min_power_delta_w = PULSE_DEFAULT_MIN_POWER_DELTA;
+  pulse_pattern_duration = 0;
+  pulse_pattern_duration_set = false;
+  pulse_custom = false;
+  pulse_ecc_check = PULSE_DEFAULT_ECC_CHECK;
+  pulse_matrix_m = 0;
+  pulse_matrix_n = 0;
+  pulse_matrix_k = 0;
 }
 
 pulse_action::~pulse_action() {
@@ -388,7 +396,144 @@ bool pulse_action::get_all_pulse_config_keys(void) {
     pulse_sample_interval = 50;
   }
 
+  if (property_get<float>(RVS_CONF_MIN_POWER_DELTA_KEY,
+        &pulse_min_power_delta_w, PULSE_DEFAULT_MIN_POWER_DELTA)) {
+    msg = "invalid '" + std::string(RVS_CONF_MIN_POWER_DELTA_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+  if (pulse_min_power_delta_w < 0.0f) {
+    msg = "'" + std::string(RVS_CONF_MIN_POWER_DELTA_KEY) + "' must be >= 0";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  error = property_get<bool>(RVS_CONF_ECC_CHECK_KEY,
+      &pulse_ecc_check, PULSE_DEFAULT_ECC_CHECK);
+  if (error == 1) {
+    msg = "invalid '" + std::string(RVS_CONF_ECC_CHECK_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  if (pulse_gpu_sync_wait <= 0) {
+    msg = "'" + std::string(RVS_CONF_GPU_SYNC_WAIT_KEY) + "' must be positive";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  uint64_t dim = 0;
+  if (property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_A_KEY, &dim, 0)) {
+    msg = "invalid '" + std::string(RVS_CONF_MATRIX_SIZE_A_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+  pulse_matrix_m = dim > 0 ? dim : pulse_matrix_size;
+  if (property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_B_KEY, &dim, 0)) {
+    msg = "invalid '" + std::string(RVS_CONF_MATRIX_SIZE_B_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+  pulse_matrix_n = dim > 0 ? dim : pulse_matrix_size;
+  if (property_get_int<uint64_t>(RVS_CONF_MATRIX_SIZE_C_KEY, &dim, 0)) {
+    msg = "invalid '" + std::string(RVS_CONF_MATRIX_SIZE_C_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+  pulse_matrix_k = dim > 0 ? dim : pulse_matrix_size;
+  if (pulse_matrix_m == 0 || pulse_matrix_n == 0 || pulse_matrix_k == 0) {
+    msg = "matrix dimensions must be positive";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  }
+
+  std::string pattern_spec;
+  if (property_get<std::string>(RVS_CONF_PATTERNS_KEY, &pattern_spec,
+        std::string(PULSE_DEFAULT_PATTERNS))) {
+    msg = "invalid '" + std::string(RVS_CONF_PATTERNS_KEY) + "' key";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    bsts = false;
+  } else if (!parse_patterns(pattern_spec)) {
+    bsts = false;
+  }
+
+  std::string duration_text;
+  pulse_pattern_duration_set = has_property(RVS_CONF_PATTERN_DURATION_KEY,
+      &duration_text);
+  if (pulse_pattern_duration_set) {
+    if (property_get_int<uint64_t>(RVS_CONF_PATTERN_DURATION_KEY,
+          &pulse_pattern_duration, 0)) {
+      msg = "invalid '" + std::string(RVS_CONF_PATTERN_DURATION_KEY) + "' key";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    } else if (pulse_pattern_duration == 0) {
+      msg = "'" + std::string(RVS_CONF_PATTERN_DURATION_KEY)
+        + "' must be positive";
+      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      bsts = false;
+    }
+  } else {
+    const int npat = pulse_custom ? 1 : static_cast<int>(pulse_patterns.size());
+    if (npat > 0 && property_duration > 0) {
+      pulse_pattern_duration = property_duration / static_cast<uint64_t>(npat);
+      if (pulse_pattern_duration == 0)
+        pulse_pattern_duration = 1;
+    } else {
+      pulse_pattern_duration = 60000;
+    }
+  }
+
   return bsts;
+}
+
+bool pulse_action::parse_patterns(const std::string& spec) {
+  pulse_patterns.clear();
+  pulse_custom = false;
+  std::string trimmed;
+  for (char c : spec) {
+    if (!std::isspace(static_cast<unsigned char>(c)))
+      trimmed.push_back(static_cast<char>(
+          std::tolower(static_cast<unsigned char>(c))));
+  }
+  if (trimmed.empty() || trimmed == "all") {
+    for (int i = 0; i < kPulsePatternCount; ++i)
+      pulse_patterns.push_back(i);
+    return true;
+  }
+  if (trimmed == "custom") {
+    pulse_custom = true;
+    return true;
+  }
+
+  std::stringstream ss(trimmed);
+  std::string token;
+  bool any = false;
+  while (std::getline(ss, token, ',')) {
+    if (token.empty())
+      continue;
+    if (token == "custom" || token == "all") {
+      rvs::lp::Log("[" + action_name + "] skipping patterns token '" + token
+          + "' inside a list", rvs::loginfo);
+      continue;
+    }
+    char* end = nullptr;
+    long idx = std::strtol(token.c_str(), &end, 10);
+    if (end == token.c_str() || *end != '\0' ||
+        idx < 0 || idx >= kPulsePatternCount) {
+      rvs::lp::Log("[" + action_name + "] skipping unsupported pattern '"
+          + token + "'", rvs::loginfo);
+      continue;
+    }
+    pulse_patterns.push_back(static_cast<int>(idx));
+    any = true;
+  }
+  if (!any) {
+    std::string msg = "'" + std::string(RVS_CONF_PATTERNS_KEY)
+      + "' has no valid pattern index";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return false;
+  }
+  return true;
 }
 
 void pulse_action::hip_to_smi_indices(void) {
@@ -419,34 +564,34 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
   int num_gpus = static_cast<int>(pulse_gpus_device_index.size());
   vector<PulseWorker> workers(num_gpus);
 
-  // Shared flag: when any GPU's duration expires, it sets this before
-  // arriving at the barrier so all GPUs see it and exit together.
-  std::atomic<bool> done_flag{false};
+  PulseSync sync;
+  sync.num_gpus = num_gpus;
+  sync.wait_ms = pulse_gpu_sync_wait;
+  const bool synced = property_parallel && num_gpus > 1;
 
-  // Allocate fine-grained coherent system memory for GPU-side barrier
-  int32_t* gpu_arrival_count = nullptr;
-  int32_t* gpu_release_flag = nullptr;
-
-  if (property_parallel && num_gpus > 1) {
-    if (hipHostMalloc(&gpu_arrival_count, sizeof(int32_t),
-          hipHostMallocCoherent) != hipSuccess) {
+  if (synced) {
+    int32_t* arrival = nullptr;
+    int32_t* release = nullptr;
+    int32_t* timeout = nullptr;
+    bool alloc_ok =
+        hipHostMalloc(&arrival, sizeof(int32_t), hipHostMallocCoherent) == hipSuccess &&
+        hipHostMalloc(&release, sizeof(int32_t), hipHostMallocCoherent) == hipSuccess &&
+        hipHostMalloc(&timeout, sizeof(int32_t), hipHostMallocCoherent) == hipSuccess;
+    if (!alloc_ok) {
       msg = "Failed to allocate fine-grained memory for GPU sync barrier";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+      if (arrival) (void)hipHostFree(arrival);
+      if (release) (void)hipHostFree(release);
+      if (timeout) (void)hipHostFree(timeout);
       return false;
     }
-    if (hipHostMalloc(&gpu_release_flag, sizeof(int32_t),
-          hipHostMallocCoherent) != hipSuccess) {
-      msg = "Failed to allocate fine-grained memory for GPU sync barrier";
-      rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      hipHostFree(gpu_arrival_count);
-      return false;
-    }
-    *gpu_arrival_count = 0;
-    *gpu_release_flag = 0;
+    sync.gpu_arrival_count = arrival;
+    sync.gpu_release_flag = release;
+    sync.gpu_timeout_flag = timeout;
+    *sync.gpu_arrival_count = 0;
+    *sync.gpu_release_flag = 0;
+    *sync.gpu_timeout_flag = 0;
   }
-
-  // CPU-side barrier for host thread alignment (C++20)
-  std::barrier cpu_barrier(num_gpus);
 
   for (;;) {
     map<int, uint16_t>::iterator it;
@@ -481,7 +626,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
       workers[i].set_pulse_rate(pulse_rate);
       workers[i].set_high_phase_ratio(high_phase_ratio);
       workers[i].set_tolerance(pulse_tolerance);
-      workers[i].set_matrix_size(pulse_matrix_size);
+      workers[i].set_matrix_size(pulse_matrix_m, pulse_matrix_n, pulse_matrix_k);
       workers[i].set_ops_type(pulse_ops_type);
       workers[i].set_data_type(pulse_data_type);
       workers[i].set_out_data_type(pulse_out_data_type);
@@ -501,14 +646,16 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
       workers[i].set_blas_source(pulse_blas_source);
       workers[i].set_compute_type(pulse_compute_type);
       workers[i].set_max_temp_c(pulse_max_temp_c);
+      workers[i].set_min_power_delta_w(pulse_min_power_delta_w);
+      workers[i].set_ecc_check(pulse_ecc_check);
+      workers[i].set_gpu_sync_wait(pulse_gpu_sync_wait);
+      workers[i].set_pattern_duration(pulse_pattern_duration);
+      workers[i].set_patterns(pulse_patterns, pulse_custom);
       workers[i].set_mcm_type(mcm_type[i]);
       workers[i].set_num_gpus(num_gpus);
       workers[i].set_worker_index(i);
-
-      if (property_parallel && num_gpus > 1) {
-        workers[i].set_sync_resources(&cpu_barrier,
-            gpu_arrival_count, gpu_release_flag, &done_flag);
-      }
+      if (synced)
+        workers[i].set_sync(&sync);
 
       i++;
     }
@@ -523,8 +670,9 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
         workers[i].start();
         workers[i].join();
         if (rvs::lp::Stopping()) {
-          if (gpu_arrival_count) hipHostFree(gpu_arrival_count);
-          if (gpu_release_flag) hipHostFree(gpu_release_flag);
+          if (sync.gpu_arrival_count) (void)hipHostFree(sync.gpu_arrival_count);
+          if (sync.gpu_release_flag) (void)hipHostFree(sync.gpu_release_flag);
+          if (sync.gpu_timeout_flag) (void)hipHostFree(sync.gpu_timeout_flag);
           return false;
         }
       }
@@ -535,8 +683,9 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
     rvs::lp::Log(msg, rvs::loginfo);
 
     if (rvs::lp::Stopping()) {
-      if (gpu_arrival_count) hipHostFree(gpu_arrival_count);
-      if (gpu_release_flag) hipHostFree(gpu_release_flag);
+      if (sync.gpu_arrival_count) (void)hipHostFree(sync.gpu_arrival_count);
+      if (sync.gpu_release_flag) (void)hipHostFree(sync.gpu_release_flag);
+      if (sync.gpu_timeout_flag) (void)hipHostFree(sync.gpu_timeout_flag);
       return false;
     }
 
@@ -544,8 +693,9 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
     break;
   }
 
-  if (gpu_arrival_count) hipHostFree(gpu_arrival_count);
-  if (gpu_release_flag) hipHostFree(gpu_release_flag);
+  if (sync.gpu_arrival_count) (void)hipHostFree(sync.gpu_arrival_count);
+  if (sync.gpu_release_flag) (void)hipHostFree(sync.gpu_release_flag);
+  if (sync.gpu_timeout_flag) (void)hipHostFree(sync.gpu_timeout_flag);
 
   for (i = 0; i < pulse_gpus_device_index.size(); i++) {
     if(false == workers[i].get_result())
@@ -608,8 +758,6 @@ int pulse_action::get_all_selected_gpus(void) {
 int pulse_action::run(void) {
   string msg;
   rvs::action_result_t action_result;
-
-  rvs::lp::Log(std::string(kPulseBetaBanner), rvs::logresults);
 
   if (!get_all_common_config_keys())
     return -1;

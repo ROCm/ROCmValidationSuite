@@ -121,6 +121,7 @@ class rvs_blas {
     template <typename Ti, typename To> bool copy_data_to_gpu(void);
     bool run_blas_gemm(uint64_t num_calls);
     bool is_gemm_op_complete(void);
+    hipStream_t get_hip_stream(void) const { return hip_stream; }
     bool validate_gemm(bool self_check, bool accu_check, double &self_error, double &accu_error);
     void set_gemm_error(uint64_t _error_freq, uint64_t _error_count);
 
