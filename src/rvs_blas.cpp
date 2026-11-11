@@ -1645,7 +1645,12 @@ float rvs_blas::fast_pseudo_rand(uint64_t *nextr, size_t i) {
     }
   }
   else if ("trig" == matrix_init) {
-    return sin(static_cast<float>(i));
+    float s = sin(static_cast<float>(i));
+    if ("i8_r" == data_type) {
+      // int8 truncation of sin(i) is always 0; store the nearest integer instead.
+      return std::clamp(std::nearbyint(s), -1.0f, 1.0f);
+    }
+    return s;
   }
   else {
     *nextr = *nextr * 1103515245 + 12345;
