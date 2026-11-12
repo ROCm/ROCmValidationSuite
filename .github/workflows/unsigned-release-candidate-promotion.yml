@@ -262,8 +262,34 @@ jobs:
           echo "rpm_sha256=${RPM_SHA256}" >> "$GITHUB_OUTPUT"
 
           echo "Rebuilding RPM repodata under x86_64/ ..."
-          createrepo_c --simple-md-filenames --no-database --compress-type gz "${STAGING}/x86_64" \
-            || createrepo "${STAGING}/x86_64"
+          # createrepo_c 1.0 (ubuntu-latest) applies --compress-type only to the
+          # database and compresses primary/filelists/other as zstd unless
+          # --general-compress-type is set. Older createrepo_c has no such flag
+          # and honors --compress-type for the XML. Do not fall through to an
+          # unflagged createrepo: that publishes the zstd default.
+          if command -v createrepo_c >/dev/null 2>&1; then
+            repo_cmd=createrepo_c
+          elif command -v createrepo >/dev/null 2>&1; then
+            repo_cmd=createrepo
+          else
+            echo "::error::Neither createrepo_c nor createrepo is installed." >&2
+            exit 1
+          fi
+          compress_args=(--compress-type gz)
+          help_text=$("$repo_cmd" --help 2>&1 || true)
+          case "$help_text" in
+            *--general-compress-type*) compress_args+=(--general-compress-type gz) ;;
+          esac
+          "$repo_cmd" --simple-md-filenames --no-database "${compress_args[@]}" "${STAGING}/x86_64"
+
+          if [ ! -f "${STAGING}/x86_64/repodata/primary.xml.gz" ]; then
+            echo "::error::RPM repodata is missing primary.xml.gz." >&2
+            exit 1
+          fi
+          if [ -n "$(find "${STAGING}/x86_64/repodata" -name '*.xml.zst' -print -quit)" ]; then
+            echo "::error::RPM repodata contains zstd XML; expected gzip." >&2
+            exit 1
+          fi
 
           echo "Syncing updated RPM repo to s3://${BUCKET}/${DST_RPM}/x86_64/ ..."
           aws s3 sync "${STAGING}/x86_64/" "s3://${BUCKET}/${DST_RPM}/x86_64/" --no-progress
