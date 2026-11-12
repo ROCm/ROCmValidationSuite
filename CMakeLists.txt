@@ -833,6 +833,7 @@ add_subdirectory(mem.so)
 add_subdirectory(babel.so)
 add_subdirectory(tst.so)
 add_subdirectory(pulse.so)
+add_subdirectory(gpim.so)
 
 if (RVS_BUILD_TESTS)
   add_subdirectory(testif.so)
@@ -841,6 +842,7 @@ endif()
 if(RVS_ROCMSMI EQUAL 1)
   add_dependencies(iet rvs_smi_target)
   add_dependencies(pulse rvs_smi_target)
+  add_dependencies(gpim rvs_smi_target)
 endif()
 
 if(RVS_ROCBLAS EQUAL 1)
@@ -848,6 +850,7 @@ if(RVS_ROCBLAS EQUAL 1)
   add_dependencies(gst rvs_rblas_target)
   add_dependencies(iet rvs_rblas_target)
   add_dependencies(pulse rvs_rblas_target)
+  add_dependencies(gpim rvs_rblas_target)
 endif()
 
 add_custom_target(rvs_bin_folder ALL
