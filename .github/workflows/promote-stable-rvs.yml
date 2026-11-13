@@ -1,0 +1,267 @@
+name: Promote RVS packages to stable
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'GitHub Actions run number (matches CPACK release on release/** branches; embedded in package filenames under release/rvs)'
+        required: true
+        type: string
+      test_report_url:
+        description: 'Optional URL to a test report (recorded in promotion report on S3 and workflow artifact)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  RELEASE_PREFIX: release/rvs
+  PROMOTE_BASE: stable/rvs
+
+jobs:
+  promote:
+    name: Promote release/rvs → stable/rvs (same S3 objects)
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    steps:
+      - name: Install AWS CLI and repo tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli python3 dpkg-dev apt-utils createrepo-c
+
+      - name: Configure AWS credentials (OIDC)
+        if: github.repository == 'ROCm/ROCmValidationSuite'
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
+          CREDS=$(aws sts assume-role-with-web-identity \
+            --role-arn "${{ secrets.AWS_ROLE_ARN }}" \
+            --role-session-name "github-actions-${{ github.run_id }}" \
+            --web-identity-token "$TOKEN" \
+            --query 'Credentials' --output json)
+          echo "AWS_ACCESS_KEY_ID=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['AccessKeyId'])")" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SecretAccessKey'])")" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SessionToken'])")" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+          echo "::add-mask::$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SecretAccessKey'])")"
+          echo "::add-mask::$(echo "$CREDS" | python3 -c "import sys,json; print(json.load(sys.stdin)['SessionToken'])")"
+
+      - name: Copy matching packages from release/rvs to stable/rvs
+        if: github.repository == 'ROCm/ROCmValidationSuite'
+        env:
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          BUCKET: ${{ vars.AWS_S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUCKET:-}" ]; then
+            echo "::error::AWS_S3_BUCKET not set."
+            exit 1
+          fi
+
+          python3 << 'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          bucket = os.environ["BUCKET"]
+          build = os.environ["BUILD_NUMBER"].strip()
+          release_prefix = os.environ.get("RELEASE_PREFIX", "release/rvs")
+          promote_base = os.environ.get("PROMOTE_BASE", "stable/rvs")
+
+          def run_json(cmd):
+              out = subprocess.check_output(cmd, text=True)
+              return json.loads(out)
+
+          def list_all_keys(prefix):
+              keys = []
+              token = None
+              while True:
+                  cmd = [
+                      "aws", "s3api", "list-objects-v2",
+                      "--bucket", bucket,
+                      "--prefix", prefix,
+                  ]
+                  if token:
+                      cmd += ["--continuation-token", token]
+                  data = run_json(cmd)
+                  for obj in data.get("Contents") or []:
+                      k = obj["Key"]
+                      if k.endswith("/"):
+                          continue
+                      keys.append(k)
+                  token = data.get("NextContinuationToken")
+                  if not token:
+                      break
+              return keys
+
+          def deb_revision(basename: str):
+              if not basename.endswith(".deb"):
+                  return None
+              stem = basename[:-4]
+              parts = stem.rsplit("_", 1)
+              if len(parts) != 2:
+                  return None
+              prefix_arch = parts[0]
+              if "_" not in prefix_arch:
+                  return None
+              _, ver_rel = prefix_arch.split("_", 1)
+              return ver_rel.rsplit("-", 1)[-1]
+
+          def rvs_stem_release(stem: str):
+              if "-rvs-" not in stem:
+                  return None
+              _, rest = stem.split("-rvs-", 1)
+              return rest.rsplit("-", 1)[-1]
+
+          def rpm_revision(basename: str):
+              m = re.match(r"^(.+)\.(x86_64|aarch64|noarch)\.rpm$", basename)
+              if not m:
+                  return None
+              return rvs_stem_release(m.group(1))
+
+          def tgz_revision(basename: str):
+              if not basename.endswith(".tar.gz"):
+                  return None
+              stem = basename[:-7]
+              if not stem.endswith("-Linux"):
+                  return None
+              stem = stem[: -len("-Linux")]
+              return rvs_stem_release(stem)
+
+          SKIP_NAMES = {
+              "packages", "packages.gz", "release", "inrelease",
+          }
+
+          def revision_for_key(key: str):
+              base = key.rsplit("/", 1)[-1].lower()
+              if base in SKIP_NAMES or base.startswith("packages"):
+                  return None
+              if base.endswith(".deb"):
+                  return deb_revision(key.rsplit("/", 1)[-1])
+              if base.endswith(".rpm"):
+                  return rpm_revision(key.rsplit("/", 1)[-1])
+              if base.endswith(".tar.gz"):
+                  return tgz_revision(key.rsplit("/", 1)[-1])
+              return None
+
+          def matches_build(rev: str, b: str) -> bool:
+              if rev == b:
+                  return True
+              if rev.startswith(b + "."):
+                  return True
+              return False
+
+          subdirs = ["deb", "rpm", "tar"]
+          to_copy = []
+          for sub in subdirs:
+              prefix = f"{release_prefix}/{sub}/"
+              for key in list_all_keys(prefix):
+                  base = key.rsplit("/", 1)[-1]
+                  if not base.startswith("amdrocm"):
+                      continue
+                  if "-rvs" not in base and "_rvs" not in base.lower():
+                      continue
+                  rev = revision_for_key(key)
+                  if rev is None:
+                      continue
+                  if matches_build(rev, build):
+                      dest = key.replace(release_prefix + "/", promote_base + "/", 1)
+                      to_copy.append((key, dest))
+
+          if not to_copy:
+              print(f"No packages under s3://{bucket}/{release_prefix}/ matched build number {build!r}.", file=sys.stderr)
+              sys.exit(1)
+
+          print("Matched keys (source → dest):")
+          for src, dst in sorted(to_copy):
+              print(f"  {src}\n    → {dst}")
+
+          for src, dst in sorted(to_copy):
+              subprocess.check_call(
+                  ["aws", "s3", "cp", f"s3://{bucket}/{src}", f"s3://{bucket}/{dst}", "--no-progress"]
+              )
+          PY
+
+          echo "Copy complete."
+
+      - name: Regenerate DEB repo metadata for stable/rvs/deb
+        if: github.repository == 'ROCm/ROCmValidationSuite'
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          DEB_PREFIX="${PROMOTE_BASE}/deb"
+          APT_SUITE="rvs-stable"
+
+          STAGING=$(mktemp -d)
+
+          echo "Sync existing DEBs from s3://${BUCKET}/${DEB_PREFIX}/ ..."
+          aws s3 sync "s3://${BUCKET}/${DEB_PREFIX}/" "$STAGING/" \
+            --exclude "Packages*" --exclude "Release*" --exclude "InRelease" \
+            --no-progress || true
+
+          cd "$STAGING"
+          dpkg-scanpackages --multiversion . /dev/null > Packages
+          sed -i 's#^Filename: \./#Filename: #g' Packages
+          gzip -k -f Packages
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin="ROCm Validation Suite" \
+            -o APT::FTPArchive::Release::Label="${APT_SUITE}" \
+            -o APT::FTPArchive::Release::Suite="${APT_SUITE}" \
+            -o APT::FTPArchive::Release::Codename="${APT_SUITE}" \
+            release . > Release
+
+          aws s3 sync "$STAGING/" "s3://${BUCKET}/${DEB_PREFIX}/" --no-progress
+
+      - name: Regenerate RPM repodata for stable/rvs/rpm
+        if: github.repository == 'ROCm/ROCmValidationSuite'
+        run: |
+          BUCKET="${{ vars.AWS_S3_BUCKET }}"
+          RPM_PREFIX="${PROMOTE_BASE}/rpm"
+
+          STAGING=$(mktemp -d)
+
+          echo "Sync existing RPMs from s3://${BUCKET}/${RPM_PREFIX}/ ..."
+          aws s3 sync "s3://${BUCKET}/${RPM_PREFIX}/" "$STAGING/" \
+            --exclude "repodata/*" --no-progress || true
+
+          createrepo_c "$STAGING" || createrepo "$STAGING"
+          aws s3 sync "$STAGING/" "s3://${BUCKET}/${RPM_PREFIX}/" --no-progress
+
+      - name: Write promotion report (S3 + artifact)
+        if: github.repository == 'ROCm/ROCmValidationSuite'
+        env:
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          TEST_REPORT_URL: ${{ inputs.test_report_url }}
+          BUCKET: ${{ vars.AWS_S3_BUCKET }}
+        run: |
+          cat > promotion-report.md << EOF
+          # RVS promotion report
+
+          ## Source
+          - **S3 prefix**: \`${RELEASE_PREFIX}\` (same objects copied server-side; not re-uploaded from GitHub)
+          - **Package release / build number**: ${BUILD_NUMBER}
+
+          ## Destination
+          - **S3 prefix**: \`${PROMOTE_BASE}\`
+
+          ## Test report
+          - **URL**: ${TEST_REPORT_URL:-_(none)_}
+
+          ## Workflow
+          - **Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+
+          DEST="s3://${BUCKET}/${PROMOTE_BASE}/promotions/${BUILD_NUMBER}/promotion-report.md"
+          aws s3 cp promotion-report.md "$DEST" --no-progress
+          echo "Report: $DEST"
+
+      - name: Upload promotion report artifact
+        if: github.repository == 'ROCm/ROCmValidationSuite'
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion-report-${{ inputs.build_number }}
+          path: promotion-report.md
+          retention-days: 180
