@@ -228,6 +228,11 @@ int pebb_action::create_threads() {
     gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
+  if (gpu_id.empty()) {
+    msg = "No AMD GPU found.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return rvs::ACTION_RESULT_ERROR;
+  }
   RVSTRACE_
     for (size_t i = 0; i < gpu_id.size(); i++) {
       RVSTRACE_

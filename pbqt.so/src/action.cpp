@@ -395,6 +395,12 @@ int pbqt_action::create_threads() {
   gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
 
+  if (gpu_id.empty()) {
+    msg = "No AMD GPU found.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return rvs::ACTION_RESULT_ERROR;
+  }
+
   std::vector<peer_pair_t> valid_pairs;
 
   // ---------------------------------------------------------------
@@ -571,6 +577,12 @@ int pbqt_action::create_threads() {
         rvs::lp::Log(msg, rvs::logresults);
       }
     }
+  }
+
+  if (!prop_test_bandwidth && !bmatch_found) {
+    msg = "[" + action_name + "] p2p No devices match criteria from the test configuration";
+    rvs::lp::Log(msg, rvs::loginfo);
+    return rvs::ACTION_RESULT_SKIPPED;
   }
 
   // ---------------------------------------------------------------

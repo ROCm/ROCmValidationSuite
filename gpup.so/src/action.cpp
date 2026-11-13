@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -434,6 +434,19 @@ int gpup_action::run(void) {
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
   bool b_gpu_found = false;
+
+  if (gpu_id.empty()) {
+    msg = "No AMD GPU found.";
+    rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+    // Action callback
+    action_result.state = rvs::actionstate::ACTION_COMPLETED;
+    action_result.status = rvs::actionstatus::ACTION_FAILED;
+    action_result.output = msg;
+    action_callback(&action_result);
+
+    return rvs::ACTION_RESULT_ERROR;
+  }
 
   if (bjson){
     json_add_primary_fields(std::string(MODULE_NAME), action_name);

@@ -156,7 +156,7 @@ void GstCrcSync::detach(size_t slot) {
 
 GSTWorker::GSTWorker()
   : consistency_check(false), crc_computed(false), crc_matrix_seed(0)
-  , crc_sync(nullptr), crc_sync_slot(0) {}
+  , crc_sync(nullptr), crc_sync_slot(0), result(false) {}
 GSTWorker::~GSTWorker() {}
 
 /**
@@ -898,6 +898,7 @@ void GSTWorker::run() {
   char gpuid_buff[12];
   auto desc = action_descriptor{action_name, MODULE_NAME, gpu_id};
   max_gflops = 0;
+  result = false;
 
   snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
 

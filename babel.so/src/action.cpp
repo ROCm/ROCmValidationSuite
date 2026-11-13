@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -76,8 +76,12 @@ int mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
   if (read_kernel == "b128_nt") {
     for (auto& dev : mem_gpus_device_index) {
       hipDeviceProp_t props{};
-      if (hipGetDeviceProperties(&props, dev.first) != hipSuccess ||
-          string(props.gcnArchName).rfind("gfx1250", 0) != 0) {
+      if (hipGetDeviceProperties(&props, dev.first) != hipSuccess) {
+        msg = "Failed to get device properties for GPU " + std::to_string(dev.second);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return rvs::ACTION_RESULT_ERROR;
+      }
+      if (string(props.gcnArchName).rfind("gfx1250", 0) != 0) {
         msg = "'" + std::string(RVS_CONF_READ_KERNEL) + "' value 'b128_nt' requires gfx1250, GPU " +
           std::to_string(dev.second) + " is " + props.gcnArchName;
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
