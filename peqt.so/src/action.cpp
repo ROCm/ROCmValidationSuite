@@ -364,8 +364,23 @@ int peqt_action::run(void) {
       action_result.output = "Error in common configuration keys.";
       action_callback(&action_result);
 
-      return -1;
+      return rvs::ACTION_RESULT_ERROR;
     }
+
+    vector<uint16_t> all_gpu_id;
+    gpu_get_all_gpu_id(&all_gpu_id);
+    if (all_gpu_id.empty()) {
+      msg = "No AMD GPU found.";
+      rvs::lp::Err(msg, MODULE_NAME, action_name);
+
+      action_result.state = rvs::actionstate::ACTION_COMPLETED;
+      action_result.status = rvs::actionstatus::ACTION_FAILED;
+      action_result.output = msg;
+      action_callback(&action_result);
+
+      return rvs::ACTION_RESULT_ERROR;
+    }
+
     if (bjson){
         json_add_primary_fields(std::string(MODULE_NAME), action_name);
     }
@@ -382,7 +397,7 @@ int peqt_action::run(void) {
       action_result.output = msg;
       action_callback(&action_result);
 
-      return 1;  // PCIe qualification check cannot continue
+      return rvs::ACTION_RESULT_ERROR;  // PCIe qualification check cannot continue
     }
 
     // compose Power Budgeting dynamic regex
@@ -435,7 +450,7 @@ int peqt_action::run(void) {
           action_result.output = msg;
           action_callback(&action_result);
 
-          return -1;
+          return rvs::ACTION_RESULT_ERROR;
         }
 
       // fill in the info
@@ -508,7 +523,7 @@ int peqt_action::run(void) {
       action_result.output = msg;
       action_callback(&action_result);
 
-      return -1;
+      return rvs::ACTION_RESULT_SKIPPED;
     }
 
     RVSTRACE_
@@ -529,5 +544,5 @@ int peqt_action::run(void) {
     action_callback(&action_result);
 
     RVSTRACE_
-    return pci_infra_qual_result ? 0 : -1;
+    return pci_infra_qual_result ? rvs::ACTION_RESULT_PASS : rvs::ACTION_RESULT_FAIL;
 }

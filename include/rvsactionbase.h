@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -42,6 +42,17 @@ enum class actionstatus {
   ACTION_SUCCESS,
   ACTION_FAILED,
   ACTION_ERROR
+};
+
+/**
+ * Action run() return values. Any other non-zero value (for example the
+ * legacy -1) is treated as ACTION_RESULT_FAIL.
+ */
+enum actionresult : int {
+  ACTION_RESULT_PASS = 0,     /*!< ran and met all criteria */
+  ACTION_RESULT_FAIL = 1,     /*!< ran, hardware missed a criterion */
+  ACTION_RESULT_ERROR = 2,    /*!< could not run or complete */
+  ACTION_RESULT_SKIPPED = 3   /*!< not applicable to this system */
 };
 
 typedef struct {

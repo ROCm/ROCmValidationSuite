@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -488,9 +488,9 @@ int tst_action::get_all_selected_gpus(void) {
     std::string msg;
     std::stringstream msg_stream;
 
-    hipGetDeviceCount(&hip_num_gpu_devices);
-    if (hip_num_gpu_devices < 1)
-        return hip_num_gpu_devices;
+    if (hipGetDeviceCount(&hip_num_gpu_devices) != hipSuccess ||
+        hip_num_gpu_devices < 1)
+        return rvs::ACTION_RESULT_ERROR;
     // find compatible GPUs to run tst tests
     amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, tst_gpus_device_index,
         property_device, property_device_id, property_device_all,
@@ -510,21 +510,21 @@ int tst_action::get_all_selected_gpus(void) {
             // log the error
             string msg = std::string(JSON_CREATE_NODE_ERROR);
             rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-            return -1;
+            return rvs::ACTION_RESULT_ERROR;
          }
 
         rvs::lp::AddString(json_root_node, "ERROR","No AMD compatible GPU found!");
         rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
        }
 
-        return 0;
+        return rvs::ACTION_RESULT_SKIPPED;
     }
 
     int tst_res = 0;
     if(do_thermal_test(tst_gpus_device_index))
-        tst_res = 0;
+        tst_res = rvs::ACTION_RESULT_PASS;
     else 
-        tst_res = -1;
+        tst_res = rvs::lp::Stopping() ? rvs::ACTION_RESULT_ERROR : rvs::ACTION_RESULT_FAIL;
      //amdsmi_shut_down();
     return tst_res;
 }
@@ -541,16 +541,16 @@ int tst_action::run(void) {
 
 
   if (!get_all_common_config_keys())
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
 
   if (!get_all_tst_config_keys())
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
 
   if (property_duration > 0 && (property_duration < tst_ramp_interval)) {
     msg = std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
       RVS_CONF_RAMP_INTERVAL_KEY + "'";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
   if(bjson){
         // add prelims for each action,

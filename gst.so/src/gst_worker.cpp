@@ -156,7 +156,7 @@ void GstCrcSync::detach(size_t slot) {
 
 GSTWorker::GSTWorker()
   : consistency_check(false), crc_computed(false), crc_matrix_seed(0)
-  , crc_sync(nullptr), crc_sync_slot(0) {}
+  , crc_sync(nullptr), crc_sync_slot(0), result(false) {}
 GSTWorker::~GSTWorker() {}
 
 /**
@@ -572,9 +572,6 @@ void GSTWorker::log_interval_gflops(double gflops_interval) {
   action_result.status = rvs::actionstatus::ACTION_SUCCESS;
   action_result.output = msg.c_str();
   action.action_callback(&action_result);
-
-  //log_to_json(GST_LOG_GFLOPS_INTERVAL_KEY, std::to_string(static_cast<uint64_t>(gflops_interval)),
-    //  rvs::loginfo);
 }
 
 /**
@@ -901,6 +898,7 @@ void GSTWorker::run() {
   char gpuid_buff[12];
   auto desc = action_descriptor{action_name, MODULE_NAME, gpu_id};
   max_gflops = 0;
+  result = false;
 
   snprintf(gpuid_buff, sizeof(gpuid_buff), "%5d", gpu_id);
 

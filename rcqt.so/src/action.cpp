@@ -1,6 +1,6 @@
 /********************************************************************************
  * 
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -114,7 +114,7 @@ int rcqt_action::run() {
     action_result.output = msg;
     action_callback(&action_result);
 
-    return 1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   // check for -j flag (json logging)
@@ -174,7 +174,7 @@ int rcqt_action::pkgchk_run() {
     auto handler = creator.getPackageHandler(pkg);
     if(!handler){
       std::cout << "Failed to create handler " << std::endl;
-      return -1;
+      return rvs::ACTION_RESULT_ERROR;
     }
 
     handler->setCallback(callback, user_param);
@@ -212,7 +212,7 @@ int rcqt_action::pkglist_run() {
   auto handler = creator.getPackageHandler();
   if(!handler){
     std::cout << "Failed to create handler " << std::endl;
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   handler->setCallback(callback, user_param);

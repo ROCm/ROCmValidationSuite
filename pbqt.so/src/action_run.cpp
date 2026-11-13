@@ -94,7 +94,7 @@ int pbqt_action::run() {
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = msg;
     action_callback(&action_result);
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   if (!get_all_pbqt_config_keys()) {
@@ -105,7 +105,7 @@ int pbqt_action::run() {
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = msg;
     action_callback(&action_result);
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   // log_interval must be less than duration
@@ -118,7 +118,7 @@ int pbqt_action::run() {
       action_result.status = rvs::actionstatus::ACTION_FAILED;
       action_result.output = msg;
       action_callback(&action_result);
-      return -1;
+      return rvs::ACTION_RESULT_ERROR;
     }
   }
 
@@ -142,7 +142,7 @@ int pbqt_action::run() {
     action_result.output = "PBQT Module action " + action_name + " completed";
     action_callback(&action_result);
     if (bjson) { rvs::lp::JsonActionEndNodeCreate(); }
-    return 0;
+    return rvs::ACTION_RESULT_PASS;
   }
 
   if (test_array.size() < 1) {
@@ -153,7 +153,7 @@ int pbqt_action::run() {
     action_result.output = "Parameters not valid. Nothing to execute !!!";
     action_callback(&action_result);
     if (bjson) { rvs::lp::JsonActionEndNodeCreate(); }
-    return -1;
+    return rvs::ACTION_RESULT_SKIPPED;
   }
 
   RVSTRACE_
@@ -222,7 +222,7 @@ int pbqt_action::run() {
   } while (iter && !rvs::lp::Stopping());
 
   RVSTRACE_
-    sts = rvs::lp::Stopping() ? -1 : 0;
+    sts = rvs::lp::Stopping() ? rvs::ACTION_RESULT_ERROR : rvs::ACTION_RESULT_PASS;
 
   print_final_average();
 
