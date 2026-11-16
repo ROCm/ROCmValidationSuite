@@ -820,6 +820,39 @@ endif()
 
 set(HCC_CXX_FLAGS "-fno-gpu-rdc --offload-arch=gfx90a --offload-arch=gfx1030 --offload-arch=gfx803 --offload-arch=gfx900 --offload-arch=gfx906 --offload-arch=gfx908 --offload-arch=gfx1101 --offload-arch=gfx942 --offload-arch=gfx1200 --offload-arch=gfx1201 --offload-arch=gfx1100 --offload-arch=gfx950 --offload-arch=gfx1250")
 
+# gfx1250-strict is newer than gfx1250. Older hipcc rejects the unknown arch
+# and the build fails, so add it only when this compiler accepts it.
+# Resolve hipcc the same way the modules do.
+if(DEFINED HIPCC_PATH)
+  set(_rvs_hipcc_root "${HIPCC_PATH}")
+elseif(DEFINED ENV{HIPCC_PATH})
+  set(_rvs_hipcc_root "$ENV{HIPCC_PATH}")
+else()
+  set(_rvs_hipcc_root "${ROCM_PATH}")
+endif()
+set(_rvs_hipcc "${_rvs_hipcc_root}/bin/hipcc")
+
+if(EXISTS "${_rvs_hipcc}")
+  set(_gfx1250_strict_probe "${CMAKE_BINARY_DIR}/CMakeFiles/rvs_gfx1250_strict_probe.hip")
+  file(WRITE "${_gfx1250_strict_probe}" "")
+  # -nogpulib keeps the probe to arch recognition, so a missing device
+  # library does not look like an unsupported arch.
+  execute_process(
+    COMMAND "${_rvs_hipcc}" -nogpulib --offload-arch=gfx1250-strict
+            -x hip -c "${_gfx1250_strict_probe}" -o "${_gfx1250_strict_probe}.o"
+    RESULT_VARIABLE _gfx1250_strict_rc
+    OUTPUT_QUIET ERROR_QUIET)
+  file(REMOVE "${_gfx1250_strict_probe}" "${_gfx1250_strict_probe}.o")
+  if(_gfx1250_strict_rc EQUAL 0)
+    set(HCC_CXX_FLAGS "${HCC_CXX_FLAGS} --offload-arch=gfx1250-strict")
+    message(STATUS "Compiler supports gfx1250-strict; adding --offload-arch=gfx1250-strict")
+  else()
+    message(STATUS "Compiler does not support gfx1250-strict; omitting --offload-arch=gfx1250-strict")
+  endif()
+else()
+  message(STATUS "hipcc not found at ${_rvs_hipcc}; omitting --offload-arch=gfx1250-strict")
+endif()
+
 add_subdirectory(rvslib)
 add_subdirectory(rvs)
 add_subdirectory(gpup.so)
