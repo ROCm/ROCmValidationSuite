@@ -263,15 +263,15 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rvs_os_helper.sh
-  RESULT_VARIABLE result
-  OUTPUT_VARIABLE RVS_OS_TYPE
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-if (result)
-   message(FATAL_ERROR "Could not obtain OS type: ${result}")
+if(NOT EXISTS "/etc/os-release")
+  message(FATAL_ERROR "Could not obtain OS type: /etc/os-release not found")
 endif()
+file(STRINGS "/etc/os-release" _os_id_line REGEX "^ID=")
+if(NOT _os_id_line)
+  message(FATAL_ERROR "Could not obtain OS type: ID= missing from /etc/os-release")
+endif()
+string(REGEX REPLACE "^ID=" "" RVS_OS_TYPE "${_os_id_line}")
+string(REPLACE "\"" "" RVS_OS_TYPE "${RVS_OS_TYPE}")
 message(STATUS "RVS_OS_TYPE: ${RVS_OS_TYPE}")
 if (${RVS_OS_TYPE} STREQUAL "ubuntu")
   set(RVS_OS_TYPE_NUM 1)
