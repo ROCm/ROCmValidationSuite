@@ -314,6 +314,18 @@ on top of the ROCm Core SDK.
 
       .. tab-set::
 
+         .. tab-item:: Active session
+
+            Set the RVS environment variables for the current shell session only.
+            To keep these settings across sessions, use System-wide setup or User setup.
+
+            .. code-block:: bash
+
+               export EXTRAS_PATH=/opt/rocm/extras-10
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=$EXTRAS_PATH/bin:$ROCM_PATH/bin:$PATH
+               export LD_LIBRARY_PATH=$EXTRAS_PATH/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
+
          .. tab-item:: System-wide
 
             .. code-block:: bash
@@ -357,18 +369,6 @@ on top of the ROCm Core SDK.
                EOF
 
                source ~/.profile
-
-         .. tab-item:: Active session
-
-            Set the RVS environment variables for the current shell session only.
-            To keep these settings across sessions, use System-wide setup or User setup.
-
-            .. code-block:: bash
-
-               export EXTRAS_PATH=/opt/rocm/extras-10
-               export ROCM_PATH=$ROCM_INSTALL_PATH
-               export PATH=$EXTRAS_PATH/bin:$ROCM_PATH/bin:$PATH
-               export LD_LIBRARY_PATH=$EXTRAS_PATH/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
 
 4. Verify your installation.
 
@@ -659,6 +659,18 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
       .. tab-set::
 
+         .. tab-item:: Active session
+
+            Set the RVS environment variables for the current shell session only.
+            To keep these settings across sessions, use System-wide setup or User setup.
+
+            .. code-block:: bash
+
+               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=$EXTRAS_PATH/bin:$ROCM_PATH/bin:$PATH
+               export LD_LIBRARY_PATH=$EXTRAS_PATH/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
+
          .. tab-item:: System-wide
 
             .. code-block:: bash
@@ -702,18 +714,6 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
                EOF
 
                source ~/.profile
-
-         .. tab-item:: Active session
-
-            Set the RVS environment variables for the current shell session only.
-            To keep these settings across sessions, use System-wide setup or User setup.
-
-            .. code-block:: bash
-
-               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
-               export ROCM_PATH=$ROCM_INSTALL_PATH
-               export PATH=$EXTRAS_PATH/bin:$ROCM_PATH/bin:$PATH
-               export LD_LIBRARY_PATH=$EXTRAS_PATH/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
 
 5. Verify your installation.
 
