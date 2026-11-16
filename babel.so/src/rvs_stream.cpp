@@ -417,12 +417,14 @@ void read_kernel(const T * __restrict a, T * __restrict c)
 
 // Fixed 4 elements per lane x 4 chunks per block. Always non-temporal; the
 // loaded data is not consumed. Host side only launches it on gfx1250.
+// gfx1250-strict is a separate processor and defines __gfx1250_strict__
+// rather than __gfx1250__.
 template <typename T>
 __launch_bounds__(TBSIZE)
 __global__
 void read_kernel_b128_nt(const T * __restrict a)
 {
-#if defined(__gfx1250__)
+#if defined(__gfx1250__) || defined(__gfx1250_strict__)
   const auto dx = grid_size() * 4;
   const auto gidx = localid() * 4;
 
