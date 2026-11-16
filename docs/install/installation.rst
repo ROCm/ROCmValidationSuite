@@ -328,7 +328,7 @@ on top of the ROCm Core SDK.
                sudo chmod +x /etc/profile.d/set-rvs-env.sh
                source /etc/profile.d/set-rvs-env.sh
 
-         .. tab-item:: User
+         .. tab-item:: User (~/.bashrc)
 
             .. code-block:: bash
 
@@ -342,6 +342,33 @@ on top of the ROCm Core SDK.
                EOF
 
                source ~/.bashrc
+
+         .. tab-item:: User (~/.profile)
+
+            .. code-block:: bash
+
+               tee --append ~/.profile << EOF
+               # BEGIN RVS environment configuration
+               export EXTRAS_PATH=/opt/rocm/extras-10
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+               # END RVS environment configuration
+               EOF
+
+               source ~/.profile
+
+         .. tab-item:: Active session
+
+            Set the RVS environment variables for the current shell session only.
+            To keep these settings across sessions, use System-wide setup or User setup.
+
+            .. code-block:: bash
+
+               export EXTRAS_PATH=/opt/rocm/extras-10
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=$EXTRAS_PATH/bin:$ROCM_PATH/bin:$PATH
+               export LD_LIBRARY_PATH=$EXTRAS_PATH/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
 
 4. Verify your installation.
 
@@ -583,13 +610,13 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
    .. code-block:: bash
 
-      wget https://rc.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.7.112-1077-Linux.tar.gz
+      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.7.112-1077-Linux.tar.gz
 
    The tarball file may be verified against the following SHA256:
 
    .. code-block:: bash
 
-      wget https://rc.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.7.112-1077-Linux.tar.gz.sha256
+      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.7.112-1077-Linux.tar.gz.sha256
 
 3. Extract the tarball to the ROCm Extras location.
 
@@ -646,7 +673,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
                sudo chmod +x /etc/profile.d/set-rvs-env.sh
                source /etc/profile.d/set-rvs-env.sh
 
-         .. tab-item:: User
+         .. tab-item:: User (~/.bashrc)
 
             .. code-block:: bash
 
@@ -660,6 +687,33 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
                EOF
 
                source ~/.bashrc
+
+         .. tab-item:: User (~/.profile)
+
+            .. code-block:: bash
+
+               tee --append ~/.profile << EOF
+               # BEGIN RVS environment configuration
+               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+               # END RVS environment configuration
+               EOF
+
+               source ~/.profile
+
+         .. tab-item:: Active session
+
+            Set the RVS environment variables for the current shell session only.
+            To keep these settings across sessions, use System-wide setup or User setup.
+
+            .. code-block:: bash
+
+               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=$EXTRAS_PATH/bin:$ROCM_PATH/bin:$PATH
+               export LD_LIBRARY_PATH=$EXTRAS_PATH/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
 
 5. Verify your installation.
 
