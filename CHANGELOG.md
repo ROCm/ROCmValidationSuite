@@ -11,6 +11,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 - Support for GEMM bandwidth.
 - GEMM consistency check support.
 - New read kernel in Babel for gfx1250.
+- Compile RVS for gfx1250-strict when the compiler supports that offload arch.
 
 ### Changed
 - Update fp32 and fp64 targets for MI300X, MI300X-HF and MI325X.
