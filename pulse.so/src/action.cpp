@@ -410,7 +410,7 @@ void pulse_action::hip_to_smi_indices(void) {
   }
 }
 
-bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
+int pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
     std::vector<mcm_type_t>& mcm_type) {
   std::string  msg;
   unsigned int i = 0;
@@ -432,14 +432,14 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
           hipHostMallocCoherent) != hipSuccess) {
       msg = "Failed to allocate fine-grained memory for GPU sync barrier";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return false;
+      return rvs::ACTION_RESULT_ERROR;
     }
     if (hipHostMalloc(&gpu_release_flag, sizeof(int32_t),
           hipHostMallocCoherent) != hipSuccess) {
       msg = "Failed to allocate fine-grained memory for GPU sync barrier";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
       hipHostFree(gpu_arrival_count);
-      return false;
+      return rvs::ACTION_RESULT_ERROR;
     }
     *gpu_arrival_count = 0;
     *gpu_release_flag = 0;
@@ -525,7 +525,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
         if (rvs::lp::Stopping()) {
           if (gpu_arrival_count) hipHostFree(gpu_arrival_count);
           if (gpu_release_flag) hipHostFree(gpu_release_flag);
-          return false;
+          return rvs::ACTION_RESULT_ERROR;
         }
       }
     }
@@ -537,7 +537,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
     if (rvs::lp::Stopping()) {
       if (gpu_arrival_count) hipHostFree(gpu_arrival_count);
       if (gpu_release_flag) hipHostFree(gpu_release_flag);
-      return false;
+      return rvs::ACTION_RESULT_ERROR;
     }
 
     // single iteration for pulse test
@@ -549,10 +549,10 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
 
   for (i = 0; i < pulse_gpus_device_index.size(); i++) {
     if(false == workers[i].get_result())
-      return false;
+      return rvs::ACTION_RESULT_FAIL;
   }
 
-  return true;
+  return rvs::ACTION_RESULT_PASS;
 }
 
 int pulse_action::get_num_amd_gpu_devices(void) {
@@ -568,9 +568,9 @@ int pulse_action::get_all_selected_gpus(void) {
   std::string msg;
   std::vector<mcm_type_t> mcm_type;
 
-  hipGetDeviceCount(&hip_num_gpu_devices);
-  if (hip_num_gpu_devices < 1)
-    return -1;
+  if (hipGetDeviceCount(&hip_num_gpu_devices) != hipSuccess ||
+      hip_num_gpu_devices < 1)
+    return rvs::ACTION_RESULT_ERROR;
 
   amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices,
       pulse_gpus_device_index,
@@ -588,21 +588,16 @@ int pulse_action::get_all_selected_gpus(void) {
       if (!json_root_node) {
         string emsg = std::string(JSON_CREATE_NODE_ERROR);
         rvs::lp::Err(emsg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
       rvs::lp::AddString(json_root_node, "ERROR",
           "No AMD compatible GPU found!");
       rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
     }
-    return -1;
+    return rvs::ACTION_RESULT_SKIPPED;
   }
 
-  int res = 0;
-  if(do_pulse_test(pulse_gpus_device_index, mcm_type))
-    res = 0;
-  else
-    res = -1;
-  return res;
+  return do_pulse_test(pulse_gpus_device_index, mcm_type);
 }
 
 int pulse_action::run(void) {
@@ -612,10 +607,10 @@ int pulse_action::run(void) {
   rvs::lp::Log(std::string(kPulseBetaBanner), rvs::logresults);
 
   if (!get_all_common_config_keys())
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
 
   if (!get_all_pulse_config_keys())
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
 
   if(bjson){
     json_add_primary_fields(std::string(MODULE_NAME), action_name);

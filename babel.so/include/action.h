@@ -151,7 +151,7 @@ class mem_action: public rvs::actionbase {
   */
   int get_num_amd_gpu_devices(void);
   int get_all_selected_gpus(void);
-  bool do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index);
+  int do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index);
 };
 
 #endif  // MEM_SO_INCLUDE_ACTION_H_

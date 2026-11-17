@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -27,6 +27,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 #include "include/rvs.h"
 #include "include/rvsactionbase.h"
 #include "yaml-cpp/node/node.h"
@@ -45,9 +46,19 @@ typedef struct {
   std::string name;
   std::string module;
   std::string category;
-  bool result;
+  int status;          /*!< actionresult value */
+  unsigned int index;  /*!< position of the action in the conf */
   uint64_t duration;
 } exec_action;
+
+/* Maps an action run() return value to an actionresult */
+actionresult to_action_result(int sts);
+/* Summary label ("PASS", "FAIL", "ERROR", "SKIPPED") for an actionresult */
+const char* action_result_label(int status);
+/* ANSI color escape for an actionresult */
+const char* action_result_color(int status);
+/* Overall result: FAIL, else ERROR, else SKIPPED if every action skipped, else PASS */
+actionresult overall_action_result(const std::vector<exec_action>& actions);
 
 /**
  * @class exec

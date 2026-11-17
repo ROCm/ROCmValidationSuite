@@ -67,10 +67,17 @@
 ## Exit Status
 
 ```
-0        - all actions ran and passed
-1        - one or more actions failed
+0        - all actions passed (skipped actions are allowed)
+1        - one or more actions failed (FAIL)
+2        - no action failed, but one or more could not run or complete
+           (ERROR: invalid action configuration, resource failure, or no
+           GPU visible)
+3        - all actions were skipped (SKIPPED: not applicable to this system)
 non-zero - other errors (invalid options, missing or invalid configuration
            file, module load failure, or the run was stopped)
+
+When several results occur, the first matching code in the order 1, 2, 3, 0
+is returned.
 ```
 
 ## Examples
