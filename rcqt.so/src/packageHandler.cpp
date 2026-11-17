@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -29,8 +29,6 @@
 #include "include/packageHandler.h"
 #include "include/rvsloglp.h"
 
-
-const std::string metapack{"Meta Package"};
 
 // expected versions usually either = or >=. 
 bool isVersionMismatch(std::string expected, std::string installed){
@@ -160,10 +158,8 @@ void PackageHandler::listPackageVersion(){
     std::cout << "no packages in the list" << std::endl;
     return;
   }
-  int totalPackages = 0, missingPackages = 0, installedPackages = 0;
+  int missingPackages = 0, installedPackages = 0;
   for (const auto& pkgname: pkglist){
-
-    ++totalPackages;
 
     kv_pairs.emplace_back(pkgname);
     auto installedversion = getInstalledVersion(pkgname);

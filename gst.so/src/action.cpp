@@ -808,7 +808,7 @@ int gst_action::get_num_amd_gpu_devices(void) {
   int hip_num_gpu_devices;
   string msg;
 
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
     msg = action_name + " " + MODULE_NAME + " " + GST_NO_COMPATIBLE_GPUS;
     rvs::lp::Log(msg, rvs::logerror);

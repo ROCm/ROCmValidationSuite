@@ -373,7 +373,6 @@ void systemOverview() {
   std::string gpus = "GPUs";
 
   // Define column width for consistent spacing
-  int columnWidth = 14;;
   int actionColumnWidth = 32;
   int TotalColumnWidth = 69;
   int maxGPUNameLength = 24;

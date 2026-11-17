@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -214,7 +214,7 @@ void log_to_json(action_descriptor desc, int log_level, KVPairs...  key_values )
       rvs::gpulist::gpu2gpuindex(desc.gpu_id, &gpu_index);
       rvs::lp::AddString(json_node, "gpu_index", std::to_string(gpu_index));
 
-      for (int i =0; i< kvlist.size()-1; i +=2){
+      for (size_t i = 0; i + 1 < kvlist.size(); i += 2){
           rvs::lp::AddString(json_node, kvlist[i], kvlist[i+1]);
       }
 

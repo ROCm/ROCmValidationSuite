@@ -340,8 +340,6 @@ int peqt_action::run(void) {
     bool pci_infra_qual_result = true;  // PCI qualification result
     bool amd_gpus_found = false;
     uint8_t i;
-    unsigned int sec;
-    unsigned int usec;
 
     struct pci_access *pacc;
     struct pci_dev *dev;

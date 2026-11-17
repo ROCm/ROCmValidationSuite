@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -162,15 +162,11 @@ void IETWorker::computeThread(void) {
  */
 bool IETWorker::do_iet_power_stress(void) {
 
-  std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time,
-    sampling_start_time;
+  std::chrono::time_point<std::chrono::system_clock> iet_start_time, end_time;
   uint64_t  total_time_ms;
-  uint64_t  last_power;
   string    msg;
   float     cur_power_value = 0;
-  float     totalpower = 0;
   float     max_power = 0;
-  bool      start = true;
   rvs::action_result_t action_result;
   char gpuid_buff[12];
   std::thread compute_t;
@@ -373,7 +369,9 @@ constexpr uint64_t wg_stride = mem_size_per_wg + wg_mem_pad;
 const uint32_t vmem_unroll = 8;
 const uint32_t wg_size = 1024;
 const uint32_t wg_size_load = 512;
+#if defined(__gfx942__) || defined(__gfx950__)
 const uint32_t load_waves = wg_size_load / 64;
+#endif
 
 #define T __uint128_t
 
@@ -492,7 +490,7 @@ bool FillMemory(uint32_t* p, size_t size)
     size -= std::min(fsize, size);
   }
 
-  hipHostFree(f);
+  (void)hipHostFree(f);
   return true;
 }
 
@@ -514,14 +512,12 @@ void IETWorker::bandwidthThread(void)
   std::vector<uint32_t*> bufs;
 
   uint32_t* r{};
-  hipEvent_t start;
-  hipEvent_t stop;
+  hipEvent_t start = nullptr;
+  hipEvent_t stop = nullptr;
 
   int b = 0;
-  int test_iters = 0;
   double min_bw = __FLT_MAX__;
   double max_bw = 0.0f;
-  double avg_bw = 0.0f;
 
   double duration = 0.0f;
   std::chrono::time_point<std::chrono::system_clock> start_time, end_time;
@@ -561,7 +557,7 @@ void IETWorker::bandwidthThread(void)
        goto end;
 
     if (true != FillMemory(p, alloc_size)) {
-      hipFree(p);
+      (void)hipFree(p);
       goto end;
     }
 
@@ -607,9 +603,6 @@ void IETWorker::bandwidthThread(void)
 
     min_bw = std::min(min_bw, bw);
     max_bw = std::max(max_bw, bw);
-    avg_bw += bw;
-
-    test_iters++;
 
     if (endtest)
       break;
@@ -625,24 +618,22 @@ void IETWorker::bandwidthThread(void)
   if(hipStreamSynchronize(stream) != hipSuccess)
     std::cout << "hipStreamSynchronize() failed !!! for stream " << stream << std::endl;
 
-  avg_bw /= test_iters;
-
 end:
 
   // Clean up bandwith workload resources
 
-  if(hipEventDestroy(start) != hipSuccess)
+  if(start != nullptr && hipEventDestroy(start) != hipSuccess)
     std::cout << "hipEventDestroy() failed !!! for event " << start << std::endl;
 
-  if(hipEventDestroy(stop) != hipSuccess)
+  if(stop != nullptr && hipEventDestroy(stop) != hipSuccess)
     std::cout << "hipEventDestroy() failed !!! for event " << stop << std::endl;
 
   if(r)
-    hipFree(r);
+    (void)hipFree(r);
 
   for (int i = 0; i < bufs.size(); i++)
   {
-    hipFree(bufs[i]);
+    (void)hipFree(bufs[i]);
   }
 
   if(hipStreamDestroy(stream) != hipSuccess)

@@ -80,7 +80,7 @@ void show_progress(std::string msg, unsigned int i, unsigned int tot_num_blocks)
     unsigned int num_checked_blocks;
     std::string buff;
 
-    hipDeviceSynchronize();						
+    (void)hipDeviceSynchronize();						
     num_checked_blocks =  i + GRIDSIZE <= tot_num_blocks? i + GRIDSIZE: tot_num_blocks; 
     // log MEM stress test - start message
     msg += ": " + std::to_string(num_checked_blocks) + " out of " + std::to_string(tot_num_blocks) + " blocks finished"; 
@@ -144,10 +144,10 @@ unsigned int error_checking(const std::string& pmsg, unsigned int blockidx)
     }
 
 
-    hipMemset(ptCntOfError, 0, sizeof(unsigned int));
-    hipMemset((void*)&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
-    hipMemset((void*)&ptExpectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
-	hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+    (void)hipMemset(ptCntOfError, 0, sizeof(unsigned int));
+    (void)hipMemset((void*)&ptFailedAdress[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+    (void)hipMemset((void*)&ptExpectedValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
+	(void)hipMemset((void*)&ptCurrentValue[0], 0, sizeof(unsigned long)*MAX_ERR_RECORD_COUNT);;
 
     return numOfErrors;
 
@@ -1597,19 +1597,19 @@ void test10(char* ptr, unsigned int tot_num_blocks, unsigned int *err)
 	        p2 = ~p2;
     }
 
-    hipEventRecord(stop, stream);
-    hipEventSynchronize(stop);
+    (void)hipEventRecord(stop, stream);
+    (void)hipEventSynchronize(stop);
 
     *err += error_checking("test11[Memory stress test]",  0);
-    hipEventElapsedTime(&elapsedtime, start, stop);
+    (void)hipEventElapsedTime(&elapsedtime, start, stop);
     msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 11: elapsedtime = " 
       + std::to_string(elapsedtime) + " bandwidth = " + std::to_string((2*n+1)*tot_num_blocks/elapsedtime) + "GB/s ";
     rvs::lp::Log(msg, rvs::logresults);
 
-    hipEventDestroy(start);
-    hipEventDestroy(stop);
+    (void)hipEventDestroy(start);
+    (void)hipEventDestroy(stop);
 
-    hipStreamDestroy(stream);
+    (void)hipStreamDestroy(stream);
 
     if(!(*err)) {
        msg = "[" + memdata.action_name + "] " + MODULE_NAME + " " + "Test 11 : PASS ";
@@ -1638,18 +1638,18 @@ void allocate_small_mem(void)
 
 void free_small_mem(void)
 {
-    hipFree((void*)ptCntOfError);
+    (void)hipFree((void*)ptCntOfError);
     ptCntOfError = nullptr;
 
-    hipFree((void*)ptFailedAdress);
+    (void)hipFree((void*)ptFailedAdress);
     ptFailedAdress = nullptr;
 
-    hipFree((void*)ptExpectedValue);
+    (void)hipFree((void*)ptExpectedValue);
     ptExpectedValue = nullptr;
 
-    hipFree((void*)ptCurrentValue);
+    (void)hipFree((void*)ptCurrentValue);
     ptCurrentValue = nullptr;
 
-    hipFree((void*)ptValueOfSecondRead);
+    (void)hipFree((void*)ptValueOfSecondRead);
     ptValueOfSecondRead = nullptr;
 }

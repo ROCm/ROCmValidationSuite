@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -55,7 +55,6 @@ bool PackageHandlerZyp::pkgrOutputParser(const std::string& s_data, package_info
   std::stringstream data{s_data};
   std::string line;
   bool found = false;
-  int pos = 0;
 
   while(std::getline(data, line)){
 

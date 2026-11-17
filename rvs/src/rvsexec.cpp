@@ -419,7 +419,7 @@ int rvs::exec::run(std::map<std::string, std::string>& opt) {
   string  path;
   string  module;
   string config;
-  yaml_data_type_t data_type;
+  yaml_data_type_t data_type = yaml_data_type_t::YAML_FILE;
   options::has_option("pwd", &path);
   logger::log_level(rvs::logerror);
 

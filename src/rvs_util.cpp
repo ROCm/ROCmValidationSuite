@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -136,7 +136,7 @@ bool fetch_gpu_list(int hip_num_gpu_devices, map<int, uint16_t>& gpus_device_ind
 
     // get GPU device properties
     hipDeviceProp_t props;
-    hipGetDeviceProperties(&props, i);
+    (void)hipGetDeviceProperties(&props, i);
 
     // compute device location_id (needed in order to identify this device
     // in the gpus_id/gpus_device_id list
@@ -257,14 +257,14 @@ std::vector<device_info> get_gpu_info (void) {
   int hip_num_gpu_devices;
   std::vector<device_info> gpu_info_list;
 
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  (void)hipGetDeviceCount(&hip_num_gpu_devices);
   if( hip_num_gpu_devices == 0){
     return {};
   }
 
   for (int i = 0; i < hip_num_gpu_devices; i++) {
     hipDeviceProp_t props;
-    hipGetDeviceProperties(&props, i);
+    (void)hipGetDeviceProperties(&props, i);
 
     unsigned int pDom, pBus, pDev, pFun;
     getBDF(i , pDom, pBus, pDev, pFun);
@@ -292,7 +292,7 @@ std::vector<device_info> get_gpu_info (void) {
     completBDFId |= (static_cast<uint64_t>(pDev) & 0x1F) << 3;
     completBDFId |= (static_cast<uint64_t>(pFun) & 0x7);
 
-    hipDeviceGetPCIBusId(buf, 256, i);
+    (void)hipDeviceGetPCIBusId(buf, 256, i);
     device_info info;
     info.bus       = buf;
     info.name      = props.name;
@@ -370,13 +370,6 @@ std::string rvs_get_rocm_install_path_string(void) {
 }
 
 namespace {
-
-std::string rvs_strip_trailing_slashes(std::string s) {
-  while (s.size() > 1 && s.back() == '/') {
-    s.pop_back();
-  }
-  return s;
-}
 
 std::string rvs_path_dirname(const std::string& path) {
   if (path.empty()) {

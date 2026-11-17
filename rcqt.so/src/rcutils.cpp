@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -64,6 +64,7 @@ OSType getOS(std::string keyname){
       return searchos(osame);
     }
   }
+  return OSType::None;
 }
 
 std::string get_last_word(const std::string& input){
@@ -82,9 +83,9 @@ std::string pfilename(const std::string& package){
 	auto now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	std::ostringstream oss;
 	oss << now;
-	fname += {"."} ;
+	fname += ".";
 	fname += oss.str();
-	fname += {".txt"};
+	fname += ".txt";
 	return fname;
 }
 
@@ -124,6 +125,7 @@ bool getPackageInfo(const std::string& package,
     else {
       execlp(packagemgr.c_str(), packagemgr.c_str(), command.c_str(), option.c_str(), package.c_str(), NULL);
     }
+    _exit(127);
   }
   else {
     /* Parent process */
