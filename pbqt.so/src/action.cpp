@@ -389,11 +389,18 @@ int pbqt_action::create_threads() {
   std::vector<uint16_t> gpu_idx;
   std::vector<uint16_t> gpu_device_id;
   bool bmatch_found = false;
+  bool bpeer_found = false;
   char srcgpuid_buff[12];
   char dstgpuid_buff[12];
   gpu_get_all_gpu_id(&gpu_id);
   gpu_get_all_gpu_idx(&gpu_idx);
   gpu_get_all_device_id(&gpu_device_id);
+
+  if (gpu_id.empty()) {
+    msg = "No AMD GPU found.";
+    rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+    return rvs::ACTION_RESULT_ERROR;
+  }
 
   std::vector<peer_pair_t> valid_pairs;
 
@@ -467,7 +474,7 @@ int pbqt_action::create_threads() {
       if (rvs::gpulist::gpu2node(gpu_id[i], &srcnode)) {
         msg = "no node found for GPU ID " + std::to_string(gpu_id[i]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
 
       uint16_t dstnode;
@@ -475,7 +482,7 @@ int pbqt_action::create_threads() {
         RVSTRACE_
           msg = "no node found for GPU ID " + std::to_string(gpu_id[j]);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
 
       std::string srcpcibdf;
@@ -484,7 +491,7 @@ int pbqt_action::create_threads() {
           std::string msg = "could not find PCI BDF for node " +
           std::to_string(srcnode);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
 
       std::string dstpcibdf;
@@ -493,7 +500,7 @@ int pbqt_action::create_threads() {
           std::string msg = "could not find PCI BDF for node " +
           std::to_string(dstnode);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
 
       RVSTRACE_
@@ -531,6 +538,7 @@ int pbqt_action::create_threads() {
         if(distance == rvs::hsa::NO_CONN) {
           continue; // no point if no connection
         }
+        bpeer_found = true;
 
         std::string pbconn;
         if (0 != arr_linkinfo.size()) {
@@ -571,6 +579,14 @@ int pbqt_action::create_threads() {
         rvs::lp::Log(msg, rvs::logresults);
       }
     }
+  }
+
+  if (!prop_test_bandwidth && !bpeer_found) {
+    msg = "[" + action_name + "] p2p " +
+      (bmatch_found ? "No peers found"
+                    : "No devices match criteria from the test configuration");
+    rvs::lp::Log(msg, rvs::loginfo);
+    return rvs::ACTION_RESULT_SKIPPED;
   }
 
   // ---------------------------------------------------------------
@@ -624,7 +640,7 @@ int pbqt_action::create_threads() {
       RVSTRACE_
         msg = "internal error";
       rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-      return -1;
+      return rvs::ACTION_RESULT_ERROR;
     }
     p->initialize(pair.srcnode, pair.dstnode, prop_bidirectional);
     RVSTRACE_

@@ -808,7 +808,8 @@ int gst_action::get_num_amd_gpu_devices(void) {
   int hip_num_gpu_devices;
   string msg;
 
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  if (hipGetDeviceCount(&hip_num_gpu_devices) != hipSuccess)
+    hip_num_gpu_devices = 0;
   if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
     msg = action_name + " " + MODULE_NAME + " " + GST_NO_COMPATIBLE_GPUS;
     rvs::lp::Log(msg, rvs::logerror);
@@ -846,7 +847,7 @@ int gst_action::get_all_selected_gpus(void) {
 
   hip_num_gpu_devices = get_num_amd_gpu_devices();
   if (hip_num_gpu_devices < 1)
-    return hip_num_gpu_devices;
+    return rvs::ACTION_RESULT_ERROR;
 
   amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, gst_gpus_device_index, 
       property_device, property_device_id, property_device_all,
@@ -855,16 +856,14 @@ int gst_action::get_all_selected_gpus(void) {
 
   if (amd_gpus_found) {
     if (do_gpu_stress_test(gst_gpus_device_index))
-      return 0;
+      return rvs::ACTION_RESULT_PASS;
 
-    return -1;
+    return rvs::lp::Stopping() ? rvs::ACTION_RESULT_ERROR : rvs::ACTION_RESULT_FAIL;
   } else {
     msg = "No devices match criteria from the test configuration.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    return rvs::ACTION_RESULT_SKIPPED;
   }
-
-  return 0;
 }
 
 
@@ -877,9 +876,9 @@ int gst_action::run(void) {
   rvs::action_result_t action_result;
 
   if (!get_all_common_config_keys())
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   if (!get_all_gst_config_keys())
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
 
   if(bjson){
     // add prelims for each action, dtype and target stress
