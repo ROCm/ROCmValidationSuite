@@ -11,7 +11,8 @@ GPU_FAMILY="${GPU_FAMILY:-gfx110X-all}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
 BUILD_TRANSFERBENCH_CLI="${BUILD_TRANSFERBENCH_CLI:-OFF}"
 # TransferBench offload archs (independent of GPU_FAMILY SDK tarball selection).
-# Source of truth: TransferBench build_packages_local.sh DEFAULT_GPU_TARGETS.
+# Keep this string identical to the TRANSFERBENCH_GPU_TARGETS default in CMakeTransferBenchCLI.cmake.
+# That file appends gfx1250-strict when the compiler accepts it.
 DEFAULT_GPU_TARGETS="gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201;gfx1250"
 TRANSFERBENCH_GPU_TARGETS="${TRANSFERBENCH_GPU_TARGETS:-${GPU_TARGETS:-$DEFAULT_GPU_TARGETS}}"
 BUILD_DIR="./build"
