@@ -63,12 +63,14 @@ tarball** `build_packages_local.sh` downloads. It does **not** control which GPU
 architectures the `TransferBench` binary is compiled for.
 
 Offload architectures are set by `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS`.
-By default RVS uses the same list as upstream TransferBench packaging
-(`external/TransferBench/build_packages_local.sh`):
+By default RVS builds the bundled CLI for:
 
 ```
-gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201
+gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201;gfx1250
 ```
+
+`gfx1250-strict` is added when the compiler that builds TransferBench accepts
+`--offload-arch=gfx1250-strict`.
 
 Override when building:
 

@@ -66,9 +66,9 @@ When manually triggering the workflow, you can specify:
    - `gfx120X-all` - AMD RX 9060/XT, 9070/XT
 
    **`GPU_FAMILY` selects the ROCm SDK tarball only.** TransferBench CLI offload
-   archs come from `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` (13-arch default
-   matching upstream TransferBench `build_packages_local.sh`), not from
-   `gpu_family`.
+   archs come from `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` (14-arch default
+   in [`docs/transferbench.md`](../../docs/transferbench.md); `gfx1250-strict`
+   is added when the compiler supports it), not from `gpu_family`.
 
 3. **Build TransferBench CLI** (boolean, default **true** on manual runs):
    - When enabled, the `TransferBench` binary is built and bundled in DEB/RPM/TGZ (requires `libnuma1` on Ubuntu/SLES or `numactl-libs` on RHEL/CentOS at runtime; RPM metadata uses `(numactl-libs or libnuma1)`).
@@ -431,7 +431,7 @@ sudo BUILD_TYPE=Debug ./build_packages_local.sh
 | `ROCM_SDK_NIGHTLY_INDEX_URL` | _(same as index default)_ | Optional override for nightly listing URL. |
 | `ROCM_SDK_CHANNEL` | `auto` locally | **`nightly`** / **`release`** / **`auto`**. CI sets channel per trigger (see table above); manual with a pin uses **`auto`** so tarball follows version format. |
 | `GPU_FAMILY` | `gfx110X-all` | ROCm SDK **tarball** family (`therock-dist-linux-<GPU_FAMILY>-…`); does not set TransferBench offload archs |
-| `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` | 13-arch default (see [`docs/transferbench.md`](../../docs/transferbench.md)) | HIP offload archs for the bundled TransferBench CLI when `BUILD_TRANSFERBENCH_CLI=ON` |
+| `GPU_TARGETS` / `TRANSFERBENCH_GPU_TARGETS` | 14-arch default (see [`docs/transferbench.md`](../../docs/transferbench.md)); `gfx1250-strict` is added when the compiler supports it | HIP offload archs for the bundled TransferBench CLI when `BUILD_TRANSFERBENCH_CLI=ON` |
 | `BUILD_TYPE` | `Release` | CMake build type (Release/Debug) |
 | `BUILD_TRANSFERBENCH_CLI` | `OFF` locally; `ON` in CI | Build and install the TransferBench CLI in packages (`-DBUILD_TRANSFERBENCH_CLI`). CI uses `vars.BUILD_TRANSFERBENCH_CLI` or defaults to `ON`; `workflow_dispatch` input **`build_transferbench_cli`** overrides manual runs. |
 | `ROCM_LIBPATCH_VERSION` | Auto-extracted from `ROCM_VERSION` | Major.minor in xxyy format with zero padding (e.g., `7.11` → `0711`, `8.0` → `0800`) - used for RVS version tagging |
