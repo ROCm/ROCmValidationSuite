@@ -16,5 +16,5 @@
 | [1.4.21](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/docs-1.4.21/) | May 15, 2026 |
 
 ```{note}
-RVS 1.4.21 is a technology preview release. For the latest production release, see the [RVS 1.6 documentation](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/).
+RVS 1.4.21 is a technology preview release. For the latest production release, see the [RVS 1.7 documentation](https://rocm.docs.amd.com/projects/ROCmValidationSuite/en/latest/).
 ```
