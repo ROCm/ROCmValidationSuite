@@ -73,7 +73,63 @@ latest = {
 out = Path("${WORKDIR}/latest.json")
 out.write_text(json.dumps(latest, indent=2) + "\n", encoding="utf-8")
 print(out.read_text(encoding="utf-8"))
+
+def _rewrite(key, old, new):
+    if isinstance(key, str) and key.startswith(old):
+        return new + key[len(old):]
+    return key
+
+signed = json.loads(json.dumps(latest))
+deb = signed.get("deb") or {}
+if deb.get("deb_prefix"):
+    deb["deb_prefix"] = _rewrite(
+        deb["deb_prefix"],
+        "nightly/unsigned/packages/deb",
+        "nightly/signed/packages/deb",
+    )
+for pkg in deb.get("packages") or []:
+    if pkg.get("s3_key"):
+        pkg["s3_key"] = _rewrite(
+            pkg["s3_key"],
+            "nightly/unsigned/packages/deb",
+            "nightly/signed/packages/deb",
+        )
+rpm = signed.get("rpm") or {}
+if rpm.get("s3_key"):
+    rpm["s3_key"] = _rewrite(
+        rpm["s3_key"],
+        "nightly/unsigned/packages/rpm",
+        "nightly/signed/packages/rpm",
+    )
+tar = signed.get("tar") or {}
+if tar.get("s3_key"):
+    tar["s3_key"] = _rewrite(tar["s3_key"], "nightly/unsigned/tarball", "nightly/signed/tarball")
+if tar.get("sha256_sidecar_key"):
+    tar["sha256_sidecar_key"] = _rewrite(
+        tar["sha256_sidecar_key"],
+        "nightly/unsigned/tarball",
+        "nightly/signed/tarball",
+    )
+_signed_root = "nightly/signed"
+_metadata_rel = [
+    "packages/deb/dists/stable/Release",
+    "packages/deb/dists/stable/InRelease",
+    "packages/deb/dists/stable/Release.gpg",
+    "packages/deb/dists/stable/main/binary-amd64/Packages",
+    "packages/deb/dists/stable/main/binary-amd64/Packages.gz",
+    "packages/rpm/x86_64/repodata/repomd.xml",
+    "packages/rpm/x86_64/repodata/repomd.xml.asc",
+    "packages/rpm/x86_64/repodata/primary.xml.gz",
+    "packages/rpm/x86_64/repodata/filelists.xml.gz",
+    "packages/rpm/x86_64/repodata/other.xml.gz",
+]
+signed["metadata"] = [{"s3_key": f"{_signed_root}/{rel}"} for rel in _metadata_rel]
+signed_out = Path("${WORKDIR}/signed-latest.json")
+signed_out.write_text(json.dumps(signed, indent=2) + "\n", encoding="utf-8")
+print(signed_out.read_text(encoding="utf-8"))
 PY
 
 aws s3 cp "$WORKDIR/latest.json" "s3://${BUCKET}/nightly/unsigned/latest.json" --no-progress
 echo "Published s3://${BUCKET}/nightly/unsigned/latest.json for run ${RUN_ID}"
+aws s3 cp "$WORKDIR/signed-latest.json" "s3://${BUCKET}/nightly/signed/latest.json" --no-progress
+echo "Published s3://${BUCKET}/nightly/signed/latest.json for run ${RUN_ID}"
