@@ -153,7 +153,7 @@ PulseWorker::PulseWorker()
       pulse_trans_a(0),
       pulse_trans_b(1),
       pulse_alpha_val(2.0f),
-      pulse_beta_val(-1.0f),
+      pulse_beta_val(0.0f),
       pulse_lda_offset(0),
       pulse_ldb_offset(0),
       pulse_ldc_offset(0),
@@ -414,6 +414,22 @@ bool PulseWorker::setup_blas(void) {
   return true;
 }
 
+// Poll a kernel event. On timeout the kernel may still be writing, so the
+// caller keeps the buffers that kernel uses.
+bool PulseWorker::poll_event(hipEvent_t ev) {
+  auto t0 = std::chrono::steady_clock::now();
+  while (true) {
+    hipError_t st = hipEventQuery(ev);
+    if (st == hipSuccess)
+      return true;
+    if (st != hipErrorNotReady)
+      return false;
+    if (steady_ms_since(t0) >= gpu_sync_wait_ms)
+      return false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+}
+
 void PulseWorker::calibrate_wall_clock(void) {
   wall_hz = 25000000ULL;
   if (gpu_device_index < 0)
@@ -422,27 +438,48 @@ void PulseWorker::calibrate_wall_clock(void) {
   if (hipHostMalloc(&ticks, sizeof(uint64_t), hipHostMallocCoherent) != hipSuccess)
     return;
   (void)hipSetDevice(gpu_device_index);
-  pulse_read_wall<<<1, 1>>>(ticks);
-  if (hipDeviceSynchronize() != hipSuccess) {
+  hipEvent_t ev = nullptr;
+  if (hipEventCreateWithFlags(&ev, hipEventDisableTiming) != hipSuccess) {
     (void)hipHostFree(ticks);
     return;
   }
-  uint64_t t0 = *ticks;
+
+  auto read_tick = [&](uint64_t& out) -> bool {
+    pulse_read_wall<<<1, 1>>>(ticks);
+    if (hipEventRecord(ev, nullptr) != hipSuccess || !poll_event(ev)) {
+      device_busy = true;
+      return false;
+    }
+    out = *ticks;
+    return true;
+  };
+
+  uint64_t t0 = 0;
+  uint64_t t1 = 0;
+  bool ok = read_tick(t0);
   auto h0 = std::chrono::steady_clock::now();
-  std::this_thread::sleep_for(std::chrono::milliseconds(20));
-  pulse_read_wall<<<1, 1>>>(ticks);
-  if (hipDeviceSynchronize() != hipSuccess) {
+  if (ok)
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  if (ok)
+    ok = read_tick(t1);
+  if (ok) {
+    double sec = std::chrono::duration<double>(
+        std::chrono::steady_clock::now() - h0).count();
+    if (sec > 0.0 && t1 > t0) {
+      double hz = static_cast<double>(t1 - t0) / sec;
+      if (hz > 1.0e6 && hz < 2.0e9)
+        wall_hz = static_cast<uint64_t>(hz);
+    }
+    (void)hipEventDestroy(ev);
     (void)hipHostFree(ticks);
-    return;
-  }
-  uint64_t t1 = *ticks;
-  double sec = std::chrono::duration<double>(
-      std::chrono::steady_clock::now() - h0).count();
-  (void)hipHostFree(ticks);
-  if (sec > 0.0 && t1 > t0) {
-    double hz = static_cast<double>(t1 - t0) / sec;
-    if (hz > 1.0e6 && hz < 2.0e9)
-      wall_hz = static_cast<uint64_t>(hz);
+  } else {
+    // The read kernel may still store into ticks. Keep both.
+    log_msg("[" + action_name + "] " + MODULE_NAME + " " +
+        std::to_string(gpu_id) +
+        " wall-clock calibration timed out; using the default frequency",
+        rvs::loginfo);
+    if (judge_results())
+      abort_flag().store(true, std::memory_order_release);
   }
 }
 
@@ -548,6 +585,7 @@ bool PulseWorker::gpu_barrier_sync(bool& test_passed) {
 
   const uint64_t timeout_cycles =
       wall_hz * static_cast<uint64_t>(std::max(gpu_sync_wait_ms, 1)) / 1000ULL;
+  pulse_sync->barrier_inflight.fetch_add(1, std::memory_order_acq_rel);
   gpu_sync_barrier_kernel<<<1, 1>>>(
       pulse_sync->gpu_arrival_count,
       pulse_sync->gpu_release_flag,
@@ -557,6 +595,7 @@ bool PulseWorker::gpu_barrier_sync(bool& test_passed) {
 
   hipEvent_t barrier_ev = nullptr;
   if (hipEventCreateWithFlags(&barrier_ev, hipEventDisableTiming) != hipSuccess) {
+    device_busy = true;
     note_failure(test_passed);
     return false;
   }
@@ -567,14 +606,24 @@ bool PulseWorker::gpu_barrier_sync(bool& test_passed) {
     __atomic_store_n(pulse_sync->gpu_release_flag, 1, __ATOMIC_RELEASE);
     auto extra = std::chrono::steady_clock::now();
     while (steady_ms_since(extra) < 1000) {
-      if (hipEventQuery(barrier_ev) == hipSuccess)
+      if (hipEventQuery(barrier_ev) == hipSuccess) {
+        done = true;
         break;
+      }
       std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
   }
-  (void)hipEventDestroy(barrier_ev);
-  if (!done)
+  if (done) {
+    pulse_sync->barrier_inflight.fetch_sub(1, std::memory_order_acq_rel);
+    (void)hipEventDestroy(barrier_ev);
+  } else {
+    // Kernel may still load the counters and the event. Keep both.
+    device_busy = true;
+    note_failure(test_passed);
+    if (judge_results())
+      abort_flag().store(true, std::memory_order_release);
     return false;
+  }
   if (__atomic_load_n(pulse_sync->gpu_timeout_flag, __ATOMIC_ACQUIRE) != 0) {
     log_msg("[" + action_name + "] " + MODULE_NAME + " " +
         std::to_string(gpu_id) + " GPU barrier timed out", rvs::logerror);
@@ -604,11 +653,37 @@ bool PulseWorker::run_gemm_verify(bool& test_passed) {
       self_check = true;
   }
 
+  // Self-check compares the current GEMM output with the previous one.
+  // A non-zero beta changes C on every call, so the two outputs differ on
+  // a healthy GPU. Skip that comparison instead of failing the pattern.
+  if (self_check && pulse_beta_val != 0.0f) {
+    log_msg("[" + action_name + "] " + MODULE_NAME + " " +
+        std::to_string(gpu_id) +
+        " skipping GEMM self-check because beta is not 0", rvs::loginfo);
+    self_check = false;
+  }
+  if (!self_check && !accu_check)
+    return true;
+
   if (gpu_device_index >= 0)
     (void)hipSetDevice(gpu_device_index);
 
   double self_error = 0.0;
   double accu_error = 0.0;
+  // The first self-check only stores a snapshot. Run one more identical GEMM
+  // (beta is 0) and check again so this pattern compares two results.
+  if (self_check && !accu_check) {
+    if (!gpu_blas->validate_gemm(true, false, self_error, accu_error)) {
+      log_msg("[" + action_name + "] " + MODULE_NAME + " " +
+          std::to_string(gpu_id) + " GEMM validate_gemm failed", rvs::logerror);
+      note_failure(test_passed);
+      return false;
+    }
+    if (!gpu_blas->run_blas_gemm(1) || !wait_gemm(test_passed)) {
+      note_failure(test_passed);
+      return false;
+    }
+  }
   if (!gpu_blas->validate_gemm(self_check, accu_check, self_error, accu_error)) {
     log_msg("[" + action_name + "] " + MODULE_NAME + " " +
         std::to_string(gpu_id) + " GEMM validate_gemm failed", rvs::logerror);
@@ -770,6 +845,9 @@ bool PulseWorker::do_pulse_stress(void) {
     bool pattern_pass = true;
     auto pattern_start = std::chrono::steady_clock::now();
     auto last_log = std::chrono::system_clock::now();
+    // One sample clock for the whole pattern. Resetting it on each 25 ms
+    // phase dropped every sample when the interval was 100 ms.
+    auto next_sample = pattern_start;
 
     log_msg("[" + action_name + "] " + MODULE_NAME + " " +
         std::to_string(gpu_id) + " pattern " + std::to_string(pid) +
@@ -777,28 +855,45 @@ bool PulseWorker::do_pulse_stress(void) {
         std::to_string(pattern_duration_ms), rvs::loginfo);
 
     while (!rvs::lp::Stopping()) {
-      if (steady_ms_since(pattern_start) >=
-          static_cast<int64_t>(pattern_duration_ms))
+      const bool time_up = steady_ms_since(pattern_start) >=
+          static_cast<int64_t>(pattern_duration_ms);
+      if ((time_up || stop_patterns) && pulse_sync)
+        pulse_sync->pattern_leave.store(true, std::memory_order_release);
+      if ((time_up || stop_patterns) && !pulse_sync)
         break;
 
       SyncStatus sr = host_rendezvous();
+      bool leave = time_up || stop_patterns ||
+          (pulse_sync &&
+           pulse_sync->pattern_leave.load(std::memory_order_acquire));
       if (sr == SyncStatus::kTimeout) {
         log_msg("[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " host rendezvous timed out",
             rvs::logerror);
         note_failure(pattern_pass);
         stop_patterns = true;
-        break;
+        leave = true;
       }
       if (sr == SyncStatus::kAbort ||
           abort_flag().load(std::memory_order_acquire)) {
         stop_patterns = true;
+        leave = true;
+      }
+      if (leave) {
+        // A completed rendezvous means every worker saw pattern_leave.
+        // Clear it together. A timeout or abort means a peer may already
+        // have left, so a second wait would not pair with anyone.
+        if (sr == SyncStatus::kGo && pulse_sync) {
+          if (worker_index == 0)
+            pulse_sync->pattern_leave.store(false, std::memory_order_release);
+          (void)host_rendezvous();
+        }
         break;
       }
 
       if (!gpu_barrier_sync(pattern_pass)) {
         stop_patterns = true;
-        break;
+        continue;
       }
 
       PulseWave wave = pulse_wave(pid,
@@ -815,7 +910,6 @@ bool PulseWorker::do_pulse_stress(void) {
 
       set_highest_clocks();
       auto phase_start = std::chrono::steady_clock::now();
-      auto last_sample = phase_start;
       while (!stop_cycle) {
         if (steady_ms_since(phase_start) >= static_cast<int64_t>(wave.high_ms))
           break;
@@ -853,8 +947,8 @@ bool PulseWorker::do_pulse_stress(void) {
         }
         }
         auto now = std::chrono::steady_clock::now();
-        if (std::chrono::duration_cast<std::chrono::milliseconds>(
-              now - last_sample).count() >= static_cast<int64_t>(smpl_ms)) {
+        if (now >= next_sample) {
+          next_sample = now + std::chrono::milliseconds(smpl_ms);
           float power = read_power();
           if (power > 0.0f) {
             total_high += power;
@@ -870,7 +964,6 @@ bool PulseWorker::do_pulse_stress(void) {
             abort_flag().store(true, std::memory_order_release);
             stop_cycle = true;
           }
-          last_sample = now;
         }
         if (steady_ms_since(phase_start) >= static_cast<int64_t>(wave.high_ms))
           break;
@@ -894,7 +987,6 @@ bool PulseWorker::do_pulse_stress(void) {
       double actual_high_ms = static_cast<double>(steady_ms_since(phase_start));
       set_lowest_clocks();
       phase_start = std::chrono::steady_clock::now();
-      last_sample = phase_start;
       while (!stop_patterns) {
         double elapsed = static_cast<double>(steady_ms_since(phase_start));
         if (elapsed >= wave.low_ms)
@@ -904,9 +996,9 @@ bool PulseWorker::do_pulse_stress(void) {
             std::min(remain, static_cast<double>(smpl_ms)));
         if (chunk < 1u) chunk = 1u;
         std::this_thread::sleep_for(std::chrono::milliseconds(chunk));
-        if (std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now() - last_sample).count()
-            >= static_cast<int64_t>(smpl_ms)) {
+        if (std::chrono::steady_clock::now() >= next_sample) {
+          next_sample = std::chrono::steady_clock::now() +
+              std::chrono::milliseconds(smpl_ms);
           float power_low = read_power();
           if (power_low > 0.0f) {
             total_low += power_low;
@@ -922,7 +1014,6 @@ bool PulseWorker::do_pulse_stress(void) {
             stop_cycle = true;
             stop_patterns = true;
           }
-          last_sample = std::chrono::steady_clock::now();
         }
       }
       double actual_low_ms = static_cast<double>(steady_ms_since(phase_start));
@@ -956,7 +1047,7 @@ bool PulseWorker::do_pulse_stress(void) {
       }
 
       if (stop_cycle || stop_patterns)
-        break;
+        continue;
     }
 
     if (blas_ok && !device_busy)
@@ -983,13 +1074,20 @@ bool PulseWorker::do_pulse_stress(void) {
     float avg_high = high_samples > 0 ? total_high / high_samples : 0.0f;
     float avg_low = low_samples > 0 ? total_low / low_samples : 0.0f;
     float delta = avg_high - avg_low;
-    if (judge_results() && min_power_delta_w > 0.0f && cycles > 0 &&
-        delta < min_power_delta_w) {
-      log_msg("[" + action_name + "] " + MODULE_NAME + " " +
-          std::to_string(gpu_id) + " power swing " + std::to_string(delta) +
-          "W is below min_power_delta_w " +
-          std::to_string(min_power_delta_w) + "W", rvs::logerror);
-      pattern_pass = false;
+    if (judge_results() && min_power_delta_w > 0.0f && cycles > 0) {
+      if (high_samples == 0 || low_samples == 0) {
+        log_msg("[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) +
+            " power swing check missing high or low samples in pattern " +
+            pname, rvs::logerror);
+        pattern_pass = false;
+      } else if (delta < min_power_delta_w) {
+        log_msg("[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) + " power swing " + std::to_string(delta) +
+            "W is below min_power_delta_w " +
+            std::to_string(min_power_delta_w) + "W", rvs::logerror);
+        pattern_pass = false;
+      }
     }
 
     if (!pattern_pass)
@@ -1015,8 +1113,22 @@ bool PulseWorker::do_pulse_stress(void) {
 
     if (!pattern_pass && judge_results()) {
       abort_flag().store(true, std::memory_order_release);
-      host_rendezvous();
       stop_patterns = true;
+    }
+    // Verify time differs per GPU. Meet here so the next pattern starts
+    // together, and so a failure is visible before anyone continues.
+    if (pulse_sync) {
+      if (host_rendezvous() == SyncStatus::kTimeout) {
+        log_msg("[" + action_name + "] " + MODULE_NAME + " " +
+            std::to_string(gpu_id) + " host rendezvous timed out",
+            rvs::logerror);
+        note_failure(pattern_pass);
+        if (judge_results())
+          test_passed = false;
+        stop_patterns = true;
+      } else if (abort_flag().load(std::memory_order_acquire)) {
+        stop_patterns = true;
+      }
     }
   }
 
@@ -1034,7 +1146,13 @@ bool PulseWorker::do_pulse_stress(void) {
         " secondary MCM, considering pass by default", rvs::loginfo);
     result = true;
   } else {
-    result = test_passed && total_cycles > 0 && !device_busy;
+    // A peer abort can stop this GPU before it finishes a cycle. That is the
+    // peer's failure. This GPU fails only for its own error, a stuck device,
+    // or a run that ended with no cycles and no peer abort.
+    bool stopped_by_peer = abort_flag().load(std::memory_order_acquire) &&
+        test_passed && !device_busy;
+    result = test_passed && !device_busy &&
+        (total_cycles > 0 || stopped_by_peer);
   }
 
   if (PulseWorker::bjson) {

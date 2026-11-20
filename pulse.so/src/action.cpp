@@ -94,7 +94,7 @@ using std::map;
 #define PULSE_DEFAULT_TRANS_A             0
 #define PULSE_DEFAULT_TRANS_B             1
 #define PULSE_DEFAULT_ALPHA_VAL           2.0f
-#define PULSE_DEFAULT_BETA_VAL            -1.0f
+#define PULSE_DEFAULT_BETA_VAL            0.0f
 #define PULSE_DEFAULT_LDA_OFFSET          0
 #define PULSE_DEFAULT_LDB_OFFSET          0
 #define PULSE_DEFAULT_LDC_OFFSET          0
@@ -593,6 +593,25 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
     *sync.gpu_timeout_flag = 0;
   }
 
+  // A barrier kernel that did not drain still reads these counters. Keep the
+  // allocation for process lifetime rather than freeing it under that kernel.
+  auto release_sync = [&]() {
+    if (sync.barrier_inflight.load(std::memory_order_acquire) != 0) {
+      rvs::lp::Log("[" + action_name + "] pulse barrier still active; "
+          "retaining sync memory", rvs::loginfo);
+      sync.gpu_arrival_count = nullptr;
+      sync.gpu_release_flag = nullptr;
+      sync.gpu_timeout_flag = nullptr;
+      return;
+    }
+    if (sync.gpu_arrival_count) (void)hipHostFree(sync.gpu_arrival_count);
+    if (sync.gpu_release_flag) (void)hipHostFree(sync.gpu_release_flag);
+    if (sync.gpu_timeout_flag) (void)hipHostFree(sync.gpu_timeout_flag);
+    sync.gpu_arrival_count = nullptr;
+    sync.gpu_release_flag = nullptr;
+    sync.gpu_timeout_flag = nullptr;
+  };
+
   for (;;) {
     map<int, uint16_t>::iterator it;
 
@@ -670,9 +689,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
         workers[i].start();
         workers[i].join();
         if (rvs::lp::Stopping()) {
-          if (sync.gpu_arrival_count) (void)hipHostFree(sync.gpu_arrival_count);
-          if (sync.gpu_release_flag) (void)hipHostFree(sync.gpu_release_flag);
-          if (sync.gpu_timeout_flag) (void)hipHostFree(sync.gpu_timeout_flag);
+          release_sync();
           return false;
         }
       }
@@ -683,9 +700,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
     rvs::lp::Log(msg, rvs::loginfo);
 
     if (rvs::lp::Stopping()) {
-      if (sync.gpu_arrival_count) (void)hipHostFree(sync.gpu_arrival_count);
-      if (sync.gpu_release_flag) (void)hipHostFree(sync.gpu_release_flag);
-      if (sync.gpu_timeout_flag) (void)hipHostFree(sync.gpu_timeout_flag);
+      release_sync();
       return false;
     }
 
@@ -693,9 +708,7 @@ bool pulse_action::do_pulse_test(map<int, uint16_t> pulse_gpus_device_index,
     break;
   }
 
-  if (sync.gpu_arrival_count) (void)hipHostFree(sync.gpu_arrival_count);
-  if (sync.gpu_release_flag) (void)hipHostFree(sync.gpu_release_flag);
-  if (sync.gpu_timeout_flag) (void)hipHostFree(sync.gpu_timeout_flag);
+  release_sync();
 
   for (i = 0; i < pulse_gpus_device_index.size(); i++) {
     if(false == workers[i].get_result())

@@ -213,6 +213,7 @@ class PulseWorker : public rvs::ThreadBase {
     bool gpu_barrier_sync(bool& test_passed);
     bool wait_gemm(bool& test_passed);
     bool wait_event(hipEvent_t ev, bool& test_passed, bool gemm_wait);
+    bool poll_event(hipEvent_t ev);
     bool run_gemm_verify(bool& test_passed);
     void note_failure(bool& test_passed);
     void log_msg(const std::string& msg, int level);

@@ -2374,7 +2374,7 @@ A primary GPU passes when every selected pattern completes all of the following:
 
 - At least one pulse cycle ran.
 - GEMM enqueue and the HIP event wait succeeded.
-- End-of-pattern GEMM verification (`verify_mode`, `tolerance`) found no data error. For a matrix dimension above 2048, accuracy checking falls back to a self-check.
+- End-of-pattern GEMM verification (`verify_mode`, `tolerance`) found no data error. For a matrix dimension above 2048, accuracy checking falls back to a self-check: with beta 0 the module runs one more GEMM and compares the two outputs.
 - Junction or edge temperature stayed at or below `max_temp_c`. `0` disables this check.
 - The uncorrectable ECC count did not rise. If the GPU does not report ECC, the check is skipped. `ecc_check: false` disables it.
 - At least one power sample was read.
@@ -2409,7 +2409,7 @@ Keys below are in addition to common keys (`name`, `module`, `device`, `duration
 <tr><td>compute_type</td><td>String</td><td>hipBLASLt compute type (e.g. <b>fp32_r</b>). Default <b>fp32_r</b>.</td></tr>
 <tr><td>blas_source</td><td>String</td><td><b>rocblas</b> or <b>hipblaslt</b>. Default <b>rocblas</b>.</td></tr>
 <tr><td>alpha</td><td>Float</td><td>GEMM scalar α. Default <b>2.0</b>.</td></tr>
-<tr><td>beta</td><td>Float</td><td>GEMM scalar β. Default <b>-1.0</b>.</td></tr>
+<tr><td>beta</td><td>Float</td><td>GEMM scalar β. Default <b>0</b>. A non-zero β accumulates into C, so the end-of-pattern self-check is skipped and a warning is logged. Shipped configs use <b>0</b> so each GEMM writes the same result and the self-check can compare two runs.</td></tr>
 <tr><td>transa</td><td>Integer</td><td>Transpose A: **0** no transpose, **1** transpose. Default <b>0</b>.</td></tr>
 <tr><td>transb</td><td>Integer</td><td>Transpose B: **0** no transpose, **1** transpose. Default <b>1</b>.</td></tr>
 <tr><td>lda</td><td>Integer</td><td>Leading dimension offset A (0 = use minimum). Defaults <b>0</b>.</td></tr>

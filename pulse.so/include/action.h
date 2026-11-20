@@ -41,6 +41,12 @@ struct PulseSync {
   std::atomic<int> arrival{0};
   std::atomic<int> epoch{0};
   std::atomic<bool> abort_flag{false};
+  // Set before a rendezvous when any worker has reached the pattern deadline,
+  // so every worker leaves that pattern on the same barrier.
+  std::atomic<bool> pattern_leave{false};
+  // Barrier kernels still running. The action keeps the counters if this is
+  // non-zero when the workers return.
+  std::atomic<int> barrier_inflight{0};
   int num_gpus{1};
   int wait_ms{10000};
   int32_t* gpu_arrival_count{nullptr};
