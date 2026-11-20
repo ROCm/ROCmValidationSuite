@@ -8,7 +8,8 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 - Added int8 GST config for MI3XX products.
 - Added ERROR and SKIPPED action results alongside PASS and FAIL.
-
+- Publish complete signed nightly and release packages to the public repos.
+- copy a public RC build to stable-staging by build number.
 
 ### Changed
 

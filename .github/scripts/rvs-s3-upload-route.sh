@@ -83,7 +83,7 @@ rvs_resolve_route() {
       RVS_S3_UNSIGNED_DEB_PREFIX="nightly/unsigned/packages/deb"
       RVS_S3_UNSIGNED_RPM_PREFIX="nightly/unsigned/packages/rpm/x86_64"
       RVS_S3_UNSIGNED_TAR_PREFIX="nightly/unsigned/tarball"
-      RVS_S3_OUTPUT_PATHS="${RVS_S3_OUTPUT_PATHS}||Unsigned DEB|nightly/unsigned/packages/deb||Unsigned RPM|nightly/unsigned/packages/rpm/x86_64||Unsigned TGZ|nightly/unsigned/tarball"
+      RVS_S3_OUTPUT_PATHS="${RVS_S3_OUTPUT_PATHS}||Unsigned DEB|nightly/unsigned/packages/deb||Unsigned RPM|nightly/unsigned/packages/rpm/x86_64||Unsigned TGZ|nightly/unsigned/tarball||Signed TGZ|nightly/signed/tarball"
     fi
     return 0
   fi
@@ -241,15 +241,21 @@ case "$cmd" in
       exit 1
     fi
 
+    SIGNED_TAR_PREFIX="nightly/signed/tarball"
     echo "Scheduled unsigned build: accumulating into ${RVS_S3_UNSIGNED_RPM_PREFIX} and ${RVS_S3_UNSIGNED_TAR_PREFIX}"
+    echo "Copying tarball and sha256 sidecar to ${SIGNED_TAR_PREFIX}"
     aws s3 cp ./build "s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/" \
       --recursive --exclude "*" --include "amdrocm*-rvs*.rpm" --no-progress
     aws s3 cp ./build "s3://${BUCKET}/${RVS_S3_UNSIGNED_TAR_PREFIX}/" \
+      --recursive --exclude "*" --include "amdrocm*-rvs*.tar.gz" --include "amdrocm*-rvs*.tar.gz.sha256" --no-progress
+    aws s3 cp ./build "s3://${BUCKET}/${SIGNED_TAR_PREFIX}/" \
       --recursive --exclude "*" --include "amdrocm*-rvs*.tar.gz" --include "amdrocm*-rvs*.tar.gz.sha256" --no-progress
     echo "Listing s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/"
     aws s3 ls "s3://${BUCKET}/${RVS_S3_UNSIGNED_RPM_PREFIX}/" --human-readable || true
     echo "Listing s3://${BUCKET}/${RVS_S3_UNSIGNED_TAR_PREFIX}/"
     aws s3 ls "s3://${BUCKET}/${RVS_S3_UNSIGNED_TAR_PREFIX}/" --human-readable || true
+    echo "Listing s3://${BUCKET}/${SIGNED_TAR_PREFIX}/"
+    aws s3 ls "s3://${BUCKET}/${SIGNED_TAR_PREFIX}/" --human-readable || true
     echo "Done."
     ;;
   *)
