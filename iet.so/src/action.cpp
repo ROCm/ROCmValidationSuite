@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -664,9 +664,9 @@ int iet_action::get_all_selected_gpus(void) {
   std::stringstream msg_stream;
   std::vector<mcm_type_t> mcm_type;
 
-  hipGetDeviceCount(&hip_num_gpu_devices);
-  if (hip_num_gpu_devices < 1)
-    return -1;
+  if (hipGetDeviceCount(&hip_num_gpu_devices) != hipSuccess ||
+      hip_num_gpu_devices < 1)
+    return rvs::ACTION_RESULT_ERROR;
 
   // find compatible GPUs to run edp tests
   amd_gpus_found = fetch_gpu_list(hip_num_gpu_devices, iet_gpus_device_index,
@@ -685,23 +685,19 @@ int iet_action::get_all_selected_gpus(void) {
         // log the error
         string msg = std::string(JSON_CREATE_NODE_ERROR);
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return -1;
+        return rvs::ACTION_RESULT_ERROR;
       }
 
       rvs::lp::AddString(json_root_node, "ERROR", "No AMD compatible GPU found!");
       rvs::lp::LogRecordFlush(json_root_node, rvs::logerror);
     }
 
-    return -1;
+    return rvs::ACTION_RESULT_SKIPPED;
   }
 
-  int iet_res = 0;
-  if(do_edp_test(iet_gpus_device_index, mcm_type))
-    iet_res = 0;
-  else
-    iet_res = -1;
-  // append end node to json
-  return iet_res;
+  if (do_edp_test(iet_gpus_device_index, mcm_type))
+    return rvs::ACTION_RESULT_PASS;
+  return rvs::lp::Stopping() ? rvs::ACTION_RESULT_ERROR : rvs::ACTION_RESULT_FAIL;
 }
 
 
@@ -715,16 +711,16 @@ int iet_action::run(void) {
 
 
   if (!get_all_common_config_keys())
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
 
   if (!get_all_iet_config_keys())
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
 
   if (property_duration > 0 && (property_duration < iet_ramp_interval)) {
     msg = std::string(RVS_CONF_DURATION_KEY) + "' cannot be less than '" +
       RVS_CONF_RAMP_INTERVAL_KEY + "'";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
   if(bjson){
     // add prelims for each action, dtype and target stress

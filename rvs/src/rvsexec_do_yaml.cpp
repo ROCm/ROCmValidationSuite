@@ -87,6 +87,65 @@ actions:
 
 using std::string;
 
+rvs::actionresult rvs::to_action_result(int sts) {
+  switch (sts) {
+    case ACTION_RESULT_PASS:
+      return ACTION_RESULT_PASS;
+    case ACTION_RESULT_ERROR:
+      return ACTION_RESULT_ERROR;
+    case ACTION_RESULT_SKIPPED:
+      return ACTION_RESULT_SKIPPED;
+    default:
+      return ACTION_RESULT_FAIL;
+  }
+}
+
+const char* rvs::action_result_label(int status) {
+  switch (status) {
+    case ACTION_RESULT_PASS:
+      return "PASS";
+    case ACTION_RESULT_ERROR:
+      return "ERROR";
+    case ACTION_RESULT_SKIPPED:
+      return "SKIPPED";
+    default:
+      return "FAIL";
+  }
+}
+
+const char* rvs::action_result_color(int status) {
+  switch (status) {
+    case ACTION_RESULT_PASS:
+      return "\033[32m";
+    case ACTION_RESULT_ERROR:
+      return "\033[33m";
+    case ACTION_RESULT_SKIPPED:
+      return "\033[36m";
+    default:
+      return "\033[31m";
+  }
+}
+
+rvs::actionresult rvs::overall_action_result(const std::vector<exec_action>& actions) {
+  bool any_error = false;
+  bool all_skipped = !actions.empty();
+
+  for (const auto& action : actions) {
+    if (ACTION_RESULT_FAIL == action.status)
+      return ACTION_RESULT_FAIL;
+    if (ACTION_RESULT_ERROR == action.status)
+      any_error = true;
+    if (ACTION_RESULT_SKIPPED != action.status)
+      all_skipped = false;
+  }
+
+  if (any_error)
+    return ACTION_RESULT_ERROR;
+  if (all_skipped)
+    return ACTION_RESULT_SKIPPED;
+  return ACTION_RESULT_PASS;
+}
+
 /**
  * @brief Executes actions listed in .conf file.
  *
@@ -774,6 +833,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
       action_info.name = action["name"].as<std::string>();
       action_info.module = action["module"].as<std::string>();
+      action_info.index = action_idx;
 
       std::transform(action_info.module.begin(),
           action_info.module.end(),
@@ -792,6 +852,7 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
       // execute action
       sts = pif1->run();
+      action_info.status = to_action_result(sts);
 
       if (rvs::options::has_option("-q")) {
 
@@ -799,22 +860,19 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
         in_progress_t.join();
 
-        std::string actionresult = (!sts) ? "PASS" : "FAIL";
-        std::string textcolor = (!sts) ? "\033[32m" : "\033[31m";
-
         std::cout << "\r" << boundary << " "
           << std::setw(actionColumnWidth) << std::left << action_info.name
           << " | " << std::setw(columnWidth) << std::left << action_info.module
-          << " | " << textcolor << std::setw(columnWidth) << std::left << actionresult << "\033[0m"
+          << " | " << action_result_color(action_info.status) << std::setw(columnWidth)
+          << std::left << action_result_label(action_info.status) << "\033[0m"
           << "  " <<  boundary << std::endl;
       }
 
       // processing finished, release action object
       module::action_destroy(pa);
 
-      // Action pass fail status !!
-      // errors?
-      if (sts) {
+      if (ACTION_RESULT_FAIL == action_info.status ||
+          ACTION_RESULT_ERROR == action_info.status) {
 
         char buff[1024];
         snprintf(buff, sizeof(buff),
@@ -828,11 +886,9 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
               action["module"].as<std::string>().c_str(),
               action["name"].as<std::string>().c_str());
         }
-
-        action_info.result = false;
       }
-      else {
-        action_info.result = true;
+      else if (ACTION_RESULT_SKIPPED == action_info.status) {
+        rvs::logger::log("[" + action_info.name + "] Action skipped", rvs::loginfo);
       }
       action_details.push_back(action_info);
     }
@@ -900,14 +956,12 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
     for(size_t i = 0; i < action_details.size(); i++) {
 
-      std::string result = (action_details[i].result) ? "PASS" : "FAIL";
-      std::string textcolor = (action_details[i].result) ? "\033[32m" : "\033[31m";
-
       // Print data row
       std::cout << boundary << " "
         << std::setw(actionColumnWidth) << std::left << action_details[i].name
         << " | " << std::setw(columnWidth) << std::left << action_details[i].module
-        << " | " << textcolor << std::setw(columnWidth) << std::left << result << "\033[0m"
+        << " | " << action_result_color(action_details[i].status) << std::setw(columnWidth)
+        << std::left << action_result_label(action_details[i].status) << "\033[0m"
         << "  " <<  boundary << std::endl;
     }
 

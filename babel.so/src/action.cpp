@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -65,9 +65,9 @@ mem_action::~mem_action() {
 /**
  * @brief runs the MEM test stress session
  * @param mem_gpus_device_index <gpu_index, gpu_id> map
- * @return true if no error occured, false otherwise
+ * @return actionresult value
  */
-bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
+int mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
 
   uint64_t k = 0;
   string    msg;
@@ -76,12 +76,16 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
   if (read_kernel == "b128_nt") {
     for (auto& dev : mem_gpus_device_index) {
       hipDeviceProp_t props{};
-      if (hipGetDeviceProperties(&props, dev.first) != hipSuccess ||
-          string(props.gcnArchName).rfind("gfx1250", 0) != 0) {
+      if (hipGetDeviceProperties(&props, dev.first) != hipSuccess) {
+        msg = "Failed to get device properties for GPU " + std::to_string(dev.second);
+        rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
+        return rvs::ACTION_RESULT_ERROR;
+      }
+      if (string(props.gcnArchName).rfind("gfx1250", 0) != 0) {
         msg = "'" + std::string(RVS_CONF_READ_KERNEL) + "' value 'b128_nt' requires gfx1250, GPU " +
           std::to_string(dev.second) + " is " + props.gcnArchName;
         rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-        return false;
+        return rvs::ACTION_RESULT_SKIPPED;
       }
     }
   }
@@ -147,13 +151,13 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
 
         // check if stop signal was received
         if (rvs::lp::Stopping())
-          return false;
+          return rvs::ACTION_RESULT_ERROR;
       }
     }
 
     // check if stop signal was received
     if (rvs::lp::Stopping())
-      return false;
+      return rvs::ACTION_RESULT_ERROR;
 
     if (property_count != 0) {
       k++;
@@ -163,17 +167,17 @@ bool mem_action::do_mem_stress_test(map<int, uint16_t> mem_gpus_device_index) {
   }
 
   if (rvs::lp::Stopping()) {
-    return false;
+    return rvs::ACTION_RESULT_ERROR;
   }
   else {
     for (size_t i = 0; i <  mem_gpus_device_index.size(); i++) {
       if(false == workers[i].get_result()) {
-        return false;
+        return rvs::ACTION_RESULT_FAIL;
       }
     }
   }
 
-  return true;
+  return rvs::ACTION_RESULT_PASS;
 }
 
 /**
@@ -411,7 +415,8 @@ int mem_action::get_num_amd_gpu_devices(void) {
   int hip_num_gpu_devices;
   string msg;
 
-  hipGetDeviceCount(&hip_num_gpu_devices);
+  if (hipGetDeviceCount(&hip_num_gpu_devices) != hipSuccess)
+    hip_num_gpu_devices = 0;
   if (hip_num_gpu_devices == 0) {  // no AMD compatible GPU
     msg = action_name + " " + MODULE_NAME + " " + MEM_NO_COMPATIBLE_GPUS;
     rvs::lp::Log(msg, rvs::logerror);
@@ -449,7 +454,7 @@ int mem_action::get_all_selected_gpus(void) {
 
   hip_num_gpu_devices = get_num_amd_gpu_devices();
   if (hip_num_gpu_devices < 1)
-    return hip_num_gpu_devices;
+    return rvs::ACTION_RESULT_ERROR;
 
   msg = "[" + action_name + "] " + MODULE_NAME + " " +
     " " + "Scan for GPU IDs";
@@ -460,14 +465,11 @@ int mem_action::get_all_selected_gpus(void) {
       property_device, property_device_id, property_device_all,
       property_device_index, property_device_index_all);
   if (amd_gpus_found) {
-    if (do_mem_stress_test(mem_gpus_device_index))
-      return 0;
-
-    return -1;
+    return do_mem_stress_test(mem_gpus_device_index);
   } else {
     msg = "No devices match criteria from the test configuration.";
     rvs::lp::Err(msg, MODULE_NAME_CAPS, action_name);
-    return -1;
+    return rvs::ACTION_RESULT_SKIPPED;
   }
 
   msg = "[" + action_name + "] " + MODULE_NAME + " " +
@@ -492,7 +494,7 @@ int mem_action::run(void) {
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = "Error in common configuration keys.";
     action_callback(&action_result);
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
 
   if (!get_all_mem_config_keys()) {
@@ -501,7 +503,7 @@ int mem_action::run(void) {
     action_result.status = rvs::actionstatus::ACTION_FAILED;
     action_result.output = "Error in MEM configuration keys.";
     action_callback(&action_result);
-    return -1;
+    return rvs::ACTION_RESULT_ERROR;
   }
   if(bjson){
     // add prelims for each action

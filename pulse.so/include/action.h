@@ -147,7 +147,7 @@ class pulse_action: public rvs::actionbase {
     bool parse_patterns(const std::string& spec);
     int get_num_amd_gpu_devices(void);
     int get_all_selected_gpus(void);
-    bool do_pulse_test(std::map<int, uint16_t> pulse_gpus_device_index,
+    int do_pulse_test(std::map<int, uint16_t> pulse_gpus_device_index,
         std::vector<mcm_type_t>& mcm_type);
 };
 

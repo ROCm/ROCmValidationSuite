@@ -408,8 +408,8 @@ bool run_stress(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, 
   }
 
   // Check solutions
-  stream->read_arrays(a, b, c);
-//check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
+  //stream->read_arrays(a, b, c);
+  //check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
   sstr.str( std::string() );
   sstr.clear();
   if (output_as_csv)
@@ -716,9 +716,9 @@ bool run_triad(std::pair<int, uint16_t> device, int num_times, int ARRAY_SIZE, b
   }
 
   // Check solutions
-  T sum = 0.0;
-  stream->read_arrays(a, b, c);
-//  check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
+  // T sum = 0.0;
+  // stream->read_arrays(a, b, c);
+  // check_solution<T>(num_times, a, b, c, sum, ARRAY_SIZE);
 
   // Display timing results
   double total_bytes = 3 * sizeof(T) * ARRAY_SIZE * actual_iterations;
