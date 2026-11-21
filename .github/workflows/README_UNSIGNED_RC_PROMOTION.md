@@ -105,7 +105,7 @@ RPMs are placed under `x86_64/` so that the signing CI and yum/dnf clients can u
 - Downloads the one matching `.tar.gz` and its `.sha256` sidecar if present — fails if zero or more than one tarball matches
 - Generates a SHA-256 sidecar if the source did not include one. `sha256sum` is run with `cd "${STAGING}" && sha256sum "${basename}"` so the path recorded in the sidecar file is the bare filename (e.g. `abc123  amdrocm7-rvs-….tar.gz`), not the runner temp path (`/tmp/…/amdrocm7-rvs-….tar.gz`). This matches what `sha256sum -c` expects on the signing host.
 - Saves the SHA-256 as a step output (`tar_fname`, `tar_sha256`)
-- Copies both `.tar.gz` and `.tar.gz.sha256` to `release/unsigned/tarball/`
+- Copies both `.tar.gz` and `.tar.gz.sha256` to `release/unsigned/tarball/` and to `release/signed/tarball/`
 
 ### 8. Publish `release/unsigned/latest.json`
 
@@ -115,6 +115,7 @@ Assembles and uploads `release/unsigned/latest.json`. All three formats are requ
 - Takes RPM filename and SHA-256 directly from the `promote-rpm` step output — no re-download
 - Takes TAR filename and SHA-256 directly from the `promote-tar` step output — no re-download
 - Writes and uploads `release/unsigned/latest.json`, matching the schema that `rvs-unsigned-publish-latest.sh` validates (`rpm.sha256`, `tar.sha256`, `tar.sha256_sidecar_key` are all present)
+- Also writes `release/signed/latest.json`. Its tarball keys point at `release/signed/tarball/`. Its deb, rpm, Packages, and `primary.xml.gz` keys point at `release/signed/packages/`, which the signing job fills later. rpm/deb bytes and repo metadata stay on `release/unsigned/` until then. [publish-signed-public.yml](./publish-signed-public.yml) copies the release set to the public RC extras-rvs bucket only after every key in that file exists.
 
 The `latest.json` schema:
 
@@ -175,7 +176,7 @@ All of DEB, RPM, and TAR must have exactly one matching package. Any of the foll
 
 | Secret | Purpose |
 |--------|---------|
-| `AWS_ROLE_ARN` | IAM role ARN to assume for S3 access via OIDC. The role must have `s3:PutObject`, `s3:GetObject`, and `s3:ListBucket` on `release/unsigned/*` and `release/rvs/*`. `s3:DeleteObject` is **not** required. |
+| `AWS_ROLE_ARN` | IAM role ARN to assume for S3 access via OIDC. The role must have `s3:PutObject`, `s3:GetObject`, and `s3:ListBucket` on `release/unsigned/*`, `release/signed/*`, and `release/rvs/*`. `s3:DeleteObject` is **not** required. |
 
 **Repository variable** (Settings → Secrets and variables → Actions → Variables):
 

@@ -1,0 +1,91 @@
+name: Publish signed packages to public repos
+
+# Every two hours, copy a complete nightly/signed or release/signed set from the
+# RVS bucket to the public extras-rvs buckets. A manual run with run_number
+# copies that build from the public RC bucket to stable-staging.
+# The public role is secrets.AWS_PUB_ARN and must contain the <stream> token.
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+    inputs:
+      run_number:
+        description: >
+          GitHub Actions run number to copy from the public RC bucket to
+          stable-staging. Leave empty to publish complete nightly and release
+          signed sets.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-signed-streams:
+    name: Publish signed nightly and release
+    if: github.event_name == 'schedule' || github.event.inputs.run_number == ''
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install AWS CLI
+        run: |
+          if command -v aws >/dev/null 2>&1; then
+            aws --version
+            exit 0
+          fi
+          python3 -m pip install --user --break-system-packages awscli \
+            || python3 -m pip install --user awscli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          aws --version
+
+      - name: Publish complete signed sets
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          chmod +x .github/scripts/rvs-publish-signed-public.sh
+          sh .github/scripts/rvs-publish-signed-public.sh publish
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          AWS_PUB_ARN: ${{ secrets.AWS_PUB_ARN }}
+          AWS_DEFAULT_REGION: us-east-1
+
+  promote-rc-to-stable-staging:
+    name: Copy public RC build to stable-staging
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_number != ''
+    runs-on: ${{ vars.RUNNER_LABEL_UTILITY || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install AWS CLI
+        run: |
+          if command -v aws >/dev/null 2>&1; then
+            aws --version
+            exit 0
+          fi
+          python3 -m pip install --user --break-system-packages awscli \
+            || python3 -m pip install --user awscli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          aws --version
+
+      - name: Copy the selected build
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          chmod +x .github/scripts/rvs-publish-signed-public.sh
+          sh .github/scripts/rvs-publish-signed-public.sh promote-stable
+        env:
+          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          AWS_PUB_ARN: ${{ secrets.AWS_PUB_ARN }}
+          RUN_NUMBER: ${{ github.event.inputs.run_number }}
+          AWS_DEFAULT_REGION: us-east-1

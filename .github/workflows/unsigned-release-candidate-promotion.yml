@@ -2,7 +2,9 @@ name: Unsigned Release Candidate Promotion
 
 # Copies packages from release/rvs/{deb,rpm,tar}/ to release/unsigned/packages/{deb,rpm}/
 # and release/unsigned/tarball/, mirroring the layout and repodata structure used by
-# nightly/unsigned/.
+# nightly/unsigned/. The tarball, its sha256 sidecar, and release/signed/latest.json
+# are also copied to release/signed/ for the public publish workflow. rpm/deb metadata
+# stays on release/unsigned/ until the signing job copies it to release/signed/.
 #
 # Release packages are named with the GitHub run number of the build job as the
 # release segment, e.g.:
@@ -361,8 +363,17 @@ jobs:
             --include "amdrocm*-rvs*.tar.gz" \
             --include "amdrocm*-rvs*.tar.gz.sha256" \
             --no-progress
-          echo "=== TAR packages updated at s3://${BUCKET}/${DST_TAR}/ ==="
+          SIGNED_TAR="release/signed/tarball"
+          echo "Copying TARs to s3://${BUCKET}/${SIGNED_TAR}/ ..."
+          aws s3 cp "${STAGING}/" "s3://${BUCKET}/${SIGNED_TAR}/" \
+            --recursive \
+            --exclude "*" \
+            --include "amdrocm*-rvs*.tar.gz" \
+            --include "amdrocm*-rvs*.tar.gz.sha256" \
+            --no-progress
+          echo "=== TAR packages updated at s3://${BUCKET}/${DST_TAR}/ and s3://${BUCKET}/${SIGNED_TAR}/ ==="
           aws s3 ls "s3://${BUCKET}/${DST_TAR}/" --human-readable
+          aws s3 ls "s3://${BUCKET}/${SIGNED_TAR}/" --human-readable
 
       # ── Publish release/unsigned/latest.json ─────────────────────────────────
       - name: Publish release/unsigned/latest.json
@@ -469,11 +480,62 @@ jobs:
           out = workdir / "latest.json"
           out.write_text(json.dumps(latest, indent=2) + "\n", encoding="utf-8")
           print(out.read_text(encoding="utf-8"))
+
+          def _rewrite(key, old, new):
+              if isinstance(key, str) and key.startswith(old):
+                  return new + key[len(old):]
+              return key
+
+          signed = json.loads(json.dumps(latest))
+          deb_meta = signed.get("deb") or {}
+          if deb_meta.get("deb_prefix"):
+              deb_meta["deb_prefix"] = _rewrite(
+                  deb_meta["deb_prefix"],
+                  "release/unsigned/packages/deb",
+                  "release/signed/packages/deb",
+              )
+          for pkg in deb_meta.get("packages") or []:
+              if pkg.get("s3_key"):
+                  pkg["s3_key"] = _rewrite(
+                      pkg["s3_key"],
+                      "release/unsigned/packages/deb",
+                      "release/signed/packages/deb",
+                  )
+          rpm_meta = signed.get("rpm") or {}
+          if rpm_meta.get("s3_key"):
+              rpm_meta["s3_key"] = _rewrite(
+                  rpm_meta["s3_key"],
+                  "release/unsigned/packages/rpm",
+                  "release/signed/packages/rpm",
+              )
+          tar_meta = signed.get("tar") or {}
+          if tar_meta.get("s3_key"):
+              tar_meta["s3_key"] = _rewrite(
+                  tar_meta["s3_key"],
+                  "release/unsigned/tarball",
+                  "release/signed/tarball",
+              )
+          if tar_meta.get("sha256_sidecar_key"):
+              tar_meta["sha256_sidecar_key"] = _rewrite(
+                  tar_meta["sha256_sidecar_key"],
+                  "release/unsigned/tarball",
+                  "release/signed/tarball",
+              )
+          signed["metadata"] = [
+              {"s3_key": "release/signed/packages/deb/dists/stable/main/binary-amd64/Packages"},
+              {"s3_key": "release/signed/packages/rpm/x86_64/repodata/primary.xml.gz"},
+          ]
+          signed_out = workdir / "signed-latest.json"
+          signed_out.write_text(json.dumps(signed, indent=2) + "\n", encoding="utf-8")
+          print(signed_out.read_text(encoding="utf-8"))
           PY
 
           aws s3 cp "${WORKDIR}/latest.json" \
             "s3://${BUCKET}/release/unsigned/latest.json" --no-progress
           echo "Published s3://${BUCKET}/release/unsigned/latest.json"
+          aws s3 cp "${WORKDIR}/signed-latest.json" \
+            "s3://${BUCKET}/release/signed/latest.json" --no-progress
+          echo "Published s3://${BUCKET}/release/signed/latest.json"
         env:
           RUN_NUM: ${{ github.event.inputs.run_number }}
           RPM_FNAME: ${{ steps.promote-rpm.outputs.rpm_fname }}
