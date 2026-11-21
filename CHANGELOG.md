@@ -26,6 +26,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Changed
 - Update fp32 and fp64 targets for MI300X, MI300X-HF and MI325X.
+- Updated TransferBench to v1.71.02. The bundled CLI is built for gfx1250-strict when the compiler supports that target.
 
 ### Removed
 

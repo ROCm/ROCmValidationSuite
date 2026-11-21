@@ -28,12 +28,16 @@
 # --gcc-toolchain=... that RVS's build script sets to make amdclang++ pick up
 # a modern libstdc++ (required for C++20 <barrier> in TransferBench).
 #
-# TRANSFERBENCH_GPU_TARGETS defaults to TransferBench build_packages_local.sh
-# DEFAULT_GPU_TARGETS. Override with -DTRANSFERBENCH_GPU_TARGETS="..." or set
-# GPU_TARGETS / TRANSFERBENCH_GPU_TARGETS in build_packages_local.sh. Set to
-# empty to take TransferBench's own CMake default. GPU_TARGETS is written into
-# the -C initial cache file (not -D on CMAKE_ARGS) because CMake list(APPEND)
-# splits semicolon-separated strings.
+# TRANSFERBENCH_GPU_TARGETS defaults to the list below (kept in sync with
+# build_packages_local.sh DEFAULT_GPU_TARGETS). Override with
+# -DTRANSFERBENCH_GPU_TARGETS="..." or set GPU_TARGETS /
+# TRANSFERBENCH_GPU_TARGETS in build_packages_local.sh. Set to empty to take
+# TransferBench's own CMake default. GPU_TARGETS is written into the -C
+# initial cache file (not -D on CMAKE_ARGS) because CMake list(APPEND) splits
+# semicolon-separated strings.
+#
+# gfx1250-strict is not part of that static list. It is appended when the
+# compiler TransferBench will use accepts --offload-arch=gfx1250-strict.
 #
 # Feature flags match upstream TransferBench build_packages_local.sh (NIC/MPI/
 # DMA-BUF off, multi-arch not local-GPU-only). Upstream passes -DDISABLE_DMABUF
@@ -50,10 +54,50 @@ endif()
 
 set(TRANSFERBENCH_BUILD_DIR "${CMAKE_BINARY_DIR}/TransferBench-cli-build")
 
-# Source of truth: TransferBench build_packages_local.sh DEFAULT_GPU_TARGETS
+# Keep in sync with build_packages_local.sh DEFAULT_GPU_TARGETS.
+# gfx1250-strict is added below if the compiler supports that arch.
 set(TRANSFERBENCH_GPU_TARGETS
     "gfx906;gfx908;gfx90a;gfx942;gfx950;gfx1030;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201;gfx1250"
     CACHE STRING "GPU targets to build TransferBench for")
+
+# Same compiler selection as TransferBench's pre-project() logic: $CXX, then
+# amdclang++ / clang++ under ROCM_PATH. The parent compiler is not the one
+# that compiles the CLI.
+set(_tb_cxx "")
+if(DEFINED ENV{CXX} AND NOT "$ENV{CXX}" STREQUAL "")
+  set(_tb_cxx "$ENV{CXX}")
+elseif(EXISTS "${ROCM_PATH}/bin/amdclang++")
+  set(_tb_cxx "${ROCM_PATH}/bin/amdclang++")
+elseif(EXISTS "${ROCM_PATH}/llvm/bin/amdclang++")
+  set(_tb_cxx "${ROCM_PATH}/llvm/bin/amdclang++")
+elseif(EXISTS "${ROCM_PATH}/llvm/bin/clang++")
+  set(_tb_cxx "${ROCM_PATH}/llvm/bin/clang++")
+endif()
+
+set(_tb_gfx1250_strict FALSE)
+if(_tb_cxx)
+  set(_tb_probe_obj "${CMAKE_BINARY_DIR}/CMakeFiles/tb-gfx1250-strict-probe.o")
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E echo "int main(){return 0;}"
+    COMMAND ${_tb_cxx} -x hip --offload-arch=gfx1250-strict -c - -o ${_tb_probe_obj}
+    RESULT_VARIABLE _tb_probe_rc
+    OUTPUT_QUIET
+    ERROR_QUIET
+  )
+  if(EXISTS "${_tb_probe_obj}")
+    file(REMOVE "${_tb_probe_obj}")
+  endif()
+  if(_tb_probe_rc EQUAL 0)
+    set(_tb_gfx1250_strict TRUE)
+  endif()
+endif()
+
+if(_tb_gfx1250_strict)
+  set(TRANSFERBENCH_GPU_TARGETS "${TRANSFERBENCH_GPU_TARGETS};gfx1250-strict")
+  message(STATUS "TransferBench: ${_tb_cxx} accepts gfx1250-strict; adding it to GPU_TARGETS")
+else()
+  message(STATUS "TransferBench: omitting gfx1250-strict (compiler does not accept it)")
+endif()
 
 set(_tb_cmake_args
   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
