@@ -853,6 +853,22 @@ else()
   message(STATUS "hipcc not found at ${_rvs_hipcc}; omitting --offload-arch=gfx1250-strict")
 endif()
 
+# Compile the per-arch device code of each source in parallel. Jobs beyond the
+# arch count stay idle, and this multiplies with make -j, so cap it at both the
+# arch count and the logical core count.
+string(REGEX MATCHALL "--offload-arch=" _rvs_offload_archs "${HCC_CXX_FLAGS}")
+list(LENGTH _rvs_offload_archs _rvs_num_archs)
+cmake_host_system_information(RESULT _rvs_num_cores QUERY NUMBER_OF_LOGICAL_CORES)
+if(_rvs_num_cores LESS _rvs_num_archs)
+  set(_rvs_parallel_jobs ${_rvs_num_cores})
+else()
+  set(_rvs_parallel_jobs ${_rvs_num_archs})
+endif()
+if(_rvs_parallel_jobs GREATER 1)
+  set(HCC_CXX_FLAGS "${HCC_CXX_FLAGS} -parallel-jobs=${_rvs_parallel_jobs}")
+  message(STATUS "Compiling HIP device code with -parallel-jobs=${_rvs_parallel_jobs}")
+endif()
+
 add_subdirectory(rvslib)
 add_subdirectory(rvs)
 add_subdirectory(gpup.so)
