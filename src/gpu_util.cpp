@@ -220,22 +220,31 @@ vector<amdsmi_processor_handle>
 get_smi_processors(){
   std::vector<amdsmi_processor_handle> proc_handles;
   uint32_t socket_num = 0;
-  auto ret = amdsmi_get_socket_handles(&socket_num, nullptr);
+  if (amdsmi_get_socket_handles(&socket_num, nullptr) != AMDSMI_STATUS_SUCCESS ||
+      socket_num == 0) {
+    return proc_handles;
+  }
   std::vector<amdsmi_socket_handle> sockets(socket_num);
-  ret = amdsmi_get_socket_handles(&socket_num, &sockets[0]);
-  for(auto socket : sockets){
+  if (amdsmi_get_socket_handles(&socket_num, sockets.data()) != AMDSMI_STATUS_SUCCESS) {
+    return proc_handles;
+  }
+  sockets.resize(socket_num);
+  for (auto socket : sockets) {
     uint32_t dev_cnt = 0;
-    ret = amdsmi_get_processor_handles(socket, &dev_cnt, nullptr);
+    if (amdsmi_get_processor_handles(socket, &dev_cnt, nullptr) != AMDSMI_STATUS_SUCCESS ||
+        dev_cnt == 0) {
+      continue;
+    }
     std::vector<amdsmi_processor_handle> dev_handles(dev_cnt);
-    ret = amdsmi_get_processor_handles(socket,
-        &dev_cnt, &dev_handles[0]);
-    if (ret == AMDSMI_STATUS_SUCCESS){
-      for (auto dev : dev_handles){
-        processor_type_t processor_type;
-	amdsmi_get_processor_type(dev, &processor_type);
-	if (processor_type == AMDSMI_PROCESSOR_TYPE_AMD_GPU) {
-          proc_handles.push_back(dev);
-        }
+    if (amdsmi_get_processor_handles(socket, &dev_cnt, dev_handles.data()) != AMDSMI_STATUS_SUCCESS) {
+      continue;
+    }
+    dev_handles.resize(dev_cnt);
+    for (auto dev : dev_handles) {
+      processor_type_t processor_type;
+      if (amdsmi_get_processor_type(dev, &processor_type) == AMDSMI_STATUS_SUCCESS &&
+          processor_type == AMDSMI_PROCESSOR_TYPE_AMD_GPU) {
+        proc_handles.push_back(dev);
       }
     }
   }
