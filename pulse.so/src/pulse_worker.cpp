@@ -483,7 +483,10 @@ void PulseWorker::calibrate_wall_clock(void) {
   }
 }
 
-PulseWorker::SyncStatus PulseWorker::host_rendezvous(void) {
+PulseWorker::SyncStatus PulseWorker::host_rendezvous(bool vote_leave,
+    bool* leave) {
+  if (leave)
+    *leave = vote_leave;
   if (!pulse_sync || num_gpus < 2) {
     if (abort_flag().load(std::memory_order_acquire))
       return SyncStatus::kAbort;
@@ -492,8 +495,19 @@ PulseWorker::SyncStatus PulseWorker::host_rendezvous(void) {
 
   const int my_epoch = sync_epoch;
   bool hit_deadline = false;
+  // The vote is visible to whoever completes this round, because it is
+  // published before this worker's arrival.
+  if (vote_leave)
+    pulse_sync->leave_votes.store(1, std::memory_order_release);
   int arrived = pulse_sync->arrival.fetch_add(1, std::memory_order_acq_rel) + 1;
   if (arrived >= pulse_sync->num_gpus) {
+    // Last to arrive fixes the answer for this round. Slot (epoch & 1) is
+    // not rewritten until every worker has arrived at the round after next,
+    // which is after each of them has read it.
+    const bool any_vote =
+        pulse_sync->leave_votes.exchange(0, std::memory_order_acq_rel) != 0;
+    pulse_sync->leave_decision[my_epoch & 1].store(any_vote,
+        std::memory_order_release);
     pulse_sync->arrival.store(0, std::memory_order_release);
     pulse_sync->epoch.fetch_add(1, std::memory_order_acq_rel);
   } else {
@@ -513,6 +527,12 @@ PulseWorker::SyncStatus PulseWorker::host_rendezvous(void) {
     }
   }
   sync_epoch = pulse_sync->epoch.load(std::memory_order_acquire);
+  if (leave) {
+    // A timed-out round has no agreed answer. It also sets abort, so every
+    // worker leaves anyway.
+    *leave = hit_deadline ||
+        pulse_sync->leave_decision[my_epoch & 1].load(std::memory_order_acquire);
+  }
   if (hit_deadline)
     return SyncStatus::kTimeout;
   if (pulse_sync->abort_flag.load(std::memory_order_acquire))
@@ -855,17 +875,12 @@ bool PulseWorker::do_pulse_stress(void) {
         std::to_string(pattern_duration_ms), rvs::loginfo);
 
     while (!rvs::lp::Stopping()) {
+      // Each worker votes from its own clock. The rendezvous returns the same
+      // answer to all of them, so they leave this pattern on the same round.
       const bool time_up = steady_ms_since(pattern_start) >=
           static_cast<int64_t>(pattern_duration_ms);
-      if ((time_up || stop_patterns) && pulse_sync)
-        pulse_sync->pattern_leave.store(true, std::memory_order_release);
-      if ((time_up || stop_patterns) && !pulse_sync)
-        break;
-
-      SyncStatus sr = host_rendezvous();
-      bool leave = time_up || stop_patterns ||
-          (pulse_sync &&
-           pulse_sync->pattern_leave.load(std::memory_order_acquire));
+      bool leave = false;
+      SyncStatus sr = host_rendezvous(time_up || stop_patterns, &leave);
       if (sr == SyncStatus::kTimeout) {
         log_msg("[" + action_name + "] " + MODULE_NAME + " " +
             std::to_string(gpu_id) + " host rendezvous timed out",
@@ -879,17 +894,8 @@ bool PulseWorker::do_pulse_stress(void) {
         stop_patterns = true;
         leave = true;
       }
-      if (leave) {
-        // A completed rendezvous means every worker saw pattern_leave.
-        // Clear it together. A timeout or abort means a peer may already
-        // have left, so a second wait would not pair with anyone.
-        if (sr == SyncStatus::kGo && pulse_sync) {
-          if (worker_index == 0)
-            pulse_sync->pattern_leave.store(false, std::memory_order_release);
-          (void)host_rendezvous();
-        }
+      if (leave)
         break;
-      }
 
       if (!gpu_barrier_sync(pattern_pass)) {
         stop_patterns = true;

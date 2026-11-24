@@ -41,9 +41,11 @@ struct PulseSync {
   std::atomic<int> arrival{0};
   std::atomic<int> epoch{0};
   std::atomic<bool> abort_flag{false};
-  // Set before a rendezvous when any worker has reached the pattern deadline,
-  // so every worker leaves that pattern on the same barrier.
-  std::atomic<bool> pattern_leave{false};
+  // Leave vote for the current rendezvous. The worker that completes the
+  // rendezvous folds it into leave_decision[epoch & 1], so every worker reads
+  // the same answer for that round and nothing is cleared after the wake-up.
+  std::atomic<int> leave_votes{0};
+  std::atomic<bool> leave_decision[2]{};
   // Barrier kernels still running. The action keeps the counters if this is
   // non-zero when the workers return.
   std::atomic<int> barrier_inflight{0};

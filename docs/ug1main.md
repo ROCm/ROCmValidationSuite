@@ -2440,14 +2440,14 @@ Keys below are in addition to common keys (`name`, `module`, `device`, `duration
 <tr><td>ldd</td><td>Integer</td><td>Leading dimension offset D. Default <b>0</b>.</td></tr>
 <tr><td>matrix_init</td><td>String</td><td>Host matrix initialization (e.g. <b>default</b>, <b>hiprand</b>). Default <b>default</b>.</td></tr>
 <tr><td>workload_iterations</td><td>Integer</td><td>GEMM calls per inner batch in the high phase before re-checking time and power. Default <b>128</b>.</td></tr>
-<tr><td>sample_interval</td><td>Integer</td><td>Power and temperature sample interval in milliseconds. Values below <b>50</b> are raised to <b>50</b>. Default <b>100</b>.</td></tr>
+<tr><td>sample_interval</td><td>Integer</td><td>Power and temperature sample interval in milliseconds. Values below <b>50</b> are raised to <b>50</b>. Default <b>100</b>. Each sample is one AMD SMI read, so the values are only as fresh as the SMI power sensor. If the sensor updates more slowly than this interval, consecutive samples repeat the same value, which limits <code>min_power_delta_w</code> on the fast patterns.</td></tr>
 <tr><td>tolerance</td><td>Float</td><td>GEMM verification error limit used with <b>verify_mode</b>. Default <b>10.0</b>.</td></tr>
 <tr><td>verify_mode</td><td>String</td><td><b>diff</b> (default), <b>crc</b>, <b>both</b>, or <b>none</b>. Checked at the end of each pattern.</td></tr>
 <tr><td>halt_on_error</td><td>Bool</td><td>If true, stop the current pattern on the first GEMM, HIP, or thermal error. Default <b>false</b>, which finishes the pattern and keeps the failure.</td></tr>
 <tr><td>hot_calls</td><td>Integer</td><td>BLAS warmup parameter forwarded to <b>rvs_blas</b>. Default <b>1</b>.</td></tr>
 <tr><td>gpu_sync_wait</td><td>Integer</td><td>Milliseconds allowed for one host rendezvous, one GPU barrier, and one GEMM completion wait. Default <b>10000</b>. Must be positive.</td></tr>
 <tr><td>max_temp_c</td><td>Float</td><td>Temperature ceiling in degrees Celsius, sampled in both phases. Default <b>105</b>. <b>0</b> disables the check.</td></tr>
-<tr><td>min_power_delta_w</td><td>Float</td><td>Minimum average high-minus-low power in watts. <b>0</b> (default) disables the check.</td></tr>
+<tr><td>min_power_delta_w</td><td>Float</td><td>Minimum average high-minus-low power in watts. <b>0</b> (default) disables the check. Measure the swing on the target GPU before setting a limit; the 25 ms phases of <code>square_fast</code> are shorter than most power sensor update periods.</td></tr>
 <tr><td>ecc_check</td><td>Bool</td><td>Fail if the uncorrectable ECC count rises during a pattern. Default <b>true</b>.</td></tr>
 </table>
 </div>

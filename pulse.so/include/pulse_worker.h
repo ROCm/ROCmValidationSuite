@@ -209,7 +209,9 @@ class PulseWorker : public rvs::ThreadBase {
 
     enum class SyncStatus { kGo, kAbort, kTimeout };
 
-    SyncStatus host_rendezvous(void);
+    // vote_leave: this worker wants the pattern to end. On return *leave is
+    // true for every worker if any of them voted, as decided by this round.
+    SyncStatus host_rendezvous(bool vote_leave = false, bool* leave = nullptr);
     bool gpu_barrier_sync(bool& test_passed);
     bool wait_gemm(bool& test_passed);
     bool wait_event(hipEvent_t ev, bool& test_passed, bool gemm_wait);
