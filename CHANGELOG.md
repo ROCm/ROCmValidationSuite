@@ -6,6 +6,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 
 ### Added
 
+- Pulse test supported with 6 patterns.
 - Added int8 GST config for MI3XX products.
 - Added ERROR and SKIPPED action results alongside PASS and FAIL.
 - Publish complete signed nightly and release packages to the public repos.
@@ -56,7 +57,7 @@ Full documentation for RVS is available at [ROCmValidationSuite.Readme](https://
 ### Added
 
 - Bundled TransferBench as a git submodule under `external/TransferBench` and ship the TransferBench CLI in the same DEB/RPM as `rvs`. The CLI is provided for compatibility with existing TransferBench-based workflows; new work should use RVS (via the `pebb`/`pbqt` modules) or the TransferBench API directly. Opt out of the CLI build with `-DBUILD_TRANSFERBENCH_CLI=OFF`.
-- Added the pulse stressor module (`pulse.so`) for GPU power pulse stress testing. **(Beta — not intended for production use.)**
+- Added the pulse stressor module (`pulse.so`) for GPU power pulse stress testing.
 - Added support for MI350X QPX mode.
 - Added support for the MXFP8 data type.
 - Added iterations-based GST hot run support.
