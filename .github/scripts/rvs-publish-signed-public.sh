@@ -2,7 +2,21 @@
 # Publish a complete signed RVS set to the public extras-rvs buckets, or copy
 # one RC build to stable-staging. The public role comes only from AWS_PUB_ARN,
 # which must contain the literal token <stream>.
+#
+# Signed content rule: this script only READS the signed prefix
+# (<stream>/signed/...) and copies its files unchanged to the public buckets with
+# "aws s3 cp" and "aws s3 sync". It never edits, recompresses, regenerates or
+# re-signs a file. It does not verify content: it assumes the signed prefix is the
+# latest complete set and is not modified while the publisher runs. What it does
+# check, by name only, is that the public files and the public index match the
+# signed ones, so apt/yum indexing is never broken for users.
+#
 # Usage: rvs-publish-signed-public.sh publish|promote-stable
+#   (internal) publish-stream <signed-prefix> <stream>
+#
+# "publish" runs each stream in its own child process (publish-stream), so errexit
+# (set -e) is active inside the stream and a failed step cannot continue with the
+# credentials of a previous role.
 set -eu
 
 COMPONENT="v5/rocm/extras/rvs"
@@ -11,6 +25,16 @@ INTERNAL_ROLE="${AWS_ROLE_ARN:-}"
 PUB_ROLE_TEMPLATE="${AWS_PUB_ARN:-}"
 RUN_NUMBER="${RUN_NUMBER:-}"
 CMD="${1:-}"
+
+DEB_INDEX_REL="packages/deb/dists/stable/main/binary-amd64/Packages"
+RPM_INDEX_REL="packages/rpm/x86_64/repodata/primary.xml.gz"
+# Top-level index and signature files. They are uploaded last so a client never
+# sees an index that points at files that are not public yet.
+INDEX_LAST="packages/deb/dists/stable/Release
+packages/deb/dists/stable/InRelease
+packages/deb/dists/stable/Release.gpg
+packages/rpm/x86_64/repodata/repomd.xml
+packages/rpm/x86_64/repodata/repomd.xml.asc"
 
 case "$PUB_ROLE_TEMPLATE" in
   *"<stream>"*) ;;
@@ -24,6 +48,247 @@ if [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQU
   exit 1
 fi
 
+TMP_ROOT=$(mktemp -d)
+trap 'rm -rf "$TMP_ROOT"' EXIT
+
+# Python helper: strict key validation, manifest parsing and index parsing.
+# It only reads its inputs; it never modifies a signed file.
+cat > "${TMP_ROOT}/helper.py" <<'PY'
+import gzip
+import json
+import posixpath
+import sys
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+REQUIRED_METADATA = [
+    "packages/deb/dists/stable/Release",
+    "packages/deb/dists/stable/InRelease",
+    "packages/deb/dists/stable/Release.gpg",
+    "packages/deb/dists/stable/main/binary-amd64/Packages",
+    "packages/deb/dists/stable/main/binary-amd64/Packages.gz",
+    "packages/rpm/x86_64/repodata/repomd.xml",
+    "packages/rpm/x86_64/repodata/repomd.xml.asc",
+    "packages/rpm/x86_64/repodata/primary.xml.gz",
+    "packages/rpm/x86_64/repodata/filelists.xml.gz",
+    "packages/rpm/x86_64/repodata/other.xml.gz",
+]
+DEB_INDEX = "packages/deb/dists/stable/main/binary-amd64/Packages"
+RPM_INDEX = "packages/rpm/x86_64/repodata/primary.xml.gz"
+
+
+def fail(message):
+    print(f"::error::{message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def valid_key(key, prefixes):
+    """A key is valid only if it is already normalized, has no ., .. or empty
+    segment, no backslash, no control character and no leading slash, and starts
+    with one of the allowed prefixes."""
+    if not isinstance(key, str) or not key:
+        return False
+    if key.startswith("/") or "\\" in key or key != key.strip():
+        return False
+    if any(ord(ch) < 32 for ch in key):
+        return False
+    if any(part in ("", ".", "..") for part in key.split("/")):
+        return False
+    if posixpath.normpath(key) != key:
+        return False
+    return any(key.startswith(prefix) for prefix in prefixes)
+
+
+def text(value):
+    return value if isinstance(value, str) and value else None
+
+
+def cmd_collect(latest_path, signed_prefix):
+    doc = json.loads(Path(latest_path).read_text(encoding="utf-8"))
+    signed_prefix = signed_prefix.rstrip("/")
+    if not signed_prefix.endswith("/signed"):
+        fail(f"Unexpected signed prefix {signed_prefix}")
+    unsigned_prefix = signed_prefix[: -len("signed")] + "unsigned"
+    allowed = (f"{signed_prefix}/packages/", f"{signed_prefix}/tarball/")
+    keys = []
+    bad = []
+
+    def add(value):
+        value = text(value)
+        if value is None:
+            return
+        if value.startswith(unsigned_prefix + "/"):
+            value = signed_prefix + value[len(unsigned_prefix):]
+        if not valid_key(value, allowed):
+            bad.append(value)
+            return
+        if value not in keys:
+            keys.append(value)
+
+    deb_packages = [
+        text(pkg.get("s3_key"))
+        for pkg in ((doc.get("deb") or {}).get("packages") or [])
+        if isinstance(pkg, dict)
+    ]
+    deb_packages = [key for key in deb_packages if key]
+    rpm_key = text((doc.get("rpm") or {}).get("s3_key"))
+    tar = doc.get("tar") or {}
+    tar_key = text(tar.get("s3_key"))
+    sidecar_key = text(tar.get("sha256_sidecar_key"))
+
+    missing = []
+    if not deb_packages:
+        missing.append("deb.packages[].s3_key")
+    if not rpm_key:
+        missing.append("rpm.s3_key")
+    if not tar_key:
+        missing.append("tar.s3_key")
+    if not sidecar_key:
+        missing.append("tar.sha256_sidecar_key")
+    if missing:
+        fail("latest.json is missing required manifest key(s): " + ", ".join(missing))
+
+    for key in deb_packages:
+        add(key)
+    add(rpm_key)
+    add(tar_key)
+    add(sidecar_key)
+    for item in doc.get("metadata") or []:
+        add(item.get("s3_key") if isinstance(item, dict) else item)
+    if bad:
+        for value in bad:
+            print(
+                f"::error::{value!r} is not a valid key under {signed_prefix}/packages/ or {signed_prefix}/tarball/",
+                file=sys.stderr,
+            )
+        sys.exit(1)
+
+    for rel in REQUIRED_METADATA:
+        add(f"{signed_prefix}/{rel}")
+    for key in keys:
+        print(key)
+
+
+def index_key(base, value):
+    value = value.strip()
+    if not value or value.startswith("/") or "\\" in value:
+        fail(f"Unsafe package path in index: {value!r}")
+    norm = posixpath.normpath(value)
+    if norm in (".", "..") or norm.startswith("../"):
+        fail(f"Unsafe package path in index: {value!r}")
+    key = f"{base}/{norm}"
+    if not valid_key(key, (base + "/",)):
+        fail(f"Unsafe package path in index: {value!r}")
+    return key
+
+
+def cmd_refs(index_dir):
+    """Print the package paths (relative to the signed or public root) that the
+    deb Packages and rpm primary.xml.gz in index_dir reference."""
+    root_dir = Path(index_dir)
+    packages_path = root_dir / DEB_INDEX
+    try:
+        packages_text = packages_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        fail(f"Cannot read {packages_path}: {exc}")
+    refs = set()
+    deb_found = 0
+    for line in packages_text.splitlines():
+        if line.startswith("Filename:"):
+            refs.add(index_key("packages/deb", line.split(":", 1)[1]))
+            deb_found += 1
+    if not deb_found:
+        fail("Packages lists no Filename entries")
+
+    primary_path = root_dir / RPM_INDEX
+    try:
+        with gzip.open(primary_path, "rb") as handle:
+            xml_root = ET.parse(handle).getroot()
+    except (OSError, EOFError, ValueError, ET.ParseError) as exc:
+        fail(f"Cannot parse {primary_path}: {exc}")
+    rpm_found = 0
+    for element in xml_root.iter():
+        if element.tag.split("}")[-1] == "location":
+            href = element.get("href")
+            if href:
+                refs.add(index_key("packages/rpm/x86_64", href))
+                rpm_found += 1
+    if not rpm_found:
+        fail("primary.xml.gz lists no package locations")
+    for key in sorted(refs):
+        print(key)
+
+
+def cmd_listkeys(list_prefix, base, mode):
+    """Read an aws s3api list-objects-v2 'Contents[].Key' JSON (one or more
+    documents) from stdin and print the keys relative to base. strict mode fails
+    on an invalid key; lenient mode skips it with a warning."""
+    data = sys.stdin.read().strip()
+    if not data:
+        fail("Empty bucket listing (the list call failed)")
+    decoder = json.JSONDecoder()
+    pos = 0
+    keys = []
+    while pos < len(data):
+        while pos < len(data) and data[pos].isspace():
+            pos += 1
+        if pos >= len(data):
+            break
+        try:
+            obj, pos = decoder.raw_decode(data, pos)
+        except ValueError as exc:
+            fail(f"Cannot parse bucket listing: {exc}")
+        if obj is None:
+            continue
+        if not isinstance(obj, list):
+            fail("Unexpected bucket listing format")
+        keys.extend(obj)
+    base = base.rstrip("/")
+    for key in keys:
+        if isinstance(key, str) and key.endswith("/"):
+            continue
+        if not (valid_key(key, (list_prefix,)) and key.startswith(base + "/")):
+            if mode == "strict":
+                fail(f"Invalid key in bucket listing: {key!r}")
+            print(f"::warning::Ignoring unexpected key in bucket listing: {key!r}", file=sys.stderr)
+            continue
+        print(key[len(base) + 1:])
+
+
+def cmd_validate(required_prefix):
+    for line in sys.stdin.read().splitlines():
+        key = line.strip()
+        if not key:
+            continue
+        if not valid_key(key, (required_prefix,)):
+            fail(f"Invalid key {key!r} (must be normalized and under {required_prefix})")
+        print(key)
+
+
+def main():
+    args = sys.argv[1:]
+    if not args:
+        fail("helper: missing command")
+    command, rest = args[0], args[1:]
+    if command == "collect" and len(rest) == 2:
+        cmd_collect(*rest)
+    elif command == "refs" and len(rest) == 1:
+        cmd_refs(*rest)
+    elif command == "listkeys" and len(rest) == 3:
+        cmd_listkeys(*rest)
+    elif command == "validate" and len(rest) == 1:
+        cmd_validate(*rest)
+    else:
+        fail(f"helper: bad usage: {' '.join(args)}")
+
+
+main()
+PY
+
+pyhelper() {
+  python3 "${TMP_ROOT}/helper.py" "$@"
+}
+
 public_bucket() {
   echo "therock-repo-amd-${1}-extras-rvs"
 }
@@ -32,124 +297,289 @@ public_role() {
   printf '%s\n' "$PUB_ROLE_TEMPLATE" | sed "s/<stream>/${1}/g"
 }
 
+# Assume a role through GitHub OIDC. Any previous credentials are removed first
+# and every step is checked, so a failure never leaves a previous role active.
 assume_role() {
   role_arn="$1"
   session="$2"
-  token=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-    "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" \
-    | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
-  creds=$(aws sts assume-role-with-web-identity \
+  unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+  if ! token_json=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+    "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com"); then
+    echo "::error::Could not request the GitHub OIDC token for ${session}." >&2
+    return 1
+  fi
+  if ! token=$(printf '%s' "$token_json" | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])"); then
+    echo "::error::Could not read the GitHub OIDC token for ${session}." >&2
+    return 1
+  fi
+  if ! creds=$(aws sts assume-role-with-web-identity \
     --role-arn "$role_arn" \
     --role-session-name "$session" \
     --web-identity-token "$token" \
-    --query 'Credentials' --output json)
-  AWS_ACCESS_KEY_ID=$(printf '%s' "$creds" | python3 -c "import sys,json; print(json.load(sys.stdin)['AccessKeyId'])")
-  AWS_SECRET_ACCESS_KEY=$(printf '%s' "$creds" | python3 -c "import sys,json; print(json.load(sys.stdin)['SecretAccessKey'])")
-  AWS_SESSION_TOKEN=$(printf '%s' "$creds" | python3 -c "import sys,json; print(json.load(sys.stdin)['SessionToken'])")
+    --query 'Credentials' --output json); then
+    echo "::error::Could not assume the role for ${session}." >&2
+    return 1
+  fi
+  if ! parsed=$(printf '%s' "$creds" | python3 -c "import sys,json; c=json.load(sys.stdin); print(c['AccessKeyId']); print(c['SecretAccessKey']); print(c['SessionToken'])"); then
+    echo "::error::Could not parse the credentials for ${session}." >&2
+    return 1
+  fi
+  access_key=$(printf '%s\n' "$parsed" | sed -n 1p)
+  secret_key=$(printf '%s\n' "$parsed" | sed -n 2p)
+  session_token=$(printf '%s\n' "$parsed" | sed -n 3p)
+  if [ -z "$access_key" ] || [ -z "$secret_key" ] || [ -z "$session_token" ]; then
+    echo "::error::Incomplete credentials for ${session}." >&2
+    return 1
+  fi
+  AWS_ACCESS_KEY_ID="$access_key"
+  AWS_SECRET_ACCESS_KEY="$secret_key"
+  AWS_SESSION_TOKEN="$session_token"
   export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
   export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
-  unset creds token role_arn
+  unset creds token token_json parsed access_key secret_key session_token role_arn
+  return 0
 }
 
 object_exists() {
   aws s3api head-object --bucket "$1" --key "$2" >/dev/null 2>&1
 }
 
-collect_keys() {
-  python3 - "$1" <<'PY'
-import json
-import sys
-from pathlib import Path
+# List keys under <prefix> and print them relative to <base>.
+# Usage: list_keys <bucket> <list-prefix> <base> strict|lenient
+list_keys() {
+  aws s3api list-objects-v2 --bucket "$1" --prefix "$2" --query 'Contents[].Key' --output json \
+    | pyhelper listkeys "$2" "$3" "$4"
+}
 
-doc = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-keys = []
+# Download the deb Packages and rpm primary.xml.gz index files from
+# s3://<bucket>/<base>/ into <dir>. Returns non-zero if either is unavailable.
+fetch_index() {
+  fi_bucket="$1"
+  fi_base="$2"
+  fi_dir="$3"
+  mkdir -p "${fi_dir}/$(dirname "$DEB_INDEX_REL")" "${fi_dir}/$(dirname "$RPM_INDEX_REL")"
+  aws s3 cp "s3://${fi_bucket}/${fi_base}/${DEB_INDEX_REL}" "${fi_dir}/${DEB_INDEX_REL}" \
+    --no-progress >/dev/null 2>&1 || return 1
+  aws s3 cp "s3://${fi_bucket}/${fi_base}/${RPM_INDEX_REL}" "${fi_dir}/${RPM_INDEX_REL}" \
+    --no-progress >/dev/null 2>&1 || return 1
+  return 0
+}
 
-def add(value):
-    if isinstance(value, str) and value and value not in keys:
-        keys.append(value)
-
-deb = doc.get("deb") or {}
-for pkg in deb.get("packages") or []:
-    add(pkg.get("s3_key"))
-add((doc.get("rpm") or {}).get("s3_key"))
-tar = doc.get("tar") or {}
-add(tar.get("s3_key"))
-add(tar.get("sha256_sidecar_key"))
-for item in doc.get("metadata") or []:
-    if isinstance(item, dict):
-        add(item.get("s3_key"))
-    else:
-        add(item)
-if not keys:
-    print("::error::latest.json has no s3 keys", file=sys.stderr)
-    sys.exit(1)
-for key in keys:
-    print(key)
-PY
+# Print the lines of <file> with a short label, for the job log.
+log_list() {
+  label="$1"
+  list_file="$2"
+  while IFS= read -r item; do
+    [ -n "$item" ] || continue
+    echo "${label}: ${item}"
+  done < "$list_file"
 }
 
 publish_stream() {
   prefix="$1"
   stream="$2"
-  work="$3/${stream}"
+  work="$3"
   mkdir -p "$work"
   echo "Checking ${prefix} for stream ${stream}"
-  assume_role "$INTERNAL_ROLE" "rvs-signed-read-${stream}"
-  if ! aws s3 cp "s3://${INTERNAL_BUCKET}/${prefix}/latest.json" "${work}/latest.json" --no-progress; then
+
+  dest_bucket=$(public_bucket "$stream")
+  latest_json="${work}/latest.json"
+  keys_file="${work}/keys.txt"
+  manifest_rel="${work}/manifest-rel.txt"
+  signed_index="${work}/signed-index"
+  public_index="${work}/public-index"
+  stage="${work}/stage"
+
+  # Internal role: read the manifest and gate on every signed key it names.
+  assume_role "$INTERNAL_ROLE" "rvs-signed-read-${stream}" || return 1
+  if ! aws s3 cp "s3://${INTERNAL_BUCKET}/${prefix}/latest.json" "$latest_json" --no-progress; then
     echo "::warning::Missing s3://${INTERNAL_BUCKET}/${prefix}/latest.json; skipping ${stream}."
     return 0
   fi
-  keys_file="${work}/keys.txt"
-  collect_keys "${work}/latest.json" > "$keys_file"
+  if ! pyhelper collect "$latest_json" "$prefix" > "$keys_file"; then
+    return 1
+  fi
   while IFS= read -r key; do
     [ -n "$key" ] || continue
     if ! object_exists "$INTERNAL_BUCKET" "$key"; then
-      echo "::warning::Missing s3://${INTERNAL_BUCKET}/${key}; skipping ${stream}."
+      echo "::warning::Signed object s3://${INTERNAL_BUCKET}/${key} is not present yet (signing job has not produced it); skipping ${stream}."
       return 0
     fi
   done < "$keys_file"
 
-  stage="${work}/stage"
-  while IFS= read -r key; do
-    [ -n "$key" ] || continue
-    case "$key" in
-      "${prefix}/"*) rel=${key#"${prefix}/"} ;;
-      *)
-        echo "::error::${key} is outside ${prefix}" >&2
-        return 1
-        ;;
-    esac
-    dest="${stage}/${rel}"
-    mkdir -p "$(dirname "$dest")"
-    aws s3 cp "s3://${INTERNAL_BUCKET}/${key}" "$dest" --no-progress
-  done < "$keys_file"
-
-  # Gate passed: fetch the complete signed metadata directories (no deletes),
-  # so the public repo has every file referenced by Release / repomd.xml.
-  mkdir -p "${stage}/packages/deb/dists" "${stage}/packages/rpm/x86_64/repodata"
-  aws s3 sync "s3://${INTERNAL_BUCKET}/${prefix}/packages/deb/dists/" \
-    "${stage}/packages/deb/dists/" --no-progress
-  aws s3 sync "s3://${INTERNAL_BUCKET}/${prefix}/packages/rpm/x86_64/repodata/" \
-    "${stage}/packages/rpm/x86_64/repodata/" --no-progress
-
-  dest_bucket=$(public_bucket "$stream")
-  assume_role "$(public_role "$stream")" "rvs-signed-pub-${stream}"
+  # Manifest objects (packages, rpm, tarball, sidecar), relative to the prefix.
+  # The repo metadata under dists/ and repodata/ is handled by the directory sync.
+  : > "$manifest_rel"
   while IFS= read -r key; do
     [ -n "$key" ] || continue
     rel=${key#"${prefix}/"}
-    dest_key="${COMPONENT}/${rel}"
-    aws s3 cp "${stage}/${rel}" "s3://${dest_bucket}/${dest_key}" --no-progress
-    if ! object_exists "$dest_bucket" "$dest_key"; then
-      echo "::error::Public object missing after copy: s3://${dest_bucket}/${dest_key}" >&2
+    case "$key" in
+      "${prefix}/packages/deb/dists/"*|"${prefix}/packages/rpm/x86_64/repodata/"*) ;;
+      *) echo "$rel" >> "$manifest_rel" ;;
+    esac
+  done < "$keys_file"
+  LC_ALL=C sort -u "$manifest_rel" > "${work}/manifest-sorted.txt"
+
+  # Signed index: the packages it references, and every file in its directories.
+  if ! fetch_index "$INTERNAL_BUCKET" "$prefix" "$signed_index"; then
+    echo "::error::Could not read the signed Packages / primary.xml.gz under ${prefix}." >&2
+    return 1
+  fi
+  if ! pyhelper refs "$signed_index" > "${work}/signed-refs.raw"; then
+    return 1
+  fi
+  LC_ALL=C sort -u "${work}/signed-refs.raw" > "${work}/signed-refs.txt"
+
+  if ! list_keys "$INTERNAL_BUCKET" "${prefix}/packages/deb/dists/" "$prefix" strict \
+    > "${work}/signed-dists.raw"; then
+    return 1
+  fi
+  if ! list_keys "$INTERNAL_BUCKET" "${prefix}/packages/rpm/x86_64/repodata/" "$prefix" strict \
+    > "${work}/signed-repodata.raw"; then
+    return 1
+  fi
+  cat "${work}/signed-dists.raw" "${work}/signed-repodata.raw" | LC_ALL=C sort -u > "${work}/signed-dirs.txt"
+
+  # Public role: compare the public files and the public index with the signed set.
+  assume_role "$(public_role "$stream")" "rvs-signed-check-${stream}" || return 1
+  if ! list_keys "$dest_bucket" "${COMPONENT}/packages/" "$COMPONENT" lenient \
+    > "${work}/public-packages.raw"; then
+    return 1
+  fi
+  if ! list_keys "$dest_bucket" "${COMPONENT}/tarball/" "$COMPONENT" lenient \
+    > "${work}/public-tarball.raw"; then
+    return 1
+  fi
+  cat "${work}/public-packages.raw" "${work}/public-tarball.raw" | LC_ALL=C sort -u > "${work}/public-rel.txt"
+
+  index_same=0
+  if fetch_index "$dest_bucket" "$COMPONENT" "$public_index"; then
+    if pyhelper refs "$public_index" > "${work}/public-refs.raw" 2>/dev/null; then
+      LC_ALL=C sort -u "${work}/public-refs.raw" > "${work}/public-refs.txt"
+      if cmp -s "${work}/signed-refs.txt" "${work}/public-refs.txt"; then
+        index_same=1
+      fi
+    fi
+  fi
+
+  # 1. manifest objects, 2. every signed dists/repodata file, 4. every package the
+  # signed index references, all by name. 3. is index_same above.
+  LC_ALL=C comm -23 "${work}/manifest-sorted.txt" "${work}/public-rel.txt" > "${work}/missing-manifest.txt"
+  LC_ALL=C comm -23 "${work}/signed-dirs.txt" "${work}/public-rel.txt" > "${work}/missing-dirs.txt"
+  LC_ALL=C comm -23 "${work}/signed-refs.txt" "${work}/public-rel.txt" > "${work}/missing-refs.txt"
+
+  # A referenced package that is missing publicly must exist in the signed set,
+  # otherwise the public repository cannot be made complete.
+  assume_role "$INTERNAL_ROLE" "rvs-signed-read2-${stream}" || return 1
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    if ! object_exists "$INTERNAL_BUCKET" "${prefix}/${rel}"; then
+      echo "::error::Referenced package ${prefix}/${rel} is missing from both the signed set and the public bucket" >&2
       return 1
     fi
-  done < "$keys_file"
+  done < "${work}/missing-refs.txt"
 
-  aws s3 sync "${stage}/packages/deb/dists/" \
-    "s3://${dest_bucket}/${COMPONENT}/packages/deb/dists/" --no-progress
-  aws s3 sync "${stage}/packages/rpm/x86_64/repodata/" \
-    "s3://${dest_bucket}/${COMPONENT}/packages/rpm/x86_64/repodata/" --no-progress
-  echo "Published ${stream} from ${prefix}"
+  if [ ! -s "${work}/missing-manifest.txt" ] && [ ! -s "${work}/missing-dirs.txt" ] \
+    && [ ! -s "${work}/missing-refs.txt" ] && [ "$index_same" -eq 1 ]; then
+    echo "::notice::No new packages or index changes for ${stream}; every package, tarball and repo file in ${prefix} is already public and the public index matches the signed index (s3://${dest_bucket}/${COMPONENT}/). Skipping."
+    return 0
+  fi
+  log_list "New manifest object to publish" "${work}/missing-manifest.txt"
+  log_list "Referenced package missing publicly, will copy" "${work}/missing-refs.txt"
+  log_list "Repo file missing publicly" "${work}/missing-dirs.txt"
+  if [ "$index_same" -ne 1 ]; then
+    echo "Public index does not match the signed index; repo metadata will be synced."
+  fi
+
+  # Copy list: only objects missing publicly. Objects already public are not
+  # downloaded or copied again.
+  cat "${work}/missing-manifest.txt" "${work}/missing-refs.txt" | LC_ALL=C sort -u > "${work}/copy-rel.txt"
+
+  # Internal role: stage the copy list, then the complete signed repo directories.
+  mkdir -p "${stage}/packages/deb/dists" "${stage}/packages/rpm/x86_64/repodata"
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    mkdir -p "$(dirname "${stage}/${rel}")"
+    if ! aws s3 cp "s3://${INTERNAL_BUCKET}/${prefix}/${rel}" "${stage}/${rel}" --no-progress; then
+      echo "::error::Could not stage s3://${INTERNAL_BUCKET}/${prefix}/${rel}" >&2
+      return 1
+    fi
+  done < "${work}/copy-rel.txt"
+  if ! aws s3 sync "s3://${INTERNAL_BUCKET}/${prefix}/packages/deb/dists/" \
+    "${stage}/packages/deb/dists/" --no-progress; then
+    return 1
+  fi
+  if ! aws s3 sync "s3://${INTERNAL_BUCKET}/${prefix}/packages/rpm/x86_64/repodata/" \
+    "${stage}/packages/rpm/x86_64/repodata/" --no-progress; then
+    return 1
+  fi
+  printf '%s\n' "$INDEX_LAST" > "${work}/index-last.txt"
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    if [ ! -f "${stage}/${rel}" ]; then
+      echo "::error::Signed index file ${prefix}/${rel} was not staged" >&2
+      return 1
+    fi
+  done < "${work}/index-last.txt"
+
+  # Public role. Order keeps the index valid while uploading:
+  # 1. packages, rpm, tarball and sidecar
+  # 2. repo directories except the top-level index and signature files
+  # 3. the top-level index and signature files
+  assume_role "$(public_role "$stream")" "rvs-signed-pub-${stream}" || return 1
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    if ! aws s3 cp "${stage}/${rel}" "s3://${dest_bucket}/${COMPONENT}/${rel}" --no-progress; then
+      echo "::error::Public copy failed: s3://${dest_bucket}/${COMPONENT}/${rel}" >&2
+      return 1
+    fi
+  done < "${work}/copy-rel.txt"
+
+  if ! aws s3 sync "${stage}/packages/deb/dists/" \
+    "s3://${dest_bucket}/${COMPONENT}/packages/deb/dists/" \
+    --exclude "stable/Release" --exclude "stable/InRelease" --exclude "stable/Release.gpg" \
+    --no-progress; then
+    return 1
+  fi
+  if ! aws s3 sync "${stage}/packages/rpm/x86_64/repodata/" \
+    "s3://${dest_bucket}/${COMPONENT}/packages/rpm/x86_64/repodata/" \
+    --exclude "repomd.xml" --exclude "repomd.xml.asc" \
+    --no-progress; then
+    return 1
+  fi
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    if ! aws s3 cp "${stage}/${rel}" "s3://${dest_bucket}/${COMPONENT}/${rel}" --no-progress; then
+      echo "::error::Public copy failed: s3://${dest_bucket}/${COMPONENT}/${rel}" >&2
+      return 1
+    fi
+  done < "${work}/index-last.txt"
+
+  # Verify by name: every copied object is public, and every signed repo file is
+  # now in the public listing.
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    if ! object_exists "$dest_bucket" "${COMPONENT}/${rel}"; then
+      echo "::error::Public object missing after copy: s3://${dest_bucket}/${COMPONENT}/${rel}" >&2
+      return 1
+    fi
+  done < "${work}/copy-rel.txt"
+  if ! list_keys "$dest_bucket" "${COMPONENT}/packages/deb/dists/" "$COMPONENT" lenient \
+    > "${work}/after-dists.raw"; then
+    return 1
+  fi
+  if ! list_keys "$dest_bucket" "${COMPONENT}/packages/rpm/x86_64/repodata/" "$COMPONENT" lenient \
+    > "${work}/after-repodata.raw"; then
+    return 1
+  fi
+  cat "${work}/after-dists.raw" "${work}/after-repodata.raw" | LC_ALL=C sort -u > "${work}/after-dirs.txt"
+  LC_ALL=C comm -23 "${work}/signed-dirs.txt" "${work}/after-dirs.txt" > "${work}/after-missing.txt"
+  if [ -s "${work}/after-missing.txt" ]; then
+    log_list "::error::Public repo file missing after sync" "${work}/after-missing.txt" >&2
+    return 1
+  fi
+
+  echo "Published ${stream} from ${prefix}."
 }
 
 match_name() {
@@ -170,15 +600,19 @@ promote_stable() {
   fi
   rc_bucket=$(public_bucket rc)
   staging_bucket=$(public_bucket stable-staging)
-  work=$(mktemp -d)
-  trap 'rm -rf "$work"' EXIT
-  assume_role "$(public_role rc)" "rvs-rc-read"
+  work="${TMP_ROOT}/promote"
+  mkdir -p "$work"
+  assume_role "$(public_role rc)" "rvs-rc-read" || exit 1
   : > "${work}/selected.txt"
   copy_matched() {
     kind="$1"
     pattern="$2"
     aws s3 ls "s3://${rc_bucket}/${COMPONENT}/${pattern}" --recursive \
-      | awk '{print $NF}' > "${work}/list.txt" || true
+      | awk '{print $NF}' > "${work}/list.raw" || true
+    # Every listed key must be a normalized key under the component.
+    if ! pyhelper validate "${COMPONENT}/" < "${work}/list.raw" > "${work}/list.txt"; then
+      exit 1
+    fi
     found=0
     while IFS= read -r key; do
       [ -n "$key" ] || continue
@@ -215,7 +649,7 @@ promote_stable() {
   aws s3 sync "s3://${rc_bucket}/${COMPONENT}/packages/rpm/" "${work}/repodata/" \
     --exclude "*" --include "*/repodata/*" --no-progress
 
-  assume_role "$(public_role rc)" "rvs-rc-read-files"
+  assume_role "$(public_role rc)" "rvs-rc-read-files" || exit 1
   while IFS= read -r key; do
     [ -n "$key" ] || continue
     rel=${key#"${COMPONENT}/"}
@@ -224,7 +658,7 @@ promote_stable() {
     aws s3 cp "s3://${rc_bucket}/${key}" "$dest" --no-progress
   done < "${work}/selected.txt"
 
-  assume_role "$(public_role stable-staging)" "rvs-stable-staging-write"
+  assume_role "$(public_role stable-staging)" "rvs-stable-staging-write" || exit 1
   while IFS= read -r key; do
     [ -n "$key" ] || continue
     rel=${key#"${COMPONENT}/"}
@@ -243,18 +677,40 @@ promote_stable() {
   echo "Copied run ${RUN_NUMBER} from public RC to stable-staging"
 }
 
+require_internal() {
+  if [ -z "$INTERNAL_BUCKET" ] || [ -z "$INTERNAL_ROLE" ]; then
+    echo "::error::AWS_S3_BUCKET and AWS_ROLE_ARN are required." >&2
+    exit 1
+  fi
+}
+
 case "$CMD" in
   publish)
-    if [ -z "$INTERNAL_BUCKET" ] || [ -z "$INTERNAL_ROLE" ]; then
-      echo "::error::AWS_S3_BUCKET and AWS_ROLE_ARN are required." >&2
-      exit 1
-    fi
-    root=$(mktemp -d)
-    trap 'rm -rf "$root"' EXIT
+    require_internal
     failed=0
-    publish_stream "nightly/signed" "nightly" "$root" || failed=1
-    publish_stream "release/signed" "rc" "$root" || failed=1
+    sh "$0" publish-stream "nightly/signed" "nightly" || failed=1
+    sh "$0" publish-stream "release/signed" "rc" || failed=1
     exit "$failed"
+    ;;
+  publish-stream)
+    require_internal
+    stream_prefix="${2:-}"
+    stream_name="${3:-}"
+    case "$stream_name" in
+      nightly|rc) ;;
+      *)
+        echo "::error::Unknown stream '${stream_name}'." >&2
+        exit 1
+        ;;
+    esac
+    case "$stream_prefix" in
+      "nightly/signed"|"release/signed") ;;
+      *)
+        echo "::error::Unexpected signed prefix '${stream_prefix}'." >&2
+        exit 1
+        ;;
+    esac
+    publish_stream "$stream_prefix" "$stream_name" "${TMP_ROOT}/${stream_name}"
     ;;
   promote-stable)
     promote_stable

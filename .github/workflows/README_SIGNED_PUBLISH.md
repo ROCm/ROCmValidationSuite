@@ -44,11 +44,23 @@ The signature files (`InRelease`, `Release.gpg`, `repomd.xml.asc`) are part of t
 For `nightly/signed` and `release/signed` it:
 
 1. Assumes `secrets.AWS_ROLE_ARN` and downloads that prefix's `latest.json` from the RVS bucket.
-2. Checks that every `s3_key`, sha256 sidecar, package key, and metadata key in the file exists.
-3. Skips that stream with a warning if `latest.json` or any listed object is missing. It does not publish a partial set. The other stream still publishes when it is complete.
-4. Assumes the public role and copies each verified object to the public bucket. `latest.json` itself is not uploaded.
-5. Checks that each public object exists after the copy. A missing public object fails that stream.
-6. Syncs the complete signed `packages/deb/dists/` and `packages/rpm/x86_64/repodata/` directories to the public bucket (no `--delete`), once the gate has passed. Any other file in those directories, such as `by-hash` entries or other components, is copied too, so every file referenced by `Release` and `repomd.xml` is public. The rest of `packages/` is not mirrored.
+2. Validates the manifest before anything else. It must name at least one deb package, the rpm, the tarball and its sha256 sidecar. An empty or partial `latest.json` fails the stream, even if the metadata files exist. Every key must be normalized and sit under `<stream>/signed/packages/` or `<stream>/signed/tarball/`. A key with `..`, `.` or empty path segments, a backslash, a control character or a leading `/` (for example `nightly/signed/packages/../runs/latest.json`) fails the stream before anything is staged or copied. The same strict check applies to package paths read from the signed index and to keys listed from S3. Only then are the required deb and rpm metadata and signature files added to the list.
+3. Maps every key that points at `<stream>/unsigned/` to the same path under `<stream>/signed/`. The manifest may list the unsigned copy of a package (for example `nightly/unsigned/packages/deb/pool/main/x.deb`), but the publisher always requires and copies the signed one (`nightly/signed/packages/deb/pool/main/x.deb`). `runs/` and `latest.json` are never published.
+4. Checks that every mapped signed object (package, rpm, tarball, sha256 sidecar, metadata) exists in the RVS bucket. It skips that stream with a warning if `latest.json` or any signed object is missing, which means the signing job has not run yet. It does not publish a partial set. The other stream still publishes when it is complete.
+5. Checks that the public repository matches the signed one, by file name only (no content comparison). The stream is up to date, and is skipped with the log line `No new packages or index changes for <stream>`, only when all four hold:
+   1. every manifest object (deb, rpm, tarball, sidecar) exists publicly;
+   2. every file in the signed `packages/deb/dists/` and `packages/rpm/x86_64/repodata/` directories (listed from S3, so `by-hash` and any other component files are included) exists publicly under the same path;
+   3. the package set referenced by the public `Packages` and `primary.xml.gz` equals the package set referenced by the signed ones;
+   4. every package referenced by the signed `Packages` and `primary.xml.gz`, including older builds that are not in this `latest.json`, exists publicly.
+
+   Skipping is not an error: nightly and release builds run less often than this job. If a package referenced by the signed index is missing publicly, it must exist in the signed prefix, otherwise the job fails because the public repository cannot be made complete.
+6. Otherwise copies only what is missing publicly: the manifest objects and referenced packages that are not public yet. Objects that are already public are not downloaded or copied again, so a metadata repair does not recopy packages. `latest.json` itself is not uploaded.
+7. Uploads in an order that keeps the index valid for clients: first the packages, rpm, tarball and sidecar; then the complete signed `packages/deb/dists/` and `packages/rpm/x86_64/repodata/` directories (no `--delete`) except the top-level index and signature files; and last `Release`, `InRelease`, `Release.gpg`, `repomd.xml` and `repomd.xml.asc`.
+8. Verifies by name that every copied object exists publicly and that every signed `dists/` and `repodata/` file is now in the public listing. A missing object fails that stream.
+
+**Trust assumption.** The publisher treats the signed prefix as the latest complete set and assumes the signing job does not modify it while the publisher runs. It copies the signed files byte for byte with `aws s3 cp` and `aws s3 sync` and never edits, recompresses, regenerates or re-signs them. Only the signing job writes `<stream>/signed/packages/`. The publisher does not compare file content, so a re-sign that keeps the same file names and the same package set is not detected by the up-to-date check.
+
+**Credentials.** Each stream runs in its own process. Role assumption clears any earlier credentials and every step is checked, so a failed role assumption ends the stream and never continues with the previous role. The public role needs `s3:ListBucket` on the public bucket for the listing checks.
 
 Public object keys keep the path under the component prefix. The `v5` prefix is part of the S3 key and is omitted from the served URL.
 
