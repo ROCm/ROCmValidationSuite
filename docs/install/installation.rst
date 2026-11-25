@@ -40,7 +40,7 @@ and ``lib``. When configuring the environment for RVS, you must set the
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=/opt/rocm/core-10.1             # <rocm-core-path> = /opt/rocm/core-10.1
+         ROCM_INSTALL_PATH=/opt/rocm/core-10.2             # <rocm-core-path> = /opt/rocm/core-10.2
 
    .. tab-item:: pip
 
@@ -60,8 +60,8 @@ and ``lib``. When configuring the environment for RVS, you must set the
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=/opt/rocm/core-10.1             # <rocm-core-path> = default /opt/rocm/core-10.1 installation (no target=)
-         ROCM_INSTALL_PATH=<path>/rocm/core-10.1           # <rocm-core-path> = target=<path>
+         ROCM_INSTALL_PATH=/opt/rocm/core-10.2             # <rocm-core-path> = default /opt/rocm/core-10.2 installation (no target=)
+         ROCM_INSTALL_PATH=<path>/rocm/core-10.2           # <rocm-core-path> = target=<path>
 
 Package manager installation
 =============================
@@ -236,6 +236,43 @@ on top of the ROCm Core SDK.
                   EOF
                   sudo dnf clean all
 
+      .. tab-item:: SLES
+         :sync: sles
+
+         .. tab-set::
+
+            .. tab-item:: 16
+               :sync: sles-16
+
+               .. code-block:: bash
+
+                  sudo tee /etc/zypp/repos.d/amdrocm-rvs.repo <<EOF
+                  [amdrocm-rvs]
+                  name=ROCm Validation Suite
+                  baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/sles16/x86_64
+                  enabled=1
+                  gpgcheck=1
+                  gpgkey=https://stable.repo.amd.com/rocm/gpg/packages.gpg
+                  priority=50
+                  EOF
+                  sudo zypper --gpg-auto-import-keys refresh
+
+            .. tab-item:: 15
+               :sync: sles-15
+
+               .. code-block:: bash
+
+                  sudo tee /etc/zypp/repos.d/amdrocm-rvs.repo <<EOF
+                  [amdrocm-rvs]
+                  name=ROCm Validation Suite
+                  baseurl=https://stable.repo.amd.com/rocm/extras/rvs/packages/sles15/x86_64
+                  enabled=1
+                  gpgcheck=1
+                  gpgkey=https://stable.repo.amd.com/rocm/gpg/packages.gpg
+                  priority=50
+                  EOF
+                  sudo zypper --gpg-auto-import-keys refresh
+
 2. Install the RVS package.
 
    .. tab-set::
@@ -254,6 +291,13 @@ on top of the ROCm Core SDK.
 
             sudo dnf install amdrocm10-rvs
 
+      .. tab-item:: SLES
+         :sync: sles
+
+         .. code-block:: bash
+
+            sudo zypper install amdrocm10-rvs
+
 3. Complete the following post-installation steps.
 
    Use the following commands to update your shell configuration file
@@ -264,11 +308,23 @@ on top of the ROCm Core SDK.
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.1
+         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.2
 
    b. Configure your environment.
 
       .. tab-set::
+
+         .. tab-item:: Active session
+
+            Set the RVS environment variables for the current shell session only.
+            To keep these settings across sessions, use System-wide setup or User setup.
+
+            .. code-block:: bash
+
+               export EXTRAS_PATH=/opt/rocm/extras-10
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=$EXTRAS_PATH/bin:$ROCM_PATH/bin:$PATH
+               export LD_LIBRARY_PATH=$EXTRAS_PATH/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
 
          .. tab-item:: System-wide
 
@@ -284,7 +340,7 @@ on top of the ROCm Core SDK.
                sudo chmod +x /etc/profile.d/set-rvs-env.sh
                source /etc/profile.d/set-rvs-env.sh
 
-         .. tab-item:: User
+         .. tab-item:: User (~/.bashrc)
 
             .. code-block:: bash
 
@@ -298,6 +354,21 @@ on top of the ROCm Core SDK.
                EOF
 
                source ~/.bashrc
+
+         .. tab-item:: User (~/.profile)
+
+            .. code-block:: bash
+
+               tee --append ~/.profile << EOF
+               # BEGIN RVS environment configuration
+               export EXTRAS_PATH=/opt/rocm/extras-10
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+               # END RVS environment configuration
+               EOF
+
+               source ~/.profile
 
 4. Verify your installation.
 
@@ -330,6 +401,13 @@ Package manager uninstalling
 
             sudo dnf remove amdrocm10-rvs
 
+      .. tab-item:: SLES
+         :sync: sles
+
+         .. code-block:: bash
+
+            sudo zypper remove --clean-deps amdrocm10-rvs
+
 2. Remove RVS repositories.
 
    .. tab-set::
@@ -349,7 +427,7 @@ Package manager uninstalling
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
-                  sudo apt clean all
+                  sudo apt clean
                   sudo apt update
 
             .. tab-item:: 24.04
@@ -362,7 +440,7 @@ Package manager uninstalling
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
-                  sudo apt clean all
+                  sudo apt clean
                   sudo apt update
 
             .. tab-item:: 22.04
@@ -375,7 +453,7 @@ Package manager uninstalling
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
-                  sudo apt clean all
+                  sudo apt clean
                   sudo apt update
 
       .. tab-item:: Debian
@@ -393,7 +471,7 @@ Package manager uninstalling
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
-                  sudo apt clean all
+                  sudo apt clean
                   sudo apt update
 
             .. tab-item:: 12
@@ -406,7 +484,7 @@ Package manager uninstalling
 
                   # Clear the cache and clean the system
                   sudo rm -rf /var/cache/apt/*
-                  sudo apt clean all
+                  sudo apt clean
                   sudo apt update
 
       .. tab-item:: RHEL
@@ -450,6 +528,35 @@ Package manager uninstalling
                   sudo rm -rf /var/cache/dnf
                   sudo dnf clean all
 
+      .. tab-item:: SLES
+         :sync: sles
+
+         .. tab-set::
+
+            .. tab-item:: 16
+               :sync: sles-16
+
+               .. code-block:: bash
+
+                  # Remove RVS repositories
+                  sudo zypper removerepo "amdrocm-rvs"
+
+                  # Clear the cache and clean the system
+                  sudo zypper clean --all
+                  sudo zypper refresh
+
+            .. tab-item:: 15
+               :sync: sles-15
+
+               .. code-block:: bash
+
+                  # Remove RVS repositories
+                  sudo zypper removerepo "amdrocm-rvs"
+
+                  # Clear the cache and clean the system
+                  sudo zypper clean --all
+                  sudo zypper refresh
+
 3. Remove your RVS environment configuration from your system.
 
    .. tab-set::
@@ -492,17 +599,24 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
             sudo dnf install pciutils-libs numactl-libs
 
+      .. tab-item:: SLES
+         :sync: sles
+
+         .. code-block:: bash
+
+            sudo zypper install pciutils
+
 2. Download the RVS tarball.
 
    .. code-block:: bash
 
-      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.6.131-844-Linux.tar.gz
+      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.7.112-1077-Linux.tar.gz
 
    The tarball file may be verified against the following SHA256:
 
    .. code-block:: bash
 
-      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.6.131-844-Linux.tar.gz.sha256
+      wget https://stable.repo.amd.com/rocm/extras/rvs/tarball/amdrocm10-rvs-1.7.112-1077-Linux.tar.gz.sha256
 
 3. Extract the tarball to the ROCm Extras location.
 
@@ -516,7 +630,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
       EXTRAS_INSTALL_PATH=<extras-path>  # ie. <extras-path> = path to ROCm extras for RVS extract
 
       sudo mkdir -p $EXTRAS_INSTALL_PATH
-      sudo tar -xzf amdrocm10-rvs-1.6.131-844-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
+      sudo tar -xzf amdrocm10-rvs-1.7.112-1077-Linux.tar.gz -C $EXTRAS_INSTALL_PATH
 
    **Recommended:** Set ``EXTRAS_INSTALL_PATH`` to a location within the root
    install directory for the ROCm Core SDK.
@@ -527,7 +641,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
    .. code-block:: bash
 
       sudo mkdir -p /opt/rocm/extras-10
-      sudo tar -xzf amdrocm10-rvs-1.6.131-844-Linux.tar.gz -C /opt/rocm/extras-10
+      sudo tar -xzf amdrocm10-rvs-1.7.112-1077-Linux.tar.gz -C /opt/rocm/extras-10
 
 4. Complete the following post-installation steps.
 
@@ -539,11 +653,23 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
 
       .. code-block:: bash
 
-         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.1
+         ROCM_INSTALL_PATH=<rocm-core-path>  # ie. /opt/rocm/core-10.2
 
    b. Configure your environment.
 
       .. tab-set::
+
+         .. tab-item:: Active session
+
+            Set the RVS environment variables for the current shell session only.
+            To keep these settings across sessions, use System-wide setup or User setup.
+
+            .. code-block:: bash
+
+               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=$EXTRAS_PATH/bin:$ROCM_PATH/bin:$PATH
+               export LD_LIBRARY_PATH=$EXTRAS_PATH/lib:$ROCM_PATH/lib:$ROCM_PATH/lib/llvm/lib:$LD_LIBRARY_PATH
 
          .. tab-item:: System-wide
 
@@ -559,7 +685,7 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
                sudo chmod +x /etc/profile.d/set-rvs-env.sh
                source /etc/profile.d/set-rvs-env.sh
 
-         .. tab-item:: User
+         .. tab-item:: User (~/.bashrc)
 
             .. code-block:: bash
 
@@ -573,6 +699,21 @@ Use the following steps to install RVS using a tarball on top of the ROCm Core S
                EOF
 
                source ~/.bashrc
+
+         .. tab-item:: User (~/.profile)
+
+            .. code-block:: bash
+
+               tee --append ~/.profile << EOF
+               # BEGIN RVS environment configuration
+               export EXTRAS_PATH=$EXTRAS_INSTALL_PATH
+               export ROCM_PATH=$ROCM_INSTALL_PATH
+               export PATH=\$EXTRAS_PATH/bin:\$ROCM_PATH/bin:\$PATH
+               export LD_LIBRARY_PATH=\$EXTRAS_PATH/lib:\$ROCM_PATH/lib:\$ROCM_PATH/lib/llvm/lib:\$LD_LIBRARY_PATH
+               # END RVS environment configuration
+               EOF
+
+               source ~/.profile
 
 5. Verify your installation.
 
