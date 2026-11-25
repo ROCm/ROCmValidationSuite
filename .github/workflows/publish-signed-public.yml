@@ -1,13 +1,16 @@
 name: Publish signed packages to public repos
 
-# Every two hours, copy a complete nightly/signed or release/signed set from the
-# RVS bucket to the public extras-rvs buckets. A manual run with run_number
+# Every four hours, sync the packages/ and tarball/ folders of nightly/signed and
+# release/signed from the RVS bucket to the public extras-rvs buckets (only new or
+# changed files are copied; latest.json and run folders are never published).
+# A stream whose signed latest.json is already marked published=Yes is skipped
+# unless the force input is set. A manual run with run_number
 # copies that build from the public RC bucket to stable-staging.
 # The public role is secrets.AWS_PUB_ARN and must contain the <stream> token.
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '0 */4 * * *'
   workflow_dispatch:
     inputs:
       run_number:
@@ -17,6 +20,14 @@ on:
           signed sets.
         required: false
         type: string
+      force:
+        description: >
+          Publish even if latest.json is already marked published=Yes (for
+          example for a new or empty public bucket, or to repair it). Only used
+          when run_number is empty.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -56,6 +67,7 @@ jobs:
           AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
           AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
           AWS_PUB_ARN: ${{ secrets.AWS_PUB_ARN }}
+          FORCE_PUBLISH: ${{ github.event.inputs.force == 'true' && 'true' || 'false' }}
           AWS_DEFAULT_REGION: us-east-1
 
   promote-rc-to-stable-staging:

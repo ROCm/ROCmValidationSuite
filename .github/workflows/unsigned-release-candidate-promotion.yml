@@ -535,6 +535,9 @@ jobs:
               "packages/rpm/x86_64/repodata/other.xml.gz",
           ]
           signed["metadata"] = [{"s3_key": f"{_signed_root}/{rel}"} for rel in _metadata_rel]
+          # A new build is not public yet. The public publisher sets this to
+          # "Yes" after it has published the build.
+          signed["published"] = "No"
           signed_out = workdir / "signed-latest.json"
           signed_out.write_text(json.dumps(signed, indent=2) + "\n", encoding="utf-8")
           print(signed_out.read_text(encoding="utf-8"))
