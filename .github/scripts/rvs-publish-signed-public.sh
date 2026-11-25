@@ -17,7 +17,8 @@
 # while the publisher runs. The only object it writes in the RVS bucket is
 # <stream>/signed/latest.json, to set published=Yes after a successful publish
 # (a conditional write, so a newer latest.json is never overwritten). A latest.json
-# with published=Yes is skipped unless FORCE_PUBLISH=true.
+# with published=Yes is skipped unless FORCE_PUBLISH=true. A build is also not
+# published until the signed Packages / primary.xml.gz list its deb and rpm.
 #
 # Usage: rvs-publish-signed-public.sh publish|promote-stable
 #   (internal) publish-stream <signed-prefix> <stream>
@@ -374,6 +375,33 @@ def cmd_flag_set(src, dst, run_id, stamp):
     Path(dst).write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
 
 
+def cmd_index_missing(latest_path, refs_path):
+    """Print the deb and rpm packages named in latest.json that the signed
+    Packages / primary.xml.gz (the refs file) do not list yet. Compared by file
+    name, which is unique per build, so a different pool folder layout cannot
+    cause a permanent mismatch. No output means every package is listed."""
+    doc = load_manifest(latest_path)
+    keys = [
+        text(pkg.get("s3_key"))
+        for pkg in ((doc.get("deb") or {}).get("packages") or [])
+        if isinstance(pkg, dict)
+    ]
+    keys.append(text((doc.get("rpm") or {}).get("s3_key")))
+    listed = {
+        line.strip().rsplit("/", 1)[-1]
+        for line in Path(refs_path).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    }
+    seen = set()
+    for key in keys:
+        if not key:
+            continue
+        name = key.rsplit("/", 1)[-1]
+        if name not in listed and name not in seen:
+            seen.add(name)
+            print(name)
+
+
 def cmd_validate(required_prefix):
     for line in sys.stdin.read().splitlines():
         key = line.strip()
@@ -401,6 +429,8 @@ def main():
         cmd_missing(*rest)
     elif command == "check-copied" and len(rest) == 3:
         cmd_check_copied(*rest)
+    elif command == "index-missing" and len(rest) == 2:
+        cmd_index_missing(*rest)
     elif command == "flag-get" and len(rest) == 1:
         cmd_flag_get(*rest)
     elif command == "flag-set" and len(rest) == 4:
@@ -473,14 +503,26 @@ object_exists() {
   aws s3api head-object --bucket "$1" --key "$2" >/dev/null 2>&1
 }
 
-# List the eligible objects (packages/ and tarball/ only) under <list-root>/ as
-# "relative-key<TAB>size<TAB>last-modified". latest.json, run folders and any
-# other path are never listed, so they are never published.
+# List the eligible objects as "relative-key<TAB>size<TAB>last-modified". Two
+# separate list requests are made, one for <list-root>/packages/ and one for
+# <list-root>/tarball/, so latest.json, run folders and any other path under the
+# root are never requested (and the role only needs ListBucket on those two
+# prefixes). Each request is checked on its own; the helper still applies the
+# packages/ and tarball/ allowlist and the strict key check.
 # Usage: list_objects <bucket> <list-root> strict|lenient
 list_objects() {
-  aws s3api list-objects-v2 --bucket "$1" --prefix "${2}/" \
-    --query 'Contents[].[Key,Size,LastModified]' --output json \
-    | pyhelper listobjs "$2" "$3"
+  lo_tmp="${TMP_ROOT}/list-objects.$$"
+  : > "$lo_tmp"
+  for lo_dir in packages tarball; do
+    if ! aws s3api list-objects-v2 --bucket "$1" --prefix "${2}/${lo_dir}/" \
+      --query 'Contents[].[Key,Size,LastModified]' --output json \
+      | pyhelper listobjs "$2" "$3" >> "$lo_tmp"; then
+      rm -f "$lo_tmp"
+      return 1
+    fi
+  done
+  cat "$lo_tmp"
+  rm -f "$lo_tmp"
 }
 
 # Download the deb Packages and rpm primary.xml.gz index files from
@@ -596,7 +638,7 @@ publish_stream() {
     fi
   done < "$keys_file"
 
-  # RVS role: the signed index and the complete list of signed files.
+  # RVS role: the signed index (also used by gate 3) and the list of signed files.
   if ! fetch_index "$INTERNAL_BUCKET" "$prefix" "$signed_index"; then
     echo "::error::Could not read the signed Packages / primary.xml.gz under ${prefix}." >&2
     return 1
@@ -605,6 +647,20 @@ publish_stream() {
     return 1
   fi
   LC_ALL=C sort -u "${work}/signed-refs.raw" > "${work}/signed-refs.txt"
+
+  # Gate 3: the signed Packages and primary.xml.gz must list the deb and rpm
+  # packages of this build. The metadata files keep the same names in every
+  # build, so they can still describe the previous build while the packages are
+  # already in the signed prefix (the signing job has not finished yet).
+  pyhelper index-missing "$latest_json" "${work}/signed-refs.txt" > "${work}/index-missing.txt" || return 1
+  if [ -s "${work}/index-missing.txt" ]; then
+    while IFS= read -r name; do
+      [ -n "$name" ] || continue
+      echo "::warning::Signed index does not list ${name} yet (signing job has not updated the index); skipping ${stream}."
+    done < "${work}/index-missing.txt"
+    return 0
+  fi
+
   if ! list_objects "$INTERNAL_BUCKET" "$prefix" strict > "${work}/signed.tsv"; then
     return 1
   fi
@@ -678,7 +734,8 @@ publish_stream() {
     pyhelper check-copied "${work}/delta.txt" "${work}/signed.tsv" "${work}/public.tsv" || return 1
   fi
 
-  # The public index must only reference packages that are public.
+  # The public index must only reference packages that are public. This reads the
+  # public Packages and primary.xml.gz, so the public role needs s3:GetObject.
   if ! fetch_index "$dest_bucket" "$COMPONENT" "$public_index"; then
     echo "::error::Could not read the public Packages / primary.xml.gz in s3://${dest_bucket}/${COMPONENT}/." >&2
     return 1
