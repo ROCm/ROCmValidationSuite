@@ -25,6 +25,7 @@
 
 #include "include/rvsexec.h"
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -128,6 +129,14 @@ int rvs::exec::run() {
   }
 
   string config_file;
+  std::vector<std::string> config_files;
+
+  if (rvs::options::has_option("-r") + rvs::options::has_option("-m") +
+      rvs::options::has_option("-c") > 1) {
+    rvs::logger::Err("Options -r, -m and -c cannot be combined !", MODULE_NAME_CAPS);
+    return -1;
+  }
+
   // check -r option
   if (rvs::options::has_option("-r", &val)) {
 
@@ -164,11 +173,12 @@ int rvs::exec::run() {
     } else {
       file.close();
     }
+    config_files.push_back(config_file);
   }
 
   // check -m option
-  string module;
-  if (rvs::options::has_option("-m", &module)) {
+  string modules;
+  if (rvs::options::has_option("-m", &modules)) {
 
     std::map<std::string, std::string> module_config_map = {
       {"babel", "babel.conf"},
@@ -183,13 +193,21 @@ int rvs::exec::run() {
       {"tst", "tst_single.conf"}
     };
 
-    auto itr = module_config_map.find(module);
-    if (itr == module_config_map.end()) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-          "Invalid module name: %s", module.c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+    std::replace(modules.begin(), modules.end(), ',', ' ');
+    std::vector<std::string> module_list = str_split(modules, " ");
+    if (module_list.empty()) {
+      rvs::logger::Err("No module name given with -m option !", MODULE_NAME_CAPS);
       return -1;
+    }
+
+    for (const auto& module : module_list) {
+      if (module_config_map.find(module) == module_config_map.end()) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "Invalid module name: %s", module.c_str());
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        return -1;
+      }
     }
 
     std::string platform_name = get_gpu_name();
@@ -198,50 +216,54 @@ int rvs::exec::run() {
       return -1;
     }
 
-    std::vector<std::string> confs = {itr->second};
-    if (module == "iet") {
-      confs.push_back("iet_single.conf");
-    }
+    for (const auto& module : module_list) {
 
-    bool found = false;
-    for (const auto& conf : confs) {
-
-      /* Plaform specific module conf. from RVS installation path */
-      config_file = "../share/rocm-validation-suite/conf/" + platform_name + "/" + conf;
-
-      std::ifstream file(path + config_file);
-      if (!file.good()) {
-        /* Plaform specific module conf. from RVS local build path */
-        config_file = "conf/" + platform_name + "/" + conf;
+      std::vector<std::string> confs = {module_config_map[module]};
+      if (module == "iet") {
+        confs.push_back("iet_single.conf");
       }
-      file.close();
-      config_file = path + config_file;
 
-      file.open(config_file);
-      if (file.good()) {
+      bool found = false;
+      for (const auto& conf : confs) {
+
+        /* Plaform specific module conf. from RVS installation path */
+        config_file = "../share/rocm-validation-suite/conf/" + platform_name + "/" + conf;
+
+        std::ifstream file(path + config_file);
+        if (!file.good()) {
+          /* Plaform specific module conf. from RVS local build path */
+          config_file = "conf/" + platform_name + "/" + conf;
+        }
         file.close();
-        found = true;
-        break;
-      }
-      else {
-        /* Try default module conf. */
-        config_file = path + "conf/" + conf;
+        config_file = path + config_file;
+
         file.open(config_file);
         if (file.good()) {
           file.close();
           found = true;
           break;
         }
+        else {
+          /* Try default module conf. */
+          config_file = path + "conf/" + conf;
+          file.open(config_file);
+          if (file.good()) {
+            file.close();
+            found = true;
+            break;
+          }
+        }
+        file.close();
       }
-      file.close();
-    }
 
-    if (!found) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-          "%s file is missing.", config_file.c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      return -1;
+      if (!found) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "%s file is missing.", config_file.c_str());
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        return -1;
+      }
+      config_files.push_back(config_file);
     }
   }
 
@@ -250,7 +272,18 @@ int rvs::exec::run() {
     // check -c option
     if (rvs::options::has_option("-c", &val)) {
 
-      config_file = val;
+      /* Trim instead of splitting on spaces, as a path may contain spaces */
+      for (const auto& conf : str_split(val, ",")) {
+        size_t first = conf.find_first_not_of(" \t");
+        if (first != std::string::npos) {
+          size_t last = conf.find_last_not_of(" \t");
+          config_files.push_back(conf.substr(first, last - first + 1));
+        }
+      }
+      if (config_files.empty()) {
+        rvs::logger::Err("No configuration file given with -c option !", MODULE_NAME_CAPS);
+        return -1;
+      }
 
     } else {
       config_file = "../share/rocm-validation-suite/conf/rvs.conf";
@@ -260,19 +293,19 @@ int rvs::exec::run() {
         config_file = "conf/rvs.conf";
       }
       file.close();
-      config_file = path + config_file;
+      config_files.push_back(path + config_file);
     }
 
-    // Check if pConfig file exists
-    std::ifstream file(config_file);
-    if (!file.good()) {
-      char buff[1024];
-      snprintf(buff, sizeof(buff),
-          "%s file is missing.", config_file.c_str());
-      rvs::logger::Err(buff, MODULE_NAME_CAPS);
-      return -1;
-    } else {
-      file.close();
+    // Check if pConfig files exist
+    for (const auto& conf : config_files) {
+      std::ifstream file(conf);
+      if (!file.good()) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "%s file is missing.", conf.c_str());
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        return -1;
+      }
     }
   }
 
@@ -350,7 +383,16 @@ int rvs::exec::run() {
 
   DTRACE_
   try {
-    sts = do_yaml(yaml_data_type_t::YAML_FILE, config_file);
+    std::vector<YAML::Node> configs;
+    for (const auto& conf : config_files) {
+      config_file = conf;
+      configs.push_back(YAML::LoadFile(conf));
+    }
+    config_file = config_files[0];
+    for (size_t i = 1; i < config_files.size(); i++) {
+      config_file += "," + config_files[i];
+    }
+    sts = do_yaml(configs, config_files);
   } catch(std::exception& e) {
     sts = -999;
     char buff[1024];
@@ -570,10 +612,13 @@ void rvs::exec::do_help() {
   cout << "-a --appendLog     When generating a debug logfile, do not overwrite the content\n";
   cout << "                   of the current log. Use in conjuction with -d and -l options.\n\n";
 
-  cout << "-c --config        Specify the test configuration file to use.\n\n";
+  cout << "-c --config        Specify the test configuration file to use. Accepts a comma separated\n";
+  cout << "                   list of files, which run one after another in the given order.\n";
+  cout << "                   Cannot be combined with -r or -m.\n\n";
 
   cout << "-r --run           Specify the test level to run. Valid range is 1 to 5,\n";
-  cout << "                   with 5 indicating the highest stress test level.\n\n";
+  cout << "                   with 5 indicating the highest stress test level.\n";
+  cout << "                   Cannot be combined with -m or -c.\n\n";
 
   cout << "-d --debugLevel    Specify the debug level for the output log. The range is 0-5 with\n";
   cout << "                   5 being the highest verbose level.\n\n";
@@ -596,8 +641,10 @@ void rvs::exec::do_help() {
   cout << "-l --debugLogFile  Generate log file with output and debug information.\n\n";
 
   cout << "-m --module        Specify a module name to run the corresponding platform-specific\n";
-  cout << "                   (MI-series GPUs) module configuration file. Valid modules: babel, gpup, gst, iet,\n";
-  cout << "                   mem, pebb, peqt, pbqt, rcqt.\n\n";
+  cout << "                   (MI-series GPUs) module configuration file. Accepts a comma separated\n";
+  cout << "                   list of modules, which run one after another in the given order.\n";
+  cout << "                   Valid modules: babel, gpup, gst, iet, mem, pebb, peqt, pbqt, rcqt, tst.\n";
+  cout << "                   Cannot be combined with -r or -c.\n\n";
 
   cout << "-t --duration      Specify the test duration (in seconds) for each action.\n";
   cout << "                   Overrides the duration value in all actions of the configuration file.\n\n";

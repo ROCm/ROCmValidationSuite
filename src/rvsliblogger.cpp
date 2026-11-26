@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -55,6 +55,7 @@ bool  rvs::logger::append_m(false);
 bool  rvs::logger::isfirstrecord_m(true);
 bool  rvs::logger::initModule(true);
 bool  rvs::logger::isfirstaction_m(true);
+std::string rvs::logger::json_module_m;
 std::mutex  rvs::logger::cout_mutex;
 std::mutex  rvs::logger::log_mutex;
 bool  rvs::logger::bStop(false);
@@ -409,6 +410,19 @@ int rvs::logger::JsonActionStartNodeCreate(const char* Module, const char* Actio
   if(initModule || json_log_file.empty()){
     rvs::logger::JsonStartNodeCreate(Module, Action);
     initModule =  false;
+    json_module_m = Module;
+  } else if (json_module_m != Module) {
+    /* The file is written as it goes, so a module that comes back after
+       another module gets its key again instead of rejoining the earlier one. */
+    std::string row{newline};
+    row += std::string(RVSINDENT) + node_end + "," + newline;
+    row += std::string("\"") + Module + std::string("\"") + kv_delimit + node_start + newline;
+    {
+      std::lock_guard<std::mutex> lk(json_log_mutex);
+      ToFile(row, true);
+    }
+    json_module_m = Module;
+    isfirstaction_m = true;
   }
   isfirstrecord_m = true;
   std::string row{newline};

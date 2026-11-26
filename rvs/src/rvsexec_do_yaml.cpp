@@ -615,27 +615,77 @@ void systemOverview() {
  */
 int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
 
-  int sts = 0;
   YAML::Node config;
-  rvs_results_t result = {RVS_STATUS_FAILED, RVS_SESSION_STATE_COMPLETED, (const char *)NULL};
+  std::string config_name;
 
   if(yaml_data_type_t::YAML_FILE == data_type) {
 
     config = YAML::LoadFile(data);
+    config_name = data;
   }
   else if(yaml_data_type_t::YAML_STRING == data_type) {
 
     config = YAML::Load(data);
+    config_name = "YAML string";
   }
   else {
     return -1;
   }
 
-  // find "actions" map
-  const YAML::Node& actions = config["actions"];
-  if (!actions.IsDefined()) {
-    rvs::logger::Err("Invalid configuration file !", MODULE_NAME_CAPS);
-    return -1;
+  return do_yaml(std::vector<YAML::Node>{config},
+                 std::vector<std::string>{config_name});
+}
+
+/**
+ * @brief Executes actions listed in one or more configurations, in order,
+ * as a single session with one summary and one JSON log.
+ *
+ * @param configs Parsed configurations, in execution order
+ * @param config_names Configuration names for error messages, same order as configs
+ * @return 0 if successful, non-zero otherwise
+ *
+ */
+int rvs::exec::do_yaml(const std::vector<YAML::Node>& configs,
+                       const std::vector<std::string>& config_names) {
+
+  int sts = 0;
+  rvs_results_t result = {RVS_STATUS_FAILED, RVS_SESSION_STATE_COMPLETED, (const char *)NULL};
+
+  /* Validate every configuration before running any action, so that a bad
+     configuration cannot cut the session (and its JSON log) short. Each action
+     keeps its index within its own configuration for the -s option. */
+  std::vector<std::pair<YAML::Node, int>> conf_actions;
+  for (size_t c = 0; c < configs.size(); c++) {
+    const char* conf_name = config_names[c].c_str();
+    const YAML::Node& actions = configs[c]["actions"];
+    if (!actions.IsDefined()) {
+      char buff[1024];
+      snprintf(buff, sizeof(buff),
+          "Invalid configuration file %s: no actions defined !", conf_name);
+      rvs::logger::Err(buff, MODULE_NAME_CAPS);
+      return -1;
+    }
+    int action_idx = 0;
+    for (YAML::const_iterator it = actions.begin(); it != actions.end();
+        ++it, ++action_idx) {
+      const YAML::Node& action = *it;
+      if (!action["name"].IsDefined() || !action["name"].IsScalar()) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff),
+            "action %d in %s does not specify name.", action_idx, conf_name);
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        return -1;
+      }
+      if (!action["module"].IsDefined() || !action["module"].IsScalar() ||
+          action["module"].as<std::string>().empty()) {
+        char buff[1024];
+        snprintf(buff, sizeof(buff), "action '%s' in %s does not specify module.",
+            action["name"].as<std::string>().c_str(), conf_name);
+        rvs::logger::Err(buff, MODULE_NAME_CAPS);
+        return -1;
+      }
+      conf_actions.emplace_back(action, action_idx);
+    }
   }
 
   /* Test Summary */
@@ -735,11 +785,10 @@ int rvs::exec::do_yaml(yaml_data_type_t data_type, const std::string& data) {
   /* Number of times to execute the test */
   for (int i = 0; i < num_times; i++) {
 
-    int action_idx = 0;
     // for all actions...
-    for (YAML::const_iterator it = actions.begin(); it != actions.end();
-        ++it, ++action_idx) {
-      const YAML::Node& action = *it;
+    for (const auto& conf_action : conf_actions) {
+      const YAML::Node& action = conf_action.first;
+      int action_idx = conf_action.second;
 
       if (has_selection) {
         std::string action_name = action["name"].as<std::string>();
