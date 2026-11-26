@@ -168,11 +168,13 @@ of the current log. Use in conjuction with <b>-d</b> and <b>-l</b> options.
 </td></tr>
 
 <tr><td>-c</td><td>--config</td><td>Specify the test configuration file to use.
-This is a mandatory field for test execution.
+This is a mandatory field for test execution. Accepts a comma separated list of files,
+which run one after another in the given order. Cannot be combined with <b>-r</b> or <b>-m</b>.
 </td></tr>
 
 <tr><td>-r</td><td>--run</td><td>Specify the predefined test level to run (1–5).
 Each level selects a GPU-specific configuration file without requiring a <b>-c</b> argument.
+Cannot be combined with <b>-m</b> or <b>-c</b>.
 See <a href="#test-levels">Test Levels</a> for details.
 </td></tr>
 
@@ -202,8 +204,10 @@ else a file created in <b>/var/tmp/</b> with timestamp in name.
 </td></tr>
 
 <tr><td>-m</td><td>--module</td><td>Specify a module name to run the corresponding
-platform-specific (MI-series GPUs) module configuration file. Valid modules: <b>babel</b>, <b>gpup</b>,
-<b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>.
+platform-specific (MI-series GPUs) module configuration file. Accepts a comma separated list of
+modules, which run one after another in the given order. Valid modules: <b>babel</b>, <b>gpup</b>,
+<b>gst</b>, <b>iet</b>, <b>mem</b>, <b>pebb</b>, <b>peqt</b>, <b>pbqt</b>, <b>rcqt</b>, <b>tst</b>.
+Cannot be combined with <b>-r</b> or <b>-c</b>.
 </td></tr>
 
 <tr><td>-t</td><td>--duration</td><td>Specify the test duration (in seconds) for each action.
@@ -296,6 +300,16 @@ Repeat a test 5 times in sequence (soak/stability testing):
 Run only the GST module using the built-in platform configuration:
 ```bash
 ./rvs -m gst
+```
+
+Run the GST and IET modules one after another in a single session:
+```bash
+./rvs -m gst,iet
+```
+
+Run several configuration files one after another in a single session:
+```bash
+./rvs -c conf/gst_single.conf,conf/mem.conf
 ```
 
 

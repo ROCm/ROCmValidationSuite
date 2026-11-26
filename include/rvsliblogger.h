@@ -1,6 +1,6 @@
 /********************************************************************************
  *
- * Copyright (c) 2018-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * MIT LICENSE:
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -100,6 +100,8 @@ class logger {
   static  bool   isfirstrecord_m;
   //! 'true' if the creating record is the first action in rvs invocation
   static  bool   isfirstaction_m;
+  //! module whose JSON node is currently open
+  static  std::string   json_module_m;
   //! Array of C std::strings representing logging level names
   static  const char*   loglevelname[6];
   //! Mutex to synchronize cout output

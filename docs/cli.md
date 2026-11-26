@@ -14,10 +14,13 @@
                    of the current log. Use in conjuction with -d and -l options.
 
 -c --config        Specify the test configuration file to use. This is a mandatory
-                   field for test execution.
+                   field for test execution. Accepts a comma separated list of files,
+                   which run one after another in the given order. Cannot be
+                   combined with -r or -m.
 
 -r --run           Specify the test level to run. Valid range is 1 to 5, with 5
-                   indicating the highest stress test level.
+                   indicating the highest stress test level. Cannot be combined
+                   with -m or -c.
 
 -d --debugLevel    Specify the debug level for the output log. The range is 0-5 with
                    5 being the highest verbose level.
@@ -40,8 +43,10 @@
 -l --debugLogFile  Generate log file with output and debug information.
 
 -m --module        Specify a module name to run the corresponding platform-specific
-                   (MI-series GPUs) module configuration file. Valid modules: babel,
-                   gpup, gst, iet, mem, pebb, peqt, pbqt, rcqt.
+                   (MI-series GPUs) module configuration file. Accepts a comma
+                   separated list of modules, which run one after another in the
+                   given order. Valid modules: babel, gpup, gst, iet, mem, pebb,
+                   peqt, pbqt, rcqt, tst. Cannot be combined with -r or -c.
 
 -t --duration      Specify the test duration (in seconds) for each action. Overrides
                    the duration value in all actions of the configuration file.

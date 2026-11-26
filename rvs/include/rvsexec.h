@@ -93,6 +93,8 @@ class exec {
 
   int   do_yaml(const std::string& config_file);
   int   do_yaml(yaml_data_type_t data_type, const std::string& data);
+  int   do_yaml(const std::vector<YAML::Node>& configs,
+                const std::vector<std::string>& config_names);
   int   do_yaml_properties(const YAML::Node& node,
                            const std::string& module_name, if1* pif1);
   bool  is_yaml_properties_collection(const std::string& module_name,
