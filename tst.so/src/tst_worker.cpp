@@ -209,6 +209,7 @@ bool TSTWorker::do_thermal_stress(void) {
     float     max_edge_temperature = 0;
     float     cur_junction_temperature = 0;
     float     max_junction_temperature = 0;
+    float     max_temperature = 0;
     string    msg;
     bool      result = true;
     bool      start = true;
@@ -297,28 +298,32 @@ bool TSTWorker::do_thermal_stress(void) {
     rvs::lp::Log(msg, rvs::loginfo);
 
 
+    // Judge on junction temperature; fall back to edge where there is no junction
+    // sensor (it reads 0), e.g. APUs such as gfx1151.
+    max_temperature = (max_junction_temperature > 0) ? max_junction_temperature : max_edge_temperature;
+
     //check whether we reached the target temperature
-    if(max_junction_temperature >= target_temp) {
+    if(max_temperature >= target_temp) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " + "GPU " +
-            std::to_string(gpu_id) + " " + " Target temperature met :" + " " + std::to_string(max_junction_temperature);
+            std::to_string(gpu_id) + " " + " Target temperature met :" + " " + std::to_string(max_temperature);
         rvs::lp::Log(msg, rvs::loginfo);
         result = true;
     }
     else {
         msg = "[" + action_name + "] " + MODULE_NAME + " " + "GPU " +
-            std::to_string(gpu_id) + " " + " Target temperature could not be met :" + " " + std::to_string(max_junction_temperature);
+            std::to_string(gpu_id) + " " + " Target temperature could not be met :" + " " + std::to_string(max_temperature);
         rvs::lp::Log(msg, rvs::loginfo);
         result = false;
     }
     //check whether we reached the trottle temperature
-    if(max_junction_temperature >= throttle_temp) {
+    if(max_temperature >= throttle_temp) {
         msg = "[" + action_name + "] " + MODULE_NAME + " " + "GPU " +
-            std::to_string(gpu_id) + " " + " Thermal throttling condition met :" + " " + std::to_string(max_junction_temperature);
+            std::to_string(gpu_id) + " " + " Thermal throttling condition met :" + " " + std::to_string(max_temperature);
         rvs::lp::Log(msg, rvs::loginfo);
     }
     else {
         msg = "[" + action_name + "] " + MODULE_NAME + " " + "GPU " +
-            std::to_string(gpu_id) + " " + " Thermal throttling condition could not be met :" + " " + std::to_string(max_junction_temperature);
+            std::to_string(gpu_id) + " " + " Thermal throttling condition could not be met :" + " " + std::to_string(max_temperature);
         rvs::lp::Log(msg, rvs::loginfo);
     }
     if (bjson)
@@ -368,7 +373,7 @@ void TSTWorker::run() {
     if (run_duration_ms < MAX_MS_TRAIN_GPU)
         run_duration_ms += MAX_MS_TRAIN_GPU;
 
-    bool pass = do_thermal_stress();
+    result = do_thermal_stress();
 
     // check if stop signal was received
     if (rvs::lp::Stopping())
@@ -376,7 +381,7 @@ void TSTWorker::run() {
 
     msg = "[" + action_name + "] "  +
                "[GPU:: " + std::to_string(gpu_id) + "] " + TST_PASS_KEY + ": " +
-               (pass ? TST_RESULT_PASS_MESSAGE : TST_RESULT_FAIL_MESSAGE);
+               (result ? TST_RESULT_PASS_MESSAGE : TST_RESULT_FAIL_MESSAGE);
     rvs::lp::Log(msg, rvs::logresults);
 
     sleep(5);
